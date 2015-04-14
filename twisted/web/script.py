@@ -10,11 +10,9 @@ from __future__ import division, absolute_import
 
 import os, traceback
 
-from io import BytesIO as StringIO
-
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.compat import execfile, networkString
+from twisted.python.compat import execfile, networkString, NativeStringIO, _PY3
 from twisted.web import http, server, static, resource, html
 
 
@@ -29,7 +27,8 @@ resource = mygreatresource.MyGreatResource()
 """
 
 class AlreadyCached(Exception):
-    """This exception is raised when a path has already been cached.
+    """
+    This exception is raised when a path has already been cached.
     """
 
 class CacheScanner:
@@ -70,6 +69,8 @@ def ResourceScript(path, registry):
         registry.cachePath(path, rsrc)
     return rsrc
 
+
+
 def ResourceTemplate(path, registry):
     from quixote import ptl_compile
 
@@ -82,6 +83,7 @@ def ResourceTemplate(path, registry):
     code = compile(e, "<source>", "exec")
     eval(code, glob, glob)
     return glob['resource']
+
 
 
 class ResourceScriptWrapper(resource.Resource):
@@ -132,21 +134,26 @@ class ResourceScriptDirectory(resource.Resource):
         return resource.NoResource().render(request)
 
 
+
 class PythonScript(resource.Resource):
-    """I am an extremely simple dynamic resource; an embedded python script.
+    """
+    I am an extremely simple dynamic resource; an embedded python script.
 
     This will execute a file (usually of the extension '.epy') as Python code,
     internal to the webserver.
     """
-    isLeaf = 1
+    isLeaf = True
+
     def __init__(self, filename, registry):
-        """Initialize me with a script name.
+        """
+        Initialize me with a script name.
         """
         self.filename = filename
         self.registry = registry
 
     def render(self, request):
-        """Render me to a web client.
+        """
+        Render me to a web client.
 
         Load my file, execute it in a special namespace (with 'request' and
         '__file__' global vars) and finish the request.  Output to the web-page
@@ -164,8 +171,11 @@ class PythonScript(resource.Resource):
                 request.setResponseCode(http.NOT_FOUND)
                 request.write(resource.NoResource("File not found.").render(request))
         except:
-            io = StringIO()
+            io = NativeStringIO()
             traceback.print_exc(file=io)
-            request.write(html.PRE(io.getvalue()))
+            output = html.PRE(io.getvalue())
+            if _PY3:
+                output = output.encode("utf8")
+            request.write(output)
         request.finish()
         return server.NOT_DONE_YET
