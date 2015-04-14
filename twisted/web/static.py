@@ -25,7 +25,6 @@ from twisted.python.compat import networkString, intToBytes, nativeString, _PY3
 
 from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
-from twisted.persisted import styles
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 
@@ -36,6 +35,7 @@ else:
     from urllib import quote, unquote
     from cgi import escape
 
+x = 0
 
 dangerousPathError = resource.NoResource("Invalid request URL.")
 
@@ -84,7 +84,7 @@ class Redirect(resource.Resource):
         return redirectTo(self.url, request)
 
 
-class Registry(components.Componentized, styles.Versioned):
+class Registry(components.Componentized):
     """
     I am a Componentized object that will be made available to internal Twisted
     file-based dynamic web content such as .rpy and .epy scripts.
@@ -144,8 +144,8 @@ def loadMimeTypes(mimetype_locations=None, init=mimetypes.init):
 
 
 def getTypeAndEncoding(filename, types, encodings, defaultType):
-    p, ext = os.path.splitext(filename)
-    ext = ext.lower()
+    p, ext = filepath.FilePath(filename).splitext()
+    ext = filepath._coerceToFilesystemEncoding('', ext.lower())
     if ext in encodings:
         enc = encodings[ext]
         ext = os.path.splitext(p)[1].lower()
@@ -156,7 +156,7 @@ def getTypeAndEncoding(filename, types, encodings, defaultType):
 
 
 
-class File(resource.Resource, styles.Versioned, filepath.FilePath):
+class File(resource.Resource, filepath.FilePath):
     """
     File is a resource that represents a plain non-interpreted file
     (although it can look for an extension like .rpy or .cgi and hand the
@@ -226,7 +226,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             del self.indexName
 
 
-    def __init__(self, path, defaultType=b"text/html", ignoredExts=(), registry=None, allowExt=0):
+    def __init__(self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0):
         """
         Create a file with the given path.
 
@@ -559,9 +559,9 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             size = self.getFileSize()
         request.setHeader(b'content-length', intToBytes(size))
         if self.type:
-            request.setHeader(b'content-type', self.type)
+            request.setHeader(b'content-type', networkString(self.type))
         if self.encoding:
-            request.setHeader(b'content-encoding', self.encoding)
+            request.setHeader(b'content-encoding', networkString(self.encoding))
 
 
     def makeProducer(self, request, fileForReading):
@@ -631,11 +631,19 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
                 raise
 
         if request.setLastModified(self.getmtime()) is http.CACHED:
+            # We don't need it... close the file.
+            #fileForReading.close()
             return b''
 
         producer = self.makeProducer(request, fileForReading)
 
         if request.method == b'HEAD':
+            global x
+            x+= 1
+            print(x)
+            request.setHeader(b'content-length', b'0')
+            # We don't need it... close the file.
+            #fileForReading.close()
             return b''
 
         producer.start()
@@ -977,12 +985,18 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         """
         files = []
         dirs = []
+
         for path in directory:
+            if _PY3:
+                if isinstance(path, bytes):
+                    path = path.decode("utf8")
+
             url = quote(path, "/")
             escapedPath = escape(path)
-            if os.path.isdir(os.path.join(self.path, path)):
-                url = url + '/'
-                dirs.append({'text': escapedPath + "/", 'href': url,
+            childPath = filepath.FilePath(self.path).child(path)
+
+            if childPath.isdir():
+                dirs.append({'text': escapedPath + "/", 'href': url + "/",
                              'size': '', 'type': '[Directory]',
                              'encoding': ''})
             else:
@@ -990,13 +1004,13 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
                                                         self.contentEncodings,
                                                         self.defaultType)
                 try:
-                    size = os.stat(os.path.join(self.path, path)).st_size
+                    size = childPath.getsize()
                 except OSError:
                     continue
                 files.append({
                     'text': escapedPath, "href": url,
-                    'type': '[%s]' % nativeString(mimetype),
-                    'encoding': (encoding and '[%s]' % nativeString(encoding )or ''),
+                    'type': '[%s]' % mimetype,
+                    'encoding': (encoding and '[%s]' % encoding or ''),
                     'size': formatFileSize(size)})
         return dirs, files
 
