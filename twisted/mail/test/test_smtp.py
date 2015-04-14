@@ -1859,7 +1859,7 @@ class SendmailTests(unittest.TestCase):
         smtp.sendmail("localhost", "source@address", "recipient@address",
                       messageFile, reactor=reactor)
         factory = reactor.tcpClients[0][2]
-        self.assertIdentical(factory.file, messageFile)
+        self.assertIs(factory.file, messageFile)
 
 
     def test_messageStringMadeFile(self):
