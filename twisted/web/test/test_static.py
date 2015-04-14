@@ -35,7 +35,7 @@ class StaticDataTests(TestCase):
         """
         L{Data.render} returns an empty response body for a I{HEAD} request.
         """
-        data = static.Data(b"foo", b"bar")
+        data = static.Data(b"foo", "bar")
         request = DummyRequest([''])
         request.method = b'HEAD'
         d = _render(data, request)
@@ -323,7 +323,7 @@ class StaticFileTests(TestCase):
         base.makedirs()
         base.child("foo.bar").setContent(
             b"from twisted.web.static import Data\n"
-            b"resource = Data(b'dynamic world', b'text/plain')\n")
+            b"resource = Data(b'dynamic world', 'text/plain')\n")
 
         file = static.File(base.path)
         file.processors = {b'.bar': script.ResourceScript}
@@ -390,11 +390,9 @@ class StaticMakeProducerTests(TestCase):
         @param content: The L{bytes} to use as the contents of the resource.
         @param type: Optional value for the content type of the resource.
         """
-        fileName = self.mktemp()
-        fileObject = open(fileName, 'wb')
-        fileObject.write(content)
-        fileObject.close()
-        resource = static.File(fileName)
+        fileName = FilePath(self.mktemp())
+        fileName.setContent(content)
+        resource = static.File(fileName._asBytesPath())
         resource.encoding = encoding
         resource.type = type
         return resource
@@ -442,15 +440,15 @@ class StaticMakeProducerTests(TestCase):
         for the response.
         """
         length = 123
-        contentType = b"text/plain"
-        contentEncoding = b'gzip'
+        contentType = "text/plain"
+        contentEncoding = 'gzip'
         resource = self.makeResourceWithContent(
             b'a'*length, type=contentType, encoding=contentEncoding)
         request = DummyRequest([])
         resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
-            {b'content-type': contentType, b'content-length': intToBytes(length),
-             b'content-encoding': contentEncoding},
+            {b'content-type': networkString(contentType), b'content-length': intToBytes(length),
+             b'content-encoding': networkString(contentEncoding)},
             self.contentHeaders(request))
 
 
@@ -486,12 +484,13 @@ class StaticMakeProducerTests(TestCase):
         """
         request = DummyRequest([])
         request.headers[b'range'] = b'bytes=1-3'
-        contentType = b"text/plain"
-        contentEncoding = b'gzip'
+        contentType = "text/plain"
+        contentEncoding = 'gzip'
         resource = self.makeResourceWithContent(b'abcdef', type=contentType, encoding=contentEncoding)
         resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
-            {b'content-type': contentType, b'content-encoding': contentEncoding,
+            {b'content-type': networkString(contentType),
+             b'content-encoding': networkString(contentEncoding),
              b'content-range': b'bytes 1-3/6', b'content-length': b'3'},
             self.contentHeaders(request))
 
@@ -529,7 +528,7 @@ class StaticMakeProducerTests(TestCase):
         """
         request = DummyRequest([])
         request.headers[b'range'] = b'bytes=4-10'
-        contentType = b"text/plain"
+        contentType = "text/plain"
         resource = self.makeResourceWithContent(b'abc', type=contentType)
         resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
@@ -545,7 +544,7 @@ class StaticMakeProducerTests(TestCase):
         """
         request = DummyRequest([])
         request.headers[b'range'] = b'bytes=2-10'
-        contentType = b"text/plain"
+        contentType = "text/plain"
         resource = self.makeResourceWithContent(b'abc', type=contentType)
         resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
@@ -588,7 +587,7 @@ class StaticMakeProducerTests(TestCase):
         request = DummyRequest([])
         request.headers[b'range'] = b'bytes=1-3,5-6'
         resource = self.makeResourceWithContent(
-            b'abcdefghijkl', encoding=b'gzip')
+            b'abcdefghijkl', encoding='gzip')
         producer = resource.makeProducer(request, resource.openForReading())
         contentHeaders = self.contentHeaders(request)
         # The only content-* headers set are content-type and content-length.
@@ -647,7 +646,7 @@ class StaticMakeProducerTests(TestCase):
         """
         request = DummyRequest([])
         request.headers['range'] = b'bytes=4-10'
-        contentType = b"text/plain"
+        contentType = "text/plain"
         request.headers[b'range'] = b'bytes=10-12,15-20'
         resource = self.makeResourceWithContent(b'abc', type=contentType)
         resource.makeProducer(request, resource.openForReading())
@@ -1143,7 +1142,8 @@ class RangeTests(TestCase):
         parts = self.parseMultipartBody(b''.join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(self.resource.type, part[b'contentType'])
+            self.assertEqual(networkString(self.resource.type),
+                             part[b'contentType'])
             start, end, size = part[b'contentRange']
             self.assertEqual(int(start), s)
             self.assertEqual(int(end), e)
@@ -1168,7 +1168,8 @@ class RangeTests(TestCase):
         parts = self.parseMultipartBody(b''.join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(self.resource.type, part[b'contentType'])
+            self.assertEqual(networkString(self.resource.type),
+                             part[b'contentType'])
             start, end, size = part[b'contentRange']
             self.assertEqual(int(start), s)
             self.assertEqual(int(end), min(e, self.resource.getFileSize()-1))

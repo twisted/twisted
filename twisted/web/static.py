@@ -35,8 +35,6 @@ else:
     from urllib import quote, unquote
     from cgi import escape
 
-x = 0
-
 dangerousPathError = resource.NoResource("Invalid request URL.")
 
 def isDangerous(path):
@@ -55,7 +53,7 @@ class Data(resource.Resource):
 
 
     def render_GET(self, request):
-        request.setHeader(b"content-type", self.type)
+        request.setHeader(b"content-type", networkString(self.type))
         request.setHeader(b"content-length", intToBytes(len(self.data)))
         if request.method == b"HEAD":
             return b''
@@ -632,18 +630,14 @@ class File(resource.Resource, filepath.FilePath):
 
         if request.setLastModified(self.getmtime()) is http.CACHED:
             # We don't need it... close the file.
-            #fileForReading.close()
+            fileForReading.close()
             return b''
 
         producer = self.makeProducer(request, fileForReading)
 
         if request.method == b'HEAD':
-            global x
-            x+= 1
-            print(x)
-            request.setHeader(b'content-length', b'0')
             # We don't need it... close the file.
-            #fileForReading.close()
+            fileForReading.close()
             return b''
 
         producer.start()
@@ -964,7 +958,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
     def __init__(self, pathname, dirs=None,
                  contentTypes=File.contentTypes,
                  contentEncodings=File.contentEncodings,
-                 defaultType=b'text/html'):
+                 defaultType='text/html'):
         resource.Resource.__init__(self)
         self.contentTypes = contentTypes
         self.contentEncodings = contentEncodings
