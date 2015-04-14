@@ -6,15 +6,15 @@
 I contain PythonScript, which is a very simple python script resource.
 """
 
+from __future__ import division, absolute_import
+
 import os, traceback
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+from io import BytesIO as StringIO
 
 from twisted import copyright
-from twisted.python.compat import execfile
+from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.python.compat import execfile, networkString
 from twisted.web import http, server, static, resource, html
 
 
@@ -56,14 +56,14 @@ def ResourceScript(path, registry):
     renderred.
     """
     cs = CacheScanner(path, registry)
-    glob = {'__file__': path,
+    glob = {'__file__': _coerceToFilesystemEncoding("", path),
             'resource': noRsrc,
             'registry': registry,
             'cache': cs.cache,
             'recache': cs.recache}
     try:
         execfile(path, glob, glob)
-    except AlreadyCached, ac:
+    except AlreadyCached as ac:
         return ac.args[0]
     rsrc = glob['resource']
     if cs.doCache and rsrc is not noRsrc:
@@ -73,13 +73,14 @@ def ResourceScript(path, registry):
 def ResourceTemplate(path, registry):
     from quixote import ptl_compile
 
-    glob = {'__file__': path,
+    glob = {'__file__': _coerceToFilesystemEncoding("", path),
             'resource': resource.ErrorPage(500, "Whoops! Internal Error",
                                            rpyNoResource),
             'registry': registry}
 
     e = ptl_compile.compile_template(open(path), path)
-    exec e in glob
+    code = compile(e, "<source>", "exec")
+    eval(code, glob, glob)
     return glob['resource']
 
 
@@ -152,18 +153,18 @@ class PythonScript(resource.Resource):
         will NOT be handled with print - standard output goes to the log - but
         with request.write.
         """
-        request.setHeader("x-powered-by","Twisted/%s" % copyright.version)
+        request.setHeader(b"x-powered-by", networkString("Twisted/%s" % copyright.version))
         namespace = {'request': request,
-                     '__file__': self.filename,
+                     '__file__': _coerceToFilesystemEncoding("", self.filename),
                      'registry': self.registry}
         try:
             execfile(self.filename, namespace, namespace)
-        except IOError, e:
+        except IOError as e:
             if e.errno == 2: #file not found
                 request.setResponseCode(http.NOT_FOUND)
                 request.write(resource.NoResource("File not found.").render(request))
         except:
-            io = StringIO.StringIO()
+            io = StringIO()
             traceback.print_exc(file=io)
             request.write(html.PRE(io.getvalue()))
         request.finish()

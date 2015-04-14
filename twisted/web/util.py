@@ -6,14 +6,27 @@
 An assortment of web server-related utilities.
 """
 
+from __future__ import division, absolute_import
+
 import linecache
 
+from twisted.python.compat import _PY3, unicode
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.modules import getModule
 
 from twisted.web import resource
-from twisted.web.template import (
-    TagLoader, XMLFile, Element, renderer, flattenString)
+
+if not _PY3:
+    # TODO: Remove when twisted.web.template and _flatten is ported
+    # https://tm.tl/#7811
+    from twisted.web.template import (
+        TagLoader, XMLFile, Element, renderer, flattenString)
+    # TODO: Remove when twisted.python.urlpath is ported
+    # https://tm.tl/#7831
+    from twisted.python import urlpath
+else:
+    Element = object
+    renderer = XMLFile = lambda a: a
 
 
 def redirectTo(URL, request):
@@ -83,8 +96,6 @@ class ChildRedirector(Redirect):
         return ChildRedirector(newUrl)
 
 
-from twisted.python import urlpath
-
 class ParentRedirect(resource.Resource):
     """
     I redirect to URLPath.here().
@@ -123,6 +134,7 @@ class DeferredResource(resource.Resource):
     def _ebChild(self, reason, request):
         request.processingFailed(reason)
         return reason
+
 
 
 class _SourceLineElement(Element):
@@ -345,3 +357,11 @@ def formatFailure(myFailure):
 __all__ = [
     "redirectTo", "Redirect", "ChildRedirector", "ParentRedirect",
     "DeferredResource", "FailureElement", "formatFailure"]
+
+if _PY3:
+    __all3__ = ["redirectTo"]
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__
