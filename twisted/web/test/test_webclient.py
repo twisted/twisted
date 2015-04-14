@@ -18,6 +18,8 @@ except ImportError:
 from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
 from twisted.trial import unittest
 from twisted.web import server, client, error, resource
+from twisted.web.static import Data
+from twisted.web.util import Redirect
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
@@ -33,29 +35,6 @@ from twisted import test
 serverPEM = FilePath(test.__file__.encode("utf-8")).sibling(b'server.pem')
 serverPEMPath = nativeString(serverPEM.path)
 
-# Remove this in #6177, when static is ported to Python 3:
-if _PY3:
-    from twisted.web.test.test_web import Data
-else:
-    from twisted.web.static import Data
-
-# Remove this in #6178, when util is ported to Python 3:
-if _PY3:
-    class Redirect(resource.Resource):
-        isLeaf = 1
-
-        def __init__(self, url):
-            resource.Resource.__init__(self)
-            self.url = url
-
-        def render(self, request):
-            request.redirect(self.url)
-            return b""
-
-        def getChild(self, name, request):
-            return self
-else:
-    from twisted.web.util import Redirect
 
 _PY3DownloadSkip = "downloadPage will be ported to Python 3 in ticket #6197."
 
@@ -69,7 +48,7 @@ class ExtendedRedirect(resource.Resource):
     @type lastMethod: C{str}
     @ivar lastMethod: Last handled HTTP request method
     """
-    isLeaf = 1
+    isLeaf = True
     lastMethod = None
 
 
@@ -309,7 +288,7 @@ class WebClientTests(unittest.TestCase):
         self.agent = None # for twisted.web.client.Agent test
         self.cleanupServerConnections = 0
         r = resource.Resource()
-        r.putChild(b"file", Data(b"0123456789", b"text/html"))
+        r.putChild(b"file", Data(b"0123456789", "text/html"))
         r.putChild(b"redirect", Redirect(b"/file"))
         self.infiniteRedirectResource = CountingRedirect(b"/infiniteRedirect")
         r.putChild(b"infiniteRedirect", self.infiniteRedirectResource)
@@ -328,7 +307,7 @@ class WebClientTests(unittest.TestCase):
         r.putChild(b"afterFoundGetCounter", self.afterFoundGetCounter)
         r.putChild(b"afterFoundGetRedirect", Redirect(b"/afterFoundGetCounter"))
 
-        miscasedHead = Data(b"miscased-head GET response content", b"major/minor")
+        miscasedHead = Data(b"miscased-head GET response content", "major/minor")
         miscasedHead.render_Head = lambda request: b"miscased-head content"
         r.putChild(b"miscased-head", miscasedHead)
 
@@ -892,8 +871,8 @@ class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
         return networkString("http://127.0.0.1:%d/%s" % (self.plainPortno, path))
 
     def setUp(self):
-        plainRoot = Data(b'not me', b'text/plain')
-        tlsRoot = Data(b'me neither', b'text/plain')
+        plainRoot = Data(b'not me', 'text/plain')
+        tlsRoot = Data(b'me neither', 'text/plain')
 
         plainSite = server.Site(plainRoot, timeout=None)
         tlsSite = server.Site(tlsRoot, timeout=None)
@@ -911,7 +890,7 @@ class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
         plainRoot.putChild(b'one', Redirect(self.getHTTPS('two')))
         tlsRoot.putChild(b'two', Redirect(self.getHTTP('three')))
         plainRoot.putChild(b'three', Redirect(self.getHTTPS('four')))
-        tlsRoot.putChild(b'four', Data(b'FOUND IT!', b'text/plain'))
+        tlsRoot.putChild(b'four', Data(b'FOUND IT!', 'text/plain'))
 
     def tearDown(self):
         ds = list(
@@ -930,7 +909,7 @@ class CookieTests(unittest.TestCase):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
     def setUp(self):
-        root = Data(b'El toro!', b'text/plain')
+        root = Data(b'El toro!', 'text/plain')
         root.putChild(b"cookiemirror", CookieMirrorResource())
         root.putChild(b"rawcookiemirror", RawCookieMirrorResource())
         site = server.Site(root, timeout=None)

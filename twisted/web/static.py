@@ -838,7 +838,7 @@ class MultipleRangeStaticProducer(StaticProducer):
         if done:
             self.request.unregisterProducer()
             self.request.finish()
-            self.request = None
+            self.stopProducing()
 
 
 
