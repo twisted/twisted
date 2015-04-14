@@ -197,7 +197,6 @@ testModules = [
     "twisted.test.test_loopback",
     "twisted.test.test_monkey",
     "twisted.test.test_paths",
-    "twisted.test.test_persisted",
     "twisted.test.test_policies",
     "twisted.test.test_randbytes",
     "twisted.test.test_reflect",
