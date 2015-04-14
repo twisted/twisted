@@ -2091,35 +2091,57 @@ class ESMTPSenderFactory(SMTPSenderFactory):
 
 
 
-def sendmail(smtphost, from_addr, to_addrs, msg,
-             senderDomainName=None, port=25, reactor=reactor):
-    """Send an email
+def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
+             reactor=reactor, username=None, password=None,
+             requireAuthentication=False, requireTransportSecurity=False):
+    """
+    Send an email.
 
-    This interface is intended to be a direct replacement for
-    smtplib.SMTP.sendmail() (with the obvious change that
-    you specify the smtphost as well). Also, ESMTP options
-    are not accepted, as we don't do ESMTP yet. I reserve the
-    right to implement the ESMTP options differently.
+    This interface is intended to be a replacement for L{smtplib.SMTP.sendmail}
+    and related methods. To maintain backwards compatibility, it will fall back
+    to plain SMTP, if ESMTP support is not available. If ESMTP support is
+    available, it will attempt to provide encryption via STARTTLS and
+    authentication if a secret is provided.
 
-    @param smtphost: The host the message should be sent to
+    @param smtphost: The host the message should be sent to.
+    @type smtphost: L{bytes}
+
     @param from_addr: The (envelope) address sending this mail.
+    @type from_addr: L{bytes}
+
     @param to_addrs: A list of addresses to send this mail to.  A string will
-        be treated as a list of one address
+        be treated as a list of one address.
+    @type to_addr: L{list} of L{bytes} or L{bytes}
+
     @param msg: The message, including headers, either as a file or a string.
         File-like objects need to support read() and close(). Lines must be
-        delimited by '\\n'. If you pass something that doesn't look like a
-        file, we try to convert it to a string (so you should be able to
-        pass an email.Message directly, but doing the conversion with
-        email.Generator manually will give you more control over the
-        process).
+        delimited by '\\n'. If you pass something that doesn't look like a file,
+        we try to convert it to a string (so you should be able to pass an
+        L{email.Message} directly, but doing the conversion with
+        L{email.Generator} manually will give you more control over the process).
 
-    @param senderDomainName: Name by which to identify.  If None, try
-    to pick something sane (but this depends on external configuration
-    and may not succeed).
+    @param senderDomainName: Name by which to identify. If None, try to pick
+        something sane (but this depends on external configuration and may not
+        succeed).
+    @type senderDomainName: L{bytes}
 
     @param port: Remote port to which to connect.
+    @type port: L{int}
 
-    @param reactor: The reactor used to make TCP connection.
+    @param username: The username to use, if wanting to authenticate.
+    @type username: L{bytes}
+
+    @param password: The secret to use, if wanting to authenticate. If you do
+        not specify this, SMTP authentication will not occur.
+    @type password: L{bytes}
+
+    @param requireTransportSecurity: Whether or not STARTTLS is required.
+    @type requireTransportSecurity: L{bool}
+
+    @param requireAuthentication: Whether or not authentication is required.
+    @type requireAuthentication: L{bool}
+
+    @param reactor: The L{reactor} used to make the TCP connection.
 
     @rtype: L{Deferred}
     @returns: A cancellable L{Deferred}, its callback will be called if a
@@ -2132,7 +2154,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
         of tuples (address, code, resp) giving the response to the RCPT command
         for each address.
     """
-    if not hasattr(msg,'read'):
+    if not hasattr(msg, 'read'):
         # It's not a file
         msg = StringIO(str(msg))
 
@@ -2149,8 +2171,11 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
         else:
             # Connection hasn't been made yet
             connector.disconnect()
+
     d = defer.Deferred(cancel)
-    factory = SMTPSenderFactory(from_addr, to_addrs, msg, d)
+    factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
+        d, heloFallback=True, requireAuthentication=requireAuthentication,
+        requireTransportSecurity=requireTransportSecurity)
 
     if senderDomainName is not None:
         factory.domain = senderDomainName

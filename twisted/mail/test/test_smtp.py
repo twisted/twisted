@@ -1828,8 +1828,64 @@ class SendmailTests(unittest.TestCase):
         L{twisted.internet.reactor}.
         """
         args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
-        index = len(args) - args.index("reactor") + 1
-        self.assertEqual(reactor, defaults[index])
+        self.assertEqual(reactor, defaults[2])
+
+
+    def test_honorsESMTPArguments(self):
+        """
+        L{twisted.mail.smtp.sendmail} creates the ESMTP factory with the ESMTP
+        arguments.
+        """
+        reactor = MemoryReactor()
+        smtp.sendmail("localhost", "source@address", "recipient@address",
+                      "message", reactor=reactor, username="foo",
+                      password="bar", requireTransportSecurity=True,
+                      requireAuthentication=True)
+        factory = reactor.tcpClients[0][2]
+        self.assertEqual(factory._requireTransportSecurity, True)
+        self.assertEqual(factory._requireAuthentication, True)
+        self.assertEqual(factory.username, "foo")
+        self.assertEqual(factory.password, "bar")
+
+
+    def test_messageFilePassthrough(self):
+        """
+        L{twisted.mail.smtp.sendmail} will pass through the message untouched
+        if it is a file-like object.
+        """
+        reactor = MemoryReactor()
+        messageFile = StringIO(b"File!")
+
+        smtp.sendmail("localhost", "source@address", "recipient@address",
+                      messageFile, reactor=reactor)
+        factory = reactor.tcpClients[0][2]
+        self.assertIs(factory.file, messageFile)
+
+
+    def test_messageStringMadeFile(self):
+        """
+        L{twisted.mail.smtp.sendmail} will turn non-file-like objects
+        (eg. strings) into file-like objects before sending.
+        """
+        reactor = MemoryReactor()
+        smtp.sendmail("localhost", "source@address", "recipient@address",
+                      "message", reactor=reactor)
+        factory = reactor.tcpClients[0][2]
+        messageFile = factory.file
+        messageFile.seek(0)
+        self.assertEqual(messageFile.read(), "message")
+
+
+    def test_senderDomainName(self):
+        """
+        L{twisted.mail.smtp.sendmail} passes through the sender domain name, if
+        provided.
+        """
+        reactor = MemoryReactor()
+        smtp.sendmail("localhost", "source@address", "recipient@address",
+                      "message", reactor=reactor, senderDomainName="foo")
+        factory = reactor.tcpClients[0][2]
+        self.assertEqual(factory.domain, "foo")
 
 
     def test_cancelBeforeConnectionMade(self):
