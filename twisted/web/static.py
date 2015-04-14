@@ -622,15 +622,22 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
                 raise
 
         if request.setLastModified(self.getmtime()) is http.CACHED:
-            return ''
-
-
-        producer = self.makeProducer(request, fileForReading)
+            # We've opened the file to make sure it's accessible, so close it
+            # now we don't need it
+            fileForReading.close()
+            return b''
 
         if request.method == 'HEAD':
-            return ''
+            # Set the content headers here, rather than making a producer
+            self._setContentHeaders(request)
+            # We've opened the file to make sure it's accessible, so close it
+            # now we don't need it
+            fileForReading.close()
+            return b''
 
+        producer = self.makeProducer(request, fileForReading)
         producer.start()
+
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
     render_HEAD = render_GET

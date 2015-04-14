@@ -373,6 +373,53 @@ class StaticFileTests(TestCase):
         return d
 
 
+    def test_HEADClosesFile(self):
+        """
+        A HEAD request should open the file, get the size, and then close it
+        after the request.
+        """
+        class MockFile(object):
+            closed = False
+            def close(self):
+                self.closed = True
+
+        requestFile = MockFile()
+        path = FilePath(self.mktemp())
+        path.setContent("foo")
+        file = static.File(path.path)
+        file.open = lambda: requestFile # Open our file instead of a real one
+        request = DummyRequest([''])
+        request.method = 'HEAD'
+        d = _render(file, request)
+        def cbRendered(ignored):
+            self.assertEqual(requestFile.closed, True)
+        d.addCallback(cbRendered)
+        return d
+
+
+    def test_cachedRequestClosesFile(self):
+        """
+        A GET request that is cached should close the file after the request.
+        """
+        class MockFile(object):
+            closed = False
+            def close(self):
+                self.closed = True
+
+        requestFile = MockFile()
+        path = FilePath(self.mktemp())
+        path.setContent("foo")
+        file = static.File(path.path)
+        file.open = lambda: requestFile # Open our file instead of a real one
+        request = DummyRequest([''])
+        request.setLastModified = lambda _: http.CACHED # Always cached
+        d = _render(file, request)
+        def cbRendered(ignored):
+            self.assertEqual(requestFile.closed, True)
+        d.addCallback(cbRendered)
+        return d
+
+
 
 class StaticMakeProducerTests(TestCase):
     """

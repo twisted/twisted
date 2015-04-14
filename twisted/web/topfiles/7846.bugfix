@@ -1,0 +1,1 @@
+twisted.web.static.File now closes files properly after cached GETs and HEAD requests.
