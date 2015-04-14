@@ -48,6 +48,7 @@ Developer Guides
    application
    tap
    systemd
+   logger
    logging
    constants
    rdbms

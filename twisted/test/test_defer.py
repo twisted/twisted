@@ -70,6 +70,34 @@ class ImmediateFailureMixin(object):
 
 
 
+class UtilTests(unittest.TestCase):
+    """
+    Tests for utility functions.
+    """
+
+    def test_logErrorReturnsError(self):
+        """
+        L{defer.logError} returns the given error.
+        """
+        error = failure.Failure(RuntimeError())
+        result = defer.logError(error)
+        self.flushLoggedErrors(RuntimeError)
+
+        self.assertIs(error, result)
+
+
+    def test_logErrorLogsError(self):
+        """
+        L{defer.logError} logs the given error.
+        """
+        error = failure.Failure(RuntimeError())
+        defer.logError(error)
+        errors = self.flushLoggedErrors(RuntimeError)
+
+        self.assertEquals(errors, [error])
+
+
+
 class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
     def setUp(self):
