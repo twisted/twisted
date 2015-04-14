@@ -92,11 +92,6 @@ class Registry(components.Componentized):
         components.Componentized.__init__(self)
         self._pathCache = {}
 
-    persistenceVersion = 1
-
-    def upgradeToVersion1(self):
-        self._pathCache = {}
-
     def cachePath(self, path, rsrc):
         self._pathCache[path] = rsrc
 
@@ -187,42 +182,6 @@ class File(resource.Resource, filepath.FilePath):
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
 
     type = None
-
-    ### Versioning
-
-    persistenceVersion = 6
-
-    def upgradeToVersion6(self):
-        self.ignoredExts = []
-        if self.allowExt:
-            self.ignoreExt(b"*")
-        del self.allowExt
-
-
-    def upgradeToVersion5(self):
-        if not isinstance(self.registry, Registry):
-            self.registry = Registry()
-
-
-    def upgradeToVersion4(self):
-        if not hasattr(self, 'registry'):
-            self.registry = {}
-
-
-    def upgradeToVersion3(self):
-        if not hasattr(self, 'allowExt'):
-            self.allowExt = 0
-
-
-    def upgradeToVersion2(self):
-        self.defaultType = "text/html"
-
-
-    def upgradeToVersion1(self):
-        if hasattr(self, 'indexName'):
-            self.indexNames = [self.indexName]
-            del self.indexName
-
 
     def __init__(self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0):
         """
