@@ -73,10 +73,7 @@ try:
     from cgi import parse_header as _parseHeader
 except ImportError:
     from urllib.parse import (
-        ParseResultBytes, urlparse as _urlparse, unquote as _unquote)
-
-    def unquote(string, *args, **kwargs):
-        return _unquote(string.decode('charmap'), *args, **kwargs).encode('charmap')
+        ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
 
     def _parseHeader(line):
         key, pdict = cgi.parse_header(line.decode('charmap'))
