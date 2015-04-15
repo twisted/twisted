@@ -749,12 +749,7 @@ class DefaultObserver(_GlobalStartStopMixIn):
         @type eventDict: dict
         """
         if eventDict["isError"]:
-            if 'failure' in eventDict:
-                text = ((eventDict.get('why') or 'Unhandled Error')
-                        + '\n' + eventDict['failure'].getTraceback())
-            else:
-                text = " ".join([str(m) for m in eventDict["message"]]) + "\n"
-
+            text = textFromEventDict(eventDict)
             self.stderr.write(text)
             self.stderr.flush()
 

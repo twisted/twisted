@@ -1,0 +1,2 @@
+Don't raise an exception if `DefaultLogObserver.emit()` gets an event with a message that raises when `repr()` is called on it.
+Specifically: use `textFromEventDict()` instead of a separate (and inferior) message rendering implementation.

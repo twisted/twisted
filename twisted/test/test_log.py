@@ -564,7 +564,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
 
 
     def test_loggingAnObjectWithBroken__str__(self):
-        #HELLO, MCFLY
+        # HELLO, MCFLY
         self.lp.msg(EvilStr())
         self.assertEqual(len(self.out), 1)
         # Logging system shouldn't need to crap itself for this trivial case
@@ -943,6 +943,25 @@ class DefaultObserverTestCase(unittest.SynchronousTestCase):
 
         self.assertIn(reason, obs.stderr.getvalue())
         self.assertEqual(len(errors), 1)
+
+
+    def test_emitEventWithBrokenRepr(self):
+        """
+        DefaultObserver.emit() does not raise when it observes an error event
+        with a message that causes L{repr} to raise.
+        """
+        class Ouch(object):
+            def __repr__(self):
+                return str(1 / 0)
+
+        message = ("foo", Ouch())
+        event = dict(message=message, isError=1)
+
+        observer = log.DefaultObserver()
+        with StringIO() as output:
+            observer.stderr = output
+            observer.emit(event)
+            self.assertTrue(output.getvalue().startswith("foo <Ouch instance"))
 
 
 
