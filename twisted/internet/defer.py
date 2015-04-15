@@ -695,10 +695,16 @@ class DebugInfo:
             # earlier tests; arguably it should be a single error message.
             log.critical("Unhandled error in Deferred:",
                          isError=True)
+
             debugInfo = self._getDebugTracebacks()
-            if debugInfo != '':
-                log.critical("(debug: {debugInfo})", debugInfo)
-            log.failure("{log_failure}", self.failResult)
+            if debugInfo:
+                format = "(debug: {debugInfo})"
+            else:
+                format = None
+
+            log.failure(format,
+                        self.failResult,
+                        debugInfo=debugInfo)
 
 
 

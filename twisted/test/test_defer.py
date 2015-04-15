@@ -1966,6 +1966,48 @@ class LogTestCase(unittest.SynchronousTestCase):
         self._check()
 
 
+    def test_errorLogNoRepr(self):
+        """
+        Verify that when a L{Deferred} with no references to it is fired,
+        the logged message does not contain a repr of the failure object.
+        """
+        defer.Deferred().addCallback(lambda x: 1 // 0).callback(1)
+
+        gc.collect()
+        self._check()
+
+        self.assertEqual(2, len(self.c))
+        msg = log.textFromEventDict(self.c[-1])
+        expected = "Unhandled Error\nTraceback "
+        self.assertTrue(msg.startswith(expected),
+                        "Expected message starting with: {!r}".
+                            format(expected))
+
+
+    def test_errorLogDebugInfo(self):
+        """
+        Verify that when a L{Deferred} with no references to it is fired,
+        the logged message includes debug info if debugging on the deferred
+        is enabled.
+        """
+        def doit():
+            d = defer.Deferred()
+            d.debug = True
+            d.addCallback(lambda x: 1 // 0)
+            d.callback(1)
+
+        doit()
+        gc.collect()
+        self._check()
+
+        self.assertEqual(2, len(self.c))
+        msg = log.textFromEventDict(self.c[-1])
+        expected = "(debug:  I"
+        self.assertTrue(msg.startswith(expected),
+                        "Expected message starting with: {!r}".
+                            format(expected))
+
+
     def test_chainedErrorCleanup(self):
         """
         If one Deferred with an error result is returned from a callback on
