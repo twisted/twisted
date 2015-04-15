@@ -788,7 +788,7 @@ class FilePath(AbstractFilePath):
         @param encoding: The encoding to use if coercing to L{bytes}. If none is
             given, L{sys.getfilesystemencoding} is used.
 
-        @return: L{bytes}-mode L{FilePath}
+        @return: L{bytes} mode L{FilePath}
         """
         if type(self.path) == unicode:
             return self.clonePath(self._asBytesPath(encoding=encoding))
@@ -802,7 +802,7 @@ class FilePath(AbstractFilePath):
         @param encoding: The encoding to use if coercing to L{unicode}. If none
             is given, L{sys.getfilesystemencoding} is used.
 
-        @return: L{unicode}-mode L{FilePath}
+        @return: L{unicode} mode L{FilePath}
         """
         if type(self.path) == bytes:
             return self.clonePath(self._asTextPath(encoding=encoding))
