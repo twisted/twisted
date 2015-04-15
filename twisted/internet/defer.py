@@ -54,7 +54,15 @@ class TimeoutError(Exception):
 
 
 def logError(err):
-    log.failure("{log_failure}", err)
+    """
+    Log and return failure.
+
+    This method can be used as an errback that passes the failure on to the
+    next errback unmodified. Note that if this is the last errback, and the
+    deferred gets garbage collected after being this errback has been called,
+    the clean up code logs it again.
+    """
+    log.failure(None, err)
     return err
 
 

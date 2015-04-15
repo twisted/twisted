@@ -97,6 +97,24 @@ class UtilTests(unittest.TestCase):
         self.assertEquals(errors, [error])
 
 
+    def test_logErrorLogsErrorNoRepr(self):
+        """
+        The text logged by L{defer.logError} has no repr of the failure.
+        """
+        output = []
+
+        def emit(eventDict):
+            output.append(log.textFromEventDict(eventDict))
+
+        log.addObserver(emit)
+
+        error = failure.Failure(RuntimeError())
+        defer.logError(error)
+        self.flushLoggedErrors(RuntimeError)
+
+        self.assertTrue(output[0].startswith("Unhandled Error\nTraceback "))
+
+
 
 class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
