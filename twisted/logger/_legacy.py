@@ -9,7 +9,6 @@ Integration with L{twisted.python.log}.
 from zope.interface import implementer
 
 from ._levels import LogLevel
-from ._format import formatEvent
 from ._observer import ILogObserver
 from ._stdlib import fromStdlibLogLevelMapping, StringifiableFromEvent
 
@@ -73,8 +72,6 @@ class LegacyLogObserverWrapper(object):
                 event["failure"] = event["log_failure"]
             if "isError" not in event:
                 event["isError"] = 1
-            if "why" not in event:
-                event["why"] = formatEvent(event)
         elif "isError" not in event:
             event["isError"] = 0
 

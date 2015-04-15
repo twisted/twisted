@@ -1,0 +1,1 @@
+Do not set `why` key in events that pass through the logging system to legacy observers; this should only be set explicitly by the caller of `log.err()`.

@@ -251,12 +251,11 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
     def test_failure(self):
         """
         Captured failures in the new style set the old-style C{"failure"},
-        C{"isError"}, and C{"why"} keys.
+        C{"isError"} key.
         """
         event = self.eventWithFailure()
         self.assertIs(event["failure"], event["log_failure"])
         self.assertTrue(event["isError"])
-        self.assertEqual(event["why"], "oopsie...")
 
 
     def test_failureAlreadySet(self):
@@ -276,15 +275,6 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         """
         event = self.eventWithFailure(isError=0)
         self.assertEqual(event["isError"], 0)
-
-
-    def test_whyAlreadySet(self):
-        """
-        Captured failures in the new style do not step on a pre-existing
-        old-style C{"failure"} key.
-        """
-        event = self.eventWithFailure(why="blah")
-        self.assertEqual(event["why"], "blah")
 
 
 
