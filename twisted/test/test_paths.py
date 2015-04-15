@@ -1945,3 +1945,47 @@ class UnicodeFilePathTests(TestCase):
 
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, unicode)
+
+
+    def test_asBytesPathFromUnicode(self):
+        """
+        C{asBytesMode} on a L{unicode}-mode L{FilePath} returns a new
+        L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./tmp")
+        newfp = fp.asBytesMode()
+        self.assertIsNot(fp, newfp)
+        self.assertIsInstance(newfp.path, bytes)
+
+
+    def test_asTextPathFromBytes(self):
+        """
+        C{asBytesMode} on a L{unicode}-mode L{FilePath} returns a new
+        L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(b"./tmp")
+        newfp = fp.asTextMode()
+        self.assertIsNot(fp, newfp)
+        self.assertIsInstance(newfp.path, unicode)
+
+
+    def test_asBytesPathFromBytes(self):
+        """
+        C{asBytesMode} on a L{bytes}-mode L{FilePath} returns the same
+        L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(b"./tmp")
+        newfp = fp.asBytesMode()
+        self.assertIs(fp, newfp)
+        self.assertIsInstance(newfp.path, bytes)
+
+
+    def test_asTextPathFromUnicode(self):
+        """
+        C{asTextMode} on a L{unicode}-mode L{FilePath} returns the same
+        L{unicode}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./tmp")
+        newfp = fp.asTextMode()
+        self.assertIs(fp, newfp)
+        self.assertIsInstance(newfp.path, unicode)
