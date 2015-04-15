@@ -11,6 +11,8 @@ import warnings
 
 from twisted.python import usage, log, versions, deprecate
 
+warnings.warn("tap2rpm is deprecated since Twisted 15.2.",
+              category=DeprecationWarning, stacklevel=2)
 
 #################################
 #  data that goes in /etc/inittab
