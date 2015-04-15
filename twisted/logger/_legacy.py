@@ -66,6 +66,15 @@ class LegacyLogObserverWrapper(object):
             event["format"] = "%(log_legacy)s"
             event["log_legacy"] = StringifiableFromEvent(event.copy())
 
+            # In the old-style system, the 'message' key always holds a tuple
+            # of messages. If we find the 'message' key here to not be a
+            # tuple, it has been passed as new-style parameter. We drop it
+            # here because we render it using the old-style 'format' key,
+            # which otherwise doesn't get precedence, and the original event
+            # has been copied above.
+            if not isinstance(event["message"], tuple):
+                event["message"] = ()
+
         # From log.failure() -> isError blah blah
         if "log_failure" in event:
             if "failure" not in event:

@@ -1,1 +1,1 @@
-twisted.logging had literal characters in docstrings that are now quoted.
+twisted.logger had literal characters in docstrings that are now quoted.

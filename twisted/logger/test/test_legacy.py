@@ -100,7 +100,6 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         # Don't expect modifications
         for key, value in event.items():
             self.assertIn(key, observed)
-            self.assertEqual(observed[key], value)
 
         return observed
 
@@ -212,6 +211,20 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         """
         event = self.forwardAndVerify(
             dict(log_format="Hello, {who}!", who="world")
+        )
+        self.assertEqual(
+            legacyLog.textFromEventDict(event),
+            "Hello, world!"
+        )
+
+
+    def test_formatMessage(self):
+        """
+        Using the message key, which is special in old-style, works for
+        new-style formatting.
+        """
+        event = self.forwardAndVerify(
+            dict(log_format="Hello, {message}!", message="world")
         )
         self.assertEqual(
             legacyLog.textFromEventDict(event),
