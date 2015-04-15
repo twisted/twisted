@@ -266,7 +266,7 @@ class FileLogObserverTests(TestCase):
         """
         A L{FileLogObserver} created by L{jsonFileLogObserver} writes events
         serialzed as JSON text to a file when it observes events.
-        By default, the record separator is C{u"\x1e"}.
+        By default, the record separator is C{u"\\x1e"}.
         """
         self.assertObserverWritesJSON()
 
@@ -324,7 +324,7 @@ class LogFileReaderTests(TestCase):
     def test_readEventsAutoWithRecordSeparator(self):
         """
         L{eventsFromJSONLogFile} reads events from a file and automatically
-        detects use of C{u"\x1e"} as the record separator.
+        detects use of C{u"\\x1e"} as the record separator.
         """
         with StringIO(
             u'\x1e{"x": 1}\n'
