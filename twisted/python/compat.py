@@ -454,7 +454,7 @@ Return an iterable of the items of C{d}.
 """
 
 items.__doc__ = """
-Return an list of the items of C{d}.
+Return a list of the items of C{d}.
 
 @type d: L{dict}
 @rtype: L{list}
