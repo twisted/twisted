@@ -377,6 +377,51 @@ class StaticFileTests(TestCase):
 
 
 
+class StaticFileClosingTests(TestCase):
+    """
+    Tests to ensure that L{File} closes open files when requests are finished.
+    """
+    def setUp(self):
+        """
+        Make a mock file object for testing and a test L{File}.
+        """
+        class MockFile(object):
+            closed = False
+            def read(self, ignored):
+                yield b'foo'
+            def close(self):
+                self.closed = True
+
+        self.requestFile = MockFile()
+        path = FilePath(self.mktemp())
+        path.setContent(b"foo")
+        self.file = static.File(path.path)
+        # Open our file instead of a real one
+        self.file.open = lambda: self.requestFile
+
+
+    def test_HEADClosesFile(self):
+        """
+        A HEAD request opens the file, gets the size, and then closes it after
+        the request.
+        """
+        request = DummyRequest([''])
+        request.method = b'HEAD'
+        self.successResultOf(_render(self.file, request))
+        self.assertEqual(self.requestFile.closed, True)
+
+
+    def test_cachedRequestClosesFile(self):
+        """
+        A GET request that is cached closes the file after the request.
+        """
+        request = DummyRequest([''])
+        request.setLastModified = lambda _: http.CACHED # Always cached
+        self.successResultOf(_render(self.file, request))
+        self.assertEqual(self.requestFile.closed, True)
+
+
+
 class StaticMakeProducerTests(TestCase):
     """
     Tests for L{File.makeProducer}.
