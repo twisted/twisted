@@ -211,7 +211,7 @@ class LoggingFileTests(unittest.TestCase):
         f = self.observedFile()
         f.write("Hello\n")
         self.assertEqual(len(f.events), 1)
-        self.assertEqual(f.events[0]["log_format"], u"{message}")
+        self.assertEqual(f.events[0]["log_format"], u"{log_io}")
 
 
     def test_writelinesBuffering(self):
@@ -262,8 +262,8 @@ class LoggingFileTests(unittest.TestCase):
         """
         def observer(event):
             f.events.append(event)
-            if "message" in event:
-                f.messages.append(event["message"])
+            if "log_io" in event:
+                f.messages.append(event["log_io"])
 
         log = Logger(observer=observer)
 

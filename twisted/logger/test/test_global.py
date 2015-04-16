@@ -217,12 +217,12 @@ class LogBeginnerTests(unittest.TestCase):
         self.beginner.beginLoggingTo([x.append])
         print("Hello, world.", file=self.sysModule.stdout)
         compareEvents(
-            self, x, [dict(log_namespace="stdout", message="Hello, world.")]
+            self, x, [dict(log_namespace="stdout", log_io="Hello, world.")]
         )
         del x[:]
         print("Error, world.", file=self.sysModule.stderr)
         compareEvents(
-            self, x, [dict(log_namespace="stderr", message="Error, world.")]
+            self, x, [dict(log_namespace="stderr", log_io="Error, world.")]
         )
 
 
@@ -259,7 +259,7 @@ class LogBeginnerTests(unittest.TestCase):
         self.sysModule.stdout.write(b"\x97\x9B\n")
         self.sysModule.stderr.write(b"\xBC\xFC\n")
         compareEvents(
-            self, x, [dict(message=u"\u674e"), dict(message=u"\u7469")]
+            self, x, [dict(log_io=u"\u674e"), dict(log_io=u"\u7469")]
         )
 
 

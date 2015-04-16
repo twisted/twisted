@@ -167,7 +167,7 @@ class LoggingFile(object):
         lines = lines[0:-1]
 
         for line in lines:
-            self.log.emit(self.level, format=u"{message}", message=line)
+            self.log.emit(self.level, format=u"{log_io}", log_io=line)
 
 
     def writelines(self, lines):
