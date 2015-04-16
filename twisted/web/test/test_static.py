@@ -387,14 +387,12 @@ class StaticFileClosingTests(TestCase):
         """
         class MockFile(object):
             closed = False
-            def read(self, ignored):
-                yield b'foo'
             def close(self):
                 self.closed = True
 
         self.requestFile = MockFile()
         path = FilePath(self.mktemp())
-        path.setContent(b"foo")
+        path.touch()
         self.file = static.File(path.path)
         # Open our file instead of a real one
         self.file.open = lambda: self.requestFile
