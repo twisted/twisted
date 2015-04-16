@@ -11,7 +11,7 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PY3, networkString
+from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor
@@ -21,23 +21,7 @@ from twisted.web import server, resource
 from twisted.web import iweb, http, error
 
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
-
-# Remove this in #6177, when static is ported to Python 3:
-if _PY3:
-    class Data(resource.Resource):
-        def __init__(self, data, type):
-            resource.Resource.__init__(self)
-            self.data = data
-            self.type = type
-
-
-        def render_GET(self, request):
-            request.setHeader(b"content-type", self.type)
-            request.setHeader(b"content-length",
-                              networkString(str(len(self.data))))
-            return self.data
-else:
-    from twisted.web.static import Data
+from twisted.web.static import Data
 
 
 class ResourceTests(unittest.TestCase):
@@ -476,7 +460,7 @@ class GzipEncoderTests(unittest.TestCase):
 
     def setUp(self):
         self.channel = DummyChannel()
-        staticResource = Data(b"Some data", b"text/plain")
+        staticResource = Data(b"Some data", "text/plain")
         wrapped = resource.EncodingResourceWrapper(
             staticResource, [server.GzipEncoderFactory()])
         self.channel.site.resource.putChild(b"foo", wrapped)

@@ -506,6 +506,42 @@ except ImportError:
     FileType = IOBase
 
 
+
+# Dealing with the differences in items/iteritems
+if _PY3:
+    def iteritems(d):
+        return d.items()
+
+    def items(d):
+        return list(d.items())
+
+    xrange = range
+else:
+    def iteritems(d):
+        return d.iteritems()
+
+    def items(d):
+        return d.items()
+
+    xrange = xrange
+
+
+iteritems.__doc__ = """
+Return an iterable of the items of C{d}.
+
+@type d: L{dict}
+@rtype: iterable
+"""
+
+items.__doc__ = """
+Return a list of the items of C{d}.
+
+@type d: L{dict}
+@rtype: L{list}
+"""
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -524,4 +560,7 @@ __all__ = [
     "StringType",
     "InstanceType",
     "FileType",
-    ]
+    "items",
+    "iteritems",
+    "xrange",
+]
