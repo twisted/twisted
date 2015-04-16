@@ -97,6 +97,24 @@ class UtilTests(unittest.TestCase):
         self.assertEquals(errors, [error])
 
 
+    def test_logErrorLogsErrorNoRepr(self):
+        """
+        The text logged by L{defer.logError} has no repr of the failure.
+        """
+        output = []
+
+        def emit(eventDict):
+            output.append(log.textFromEventDict(eventDict))
+
+        log.addObserver(emit)
+
+        error = failure.Failure(RuntimeError())
+        defer.logError(error)
+        self.flushLoggedErrors(RuntimeError)
+
+        self.assertTrue(output[0].startswith("Unhandled Error\nTraceback "))
+
+
 
 class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
@@ -1946,6 +1964,48 @@ class LogTestCase(unittest.SynchronousTestCase):
         _subErrorLogWithInnerFrameCycle()
         gc.collect()
         self._check()
+
+
+    def test_errorLogNoRepr(self):
+        """
+        Verify that when a L{Deferred} with no references to it is fired,
+        the logged message does not contain a repr of the failure object.
+        """
+        defer.Deferred().addCallback(lambda x: 1 // 0).callback(1)
+
+        gc.collect()
+        self._check()
+
+        self.assertEqual(2, len(self.c))
+        msg = log.textFromEventDict(self.c[-1])
+        expected = "Unhandled Error\nTraceback "
+        self.assertTrue(msg.startswith(expected),
+                        "Expected message starting with: {0!r}".
+                            format(expected))
+
+
+    def test_errorLogDebugInfo(self):
+        """
+        Verify that when a L{Deferred} with no references to it is fired,
+        the logged message includes debug info if debugging on the deferred
+        is enabled.
+        """
+        def doit():
+            d = defer.Deferred()
+            d.debug = True
+            d.addCallback(lambda x: 1 // 0)
+            d.callback(1)
+
+        doit()
+        gc.collect()
+        self._check()
+
+        self.assertEqual(2, len(self.c))
+        msg = log.textFromEventDict(self.c[-1])
+        expected = "(debug:  I"
+        self.assertTrue(msg.startswith(expected),
+                        "Expected message starting with: {0!r}".
+                            format(expected))
 
 
     def test_chainedErrorCleanup(self):
