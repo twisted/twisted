@@ -1980,7 +1980,7 @@ class LogTestCase(unittest.SynchronousTestCase):
         msg = log.textFromEventDict(self.c[-1])
         expected = "Unhandled Error\nTraceback "
         self.assertTrue(msg.startswith(expected),
-                        "Expected message starting with: {!r}".
+                        "Expected message starting with: {0!r}".
                             format(expected))
 
 
@@ -2004,7 +2004,7 @@ class LogTestCase(unittest.SynchronousTestCase):
         msg = log.textFromEventDict(self.c[-1])
         expected = "(debug:  I"
         self.assertTrue(msg.startswith(expected),
-                        "Expected message starting with: {!r}".
+                        "Expected message starting with: {0!r}".
                             format(expected))
 
 
