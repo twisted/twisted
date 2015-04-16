@@ -148,6 +148,8 @@ modules = [
     "twisted.web._version",
     "twisted.web.http_headers",
     "twisted.web.resource",
+    "twisted.web.script",
+    "twisted.web.static",
     "twisted.web.test",
     "twisted.web.test.requesthelper",
 ]
@@ -253,11 +255,14 @@ testModules = [
     "twisted.trial.test.test_tests",
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
+    "twisted.web.test._util",
     # The downloadPage tests weren't ported:
     "twisted.web.test.test_http",
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_newclient",
     "twisted.web.test.test_resource",
+    "twisted.web.test.test_script",
+    "twisted.web.test.test_static",
     "twisted.web.test.test_web",
     "twisted.web.test.test_webclient",
 ]
@@ -299,6 +304,8 @@ almostModules = [
     # GzipEncoder and allowed methods functionality not ported, no doubt
     # missing lots of test coverage:
     "twisted.web.server",
+    # Parts are ported for twisted.web.static
+    "twisted.web.util",
 ]
 
 

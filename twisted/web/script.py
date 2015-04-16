@@ -6,15 +6,13 @@
 I contain PythonScript, which is a very simple python script resource.
 """
 
+from __future__ import division, absolute_import
+
 import os, traceback
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
 from twisted import copyright
-from twisted.python.compat import execfile
+from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.python.compat import execfile, networkString, NativeStringIO, _PY3
 from twisted.web import http, server, static, resource, html
 
 
@@ -29,7 +27,8 @@ resource = mygreatresource.MyGreatResource()
 """
 
 class AlreadyCached(Exception):
-    """This exception is raised when a path has already been cached.
+    """
+    This exception is raised when a path has already been cached.
     """
 
 class CacheScanner:
@@ -56,31 +55,35 @@ def ResourceScript(path, registry):
     renderred.
     """
     cs = CacheScanner(path, registry)
-    glob = {'__file__': path,
+    glob = {'__file__': _coerceToFilesystemEncoding("", path),
             'resource': noRsrc,
             'registry': registry,
             'cache': cs.cache,
             'recache': cs.recache}
     try:
         execfile(path, glob, glob)
-    except AlreadyCached, ac:
+    except AlreadyCached as ac:
         return ac.args[0]
     rsrc = glob['resource']
     if cs.doCache and rsrc is not noRsrc:
         registry.cachePath(path, rsrc)
     return rsrc
 
+
+
 def ResourceTemplate(path, registry):
     from quixote import ptl_compile
 
-    glob = {'__file__': path,
+    glob = {'__file__': _coerceToFilesystemEncoding("", path),
             'resource': resource.ErrorPage(500, "Whoops! Internal Error",
                                            rpyNoResource),
             'registry': registry}
 
     e = ptl_compile.compile_template(open(path), path)
-    exec e in glob
+    code = compile(e, "<source>", "exec")
+    eval(code, glob, glob)
     return glob['resource']
+
 
 
 class ResourceScriptWrapper(resource.Resource):
@@ -131,40 +134,48 @@ class ResourceScriptDirectory(resource.Resource):
         return resource.NoResource().render(request)
 
 
+
 class PythonScript(resource.Resource):
-    """I am an extremely simple dynamic resource; an embedded python script.
+    """
+    I am an extremely simple dynamic resource; an embedded python script.
 
     This will execute a file (usually of the extension '.epy') as Python code,
     internal to the webserver.
     """
-    isLeaf = 1
+    isLeaf = True
+
     def __init__(self, filename, registry):
-        """Initialize me with a script name.
+        """
+        Initialize me with a script name.
         """
         self.filename = filename
         self.registry = registry
 
     def render(self, request):
-        """Render me to a web client.
+        """
+        Render me to a web client.
 
         Load my file, execute it in a special namespace (with 'request' and
         '__file__' global vars) and finish the request.  Output to the web-page
         will NOT be handled with print - standard output goes to the log - but
         with request.write.
         """
-        request.setHeader("x-powered-by","Twisted/%s" % copyright.version)
+        request.setHeader(b"x-powered-by", networkString("Twisted/%s" % copyright.version))
         namespace = {'request': request,
-                     '__file__': self.filename,
+                     '__file__': _coerceToFilesystemEncoding("", self.filename),
                      'registry': self.registry}
         try:
             execfile(self.filename, namespace, namespace)
-        except IOError, e:
+        except IOError as e:
             if e.errno == 2: #file not found
                 request.setResponseCode(http.NOT_FOUND)
                 request.write(resource.NoResource("File not found.").render(request))
         except:
-            io = StringIO.StringIO()
+            io = NativeStringIO()
             traceback.print_exc(file=io)
-            request.write(html.PRE(io.getvalue()))
+            output = html.PRE(io.getvalue())
+            if _PY3:
+                output = output.encode("utf8")
+            request.write(output)
         request.finish()
         return server.NOT_DONE_YET
