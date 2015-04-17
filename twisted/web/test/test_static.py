@@ -376,26 +376,19 @@ class StaticFileTests(TestCase):
         return d
 
 
-
-class StaticFileClosingTests(TestCase):
-    """
-    Tests to ensure that L{File} closes open files when requests are finished.
-    """
-    def setUp(self):
+    def _makeFilePathWithStringIO(self):
         """
-        Make a mock file object for testing and a test L{File}.
-        """
-        class MockFile(object):
-            closed = False
-            def close(self):
-                self.closed = True
+        Create a L{File} that when opened for reading, returns a L{StringIO}.
 
-        self.requestFile = MockFile()
+        @return: 2-tuple of the opened "file" and the L{File}.
+        """
+        fakeFile = StringIO()
         path = FilePath(self.mktemp())
         path.touch()
-        self.file = static.File(path.path)
+        file = static.File(path.path)
         # Open our file instead of a real one
-        self.file.open = lambda: self.requestFile
+        file.open = lambda: fakeFile
+        return fakeFile, file
 
 
     def test_HEADClosesFile(self):
@@ -403,20 +396,23 @@ class StaticFileClosingTests(TestCase):
         A HEAD request opens the file, gets the size, and then closes it after
         the request.
         """
+        fakeFile, file = self._makeFilePathWithStringIO()
         request = DummyRequest([''])
         request.method = b'HEAD'
-        self.successResultOf(_render(self.file, request))
-        self.assertEqual(self.requestFile.closed, True)
+        self.successResultOf(_render(file, request))
+        self.assertEqual(fakeFile.closed, True)
 
 
     def test_cachedRequestClosesFile(self):
         """
         A GET request that is cached closes the file after the request.
         """
+        fakeFile, file = self._makeFilePathWithStringIO()
         request = DummyRequest([''])
+        request.method = b'GET'
         request.setLastModified = lambda _: http.CACHED # Always cached
-        self.successResultOf(_render(self.file, request))
-        self.assertEqual(self.requestFile.closed, True)
+        self.successResultOf(_render(file, request))
+        self.assertEqual(fakeFile.closed, True)
 
 
 
