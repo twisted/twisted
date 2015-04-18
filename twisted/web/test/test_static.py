@@ -23,7 +23,7 @@ from twisted.python.compat import iteritems, intToBytes, networkString
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.test._util import _render
 
 
