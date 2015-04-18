@@ -12,6 +12,7 @@ import os
 import warnings
 import itertools
 import time
+import errno
 import mimetypes
 
 from zope.interface import implementer
@@ -581,23 +582,23 @@ class File(resource.Resource, filepath.FilePath):
         try:
             fileForReading = self.openForReading()
         except IOError as e:
-            import errno
             if e.errno == errno.EACCES:
                 return self.forbidden.render(request)
             else:
                 raise
 
-        if request.setLastModified(self.getmtime()) is http.CACHED:
-            # We've opened the file to make sure it's accessible, so close it
-            # now we don't need it
+        if request.setLastModified(self.getModificationTime()) is http.CACHED:
+            # `setLastModified` also sets the response code for us, so if the
+            # request is cached, we close the file now that we've made sure that
+            # the request would otherwise succeed and return an empty body.
             fileForReading.close()
             return b''
 
         if request.method == b'HEAD':
-            # Set the content headers here, rather than making a producer
+            # Set the content headers here, rather than making a producer.
             self._setContentHeaders(request)
             # We've opened the file to make sure it's accessible, so close it
-            # now we don't need it
+            # now that we don't need it.
             fileForReading.close()
             return b''
 

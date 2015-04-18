@@ -400,7 +400,7 @@ class StaticFileTests(TestCase):
         request = DummyRequest([''])
         request.method = b'HEAD'
         self.successResultOf(_render(file, request))
-        self.assertEqual(fakeFile.closed, True)
+        self.assertTrue(fakeFile.closed)
 
 
     def test_cachedRequestClosesFile(self):
@@ -412,7 +412,7 @@ class StaticFileTests(TestCase):
         request.method = b'GET'
         request.setLastModified = lambda _: http.CACHED # Always cached
         self.successResultOf(_render(file, request))
-        self.assertEqual(fakeFile.closed, True)
+        self.assertTrue(fakeFile.closed)
 
 
 
