@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+USAGE="Runs the specified tests inside a virtualenv after installing Twisted.
+If no test module arguments are given, runs the entire test suite.
+Usage: pythonExecutable [<testModule>...]"
+
+if [ "$#" == "0" ]; then
+    echo "$USAGE"
+    exit 1
+fi
+
+PYTHON=$1
+shift
+virtualenv -q --clear -p $PYTHON venv > /dev/null
+venv/bin/$PYTHON setup.py -q install 2> /dev/null
+venv/bin/$PYTHON admin/run-python3-tests --installed "$@"
