@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 USAGE="Runs the specified tests inside a virtualenv after installing Twisted.
 If no test module arguments are given, runs the entire test suite.
 Usage: pythonExecutable [<testModule>...]"

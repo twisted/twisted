@@ -19,8 +19,8 @@ from twisted.names.dns import (
     IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
     Name, Query, Message, RRHeader, Record_A, Record_NS)
 from twisted.names.error import DNSNameError, ResolverError
-
 from twisted.names.test.test_util import MemoryReactor
+
 
 
 def getOnePayload(results):
