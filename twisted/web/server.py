@@ -604,8 +604,8 @@ class Site(http.HTTPFactory):
     A web site: manage log, sessions, and resources.
 
     @ivar counter: increment value used for generating unique sessions ID.
-    @ivar requestFactory: factory creating requests objects. Default to
-        L{Request}.
+    @ivar requestFactory: A factory which is called with (channel, queued)
+        and creates L{Request} instances. Default to L{Request}.
     @ivar displayTracebacks: if set, Twisted internal errors are displayed on
         rendered pages. Default to C{True}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
@@ -617,18 +617,22 @@ class Site(http.HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
 
-    def __init__(self, resource, *args, **kwargs):
+    def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """
         @param resource: The root of the resource hierarchy.  All request
             traversal for requests received by this factory will begin at this
             resource.
         @type resource: L{IResource} provider
+        @param requestFactory: Overwrite for default requestFactory.
+        @type requestFactory: C{callable} or C{class}.
 
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
         http.HTTPFactory.__init__(self, *args, **kwargs)
         self.sessions = {}
         self.resource = resource
+        if requestFactory is not None:
+            self.requestFactory = requestFactory
 
     def _openLogFile(self, path):
         from twisted.python import logfile

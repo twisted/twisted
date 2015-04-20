@@ -53,7 +53,12 @@ class SimpleResource(resource.Resource):
             return b"correct"
 
 
-class SiteTests(unittest.TestCase):
+
+class SiteTest(unittest.TestCase):
+    """
+    Unit tests for L{server.Site}.
+    """
+
     def test_simplestSite(self):
         """
         L{Site.getResourceFor} returns the C{b""} child of the root resource it
@@ -66,6 +71,40 @@ class SiteTests(unittest.TestCase):
         self.assertIdentical(
             site.getResourceFor(DummyRequest([b''])),
             sres2, "Got the wrong resource.")
+
+
+    def test_defaultRequestFactory(self):
+        """
+        L{server.Request} is the default request factory.
+        """
+        site = server.Site(resource=SimpleResource())
+
+        self.assertIs(server.Request, site.requestFactory)
+
+
+    def test_constructorRequestFactory(self):
+        """
+        Can be initialized with a custom requestFactory.
+        """
+        customFactory = object()
+
+        site = server.Site(
+            resource=SimpleResource(), requestFactory=customFactory)
+
+        self.assertIs(customFactory, site.requestFactory)
+
+
+    def test_buildProtocol(self):
+        """
+        Returns a C{Channel} whose C{site} and C{requestFactory} attributes are
+        assigned from the C{site} instance.
+        """
+        site = server.Site(SimpleResource())
+
+        channel = site.buildProtocol(None)
+
+        self.assertIs(site, channel.site)
+        self.assertIs(site.requestFactory, channel.requestFactory)
 
 
 

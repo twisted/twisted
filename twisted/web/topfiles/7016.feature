@@ -1,0 +1,1 @@
+twisted.web.server.Site accepts requestFactory as constructor argument.
