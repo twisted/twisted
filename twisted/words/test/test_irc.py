@@ -14,6 +14,7 @@ from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient, attributes as A
 from twisted.internet import protocol, task
 from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
+from twisted.python.filepath import FilePath
 
 
 
@@ -2614,4 +2615,137 @@ class DccDescribeTests(unittest.TestCase):
         """
         result = irc.dccDescribe('CHAT arg 3232235522 6666')
         self.assertEqual(result, "CHAT for host 192.168.0.2, port 6666")
+
+
+
+class DccFileReceiveTests(unittest.TestCase):
+    """
+    Tests for L{DccFileReceive}.
+    """
+    def makeConnectedDccFileReceive(self, filename, resumeOffset=0,
+                                    overwrite=None):
+        """
+        Factory helper that returns a L{DccFileReceive} instance
+        for a specific test case.
+
+        @param filename: Path to a temporary file as returned by
+             L{TestCase.mktemp}.
+        @type filename: L{str}
+
+        @param resumeOffset: An integer representing the amount of bytes from
+            where the transfer of data should be resumed.
+        @type resumeOffset: L{int}
+
+        @param overwrite: A boolean specifying whether the file to write to
+            should be overwritten by calling L{DccFileReceive.set_overwrite}
+            or not.
+        @type overwrite: L{bool}
+
+        @return: An instance of L{DccFileReceive}.
+        @rtype: L{DccFileReceive}
+        """
+        protocol = irc.DccFileReceive(filename, resumeOffset=resumeOffset)
+        if overwrite:
+            protocol.set_overwrite(True)
+        transport = StringTransport()
+        protocol.makeConnection(transport)
+        return protocol
+
+
+    def allDataReceivedForProtocol(self, protocol, data):
+        """
+        Calls protocol methods of the protocol instance (an instance of
+        L{DccFileReceive}, in this case) that has been passed as an
+        argument to this method.
+
+        @param protocol: An instance of L{DccFileReceive} for a specific
+            test case.
+        @type: L{DccFileReceive}
+
+        @param data: The data that is passed as an argument to
+            L{DccFileReceive.dataReceived}.
+        @type data: L{str}
+        """
+        protocol.dataReceived(data)
+        protocol.connectionLost(None)
+
+
+    def test_resumeFromResumeOffset(self):
+        """
+        If given a resumeOffset argument, L{DccFileReceive} will attempt to
+        resume from that number of bytes if the file exists.
+        """
+        fp = FilePath(self.mktemp())
+        fp.setContent("Twisted is awesome!")
+        protocol = self.makeConnectedDccFileReceive(fp.path, resumeOffset=11)
+
+        self.allDataReceivedForProtocol(protocol, "amazing!")
+
+        self.assertEqual(fp.getContent(), "Twisted is amazing!")
+
+
+    def test_resumeFromResumeOffsetInTheMiddleOfAlreadyWrittenData(self):
+        """
+        When resuming from an offset somewhere in the middle of the file,
+        for example, if there are 50 bytes in a file, and L{DccFileReceive}
+        is given a resumeOffset of 25, and after that 15 more bytes are
+        written to the file, then the resultant file should have just 40
+        bytes of data, and L{DccFileReceive} should make sure that the
+        old remaining 10 bytes (in what was previously a file with 50 bytes
+        of data in it) are truncated.
+        """
+        fp = FilePath(self.mktemp())
+        fp.setContent("Twisted is amazing!")
+        protocol = self.makeConnectedDccFileReceive(fp.path, resumeOffset=11)
+
+        self.allDataReceivedForProtocol(protocol, "cool!")
+
+        self.assertEqual(fp.getContent(), "Twisted is cool!")
+
+
+    def test_setOverwrite(self):
+        """
+        We can overwrite the file (or create a new one if there is no file
+        to overwrite) using the L{DccFileReceive.set_overwrite} method.
+        """
+        fp = FilePath(self.mktemp())
+        fp.setContent("I love contributing to Twisted!")
+        protocol = self.makeConnectedDccFileReceive(fp.path, overwrite=True)
+
+        self.allDataReceivedForProtocol(protocol, "Twisted rocks!")
+
+        self.assertEqual(fp.getContent(), "Twisted rocks!")
+
+
+    def test_fileDoesNotExist(self):
+        """
+        If the file does not already exist, then L{DccFileReceive} will
+        create one and write the data to it.
+        """
+        fp = FilePath(self.mktemp())
+        protocol = self.makeConnectedDccFileReceive(fp.path)
+
+        self.allDataReceivedForProtocol(protocol, "I <3 Twisted")
+
+        self.assertEqual(fp.getContent(), "I <3 Twisted")
+
+
+    def test_resumeWhenFileDoesNotExist(self):
+        """
+        If given a resumeOffset to resume writing to a file that does not
+        exist, L{DccFileReceive} will raise L{OSError}.
+        """
+        self.assertRaises(OSError, self.makeConnectedDccFileReceive,
+                          self.mktemp(), 11)
+
+
+    def test_cannotOpenFile(self):
+        """
+        If L{DccFileReceive} can't open the file, or if the file already
+        exists, L{OSError} will be raised.
+        """
+        fp = FilePath(self.mktemp())
+        fp.touch()
+
+        self.assertRaises(OSError, self.makeConnectedDccFileReceive, fp.path)
 
