@@ -2628,8 +2628,7 @@ class DccFileReceiveTests(unittest.TestCase):
         Factory helper that returns a L{DccFileReceive} instance
         for a specific test case.
 
-        @param filename: Path to a temporary file as returned by
-             L{TestCase.mktemp}.
+        @param filename: Path to the local file where received data is stored.
         @type filename: L{str}
 
         @param resumeOffset: An integer representing the amount of bytes from
@@ -2654,17 +2653,13 @@ class DccFileReceiveTests(unittest.TestCase):
 
     def allDataReceivedForProtocol(self, protocol, data):
         """
-        Calls protocol methods of the protocol instance (an instance of
-        L{DccFileReceive}, in this case) that has been passed as an
-        argument to this method.
+        Arrange the protocol so that it received all data.
 
-        @param protocol: An instance of L{DccFileReceive} for a specific
-            test case.
+        @param protocol: The protocol which will receive the data.
         @type: L{DccFileReceive}
 
-        @param data: The data that is passed as an argument to
-            L{DccFileReceive.dataReceived}.
-        @type data: L{str}
+        @param data: The received data.
+        @type data: L{bytest}
         """
         protocol.dataReceived(data)
         protocol.connectionLost(None)
@@ -2676,12 +2671,12 @@ class DccFileReceiveTests(unittest.TestCase):
         resume from that number of bytes if the file exists.
         """
         fp = FilePath(self.mktemp())
-        fp.setContent("Twisted is awesome!")
+        fp.setContent(b'Twisted is awesome!')
         protocol = self.makeConnectedDccFileReceive(fp.path, resumeOffset=11)
 
-        self.allDataReceivedForProtocol(protocol, "amazing!")
+        self.allDataReceivedForProtocol(protocol, b'amazing!')
 
-        self.assertEqual(fp.getContent(), "Twisted is amazing!")
+        self.assertEqual(fp.getContent(), b'Twisted is amazing!')
 
 
     def test_resumeFromResumeOffsetInTheMiddleOfAlreadyWrittenData(self):
@@ -2690,31 +2685,29 @@ class DccFileReceiveTests(unittest.TestCase):
         for example, if there are 50 bytes in a file, and L{DccFileReceive}
         is given a resumeOffset of 25, and after that 15 more bytes are
         written to the file, then the resultant file should have just 40
-        bytes of data, and L{DccFileReceive} should make sure that the
-        old remaining 10 bytes (in what was previously a file with 50 bytes
-        of data in it) are truncated.
+        bytes of data.
         """
         fp = FilePath(self.mktemp())
-        fp.setContent("Twisted is amazing!")
+        fp.setContent(b'Twisted is amazing!')
         protocol = self.makeConnectedDccFileReceive(fp.path, resumeOffset=11)
 
-        self.allDataReceivedForProtocol(protocol, "cool!")
+        self.allDataReceivedForProtocol(protocol, b'cool!')
 
-        self.assertEqual(fp.getContent(), "Twisted is cool!")
+        self.assertEqual(fp.getContent(), b'Twisted is cool!')
 
 
     def test_setOverwrite(self):
         """
-        We can overwrite the file (or create a new one if there is no file
-        to overwrite) using the L{DccFileReceive.set_overwrite} method.
+        When local file already exists it can be overwritten using the
+        L{DccFileReceive.set_overwrite} method.
         """
         fp = FilePath(self.mktemp())
-        fp.setContent("I love contributing to Twisted!")
+        fp.setContent(b'I love contributing to Twisted!')
         protocol = self.makeConnectedDccFileReceive(fp.path, overwrite=True)
 
-        self.allDataReceivedForProtocol(protocol, "Twisted rocks!")
+        self.allDataReceivedForProtocol(protocol, b'Twisted rocks!')
 
-        self.assertEqual(fp.getContent(), "Twisted rocks!")
+        self.assertEqual(fp.getContent(), b'Twisted rocks!')
 
 
     def test_fileDoesNotExist(self):
@@ -2725,9 +2718,9 @@ class DccFileReceiveTests(unittest.TestCase):
         fp = FilePath(self.mktemp())
         protocol = self.makeConnectedDccFileReceive(fp.path)
 
-        self.allDataReceivedForProtocol(protocol, "I <3 Twisted")
+        self.allDataReceivedForProtocol(protocol, b'I <3 Twisted')
 
-        self.assertEqual(fp.getContent(), "I <3 Twisted")
+        self.assertEqual(fp.getContent(), b'I <3 Twisted')
 
 
     def test_resumeWhenFileDoesNotExist(self):
@@ -2735,17 +2728,27 @@ class DccFileReceiveTests(unittest.TestCase):
         If given a resumeOffset to resume writing to a file that does not
         exist, L{DccFileReceive} will raise L{OSError}.
         """
-        self.assertRaises(OSError, self.makeConnectedDccFileReceive,
-                          self.mktemp(), 11)
+        self.assertRaises(
+            OSError,
+            self.makeConnectedDccFileReceive, self.mktemp(), 11)
 
 
-    def test_cannotOpenFile(self):
+    def test_fileAlreadyExistsNoOverwrite(self):
         """
-        If L{DccFileReceive} can't open the file, or if the file already
-        exists, L{OSError} will be raised.
+        If the file already exists and overwrite action was not asked,
+        L{OSError} is raised.
         """
         fp = FilePath(self.mktemp())
         fp.touch()
 
         self.assertRaises(OSError, self.makeConnectedDccFileReceive, fp.path)
+
+
+    def test_failToOpenLocalFile(self):
+        """
+        L{IOError} is raised when failing to open the requested path.
+        """
+        fp = FilePath(self.mktemp()).child(u'child-with-no-existing-parent')
+
+        self.assertRaises(IOError, self.makeConnectedDccFileReceive, fp.path)
 
