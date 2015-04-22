@@ -7,11 +7,13 @@ Tests for implementations of L{IReactorProcess}.
 
 from __future__ import division, absolute_import, print_function
 
-__metaclass__ = type
-
-import os, io, sys, signal, threading
-
+import io
+import os
+import signal
+import sys
+import threading
 import twisted
+
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
@@ -24,8 +26,10 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
 
+
+
 # Get the current Python executable as a bytestring.
-exe = FilePath(sys.executable)._asBytesPath()
+pyExe = FilePath(sys.executable)._asBytesPath()
 twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = None
@@ -83,7 +87,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         reactor = self.buildReactor()
         transport = reactor.spawnProcess(
-            protocol, exe, [exe, b"-c", b""],
+            protocol, pyExe, [pyExe, b"-c", b""],
             usePTY=self.usePTY)
 
         # The transport is available synchronously, so we can check it right
@@ -123,7 +127,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def startup():
             transport = reactor.spawnProcess(
-                protocol, exe, [exe, b"-c", program])
+                protocol, pyExe, [pyExe, b"-c", program])
             try:
                 write(transport, bytesToSend)
             except:
@@ -207,8 +211,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # Start a process - before starting the reactor!
         ended = Deferred()
         reactor.spawnProcess(
-            _ShutdownCallbackProcessProtocol(ended), exe,
-            [exe, b"-c", b""], usePTY=self.usePTY, childFDs=childFDs)
+            _ShutdownCallbackProcessProtocol(ended), pyExe,
+            [pyExe, b"-c", b""], usePTY=self.usePTY, childFDs=childFDs)
 
         # Wait for the SIGCHLD (which might have been delivered before we got
         # here, but that's okay because the signal handler was installed above,
@@ -281,8 +285,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Exiter(), exe,
-            [exe, b"-c", source], usePTY=self.usePTY)
+            reactor.spawnProcess, Exiter(), pyExe,
+            [pyExe, b"-c", source], usePTY=self.usePTY)
 
         def cbExited(args):
             failure, = args
@@ -326,10 +330,11 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                os.popen('%s -c "import time; time.sleep(0.1)"' %
-                    (exe.decode('ascii'),))
-                f2 = os.popen('%s -c "import time; time.sleep(0.5); print(\'Foo\')"' %
-                    (exe.decode('ascii'),))
+                os.popen(u'%s -c "import time; time.sleep(0.1)"' %
+                    (pyExe.decode('ascii'),))
+                f2 = os.popen(u'%s -c "import time; time.sleep(0.5);'
+                              'print(\'Foo\')"' %
+                              (pyExe.decode('ascii'),))
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
@@ -398,8 +403,8 @@ sys.stdout.flush()""".format(twistedRoot.path))
         reactor = self.buildReactor()
 
         reactor.callWhenRunning(
-            reactor.spawnProcess, GatheringProtocol(), exe,
-            [exe, b"-Wignore", b"-c", source], usePTY=self.usePTY)
+            reactor.spawnProcess, GatheringProtocol(), pyExe,
+            [pyExe, b"-Wignore", b"-c", source], usePTY=self.usePTY)
 
         self.runReactor(reactor)
         reportedChildFDs = set(eval(output.getvalue()))
@@ -436,8 +441,8 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         protocol = ExitingProtocol()
         reactor.callWhenRunning(
-            reactor.spawnProcess, protocol, exe,
-            [exe, b"-c", b"raise SystemExit(0)"],
+            reactor.spawnProcess, protocol, pyExe,
+            [pyExe, b"-c", b"raise SystemExit(0)"],
             usePTY=self.usePTY)
 
         # This will timeout if processExited isn't called:
@@ -467,8 +472,8 @@ sys.stdout.flush()""".format(twistedRoot.path))
         reactor = self.buildReactor()
         protocol = CaptureExitStatus()
         reactor.callWhenRunning(
-            reactor.spawnProcess, protocol, exe,
-            [exe, "-c", "\n".join(program)],
+            reactor.spawnProcess, protocol, pyExe,
+            [pyExe, "-c", "\n".join(program)],
             **{which: 1})
 
         self.runReactor(reactor)
@@ -514,7 +519,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         protocol = Protocol()
         transport = reactor.spawnProcess(
-               protocol, exe, [exe, b"-c", b""],
+               protocol, pyExe, [pyExe, b"-c", b""],
                usePTY=self.usePTY)
         self.runReactor(reactor)
 
@@ -568,8 +573,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Closer(), exe,
-            [exe, target.path], usePTY=self.usePTY)
+            reactor.spawnProcess, Closer(), pyExe,
+            [pyExe, target.path], usePTY=self.usePTY)
 
         def cbConnected(transport):
             transport.write(b'2\n')
@@ -621,8 +626,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Ender(), exe,
-            [exe, self.keepStdioOpenProgram, b"child",
+            reactor.spawnProcess, Ender(), pyExe,
+            [pyExe, self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
@@ -669,8 +674,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Waiter(), exe,
-            [exe, self.keepStdioOpenProgram, b"child",
+            reactor.spawnProcess, Waiter(), pyExe,
+            [pyExe, self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
@@ -698,9 +703,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         path to it.
         """
         script = _asFilesystemBytes(self.mktemp())
-        scriptFile = open(script, 'wt')
-        scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
-        scriptFile.close()
+        with open(script, 'wt') as scriptFile:
+            scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 
 
@@ -713,7 +717,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         SHEBANG_OUTPUT = b'this is the shebang output'
 
         scriptFile = self.makeSourceFile([
-                "#!%s" % (exe.decode('ascii'),),
+                "#!%s" % (pyExe.decode('ascii'),),
                 "import sys",
                 "sys.stdout.write('%s')" % (SHEBANG_OUTPUT.decode('ascii'),),
                 "sys.stdout.flush()"])
@@ -772,7 +776,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def spawnChild():
             d = succeed(None)
             d.addCallback(lambda dummy: utils.getProcessOutputAndValue(
-                exe, [us.path] + args, reactor=reactor))
+                pyExe, [us.path] + args, reactor=reactor))
             d.addCallback(processFinished)
             d.addBoth(shutdown)
 
