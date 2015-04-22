@@ -417,7 +417,7 @@ class _BaseProcess(BaseProcess, object):
                     # XXXX: however even libc assumes write(2, err) is a useful
                     #       thing to attempt
                     try:
-                        stderr = os.fdopen(2, 'wb')
+                        stderr = os.fdopen(2, 'w')
                         msg = ("Upon execvpe {0} {1} in environment id {2}"
                                "\n:").format(executable, str(args),
                                              id(environment))
@@ -425,12 +425,8 @@ class _BaseProcess(BaseProcess, object):
                         traceback.print_exc(file=tb)
                         tb = tb.getvalue()
 
-                        if _PY3:
-                            stderr.write(msg.encode("utf8"))
-                            stderr.write(tb.encode("utf8"))
-                        else:
-                            stderr.write(msg)
-                            stderr.write(tb)
+                        stderr.write(msg)
+                        stderr.write(tb)
                         stderr.flush()
 
                         for fd in xrange(3):
@@ -615,7 +611,6 @@ class Process(_BaseProcess):
     code is not cross-platform. (also, windows can only select
     on sockets...)
     """
-
     debug = False
     debug_child = False
 
@@ -761,10 +756,10 @@ class Process(_BaseProcess):
         debug = self.debug_child
         if debug:
             errfd = sys.stderr
-            errfd.write(b"starting _setupChild\n")
+            errfd.write("starting _setupChild\n")
 
-        destList = list(fdmap.values())
-        for fd in list(_listOpenFDs()):
+        destList = fdmap.values()
+        for fd in _listOpenFDs():
             if fd in destList:
                 continue
             if debug and fd == errfd.fileno():
@@ -779,8 +774,7 @@ class Process(_BaseProcess):
         # of fdmap, i.e. fdmap.values() )
 
         if debug: print("fdmap", fdmap, file=errfd)
-        childlist = list(fdmap.keys())
-        childlist.sort()
+        childlist = sorted(fdmap.keys())
 
         for child in childlist:
             target = fdmap[child]
@@ -813,7 +807,7 @@ class Process(_BaseProcess):
         # need to remove duplicates first.
 
         old = []
-        for fd in list(fdmap.values()):
+        for fd in fdmap.values():
             if not fd in old:
                 if not fd in list(fdmap.keys()):
                     old.append(fd)

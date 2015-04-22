@@ -22,7 +22,7 @@ from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolv
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import fdesc, main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
-from twisted.python.compat import unicode, items
+from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -916,7 +916,7 @@ class ReactorBase(object):
         outputEnv = None
         if env is not None:
             outputEnv = {}
-            for key, val in items(env):
+            for key, val in iteritems(env):
                 key = argChecker(key)
                 if key is None:
                     raise TypeError("Environment contains a non-string key")

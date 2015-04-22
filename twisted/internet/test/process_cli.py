@@ -9,6 +9,7 @@ except ImportError:
     pass
 
 
+# Loop over each of the arguments given and print it to stdout
 for arg in sys.argv[1:]:
     res = arg + chr(0)
 

@@ -41,7 +41,7 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
-from twisted.python.compat import _PY3, networkString
+from twisted.python.compat import _PY3, networkString, NativeStringIO, xrange
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 
 
@@ -581,7 +581,7 @@ class ProcessTestCase(unittest.TestCase):
         protocols = []
         deferreds = []
 
-        for i in range(CONCURRENT_PROCESS_TEST_COUNT):
+        for i in xrange(CONCURRENT_PROCESS_TEST_COUNT):
             p = TestManyProcessProtocol()
             protocols.append(p)
             reactor.spawnProcess(p, exe, args, env=None)
@@ -617,7 +617,8 @@ class ProcessTestCase(unittest.TestCase):
 
 
     def testCommandLine(self):
-        args = [br'a\"b ', br'a\b ', br' a\\"b', br' a\\b', br'"foo bar" "', b'\tab', b'"\\', b'a"b', b"a'b"]
+        args = [br'a\"b ', br'a\b ', br' a\\"b', br' a\\b', br'"foo bar" "',
+                b'\tab', b'"\\', b'a"b', b"a'b"]
         scriptPath = FilePath(__file__).sibling(b"process_cmdline.py").path
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
@@ -1245,7 +1246,7 @@ class MockOS(object):
     @type raiseExec: C{bool}
 
     @ivar fdio: fake file object returned by calls to fdopen.
-    @type fdio: C{StringIO}
+    @type fdio: C{NativeStringIO}
 
     @ivar actions: hold names of some actions executed by the object, in order
         of execution.
@@ -1336,10 +1337,10 @@ class MockOS(object):
 
     def fdopen(self, fd, flag):
         """
-        Fake C{os.fdopen}. Return a StringIO object whose content can be tested
-        later via C{self.fdio}.
+        Fake C{os.fdopen}. Return a L{NativeStringIO} object whose content can
+        be tested later via C{self.fdio}.
         """
-        self.fdio = StringIO()
+        self.fdio = NativeStringIO()
         return self.fdio
 
 
@@ -1891,7 +1892,7 @@ class MockProcessTestCase(unittest.TestCase):
             self.assertIn(1, self.mockos.closed)
             self.assertIn(2, self.mockos.closed)
             # Check content of traceback
-            self.assertIn(b"RuntimeError: Bar", self.mockos.fdio.getvalue())
+            self.assertIn("RuntimeError: Bar", self.mockos.fdio.getvalue())
         else:
             self.fail("Should not be here")
 
@@ -2116,7 +2117,8 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, exe,
                              [exe, b"-c",
-                              networkString("import sys; sys.stderr.write('{0}')".format(value))],
+                              networkString("import sys; sys.stderr.write"
+                                            "('{0}')".format(value))],
                              env=None, path="/tmp",
                              usePTY=self.usePTY)
 
