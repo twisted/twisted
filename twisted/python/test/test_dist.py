@@ -118,6 +118,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['tls']
         self.assertIn('pyopenssl >= 0.11', deps)
         self.assertIn('service_identity', deps)
+        self.assertIn('idna', deps)
 
 
     def test_extrasRequiresConchDeps(self):
@@ -163,6 +164,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['all_non_platform']
         self.assertIn('pyopenssl >= 0.11', deps)
         self.assertIn('service_identity', deps)
+        self.assertIn('idna', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('pycrypto', deps)
@@ -179,6 +181,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['osx_platform']
         self.assertIn('pyopenssl >= 0.11', deps)
         self.assertIn('service_identity', deps)
+        self.assertIn('idna', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('pycrypto', deps)
@@ -196,6 +199,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['windows_platform']
         self.assertIn('pyopenssl >= 0.11', deps)
         self.assertIn('service_identity', deps)
+        self.assertIn('idna', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('pycrypto', deps)
