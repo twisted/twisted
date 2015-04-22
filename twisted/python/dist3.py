@@ -35,7 +35,7 @@ modules = [
     "twisted._version",
     "twisted.copyright",
     "twisted.internet",
-    "twisted.internet._baseprocess.py",
+    "twisted.internet._baseprocess",
     "twisted.internet._glibbase",
     "twisted.internet._newtls",
     "twisted.internet._posixstdio",
