@@ -12,8 +12,14 @@ Maintainer: Itamar Shtull-Trauring
 
 from __future__ import division, absolute_import, print_function
 
-# System Imports
-import gc, os, sys, stat, traceback, select, signal, errno
+import errno
+import gc
+import os
+import select
+import signal
+import stat
+import sys
+import traceback
 
 try:
     import pty

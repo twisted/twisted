@@ -2576,7 +2576,7 @@ class ClosingPipes(unittest.TestCase):
         d = self.doit(2)
         def _check(errput):
             # there should be no stderr open, so nothing for it to
-            # write the error to.]
+            # write the error to.
             self.assertEqual(errput, b'')
         d.addCallback(_check)
         return d
