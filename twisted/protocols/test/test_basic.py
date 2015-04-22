@@ -16,6 +16,7 @@ from zope.interface.verify import verifyObject
 from twisted.python.compat import _PY3, iterbytes
 from twisted.trial import unittest
 from twisted.protocols import basic
+from twisted.python import reflect
 from twisted.internet import protocol, error, task
 from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
@@ -1312,3 +1313,48 @@ class FileSenderTests(unittest.TestCase):
         failure.trap(Exception)
         self.assertEqual("Consumer asked us to stop producing",
                          str(failure.value))
+
+
+
+class GPSDeprecationTests(unittest.TestCase):
+    """
+    Contains tests to make sure twisted.protocols.gps is marked as deprecated.
+    """
+    if _PY3:
+        skip = "twisted.protocols.gps is not being ported to Python 3."
+
+
+    def test_GPSDeprecation(self):
+        """
+        L{twisted.protocols.gps} is deprecated since Twisted 15.2.
+        """
+        reflect.namedAny("twisted.protocols.gps")
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "twisted.protocols.gps was deprecated in Twisted 15.2.0: "
+            "Use twisted.positioning instead.", warningsShown[0]['message'])
+
+
+    def test_RockwellDeprecation(self):
+        """
+        L{twisted.protocols.gps.rockwell} is deprecated since Twisted 15.2.
+        """
+        reflect.namedAny("twisted.protocols.gps.rockwell")
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "twisted.protocols.gps was deprecated in Twisted 15.2.0: "
+            "Use twisted.positioning instead.", warningsShown[0]['message'])
+
+
+    def test_NMEADeprecation(self):
+        """
+        L{twisted.protocols.gps.nmea} is deprecated since Twisted 15.2.
+        """
+        reflect.namedAny("twisted.protocols.gps.nmea")
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "twisted.protocols.gps was deprecated in Twisted 15.2.0: "
+            "Use twisted.positioning instead.", warningsShown[0]['message'])
