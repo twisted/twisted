@@ -39,8 +39,6 @@ from twisted.python.compat import _PY3
 if gireactor is None:
     skip = "gtk3/gi not importable"
 
-exe = FilePath(sys.executable)._asBytesPath()
-
 
 
 class GApplicationRegistration(ReactorBuilder, TestCase):
@@ -213,9 +211,10 @@ class PygtkCompatibilityTests(TestCase):
                 result.callback(self.data)
 
         path = FilePath(__file__).sibling(b"process_gireactornocompat.py").path
+        pyExe = FilePath(sys.executable)._asBytesPath()
         # Pass in a PYTHONPATH that is the test runner's os.path, to make sure
         # we're running from a checkout
-        reactor.spawnProcess(Stdout(), exe, [exe, path],
+        reactor.spawnProcess(Stdout(), pyExe, [pyExe, path],
                              env={"PYTHONPATH": ":".join(os.path)})
         result.addCallback(self.assertEqual, b"success")
         return result
