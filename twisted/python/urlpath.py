@@ -4,8 +4,16 @@
 
 #
 
-import urlparse
-import urllib
+from __future__ import division, absolute_import
+
+from twisted.python.compat import _PY3
+if not _PY3:
+    import urlparse
+    from urllib import unquote as unquoteFunc
+else:
+    import urllib.parse as urlparse
+    from urllib.parse import unquote as unquoteFunc
+
 
 class URLPath:
     def __init__(self, scheme='', netloc='localhost', path='',
@@ -18,11 +26,11 @@ class URLPath:
 
     _qpathlist = None
     _uqpathlist = None
-    
+
     def pathList(self, unquote=0, copy=1):
         if self._qpathlist is None:
             self._qpathlist = self.path.split('/')
-            self._uqpathlist = map(urllib.unquote, self._qpathlist)
+            self._uqpathlist = map(unquoteFunc, self._qpathlist)
         if unquote:
             result = self._uqpathlist
         else:
@@ -101,7 +109,7 @@ class URLPath:
                 l = self.pathList()
                 l[-1] = path
                 path = '/'.join(l)
-        
+
         return URLPath(scheme,
                         netloc,
                         path,
@@ -109,7 +117,7 @@ class URLPath:
                         fragment)
 
 
-    
+
     def __str__(self):
         x = urlparse.urlunsplit((
             self.scheme, self.netloc, self.path,
