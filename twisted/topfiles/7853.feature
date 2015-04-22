@@ -1,1 +1,1 @@
-Include the idna package in the tls extra.
+The tls optional dependency will now also install the idna package to validate idna2008 names.

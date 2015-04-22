@@ -27,6 +27,7 @@ The following optional dependencies are supported:
 * **tls** - packages that are needed to work with TLS.
     * `pyOpenSSL`_
     * `service_identity`_
+    * `idna`_
 
 * **conch** - packages for working with conch/SSH.
     * `gmpy`_
@@ -61,3 +62,4 @@ The following optional dependencies are supported:
 .. _pypiwin32: https://pypi.python.org/pypi/pypiwin32
 .. _`setuptools documentation`: https://pythonhosted.org/setuptools/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 .. _`python packaging tutorial`: https://packaging.python.org/en/latest/installing.html#examples
+.. _idna: https://pypi.python.org/pypi/idna
