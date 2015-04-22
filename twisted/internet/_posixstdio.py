@@ -11,19 +11,20 @@ Future Plans::
 Maintainer: James Y Knight
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import process, error, interfaces
 from twisted.python import log, failure
 
 
+@implementer(interfaces.IAddress)
 class PipeAddress(object):
-    implements(interfaces.IAddress)
+    pass
 
 
+@implementer(interfaces.ITransport, interfaces.IProducer,
+             interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
 class StandardIO(object):
-    implements(interfaces.ITransport, interfaces.IProducer,
-               interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
 
     _reader = None
     _writer = None

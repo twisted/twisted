@@ -33,10 +33,14 @@ from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.test.test_twisted import SetAsideModule
 from twisted.internet.interfaces import IReactorProcess
+from twisted.python.compat import _PY3
 
 # Skip all tests if gi is unavailable:
 if gireactor is None:
     skip = "gtk3/gi not importable"
+
+exe = FilePath(sys.executable)._asBytesPath()
+
 
 
 class GApplicationRegistration(ReactorBuilder, TestCase):
@@ -180,7 +184,6 @@ class PygtkCompatibilityTests(TestCase):
     pygtk imports are either prevented, or a compatibility layer is used if
     possible.
     """
-
     def test_noCompatibilityLayer(self):
         """
         If no compatibility layer is present, imports of gobject and friends
@@ -189,6 +192,9 @@ class PygtkCompatibilityTests(TestCase):
         We do this by running a process where we make sure gi.pygtkcompat
         isn't present.
         """
+        if _PY3:
+            raise SkipTest("Python3 always has the compatibility layer.")
+
         from twisted.internet import reactor
         if not IReactorProcess.providedBy(reactor):
             raise SkipTest("No process support available in this reactor.")
@@ -206,10 +212,11 @@ class PygtkCompatibilityTests(TestCase):
             def processExited(self, reason):
                 result.callback(self.data)
 
-        path = FilePath(__file__.encode("utf-8")).sibling(
-            b"process_gireactornocompat.py").path
-        reactor.spawnProcess(Stdout(), sys.executable, [sys.executable, path],
-                             env=os.environ)
+        path = FilePath(__file__).sibling(b"process_gireactornocompat.py").path
+        # Pass in a PYTHONPATH that is the test runner's os.path, to make sure
+        # we're running from a checkout
+        reactor.spawnProcess(Stdout(), exe, [exe, path],
+                             env={"PYTHONPATH": ":".join(os.path)})
         result.addCallback(self.assertEqual, b"success")
         return result
 
