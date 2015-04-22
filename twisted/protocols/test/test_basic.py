@@ -1320,6 +1320,9 @@ class GPSDeprecationTests(unittest.TestCase):
     """
     Contains tests to make sure twisted.protocols.gps is marked as deprecated.
     """
+    if _PY3:
+        skip = "twisted.protocols.gps is not being ported to Python 3."
+
     def test_GPSDeprecation(self):
         """
         L{twisted.protocols.gps} is deprecated since Twisted 15.2.
