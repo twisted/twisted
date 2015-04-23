@@ -381,6 +381,7 @@ class StaticFileTests(TestCase):
         Create a L{File} that when opened for reading, returns a L{StringIO}.
 
         @return: 2-tuple of the opened "file" and the L{File}.
+        @rtype: L{tuple}
         """
         fakeFile = StringIO()
         path = FilePath(self.mktemp())
@@ -400,6 +401,7 @@ class StaticFileTests(TestCase):
         request = DummyRequest([''])
         request.method = b'HEAD'
         self.successResultOf(_render(file, request))
+        self.assertEqual(b''.join(request.written), b'')
         self.assertTrue(fakeFile.closed)
 
 
@@ -410,8 +412,10 @@ class StaticFileTests(TestCase):
         fakeFile, file = self._makeFilePathWithStringIO()
         request = DummyRequest([''])
         request.method = b'GET'
-        request.setLastModified = lambda _: http.CACHED # Always cached
+        # This request will always return saying that it is cached
+        request.setLastModified = lambda _: http.CACHED
         self.successResultOf(_render(file, request))
+        self.assertEqual(b''.join(request.written), b'')
         self.assertTrue(fakeFile.closed)
 
 
