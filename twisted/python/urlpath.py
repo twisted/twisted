@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_paths -*-
+# -*- test-case-name: twisted.test.test_urlpath -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -15,7 +15,8 @@ else:
     from urllib.parse import unquote as unquoteFunc
 
 
-class URLPath:
+
+class URLPath(object):
     def __init__(self, scheme='', netloc='localhost', path='',
                  query='', fragment=''):
         self.scheme = scheme or 'http'
