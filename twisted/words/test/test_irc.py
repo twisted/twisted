@@ -2729,16 +2729,6 @@ class DccFileReceiveTests(unittest.TestCase):
         If given a resumeOffset to resume writing to a file that does not
         exist, L{DccFileReceive} will raise L{OSError}.
         """
-        self.assertRaises(
-            OSError,
-            self.makeConnectedDccFileReceive, self.mktemp(), 11)
-
-
-    def test_fileDontExistsWithResume(self):
-        """
-        If the file don't exists and resume action was asked, L{OSError} is
-        raised.
-        """
         fp = FilePath(self.mktemp())
 
         error = self.assertRaises(
