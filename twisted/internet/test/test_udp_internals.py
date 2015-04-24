@@ -65,7 +65,7 @@ class KeepReads(DatagramProtocol):
 
 
 
-class ErrorsTestCase(unittest.SynchronousTestCase):
+class ErrorsTests(unittest.SynchronousTestCase):
     """
     Error handling tests for C{udp.Port}.
     """

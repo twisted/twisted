@@ -41,7 +41,7 @@ class ObjectModelIntegrationMixin(object):
 
 
 
-class ObjectModelIntegrationTest(ReactorBuilder, ObjectModelIntegrationMixin):
+class ObjectModelIntegrationTests(ReactorBuilder, ObjectModelIntegrationMixin):
     """
     Test details of object model integration against all reactors.
     """
@@ -330,4 +330,4 @@ class SystemEventTestsBuilder(ReactorBuilder):
 
 
 globals().update(SystemEventTestsBuilder.makeTestCaseClasses())
-globals().update(ObjectModelIntegrationTest.makeTestCaseClasses())
+globals().update(ObjectModelIntegrationTests.makeTestCaseClasses())

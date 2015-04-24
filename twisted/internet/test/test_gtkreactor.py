@@ -11,7 +11,7 @@ import sys
 from twisted.trial.unittest import TestCase
 
 
-class GtkReactorDeprecation(TestCase):
+class GtkReactorDeprecationTests(TestCase):
     """
     Tests to ensure all attributes of L{twisted.internet.gtkreactor} are 
     deprecated.

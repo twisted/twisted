@@ -141,8 +141,8 @@ class HostnameAddressTests(unittest.TestCase, AddressTestCaseMixin):
 
 
 
-class IPv4AddressTCPTestCase(unittest.SynchronousTestCase,
-                             IPv4AddressTestCaseMixin):
+class IPv4AddressTCPTests(unittest.SynchronousTestCase,
+                          IPv4AddressTestCaseMixin):
     def buildAddress(self):
         """
         Create an arbitrary new L{IPv4Address} instance with a C{"TCP"}
@@ -174,8 +174,8 @@ class IPv4AddressTCPTestCase(unittest.SynchronousTestCase,
 
 
 
-class IPv4AddressUDPTestCase(unittest.SynchronousTestCase,
-                             IPv4AddressTestCaseMixin):
+class IPv4AddressUDPTests(unittest.SynchronousTestCase,
+                          IPv4AddressTestCaseMixin):
     def buildAddress(self):
         """
         Create an arbitrary new L{IPv4Address} instance with a C{"UDP"}
@@ -207,7 +207,7 @@ class IPv4AddressUDPTestCase(unittest.SynchronousTestCase,
 
 
 
-class IPv6AddressTestCase(unittest.SynchronousTestCase, AddressTestCaseMixin):
+class IPv6AddressTests(unittest.SynchronousTestCase, AddressTestCaseMixin):
     addressArgSpec = (("type", "%s"), ("host", "%r"), ("port", "%d"))
 
     def buildAddress(self):
@@ -227,7 +227,7 @@ class IPv6AddressTestCase(unittest.SynchronousTestCase, AddressTestCaseMixin):
 
 
 
-class UNIXAddressTestCase(unittest.SynchronousTestCase, AddressTestCaseMixin):
+class UNIXAddressTests(unittest.SynchronousTestCase, AddressTestCaseMixin):
     addressArgSpec = (("name", "%r"),)
 
     def setUp(self):
@@ -291,8 +291,8 @@ class UNIXAddressTestCase(unittest.SynchronousTestCase, AddressTestCaseMixin):
 
 
 
-class EmptyUNIXAddressTestCase(unittest.SynchronousTestCase,
-                               AddressTestCaseMixin):
+class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
+                            AddressTestCaseMixin):
     """
     Tests for L{UNIXAddress} operations involving a C{None} address.
     """

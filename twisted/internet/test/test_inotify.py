@@ -17,7 +17,7 @@ else:
 
 
 
-class TestINotify(unittest.TestCase):
+class INotifyTests(unittest.TestCase):
     """
     Define all the tests for the basic functionality exposed by
     L{inotify.INotify}.

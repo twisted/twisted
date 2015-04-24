@@ -331,7 +331,7 @@ globals().update(TLSPortTestsBuilder().makeTestCaseClasses())
 
 
 
-class AbortSSLConnectionTest(ReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin):
+class AbortSSLConnectionTests(ReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin):
     """
     C{abortConnection} tests using SSL.
     """
@@ -357,4 +357,4 @@ class AbortSSLConnectionTest(ReactorBuilder, AbortConnectionMixin, ContextGenera
         if FILETYPE_PEM is None:
             raise SkipTest("OpenSSL not available.")
 
-globals().update(AbortSSLConnectionTest.makeTestCaseClasses())
+globals().update(AbortSSLConnectionTests.makeTestCaseClasses())
