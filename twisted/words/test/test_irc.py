@@ -5,6 +5,7 @@
 Tests for L{twisted.words.protocols.irc}.
 """
 
+import errno
 import operator
 import time
 
@@ -2733,15 +2734,18 @@ class DccFileReceiveTests(unittest.TestCase):
             self.makeConnectedDccFileReceive, self.mktemp(), 11)
 
 
-    def test_fileAlreadyExistsNoOverwrite(self):
+    def test_fileDontExistsWithResume(self):
         """
-        If the file already exists and overwrite action was not asked,
-        L{OSError} is raised.
+        If the file don't exists and resume action was asked, L{OSError} is
+        raised.
         """
         fp = FilePath(self.mktemp())
-        fp.touch()
 
-        self.assertRaises(OSError, self.makeConnectedDccFileReceive, fp.path)
+        error = self.assertRaises(
+            OSError,
+            self.makeConnectedDccFileReceive, fp.path, resumeOffset=1)
+
+        self.assertEqual(errno.ENOENT, error.errno)
 
 
     def test_failToOpenLocalFile(self):
