@@ -686,7 +686,7 @@ class FakeStdio(object):
 
 
 
-class StandardIOEndpointsTestCase(unittest.TestCase):
+class StandardIOEndpointsTests(unittest.TestCase):
     """
     Tests for Standard I/O Endpoints
     """
@@ -824,7 +824,7 @@ class MemoryProcessReactor(object):
 
 
 
-class ProcessEndpointsTestCase(unittest.TestCase):
+class ProcessEndpointsTests(unittest.TestCase):
     """
     Tests for child process endpoints.
     """
@@ -1237,7 +1237,7 @@ class WrappedIProtocolTests(unittest.TestCase):
 
 
 
-class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
+class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for TCP IPv4 Endpoints.
     """
@@ -1345,7 +1345,7 @@ class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
 
 
 
-class TCP6EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
+class TCP6EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for TCP IPv6 Endpoints.
     """
@@ -1454,8 +1454,8 @@ class TCP6EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
 
 
 
-class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
-                                         unittest.TestCase):
+class TCP6EndpointNameResolutionTests(ClientEndpointTestCaseMixin,
+                                      unittest.TestCase):
     """
     Tests for a TCP IPv6 Client Endpoint pointed at a hostname instead
     of an IPv6 address literal.
@@ -1571,8 +1571,8 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
 
 
 
-class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
-                                unittest.TestCase):
+class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
+                                    unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns only one
     (IPv4) address.
@@ -1799,8 +1799,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
 
 
-class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
-                                unittest.TestCase):
+class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
+                                    unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns only one
     (IPv6) address.
@@ -1912,7 +1912,7 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
 
 
 
-class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
+class HostnameEndpointsGAIFailureTests(unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns no address.
     """
@@ -1935,7 +1935,7 @@ class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
 
 
 
-class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
+class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
     """
     Tests for the hostname based endpoints when gai returns an IPv4 and
     an IPv6 address, and one connection takes less time than the other.
@@ -2080,8 +2080,8 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
 
 
 
-class SSL4EndpointsTestCase(EndpointTestCaseMixin,
-                            unittest.TestCase):
+class SSL4EndpointsTests(EndpointTestCaseMixin,
+                         unittest.TestCase):
     """
     Tests for SSL Endpoints.
     """
@@ -2215,8 +2215,8 @@ class SSL4EndpointsTestCase(EndpointTestCaseMixin,
 
 
 
-class UNIXEndpointsTestCase(EndpointTestCaseMixin,
-                            unittest.TestCase):
+class UNIXEndpointsTests(EndpointTestCaseMixin,
+                         unittest.TestCase):
     """
     Tests for UnixSocket Endpoints.
     """
@@ -2324,7 +2324,7 @@ class UNIXEndpointsTestCase(EndpointTestCaseMixin,
 
 
 
-class ParserTestCase(unittest.TestCase):
+class ParserTests(unittest.TestCase):
     """
     Tests for L{endpoints._parseServer}, the low-level parsing logic.
     """
@@ -3003,8 +3003,8 @@ class SSLClientStringTests(unittest.TestCase):
 
 
 
-class AdoptedStreamServerEndpointTestCase(ServerEndpointTestCaseMixin,
-                                          unittest.TestCase):
+class AdoptedStreamServerEndpointTests(ServerEndpointTestCaseMixin,
+                                       unittest.TestCase):
     """
     Tests for adopted socket-based stream server endpoints.
     """
@@ -3346,10 +3346,10 @@ class ConnectProtocolTests(unittest.TestCase):
 
 
 if _PY3:
-    del (StandardIOEndpointsTestCase, UNIXEndpointsTestCase, ParserTestCase,
+    del (StandardIOEndpointsTests, UNIXEndpointsTests, ParserTests,
          ServerStringTests, ClientStringTests, SSLClientStringTests,
-         AdoptedStreamServerEndpointTestCase, SystemdEndpointPluginTests,
+         AdoptedStreamServerEndpointTests, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests,
-         ProcessEndpointsTestCase, WrappedIProtocolTests,
+         ProcessEndpointsTests, WrappedIProtocolTests,
          ProcessEndpointTransportTests,
          )

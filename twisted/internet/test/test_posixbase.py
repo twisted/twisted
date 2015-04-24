@@ -275,7 +275,7 @@ class IterationTimeoutTests(TestCase):
 
 
 
-class ConnectedDatagramPortTestCase(TestCase):
+class ConnectedDatagramPortTests(TestCase):
     """
     Test connected datagram UNIX sockets.
     """

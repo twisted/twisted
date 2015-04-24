@@ -332,7 +332,7 @@ class ReactorBuilder:
         classes = {}
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
-            name = (cls.__name__ + "." + shortReactorName).replace(".", "_")
+            name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")
             class testcase(cls, SynchronousTestCase):
                 __module__ = cls.__module__
                 if reactor in cls.skippedReactors:

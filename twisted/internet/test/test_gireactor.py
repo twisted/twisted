@@ -39,7 +39,7 @@ if gireactor is None:
     skip = "gtk3/gi not importable"
 
 
-class GApplicationRegistration(ReactorBuilder, TestCase):
+class GApplicationRegistrationTests(ReactorBuilder, TestCase):
     """
     GtkApplication and GApplication are supported by
     L{twisted.internet.gtk3reactor} and L{twisted.internet.gireactor}.

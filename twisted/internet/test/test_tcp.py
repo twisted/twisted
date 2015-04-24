@@ -178,7 +178,7 @@ class FakeSocket(object):
 
 
 
-class TestFakeSocket(TestCase):
+class FakeSocketTests(TestCase):
     """
     Test that the FakeSocket can be used by the doRead method of L{Connection}
     """
@@ -2456,7 +2456,7 @@ class AbortConnectionMixin(object):
 
 
 
-class AbortConnectionTestCase(ReactorBuilder, AbortConnectionMixin):
+class AbortConnectionTests(ReactorBuilder, AbortConnectionMixin):
     """
     TCP-specific L{AbortConnectionMixin} tests.
     """
@@ -2464,11 +2464,11 @@ class AbortConnectionTestCase(ReactorBuilder, AbortConnectionMixin):
 
     endpoints = TCPCreator()
 
-globals().update(AbortConnectionTestCase.makeTestCaseClasses())
+globals().update(AbortConnectionTests.makeTestCaseClasses())
 
 
 
-class SimpleUtilityTestCase(TestCase):
+class SimpleUtilityTests(TestCase):
     """
     Simple, direct tests for helpers within L{twisted.internet.tcp}.
     """

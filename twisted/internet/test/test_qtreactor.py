@@ -8,7 +8,7 @@ from twisted.python.reflect import namedModule
 
 
 
-class QtreactorTestCase(unittest.TestCase):
+class QtreactorTests(unittest.TestCase):
     """
     Tests for L{twisted.internet.qtreactor}.
     """

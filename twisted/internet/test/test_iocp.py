@@ -100,7 +100,7 @@ class SupportTests(unittest.TestCase):
 
 
 
-class IOCPReactorTestCase(unittest.TestCase):
+class IOCPReactorTests(unittest.TestCase):
     def test_noPendingTimerEvents(self):
         """
         Test reactor behavior (doIteration) when there are no pending time

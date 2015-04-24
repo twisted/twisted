@@ -15,7 +15,7 @@ else:
 
 
 
-class TestPollableWritePipe(TestCase):
+class PollableWritePipeTests(TestCase):
     """
     Tests for L{_pollingfile._PollableWritePipe}.
     """
@@ -43,4 +43,4 @@ class TestPollableWritePipe(TestCase):
 
 
 if _pollingfile is None:
-    TestPollableWritePipe.skip = "Test will run only on Windows."
+    PollableWritePipeTests.skip = "Test will run only on Windows."

@@ -8,13 +8,13 @@ Tests for L{twisted.application.strports}.
 from twisted.trial.unittest import TestCase
 from twisted.application import strports
 from twisted.application import internet
-from twisted.internet.test.test_endpoints import ParserTestCase
+from twisted.internet.test.test_endpoints import ParserTests
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ServerEndpoint, UNIXServerEndpoint
 
 
 
-class DeprecatedParseTestCase(ParserTestCase):
+class DeprecatedParseTestCase(ParserTests):
     """
     L{strports.parse} is deprecated.  It's an alias for a method that is now
     private in L{twisted.internet.endpoints}.
