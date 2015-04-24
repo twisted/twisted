@@ -2738,6 +2738,17 @@ class DccFileReceiveTests(unittest.TestCase):
         self.assertEqual(errno.ENOENT, error.errno)
 
 
+    def test_fileAlreadyExistsNoOverwrite(self):
+        """
+        If the file already exists and overwrite action was not asked,
+        L{OSError} is raised.
+        """
+        fp = FilePath(self.mktemp())
+        fp.touch()
+
+        self.assertRaises(OSError, self.makeConnectedDccFileReceive, fp.path)
+
+
     def test_failToOpenLocalFile(self):
         """
         L{IOError} is raised when failing to open the requested path.
