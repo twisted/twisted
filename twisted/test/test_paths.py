@@ -2018,7 +2018,7 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u"\u2603")
         with self.assertRaises(UnicodeError):
-            newfp = fp.asBytesMode(encoding="ascii")
+            fp.asBytesMode(encoding="ascii")
 
 
     def test_asTextPathFromBytesWithUnusableEncoding(self):
@@ -2028,4 +2028,4 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(b"\u2603")
         with self.assertRaises(UnicodeError):
-            newfp = fp.asTextMode(encoding="utf-32")
+            fp.asTextMode(encoding="utf-32")
