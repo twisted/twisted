@@ -2343,12 +2343,6 @@ class IRCClient(basic.LineReceiver):
         @param data: A 3-list of [fileName, address, port].
         @type data: L{list}
         """
-        ## filename = path.basename(arg)
-        ## protocol = DccFileReceive(filename, size,
-        ##                           (user,channel,data),self.dcc_destdir)
-        ## reactor.clientTCP(address, port, protocol)
-        ## self.dcc_sessions.append(protocol)
-        pass
 
 
     def dccDoResume(self, user, file, port, resumePos):
@@ -2963,6 +2957,7 @@ class DccFileReceive(DccFileReceiveBasic):
         self.filename = filename
         self.destDir = destDir
         self.fileSize = fileSize
+        self._resumeOffset = resumeOffset
 
         if queryData:
             self.queryData = queryData
@@ -3021,9 +3016,16 @@ class DccFileReceive(DccFileReceiveBasic):
         if self.resume and exists:
             # I have been told I want to resume, and a file already
             # exists - Here we go
-            self.file = open(dst, 'ab')
+            self.file = open(dst, 'rb+')
+            self.file.seek(self._resumeOffset)
+            self.file.truncate()
             log.msg("Attempting to resume %s - starting from %d bytes" %
                     (self.file, self.file.tell()))
+        elif self.resume and not exists:
+            raise OSError(errno.ENOENT,
+                          "You cannot resume writing to a file "
+                          "that does not exist!",
+                          dst)
         elif self.overwrite or not exists:
             self.file = open(dst, 'wb')
         else:
