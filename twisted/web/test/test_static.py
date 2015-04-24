@@ -23,7 +23,7 @@ from twisted.python.compat import iteritems, intToBytes, networkString
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.test._util import _render
 
 
@@ -374,6 +374,49 @@ class StaticFileTests(TestCase):
             self.assertEqual(b''.join(request.written), b'baz')
         d.addCallback(cbRendered)
         return d
+
+
+    def _makeFilePathWithStringIO(self):
+        """
+        Create a L{File} that when opened for reading, returns a L{StringIO}.
+
+        @return: 2-tuple of the opened "file" and the L{File}.
+        @rtype: L{tuple}
+        """
+        fakeFile = StringIO()
+        path = FilePath(self.mktemp())
+        path.touch()
+        file = static.File(path.path)
+        # Open our file instead of a real one
+        file.open = lambda: fakeFile
+        return fakeFile, file
+
+
+    def test_HEADClosesFile(self):
+        """
+        A HEAD request opens the file, gets the size, and then closes it after
+        the request.
+        """
+        fakeFile, file = self._makeFilePathWithStringIO()
+        request = DummyRequest([''])
+        request.method = b'HEAD'
+        self.successResultOf(_render(file, request))
+        self.assertEqual(b''.join(request.written), b'')
+        self.assertTrue(fakeFile.closed)
+
+
+    def test_cachedRequestClosesFile(self):
+        """
+        A GET request that is cached closes the file after the request.
+        """
+        fakeFile, file = self._makeFilePathWithStringIO()
+        request = DummyRequest([''])
+        request.method = b'GET'
+        # This request will always return saying that it is cached
+        request.setLastModified = lambda _: http.CACHED
+        self.successResultOf(_render(file, request))
+        self.assertEqual(b''.join(request.written), b'')
+        self.assertTrue(fakeFile.closed)
 
 
 
