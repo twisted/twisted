@@ -13,7 +13,7 @@ from twisted.trial.unittest import TestCase, SkipTest
 
 
 
-class Tap2DEBTests(TestCase):
+class TestTap2DEB(TestCase):
     """
     Tests for the L{tap2deb} script.
     """

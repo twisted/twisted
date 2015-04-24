@@ -121,7 +121,7 @@ def _queryRPMTags(rpmfile, taglist):
 
 
 
-class Tap2RPMTests(TestCase):
+class TestTap2RPM(TestCase):
 
 
     def setUp(self):
