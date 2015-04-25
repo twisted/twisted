@@ -381,7 +381,7 @@ class StartupBehaviorTestCase(unittest.TestCase):
 
     def testCallBeforeStartupUnexecuted(self):
         progname = self.mktemp()
-        progfile = file(progname, 'w')
+        progfile = open(progname, 'w')
         progfile.write(_callBeforeStartupProgram % {'reactor': reactor.__module__})
         progfile.close()
 

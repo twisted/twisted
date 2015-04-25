@@ -1,5 +1,7 @@
 """A process that reads from stdin and out using Twisted."""
 
+from __future__ import division, absolute_import
+
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
@@ -12,7 +14,7 @@ sys.path.insert(0, os.curdir)
 
 
 from twisted.python import log
-from zope.interface import implements
+from zope.interface import implementer
 from twisted.internet import interfaces
 
 log.startLogging(sys.stderr)
@@ -20,23 +22,23 @@ log.startLogging(sys.stderr)
 from twisted.internet import protocol, reactor, stdio
 
 
+@implementer(interfaces.IHalfCloseableProtocol)
 class Echo(protocol.Protocol):
-    implements(interfaces.IHalfCloseableProtocol)
-    
+
     def connectionMade(self):
-        print "connection made"
-    
+        print("connection made")
+
     def dataReceived(self, data):
         self.transport.write(data)
 
     def readConnectionLost(self):
-        print "readConnectionLost"
+        print("readConnectionLost")
         self.transport.loseConnection()
     def writeConnectionLost(self):
-        print "writeConnectionLost"
-    
+        print("writeConnectionLost")
+
     def connectionLost(self, reason):
-        print "connectionLost", reason
+        print("connectionLost", reason)
         reactor.stop()
 
 stdio.StandardIO(Echo())

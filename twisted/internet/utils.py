@@ -13,13 +13,11 @@ from functools import wraps
 
 from twisted.internet import protocol, defer
 from twisted.python import failure
-from twisted.python.compat import _PY3, reraise
+from twisted.python.compat import reraise
 
-if not _PY3:
-    try:
-        import cStringIO as StringIO
-    except ImportError:
-        import StringIO
+from io import BytesIO as StringIO
+
+
 
 def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=None):
     if reactor is None:
@@ -70,7 +68,7 @@ class _BackRelay(protocol.ProcessProtocol):
 
     def __init__(self, deferred, errortoo=0):
         self.deferred = deferred
-        self.s = StringIO.StringIO()
+        self.s = StringIO()
         if errortoo:
             self.errReceived = self.errReceivedIsGood
         else:
@@ -149,8 +147,8 @@ class _EverythingGetter(protocol.ProcessProtocol):
 
     def __init__(self, deferred):
         self.deferred = deferred
-        self.outBuf = StringIO.StringIO()
-        self.errBuf = StringIO.StringIO()
+        self.outBuf = StringIO()
+        self.errBuf = StringIO()
         self.outReceived = self.outBuf.write
         self.errReceived = self.errBuf.write
 
@@ -225,11 +223,3 @@ __all__ = [
     "runWithWarningsSuppressed", "suppressWarnings",
     "getProcessOutput", "getProcessValue", "getProcessOutputAndValue",
     ]
-
-if _PY3:
-    __all3__ = ["runWithWarningsSuppressed", "suppressWarnings"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__
