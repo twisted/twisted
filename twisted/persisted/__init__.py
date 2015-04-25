@@ -2,5 +2,5 @@
 # See LICENSE for details.
 
 """
-Twisted Persisted: utilities for managing persistence.
+Twisted Persisted: Utilities for managing persistence.
 """

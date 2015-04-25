@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Classes and functions to do granular logging.
+Twisted Logger: Classes and functions to do granular logging.
 
 Example usage in a module C{some.module}::
 

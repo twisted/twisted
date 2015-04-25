@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Twisted Protocols: a collection of internet protocol implementations.
+Twisted Protocols: A collection of internet protocol implementations.
 """
 
 # Deprecating twisted.protocols.gps.

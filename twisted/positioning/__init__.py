@@ -2,7 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
-The Twisted positioning framework.
+Twisted Positioning: Framework for applications that make use of positioning.
 
 @since: 14.0
 """
