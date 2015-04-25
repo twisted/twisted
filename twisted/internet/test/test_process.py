@@ -27,7 +27,6 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
 
 
-
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()
 twistedRoot = FilePath(twisted.__file__).parent().parent()
@@ -42,6 +41,7 @@ else:
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
+
 
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
@@ -419,7 +419,6 @@ sys.stdout.flush()""".format(twistedRoot.path))
             set(stdFDs)
         )
 
-
     if resource is None:
         test_openFileDescriptors.skip = "Test only applies to POSIX platforms"
 
@@ -551,6 +550,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
     else:
         # Just a value that doesn't equal "windows"
         keepStdioOpenArg = b""
+
 
     # Define this test here because PTY-using processes only have stdin and
     # stdout and the test would need to be different for that to work.
@@ -714,12 +714,12 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         with an interpreter definition line (#!) uses that interpreter to
         evaluate the script.
         """
-        SHEBANG_OUTPUT = b'this is the shebang output'
+        shebangOutput = b'this is the shebang output'
 
         scriptFile = self.makeSourceFile([
                 "#!%s" % (pyExe.decode('ascii'),),
                 "import sys",
-                "sys.stdout.write('%s')" % (SHEBANG_OUTPUT.decode('ascii'),),
+                "sys.stdout.write('%s')" % (shebangOutput.decode('ascii'),),
                 "sys.stdout.flush()"])
         os.chmod(scriptFile, 0o700)
 
@@ -728,7 +728,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def cbProcessExited(args):
             out, err, code = args
             msg("cbProcessExited((%r, %r, %d))" % (out, err, code))
-            self.assertEqual(out, SHEBANG_OUTPUT)
+            self.assertEqual(out, shebangOutput)
             self.assertEqual(err, b"")
             self.assertEqual(code, 0)
 
