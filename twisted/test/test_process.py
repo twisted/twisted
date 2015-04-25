@@ -41,7 +41,7 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
-from twisted.python.compat import _PY3, networkString, NativeStringIO, xrange
+from twisted.python.compat import _PY3, networkString, xrange
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 
 
@@ -1246,7 +1246,7 @@ class MockOS(object):
     @type raiseExec: C{bool}
 
     @ivar fdio: fake file object returned by calls to fdopen.
-    @type fdio: C{NativeStringIO}
+    @type fdio: C{BytesIO}
 
     @ivar actions: hold names of some actions executed by the object, in order
         of execution.
@@ -1337,10 +1337,10 @@ class MockOS(object):
 
     def fdopen(self, fd, flag):
         """
-        Fake C{os.fdopen}. Return a L{NativeStringIO} object whose content can
+        Fake C{os.fdopen}. Return a L{BytesIO} object whose content can
         be tested later via C{self.fdio}.
         """
-        self.fdio = NativeStringIO()
+        self.fdio = BytesIO()
         return self.fdio
 
 

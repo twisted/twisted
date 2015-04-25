@@ -35,7 +35,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import NativeStringIO, items, xrange
+from twisted.python.compat import NativeStringIO, items, xrange, _PY3
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -51,6 +51,8 @@ def reapAllProcesses():
     """
     Reap all registered processes.
     """
+    # Coerce this to a list, as reaping the process changes the dictionary and
+    # causes a "size changed during iteration" exception
     for process in list(reapProcessHandlers.values()):
         process.reapProcess()
 
@@ -423,13 +425,17 @@ class _BaseProcess(BaseProcess, object):
                     # XXXX: however even libc assumes write(2, err) is a useful
                     #       thing to attempt
                     try:
-                        stderr = os.fdopen(2, 'w')
+                        stderr = os.fdopen(2, 'wb')
                         msg = ("Upon execvpe {0} {1} in environment id {2}"
                                "\n:").format(executable, str(args),
                                              id(environment))
                         tb = NativeStringIO()
                         traceback.print_exc(file=tb)
                         tb = tb.getvalue()
+
+                        if _PY3:
+                            msg = msg.encode(sys.getfilesystemencoding())
+                            tb = tb.encode(sys.getfilesystemencoding())
 
                         stderr.write(msg)
                         stderr.write(tb)
@@ -780,9 +786,7 @@ class Process(_BaseProcess):
         # of fdmap, i.e. fdmap.values() )
 
         if debug: print("fdmap", fdmap, file=errfd)
-        childlist = sorted(fdmap.keys())
-
-        for child in childlist:
+        for child in sorted(fdmap.keys()):
             target = fdmap[child]
             if target == child:
                 # fd is already in place
@@ -815,7 +819,7 @@ class Process(_BaseProcess):
         old = []
         for fd in fdmap.values():
             if not fd in old:
-                if not fd in list(fdmap.keys()):
+                if not fd in fdmap.keys():
                     old.append(fd)
         if debug: print("old", old, file=errfd)
         for fd in old:
