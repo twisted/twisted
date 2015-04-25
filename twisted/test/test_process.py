@@ -35,7 +35,7 @@ else:
 
 from zope.interface.verify import verifyObject
 
-from io import BytesIO as StringIO
+from io import BytesIO
 
 from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
@@ -975,8 +975,8 @@ class Accumulator(protocol.ProcessProtocol):
     endedDeferred = None
 
     def connectionMade(self):
-        self.outF = StringIO()
-        self.errF = StringIO()
+        self.outF = BytesIO()
+        self.errF = BytesIO()
 
     def outReceived(self, d):
         self.outF.write(d)
@@ -1246,7 +1246,7 @@ class MockOS(object):
     @type raiseExec: C{bool}
 
     @ivar fdio: fake file object returned by calls to fdopen.
-    @type fdio: C{BytesIO}
+    @type fdio: C{BytesIO} or C{BytesIO}
 
     @ivar actions: hold names of some actions executed by the object, in order
         of execution.
@@ -1337,10 +1337,13 @@ class MockOS(object):
 
     def fdopen(self, fd, flag):
         """
-        Fake C{os.fdopen}. Return a L{BytesIO} object whose content can
+        Fake C{os.fdopen}. Return a file-like object whose content can
         be tested later via C{self.fdio}.
         """
-        self.fdio = BytesIO()
+        if flag == "wb":
+            self.fdio = BytesIO()
+        else:
+            assert False
         return self.fdio
 
 
@@ -1621,6 +1624,15 @@ class MockOS(object):
         return 6789
 
 
+    def getfilesystemencoding(self):
+        """
+        Return a fixed filesystem encoding.
+
+        @return: A fixed value of "utf8".
+        """
+        return "utf8"
+
+
 if process is not None:
     class DumbProcessWriter(process.ProcessWriter):
         """
@@ -1892,7 +1904,7 @@ class MockProcessTestCase(unittest.TestCase):
             self.assertIn(1, self.mockos.closed)
             self.assertIn(2, self.mockos.closed)
             # Check content of traceback
-            self.assertIn("RuntimeError: Bar", self.mockos.fdio.getvalue())
+            self.assertIn(b"RuntimeError: Bar", self.mockos.fdio.getvalue())
         else:
             self.fail("Should not be here")
 
