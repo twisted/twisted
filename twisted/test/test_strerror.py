@@ -21,7 +21,7 @@ class _MyWindowsException(OSError):
 
 
 
-class ErrorFormatingTestCase(TestCase):
+class ErrorFormatingTests(TestCase):
     """
     Tests for C{_ErrorFormatter.formatError}.
     """

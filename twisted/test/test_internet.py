@@ -345,7 +345,7 @@ class ThreePhaseEventTests(unittest.TestCase):
 
 
 
-class SystemEventTestCase(unittest.TestCase):
+class SystemEventTests(unittest.TestCase):
     """
     Tests for the reactor's implementation of the C{fireSystemEvent},
     C{addSystemEventTrigger}, and C{removeSystemEventTrigger} methods of the
@@ -649,7 +649,7 @@ class SystemEventTestCase(unittest.TestCase):
 
 
 
-class TimeTestCase(unittest.TestCase):
+class TimeTests(unittest.TestCase):
     """
     Tests for the IReactorTime part of the reactor.
     """
@@ -828,7 +828,7 @@ class TimeTestCase(unittest.TestCase):
         self.assertEqual(dc.getTime(), 13)
 
 
-class CallFromThreadTests(unittest.TestCase):
+class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
     def testWakeUp(self):
         # Make sure other threads can wake up the reactor
         d = Deferred()
@@ -870,7 +870,7 @@ class CallFromThreadTests(unittest.TestCase):
         return d
 
 
-class DelayedTestCase(unittest.TestCase):
+class DelayedTests(unittest.TestCase):
     def setUp(self):
         self.finished = 0
         self.counter = 0
@@ -997,7 +997,7 @@ class ChildResolveProtocol(protocol.ProcessProtocol):
         self.onCompletion = None
 
 
-class Resolve(unittest.TestCase):
+class ResolveTests(unittest.TestCase):
     def testChildResolve(self):
         # I've seen problems with reactor.run under gtk2reactor. Spawn a
         # child which just does reactor.resolve after the reactor has
@@ -1035,11 +1035,12 @@ class Resolve(unittest.TestCase):
         return helperDeferred
 
 if not interfaces.IReactorProcess(reactor, None):
-    Resolve.skip = "cannot run test: reactor doesn't support IReactorProcess"
+    ResolveTests.skip = (
+        "cannot run test: reactor doesn't support IReactorProcess")
 
 
 
-class CallFromThreadTestCase(unittest.TestCase):
+class CallFromThreadTests(unittest.TestCase):
     """
     Task scheduling from threads tests.
     """
@@ -1121,7 +1122,7 @@ class MyFactory(protocol.Factory):
     protocol = MyProtocol
 
 
-class ProtocolTestCase(unittest.TestCase):
+class ProtocolTests(unittest.TestCase):
 
     def testFactory(self):
         factory = MyFactory()
@@ -1212,7 +1213,7 @@ class ReentrantProducer(DummyProducer):
 
 
 
-class TestProducer(unittest.TestCase):
+class ProducerTests(unittest.TestCase):
     """
     Test abstract.FileDescriptor's consumer interface.
     """
@@ -1341,7 +1342,7 @@ class TestProducer(unittest.TestCase):
 
 
 
-class PortStringification(unittest.TestCase):
+class PortStringificationTests(unittest.TestCase):
     if interfaces.IReactorTCP(reactor, None) is not None:
         def testTCP(self):
             p = reactor.listenTCP(0, protocol.ServerFactory())

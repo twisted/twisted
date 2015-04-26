@@ -75,7 +75,7 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
 
 
 
-class StandardInputOutputTestCase(unittest.TestCase):
+class StandardInputOutputTests(unittest.TestCase):
 
     skip = skipWindowsNopywin32
 

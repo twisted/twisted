@@ -34,7 +34,7 @@ class SomeDohickey:
         return self.args
 
 
-class TestBrowser(unittest.TestCase):
+class BrowserTests(unittest.TestCase):
     def setUp(self):
         self.pool = explorer.explorerPool
         self.pool.clear()
@@ -145,7 +145,7 @@ def function_crazy((alpha, beta), c, d=range(4), **kw):
     "A function with a mad crazy signature."
     return alpha, beta, c, d, kw
 
-class TestBrowseFunction(unittest.TestCase):
+class BrowseFunctionTests(unittest.TestCase):
 
     def setUp(self):
         self.pool = explorer.explorerPool

@@ -33,7 +33,7 @@ class BytesTestCase(TestCase):
 
 
 
-class AbstractFilePathTestCase(BytesTestCase):
+class AbstractFilePathTests(BytesTestCase):
     """
     Tests for L{IFilePath} implementations.
     """
@@ -432,7 +432,7 @@ class ExplodingFilePath(filepath.FilePath):
 
 
 
-class PermissionsTestCase(BytesTestCase):
+class PermissionsTests(BytesTestCase):
     """
     Test Permissions and RWX classes
     """
@@ -579,7 +579,7 @@ class PermissionsTestCase(BytesTestCase):
 
 
 
-class FilePathTestCase(AbstractFilePathTestCase):
+class FilePathTests(AbstractFilePathTests):
     """
     Test various L{FilePath} path manipulations.
 

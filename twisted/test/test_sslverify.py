@@ -378,7 +378,7 @@ class FakeContext(object):
 
 
 
-class ClientOptions(unittest.SynchronousTestCase):
+class ClientOptionsTests(unittest.SynchronousTestCase):
     """
     Tests for L{sslverify.optionsForClientTLS}.
     """
@@ -420,7 +420,7 @@ class ClientOptions(unittest.SynchronousTestCase):
 
 
 
-class OpenSSLOptions(unittest.TestCase):
+class OpenSSLOptionsTests(unittest.TestCase):
     if skipSSL:
         skip = skipSSL
 
@@ -1749,7 +1749,7 @@ class _ActualSSLTransport:
 
 
 
-class Constructors(unittest.TestCase):
+class ConstructorsTests(unittest.TestCase):
     if skipSSL:
         skip = skipSSL
 
@@ -1820,7 +1820,7 @@ class Constructors(unittest.TestCase):
 
 
 
-class TestOpenSSLCipher(unittest.TestCase):
+class OpenSSLCipherTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLCipher.
     """
@@ -1874,7 +1874,7 @@ class TestOpenSSLCipher(unittest.TestCase):
 
 
 
-class TestExpandCipherString(unittest.TestCase):
+class ExpandCipherStringTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify._expandCipherString.
     """
@@ -1925,7 +1925,7 @@ class TestExpandCipherString(unittest.TestCase):
 
 
 
-class TestAcceptableCiphers(unittest.TestCase):
+class AcceptableCiphersTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLAcceptableCiphers.
     """
@@ -1966,7 +1966,7 @@ class TestAcceptableCiphers(unittest.TestCase):
 
 
 
-class TestDiffieHellmanParameters(unittest.TestCase):
+class DiffieHellmanParametersTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLDHParameters.
     """
@@ -2078,7 +2078,7 @@ class FakeLib(object):
 
 
 
-class TestFakeLib(unittest.TestCase):
+class FakeLibTests(unittest.TestCase):
     """
     Tests for FakeLib
     """
@@ -2151,7 +2151,7 @@ class FakeBinding(object):
 
 
 
-class TestECCurve(unittest.TestCase):
+class ECCurveTests(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLECCurve.
     """
@@ -2236,7 +2236,7 @@ class TestECCurve(unittest.TestCase):
 
 
 
-class KeyPair(unittest.TestCase):
+class KeyPairTests(unittest.TestCase):
     """
     Tests for L{sslverify.KeyPair}.
     """

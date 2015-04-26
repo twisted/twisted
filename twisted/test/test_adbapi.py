@@ -561,13 +561,13 @@ def makeSQLTests(base, suffix, globals):
                                 base.__dict__)
         globals[name] = klass
 
-# GadflyADBAPITestCase SQLiteADBAPITestCase PyPgSQLADBAPITestCase
-# PsycopgADBAPITestCase MySQLADBAPITestCase FirebirdADBAPITestCase
-makeSQLTests(ADBAPITestBase, 'ADBAPITestCase', globals())
+# GadflyADBAPITests SQLiteADBAPITests PyPgSQLADBAPITests
+# PsycopgADBAPITests MySQLADBAPITests FirebirdADBAPITests
+makeSQLTests(ADBAPITestBase, 'ADBAPITests', globals())
 
-# GadflyReconnectTestCase SQLiteReconnectTestCase PyPgSQLReconnectTestCase
-# PsycopgReconnectTestCase MySQLReconnectTestCase FirebirdReconnectTestCase
-makeSQLTests(ReconnectTestBase, 'ReconnectTestCase', globals())
+# GadflyReconnectTests SQLiteReconnectTests PyPgSQLReconnectTests
+# PsycopgReconnectTests MySQLReconnectTests FirebirdReconnectTests
+makeSQLTests(ReconnectTestBase, 'ReconnectTests', globals())
 
 
 
@@ -600,7 +600,7 @@ class FakePool(object):
 
 
 
-class ConnectionTestCase(unittest.TestCase):
+class ConnectionTests(unittest.TestCase):
     """
     Tests for the L{Connection} class.
     """
@@ -623,7 +623,7 @@ class ConnectionTestCase(unittest.TestCase):
 
 
 
-class TransactionTestCase(unittest.TestCase):
+class TransactionTests(unittest.TestCase):
     """
     Tests for the L{Transaction} class.
     """
@@ -712,7 +712,7 @@ class EventReactor(object):
 
 
 
-class ConnectionPoolTestCase(unittest.TestCase):
+class ConnectionPoolTests(unittest.TestCase):
     """
     Unit tests for L{ConnectionPool}.
     """

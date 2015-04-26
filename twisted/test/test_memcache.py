@@ -230,7 +230,7 @@ class CommandMixin:
 
 
 
-class MemCacheTestCase(CommandMixin, TestCase):
+class MemCacheTests(CommandMixin, TestCase):
     """
     Test client protocol class L{MemCacheProtocol}.
     """

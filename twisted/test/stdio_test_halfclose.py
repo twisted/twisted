@@ -1,10 +1,10 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_readConnectionLost -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_readConnectionLost -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.test_readConnectionLost}
+L{twisted.test.test_stdio.StandardInputOutputTests.test_readConnectionLost}
 to test that IHalfCloseableProtocol.readConnectionLost works for process
 transports.
 """

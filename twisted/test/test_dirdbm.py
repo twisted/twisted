@@ -12,7 +12,7 @@ from twisted.persisted import dirdbm
 
 
 
-class DirDbmTestCase(unittest.TestCase):
+class DirDbmTests(unittest.TestCase):
 
     def setUp(self):
         self.path = self.mktemp()
@@ -158,7 +158,7 @@ class DirDbmTestCase(unittest.TestCase):
 
 
 
-class ShelfTestCase(DirDbmTestCase):
+class ShelfTests(DirDbmTests):
 
     def setUp(self):
         self.path = self.mktemp()
@@ -167,4 +167,4 @@ class ShelfTestCase(DirDbmTestCase):
                       ('int', 12), ('float', 12.0), ('tuple', (None, 12)))
 
 
-testCases = [DirDbmTestCase, ShelfTestCase]
+testCases = [DirDbmTests, ShelfTests]

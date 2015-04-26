@@ -23,7 +23,7 @@ science.
 """
 
 
-class WrapTest(unittest.TestCase):
+class WrapTests(unittest.TestCase):
     """
     Tests for L{text.greedyWrap}.
     """
@@ -83,7 +83,7 @@ class WrapTest(unittest.TestCase):
 
 
 
-class LineTest(unittest.TestCase):
+class LineTests(unittest.TestCase):
     """
     Tests for L{isMultiline} and L{endsInNewline}.
     """
@@ -114,7 +114,7 @@ class LineTest(unittest.TestCase):
 
 
 
-class StringyStringTest(unittest.TestCase):
+class StringyStringTests(unittest.TestCase):
     """
     Tests for L{text.stringyString}.
     """
@@ -146,7 +146,7 @@ class StringyStringTest(unittest.TestCase):
 
 
 
-class SplitTest(unittest.TestCase):
+class SplitTests(unittest.TestCase):
     """
     Tests for L{text.splitQuoted}.
     """
@@ -179,7 +179,7 @@ class SplitTest(unittest.TestCase):
 
 
 
-class StrFileTest(unittest.TestCase):
+class StrFileTests(unittest.TestCase):
     def setUp(self):
         self.io = StringIO("this is a test string")
 

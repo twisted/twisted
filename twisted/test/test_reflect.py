@@ -177,7 +177,7 @@ class AddMethodNamesToDictTests(TestCase):
 
 class Summer(object):
     """
-    A class we look up as part of the LookupsTestCase.
+    A class we look up as part of the LookupsTests.
     """
 
     def reallySet(self):
@@ -187,7 +187,7 @@ class Summer(object):
 
 
 
-class LookupsTestCase(TestCase):
+class LookupsTests(TestCase):
     """
     Tests for L{namedClass}, L{namedModule}, and L{namedAny}.
     """
@@ -424,7 +424,7 @@ class NoClassAttr(Breakable):
 
 
 
-class SafeRepr(TestCase):
+class SafeReprTests(TestCase):
     """
     Tests for L{reflect.safe_repr} function.
     """
@@ -521,7 +521,7 @@ class SafeRepr(TestCase):
 
 
 
-class SafeStr(TestCase):
+class SafeStrTests(TestCase):
     """
     Tests for L{reflect.safe_str} function.
     """
@@ -632,7 +632,7 @@ class SafeStr(TestCase):
 
 
 
-class FilenameToModule(TestCase):
+class FilenameToModuleTests(TestCase):
     """
     Test L{filenameToModuleName} detection.
     """
@@ -750,7 +750,7 @@ class FullyQualifiedNameTests(TestCase):
             "%s.%s.test_unboundMethod" % (__name__, self.__class__.__name__))
 
 
-class ObjectGrep(unittest.TestCase):
+class ObjectGrepTests(unittest.TestCase):
     if _PY3:
         # This is to be removed when fixing #6986
         skip = "twisted.python.reflect.objgrep hasn't been ported to Python 3"
@@ -872,7 +872,7 @@ class ObjectGrep(unittest.TestCase):
         self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
 
 
-class GetClass(unittest.TestCase):
+class GetClassTests(unittest.TestCase):
     if _PY3:
         oldClassNames = ['type']
     else:
@@ -899,7 +899,7 @@ if not _PY3:
     # (hence the condition above) and will be removed as soon as no project used
     # by Twisted will depend on these functions. Also, have a look at the
     # comments related to those functions in twisted.python.reflect.
-    class DeprecationTestCase(unittest.TestCase):
+    class DeprecationTests(unittest.TestCase):
         """
         Test deprecations in twisted.python.reflect
         """
@@ -910,7 +910,7 @@ if not _PY3:
             """
             self.callDeprecated(
                 (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-                reflect.allYourBase, DeprecationTestCase)
+                reflect.allYourBase, DeprecationTests)
 
 
         def test_accumulateBases(self):
@@ -920,7 +920,7 @@ if not _PY3:
             l = []
             self.callDeprecated(
                 (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-                reflect.accumulateBases, DeprecationTestCase, l, None)
+                reflect.accumulateBases, DeprecationTests, l, None)
 
 
         def test_getcurrent(self):

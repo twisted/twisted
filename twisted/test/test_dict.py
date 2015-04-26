@@ -9,7 +9,7 @@ from twisted.protocols import dict
 paramString = "\"This is a dqstring \\w\\i\\t\\h boring stuff like: \\\"\" and t\\hes\\\"e are a\\to\\ms"
 goodparams = ["This is a dqstring with boring stuff like: \"", "and", "thes\"e", "are", "atoms"]
 
-class ParamTest(unittest.TestCase):
+class ParamTests(unittest.TestCase):
     def testParseParam(self):
         """Testing command response handling"""
         params = []

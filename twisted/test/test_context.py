@@ -11,7 +11,7 @@ from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.python import context
 
-class ContextTest(SynchronousTestCase):
+class ContextTests(SynchronousTestCase):
     """
     Tests for the module-scope APIs for L{twisted.python.context}.
     """

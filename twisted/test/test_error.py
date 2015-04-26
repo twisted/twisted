@@ -9,7 +9,7 @@ from twisted.internet import error
 from twisted.python.runtime import platformType
 
 
-class TestStringification(unittest.SynchronousTestCase):
+class StringificationTests(unittest.SynchronousTestCase):
     """Test that the exceptions have useful stringifications.
     """
 

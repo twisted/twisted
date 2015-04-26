@@ -86,7 +86,7 @@ class LoopbackTestCaseMixin:
 
 
 
-class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
+class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
     loopbackFunc = staticmethod(loopback.loopbackAsync)
 
 
@@ -417,11 +417,11 @@ class LoopbackAsyncTestCase(LoopbackTestCaseMixin, unittest.TestCase):
 
 
 
-class LoopbackTCPTestCase(LoopbackTestCaseMixin, unittest.TestCase):
+class LoopbackTCPTests(LoopbackTestCaseMixin, unittest.TestCase):
     loopbackFunc = staticmethod(loopback.loopbackTCP)
 
 
-class LoopbackUNIXTestCase(LoopbackTestCaseMixin, unittest.TestCase):
+class LoopbackUNIXTests(LoopbackTestCaseMixin, unittest.TestCase):
     loopbackFunc = staticmethod(loopback.loopbackUNIX)
 
     if interfaces.IReactorUNIX(reactor, None) is None:

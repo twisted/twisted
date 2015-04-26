@@ -1,10 +1,10 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_producer -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_producer -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.test_producer} to test
+L{twisted.test.test_stdio.StandardInputOutputTests.test_producer} to test
 that process transports implement IProducer properly.
 """
 

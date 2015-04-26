@@ -14,7 +14,7 @@ from twisted.python.filepath import FilePath
 
 
 
-class FTPOptionsTestCase(TestCase):
+class FTPOptionsTests(TestCase):
     """
     Tests for the command line option parser used for C{twistd ftp}.
     """

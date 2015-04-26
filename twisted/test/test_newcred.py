@@ -77,7 +77,7 @@ class TestRealm:
         return (interfaces[0], interfaces[0](avatar),
                 avatar.logout)
 
-class NewCredTest(unittest.TestCase):
+class NewCredTests(unittest.TestCase):
     def setUp(self):
         r = self.realm = TestRealm()
         p = self.portal = portal.Portal(r)
@@ -151,7 +151,7 @@ class NewCredTest(unittest.TestCase):
         self.assertEqual(error.UnauthorizedLogin, l[0])
 
 
-class CramMD5CredentialsTestCase(unittest.TestCase):
+class CramMD5CredentialsTests(unittest.TestCase):
     def testIdempotentChallenge(self):
         c = credentials.CramMD5Credentials()
         chal = c.getChallenge()
@@ -167,7 +167,7 @@ class CramMD5CredentialsTestCase(unittest.TestCase):
         c = credentials.CramMD5Credentials()
         self.failIf(c.checkPassword('secret'))
 
-class OnDiskDatabaseTestCase(unittest.TestCase):
+class OnDiskDatabaseTests(unittest.TestCase):
     users = [
         ('user1', 'pass1'),
         ('user2', 'pass2'),
@@ -226,7 +226,7 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
 
 
 
-class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
+class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
     users = [
         ('user1', 'pass1'),
         ('user2', 'pass2'),
@@ -287,7 +287,7 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
     if crypt is None:
         skip = "crypt module not available"
 
-class PluggableAuthenticationModulesTest(unittest.TestCase):
+class PluggableAuthenticationModulesTests(unittest.TestCase):
 
     def setUp(self):
         """
@@ -446,12 +446,12 @@ class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
         def checkPassword(self, password):
             return self.hashed.decode('hex') == password
 
-class HashlessFilePasswordDBCheckerTestCase(HashlessFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
+class HashlessFilePasswordDBCheckerTests(HashlessFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
 
-class LocallyHashedFilePasswordDBCheckerTestCase(LocallyHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
+class LocallyHashedFilePasswordDBCheckerTests(LocallyHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
 
-class NetworkHashedFilePasswordDBCheckerTestCase(NetworkHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
+class NetworkHashedFilePasswordDBCheckerTests(NetworkHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
 

@@ -1,10 +1,10 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_loseConnection -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_loseConnection -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.test_loseConnection} to
+L{twisted.test.test_stdio.StandardInputOutputTests.test_loseConnection} to
 test that ITransport.loseConnection() works for process transports.
 """
 

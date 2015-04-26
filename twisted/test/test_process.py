@@ -485,7 +485,7 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
 
 
 
-class ProcessTestCase(unittest.TestCase):
+class ProcessTests(unittest.TestCase):
     """Test running a process."""
 
     usePTY = False
@@ -812,10 +812,10 @@ class TestTwoProcessesBase:
         reactor.callLater(2, self.close, 1)
         return self._onClose()
 
-class TestTwoProcessesNonPosix(TestTwoProcessesBase, unittest.TestCase):
+class TwoProcessesNonPosixTests(TestTwoProcessesBase, unittest.TestCase):
     pass
 
-class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
+class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
     def tearDown(self):
         for pp, pr in zip(self.pp, self.processes):
             if not pp.finished:
@@ -937,7 +937,7 @@ class FDChecker(protocol.ProcessProtocol):
         self.deferred.callback(None)
 
 
-class FDTest(unittest.TestCase):
+class FDTests(unittest.TestCase):
 
     def testFD(self):
         exe = sys.executable
@@ -1661,7 +1661,7 @@ if process is not None:
 
 
 
-class MockProcessTestCase(unittest.TestCase):
+class MockProcessTests(unittest.TestCase):
     """
     Mock a process runner to test forked child code path.
     """
@@ -2105,7 +2105,7 @@ class MockProcessTestCase(unittest.TestCase):
 
 
 
-class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
+class PosixProcessTests(unittest.TestCase, PosixProcessBase):
     # add two non-pty test cases
 
     def test_stderr(self):
@@ -2150,9 +2150,9 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
 
 
 
-class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
+class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
     """
-    Just like PosixProcessTestCase, but use ptys instead of pipes.
+    Just like PosixProcessTests, but use ptys instead of pipes.
     """
     usePTY = True
     # PTYs only offer one input and one output. What still makes sense?
@@ -2213,7 +2213,7 @@ class Win32SignalProtocol(SignalProtocol):
 
 
 
-class Win32ProcessTestCase(unittest.TestCase):
+class Win32ProcessTests(unittest.TestCase):
     """
     Test process programs that are packaged with twisted.
     """
@@ -2335,7 +2335,7 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 
 
-class Win32UnicodeEnvironmentTest(unittest.TestCase):
+class Win32UnicodeEnvironmentTests(unittest.TestCase):
     """
     Tests for Unicode environment on Windows
     """
@@ -2361,7 +2361,7 @@ class Win32UnicodeEnvironmentTest(unittest.TestCase):
 
 
 
-class Dumbwin32procPidTest(unittest.TestCase):
+class Dumbwin32procPidTests(unittest.TestCase):
     """
     Simple test for the pid attribute of Process on win32.
     """
@@ -2397,7 +2397,7 @@ class Dumbwin32procPidTest(unittest.TestCase):
 
 
 
-class UtilTestCase(unittest.TestCase):
+class UtilTests(unittest.TestCase):
     """
     Tests for process-related helper functions (currently only
     L{procutils.which}.
@@ -2508,7 +2508,7 @@ class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
 
 
 
-class ClosingPipes(unittest.TestCase):
+class ClosingPipesTests(unittest.TestCase):
 
     def doit(self, fd):
         """
@@ -2591,17 +2591,17 @@ class ClosingPipes(unittest.TestCase):
 
 skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
 if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(reactor, None)):
-    PosixProcessTestCase.skip = skipMessage
-    PosixProcessTestCasePTY.skip = skipMessage
-    TestTwoProcessesPosix.skip = skipMessage
-    FDTest.skip = skipMessage
+    PosixProcessTests.skip = skipMessage
+    PosixProcessPTYTests.skip = skipMessage
+    TwoProcessesPosixTests.skip = skipMessage
+    FDTests.skip = skipMessage
 
 if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
-    Win32ProcessTestCase.skip = skipMessage
-    TestTwoProcessesNonPosix.skip = skipMessage
-    Dumbwin32procPidTest.skip = skipMessage
-    Win32UnicodeEnvironmentTest.skip = skipMessage
+    Win32ProcessTests.skip = skipMessage
+    TwoProcessesNonPosixTests.skip = skipMessage
+    Dumbwin32procPidTests.skip = skipMessage
+    Win32UnicodeEnvironmentTests.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):
-    ProcessTestCase.skip = skipMessage
-    ClosingPipes.skip = skipMessage
+    ProcessTests.skip = skipMessage
+    ClosingPipesTests.skip = skipMessage

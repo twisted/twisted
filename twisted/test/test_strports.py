@@ -14,7 +14,7 @@ from twisted.internet.endpoints import TCP4ServerEndpoint, UNIXServerEndpoint
 
 
 
-class DeprecatedParseTestCase(ParserTests):
+class DeprecatedParseTests(ParserTests):
     """
     L{strports.parse} is deprecated.  It's an alias for a method that is now
     private in L{twisted.internet.endpoints}.
@@ -49,7 +49,7 @@ class DeprecatedParseTestCase(ParserTests):
 
 
 
-class ServiceTestCase(TestCase):
+class ServiceTests(TestCase):
     """
     Tests for L{strports.service}.
     """

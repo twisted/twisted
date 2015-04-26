@@ -22,7 +22,7 @@ except ImportError:
 from twisted.persisted import styles, aot, crefutil
 
 
-class VersionTestCase(unittest.TestCase):
+class VersionTests(unittest.TestCase):
     def test_nullVersionUpgrade(self):
         global NullVersioned
         class NullVersioned:
@@ -181,7 +181,7 @@ class MyEphemeral(styles.Ephemeral):
         self.x = x
 
 
-class EphemeralTestCase(unittest.TestCase):
+class EphemeralTests(unittest.TestCase):
 
     def test_ephemeral(self):
         o = MyEphemeral(3)
@@ -220,7 +220,7 @@ class B:
 def funktion():
     pass
 
-class PicklingTestCase(unittest.TestCase):
+class PicklingTests(unittest.TestCase):
     """Test pickling of extra object types."""
     
     def test_module(self):
@@ -261,7 +261,7 @@ class NonDictState:
     def __setstate__(self, state):
         self.state = state
 
-class AOTTestCase(unittest.TestCase):
+class AOTTests(unittest.TestCase):
     def test_simpleTypes(self):
         obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world', sys.maxint + 1, None, Ellipsis)
         rtObj = aot.unjellyFromSource(aot.jellyToSource(obj))
@@ -350,7 +350,7 @@ class AOTTestCase(unittest.TestCase):
         assert oj.c is not oj.c.c
 
 
-class CrefUtilTestCase(unittest.TestCase):
+class CrefUtilTests(unittest.TestCase):
     """
     Tests for L{crefutil}.
     """
@@ -373,5 +373,5 @@ class CrefUtilTestCase(unittest.TestCase):
 
 
 
-testCases = [VersionTestCase, EphemeralTestCase, PicklingTestCase]
+testCases = [VersionTests, EphemeralTests, PicklingTests]
 

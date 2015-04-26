@@ -41,7 +41,7 @@ def getDivisionFailure(*args, **kwargs):
     return f
 
 
-class FailureTestCase(SynchronousTestCase):
+class FailureTests(SynchronousTestCase):
     """
     Tests for L{failure.Failure}.
     """
@@ -738,7 +738,7 @@ class FindFailureTests(SynchronousTestCase):
 
 
 
-class TestFormattableTraceback(SynchronousTestCase):
+class FormattableTracebackTests(SynchronousTestCase):
     """
     Whitebox tests that show that L{failure._Traceback} constructs objects that
     can be used by L{traceback.extract_tb}.
@@ -776,7 +776,7 @@ class TestFormattableTraceback(SynchronousTestCase):
 
 
 
-class TestFrameAttributes(SynchronousTestCase):
+class FrameAttributesTests(SynchronousTestCase):
     """
     _Frame objects should possess some basic attributes that qualify them as
     fake python Frame objects.
@@ -795,7 +795,7 @@ class TestFrameAttributes(SynchronousTestCase):
 
 
 
-class TestDebugMode(SynchronousTestCase):
+class DebugModeTests(SynchronousTestCase):
     """
     Failure's debug mode should allow jumping into the debugger.
     """

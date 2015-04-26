@@ -323,7 +323,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
 
 
-class DeprecateDeferredGenerator(unittest.SynchronousTestCase):
+class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
     """
     Tests that L{DeferredGeneratorTests} and L{waitForDeferred} are
     deprecated.

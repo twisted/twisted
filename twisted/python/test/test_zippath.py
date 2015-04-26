@@ -7,7 +7,7 @@ Test cases covering L{twisted.python.zippath}.
 
 import os, zipfile
 
-from twisted.test.test_paths import AbstractFilePathTestCase
+from twisted.test.test_paths import AbstractFilePathTests
 from twisted.python.zippath import ZipArchive
 
 
@@ -26,13 +26,13 @@ def zipit(dirname, zfname):
 
 
 
-class ZipFilePathTests(AbstractFilePathTestCase):
+class ZipFilePathTests(AbstractFilePathTests):
     """
     Test various L{ZipPath} path manipulations as well as reprs for L{ZipPath}
     and L{ZipArchive}.
     """
     def setUp(self):
-        AbstractFilePathTestCase.setUp(self)
+        AbstractFilePathTests.setUp(self)
         zipit(self.cmn, self.cmn + '.zip')
         self.path = ZipArchive(self.cmn + '.zip')
         self.root = self.path

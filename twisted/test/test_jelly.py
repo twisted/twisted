@@ -112,7 +112,7 @@ class SimpleJellyTest:
 
 
 
-class JellyTestCase(unittest.TestCase):
+class JellyTests(unittest.TestCase):
     """
     Testcases for L{jelly} module serialization.
 
@@ -627,7 +627,7 @@ class ClassB(pb.Copyable, pb.RemoteCopy):
 
 
 
-class CircularReferenceTestCase(unittest.TestCase):
+class CircularReferenceTests(unittest.TestCase):
     """
     Tests for circular references handling in the jelly/unjelly process.
     """

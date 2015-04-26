@@ -13,7 +13,7 @@ from twisted.internet import protocol, main
 from twisted.test.proto_helpers import StringTransport
 
 
-class MathTestCase(unittest.TestCase):
+class MathTests(unittest.TestCase):
     def test_int2b128(self):
         funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10l]
         for i in funkylist:
@@ -96,7 +96,7 @@ class BananaTestBase(unittest.TestCase):
 
 
 
-class BananaTestCase(BananaTestBase):
+class BananaTests(BananaTestBase):
     """
     General banana tests.
     """
@@ -131,7 +131,7 @@ class BananaTestCase(BananaTestBase):
         defined with the ``class`` statement).  ``Banana.sendEncoded`` raises
         ``BananaError`` if called with an instance of such a type.
         """
-        self._unsupportedTypeTest(MathTestCase(), __name__ + ".MathTestCase")
+        self._unsupportedTypeTest(MathTests(), __name__ + ".MathTests")
 
 
     def _unsupportedTypeTest(self, obj, name):

@@ -116,7 +116,7 @@ class UtilTests(unittest.TestCase):
 
 
 
-class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
+class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
     def setUp(self):
         self.callbackResults = None
@@ -1490,7 +1490,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
 
 
 
-class AlreadyCalledTestCase(unittest.SynchronousTestCase):
+class AlreadyCalledTests(unittest.SynchronousTestCase):
     def setUp(self):
         self._deferredWasDebugging = defer.getDebugging()
         defer.setDebugging(True)
@@ -1633,7 +1633,7 @@ class AlreadyCalledTestCase(unittest.SynchronousTestCase):
 
 
 
-class DeferredCancellerTest(unittest.SynchronousTestCase):
+class DeferredCancellerTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.callbackResults = None
         self.errbackResults = None
@@ -1896,7 +1896,7 @@ class DeferredCancellerTest(unittest.SynchronousTestCase):
 
 
 
-class LogTestCase(unittest.SynchronousTestCase):
+class LogTests(unittest.SynchronousTestCase):
     """
     Test logging of unhandled errors.
     """
@@ -2056,7 +2056,7 @@ class LogTestCase(unittest.SynchronousTestCase):
 
 
 
-class DeferredTestCaseII(unittest.SynchronousTestCase):
+class DeferredListEmptyTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.callbackRan = 0
 
@@ -2074,7 +2074,7 @@ class DeferredTestCaseII(unittest.SynchronousTestCase):
 
 
 
-class OtherPrimitives(unittest.SynchronousTestCase, ImmediateFailureMixin):
+class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def _incr(self, result):
         self.counter += 1
 
@@ -2316,7 +2316,7 @@ class OtherPrimitives(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
 
 
-class DeferredFilesystemLockTestCase(unittest.TestCase):
+class DeferredFilesystemLockTests(unittest.TestCase):
     """
     Test the behavior of L{DeferredFilesystemLock}
     """

@@ -35,7 +35,7 @@ class SecureRandomTestCaseBase(object):
 
 
 
-class SecureRandomTestCase(SecureRandomTestCaseBase, unittest.TestCase):
+class SecureRandomTests(SecureRandomTestCaseBase, unittest.TestCase):
     """
     Test secureRandom under normal conditions.
     """
@@ -49,8 +49,8 @@ class SecureRandomTestCase(SecureRandomTestCaseBase, unittest.TestCase):
 
 
 
-class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
-                                      unittest.SynchronousTestCase):
+class ConditionalSecureRandomTests(SecureRandomTestCaseBase,
+                                   unittest.SynchronousTestCase):
     """
     Test random sources one by one, then remove it to.
     """
@@ -97,7 +97,7 @@ class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
 
 
 
-class RandomTestCaseBase(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
+class RandomBaseTests(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
     """
     'Normal' random test cases.
     """

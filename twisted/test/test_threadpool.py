@@ -56,7 +56,7 @@ threadable.synchronize(Synchronization)
 
 
 
-class ThreadPoolTestCase(unittest.SynchronousTestCase):
+class ThreadPoolTests(unittest.SynchronousTestCase):
     """
     Test threadpools.
     """
@@ -556,7 +556,7 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
 
 
-class RaceConditionTestCase(unittest.SynchronousTestCase):
+class RaceConditionTests(unittest.SynchronousTestCase):
 
     def getTimeout(self):
         """

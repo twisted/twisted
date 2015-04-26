@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_amp.TLSTest,twisted.test.test_iosim -*-
+# -*- test-case-name: twisted.test.test_amp.TLSTests,twisted.test.test_iosim -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

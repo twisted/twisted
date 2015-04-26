@@ -36,7 +36,7 @@ class ITestPlugin2(Interface):
 
 
 
-class PluginTestCase(unittest.TestCase):
+class PluginTests(unittest.TestCase):
     """
     Tests which verify the behavior of the current, active Twisted plugins
     directory.

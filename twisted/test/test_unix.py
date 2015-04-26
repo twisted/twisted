@@ -24,7 +24,7 @@ class FailedConnectionClientFactory(protocol.ClientFactory):
 
 
 
-class UnixSocketTestCase(unittest.TestCase):
+class UnixSocketTests(unittest.TestCase):
     """
     Test unix sockets.
     """
@@ -286,7 +286,7 @@ class ServerProto(protocol.DatagramProtocol):
 
 
 
-class DatagramUnixSocketTestCase(unittest.TestCase):
+class DatagramUnixSocketTests(unittest.TestCase):
     """
     Test datagram UNIX sockets.
     """
@@ -400,6 +400,6 @@ class DatagramUnixSocketTestCase(unittest.TestCase):
 
 
 if not interfaces.IReactorUNIX(reactor, None):
-    UnixSocketTestCase.skip = "This reactor does not support UNIX domain sockets"
+    UnixSocketTests.skip = "This reactor does not support UNIX domain sockets"
 if not interfaces.IReactorUNIXDatagram(reactor, None):
-    DatagramUnixSocketTestCase.skip = "This reactor does not support UNIX datagram sockets"
+    DatagramUnixSocketTests.skip = "This reactor does not support UNIX datagram sockets"

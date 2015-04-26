@@ -321,7 +321,7 @@ class BasicTests(TwistedModulesTestCase):
 
 
 
-class PathModificationTest(TwistedModulesTestCase):
+class PathModificationTests(TwistedModulesTestCase):
     """
     These tests share setup/cleanup behavior of creating a dummy package and
     stuffing some code in it.
@@ -412,7 +412,7 @@ class PathModificationTest(TwistedModulesTestCase):
 
 
 
-class RebindingTest(PathModificationTest):
+class RebindingTests(PathModificationTests):
     """
     These tests verify that the default path interrogation API works properly
     even when sys.path has been rebound to a different object.
@@ -434,16 +434,16 @@ class RebindingTest(PathModificationTest):
 
 
 
-class ZipPathModificationTest(PathModificationTest):
+class ZipPathModificationTests(PathModificationTests):
     def _setupSysPath(self):
         assert not self.pathSetUp
         zipit(self.pathExtensionName, self.pathExtensionName+'.zip')
         self.pathExtensionName += '.zip'
         assert zipfile.is_zipfile(self.pathExtensionName)
-        PathModificationTest._setupSysPath(self)
+        PathModificationTests._setupSysPath(self)
 
 
-class PythonPathTestCase(TestCase):
+class PythonPathTests(TestCase):
     """
     Tests for the class which provides the implementation for all of the
     public API of L{twisted.python.modules}, L{PythonPath}.
@@ -511,12 +511,12 @@ class PythonPathTestCase(TestCase):
         self.assertNotIn('bogusModule', thePath)
 
 
-__all__ = ["BasicTests", "PathModificationTest", "RebindingTest",
-           "ZipPathModificationTest", "PythonPathTestCase"]
+__all__ = ["BasicTests", "PathModificationTests", "RebindingTests",
+           "ZipPathModificationTests", "PythonPathTests"]
 
 if _PY3:
-    __all3__ = ["BasicTests", "PathModificationTest", "RebindingTest",
-                "PythonPathTestCase"]
+    __all3__ = ["BasicTests", "PathModificationTests", "RebindingTests",
+                "PythonPathTests"]
     for name in __all__[:]:
         if name not in __all3__:
             __all__.remove(name)

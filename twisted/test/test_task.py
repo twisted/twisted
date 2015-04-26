@@ -31,7 +31,7 @@ class TestException(Exception):
 
 
 
-class ClockTestCase(unittest.TestCase):
+class ClockTests(unittest.TestCase):
     """
     Test the non-wallclock based clock implementation.
     """
@@ -251,7 +251,7 @@ class ClockTestCase(unittest.TestCase):
 
 
 
-class LoopTestCase(unittest.TestCase):
+class LoopTests(unittest.TestCase):
     """
     Tests for L{task.LoopingCall} based on a fake L{IReactorTime}
     implementation.
@@ -565,7 +565,7 @@ class LoopTestCase(unittest.TestCase):
 
 
 
-class ReactorLoopTestCase(unittest.TestCase):
+class ReactorLoopTests(unittest.TestCase):
     # Slightly inferior tests which exercise interactions with an actual
     # reactor.
     def testFailure(self):

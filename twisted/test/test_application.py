@@ -24,7 +24,7 @@ from twisted.python.test.modules_helpers import TwistedModulesMixin
 class Dummy:
     processName=None
 
-class TestService(unittest.TestCase):
+class ServiceTests(unittest.TestCase):
 
     def testName(self):
         s = service.Service()
@@ -151,7 +151,7 @@ else:
     curuid = curgid = 0
 
 
-class TestProcess(unittest.TestCase):
+class ProcessTests(unittest.TestCase):
 
     def testID(self):
         p = service.Process(5, 6)
@@ -176,7 +176,7 @@ class TestProcess(unittest.TestCase):
         self.assertEqual(p.processName, 'hello')
 
 
-class TestInterfaces(unittest.TestCase):
+class InterfacesTests(unittest.TestCase):
 
     def testService(self):
         self.assert_(service.IService.providedBy(service.Service()))
@@ -189,7 +189,7 @@ class TestInterfaces(unittest.TestCase):
         self.assert_(service.IProcess.providedBy(service.Process()))
 
 
-class TestApplication(unittest.TestCase):
+class ApplicationTests(unittest.TestCase):
 
     def testConstructor(self):
         service.Application("hello")
@@ -220,7 +220,7 @@ class TestApplication(unittest.TestCase):
         self.assertEqual(p.name, 'hello')
         self.assert_(p.original is a)
 
-class TestLoading(unittest.TestCase):
+class LoadingTests(unittest.TestCase):
 
     def test_simpleStoreAndLoad(self):
         a = service.Application("hello")
@@ -241,7 +241,7 @@ class TestLoading(unittest.TestCase):
 
 
 
-class TestAppSupport(unittest.TestCase):
+class AppSupportTests(unittest.TestCase):
 
     def testPassphrase(self):
         self.assertEqual(app.getPassphrase(0), None)
@@ -316,7 +316,7 @@ class TestEcho(wire.Echo):
     def connectionLost(self, reason):
         self.d.callback(True)
 
-class TestInternet2(unittest.TestCase):
+class InternetTests(unittest.TestCase):
 
     def testTCP(self):
         s = service.MultiService()
@@ -592,7 +592,7 @@ class TestInternet2(unittest.TestCase):
 
 
 
-class TestTimerBasic(unittest.TestCase):
+class TimerBasicTests(unittest.TestCase):
 
     def testTimerRuns(self):
         d = defer.Deferred()
@@ -660,7 +660,7 @@ class FakeReactor(reactors.Reactor):
 
 
 
-class PluggableReactorTestCase(TwistedModulesMixin, unittest.TestCase):
+class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
     """
     Tests for the reactor discovery/inspection APIs.
     """
