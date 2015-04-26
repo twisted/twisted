@@ -1035,7 +1035,8 @@ class ResolveTests(unittest.TestCase):
         return helperDeferred
 
 if not interfaces.IReactorProcess(reactor, None):
-    Resolve.skip = "cannot run test: reactor doesn't support IReactorProcess"
+    ResolveTests.skip = (
+        "cannot run test: reactor doesn't support IReactorProcess")
 
 
 
