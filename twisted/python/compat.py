@@ -16,6 +16,9 @@ the latest version of Python directly from your code, if possible.
 
 @var NativeStringIO: An in-memory file-like object that operates on the native
     string type (bytes in Python 2, unicode in Python 3).
+
+@var urlparse: a URL-parsing module (urlparse on Python 2, urllib.parse on
+    Python 3)
 """
 
 from __future__ import division
@@ -387,6 +390,12 @@ if _PY3:
     from io import StringIO as NativeStringIO
 else:
     from io import BytesIO as NativeStringIO
+
+
+if _PY3:
+    import urllib.parse as urlparse
+else:
+    import urlparse
 
 
 

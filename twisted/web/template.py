@@ -26,9 +26,9 @@ __all__ = [
     ]
 
 import warnings
-from zope.interface import implements
+from zope.interface import implementer
 
-from cStringIO import StringIO
+from twisted.python.compat import NativeStringIO as StringIO
 from xml.sax import make_parser, handler
 
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
@@ -353,6 +353,7 @@ def _flatsaxParse(fl):
     return s.document
 
 
+@implementer(ITemplateLoader)
 class TagLoader(object):
     """
     An L{ITemplateLoader} that loads existing L{IRenderable} providers.
@@ -360,7 +361,6 @@ class TagLoader(object):
     @ivar tag: The object which will be loaded.
     @type tag: An L{IRenderable} provider.
     """
-    implements(ITemplateLoader)
 
     def __init__(self, tag):
         """
@@ -375,6 +375,7 @@ class TagLoader(object):
 
 
 
+@implementer(ITemplateLoader)
 class XMLString(object):
     """
     An L{ITemplateLoader} that loads and parses XML from a string.
@@ -382,7 +383,6 @@ class XMLString(object):
     @ivar _loadedTemplate: The loaded document.
     @type _loadedTemplate: a C{list} of Stan objects.
     """
-    implements(ITemplateLoader)
 
     def __init__(self, s):
         """
@@ -405,6 +405,7 @@ class XMLString(object):
 
 
 
+@implementer(ITemplateLoader)
 class XMLFile(object):
     """
     An L{ITemplateLoader} that loads and parses XML from a file.
@@ -415,7 +416,6 @@ class XMLFile(object):
     @ivar _path: The L{FilePath}, file object, or filename that is being
         loaded from.
     """
-    implements(ITemplateLoader)
 
     def __init__(self, path):
         """

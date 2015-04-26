@@ -5,8 +5,14 @@
 HTTP errors.
 """
 
+import re
+import sys
+import traceback
+
 from twisted.trial import unittest
+from twisted.python.compat import nativeString
 from twisted.web import error
+from twisted.web.template import Tag
 
 class ErrorTests(unittest.TestCase):
     """
@@ -149,3 +155,201 @@ class InfiniteRedirectionTests(unittest.TestCase):
         """
         e = error.InfiniteRedirection("200", "My own message")
         self.assertEqual(e.message, "My own message")
+
+
+
+class RedirectWithNoLocationTests(unittest.TestCase):
+    """
+    Tests for how L{RedirectWithNoLocation} attributes are initialized.
+    """
+    def test_validMessage(self):
+        """
+        When C{code}, C{message}, and C{uri} are passed to the
+        L{RedirectWithNoLocation} constructor, the C{status}, C{message}, and
+        C{uri} attributes are set, respectively.
+        """
+        e = error.RedirectWithNoLocation("200", "NO LOCATION",
+                                         "https://example.com")
+        self.assertEqual(e.message, "NO LOCATION to https://example.com")
+
+
+class MissingRenderMethodTests(unittest.TestCase):
+    """
+    Tests for how L{MissingRenderMethod} exceptions are initialized and
+    displayed.
+    """
+    def test_constructor(self):
+        """
+        Given C{element} and C{renderName} arguments, the
+        L{MissingRenderMethod} constructor assigns the values to the
+        corresponding attributes.
+        """
+        elt = object()
+        e = error.MissingRenderMethod(elt, 'renderThing')
+        self.assertIdentical(e.element, elt)
+        self.assertIdentical(e.renderName, 'renderThing')
+
+    def test_repr(self):
+        """
+        A L{MissingRenderMethod} is represented using a custom string containing
+        the element's representation and the method name.
+        """
+        elt = object()
+        e = error.MissingRenderMethod(elt, 'renderThing')
+        self.assertEqual(
+            repr(e),
+            "'MissingRenderMethod': %r had no render method named 'renderThing'" % elt)
+
+
+class MissingTemplateLoaderTests(unittest.TestCase):
+    """
+    Tests for how L{MissingTemplateLoader} exceptions are initialized and
+    displayed.
+    """
+    def test_constructor(self):
+        """
+        Given an C{element} argument, the L{MissingTemplateLoader} constructor
+        assigns the value to the corresponding attribute.
+        """
+        elt = object()
+        e = error.MissingTemplateLoader(elt)
+        self.assertIdentical(e.element, elt)
+
+    def test_repr(self):
+        """
+        A L{MissingTemplateLoader} is represented using a custom string containing
+        the element's representation and the method name.
+        """
+        elt = object()
+        e = error.MissingTemplateLoader(elt)
+        self.assertEqual(
+            repr(e),
+            "'MissingTemplateLoader': %r had no loader" % elt)
+
+
+class FlattenerErrorTests(unittest.TestCase):
+    """
+    Tests for how L{FlattenerError} exceptions are initialized and displayed.
+    """
+    def makeFlattenerError(self, roots=[]):
+        try:
+            raise RuntimeError("oh noes")
+        except Exception as e:
+            tb = traceback.extract_tb(sys.exc_info()[2])
+            return error.FlattenerError(e, roots, tb)
+
+    def fakeFormatRoot(self, obj):
+        return 'R(%s)' % obj
+
+    def test_constructor(self):
+        """
+        Given C{exception}, C{roots}, and C{traceback} arguments, the
+        L{FlattenerError} constructor assigns the roots to the C{_roots}
+        attribute.
+        """
+        e = self.makeFlattenerError(roots=['a', 'b'])
+        self.assertEqual(e._roots, ['a', 'b'])
+
+    def test_str(self):
+        """
+        The string form of a L{FlattenerError} is identical to its representation.
+        """
+        e = self.makeFlattenerError()
+        self.assertEqual(str(e), repr(e))
+
+    def test_reprWithRootsAndWithTraceback(self):
+        """
+        The representation of a L{FlattenerError} initialized with roots and a
+        traceback contains a formatted representation of those roots (using
+        C{_formatRoot}) and a formatted traceback.
+        """
+        e = self.makeFlattenerError(['a', 'b'])
+        e._formatRoot = self.fakeFormatRoot
+        self.failUnless(
+            re.match('Exception while flattening:\n'
+                     '  R\(a\)\n'
+                     '  R\(b\)\n'
+                     '  File "[^"]*", line [0-9]*, in makeFlattenerError\n'
+                     '    raise RuntimeError\("oh noes"\)\n'
+                     'RuntimeError: oh noes\n$',
+                     repr(e), re.M | re.S),
+            repr(e))
+
+    def test_reprWithoutRootsAndWithTraceback(self):
+        """
+        The representation of a L{FlattenerError} initialized without roots but
+        with a traceback contains a formatted traceback but no roots.
+        """
+        e = self.makeFlattenerError([])
+        self.failUnless(
+            re.match('Exception while flattening:\n'
+                     '  File "[^"]*", line [0-9]*, in makeFlattenerError\n'
+                     '    raise RuntimeError\("oh noes"\)\n'
+                     'RuntimeError: oh noes\n$',
+                     repr(e), re.M | re.S),
+            repr(e))
+
+    def test_reprWithoutRootsAndWithoutTraceback(self):
+        """
+        The representation of a L{FlattenerError} initialized without roots but
+        with a traceback contains a formatted traceback but no roots.
+        """
+        e = error.FlattenerError(RuntimeError("oh noes"), [], None)
+        self.failUnless(
+            re.match('Exception while flattening:\n'
+                     'RuntimeError: oh noes\n$',
+                     repr(e), re.M | re.S),
+            repr(e))
+
+    def test_formatRootShortNativeString(self):
+        """
+        The C{_formatRoot} method formats a short native string using the
+        built-in repr.
+        """
+        e = self.makeFlattenerError()
+        self.assertEqual(e._formatRoot(nativeString('abcd')), repr('abcd'))
+
+    def test_formatRootLongNativeString(self):
+        """
+        The C{_formatRoot} method formats a short native string using the
+        built-in repr.
+        """
+        e = self.makeFlattenerError()
+        longString = nativeString('abcde-' * 20)
+        self.assertEqual(e._formatRoot(longString),
+                        repr('abcde-abcde-abcde-ab<...>-abcde-abcde-abcde-'))
+
+    def test_formatRootShortByteString(self):
+        """
+        The C{_formatRoot} method formats a short native string using the
+        built-in repr.
+        """
+        e = self.makeFlattenerError()
+        self.assertEqual(e._formatRoot(b'abcd'), repr(b'abcd'))
+
+    def test_formatRootLongByteString(self):
+        """
+        The C{_formatRoot} method formats a short native string using the
+        built-in repr.
+        """
+        e = self.makeFlattenerError()
+        longString = b'abcde-' * 20
+        self.assertEqual(e._formatRoot(longString),
+                        repr(b'abcde-abcde-abcde-ab<...>-abcde-abcde-abcde-'))
+
+    def test_formatRootTagNoFilename(self):
+        """
+        The C{_formatRoot} method formats a C{Tag} with no filename information
+        as 'Tag <tagName>'.
+        """
+        e = self.makeFlattenerError()
+        self.assertEqual(e._formatRoot(Tag('a-tag')), 'Tag <a-tag>')
+
+    def test_formatRootTagWithFilename(self):
+        """
+        The C{_formatRoot} method formats a C{Tag} with filename information
+        using the filename, line, column, and tag information
+        """
+        e = self.makeFlattenerError()
+        t = Tag('a-tag', filename='tpl.py', lineNumber=10, columnNumber=20)
+        self.assertEqual(e._formatRoot(t), 'File "tpl.py", line 10, column 20, in "a-tag"')

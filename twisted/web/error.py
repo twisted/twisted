@@ -17,7 +17,8 @@ __all__ = [
 
 from collections import Sequence
 
-from twisted.web._responses import RESPONSES
+from twisted.web._responses import str2response
+from twisted.python.compat import unicode
 
 
 class Error(Exception):
@@ -48,14 +49,7 @@ class Error(Exception):
         @type response: C{bytes}
         @param response: A complete HTML document for an error page.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
+        message = message or str2response(code)
 
         Exception.__init__(self, code, message, response)
         self.status = code
@@ -95,19 +89,9 @@ class PageRedirect(Error):
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
-
-        if location and message:
-            message = "%s to %s" % (message, location)
-
         Error.__init__(self, code, message, response)
+        if self.message and location:
+            self.message = "%s to %s" % (self.message, location)
         self.location = location
 
 
@@ -140,19 +124,9 @@ class InfiniteRedirection(Error):
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
-
-        if location and message:
-            message = "%s to %s" % (message, location)
-
         Error.__init__(self, code, message, response)
+        if self.message and location:
+            self.message = "%s to %s" % (self.message, location)
         self.location = location
 
 
@@ -161,6 +135,10 @@ class RedirectWithNoLocation(Error):
     """
     Exception passed to L{ResponseFailed} if we got a redirect without a
     C{Location} header field.
+
+    @type uri: C{str}
+    @ivar uri: The URI which failed to give a proper location header
+        field.
 
     @since: 11.1
     """
@@ -322,18 +300,22 @@ class FlattenerError(Exception):
         # There's a circular dependency between this class and 'Tag', although
         # only for an isinstance() check.
         from twisted.web.template import Tag
-        if isinstance(obj, (str, unicode)):
+        try:
+            stringTypes = (bytes, str)
+        except NameError:
+            stringTypes = (str, unicode)
+        if isinstance(obj, stringTypes):
             # It's somewhat unlikely that there will ever be a str in the roots
             # list.  However, something like a MemoryError during a str.replace
             # call (eg, replacing " with &quot;) could possibly cause this.
             # Likewise, UTF-8 encoding a unicode string to a byte string might
             # fail like this.
             if len(obj) > 40:
-                if isinstance(obj, str):
-                    prefix = 1
+                if isinstance(obj, unicode):
+                    ellipsis = u'<...>'
                 else:
-                    prefix = 2
-                return repr(obj[:20])[:-1] + '<...>' + repr(obj[-20:])[prefix:]
+                    ellipsis = b'<...>'
+                return repr(obj[:20] + ellipsis + obj[-19:])
             else:
                 return repr(obj)
         elif isinstance(obj, Tag):

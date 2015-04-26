@@ -112,3 +112,19 @@ RESPONSES = {
     NOT_EXTENDED: "Not Extended"
     }
 
+
+def str2response(code):
+    """
+    Returns the response message corresponding to an HTTP code, or None
+    if the code is unknown or unrecognized.
+
+    @type code: L{str}
+    @param code: Refers to an HTTP status code, for example C{http.NOT_FOUND}.
+
+    @return: A string message or none
+    @rtype: L{str}
+    """
+    try:
+        return RESPONSES.get(int(code))
+    except ValueError:
+        return None
