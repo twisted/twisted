@@ -64,7 +64,7 @@ class FakeScheduler(object):
 
 
 
-class TestCooperator(unittest.TestCase):
+class CooperatorTests(unittest.TestCase):
     RESULT = 'done'
 
     def ebIter(self, err):

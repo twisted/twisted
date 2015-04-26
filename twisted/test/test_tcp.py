@@ -170,7 +170,7 @@ class MyClientFactory(MyProtocolFactoryMixin, protocol.ClientFactory):
 
 
 
-class ListeningTestCase(unittest.TestCase):
+class ListeningTests(unittest.TestCase):
 
     def test_listen(self):
         """
@@ -369,7 +369,7 @@ class ListeningTestCase(unittest.TestCase):
 
 
 
-class LoopbackTestCase(unittest.TestCase):
+class LoopbackTests(unittest.TestCase):
     """
     Test loopback connections.
     """
@@ -617,7 +617,7 @@ class ClientStartStopFactory(MyClientFactory):
         self.whenStopped.callback(True)
 
 
-class FactoryTestCase(unittest.TestCase):
+class FactoryTests(unittest.TestCase):
     """Tests for factories."""
 
     def test_serverStartStop(self):
@@ -681,7 +681,7 @@ class FactoryTestCase(unittest.TestCase):
 
 
 
-class CannotBindTestCase(unittest.TestCase):
+class CannotBindTests(unittest.TestCase):
     """
     Tests for correct behavior when a reactor cannot bind to the required TCP
     port.
@@ -798,7 +798,7 @@ class MyOtherClientFactory(protocol.ClientFactory):
 
 
 
-class LocalRemoteAddressTestCase(unittest.TestCase):
+class LocalRemoteAddressTests(unittest.TestCase):
     """
     Tests for correct getHost/getPeer values and that the correct address is
     passed to buildProtocol.
@@ -875,7 +875,7 @@ class WriterClientFactory(protocol.ClientFactory):
         self.protocol = p
         return p
 
-class WriteDataTestCase(unittest.TestCase):
+class WriteDataTests(unittest.TestCase):
     """
     Test that connected TCP sockets can actually write data. Try to exercise
     the entire ITransport interface.
@@ -1219,7 +1219,7 @@ class ProperlyCloseFilesMixin:
 
 
 
-class ProperlyCloseFilesTestCase(unittest.TestCase, ProperlyCloseFilesMixin):
+class ProperlyCloseFilesTests(unittest.TestCase, ProperlyCloseFilesMixin):
     """
     Test that the sockets created by L{IReactorTCP.connectTCP} are cleaned up
     when the connection they are associated with is closed.
@@ -1272,7 +1272,7 @@ class WiredFactory(policies.WrappingFactory):
 
 
 
-class AddressTestCase(unittest.TestCase):
+class AddressTests(unittest.TestCase):
     """
     Tests for address-related interactions with client and server protocols.
     """
@@ -1409,7 +1409,7 @@ class FireOnCloseFactory(policies.WrappingFactory):
         self.deferred = defer.Deferred()
 
 
-class LargeBufferTestCase(unittest.TestCase):
+class LargeBufferTests(unittest.TestCase):
     """Test that buffering large amounts of data works.
     """
 
@@ -1472,7 +1472,7 @@ class MyHCFactory(protocol.ServerFactory):
         return p
 
 
-class HalfCloseTestCase(unittest.TestCase):
+class HalfCloseTests(unittest.TestCase):
     """Test half-closing connections."""
 
     def setUp(self):
@@ -1554,7 +1554,7 @@ class HalfCloseTestCase(unittest.TestCase):
         return d
 
 
-class HalfClose2TestCase(unittest.TestCase):
+class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
 
     def setUp(self):
         self.f = f = MyServerFactory()
@@ -1678,7 +1678,7 @@ class HalfCloseBuggyApplicationTests(unittest.TestCase):
 
 
 
-class LogTestCase(unittest.TestCase):
+class LogTests(unittest.TestCase):
     """
     Test logging facility of TCP base classes.
     """
@@ -1712,7 +1712,7 @@ class LogTestCase(unittest.TestCase):
 
 
 
-class PauseProducingTestCase(unittest.TestCase):
+class PauseProducingTests(unittest.TestCase):
     """
     Test some behaviors of pausing the production of a transport.
     """
@@ -1759,7 +1759,7 @@ class PauseProducingTestCase(unittest.TestCase):
 
 
 
-class CallBackOrderTestCase(unittest.TestCase):
+class CallBackOrderTests(unittest.TestCase):
     """
     Test the order of reactor callbacks
     """
@@ -1821,4 +1821,4 @@ except ImportError:
     pass
 else:
     numRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
-    ProperlyCloseFilesTestCase.numberRounds = numRounds
+    ProperlyCloseFilesTests.numberRounds = numRounds

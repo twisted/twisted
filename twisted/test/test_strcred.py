@@ -46,7 +46,7 @@ def getInvalidAuthType():
 
 
 
-class TestPublicAPI(unittest.TestCase):
+class PublicAPITests(unittest.TestCase):
 
     def test_emptyDescription(self):
         """
@@ -69,7 +69,7 @@ class TestPublicAPI(unittest.TestCase):
 
 
 
-class TestStrcredFunctions(unittest.TestCase):
+class StrcredFunctionsTests(unittest.TestCase):
 
     def test_findCheckerFactories(self):
         """
@@ -90,7 +90,7 @@ class TestStrcredFunctions(unittest.TestCase):
 
 
 
-class TestMemoryChecker(unittest.TestCase):
+class MemoryCheckerTests(unittest.TestCase):
 
     def setUp(self):
         self.admin = credentials.UsernamePassword('admin', 'asdf')
@@ -147,7 +147,7 @@ class TestMemoryChecker(unittest.TestCase):
 
 
 
-class TestAnonymousChecker(unittest.TestCase):
+class AnonymousCheckerTests(unittest.TestCase):
 
     def test_isChecker(self):
         """
@@ -171,7 +171,7 @@ class TestAnonymousChecker(unittest.TestCase):
 
 
 
-class TestUnixChecker(unittest.TestCase):
+class UnixCheckerTests(unittest.TestCase):
     users = {
         'admin': 'asdf',
         'alice': 'foo',
@@ -259,7 +259,7 @@ class TestUnixChecker(unittest.TestCase):
 
 
 
-class TestFileDBChecker(unittest.TestCase):
+class FileDBCheckerTests(unittest.TestCase):
     """
     Test for the --auth=file:... file checker.
     """
@@ -340,7 +340,7 @@ class TestFileDBChecker(unittest.TestCase):
 
 
 
-class TestSSHChecker(unittest.TestCase):
+class SSHCheckerTests(unittest.TestCase):
     """
     Tests for the --auth=sshkey:... checker.  The majority of the tests for the
     ssh public key database checker are in
@@ -375,7 +375,7 @@ class DummyOptions(usage.Options, strcred.AuthOptionMixin):
 
 
 
-class TestCheckerOptions(unittest.TestCase):
+class CheckerOptionsTests(unittest.TestCase):
 
     def test_createsList(self):
         """
@@ -512,7 +512,7 @@ class OptionsSupportsNoInterfaces(usage.Options, strcred.AuthOptionMixin):
 
 
 
-class TestLimitingInterfaces(unittest.TestCase):
+class LimitingInterfacesTests(unittest.TestCase):
     """
     Tests functionality that allows an application to limit the
     credential interfaces it can support. For the purposes of this

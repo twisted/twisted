@@ -176,7 +176,7 @@ class FTPServerTestCase(unittest.TestCase):
 
 
 
-class FTPAnonymousTestCase(FTPServerTestCase):
+class FTPAnonymousTests(FTPServerTestCase):
     """
     Simple tests for an FTP server with different anonymous username.
     The new anonymous username used in this test case is "guest"
@@ -200,7 +200,7 @@ class FTPAnonymousTestCase(FTPServerTestCase):
 
 
 
-class BasicFTPServerTestCase(FTPServerTestCase):
+class BasicFTPServerTests(FTPServerTestCase):
     def testNotLoggedInReply(self):
         """
         When not logged in, most commands other than USER and PASS should
@@ -603,7 +603,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
 
 
 
-class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
+class FTPServerAdvancedClientTests(FTPServerTestCase):
     """
     Test FTP server with the L{ftp.FTPClient} class.
     """
@@ -715,7 +715,7 @@ class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
 
 
 
-class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
+class FTPServerPasvDataConnectionTests(FTPServerTestCase):
     def _makeDataConnection(self, ignored=None):
         # Establish a passive data connection (i.e. client connecting to
         # server).
@@ -1024,10 +1024,10 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
 
 
 
-class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
+class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
     def setUp(self):
         self.dataPorts = []
-        return FTPServerPasvDataConnectionTestCase.setUp(self)
+        return FTPServerPasvDataConnectionTests.setUp(self)
 
     def _makeDataConnection(self, ignored=None):
         # Establish an active data connection (i.e. server connecting to
@@ -1048,7 +1048,7 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
     def tearDown(self):
         l = [defer.maybeDeferred(port.stopListening) for port in self.dataPorts]
         d = defer.maybeDeferred(
-            FTPServerPasvDataConnectionTestCase.tearDown, self)
+            FTPServerPasvDataConnectionTests.tearDown, self)
         l.append(d)
         return defer.DeferredList(l, fireOnOneErrback=True)
 
@@ -1419,7 +1419,7 @@ class FTPFileListingTests(unittest.TestCase):
 
 
 
-class FTPClientTests(unittest.TestCase):
+class FTPClientFailedRETRAndErrbacksUponDisconnectTests(unittest.TestCase):
 
     def testFailedRETR(self):
         f = protocol.Factory()
@@ -1472,7 +1472,7 @@ class FTPClientTests(unittest.TestCase):
 
 
 
-class FTPClientTestCase(unittest.TestCase):
+class FTPClientTests(unittest.TestCase):
     """
     Test advanced FTP client commands.
     """
@@ -2519,7 +2519,7 @@ class FTPClientBasicTests(unittest.TestCase):
 
 
 
-class PathHandling(unittest.TestCase):
+class PathHandlingTests(unittest.TestCase):
     def testNormalizer(self):
         for inp, outp in [('a', ['a']),
                           ('/a', ['a']),
@@ -2667,7 +2667,7 @@ class BaseFTPRealmTests(unittest.TestCase):
 
 
 
-class FTPRealmTestCase(unittest.TestCase):
+class FTPRealmTests(unittest.TestCase):
     """
     Tests for L{ftp.FTPRealm}.
     """
@@ -2733,7 +2733,7 @@ class SystemFTPRealmTests(unittest.TestCase):
 
 
 
-class ErrnoToFailureTestCase(unittest.TestCase):
+class ErrnoToFailureTests(unittest.TestCase):
     """
     Tests for L{ftp.errnoToFailure} errno checking.
     """
@@ -2799,7 +2799,7 @@ class ErrnoToFailureTestCase(unittest.TestCase):
 
 
 
-class AnonymousFTPShellTestCase(unittest.TestCase):
+class AnonymousFTPShellTests(unittest.TestCase):
     """
     Test anonymous shell properties.
     """
@@ -3244,7 +3244,7 @@ class IFTPShellTestsMixin:
 
 
 
-class FTPShellTestCase(unittest.TestCase, IFTPShellTestsMixin):
+class FTPShellTests(unittest.TestCase, IFTPShellTestsMixin):
     """
     Tests for the C{ftp.FTPShell} object.
     """
@@ -3413,7 +3413,7 @@ class IReadWriteTestsMixin:
 
 
 
-class FTPReadWriteTestCase(unittest.TestCase, IReadWriteTestsMixin):
+class FTPReadWriteTests(unittest.TestCase, IReadWriteTestsMixin):
     """
     Tests for C{ftp._FileReader} and C{ftp._FileWriter}, the objects returned
     by the shell in C{openForReading}/C{openForWriting}.
@@ -3471,7 +3471,7 @@ class CloseTestShell:
 
 
 
-class FTPCloseTest(unittest.TestCase):
+class FTPCloseTests(unittest.TestCase):
     """Tests that the server invokes IWriteFile.close"""
 
     def test_write(self):

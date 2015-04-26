@@ -121,7 +121,7 @@ class TestableTimeoutFactory(policies.TimeoutFactory):
 
 
 
-class WrapperTestCase(unittest.TestCase):
+class WrapperTests(unittest.TestCase):
     """
     Tests for L{WrappingFactory} and L{ProtocolWrapper}.
     """
@@ -345,7 +345,7 @@ class WrappingFactory(policies.WrappingFactory):
 
 
 
-class ThrottlingTestCase(unittest.TestCase):
+class ThrottlingTests(unittest.TestCase):
     """
     Tests for L{policies.ThrottlingFactory}.
     """
@@ -498,7 +498,7 @@ class ThrottlingTestCase(unittest.TestCase):
 
 
 
-class TimeoutTestCase(unittest.TestCase):
+class TimeoutFactoryTests(unittest.TestCase):
     """
     Tests for L{policies.TimeoutFactory}.
     """
@@ -639,7 +639,7 @@ class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
 
 
 
-class TestTimeout(unittest.TestCase):
+class TimeoutMixinTests(unittest.TestCase):
     """
     Tests for L{policies.TimeoutMixin}.
     """
@@ -737,7 +737,7 @@ class TestTimeout(unittest.TestCase):
 
 
 
-class LimitTotalConnectionsFactoryTestCase(unittest.TestCase):
+class LimitTotalConnectionsFactoryTests(unittest.TestCase):
     """Tests for policies.LimitTotalConnectionsFactory"""
     def testConnectionCounting(self):
         # Make a basic factory
@@ -813,7 +813,7 @@ class TestLoggingFactory(policies.TrafficLoggingFactory):
 
 
 
-class LoggingFactoryTestCase(unittest.TestCase):
+class LoggingFactoryTests(unittest.TestCase):
     """
     Tests for L{policies.TrafficLoggingFactory}.
     """

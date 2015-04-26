@@ -11,7 +11,7 @@ from twisted.trial import unittest
 from twisted.python import formmethod
 
 
-class ArgumentTestCase(unittest.TestCase):
+class ArgumentTests(unittest.TestCase):
 
     def argTest(self, argKlass, testPairs, badValues, *args, **kwargs):
         arg = argKlass("name", *args, **kwargs)

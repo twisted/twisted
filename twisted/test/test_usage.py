@@ -36,7 +36,7 @@ class WellBehaved(usage.Options):
 
 
 
-class ParseCorrectnessTest(unittest.TestCase):
+class ParseCorrectnessTests(unittest.TestCase):
     """
     Test L{usage.Options.parseOptions} for correct values under
     good conditions.
@@ -97,7 +97,7 @@ class TypedOptions(usage.Options):
 
 
 
-class TypedTestCase(unittest.TestCase):
+class TypedTests(unittest.TestCase):
     """
     Test L{usage.Options.parseOptions} for options with forced types.
     """
@@ -178,7 +178,7 @@ class WeirdCallableOptions(usage.Options):
     ]
 
 
-class WrongTypedTestCase(unittest.TestCase):
+class WrongTypedTests(unittest.TestCase):
     """
     Test L{usage.Options.parseOptions} for wrong coerce options.
     """
@@ -214,7 +214,7 @@ class WrongTypedTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, us.parseOptions, argV)
 
 
-class OutputTest(unittest.TestCase):
+class OutputTests(unittest.TestCase):
     def test_uppercasing(self):
         """
         Error output case adjustment does not mangle options
@@ -255,7 +255,7 @@ class SubCommandOptions(usage.Options):
         ]
 
 
-class SubCommandTest(unittest.TestCase):
+class SubCommandTests(unittest.TestCase):
     """
     Test L{usage.Options.parseOptions} for options with subcommands.
     """
@@ -374,7 +374,7 @@ class SubCommandTest(unittest.TestCase):
         self.failUnlessIdentical(oBar.subOptions.parent, oBar)
 
 
-class HelpStringTest(unittest.TestCase):
+class HelpStringTests(unittest.TestCase):
     """
     Test generated help strings.
     """
@@ -409,7 +409,7 @@ class HelpStringTest(unittest.TestCase):
         self.failUnless(lines[0].find("flagallicious") >= 0)
 
 
-class PortCoerceTestCase(unittest.TestCase):
+class PortCoerceTests(unittest.TestCase):
     """
     Test the behavior of L{usage.portCoerce}.
     """
@@ -432,7 +432,7 @@ class PortCoerceTestCase(unittest.TestCase):
 
 
 
-class ZshCompleterTestCase(unittest.TestCase):
+class ZshCompleterTests(unittest.TestCase):
     """
     Test the behavior of the various L{twisted.usage.Completer} classes
     for producing output usable by zsh tab-completion system.
@@ -590,7 +590,7 @@ class ZshCompleterTestCase(unittest.TestCase):
 
 
 
-class CompleterNotImplementedTestCase(unittest.TestCase):
+class CompleterNotImplementedTests(unittest.TestCase):
     """
     Using an unknown shell constant with the various Completer() classes
     should raise NotImplementedError
@@ -615,7 +615,7 @@ class CompleterNotImplementedTestCase(unittest.TestCase):
 
 
 
-class FlagFunctionTest(unittest.TestCase):
+class FlagFunctionTests(unittest.TestCase):
     """
     Tests for L{usage.flagFunction}.
     """
@@ -684,7 +684,7 @@ class FlagFunctionTest(unittest.TestCase):
 
 
 
-class OptionsInternalTest(unittest.TestCase):
+class OptionsInternalTests(unittest.TestCase):
     """
     Tests internal behavior of C{usage.Options}.
     """

@@ -125,7 +125,7 @@ class IOTypeTests(unittest.SynchronousTestCase):
 
 
 
-class CompatTestCase(unittest.SynchronousTestCase):
+class CompatTests(unittest.SynchronousTestCase):
     """
     Various utility functions in C{twisted.python.compat} provide same
     functionality as modern Python variants.
@@ -241,7 +241,7 @@ if _PY3:
 
 
 
-class ExecfileCompatTestCase(unittest.SynchronousTestCase):
+class ExecfileCompatTests(unittest.SynchronousTestCase):
     """
     Tests for the Python 3-friendly L{execfile} implementation.
     """

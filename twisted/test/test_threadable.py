@@ -35,7 +35,7 @@ class TestObject:
 
 threadable.synchronize(TestObject)
 
-class SynchronizationTestCase(unittest.SynchronousTestCase):
+class SynchronizationTests(unittest.SynchronousTestCase):
     def setUp(self):
         """
         Reduce the CPython check interval so that thread switches happen much
@@ -113,7 +113,7 @@ class SynchronizationTestCase(unittest.SynchronousTestCase):
 
 
 
-class SerializationTestCase(unittest.SynchronousTestCase):
+class SerializationTests(unittest.SynchronousTestCase):
     def testPickling(self):
         lock = threadable.XLock()
         lockType = type(lock)

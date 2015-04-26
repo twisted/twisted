@@ -21,7 +21,7 @@ def errorInFile(f, line=17, name=''):
     # return 'File "%s", line %d, in %s' % (f, line, name)
 
 
-class DocCoverage(unittest.TestCase):
+class DocCoverageTests(unittest.TestCase):
     """
     Looking for docstrings in all modules and packages.
     """

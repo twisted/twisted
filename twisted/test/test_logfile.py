@@ -7,7 +7,7 @@ from twisted.trial import unittest
 from twisted.python import logfile, runtime
 
 
-class LogFileTestCase(unittest.TestCase):
+class LogFileTests(unittest.TestCase):
     """
     Test the rotating log file.
     """
@@ -271,7 +271,7 @@ class RiggedDailyLogFile(logfile.DailyLogFile):
             return time.gmtime(*args)[:3]
         return time.gmtime(self._clock)[:3]
 
-class DailyLogFileTestCase(unittest.TestCase):
+class DailyLogFileTests(unittest.TestCase):
     """
     Test rotating log file.
     """

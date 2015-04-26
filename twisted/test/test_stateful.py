@@ -65,7 +65,7 @@ class TestInt32(MyInt32StringReceiver):
         self.closed = 1
 
 
-class Int32TestCase(TestCase, test_basic.IntNTestCaseMixin):
+class Int32Tests(TestCase, test_basic.IntNTestCaseMixin):
     protocol = TestInt32
     strings = ["a", "b" * 16]
     illegalStrings = ["\x10\x00\x00\x00aaaaaa"]

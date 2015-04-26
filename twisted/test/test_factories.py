@@ -29,7 +29,7 @@ class FakeConnector(object):
 
 
 
-class ReconnectingFactoryTestCase(TestCase):
+class ReconnectingFactoryTests(TestCase):
     """
     Tests for L{ReconnectingClientFactory}.
     """

@@ -18,7 +18,7 @@ from twisted.test.proto_helpers import StringTransport
 
 
 
-class ClassParserTestCase(unittest.TestCase):
+class ClassParserTests(unittest.TestCase):
     """
     Test parsing of ident responses.
     """
@@ -96,7 +96,7 @@ class NewException(RuntimeError):
     pass
 
 
-class ServerParserTestCase(unittest.TestCase):
+class ServerParserTests(unittest.TestCase):
     def testErrors(self):
         p = TestErrorIdentServer()
         p.makeConnection(StringTransport())
@@ -152,7 +152,7 @@ else:
     _addr2 = '01020304'
 
 
-class ProcMixinTestCase(unittest.TestCase):
+class ProcMixinTests(unittest.TestCase):
     line = ('4: %s:0019 %s:02FA 0A 00000000:00000000 '
             '00:00000000 00000000     0        0 10927 1 f72a5b80 '
             '3000 0 0 2 -1') % (_addr1, _addr2)

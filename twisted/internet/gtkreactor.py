@@ -106,7 +106,7 @@ class GtkReactor(posixbase.PosixReactorBase):
         # flush some pending events, return if there was something to do
         # don't use the usual "while gtk.events_pending(): mainiteration()"
         # idiom because lots of IO (in particular test_tcp's
-        # ProperlyCloseFilesTestCase) can keep us from ever exiting.
+        # ProperlyCloseFilesTests) can keep us from ever exiting.
         log.msg(channel='system', event='iteration', reactor=self)
         if gtk.events_pending():
             gtk.mainiteration(0)

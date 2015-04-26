@@ -40,7 +40,7 @@ class DummyManholeClient(LocalAsRemote):
     sync_setZero = setZero
     sync_getMessages = getMessages
 
-class ManholeTest(unittest.TestCase):
+class ManholeTests(unittest.TestCase):
     """Various tests for the manhole service.
 
     Both the importIdentity and importMain tests are known to fail

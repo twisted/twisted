@@ -76,7 +76,7 @@ class DummyConsumer(DummyTransport):
     def finish(self):
         self.finished = True
 
-class TransportInterfaceTest(unittest.TestCase):
+class TransportInterfaceTests(unittest.TestCase):
     proxyClass = pcp.BasicProducerConsumerProxy
 
     def setUp(self):
@@ -179,19 +179,19 @@ class ProducerInterfaceTest:
                     "Stopped producer should not have sent data.")
 
 
-class PCP_ConsumerInterfaceTest(ConsumerInterfaceTest, unittest.TestCase):
+class PCP_ConsumerInterfaceTests(ConsumerInterfaceTest, unittest.TestCase):
     proxyClass = pcp.BasicProducerConsumerProxy
 
-class PCPII_ConsumerInterfaceTest(ConsumerInterfaceTest, unittest.TestCase):
+class PCPII_ConsumerInterfaceTests(ConsumerInterfaceTest, unittest.TestCase):
     proxyClass = pcp.ProducerConsumerProxy
 
-class PCP_ProducerInterfaceTest(ProducerInterfaceTest, unittest.TestCase):
+class PCP_ProducerInterfaceTests(ProducerInterfaceTest, unittest.TestCase):
     proxyClass = pcp.BasicProducerConsumerProxy
 
-class PCPII_ProducerInterfaceTest(ProducerInterfaceTest, unittest.TestCase):
+class PCPII_ProducerInterfaceTests(ProducerInterfaceTest, unittest.TestCase):
     proxyClass = pcp.ProducerConsumerProxy
 
-class ProducerProxyTest(unittest.TestCase):
+class ProducerProxyTests(unittest.TestCase):
     """Producer methods on me should be relayed to the Producer I proxy.
     """
     proxyClass = pcp.BasicProducerConsumerProxy
@@ -206,7 +206,7 @@ class ProducerProxyTest(unittest.TestCase):
         self.failUnless(self.parentProducer.stopped)
 
 
-class ConsumerProxyTest(unittest.TestCase):
+class ConsumerProxyTests(unittest.TestCase):
     """Consumer methods on me should be relayed to the Consumer I proxy.
     """
     proxyClass = pcp.BasicProducerConsumerProxy
@@ -264,17 +264,17 @@ class PullProducerTest:
         # This data should answer that pull request.
         self.assertEqual(self.underlying.getvalue(), "data")
 
-class PCP_PullProducerTest(PullProducerTest, unittest.TestCase):
+class PCP_PullProducerTests(PullProducerTest, unittest.TestCase):
     class proxyClass(pcp.BasicProducerConsumerProxy):
         iAmStreaming = False
 
-class PCPII_PullProducerTest(PullProducerTest, unittest.TestCase):
+class PCPII_PullProducerTests(PullProducerTest, unittest.TestCase):
     class proxyClass(pcp.ProducerConsumerProxy):
         iAmStreaming = False
 
 # Buffering!
 
-class BufferedConsumerTest(unittest.TestCase):
+class BufferedConsumerTests(unittest.TestCase):
     """As a consumer, ask the producer to pause after too much data."""
 
     proxyClass = pcp.ProducerConsumerProxy

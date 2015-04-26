@@ -36,7 +36,7 @@ unhashableObject = None # set in test_hashException
 
 
 
-class RebuildTestCase(unittest.TestCase):
+class RebuildTests(unittest.TestCase):
     """
     Simple testcase for rebuilding, to at least exercise the code.
     """
@@ -162,7 +162,7 @@ class RebuildTestCase(unittest.TestCase):
 
 
 
-class NewStyleTestCase(unittest.TestCase):
+class NewStyleTests(unittest.TestCase):
     """
     Tests for rebuilding new-style classes of various sorts.
     """

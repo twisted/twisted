@@ -121,7 +121,7 @@ class UtilTests(unittest.TestCase):
 
 
 
-class LockingTestCase(unittest.TestCase):
+class LockingTests(unittest.TestCase):
     def _symlinkErrorTest(self, errno):
         def fakeSymlink(source, dest):
             raise OSError(errno, None)

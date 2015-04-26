@@ -166,7 +166,7 @@ class PBConnTestCase(unittest.TestCase):
 
 
 
-class PBFailureTest(PBConnTestCase):
+class PBFailureTests(PBConnTestCase):
     compare = unittest.TestCase.assertEqual
 
 
@@ -394,7 +394,7 @@ class PBFailureTest(PBConnTestCase):
 
 
 
-class PBFailureTestUnsafe(PBFailureTest):
+class PBFailureUnsafeTests(PBFailureTests):
     compare = unittest.TestCase.failIfEquals
     unsafeTracebacks = 1
 

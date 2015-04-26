@@ -1,10 +1,10 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_lastWriteReceived -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_lastWriteReceived -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.test_lastWriteReceived}
+L{twisted.test.test_stdio.StandardInputOutputTests.test_lastWriteReceived}
 to test that L{os.write} can be reliably used after
 L{twisted.internet.stdio.StandardIO} has finished.
 """

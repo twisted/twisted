@@ -11,7 +11,7 @@ from twisted.internet import reactor, defer, address, protocol
 from twisted.test import proto_helpers
 
 
-class WireTestCase(unittest.TestCase):
+class WireTests(unittest.TestCase):
     """
     Test wire protocols.
     """
@@ -112,7 +112,7 @@ class TestableProxyFactory(portforward.ProxyFactory):
 
 
 
-class Portforwarding(unittest.TestCase):
+class PortforwardingTests(unittest.TestCase):
     """
     Test port forwarding.
     """
@@ -223,7 +223,7 @@ class Portforwarding(unittest.TestCase):
 
 
 
-class StringTransportTestCase(unittest.TestCase):
+class StringTransportTests(unittest.TestCase):
     """
     Test L{proto_helpers.StringTransport} helper behaviour.
     """

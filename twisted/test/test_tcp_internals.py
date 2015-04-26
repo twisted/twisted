@@ -25,7 +25,7 @@ from twisted.internet.defer import maybeDeferred, gatherResults
 from twisted.internet import reactor, interfaces
 
 
-class PlatformAssumptionsTestCase(TestCase):
+class PlatformAssumptionsTests(TestCase):
     """
     Test assumptions about platform behaviors.
     """
@@ -117,7 +117,7 @@ class PlatformAssumptionsTestCase(TestCase):
 
 
 
-class SelectReactorTestCase(TestCase):
+class SelectReactorTests(TestCase):
     """
     Tests for select-specific failure conditions.
     """
@@ -250,6 +250,6 @@ class SelectReactorTestCase(TestCase):
 
 if not interfaces.IReactorFDSet.providedBy(reactor):
     skipMsg = 'This test only applies to reactors that implement IReactorFDset'
-    PlatformAssumptionsTestCase.skip = skipMsg
-    SelectReactorTestCase.skip = skipMsg
+    PlatformAssumptionsTests.skip = skipMsg
+    SelectReactorTests.skip = skipMsg
 

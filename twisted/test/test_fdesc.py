@@ -20,7 +20,7 @@ from twisted.trial import unittest
 
 
 
-class NonBlockingTestCase(unittest.SynchronousTestCase):
+class NonBlockingTests(unittest.SynchronousTestCase):
     """
     Tests for L{fdesc.setNonBlocking} and L{fdesc.setBlocking}.
     """
@@ -50,7 +50,7 @@ class NonBlockingTestCase(unittest.SynchronousTestCase):
 
 
 
-class ReadWriteTestCase(unittest.SynchronousTestCase):
+class ReadWriteTests(unittest.SynchronousTestCase):
     """
     Tests for L{fdesc.readFromFD}, L{fdesc.writeToFD}.
     """

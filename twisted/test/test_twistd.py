@@ -172,7 +172,7 @@ class CrippledApplicationRunner(twistd._SomeApplicationRunner):
 
 
 
-class ServerOptionsTest(unittest.TestCase):
+class ServerOptionsTests(unittest.TestCase):
     """
     Non-platform-specific tests for the pltaform-specific ServerOptions class.
     """
@@ -355,7 +355,7 @@ class ServerOptionsTest(unittest.TestCase):
 
 
 
-class TapFileTest(unittest.TestCase):
+class TapFileTests(unittest.TestCase):
     """
     Test twistd-related functionality that requires a tap file on disk.
     """
@@ -431,7 +431,7 @@ class TestApplicationRunner(app.ApplicationRunner):
 
 
 
-class ApplicationRunnerTest(unittest.TestCase):
+class ApplicationRunnerTests(unittest.TestCase):
     """
     Non-platform-specific tests for the platform-specific ApplicationRunner.
     """
@@ -793,7 +793,7 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
 
 
 
-class UnixApplicationRunnerRemovePID(unittest.TestCase):
+class UnixApplicationRunnerRemovePIDTests(unittest.TestCase):
     """
     Tests for L{UnixApplicationRunner.removePID}.
     """
@@ -889,7 +889,7 @@ class DummyReactor(object):
 
 
 
-class AppProfilingTestCase(unittest.TestCase):
+class AppProfilingTests(unittest.TestCase):
     """
     Tests for L{app.AppProfiler}.
     """
@@ -1218,7 +1218,7 @@ def _setupSyslog(testCase):
 
 
 
-class AppLoggerTestCase(unittest.TestCase):
+class AppLoggerTests(unittest.TestCase):
     """
     Tests for L{app.AppLogger}.
 
@@ -1423,7 +1423,7 @@ class AppLoggerTestCase(unittest.TestCase):
 
 
 
-class UnixAppLoggerTestCase(unittest.TestCase):
+class UnixAppLoggerTests(unittest.TestCase):
     """
     Tests for L{UnixAppLogger}.
 

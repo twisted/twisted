@@ -26,7 +26,7 @@ class TestBucketBase(unittest.TestCase):
     def tearDown(self):
         htb.time = self._realTimeFunc
 
-class TestBucket(TestBucketBase):
+class BucketTests(TestBucketBase):
     def testBucketSize(self):
         """Testing the size of the bucket."""
         b = SomeBucket()
@@ -54,7 +54,7 @@ class TestBucket(TestBucketBase):
         empty = b.drip()
         self.assertTrue(empty)
 
-class TestBucketNesting(TestBucketBase):
+class BucketNestingTests(TestBucketBase):
     def setUp(self):
         TestBucketBase.setUp(self)
         self.parent = SomeBucket()
@@ -85,7 +85,7 @@ class TestBucketNesting(TestBucketBase):
 
 from test_pcp import DummyConsumer
 
-class ConsumerShaperTest(TestBucketBase):
+class ConsumerShaperTests(TestBucketBase):
     def setUp(self):
         TestBucketBase.setUp(self)
         self.underlying = DummyConsumer()

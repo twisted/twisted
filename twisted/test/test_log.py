@@ -36,7 +36,7 @@ class FakeWarning(Warning):
 
 
 
-class TextFromEventDictTest(unittest.SynchronousTestCase):
+class TextFromEventDictTests(unittest.SynchronousTestCase):
     """
     Tests for L{textFromEventDict}.
     """
@@ -113,7 +113,7 @@ class TextFromEventDictTest(unittest.SynchronousTestCase):
 
 
 
-class LogTest(unittest.SynchronousTestCase):
+class LogTests(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.catcher = []
@@ -373,8 +373,8 @@ class LogPublisherTestCaseMixin:
 
 
 
-class LogPublisherTestCase(LogPublisherTestCaseMixin,
-                           unittest.SynchronousTestCase):
+class LogPublisherTests(LogPublisherTestCaseMixin,
+                        unittest.SynchronousTestCase):
     def testSingleString(self):
         self.lp.msg("Hello, world.")
         self.assertEqual(len(self.out), 1)
@@ -407,8 +407,8 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin,
 
 
 
-class FileObserverTestCase(LogPublisherTestCaseMixin,
-                           unittest.SynchronousTestCase):
+class FileObserverTests(LogPublisherTestCaseMixin,
+                        unittest.SynchronousTestCase):
     """
     Tests for L{log.FileObserver}.
     """
@@ -790,7 +790,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
 
 
 
-class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
+class PythonLoggingObserverTests(unittest.SynchronousTestCase):
     """
     Test the bridge with python logging module.
     """
@@ -870,7 +870,7 @@ class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
 
 
 
-class PythonLoggingIntegrationTestCase(unittest.SynchronousTestCase):
+class PythonLoggingIntegrationTests(unittest.SynchronousTestCase):
     """
     Test integration of python logging bridge.
     """
@@ -917,7 +917,7 @@ class PythonLoggingIntegrationTestCase(unittest.SynchronousTestCase):
 
 
 
-class DefaultObserverTestCase(unittest.SynchronousTestCase):
+class DefaultObserverTests(unittest.SynchronousTestCase):
     """
     Test the default observer.
     """
@@ -965,7 +965,7 @@ class DefaultObserverTestCase(unittest.SynchronousTestCase):
 
 
 
-class StdioOnnaStickTestCase(unittest.SynchronousTestCase):
+class StdioOnnaStickTests(unittest.SynchronousTestCase):
     """
     StdioOnnaStick should act like the normal sys.stdout object.
     """

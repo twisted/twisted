@@ -114,7 +114,7 @@ class BadClient(protocol.DatagramProtocol):
 
 
 
-class UDPTestCase(unittest.TestCase):
+class UDPTests(unittest.TestCase):
 
     def test_oldAddress(self):
         """
@@ -451,7 +451,7 @@ class UDPTestCase(unittest.TestCase):
 
 
 
-class ReactorShutdownInteraction(unittest.TestCase):
+class ReactorShutdownInteractionTests(unittest.TestCase):
     """Test reactor shutdown interaction"""
 
     def setUp(self):
@@ -500,7 +500,7 @@ class ReactorShutdownInteraction(unittest.TestCase):
 
 
 
-class MulticastTestCase(unittest.TestCase):
+class MulticastTests(unittest.TestCase):
 
     def setUp(self):
         self.server = Server()
@@ -695,7 +695,7 @@ class MulticastTestCase(unittest.TestCase):
 
 
 if not interfaces.IReactorUDP(reactor, None):
-    UDPTestCase.skip = "This reactor does not support UDP"
-    ReactorShutdownInteraction.skip = "This reactor does not support UDP"
+    UDPTests.skip = "This reactor does not support UDP"
+    ReactorShutdownInteractionTests.skip = "This reactor does not support UDP"
 if not interfaces.IReactorMulticast(reactor, None):
-    MulticastTestCase.skip = "This reactor does not support multicast"
+    MulticastTests.skip = "This reactor does not support multicast"

@@ -106,7 +106,7 @@ class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         return sip.IContact, None, lambda: None
 
-class MessageParsingTestCase(unittest.TestCase):
+class MessageParsingTests(unittest.TestCase):
     def setUp(self):
         self.l = []
         self.parser = sip.MessagesParser(self.l.append)
@@ -218,7 +218,7 @@ class MessageParsingTestCase(unittest.TestCase):
 
 
 
-class MessageParsingTestCase2(MessageParsingTestCase):
+class MessageParsingFeedDataCharByCharTests(MessageParsingTests):
     """Same as base class, but feed data char by char."""
 
     def feedMessage(self, message):
@@ -227,7 +227,7 @@ class MessageParsingTestCase2(MessageParsingTestCase):
         self.parser.dataDone()
 
 
-class MakeMessageTestCase(unittest.TestCase):
+class MakeMessageTests(unittest.TestCase):
 
     def testRequest(self):
         r = sip.Request("INVITE", "sip:foo")
@@ -250,7 +250,7 @@ class MakeMessageTestCase(unittest.TestCase):
         self.assertEqual(r.toString(), "SIP/2.0 200 OK\r\n\r\n")
 
 
-class ViaTestCase(unittest.TestCase):
+class ViaTests(unittest.TestCase):
 
     def checkRoundtrip(self, v):
         s = v.toString()
@@ -377,7 +377,7 @@ class ViaTestCase(unittest.TestCase):
 
 
 
-class URLTestCase(unittest.TestCase):
+class URLTests(unittest.TestCase):
 
     def testRoundtrip(self):
         for url in [
@@ -401,7 +401,7 @@ class URLTestCase(unittest.TestCase):
             self.assertEqual(getattr(url, k), v)
 
 
-class ParseTestCase(unittest.TestCase):
+class ParseTests(unittest.TestCase):
 
     def testParseAddress(self):
         for address, name, urls, params in [
@@ -430,7 +430,7 @@ class FailingLocator:
         return defer.fail(LookupError())
 
 
-class ProxyTestCase(unittest.TestCase):
+class ProxyTests(unittest.TestCase):
 
     def setUp(self):
         self.proxy = sip.Proxy("127.0.0.1")
@@ -536,7 +536,7 @@ class ProxyTestCase(unittest.TestCase):
     #testCantForwardResponse.skip = "not implemented yet"
 
 
-class RegistrationTestCase(unittest.TestCase):
+class RegistrationTests(unittest.TestCase):
 
     def setUp(self):
         self.proxy = sip.RegisterProxy(host="127.0.0.1")
@@ -724,7 +724,7 @@ class Client(sip.Base):
         self.deferred.callback(self.received)
 
 
-class LiveTest(unittest.TestCase):
+class LiveTests(unittest.TestCase):
 
     def setUp(self):
         self.proxy = sip.RegisterProxy(host="127.0.0.1")
@@ -882,7 +882,7 @@ class FakeRegistry(sip.InMemoryRegistry):
             self, domainURL, logicalURL, physicalURL)
         return d.addCallback(self._cbReg)
 
-class AuthorizationTestCase(unittest.TestCase):
+class AuthorizationTests(unittest.TestCase):
     def setUp(self):
         self.proxy = sip.RegisterProxy(host="intarweb.us")
         self.proxy.authorizers = self.proxy.authorizers.copy()

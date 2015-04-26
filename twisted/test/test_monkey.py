@@ -19,7 +19,7 @@ class TestObj:
 
 
 
-class MonkeyPatcherTest(unittest.SynchronousTestCase):
+class MonkeyPatcherTests(unittest.SynchronousTestCase):
     """
     Tests for L{MonkeyPatcher} monkey-patching class.
     """

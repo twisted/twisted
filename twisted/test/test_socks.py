@@ -81,7 +81,7 @@ class SOCKSv4Driver(socks.SOCKSv4):
 
 
 
-class Connect(unittest.TestCase):
+class ConnectTests(unittest.TestCase):
     """
     Tests for SOCKS and SOCKSv4a connect requests using the L{SOCKSv4} protocol.
     """
@@ -251,7 +251,7 @@ class Connect(unittest.TestCase):
 
 
 
-class Bind(unittest.TestCase):
+class BindTests(unittest.TestCase):
     """
     Tests for SOCKS and SOCKSv4a bind requests using the L{SOCKSv4} protocol.
     """

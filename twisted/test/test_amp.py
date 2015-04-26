@@ -407,7 +407,7 @@ class AmpBoxTests(unittest.TestCase):
 
 
 
-class ParsingTest(unittest.TestCase):
+class ParsingTests(unittest.TestCase):
 
     def test_booleanValues(self):
         """
@@ -547,7 +547,7 @@ class CommandDispatchTests(unittest.TestCase):
     and responses using Command.responder decorator.
 
     Note: Originally, AMP's factoring was such that many tests for this
-    functionality are now implemented as full round-trip tests in L{AMPTest}.
+    functionality are now implemented as full round-trip tests in L{AMPTests}.
     Future tests should be written at this level instead, to ensure API
     compatibility and to provide more granular, readable units of test
     coverage.
@@ -1198,7 +1198,7 @@ class BinaryProtocolTests(unittest.TestCase):
 
 
 
-class AMPTest(unittest.TestCase):
+class AMPTests(unittest.TestCase):
 
     def test_interfaceDeclarations(self):
         """
@@ -1898,7 +1898,7 @@ class SecurableProto(FactoryNotifier):
 
 
 
-class TLSTest(unittest.TestCase):
+class TLSTests(unittest.TestCase):
     def test_startingTLS(self):
         """
         Verify that starting TLS and succeeding at handshaking sends all the
@@ -2005,7 +2005,7 @@ class TLSTest(unittest.TestCase):
 
 
 
-class TLSNotAvailableTest(unittest.TestCase):
+class TLSNotAvailableTests(unittest.TestCase):
     """
     Tests what happened when ssl is not available in current installation.
     """
@@ -2271,7 +2271,7 @@ if ssl is not None:
     tempcert = tempSelfSigned()
 
 
-class LiveFireTLSTestCase(LiveFireBase, unittest.TestCase):
+class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
     clientProto = SecurableProto
     serverProto = SecurableProto
     def test_liveFireCustomTLS(self):
@@ -2323,7 +2323,7 @@ class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
     amp.StartTLS.responder(getTLSVars)
 
 
-class PlainVanillaLiveFire(LiveFireBase, unittest.TestCase):
+class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
 
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SimpleSymmetricCommandProtocol
@@ -2341,7 +2341,7 @@ class PlainVanillaLiveFire(LiveFireBase, unittest.TestCase):
 
 
 
-class WithServerTLSVerification(LiveFireBase, unittest.TestCase):
+class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SlightlySmartTLS
 
@@ -2480,7 +2480,7 @@ class ProtocolIncludingCommandWithDifferentCommandType(
 
 
 
-class CommandTestCase(unittest.TestCase):
+class CommandTests(unittest.TestCase):
     """
     Tests for L{amp.Argument} and L{amp.Command}.
     """
@@ -3164,7 +3164,7 @@ class UTCTests(unittest.TestCase):
 
 if not interfaces.IReactorSSL.providedBy(reactor):
     skipMsg = 'This test case requires SSL support in the reactor'
-    TLSTest.skip = skipMsg
-    LiveFireTLSTestCase.skip = skipMsg
-    PlainVanillaLiveFire.skip = skipMsg
-    WithServerTLSVerification.skip = skipMsg
+    TLSTests.skip = skipMsg
+    LiveFireTLSTests.skip = skipMsg
+    PlainVanillaLiveFireTests.skip = skipMsg
+    WithServerTLSVerificationTests.skip = skipMsg

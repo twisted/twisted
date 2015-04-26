@@ -20,7 +20,7 @@ if _PY3:
     xrange = range
 
 
-class ReactorThreadsTestCase(unittest.TestCase):
+class ReactorThreadsTests(unittest.TestCase):
     """
     Tests for the reactor threading API.
     """
@@ -212,7 +212,7 @@ class Counter:
 
 
 
-class DeferredResultTestCase(unittest.TestCase):
+class DeferredResultTests(unittest.TestCase):
     """
     Test twisted.internet.threads.
     """
@@ -288,7 +288,7 @@ class DeferredResultTestCase(unittest.TestCase):
 
 
 
-class DeferToThreadPoolTestCase(unittest.TestCase):
+class DeferToThreadPoolTests(unittest.TestCase):
     """
     Test L{twisted.internet.threads.deferToThreadPool}.
     """
@@ -364,7 +364,7 @@ class ThreadStartupProcessProtocol(protocol.ProcessProtocol):
 
 
 
-class StartupBehaviorTestCase(unittest.TestCase):
+class StartupBehaviorTests(unittest.TestCase):
     """
     Test cases for the behavior of the reactor threadpool near startup
     boundary conditions.
@@ -409,13 +409,13 @@ class StartupBehaviorTestCase(unittest.TestCase):
 
 
 if interfaces.IReactorThreads(reactor, None) is None:
-    for cls in (ReactorThreadsTestCase,
-                DeferredResultTestCase,
-                StartupBehaviorTestCase):
+    for cls in (ReactorThreadsTests,
+                DeferredResultTests,
+                StartupBehaviorTests):
         cls.skip = "No thread support, nothing to test here."
 else:
     import threading
 
 if interfaces.IReactorProcess(reactor, None) is None:
-    for cls in (StartupBehaviorTestCase,):
+    for cls in (StartupBehaviorTests,):
         cls.skip = "No process support, cannot run subprocess thread tests."
