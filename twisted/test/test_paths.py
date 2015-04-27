@@ -1945,3 +1945,87 @@ class UnicodeFilePathTests(TestCase):
 
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, unicode)
+
+
+    def test_asBytesModeFromUnicode(self):
+        """
+        C{asBytesMode} on a L{unicode}-mode L{FilePath} returns a new
+        L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./tmp")
+        newfp = fp.asBytesMode()
+        self.assertIsNot(fp, newfp)
+        self.assertIsInstance(newfp.path, bytes)
+
+
+    def test_asTextModeFromBytes(self):
+        """
+        C{asBytesMode} on a L{unicode}-mode L{FilePath} returns a new
+        L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(b"./tmp")
+        newfp = fp.asTextMode()
+        self.assertIsNot(fp, newfp)
+        self.assertIsInstance(newfp.path, unicode)
+
+
+    def test_asBytesModeFromBytes(self):
+        """
+        C{asBytesMode} on a L{bytes}-mode L{FilePath} returns the same
+        L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(b"./tmp")
+        newfp = fp.asBytesMode()
+        self.assertIs(fp, newfp)
+        self.assertIsInstance(newfp.path, bytes)
+
+
+    def test_asTextModeFromUnicode(self):
+        """
+        C{asTextMode} on a L{unicode}-mode L{FilePath} returns the same
+        L{unicode}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./tmp")
+        newfp = fp.asTextMode()
+        self.assertIs(fp, newfp)
+        self.assertIsInstance(newfp.path, unicode)
+
+
+    def test_asBytesModeFromUnicodeWithEncoding(self):
+        """
+        C{asBytesMode} with an C{encoding} argument uses that encoding when
+        coercing the L{unicode}-mode L{FilePath} to a L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"\u2603")
+        newfp = fp.asBytesMode(encoding="utf-8")
+        self.assertIn(b"\xe2\x98\x83", newfp.path)
+
+
+    def test_asTextModeFromBytesWithEncoding(self):
+        """
+        C{asTextMode} with an C{encoding} argument uses that encoding when
+        coercing the L{bytes}-mode L{FilePath} to a L{unicode}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(b'\xe2\x98\x83')
+        newfp = fp.asTextMode(encoding="utf-8")
+        self.assertIn(u"\u2603", newfp.path)
+
+
+    def test_asBytesModeFromUnicodeWithUnusableEncoding(self):
+        """
+        C{asBytesMode} with an C{encoding} argument that can't be used to encode
+        the unicode path raises a L{UnicodeError}.
+        """
+        fp = filepath.FilePath(u"\u2603")
+        with self.assertRaises(UnicodeError):
+            fp.asBytesMode(encoding="ascii")
+
+
+    def test_asTextModeFromBytesWithUnusableEncoding(self):
+        """
+        C{asTextMode} with an C{encoding} argument that can't be used to encode
+        the unicode path raises a L{UnicodeError}.
+        """
+        fp = filepath.FilePath(b"\u2603")
+        with self.assertRaises(UnicodeError):
+            fp.asTextMode(encoding="utf-32")

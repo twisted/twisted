@@ -781,6 +781,34 @@ class FilePath(AbstractFilePath):
         return _asFilesystemText(self.path, encoding=encoding)
 
 
+    def asBytesMode(self, encoding=None):
+        """
+        Return this L{FilePath} in L{bytes}-mode.
+
+        @param encoding: The encoding to use if coercing to L{bytes}. If none is
+            given, L{sys.getfilesystemencoding} is used.
+
+        @return: L{bytes} mode L{FilePath}
+        """
+        if type(self.path) == unicode:
+            return self.clonePath(self._asBytesPath(encoding=encoding))
+        return self
+
+
+    def asTextMode(self, encoding=None):
+        """
+        Return this L{FilePath} in L{unicode}-mode.
+
+        @param encoding: The encoding to use if coercing to L{unicode}. If none
+            is given, L{sys.getfilesystemencoding} is used.
+
+        @return: L{unicode} mode L{FilePath}
+        """
+        if type(self.path) == bytes:
+            return self.clonePath(self._asTextPath(encoding=encoding))
+        return self
+
+
     def _getPathAsSameTypeAs(self, pattern):
         """
         If C{pattern} is C{bytes}, return L{FilePath.path} as L{bytes}.
