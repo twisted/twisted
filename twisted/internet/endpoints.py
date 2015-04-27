@@ -63,7 +63,8 @@ __all__ = ["clientFromString", "serverFromString",
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "TCP4ClientEndpoint", "TCP6ClientEndpoint",
             "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-            "connectProtocol", "HostnameEndpoint"]
+            "connectProtocol", "HostnameEndpoint",
+            "ProcessEndpoint", "StandardErrorBehavior"]
 
 
 class _WrappingProtocol(Protocol):
