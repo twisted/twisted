@@ -789,9 +789,9 @@ class TestTwoProcessesBase:
         for num in (0,1):
             self.pp[num] = TwoProcessProtocol()
             self.pp[num].num = num
-            p = reactor.spawnProcess(self.pp[num],
-                                     pyExe, [pyExe, b"-u", scriptPath], env=None,
-                                     usePTY=usePTY)
+            p = reactor.spawnProcess(self.pp[num], pyExe,
+                                     [pyExe, b"-u", scriptPath],
+                                     env=None, usePTY=usePTY)
             self.processes[num] = p
 
     def close(self, num):
