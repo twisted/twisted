@@ -16,7 +16,7 @@ from twisted.python.compat import reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString, networkString
 from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
 from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
-from twisted.python.compat import joinBytes
+from twisted.python.compat import joinBytes, ioType
 from twisted.python.filepath import FilePath
 
 
