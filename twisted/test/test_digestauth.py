@@ -5,17 +5,23 @@
 Tests for L{twisted.cred._digest} and the associated bits in
 L{twisted.cred.credentials}.
 """
+
+from __future__ import division, absolute_import
+
+import base64, binascii
+
 from hashlib import md5, sha1
 
 from zope.interface.verify import verifyObject
 from twisted.trial.unittest import TestCase
 from twisted.internet.address import IPv4Address
+from twisted.python.compat import joinBytes
 from twisted.cred.error import LoginFailed
 from twisted.cred.credentials import calcHA1, calcHA2, IUsernameDigestHash
 from twisted.cred.credentials import calcResponse, DigestCredentialFactory
 
 def b64encode(s):
-    return s.encode('base64').strip()
+    return base64.b64encode(s).strip()
 
 
 class FakeDigestCredentialFactory(DigestCredentialFactory):
@@ -25,14 +31,14 @@ class FakeDigestCredentialFactory(DigestCredentialFactory):
     """
     def __init__(self, *args, **kwargs):
         super(FakeDigestCredentialFactory, self).__init__(*args, **kwargs)
-        self.privateKey = "0"
+        self.privateKey = b"0"
 
 
     def _generateNonce(self):
         """
         Generate a static nonce
         """
-        return '178288758716122392881254770685'
+        return b'178288758716122392881254770685'
 
 
     def _getTime(self):
@@ -53,29 +59,29 @@ class DigestAuthTests(TestCase):
         """
         Create a DigestCredentialFactory for testing
         """
-        self.username = "foobar"
-        self.password = "bazquux"
-        self.realm = "test realm"
-        self.algorithm = "md5"
-        self.cnonce = "29fc54aa1641c6fa0e151419361c8f23"
-        self.qop = "auth"
-        self.uri = "/write/"
+        self.username = b"foobar"
+        self.password = b"bazquux"
+        self.realm = b"test realm"
+        self.algorithm = b"md5"
+        self.cnonce = b"29fc54aa1641c6fa0e151419361c8f23"
+        self.qop = b"auth"
+        self.uri = b"/write/"
         self.clientAddress = IPv4Address('TCP', '10.2.3.4', 43125)
-        self.method = 'GET'
+        self.method = b'GET'
         self.credentialFactory = DigestCredentialFactory(
             self.algorithm, self.realm)
 
 
-    def test_MD5HashA1(self, _algorithm='md5', _hash=md5):
+    def test_MD5HashA1(self, _algorithm=b'md5', _hash=md5):
         """
         L{calcHA1} accepts the C{'md5'} algorithm and returns an MD5 hash of
         its parameters, excluding the nonce and cnonce.
         """
-        nonce = 'abc123xyz'
+        nonce = b'abc123xyz'
         hashA1 = calcHA1(_algorithm, self.username, self.realm, self.password,
                          nonce, self.cnonce)
-        a1 = '%s:%s:%s' % (self.username, self.realm, self.password)
-        expected = _hash(a1).hexdigest()
+        a1 = joinBytes(b":", (self.username, self.realm, self.password))
+        expected = binascii.hexlify(_hash(a1).digest())
         self.assertEqual(hashA1, expected)
 
 
@@ -84,13 +90,13 @@ class DigestAuthTests(TestCase):
         L{calcHA1} accepts the C{'md5-sess'} algorithm and returns an MD5 hash
         of its parameters, including the nonce and cnonce.
         """
-        nonce = 'xyz321abc'
-        hashA1 = calcHA1('md5-sess', self.username, self.realm, self.password,
+        nonce = b'xyz321abc'
+        hashA1 = calcHA1(b'md5-sess', self.username, self.realm, self.password,
                          nonce, self.cnonce)
-        a1 = '%s:%s:%s' % (self.username, self.realm, self.password)
+        a1 = joinBytes(b":", (self.username, self.realm, self.password))
         ha1 = md5(a1).hexdigest()
-        a1 = '%s:%s:%s' % (ha1, nonce, self.cnonce)
-        expected = md5(a1).hexdigest()
+        a1 = joinBytes(b":", (ha1, nonce, self.cnonce))
+        expected = binascii.hexlify(md5(a1).digest())
         self.assertEqual(hashA1, expected)
 
 
@@ -99,32 +105,32 @@ class DigestAuthTests(TestCase):
         L{calcHA1} accepts the C{'sha'} algorithm and returns a SHA hash of its
         parameters, excluding the nonce and cnonce.
         """
-        self.test_MD5HashA1('sha', sha1)
+        self.test_MD5HashA1(b'sha', sha1)
 
 
-    def test_MD5HashA2Auth(self, _algorithm='md5', _hash=md5):
+    def test_MD5HashA2Auth(self, _algorithm=b'md5', _hash=md5):
         """
         L{calcHA2} accepts the C{'md5'} algorithm and returns an MD5 hash of
         its arguments, excluding the entity hash for QOP other than
         C{'auth-int'}.
         """
-        method = 'GET'
-        hashA2 = calcHA2(_algorithm, method, self.uri, 'auth', None)
-        a2 = '%s:%s' % (method, self.uri)
-        expected = _hash(a2).hexdigest()
+        method = b'GET'
+        hashA2 = calcHA2(_algorithm, method, self.uri, b'auth', None)
+        a2 = joinBytes(b":", (method, self.uri))
+        expected = binascii.hexlify(_hash(a2).digest())
         self.assertEqual(hashA2, expected)
 
 
-    def test_MD5HashA2AuthInt(self, _algorithm='md5', _hash=md5):
+    def test_MD5HashA2AuthInt(self, _algorithm=b'md5', _hash=md5):
         """
         L{calcHA2} accepts the C{'md5'} algorithm and returns an MD5 hash of
         its arguments, including the entity hash for QOP of C{'auth-int'}.
         """
-        method = 'GET'
-        hentity = 'foobarbaz'
-        hashA2 = calcHA2(_algorithm, method, self.uri, 'auth-int', hentity)
-        a2 = '%s:%s:%s' % (method, self.uri, hentity)
-        expected = _hash(a2).hexdigest()
+        method = b'GET'
+        hentity = b'foobarbaz'
+        hashA2 = calcHA2(_algorithm, method, self.uri, b'auth-int', hentity)
+        a2 = joinBytes(b":", (method, self.uri, hentity))
+        expected = binascii.hexlify(_hash(a2).digest())
         self.assertEqual(hashA2, expected)
 
 
@@ -133,7 +139,7 @@ class DigestAuthTests(TestCase):
         L{calcHA2} accepts the C{'md5-sess'} algorithm and QOP of C{'auth'} and
         returns the same value as it does for the C{'md5'} algorithm.
         """
-        self.test_MD5HashA2Auth('md5-sess')
+        self.test_MD5HashA2Auth(b'md5-sess')
 
 
     def test_MD5SessHashA2AuthInt(self):
@@ -141,7 +147,7 @@ class DigestAuthTests(TestCase):
         L{calcHA2} accepts the C{'md5-sess'} algorithm and QOP of C{'auth-int'}
         and returns the same value as it does for the C{'md5'} algorithm.
         """
-        self.test_MD5HashA2AuthInt('md5-sess')
+        self.test_MD5HashA2AuthInt(b'md5-sess')
 
 
     def test_SHAHashA2Auth(self):
@@ -150,7 +156,7 @@ class DigestAuthTests(TestCase):
         its arguments, excluding the entity hash for QOP other than
         C{'auth-int'}.
         """
-        self.test_MD5HashA2Auth('sha', sha1)
+        self.test_MD5HashA2Auth(b'sha', sha1)
 
 
     def test_SHAHashA2AuthInt(self):
@@ -158,21 +164,21 @@ class DigestAuthTests(TestCase):
         L{calcHA2} accepts the C{'sha'} algorithm and returns a SHA hash of
         its arguments, including the entity hash for QOP of C{'auth-int'}.
         """
-        self.test_MD5HashA2AuthInt('sha', sha1)
+        self.test_MD5HashA2AuthInt(b'sha', sha1)
 
 
-    def test_MD5HashResponse(self, _algorithm='md5', _hash=md5):
+    def test_MD5HashResponse(self, _algorithm=b'md5', _hash=md5):
         """
         L{calcResponse} accepts the C{'md5'} algorithm and returns an MD5 hash
         of its parameters, excluding the nonce count, client nonce, and QoP
         value if the nonce count and client nonce are C{None}
         """
-        hashA1 = 'abc123'
-        hashA2 = '789xyz'
-        nonce = 'lmnopq'
+        hashA1 = b'abc123'
+        hashA2 = b'789xyz'
+        nonce = b'lmnopq'
 
-        response = '%s:%s:%s' % (hashA1, nonce, hashA2)
-        expected = _hash(response).hexdigest()
+        response = joinBytes(b":", (hashA1, nonce, hashA2))
+        expected = binascii.hexlify(_hash(response).digest())
 
         digest = calcResponse(hashA1, hashA2, _algorithm, nonce, None, None,
                               None)
@@ -185,7 +191,7 @@ class DigestAuthTests(TestCase):
         hash of its parameters, excluding the nonce count, client nonce, and
         QoP value if the nonce count and client nonce are C{None}
         """
-        self.test_MD5HashResponse('md5-sess')
+        self.test_MD5HashResponse(b'md5-sess')
 
 
     def test_SHAHashResponse(self):
@@ -194,25 +200,25 @@ class DigestAuthTests(TestCase):
         of its parameters, excluding the nonce count, client nonce, and QoP
         value if the nonce count and client nonce are C{None}
         """
-        self.test_MD5HashResponse('sha', sha1)
+        self.test_MD5HashResponse(b'sha', sha1)
 
 
-    def test_MD5HashResponseExtra(self, _algorithm='md5', _hash=md5):
+    def test_MD5HashResponseExtra(self, _algorithm=b'md5', _hash=md5):
         """
         L{calcResponse} accepts the C{'md5'} algorithm and returns an MD5 hash
         of its parameters, including the nonce count, client nonce, and QoP
         value if they are specified.
         """
-        hashA1 = 'abc123'
-        hashA2 = '789xyz'
-        nonce = 'lmnopq'
-        nonceCount = '00000004'
-        clientNonce = 'abcxyz123'
-        qop = 'auth'
+        hashA1 = b'abc123'
+        hashA2 = b'789xyz'
+        nonce = b'lmnopq'
+        nonceCount = b'00000004'
+        clientNonce = b'abcxyz123'
+        qop = b'auth'
 
-        response = '%s:%s:%s:%s:%s:%s' % (
-            hashA1, nonce, nonceCount, clientNonce, qop, hashA2)
-        expected = _hash(response).hexdigest()
+        response = joinBytes(b":", (hashA1, nonce, nonceCount, clientNonce, qop,
+                                    hashA2))
+        expected = binascii.hexlify(_hash(response).digest())
 
         digest = calcResponse(
             hashA1, hashA2, _algorithm, nonce, nonceCount, clientNonce, qop)
@@ -225,7 +231,7 @@ class DigestAuthTests(TestCase):
         hash of its parameters, including the nonce count, client nonce, and
         QoP value if they are specified.
         """
-        self.test_MD5HashResponseExtra('md5-sess')
+        self.test_MD5HashResponseExtra(b'md5-sess')
 
 
     def test_SHAHashResponseExtra(self):
@@ -234,7 +240,7 @@ class DigestAuthTests(TestCase):
         of its parameters, including the nonce count, client nonce, and QoP
         value if they are specified.
         """
-        self.test_MD5HashResponseExtra('sha', sha1)
+        self.test_MD5HashResponseExtra(b'sha', sha1)
 
 
     def formatResponse(self, quotes=True, **kw):
@@ -246,10 +252,10 @@ class DigestAuthTests(TestCase):
         @param quotes: A flag indicating whether to quote the values of each
             field in the response.
 
-        @param **kw: Keywords and C{str} values which will be treated as field
+        @param **kw: Keywords and C{bytes} values which will be treated as field
             name/value pairs to include in the result.
 
-        @rtype: C{str}
+        @rtype: C{bytes}
         @return: The given fields formatted for use as an HTTP header value.
         """
         if 'username' not in kw:
@@ -268,10 +274,10 @@ class DigestAuthTests(TestCase):
             quote = '"'
         else:
             quote = ''
-        return ', '.join([
-                '%s=%s%s%s' % (k, quote, v, quote)
+        return b', '.join([
+                joinBytes(b"", (k, b"=", quote, v, quote))
                 for (k, v)
-                in kw.iteritems()
+                in kw.items()
                 if v is not None])
 
 
@@ -285,7 +291,7 @@ class DigestAuthTests(TestCase):
 
         ha1 = calcHA1(
             algo, self.username, self.realm, self.password, nonce, self.cnonce)
-        ha2 = calcHA2(algo, "GET", self.uri, qop, None)
+        ha2 = calcHA2(algo, b"GET", self.uri, qop, None)
         expected = calcResponse(ha1, ha2, algo, nonce, ncount, self.cnonce, qop)
         return expected
 
@@ -297,7 +303,7 @@ class DigestAuthTests(TestCase):
         """
         challenge = self.credentialFactory.getChallenge(self.clientAddress.host)
 
-        nc = "00000001"
+        nc = b"00000001"
         clientResponse = self.formatResponse(
             quotes=quotes,
             nonce=challenge['nonce'],
@@ -307,7 +313,7 @@ class DigestAuthTests(TestCase):
         creds = self.credentialFactory.decode(
             clientResponse, self.method, self.clientAddress.host)
         self.assertTrue(creds.checkPassword(self.password))
-        self.assertFalse(creds.checkPassword(self.password + 'wrong'))
+        self.assertFalse(creds.checkPassword(self.password + b'wrong'))
 
 
     def test_responseWithoutQuotes(self):
@@ -335,7 +341,7 @@ class DigestAuthTests(TestCase):
         The case of the algorithm value in the response is ignored when
         checking the credentials.
         """
-        self.algorithm = 'MD5'
+        self.algorithm = b'MD5'
         self.test_response()
 
 
@@ -354,7 +360,7 @@ class DigestAuthTests(TestCase):
         """
         challenge = self.credentialFactory.getChallenge(None)
 
-        nc = "00000001"
+        nc = b"00000001"
         clientResponse = self.formatResponse(
             nonce=challenge['nonce'],
             response=self.getDigestResponse(challenge, nc),
@@ -362,7 +368,7 @@ class DigestAuthTests(TestCase):
             opaque=challenge['opaque'])
         creds = self.credentialFactory.decode(clientResponse, self.method, None)
         self.assertTrue(creds.checkPassword(self.password))
-        self.assertFalse(creds.checkPassword(self.password + 'wrong'))
+        self.assertFalse(creds.checkPassword(self.password + b'wrong'))
 
 
     def test_multiResponse(self):
@@ -372,7 +378,7 @@ class DigestAuthTests(TestCase):
         """
         challenge = self.credentialFactory.getChallenge(self.clientAddress.host)
 
-        nc = "00000001"
+        nc = b"00000001"
         clientResponse = self.formatResponse(
             nonce=challenge['nonce'],
             response=self.getDigestResponse(challenge, nc),
@@ -382,9 +388,9 @@ class DigestAuthTests(TestCase):
         creds = self.credentialFactory.decode(clientResponse, self.method,
                                               self.clientAddress.host)
         self.assertTrue(creds.checkPassword(self.password))
-        self.assertFalse(creds.checkPassword(self.password + 'wrong'))
+        self.assertFalse(creds.checkPassword(self.password + b'wrong'))
 
-        nc = "00000002"
+        nc = b"00000002"
         clientResponse = self.formatResponse(
             nonce=challenge['nonce'],
             response=self.getDigestResponse(challenge, nc),
@@ -394,7 +400,7 @@ class DigestAuthTests(TestCase):
         creds = self.credentialFactory.decode(clientResponse, self.method,
                                               self.clientAddress.host)
         self.assertTrue(creds.checkPassword(self.password))
-        self.assertFalse(creds.checkPassword(self.password + 'wrong'))
+        self.assertFalse(creds.checkPassword(self.password + b'wrong'))
 
 
     def test_failsWithDifferentMethod(self):
@@ -406,16 +412,16 @@ class DigestAuthTests(TestCase):
         """
         challenge = self.credentialFactory.getChallenge(self.clientAddress.host)
 
-        nc = "00000001"
+        nc = b"00000001"
         clientResponse = self.formatResponse(
             nonce=challenge['nonce'],
             response=self.getDigestResponse(challenge, nc),
             nc=nc,
             opaque=challenge['opaque'])
-        creds = self.credentialFactory.decode(clientResponse, 'POST',
+        creds = self.credentialFactory.decode(clientResponse, b'POST',
                                               self.clientAddress.host)
         self.assertFalse(creds.checkPassword(self.password))
-        self.assertFalse(creds.checkPassword(self.password + 'wrong'))
+        self.assertFalse(creds.checkPassword(self.password + b'wrong'))
 
 
     def test_noUsername(self):
@@ -435,7 +441,7 @@ class DigestAuthTests(TestCase):
         e = self.assertRaises(
             LoginFailed,
             self.credentialFactory.decode,
-            self.formatResponse(username=""),
+            self.formatResponse(username=b""),
             self.method, self.clientAddress.host)
         self.assertEqual(str(e), "Invalid response, no username given.")
 
@@ -448,7 +454,7 @@ class DigestAuthTests(TestCase):
         e = self.assertRaises(
             LoginFailed,
             self.credentialFactory.decode,
-            self.formatResponse(opaque="abc123"),
+            self.formatResponse(opaque=b"abc123"),
             self.method, self.clientAddress.host)
         self.assertEqual(str(e), "Invalid response, no nonce given.")
 
@@ -473,7 +479,7 @@ class DigestAuthTests(TestCase):
         """
         challenge = self.credentialFactory.getChallenge(self.clientAddress.host)
 
-        nc = "00000001"
+        nc = b"00000001"
         clientResponse = self.formatResponse(
             nonce=challenge['nonce'],
             response=self.getDigestResponse(challenge, nc),
@@ -484,11 +490,11 @@ class DigestAuthTests(TestCase):
                                               self.clientAddress.host)
         self.assertTrue(verifyObject(IUsernameDigestHash, creds))
 
-        cleartext = '%s:%s:%s' % (self.username, self.realm, self.password)
+        cleartext = joinBytes(b":", (self.username, self.realm, self.password))
         hash = md5(cleartext)
-        self.assertTrue(creds.checkHash(hash.hexdigest()))
-        hash.update('wrong')
-        self.assertFalse(creds.checkHash(hash.hexdigest()))
+        self.assertTrue(creds.checkHash(binascii.hexlify(hash.digest())))
+        hash.update(b'wrong')
+        self.assertFalse(creds.checkHash(binascii.hexlify(hash.digest())))
 
 
     def test_invalidOpaque(self):
@@ -503,12 +509,12 @@ class DigestAuthTests(TestCase):
         exc = self.assertRaises(
             LoginFailed,
             credentialFactory._verifyOpaque,
-            'badOpaque',
+            b'badOpaque',
             challenge['nonce'],
             self.clientAddress.host)
         self.assertEqual(str(exc), 'Invalid response, invalid opaque value')
 
-        badOpaque = 'foo-' + b64encode('nonce,clientip')
+        badOpaque = b'foo-' + b64encode(b'nonce,clientip')
 
         exc = self.assertRaises(
             LoginFailed,
@@ -521,15 +527,14 @@ class DigestAuthTests(TestCase):
         exc = self.assertRaises(
             LoginFailed,
             credentialFactory._verifyOpaque,
-            '',
+            b'',
             challenge['nonce'],
             self.clientAddress.host)
         self.assertEqual(str(exc), 'Invalid response, invalid opaque value')
 
-        badOpaque = (
-            'foo-' + b64encode('%s,%s,foobar' % (
-                    challenge['nonce'],
-                    self.clientAddress.host)))
+        badOpaque = b'foo-' + b64encode(
+            joinBytes(b",", (challenge['nonce'], self.clientAddress.host,
+                             b"foobar")))
         exc = self.assertRaises(
             LoginFailed,
             credentialFactory._verifyOpaque,
@@ -549,7 +554,7 @@ class DigestAuthTests(TestCase):
         challenge = credentialFactory.getChallenge(self.clientAddress.host)
 
         badNonceOpaque = credentialFactory._generateOpaque(
-            '1234567890',
+            b'1234567890',
             self.clientAddress.host)
 
         exc = self.assertRaises(
@@ -566,7 +571,7 @@ class DigestAuthTests(TestCase):
             LoginFailed,
             credentialFactory._verifyOpaque,
             badNonceOpaque,
-            '',
+            b'',
             self.clientAddress.host)
         self.assertEqual(
             str(exc),
@@ -606,13 +611,13 @@ class DigestAuthTests(TestCase):
                                                         self.realm)
         challenge = credentialFactory.getChallenge(self.clientAddress.host)
 
-        key = '%s,%s,%s' % (challenge['nonce'],
-                            self.clientAddress.host,
-                            '-137876876')
+        key = joinBytes(b",", (challenge['nonce'],
+                               self.clientAddress.host,
+                               '-137876876'))
         digest = md5(key + credentialFactory.privateKey).hexdigest()
         ekey = b64encode(key)
 
-        oldNonceOpaque = '%s-%s' % (digest, ekey.strip('\n'))
+        oldNonceOpaque = joinBytes(b"-", (digest, ekey.strip(b'\n')))
 
         self.assertRaises(
             LoginFailed,
@@ -631,12 +636,13 @@ class DigestAuthTests(TestCase):
                                                         self.realm)
         challenge = credentialFactory.getChallenge(self.clientAddress.host)
 
-        key = '%s,%s,%s' % (challenge['nonce'],
-                            self.clientAddress.host,
-                            '0')
+        key = joinBytes(b",",
+                        (challenge['nonce'],
+                         self.clientAddress.host,
+                         '0'))
 
-        digest = md5(key + 'this is not the right pkey').hexdigest()
-        badChecksum = '%s-%s' % (digest, b64encode(key))
+        digest = md5(key + b'this is not the right pkey').hexdigest()
+        badChecksum = joinBytes(b"-", (digest, b64encode(key)))
 
         self.assertRaises(
             LoginFailed,
@@ -653,21 +659,21 @@ class DigestAuthTests(TestCase):
         argument.
         """
         arguments = (
-            ("user", "realm", "password", "preHA1"),
-            (None, "realm", None, "preHA1"),
-            (None, None, "password", "preHA1"),
+            (b"user", b"realm", b"password", b"preHA1"),
+            (None, b"realm", None, b"preHA1"),
+            (None, None, b"password", b"preHA1"),
             )
 
         for pszUsername, pszRealm, pszPassword, preHA1 in arguments:
             self.assertRaises(
                 TypeError,
                 calcHA1,
-                "md5",
+                b"md5",
                 pszUsername,
                 pszRealm,
                 pszPassword,
-                "nonce",
-                "cnonce",
+                b"nonce",
+                b"cnonce",
                 preHA1=preHA1)
 
 
@@ -677,5 +683,5 @@ class DigestAuthTests(TestCase):
         newlines, regardless of the length of the nonce.
         """
         opaque = self.credentialFactory._generateOpaque(
-            "long nonce " * 10, None)
-        self.assertNotIn('\n', opaque)
+            b"long nonce " * 10, None)
+        self.assertNotIn(b'\n', opaque)

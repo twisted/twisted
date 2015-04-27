@@ -12,11 +12,11 @@ import socket, sys, traceback, io, codecs
 
 from twisted.trial import unittest
 
-from twisted.python.compat import (
-    reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
-    unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType
-)
+from twisted.python.compat import reduce, execfile, _PY3
+from twisted.python.compat import comparable, cmp, nativeString, networkString
+from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
+from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
+from twisted.python.compat import joinBytes
 from twisted.python.filepath import FilePath
 
 
@@ -730,3 +730,42 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         """
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data, 2, 3)), data[2:5])
+
+
+
+class JoinBytesTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{joinBytes}.
+    """
+
+    def test_unicodeArgs(self):
+        """
+        Unicode arguments (assuming they are ASCII-encodable) can be passed.
+        """
+        result = joinBytes(b",", (u"foo", u"bar"))
+        self.assertEqual(result, b"foo,bar")
+
+
+    def test_mixedTypeArgs(self):
+        """
+        Arguments of mixed type can be passed.
+        """
+        result = joinBytes(b",", (b"2.3", u"foo", b"bar"))
+        self.assertEqual(result, b"2.3,foo,bar")
+
+
+    def test_nonASCIIUnicode(self):
+        """
+        Unicode arguments passed with non-ASCII-decodable contents will raise an
+        exception.
+        """
+        with self.assertRaises(UnicodeError):
+            joinBytes(b":", (u"\N{SNOWMAN}",))
+
+
+    def test_nonBytesArguments(self):
+        """
+        Non-bytes arguments passed will raise an exception.
+        """
+        with self.assertRaises(TypeError):
+            joinBytes(b":", (1,))

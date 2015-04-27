@@ -8,6 +8,10 @@ Calculations for HTTP Digest authentication.
 @see: U{http://www.faqs.org/rfcs/rfc2617.html}
 """
 
+from __future__ import division, absolute_import
+
+import binascii
+
 from hashlib import md5, sha1
 
 
@@ -15,7 +19,7 @@ from hashlib import md5, sha1
 # The digest math
 
 algorithms = {
-    'md5': md5,
+    b'md5': md5,
 
     # md5-sess is more complicated than just another algorithm.  It requires
     # H(A1) state to be remembered from the first WWW-Authenticate challenge
@@ -24,9 +28,9 @@ algorithms = {
     # recalculate H(A1) each time an Authorization header is received.  Read
     # RFC 2617, section 3.2.2.2 and do not try to make DigestCredentialFactory
     # support this unless you completely understand it. -exarkun
-    'md5-sess': md5,
+    b'md5-sess': md5,
 
-    'sha': sha1,
+    b'sha': sha1,
 }
 
 # DigestCalcHA1
@@ -56,23 +60,23 @@ def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
         # We need to calculate the HA1 from the username:realm:password
         m = algorithms[pszAlg]()
         m.update(pszUserName)
-        m.update(":")
+        m.update(b":")
         m.update(pszRealm)
-        m.update(":")
+        m.update(b":")
         m.update(pszPassword)
-        HA1 = m.hexdigest()
+        HA1 = binascii.hexlify(m.digest())
     else:
         # We were given a username:realm:password
         HA1 = preHA1
 
-    if pszAlg == "md5-sess":
+    if pszAlg == b"md5-sess":
         m = algorithms[pszAlg]()
         m.update(HA1)
-        m.update(":")
+        m.update(b":")
         m.update(pszNonce)
-        m.update(":")
+        m.update(b":")
         m.update(pszCNonce)
-        HA1 = m.hexdigest()
+        HA1 = binascii.hexlify(m.digest())
 
     return HA1
 
@@ -93,12 +97,12 @@ def calcHA2(algo, pszMethod, pszDigestUri, pszQop, pszHEntity):
     """
     m = algorithms[algo]()
     m.update(pszMethod)
-    m.update(":")
+    m.update(b":")
     m.update(pszDigestUri)
-    if pszQop == "auth-int":
-        m.update(":")
+    if pszQop == b"auth-int":
+        m.update(b":")
         m.update(pszHEntity)
-    return m.digest().encode('hex')
+    return binascii.hexlify(m.digest())
 
 
 def calcResponse(HA1, HA2, algo, pszNonce, pszNonceCount, pszCNonce, pszQop):
@@ -114,16 +118,16 @@ def calcResponse(HA1, HA2, algo, pszNonce, pszNonceCount, pszCNonce, pszQop):
     """
     m = algorithms[algo]()
     m.update(HA1)
-    m.update(":")
+    m.update(b":")
     m.update(pszNonce)
-    m.update(":")
+    m.update(b":")
     if pszNonceCount and pszCNonce:
         m.update(pszNonceCount)
-        m.update(":")
+        m.update(b":")
         m.update(pszCNonce)
-        m.update(":")
+        m.update(b":")
         m.update(pszQop)
-        m.update(":")
+        m.update(b":")
     m.update(HA2)
-    respHash = m.digest().encode('hex')
+    respHash = binascii.hexlify(m.digest())
     return respHash
