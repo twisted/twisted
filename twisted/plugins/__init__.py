@@ -4,6 +4,8 @@
 # See LICENSE for details.
 
 """
+Plugins for services implemented in Twisted.
+
 Plugins go in directories on your PYTHONPATH named twisted/plugins:
 this is the only place where an __init__.py is necessary, thanks to
 the __path__ variable.
