@@ -464,15 +464,15 @@ class NetworkHashedFilePasswordDBCheckerTests(NetworkHashedFilePasswordDBMixin, 
     pass
 
 
-__all__ = ["NewCredTest", "CramMD5CredentialsTestCase",
-           "OnDiskDatabaseTestCase", "HashedPasswordOnDiskDatabaseTestCase",
-           "PluggableAuthenticationModulesTest",
-           "HashlessFilePasswordDBCheckerTestCase",
-           "LocallyHashedFilePasswordDBCheckerTestCase",
-           "NetworkHashedFilePasswordDBCheckerTestCase"]
+__all__ = ["NewCredTests", "CramMD5CredentialsTests",
+           "OnDiskDatabaseTests", "HashedPasswordOnDiskDatabaseTests",
+           "PluggableAuthenticationModulesTests",
+           "HashlessFilePasswordDBCheckerTests",
+           "LocallyHashedFilePasswordDBCheckerTests",
+           "NetworkHashedFilePasswordDBCheckerTests"]
 
 if _PY3:
-    __all3__ = ["CramMD5CredentialsTestCase"]
+    __all3__ = ["CramMD5CredentialsTests"]
     for name in __all__[:]:
         if name not in __all3__:
             __all__.remove(name)
