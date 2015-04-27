@@ -622,8 +622,8 @@ class ProcessTestCase(unittest.TestCase):
         scriptPath = FilePath(__file__).sibling(b"process_cmdline.py").path
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath]+args, env=None,
-                             path=None)
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath] + args,
+                             env=None, path=None)
 
         def processEnded(ign):
             self.assertEqual(p.errF.getvalue(), b"")
@@ -1043,7 +1043,8 @@ class PosixProcessBase(object):
         """
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
-        reactor.spawnProcess(p, pyExe, [pyExe, b'-c', b'import sys; sys.exit(1)'],
+        reactor.spawnProcess(p, pyExe,
+                             [pyExe, b'-c', b'import sys; sys.exit(1)'],
                              env=None, usePTY=self.usePTY)
 
         def check(ignored):
