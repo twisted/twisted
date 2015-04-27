@@ -5,6 +5,8 @@
 Tests for POSIX-based L{IReactorProcess} implementations.
 """
 
+from __future__ import division, absolute_import
+
 import errno, os, sys
 
 try:
@@ -211,11 +213,11 @@ class FDDetectorTests(TestCase):
         # Create a new instance
         detector = process._FDDetector()
 
-        first = detector._listOpenFDs.func_name
+        first = detector._listOpenFDs.__name__
         detector._listOpenFDs()
-        second = detector._listOpenFDs.func_name
+        second = detector._listOpenFDs.__name__
         detector._listOpenFDs()
-        third = detector._listOpenFDs.func_name
+        third = detector._listOpenFDs.__name__
 
         self.assertNotEqual(first, second)
         self.assertEqual(second, third)
@@ -290,7 +292,7 @@ class FileDescriptorTests(TestCase):
         for fd in process._listOpenFDs():
             try:
                 fcntl.fcntl(fd, fcntl.F_GETFL)
-            except IOError, err:
+            except IOError as err:
                 self.assertEqual(
                     errno.EBADF, err.errno,
                     "fcntl(%d, F_GETFL) failed with unexpected errno %d" % (
@@ -308,7 +310,7 @@ class FileDescriptorTests(TestCase):
         # their presence or absence in the result.
 
         # Expect a file we just opened to be listed.
-        f = file(os.devnull)
+        f = open(os.devnull)
         openfds = process._listOpenFDs()
         self.assertIn(f.fileno(), openfds)
 

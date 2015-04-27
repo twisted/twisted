@@ -1037,7 +1037,7 @@ __all__ = [
 if _PY3:
     __all3__ = ["FancyEqMixin", "untilConcludes",
                 "runWithWarningsSuppressed", "FancyStrMixin", "nameToLabel",
-                "InsensitiveDict", "padTo"]
+                "InsensitiveDict", "padTo", "switchUID", "sibpath"]
     for name in __all__[:]:
         if name not in __all3__:
             __all__.remove(name)

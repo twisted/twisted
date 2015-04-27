@@ -19,4 +19,3 @@ except ImportError:
     sys.stdout.write("success")
 else:
     sys.stdout.write("failure: %s was imported" % (gobject.__path__,))
-
