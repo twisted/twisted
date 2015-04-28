@@ -14,14 +14,11 @@ from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
 
 skipSockets = None
-if _PY3:
-    skipSockets = "Re-enable when Python 3 port supports AF_UNIX"
-else:
-    try:
-        from twisted.internet import unix
-        from twisted.test.test_unix import ClientProto
-    except ImportError:
-        skipSockets = "Platform does not support AF_UNIX sockets"
+try:
+    from twisted.internet import unix
+    from twisted.test.test_unix import ClientProto
+except ImportError:
+    skipSockets = "Platform does not support AF_UNIX sockets"
 
 from twisted.internet.tcp import Port
 from twisted.internet import reactor
