@@ -412,7 +412,6 @@ class DatagramUnixSocketTests(unittest.TestCase):
         return self._reprTest(
             NewStyleProtocol(), "twisted.test.test_unix.NewStyleProtocol")
 
-
     if _PY3:
         test_reprWithClassicProtocol.skip = ("Classic classes do not exist on "
                                              "Python 3.")
