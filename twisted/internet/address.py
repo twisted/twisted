@@ -11,6 +11,7 @@ import warnings, os
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IAddress
+from twisted.python.filepath import _asFilesystemBytes
 from twisted.python.util import FancyEqMixin
 from twisted.python.runtime import platform
 from twisted.python.compat import _PY3
@@ -123,13 +124,13 @@ class UNIXAddress(FancyEqMixin, object):
     Object representing a UNIX socket endpoint.
 
     @ivar name: The filename associated with this socket.
-    @type name: C{str}
+    @type name: C{bytes}
     """
 
     compareAttributes = ('name', )
 
     def __init__(self, name, _bwHack = None):
-        self.name = name
+        self.name = _asFilesystemBytes(name)
         if _bwHack is not None:
             warnings.warn("twisted.internet.address.UNIXAddress._bwHack is deprecated since Twisted 11.0",
                     DeprecationWarning, stacklevel=2)
