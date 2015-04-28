@@ -142,8 +142,12 @@ class UNIXAddress(FancyEqMixin, object):
 
 
     @name.setter
-    def _name_set(self, name):
-        self._name = self._asFilesystemBytes(name) if name else None
+    def name(self, name):
+        """
+        When setting C{self.name}, make sure it is always bytes, and convert it
+        if not.
+        """
+        self._name = _asFilesystemBytes(name) if name else None
 
 
     if getattr(os.path, 'samefile', None) is not None:
