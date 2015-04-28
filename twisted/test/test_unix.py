@@ -5,13 +5,16 @@
 Tests for implementations of L{IReactorUNIX} and L{IReactorUNIXDatagram}.
 """
 
-import os, sys, types
+import os
+import sys
+import types
 import socket
 
-from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
+from twisted.internet import interfaces, reactor, protocol, error, address
+from twisted.internet import defer, utils
 from twisted.python import lockfile
-from twisted.python.filepath import FilePath
 from twisted.python.compat import _PY3
+from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 
 from twisted.test.test_tcp import MyServerFactory, MyClientFactory

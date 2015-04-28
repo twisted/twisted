@@ -19,26 +19,28 @@ except ImportError:
 
 from zope.interface import implementer
 
-from twisted.python.log import addObserver, removeObserver, err
-from twisted.python.failure import Failure
-from twisted.python.reflect import requireModule
-from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath
-from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
-from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
-from twisted.internet.address import UNIXAddress
-from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
-from twisted.internet.defer import Deferred, fail
-from twisted.internet.task import LoopingCall
 from twisted.internet import interfaces
-from twisted.internet.protocol import (
-    ServerFactory, ClientFactory, DatagramProtocol)
+from twisted.internet.address import UNIXAddress
+from twisted.internet.defer import Deferred, fail
+from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
+from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
+from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
+from twisted.internet.protocol import DatagramProtocol
+from twisted.internet.protocol import ServerFactory, ClientFactory
+from twisted.internet.task import LoopingCall
+from twisted.internet.test.connectionmixins import EndpointCreator
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
-from twisted.internet.test.connectionmixins import (
-    EndpointCreator, ConnectableProtocol, runProtocolsWithReactor,
-    ConnectionTestsMixin, StreamClientTestsMixin)
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.test.connectionmixins import ConnectableProtocol
+from twisted.internet.test.connectionmixins import ConnectionTestsMixin
+from twisted.internet.test.connectionmixins import StreamClientTestsMixin
+from twisted.internet.test.connectionmixins import runProtocolsWithReactor
+from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
+from twisted.python.log import addObserver, removeObserver, err
+from twisted.python.reflect import requireModule
+from twisted.python.runtime import platform
 
 if requireModule('twisted.python.sendmsg') is None:
     sendmsgSkip = (

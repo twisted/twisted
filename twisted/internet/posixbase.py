@@ -15,18 +15,16 @@ import sys
 
 from zope.interface import implementer, classImplements
 
+from twisted.internet import error, udp, tcp, unix
+from twisted.internet.base import ReactorBase, _SignalReactorMixin
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
-from twisted.internet.interfaces import (
-    IReactorTCP, IReactorUDP, IReactorSSL, IReactorSocket)
+from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
+from twisted.internet.interfaces import IReactorSocket, IHalfCloseableDescriptor
 from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
-from twisted.internet.interfaces import IHalfCloseableDescriptor
-from twisted.internet import error, udp, tcp
 
 from twisted.python import log, failure, util
 from twisted.python.runtime import platformType, platform
-
-from twisted.internet.base import ReactorBase, _SignalReactorMixin
-from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 
 # Exceptions that doSelect might return frequently
 _NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')
@@ -389,18 +387,12 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         assert unixEnabled, "UNIX support is not present"
-        # Move this import back up to main level when twisted.internet.unix is
-        # ported to Python 3:
-        from twisted.internet import unix
         c = unix.Connector(address, factory, timeout, self, checkPID)
         c.connect()
         return c
 
     def listenUNIX(self, address, factory, backlog=50, mode=0o666, wantPID=0):
         assert unixEnabled, "UNIX support is not present"
-        # Move this import back up to main level when twisted.internet.unix is
-        # ported to Python 3:
-        from twisted.internet import unix
         p = unix.Port(address, factory, backlog, mode, self, wantPID)
         p.startListening()
         return p
@@ -418,9 +410,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         @returns: object conforming to L{IListeningPort}.
         """
         assert unixEnabled, "UNIX support is not present"
-        # Move this import back up to main level when twisted.internet.unix is
-        # ported to Python 3:
-        from twisted.internet import unix
         p = unix.DatagramPort(address, protocol, maxPacketSize, mode, self)
         p.startListening()
         return p
@@ -433,9 +422,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         EXPERIMENTAL.
         """
         assert unixEnabled, "UNIX support is not present"
-        # Move this import back up to main level when twisted.internet.unix is
-        # ported to Python 3:
-        from twisted.internet import unix
         p = unix.ConnectedDatagramPort(address, protocol, maxPacketSize, mode, bindAddress, self)
         p.startListening()
         return p

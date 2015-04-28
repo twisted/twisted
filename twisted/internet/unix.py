@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Various asynchronous TCP/IP classes.
 
@@ -11,7 +10,6 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-# System imports
 import os, sys, stat, socket, struct
 from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
 
@@ -20,11 +18,10 @@ from zope.interface import implementer, implementer_only, implementedBy
 if not hasattr(socket, 'AF_UNIX'):
     raise ImportError("UNIX sockets not supported on this platform")
 
-# Twisted imports
-from twisted.internet import main, base, tcp, udp, error, interfaces, protocol, address
-from twisted.internet.error import CannotListenError
-from twisted.python.util import untilConcludes
+from twisted.internet import main, base, tcp, udp, error, interfaces
+from twisted.internet import protocol, address
 from twisted.python import lockfile, log, reflect, failure
+from twisted.python.util import untilConcludes
 
 try:
     from twisted.python import sendmsg
@@ -279,7 +276,8 @@ class Port(_UNIXPort, tcp.Port):
         if self.wantPID:
             self.lockFile = lockfile.FilesystemLock(self.port + ".lock")
             if not self.lockFile.lock():
-                raise CannotListenError(None, self.port, "Cannot acquire lock")
+                raise error.CannotListenError(None, self.port,
+                                              "Cannot acquire lock")
             else:
                 if not self.lockFile.clean:
                     try:
@@ -298,7 +296,7 @@ class Port(_UNIXPort, tcp.Port):
             skt = self.createInternetSocket()
             skt.bind(self.port)
         except socket.error as le:
-            raise CannotListenError(None, self.port, le)
+            raise error.CannotListenError(None, self.port, le)
         else:
             if _inFilesystemNamespace(self.port):
                 # Make the socket readable and writable to the world.
