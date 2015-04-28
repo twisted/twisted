@@ -23,6 +23,7 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
+from twisted.python.filepath import FilePath
 from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
 from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
 from twisted.internet.address import UNIXAddress
@@ -70,7 +71,7 @@ def _abstractPath(case):
     # Use the test cases's mktemp to get something unique, but also squash it
     # down to make sure it fits in the unix socket path limit (something around
     # 110 bytes).
-    return md5(case.mktemp()).hexdigest()
+    return md5(FilePath(case.mktemp())._asBytesPath()).hexdigest()
 
 
 
@@ -323,7 +324,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 self.transport.registerProducer(self, True)
                 def sender():
                     self.transport.sendFileDescriptor(self.socket.fileno())
-                    self.transport.write("x")
+                    self.transport.write(b"x")
                 self.task = LoopingCall(sender)
                 self.task.clock = self.transport.reactor
                 self.task.start(0).addErrback(err, "Send loop failure")
@@ -470,12 +471,12 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 self.events.extend(data)
 
         cargo = socket()
-        server = SendFileDescriptor(cargo.fileno(), "junk")
+        server = SendFileDescriptor(cargo.fileno(), b"junk")
         client = RecordEvents()
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
 
-        self.assertEqual([int, "j", "u", "n", "k"], client.events)
+        self.assertEqual([int, b"j", b"u", b"n", b"k"], client.events)
     if sendmsgSkip is not None:
         test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
 

@@ -10,6 +10,8 @@ import socket
 
 from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
 from twisted.python import lockfile
+from twisted.python.filepath import FilePath
+from twisted.python.compat import _PY3
 from twisted.trial import unittest
 
 from twisted.test.test_tcp import MyServerFactory, MyClientFactory
@@ -144,11 +146,14 @@ class UnixSocketTests(unittest.TestCase):
 
     def _uncleanSocketTest(self, callback):
         self.filename = self.mktemp()
-        source = ("from twisted.internet import protocol, reactor\n"
-                  "reactor.listenUNIX(%r, protocol.ServerFactory(), wantPID=True)\n") % (self.filename,)
-        env = {'PYTHONPATH': os.pathsep.join(sys.path)}
+        source = (("from twisted.internet import protocol, reactor\n"
+                  "reactor.listenUNIX(%r, protocol.ServerFactory(),"
+                  "wantPID=True)\n") % (self.filename,)).encode("ascii")
+        env = {b'PYTHONPATH': FilePath(
+            os.pathsep.join(sys.path))._asBytesPath()}
+        pyExe = FilePath(sys.executable)._asBytesPath()
 
-        d = utils.getProcessValue(sys.executable, ("-u", "-c", source), env=env)
+        d = utils.getProcessValue(pyExe, (b"-u", b"-c", source), env=env)
         d.addCallback(callback)
         return d
 
@@ -244,6 +249,10 @@ class UnixSocketTests(unittest.TestCase):
             NewStyleFactory(), "twisted.test.test_unix.NewStyleFactory")
 
 
+    if _PY3:
+        test_reprWithClassicFactory.skip = ("Classic classes do not exist on "
+                                            "Python 3.")
+
 
 class ClientProto(protocol.ConnectedDatagramProtocol):
     started = stopped = False
@@ -281,7 +290,7 @@ class ServerProto(protocol.DatagramProtocol):
 
     def datagramReceived(self, data, addr):
         self.gotfrom = addr
-        self.transport.write("hi back", addr)
+        self.transport.write(b"hi back", addr)
         self.gotwhat = data
         self.deferredGotWhat.callback(None)
 
@@ -307,14 +316,14 @@ class DatagramUnixSocketTests(unittest.TestCase):
 
         d = defer.gatherResults([sp.deferredStarted, cp.deferredStarted])
         def write(ignored):
-            cp.transport.write("hi")
+            cp.transport.write(b"hi")
             return defer.gatherResults([sp.deferredGotWhat,
                                         cp.deferredGotBack])
 
         def _cbTestExchange(ignored):
-            self.assertEqual("hi", sp.gotwhat)
+            self.assertEqual(b"hi", sp.gotwhat)
             self.assertEqual(clientaddr, sp.gotfrom)
-            self.assertEqual("hi back", cp.gotback)
+            self.assertEqual(b"hi back", cp.gotback)
 
         d.addCallback(write)
         d.addCallback(_cbTestExchange)
@@ -397,6 +406,11 @@ class DatagramUnixSocketTests(unittest.TestCase):
 
         return self._reprTest(
             NewStyleProtocol(), "twisted.test.test_unix.NewStyleProtocol")
+
+
+    if _PY3:
+        test_reprWithClassicProtocol.skip = ("Classic classes do not exist on "
+                                             "Python 3.")
 
 
 
