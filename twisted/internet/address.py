@@ -137,11 +137,11 @@ class UNIXAddress(FancyEqMixin, object):
 
 
     @property
-    def _name_get(self):
+    def name(self):
         return self._name
 
 
-    @_name_get.setter
+    @name.setter
     def _name_set(self, name):
         self._name = self._asFilesystemBytes(name) if name else None
 
