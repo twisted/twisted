@@ -253,10 +253,10 @@ class UnixSocketTests(unittest.TestCase):
         return self._reprTest(
             NewStyleFactory(), "twisted.test.test_unix.NewStyleFactory")
 
-
     if _PY3:
         test_reprWithClassicFactory.skip = ("Classic classes do not exist on "
                                             "Python 3.")
+
 
 
 class ClientProto(protocol.ConnectedDatagramProtocol):
