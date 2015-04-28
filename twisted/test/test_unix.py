@@ -155,8 +155,8 @@ class UnixSocketTests(unittest.TestCase):
                   "reactor.listenUNIX(%r, protocol.ServerFactory(),"
                   "wantPID=True)\n") % (self.filename,)).encode("ascii")
         env = {b'PYTHONPATH': FilePath(
-            os.pathsep.join(sys.path))._asBytesPath()}
-        pyExe = FilePath(sys.executable)._asBytesPath()
+            os.pathsep.join(sys.path)).asBytesMode().path}
+        pyExe = FilePath(sys.executable).asBytesMode().path
 
         d = utils.getProcessValue(pyExe, (b"-u", b"-c", source), env=env)
         d.addCallback(callback)
