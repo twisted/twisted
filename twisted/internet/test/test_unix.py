@@ -17,7 +17,7 @@ try:
 except ImportError:
     AF_UNIX = None
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
@@ -136,6 +136,7 @@ class SendFileDescriptor(ConnectableProtocol):
 
 
 
+@implementer(IFileDescriptorReceiver)
 class ReceiveFileDescriptor(ConnectableProtocol):
     """
     L{ReceiveFileDescriptor} provides an API for waiting for file descriptors to
@@ -148,7 +149,6 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         received, or with a failure if the connection is lost with no descriptor
         arriving.
     """
-    implements(IFileDescriptorReceiver)
 
     reason = None
     waiting = None
@@ -455,8 +455,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         L{IUNIXTransport.sendFileDescriptor} sends file descriptors before
         L{ITransport.write} sends normal bytes.
         """
+        @implementer(IFileDescriptorReceiver)
         class RecordEvents(ConnectableProtocol):
-            implements(IFileDescriptorReceiver)
 
             def connectionMade(self):
                 ConnectableProtocol.connectionMade(self)
