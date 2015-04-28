@@ -56,7 +56,7 @@ class UNIXFamilyMixin:
         Assert that the mode of the created unix socket is set to the mode
         specified to the reactor method.
         """
-        mode = 0600
+        mode = 0o600
         reactor = self.buildReactor()
         unixPort = getattr(reactor, methodName)(path, factory, mode=mode)
         unixPort.stopListening()

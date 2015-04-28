@@ -68,8 +68,8 @@ class UnixSocketTests(unittest.TestCase):
         clientFactory.protocolConnectionMade = clientConnMade
         reactor.connectUNIX(filename, clientFactory)
         d = defer.gatherResults([serverConnMade, clientConnMade])
-        def allConnected((serverProtocol, clientProtocol)):
-
+        def allConnected(args):
+            serverProtocol, clientProtocol = args
             # Incidental assertion which may or may not be redundant with some
             # other test.  This probably deserves its own test method.
             self.assertEqual(clientFactory.peerAddresses,
@@ -103,7 +103,8 @@ class UnixSocketTests(unittest.TestCase):
         reactor.connectUNIX(filename, clientFactory, checkPID=1)
 
         d = defer.gatherResults([serverConnMade, clientConnMade])
-        def _portStuff((serverProtocol, clientProto)):
+        def _portStuff(args):
+            serverProtocol, clientProto = args
 
             # Incidental assertion which may or may not be redundant with some
             # other test.  This probably deserves its own test method.
