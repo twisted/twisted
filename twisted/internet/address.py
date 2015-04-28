@@ -11,7 +11,7 @@ import warnings, os
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IAddress
-from twisted.python.filepath import _asFilesystemBytes
+from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import FancyEqMixin
 from twisted.python.runtime import platform
 from twisted.python.compat import _PY3
@@ -124,7 +124,7 @@ class UNIXAddress(FancyEqMixin, object):
     Object representing a UNIX socket endpoint.
 
     @ivar name: The filename associated with this socket.
-    @type name: C{bytes}
+    @type name: C{str}
     """
 
     compareAttributes = ('name', )
@@ -144,10 +144,10 @@ class UNIXAddress(FancyEqMixin, object):
     @name.setter
     def name(self, name):
         """
-        When setting C{self.name}, make sure it is always bytes, and convert it
+        When setting C{self.name}, make sure it is always L{str}, and convert it
         if not.
         """
-        self._name = _asFilesystemBytes(name) if name else None
+        self._name = _coerceToFilesystemEncoding('', name)
 
 
     if getattr(os.path, 'samefile', None) is not None:
