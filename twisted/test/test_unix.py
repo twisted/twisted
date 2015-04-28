@@ -254,8 +254,8 @@ class UnixSocketTests(unittest.TestCase):
             NewStyleFactory(), "twisted.test.test_unix.NewStyleFactory")
 
     if _PY3:
-        test_reprWithClassicFactory.skip = ("Classic classes do not exist on "
-                                            "Python 3.")
+        test_reprWithClassicFactory.skip = (
+            "Classic classes do not exist on Python 3.")
 
 
 
@@ -413,8 +413,8 @@ class DatagramUnixSocketTests(unittest.TestCase):
             NewStyleProtocol(), "twisted.test.test_unix.NewStyleProtocol")
 
     if _PY3:
-        test_reprWithClassicProtocol.skip = ("Classic classes do not exist on "
-                                             "Python 3.")
+        test_reprWithClassicProtocol.skip = (
+            "Classic classes do not exist on Python 3.")
 
 
 
