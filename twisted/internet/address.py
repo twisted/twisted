@@ -12,6 +12,8 @@ import warnings, os
 from zope.interface import implementer
 from twisted.internet.interfaces import IAddress
 from twisted.python.util import FancyEqMixin
+from twisted.python.runtime import platform
+from twisted.python.compat import _PY3
 
 
 @implementer(IAddress)
@@ -145,6 +147,11 @@ class UNIXAddress(FancyEqMixin, object):
                     return os.path.samefile(self.name, other.name)
                 except OSError:
                     pass
+                except (TypeError, ValueError) as e:
+                    # On Linux, abstract namespace UNIX sockets start with a \0,
+                    # which os.path doesn't like.
+                    if not _PY3 and not platform.isLinux():
+                        raise e
             return res
 
 
