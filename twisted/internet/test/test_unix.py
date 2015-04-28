@@ -39,7 +39,7 @@ from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
 from twisted.internet.test.connectionmixins import runProtocolsWithReactor
 from twisted.python.failure import Failure
-from twisted.python.filepath import FilePath, _asFilesystemBytes
+from twisted.python.filepath import FilePath
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
@@ -234,8 +234,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         path = _abstractPath(self)
         reactor = self.buildReactor()
         port = reactor.listenUNIX('\0' + path, ServerFactory())
-        self.assertEqual(port.getHost(),
-                         UNIXAddress(_asFilesystemBytes('\0' + path)))
+        self.assertEqual(port.getHost(), UNIXAddress('\0' + path))
     if not platform.isLinux():
         test_listenOnLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
@@ -249,8 +248,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         path = _abstractPath(self)
         reactor = self.buildReactor()
         connector = reactor.connectUNIX('\0' + path, ClientFactory())
-        self.assertEqual(connector.getDestination(),
-                         UNIXAddress(_asFilesystemBytes('\0' + path)))
+        self.assertEqual(connector.getDestination(), UNIXAddress('\0' + path))
     if not platform.isLinux():
         test_connectToLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
