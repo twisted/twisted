@@ -130,10 +130,20 @@ class UNIXAddress(FancyEqMixin, object):
     compareAttributes = ('name', )
 
     def __init__(self, name, _bwHack = None):
-        self.name = _asFilesystemBytes(name)
+        self.name = name
         if _bwHack is not None:
             warnings.warn("twisted.internet.address.UNIXAddress._bwHack is deprecated since Twisted 11.0",
                     DeprecationWarning, stacklevel=2)
+
+
+    @property
+    def _name_get(self):
+        return self._name
+
+
+    @_name_get.setter
+    def _name_set(self, name):
+        self._name = self._asFilesystemBytes(name) if name else None
 
 
     if getattr(os.path, 'samefile', None) is not None:
