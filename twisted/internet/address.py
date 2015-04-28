@@ -147,7 +147,7 @@ class UNIXAddress(FancyEqMixin, object):
         When setting C{self.name}, make sure it is always L{str}, and convert it
         if not.
         """
-        self._name = _coerceToFilesystemEncoding('', name)
+        self._name = _coerceToFilesystemEncoding('', name) if name else None
 
 
     if getattr(os.path, 'samefile', None) is not None:
