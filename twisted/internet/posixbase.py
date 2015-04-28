@@ -15,7 +15,7 @@ import sys
 
 from zope.interface import implementer, classImplements
 
-from twisted.internet import error, udp, tcp, unix
+from twisted.internet import error, udp, tcp
 from twisted.internet.base import ReactorBase, _SignalReactorMixin
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
@@ -44,7 +44,7 @@ unixEnabled = (platformType == 'posix')
 
 processEnabled = False
 if unixEnabled:
-    from twisted.internet import fdesc
+    from twisted.internet import fdesc, unix
     from twisted.internet import process, _signals
     processEnabled = True
 
