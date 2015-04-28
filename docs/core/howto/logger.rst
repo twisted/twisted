@@ -128,7 +128,7 @@ For example, :api:`twisted.logger.FileLogObserver <FileLogObserver>` will append
     exceptions.ZeroDivisionError: integer division or modulo by zero
 
 Note that this API is meant to capture unexpected and unhandled errors (that is: bugs, which is why tracebacks are preserved).
-As such, it defaults to logging that the :api:`twisted.logger.LogLevel.critical <critical>` level.
+As such, it defaults to logging at the :api:`twisted.logger.LogLevel.critical <critical>` level.
 It is generally more appropriate to instead use `log.error()` when logging an expected error condition that was appropriately handled by the software.
 
 
