@@ -12,7 +12,10 @@ Maintainer: Itamar Shtull-Trauring
 
 from __future__ import division, absolute_import
 
-import os, sys, stat, socket, struct
+import os
+import stat
+import socket
+import struct
 from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
 
 from zope.interface import implementer, implementer_only, implementedBy
