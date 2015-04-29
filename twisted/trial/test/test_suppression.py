@@ -152,7 +152,7 @@ class SuppressionMixin(object):
 
 
 
-class SynchronousSuppressionTest(SuppressionMixin, unittest.SynchronousTestCase):
+class SynchronousSuppressionTests(SuppressionMixin, unittest.SynchronousTestCase):
     """
     @see: L{twisted.trial.test.test_tests}
     """

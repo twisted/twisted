@@ -15,7 +15,7 @@ from twisted.trial import util
 from twisted.trial.test import detests
 
 
-class TestSetUp(unittest.TestCase):
+class SetUpTests(unittest.TestCase):
     def _loadSuite(self, klass):
         loader = pyunit.TestLoader()
         r = reporter.TestResult()
@@ -70,7 +70,7 @@ class TestSetUp(unittest.TestCase):
         self.failIf(detests.DeferredSetUpSkip.testCalled)
 
 
-class TestNeverFire(unittest.TestCase):
+class NeverFireTests(unittest.TestCase):
     def setUp(self):
         self._oldTimeout = util.DEFAULT_TIMEOUT_DURATION
         util.DEFAULT_TIMEOUT_DURATION = 0.1
@@ -106,7 +106,7 @@ class TestTester(unittest.TestCase):
         return result
 
 
-class TestDeferred(TestTester):
+class DeferredTests(TestTester):
     def getTest(self, name):
         return detests.DeferredTests(name)
 
@@ -173,7 +173,7 @@ class TestDeferred(TestTester):
 
 
 
-class TestTimeout(TestTester):
+class TimeoutTests(TestTester):
     def getTest(self, name):
         return detests.TimeoutTests(name)
 

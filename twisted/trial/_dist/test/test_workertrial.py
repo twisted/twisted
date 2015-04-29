@@ -27,7 +27,7 @@ class FakeAMP(AMP):
 
 
 
-class WorkerLogObserverTestCase(TestCase):
+class WorkerLogObserverTests(TestCase):
     """
     Tests for L{WorkerLogObserver}.
     """
@@ -50,7 +50,7 @@ class WorkerLogObserverTestCase(TestCase):
 
 
 
-class MainTestCase(TestCase):
+class MainTests(TestCase):
     """
     Tests for L{main}.
     """
@@ -154,7 +154,7 @@ class MainTestCase(TestCase):
 
 
 
-class SetupPathTestCase(TestCase):
+class SetupPathTests(TestCase):
     """
     Tests for L{_setupPath} C{sys.path} manipulation.
     """

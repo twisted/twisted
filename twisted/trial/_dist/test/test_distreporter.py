@@ -13,7 +13,7 @@ from twisted.trial.reporter import TreeReporter
 
 
 
-class DistReporterTestCase(TestCase):
+class DistReporterTests(TestCase):
     """
     Tests for L{DistReporter}.
     """

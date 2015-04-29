@@ -30,7 +30,7 @@ def sibpath(filename):
 
 
 
-class ForceGarbageCollection(unittest.SynchronousTestCase):
+class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
     """
     Tests for the --force-gc option.
     """
@@ -90,7 +90,7 @@ class ForceGarbageCollection(unittest.SynchronousTestCase):
 
 
 
-class TestSuiteUsed(unittest.SynchronousTestCase):
+class SuiteUsedTests(unittest.SynchronousTestCase):
     """
     Check the category of tests suite used by the loader.
     """
@@ -121,7 +121,7 @@ class TestSuiteUsed(unittest.SynchronousTestCase):
 
 
 
-class TestModuleTest(unittest.SynchronousTestCase):
+class TestModuleTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.config = trial.Options()
 
@@ -450,7 +450,7 @@ class CoverageTests(unittest.SynchronousTestCase):
 
 
 
-class OptionsTestCase(unittest.TestCase):
+class OptionsTests(unittest.TestCase):
     """
     Tests for L{trial.Options}.
     """
@@ -551,7 +551,7 @@ class OptionsTestCase(unittest.TestCase):
 
 
 
-class MakeRunnerTestCase(unittest.TestCase):
+class MakeRunnerTests(unittest.TestCase):
     """
     Tests for the L{_makeRunner} helper.
     """
@@ -609,7 +609,7 @@ class MakeRunnerTestCase(unittest.TestCase):
         self.assertTrue(runner._exitFirst)
 
 
-class TestRun(unittest.TestCase):
+class RunTests(unittest.TestCase):
     """
     Tests for the L{run} function.
     """

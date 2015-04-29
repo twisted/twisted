@@ -4,7 +4,7 @@ import unittest
 
 from twisted.internet import defer
 
-# Used in test_tests.TestUnhandledDeferred
+# Used in test_tests.UnhandledDeferredTests
 
 class TestBleeding(unittest.TestCase):
     """This test creates an unhandled Deferred and leaves it in a cycle.

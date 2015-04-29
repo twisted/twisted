@@ -26,7 +26,7 @@ def runTrial(*args):
     return output.getvalue()
 
 
-class TestImportErrors(packages.SysPathManglingTest):
+class ImportErrorsTests(packages.SysPathManglingTest):
     """Actually run trial as if on the command line and check that the output
     is what we expect.
     """
@@ -44,14 +44,14 @@ class TestImportErrors(packages.SysPathManglingTest):
 
     def assertIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        super(TestImportErrors, self).assertIn(
+        super(ImportErrorsTests, self).assertIn(
             containee, container, *args, **kwargs)
         return container
 
 
     def assertNotIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        super(TestImportErrors, self).assertNotIn(
+        super(ImportErrorsTests, self).assertNotIn(
             containee, container, *args, **kwargs)
         return container
 

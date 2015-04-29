@@ -28,7 +28,7 @@ from twisted.trial.test import suppression
 
 
 
-class TestMktemp(SynchronousTestCase):
+class MktempTests(SynchronousTestCase):
     """
     Tests for L{TestCase.mktemp}, a helper function for creating temporary file
     or directory names.
@@ -41,7 +41,7 @@ class TestMktemp(SynchronousTestCase):
         name = self.mktemp()
         dirs = os.path.dirname(name).split(os.sep)[:-1]
         self.assertEqual(
-            dirs, ['twisted.trial.test.test_util', 'TestMktemp', 'test_name'])
+            dirs, ['twisted.trial.test.test_util', 'MktempTests', 'test_name'])
 
 
     def test_unique(self):
@@ -71,7 +71,7 @@ class TestMktemp(SynchronousTestCase):
 
 
 
-class TestIntrospection(SynchronousTestCase):
+class IntrospectionTests(SynchronousTestCase):
     def test_containers(self):
         """
         When passed a test case, L{util.getPythonContainers} returns a list
@@ -96,7 +96,7 @@ class TestIntrospection(SynchronousTestCase):
 
 
 
-class TestRunSequentially(SynchronousTestCase):
+class RunSequentiallyTests(SynchronousTestCase):
     """
     Sometimes it is useful to be able to run an arbitrary list of callables,
     one after the other.
@@ -225,7 +225,7 @@ class TestRunSequentially(SynchronousTestCase):
 
 
 
-class DirtyReactorAggregateErrorTest(SynchronousTestCase):
+class DirtyReactorAggregateErrorTests(SynchronousTestCase):
     """
     Tests for the L{DirtyReactorAggregateError}.
     """
@@ -684,7 +684,7 @@ class AcquireAttributeTests(SynchronousTestCase):
 
 
 
-class TestListToPhrase(SynchronousTestCase):
+class ListToPhraseTests(SynchronousTestCase):
     """
     Input is transformed into a string representation of the list,
     with each item separated by delimiter (defaulting to a comma) and the final

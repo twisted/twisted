@@ -14,7 +14,7 @@ from twisted.internet import defer
 from twisted.trial import unittest
 
 
-class TestAsynchronousAssertions(unittest.TestCase):
+class AsynchronousAssertionsTests(unittest.TestCase):
     """
     Tests for L{TestCase}'s asynchronous extensions to L{SynchronousTestCase}.
     That is, assertFailure.

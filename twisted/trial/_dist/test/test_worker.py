@@ -35,7 +35,7 @@ class FakeAMP(AMP):
 
 
 
-class WorkerProtocolTestCase(TestCase):
+class WorkerProtocolTests(TestCase):
     """
     Tests for L{WorkerProtocol}.
     """
@@ -81,7 +81,7 @@ class WorkerProtocolTestCase(TestCase):
 
 
 
-class LocalWorkerAMPTestCase(TestCase):
+class LocalWorkerAMPTests(TestCase):
     """
     Test case for distributed trial's manager-side local worker AMP protocol
     """
@@ -306,7 +306,7 @@ class FakeTransport(object):
 
 
 
-class LocalWorkerTestCase(TestCase):
+class LocalWorkerTests(TestCase):
     """
     Tests for L{LocalWorker} and L{LocalWorkerTransport}.
     """

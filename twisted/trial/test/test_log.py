@@ -62,7 +62,7 @@ class Mask(object):
 
 
 
-class TestObserver(unittest.SynchronousTestCase):
+class ObserverTests(unittest.SynchronousTestCase):
     """
     Tests for L{_synctest._LogObserver}, a helper for the implementation of
     L{SynchronousTestCase.flushLoggedErrors}.
