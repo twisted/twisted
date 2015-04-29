@@ -232,6 +232,10 @@ class UnixSocketTests(unittest.TestCase):
         return self._reprTest(
             ClassicFactory(), "twisted.test.test_unix.ClassicFactory")
 
+    if _PY3:
+        test_reprWithClassicFactory.skip = (
+            "Classic classes do not exist on Python 3.")
+
 
     def test_reprWithNewStyleFactory(self):
         """
@@ -253,10 +257,6 @@ class UnixSocketTests(unittest.TestCase):
         return self._reprTest(
             NewStyleFactory(), "twisted.test.test_unix.NewStyleFactory")
 
-    if _PY3:
-        test_reprWithClassicFactory.skip = (
-            "Classic classes do not exist on Python 3.")
-
 
 
 class ClientProto(protocol.ConnectedDatagramProtocol):
@@ -277,6 +277,8 @@ class ClientProto(protocol.ConnectedDatagramProtocol):
     def datagramReceived(self, data):
         self.gotback = data
         self.deferredGotBack.callback(None)
+
+
 
 class ServerProto(protocol.DatagramProtocol):
     started = stopped = False
@@ -391,6 +393,10 @@ class DatagramUnixSocketTests(unittest.TestCase):
         return self._reprTest(
             ClassicProtocol(), "twisted.test.test_unix.ClassicProtocol")
 
+    if _PY3:
+        test_reprWithClassicProtocol.skip = (
+            "Classic classes do not exist on Python 3.")
+
 
     def test_reprWithNewStyleProtocol(self):
         """
@@ -411,10 +417,6 @@ class DatagramUnixSocketTests(unittest.TestCase):
 
         return self._reprTest(
             NewStyleProtocol(), "twisted.test.test_unix.NewStyleProtocol")
-
-    if _PY3:
-        test_reprWithClassicProtocol.skip = (
-            "Classic classes do not exist on Python 3.")
 
 
 
