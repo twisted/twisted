@@ -23,6 +23,7 @@ if not hasattr(socket, 'AF_UNIX'):
 from twisted.internet import main, base, tcp, udp, error, interfaces
 from twisted.internet import protocol, address
 from twisted.python import lockfile, log, reflect, failure
+from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import untilConcludes
 
 try:
@@ -225,22 +226,17 @@ def _inFilesystemNamespace(path):
     path is stored in the filesystem and C{False} if the path is in this
     abstract namespace.
     """
-    return path[:1] != "\0"
+    return path[:1] not in (b"\0", u"\0")
 
 
 class _UNIXPort(object):
     def getHost(self):
-        """Returns a UNIXAddress.
+        """
+        Returns a UNIXAddress.
 
         This indicates the server's address.
         """
-        if sys.version_info > (2, 5) or _inFilesystemNamespace(self.port):
-            path = self.socket.getsockname()
-        else:
-            # Abstract namespace sockets aren't well supported on Python 2.4.
-            # getsockname() always returns ''.
-            path = self.port
-        return address.UNIXAddress(path)
+        return address.UNIXAddress(self.socket.getsockname())
 
 
 
@@ -251,15 +247,18 @@ class Port(_UNIXPort, tcp.Port):
     transport = Server
     lockFile = None
 
-    def __init__(self, fileName, factory, backlog=50, mode=0o666, reactor=None, wantPID = 0):
-        tcp.Port.__init__(self, fileName, factory, backlog, reactor=reactor)
+    def __init__(self, fileName, factory, backlog=50, mode=0o666, reactor=None,
+                 wantPID = 0):
+        tcp.Port.__init__(self, self._buildAddr(fileName).name, factory,
+                          backlog, reactor=reactor)
         self.mode = mode
         self.wantPID = wantPID
 
     def __repr__(self):
         factoryName = reflect.qual(self.factory.__class__)
         if hasattr(self, 'socket'):
-            return '<%s on %r>' % (factoryName, self.port)
+            return '<%s on %r>' % (
+                factoryName, _coerceToFilesystemEncoding('', self.port))
         else:
             return '<%s (not listening)>' % (factoryName,)
 
@@ -274,9 +273,10 @@ class Port(_UNIXPort, tcp.Port):
         server to begin listening on the specified port.
         """
         log.msg("%s starting on %r" % (
-                self._getLogPrefix(self.factory), self.port))
+            self._getLogPrefix(self.factory),
+            _coerceToFilesystemEncoding('', self.port)))
         if self.wantPID:
-            self.lockFile = lockfile.FilesystemLock(self.port + ".lock")
+            self.lockFile = lockfile.FilesystemLock(self.port + b".lock")
             if not self.lockFile.lock():
                 raise error.CannotListenError(None, self.port,
                                               "Cannot acquire lock")
@@ -315,7 +315,8 @@ class Port(_UNIXPort, tcp.Port):
         """
         Log message for closing socket
         """
-        log.msg('(UNIX Port %s Closed)' % (repr(self.port),))
+        log.msg('(UNIX Port %s Closed)' % (
+            _coerceToFilesystemEncoding('', self.port,)))
 
 
     def connectionLost(self, reason):
@@ -331,14 +332,15 @@ class Client(_SendmsgMixin, tcp.BaseClient):
     """A client for Unix sockets."""
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
-
     _writeSomeDataBase = tcp.BaseClient
 
     def __init__(self, filename, connector, reactor=None, checkPID = 0):
         _SendmsgMixin.__init__(self)
+        # Normalise the filename using UNIXAddress
+        filename = address.UNIXAddress(filename).name
         self.connector = connector
         self.realAddress = self.addr = filename
-        if checkPID and not lockfile.isLocked(filename + ".lock"):
+        if checkPID and not lockfile.isLocked(filename + b".lock"):
             self._finishInit(None, None, error.BadFileError(filename), reactor)
         self._finishInit(self.doConnect, self.createInternetSocket(),
                          None, reactor)

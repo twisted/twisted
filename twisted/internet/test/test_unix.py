@@ -38,6 +38,7 @@ from twisted.internet.test.connectionmixins import ConnectableProtocol
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
 from twisted.internet.test.connectionmixins import runProtocolsWithReactor
+from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import addObserver, removeObserver, err
@@ -538,14 +539,15 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         """
         Get the message expected to be logged when a UNIX port starts listening.
         """
-        return "%s starting on %r" % (factory, port.getHost().name)
+        return "%s starting on %r" % (factory,
+                                      nativeString(port.getHost().name))
 
 
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
-        return "(UNIX Port %s Closed)" % (repr(port.port),)
+        return "(UNIX Port %s Closed)" % (nativeString(port.getHost().name),)
 
 
 
