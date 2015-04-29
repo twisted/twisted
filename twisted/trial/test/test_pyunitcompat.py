@@ -16,7 +16,7 @@ from twisted.trial.itrial import IReporter, ITestCase
 import unittest as pyunit
 
 
-class TestPyUnitTestCase(SynchronousTestCase):
+class PyUnitTestTests(SynchronousTestCase):
 
     class PyUnitTest(pyunit.TestCase):
 
@@ -38,11 +38,11 @@ class TestPyUnitTestCase(SynchronousTestCase):
 
 # Remove this when we port twisted.trial._synctest to Python 3:
 if _PY3:
-    del TestPyUnitTestCase
+    del PyUnitTestTests
 
 
 
-class TestPyUnitResult(SynchronousTestCase):
+class PyUnitResultTests(SynchronousTestCase):
     """
     Tests to show that PyUnitResultAdapter wraps TestResult objects from the
     standard library 'unittest' module in such a way as to make them usable and

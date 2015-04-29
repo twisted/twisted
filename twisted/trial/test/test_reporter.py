@@ -67,7 +67,7 @@ class StringTest(unittest.SynchronousTestCase):
                                 % (exp,))
 
 
-class TestTestResult(unittest.SynchronousTestCase):
+class TestResultTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.result = reporter.TestResult()
 
@@ -92,13 +92,13 @@ class TestTestResult(unittest.SynchronousTestCase):
         self.assertEqual(self.failureException, failure.type)
 
 
-class TestReporterRealtime(TestTestResult):
+class ReporterRealtimeTests(TestResultTests):
     def setUp(self):
         output = StringIO.StringIO()
         self.result = reporter.Reporter(output, realtime=True)
 
 
-class TestErrorReporting(StringTest):
+class ErrorReportingTests(StringTest):
     doubleSeparator = re.compile(r'^=+$')
 
     def setUp(self):
@@ -214,7 +214,7 @@ class TestErrorReporting(StringTest):
 
 
 
-class TestUncleanWarningWrapperErrorReporting(TestErrorReporting):
+class UncleanWarningWrapperErrorReportingTests(ErrorReportingTests):
     """
     Tests that the L{UncleanWarningsReporterWrapper} can sufficiently proxy
     IReporter failure and error reporting methods to a L{reporter.Reporter}.
@@ -227,7 +227,7 @@ class TestUncleanWarningWrapperErrorReporting(TestErrorReporting):
 
 
 
-class TracebackHandling(unittest.SynchronousTestCase):
+class TracebackHandlingTests(unittest.SynchronousTestCase):
 
     def getErrorFrames(self, test):
         """
@@ -298,7 +298,7 @@ class TracebackHandling(unittest.SynchronousTestCase):
                          [('test_exception', 'twisted/trial/test/erroneous')])
 
 
-class FormatFailures(StringTest):
+class FormatFailuresTests(StringTest):
     def setUp(self):
         try:
             raise RuntimeError('foo')
@@ -343,7 +343,7 @@ exceptions.TypeError: iterable argument required
         self.assertEqual(self.f.frames, frames)
 
 
-class PyunitTestNames(unittest.SynchronousTestCase):
+class PyunitNamesTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.stream = StringIO.StringIO()
         self.test = sample.PyunitTest('test_foo')
@@ -414,7 +414,7 @@ class PyunitTestNames(unittest.SynchronousTestCase):
 
 
 
-class TestDirtyReactor(unittest.SynchronousTestCase):
+class DirtyReactorTests(unittest.SynchronousTestCase):
     """
     The trial script has an option to treat L{DirtyReactorAggregateError}s as
     warnings, as a migration tool for test authors. It causes a wrapper to be
@@ -426,7 +426,7 @@ class TestDirtyReactor(unittest.SynchronousTestCase):
         self.dirtyError = Failure(
             util.DirtyReactorAggregateError(['foo'], ['bar']))
         self.output = StringIO.StringIO()
-        self.test = TestDirtyReactor('test_errorByDefault')
+        self.test = DirtyReactorTests('test_errorByDefault')
 
 
     def test_errorByDefault(self):
@@ -485,7 +485,7 @@ class TestDirtyReactor(unittest.SynchronousTestCase):
 
 
 
-class TrialTestNames(unittest.SynchronousTestCase):
+class TrialNamesTests(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.stream = StringIO.StringIO()
@@ -516,7 +516,7 @@ class TrialTestNames(unittest.SynchronousTestCase):
         self.assertEqual(output, "test_foo")
 
 
-class TestSkip(unittest.SynchronousTestCase):
+class SkipTests(unittest.SynchronousTestCase):
     """
     Tests for L{reporter.Reporter}'s handling of skips.
     """
@@ -591,13 +591,13 @@ class TestSkip(unittest.SynchronousTestCase):
         self.assertEqual(output, str(e))
 
 
-class UncleanWarningSkipTest(TestSkip):
+class UncleanWarningSkipTests(SkipTests):
     """
     Tests for skips on a L{reporter.Reporter} wrapped by an
     L{UncleanWarningsReporterWrapper}.
     """
     def setUp(self):
-        TestSkip.setUp(self)
+        SkipTests.setUp(self)
         self.result = UncleanWarningsReporterWrapper(self.result)
 
     def _getSkips(self, result):
@@ -609,7 +609,7 @@ class UncleanWarningSkipTest(TestSkip):
 
 
 
-class TodoTest(unittest.SynchronousTestCase):
+class TodoTests(unittest.SynchronousTestCase):
     """
     Tests for L{reporter.Reporter}'s handling of todos.
     """
@@ -718,13 +718,13 @@ class TodoTest(unittest.SynchronousTestCase):
 
 
 
-class UncleanWarningTodoTest(TodoTest):
+class UncleanWarningTodoTests(TodoTests):
     """
     Tests for L{UncleanWarningsReporterWrapper}'s handling of todos.
     """
 
     def setUp(self):
-        TodoTest.setUp(self)
+        TodoTests.setUp(self)
         self.result = UncleanWarningsReporterWrapper(self.result)
 
 
@@ -747,7 +747,7 @@ class UncleanWarningTodoTest(TodoTest):
 
 class MockColorizer:
     """
-    Used by TestTreeReporter to make sure that output is colored correctly.
+    Used by TreeReporterTests to make sure that output is colored correctly.
     """
 
     def __init__(self, stream):
@@ -759,7 +759,7 @@ class MockColorizer:
 
 
 
-class TestTreeReporter(unittest.SynchronousTestCase):
+class TreeReporterTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.test = sample.FooTest('test_foo')
         self.stream = StringIO.StringIO()
@@ -875,7 +875,7 @@ class TestTreeReporter(unittest.SynchronousTestCase):
 
 
 
-class TestReporterInterface(unittest.SynchronousTestCase):
+class ReporterInterfaceTests(unittest.SynchronousTestCase):
     """
     Tests for the bare interface of a trial reporter.
 
@@ -950,13 +950,13 @@ class TestReporterInterface(unittest.SynchronousTestCase):
 
 
 
-class TestReporter(TestReporterInterface):
+class ReporterTests(ReporterInterfaceTests):
     """
     Tests for the base L{reporter.Reporter} class.
     """
 
     def setUp(self):
-        TestReporterInterface.setUp(self)
+        ReporterInterfaceTests.setUp(self)
         self._timer = 0
         self.result._getTime = self._getTime
 
@@ -1065,7 +1065,7 @@ class TestReporter(TestReporterInterface):
 
 
 
-class TestSafeStream(unittest.SynchronousTestCase):
+class SafeStreamTests(unittest.SynchronousTestCase):
     def test_safe(self):
         """
         Test that L{reporter.SafeStream} successfully write to its original
@@ -1079,7 +1079,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
 
 
 
-class TestSubunitReporter(TestReporterInterface):
+class SubunitReporterTests(ReporterInterfaceTests):
     """
     Tests for the subunit reporter.
 
@@ -1093,7 +1093,7 @@ class TestSubunitReporter(TestReporterInterface):
         if reporter.TestProtocolClient is None:
             raise SkipTest(
                 "Subunit not installed, cannot test SubunitReporter")
-        TestReporterInterface.setUp(self)
+        ReporterInterfaceTests.setUp(self)
 
 
     def assertForwardsToSubunit(self, methodName, *args, **kwargs):
@@ -1290,7 +1290,7 @@ class TestSubunitReporter(TestReporterInterface):
 
 
 
-class TestSubunitReporterNotInstalled(unittest.SynchronousTestCase):
+class SubunitReporterNotInstalledTests(unittest.SynchronousTestCase):
     """
     Test behaviour when the subunit reporter is not installed.
     """
@@ -1307,7 +1307,7 @@ class TestSubunitReporterNotInstalled(unittest.SynchronousTestCase):
 
 
 
-class TestTimingReporter(TestReporter):
+class TimingReporterTests(ReporterTests):
     resultFactory = reporter.TimingTextReporter
 
 
@@ -1344,7 +1344,7 @@ class LoggingReporter(reporter.Reporter):
 
 
 
-class TestAdaptedReporter(unittest.SynchronousTestCase):
+class AdaptedReporterTests(unittest.SynchronousTestCase):
     """
     L{reporter._AdaptedReporter} is a reporter wrapper that wraps all of the
     tests it receives before passing them on to the original reporter.

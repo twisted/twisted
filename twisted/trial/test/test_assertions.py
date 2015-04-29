@@ -259,7 +259,7 @@ class AssertTrueTests(unittest.SynchronousTestCase):
 
 
 
-class TestSynchronousAssertions(unittest.SynchronousTestCase):
+class SynchronousAssertionsTests(unittest.SynchronousTestCase):
     """
     Tests for L{SynchronousTestCase}'s assertion methods.  That is, failUnless*,
     failIf*, assert* (not covered by other more specific test classes).
@@ -951,7 +951,7 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
 
 
 
-class TestResultOfAssertions(unittest.SynchronousTestCase):
+class ResultOfAssertionsTests(unittest.SynchronousTestCase):
     """
     Tests for L{SynchronousTestCase.successResultOf},
     L{SynchronousTestCase.failureResultOf}, and
@@ -1161,7 +1161,7 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
 
 
 
-class TestAssertionNames(unittest.SynchronousTestCase):
+class AssertionNamesTests(unittest.SynchronousTestCase):
     """
     Tests for consistency of naming within TestCase assertion methods
     """
@@ -1209,7 +1209,7 @@ class TestAssertionNames(unittest.SynchronousTestCase):
                 self.assertEqual(value, getattr(self, name[:-1]))
 
 
-class TestCallDeprecated(unittest.SynchronousTestCase):
+class CallDeprecatedTests(unittest.SynchronousTestCase):
     """
     Test use of the L{SynchronousTestCase.callDeprecated} method with version objects.
     """
@@ -1311,7 +1311,7 @@ class TestCallDeprecated(unittest.SynchronousTestCase):
 
 
 
-@deprecated(TestCallDeprecated.version)
+@deprecated(CallDeprecatedTests.version)
 def oldMethod(x):
     """
     Deprecated method for testing.
@@ -1319,7 +1319,7 @@ def oldMethod(x):
     return x
 
 
-@deprecated(TestCallDeprecated.version, replacement="newMethod")
+@deprecated(CallDeprecatedTests.version, replacement="newMethod")
 def oldMethodReplaced(x):
     """
     Another deprecated method, which has been deprecated in favor of the

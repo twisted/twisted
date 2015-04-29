@@ -32,7 +32,7 @@ def testNames(tests):
 
 
 
-class FinderTest(packages.PackageTest):
+class FinderTests(packages.PackageTest):
     """
     Tests for L{runner.TestLoader.findByName}.
     """
@@ -80,7 +80,7 @@ class FinderTest(packages.PackageTest):
 
 
 
-class FileTest(packages.SysPathManglingTest):
+class FileTests(packages.SysPathManglingTest):
     """
     Tests for L{runner.filenameToModule}.
     """
@@ -219,7 +219,7 @@ class FileTest(packages.SysPathManglingTest):
 
 
 
-class LoaderTest(packages.SysPathManglingTest):
+class LoaderTests(packages.SysPathManglingTest):
     """
     Tests for L{trial.TestLoader}.
     """
@@ -554,17 +554,17 @@ class LoaderTest(packages.SysPathManglingTest):
 
 
 
-class ZipLoadingTest(LoaderTest):
+class ZipLoadingTests(LoaderTests):
     def setUp(self):
         from twisted.python.test.test_zippath import zipit
-        LoaderTest.setUp(self)
+        LoaderTests.setUp(self)
         zipit(self.parent, self.parent+'.zip')
         self.parent += '.zip'
         self.mangleSysPath(self.oldPath+[self.parent])
 
 
 
-class PackageOrderingTest(packages.SysPathManglingTest):
+class PackageOrderingTests(packages.SysPathManglingTest):
 
     def setUp(self):
         self.loader = runner.TestLoader()

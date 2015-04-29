@@ -12,7 +12,7 @@ from twisted.trial._dist.options import WorkerOptions
 
 
 
-class WorkerOptionsTestCase(TestCase):
+class WorkerOptionsTests(TestCase):
     """
     Tests for L{WorkerOptions}.
     """

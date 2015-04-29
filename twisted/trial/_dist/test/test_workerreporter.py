@@ -23,7 +23,7 @@ class FakeAMProtocol(object):
 
 
 
-class WorkerReporterTestCase(TestCase):
+class WorkerReporterTests(TestCase):
     """
     Tests for L{WorkerReporter}.
     """

@@ -587,7 +587,7 @@ class AsynchronousStrictTodoTests(StrictTodoMixin, unittest.TestCase):
 
 
 
-class TestReactorCleanup(unittest.SynchronousTestCase):
+class ReactorCleanupTests(unittest.SynchronousTestCase):
     """
     Tests for cleanup and reporting of reactor event sources left behind by test
     methods.
@@ -666,7 +666,7 @@ class FixtureMixin(object):
 
 
 
-class SynchronousFixtureTest(FixtureMixin, unittest.SynchronousTestCase):
+class SynchronousFixtureTests(FixtureMixin, unittest.SynchronousTestCase):
     """
     Tests for broken fixture helper methods in the synchronous case
 
@@ -679,7 +679,7 @@ class SynchronousFixtureTest(FixtureMixin, unittest.SynchronousTestCase):
 
 
 
-class AsynchronousFixtureTest(FixtureMixin, unittest.TestCase):
+class AsynchronousFixtureTests(FixtureMixin, unittest.TestCase):
     """
     Tests for broken fixture helper methods in the asynchronous case
 
@@ -692,7 +692,7 @@ class AsynchronousFixtureTest(FixtureMixin, unittest.TestCase):
 
 
 
-class AsynchronousSuppressionTest(SuppressionMixin, unittest.TestCase):
+class AsynchronousSuppressionTests(SuppressionMixin, unittest.TestCase):
     """
     Tests for the warning suppression features of
     L{twisted.trial.unittest.TestCase}
@@ -766,7 +766,7 @@ class GCMixin:
         gc.collect = self._oldCollect
 
 
-class TestGarbageCollectionDefault(GCMixin, unittest.SynchronousTestCase):
+class GarbageCollectionDefaultTests(GCMixin, unittest.SynchronousTestCase):
     """
     By default, tests should not force garbage collection.
     """
@@ -782,7 +782,7 @@ class TestGarbageCollectionDefault(GCMixin, unittest.SynchronousTestCase):
 
 
 
-class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
+class GarbageCollectionTests(GCMixin, unittest.SynchronousTestCase):
     """
     Test that, when force GC, it works.
     """
@@ -790,7 +790,7 @@ class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
         """
         test gc.collect is called before and after each test.
         """
-        test = TestGarbageCollection.BasicTest('test_foo')
+        test = GarbageCollectionTests.BasicTest('test_foo')
         test = _ForceGarbageCollectionDecorator(test)
         result = reporter.TestResult()
         test.run(result)
@@ -799,7 +799,7 @@ class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
             ['collect', 'setUp', 'test', 'tearDown', 'collect'])
 
 
-class TestUnhandledDeferred(unittest.SynchronousTestCase):
+class UnhandledDeferredTests(unittest.SynchronousTestCase):
     """
     Test what happens when we have an unhandled deferred left around after
     a test.

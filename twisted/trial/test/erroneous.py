@@ -139,7 +139,7 @@ class DelayedCall(unittest.TestCase):
         What happens if an error is raised in a DelayedCall and an error is
         also raised in the test?
 
-        L{test_reporter.TestErrorReporting.testHiddenException} checks that
+        L{test_reporter.ErrorReportingTests.testHiddenException} checks that
         both errors get reported.
 
         Note that this behaviour is deprecated. A B{real} test would return a

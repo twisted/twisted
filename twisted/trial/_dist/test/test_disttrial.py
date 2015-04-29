@@ -81,7 +81,7 @@ class EternalTerminationPredicateFactory(object):
 
 
 
-class DistTrialRunnerTestCase(TestCase):
+class DistTrialRunnerTests(TestCase):
     """
     Tests for L{DistTrialRunner}.
     """

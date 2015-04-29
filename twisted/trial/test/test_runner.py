@@ -155,7 +155,7 @@ class TrialRunnerTestsMixin:
 
 
 
-class TestTrialRunner(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
+class TrialRunnerTests(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
     """
     Tests for L{runner.TrialRunner} with the feature to turn unclean errors
     into warnings disabled.
@@ -163,7 +163,7 @@ class TestTrialRunner(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
     def setUp(self):
         self.stream = StringIO.StringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
-        self.test = TestTrialRunner('test_empty')
+        self.test = TrialRunnerTests('test_empty')
 
 
     def test_publisher(self):
@@ -176,8 +176,8 @@ class TestTrialRunner(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
 
 
 
-class TrialRunnerWithUncleanWarningsReporter(TrialRunnerTestsMixin,
-                                             unittest.SynchronousTestCase):
+class TrialRunnerWithUncleanWarningsReporterTests(TrialRunnerTestsMixin,
+                                                  unittest.SynchronousTestCase):
     """
     Tests for the TrialRunner's interaction with an unclean-error suppressing
     reporter.
@@ -187,7 +187,7 @@ class TrialRunnerWithUncleanWarningsReporter(TrialRunnerTestsMixin,
         self.stream = StringIO.StringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream,
                                          uncleanWarnings=True)
-        self.test = TestTrialRunner('test_empty')
+        self.test = TrialRunnerTests('test_empty')
 
 
 
@@ -240,7 +240,7 @@ class DryRunMixin(object):
 
 
 
-class SynchronousDryRunTest(DryRunMixin, unittest.SynchronousTestCase):
+class SynchronousDryRunTests(DryRunMixin, unittest.SynchronousTestCase):
     """
     Check that 'dry run' mode works well with trial's L{SynchronousTestCase}.
     """
@@ -253,7 +253,7 @@ class SynchronousDryRunTest(DryRunMixin, unittest.SynchronousTestCase):
 
 
 
-class DryRunTest(DryRunMixin, unittest.SynchronousTestCase):
+class DryRunTests(DryRunMixin, unittest.SynchronousTestCase):
     """
     Check that 'dry run' mode works well with Trial tests.
     """
@@ -266,7 +266,7 @@ class DryRunTest(DryRunMixin, unittest.SynchronousTestCase):
 
 
 
-class PyUnitDryRunTest(DryRunMixin, unittest.SynchronousTestCase):
+class PyUnitDryRunTests(DryRunMixin, unittest.SynchronousTestCase):
     """
     Check that 'dry run' mode works well with stdlib unittest tests.
     """
@@ -279,7 +279,7 @@ class PyUnitDryRunTest(DryRunMixin, unittest.SynchronousTestCase):
 
 
 
-class TestRunner(unittest.SynchronousTestCase):
+class RunnerTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.config = trial.Options()
         # whitebox hack a reporter in, because plugins are CACHED and will
@@ -361,7 +361,7 @@ class TestRunner(unittest.SynchronousTestCase):
         """
         By default Trial sets the 'uncleanWarnings' option on the runner to
         False. This means that dirty reactor errors will be reported as
-        errors. See L{test_reporter.TestDirtyReactor}.
+        errors. See L{test_reporter.DirtyReactorTests}.
         """
         self.parseOptions([])
         runner = self.getRunner()
@@ -373,7 +373,7 @@ class TestRunner(unittest.SynchronousTestCase):
         """
         Specifying '--unclean-warnings' on the trial command line will cause
         reporters to be wrapped in a device which converts unclean errors to
-        warnings.  See L{test_reporter.TestDirtyReactor} for implications.
+        warnings.  See L{test_reporter.DirtyReactorTests} for implications.
         """
         self.parseOptions(['--unclean-warnings'])
         runner = self.getRunner()
@@ -553,7 +553,7 @@ class TestRunner(unittest.SynchronousTestCase):
         self.parseOptions([
             '--reporter', 'capturing',
             '--debugger',
-            'twisted.trial.test.test_runner.TestRunner.cdebugger',
+            'twisted.trial.test.test_runner.RunnerTests.cdebugger',
             '--debug',
             'twisted.trial.test.sample',
         ])
@@ -575,7 +575,7 @@ class TestRunner(unittest.SynchronousTestCase):
 
 
 
-class TestTrialSuite(unittest.SynchronousTestCase):
+class TrialSuiteTests(unittest.SynchronousTestCase):
 
     def test_imports(self):
         # FIXME, HTF do you test the reactor can be cleaned up ?!!!
@@ -583,7 +583,7 @@ class TestTrialSuite(unittest.SynchronousTestCase):
 
 
 
-class TestUntilFailure(unittest.SynchronousTestCase):
+class UntilFailureTests(unittest.SynchronousTestCase):
     class FailAfter(pyunit.TestCase):
         """
         A test case that fails when run 3 times in a row.
@@ -596,8 +596,8 @@ class TestUntilFailure(unittest.SynchronousTestCase):
 
 
     def setUp(self):
-        TestUntilFailure.FailAfter.count = []
-        self.test = TestUntilFailure.FailAfter('test_foo')
+        UntilFailureTests.FailAfter.count = []
+        self.test = UntilFailureTests.FailAfter('test_foo')
         self.stream = StringIO.StringIO()
         self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream)
 
@@ -658,14 +658,14 @@ class TestUntilFailure(unittest.SynchronousTestCase):
 
 
 
-class UncleanUntilFailureTests(TestUntilFailure):
+class UncleanUntilFailureTests(UntilFailureTests):
     """
     Test that the run-until-failure feature works correctly with the unclean
     error suppressor.
     """
 
     def setUp(self):
-        TestUntilFailure.setUp(self)
+        UntilFailureTests.setUp(self)
         self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream,
                                          uncleanWarnings=True)
 
@@ -691,7 +691,7 @@ class BreakingSuite(runner.TestSuite):
 
 
 
-class TestLoggedErrors(unittest.SynchronousTestCase):
+class LoggedErrorsTests(unittest.SynchronousTestCase):
     """
     It is possible for an error generated by a test to be logged I{outside} of
     any test. The log observers constructed by L{TestCase} won't catch these
@@ -725,7 +725,7 @@ class TestLoggedErrors(unittest.SynchronousTestCase):
 
 
 
-class TestTestHolder(unittest.SynchronousTestCase):
+class TestHolderTests(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.description = "description"
@@ -843,7 +843,7 @@ class ErrorHolderTestsMixin(object):
 
 
 
-class FailureHoldingErrorHolderTests(ErrorHolderTestsMixin, TestTestHolder):
+class FailureHoldingErrorHolderTests(ErrorHolderTestsMixin, TestHolderTests):
     """
     Tests for L{runner.ErrorHolder} behaving similarly to L{runner.TestHolder}
     when constructed with a L{Failure} representing its error.
@@ -860,7 +860,7 @@ class FailureHoldingErrorHolderTests(ErrorHolderTestsMixin, TestTestHolder):
 
 
 
-class ExcInfoHoldingErrorHolderTests(ErrorHolderTestsMixin, TestTestHolder):
+class ExcInfoHoldingErrorHolderTests(ErrorHolderTestsMixin, TestHolderTests):
     """
     Tests for L{runner.ErrorHolder} behaving similarly to L{runner.TestHolder}
     when constructed with a C{exc_info}-style tuple representing its error.
@@ -878,7 +878,7 @@ class ExcInfoHoldingErrorHolderTests(ErrorHolderTestsMixin, TestTestHolder):
 
 
 
-class TestMalformedMethod(unittest.SynchronousTestCase):
+class MalformedMethodTests(unittest.SynchronousTestCase):
     """
     Test that trial manages when test methods don't have correct signatures.
     """
@@ -898,7 +898,7 @@ class TestMalformedMethod(unittest.SynchronousTestCase):
         """
         stream = StringIO.StringIO()
         trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
-        test = TestMalformedMethod.ContainMalformed(method)
+        test = MalformedMethodTests.ContainMalformed(method)
         result = trialRunner.run(test)
         self.assertEqual(result.testsRun, 1)
         self.failIf(result.wasSuccessful())
@@ -924,7 +924,7 @@ class TestMalformedMethod(unittest.SynchronousTestCase):
 
 
 
-class DestructiveTestSuiteTestCase(unittest.SynchronousTestCase):
+class DestructiveTestSuiteTests(unittest.SynchronousTestCase):
     """
     Test for L{runner.DestructiveTestSuite}.
     """
@@ -987,7 +987,7 @@ class DestructiveTestSuiteTestCase(unittest.SynchronousTestCase):
 
 
 
-class TestRunnerDeprecation(unittest.SynchronousTestCase):
+class RunnerDeprecationTests(unittest.SynchronousTestCase):
 
     class FakeReporter(reporter.Reporter):
         """
@@ -1033,7 +1033,7 @@ class TestRunnerDeprecation(unittest.SynchronousTestCase):
 
 
 
-class DryRunVisitorDeprecation(unittest.TestCase):
+class DryRunVisitorDeprecationTests(unittest.TestCase):
     """
     Test for L{DryRunVisitor}
     """
