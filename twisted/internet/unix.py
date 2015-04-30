@@ -32,7 +32,11 @@ from twisted.python.compat import _PY3, lazyByteSlice
 
 
 if _PY3:
-    SCM_RIGHTS = socket.SCM_RIGHTS
+    if "sendmsg" in socket.socket:
+        SCM_RIGHTS = socket.SCM_RIGHTS
+        sendmsg = True
+    else:
+        sendmsg = None
 else:
     try:
         from twisted.python import sendmsg
@@ -210,7 +214,7 @@ class _SendmsgMixin(object):
 
 
 
-class _UnsuportedSendmsgMixin(object):
+class _UnsupportedSendmsgMixin(object):
     """
     Behaviorless placeholder used when L{twisted.python.sendmsg} is not
     available, preventing L{IUNIXTransport} from being supported.
@@ -219,10 +223,10 @@ class _UnsuportedSendmsgMixin(object):
 
 
 
-if _PY3 or sendmsg:
+if sendmsg:
     _SendmsgMixin = _SendmsgMixin
 else:
-    _SendmsgMixin = _UnsuportedSendmsgMixin
+    _SendmsgMixin = _UnsupportedSendmsgMixin
 
 
 
