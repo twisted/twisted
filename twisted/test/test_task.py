@@ -438,9 +438,19 @@ class LoopTestCase(unittest.TestCase):
         self.assertEqual(times.pop(), ((3.0 * INTERVAL) + REALISTIC_DELAY, 1))
 
 
-    def test_unluckyFloatingPoint(self):
+    def test_withCountFloatingPointBoundary(self):
         """
-        It is well known that 0.1 is an unlucky number.
+        When L{task.LoopingCall.withCount} should never invoke its callable
+        with a 0; specifically, if a L{task.LoopingCall} created with
+        C{withCount} has its L{start <task.LoopingCall.start>} method invoked
+        with a floating-point number which introduces decimal inaccuracy when
+        multiplied or divided, such as "0.1", it will (A) never invoke its
+        callable with 0 and (B) the sum of the values passed to that callable
+        will correctly sum to exactly the number of calls which should have
+        elapsed.
+
+        (This is a regression test for a particularly tricky case to
+        implement.)
         """
         clock = task.Clock()
         accumulator = []
@@ -450,6 +460,9 @@ class LoopTestCase(unittest.TestCase):
         n = 10
         for x in range(n):
             clock.advance(0.1)
+        # There is still an epsilon of inaccuracy here; 0.1 is not quite
+        # exactly 1/10 in binary, so we need to push our clock over the
+        # threshold.
         clock.advance(0.0000000000000001)
         self.assertGreaterEqual(clock.seconds(), 0.1 * n)
         self.assertEqual(sum(accumulator), n)
