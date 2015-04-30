@@ -32,7 +32,7 @@ from twisted.python.compat import _PY3, lazyByteSlice
 
 
 if _PY3:
-    if "sendmsg" in socket.socket:
+    if "sendmsg" in dir(socket.socket):
         SCM_RIGHTS = socket.SCM_RIGHTS
         sendmsg = True
     else:
