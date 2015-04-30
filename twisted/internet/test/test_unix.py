@@ -41,9 +41,7 @@ from twisted.internet.test.connectionmixins import runProtocolsWithReactor
 from twisted.internet.unix import sendmsg
 from twisted.python.compat import nativeString, _PY3, iteritems
 from twisted.python.failure import Failure
-from twisted.python.filepath import FilePath
 from twisted.python.log import addObserver, removeObserver, err
-from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 
 if sendmsg is None:

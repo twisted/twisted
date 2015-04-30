@@ -216,10 +216,9 @@ class _SendmsgMixin(object):
 
 class _UnsupportedSendmsgMixin(object):
     """
-    Behaviorless placeholder used when L{twisted.python.sendmsg} is not
+    Behaviorless placeholder used when C{twisted.python.sendmsg} is not
     available, preventing L{IUNIXTransport} from being supported.
     """
-
 
 
 
