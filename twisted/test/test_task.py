@@ -464,7 +464,11 @@ class LoopTestCase(unittest.TestCase):
         # exactly 1/10 in binary, so we need to push our clock over the
         # threshold.
         clock.advance(0.0000000000000001)
-        self.assertGreaterEqual(clock.seconds(), 0.1 * n)
+        secondsValue = clock.seconds()
+        shouldBeAtLeast = 0.1 * n
+        self.assertTrue(secondsValue >= shouldBeAtLeast,
+                        "{0} should be greater than or equal to {1}"
+                        .format(secondsValue, shouldBeAtLeast))
         self.assertEqual(sum(accumulator), n)
         self.assertNotIn(0, accumulator)
 
