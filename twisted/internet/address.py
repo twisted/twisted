@@ -147,7 +147,7 @@ class UNIXAddress(FancyEqMixin, object):
         """
         On Linux, paths are always bytes. However, as paths are L{unicode} on
         Python 3, and this technically takes a file path, we convert it to bytes
-        if need be to maintain compatibility with C{os.path} on Python 3.
+        if required to maintain compatibility with C{os.path} on Python 3.
         """
         self._name = _asFilesystemBytes(name) if name else None
 
