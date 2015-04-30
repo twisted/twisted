@@ -482,7 +482,10 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         runProtocolsWithReactor(self, server, client, self.endpoints)
 
         self.assertEqual(int, client.events[0])
-        self.assertEqual(b"junk", bytes(client.events[1:]))
+        if _PY3:
+            self.assertEqual(b"junk", bytes(client.events[1:]))
+        else:
+            self.assertEqual(b"junk", b"".join(client.events[1:]))
     if sendmsgSkip is not None:
         test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
 
