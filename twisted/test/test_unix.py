@@ -15,7 +15,7 @@ import socket
 from twisted.internet import interfaces, reactor, protocol, error, address
 from twisted.internet import defer, utils
 from twisted.python import lockfile
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, networkString
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 
@@ -151,9 +151,10 @@ class UnixSocketTests(unittest.TestCase):
 
     def _uncleanSocketTest(self, callback):
         self.filename = self.mktemp()
-        source = (("from twisted.internet import protocol, reactor\n"
-                  "reactor.listenUNIX(%r, protocol.ServerFactory(),"
-                  "wantPID=True)\n") % (self.filename,)).encode("ascii")
+        source = networkString((
+            "from twisted.internet import protocol, reactor\n"
+            "reactor.listenUNIX(%r, protocol.ServerFactory(),"
+            "wantPID=True)\n") % (self.filename,))
         env = {b'PYTHONPATH': FilePath(
             os.pathsep.join(sys.path)).asBytesMode().path}
         pyExe = FilePath(sys.executable).asBytesMode().path

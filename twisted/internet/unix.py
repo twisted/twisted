@@ -28,20 +28,28 @@ from twisted.internet import protocol, address
 from twisted.python import lockfile, log, reflect, failure
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import untilConcludes
+from twisted.python.compat import _PY3, lazyByteSlice
 
-try:
-    from twisted.python import sendmsg
-except ImportError:
-    sendmsg = None
+
+if _PY3:
+    SCM_RIGHTS = socket.SCM_RIGHTS
+else:
+    try:
+        from twisted.python import sendmsg
+        SCM_RIGHTS = sendmsg.SCM_RIGHTS
+    except ImportError:
+        sendmsg = None
+
 
 
 def _ancillaryDescriptor(fd):
     """
     Pack an integer into an ancillary data structure suitable for use with
-    L{sendmsg.send1msg}.
+    L{sendmsg.send1msg} or L{socket.socket.sendmsg}.
     """
     packed = struct.pack("i", fd)
-    return [(socket.SOL_SOCKET, sendmsg.SCM_RIGHTS, packed)]
+    return [(socket.SOL_SOCKET, SCM_RIGHTS, packed)]
+
 
 
 @implementer(interfaces.IUNIXTransport)
@@ -125,9 +133,14 @@ class _SendmsgMixin(object):
             while index < len(self._sendmsgQueue):
                 fd = self._sendmsgQueue[index]
                 try:
-                    untilConcludes(
-                        sendmsg.send1msg, self.socket.fileno(), data[index], 0,
-                        _ancillaryDescriptor(fd))
+                    if _PY3:
+                        untilConcludes(
+                            self.socket.sendmsg, [bytes([data[index]])],
+                            _ancillaryDescriptor(fd))
+                    else:
+                        untilConcludes(
+                            sendmsg.send1msg, self.socket.fileno(), data[index],
+                            0, _ancillaryDescriptor(fd))
                 except socket.error as se:
                     if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                         return index
@@ -140,7 +153,7 @@ class _SendmsgMixin(object):
 
         # Hand the remaining data to the base implementation.  Avoid slicing in
         # favor of a buffer, in case that happens to be any faster.
-        limitedData = buffer(data, index)
+        limitedData = lazyByteSlice(data, index)
         result = self._writeSomeDataBase.writeSomeData(self, limitedData)
         try:
             return index + result
@@ -159,8 +172,19 @@ class _SendmsgMixin(object):
         this function will return the result of the dataReceived call.
         """
         try:
-            data, flags, ancillary = untilConcludes(
-                sendmsg.recv1msg, self.socket.fileno(), 0, self.bufferSize)
+            if _PY3:
+                # In Twisted's sendmsg.c, the csmg_space is defined as:
+                #     int cmsg_size = 4096;
+                #     cmsg_space = CMSG_SPACE(cmsg_size);
+                # Since the default in Python 3's socket is 0, we need to define
+                # it ourselves, and since it worked for sendmsg.c, it probably
+                # works fine here. -hawkie
+                data, ancillary, flags = untilConcludes(
+                    self.socket.recvmsg, self.bufferSize,
+                    socket.CMSG_SPACE(4096))[0:3]
+            else:
+                data, flags, ancillary = untilConcludes(
+                    sendmsg.recv1msg, self.socket.fileno(), 0, self.bufferSize)
         except socket.error as se:
             if se.args[0] == EWOULDBLOCK:
                 return
@@ -195,7 +219,7 @@ class _UnsuportedSendmsgMixin(object):
 
 
 
-if sendmsg:
+if _PY3 or sendmsg:
     _SendmsgMixin = _SendmsgMixin
 else:
     _SendmsgMixin = _UnsuportedSendmsgMixin

@@ -12,6 +12,7 @@ import warnings, os
 from zope.interface import implementer
 from twisted.internet.interfaces import IAddress
 from twisted.python.filepath import _asFilesystemBytes
+from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import FancyEqMixin
 from twisted.python.runtime import platform
 from twisted.python.compat import _PY3
@@ -172,7 +173,10 @@ class UNIXAddress(FancyEqMixin, object):
 
 
     def __repr__(self):
-        return 'UNIXAddress(%r)' % (self.name,)
+        name = self.name
+        if name:
+            name = _coerceToFilesystemEncoding('', self.name)
+        return 'UNIXAddress(%r)' % (name,)
 
 
     def __hash__(self):

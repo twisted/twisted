@@ -8,7 +8,7 @@ Tests for implementations of L{IReactorUNIX}.
 from __future__ import division, absolute_import
 
 from stat import S_IMODE
-from os import stat, close
+from os import stat, close, urandom
 from tempfile import mktemp
 from socket import AF_INET, SOCK_STREAM, socket
 from pprint import pformat
@@ -38,14 +38,14 @@ from twisted.internet.test.connectionmixins import ConnectableProtocol
 from twisted.internet.test.connectionmixins import ConnectionTestsMixin
 from twisted.internet.test.connectionmixins import StreamClientTestsMixin
 from twisted.internet.test.connectionmixins import runProtocolsWithReactor
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, _PY3, iteritems
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 
-if requireModule('twisted.python.sendmsg') is None:
+if not _PY3 and requireModule('twisted.python.sendmsg') is None:
     sendmsgSkip = (
         "sendmsg extension unavailable, extended UNIX features disabled")
 else:
@@ -76,7 +76,7 @@ def _abstractPath(case):
     # Use the test cases's mktemp to get something unique, but also squash it
     # down to make sure it fits in the unix socket path limit (something around
     # 110 bytes).
-    return md5(FilePath(case.mktemp())._asBytesPath()).hexdigest()
+    return md5(urandom(110)).hexdigest()
 
 
 
@@ -285,7 +285,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         s = socket()
         s.bind(('', 0))
-        server = SendFileDescriptor(s.fileno(), "junk")
+        server = SendFileDescriptor(s.fileno(), b"junk")
 
         client = ReceiveFileDescriptor()
         d = client.waitForDescriptor()
@@ -410,7 +410,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 self.peerAddress = self.transport.getPeer()
                 SendFileDescriptor.connectionMade(self)
 
-        server = RecordEndpointAddresses(probeClient.fileno(), "junk")
+        server = RecordEndpointAddresses(probeClient.fileno(), b"junk")
         client = ConnectableProtocol()
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
@@ -423,7 +423,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # duplicate file descriptor is still open, it will fail with EAGAIN
         # instead.
         probeServer.setblocking(False)
-        self.assertEqual("", probeServer.recv(1024))
+        self.assertEqual(b"", probeServer.recv(1024))
 
         # This is a surprising circumstance, so it should be logged.
         format = (
@@ -440,7 +440,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                              format=format)
 
         for logEvent in events:
-            for k, v in expectedEvent.iteritems():
+            for k, v in iteritems(expectedEvent):
                 if v != logEvent.get(k):
                     break
             else:
@@ -480,7 +480,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
 
-        self.assertEqual([int, b"j", b"u", b"n", b"k"], client.events)
+        self.assertEqual(int, client.events[0])
+        self.assertEqual(b"junk", bytes(client.events[1:]))
     if sendmsgSkip is not None:
         test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
 
