@@ -31,15 +31,20 @@ try:
 except ImportError:
     fcntl = None
 
+from io import StringIO
+
 from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import NativeStringIO, items, xrange, _PY3
+from twisted.python.compat import items, xrange, _PY3
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
 from twisted.internet.interfaces import IProcessTransport
+
+# Note the original stderr encoding for when we want to write to it later
+_stderrEncoding = sys.stderr.encoding
 
 # Some people were importing this, which is incorrect, just keeping it
 # here for backwards compatibility:
@@ -429,16 +434,17 @@ class _BaseProcess(BaseProcess, object):
                         msg = ("Upon execvpe {0} {1} in environment id {2}"
                                "\n:").format(executable, str(args),
                                              id(environment))
-                        tb = NativeStringIO()
-                        traceback.print_exc(file=tb)
-                        tb = tb.getvalue()
 
                         if _PY3:
-                            msg = msg.encode(sys.getfilesystemencoding())
-                            tb = tb.encode(sys.getfilesystemencoding())
+                            tb = StringIO()
+                            traceback.print_exc(file=tb)
 
-                        stderr.write(msg)
-                        stderr.write(tb)
+                            stderr.write(msg.encode(_stderrEncoding))
+                            stderr.write(tb.getvalue().encode(_stderrEncoding))
+                        else:
+                            stderr.write(msg)
+                            traceback.print_exc(file=stderr)
+
                         stderr.flush()
 
                         for fd in xrange(3):
