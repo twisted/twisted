@@ -44,6 +44,20 @@ else:
 
 
 
+def onlyOnPOSIX(testMethod):
+    """
+    Only run this test on POSIX platforms.
+
+    @param testMethod: A test function, being decorated.
+
+    @return: the C{testMethod} argument.
+    """
+    if resource is None:
+        testMethod.skip = "Test only applies to POSIX platforms."
+    return testMethod
+
+
+
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
     """
     An L{IProcessProtocol} which fires a Deferred when the process it is
@@ -347,6 +361,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.assertEqual(result, ["Foo\n"])
 
 
+    @onlyOnPOSIX
     def test_openFileDescriptors(self):
         """
         Processes spawned with spawnProcess() close all extraneous file
@@ -419,8 +434,40 @@ sys.stdout.flush()""".format(twistedRoot.path))
             set(stdFDs)
         )
 
-    if resource is None:
-        test_openFileDescriptors.skip = "Test only applies to POSIX platforms"
+
+    @onlyOnPOSIX
+    def test_errorDuringExec(self):
+        """
+        When L{os.execvpe} raises an exception, it will format that exception
+        on stderr as UTF-8, regardless of system encoding information.
+        """
+
+        def execvpe(*args, **kw):
+            # Ensure that real traceback formatting has some non-ASCII in it,
+            # by forcing the filename of the last frame to contain non-ASCII.
+            filename = u"\N{SNOWMAN}"
+            if not isinstance(filename, str):
+                filename = filename.encode("utf-8")
+            codeobj = compile("1/0", filename, "single")
+            eval(codeobj)
+
+        self.patch(os, "execvpe", execvpe)
+        self.patch(sys, "getfilesystemencoding", lambda: "ascii")
+
+        reactor = self.buildReactor()
+        output = io.BytesIO()
+
+        @reactor.callWhenRunning
+        def whenRunning():
+            class TracebackCatcher(ProcessProtocol, object):
+                errReceived = output.write
+                def processEnded(self, reason):
+                    reactor.stop()
+            reactor.spawnProcess(TracebackCatcher(), pyExe,
+                                 [pyExe, b"-c", b""])
+
+        self.runReactor(reactor, timeout=30)
+        self.assertIn(u"\N{SNOWMAN}".encode("utf-8"), output.getvalue())
 
 
     def test_timelyProcessExited(self):
