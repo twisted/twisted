@@ -15,6 +15,7 @@ from __future__ import division, absolute_import, print_function
 import errno
 import gc
 import os
+import io
 import select
 import signal
 import stat
@@ -35,7 +36,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import NativeStringIO, items, xrange, _PY3
+from twisted.python.compat import items, xrange, _PY3
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -402,50 +403,57 @@ class _BaseProcess(BaseProcess, object):
                 gc.enable()
             raise
         else:
-            if self.pid == 0: # pid is 0 in the child process
-                # do not put *ANY* code outside the try block. The child process
-                # must either exec or _exit. If it gets outside this block (due
-                # to an exception that is not handled here, but which might be
-                # handled higher up), there will be two copies of the parent
-                # running in parallel, doing all kinds of damage.
+            if self.pid == 0:
+                # A return value of 0 from fork() indicates that we are now
+                # executing in the child process.
+
+                # Do not put *ANY* code outside the try block. The child
+                # process must either exec or _exit. If it gets outside this
+                # block (due to an exception that is not handled here, but
+                # which might be handled higher up), there will be two copies
+                # of the parent running in parallel, doing all kinds of damage.
 
                 # After each change to this code, review it to make sure there
                 # are no exit paths.
+
                 try:
                     # Stop debugging. If I am, I don't care anymore.
                     sys.settrace(None)
                     self._setupChild(**kwargs)
-                    self._execChild(
-                        path, uid, gid, executable, args, environment)
+                    self._execChild(path, uid, gid, executable, args,
+                                    environment)
                 except:
-                    # If there are errors, bail and try to write something
-                    # descriptive to stderr.
-                    # XXX: The parent's stderr isn't necessarily fd 2 anymore, or
-                    #      even still available
-                    # XXXX: however even libc assumes write(2, err) is a useful
-                    #       thing to attempt
+                    # If there are errors, try to write something descriptive
+                    # to stderr before exiting.
+
+                    # The parent's stderr isn't *necessarily* fd 2 anymore, or
+                    # even still available; however, even libc assumes that
+                    # write(2, err) is a useful thing to attempt.
+
                     try:
                         stderr = os.fdopen(2, 'wb')
                         msg = ("Upon execvpe {0} {1} in environment id {2}"
                                "\n:").format(executable, str(args),
                                              id(environment))
-                        tb = NativeStringIO()
-                        traceback.print_exc(file=tb)
-                        tb = tb.getvalue()
 
                         if _PY3:
-                            msg = msg.encode(sys.getfilesystemencoding())
-                            tb = tb.encode(sys.getfilesystemencoding())
+                            # On Python 3, print_exc takes a text stream, but
+                            # on Python 2 it still takes a byte stream.
+                            stderr = io.TextIOWrapper(stderr, encoding="utf-8")
 
                         stderr.write(msg)
-                        stderr.write(tb)
+                        traceback.print_exc(file=stderr)
                         stderr.flush()
 
                         for fd in xrange(3):
                             os.close(fd)
                     except:
-                        pass # make *sure* the child terminates
-                # Did you read the comment about not adding code here?
+                        # Handle all errors during the error-reporting process
+                        # silently to ensure that the child terminates.
+                        pass
+
+                # See comment above about making sure that we reach this line
+                # of code.
                 os._exit(1)
 
         # we are now in parent process
