@@ -445,7 +445,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
         def execvpe(*args, **kw):
             # Ensure that real traceback formatting has some non-ASCII in it,
             # by forcing the filename of the last frame to contain non-ASCII.
-            filename = u"\N{SNOWMAN}"
+            filename = u"<\N{SNOWMAN}>"
             if not isinstance(filename, str):
                 filename = filename.encode("utf-8")
             codeobj = compile("1/0", filename, "single")
