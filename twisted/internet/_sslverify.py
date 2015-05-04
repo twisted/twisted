@@ -84,7 +84,7 @@ def _idnaBytes(text):
     except ImportError:
         return text.encode("idna")
     else:
-        return idna.encode(text).encode("ascii")
+        return idna.encode(text)
 
 
 
