@@ -74,7 +74,7 @@ _EXTRA_OPTIONS = dict(
          'pydoctor >= 0.5'],
     tls=['pyopenssl >= 0.11',
          'service_identity',
-         'idna'],
+         'idna >= 0.6'],
     conch=['gmpy',
            'pyasn1',
            'pycrypto'],
