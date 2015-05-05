@@ -167,12 +167,28 @@ class TestResult(pyunit.TestResult, object):
         # XXX - 'todo' should just be a string
         self.expectedFailures.append((test, error, todo))
 
+
     def addSuccess(self, test):
-        """Report that the given test succeeded.
+        """
+        Report that the given test succeeded.
 
         @type test: L{pyunit.TestCase}
         """
         self.successes += 1
+
+
+    def wasSuccessful(self):
+        """
+        Report whether or not this test suite was successful or not.
+
+        The behaviour of this function changed in L{pyunit} in Python 3.4, so
+        it is overridden here so our behaviour is consistent across Python
+        versions.
+
+        @rtype: L{bool}
+        """
+        return len(self.failures) == len(self.errors) == 0
+
 
     def done(self):
         """
