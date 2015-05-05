@@ -74,6 +74,7 @@ class TestResult(pyunit.TestResult, object):
         self.successes = 0
         self._timings = []
 
+
     def __repr__(self):
         return ('<%s run=%d errors=%d failures=%d todos=%d dones=%d skips=%d>'
                 % (reflect.qual(self.__class__), self.testsRun,
@@ -81,8 +82,10 @@ class TestResult(pyunit.TestResult, object):
                    len(self.expectedFailures), len(self.skips),
                    len(self.unexpectedSuccesses)))
 
+
     def _getTime(self):
         return time.time()
+
 
     def _getFailure(self, error):
         """
@@ -91,6 +94,7 @@ class TestResult(pyunit.TestResult, object):
         if isinstance(error, tuple):
             return Failure(error[1], error[0], error[2])
         return error
+
 
     def startTest(self, test):
         """
@@ -101,6 +105,7 @@ class TestResult(pyunit.TestResult, object):
         super(TestResult, self).startTest(test)
         self._testStarted = self._getTime()
 
+
     def stopTest(self, test):
         """
         This must be called after the given test is completed.
@@ -109,6 +114,7 @@ class TestResult(pyunit.TestResult, object):
         """
         super(TestResult, self).stopTest(test)
         self._lastTime = self._getTime() - self._testStarted
+
 
     def addFailure(self, test, fail):
         """
@@ -119,6 +125,7 @@ class TestResult(pyunit.TestResult, object):
         """
         self.failures.append((test, self._getFailure(fail)))
 
+
     def addError(self, test, error):
         """
         Report an error that occurred while running the given test.
@@ -127,6 +134,7 @@ class TestResult(pyunit.TestResult, object):
         @type error: L{Failure} or L{tuple}
         """
         self.errors.append((test, self._getFailure(error)))
+
 
     def addSkip(self, test, reason):
         """
@@ -141,8 +149,10 @@ class TestResult(pyunit.TestResult, object):
         """
         self.skips.append((test, reason))
 
+
     def addUnexpectedSuccess(self, test, todo):
-        """Report that the given test succeeded against expectations.
+        """
+        Report that the given test succeeded against expectations.
 
         In Trial, tests can be marked 'todo'. That is, they are expected to
         fail.  When a test that is expected to fail instead succeeds, it should
@@ -154,8 +164,10 @@ class TestResult(pyunit.TestResult, object):
         # XXX - 'todo' should just be a string
         self.unexpectedSuccesses.append((test, todo))
 
+
     def addExpectedFailure(self, test, error, todo):
-        """Report that the given test failed, and was expected to do so.
+        """
+        Report that the given test failed, and was expected to do so.
 
         In Trial, tests can be marked 'todo'. That is, they are expected to
         fail.
