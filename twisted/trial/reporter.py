@@ -193,9 +193,11 @@ class TestResult(pyunit.TestResult, object):
         """
         Report whether or not this test suite was successful or not.
 
-        The behaviour of this function changed in L{pyunit} in Python 3.4, so
-        it is overridden here so our behaviour is consistent across Python
-        versions.
+        The behaviour of this method changed in L{pyunit} in Python 3.4 to
+        fail if there are any errors, failures, or unexpected successes.
+        Previous to 3.4, it was only if there were errors or failures. This
+        method implements the old behaviour for backwards compatibility reasons,
+        checking just for errors and failures.
 
         @rtype: L{bool}
         """
