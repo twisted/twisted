@@ -8,17 +8,18 @@ L{twisted.cred.credentials}.
 
 from __future__ import division, absolute_import
 
-import base64, binascii
+import base64
 
+from binascii import hexlify
 from hashlib import md5, sha1
 
 from zope.interface.verify import verifyObject
 from twisted.trial.unittest import TestCase
 from twisted.internet.address import IPv4Address
-from twisted.python.compat import joinBytes
 from twisted.cred.error import LoginFailed
 from twisted.cred.credentials import calcHA1, calcHA2, IUsernameDigestHash
 from twisted.cred.credentials import calcResponse, DigestCredentialFactory
+from twisted.python.compat import networkString
 
 def b64encode(s):
     return base64.b64encode(s).strip()
@@ -80,8 +81,8 @@ class DigestAuthTests(TestCase):
         nonce = b'abc123xyz'
         hashA1 = calcHA1(_algorithm, self.username, self.realm, self.password,
                          nonce, self.cnonce)
-        a1 = joinBytes(b":", (self.username, self.realm, self.password))
-        expected = binascii.hexlify(_hash(a1).digest())
+        a1 = b":".join((self.username, self.realm, self.password))
+        expected = hexlify(_hash(a1).digest())
         self.assertEqual(hashA1, expected)
 
 
@@ -93,10 +94,10 @@ class DigestAuthTests(TestCase):
         nonce = b'xyz321abc'
         hashA1 = calcHA1(b'md5-sess', self.username, self.realm, self.password,
                          nonce, self.cnonce)
-        a1 = joinBytes(b":", (self.username, self.realm, self.password))
-        ha1 = md5(a1).hexdigest()
-        a1 = joinBytes(b":", (ha1, nonce, self.cnonce))
-        expected = binascii.hexlify(md5(a1).digest())
+        a1 = self.username + b':' + self.realm + b':' + self.password
+        ha1 = hexlify(md5(a1).digest())
+        a1 = ha1 + b':' + nonce + b':' + self.cnonce
+        expected = hexlify(md5(a1).digest())
         self.assertEqual(hashA1, expected)
 
 
@@ -116,8 +117,8 @@ class DigestAuthTests(TestCase):
         """
         method = b'GET'
         hashA2 = calcHA2(_algorithm, method, self.uri, b'auth', None)
-        a2 = joinBytes(b":", (method, self.uri))
-        expected = binascii.hexlify(_hash(a2).digest())
+        a2 = method + b':' + self.uri
+        expected = hexlify(_hash(a2).digest())
         self.assertEqual(hashA2, expected)
 
 
@@ -129,8 +130,8 @@ class DigestAuthTests(TestCase):
         method = b'GET'
         hentity = b'foobarbaz'
         hashA2 = calcHA2(_algorithm, method, self.uri, b'auth-int', hentity)
-        a2 = joinBytes(b":", (method, self.uri, hentity))
-        expected = binascii.hexlify(_hash(a2).digest())
+        a2 = method + b':' + self.uri + b':' + hentity
+        expected = hexlify(_hash(a2).digest())
         self.assertEqual(hashA2, expected)
 
 
@@ -177,8 +178,8 @@ class DigestAuthTests(TestCase):
         hashA2 = b'789xyz'
         nonce = b'lmnopq'
 
-        response = joinBytes(b":", (hashA1, nonce, hashA2))
-        expected = binascii.hexlify(_hash(response).digest())
+        response = hashA1 + b':' + nonce + b':' + hashA2
+        expected = hexlify(_hash(response).digest())
 
         digest = calcResponse(hashA1, hashA2, _algorithm, nonce, None, None,
                               None)
@@ -216,9 +217,9 @@ class DigestAuthTests(TestCase):
         clientNonce = b'abcxyz123'
         qop = b'auth'
 
-        response = joinBytes(b":", (hashA1, nonce, nonceCount, clientNonce, qop,
-                                    hashA2))
-        expected = binascii.hexlify(_hash(response).digest())
+        response = hashA1 + b':' + nonce + b':' + nonceCount + b':' +\
+                   clientNonce + b':' + qop + b':' + hashA2
+        expected = hexlify(_hash(response).digest())
 
         digest = calcResponse(
             hashA1, hashA2, _algorithm, nonce, nonceCount, clientNonce, qop)
@@ -271,11 +272,12 @@ class DigestAuthTests(TestCase):
         if 'uri' not in kw:
             kw['uri'] = self.uri
         if quotes:
-            quote = '"'
+            quote = b'"'
         else:
-            quote = ''
+            quote = b''
+
         return b', '.join([
-                joinBytes(b"", (k, b"=", quote, v, quote))
+                b"".join((networkString(k), b"=", quote, v, quote))
                 for (k, v)
                 in kw.items()
                 if v is not None])
@@ -490,11 +492,11 @@ class DigestAuthTests(TestCase):
                                               self.clientAddress.host)
         self.assertTrue(verifyObject(IUsernameDigestHash, creds))
 
-        cleartext = joinBytes(b":", (self.username, self.realm, self.password))
+        cleartext = self.username + b":" + self.realm + b":" + self.password
         hash = md5(cleartext)
-        self.assertTrue(creds.checkHash(binascii.hexlify(hash.digest())))
+        self.assertTrue(creds.checkHash(hexlify(hash.digest())))
         hash.update(b'wrong')
-        self.assertFalse(creds.checkHash(binascii.hexlify(hash.digest())))
+        self.assertFalse(creds.checkHash(hexlify(hash.digest())))
 
 
     def test_invalidOpaque(self):
@@ -533,8 +535,9 @@ class DigestAuthTests(TestCase):
         self.assertEqual(str(exc), 'Invalid response, invalid opaque value')
 
         badOpaque = b'foo-' + b64encode(
-            joinBytes(b",", (challenge['nonce'], self.clientAddress.host,
-                             b"foobar")))
+            b",".join((challenge['nonce'],
+                       networkString(self.clientAddress.host),
+                       b"foobar")))
         exc = self.assertRaises(
             LoginFailed,
             credentialFactory._verifyOpaque,
@@ -611,13 +614,13 @@ class DigestAuthTests(TestCase):
                                                         self.realm)
         challenge = credentialFactory.getChallenge(self.clientAddress.host)
 
-        key = joinBytes(b",", (challenge['nonce'],
-                               self.clientAddress.host,
-                               '-137876876'))
-        digest = md5(key + credentialFactory.privateKey).hexdigest()
+        key = b",".join((challenge['nonce'],
+                         networkString(self.clientAddress.host),
+                         b'-137876876'))
+        digest = hexlify(md5(key + credentialFactory.privateKey).digest())
         ekey = b64encode(key)
 
-        oldNonceOpaque = joinBytes(b"-", (digest, ekey.strip(b'\n')))
+        oldNonceOpaque = b"-".join((digest, ekey.strip(b'\n')))
 
         self.assertRaises(
             LoginFailed,
@@ -636,13 +639,12 @@ class DigestAuthTests(TestCase):
                                                         self.realm)
         challenge = credentialFactory.getChallenge(self.clientAddress.host)
 
-        key = joinBytes(b",",
-                        (challenge['nonce'],
-                         self.clientAddress.host,
-                         '0'))
+        key = b",".join((challenge['nonce'],
+                         networkString(self.clientAddress.host),
+                         b'0'))
 
-        digest = md5(key + b'this is not the right pkey').hexdigest()
-        badChecksum = joinBytes(b"-", (digest, b64encode(key)))
+        digest = hexlify(md5(key + b'this is not the right pkey').digest())
+        badChecksum = b"-".join((digest, b64encode(key)))
 
         self.assertRaises(
             LoginFailed,
