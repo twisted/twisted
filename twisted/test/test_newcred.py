@@ -165,6 +165,7 @@ class NewCredTests(unittest.TestCase):
         self.assertEqual(error.UnauthorizedLogin, l[0])
 
 
+
 class CramMD5CredentialsTests(unittest.TestCase):
     def testIdempotentChallenge(self):
         c = credentials.CramMD5Credentials()
@@ -175,11 +176,13 @@ class CramMD5CredentialsTests(unittest.TestCase):
         c = credentials.CramMD5Credentials()
         chal = c.getChallenge()
         c.response = hexlify(hmac.HMAC(b'secret', chal).digest())
-        self.failUnless(c.checkPassword(b'secret'))
+        self.assertTrue(c.checkPassword(b'secret'))
 
     def testWrongPassword(self):
         c = credentials.CramMD5Credentials()
-        self.failIf(c.checkPassword(b'secret'))
+        self.assertFalse(c.checkPassword(b'secret'))
+
+
 
 class OnDiskDatabaseTests(unittest.TestCase):
     users = [

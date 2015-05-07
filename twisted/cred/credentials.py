@@ -12,13 +12,21 @@ from __future__ import division, absolute_import
 
 from zope.interface import implementer, Interface
 
-import hmac, time, random, re, binascii, base64
+import base64
+import hmac
+import random
+import re
+import time
+
+from binascii import hexlify
 from hashlib import md5
 
 from twisted.python.randbytes import secureRandom
 from twisted.python.compat import networkString, nativeString, intToBytes, unicode
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
+
+
 
 class ICredentials(Interface):
     """
@@ -56,7 +64,7 @@ class IUsernameHashedPassword(ICredentials):
     password-equivalent hashes) form so that they can be hashed in a manner
     appropriate for the particular credentials class.
 
-    @type username: C{bytes}
+    @type username: L{bytes}
     @ivar username: The username associated with these credentials.
     """
 
@@ -64,7 +72,7 @@ class IUsernameHashedPassword(ICredentials):
         """
         Validate these credentials against the correct password.
 
-        @type password: C{bytes}
+        @type password: L{bytes}
         @param password: The correct, plaintext password against which to
         check.
 
@@ -86,10 +94,10 @@ class IUsernamePassword(ICredentials):
     it need only transform the stored password in a similar way before
     performing the comparison.
 
-    @type username: C{bytes}
+    @type username: L{bytes}
     @ivar username: The username associated with these credentials.
 
-    @type password: C{bytes}
+    @type password: L{bytes}
     @ivar password: The password associated with these credentials.
     """
 
@@ -97,7 +105,7 @@ class IUsernamePassword(ICredentials):
         """
         Validate these credentials against the correct password.
 
-        @type password: C{bytes}
+        @type password: L{bytes}
         @param password: The correct, plaintext password against which to
         check.
 
@@ -184,15 +192,15 @@ class DigestCredentialFactory(object):
     @cvar CHALLENGE_LIFETIME_SECS: The number of seconds for which an
         opaque should be valid.
 
-    @type privateKey: C{bytes}
+    @type privateKey: L{bytes}
     @ivar privateKey: A random string used for generating the secure opaque.
 
-    @type algorithm: C{bytes}
+    @type algorithm: L{bytes}
     @param algorithm: Case insensitive string specifying the hash algorithm to
         use.  Must be either C{'md5'} or C{'sha'}.  C{'md5-sess'} is B{not}
         supported.
 
-    @type authenticationRealm: C{bytes}
+    @type authenticationRealm: L{bytes}
     @param authenticationRealm: case sensitive string that specifies the realm
         portion of the challenge
     """
@@ -224,7 +232,7 @@ class DigestCredentialFactory(object):
         @param address: The client address to which this challenge is being
         sent.
 
-        @return: The C{dict} that can be used to generate a WWW-Authenticate
+        @return: The L{dict} that can be used to generate a WWW-Authenticate
             header.
         """
         c = self._generateNonce()
@@ -242,9 +250,9 @@ class DigestCredentialFactory(object):
         Create a random value suitable for use as the nonce parameter of a
         WWW-Authenticate challenge.
 
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
-        return binascii.hexlify(secureRandom(12))
+        return hexlify(secureRandom(12))
 
 
     def _getTime(self):
@@ -270,7 +278,7 @@ class DigestCredentialFactory(object):
             clientip = clientip.encode('ascii')
 
         key = b",".join((nonce, clientip, now))
-        digest = binascii.hexlify(md5(key + self.privateKey).digest())
+        digest = hexlify(md5(key + self.privateKey).digest())
         ekey = base64.b64encode(key)
         return b"-".join((digest, ekey.replace(b'\n', b'')))
 
@@ -330,7 +338,7 @@ class DigestCredentialFactory(object):
                 'Invalid response, incompatible opaque/nonce too old')
 
         # Verify the digest
-        digest = binascii.hexlify(md5(key + self.privateKey).digest())
+        digest = hexlify(md5(key + self.privateKey).digest())
         if digest != opaqueParts[0]:
             raise error.LoginFailed('Invalid response, invalid opaque value')
 
@@ -342,14 +350,14 @@ class DigestCredentialFactory(object):
         Decode the given response and attempt to generate a
         L{DigestedCredentials} from it.
 
-        @type response: C{bytes}
+        @type response: L{bytes}
         @param response: A string of comma separated key=value pairs
 
-        @type method: C{bytes}
+        @type method: L{bytes}
         @param method: The action requested to which this response is addressed
         (GET, POST, INVITE, OPTIONS, etc).
 
-        @type host: C{bytes}
+        @type host: L{bytes}
         @param host: The address the request was sent from.
 
         @raise error.LoginFailed: If the response does not contain a username,
@@ -385,7 +393,15 @@ class DigestCredentialFactory(object):
 
 @implementer(IUsernameHashedPassword)
 class CramMD5Credentials:
+    """
+    An encapsulation of some CramMD5 hashed credentials.
 
+    @ivar challenge: The challenge to be sent to the client.
+    @type challenge: L{bytes}
+
+    @ivar response: The hashed response from the client.
+    @type response: L{bytes}
+    """
     challenge = b''
     response = b''
 
@@ -404,7 +420,7 @@ class CramMD5Credentials:
         r = random.randrange(0x7fffffff)
         t = time.time()
         self.challenge = networkString('<%d.%d@%s>' % (
-            r, t,nativeString(self.host) if self.host else None))
+            r, t, nativeString(self.host) if self.host else None))
         return self.challenge
 
     def setResponse(self, response):
@@ -414,8 +430,9 @@ class CramMD5Credentials:
         return False
 
     def checkPassword(self, password):
-        verify = hmac.HMAC(password, self.challenge).hexdigest()
+        verify = hexlify(hmac.HMAC(password, self.challenge).digest())
         return verify == self.response
+
 
 
 @implementer(IUsernameHashedPassword)
@@ -427,6 +444,7 @@ class UsernameHashedPassword:
 
     def checkPassword(self, password):
         return self.hashed == password
+
 
 
 @implementer(IUsernamePassword)
@@ -453,20 +471,20 @@ class ISSHPrivateKey(ICredentials):
     against a user's private key.
 
     @ivar username: The username associated with these credentials.
-    @type username: C{bytes}
+    @type username: L{bytes}
 
     @ivar algName: The algorithm name for the blob.
-    @type algName: C{bytes}
+    @type algName: L{bytes}
 
     @ivar blob: The public key blob as sent by the client.
-    @type blob: C{bytes}
+    @type blob: L{bytes}
 
     @ivar sigData: The data the signature was made from.
-    @type sigData: C{bytes}
+    @type sigData: L{bytes}
 
     @ivar signature: The signed data.  This is checked to verify that the user
         owns the private key.
-    @type signature: C{bytes} or C{NoneType}
+    @type signature: L{bytes} or C{NoneType}
     """
 
 
@@ -479,6 +497,7 @@ class SSHPrivateKey:
         self.blob = blob
         self.sigData = sigData
         self.signature = signature
+
 
 
 class IPluggableAuthenticationModules(ICredentials):
@@ -495,6 +514,8 @@ class IPluggableAuthenticationModules(ICredentials):
     of (response, 0), one for each message.  The 0 is
     currently unused, but is required by the PAM library.
     """
+
+
 
 @implementer(IPluggableAuthenticationModules)
 class PluggableAuthenticationModules:
