@@ -1,0 +1,1 @@
+twisted.internet.endpoints.HostnameEndpoint now uses getaddrinfo properly on Python 3.4 and above.

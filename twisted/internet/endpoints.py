@@ -575,7 +575,7 @@ class TCP6ClientEndpoint(object):
         5-tuple L{_GAI_ADDRESS}.
     """
 
-    _getaddrinfo = socket.getaddrinfo
+    _getaddrinfo = staticmethod(socket.getaddrinfo)
     _deferToThread = staticmethod(threads.deferToThread)
     _GAI_ADDRESS = 4
     _GAI_ADDRESS_HOST = 0
@@ -642,7 +642,7 @@ class HostnameEndpoint(object):
 
     @ivar _deferToThread: A hook used for testing deferToThread.
     """
-    _getaddrinfo = socket.getaddrinfo
+    _getaddrinfo = staticmethod(socket.getaddrinfo)
     _deferToThread = staticmethod(threads.deferToThread)
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
