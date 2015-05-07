@@ -563,5 +563,4 @@ __all__ = [
     "items",
     "iteritems",
     "xrange",
-    "joinBytes",
 ]
