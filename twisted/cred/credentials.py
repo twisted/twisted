@@ -22,7 +22,8 @@ from binascii import hexlify
 from hashlib import md5
 
 from twisted.python.randbytes import secureRandom
-from twisted.python.compat import networkString, nativeString, intToBytes, unicode
+from twisted.python.compat import networkString, nativeString
+from twisted.python.compat import intToBytes, unicode
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
 
