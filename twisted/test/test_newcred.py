@@ -8,6 +8,9 @@ Tests for L{twisted.cred}, now with 30% more starch.
 from __future__ import division, absolute_import
 
 import hmac
+
+from binascii import hexlify
+
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
@@ -24,11 +27,14 @@ except ImportError:
 try:
     from twisted.cred import pamauth
 except (ImportError, SyntaxError):
+    # twisted.cred.pamauth is not ported to Python 3
     pamauth = None
 
 try:
     from twisted.cred import checkers
 except (ImportError, TypeError):
+    # twisted.cred.checkers isn't ported to Python 3 (see #7834)
+    # We catch a TypeError on import because z.i implements() is still in use
     checkers = False
 
 
@@ -168,7 +174,7 @@ class CramMD5CredentialsTests(unittest.TestCase):
     def testCheckPassword(self):
         c = credentials.CramMD5Credentials()
         chal = c.getChallenge()
-        c.response = hmac.HMAC(b'secret', chal).hexdigest()
+        c.response = hexlify(hmac.HMAC(b'secret', chal).digest())
         self.failUnless(c.checkPassword(b'secret'))
 
     def testWrongPassword(self):
