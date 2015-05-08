@@ -385,7 +385,7 @@ def spewer(frame, s, ignored):
     A trace function for sys.settrace that prints every function or method call.
     """
     from twisted.python import reflect
-    if 'self' in frame.f_locals:
+    if frame.f_locals.has_key('self'):
         se = frame.f_locals['self']
         if hasattr(se, '__class__'):
             k = reflect.qual(se.__class__)
