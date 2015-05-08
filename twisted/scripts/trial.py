@@ -18,7 +18,6 @@ from twisted.application import app
 from twisted.python import usage, reflect, failure
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
-from twisted.python.compat import _PY3
 from twisted import plugin
 from twisted.trial import runner, itrial, reporter
 
@@ -276,12 +275,9 @@ class _BasicOptions(object):
         Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code.
         """
+        # Spewer is not yet ported to Python 3.
         from twisted.python.util import spewer
         sys.settrace(spewer)
-
-    if _PY3:
-        # Spewer is not yet ported to Python 3
-        del opt_spew
 
 
     def opt_help_orders(self):

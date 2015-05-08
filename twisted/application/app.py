@@ -605,17 +605,15 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
     def opt_spew(self):
         """
         Print an insanely verbose log of everything that happens.
-        Useful when debugging freezes or locks in complex code."""
+        Useful when debugging freezes or locks in complex code.
+        """
+        # Won't work on Python 3, because util.spewer is not ported.
         sys.settrace(util.spewer)
         try:
             import threading
         except ImportError:
             return
         threading.settrace(util.spewer)
-
-    if _PY3:
-        # Spewer is not yet ported to Python 3
-        del opt_spew
 
 
     def parseOptions(self, options=None):
