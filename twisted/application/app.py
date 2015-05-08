@@ -16,7 +16,6 @@ from operator import attrgetter
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python.reflect import qual, namedAny
 from twisted.python.log import ILogObserver
-from twisted.python.compat import _PY3
 from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted import copyright, plugin
