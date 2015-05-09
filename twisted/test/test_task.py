@@ -455,21 +455,42 @@ class LoopTestCase(unittest.TestCase):
         accumulator = []
         call = task.LoopingCall.withCount(accumulator.append)
         call.clock = clock
-        call.start(0.1, now=False)
-        n = 10
-        for x in range(n):
-            clock.advance(0.1)
+
+        # count: the number of ticks within the time span, the number of calls
+        # that should be made.  this should be a value which causes
+        # floating-point inaccuracy as the denominator for the timespan.
+        count = 10
+        # timespan: the amount of virtual time that the test will take, in
+        # seconds, as a floating point number
+        timespan = 1.0
+        # interval: the amount of time for one actual call.
+        interval = timespan / count
+
+        call.start(interval, now=False)
+        for x in range(count):
+            clock.advance(interval)
+
         # There is still an epsilon of inaccuracy here; 0.1 is not quite
         # exactly 1/10 in binary, so we need to push our clock over the
         # threshold.
-        epsilon = 1.0 - sum([0.1] * 10)
+        epsilon = timespan - sum([interval] * count)
         clock.advance(epsilon)
         secondsValue = clock.seconds()
-        shouldBeAtLeast = 0.1 * n
-        self.assertTrue(secondsValue >= shouldBeAtLeast,
+        # The following two assertions are here to ensure that if the values of
+        # count, timespan, and interval are changed, that the test remains
+        # valid.  First, the "epsilon" value here measures the floating-point
+        # inaccuracy in question, and so if it doesn't exist then we are not
+        # triggering an interesting condition.
+        self.assertTrue(abs(epsilon) > 0.0,
+                        "{0} should be greater than zero"
+                        .format(epsilon))
+        # Secondly, task.Clock should behave in such a way that once we have
+        # advanced to this point, it has reached or exceeded the timespan.
+        self.assertTrue(secondsValue >= timespan,
                         "{0} should be greater than or equal to {1}"
-                        .format(secondsValue, shouldBeAtLeast))
-        self.assertEqual(sum(accumulator), n)
+                        .format(secondsValue, timespan))
+
+        self.assertEqual(sum(accumulator), count)
         self.assertNotIn(0, accumulator)
 
 
