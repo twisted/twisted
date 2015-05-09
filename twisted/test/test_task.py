@@ -440,17 +440,16 @@ class LoopTestCase(unittest.TestCase):
 
     def test_withCountFloatingPointBoundary(self):
         """
-        When L{task.LoopingCall.withCount} should never invoke its callable
-        with a 0; specifically, if a L{task.LoopingCall} created with
-        C{withCount} has its L{start <task.LoopingCall.start>} method invoked
-        with a floating-point number which introduces decimal inaccuracy when
-        multiplied or divided, such as "0.1", it will (A) never invoke its
-        callable with 0 and (B) the sum of the values passed to that callable
-        will correctly sum to exactly the number of calls which should have
-        elapsed.
+        L{task.LoopingCall.withCount} should never invoke its callable with a
+        zero.  Specifically, if a L{task.LoopingCall} created with C{withCount}
+        has its L{start <task.LoopingCall.start>} method invoked with a
+        floating-point number which introduces decimal inaccuracy when
+        multiplied or divided, such as "0.1", L{task.LoopingCall} will never
+        invoke its callable with 0.  Also, the sum of all the values passed to
+        its callable as the "count" will be an integer, the number of intervals
+        that have elapsed.
 
-        (This is a regression test for a particularly tricky case to
-        implement.)
+        This is a regression test for a particularly tricky case to implement.
         """
         clock = task.Clock()
         accumulator = []
