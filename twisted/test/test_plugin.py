@@ -340,7 +340,7 @@ class PluginTests(unittest.TestCase):
 
 
 # This is something like the Twisted plugins file.
-pluginInitFile = """
+pluginInitFile = b"""
 from twisted.plugin import pluginPackagePaths
 __path__.extend(pluginPackagePaths(__name__))
 __all__ = []
@@ -348,12 +348,14 @@ __all__ = []
 
 def pluginFileContents(name):
     return (
-        "from zope.interface import classProvides\n"
+        "from zope.interface import provider\n"
         "from twisted.plugin import IPlugin\n"
         "from twisted.test.test_plugin import ITestPlugin\n"
         "\n"
-        "class %s(object):\n"
-        "    classProvides(IPlugin, ITestPlugin)\n") % (name,)
+        "@provider(IPlugin, ITestPlugin)\n"
+        "class {0}(object):\n"
+        "    pass\n"
+    ).format(name).encode('ascii')
 
 
 def _createPluginDummy(entrypath, pluginContent, real, pluginModule):

@@ -102,7 +102,7 @@ class CachedDropin(object):
 def _generateCacheEntry(provider):
     dropin = CachedDropin(provider.__name__,
                           provider.__doc__)
-    for k, v in provider.__dict__.iteritems():
+    for k, v in provider.__dict__.items():
         plugin = IPlugin(v, None)
         if plugin is not None:
             # Instantiated for its side-effects.
@@ -172,7 +172,7 @@ def getCache(module):
                     entry = _generateCacheEntry(provider)
                     dropinDotCache[pluginKey] = entry
         # Make sure that the cache doesn't contain any stale plugins.
-        for pluginKey in dropinDotCache.keys():
+        for pluginKey in list(dropinDotCache.keys()):
             if pluginKey not in existingKeys:
                 del dropinDotCache[pluginKey]
                 needsWrite = True
