@@ -8,13 +8,13 @@ Tests for Twisted plugin system.
 
 import sys, errno, os, time
 import compileall
+import functools
 
 from zope.interface import Interface
 
 from twisted.trial import unittest
 from twisted.python.log import textFromEventDict, addObserver, removeObserver
 from twisted.python.filepath import FilePath
-from twisted.python.util import mergeFunctionMetadata
 
 from twisted import plugin
 
@@ -53,7 +53,7 @@ class PluginTests(unittest.TestCase):
         self.root.createDirectory()
         self.package = self.root.child('mypackage')
         self.package.createDirectory()
-        self.package.child('__init__.py').setContent("")
+        self.package.child('__init__.py').setContent(b"")
 
         FilePath(__file__).sibling('plugin_basic.py'
             ).copyTo(self.package.child('testplugin.py'))
@@ -84,7 +84,7 @@ class PluginTests(unittest.TestCase):
         for ext in ['c', 'o'] + (deleteSource and [''] or []):
             try:
                 os.remove(module.__file__ + ext)
-            except OSError, ose:
+            except OSError as ose:
                 if ose.errno != errno.ENOENT:
                     raise
 
@@ -103,13 +103,15 @@ class PluginTests(unittest.TestCase):
         plugin system behaves correctly no matter what the state of the cache
         is.
         """
+        @functools.wraps(meth)
         def wrapped(self):
             meth(self)
             meth(self)
             self._clearCache()
             meth(self)
             meth(self)
-        return mergeFunctionMetadata(meth, wrapped)
+
+        return wrapped
 
 
     def test_cache(self):
@@ -308,11 +310,11 @@ class PluginTests(unittest.TestCase):
         FilePath(__file__).sibling('plugin_extra1.py'
             ).copyTo(self.package.child('pluginextra.py'))
 
-        os.chmod(self.package.path, 0500)
+        os.chmod(self.package.path, 0o500)
         # Change the right of dropin.cache too for windows
-        os.chmod(cachepath.path, 0400)
-        self.addCleanup(os.chmod, self.package.path, 0700)
-        self.addCleanup(os.chmod, cachepath.path, 0700)
+        os.chmod(cachepath.path, 0o400)
+        self.addCleanup(os.chmod, self.package.path, 0o700)
+        self.addCleanup(os.chmod, cachepath.path, 0o700)
 
         # Start observing log events to see the warning
         events = []
@@ -362,7 +364,7 @@ def _createPluginDummy(entrypath, pluginContent, real, pluginModule):
     pkg = entrypath.child('plugindummy')
     pkg.createDirectory()
     if real:
-        pkg.child('__init__.py').setContent('')
+        pkg.child('__init__.py').setContent(b'')
     plugs = pkg.child('plugins')
     plugs.createDirectory()
     if real:
@@ -429,16 +431,16 @@ class DeveloperSetupTests(unittest.TestCase):
         """
         Lock the system directories, as if they were unwritable by this user.
         """
-        os.chmod(self.sysplug.path, 0555)
-        os.chmod(self.syscache.path, 0555)
+        os.chmod(self.sysplug.path, 0o555)
+        os.chmod(self.syscache.path, 0o555)
 
 
     def unlockSystem(self):
         """
         Unlock the system directories, as if they were writable by this user.
         """
-        os.chmod(self.sysplug.path, 0777)
-        os.chmod(self.syscache.path, 0777)
+        os.chmod(self.sysplug.path, 0o777)
+        os.chmod(self.syscache.path, 0o777)
 
 
     def getAllPlugins(self):
@@ -613,7 +615,7 @@ class AdjacentPackageTests(unittest.TestCase):
         directory = root.child(name)
         package = directory.child('dummy')
         package.makedirs()
-        package.child('__init__.py').setContent('')
+        package.child('__init__.py').setContent(b'')
         plugins = package.child('plugins')
         plugins.makedirs()
         plugins.child('__init__.py').setContent(pluginInitFile)
@@ -712,7 +714,7 @@ class PackagePathTests(unittest.TestCase):
         root = FilePath(self.mktemp())
         foo = root.child('foo').child('dummy').child('plugins')
         foo.makedirs()
-        foo.child('__init__.py').setContent('')
+        foo.child('__init__.py').setContent(b'')
         sys.path = [root.child('foo').path, root.child('bar').path]
         self.assertEqual(
             plugin.pluginPackagePaths('dummy.plugins'),
