@@ -462,7 +462,8 @@ class LoopTestCase(unittest.TestCase):
         # There is still an epsilon of inaccuracy here; 0.1 is not quite
         # exactly 1/10 in binary, so we need to push our clock over the
         # threshold.
-        clock.advance(0.0000000000000001)
+        epsilon = 1.0 - sum([0.1] * 10)
+        clock.advance(epsilon)
         secondsValue = clock.seconds()
         shouldBeAtLeast = 0.1 * n
         self.assertTrue(secondsValue >= shouldBeAtLeast,
