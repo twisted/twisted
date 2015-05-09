@@ -438,6 +438,62 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(times.pop(), ((3.0 * INTERVAL) + REALISTIC_DELAY, 1))
 
 
+    def test_withCountFloatingPointBoundary(self):
+        """
+        L{task.LoopingCall.withCount} should never invoke its callable with a
+        zero.  Specifically, if a L{task.LoopingCall} created with C{withCount}
+        has its L{start <task.LoopingCall.start>} method invoked with a
+        floating-point number which introduces decimal inaccuracy when
+        multiplied or divided, such as "0.1", L{task.LoopingCall} will never
+        invoke its callable with 0.  Also, the sum of all the values passed to
+        its callable as the "count" will be an integer, the number of intervals
+        that have elapsed.
+
+        This is a regression test for a particularly tricky case to implement.
+        """
+        clock = task.Clock()
+        accumulator = []
+        call = task.LoopingCall.withCount(accumulator.append)
+        call.clock = clock
+
+        # 'count': the number of ticks within the time span, the number of
+        # calls that should be made.  this should be a value which causes
+        # floating-point inaccuracy as the denominator for the timespan.
+        count = 10
+        # 'timespan': the amount of virtual time that the test will take, in
+        # seconds, as a floating point number
+        timespan = 1.0
+        # 'interval': the amount of time for one actual call.
+        interval = timespan / count
+
+        call.start(interval, now=False)
+        for x in range(count):
+            clock.advance(interval)
+
+        # There is still an epsilon of inaccuracy here; 0.1 is not quite
+        # exactly 1/10 in binary, so we need to push our clock over the
+        # threshold.
+        epsilon = timespan - sum([interval] * count)
+        clock.advance(epsilon)
+        secondsValue = clock.seconds()
+        # The following two assertions are here to ensure that if the values of
+        # count, timespan, and interval are changed, that the test remains
+        # valid.  First, the "epsilon" value here measures the floating-point
+        # inaccuracy in question, and so if it doesn't exist then we are not
+        # triggering an interesting condition.
+        self.assertTrue(abs(epsilon) > 0.0,
+                        "{0} should be greater than zero"
+                        .format(epsilon))
+        # Secondly, task.Clock should behave in such a way that once we have
+        # advanced to this point, it has reached or exceeded the timespan.
+        self.assertTrue(secondsValue >= timespan,
+                        "{0} should be greater than or equal to {1}"
+                        .format(secondsValue, timespan))
+
+        self.assertEqual(sum(accumulator), count)
+        self.assertNotIn(0, accumulator)
+
+
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
         # called a few times.

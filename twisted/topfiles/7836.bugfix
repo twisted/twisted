@@ -1,0 +1,1 @@
+Fixed an issue with twisted.internet.task.LoopingCall.withCount where sometimes the passed callable would be invoked with "0" when we got close to tricky floating point boundary conditions.
