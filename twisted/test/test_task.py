@@ -456,14 +456,14 @@ class LoopTestCase(unittest.TestCase):
         call = task.LoopingCall.withCount(accumulator.append)
         call.clock = clock
 
-        # count: the number of ticks within the time span, the number of calls
-        # that should be made.  this should be a value which causes
+        # 'count': the number of ticks within the time span, the number of
+        # calls that should be made.  this should be a value which causes
         # floating-point inaccuracy as the denominator for the timespan.
         count = 10
-        # timespan: the amount of virtual time that the test will take, in
+        # 'timespan': the amount of virtual time that the test will take, in
         # seconds, as a floating point number
         timespan = 1.0
-        # interval: the amount of time for one actual call.
+        # 'interval': the amount of time for one actual call.
         interval = timespan / count
 
         call.start(interval, now=False)
