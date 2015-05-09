@@ -437,8 +437,23 @@ class _BaseProcess(BaseProcess, object):
                                              id(environment))
 
                         if _PY3:
+
                             # On Python 3, print_exc takes a text stream, but
-                            # on Python 2 it still takes a byte stream.
+                            # on Python 2 it still takes a byte stream.  So on
+                            # Python 3 we will wrap up the byte stream returned
+                            # by os.fdopen using TextIOWrapper.
+
+                            # We hard-code UTF-8 as the encoding here, rather
+                            # than looking at something like
+                            # getfilesystemencoding() or sys.stderr.encoding,
+                            # because we want an encoding that will be able to
+                            # encode the full range of code points.  We are
+                            # (most likely) talking to the parent process on
+                            # the other end of this pipe and not the filesystem
+                            # or the original sys.stderr, so there's no point
+                            # in trying to match the encoding of one of those
+                            # objects.
+
                             stderr = io.TextIOWrapper(stderr, encoding="utf-8")
 
                         stderr.write(msg)
