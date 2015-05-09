@@ -222,12 +222,31 @@ class LoopingCall:
         @param when: The present time from whence the call is scheduled.
         """
         def howLong():
+            # How long should it take until the next invocation of our
+            # callable?  Split out into a function because there are multiple
+            # places we want to 'return' out of this.
             if self.interval == 0:
+                # If the interval is 0, just go as fast as possible, always
+                # return zero, call ourselves ASAP.
                 return 0
-            untilNextInterval = self.interval - ((when - self.starttime)
-                                                 % self.interval)
-            return (untilNextInterval if when != when + untilNextInterval
-                    else self.interval)
+            # Compute the time until the next interval; how long has this call
+            # been running for?
+            runningFor = when - self.starttime
+            # And based on that start time, when does the current interval end?
+            untilNextInterval = self.interval - (runningFor % self.interval)
+            # Now that we know how long it would be, we have to tell if the
+            # number is effectively zero.  However, we can't just test against
+            # zero.  If a number with a small exponent is added to a number
+            # with a large exponent, it may be so small that the digits just
+            # fall off the end, which means that adding the increment makes no
+            # difference; it's time to tick over into the next interval.
+            if when == when + untilNextInterval:
+                # If it's effectively zero, then we need to add another
+                # interval.
+                return self.interval
+            # Finally, if everything else is normal, we just return the
+            # computed delay.
+            return untilNextInterval
         self.call = self.clock.callLater(howLong(), self)
 
 
