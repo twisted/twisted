@@ -34,10 +34,10 @@ class UsernamePasswordTests(TestCase):
         self.assertTrue(creds.checkPassword(b"pass"))
 
 
-    def test_correctPassword(self):
+    def test_wrongPassword(self):
         """
         Calling C{checkPassword} on a L{UsernamePassword} will return L{False}
         when the password given is NOT the password on the object.
         """
         creds = UsernamePassword(b"user", b"pass")
-        self.assertTrue(creds.checkPassword(b"someotherpass"))
+        self.assertFalse(creds.checkPassword(b"someotherpass"))
