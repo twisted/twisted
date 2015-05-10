@@ -25,6 +25,7 @@ def b64encode(s):
     return base64.b64encode(s).strip()
 
 
+
 class FakeDigestCredentialFactory(DigestCredentialFactory):
     """
     A Fake Digest Credential Factory that generates a predictable
@@ -294,7 +295,8 @@ class DigestAuthTests(TestCase):
         ha1 = calcHA1(
             algo, self.username, self.realm, self.password, nonce, self.cnonce)
         ha2 = calcHA2(algo, b"GET", self.uri, qop, None)
-        expected = calcResponse(ha1, ha2, algo, nonce, ncount, self.cnonce, qop)
+        expected = calcResponse(
+            ha1, ha2, algo, nonce, ncount, self.cnonce, qop)
         return expected
 
 
@@ -553,7 +555,8 @@ class DigestAuthTests(TestCase):
         L{DigestCredentialFactory.decode} raises L{LoginFailed} when the given
         nonce from the response does not match the nonce encoded in the opaque.
         """
-        credentialFactory = FakeDigestCredentialFactory(self.algorithm, self.realm)
+        credentialFactory = FakeDigestCredentialFactory(self.algorithm,
+                                                        self.realm)
         challenge = credentialFactory.getChallenge(self.clientAddress.host)
 
         badNonceOpaque = credentialFactory._generateOpaque(
@@ -587,7 +590,8 @@ class DigestAuthTests(TestCase):
         request comes from a client IP other than what is encoded in the
         opaque.
         """
-        credentialFactory = FakeDigestCredentialFactory(self.algorithm, self.realm)
+        credentialFactory = FakeDigestCredentialFactory(self.algorithm,
+                                                        self.realm)
         challenge = credentialFactory.getChallenge(self.clientAddress.host)
 
         badAddress = '10.0.0.1'
