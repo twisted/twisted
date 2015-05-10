@@ -231,7 +231,7 @@ class DigestCredentialFactory(object):
         Generate the challenge for use in the WWW-Authenticate header.
 
         @param address: The client address to which this challenge is being
-        sent.
+            sent.
 
         @return: The L{dict} that can be used to generate a WWW-Authenticate
             header.
@@ -356,7 +356,7 @@ class DigestCredentialFactory(object):
 
         @type method: L{bytes}
         @param method: The action requested to which this response is addressed
-        (GET, POST, INVITE, OPTIONS, etc).
+            (GET, POST, INVITE, OPTIONS, etc).
 
         @type host: L{bytes}
         @param host: The address the request was sent from.
