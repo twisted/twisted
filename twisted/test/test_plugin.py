@@ -29,9 +29,6 @@ else:
 
 
 
-
-
-
 class ITestPlugin(Interface):
     """
     A plugin for use by the plugin system's unit tests.
