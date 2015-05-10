@@ -167,6 +167,8 @@ modules = [
 
 
 testModules = [
+    "twisted.cred.test",
+    "twisted.cred.test.test_digestauth",
     "twisted.internet.test.test_abstract",
     "twisted.internet.test.test_address",
     "twisted.internet.test.test_base",
@@ -230,7 +232,6 @@ testModules = [
     "twisted.test.test_compat",
     "twisted.test.test_context",
     "twisted.test.test_cooperator",
-    "twisted.test.test_digestauth",
     "twisted.test.test_defer",
     "twisted.test.test_defgen",
     "twisted.test.test_error",
@@ -245,7 +246,6 @@ testModules = [
     "twisted.test.test_loopback",
     "twisted.test.test_modules",
     "twisted.test.test_monkey",
-    "twisted.test.test_newcred",
     "twisted.test.test_paths",
     "twisted.test.test_policies",
     "twisted.test.test_process",
