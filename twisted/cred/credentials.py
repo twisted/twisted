@@ -404,7 +404,7 @@ class CramMD5Credentials(object):
     @type response: L{bytes}
 
     @ivar username: The username from the response from the client.
-    @type username: L{bytes} or L{NoneType} if not yet provided
+    @type username: L{bytes} or C{None} if not yet provided.
     """
     username = None
     challenge = b''
