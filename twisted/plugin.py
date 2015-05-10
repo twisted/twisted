@@ -150,7 +150,8 @@ def getCache(module):
         dropinPath = pseudoPackagePath.child('dropin.cache')
         try:
             lastCached = dropinPath.getModificationTime()
-            dropinDotCache = pickle.load(dropinPath.open('r'))
+            with dropinPath.open('r') as f:
+                dropinDotCache = pickle.load(f)
         except:
             dropinDotCache = {}
             lastCached = 0
