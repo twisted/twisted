@@ -402,12 +402,17 @@ class CramMD5Credentials(object):
 
     @ivar response: The hashed response from the client.
     @type response: L{bytes}
+
+    @ivar username: The username from the response from the client.
+    @type username: L{bytes} or L{NoneType} if not yet provided
     """
+    username = None
     challenge = b''
     response = b''
 
     def __init__(self, host=None):
         self.host = host
+
 
     def getChallenge(self):
         if self.challenge:
@@ -424,11 +429,14 @@ class CramMD5Credentials(object):
             r, t, nativeString(self.host) if self.host else None))
         return self.challenge
 
+
     def setResponse(self, response):
         self.username, self.response = response.split(None, 1)
 
+
     def moreChallenges(self):
         return False
+
 
     def checkPassword(self, password):
         verify = hexlify(hmac.HMAC(password, self.challenge).digest())

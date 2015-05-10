@@ -19,7 +19,7 @@ class CramMD5CredentialsTests(TestCase):
     """
     Tests for L{CramMD5Credentials}.
     """
-    def testIdempotentChallenge(self):
+    def test_idempotentChallenge(self):
         """
         The same L{CramMD5Credentials} will always provide the same challenge,
         no matter how many times it is called.
@@ -29,7 +29,7 @@ class CramMD5CredentialsTests(TestCase):
         self.assertEqual(chal, c.getChallenge())
 
 
-    def testCheckPassword(self):
+    def test_checkPassword(self):
         """
         When a valid response (which is a hex digest of the challenge that has
         been encrypted by the user's shared secret) is set on the
@@ -42,7 +42,7 @@ class CramMD5CredentialsTests(TestCase):
         self.assertTrue(c.checkPassword(b'secret'))
 
 
-    def testNoResponse(self):
+    def test_noResponse(self):
         """
         When there is no response set, calling C{checkPassword} will return
         L{False}.
@@ -51,7 +51,7 @@ class CramMD5CredentialsTests(TestCase):
         self.assertFalse(c.checkPassword(b'secret'))
 
 
-    def testWrongPassword(self):
+    def test_wrongPassword(self):
         """
         When an invalid response is set on the L{CramMD5Credentials} (one that
         is not the hex digest of the challenge, encrypted with the user's shared
@@ -62,3 +62,18 @@ class CramMD5CredentialsTests(TestCase):
         chal = c.getChallenge()
         c.response = hexlify(HMAC(b'thewrongsecret', chal).digest())
         self.assertFalse(c.checkPassword(b'secret'))
+
+
+    def test_setResponse(self):
+        """
+        When C{setResponse} is called with a string that is the username and
+        the hashed challenge separated with a space, they will be set on the
+        L{CramMD5Credentials}.
+        """
+        c = CramMD5Credentials()
+        chal = c.getChallenge()
+        c.setResponse(b" ".join(
+            (b"squirrel",
+             hexlify(HMAC(b'supersecret', chal).digest()))))
+        self.assertTrue(c.checkPassword(b'supersecret'))
+        self.assertEqual(c.username, b"squirrel")
