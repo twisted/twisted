@@ -5,8 +5,6 @@
 Tests for L{twisted.cred}, now with 30% more starch.
 """
 
-
-import hmac
 from zope.interface import implements, Interface
 
 from twisted.trial import unittest
@@ -151,21 +149,6 @@ class NewCredTests(unittest.TestCase):
         self.assertEqual(error.UnauthorizedLogin, l[0])
 
 
-class CramMD5CredentialsTests(unittest.TestCase):
-    def testIdempotentChallenge(self):
-        c = credentials.CramMD5Credentials()
-        chal = c.getChallenge()
-        self.assertEqual(chal, c.getChallenge())
-
-    def testCheckPassword(self):
-        c = credentials.CramMD5Credentials()
-        chal = c.getChallenge()
-        c.response = hmac.HMAC('secret', chal).hexdigest()
-        self.failUnless(c.checkPassword('secret'))
-
-    def testWrongPassword(self):
-        c = credentials.CramMD5Credentials()
-        self.failIf(c.checkPassword('secret'))
 
 class OnDiskDatabaseTests(unittest.TestCase):
     users = [
@@ -454,4 +437,3 @@ class LocallyHashedFilePasswordDBCheckerTests(LocallyHashedFilePasswordDBMixin, 
 
 class NetworkHashedFilePasswordDBCheckerTests(NetworkHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
-
