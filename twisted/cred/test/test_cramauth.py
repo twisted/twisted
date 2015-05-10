@@ -7,6 +7,7 @@ Tests for L{twisted.cred}'s implementation of CRAM-MD5.
 
 from __future__ import division, absolute_import
 
+from hmac import HMAC
 from binascii import hexlify
 
 from twisted.trial.unittest import TestCase
@@ -14,7 +15,7 @@ from twisted.cred.credentials import CramMD5Credentials
 
 
 
-class CramMD5CredentialsTests(unittest.TestCase):
+class CramMD5CredentialsTests(TestCase):
     """
     Tests for L{CramMD5Credentials}.
     """
@@ -37,7 +38,7 @@ class CramMD5CredentialsTests(unittest.TestCase):
         """
         c = CramMD5Credentials()
         chal = c.getChallenge()
-        c.response = hexlify(hmac.HMAC(b'secret', chal).digest())
+        c.response = hexlify(HMAC(b'secret', chal).digest())
         self.assertTrue(c.checkPassword(b'secret'))
 
 
@@ -59,5 +60,5 @@ class CramMD5CredentialsTests(unittest.TestCase):
         """
         c = CramMD5Credentials()
         chal = c.getChallenge()
-        c.response = hexlify(hmac.HMAC(b'thewrongsecret', chal).digest())
+        c.response = hexlify(HMAC(b'thewrongsecret', chal).digest())
         self.assertFalse(c.checkPassword(b'secret'))

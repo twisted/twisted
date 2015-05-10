@@ -7,8 +7,6 @@ Tests for L{twisted.cred}, now with 30% more starch.
 
 from __future__ import division, absolute_import
 
-import hmac
-
 from binascii import hexlify
 
 from zope.interface import implementer, Interface
