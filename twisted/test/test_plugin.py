@@ -19,14 +19,19 @@ from twisted.python.filepath import FilePath
 
 from twisted import plugin
 
+if _PY3:
+    from importlib import invalidate_caches as invalidateImportCaches
+else:
+    def invalidateImportCaches():
+        """
+        On python 2, import caches don't need to be invalidated.
+        """
+
+
 
 
 def cacheFromSource(filename):
-    if _PY3:
-        import importlib.util
-        return importlib.util.cache_from_source(filename)
-    else:
-        return filename + 'c'
+    return filename + 'c'
 
 
 
@@ -482,6 +487,7 @@ class DeveloperSetupTests(unittest.TestCase):
         Change the Python environment back to what it was before the test was
         started.
         """
+        invalidateImportCaches()
         sys.modules.clear()
         sys.modules.update(self.savedModules)
         sys.path[:] = self.savedPath
@@ -529,7 +535,16 @@ class DeveloperSetupTests(unittest.TestCase):
         os.utime(mypath.path, (x, x))
         pyc = FilePath(cacheFromSource(mypath.path))
         # compile it
-        compileall.compile_dir(self.appPackage.path, quiet=1)
+        if _PY3:
+            # On python 3, don't use the __pycache__ directory; the intention
+            # of scanning for .pyc files is for configurations where you want
+            # to intentionally include them, which means we _don't_ scan for
+            # them inside cache directories.
+            extra = dict(legacy=True)
+        else:
+            # On python 2 this option doesn't exist.
+            extra = dict()
+        compileall.compile_dir(self.appPackage.path, quiet=1, **extra)
         os.utime(pyc.path, (x, x))
         # Eliminate the other option.
         mypath.remove()
