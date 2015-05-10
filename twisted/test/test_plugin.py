@@ -318,6 +318,7 @@ class PluginTests(unittest.TestCase):
         # Add a new plugin
         FilePath(__file__).sibling('plugin_extra1.py'
             ).copyTo(self.package.child('pluginextra.py'))
+        invalidateImportCaches()
 
         os.chmod(self.package.path, 0o500)
         # Change the right of dropin.cache too for windows
