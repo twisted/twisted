@@ -10,8 +10,7 @@ Calculations for HTTP Digest authentication.
 
 from __future__ import division, absolute_import
 
-import binascii
-
+from binascii import hexlify
 from hashlib import md5, sha1
 
 
@@ -64,7 +63,7 @@ def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
         m.update(pszRealm)
         m.update(b":")
         m.update(pszPassword)
-        HA1 = binascii.hexlify(m.digest())
+        HA1 = hexlify(m.digest())
     else:
         # We were given a username:realm:password
         HA1 = preHA1
@@ -76,7 +75,7 @@ def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
         m.update(pszNonce)
         m.update(b":")
         m.update(pszCNonce)
-        HA1 = binascii.hexlify(m.digest())
+        HA1 = hexlify(m.digest())
 
     return HA1
 
@@ -102,7 +101,7 @@ def calcHA2(algo, pszMethod, pszDigestUri, pszQop, pszHEntity):
     if pszQop == b"auth-int":
         m.update(b":")
         m.update(pszHEntity)
-    return binascii.hexlify(m.digest())
+    return hexlify(m.digest())
 
 
 def calcResponse(HA1, HA2, algo, pszNonce, pszNonceCount, pszCNonce, pszQop):
@@ -129,5 +128,5 @@ def calcResponse(HA1, HA2, algo, pszNonce, pszNonceCount, pszCNonce, pszQop):
         m.update(pszQop)
         m.update(b":")
     m.update(HA2)
-    respHash = binascii.hexlify(m.digest())
+    respHash = hexlify(m.digest())
     return respHash
