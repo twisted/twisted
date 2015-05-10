@@ -305,7 +305,8 @@ class DigestAuthTests(TestCase):
         L{DigestCredentialFactory.decode} accepts a digest challenge response
         and parses it into an L{IUsernameHashedPassword} provider.
         """
-        challenge = self.credentialFactory.getChallenge(self.clientAddress.host)
+        challenge = self.credentialFactory.getChallenge(
+            self.clientAddress.host)
 
         nc = b"00000001"
         clientResponse = self.formatResponse(
@@ -370,7 +371,8 @@ class DigestAuthTests(TestCase):
             response=self.getDigestResponse(challenge, nc),
             nc=nc,
             opaque=challenge['opaque'])
-        creds = self.credentialFactory.decode(clientResponse, self.method, None)
+        creds = self.credentialFactory.decode(clientResponse, self.method,
+                                              None)
         self.assertTrue(creds.checkPassword(self.password))
         self.assertFalse(creds.checkPassword(self.password + b'wrong'))
 
@@ -380,7 +382,8 @@ class DigestAuthTests(TestCase):
         L{DigestCredentialFactory.decode} handles multiple responses to a
         single challenge.
         """
-        challenge = self.credentialFactory.getChallenge(self.clientAddress.host)
+        challenge = self.credentialFactory.getChallenge(
+            self.clientAddress.host)
 
         nc = b"00000001"
         clientResponse = self.formatResponse(
@@ -414,7 +417,8 @@ class DigestAuthTests(TestCase):
         challenge response request is made using a different HTTP method than
         was used to request the initial challenge.
         """
-        challenge = self.credentialFactory.getChallenge(self.clientAddress.host)
+        challenge = self.credentialFactory.getChallenge(
+            self.clientAddress.host)
 
         nc = b"00000001"
         clientResponse = self.formatResponse(
@@ -481,7 +485,8 @@ class DigestAuthTests(TestCase):
         L{DigestCredentialFactory.decode} returns an L{IUsernameDigestHash}
         provider which can verify a hash of the form 'username:realm:password'.
         """
-        challenge = self.credentialFactory.getChallenge(self.clientAddress.host)
+        challenge = self.credentialFactory.getChallenge(
+            self.clientAddress.host)
 
         nc = b"00000001"
         clientResponse = self.formatResponse(
