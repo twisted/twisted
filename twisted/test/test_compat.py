@@ -12,11 +12,11 @@ import socket, sys, traceback, io, codecs
 
 from twisted.trial import unittest
 
-from twisted.python.compat import reduce, execfile, _PY3
-from twisted.python.compat import comparable, cmp, nativeString, networkString
-from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
-from twisted.python.compat import NativeStringIO, iterbytes, intToBytes
-from twisted.python.compat import ioType, reraise
+from twisted.python.compat import (
+    reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
+    unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
+    iterbytes, intToBytes, ioType
+)
 from twisted.python.filepath import FilePath
 
 
