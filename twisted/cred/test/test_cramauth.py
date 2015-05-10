@@ -12,6 +12,7 @@ from binascii import hexlify
 
 from twisted.trial.unittest import TestCase
 from twisted.cred.credentials import CramMD5Credentials
+from twisted.cred.credentials import IUsernameHashedPassword
 
 
 
@@ -77,3 +78,12 @@ class CramMD5CredentialsTests(TestCase):
              hexlify(HMAC(b'supersecret', chal).digest()))))
         self.assertTrue(c.checkPassword(b'supersecret'))
         self.assertEqual(c.username, b"squirrel")
+
+
+    def test_interface(self):
+        """
+        L{CramMD5Credentials} implements the L{IUsernameHashedPassword}
+        interface.
+        """
+        self.assertTrue(
+            IUsernameHashedPassword.implementedBy(CramMD5Credentials))
