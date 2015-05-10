@@ -1,1 +1,1 @@
-Ported twisted.plugin to support Python3.
+twisted.plugin now supports Python 3
