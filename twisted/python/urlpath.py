@@ -5,13 +5,12 @@
 #
 
 from __future__ import division, absolute_import
-
+from twisted.python.compat import urlparse
 from twisted.python.compat import _PY3
+
 if not _PY3:
-    import urlparse
     from urllib import unquote as unquoteFunc
 else:
-    import urllib.parse as urlparse
     from urllib.parse import unquote as unquoteFunc
 
 

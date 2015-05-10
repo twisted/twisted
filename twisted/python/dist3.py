@@ -268,6 +268,7 @@ testModules = [
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
     "twisted.web.test._util",
+    "twisted.web.error",
     # The downloadPage tests weren't ported:
     "twisted.web.test.test_http",
     "twisted.web.test.test_http_headers",
@@ -275,6 +276,7 @@ testModules = [
     "twisted.web.test.test_resource",
     "twisted.web.test.test_script",
     "twisted.web.test.test_static",
+    "twisted.web.test.test_web__responses",
     "twisted.web.test.test_web",
     "twisted.web.test.test_webclient",
 ]
@@ -299,12 +301,12 @@ almostModules = [
     "twisted.test.reflect_helper_ZDE",
     # Required by some of the ported trial tests:
     "twisted.trial.reporter",
+    # Required by twisted.web.template
+    "twisted.web._element",
+    "twisted.web._flatten",
+    "twisted.web.util",
     # Agent code and downloadPage aren't ported, test coverage isn't complete:
     "twisted.web.client",
-    # twisted.web.resource depends on twisted.web.error, so it is sorta
-    # ported, but its tests are not yet ported, so it probably doesn't
-    # completely work.
-    "twisted.web.error",
     # Required by twisted.web.server, no actual code here:
     "twisted.web.iweb",
     # Required by twisted.web.server for an error handling case:
@@ -318,6 +320,8 @@ almostModules = [
     "twisted.web.server",
     # Parts are ported for twisted.web.static
     "twisted.web.util",
+    # Required by twisted.web.error when formatting flattener roots
+    "twisted.web.template",
 ]
 
 
