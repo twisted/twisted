@@ -393,7 +393,7 @@ class DigestCredentialFactory(object):
 
 
 @implementer(IUsernameHashedPassword)
-class CramMD5Credentials:
+class CramMD5Credentials(object):
     """
     An encapsulation of some CramMD5 hashed credentials.
 
