@@ -169,6 +169,7 @@ modules = [
 testModules = [
     "twisted.cred.test",
     "twisted.cred.test.test_digestauth",
+    "twisted.cred.test.test_cramauth",
     "twisted.internet.test.test_abstract",
     "twisted.internet.test.test_address",
     "twisted.internet.test.test_base",

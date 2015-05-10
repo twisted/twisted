@@ -15,7 +15,7 @@ from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
 from twisted.python.compat import _PY3
-from twisted.cred import portal, credentials, error
+from twisted.cred import portal, credentials, error, checkers
 from twisted.python import components
 from twisted.internet import defer
 
@@ -26,16 +26,9 @@ except ImportError:
 
 try:
     from twisted.cred import pamauth
-except (ImportError, SyntaxError):
-    # twisted.cred.pamauth is not ported to Python 3
+except ImportError:
     pamauth = None
 
-try:
-    from twisted.cred import checkers
-except (ImportError, TypeError):
-    # twisted.cred.checkers isn't ported to Python 3 (see #7834)
-    # We catch a TypeError on import because z.i implements() is still in use
-    checkers = False
 
 
 class ITestable(Interface):
@@ -163,24 +156,6 @@ class NewCredTests(unittest.TestCase):
             lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
         self.failUnless(l)
         self.assertEqual(error.UnauthorizedLogin, l[0])
-
-
-
-class CramMD5CredentialsTests(unittest.TestCase):
-    def testIdempotentChallenge(self):
-        c = credentials.CramMD5Credentials()
-        chal = c.getChallenge()
-        self.assertEqual(chal, c.getChallenge())
-
-    def testCheckPassword(self):
-        c = credentials.CramMD5Credentials()
-        chal = c.getChallenge()
-        c.response = hexlify(hmac.HMAC(b'secret', chal).digest())
-        self.assertTrue(c.checkPassword(b'secret'))
-
-    def testWrongPassword(self):
-        c = credentials.CramMD5Credentials()
-        self.assertFalse(c.checkPassword(b'secret'))
 
 
 
@@ -479,11 +454,3 @@ __all__ = ["NewCredTests", "CramMD5CredentialsTests",
            "HashlessFilePasswordDBCheckerTests",
            "LocallyHashedFilePasswordDBCheckerTests",
            "NetworkHashedFilePasswordDBCheckerTests"]
-
-if _PY3:
-    __all3__ = ["CramMD5CredentialsTests"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__
