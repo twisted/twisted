@@ -163,6 +163,21 @@ class PluginTests(unittest.TestCase):
     test_cache = _withCacheness(test_cache)
 
 
+    def test_cacheRepr(self):
+        """
+        L{CachedPlugin} has a helpful C{repr} which contains relevant
+        information about it.
+        """
+        cachedDropin = plugin.getCache(self.module)[self.originalPlugin]
+        cachedPlugin = list(p for p in cachedDropin.plugins
+                            if p.name == 'TestPlugin')[0]
+        self.assertEqual(
+            repr(cachedPlugin),
+            "<CachedPlugin 'TestPlugin'/'mypackage.testplugin' "
+            "(provides 'ITestPlugin, IPlugin')>"
+        )
+
+
     def test_plugins(self):
         """
         L{plugin.getPlugins} should return the list of plugins matching the
