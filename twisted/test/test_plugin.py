@@ -30,9 +30,6 @@ else:
 
 
 
-def cacheFromSource(filename):
-    return filename + 'c'
-
 
 
 class ITestPlugin(Interface):
@@ -533,7 +530,7 @@ class DeveloperSetupTests(unittest.TestCase):
         # Make it super stale
         x = time.time() - 1000
         os.utime(mypath.path, (x, x))
-        pyc = FilePath(cacheFromSource(mypath.path))
+        pyc = mypath.sibling('stale.pyc')
         # compile it
         if _PY3:
             # On python 3, don't use the __pycache__ directory; the intention
