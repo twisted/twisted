@@ -13,10 +13,20 @@ import functools
 from zope.interface import Interface
 
 from twisted.trial import unittest
+from twisted.python.compat import _PY3
 from twisted.python.log import textFromEventDict, addObserver, removeObserver
 from twisted.python.filepath import FilePath
 
 from twisted import plugin
+
+
+
+def cacheFromSource(filename):
+    if _PY3:
+        import importlib.util
+        return importlib.util.cache_from_source(filename)
+    else:
+        return filename + 'c'
 
 
 
@@ -517,7 +527,7 @@ class DeveloperSetupTests(unittest.TestCase):
         # Make it super stale
         x = time.time() - 1000
         os.utime(mypath.path, (x, x))
-        pyc = mypath.sibling('stale.pyc')
+        pyc = FilePath(cacheFromSource(mypath.path))
         # compile it
         compileall.compile_dir(self.appPackage.path, quiet=1)
         os.utime(pyc.path, (x, x))
