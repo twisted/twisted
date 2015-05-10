@@ -502,7 +502,8 @@ class SSHPrivateKey:
 
 
 class IPluggableAuthenticationModules(ICredentials):
-    """I encapsulate the authentication of a user via PAM (Pluggable
+    """
+    I encapsulate the authentication of a user via PAM (Pluggable
     Authentication Modules.  I use PyPAM (available from
     http://www.tummy.com/Software/PyPam/index.html).
 
