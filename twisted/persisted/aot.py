@@ -498,6 +498,9 @@ class AOTJellier:
         elif objType is types.ModuleType:
             retval = Module(obj.__name__)
 
+        elif objType in classTypes:
+            retval = Class(reflect.qual(obj))
+
         elif issubclass(objType, classTypes):
             retval = Class(reflect.qual(obj))
 
