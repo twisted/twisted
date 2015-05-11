@@ -11,6 +11,12 @@ features.
 This is mainly for use of internal Twisted code. We encourage you to use
 the latest version of Python directly from your code, if possible.
 
+@var classTypes: A tuple of all types used to represent classes; will be
+    C{type} and C{types.ClassType} on Python 2 and only C{type} on Python 3.
+
+@var instanceTypes: A tuple of all types used to represent instances; will
+    contain C{object} on both platforms and C{types.InstanceType} on Python 2.
+
 @var unicode: The type of Unicode strings, C{unicode} on Python 2 and C{str}
     on Python 3.
 
@@ -541,6 +547,19 @@ Return a list of the items of C{d}.
 """
 
 
+if _PY3:
+    classTypes = (type,)
+else:
+    classTypes = (type, types.ClassType)
+
+
+
+if _PY3:
+    instanceTypes = (object,)
+else:
+    instanceTypes = (object, types.InstanceType)
+
+
 
 def new_class(name, bases=(), class_dict=None):
     """
@@ -584,4 +603,6 @@ __all__ = [
     "iteritems",
     "xrange",
     "new_class",
+    "classTypes",
+    "instanceTypes",
 ]
