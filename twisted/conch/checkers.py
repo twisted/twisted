@@ -26,11 +26,6 @@ except ImportError:
 else:
     shadow = None
 
-try:
-    from twisted.cred import pamauth
-except ImportError:
-    pamauth = None
-
 from zope.interface import providedBy, implementer, Interface
 
 

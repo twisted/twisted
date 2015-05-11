@@ -9,14 +9,9 @@ Support module for making SSH servers with twistd.
 from twisted.conch import unix
 from twisted.conch import checkers as conch_checkers
 from twisted.conch.openssh_compat import factory
-from twisted.cred import portal, checkers, strcred
+from twisted.cred import portal, strcred
 from twisted.python import usage
 from twisted.application import strports
-try:
-    from twisted.cred import pamauth
-except ImportError:
-    pamauth = None
-
 
 
 class Options(usage.Options, strcred.AuthOptionMixin):
@@ -49,9 +44,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         super(Options, self).addChecker(conch_checkers.UNIXPasswordDatabase())
         super(Options, self).addChecker(conch_checkers.SSHPublicKeyChecker(
             conch_checkers.UNIXAuthorizedKeysFiles()))
-        if pamauth is not None:
-            super(Options, self).addChecker(
-                checkers.PluggableAuthenticationModulesChecker())
         self._usingDefaultAuth = True
 
 
