@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_newcred-*-
+# -*- test-case-name: twisted.cred.test.test_cred-*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

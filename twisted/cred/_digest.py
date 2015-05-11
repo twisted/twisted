@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_digestauth -*-
+# -*- test-case-name: twisted.cred.test.test_digestauth -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
