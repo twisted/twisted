@@ -6,6 +6,8 @@ Tests for L{twisted.application} and its interaction with
 L{twisted.persisted.sob}.
 """
 
+from __future__ import absolute_import, division, unicode_literals
+
 import copy, os, pickle
 
 from twisted.trial import unittest
@@ -290,7 +292,7 @@ class AppSupportTests(unittest.TestCase):
 
 class Foo(basic.LineReceiver):
     def connectionMade(self):
-        self.transport.write('lalala\r\n')
+        self.transport.write(b'lalala\r\n')
     def lineReceived(self, line):
         self.factory.line = line
         self.transport.loseConnection()
@@ -332,7 +334,7 @@ class InternetTests(unittest.TestCase):
         factory.protocol = Foo
         factory.line = None
         internet.TCPClient('127.0.0.1', num, factory).setServiceParent(s)
-        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(self.assertEqual, b'lalala')
         factory.d.addCallback(lambda x : s.stopService())
         factory.d.addCallback(lambda x : TestEcho.d)
         return factory.d
@@ -372,7 +374,7 @@ class InternetTests(unittest.TestCase):
         factory.line = None
         c = internet.TCPClient('127.0.0.1', num, factory)
         c.startService()
-        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(self.assertEqual, b'lalala')
         factory.d.addCallback(lambda x : c.stopService())
         factory.d.addCallback(lambda x : t.stopService())
         factory.d.addCallback(lambda x : TestEcho.d)
@@ -409,7 +411,7 @@ class InternetTests(unittest.TestCase):
         factory.d = defer.Deferred()
         factory.line = None
         internet.UNIXClient('echo.skt', factory).setServiceParent(s)
-        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(self.assertEqual, b'lalala')
         factory.d.addCallback(lambda x : s.stopService())
         factory.d.addCallback(lambda x : TestEcho.d)
         factory.d.addCallback(self._cbTestUnix, factory, s)
@@ -420,7 +422,7 @@ class InternetTests(unittest.TestCase):
         factory.line = None
         factory.d = defer.Deferred()
         s.startService()
-        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(self.assertEqual, b'lalala')
         factory.d.addCallback(lambda x : s.stopService())
         factory.d.addCallback(lambda x : TestEcho.d)
         return factory.d
