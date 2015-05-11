@@ -69,7 +69,7 @@ class Portal:
         """
         Return list of credentials interfaces that can be used to login.
         """
-        return self.checkers.keys()
+        return list(self.checkers.keys())
 
 
     def registerChecker(self, checker, *credentialInterfaces):
