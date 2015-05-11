@@ -13,7 +13,6 @@ import sys
 from types import ModuleType, FunctionType
 
 from twisted import _checkRequirements
-from twisted.python import reflect
 from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 
