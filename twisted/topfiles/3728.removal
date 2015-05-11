@@ -1,0 +1,1 @@
+twisted.cred.pamauth (providing PAM support) has been removed due to it being unusable in current supported Python versions.
