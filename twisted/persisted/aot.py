@@ -11,10 +11,17 @@ The source-code-marshallin'est abstract-object-serializin'est persister
 this side of Marmalade!
 """
 
-import types, copy_reg, tokenize, re
+import types, tokenize, re
 
 from twisted.python import reflect, log
+from twisted.python.compat import _PY3, classTypes, instanceTypes
 from twisted.persisted import crefutil
+
+if _PY3:
+    import copyreg as copy_reg
+else:
+    import copy_reg
+
 
 ###########################
 # Abstract Object Classes #
@@ -56,15 +63,22 @@ class _NoStateObj:
     pass
 NoStateObj = _NoStateObj()
 
-_SIMPLE_BUILTINS = [
-    types.StringType, types.UnicodeType, types.IntType, types.FloatType,
-    types.ComplexType, types.LongType, types.NoneType, types.SliceType,
-    types.EllipsisType]
 
-try:
-    _SIMPLE_BUILTINS.append(types.BooleanType)
-except AttributeError:
-    pass
+_SIMPLE_BUILTINS = [
+    bool,
+    complex,
+    type(Ellipsis),
+    float,
+    int,
+    type(None),
+    slice,
+]
+
+if _PY3:
+    _SIMPLE_BUILTINS.extend([str, bytes])
+else:
+    _SIMPLE_BUILTINS.extend([unicode, str, long])
+
 
 class Instance:
     def __init__(self, className, __stateObj__=NoStateObj, **state):
@@ -82,7 +96,7 @@ class Instance:
         #XXX make state be foo=bar instead of a dict.
         if self.stateIsDict:
             stateDict = self.state
-        elif isinstance(self.state, Ref) and isinstance(self.state.obj, types.DictType):
+        elif isinstance(self.state, Ref) and isinstance(self.state.obj, dict):
             stateDict = self.state.obj
         else:
             stateDict = None
@@ -183,21 +197,21 @@ def prettify(obj):
         if t in _SIMPLE_BUILTINS:
             return repr(obj)
 
-        elif t is types.DictType:
+        elif t is dict:
             out = ['{']
             for k,v in obj.items():
                 out.append('\n\0%s: %s,' % (prettify(k), prettify(v)))
             out.append(len(obj) and '\n\0}' or '}')
             return ''.join(out)
 
-        elif t is types.ListType:
+        elif t is list:
             out = ["["]
             for x in obj:
                 out.append('\n\0%s,' % prettify(x))
             out.append(len(obj) and '\n\0]' or ']')
             return ''.join(out)
 
-        elif t is types.TupleType:
+        elif t is tuple:
             out = ["("]
             for x in obj:
                 out.append('\n\0%s,' % prettify(x))
@@ -256,9 +270,9 @@ def unjellyFromSource(stringOrFile):
           }
 
     if hasattr(stringOrFile, "read"):
-        exec stringOrFile.read() in ns
+        exec(stringOrFile.read(), ns)
     else:
-        exec stringOrFile in ns
+        exec(stringOrFile, ns)
 
     if 'app' in ns:
         return unjellyFromAOT(ns['app'])
@@ -389,14 +403,14 @@ class AOTUnjellier:
         elif t in _SIMPLE_BUILTINS:
             return ao
 
-        elif t is types.ListType:
+        elif t is list:
             l = []
             for x in ao:
                 l.append(None)
                 self.unjellyInto(l, len(l)-1, x)
             return l
 
-        elif t is types.TupleType:
+        elif t is tuple:
             l = []
             tuple_ = tuple
             for x in ao:
@@ -405,7 +419,7 @@ class AOTUnjellier:
                     tuple_ = crefutil._Tuple
             return tuple_(l)
 
-        elif t is types.DictType:
+        elif t is dict:
             d = {}
             for k,v in ao.items():
                 kvd = crefutil._DictKeyAndValue(d)
@@ -484,10 +498,7 @@ class AOTJellier:
         elif objType is types.ModuleType:
             retval = Module(obj.__name__)
 
-        elif objType is types.ClassType:
-            retval = Class(reflect.qual(obj))
-
-        elif issubclass(objType, type):
+        elif issubclass(objType, classTypes):
             retval = Class(reflect.qual(obj))
 
         elif objType is types.FunctionType:
@@ -519,19 +530,19 @@ class AOTJellier:
             retval = Ref()
             self.prepareForRef(retval, obj)
 
-            if objType is types.ListType:
+            if objType is list:
                 retval.setObj(map(self.jellyToAO, obj)) #hah!
 
-            elif objType is types.TupleType:
+            elif objType is tuple:
                 retval.setObj(tuple(map(self.jellyToAO, obj)))
 
-            elif objType is types.DictionaryType:
+            elif objType is dict:
                 d = {}
                 for k,v in obj.items():
                     d[self.jellyToAO(k)] = self.jellyToAO(v)
                 retval.setObj(d)
 
-            elif objType is types.InstanceType:
+            elif objType in instanceTypes:
                 if hasattr(obj, "__getstate__"):
                     state = self.jellyToAO(obj.__getstate__())
                 else:
