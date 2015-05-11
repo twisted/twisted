@@ -17,11 +17,6 @@ try:
 except ImportError:
     crypt = None
 
-try:
-    from twisted.cred import pamauth
-except ImportError:
-    pamauth = None
-
 
 class ITestable(Interface):
     pass
@@ -269,70 +264,6 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     if crypt is None:
         skip = "crypt module not available"
-
-class PluggableAuthenticationModulesTests(unittest.TestCase):
-
-    def setUp(self):
-        """
-        Replace L{pamauth.callIntoPAM} with a dummy implementation with
-        easily-controlled behavior.
-        """
-        self.patch(pamauth, 'callIntoPAM', self.callIntoPAM)
-
-
-    def callIntoPAM(self, service, user, conv):
-        if service != 'Twisted':
-            raise error.UnauthorizedLogin('bad service: %s' % service)
-        if user != 'testuser':
-            raise error.UnauthorizedLogin('bad username: %s' % user)
-        questions = [
-                (1, "Password"),
-                (2, "Message w/ Input"),
-                (3, "Message w/o Input"),
-                ]
-        replies = conv(questions)
-        if replies != [
-            ("password", 0),
-            ("entry", 0),
-            ("", 0)
-            ]:
-                raise error.UnauthorizedLogin('bad conversion: %s' % repr(replies))
-        return 1
-
-    def _makeConv(self, d):
-        def conv(questions):
-            return defer.succeed([(d[t], 0) for t, q in questions])
-        return conv
-
-    def testRequestAvatarId(self):
-        db = checkers.PluggableAuthenticationModulesChecker()
-        conv = self._makeConv({1:'password', 2:'entry', 3:''})
-        creds = credentials.PluggableAuthenticationModules('testuser',
-                conv)
-        d = db.requestAvatarId(creds)
-        d.addCallback(self.assertEqual, 'testuser')
-        return d
-
-    def testBadCredentials(self):
-        db = checkers.PluggableAuthenticationModulesChecker()
-        conv = self._makeConv({1:'', 2:'', 3:''})
-        creds = credentials.PluggableAuthenticationModules('testuser',
-                conv)
-        d = db.requestAvatarId(creds)
-        self.assertFailure(d, error.UnauthorizedLogin)
-        return d
-
-    def testBadUsername(self):
-        db = checkers.PluggableAuthenticationModulesChecker()
-        conv = self._makeConv({1:'password', 2:'entry', 3:''})
-        creds = credentials.PluggableAuthenticationModules('baduser',
-                conv)
-        d = db.requestAvatarId(creds)
-        self.assertFailure(d, error.UnauthorizedLogin)
-        return d
-
-    if not pamauth:
-        skip = "Can't run without PyPAM"
 
 
 
