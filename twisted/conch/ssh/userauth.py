@@ -74,22 +74,20 @@ class SSHUserAuthServer(service.SSHService):
     interfaceToMethod = {
         credentials.ISSHPrivateKey : 'publickey',
         credentials.IUsernamePassword : 'password',
-        credentials.IPluggableAuthenticationModules : 'keyboard-interactive',
     }
 
 
     def serviceStarted(self):
         """
         Called when the userauth service is started.  Set up instance
-        variables, check if we should allow password/keyboard-interactive
-        authentication (only allow if the outgoing connection is encrypted) and
-        set up a login timeout.
+        variables, check if we should allow password authentication (only
+        allow if the outgoing connection is encrypted) and set up a login
+        timeout.
         """
         self.authenticatedWith = []
         self.loginAttempts = 0
         self.user = None
         self.nextService = None
-        self._pamDeferred = None
         self.portal = self.transport.factory.portal
 
         self.supportedAuthentications = []
@@ -101,8 +99,6 @@ class SSHUserAuthServer(service.SSHService):
             # don't let us transport password in plaintext
             if 'password' in self.supportedAuthentications:
                 self.supportedAuthentications.remove('password')
-            if 'keyboard-interactive' in self.supportedAuthentications:
-                self.supportedAuthentications.remove('keyboard-interactive')
         self._cancelLoginTimeout = self.clock.callLater(
             self.loginTimeout,
             self.timeoutAuthentication)
@@ -311,82 +307,6 @@ class SSHUserAuthServer(service.SSHService):
         d = defer.Deferred()
         self.clock.callLater(self.passwordDelay, d.callback, f)
         return d
-
-
-    def auth_keyboard_interactive(self, packet):
-        """
-        Keyboard interactive authentication.  No payload.  We create a
-        PluggableAuthenticationModules credential and authenticate with our
-        portal.
-        """
-        if self._pamDeferred is not None:
-            self.transport.sendDisconnect(
-                    transport.DISCONNECT_PROTOCOL_ERROR,
-                    "only one keyboard interactive attempt at a time")
-            return defer.fail(error.IgnoreAuthentication())
-        c = credentials.PluggableAuthenticationModules(self.user,
-                self._pamConv)
-        return self.portal.login(c, None, interfaces.IConchUser)
-
-
-    def _pamConv(self, items):
-        """
-        Convert a list of PAM authentication questions into a
-        MSG_USERAUTH_INFO_REQUEST.  Returns a Deferred that will be called
-        back when the user has responses to the questions.
-
-        @param items: a list of 2-tuples (message, kind).  We only care about
-            kinds 1 (password) and 2 (text).
-        @type items: C{list}
-        @rtype: L{defer.Deferred}
-        """
-        resp = []
-        for message, kind in items:
-            if kind == 1: # password
-                resp.append((message, 0))
-            elif kind == 2: # text
-                resp.append((message, 1))
-            elif kind in (3, 4):
-                return defer.fail(error.ConchError(
-                    'cannot handle PAM 3 or 4 messages'))
-            else:
-                return defer.fail(error.ConchError(
-                    'bad PAM auth kind %i' % kind))
-        packet = NS('') + NS('') + NS('')
-        packet += struct.pack('>L', len(resp))
-        for prompt, echo in resp:
-            packet += NS(prompt)
-            packet += chr(echo)
-        self.transport.sendPacket(MSG_USERAUTH_INFO_REQUEST, packet)
-        self._pamDeferred = defer.Deferred()
-        return self._pamDeferred
-
-
-    def ssh_USERAUTH_INFO_RESPONSE(self, packet):
-        """
-        The user has responded with answers to PAMs authentication questions.
-        Parse the packet into a PAM response and callback self._pamDeferred.
-        Payload::
-            uint32 numer of responses
-            string response 1
-            ...
-            string response n
-        """
-        d, self._pamDeferred = self._pamDeferred, None
-
-        try:
-            resp = []
-            numResps = struct.unpack('>L', packet[:4])[0]
-            packet = packet[4:]
-            while len(resp) < numResps:
-                response, packet = getNS(packet)
-                resp.append((response, 0))
-            if packet:
-                raise error.ConchError("%i bytes of extra data" % len(packet))
-        except:
-            d.errback(failure.Failure())
-        else:
-            d.callback(resp)
 
 
 

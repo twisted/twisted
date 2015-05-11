@@ -76,8 +76,7 @@ class MakeServiceTests(TestCase):
     def test_defaultAuths(self):
         """
         Make sure that if the C{--auth} command-line option is not passed,
-        the default checkers are (for backwards compatibility): SSH, UNIX, and
-        PAM if available
+        the default checkers are (for backwards compatibility): SSH and UNIX
         """
         numCheckers = 2
 

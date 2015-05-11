@@ -17,8 +17,8 @@ from twisted.application import strports
 class Options(usage.Options, strcred.AuthOptionMixin):
     synopsis = "[-i <interface>] [-p <port>] [-d <dir>] "
     longdesc = ("Makes a Conch SSH server.  If no authentication methods are "
-        "specified, the default authentication methods are UNIX passwords, "
-        "SSH public keys, and PAM if it is available.  If --auth options are "
+        "specified, the default authentication methods are UNIX passwords "
+        "and SSH public keys.  If --auth options are "
         "passed, only the measures specified will be used.")
     optParameters = [
         ["interface", "i", "", "local interface to which we listen"],
