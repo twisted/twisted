@@ -34,6 +34,10 @@ modules = [
     "twisted",
     "twisted._version",
     "twisted.copyright",
+    "twisted.cred",
+    "twisted.cred._digest",
+    "twisted.cred.credentials",
+    "twisted.cred.error",
     "twisted.internet",
     "twisted.internet._baseprocess",
     "twisted.internet._glibbase",
@@ -163,6 +167,10 @@ modules = [
 
 
 testModules = [
+    "twisted.cred.test",
+    "twisted.cred.test.test_cramauth",
+    "twisted.cred.test.test_digestauth",
+    "twisted.cred.test.test_simpleauth",
     "twisted.internet.test.test_abstract",
     "twisted.internet.test.test_address",
     "twisted.internet.test.test_base",

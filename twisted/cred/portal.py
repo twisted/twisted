@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_newcred -*-
+# -*- test-case-name: twisted.cred.test.test_cred -*-
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -118,4 +118,3 @@ class Portal:
         ifac = providedBy(credentials)
         return defer.fail(failure.Failure(error.UnhandledCredentials(
             "No checker for %s" % ', '.join(map(reflect.qual, ifac)))))
-
