@@ -24,6 +24,7 @@ except ImportError:
 
 try:
     import PAM
+    PAM
     from twisted.cred import pamauth
 except ImportError:
     pamauth = None
