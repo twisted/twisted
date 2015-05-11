@@ -38,7 +38,7 @@ reactor.listen/connect* methods for more information.
 """
 
 from twisted.python import log
-from twisted.python.compat import new_class
+from twisted.python.compat import newClass
 from twisted.application import service
 from twisted.internet import task
 
@@ -212,7 +212,7 @@ for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
             continue
         base = globals()['_Abstract'+side]
         doc = _doc[side] % vars()
-        klass = new_class(tran+side, (base,), {'method': tran, '__doc__': doc})
+        klass = newClass(tran+side, (base,), {'method': tran, '__doc__': doc})
         globals()[tran+side] = klass
 
 

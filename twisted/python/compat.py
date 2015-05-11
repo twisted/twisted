@@ -561,10 +561,9 @@ else:
 
 
 
-def new_class(name, bases=(), class_dict=None):
+def newClass(name, bases=(), class_dict=None):
     """
-    Creates a new class using the given base classes (if any)
-    with the contents of the given C{class_dict} as members.
+    Creates a new class using the given base classes and dictionary.
 
     @type bases: L{tuple}
     @type class_dict: L{dict}
@@ -602,7 +601,7 @@ __all__ = [
     "items",
     "iteritems",
     "xrange",
-    "new_class",
+    "newClass",
     "classTypes",
     "instanceTypes",
 ]
