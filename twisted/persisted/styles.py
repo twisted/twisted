@@ -2,11 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-
 """
 Different styles of persisted objects.
 """
+
+from __future__ import absolute_import, division
 
 # System Imports
 import types
@@ -36,9 +36,9 @@ oldModules = {}
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
-    return unpickleMethod, (method.im_func.__name__,
-                             method.im_self,
-                             method.im_class)
+    return unpickleMethod, (method.__func__.__name__,
+                            method.__self__,
+                            method.__self__.__class__)
 
 def unpickleMethod(im_name,
                     im_self,
@@ -48,8 +48,10 @@ def unpickleMethod(im_name,
         unbound = getattr(im_class,im_name)
         if im_self is None:
             return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_class)
-        return bound
+        if _PY3:
+            return unbound.__get__(im_self, im_class)
+        else:
+            return types.MethodType(unbound.im_func, im_self, im_class)
     except AttributeError:
         log.msg("Method",im_name,"not on class",im_class)
         assert im_self is not None,"No recourse: no instance to guess from."
@@ -60,8 +62,10 @@ def unpickleMethod(im_name,
         log.msg("Attempting fixup with",unbound)
         if im_self is None:
             return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_self.__class__)
-        return bound
+        if _PY3:
+            return unbound.__get__(im_self, im_self.__class__)
+        else:
+            return types.MethodType(unbound.im_func, im_self, im_self.__class__)
 
 copy_reg.pickle(types.MethodType,
                 pickleMethod,
