@@ -5,12 +5,15 @@
 Tests for L{twisted.cred}, now with 30% more starch.
 """
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
+
+from binascii import hexlify, unhexlify
 
 from twisted.trial import unittest
-from twisted.cred import portal, checkers, credentials, error
+from twisted.python.compat import nativeString, networkString
 from twisted.python import components
 from twisted.internet import defer
+from twisted.cred import checkers, credentials, portal, error
 
 try:
     from crypt import crypt
@@ -18,6 +21,7 @@ except ImportError:
     crypt = None
 
 try:
+    import PAM
     from twisted.cred import pamauth
 except ImportError:
     pamauth = None
@@ -39,18 +43,18 @@ class TestAvatar:
     def logout(self):
         self.loggedOut = True
 
+@implementer(ITestable)
 class Testable(components.Adapter):
-    implements(ITestable)
-
-# components.Interface(TestAvatar).adaptWith(Testable, ITestable)
+    pass
 
 components.registerAdapter(Testable, TestAvatar, ITestable)
 
 class IDerivedCredentials(credentials.IUsernamePassword):
     pass
 
+
+@implementer(IDerivedCredentials, ITestable)
 class DerivedCredentials(object):
-    implements(IDerivedCredentials, ITestable)
 
     def __init__(self, username, password):
         self.username = username
@@ -60,8 +64,8 @@ class DerivedCredentials(object):
         return password == self.password
 
 
+@implementer(portal.IRealm)
 class TestRealm:
-    implements(portal.IRealm)
     def __init__(self):
         self.avatars = {}
 
@@ -80,19 +84,17 @@ class NewCredTests(unittest.TestCase):
         r = self.realm = TestRealm()
         p = self.portal = portal.Portal(r)
         up = self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        up.addUser("bob", "hello")
+        up.addUser(b"bob", b"hello")
         p.registerChecker(up)
 
     def testListCheckers(self):
         expected = [credentials.IUsernamePassword, credentials.IUsernameHashedPassword]
         got = self.portal.listCredentialsInterfaces()
-        expected.sort()
-        got.sort()
-        self.assertEqual(got, expected)
+        self.assertEqual(sorted(got), sorted(expected))
 
     def testBasicLogin(self):
         l = []; f = []
-        self.portal.login(credentials.UsernamePassword("bob", "hello"),
+        self.portal.login(credentials.UsernamePassword(b"bob", b"hello"),
                           self, ITestable).addCallback(
             l.append).addErrback(f.append)
         if f:
@@ -116,7 +118,7 @@ class NewCredTests(unittest.TestCase):
         """
         l = []
         f = []
-        self.portal.login(DerivedCredentials("bob", "hello"), self, ITestable
+        self.portal.login(DerivedCredentials(b"bob", b"hello"), self, ITestable
             ).addCallback(l.append
             ).addErrback(f.append)
         if f:
@@ -134,7 +136,7 @@ class NewCredTests(unittest.TestCase):
 
     def testFailedLogin(self):
         l = []
-        self.portal.login(credentials.UsernamePassword("bob", "h3llo"),
+        self.portal.login(credentials.UsernamePassword(b"bob", b"h3llo"),
                           self, ITestable).addErrback(
             lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
         self.failUnless(l)
@@ -142,7 +144,7 @@ class NewCredTests(unittest.TestCase):
 
     def testFailedLoginName(self):
         l = []
-        self.portal.login(credentials.UsernamePassword("jay", "hello"),
+        self.portal.login(credentials.UsernamePassword(b"jay", b"hello"),
                           self, ITestable).addErrback(
             lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
         self.failUnless(l)
@@ -152,58 +154,43 @@ class NewCredTests(unittest.TestCase):
 
 class OnDiskDatabaseTests(unittest.TestCase):
     users = [
-        ('user1', 'pass1'),
-        ('user2', 'pass2'),
-        ('user3', 'pass3'),
+        (b'user1', b'pass1'),
+        (b'user2', b'pass2'),
+        (b'user3', b'pass3'),
     ]
+
+    def setUp(self):
+        self.dbfile = self.mktemp()
+        with open(self.dbfile, 'wb') as f:
+            for (u, p) in self.users:
+                f.write(u + b":" + p + b"\n")
 
 
     def testUserLookup(self):
-        dbfile = self.mktemp()
-        db = checkers.FilePasswordDB(dbfile)
-        f = file(dbfile, 'w')
+        self.db = checkers.FilePasswordDB(self.dbfile)
         for (u, p) in self.users:
-            f.write('%s:%s\n' % (u, p))
-        f.close()
+            self.failUnlessRaises(KeyError, self.db.getUser, u.upper())
+            self.assertEqual(self.db.getUser(u), (u, p))
 
-        for (u, p) in self.users:
-            self.failUnlessRaises(KeyError, db.getUser, u.upper())
-            self.assertEqual(db.getUser(u), (u, p))
 
     def testCaseInSensitivity(self):
-        dbfile = self.mktemp()
-        db = checkers.FilePasswordDB(dbfile, caseSensitive=0)
-        f = file(dbfile, 'w')
+        self.db = checkers.FilePasswordDB(self.dbfile, caseSensitive=False)
         for (u, p) in self.users:
-            f.write('%s:%s\n' % (u, p))
-        f.close()
-
-        for (u, p) in self.users:
-            self.assertEqual(db.getUser(u.upper()), (u, p))
+            self.assertEqual(self.db.getUser(u.upper()), (u, p))
 
     def testRequestAvatarId(self):
-        dbfile = self.mktemp()
-        db = checkers.FilePasswordDB(dbfile, caseSensitive=0)
-        f = file(dbfile, 'w')
-        for (u, p) in self.users:
-            f.write('%s:%s\n' % (u, p))
-        f.close()
+        self.db = checkers.FilePasswordDB(self.dbfile)
         creds = [credentials.UsernamePassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
-            [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
+            [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
     def testRequestAvatarId_hashed(self):
-        dbfile = self.mktemp()
-        db = checkers.FilePasswordDB(dbfile, caseSensitive=0)
-        f = file(dbfile, 'w')
-        for (u, p) in self.users:
-            f.write('%s:%s\n' % (u, p))
-        f.close()
+        self.db = checkers.FilePasswordDB(self.dbfile)
         creds = [credentials.UsernameHashedPassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
-            [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
+            [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
@@ -211,25 +198,24 @@ class OnDiskDatabaseTests(unittest.TestCase):
 
 class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
     users = [
-        ('user1', 'pass1'),
-        ('user2', 'pass2'),
-        ('user3', 'pass3'),
+        (b'user1', b'pass1'),
+        (b'user2', b'pass2'),
+        (b'user3', b'pass3'),
     ]
-
-
-    def hash(self, u, p, s):
-        return crypt(p, s)
 
     def setUp(self):
         dbfile = self.mktemp()
         self.db = checkers.FilePasswordDB(dbfile, hash=self.hash)
-        f = file(dbfile, 'w')
-        for (u, p) in self.users:
-            f.write('%s:%s\n' % (u, crypt(p, u[:2])))
-        f.close()
+        with open(dbfile, 'wb') as f:
+            for (u, p) in self.users:
+                f.write(u + b":" + self.hash(u, p, u[:2]) + b"\n")
+
         r = TestRealm()
         self.port = portal.Portal(r)
         self.port.registerChecker(self.db)
+
+    def hash(self, u, p, s):
+        return networkString(crypt(nativeString(p), nativeString(s)))
 
     def testGoodCredentials(self):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
@@ -254,7 +240,8 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         return d
 
     def testHashedCredentials(self):
-        hashedCreds = [credentials.UsernameHashedPassword(u, crypt(p, u[:2]))
+        hashedCreds = [credentials.UsernameHashedPassword(u,
+                                                          self.hash(None, p, u[:2]))
                        for u, p in self.users]
         d = defer.DeferredList([self.port.login(c, None, ITestable)
                                 for c in hashedCreds], consumeErrors=True)
@@ -380,18 +367,18 @@ class HashlessFilePasswordDBMixin:
     networkHash = staticmethod(lambda x: x)
 
     _validCredentials = [
-        ('user1', 'password1'),
-        ('user2', 'password2'),
-        ('user3', 'password3')]
+        (b'user1', b'password1'),
+        (b'user2', b'password2'),
+        (b'user3', b'password3')]
 
     def getGoodCredentials(self):
         for u, p in self._validCredentials:
             yield self.credClass(u, self.networkHash(p)), u
 
     def getBadCredentials(self):
-        for u, p in [('user1', 'password3'),
-                     ('user2', 'password1'),
-                     ('bloof', 'blarf')]:
+        for u, p in [(b'user1', b'password3'),
+                     (b'user2', b'password1'),
+                     (b'bloof', b'blarf')]:
             yield self.credClass(u, self.networkHash(p))
 
     def getCheckers(self):
@@ -400,34 +387,35 @@ class HashlessFilePasswordDBMixin:
 
         for cache in True, False:
             fn = self.mktemp()
-            fObj = file(fn, 'w')
+            fObj = open(fn, 'wb')
             for u, p in self._validCredentials:
-                fObj.write('%s:%s\n' % (u, diskHash(p)))
+                fObj.write(u + b":" + diskHash(p) + b"\n")
             fObj.close()
             yield checkers.FilePasswordDB(fn, cache=cache, hash=hashCheck)
 
             fn = self.mktemp()
-            fObj = file(fn, 'w')
+            fObj = open(fn, 'wb')
             for u, p in self._validCredentials:
-                fObj.write('%s dingle dongle %s\n' % (diskHash(p), u))
+                fObj.write(diskHash(p) + b' dingle dongle ' + u + b'\n')
             fObj.close()
-            yield checkers.FilePasswordDB(fn, ' ', 3, 0, cache=cache, hash=hashCheck)
+            yield checkers.FilePasswordDB(fn, b' ', 3, 0, cache=cache, hash=hashCheck)
 
             fn = self.mktemp()
-            fObj = file(fn, 'w')
+            fObj = open(fn, 'wb')
             for u, p in self._validCredentials:
-                fObj.write('zip,zap,%s,zup,%s\n' % (u.title(), diskHash(p)))
+                fObj.write(b'zip,zap,' + u.title() + b',zup,'\
+                           + diskHash(p) + b'\n',)
             fObj.close()
-            yield checkers.FilePasswordDB(fn, ',', 2, 4, False, cache=cache, hash=hashCheck)
+            yield checkers.FilePasswordDB(fn, b',', 2, 4, False, cache=cache, hash=hashCheck)
 
 class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    diskHash = staticmethod(lambda x: x.encode('hex'))
+    diskHash = staticmethod(lambda x: hexlify(x))
 
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    networkHash = staticmethod(lambda x: x.encode('hex'))
+    networkHash = staticmethod(lambda x: hexlify(x))
     class credClass(credentials.UsernameHashedPassword):
         def checkPassword(self, password):
-            return self.hashed.decode('hex') == password
+            return unhexlify(self.hashed) == password
 
 class HashlessFilePasswordDBCheckerTests(HashlessFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
