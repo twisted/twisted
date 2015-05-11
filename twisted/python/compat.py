@@ -20,7 +20,7 @@ the latest version of Python directly from your code, if possible.
 
 from __future__ import division
 
-import sys, string, socket, struct, inspect
+import inspect, sys, string, socket, struct, types
 from io import TextIOBase, IOBase
 
 
@@ -542,6 +542,26 @@ Return a list of the items of C{d}.
 
 
 
+def new_class(name, bases=(), class_dict=None):
+    """
+    Creates a new class using the given base classes (if any)
+    with the contents of the given C{class_dict} as members.
+
+    @type bases: L{tuple}
+    @type class_dict: L{dict}
+    """
+    if class_dict is None:
+        class_dict = {}
+
+    if _PY3:
+        def _exec_body(ns):
+            return ns.update(class_dict)
+        return types.new_class(name, bases, exec_body=_exec_body)
+    else:
+        return types.ClassType(name, bases, class_dict)
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -563,4 +583,5 @@ __all__ = [
     "items",
     "iteritems",
     "xrange",
+    "new_class",
 ]
