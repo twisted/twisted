@@ -8,7 +8,7 @@ These protocols are either provided by inetd, or are not provided at all.
 
 # system imports
 import time, struct
-from zope.interface import implements
+from zope.interface import implementer
 
 # twisted import
 from twisted.internet import protocol, interfaces
@@ -29,11 +29,10 @@ class Discard(protocol.Protocol):
         pass
 
 
+@implementer(interfaces.IProducer)
 class Chargen(protocol.Protocol):
     """Generate repeating noise (RFC 864)"""
     noise = r'@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&?'
-
-    implements(interfaces.IProducer)
 
     def connectionMade(self):
         self.transport.registerProducer(self, 0)

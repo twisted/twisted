@@ -7,9 +7,9 @@ L{twisted.persisted.sob}.
 """
 
 import copy, os, pickle
-from StringIO import StringIO
 
 from twisted.trial import unittest
+from twisted.python.compat import NativeStringIO as StringIO
 from twisted.application import service, internet, app
 from twisted.persisted import sob
 from twisted.python import usage
@@ -396,7 +396,7 @@ class InternetTests(unittest.TestCase):
         # FIXME: This test is far too dense.  It needs comments.
         #  -- spiv, 2004-11-07
         if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
+            raise unittest.SkipTest("This reactor does not support UNIX domain sockets")
         s = service.MultiService()
         s.startService()
         factory = protocol.ServerFactory()
@@ -427,7 +427,7 @@ class InternetTests(unittest.TestCase):
 
     def testVolatile(self):
         if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
+            raise unittest.SkipTest("This reactor does not support UNIX domain sockets")
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
         t = internet.UNIXServer('echo.skt', factory)
@@ -452,7 +452,7 @@ class InternetTests(unittest.TestCase):
 
     def testStoppingServer(self):
         if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
+            raise unittest.SkipTest("This reactor does not support UNIX domain sockets")
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
         t = internet.UNIXServer('echo.skt', factory)
