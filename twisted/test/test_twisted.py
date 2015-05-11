@@ -680,23 +680,3 @@ class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
                 pass
             else:
                 raise SkipTest("Mismatched system version of zope.interface")
-
-
-
-class LoreDeprecationTests(TestCase):
-    """
-    Contains tests to make sure Lore is marked as deprecated.
-    """
-    if _PY3:
-        skip = "Lore is not being ported to Python 3."
-
-    def test_loreDeprecation(self):
-        """
-        L{twisted.lore} is deprecated since Twisted 14.0.
-        """
-        reflect.namedAny("twisted.lore")
-        warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-            "twisted.lore was deprecated in Twisted 14.0.0: "
-            "Use Sphinx instead.", warningsShown[0]['message'])
