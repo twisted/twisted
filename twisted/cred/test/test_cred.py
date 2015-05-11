@@ -27,21 +27,31 @@ except ImportError:
     pamauth = None
 
 
+
 class ITestable(Interface):
     pass
 
+
+
 class TestAvatar:
+    """
+    A test avatar.
+    """
     def __init__(self, name):
         self.name = name
         self.loggedIn = False
         self.loggedOut = False
 
+
     def login(self):
         assert not self.loggedIn
         self.loggedIn = True
 
+
     def logout(self):
         self.loggedOut = True
+
+
 
 @implementer(ITestable)
 class Testable(components.Adapter):
@@ -49,8 +59,11 @@ class Testable(components.Adapter):
 
 components.registerAdapter(Testable, TestAvatar, ITestable)
 
+
+
 class IDerivedCredentials(credentials.IUsernamePassword):
     pass
+
 
 
 @implementer(IDerivedCredentials, ITestable)
@@ -60,14 +73,17 @@ class DerivedCredentials(object):
         self.username = username
         self.password = password
 
+
     def checkPassword(self, password):
         return password == self.password
+
 
 
 @implementer(portal.IRealm)
 class TestRealm:
     def __init__(self):
         self.avatars = {}
+
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if avatarId in self.avatars:
@@ -79,6 +95,8 @@ class TestRealm:
         return (interfaces[0], interfaces[0](avatar),
                 avatar.logout)
 
+
+
 class NewCredTests(unittest.TestCase):
     def setUp(self):
         r = self.realm = TestRealm()
@@ -87,10 +105,13 @@ class NewCredTests(unittest.TestCase):
         up.addUser(b"bob", b"hello")
         p.registerChecker(up)
 
+
     def testListCheckers(self):
-        expected = [credentials.IUsernamePassword, credentials.IUsernameHashedPassword]
+        expected = [credentials.IUsernamePassword,
+                    credentials.IUsernameHashedPassword]
         got = self.portal.listCredentialsInterfaces()
         self.assertEqual(sorted(got), sorted(expected))
+
 
     def testBasicLogin(self):
         l = []; f = []
@@ -99,7 +120,6 @@ class NewCredTests(unittest.TestCase):
             l.append).addErrback(f.append)
         if f:
             raise f[0]
-        # print l[0].getBriefTraceback()
         iface, impl, logout = l[0]
         # whitebox
         self.assertEqual(iface, ITestable)
@@ -110,6 +130,7 @@ class NewCredTests(unittest.TestCase):
         self.failUnless(not impl.original.loggedOut)
         logout()
         self.failUnless(impl.original.loggedOut)
+
 
     def test_derivedInterface(self):
         """
@@ -134,6 +155,7 @@ class NewCredTests(unittest.TestCase):
         logout()
         self.failUnless(impl.original.loggedOut)
 
+
     def testFailedLogin(self):
         l = []
         self.portal.login(credentials.UsernamePassword(b"bob", b"h3llo"),
@@ -141,6 +163,7 @@ class NewCredTests(unittest.TestCase):
             lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
         self.failUnless(l)
         self.assertEqual(error.UnauthorizedLogin, l[0])
+
 
     def testFailedLoginName(self):
         l = []
@@ -178,6 +201,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
         for (u, p) in self.users:
             self.assertEqual(self.db.getUser(u.upper()), (u, p))
 
+
     def testRequestAvatarId(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
         creds = [credentials.UsernamePassword(u, p) for u, p in self.users]
@@ -186,9 +210,11 @@ class OnDiskDatabaseTests(unittest.TestCase):
         d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
+
     def testRequestAvatarId_hashed(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
-        creds = [credentials.UsernameHashedPassword(u, p) for u, p in self.users]
+        creds = [credentials.UsernameHashedPassword(u, p)
+                 for u, p in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
@@ -214,14 +240,18 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         self.port = portal.Portal(r)
         self.port.registerChecker(self.db)
 
+
     def hash(self, u, p, s):
         return networkString(crypt(nativeString(p), nativeString(s)))
 
+
     def testGoodCredentials(self):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
-        d = defer.gatherResults([self.db.requestAvatarId(c) for c in goodCreds])
+        d = defer.gatherResults([self.db.requestAvatarId(c)
+                                 for c in goodCreds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
+
 
     def testGoodCredentials_login(self):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
@@ -231,6 +261,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         d.addCallback(self.assertEqual, [u for u, p in self.users])
         return d
 
+
     def testBadCredentials(self):
         badCreds = [credentials.UsernamePassword(u, 'wrong password')
                     for u, p in self.users]
@@ -239,14 +270,15 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         d.addCallback(self._assertFailures, error.UnauthorizedLogin)
         return d
 
+
     def testHashedCredentials(self):
-        hashedCreds = [credentials.UsernameHashedPassword(u,
-                                                          self.hash(None, p, u[:2]))
-                       for u, p in self.users]
+        hashedCreds = [credentials.UsernameHashedPassword(
+            u, self.hash(None, p, u[:2])) for u, p in self.users]
         d = defer.DeferredList([self.port.login(c, None, ITestable)
                                 for c in hashedCreds], consumeErrors=True)
         d.addCallback(self._assertFailures, error.UnhandledCredentials)
         return d
+
 
     def _assertFailures(self, failures, *expectedFailures):
         for flag, failure in failures:
@@ -256,6 +288,8 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     if crypt is None:
         skip = "crypt module not available"
+
+
 
 class PluggableAuthenticationModulesTests(unittest.TestCase):
 
@@ -283,7 +317,8 @@ class PluggableAuthenticationModulesTests(unittest.TestCase):
             ("entry", 0),
             ("", 0)
             ]:
-                raise error.UnauthorizedLogin('bad conversion: %s' % repr(replies))
+                raise error.UnauthorizedLogin(
+                    'bad conversion: %s' % repr(replies))
         return 1
 
     def _makeConv(self, d):
@@ -323,7 +358,7 @@ class PluggableAuthenticationModulesTests(unittest.TestCase):
 
 
 
-class CheckersMixin:
+class CheckersMixin(object):
     """
     L{unittest.TestCase} mixin for testing that some checkers accept
     and deny specified credentials.
@@ -361,7 +396,7 @@ class CheckersMixin:
 
 
 
-class HashlessFilePasswordDBMixin:
+class HashlessFilePasswordDBMixin(object):
     credClass = credentials.UsernamePassword
     diskHash = None
     networkHash = staticmethod(lambda x: x)
@@ -371,9 +406,11 @@ class HashlessFilePasswordDBMixin:
         (b'user2', b'password2'),
         (b'user3', b'password3')]
 
+
     def getGoodCredentials(self):
         for u, p in self._validCredentials:
             yield self.credClass(u, self.networkHash(p)), u
+
 
     def getBadCredentials(self):
         for u, p in [(b'user1', b'password3'),
@@ -381,9 +418,11 @@ class HashlessFilePasswordDBMixin:
                      (b'bloof', b'blarf')]:
             yield self.credClass(u, self.networkHash(p))
 
+
     def getCheckers(self):
         diskHash = self.diskHash or (lambda x: x)
-        hashCheck = self.diskHash and (lambda username, password, stored: self.diskHash(password))
+        hashCheck = self.diskHash and (lambda username, password,
+                                       stored: self.diskHash(password))
 
         for cache in True, False:
             fn = self.mktemp()
@@ -398,7 +437,8 @@ class HashlessFilePasswordDBMixin:
             for u, p in self._validCredentials:
                 fObj.write(diskHash(p) + b' dingle dongle ' + u + b'\n')
             fObj.close()
-            yield checkers.FilePasswordDB(fn, b' ', 3, 0, cache=cache, hash=hashCheck)
+            yield checkers.FilePasswordDB(fn, b' ', 3, 0,
+                                          cache=cache, hash=hashCheck)
 
             fn = self.mktemp()
             fObj = open(fn, 'wb')
@@ -406,22 +446,40 @@ class HashlessFilePasswordDBMixin:
                 fObj.write(b'zip,zap,' + u.title() + b',zup,'\
                            + diskHash(p) + b'\n',)
             fObj.close()
-            yield checkers.FilePasswordDB(fn, b',', 2, 4, False, cache=cache, hash=hashCheck)
+            yield checkers.FilePasswordDB(fn, b',', 2, 4, False,
+                                          cache=cache, hash=hashCheck)
+
+
+
 
 class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
     diskHash = staticmethod(lambda x: hexlify(x))
 
+
+
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
     networkHash = staticmethod(lambda x: hexlify(x))
+
     class credClass(credentials.UsernameHashedPassword):
         def checkPassword(self, password):
             return unhexlify(self.hashed) == password
 
-class HashlessFilePasswordDBCheckerTests(HashlessFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
+
+
+class HashlessFilePasswordDBCheckerTests(HashlessFilePasswordDBMixin,
+                                         CheckersMixin, unittest.TestCase):
     pass
 
-class LocallyHashedFilePasswordDBCheckerTests(LocallyHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
+
+
+class LocallyHashedFilePasswordDBCheckerTests(LocallyHashedFilePasswordDBMixin,
+                                              CheckersMixin,
+                                              unittest.TestCase):
     pass
 
-class NetworkHashedFilePasswordDBCheckerTests(NetworkHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
+
+
+class NetworkHashedFilePasswordDBCheckerTests(NetworkHashedFilePasswordDBMixin,
+                                              CheckersMixin,
+                                              unittest.TestCase):
     pass

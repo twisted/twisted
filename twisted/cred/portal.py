@@ -64,17 +64,20 @@ class Portal:
         for checker in checkers:
             self.registerChecker(checker)
 
+
     def listCredentialsInterfaces(self):
         """
         Return list of credentials interfaces that can be used to login.
         """
         return self.checkers.keys()
 
+
     def registerChecker(self, checker, *credentialInterfaces):
         if not credentialInterfaces:
             credentialInterfaces = checker.credentialInterfaces
         for credentialInterface in credentialInterfaces:
             self.checkers[credentialInterface] = checker
+
 
     def login(self, credentials, mind, *interfaces):
         """

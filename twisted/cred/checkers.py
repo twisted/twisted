@@ -59,6 +59,7 @@ class AllowAnonymousAccess:
         return defer.succeed(ANONYMOUS)
 
 
+
 @implementer(ICredentialsChecker)
 class InMemoryUsernamePasswordDatabaseDontUse:
     """
@@ -78,14 +79,17 @@ class InMemoryUsernamePasswordDatabaseDontUse:
     def __init__(self, **users):
         self.users = users
 
+
     def addUser(self, username, password):
         self.users[username] = password
+
 
     def _cbPasswordMatch(self, matched, username):
         if matched:
             return username
         else:
             return failure.Failure(error.UnauthorizedLogin())
+
 
     def requestAvatarId(self, credentials):
         if credentials.username in self.users:
@@ -97,9 +101,11 @@ class InMemoryUsernamePasswordDatabaseDontUse:
             return defer.fail(error.UnauthorizedLogin())
 
 
+
 @implementer(ICredentialsChecker)
 class FilePasswordDB:
-    """A file-based, text-based username/password database.
+    """
+    A file-based, text-based username/password database.
 
     Records in the datafile for this class are delimited by a particular
     string.  The username appears in a fixed field of the columns delimited
