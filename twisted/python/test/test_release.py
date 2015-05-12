@@ -2055,7 +2055,7 @@ class CommandsTestMixin(StructureAssertingMixin):
     """
     def setUp(self):
         self.tmpDir = FilePath(makeTempDir())
-        self.tmpDir.createDirectory()
+        self.tmpDir.makedirs()
 
 
     def test_ensureIsWorkingDirectoryWithWorkingDirectory(self):
@@ -2141,6 +2141,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.assertStructure(exportDir, structure)
 
 
+
 class GitCommandTest(CommandsTestMixin, TestCase):
     """
     Specific L{CommandsTestMixin} related to Git repositories through
@@ -2173,6 +2174,7 @@ class GitCommandTest(CommandsTestMixin, TestCase):
         runCommand(["git", "-C", repository.path, "add"] +
                    glob.glob(repository.path + "/*"))
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
+
 
 
 class SVNCommandTest(CommandsTestMixin, TestCase):
