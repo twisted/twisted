@@ -137,7 +137,8 @@ class SVNCommand(object):
     Subset of SVN commands to release Twisted from a Subversion checkout.
     """
     def ensureIsWorkingDirectory(self, directory):
-        if not directory.child(".svn").exists():
+        if "is not a working copy" in runCommand(
+                ["svn", "status", directory.path]):
             raise NotWorkingDirectory(
                 "%s does not appear to be an SVN working directory."
                 % (directory.path,))
