@@ -70,7 +70,7 @@ if which("git"):
     if int(gitVersion[0]) >= 2:
         gitSkip = skip
     elif int(gitVersion[0] >= 1) and int(gitVersion[1]) >= 8:
-        if int(gitVersion[3]) >= 5:
+        if int(gitVersion[2]) >= 5:
             gitSkip = skip
         else:
             gitSkip = "old git is present, 1.8.5 or newer needed"
