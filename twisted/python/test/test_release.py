@@ -95,6 +95,20 @@ def makeTempDir():
 
 
 
+def _gitInit(path):
+    """
+    Run a git init, and set some config that git requires. This isn't needed in
+    real usage.
+    """
+    runCommand(["git", "init", path.path])
+    runCommand(["git", "config",
+                "--file", path.child(".git").child("config").path,
+                "user.name", '"someone"'])
+    runCommand(["git", "config",
+                "--file", path.child(".git").child("config").path,
+                "user.email", '"someone@someplace.com"'])
+
+
 def genVersion(*args, **kwargs):
     """
     A convenience for generating _version.py data.
@@ -1312,13 +1326,7 @@ class NewsBuilderGitTests(NewsBuilderMixin, TestCase):
         if project is None:
             project = self.project
 
-        runCommand(["git", "init", project.path])
-        runCommand(["git", "config",
-                    "--file", project.child(".git").child("config").path,
-                    "user.name", '"someone"'])
-        runCommand(["git", "config",
-                    "--file", project.child(".git").child("config").path,
-                    "user.email", '"someone@someplace.com"'])
+        _gitInit(project)
         runCommand(["git", "-C", project.path, "add"] + glob.glob(project.path + "/*"))
         runCommand(["git", "-C", project.path, "commit", "-m", "yay"])
 
@@ -1762,13 +1770,7 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         checkout = FilePath(checkoutPath)
         self.outputDir.remove()
 
-        runCommand(["git", "init", checkout.path])
-        runCommand(["git", "config",
-                    "--file", checkout.child(".git").child("config").path,
-                    "user.name", '"someone"'])
-        runCommand(["git", "config",
-                    "--file", checkout.child(".git").child("config").path,
-                    "user.email", '"someone@someplace.com"'])
+        _gitInit(checkout)
 
         structure = {
             "README": "Twisted",
@@ -1871,13 +1873,7 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         checkoutPath = makeTempDir()
         checkout = FilePath(checkoutPath)
 
-        runCommand(["git", "init", checkout.path])
-        runCommand(["git", "config",
-                    "--file", checkout.child(".git").child("config").path,
-                    "user.name", '"someone"'])
-        runCommand(["git", "config",
-                    "--file", checkout.child(".git").child("config").path,
-                    "user.email", '"someone@someplace.com"'])
+        _gitInit(checkout)
 
         checkout.child("foo").setContent("whatever")
         self.assertRaises(UncleanWorkingDirectory,
@@ -2168,7 +2164,7 @@ class GitCommandTest(CommandsTestMixin, TestCase):
         @return: The path to the repository just created.
         @rtype: L{FilePath}
         """
-        runCommand(["git", "init", root.path])
+        _gitInit(root)
         return root
 
 
@@ -2257,7 +2253,7 @@ class RepositoryCommandDetectionTest(TestCase):
         L{getRepositoryCommand} from a Git repository returns a L{GitCommand}
         instance.
         """
-        runCommand(["git", "init", self.repos.path])
+        _gitInit(self.repos)
         cmd = getRepositoryCommand(self.repos)
         self.assertTrue(isinstance(cmd, GitCommand), cmd)
 
@@ -2268,7 +2264,7 @@ class RepositoryCommandDetectionTest(TestCase):
         Subversion checkout or a Git directory returns a L{SVNCommand}, which is
         the currently preferred way of dealing with Twisted release scripts.
         """
-        runCommand(["git", "init", self.repos.child("checkout").path])
+        _gitInit(self.repos.child("checkout"))
 
         repository = self.repos.child('repository')
         checkout = self.repos.child('checkout')
