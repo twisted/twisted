@@ -2049,6 +2049,7 @@ class ScriptTests(StructureAssertingMixin, TestCase):
         self.assertEqual(builds, [FilePath("/foo/bar/baz")])
 
 
+
 class CommandsTestMixin(StructureAssertingMixin):
     """
     Test mixin for the VCS commands used by the release scripts.
@@ -2148,6 +2149,7 @@ class GitCommandTest(CommandsTestMixin, TestCase):
     L{GitCommand}.
     """
     createCommand = staticmethod(GitCommand)
+    skip = gitSkip
 
 
     def makeRepository(self, root):
@@ -2183,6 +2185,7 @@ class SVNCommandTest(CommandsTestMixin, TestCase):
     L{SVNCommand}.
     """
     createCommand = staticmethod(SVNCommand)
+    skip = svnSkip
 
 
     def makeRepository(self, root):
