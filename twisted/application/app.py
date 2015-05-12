@@ -606,7 +606,6 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
         Print an insanely verbose log of everything that happens.
         Useful when debugging freezes or locks in complex code.
         """
-        # Won't work on Python 3, because util.spewer is not ported.
         sys.settrace(util.spewer)
         try:
             import threading

@@ -370,6 +370,7 @@ class Process:
         self.gid = gid
 
 
+
 def Application(name, uid=None, gid=None):
     """
     Return a compound class.
@@ -381,10 +382,10 @@ def Application(name, uid=None, gid=None):
     """
     ret = components.Componentized()
     availableComponents = [MultiService(), Process(uid, gid)]
+
     if not _PY3:
-        # TODO https://twistedmatrix.com/trac/ticket/6910
-        # twisted.persisted is proposed for deprecation and is not yet ported to
-        # to Python3 so we only import it if some code really needs to use it
+        # twisted.persisted is not yet ported to Python 3 (#7827), so import it
+        # down here.
         from twisted.persisted import sob
         availableComponents.append(sob.Persistent(ret, name))
 
@@ -408,12 +409,13 @@ def loadApplication(filename, kind, passphrase=None):
     @type kind: C{str}
     @type passphrase: C{str}
     """
-    # TODO https://twistedmatrix.com/trac/ticket/6910
-    # twisted.persisted is proposed for deprecation and is not yet ported to
-    # to Python3 so we only import it if some code really needs to use it
+    # twisted.persisted is not yet ported to Python 3 (#7827), so import it
+    # down here.
     from twisted.persisted import sob
+
     if kind == 'python':
-        application = sob.loadValueFromFile(filename, 'application', passphrase)
+        application = sob.loadValueFromFile(filename, 'application',
+                                            passphrase)
     else:
         application = sob.load(filename, kind, passphrase)
     return application

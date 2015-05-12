@@ -6,12 +6,8 @@ Tests for L{twisted.application.service}.
 
 from zope.interface.verify import verifyObject
 
-from twisted.application.service import (
-    Application,
-    IProcess,
-    IService,
-    IServiceCollection,
-    )
+from twisted.application.service import Application, IProcess
+from twisted.application.service import IService, IServiceCollection
 from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 
@@ -19,23 +15,29 @@ from twisted.trial.unittest import TestCase
 
 class ApplicationTests(TestCase):
     """
-    Tests for L{twisted.application.service.Application} function.
+    Tests for L{twisted.application.service.Application}.
     """
-
-    def test_ApplicationComponents(self):
+    def test_applicationComponents(self):
         """
         Check L{twisted.application.service.Application} instantiation.
         """
-        sut = Application('app-name')
+        app = Application('app-name')
 
-        self.assertTrue(verifyObject(IService, IService(sut)))
+        self.assertTrue(verifyObject(IService, IService(app)))
         self.assertTrue(
-            verifyObject(IServiceCollection, IServiceCollection(sut)))
-        self.assertTrue(verifyObject(IProcess, IProcess(sut)))
+            verifyObject(IServiceCollection, IServiceCollection(app)))
+        self.assertTrue(verifyObject(IProcess, IProcess(app)))
 
-        if not _PY3:
-           # TODO https://twistedmatrix.com/trac/ticket/6910
-           # twisted.persisted is proposed for deprecation and is not yet
-           # ported to to Python3.
-            from twisted.persisted.sob import IPersistable
-            self.assertTrue(verifyObject(IPersistable, IPersistable(sut)))
+
+    def test_applicationComponentsArePersistable(self):
+        """
+        L{twisted.application.service.Application} implements L{IPersistable}.
+        """
+        # twisted.persisted is not yet ported to Python 3 (#7827)
+        from twisted.persisted.sob import IPersistable
+        self.assertTrue(verifyObject(IPersistable, IPersistable(app)))
+
+
+    if _PY3:
+        test_applicationComponentsArePersistable.skip = (
+            "twisted.persisted is not yet ported to Python 3.")

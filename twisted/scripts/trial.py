@@ -275,7 +275,6 @@ class _BasicOptions(object):
         Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code.
         """
-        # Spewer is not yet ported to Python 3.
         from twisted.python.util import spewer
         sys.settrace(spewer)
 
