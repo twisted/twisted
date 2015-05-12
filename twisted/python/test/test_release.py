@@ -1752,6 +1752,12 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         self.outputDir.remove()
 
         runCommand(["git", "init", checkout.path])
+        runCommand(["git", "config",
+                    "--file", checkout.child(".git").child("config").path,
+                    "user.name", '"someone"'])
+        runCommand(["git", "config",
+                    "--file", checkout.child(".git").child("config").path,
+                    "user.email", '"someone@someplace.com"'])
 
         structure = {
             "README": "Twisted",
@@ -1855,6 +1861,12 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         checkout = FilePath(checkoutPath)
 
         runCommand(["git", "init", checkout.path])
+        runCommand(["git", "config",
+                    "--file", checkout.child(".git").child("config").path,
+                    "user.name", '"someone"'])
+        runCommand(["git", "config",
+                    "--file", checkout.child(".git").child("config").path,
+                    "user.email", '"someone@someplace.com"'])
 
         checkout.child("foo").setContent("whatever")
         self.assertRaises(UncleanWorkingDirectory,
