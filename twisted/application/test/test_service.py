@@ -33,11 +33,13 @@ class ApplicationTests(TestCase):
         """
         L{twisted.application.service.Application} implements L{IPersistable}.
         """
-        # twisted.persisted is not yet ported to Python 3 (#7827)
+        app = Application('app-name')
+
         from twisted.persisted.sob import IPersistable
         self.assertTrue(verifyObject(IPersistable, IPersistable(app)))
 
 
     if _PY3:
+        # twisted.persisted is not yet ported to Python 3 (#7827)
         test_applicationComponentsArePersistable.skip = (
             "twisted.persisted is not yet ported to Python 3.")
