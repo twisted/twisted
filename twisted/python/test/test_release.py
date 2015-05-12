@@ -69,6 +69,20 @@ else:
     gitSkip = "git is not present."
 
 
+if which("svn") and which("svnadmin"):
+    svnSkip = skip
+else:
+    svnSkip = "svn is not present."
+
+
+
+def makeTempDir():
+    """
+    Our own mktemp that makes directories outside of the checkout.
+    """
+    return FilePath("/tmp/tw").child(os.urandom(12).encode('hex')).path
+
+
 
 def genVersion(*args, **kwargs):
     """
@@ -310,7 +324,7 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         and README files for all projects as well as in the top-level
         README file.
         """
-        root = FilePath(self.mktemp())
+        root = FilePath(makeTempDir())
         root.createDirectory()
         structure = {
             "README": "Hi this is 1.0.0.",
@@ -345,7 +359,7 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         README file. If the old version was a pre-release, it will change the
         version in NEWS files as well.
         """
-        root = FilePath(self.mktemp())
+        root = FilePath(makeTempDir())
         root.createDirectory()
         coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
                     "===============================\n"
@@ -420,7 +434,7 @@ class ProjectTests(TestCase):
         @return: L{Project} pointing to the created project.
         """
         if baseDirectory is None:
-            baseDirectory = FilePath(self.mktemp())
+            baseDirectory = FilePath(makeTempDir())
             baseDirectory.createDirectory()
         segments = version.package.split('.')
         directory = baseDirectory
@@ -442,7 +456,7 @@ class ProjectTests(TestCase):
 
         @return: A L{FilePath} for the base directory.
         """
-        baseDirectory = FilePath(self.mktemp())
+        baseDirectory = FilePath(makeTempDir())
         baseDirectory.createDirectory()
         for version in versions:
             self.makeProject(version, baseDirectory)
@@ -596,7 +610,7 @@ class APIBuilderTests(TestCase):
         docstring = "text in docstring"
         privateDocstring = "should also appear in output"
 
-        inputPath = FilePath(self.mktemp()).child(packageName)
+        inputPath = FilePath(makeTempDir()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
             "def foo():\n"
@@ -604,7 +618,7 @@ class APIBuilderTests(TestCase):
             "def _bar():\n"
             "    '%s'" % (docstring, privateDocstring))
 
-        outputPath = FilePath(self.mktemp())
+        outputPath = FilePath(makeTempDir())
         outputPath.makedirs()
 
         builder = APIBuilder()
@@ -651,7 +665,7 @@ class APIBuilderTests(TestCase):
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
-        projectRoot = FilePath(self.mktemp())
+        projectRoot = FilePath(makeTempDir())
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
@@ -659,7 +673,7 @@ class APIBuilderTests(TestCase):
             "    '%s'\n" % (docstring,))
         packagePath.child("_version.py").setContent(
             genVersion("twisted", 1, 0, 0))
-        outputPath = FilePath(self.mktemp())
+        outputPath = FilePath(makeTempDir())
 
         script = BuildAPIDocsScript()
         script.buildAPIDocs(projectRoot, outputPath)
@@ -760,11 +774,10 @@ class FilePathDeltaTests(TestCase):
 
 
 
-class NewsBuilderTests(TestCase, StructureAssertingMixin):
+class NewsBuilderMixin(StructureAssertingMixin):
     """
-    Tests for L{NewsBuilder}.
+    Tests for L{NewsBuilder} using Git.
     """
-    skip = gitSkip
 
     def setUp(self):
         """
@@ -772,8 +785,8 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         it.
         """
         self.builder = NewsBuilder()
-        self.project = FilePath(self.mktemp())
-        self.project.createDirectory()
+        self.project = FilePath(makeTempDir())
+        self.project.makedirs()
 
         self.existingText = 'Here is stuff which was present previously.\n'
         self.createStructure(
@@ -797,17 +810,11 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                 '41.doc': 'writing Foo servers'})
 
 
-    def gitCommit(self, project=None):
+    def tearDown(self):
         """
-        Make the C{project} directory a valid Git repository with all
-        files committed.
+        Remove the fake project.
         """
-        if project is None:
-            project = self.project
-
-        runCommand(["git", "init", project.path])
-        runCommand(["git", "-C", project.path, "add"] + glob.glob(project.path + "/*"))
-        runCommand(["git", "-C", project.path, "commit", "-m", "yay"])
+        self.project.remove()
 
 
     def test_today(self):
@@ -1002,7 +1009,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         that project that includes some helpful text about how there were no
         interesting changes.
         """
-        project = FilePath(self.mktemp()).child("twisted")
+        project = FilePath(makeTempDir()).child("twisted")
         project.makedirs()
         self.createStructure(project, {'NEWS': self.existingText})
 
@@ -1150,7 +1157,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         Create a fake-looking Twisted project to build from.
         """
-        project = FilePath(self.mktemp()).child("twisted")
+        project = FilePath(makeTempDir()).child("twisted")
         project.makedirs()
         self.createStructure(
             project, {
@@ -1183,19 +1190,19 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             path, output, header))
         builder._today = lambda: '2009-12-01'
 
-        project = self.createFakeTwistedProject()
-        self.gitCommit(project)
-        builder.buildAll(project)
+        self.project = self.createFakeTwistedProject()
+        self._commit(self.project)
+        builder.buildAll(self.project)
 
-        coreTopfiles = project.child("topfiles")
+        coreTopfiles = self.project.child("topfiles")
         coreNews = coreTopfiles.child("NEWS")
         coreHeader = "Twisted Core 1.2.3 (2009-12-01)"
 
-        conchTopfiles = project.child("conch").child("topfiles")
+        conchTopfiles = self.project.child("conch").child("topfiles")
         conchNews = conchTopfiles.child("NEWS")
         conchHeader = "Twisted Conch 3.4.5 (2009-12-01)"
 
-        aggregateNews = project.child("NEWS")
+        aggregateNews = self.project.child("NEWS")
 
         self.assertEqual(
             builds,
@@ -1212,7 +1219,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         builder = NewsBuilder()
         project = self.createFakeTwistedProject()
-        self.gitCommit(project)
+        self._commit(project)
         builder.buildAll(project)
 
         aggregateNews = project.child("NEWS")
@@ -1231,7 +1238,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         builder = NewsBuilder()
         builder._today = lambda: '2009-12-01'
         project = self.createFakeTwistedProject()
-        self.gitCommit(project)
+        self._commit(project)
         builder.buildAll(project)
         newVersion = Version('TEMPLATE', 7, 7, 14)
         coreNews = project.child('topfiles').child('NEWS')
@@ -1261,23 +1268,75 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         builder = NewsBuilder()
         project = self.createFakeTwistedProject()
-        self.gitCommit(project)
+        self._commit(project)
         builder.buildAll(project)
 
         self.assertEqual(5, len(project.children()))
-        output = runCommand(["git", "-C", project.path, "status", "--short"])
+        output = self._getStatus(project)
         removed = [line for line in output.splitlines()
                    if line.startswith("D ")]
         self.assertEqual(3, len(removed))
 
 
-    def test_checkGit(self):
+    def test_checkRepo(self):
         """
         L{NewsBuilder.buildAll} raises L{NotWorkingDirectory} when the given
-        path is not a Git repository.
+        path is not a supported repository.
         """
         self.assertRaises(
             NotWorkingDirectory, self.builder.buildAll, self.project)
+
+
+class NewsBuilderGitTests(NewsBuilderMixin, TestCase):
+    """
+    Tests for L{NewsBuilder} using Git.
+    """
+    skip = gitSkip
+
+    def _commit(self, project=None):
+        """
+        Make the C{project} directory a valid Git repository with all
+        files committed.
+        """
+        if project is None:
+            project = self.project
+
+        runCommand(["git", "init", project.path])
+        runCommand(["git", "-C", project.path, "add"] + glob.glob(project.path + "/*"))
+        runCommand(["git", "-C", project.path, "commit", "-m", "yay"])
+
+    def _getStatus(self, project):
+        return runCommand(["git", "-C", project.path, "status", "--short"])
+
+
+class NewsBuilderSVNTests(NewsBuilderMixin, TestCase):
+    """
+    Tests for L{NewsBuilder} using SVN.
+    """
+    skip = svnSkip
+
+    def _commit(self, project=None):
+        """
+        Make the C{project} directory a valid subversion directory with all
+        files committed.
+        """
+        if project is None:
+            project = self.project
+
+        repositoryPath = makeTempDir()
+        repository = FilePath(repositoryPath)
+
+        runCommand(["svnadmin", "create", repository.path])
+        runCommand(["svn", "checkout", "file://" + repository.path,
+                    project.path])
+
+        runCommand(["svn", "add"] + glob.glob(project.path + "/*"))
+        runCommand(["svn", "commit", project.path, "-m", "yay"])
+
+
+    def _getStatus(self, project):
+        return runCommand(["svn", "status", project.path])
+
 
 
 
@@ -1327,7 +1386,7 @@ class SphinxBuilderTests(TestCase):
         self.builder = SphinxBuilder()
 
         # set up a place for a fake sphinx project
-        self.twistedRootDir = FilePath(self.mktemp())
+        self.twistedRootDir = FilePath(makeTempDir())
         self.sphinxDir = self.twistedRootDir.child("docs")
         self.sphinxDir.makedirs()
         self.sourceDir = self.sphinxDir
@@ -1437,10 +1496,10 @@ class DistributionBuilderTestBase(StructureAssertingMixin, TestCase):
     """
 
     def setUp(self):
-        self.rootDir = FilePath(self.mktemp())
+        self.rootDir = FilePath(makeTempDir())
         self.rootDir.createDirectory()
 
-        self.outputDir = FilePath(self.mktemp())
+        self.outputDir = FilePath(makeTempDir())
         self.outputDir.createDirectory()
         self.builder = DistributionBuilder(self.rootDir, self.outputDir)
 
@@ -1682,7 +1741,7 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         no Git metadata.  This involves building documentation, which it will
         build with the correct API documentation reference base URL.
         """
-        checkoutPath = self.mktemp()
+        checkoutPath = makeTempDir()
         checkout = FilePath(checkoutPath)
         self.outputDir.remove()
 
@@ -1786,14 +1845,14 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         L{UncleanWorkingDirectory} is raised by L{buildAllTarballs} when the
         Git repository provided has uncommitted changes.
         """
-        checkoutPath = self.mktemp()
+        checkoutPath = makeTempDir()
         checkout = FilePath(checkoutPath)
 
         runCommand(["git", "init", checkout.path])
 
         checkout.child("foo").setContent("whatever")
         self.assertRaises(UncleanWorkingDirectory,
-                          buildAllTarballs, checkout, FilePath(self.mktemp()))
+                          buildAllTarballs, checkout, FilePath(makeTempDir()))
 
 
     def test_buildAllTarballsEnsuresExistingCheckout(self):
@@ -1801,14 +1860,14 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         L{NotWorkingDirectory} is raised by L{buildAllTarballs} when the
         checkout passed does not exist or is not a Git repository.
         """
-        checkout = FilePath(self.mktemp())
+        checkout = FilePath(makeTempDir())
         self.assertRaises(NotWorkingDirectory,
                           buildAllTarballs,
-                          checkout, FilePath(self.mktemp()))
+                          checkout, FilePath(makeTempDir()))
         checkout.createDirectory()
         self.assertRaises(NotWorkingDirectory,
                           buildAllTarballs,
-                          checkout, FilePath(self.mktemp()))
+                          checkout, FilePath(makeTempDir()))
 
 
 
@@ -1975,7 +2034,7 @@ class CommandsTestMixin(StructureAssertingMixin):
     Test mixin for the VCS commands used by the release scripts.
     """
     def setUp(self):
-        self.tmpDir = FilePath(self.mktemp())
+        self.tmpDir = FilePath(makeTempDir())
         self.tmpDir.createDirectory()
 
 
@@ -2056,7 +2115,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.createStructure(reposDir, structure)
         self.commitRepository(reposDir)
 
-        exportDir = FilePath(self.mktemp())
+        exportDir = FilePath(makeTempDir())
         cmd = self.createCommand()
         cmd.exportTo(reposDir, exportDir)
         self.assertStructure(exportDir, structure)
@@ -2143,8 +2202,10 @@ class RepositoryCommandDetectionTest(TestCase):
     Test the L{getRepositoryCommand} to acces the right set of VCS commands
     depending on the repository manipulated.
     """
+    skip = svnSkip or gitSkip
+
     def setUp(self):
-        self.repos = FilePath(self.mktemp())
+        self.repos = FilePath("/tmp/tw").child(os.urandom(24).encode('hex'))
         self.repos.createDirectory()
 
 
@@ -2153,8 +2214,12 @@ class RepositoryCommandDetectionTest(TestCase):
         L{getRepositoryCommand} from a Subversion checkout returns a
         L{SVNCommand} instance.
         """
-        self.repos.child('.svn').createDirectory()
-        cmd = getRepositoryCommand(self.repos)
+        repository = self.repos.child('repository')
+        checkout = self.repos.child('checkout')
+        runCommand(["svnadmin", "create", repository.path])
+        runCommand(["svn", "checkout", "file://" + repository.path,
+                    checkout.path])
+        cmd = getRepositoryCommand(self.repos.child("checkout"))
         self.assertTrue(isinstance(cmd, SVNCommand), cmd)
 
 
@@ -2163,7 +2228,7 @@ class RepositoryCommandDetectionTest(TestCase):
         L{getRepositoryCommand} from a Git repository returns a L{GitCommand}
         instance.
         """
-        self.repos.child('.git').createDirectory()
+        runCommand(["git", "init", self.repos.path])
         cmd = getRepositoryCommand(self.repos)
         self.assertTrue(isinstance(cmd, GitCommand), cmd)
 
@@ -2174,10 +2239,15 @@ class RepositoryCommandDetectionTest(TestCase):
         Subversion checkout or a Git directory returns a L{SVNCommand}, which is
         the currently preferred way of dealing with Twisted release scripts.
         """
-        self.repos.child('.git').createDirectory()
-        self.repos.child('.svn').createDirectory()
+        runCommand(["git", "init", self.repos.child("checkout").path])
 
-        cmd = getRepositoryCommand(self.repos)
+        repository = self.repos.child('repository')
+        checkout = self.repos.child('checkout')
+        runCommand(["svnadmin", "create", repository.path])
+        runCommand(["svn", "checkout", "file://" + repository.path,
+                    checkout.path])
+
+        cmd = getRepositoryCommand(self.repos.child("checkout"))
         self.assertTrue(isinstance(cmd, SVNCommand), cmd)
 
 
@@ -2187,6 +2257,5 @@ class RepositoryCommandDetectionTest(TestCase):
         Subversion checkout nor a Git repository produce a
         L{NotWorkingDirectory} exceptions.
         """
-        self.assertRaises(NotWorkingDirectory, getRepositoryCommand, self.repos)
         self.assertRaises(NotWorkingDirectory, getRepositoryCommand,
-                          FilePath(self.mktemp()))
+                          self.repos)

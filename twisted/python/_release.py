@@ -32,7 +32,7 @@ from twisted.python.usage import Options, UsageError
 VERSION_OFFSET = 2000
 
 
-def runCommand(args):
+def runCommand(args, cwd=None):
     """
     Execute a vector of arguments.
 
@@ -45,7 +45,7 @@ def runCommand(args):
 
     @raise CommandFailed: when the program exited with a non-0 exit code.
     """
-    process = Popen(args, stdout=PIPE, stderr=STDOUT)
+    process = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=cwd)
     stdout = process.stdout.read()
     exitCode = process.wait()
     if exitCode < 0:
@@ -76,12 +76,15 @@ class CommandFailed(Exception):
         self.output = output
 
 
+
 class GitCommand(object):
     """
     Subset of Git commands to release Twisted from a Git repository.
     """
     def ensureIsWorkingDirectory(self, directory):
-        if not directory.child(".git").exists():
+        try:
+            runCommand(["git", "rev-parse"], cwd=directory.path)
+        except CommandFailed:
             raise NotWorkingDirectory(
                 "%s does not appear to be a Git repository."
                 % (directory.path,))
@@ -95,7 +98,8 @@ class GitCommand(object):
         @params path: The path to get the status from (can be a directory or a
             file.)
         """
-        status = runCommand(["git", "-C", path.path, "status", "--short"]).strip()
+        status = runCommand(
+            ["git", "-C", path.path, "status", "--short"]).strip()
         return status == ''
 
 
@@ -117,9 +121,9 @@ class GitCommand(object):
         @params fromDir: The path to the Git repository to export.
 
         @type exportDir: L{twisted.python.filepath.FilePath}
-        @params exportDir: The directory to export the content of the repository
-            to. This directory doesn't have to exist prior to exporting the
-            repository.
+        @params exportDir: The directory to export the content of the
+            repository to. This directory doesn't have to exist prior to
+            exporting the repository.
         """
         runCommand(["git", "-C", fromDir.path,
                     "checkout-index", "--all", "--force",
@@ -192,13 +196,17 @@ def getRepositoryCommand(directory):
     @raise NotWorkingDirectory: if no supported VCS can be found from the
         specified directory.
     """
-    if directory.child('.svn').exists():
+
+    if "is not a working copy" not in runCommand(
+            ["svn", "status", directory.path]):
         return SVNCommand()
-    elif directory.child('.git').exists():
-        return GitCommand()
     else:
-        raise NotWorkingDirectory("No supported VCS can be found in %s" %
-                                  (directory.path,))
+        try:
+            runCommand(["git", "rev-parse"], cwd=directory.path)
+            return GitCommand()
+        except (CommandFailed, OSError):
+            raise NotWorkingDirectory("No supported VCS can be found in %s" %
+                                      (directory.path,))
 
 
 def _changeVersionInFile(old, new, filename):
@@ -649,7 +657,8 @@ class NewsBuilder(object):
         @param header: The top-level header to use when writing the news.
         @type header: L{str}
 
-        @raise NotWorkingDirectory: If the C{path} is not an Git repository.
+        @raise NotWorkingDirectory: If the C{path} is not a supported VCS
+            repository.
         """
         changes = []
         for part in (self._FEATURE, self._BUGFIX, self._DOC, self._REMOVAL):
@@ -681,8 +690,8 @@ class NewsBuilder(object):
     def _deleteFragments(self, path):
         """
         Delete the change information, to clean up the repository  once the
-        NEWS files have been built. It requires C{path} to be in a Git
-        repository.
+        NEWS files have been built. It requires C{path} to be in a supported
+        VCS repository.
 
         @param path: A directory (probably a I{topfiles} directory) containing
             change information in the form of <ticket>.<change type> files.
@@ -1109,14 +1118,15 @@ class DistributionBuilder(object):
 
 class UncleanWorkingDirectory(Exception):
     """
-    Raised when the working directory of a Git repository is unclean.
+    Raised when the working directory of a repository is unclean.
     """
 
 
 
 class NotWorkingDirectory(Exception):
     """
-    Raised when a directory does not appear to be a Git repository directory.
+    Raised when a directory does not appear to be a repository directory of a
+    supported VCS.
     """
 
 
@@ -1130,8 +1140,8 @@ def buildAllTarballs(checkout, destination, templatePath=None):
     NEWS files created.
 
     @type checkout: L{FilePath}
-    @param checkout: The Git repository from which a pristine source tree
-        will be exported.
+    @param checkout: The repository from which a pristine source tree will be
+        exported.
     @type destination: L{FilePath}
     @param destination: The directory in which tarballs will be placed.
     @type templatePath: L{FilePath}
@@ -1140,7 +1150,7 @@ def buildAllTarballs(checkout, destination, templatePath=None):
 
     @raise UncleanWorkingDirectory: If there are modifications to the
         working directory of C{checkout}.
-    @raise NotWorkingDirectory: If the C{checkout} path is not a Git
+    @raise NotWorkingDirectory: If the C{checkout} path is not a supported VCS
         repository.
     """
     cmd = getRepositoryCommand(checkout)
