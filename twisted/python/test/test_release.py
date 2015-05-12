@@ -66,16 +66,11 @@ else:
 if which("git"):
     gitVersion = runCommand(["git", "--version"]).split(" ")[2].split(".")
 
-    # We want a git above 1.8.5.
+    # We want git 2.0 or above.
     if int(gitVersion[0]) >= 2:
         gitSkip = skip
-    elif int(gitVersion[0] >= 1) and int(gitVersion[1]) >= 8:
-        if int(gitVersion[2]) >= 5:
-            gitSkip = skip
-        else:
-            gitSkip = "old git is present, 1.8.5 or newer needed"
     else:
-        gitSkip = "old git is present, 1.8.5 or newer needed"
+        gitSkip = "old git is present"
 else:
     gitSkip = "git is not present."
 
