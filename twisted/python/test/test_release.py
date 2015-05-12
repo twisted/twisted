@@ -1264,7 +1264,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
     def test_removeNEWSfragments(self):
         """
         L{NewsBuilder.buildALL} removes all the NEWS fragments after the build
-        process, using the C{git} C{rm} command.
+        process, using the VCS's C{rm} command.
         """
         builder = NewsBuilder()
         project = self.createFakeTwistedProject()
@@ -1302,6 +1302,12 @@ class NewsBuilderGitTests(NewsBuilderMixin, TestCase):
             project = self.project
 
         runCommand(["git", "init", project.path])
+        runCommand(["git", "config",
+                    "--file", project.child(".git").child("config").path,
+                    "user.name", '"someone"'])
+        runCommand(["git", "config",
+                    "--file", project.child(".git").child("config").path,
+                    "user.email", '"someone@someplace.com"'])
         runCommand(["git", "-C", project.path, "add"] + glob.glob(project.path + "/*"))
         runCommand(["git", "-C", project.path, "commit", "-m", "yay"])
 
