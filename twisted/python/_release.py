@@ -162,7 +162,7 @@ class SVNCommand(object):
         Remove the specified path from a Subversion checkout.
 
         @type path: L{twisted.python.filepath.FilePath}
-        @params path: The path to remove from the checkout.
+        @param path: The path to remove from the checkout.
         """
         runCommand(["svn", "rm", path.path])
 
