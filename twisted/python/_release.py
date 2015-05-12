@@ -95,7 +95,7 @@ class GitCommand(object):
         Return the Git status of the files in the specified path.
 
         @type path: L{twisted.python.filepath.FilePath}
-        @params path: The path to get the status from (can be a directory or a
+        @param path: The path to get the status from (can be a directory or a
             file.)
         """
         status = runCommand(
@@ -108,7 +108,7 @@ class GitCommand(object):
         Remove the specified path from a Git repository.
 
         @type path: L{twisted.python.filepath.FilePath}
-        @params path: The path to remove from the repository.
+        @param path: The path to remove from the repository.
         """
         runCommand(["git", "-C", path.dirname(), "rm", path.path])
 
@@ -118,10 +118,10 @@ class GitCommand(object):
         Export the content of a Git repository to the specified directory.
 
         @type fromDir: L{twisted.python.filepath.FilePath}
-        @params fromDir: The path to the Git repository to export.
+        @param fromDir: The path to the Git repository to export.
 
         @type exportDir: L{twisted.python.filepath.FilePath}
-        @params exportDir: The directory to export the content of the
+        @param exportDir: The directory to export the content of the
             repository to. This directory doesn't have to exist prior to
             exporting the repository.
         """
@@ -130,6 +130,7 @@ class GitCommand(object):
                     # prefix has to end up with a "/" so that files get copied to a
                     # directory whose name is the prefix.
                     "--prefix", exportDir.path + "/"])
+
 
 
 class SVNCommand(object):
@@ -149,7 +150,7 @@ class SVNCommand(object):
         Return the SVN status of the files in the specified path.
 
         @type path: L{twisted.python.filepath.FilePath}
-        @params path: The path to get the status from (can be a directory or a
+        @param path: The path to get the status from (can be a directory or a
             file.)
         """
         status = runCommand(["svn", "status", path.path]).strip()
@@ -171,10 +172,10 @@ class SVNCommand(object):
         Export the content of a SVN checkout to the specified directory.
 
         @type fromDir: L{twisted.python.filepath.FilePath}
-        @params fromDir: The path to the Subversion checkout to export.
+        @param fromDir: The path to the Subversion checkout to export.
 
         @type exportDir: L{twisted.python.filepath.FilePath}
-        @params exportDir: The directory to export the content of the checkout
+        @param exportDir: The directory to export the content of the checkout
             to. This directory doesn't have to exist prior to exporting the
             repository.
         """
@@ -190,7 +191,7 @@ def getRepositoryCommand(directory):
     L{NotWorkingDirectory} exception.
 
     @type directory: L{FilePath}
-    @params directory: The directory to detect the VCS used from.
+    @param directory: The directory to detect the VCS used from.
 
     @rtype: L{SVNCommand} or L{GitCommand}
 
