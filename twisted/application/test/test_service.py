@@ -39,6 +39,7 @@ class ApplicationTests(TestCase):
         self.assertTrue(verifyObject(IPersistable, IPersistable(app)))
 
     if _PY3:
-        # twisted.persisted is not yet ported to Python 3 (#7827)
+        # FIXME: https://twistedmatrix.com/trac/ticket/#7827
+        # twisted.persisted is not yet ported to Python 3
         test_applicationComponentsArePersistable.skip = (
             "twisted.persisted is not yet ported to Python 3.")

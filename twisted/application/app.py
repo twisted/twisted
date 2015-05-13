@@ -660,10 +660,8 @@ def run(runApp, ServerOptions):
 
 
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
-    # TODO https://twistedmatrix.com/trac/ticket/3843
-    # TODO https://twistedmatrix.com/trac/ticket/6910
-    # twisted.persisted is proposed for deprecation and is not yet ported to
-    # to Python3 so we only import it if some code really needs to use it
+    # FIXME: https://twistedmatrix.com/trac/ticket/#7827
+    # twisted.persisted is not yet ported to Python 3, so import it here.
     from twisted.persisted import sob
     application = service.loadApplication(filein, typein, passphrase)
     sob.IPersistable(application).setStyle(typeout)
@@ -678,10 +676,8 @@ def startApplication(application, save):
     from twisted.internet import reactor
     service.IService(application).startService()
     if save:
-        # TODO https://twistedmatrix.com/trac/ticket/3843
-        # TODO https://twistedmatrix.com/trac/ticket/6910
-        # twisted.persisted is proposed for deprecation and is not yet ported to
-        # to Python3 so we only import it if some code really needs to use it
+        # FIXME: https://twistedmatrix.com/trac/ticket/#7827
+        # twisted.persisted is not yet ported to Python 3, so import it here.
         from twisted.persisted import sob
         p = sob.IPersistable(application)
         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')

@@ -384,8 +384,8 @@ def Application(name, uid=None, gid=None):
     availableComponents = [MultiService(), Process(uid, gid)]
 
     if not _PY3:
-        # twisted.persisted is not yet ported to Python 3 (#7827), so import it
-        # down here.
+        # FIXME: https://twistedmatrix.com/trac/ticket/#7827
+        # twisted.persisted is not yet ported to Python 3, so import it here.
         from twisted.persisted import sob
         availableComponents.append(sob.Persistent(ret, name))
 
@@ -409,8 +409,8 @@ def loadApplication(filename, kind, passphrase=None):
     @type kind: C{str}
     @type passphrase: C{str}
     """
-    # twisted.persisted is not yet ported to Python 3 (#7827), so import it
-    # down here.
+    # FIXME: https://twistedmatrix.com/trac/ticket/#7827
+    # twisted.persisted is not yet ported to Python 3, so import it here.
     from twisted.persisted import sob
 
     if kind == 'python':
