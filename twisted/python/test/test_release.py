@@ -1741,11 +1741,10 @@ class DistributionBuilderTests(DistributionBuilderTestBase):
 
 
 
-class BuildAllTarballsTests(DistributionBuilderTestBase):
+class BuildAllTarballsTestBase(object):
     """
     Tests for L{DistributionBuilder.buildAllTarballs}.
     """
-    skip = gitSkip or sphinxSkip
 
     def test_buildAllTarballs(self):
         """
@@ -1758,7 +1757,7 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         checkout = FilePath(checkoutPath)
         self.outputDir.remove()
 
-        _gitInit(checkout)
+        self._init(checkout)
 
         structure = {
             "README": "Twisted",
@@ -1832,8 +1831,7 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
 
         self.createStructure(checkout, structure)
         childs = [x.path for x in checkout.children()]
-        runCommand(["git", "-C", checkout.path, "add", "-f"] + childs)
-        runCommand(["git", "-C", checkout.path, "commit", "-m", "yay"])
+        self._addAndCommit(checkout, childs)
 
         buildAllTarballs(checkout, self.outputDir)
         self.assertEqual(
@@ -1861,7 +1859,7 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         checkoutPath = self.mktemp()
         checkout = FilePath(checkoutPath)
 
-        _gitInit(checkout)
+        self._init(checkout)
 
         checkout.child("foo").setContent("whatever")
         self.assertRaises(UncleanWorkingDirectory,
@@ -1881,6 +1879,45 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         self.assertRaises(NotWorkingDirectory,
                           buildAllTarballs,
                           checkout, FilePath(self.mktemp()))
+
+
+
+class BuildAllTarballsGitTestCase(DistributionBuilderTestBase,
+                                  BuildAllTarballsTestBase):
+    """
+    Tests for L{DistributionBuilder.buildAllTarballs} using Git.
+    """
+    skip = gitSkip or sphinxSkip
+
+    def _init(self, directory):
+        _gitInit(directory)
+
+    def _addAndCommit(self, checkout, files):
+        runCommand(["git", "-C", checkout.path, "add", "-f"] + files)
+        runCommand(["git", "-C", checkout.path, "commit", "-m", "yay"])
+
+
+
+class BuildAllTarballsSVNTestCase(DistributionBuilderTestBase,
+                                  BuildAllTarballsTestBase):
+    """
+    Tests for L{DistributionBuilder.buildAllTarballs} using SVN.
+    """
+    skip = svnSkip or sphinxSkip
+
+    def _init(self, directory):
+
+        repositoryPath = self.mktemp()
+        repository = FilePath(repositoryPath)
+
+        runCommand(["svnadmin", "create", repository.path])
+        runCommand(["svn", "checkout", "file://" + repository.path,
+                    directory.path])
+
+    def _addAndCommit(self, checkout, files):
+
+        runCommand(["svn", "add"] + files)
+        runCommand(["svn", "commit", checkout.path, "-m", "yay"])
 
 
 
