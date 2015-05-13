@@ -12,21 +12,12 @@ import errno
 from zope.interface import implementer
 
 from twisted.trial.unittest import TestCase
-from twisted.python.constants import NamedConstant, Names
-from twisted.internet.kqreactor import KQueueReactor, _IKQueueProvider
 
-
-
-class KQueueFlags(Names):
-    """
-    Flags that are used by the KQueue reactor.
-    """
-    KQ_FILTER_READ = NamedConstant()
-    KQ_FILTER_WRITE = NamedConstant()
-    KQ_EV_DELETE = NamedConstant()
-    KQ_EV_ADD = NamedConstant()
-    KQ_EV_EOF = NamedConstant()
-
+try:
+    from twisted.internet.kqreactor import KQueueReactor, _IKQueue
+    kqueueSkip = None
+except ImportError:
+    kqueueSkip = "KQueue not available."
 
 
 def _fakeKEvent(*args, **kwargs):
@@ -39,20 +30,14 @@ def _fakeKEvent(*args, **kwargs):
 
 def makeFakeKQueue(testKQueue, testKEvent):
     """
-    Create a fake that implements L{_IKQueueProvider}.
+    Create a fake that implements L{_IKQueue}.
     """
-    @implementer(_IKQueueProvider)
-    class FakeKQueueProvider(object):
+    @implementer(_IKQueue)
+    class FakeKQueue(object):
         kqueue = testKQueue
         kevent = testKEvent
 
-        KQ_FILTER_READ = KQueueFlags.KQ_FILTER_READ
-        KQ_FILTER_WRITE = KQueueFlags.KQ_FILTER_WRITE
-        KQ_EV_DELETE = KQueueFlags.KQ_EV_DELETE
-        KQ_EV_ADD = KQueueFlags.KQ_EV_ADD
-        KQ_EV_EOF = KQueueFlags.KQ_EV_EOF
-
-    return FakeKQueueProvider
+    return FakeKQueue()
 
 
 
@@ -62,6 +47,8 @@ class KQueueTests(TestCase):
     behaviour. For that, look at
     L{twisted.internet.test.reactormixins.ReactorBuilder}.
     """
+    skip = kqueueSkip
+
     def test_EINTR(self):
         """
         L{KQueueReactor} should handle L{errno.EINTR} by returning.
