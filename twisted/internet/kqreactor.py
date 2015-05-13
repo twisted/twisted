@@ -15,11 +15,9 @@ connections, listeners or connectors are added)::
    from twisted.internet import kqreactor
    kqreactor.install()
 
-This implementation depends on Python 2.6 or higher which has kqueue support
-built in the select module.
-
-Note, that you should use Python 2.6.5 or higher, since previous implementations
-of select.kqueue had U{http://bugs.python.org/issue5910} not yet fixed.
+Note, that you should use Python 2.6.5 or higher, since previous
+implementations of L{select.kqueue} had U{http://bugs.python.org/issue5910}
+not yet fixed.
 """
 
 from __future__ import division, absolute_import
