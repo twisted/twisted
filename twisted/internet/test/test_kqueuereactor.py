@@ -13,7 +13,7 @@ from zope.interface import implementer
 
 from twisted.trial.unittest import TestCase
 from twisted.python.constants import NamedConstant, Names
-from twisted.internet.kqreactor import KQueueReactor, IKQueueProvider
+from twisted.internet.kqreactor import KQueueReactor, _IKQueueProvider
 
 
 
@@ -41,7 +41,7 @@ def makeFakeKQueue(testKQueue, testKEvent):
     """
     Create a fake that implements L{IKQueueProvider}.
     """
-    @implementer(IKQueueProvider)
+    @implementer(_IKQueueProvider)
     class FakeKQueueProvider(object):
         """
         A template FakeKQueueProvider that sets up a bunch of flags.

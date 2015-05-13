@@ -32,7 +32,7 @@ from twisted.python import log, failure
 
 
 
-class IKQueueProvider(Interface):
+class _IKQueueProvider(Interface):
     """
     An interface for KQueue implementation providers.
 
@@ -42,7 +42,7 @@ class IKQueueProvider(Interface):
 
 
 
-@implementer(IKQueueProvider)
+@implementer(_IKQueueProvider)
 class _StdlibKQueue(object):
     """
     An implementation of L{IKQueueProvider} that uses the standard library
