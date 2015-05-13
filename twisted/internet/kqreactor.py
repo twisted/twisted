@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_kqueuereactor -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
