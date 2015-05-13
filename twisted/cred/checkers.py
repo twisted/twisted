@@ -61,7 +61,7 @@ class AllowAnonymousAccess:
 
 
 @implementer(ICredentialsChecker)
-class InMemoryUsernamePasswordDatabaseDontUse:
+class InMemoryUsernamePasswordDatabaseDontUse(object):
     """
     An extremely simple credentials checker.
 
@@ -72,7 +72,6 @@ class InMemoryUsernamePasswordDatabaseDontUse:
     toy.  If you need a simple credentials checker for a real application,
     see L{FilePasswordDB}.
     """
-
     credentialInterfaces = (credentials.IUsernamePassword,
                             credentials.IUsernameHashedPassword)
 

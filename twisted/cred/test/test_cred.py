@@ -36,7 +36,7 @@ class ITestable(Interface):
 
 
 
-class TestAvatar:
+class TestAvatar(object):
     """
     A test avatar.
     """
@@ -83,7 +83,10 @@ class DerivedCredentials(object):
 
 
 @implementer(portal.IRealm)
-class TestRealm:
+class TestRealm(object):
+    """
+    A basic test realm.
+    """
     def __init__(self):
         self.avatars = {}
 
@@ -100,34 +103,45 @@ class TestRealm:
 
 
 
-class NewCredTests(unittest.TestCase):
+class CredTests(unittest.TestCase):
+    """
+    Tests for the meat of L{twisted.cred} -- realms, portals, avatars, and
+    checkers.
+    """
     def setUp(self):
-        r = self.realm = TestRealm()
-        p = self.portal = portal.Portal(r)
-        up = self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        up.addUser(b"bob", b"hello")
-        p.registerChecker(up)
+        self.realm = TestRealm()
+        self.portal = portal.Portal(self.realm)
+        self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        self.checker.addUser(b"bob", b"hello")
+        self.portal.registerChecker(self.checker)
 
 
-    def testListCheckers(self):
+    def test_listCheckers(self):
+        """
+        The checkers in a portal can check only certain types of credentials.
+        Since this portal has
+        L{checkers.InMemoryUsernamePasswordDatabaseDontUse} registered, it
+        """
         expected = [credentials.IUsernamePassword,
                     credentials.IUsernameHashedPassword]
         got = self.portal.listCredentialsInterfaces()
         self.assertEqual(sorted(got), sorted(expected))
 
 
-    def testBasicLogin(self):
-        l = []; f = []
-        self.portal.login(credentials.UsernamePassword(b"bob", b"hello"),
-                          self, ITestable).addCallback(
-            l.append).addErrback(f.append)
-        if f:
-            raise f[0]
-        iface, impl, logout = l[0]
+    def test_basicLogin(self):
+        """
+        Calling C{login} on a portal with correct credentials and an interface
+        that the portal's realm supports works.
+        """
+        login = self.successResultOf(self.portal.login(
+            credentials.UsernamePassword(b"bob", b"hello"), self, ITestable))
+        iface, impl, logout = login
+
         # whitebox
         self.assertEqual(iface, ITestable)
         self.failUnless(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
+
         # greybox
         self.failUnless(impl.original.loggedIn)
         self.failUnless(not impl.original.loggedOut)
@@ -140,18 +154,15 @@ class NewCredTests(unittest.TestCase):
         Login with credentials implementing an interface inheriting from an
         interface registered with a checker (but not itself registered).
         """
-        l = []
-        f = []
-        self.portal.login(DerivedCredentials(b"bob", b"hello"), self, ITestable
-            ).addCallback(l.append
-            ).addErrback(f.append)
-        if f:
-            raise f[0]
-        iface, impl, logout = l[0]
+        login = self.successResultOf(self.portal.login(
+            DerivedCredentials(b"bob", b"hello"), self, ITestable))
+        iface, impl, logout = login
+
         # whitebox
         self.assertEqual(iface, ITestable)
         self.failUnless(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
+
         # greybox
         self.failUnless(impl.original.loggedIn)
         self.failUnless(not impl.original.loggedOut)
