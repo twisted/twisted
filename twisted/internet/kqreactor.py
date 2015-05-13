@@ -16,7 +16,7 @@ connections, listeners or connectors are added)::
    kqreactor.install()
 
 Note, that you should use Python 2.6.5 or higher, since previous
-implementations of L{select.kqueue} had U{http://bugs.python.org/issue5910}
+implementations of C{select.kqueue} had U{http://bugs.python.org/issue5910}
 not yet fixed.
 """
 
@@ -46,11 +46,11 @@ class _IKQueueProvider(Interface):
 class _StdlibKQueue(object):
     """
     An implementation of L{IKQueueProvider} that uses the standard library
-    implementation of L{kqueue}.
+    implementation of C{kqueue}.
     """
     def __init__(self):
         """
-        Import L{kqueue}, L{kevent}, and a bunch of flags.
+        Import C{kqueue}, C{kevent}, and a bunch of flags.
         """
         from select import kqueue, kevent
         from select import KQ_FILTER_READ, KQ_FILTER_WRITE
@@ -70,7 +70,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
     A reactor that uses kqueue(2)/kevent(2) and relies on Python 2.6 or higher
     which has built in support for kqueue in the select module.
 
-    @ivar _kq: A L{kqueue} which will be used to check for I/O readiness.
+    @ivar _kq: A C{kqueue} which will be used to check for I/O readiness.
 
     @ivar _kqueueImpl: The implementation of L{IKQueueProvider} to use.
 
