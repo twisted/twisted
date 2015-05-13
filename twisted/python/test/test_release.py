@@ -8,16 +8,17 @@ All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
 
-
 import glob
 import operator
 import os
 import sys
 import textwrap
 import tempfile
-from StringIO import StringIO
+import shutil
 import tarfile
+
 from datetime import date
+from io import BytesIO as StringIO
 
 from twisted.trial.unittest import TestCase
 
@@ -83,11 +84,18 @@ else:
 
 
 
-def makeTempDir():
+class ExternalTempdirTestCase(TestCase):
     """
-    Our own mktemp that makes directories outside of the checkout.
+    A test case which has mkdir make directories outside of the usual spot, so
+    that SVN and Git commands don't interfere with the Twisted checkout.
     """
-    return tempfile.mkdtemp(dir="/tmp/tw")
+    def mktemp(self):
+        """
+        Make our own directory.
+        """
+        newDir = tempfile.mkdtemp(dir="/tmp/tw")
+        self.addCleanup(shutil.rmtree, newDir)
+        return newDir
 
 
 
@@ -198,7 +206,7 @@ class StructureAssertingMixin(object):
 
 
 
-class ChangeVersionTests(TestCase, StructureAssertingMixin):
+class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
     """
     Twisted has the ability to change versions.
     """
@@ -214,7 +222,6 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         baseDirectory = FilePath(self.mktemp())
         directory, filename = os.path.split(relativePath)
         directory = baseDirectory.preauthChild(directory)
-        directory.makedirs()
         file = directory.child(filename)
         directory.child(filename).setContent(content)
         return file
@@ -344,7 +351,7 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         and README files for all projects as well as in the top-level
         README file.
         """
-        root = FilePath(makeTempDir())
+        root = FilePath(self.mktemp())
         structure = {
             "README": "Hi this is 1.0.0.",
             "twisted": {
@@ -378,7 +385,7 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         README file. If the old version was a pre-release, it will change the
         version in NEWS files as well.
         """
-        root = FilePath(makeTempDir())
+        root = FilePath(self.mktemp())
 
         coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
                     "===============================\n"
@@ -425,7 +432,7 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
 
 
 
-class ProjectTests(TestCase):
+class ProjectTests(ExternalTempdirTestCase):
     """
     There is a first-class representation of a project.
     """
@@ -453,7 +460,7 @@ class ProjectTests(TestCase):
         @return: L{Project} pointing to the created project.
         """
         if baseDirectory is None:
-            baseDirectory = FilePath(makeTempDir())
+            baseDirectory = FilePath(self.mktemp())
         segments = version.package.split('.')
         directory = baseDirectory
         for segment in segments:
@@ -474,7 +481,7 @@ class ProjectTests(TestCase):
 
         @return: A L{FilePath} for the base directory.
         """
-        baseDirectory = FilePath(makeTempDir())
+        baseDirectory = FilePath(self.mktemp())
         for version in versions:
             self.makeProject(version, baseDirectory)
         return baseDirectory
@@ -528,7 +535,7 @@ class ProjectTests(TestCase):
 
 
 
-class UtilityTests(TestCase):
+class UtilityTests(ExternalTempdirTestCase):
     """
     Tests for various utility functions for releasing.
     """
@@ -574,7 +581,7 @@ class UtilityTests(TestCase):
 
 
 
-class VersionWritingTests(TestCase):
+class VersionWritingTests(ExternalTempdirTestCase):
     """
     Tests for L{replaceProjectVersion}.
     """
@@ -606,7 +613,7 @@ class VersionWritingTests(TestCase):
 
 
 
-class APIBuilderTests(TestCase):
+class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
@@ -627,7 +634,7 @@ class APIBuilderTests(TestCase):
         docstring = "text in docstring"
         privateDocstring = "should also appear in output"
 
-        inputPath = FilePath(makeTempDir()).child(packageName)
+        inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
         inputPath.child("__init__.py").setContent(
             "def foo():\n"
@@ -635,7 +642,7 @@ class APIBuilderTests(TestCase):
             "def _bar():\n"
             "    '%s'" % (docstring, privateDocstring))
 
-        outputPath = FilePath(makeTempDir())
+        outputPath = FilePath(self.mktemp())
 
         builder = APIBuilder()
         builder.build(projectName, projectURL, sourceURL, inputPath,
@@ -681,7 +688,7 @@ class APIBuilderTests(TestCase):
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
-        projectRoot = FilePath(makeTempDir())
+        projectRoot = FilePath(self.mktemp())
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
@@ -689,7 +696,7 @@ class APIBuilderTests(TestCase):
             "    '%s'\n" % (docstring,))
         packagePath.child("_version.py").setContent(
             genVersion("twisted", 1, 0, 0))
-        outputPath = FilePath(makeTempDir())
+        outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
         script.buildAPIDocs(projectRoot, outputPath)
@@ -801,7 +808,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         it.
         """
         self.builder = NewsBuilder()
-        self.project = FilePath(makeTempDir())
+        self.project = FilePath(self.mktemp())
 
         self.existingText = 'Here is stuff which was present previously.\n'
         self.createStructure(
@@ -823,13 +830,6 @@ class NewsBuilderMixin(StructureAssertingMixin):
                 '35.misc': '',
                 '40.doc': 'foo.bar.Baz.quux',
                 '41.doc': 'writing Foo servers'})
-
-
-    def tearDown(self):
-        """
-        Remove the fake project.
-        """
-        self.project.remove()
 
 
     def test_today(self):
@@ -1024,7 +1024,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         that project that includes some helpful text about how there were no
         interesting changes.
         """
-        project = FilePath(makeTempDir()).child("twisted")
+        project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
         self.createStructure(project, {'NEWS': self.existingText})
 
@@ -1172,7 +1172,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         """
         Create a fake-looking Twisted project to build from.
         """
-        project = FilePath(makeTempDir()).child("twisted")
+        project = FilePath(self.mktemp()).child("twisted")
         project.makedirs()
         self.createStructure(
             project, {
@@ -1302,7 +1302,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             NotWorkingDirectory, self.builder.buildAll, self.project)
 
 
-class NewsBuilderGitTests(NewsBuilderMixin, TestCase):
+class NewsBuilderGitTests(NewsBuilderMixin, ExternalTempdirTestCase):
     """
     Tests for L{NewsBuilder} using Git.
     """
@@ -1324,7 +1324,7 @@ class NewsBuilderGitTests(NewsBuilderMixin, TestCase):
         return runCommand(["git", "-C", project.path, "status", "--short"])
 
 
-class NewsBuilderSVNTests(NewsBuilderMixin, TestCase):
+class NewsBuilderSVNTests(NewsBuilderMixin, ExternalTempdirTestCase):
     """
     Tests for L{NewsBuilder} using SVN.
     """
@@ -1338,7 +1338,7 @@ class NewsBuilderSVNTests(NewsBuilderMixin, TestCase):
         if project is None:
             project = self.project
 
-        repositoryPath = makeTempDir()
+        repositoryPath = self.mktemp()
         repository = FilePath(repositoryPath)
 
         runCommand(["svnadmin", "create", repository.path])
@@ -1401,7 +1401,7 @@ class SphinxBuilderTests(TestCase):
         self.builder = SphinxBuilder()
 
         # set up a place for a fake sphinx project
-        self.twistedRootDir = FilePath(makeTempDir())
+        self.twistedRootDir = FilePath(self.mktemp())
         self.sphinxDir = self.twistedRootDir.child("docs")
         self.sphinxDir.makedirs()
         self.sourceDir = self.sphinxDir
@@ -1505,14 +1505,15 @@ class SphinxBuilderTests(TestCase):
 
 
 
-class DistributionBuilderTestBase(StructureAssertingMixin, TestCase):
+class DistributionBuilderTestBase(StructureAssertingMixin,
+                                  ExternalTempdirTestCase):
     """
     Base for tests of L{DistributionBuilder}.
     """
 
     def setUp(self):
-        self.rootDir = FilePath(makeTempDir())
-        self.outputDir = FilePath(makeTempDir())
+        self.rootDir = FilePath(self.mktemp())
+        self.outputDir = FilePath(self.mktemp())
         self.builder = DistributionBuilder(self.rootDir, self.outputDir)
 
 
@@ -1753,7 +1754,7 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         no Git metadata.  This involves building documentation, which it will
         build with the correct API documentation reference base URL.
         """
-        checkoutPath = makeTempDir()
+        checkoutPath = self.mktemp()
         checkout = FilePath(checkoutPath)
         self.outputDir.remove()
 
@@ -1857,14 +1858,14 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         L{UncleanWorkingDirectory} is raised by L{buildAllTarballs} when the
         Git repository provided has uncommitted changes.
         """
-        checkoutPath = makeTempDir()
+        checkoutPath = self.mktemp()
         checkout = FilePath(checkoutPath)
 
         _gitInit(checkout)
 
         checkout.child("foo").setContent("whatever")
         self.assertRaises(UncleanWorkingDirectory,
-                          buildAllTarballs, checkout, FilePath(makeTempDir()))
+                          buildAllTarballs, checkout, FilePath(self.mktemp()))
 
 
     def test_buildAllTarballsEnsuresExistingCheckout(self):
@@ -1872,18 +1873,18 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         L{NotWorkingDirectory} is raised by L{buildAllTarballs} when the
         checkout passed does not exist or is not a Git repository.
         """
-        checkout = FilePath(makeTempDir()).child("test")
+        checkout = FilePath(self.mktemp()).child("test")
         self.assertRaises(NotWorkingDirectory,
                           buildAllTarballs,
-                          checkout, FilePath(makeTempDir()))
+                          checkout, FilePath(self.mktemp()))
         checkout.createDirectory()
         self.assertRaises(NotWorkingDirectory,
                           buildAllTarballs,
-                          checkout, FilePath(makeTempDir()))
+                          checkout, FilePath(self.mktemp()))
 
 
 
-class ScriptTests(StructureAssertingMixin, TestCase):
+class ScriptTests(StructureAssertingMixin, ExternalTempdirTestCase):
     """
     Tests for the release script functionality.
     """
@@ -2047,7 +2048,7 @@ class CommandsTestMixin(StructureAssertingMixin):
     Test mixin for the VCS commands used by the release scripts.
     """
     def setUp(self):
-        self.tmpDir = FilePath(makeTempDir())
+        self.tmpDir = FilePath(self.mktemp())
 
 
     def test_ensureIsWorkingDirectoryWithWorkingDirectory(self):
@@ -2127,14 +2128,14 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.createStructure(reposDir, structure)
         self.commitRepository(reposDir)
 
-        exportDir = FilePath(makeTempDir()).child("export")
+        exportDir = FilePath(self.mktemp()).child("export")
         cmd = self.createCommand()
         cmd.exportTo(reposDir, exportDir)
         self.assertStructure(exportDir, structure)
 
 
 
-class GitCommandTest(CommandsTestMixin, TestCase):
+class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
     Specific L{CommandsTestMixin} related to Git repositories through
     L{GitCommand}.
@@ -2170,7 +2171,7 @@ class GitCommandTest(CommandsTestMixin, TestCase):
 
 
 
-class SVNCommandTest(CommandsTestMixin, TestCase):
+class SVNCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
     Specific L{CommandsTestMixin} related to Subversion checkouts through
     L{SVNCommand}.
@@ -2213,7 +2214,7 @@ class SVNCommandTest(CommandsTestMixin, TestCase):
         runCommand(["svn", "commit", repository.path, "-m", "hop"])
 
 
-class RepositoryCommandDetectionTest(TestCase):
+class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to acces the right set of VCS commands
     depending on the repository manipulated.
@@ -2221,7 +2222,7 @@ class RepositoryCommandDetectionTest(TestCase):
     skip = svnSkip or gitSkip
 
     def setUp(self):
-        self.repos = FilePath(makeTempDir())
+        self.repos = FilePath(self.mktemp())
 
 
     def test_subversion(self):
