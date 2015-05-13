@@ -283,7 +283,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         try:
             l = self._kq.control([], len(self._selectables), timeout)
         except OSError as e:
-            if e[0] == errno.EINTR:
+            if e.errno == errno.EINTR:
                 return
             else:
                 raise
