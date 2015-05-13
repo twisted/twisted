@@ -14,6 +14,7 @@ import operator
 import os
 import sys
 import textwrap
+import tempfile
 from StringIO import StringIO
 import tarfile
 from datetime import date
@@ -86,7 +87,7 @@ def makeTempDir():
     """
     Our own mktemp that makes directories outside of the checkout.
     """
-    return FilePath("/tmp/tw").child(os.urandom(12).encode('hex')).path
+    return tempfile.mkdtemp(dir="/tmp/tw")
 
 
 
@@ -191,7 +192,6 @@ class StructureAssertingMixin(object):
         """
         tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
         extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
         for info in tarFile:
             tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.children()[0], dirDict)
@@ -345,7 +345,6 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         README file.
         """
         root = FilePath(makeTempDir())
-        root.createDirectory()
         structure = {
             "README": "Hi this is 1.0.0.",
             "twisted": {
@@ -380,7 +379,7 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         version in NEWS files as well.
         """
         root = FilePath(makeTempDir())
-        root.createDirectory()
+
         coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
                     "===============================\n"
                     "\n")
@@ -455,7 +454,6 @@ class ProjectTests(TestCase):
         """
         if baseDirectory is None:
             baseDirectory = FilePath(makeTempDir())
-            baseDirectory.createDirectory()
         segments = version.package.split('.')
         directory = baseDirectory
         for segment in segments:
@@ -477,7 +475,6 @@ class ProjectTests(TestCase):
         @return: A L{FilePath} for the base directory.
         """
         baseDirectory = FilePath(makeTempDir())
-        baseDirectory.createDirectory()
         for version in versions:
             self.makeProject(version, baseDirectory)
         return baseDirectory
@@ -639,7 +636,6 @@ class APIBuilderTests(TestCase):
             "    '%s'" % (docstring, privateDocstring))
 
         outputPath = FilePath(makeTempDir())
-        outputPath.makedirs()
 
         builder = APIBuilder()
         builder.build(projectName, projectURL, sourceURL, inputPath,
@@ -806,7 +802,6 @@ class NewsBuilderMixin(StructureAssertingMixin):
         """
         self.builder = NewsBuilder()
         self.project = FilePath(makeTempDir())
-        self.project.makedirs()
 
         self.existingText = 'Here is stuff which was present previously.\n'
         self.createStructure(
@@ -1517,10 +1512,7 @@ class DistributionBuilderTestBase(StructureAssertingMixin, TestCase):
 
     def setUp(self):
         self.rootDir = FilePath(makeTempDir())
-        self.rootDir.createDirectory()
-
         self.outputDir = FilePath(makeTempDir())
-        self.outputDir.createDirectory()
         self.builder = DistributionBuilder(self.rootDir, self.outputDir)
 
 
@@ -1880,7 +1872,7 @@ class BuildAllTarballsTests(DistributionBuilderTestBase):
         L{NotWorkingDirectory} is raised by L{buildAllTarballs} when the
         checkout passed does not exist or is not a Git repository.
         """
-        checkout = FilePath(makeTempDir())
+        checkout = FilePath(makeTempDir()).child("test")
         self.assertRaises(NotWorkingDirectory,
                           buildAllTarballs,
                           checkout, FilePath(makeTempDir()))
@@ -2056,7 +2048,6 @@ class CommandsTestMixin(StructureAssertingMixin):
     """
     def setUp(self):
         self.tmpDir = FilePath(makeTempDir())
-        self.tmpDir.makedirs()
 
 
     def test_ensureIsWorkingDirectoryWithWorkingDirectory(self):
@@ -2136,7 +2127,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.createStructure(reposDir, structure)
         self.commitRepository(reposDir)
 
-        exportDir = FilePath(makeTempDir())
+        exportDir = FilePath(makeTempDir()).child("export")
         cmd = self.createCommand()
         cmd.exportTo(reposDir, exportDir)
         self.assertStructure(exportDir, structure)
@@ -2230,8 +2221,7 @@ class RepositoryCommandDetectionTest(TestCase):
     skip = svnSkip or gitSkip
 
     def setUp(self):
-        self.repos = FilePath("/tmp/tw").child(os.urandom(24).encode('hex'))
-        self.repos.createDirectory()
+        self.repos = FilePath(makeTempDir())
 
 
     def test_subversion(self):
