@@ -39,13 +39,10 @@ def _fakeKEvent(*args, **kwargs):
 
 def makeFakeKQueue(testKQueue, testKEvent):
     """
-    Create a fake that implements L{IKQueueProvider}.
+    Create a fake that implements L{_IKQueueProvider}.
     """
     @implementer(_IKQueueProvider)
     class FakeKQueueProvider(object):
-        """
-        A template FakeKQueueProvider that sets up a bunch of flags.
-        """
         kqueue = testKQueue
         kevent = testKEvent
 

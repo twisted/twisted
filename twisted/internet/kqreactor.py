@@ -45,7 +45,7 @@ class _IKQueueProvider(Interface):
 @implementer(_IKQueueProvider)
 class _StdlibKQueue(object):
     """
-    An implementation of L{IKQueueProvider} that uses the standard library
+    An implementation of L{_IKQueueProvider} that uses the standard library
     implementation of C{kqueue}.
     """
     def __init__(self):
@@ -72,7 +72,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
 
     @ivar _kq: A C{kqueue} which will be used to check for I/O readiness.
 
-    @ivar _kqueueImpl: The implementation of L{IKQueueProvider} to use.
+    @ivar _kqueueImpl: The implementation of L{_IKQueueProvider} to use.
 
     @ivar _selectables: A dictionary mapping integer file descriptors to
         instances of L{FileDescriptor} which have been registered with the
@@ -101,7 +101,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
             - www.freebsd.org/cgi/man.cgi?query=kqueue
             - people.freebsd.org/~jlemon/papers/kqueue.pdf
 
-        @param _kqueueImpl: The implementation of L{IKQueueProvider} to use. A
+        @param _kqueueImpl: The implementation of L{_IKQueueProvider} to use. A
             hook for testing.
         """
         self._kqueueImpl = _kqueueImpl()
