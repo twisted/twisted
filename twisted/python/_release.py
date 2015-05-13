@@ -84,7 +84,7 @@ class GitCommand(object):
     def ensureIsWorkingDirectory(self, directory):
         try:
             runCommand(["git", "rev-parse"], cwd=directory.path)
-        except CommandFailed:
+        except (CommandFailed, OSError):
             raise NotWorkingDirectory(
                 "%s does not appear to be a Git repository."
                 % (directory.path,))
@@ -182,6 +182,7 @@ class SVNCommand(object):
         runCommand(["svn", "export", fromDir.path, exportDir.path])
 
 
+
 def getRepositoryCommand(directory):
     """
     Detect the VCS used in the specified directory and return either a
@@ -198,17 +199,25 @@ def getRepositoryCommand(directory):
     @raise NotWorkingDirectory: if no supported VCS can be found from the
         specified directory.
     """
+    try:
+        svn = SVNCommand()
+        svn.ensureIsWorkingDirectory(directory)
+        return svn
+    except NotWorkingDirectory:
+        # It's not SVN, but that's okay, eat the error
+        pass
 
-    if "is not a working copy" not in runCommand(
-            ["svn", "status", directory.path]):
-        return SVNCommand()
-    else:
-        try:
-            runCommand(["git", "rev-parse"], cwd=directory.path)
-            return GitCommand()
-        except (CommandFailed, OSError):
-            raise NotWorkingDirectory("No supported VCS can be found in %s" %
-                                      (directory.path,))
+    try:
+        git = GitCommand()
+        git.ensureIsWorkingDirectory(directory)
+        return git
+    except NotWorkingDirectory:
+        # It's not Git, but that's okay, eat the error
+        pass
+
+    raise NotWorkingDirectory("No supported VCS can be found in %s" %
+                              (directory.path,))
+
 
 
 def _changeVersionInFile(old, new, filename):
