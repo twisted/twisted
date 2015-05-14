@@ -1906,7 +1906,6 @@ class BuildAllTarballsSVNTestCase(DistributionBuilderTestBase,
     skip = svnSkip or sphinxSkip
 
     def _init(self, directory):
-
         repositoryPath = self.mktemp()
         repository = FilePath(repositoryPath)
 
@@ -1915,7 +1914,6 @@ class BuildAllTarballsSVNTestCase(DistributionBuilderTestBase,
                     directory.path])
 
     def _addAndCommit(self, checkout, files):
-
         runCommand(["svn", "add"] + files)
         runCommand(["svn", "commit", checkout.path, "-m", "yay"])
 
@@ -2090,28 +2088,29 @@ class CommandsTestMixin(StructureAssertingMixin):
 
     def test_ensureIsWorkingDirectoryWithWorkingDirectory(self):
         """
-        Calling the `ensureIsWorkingDirectory` VCS command's method on a valid
+        Calling the C{ensureIsWorkingDirectory} VCS command's method on a valid
         working directory doesn't produce any error.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        cmd = self.createCommand()
-        self.assertEqual(None, cmd.ensureIsWorkingDirectory(reposDir))
+        self.assertEqual(None,
+                         self.createCommand.ensureIsWorkingDirectory(reposDir))
 
 
     def test_ensureIsWorkingDirectoryWithNonWorkingDirectory(self):
         """
-        Calling the `ensureIsWorkingDirectory` VCS command's method on a invalid
-        working directory raises a L{NotWorkingDirectory} exception.
+        Calling the C{ensureIsWorkingDirectory} VCS command's method on an
+        invalid working directory raises a L{NotWorkingDirectory} exception.
         """
         cmd = self.createCommand()
         self.assertRaises(NotWorkingDirectory,
-                          cmd.ensureIsWorkingDirectory, self.tmpDir)
+                          self.createCommand.ensureIsWorkingDirectory,
+                          self.tmpDir)
 
 
     def test_statusClean(self):
         """
-        Calling the `isStatusClean` VCS command's method on a repository with no
-        pending modifications returns `True`.
+        Calling the C{isStatusClean} VCS command's method on a repository with
+        no pending modifications returns C{True}.
         """
         reposDir = self.makeRepository(self.tmpDir)
         cmd = self.createCommand()
@@ -2120,8 +2119,8 @@ class CommandsTestMixin(StructureAssertingMixin):
 
     def test_statusNotClean(self):
         """
-        Calling the `isStatusClean` VCS command's method on a repository with no
-        pending modifications returns `False`.
+        Calling the C{isStatusClean} VCS command's method on a repository with
+        no pending modifications returns C{False}.
         """
         reposDir = self.makeRepository(self.tmpDir)
         reposDir.child('some-file').setContent("something")
@@ -2131,8 +2130,8 @@ class CommandsTestMixin(StructureAssertingMixin):
 
     def test_remove(self):
         """
-        Calling the `remove` VCS command's method remove the specified path from
-        the directory.
+        Calling the C{remove} VCS command's method remove the specified path
+        from the directory.
         """
         reposDir = self.makeRepository(self.tmpDir)
         testFile = reposDir.child('some-file')
@@ -2140,16 +2139,15 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.commitRepository(reposDir)
         self.assertTrue(testFile.exists())
 
-        cmd = self.createCommand()
-        cmd.remove(testFile)
+        self.createCommand.remove(testFile)
         testFile.restat(False) # Refresh the file information
         self.assertFalse(testFile.exists(), "File still exists")
 
 
     def test_export(self):
         """
-        The `exportTo` VCS command's method export the content of the repository
-        as identical in a specified directory.
+        The C{exportTo} VCS command's method export the content of the
+        repository as identical in a specified directory.
         """
         structure = {
             "README": "Hi this is 1.0.0.",
@@ -2166,8 +2164,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         self.commitRepository(reposDir)
 
         exportDir = FilePath(self.mktemp()).child("export")
-        cmd = self.createCommand()
-        cmd.exportTo(reposDir, exportDir)
+        self.createCommand.exportTo(reposDir, exportDir)
         self.assertStructure(exportDir, structure)
 
 
@@ -2177,7 +2174,7 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     Specific L{CommandsTestMixin} related to Git repositories through
     L{GitCommand}.
     """
-    createCommand = staticmethod(GitCommand)
+    createCommand = GitCommand
     skip = gitSkip
 
 
@@ -2213,7 +2210,7 @@ class SVNCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     Specific L{CommandsTestMixin} related to Subversion checkouts through
     L{SVNCommand}.
     """
-    createCommand = staticmethod(SVNCommand)
+    createCommand = SVNCommand
     skip = svnSkip
 
 
@@ -2251,6 +2248,7 @@ class SVNCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["svn", "commit", repository.path, "-m", "hop"])
 
 
+
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to acces the right set of VCS commands
@@ -2264,8 +2262,8 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
 
     def test_subversion(self):
         """
-        L{getRepositoryCommand} from a Subversion checkout returns a
-        L{SVNCommand} instance.
+        L{getRepositoryCommand} from a Subversion checkout returns
+        L{SVNCommand}.
         """
         repository = self.repos.child('repository')
         checkout = self.repos.child('checkout')
@@ -2278,8 +2276,7 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
 
     def test_git(self):
         """
-        L{getRepositoryCommand} from a Git repository returns a L{GitCommand}
-        instance.
+        L{getRepositoryCommand} from a Git repository returns L{GitCommand}.
         """
         _gitInit(self.repos)
         cmd = getRepositoryCommand(self.repos)
@@ -2289,8 +2286,8 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     def test_subversionPreferredOverGit(self):
         """
         L{getRepositoryCommand} from a directory which looks like both as a
-        Subversion checkout or a Git directory returns a L{SVNCommand}, which is
-        the currently preferred way of dealing with Twisted release scripts.
+        Subversion checkout or a Git directory returns a L{SVNCommand}, which
+        is the currently preferred way of dealing with Twisted release scripts.
         """
         _gitInit(self.repos.child("checkout"))
 
@@ -2312,6 +2309,7 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
         """
         self.assertRaises(NotWorkingDirectory, getRepositoryCommand,
                           self.repos)
+
 
 
 class VCSCommandInterfaceTests(TestCase):
