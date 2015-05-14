@@ -2101,7 +2101,6 @@ class CommandsTestMixin(StructureAssertingMixin):
         Calling the C{ensureIsWorkingDirectory} VCS command's method on an
         invalid working directory raises a L{NotWorkingDirectory} exception.
         """
-        cmd = self.createCommand()
         self.assertRaises(NotWorkingDirectory,
                           self.createCommand.ensureIsWorkingDirectory,
                           self.tmpDir)
@@ -2113,8 +2112,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         no pending modifications returns C{True}.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        cmd = self.createCommand()
-        self.assertTrue(cmd.isStatusClean(reposDir))
+        self.assertTrue(self.createCommand.isStatusClean(reposDir))
 
 
     def test_statusNotClean(self):
@@ -2124,8 +2122,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         """
         reposDir = self.makeRepository(self.tmpDir)
         reposDir.child('some-file').setContent("something")
-        cmd = self.createCommand()
-        self.assertFalse(cmd.isStatusClean(reposDir))
+        self.assertFalse(self.createCommand.isStatusClean(reposDir))
 
 
     def test_remove(self):
