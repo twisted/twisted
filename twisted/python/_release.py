@@ -12,14 +12,16 @@ Only Linux is supported by this code.  It should not be used by any tools
 which must run on multiple platforms (eg the setup.py script).
 """
 
-import textwrap
-from datetime import date
+import os
 import re
 import sys
-import os
-from tempfile import mkdtemp
 import tarfile
+import textwrap
 
+from zope.interface import Interface, implementer
+
+from datetime import date
+from tempfile import mkdtemp
 from subprocess import PIPE, STDOUT, Popen
 
 from twisted.python.versions import Version
@@ -77,20 +79,67 @@ class CommandFailed(Exception):
 
 
 
+class IVCSCommand(Interface):
+    """
+    An interface for VCS commands.
+    """
+    def ensureIsWorkingDirectory(path):
+        """
+        Ensure that C{path} is a working directory of this VCS.
+        """
+
+
+    def isStatusClean(path):
+        """
+        Return the Git status of the files in the specified path.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to get the status from (can be a directory or a
+            file.)
+        """
+
+
+    def remove(path):
+        """
+        Remove the specified path from a the VCS.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to remove from the repository.
+        """
+
+
+    def exportTo(fromDir, exportDir):
+        """
+        Export the content of the VCSrepository to the specified directory.
+
+        @type fromDir: L{twisted.python.filepath.FilePath}
+        @param fromDir: The path to the VCS repository to export.
+
+        @type exportDir: L{twisted.python.filepath.FilePath}
+        @param exportDir: The directory to export the content of the
+            repository to. This directory doesn't have to exist prior to
+            exporting the repository.
+        """
+
+
+
+@implementer(IVCSCommand)
 class GitCommand(object):
     """
     Subset of Git commands to release Twisted from a Git repository.
     """
-    def ensureIsWorkingDirectory(self, directory):
+    @staticmethod
+    def ensureIsWorkingDirectory(path):
         try:
-            runCommand(["git", "rev-parse"], cwd=directory.path)
+            runCommand(["git", "rev-parse"], cwd=path.path)
         except (CommandFailed, OSError):
             raise NotWorkingDirectory(
                 "%s does not appear to be a Git repository."
-                % (directory.path,))
+                % (path.path,))
 
 
-    def isStatusClean(self, path):
+    @staticmethod
+    def isStatusClean(path):
         """
         Return the Git status of the files in the specified path.
 
@@ -103,7 +152,8 @@ class GitCommand(object):
         return status == ''
 
 
-    def remove(self, path):
+    @staticmethod
+    def remove(path):
         """
         Remove the specified path from a Git repository.
 
@@ -113,7 +163,8 @@ class GitCommand(object):
         runCommand(["git", "-C", path.dirname(), "rm", path.path])
 
 
-    def exportTo(self, fromDir, exportDir):
+    @staticmethod
+    def exportTo(fromDir, exportDir):
         """
         Export the content of a Git repository to the specified directory.
 
@@ -133,19 +184,22 @@ class GitCommand(object):
 
 
 
+@implementer(IVCSCommand)
 class SVNCommand(object):
     """
     Subset of SVN commands to release Twisted from a Subversion checkout.
     """
-    def ensureIsWorkingDirectory(self, directory):
+    @staticmethod
+    def ensureIsWorkingDirectory(path):
         if "is not a working copy" in runCommand(
-                ["svn", "status", directory.path]):
+                ["svn", "status", path.path]):
             raise NotWorkingDirectory(
                 "%s does not appear to be an SVN working directory."
-                % (directory.path,))
+                % (path.path,))
 
 
-    def isStatusClean(self, path):
+    @staticmethod
+    def isStatusClean(path):
         """
         Return the SVN status of the files in the specified path.
 
@@ -157,7 +211,8 @@ class SVNCommand(object):
         return status == ''
 
 
-    def remove(self, path):
+    @staticmethod
+    def remove(path):
         """
         Remove the specified path from a Subversion checkout.
 
@@ -167,7 +222,8 @@ class SVNCommand(object):
         runCommand(["svn", "rm", path.path])
 
 
-    def exportTo(self, fromDir, exportDir):
+    @staticmethod
+    def exportTo(fromDir, exportDir):
         """
         Export the content of a SVN checkout to the specified directory.
 
@@ -200,17 +256,15 @@ def getRepositoryCommand(directory):
         specified directory.
     """
     try:
-        svn = SVNCommand()
-        svn.ensureIsWorkingDirectory(directory)
-        return svn
+        SVNCommand.ensureIsWorkingDirectory(directory)
+        return SVNCommand
     except NotWorkingDirectory:
         # It's not SVN, but that's okay, eat the error
         pass
 
     try:
-        git = GitCommand()
-        git.ensureIsWorkingDirectory(directory)
-        return git
+        GitCommand.ensureIsWorkingDirectory(directory)
+        return GitCommand
     except NotWorkingDirectory:
         # It's not Git, but that's okay, eat the error
         pass

@@ -36,7 +36,7 @@ from twisted.python._release import (
     DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
     runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
     ChangeVersionsScript, BuildTarballsScript, NewsBuilder, SphinxBuilder,
-    GitCommand, SVNCommand, getRepositoryCommand)
+    GitCommand, SVNCommand, getRepositoryCommand, IVCSCommand)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -2273,7 +2273,7 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
         runCommand(["svn", "checkout", "file://" + repository.path,
                     checkout.path])
         cmd = getRepositoryCommand(self.repos.child("checkout"))
-        self.assertTrue(isinstance(cmd, SVNCommand), cmd)
+        self.assertIs(cmd, SVNCommand)
 
 
     def test_git(self):
@@ -2283,7 +2283,7 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
         """
         _gitInit(self.repos)
         cmd = getRepositoryCommand(self.repos)
-        self.assertTrue(isinstance(cmd, GitCommand), cmd)
+        self.assertIs(cmd, GitCommand)
 
 
     def test_subversionPreferredOverGit(self):
@@ -2301,7 +2301,7 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
                     checkout.path])
 
         cmd = getRepositoryCommand(self.repos.child("checkout"))
-        self.assertTrue(isinstance(cmd, SVNCommand), cmd)
+        self.assertTrue(cmd, SVNCommand)
 
 
     def test_unknownRepository(self):
@@ -2312,3 +2312,21 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
         """
         self.assertRaises(NotWorkingDirectory, getRepositoryCommand,
                           self.repos)
+
+
+class VCSCommandInterfaceTests(TestCase):
+    """
+    Test that the VCS command classes implement their interface.
+    """
+    def test_git(self):
+        """
+        L{GitCommand} implements L{IVCSCommand}.
+        """
+        self.assertTrue(IVCSCommand.implementedBy(GitCommand))
+
+
+    def test_svn(self):
+        """
+        L{SVNCommand} implements L{IVCSCommand}.
+        """
+        self.assertTrue(IVCSCommand.implementedBy(SVNCommand))
