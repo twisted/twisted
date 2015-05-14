@@ -113,6 +113,7 @@ def _gitInit(path):
                 "user.email", '"someone@someplace.com"'])
 
 
+
 def genVersion(*args, **kwargs):
     """
     A convenience for generating _version.py data.
@@ -1317,7 +1318,8 @@ class NewsBuilderGitTests(NewsBuilderMixin, ExternalTempdirTestCase):
             project = self.project
 
         _gitInit(project)
-        runCommand(["git", "-C", project.path, "add"] + glob.glob(project.path + "/*"))
+        runCommand(["git", "-C", project.path, "add"] + glob.glob(
+            project.path + "/*"))
         runCommand(["git", "-C", project.path, "commit", "-m", "yay"])
 
     def _getStatus(self, project):
@@ -1351,7 +1353,6 @@ class NewsBuilderSVNTests(NewsBuilderMixin, ExternalTempdirTestCase):
 
     def _getStatus(self, project):
         return runCommand(["svn", "status", project.path])
-
 
 
 

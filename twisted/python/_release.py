@@ -38,11 +38,14 @@ def runCommand(args, cwd=None):
     """
     Execute a vector of arguments.
 
-    @type args: C{list} of C{str}
+    @type args: L{list} of L{bytes}
     @param args: A list of arguments, the first of which will be used as the
         executable to run.
 
-    @rtype: C{str}
+    @type cwd: L{bytes}
+    @param: The current working directory that the command should run with.
+
+    @rtype: L{bytes}
     @return: All of the standard output.
 
     @raise CommandFailed: when the program exited with a non-0 exit code.
@@ -86,6 +89,9 @@ class IVCSCommand(Interface):
     def ensureIsWorkingDirectory(path):
         """
         Ensure that C{path} is a working directory of this VCS.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to check.
         """
 
 
@@ -130,6 +136,12 @@ class GitCommand(object):
     """
     @staticmethod
     def ensureIsWorkingDirectory(path):
+        """
+        Ensure that C{path} is a Git working directory.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to check.
+        """
         try:
             runCommand(["git", "rev-parse"], cwd=path.path)
         except (CommandFailed, OSError):
@@ -178,8 +190,8 @@ class GitCommand(object):
         """
         runCommand(["git", "-C", fromDir.path,
                     "checkout-index", "--all", "--force",
-                    # prefix has to end up with a "/" so that files get copied to a
-                    # directory whose name is the prefix.
+                    # prefix has to end up with a "/" so that files get copied
+                    # to a directory whose name is the prefix.
                     "--prefix", exportDir.path + "/"])
 
 
@@ -191,6 +203,12 @@ class SVNCommand(object):
     """
     @staticmethod
     def ensureIsWorkingDirectory(path):
+        """
+        Ensure that C{path} is a SVN working directory.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to check.
+        """
         if "is not a working copy" in runCommand(
                 ["svn", "status", path.path]):
             raise NotWorkingDirectory(
