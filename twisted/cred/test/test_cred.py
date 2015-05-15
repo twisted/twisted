@@ -23,8 +23,7 @@ except ImportError:
     crypt = None
 
 try:
-    import PAM
-    PAM
+    __import__('PAM')
     from twisted.cred import pamauth
 except ImportError:
     pamauth = None
@@ -32,6 +31,9 @@ except ImportError:
 
 
 class ITestable(Interface):
+    """
+    An interface for a theoretical protocol.
+    """
     pass
 
 
@@ -58,6 +60,9 @@ class TestAvatar(object):
 
 @implementer(ITestable)
 class Testable(components.Adapter):
+    """
+    A theoretical protocol for testing.
+    """
     pass
 
 components.registerAdapter(Testable, TestAvatar, ITestable)
@@ -151,8 +156,8 @@ class CredTests(unittest.TestCase):
 
     def test_derivedInterface(self):
         """
-        Login with credentials implementing an interface inheriting from an
-        interface registered with a checker (but not itself registered).
+        Logging in with correct derived credentials and an interface
+        that the portal's realm supports works.
         """
         login = self.successResultOf(self.portal.login(
             DerivedCredentials(b"bob", b"hello"), self, ITestable))
@@ -170,22 +175,26 @@ class CredTests(unittest.TestCase):
         self.failUnless(impl.original.loggedOut)
 
 
-    def testFailedLogin(self):
-        l = []
-        self.portal.login(credentials.UsernamePassword(b"bob", b"h3llo"),
-                          self, ITestable).addErrback(
-            lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
-        self.failUnless(l)
-        self.assertEqual(error.UnauthorizedLogin, l[0])
+    def test_failedLoginPassword(self):
+        """
+        Calling C{login} with incorrect credentials (in this case a wrong
+        password) causes L{error.UnauthorizedLogin} to be raised.
+        """
+        login = self.failureResultOf(self.portal.login(
+            credentials.UsernamePassword(b"bob", b"h3llo"), self, ITestable))
+        self.failUnless(login)
+        self.assertEqual(error.UnauthorizedLogin, login.type)
 
 
-    def testFailedLoginName(self):
-        l = []
-        self.portal.login(credentials.UsernamePassword(b"jay", b"hello"),
-                          self, ITestable).addErrback(
-            lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
-        self.failUnless(l)
-        self.assertEqual(error.UnauthorizedLogin, l[0])
+    def test_failedLoginName(self):
+        """
+        Calling C{login} with incorrect credentials (in this case no known
+        user) causes L{error.UnauthorizedLogin} to be raised.
+        """
+        login = self.failureResultOf(self.portal.login(
+            credentials.UsernamePassword(b"jay", b"hello"), self, ITestable))
+        self.failUnless(login)
+        self.assertEqual(error.UnauthorizedLogin, login.type)
 
 
 
@@ -327,18 +336,19 @@ class PluggableAuthenticationModulesTests(unittest.TestCase):
                 ]
         replies = conv(questions)
         if replies != [
-            ("password", 0),
-            ("entry", 0),
-            ("", 0)
-            ]:
-                raise error.UnauthorizedLogin(
-                    'bad conversion: %s' % repr(replies))
+                ("password", 0),
+                ("entry", 0),
+                ("", 0)]:
+            raise error.UnauthorizedLogin(
+                'bad conversion: %s' % repr(replies))
         return 1
+
 
     def _makeConv(self, d):
         def conv(questions):
             return defer.succeed([(d[t], 0) for t, q in questions])
         return conv
+
 
     def testRequestAvatarId(self):
         db = checkers.PluggableAuthenticationModulesChecker()
@@ -349,6 +359,7 @@ class PluggableAuthenticationModulesTests(unittest.TestCase):
         d.addCallback(self.assertEqual, 'testuser')
         return d
 
+
     def testBadCredentials(self):
         db = checkers.PluggableAuthenticationModulesChecker()
         conv = self._makeConv({1:'', 2:'', 3:''})
@@ -357,6 +368,7 @@ class PluggableAuthenticationModulesTests(unittest.TestCase):
         d = db.requestAvatarId(creds)
         self.assertFailure(d, error.UnauthorizedLogin)
         return d
+
 
     def testBadUsername(self):
         db = checkers.PluggableAuthenticationModulesChecker()
@@ -462,7 +474,6 @@ class HashlessFilePasswordDBMixin(object):
             fObj.close()
             yield checkers.FilePasswordDB(fn, b',', 2, 4, False,
                                           cache=cache, hash=hashCheck)
-
 
 
 
