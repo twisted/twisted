@@ -5,6 +5,8 @@
 HTTP errors.
 """
 
+from __future__ import division, absolute_import
+
 import re
 import sys
 import traceback
@@ -15,22 +17,25 @@ from twisted.web import error
 from twisted.web.template import Tag
 
 
+
 class CodeToMessageTests(unittest.TestCase):
     """
     L{_codeToMessages} inverts L{_responses.RESPONSES}
     """
-
     def test_validCode(self):
         m = error._codeToMessage("302")
         self.assertEqual(m, "Found")
+
 
     def test_invalidCode(self):
         m = error._codeToMessage("987")
         self.assertEqual(m, None)
 
+
     def test_nonintegerCode(self):
         m = error._codeToMessage("InvalidCode")
         self.assertEqual(m, None)
+
 
 
 class ErrorTests(unittest.TestCase):
@@ -112,8 +117,8 @@ class PageRedirectTests(unittest.TestCase):
     def test_messageExistsNoLocation(self):
         """
         If a C{message} argument is passed to the L{PageRedirect} constructor
-        and no location is provided, C{message} doesn't try to include the empty
-        location.
+        and no location is provided, C{message} doesn't try to include the
+        empty location.
         """
         e = error.PageRedirect("200", "My own message")
         self.assertEqual(e.message, "My own message")
@@ -194,6 +199,7 @@ class RedirectWithNoLocationTests(unittest.TestCase):
         self.assertEqual(e.uri, "https://example.com")
 
 
+
 class MissingRenderMethodTests(unittest.TestCase):
     """
     Tests for how L{MissingRenderMethod} exceptions are initialized and
@@ -210,16 +216,19 @@ class MissingRenderMethodTests(unittest.TestCase):
         self.assertIs(e.element, elt)
         self.assertIs(e.renderName, 'renderThing')
 
+
     def test_repr(self):
         """
-        A L{MissingRenderMethod} is represented using a custom string containing
-        the element's representation and the method name.
+        A L{MissingRenderMethod} is represented using a custom string
+        containing the element's representation and the method name.
         """
         elt = object()
         e = error.MissingRenderMethod(elt, 'renderThing')
         self.assertEqual(
             repr(e),
-            "'MissingRenderMethod': %r had no render method named 'renderThing'" % elt)
+            ("'MissingRenderMethod':"
+             "%r had no render method named 'renderThing'") % elt)
+
 
 
 class MissingTemplateLoaderTests(unittest.TestCase):
@@ -236,16 +245,18 @@ class MissingTemplateLoaderTests(unittest.TestCase):
         e = error.MissingTemplateLoader(elt)
         self.assertIs(e.element, elt)
 
+
     def test_repr(self):
         """
-        A L{MissingTemplateLoader} is represented using a custom string containing
-        the element's representation and the method name.
+        A L{MissingTemplateLoader} is represented using a custom string
+        containing the element's representation and the method name.
         """
         elt = object()
         e = error.MissingTemplateLoader(elt)
         self.assertEqual(
             repr(e),
             "'MissingTemplateLoader': %r had no loader" % elt)
+
 
 
 class FlattenerErrorTests(unittest.TestCase):
@@ -259,8 +270,10 @@ class FlattenerErrorTests(unittest.TestCase):
             tb = traceback.extract_tb(sys.exc_info()[2])
             return error.FlattenerError(e, roots, tb)
 
+
     def fakeFormatRoot(self, obj):
         return 'R(%s)' % obj
+
 
     def test_constructor(self):
         """
@@ -271,12 +284,15 @@ class FlattenerErrorTests(unittest.TestCase):
         e = self.makeFlattenerError(roots=['a', 'b'])
         self.assertEqual(e._roots, ['a', 'b'])
 
+
     def test_str(self):
         """
-        The string form of a L{FlattenerError} is identical to its representation.
+        The string form of a L{FlattenerError} is identical to its
+        representation.
         """
         e = self.makeFlattenerError()
         self.assertEqual(str(e), repr(e))
+
 
     def test_reprWithRootsAndWithTraceback(self):
         """
@@ -296,6 +312,7 @@ class FlattenerErrorTests(unittest.TestCase):
                      repr(e), re.M | re.S),
             repr(e))
 
+
     def test_reprWithoutRootsAndWithTraceback(self):
         """
         The representation of a L{FlattenerError} initialized without roots but
@@ -310,6 +327,7 @@ class FlattenerErrorTests(unittest.TestCase):
                      repr(e), re.M | re.S),
             repr(e))
 
+
     def test_reprWithoutRootsAndWithoutTraceback(self):
         """
         The representation of a L{FlattenerError} initialized without roots but
@@ -322,6 +340,7 @@ class FlattenerErrorTests(unittest.TestCase):
                      repr(e), re.M | re.S),
             repr(e))
 
+
     def test_formatRootShortUnicodeString(self):
         """
         The C{_formatRoot} method formats a short unicode string using the
@@ -329,6 +348,7 @@ class FlattenerErrorTests(unittest.TestCase):
         """
         e = self.makeFlattenerError()
         self.assertEqual(e._formatRoot(nativeString('abcd')), repr('abcd'))
+
 
     def test_formatRootLongUnicodeString(self):
         """
@@ -340,6 +360,7 @@ class FlattenerErrorTests(unittest.TestCase):
         self.assertEqual(e._formatRoot(longString),
                         repr('abcde-abcde-abcde-ab<...>e-abcde-abcde-abcde-'))
 
+
     def test_formatRootShortByteString(self):
         """
         The C{_formatRoot} method formats a short byte string using the
@@ -347,6 +368,7 @@ class FlattenerErrorTests(unittest.TestCase):
         """
         e = self.makeFlattenerError()
         self.assertEqual(e._formatRoot(b'abcd'), repr(b'abcd'))
+
 
     def test_formatRootLongByteString(self):
         """
@@ -358,6 +380,7 @@ class FlattenerErrorTests(unittest.TestCase):
         self.assertEqual(e._formatRoot(longString),
                         repr(b'abcde-abcde-abcde-ab<...>e-abcde-abcde-abcde-'))
 
+
     def test_formatRootTagNoFilename(self):
         """
         The C{_formatRoot} method formats a C{Tag} with no filename information
@@ -366,6 +389,7 @@ class FlattenerErrorTests(unittest.TestCase):
         e = self.makeFlattenerError()
         self.assertEqual(e._formatRoot(Tag('a-tag')), 'Tag <a-tag>')
 
+
     def test_formatRootTagWithFilename(self):
         """
         The C{_formatRoot} method formats a C{Tag} with filename information
@@ -373,7 +397,8 @@ class FlattenerErrorTests(unittest.TestCase):
         """
         e = self.makeFlattenerError()
         t = Tag('a-tag', filename='tpl.py', lineNumber=10, columnNumber=20)
-        self.assertEqual(e._formatRoot(t), 'File "tpl.py", line 10, column 20, in "a-tag"')
+        self.assertEqual(e._formatRoot(t),
+                         'File "tpl.py", line 10, column 20, in "a-tag"')
 
 
     def test_string(self):
@@ -383,7 +408,8 @@ class FlattenerErrorTests(unittest.TestCase):
         exception.
         """
         self.assertEqual(
-            str(error.FlattenerError(RuntimeError("reason"), ['abc123xyz'], [])),
+            str(error.FlattenerError(RuntimeError("reason"),
+                                     ['abc123xyz'], [])),
             "Exception while flattening:\n"
             "  'abc123xyz'\n"
             "RuntimeError: reason\n")
@@ -391,7 +417,8 @@ class FlattenerErrorTests(unittest.TestCase):
             str(error.FlattenerError(
                     RuntimeError("reason"), ['0123456789' * 10], [])),
             "Exception while flattening:\n"
-            "  '01234567890123456789<...>01234567890123456789'\n" # TODO: re-add 0
+            "  '01234567890123456789"
+            "<...>01234567890123456789'\n" # TODO: re-add 0
             "RuntimeError: reason\n")
 
 
@@ -415,6 +442,7 @@ class FlattenerErrorTests(unittest.TestCase):
                     RuntimeError("reason"), [u'01234567\N{SNOWMAN}9' * 10],
                     [])),
             "Exception while flattening:\n"
-            "  %(u)s'01234567\\u2603901234567\\u26039<...>01234567\\u2603901234567"
+            "  %(u)s'01234567\\u2603901234567\\u26039"
+            "<...>01234567\\u2603901234567"
             "\\u26039'\n"
             "RuntimeError: reason\n" % u)
