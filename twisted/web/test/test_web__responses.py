@@ -6,6 +6,8 @@ The L{_response} module contains constants for all standard HTTP codes, along
 with a mapping to the corresponding phrases.
 """
 
+from __future__ import division, absolute_import
+
 import string
 from twisted.trial import unittest
 from twisted.web import _responses
@@ -17,7 +19,6 @@ class ResponseTests(unittest.TestCase):
         All constants besides C{RESPONSES} defined in L{_response} are
         integers and are keys in C{RESPONSES}.
         """
-
         for sym in dir(_responses):
             if sym == 'RESPONSES':
                 continue
