@@ -226,7 +226,7 @@ class MissingRenderMethodTests(unittest.TestCase):
         e = error.MissingRenderMethod(elt, 'renderThing')
         self.assertEqual(
             repr(e),
-            ("'MissingRenderMethod':"
+            ("'MissingRenderMethod': "
              "%r had no render method named 'renderThing'") % elt)
 
 
