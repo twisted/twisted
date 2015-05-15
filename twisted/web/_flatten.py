@@ -7,17 +7,17 @@ Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
 
-from twisted.python.compat import NativeStringIO as StringIO
+from __future__ import division, absolute_import
+
 from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
+
 from twisted.internet.defer import Deferred
+from twisted.python.compat import NativeStringIO
+from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-
 from twisted.web.iweb import IRenderable
-from twisted.web._stan import (
-    Tag, slot, voidElements, Comment, CDATA, CharRef)
-
 
 
 def escapeForContent(data):
@@ -409,15 +409,15 @@ def flattenString(request, root):
     """
     Collate a string representation of C{root} into a single string.
 
-    This is basically gluing L{flatten} to a C{StringIO} and returning the
-    results. See L{flatten} for the exact meanings of C{request} and
+    This is basically gluing L{flatten} to a L{NativeStringIO} and returning
+    the results. See L{flatten} for the exact meanings of C{request} and
     C{root}.
 
     @return: A L{Deferred} which will be called back with a single string as
         its result when C{root} has been completely flattened into C{write} or
         which will be errbacked if an unexpected exception occurs.
     """
-    io = StringIO()
+    io = NativeStringIO()
     d = flatten(request, root, io.write)
     d.addCallback(lambda _: io.getvalue())
     return d
