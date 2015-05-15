@@ -572,4 +572,5 @@ __all__ = [
     "items",
     "iteritems",
     "xrange",
+    "urlparse",
 ]
