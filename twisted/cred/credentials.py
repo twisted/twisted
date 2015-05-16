@@ -453,7 +453,7 @@ class UsernameHashedPassword:
         self.hashed = hashed
         warnings.warn(
             "twisted.cred.credentials.UsernameHashedPassword was deprecated "
-            "in Twisted 12.0.0",
+            "in Twisted 15.2.0",
             category=DeprecationWarning,
             stacklevel=2)
 
