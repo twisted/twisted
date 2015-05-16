@@ -2,10 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import time
-
-from twisted.internet import reactor, protocol
-
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -24,18 +20,18 @@ class TestBufferingProto(mixin.BufferingMixin):
 
 
 
-class BufferingTest(unittest.TestCase):
+class BufferingTests(unittest.TestCase):
     def testBuffering(self):
         p = TestBufferingProto()
         t = p.transport = StringTransport()
 
-        self.failIf(p.scheduled)
+        self.assertFalse(p.scheduled)
 
         L = ['foo', 'bar', 'baz', 'quux']
 
         p.write('foo')
-        self.failUnless(p.scheduled)
-        self.failIf(p.rescheduled)
+        self.assertTrue(p.scheduled)
+        self.assertFalse(p.rescheduled)
 
         for s in L:
             n = p.rescheduled

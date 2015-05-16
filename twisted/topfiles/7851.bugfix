@@ -1,0 +1,1 @@
+twisted.internet.defer now properly works with the new logging system.

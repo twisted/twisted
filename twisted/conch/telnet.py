@@ -10,7 +10,7 @@ Telnet protocol implementation.
 
 import struct
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import protocol, interfaces as iinternet, defer
 from twisted.python import log
@@ -314,9 +314,10 @@ class AlreadyDisabled(NegotiationError):
 class AlreadyNegotiating(NegotiationError):
     pass
 
-class TelnetProtocol(protocol.Protocol):
-    implements(ITelnetProtocol)
 
+
+@implementer(ITelnetProtocol)
+class TelnetProtocol(protocol.Protocol):
     def unhandledCommand(self, command, argument):
         pass
 
@@ -901,8 +902,6 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
 
 
 class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
-    implements()
-
     protocol = None
 
     def __init__(self, protocolFactory, *args, **kw):
@@ -974,7 +973,6 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
     linemodeSubcommands = {
         LINEMODE_SLC: 'SLC'}
     def telnet_LINEMODE(self, bytes):
-        revmap = {}
         linemodeSubcommand = bytes[0]
         if 0:
             # XXX TODO: This should be enabled to parse linemode subnegotiation.

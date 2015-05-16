@@ -12,7 +12,7 @@ import sys, os
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
-    optFlags = [['nodaemon','n',  "(for backwards compatability)."],
+    optFlags = [['nodaemon','n',  "(for backwards compatibility)."],
                 ]
 
     def opt_version(self):

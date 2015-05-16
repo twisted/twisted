@@ -11,7 +11,7 @@ import sys
 from twisted.trial.unittest import TestCase
 
 
-class GtkReactorDeprecation(TestCase):
+class GtkReactorDeprecationTests(TestCase):
     """
     Tests to ensure all attributes of L{twisted.internet.gtkreactor} are 
     deprecated.
@@ -48,7 +48,7 @@ class GtkReactorDeprecation(TestCase):
     def lookForDeprecationWarning(self, testmethod, attributeName):
         warningsShown = self.flushWarnings([testmethod])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             "twisted.internet.gtkreactor." + attributeName + " "

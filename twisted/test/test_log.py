@@ -5,12 +5,27 @@
 Tests for L{twisted.python.log}.
 """
 
-import os, sys, time, logging, warnings
-from cStringIO import StringIO
+from __future__ import division, absolute_import, print_function
+
+from twisted.python.compat import _PY3, NativeStringIO as StringIO
+
+import os
+import sys
+import time
+import logging
+import warnings
+import calendar
+from io import IOBase
 
 from twisted.trial import unittest
 
 from twisted.python import log, failure
+from twisted.logger.test.test_stdlib import handlerAndBytesIO
+from twisted.python.log import LogPublisher
+from twisted.logger import (
+    LoggingFile, LogLevel as NewLogLevel, LogBeginner,
+    LogPublisher as NewLogPublisher
+)
 
 
 class FakeWarning(Warning):
@@ -21,7 +36,84 @@ class FakeWarning(Warning):
 
 
 
-class LogTest(unittest.TestCase):
+class TextFromEventDictTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{textFromEventDict}.
+    """
+
+    def test_message(self):
+        """
+        The C{"message"} value, when specified, is concatenated to generate the
+        message.
+        """
+        eventDict = dict(message=("a", "b", "c"))
+        text = log.textFromEventDict(eventDict)
+        self.assertEquals(text, "a b c")
+
+
+
+    def test_format(self):
+        """
+        The C{"format"} value, when specified, is used to format the message.
+        """
+        eventDict = dict(
+            message=(), isError=0, format="Hello, %(foo)s!", foo="dude"
+        )
+        text = log.textFromEventDict(eventDict)
+        self.assertEquals(text, "Hello, dude!")
+
+
+
+    def test_noMessageNoFormat(self):
+        """
+        If C{"format"} is unspecified and C{"message"} is empty, return
+        C{None}.
+        """
+        eventDict = dict(message=(), isError=0)
+        text = log.textFromEventDict(eventDict)
+        self.assertIdentical(text, None)
+
+
+
+    def test_whySpecified(self):
+        """
+        The C{"why"} value, when specified, is first part of message.
+        """
+        try:
+            raise RuntimeError()
+        except:
+            eventDict = dict(
+                message=(), isError=1, failure=failure.Failure(), why="foo"
+            )
+            text = log.textFromEventDict(eventDict)
+            self.assertTrue(text.startswith("foo\n"))
+
+
+    def test_whyDefault(self):
+        """
+        The C{"why"} value, when unspecified, defaults to C{"Unhandled Error"}.
+        """
+        try:
+            raise RuntimeError()
+        except:
+            eventDict = dict(message=(), isError=1, failure=failure.Failure())
+            text = log.textFromEventDict(eventDict)
+            self.assertTrue(text.startswith("Unhandled Error\n"))
+
+
+    def test_noTracebackForYou(self):
+        """
+        If unable to obtain a traceback due to an exception, catch it and note
+        the error.
+        """
+        # Invalid failure object doesn't implement .getTraceback()
+        eventDict = dict(message=(), isError=1, failure=object())
+        text = log.textFromEventDict(eventDict)
+        self.assertIn("\n(unable to obtain traceback)", text)
+
+
+
+class LogTests(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.catcher = []
@@ -36,7 +128,7 @@ class LogTest(unittest.TestCase):
         i = catcher.pop()
         self.assertEqual(i["message"][0], "test")
         self.assertEqual(i["testShouldCatch"], True)
-        self.failUnless(i.has_key("time"))
+        self.assertIn("time", i)
         self.assertEqual(len(catcher), 0)
 
 
@@ -53,8 +145,9 @@ class LogTest(unittest.TestCase):
         self.assertEqual(i['other'], 'd')
         self.assertEqual(i['message'][0], 'foo')
 
+
     def testErrors(self):
-        for e, ig in [("hello world","hello world"),
+        for e, ig in [("hello world", "hello world"),
                       (KeyError(), KeyError),
                       (failure.Failure(RuntimeError()), RuntimeError)]:
             log.err(e)
@@ -62,8 +155,9 @@ class LogTest(unittest.TestCase):
             self.assertEqual(i['isError'], 1)
             self.flushLoggedErrors(ig)
 
+
     def testErrorsWithWhy(self):
-        for e, ig in [("hello world","hello world"),
+        for e, ig in [("hello world", "hello world"),
                       (KeyError(), KeyError),
                       (failure.Failure(RuntimeError()), RuntimeError)]:
             log.err(e, 'foobar')
@@ -82,84 +176,35 @@ class LogTest(unittest.TestCase):
         """
         L1 = []
         L2 = []
-        def broken(events):
-            1 / 0
+
+        def broken(event):
+            1 // 0
 
         for observer in [L1.append, broken, L2.append]:
             log.addObserver(observer)
             self.addCleanup(log.removeObserver, observer)
 
-        for i in xrange(3):
+        for i in range(3):
             # Reset the lists for simpler comparison.
             L1[:] = []
             L2[:] = []
 
             # Send out the event which will break one of the observers.
-            log.msg("Howdy, y'all.")
+            log.msg("Howdy, y'all.", log_trace=[])
 
             # The broken observer should have caused this to be logged.
             excs = self.flushLoggedErrors(ZeroDivisionError)
+            del self.catcher[:]
             self.assertEqual(len(excs), 1)
 
             # Both other observers should have seen the message.
             self.assertEqual(len(L1), 2)
             self.assertEqual(len(L2), 2)
 
-            # The order is slightly wrong here.  The first event should be
-            # delivered to all observers; then, errors should be delivered.
-            self.assertEqual(L1[1]['message'], ("Howdy, y'all.",))
+            # The first event is delivered to all observers; then, errors
+            # are delivered.
+            self.assertEqual(L1[0]['message'], ("Howdy, y'all.",))
             self.assertEqual(L2[0]['message'], ("Howdy, y'all.",))
-
-
-    def test_doubleErrorDoesNotRemoveObserver(self):
-        """
-        If logging causes an error, make sure that if logging the fact that
-        logging failed also causes an error, the log observer is not removed.
-        """
-        events = []
-        errors = []
-        publisher = log.LogPublisher()
-
-        class FailingObserver(object):
-            calls = 0
-            def log(self, msg, **kwargs):
-                # First call raises RuntimeError:
-                self.calls += 1
-                if self.calls < 2:
-                    raise RuntimeError("Failure #%s" % (self.calls,))
-                else:
-                    events.append(msg)
-
-        observer = FailingObserver()
-        publisher.addObserver(observer.log)
-        self.assertEqual(publisher.observers, [observer.log])
-
-        try:
-            # When observer throws, the publisher attempts to log the fact by
-            # calling self._err()... which also fails with recursion error:
-            oldError = publisher._err
-
-            def failingErr(failure, why, **kwargs):
-                errors.append(failure.value)
-                raise RuntimeError("Fake recursion error")
-
-            publisher._err = failingErr
-            publisher.msg("error in first observer")
-        finally:
-            publisher._err = oldError
-            # Observer should still exist; we do this in finally since before
-            # bug was fixed the test would fail due to uncaught exception, so
-            # we want failing assert too in that case:
-            self.assertEqual(publisher.observers, [observer.log])
-
-        # The next message should succeed:
-        publisher.msg("but this should succeed")
-
-        self.assertEqual(observer.calls, 2)
-        self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]['message'], ("but this should succeed",))
-        self.assertEqual(len(errors), 1)
-        self.assertIsInstance(errors[0], RuntimeError)
 
 
     def test_showwarning(self):
@@ -231,6 +276,7 @@ class LogTest(unittest.TestCase):
         observers.
         """
         errors = []
+
         def logError(eventDict):
             if eventDict.get("isError"):
                 errors.append(eventDict["failure"].value)
@@ -243,31 +289,46 @@ class LogTest(unittest.TestCase):
         publisher.addObserver(fail)
 
         publisher.msg("Hello!")
-        self.assertEqual(publisher.observers, [logError, fail])
+        self.assertEqual(set(publisher.observers), set([logError, fail]))
         self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], RuntimeError)
 
 
 
 class FakeFile(list):
+
     def write(self, bytes):
         self.append(bytes)
+
 
     def flush(self):
         pass
 
+
+IOBase.register(FakeFile)
+
+
+
 class EvilStr:
     def __str__(self):
-        1/0
+        1 // 0
+
+
 
 class EvilRepr:
     def __str__(self):
         return "Happy Evil Repr"
+
+
     def __repr__(self):
-        1/0
+        1 // 0
+
+
 
 class EvilReprStr(EvilStr, EvilRepr):
     pass
+
+
 
 class LogPublisherTestCaseMixin:
     def setUp(self):
@@ -288,6 +349,9 @@ class LogPublisherTestCaseMixin:
             # This is the behavior we want - don't change anything.
             self._origEncoding = None
         else:
+            if _PY3:
+                self._origEncoding = None
+                return
             reload(sys)
             self._origEncoding = sys.getdefaultencoding()
             sys.setdefaultencoding('ascii')
@@ -300,7 +364,8 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.failUnless(isinstance(chunk, str), "%r was not a string" % (chunk,))
+            self.failUnless(isinstance(chunk, str),
+                            "%r was not a string" % (chunk,))
 
         if self._origEncoding is not None:
             sys.setdefaultencoding(self._origEncoding)
@@ -308,7 +373,8 @@ class LogPublisherTestCaseMixin:
 
 
 
-class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
+class LogPublisherTests(LogPublisherTestCaseMixin,
+                        unittest.SynchronousTestCase):
     def testSingleString(self):
         self.lp.msg("Hello, world.")
         self.assertEqual(len(self.out), 1)
@@ -322,68 +388,126 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.assertEqual(len(self.out), 1)
 
 
-    def testSingleUnicode(self):
-        self.lp.msg(u"Hello, \N{VULGAR FRACTION ONE HALF} world.")
+    def test_singleUnicode(self):
+        """
+        L{log.LogPublisher.msg} does not accept non-ASCII Unicode on Python 2,
+        logging an error instead.
+
+        On Python 3, where Unicode is default message type, the message is
+        logged normally.
+        """
+        message = u"Hello, \N{VULGAR FRACTION ONE HALF} world."
+        self.lp.msg(message)
         self.assertEqual(len(self.out), 1)
-        self.assertIn('with str error', self.out[0])
-        self.assertIn('UnicodeEncodeError', self.out[0])
+        if _PY3:
+            self.assertIn(message, self.out[0])
+        else:
+            self.assertIn('with str error', self.out[0])
+            self.assertIn('UnicodeEncodeError', self.out[0])
 
 
 
-class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
-    def test_getTimezoneOffset(self):
+class FileObserverTests(LogPublisherTestCaseMixin,
+                        unittest.SynchronousTestCase):
+    """
+    Tests for L{log.FileObserver}.
+    """
+    ERROR_INVALID_FORMAT = 'Invalid format string'
+    ERROR_UNFORMATTABLE_OBJECT = 'UNFORMATTABLE OBJECT'
+    ERROR_FORMAT = (
+        'Invalid format string or unformattable object in log message'
+    )
+    ERROR_PATHOLOGICAL = 'PATHOLOGICAL ERROR'
+
+    ERROR_NO_FORMAT = 'Unable to format event'
+    ERROR_UNFORMATTABLE_SYSTEM = '[UNFORMATTABLE]'
+    ERROR_MESSAGE_LOST = 'MESSAGE LOST: unformattable object logged'
+
+    def _getTimezoneOffsetTest(self, tzname, daylightOffset, standardOffset):
         """
-        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
-        correct values for the current C{TZ} environment setting.  Do this
-        by setting C{TZ} to various well-known values and asserting that the
-        reported offset is correct.
+        Verify that L{getTimezoneOffset} produces the expected offset for a
+        certain timezone both when daylight saving time is in effect and when
+        it is not.
+
+        @param tzname: The name of a timezone to exercise.
+        @type tzname: L{bytes}
+
+        @param daylightOffset: The number of seconds west of UTC the timezone
+            should be when daylight saving time is in effect.
+        @type daylightOffset: L{int}
+
+        @param standardOffset: The number of seconds west of UTC the timezone
+            should be when daylight saving time is not in effect.
+        @type standardOffset: L{int}
         """
-        localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
-        utcDaylightTimestamp = time.mktime(localDaylightTuple)
-        localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
-        utcStandardTimestamp = time.mktime(localStandardTuple)
+        if getattr(time, 'tzset', None) is None:
+            raise unittest.SkipTest(
+                "Platform cannot change timezone, cannot verify correct "
+                "offsets in well-known timezones.")
 
         originalTimezone = os.environ.get('TZ', None)
         try:
-            # Test something west of UTC
-            os.environ['TZ'] = 'America/New_York'
+            os.environ['TZ'] = tzname
             time.tzset()
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                14400)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                18000)
 
-            # Test something east of UTC
-            os.environ['TZ'] = 'Europe/Berlin'
-            time.tzset()
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                -7200)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                -3600)
+            # The behavior of mktime depends on the current timezone setting.
+            # So only do this after changing the timezone.
 
-            # Test a timezone that doesn't have DST
-            os.environ['TZ'] = 'Africa/Johannesburg'
-            time.tzset()
+            # Compute a POSIX timestamp for a certain date and time that is
+            # known to occur at a time when daylight saving time is in effect.
+            localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
+            daylight = time.mktime(localDaylightTuple)
+
+            # Compute a POSIX timestamp for a certain date and time that is
+            # known to occur at a time when daylight saving time is not in
+            # effect.
+            localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
+            standard = time.mktime(localStandardTuple)
+
             self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                -7200)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                -7200)
+                (self.flo.getTimezoneOffset(daylight),
+                 self.flo.getTimezoneOffset(standard)),
+                (daylightOffset, standardOffset))
         finally:
             if originalTimezone is None:
                 del os.environ['TZ']
             else:
                 os.environ['TZ'] = originalTimezone
             time.tzset()
-    if getattr(time, 'tzset', None) is None:
-        test_getTimezoneOffset.skip = (
-            "Platform cannot change timezone, cannot verify correct offsets "
-            "in well-known timezones.")
+
+
+    def test_getTimezoneOffsetWestOfUTC(self):
+        """
+        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
+        correct values for the current C{TZ} environment setting for at least
+        some cases.  This test method exercises a timezone that is west of UTC
+        (and should produce positive results).
+        """
+        self._getTimezoneOffsetTest("America/New_York", 14400, 18000)
+
+
+    def test_getTimezoneOffsetEastOfUTC(self):
+        """
+        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
+        correct values for the current C{TZ} environment setting for at least
+        some cases.  This test method exercises a timezone that is east of UTC
+        (and should produce negative results).
+        """
+        self._getTimezoneOffsetTest("Europe/Berlin", -7200, -3600)
+
+
+    def test_getTimezoneOffsetWithoutDaylightSavingTime(self):
+        """
+        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
+        correct values for the current C{TZ} environment setting for at least
+        some cases.  This test method exercises a timezone that does not use
+        daylight saving time at all (so both summer and winter time test values
+        should have the same offset).
+        """
+        # Test a timezone that doesn't have DST.  mktime() implementations
+        # available for testing seem happy to produce results for this even
+        # though it's not entirely valid.
+        self._getTimezoneOffsetTest("Africa/Johannesburg", -7200, -7200)
 
 
     def test_timeFormatting(self):
@@ -391,9 +515,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         Test the method of L{FileLogObserver} which turns a timestamp into a
         human-readable string.
         """
-        # There is no function in the time module which converts a UTC time
-        # tuple to a timestamp.
-        when = time.mktime((2001, 2, 3, 4, 5, 6, 7, 8, 0)) - time.timezone
+        when = calendar.timegm((2001, 2, 3, 4, 5, 6, 7, 8, 0))
 
         # Pretend to be in US/Eastern for a moment
         self.flo.getTimezoneOffset = lambda when: 18000
@@ -432,54 +554,63 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.assertEqual(self.flo.formatTime(when), '2001 02')
 
 
+    def test_microsecondTimestampFormatting(self):
+        """
+        L{FileLogObserver.formatTime} supports a value of C{timeFormat} which
+        includes C{"%f"}, a L{datetime}-only format specifier for microseconds.
+        """
+        self.flo.timeFormat = '%f'
+        self.assertEqual("600000", self.flo.formatTime(12345.6))
+
+
     def test_loggingAnObjectWithBroken__str__(self):
-        #HELLO, MCFLY
+        # HELLO, MCFLY
         self.lp.msg(EvilStr())
         self.assertEqual(len(self.out), 1)
         # Logging system shouldn't need to crap itself for this trivial case
-        self.assertNotIn('UNFORMATTABLE', self.out[0])
+        self.assertNotIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
 
     def test_formattingAnObjectWithBroken__str__(self):
         self.lp.msg(format='%(blat)s', blat=EvilStr())
         self.assertEqual(len(self.out), 1)
-        self.assertIn('Invalid format string or unformattable object', self.out[0])
+        self.assertIn(self.ERROR_INVALID_FORMAT, self.out[0])
 
 
     def test_brokenSystem__str__(self):
         self.lp.msg('huh', system=EvilStr())
         self.assertEqual(len(self.out), 1)
-        self.assertIn('Invalid format string or unformattable object', self.out[0])
+        self.assertIn(self.ERROR_FORMAT, self.out[0])
 
 
     def test_formattingAnObjectWithBroken__repr__Indirect(self):
         self.lp.msg(format='%(blat)s', blat=[EvilRepr()])
         self.assertEqual(len(self.out), 1)
-        self.assertIn('UNFORMATTABLE OBJECT', self.out[0])
+        self.assertIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
 
     def test_systemWithBroker__repr__Indirect(self):
         self.lp.msg('huh', system=[EvilRepr()])
         self.assertEqual(len(self.out), 1)
-        self.assertIn('UNFORMATTABLE OBJECT', self.out[0])
+        self.assertIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
 
     def test_simpleBrokenFormat(self):
         self.lp.msg(format='hooj %s %s', blat=1)
         self.assertEqual(len(self.out), 1)
-        self.assertIn('Invalid format string or unformattable object', self.out[0])
+        self.assertIn(self.ERROR_INVALID_FORMAT, self.out[0])
 
 
     def test_ridiculousFormat(self):
         self.lp.msg(format=42, blat=1)
         self.assertEqual(len(self.out), 1)
-        self.assertIn('Invalid format string or unformattable object', self.out[0])
+        self.assertIn(self.ERROR_INVALID_FORMAT, self.out[0])
 
 
     def test_evilFormat__repr__And__str__(self):
         self.lp.msg(format=EvilReprStr(), blat=1)
         self.assertEqual(len(self.out), 1)
-        self.assertIn('PATHOLOGICAL', self.out[0])
+        self.assertIn(self.ERROR_PATHOLOGICAL, self.out[0])
 
 
     def test_strangeEventDict(self):
@@ -490,28 +621,41 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.assertEqual(len(self.out), 0)
 
 
+    def _startLoggingCleanup(self):
+        """
+        Cleanup after a startLogging() call that mutates the hell out of some
+        global state.
+        """
+        self.addCleanup(log.theLogPublisher._stopLogging)
+        self.addCleanup(setattr, sys, 'stdout', sys.stdout)
+        self.addCleanup(setattr, sys, 'stderr', sys.stderr)
+
+
     def test_startLogging(self):
         """
         startLogging() installs FileLogObserver and overrides sys.stdout and
         sys.stderr.
         """
-        # When done with test, reset stdout and stderr to current values:
         origStdout, origStderr = sys.stdout, sys.stderr
-        self.addCleanup(setattr, sys, 'stdout', sys.stdout)
-        self.addCleanup(setattr, sys, 'stderr', sys.stderr)
+        self._startLoggingCleanup()
+        # When done with test, reset stdout and stderr to current values:
         fakeFile = StringIO()
         observer = log.startLogging(fakeFile)
         self.addCleanup(observer.stop)
         log.msg("Hello!")
         self.assertIn("Hello!", fakeFile.getvalue())
-        self.assertIsInstance(sys.stdout, log.StdioOnnaStick)
-        self.assertEqual(sys.stdout.isError, False)
-        self.assertEqual(sys.stdout.encoding, 
-                         origStdout.encoding or sys.getdefaultencoding())
-        self.assertIsInstance(sys.stderr, log.StdioOnnaStick)
-        self.assertEqual(sys.stderr.isError, True)
-        self.assertEqual(sys.stderr.encoding,
-                         origStderr.encoding or sys.getdefaultencoding())
+        self.assertIsInstance(sys.stdout, LoggingFile)
+        self.assertEqual(sys.stdout.level, NewLogLevel.info)
+        encoding = getattr(origStdout, "encoding", None)
+        if not encoding:
+            encoding = sys.getdefaultencoding()
+        self.assertEqual(sys.stdout.encoding.upper(), encoding.upper())
+        self.assertIsInstance(sys.stderr, LoggingFile)
+        self.assertEqual(sys.stderr.level, NewLogLevel.error)
+        encoding = getattr(origStderr, "encoding", None)
+        if not encoding:
+            encoding = sys.getdefaultencoding()
+        self.assertEqual(sys.stderr.encoding.upper(), encoding.upper())
 
 
     def test_startLoggingTwice(self):
@@ -520,12 +664,11 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         started twice. See http://twistedmatrix.com/trac/ticket/3289 for more
         information.
         """
+        self._startLoggingCleanup()
         # The bug is particular to the way that the t.p.log 'global' function
         # handle stdout. If we use our own stream, the error doesn't occur. If
         # we use our own LogPublisher, the error doesn't occur.
         sys.stdout = StringIO()
-        self.addCleanup(setattr, sys, 'stdout', sys.stdout)
-        self.addCleanup(setattr, sys, 'stderr', sys.stderr)
 
         def showError(eventDict):
             if eventDict['isError']:
@@ -536,70 +679,186 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         observer = log.startLogging(sys.stdout)
         self.addCleanup(observer.stop)
         # At this point, we expect that sys.stdout is a StdioOnnaStick object.
-        self.assertIsInstance(sys.stdout, log.StdioOnnaStick)
+        self.assertIsInstance(sys.stdout, LoggingFile)
         fakeStdout = sys.stdout
         observer = log.startLogging(sys.stdout)
         self.assertIdentical(sys.stdout, fakeStdout)
 
 
-class PythonLoggingObserverTestCase(unittest.TestCase):
+    def test_startLoggingOverridesWarning(self):
+        """
+        startLogging() overrides global C{warnings.showwarning} such that
+        warnings go to Twisted log observers.
+        """
+        self._startLoggingCleanup()
+        newPublisher = NewLogPublisher()
+
+        class SysModule(object):
+            stdout = object()
+            stderr = object()
+
+        tempLogPublisher = LogPublisher(
+            newPublisher, newPublisher,
+            logBeginner=LogBeginner(newPublisher, StringIO(), SysModule,
+                                    warnings)
+        )
+        # Trial reports warnings in two ways.  First, it intercepts the global
+        # 'showwarning' function *itself*, after starting logging (by way of
+        # the '_collectWarnings' function which collects all warnings as a
+        # around the test's 'run' method).  Second, it has a log observer which
+        # immediately reports warnings when they're propagated into the log
+        # system (which, in normal operation, happens only at the end of the
+        # test case).  In order to avoid printing a spurious warning in this
+        # test, we first replace the global log publisher's 'showwarning' in
+        # the module with our own.
+        self.patch(log, "theLogPublisher", tempLogPublisher)
+        # And, one last thing, pretend we're starting from a fresh import, or
+        # warnings.warn won't be patched at all.
+        log._oldshowwarning = None
+        # Global mutable state is bad, kids.  Stay in school.
+        fakeFile = StringIO()
+        # We didn't previously save log messages, so let's make sure we don't
+        # save them any more.
+        evt = {"pre-start": "event"}
+        received = []
+
+        def preStartObserver(x):
+            if 'pre-start' in x.keys():
+                received.append(x)
+
+        newPublisher(evt)
+        newPublisher.addObserver(preStartObserver)
+        log.startLogging(fakeFile, setStdout=False)
+        self.addCleanup(tempLogPublisher._stopLogging)
+        self.assertEquals(received, [])
+        warnings.warn("hello!")
+        output = fakeFile.getvalue()
+        self.assertIn("UserWarning: hello!", output)
+
+
+    def test_emitPrefix(self):
+        """
+        FileLogObserver.emit() will add a timestamp and system prefix to its
+        file output.
+        """
+        output = StringIO()
+        flo = log.FileLogObserver(output)
+        events = []
+
+        def observer(event):
+            # Capture the event for reference and pass it along to flo
+            events.append(event)
+            flo.emit(event)
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(observer)
+
+        publisher.msg("Hello!")
+        self.assertEqual(len(events), 1)
+        event = events[0]
+
+        result = output.getvalue()
+        prefix = "{time} [{system}] ".format(
+            time=flo.formatTime(event["time"]), system=event["system"],
+        )
+
+        self.assertTrue(
+            result.startswith(prefix),
+            "{0!r} does not start with {1!r}".format(result, prefix)
+        )
+
+
+    def test_emitNewline(self):
+        """
+        FileLogObserver.emit() will append a newline to its file output.
+        """
+        output = StringIO()
+        flo = log.FileLogObserver(output)
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(flo.emit)
+
+        publisher.msg("Hello!")
+
+        result = output.getvalue()
+        suffix = "Hello!\n"
+
+        self.assertTrue(
+            result.endswith(suffix),
+            "{0!r} does not end with {1!r}".format(result, suffix)
+        )
+
+
+
+class PythonLoggingObserverTests(unittest.SynchronousTestCase):
     """
     Test the bridge with python logging module.
     """
     def setUp(self):
-        self.out = StringIO()
-
         rootLogger = logging.getLogger("")
-        self.originalLevel = rootLogger.getEffectiveLevel()
+        originalLevel = rootLogger.getEffectiveLevel()
         rootLogger.setLevel(logging.DEBUG)
-        self.hdlr = logging.StreamHandler(self.out)
-        fmt = logging.Formatter(logging.BASIC_FORMAT)
-        self.hdlr.setFormatter(fmt)
+
+        @self.addCleanup
+        def restoreLevel():
+            rootLogger.setLevel(originalLevel)
+        self.hdlr, self.out = handlerAndBytesIO()
         rootLogger.addHandler(self.hdlr)
+
+        @self.addCleanup
+        def removeLogger():
+            rootLogger.removeHandler(self.hdlr)
+            self.hdlr.close()
 
         self.lp = log.LogPublisher()
         self.obs = log.PythonLoggingObserver()
         self.lp.addObserver(self.obs.emit)
 
-    def tearDown(self):
-        rootLogger = logging.getLogger("")
-        rootLogger.removeHandler(self.hdlr)
-        rootLogger.setLevel(self.originalLevel)
-        logging.shutdown()
 
     def test_singleString(self):
         """
         Test simple output, and default log level.
         """
         self.lp.msg("Hello, world.")
-        self.assertIn("Hello, world.", self.out.getvalue())
-        self.assertIn("INFO", self.out.getvalue())
+        self.assertIn(b"Hello, world.", self.out.getvalue())
+        self.assertIn(b"INFO", self.out.getvalue())
+
 
     def test_errorString(self):
         """
         Test error output.
         """
-        self.lp.msg(failure=failure.Failure(ValueError("That is bad.")), isError=True)
-        self.assertIn("ERROR", self.out.getvalue())
+        f = failure.Failure(ValueError("That is bad."))
+        self.lp.msg(failure=f, isError=True)
+        prefix = b"CRITICAL:"
+        output = self.out.getvalue()
+        self.assertTrue(
+            output.startswith(prefix),
+            "Does not start with {0!r}: {1!r}".format(prefix, output)
+        )
+
 
     def test_formatString(self):
         """
         Test logging with a format.
         """
         self.lp.msg(format="%(bar)s oo %(foo)s", bar="Hello", foo="world")
-        self.assertIn("Hello oo world", self.out.getvalue())
+        self.assertIn(b"Hello oo world", self.out.getvalue())
+
 
     def test_customLevel(self):
         """
         Test the logLevel keyword for customizing level used.
         """
-        self.lp.msg("Spam egg.", logLevel=logging.DEBUG)
-        self.assertIn("Spam egg.", self.out.getvalue())
-        self.assertIn("DEBUG", self.out.getvalue())
-        self.out.reset()
+        self.lp.msg("Spam egg.", logLevel=logging.ERROR)
+        self.assertIn(b"Spam egg.", self.out.getvalue())
+        self.assertIn(b"ERROR", self.out.getvalue())
+        self.out.seek(0, 0)
+        self.out.truncate()
         self.lp.msg("Foo bar.", logLevel=logging.WARNING)
-        self.assertIn("Foo bar.", self.out.getvalue())
-        self.assertIn("WARNING", self.out.getvalue())
+        self.assertIn(b"Foo bar.", self.out.getvalue())
+        self.assertIn(b"WARNING", self.out.getvalue())
+
 
     def test_strangeEventDict(self):
         """
@@ -607,13 +866,15 @@ class PythonLoggingObserverTestCase(unittest.TestCase):
         message isn't recorded.
         """
         self.lp.msg(message='', isError=False)
-        self.assertEqual(self.out.getvalue(), '')
+        self.assertEqual(self.out.getvalue(), b'')
 
 
-class PythonLoggingIntegrationTestCase(unittest.TestCase):
+
+class PythonLoggingIntegrationTests(unittest.SynchronousTestCase):
     """
     Test integration of python logging bridge.
     """
+
     def test_startStopObserver(self):
         """
         Test that start and stop methods of the observer actually register
@@ -633,6 +894,7 @@ class PythonLoggingIntegrationTestCase(unittest.TestCase):
         finally:
             log.addObserver = oldAddObserver
             log.removeObserver = oldRemoveObserver
+
 
     def test_inheritance(self):
         """
@@ -654,7 +916,8 @@ class PythonLoggingIntegrationTestCase(unittest.TestCase):
             log.PythonLoggingObserver.emit = oldEmit
 
 
-class DefaultObserverTestCase(unittest.TestCase):
+
+class DefaultObserverTests(unittest.SynchronousTestCase):
     """
     Test the default observer.
     """
@@ -664,24 +927,45 @@ class DefaultObserverTestCase(unittest.TestCase):
         The reason argument passed to log.err() appears in the report
         generated by DefaultObserver.
         """
-        from StringIO import StringIO
+        self.catcher = []
+        self.observer = self.catcher.append
+        log.addObserver(self.observer)
+        self.addCleanup(log.removeObserver, self.observer)
 
         obs = log.DefaultObserver()
         obs.stderr = StringIO()
         obs.start()
+        self.addCleanup(obs.stop)
 
         reason = "The reason."
         log.err(Exception(), reason)
         errors = self.flushLoggedErrors()
 
-        self.assertSubstring(reason, obs.stderr.getvalue())
+        self.assertIn(reason, obs.stderr.getvalue())
         self.assertEqual(len(errors), 1)
 
-        obs.stop()
+
+    def test_emitEventWithBrokenRepr(self):
+        """
+        DefaultObserver.emit() does not raise when it observes an error event
+        with a message that causes L{repr} to raise.
+        """
+        class Ouch(object):
+            def __repr__(self):
+                return str(1 / 0)
+
+        message = ("foo", Ouch())
+        event = dict(message=message, isError=1)
+
+        observer = log.DefaultObserver()
+        with StringIO() as output:
+            observer.stderr = output
+            observer.emit(event)
+            self.assertTrue(output.getvalue().startswith("foo <Ouch instance"))
 
 
 
-class StdioOnnaStickTestCase(unittest.TestCase):
+class StdioOnnaStickTests(unittest.SynchronousTestCase):
     """
     StdioOnnaStick should act like the normal sys.stdout object.
     """
@@ -703,13 +987,14 @@ class StdioOnnaStickTestCase(unittest.TestCase):
         """
         Writing to a StdioOnnaStick instance results in Twisted log messages.
 
-        Log messages are generated every time a '\n' is encountered.
+        Log messages are generated every time a '\\n' is encountered.
         """
         stdio = log.StdioOnnaStick()
         stdio.write("Hello there\nThis is a test")
         self.assertEqual(self.getLogMessages(), ["Hello there"])
         stdio.write("!\n")
-        self.assertEqual(self.getLogMessages(), ["Hello there", "This is a test!"])
+        self.assertEqual(self.getLogMessages(),
+                         ["Hello there", "This is a test!"])
 
 
     def test_metadata(self):
@@ -739,8 +1024,8 @@ class StdioOnnaStickTestCase(unittest.TestCase):
         oldStdout = sys.stdout
         sys.stdout = log.StdioOnnaStick()
         self.addCleanup(setattr, sys, "stdout", oldStdout)
-        print "This",
-        print "is a test"
+        print("This", end=" ")
+        print("is a test")
         self.assertEqual(self.getLogMessages(), ["This is a test"])
 
 
@@ -755,8 +1040,10 @@ class StdioOnnaStickTestCase(unittest.TestCase):
 
     def test_unicode(self):
         """
-        StdioOnnaStick converts unicode prints to strings, in order to be
-        compatible with the normal stdout/stderr objects.
+        StdioOnnaStick converts unicode prints to byte strings on Python 2, in
+        order to be compatible with the normal stdout/stderr objects.
+
+        On Python 3, the prints are left unmodified.
         """
         unicodeString = u"Hello, \N{VULGAR FRACTION ONE HALF} world."
         stdio = log.StdioOnnaStick(encoding="utf-8")
@@ -767,9 +1054,14 @@ class StdioOnnaStickTestCase(unittest.TestCase):
         sys.stdout = stdio
         self.addCleanup(setattr, sys, "stdout", oldStdout)
         # This should go to the log, utf-8 encoded too:
-        print unicodeString
-        self.assertEqual(self.getLogMessages(),
-                         [unicodeString.encode("utf-8"),
-                          (u"Also, " + unicodeString).encode("utf-8"),
-                          unicodeString.encode("utf-8")])
-
+        print(unicodeString)
+        if _PY3:
+            self.assertEqual(self.getLogMessages(),
+                             [unicodeString,
+                              u"Also, " + unicodeString,
+                              unicodeString])
+        else:
+            self.assertEqual(self.getLogMessages(),
+                             [unicodeString.encode("utf-8"),
+                              (u"Also, " + unicodeString).encode("utf-8"),
+                              unicodeString.encode("utf-8")])

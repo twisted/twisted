@@ -1,10 +1,10 @@
 # -*- test-case-name: twisted.test.test_htb -*-
-#
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Hierarchical Token Bucket traffic shaping.
+"""
+Hierarchical Token Bucket traffic shaping.
 
 Patterned after U{Martin Devera's Hierarchical Token Bucket traffic
 shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
@@ -13,12 +13,7 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
   <http://luxik.cdi.cz/~devik/qos/htb/manual/userg.htm>}
 @seealso: U{Token Bucket Filter in Linux Advanced Routing & Traffic Control
     HOWTO<http://lartc.org/howto/lartc.qdisc.classless.html#AEN682>}
-@author: Kevin Turner
 """
-
-from __future__ import nested_scopes
-
-__version__ = '$Revision: 1.5 $'[11:-2]
 
 
 # TODO: Investigate whether we should be using os.times()[-1] instead of
@@ -31,16 +26,19 @@ from twisted.protocols import pcp
 
 
 class Bucket:
-    """Token bucket, or something like it.
+    """
+    Implementation of a Token bucket.
 
-    I can hold up to a certain number of tokens, and I drain over time.
+    A bucket can hold a certain number of tokens and it drains over time.
 
-    @cvar maxburst: Size of the bucket, in bytes.  If None, the bucket is
-        never full.
-    @type maxburst: int
-    @cvar rate: Rate the bucket drains, in bytes per second.  If None,
-        the bucket drains instantaneously.
-    @type rate: int
+    @cvar maxburst: The maximum number of tokens that the bucket can
+        hold at any given time. If this is C{None}, the bucket has
+        an infinite size.
+    @type maxburst: C{int}
+    @cvar rate: The rate at which the bucket drains, in number
+        of tokens per second. If the rate is C{None}, the bucket
+        drains instantaneously.
+    @type rate: C{int}
     """
 
     maxburst = None
@@ -49,18 +47,31 @@ class Bucket:
     _refcount = 0
 
     def __init__(self, parentBucket=None):
+        """
+        Create a L{Bucket} that may have a parent L{Bucket}.
+
+        @param parentBucket: If a parent Bucket is specified,
+            all L{add} and L{drip} operations on this L{Bucket}
+            will be applied on the parent L{Bucket} as well.
+        @type parentBucket: L{Bucket}
+        """
         self.content = 0
-        self.parentBucket=parentBucket
+        self.parentBucket = parentBucket
         self.lastDrip = time()
 
+
     def add(self, amount):
-        """Add tokens to me.
+        """
+        Adds tokens to the L{Bucket} and its C{parentBucket}.
 
-        @param amount: A quanity of tokens to add.
-        @type amount: int
+        This will add as many of the C{amount} tokens as will fit into both
+        this L{Bucket} and its C{parentBucket}.
 
-        @returns: The number of tokens that fit.
-        @returntype: int
+        @param amount: The number of tokens to try to add.
+        @type amount: C{int}
+
+        @returns: The number of tokens that actually fit.
+        @returntype: C{int}
         """
         self.drip()
         if self.maxburst is None:
@@ -73,43 +84,47 @@ class Bucket:
         self.content += allowable
         return allowable
 
+
     def drip(self):
-        """Let some of the bucket drain.
+        """
+        Let some of the bucket drain.
 
-        How much of the bucket drains depends on how long it has been
-        since I was last called.
+        The L{Bucket} drains at the rate specified by the class
+        variable C{rate}.
 
-        @returns: True if I am now empty.
-        @returntype: bool
+        @returns: C{True} if the bucket is empty after this drip.
+        @returntype: C{bool}
         """
         if self.parentBucket is not None:
             self.parentBucket.drip()
 
         if self.rate is None:
             self.content = 0
-            return True
         else:
             now = time()
-            deltaT = now - self.lastDrip
-            self.content = long(max(0, self.content - deltaT * self.rate))
+            deltaTime = now - self.lastDrip
+            deltaTokens = deltaTime * self.rate
+            self.content = max(0, self.content - deltaTokens)
             self.lastDrip = now
-            return False
+        return self.content == 0
 
 
 class IBucketFilter(Interface):
     def getBucketFor(*somethings, **some_kw):
-        """I'll give you a bucket for something.
+        """
+        Return a L{Bucket} corresponding to the provided parameters.
 
         @returntype: L{Bucket}
         """
 
 class HierarchicalBucketFilter:
-    """I filter things into buckets, and I am nestable.
+    """
+    Filter things into buckets that can be nested.
 
     @cvar bucketFactory: Class of buckets to make.
-    @type bucketFactory: L{Bucket} class
+    @type bucketFactory: L{Bucket}
     @cvar sweepInterval: Seconds between sweeping out the bucket cache.
-    @type sweepInterval: int
+    @type sweepInterval: C{int}
     """
 
     implements(IBucketFilter)
@@ -123,7 +138,8 @@ class HierarchicalBucketFilter:
         self.lastSweep = time()
 
     def getBucketFor(self, *a, **kw):
-        """You want a bucket for that?  I'll give you a bucket.
+        """
+        Find or create a L{Bucket} corresponding to the provided parameters.
 
         Any parameters are passed on to L{getBucketKey}, from them it
         decides which bucket you get.
@@ -147,25 +163,31 @@ class HierarchicalBucketFilter:
         return bucket
 
     def getBucketKey(self, *a, **kw):
-        """I determine who gets which bucket.
+        """
+        Construct a key based on the input parameters to choose a L{Bucket}.
 
-        Unless I'm overridden, everything gets the same bucket.
+        The default implementation returns the same key for all
+        arguments. Override this method to provide L{Bucket} selection.
 
-        @returns: something to be used as a key in the bucket cache.
+        @returns: Something to be used as a key in the bucket cache.
         """
         return None
 
     def sweep(self):
-        """I throw away references to empty buckets."""
+        """
+        Remove empty buckets.
+        """
         for key, bucket in self.buckets.items():
-            if (bucket._refcount == 0) and bucket.drip():
+            bucket_is_empty = bucket.drip()
+            if (bucket._refcount == 0) and bucket_is_empty:
                 del self.buckets[key]
 
         self.lastSweep = time()
 
 
 class FilterByHost(HierarchicalBucketFilter):
-    """A bucket filter with a bucket for each host.
+    """
+    A Hierarchical Bucket filter with a L{Bucket} for each host.
     """
     sweepInterval = 60 * 20
 
@@ -174,7 +196,8 @@ class FilterByHost(HierarchicalBucketFilter):
 
 
 class FilterByServer(HierarchicalBucketFilter):
-    """A bucket filter with a bucket for each service.
+    """
+    A Hierarchical Bucket filter with a L{Bucket} for each service.
     """
     sweepInterval = None
 
@@ -183,7 +206,8 @@ class FilterByServer(HierarchicalBucketFilter):
 
 
 class ShapedConsumer(pcp.ProducerConsumerProxy):
-    """I wrap a Consumer and shape the rate at which it receives data.
+    """
+    Wraps a C{Consumer} and shapes the rate at which it receives data.
     """
     # Providing a Pull interface means I don't have to try to schedule
     # traffic with callLaters.
@@ -208,12 +232,13 @@ class ShapedConsumer(pcp.ProducerConsumerProxy):
 
 
 class ShapedTransport(ShapedConsumer):
-    """I wrap a Transport and shape the rate at which it receives data.
+    """
+    Wraps a C{Transport} and shapes the rate at which it receives data.
 
-    I am a L{ShapedConsumer} with a little bit of magic to provide for
-    the case where the consumer I wrap is also a Transport and people
-    will be attempting to access attributes I do not proxy as a
-    Consumer (e.g. loseConnection).
+    This is a L{ShapedConsumer} with a little bit of magic to provide for
+    the case where the consumer it wraps is also a C{Transport} and people
+    will be attempting to access attributes this does not proxy as a
+    C{Consumer} (e.g. C{loseConnection}).
     """
     # Ugh.  We only wanted to filter IConsumer, not ITransport.
 
@@ -225,7 +250,8 @@ class ShapedTransport(ShapedConsumer):
 
 
 class ShapedProtocolFactory:
-    """I dispense Protocols with traffic shaping on their transports.
+    """
+    Dispense C{Protocols} with traffic shaping on their transports.
 
     Usage::
 
@@ -233,13 +259,14 @@ class ShapedProtocolFactory:
         myserver.protocol = ShapedProtocolFactory(myserver.protocol,
                                                   bucketFilter)
 
-    Where SomeServerFactory is a L{twisted.internet.protocol.Factory}, and
-    bucketFilter is an instance of L{HierarchicalBucketFilter}.
+    Where C{SomeServerFactory} is a L{twisted.internet.protocol.Factory}, and
+    C{bucketFilter} is an instance of L{HierarchicalBucketFilter}.
     """
     def __init__(self, protoClass, bucketFilter):
-        """Tell me what to wrap and where to get buckets.
+        """
+        Tell me what to wrap and where to get buckets.
 
-        @param protoClass: The class of Protocol I will generate
+        @param protoClass: The class of C{Protocol} this will generate
           wrapped instances of.
         @type protoClass: L{Protocol<twisted.internet.interfaces.IProtocol>}
           class
@@ -253,11 +280,12 @@ class ShapedProtocolFactory:
         self.bucketFilter = bucketFilter
 
     def __call__(self, *a, **kw):
-        """Make a Protocol instance with a shaped transport.
+        """
+        Make a C{Protocol} instance with a shaped transport.
 
         Any parameters will be passed on to the protocol's initializer.
 
-        @returns: a Protocol instance with a L{ShapedTransport}.
+        @returns: A C{Protocol} instance with a L{ShapedTransport}.
         """
         proto = self.protocol(*a, **kw)
         origMakeConnection = proto.makeConnection

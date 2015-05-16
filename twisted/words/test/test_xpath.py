@@ -3,13 +3,12 @@
 
 
 from twisted.trial import unittest
-import sys, os
 
 from twisted.words.xish.domish import Element
 from twisted.words.xish.xpath import XPathQuery
 from twisted.words.xish import xpath
 
-class XPathTest(unittest.TestCase):
+class XPathTests(unittest.TestCase):
     def setUp(self):
         # Build element:
         # <foo xmlns='testns' attrib1='value1' attrib3="user@host/resource">
@@ -130,16 +129,6 @@ class XPathTest(unittest.TestCase):
         xp = XPathQuery("/foo/*[@attrib2='value2']")
         self.assertEqual(xp.matches(self.e), True)
         self.assertEqual(xp.queryForNodes(self.e), [self.bar2])
-
-    def test_position(self):
-        """
-        Test finding element at position.
-        """
-        xp = XPathQuery("/foo/bar[2]")
-        self.assertEqual(xp.matches(self.e), 1)
-        self.assertEqual(xp.queryForNodes(self.e), [self.bar1])
-
-    test_position.todo = "XPath queries with position are not working."
 
     def test_namespaceFound(self):
         """

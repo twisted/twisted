@@ -12,15 +12,27 @@ from cStringIO import StringIO
 from zope.interface.verify import verifyObject
 
 from twisted.internet.defer import succeed, gatherResults
+from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
+from twisted.trial.util import suppress as SUPPRESS
 from twisted.web.template import (
     Element, TagLoader, renderer, tags, XMLFile, XMLString)
 from twisted.web.iweb import ITemplateLoader
 
-from twisted.web.error import MissingTemplateLoader, MissingRenderMethod
+from twisted.web.error import (FlattenerError, MissingTemplateLoader,
+    MissingRenderMethod)
 
+from twisted.web.template import renderElement
 from twisted.web._element import UnexposedMethodError
 from twisted.web.test._util import FlattenTestCase
+from twisted.web.test.test_web import DummyRequest
+from twisted.web.server import NOT_DONE_YET
+
+
+_xmlFileSuppress = SUPPRESS(category=DeprecationWarning,
+        message="Passing filenames or file objects to XMLFile is "
+                "deprecated since Twisted 12.1.  Pass a FilePath instead.")
+
 
 class TagFactoryTests(TestCase):
     """
@@ -74,7 +86,7 @@ class ElementTests(TestCase):
     """
     Tests for the awesome new L{Element} class.
     """
-    def test_MissingTemplateLoader(self):
+    def test_missingTemplateLoader(self):
         """
         L{Element.render} raises L{MissingTemplateLoader} if the C{loader}
         attribute is C{None}.
@@ -84,10 +96,9 @@ class ElementTests(TestCase):
         self.assertIdentical(err.element, element)
 
 
-    def test_MissingTemplateLoaderRepr(self):
+    def test_missingTemplateLoaderRepr(self):
         """
-        Test that a L{MissingTemplateLoader} instance can be repr()'d without
-        error.
+        A L{MissingTemplateLoader} instance can be repr()'d without error.
         """
         class PrettyReprElement(Element):
             def __repr__(self):
@@ -110,8 +121,7 @@ class ElementTests(TestCase):
 
     def test_missingRenderMethodRepr(self):
         """
-        Test that a L{MissingRenderMethod} instance can be repr()'d without
-        error.
+        A L{MissingRenderMethod} instance can be repr()'d without error.
         """
         class PrettyReprElement(Element):
             def __repr__(self):
@@ -171,9 +181,43 @@ class ElementTests(TestCase):
 
 
 
+class XMLFileReprTests(TestCase):
+    """
+    Tests for L{twisted.web.template.XMLFile}'s C{__repr__}.
+    """
+    def test_filePath(self):
+        """
+        An L{XMLFile} with a L{FilePath} returns a useful repr().
+        """
+        path = FilePath("/tmp/fake.xml")
+        self.assertEqual('<XMLFile of %r>' % (path,), repr(XMLFile(path)))
+
+
+    def test_filename(self):
+        """
+        An L{XMLFile} with a filename returns a useful repr().
+        """
+        fname = "/tmp/fake.xml"
+        self.assertEqual('<XMLFile of %r>' % (fname,), repr(XMLFile(fname)))
+    test_filename.suppress = [_xmlFileSuppress]
+
+
+    def test_file(self):
+        """
+        An L{XMLFile} with a file object returns a useful repr().
+        """
+        fobj = StringIO("not xml")
+        self.assertEqual('<XMLFile of %r>' % (fobj,), repr(XMLFile(fobj)))
+    test_file.suppress = [_xmlFileSuppress]
+
+
+
 class XMLLoaderTestsMixin(object):
     """
-    @ivar templateString: Simple template to use to excercise the loaders.
+    @ivar templateString: Simple template to use to exercise the loaders.
+
+    @ivar deprecatedUse: C{True} if this use of L{XMLFile} is deprecated and
+        should emit a C{DeprecationWarning}.
     """
 
     loaderFactory = None
@@ -184,6 +228,18 @@ class XMLLoaderTestsMixin(object):
         """
         loader = self.loaderFactory()
         tag, = loader.load()
+
+        warnings = self.flushWarnings(offendingFunctions=[self.loaderFactory])
+        if self.deprecatedUse:
+            self.assertEqual(len(warnings), 1)
+            self.assertEqual(warnings[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                warnings[0]['message'],
+                "Passing filenames or file objects to XMLFile is "
+                "deprecated since Twisted 12.1.  Pass a FilePath instead.")
+        else:
+            self.assertEqual(len(warnings), 0)
+
         self.assertEqual(tag.tagName, 'p')
         self.assertEqual(tag.children, [u'Hello, world.'])
 
@@ -197,6 +253,7 @@ class XMLLoaderTestsMixin(object):
         tags1 = loader.load()
         tags2 = loader.load()
         self.assertEqual(tags1, tags2)
+    test_loadTwice.suppress = [_xmlFileSuppress]
 
 
 
@@ -204,18 +261,58 @@ class XMLStringLoaderTests(TestCase, XMLLoaderTestsMixin):
     """
     Tests for L{twisted.web.template.XMLString}
     """
+    deprecatedUse = False
     def loaderFactory(self):
+        """
+        @return: an L{XMLString} constructed with C{self.templateString}.
+        """
         return XMLString(self.templateString)
 
 
 
-class XMLFileLoaderTests(TestCase, XMLLoaderTestsMixin):
+class XMLFileWithFilePathTests(TestCase, XMLLoaderTestsMixin):
     """
-    Tests for L{twisted.web.template.XMLFile}, using L{StringIO} to simulate a
-    file object.
+    Tests for L{twisted.web.template.XMLFile}'s L{FilePath} support.
     """
+    deprecatedUse = False
     def loaderFactory(self):
+        """
+        @return: an L{XMLString} constructed with a L{FilePath} pointing to a
+            file that contains C{self.templateString}.
+        """
+        fp = FilePath(self.mktemp())
+        fp.setContent(self.templateString)
+        return XMLFile(fp)
+
+
+
+class XMLFileWithFileTests(TestCase, XMLLoaderTestsMixin):
+    """
+    Tests for L{twisted.web.template.XMLFile}'s deprecated file object support.
+    """
+    deprecatedUse = True
+    def loaderFactory(self):
+        """
+        @return: an L{XMLString} constructed with a file object that contains
+            C{self.templateString}.
+        """
         return XMLFile(StringIO(self.templateString))
+
+
+
+class XMLFileWithFilenameTests(TestCase, XMLLoaderTestsMixin):
+    """
+    Tests for L{twisted.web.template.XMLFile}'s deprecated filename support.
+    """
+    deprecatedUse = True
+    def loaderFactory(self):
+        """
+        @return: an L{XMLString} constructed with a filename that points to a
+            file containing C{self.templateString}.
+        """
+        fp = FilePath(self.mktemp())
+        fp.setContent(self.templateString)
+        return XMLFile(fp.path)
 
 
 
@@ -257,17 +354,17 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_missingTemplateLoader(self):
         """
-        Test that rendering a Element without a loader attribute raises
-        the appropriate exception.
+        Rendering a Element without a loader attribute raises the appropriate
+        exception.
         """
         return self.assertFlatteningRaises(Element(), MissingTemplateLoader)
 
 
     def test_missingRenderMethod(self):
         """
-        Test that flattening an L{Element} with a C{loader} which has a tag
-        with a render directive fails with L{FlattenerError} if there is no
-        available render method to satisfy that directive.
+        Flattening an L{Element} with a C{loader} which has a tag with a render
+        directive fails with L{FlattenerError} if there is no available render
+        method to satisfy that directive.
         """
         element = Element(loader=XMLString("""
         <p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1"
@@ -292,8 +389,8 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_attrRendering(self):
         """
-        Test that a Element with an attr tag renders the vaule of its attr tag
-        as an attribute of its containing tag.
+        An Element with an attr tag renders the vaule of its attr tag as an
+        attribute of its containing tag.
         """
         element = Element(loader=XMLString(
             '<a xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">'
@@ -348,8 +445,8 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_deferredRendering(self):
         """
-        Test that a Element with a render method which returns a Deferred will
-        render correctly.
+        An Element with a render method which returns a Deferred will render
+        correctly.
         """
         class RenderfulElement(Element):
             @renderer
@@ -366,9 +463,8 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_loaderClassAttribute(self):
         """
-        Test that if there is a non-None loader attribute on the class
-        of an Element instance but none on the instance itself, the class
-        attribute is used.
+        If there is a non-None loader attribute on the class of an Element
+        instance but none on the instance itself, the class attribute is used.
         """
         class SubElement(Element):
             loader = XMLString("<p>Hello, world.</p>")
@@ -377,8 +473,8 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_directiveRendering(self):
         """
-        Test that a Element with a valid render directive has that directive
-        invoked and the result added to the output.
+        An Element with a valid render directive has that directive invoked and
+        the result added to the output.
         """
         renders = []
         class RenderfulElement(Element):
@@ -395,8 +491,8 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_directiveRenderingOmittingTag(self):
         """
-        Test that a Element with a render method which omits the containing
-        tag successfully removes that tag from the output.
+        An Element with a render method which omits the containing tag
+        successfully removes that tag from the output.
         """
         class RenderfulElement(Element):
             @renderer
@@ -413,8 +509,8 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_elementContainingStaticElement(self):
         """
-        Test that a Element which is returned by the render method of another
-        Element is rendered properly.
+        An Element which is returned by the render method of another Element is
+        rendered properly.
         """
         class RenderfulElement(Element):
             @renderer
@@ -430,8 +526,8 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_elementUsingSlots(self):
         """
-        Test that a Element which is returned by the render method of another
-        Element is rendered properly.
+        An Element which is returned by the render method of another Element is
+        rendered properly.
         """
         class RenderfulElement(Element):
             @renderer
@@ -449,9 +545,9 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_elementContainingDynamicElement(self):
         """
-        Test that directives in the document factory of a Element returned from
-        a render method of another Element are satisfied from the correct
-        object: the "inner" Element.
+        Directives in the document factory of a Element returned from a render
+        method of another Element are satisfied from the correct object: the
+        "inner" Element.
         """
         class OuterElement(Element):
             @renderer
@@ -534,3 +630,191 @@ class TagLoaderTests(FlattenTestCase):
         """
         e = Element(self.loader)
         self.assertFlattensImmediately(e, '<i>test</i>')
+
+
+
+class TestElement(Element):
+    """
+    An L{Element} that can be rendered successfully.
+    """
+    loader = XMLString(
+        '<p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">'
+        'Hello, world.'
+        '</p>')
+
+
+
+class TestFailureElement(Element):
+    """
+    An L{Element} that can be used in place of L{FailureElement} to verify
+    that L{renderElement} can render failures properly.
+    """
+    loader = XMLString(
+        '<p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">'
+        'I failed.'
+        '</p>')
+
+    def __init__(self, failure, loader=None):
+        self.failure = failure
+
+
+
+class FailingElement(Element):
+    """
+    An element that raises an exception when rendered.
+    """
+    def render(self, request):
+        a = 42
+        b = 0
+        return a // b
+
+
+
+class FakeSite(object):
+    """
+    A minimal L{Site} object that we can use to test displayTracebacks
+    """
+    displayTracebacks = False
+
+
+
+class RenderElementTests(TestCase):
+    """
+    Test L{renderElement}
+    """
+
+    def setUp(self):
+        """
+        Set up a common L{DummyRequest} and L{FakeSite}.
+        """
+        self.request = DummyRequest([""])
+        self.request.site = FakeSite()
+
+
+    def test_simpleRender(self):
+        """
+        L{renderElement} returns NOT_DONE_YET and eventually
+        writes the rendered L{Element} to the request before finishing the
+        request.
+        """
+        element = TestElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            self.assertEqual(
+                "".join(self.request.written),
+                "<!DOCTYPE html>\n"
+                "<p>Hello, world.</p>")
+            self.assertTrue(self.request.finished)
+
+        d.addCallback(check)
+
+        self.assertIdentical(NOT_DONE_YET, renderElement(self.request, element))
+
+        return d
+
+
+    def test_simpleFailure(self):
+        """
+        L{renderElement} handles failures by writing a minimal
+        error message to the request and finishing it.
+        """
+        element = FailingElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            flushed = self.flushLoggedErrors(FlattenerError)
+            self.assertEqual(len(flushed), 1)
+            self.assertEqual(
+                "".join(self.request.written),
+                ('<!DOCTYPE html>\n'
+                 '<div style="font-size:800%;'
+                 'background-color:#FFF;'
+                 'color:#F00'
+                 '">An error occurred while rendering the response.</div>'))
+            self.assertTrue(self.request.finished)
+
+        d.addCallback(check)
+
+        self.assertIdentical(NOT_DONE_YET, renderElement(self.request, element))
+
+        return d
+
+
+    def test_simpleFailureWithTraceback(self):
+        """
+        L{renderElement} will render a traceback when rendering of
+        the element fails and our site is configured to display tracebacks.
+        """
+        self.request.site.displayTracebacks = True
+
+        element = FailingElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            flushed = self.flushLoggedErrors(FlattenerError)
+            self.assertEqual(len(flushed), 1)
+            self.assertEqual(
+                "".join(self.request.written),
+                "<!DOCTYPE html>\n<p>I failed.</p>")
+            self.assertTrue(self.request.finished)
+
+        d.addCallback(check)
+
+        renderElement(self.request, element, _failElement=TestFailureElement)
+
+        return d
+
+
+    def test_nonDefaultDoctype(self):
+        """
+        L{renderElement} will write the doctype string specified by the
+        doctype keyword argument.
+        """
+
+        element = TestElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            self.assertEqual(
+                "".join(self.request.written),
+                ('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
+                 ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
+                 '<p>Hello, world.</p>'))
+
+        d.addCallback(check)
+
+        renderElement(
+            self.request,
+            element,
+            doctype=(
+                '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
+                ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">'))
+
+        return d
+
+
+    def test_noneDoctype(self):
+        """
+        L{renderElement} will not write out a doctype if the doctype keyword
+        argument is C{None}.
+        """
+
+        element = TestElement()
+
+        d = self.request.notifyFinish()
+
+        def check(_):
+            self.assertEqual(
+                "".join(self.request.written),
+                '<p>Hello, world.</p>')
+
+        d.addCallback(check)
+
+        renderElement(self.request, element, doctype=None)
+
+        return d

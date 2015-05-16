@@ -5,6 +5,8 @@
 POSIX implementation of local network interface enumeration.
 """
 
+from __future__ import division, absolute_import
+
 import sys, socket
 
 from socket import AF_INET, AF_INET6, inet_ntop
@@ -13,9 +15,22 @@ from ctypes import (
     c_uint32, c_uint8, c_void_p, c_ubyte, pointer, cast)
 from ctypes.util import find_library
 
+from twisted.python.compat import _PY3, nativeString
+
+if _PY3:
+    # Once #6070 is implemented, this can be replaced with the implementation
+    # from that ticket:
+    def chr(i):
+        """
+        Python 3 implementation of Python 2 chr(), i.e. convert an integer to
+        corresponding byte.
+        """
+        return bytes([i])
+
+
 libc = CDLL(find_library("c"))
 
-if sys.platform == 'darwin':
+if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
     _sockaddrCommon = [
         ("sin_len", c_uint8),
         ("sin_family", c_uint8),
@@ -85,6 +100,34 @@ getifaddrs.restype = c_int
 freeifaddrs = libc.freeifaddrs
 freeifaddrs.argtypes = [ifaddrs_p]
 
+
+
+def _maybeCleanupScopeIndex(family, packed):
+    """
+    On FreeBSD, kill the embedded interface indices in link-local scoped
+    addresses.
+
+    @param family: The address family of the packed address - one of the
+        I{socket.AF_*} constants.
+
+    @param packed: The packed representation of the address (ie, the bytes of a
+        I{in_addr} field).
+    @type packed: L{bytes}
+
+    @return: The packed address with any FreeBSD-specific extra bits cleared.
+    @rtype: L{bytes}
+
+    @see: U{https://twistedmatrix.com/trac/ticket/6843}
+    @see: U{http://www.freebsd.org/doc/en/books/developers-handbook/ipv6.html#ipv6-scope-index}
+
+    @note: Indications are that the need for this will be gone in FreeBSD >=10.
+    """
+    if sys.platform.startswith('freebsd') and packed[:2] == b"\xfe\x80":
+        return packed[:2] + b"\x00\x00" + packed[4:]
+    return packed
+
+
+
 def _interfaces():
     """
     Call C{getifaddrs(3)} and return a list of tuples of interface name, address
@@ -106,7 +149,8 @@ def _interfaces():
                     addr = None
 
                 if addr:
-                    packed = ''.join(map(chr, addr[0].sin_addr.in_addr[:]))
+                    packed = b''.join(map(chr, addr[0].sin_addr.in_addr[:]))
+                    packed = _maybeCleanupScopeIndex(family, packed)
                     results.append((
                             ifaddrs[0].ifa_name,
                             family,
@@ -126,6 +170,8 @@ def posixGetLinkLocalIPv6Addresses():
     """
     retList = []
     for (interface, family, address) in _interfaces():
+        interface = nativeString(interface)
+        address = nativeString(address)
         if family == socket.AF_INET6 and address.startswith('fe80:'):
             retList.append('%s%%%s' % (address, interface))
     return retList

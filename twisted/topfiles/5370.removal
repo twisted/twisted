@@ -1,1 +1,0 @@
-Removed printTraceback and noOperation from twisted.spread.pb, deprecated since Twisted 8.2.

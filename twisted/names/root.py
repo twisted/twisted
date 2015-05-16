@@ -13,37 +13,9 @@ todo::
     documentation
 """
 
-import warnings
-
 from twisted.python.failure import Failure
 from twisted.internet import defer
 from twisted.names import dns, common, error
-
-
-def retry(t, p, *args):
-    """
-    Issue a query one or more times.
-
-    This function is deprecated.  Use one of the resolver classes for retry
-    logic, or implement it yourself.
-    """
-    warnings.warn(
-        "twisted.names.root.retry is deprecated since Twisted 10.0.  Use a "
-        "Resolver object for retry logic.", category=DeprecationWarning,
-        stacklevel=2)
-
-    assert t, "Timeout is required"
-    t = list(t)
-    def errback(failure):
-        failure.trap(defer.TimeoutError)
-        if not t:
-            return failure
-        return p.query(timeout=t.pop(0), *args
-            ).addErrback(errback
-            )
-    return p.query(timeout=t.pop(0), *args
-        ).addErrback(errback
-        )
 
 
 
@@ -63,20 +35,40 @@ class Resolver(common.ResolverBase):
     L{Resolver} implements recursive lookup starting from a specified list of
     root servers.
 
-    @ivar hints: A C{list} of C{str} giving the dotted quad representation
-        of IP addresses of root servers at which to begin resolving names.
-
-    @ivar _maximumQueries: A C{int} giving the maximum number of queries
-        which will be attempted to resolve a single name.
-
-    @ivar _reactor: A L{IReactorTime} and L{IReactorUDP} provider to use to
-        bind UDP ports and manage timeouts.
+    @ivar hints: See C{hints} parameter of L{__init__}
+    @ivar _maximumQueries: See C{maximumQueries} parameter of L{__init__}
+    @ivar _reactor: See C{reactor} parameter of L{__init__}
+    @ivar _resolverFactory: See C{resolverFactory} parameter of L{__init__}
     """
-    def __init__(self, hints, maximumQueries=10, reactor=None):
+    def __init__(self, hints, maximumQueries=10,
+                 reactor=None, resolverFactory=None):
+        """
+        @param hints: A L{list} of L{str} giving the dotted quad
+            representation of IP addresses of root servers at which to
+            begin resolving names.
+        @type hints: L{list} of L{str}
+
+        @param maximumQueries: An optional L{int} giving the maximum
+             number of queries which will be attempted to resolve a
+             single name.
+        @type maximumQueries: L{int}
+
+        @param reactor: An optional L{IReactorTime} and L{IReactorUDP}
+             provider to use to bind UDP ports and manage timeouts.
+        @type reactor: L{IReactorTime} and L{IReactorUDP} provider
+
+        @param resolverFactory: An optional callable which accepts C{reactor}
+             and C{servers} arguments and returns an instance that provides a
+             C{queryUDP} method. Defaults to L{twisted.names.client.Resolver}.
+        @type resolverFactory: callable
+        """
         common.ResolverBase.__init__(self)
         self.hints = hints
         self._maximumQueries = maximumQueries
         self._reactor = reactor
+        if resolverFactory is None:
+            from twisted.names.client import Resolver as resolverFactory
+        self._resolverFactory = resolverFactory
 
 
     def _roots(self):
@@ -112,8 +104,7 @@ class Resolver(common.ResolverBase):
             error.
         @rtype: L{Deferred}
         """
-        from twisted.names import client
-        r = client.Resolver(servers=servers, reactor=self._reactor)
+        r = self._resolverFactory(servers=servers, reactor=self._reactor)
         d = r.queryUDP([query], timeout)
         if filter:
             d.addCallback(r.filterAnswers)
@@ -230,7 +221,8 @@ class Resolver(common.ResolverBase):
                         self._roots(), timeout, queriesLeft)
                     # We also want to include the CNAME in the ultimate result,
                     # otherwise this will be pretty confusing.
-                    def cbResolved((answers, authority, additional)):
+                    def cbResolved(results):
+                        answers, authority, additional = results
                         answers.insert(0, previous)
                         return (answers, authority, additional)
                     d.addCallback(cbResolved)
@@ -252,13 +244,13 @@ class Resolver(common.ResolverBase):
         addresses = {}
         for rr in response.additional:
             if rr.type == dns.A:
-                addresses[str(rr.name)] = rr.payload.dottedQuad()
+                addresses[rr.name.name] = rr.payload.dottedQuad()
 
         hints = []
         traps = []
         for rr in response.authority:
             if rr.type == dns.NS:
-                ns = str(rr.payload.name)
+                ns = rr.payload.name.name
                 if ns in addresses:
                     hints.append((addresses[ns], dns.PORT))
                 else:
@@ -268,9 +260,10 @@ class Resolver(common.ResolverBase):
                 query, hints, timeout, queriesLeft)
         elif traps:
             d = self.lookupAddress(traps[0], timeout)
-            d.addCallback(
-                lambda (answers, authority, additional):
-                    answers[0].payload.dottedQuad())
+            def getOneAddress(results):
+                answers, authority, additional = results
+                return answers[0].payload.dottedQuad()
+            d.addCallback(getOneAddress)
             d.addCallback(
                 lambda hint: self._discoverAuthority(
                     query, [(hint, dns.PORT)], timeout, queriesLeft - 1))
@@ -280,131 +273,6 @@ class Resolver(common.ResolverBase):
                     "Stuck at response without answers or delegation"))
 
 
-    def discoveredAuthority(self, auth, name, cls, type, timeout):
-        warnings.warn(
-            'twisted.names.root.Resolver.discoveredAuthority is deprecated since '
-            'Twisted 10.0.  Use twisted.names.client.Resolver directly, instead.',
-            category=DeprecationWarning, stacklevel=2)
-        from twisted.names import client
-        q = dns.Query(name, type, cls)
-        r = client.Resolver(servers=[(auth, dns.PORT)])
-        d = r.queryUDP([q], timeout)
-        d.addCallback(r.filterAnswers)
-        return d
-
-
-
-def lookupNameservers(host, atServer, p=None):
-    warnings.warn(
-        'twisted.names.root.lookupNameservers is deprecated since Twisted '
-        '10.0.  Use twisted.names.root.Resolver.lookupNameservers instead.',
-        category=DeprecationWarning, stacklevel=2)
-    # print 'Nameserver lookup for', host, 'at', atServer, 'with', p
-    if p is None:
-        p = dns.DNSDatagramProtocol(_DummyController())
-        p.noisy = False
-    return retry(
-        (1, 3, 11, 45),                     # Timeouts
-        p,                                  # Protocol instance
-        (atServer, dns.PORT),               # Server to query
-        [dns.Query(host, dns.NS, dns.IN)]   # Question to ask
-    )
-
-def lookupAddress(host, atServer, p=None):
-    warnings.warn(
-        'twisted.names.root.lookupAddress is deprecated since Twisted '
-        '10.0.  Use twisted.names.root.Resolver.lookupAddress instead.',
-        category=DeprecationWarning, stacklevel=2)
-    # print 'Address lookup for', host, 'at', atServer, 'with', p
-    if p is None:
-        p = dns.DNSDatagramProtocol(_DummyController())
-        p.noisy = False
-    return retry(
-        (1, 3, 11, 45),                     # Timeouts
-        p,                                  # Protocol instance
-        (atServer, dns.PORT),               # Server to query
-        [dns.Query(host, dns.A, dns.IN)]    # Question to ask
-    )
-
-def extractAuthority(msg, cache):
-    warnings.warn(
-        'twisted.names.root.extractAuthority is deprecated since Twisted '
-        '10.0.  Please inspect the Message object directly.',
-        category=DeprecationWarning, stacklevel=2)
-    records = msg.answers + msg.authority + msg.additional
-    nameservers = [r for r in records if r.type == dns.NS]
-
-    # print 'Records for', soFar, ':', records
-    # print 'NS for', soFar, ':', nameservers
-
-    if not nameservers:
-        return None, nameservers
-    if not records:
-        raise IOError("No records")
-    for r in records:
-        if r.type == dns.A:
-            cache[str(r.name)] = r.payload.dottedQuad()
-    for r in records:
-        if r.type == dns.NS:
-            if str(r.payload.name) in cache:
-                return cache[str(r.payload.name)], nameservers
-    for addr in records:
-        if addr.type == dns.A and addr.name == r.name:
-            return addr.payload.dottedQuad(), nameservers
-    return None, nameservers
-
-def discoverAuthority(host, roots, cache=None, p=None):
-    warnings.warn(
-        'twisted.names.root.discoverAuthority is deprecated since Twisted '
-        '10.0.  Use twisted.names.root.Resolver.lookupNameservers instead.',
-        category=DeprecationWarning, stacklevel=4)
-
-    if cache is None:
-        cache = {}
-
-    rootAuths = list(roots)
-
-    parts = host.rstrip('.').split('.')
-    parts.reverse()
-
-    authority = rootAuths.pop()
-
-    soFar = ''
-    for part in parts:
-        soFar = part + '.' + soFar
-        # print '///////',  soFar, authority, p
-        msg = defer.waitForDeferred(lookupNameservers(soFar, authority, p))
-        yield msg
-        msg = msg.getResult()
-
-        newAuth, nameservers = extractAuthority(msg, cache)
-
-        if newAuth is not None:
-            # print "newAuth is not None"
-            authority = newAuth
-        else:
-            if nameservers:
-                r = str(nameservers[0].payload.name)
-                # print 'Recursively discovering authority for', r
-                authority = defer.waitForDeferred(discoverAuthority(r, roots, cache, p))
-                yield authority
-                authority = authority.getResult()
-                # print 'Discovered to be', authority, 'for', r
-##            else:
-##                # print 'Doing address lookup for', soFar, 'at', authority
-##                msg = defer.waitForDeferred(lookupAddress(soFar, authority, p))
-##                yield msg
-##                msg = msg.getResult()
-##                records = msg.answers + msg.authority + msg.additional
-##                addresses = [r for r in records if r.type == dns.A]
-##                if addresses:
-##                    authority = addresses[0].payload.dottedQuad()
-##                else:
-##                    raise IOError("Resolution error")
-    # print "Yielding authority", authority
-    yield authority
-
-discoverAuthority = defer.deferredGenerator(discoverAuthority)
 
 def makePlaceholder(deferred, name):
     def placeholder(*args, **kw):
@@ -430,17 +298,36 @@ class DeferredResolver:
             return makePlaceholder(self.waiting[-1], name)
         raise AttributeError(name)
 
-def bootstrap(resolver):
-    """Lookup the root nameserver addresses using the given resolver
+
+
+def bootstrap(resolver, resolverFactory=None):
+    """
+    Lookup the root nameserver addresses using the given resolver
 
     Return a Resolver which will eventually become a C{root.Resolver}
     instance that has references to all the root servers that we were able
     to look up.
+
+    @param resolver: The resolver instance which will be used to
+        lookup the root nameserver addresses.
+    @type resolver: L{twisted.internet.interfaces.IResolverSimple}
+
+    @param resolverFactory: An optional callable which returns a
+        resolver instance. It will passed as the C{resolverFactory}
+        argument to L{Resolver.__init__}.
+    @type resolverFactory: callable
+
+    @return: A L{DeferredResolver} which will be dynamically replaced
+        with L{Resolver} when the root nameservers have been looked up.
     """
     domains = [chr(ord('a') + i) for i in range(13)]
-    # f = lambda r: (log.msg('Root server address: ' + str(r)), r)[1]
-    f = lambda r: r
-    L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
+    L = [resolver.getHostByName('%s.root-servers.net' % d) for d in domains]
     d = defer.DeferredList(L)
-    d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]]))
+
+    def buildResolver(res):
+        return Resolver(
+            hints=[e[1] for e in res if e[0]],
+            resolverFactory=resolverFactory)
+    d.addCallback(buildResolver)
+
     return DeferredResolver(d)

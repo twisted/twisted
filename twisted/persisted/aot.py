@@ -260,7 +260,7 @@ def unjellyFromSource(stringOrFile):
     else:
         exec stringOrFile in ns
 
-    if ns.has_key('app'):
+    if 'app' in ns:
         return unjellyFromAOT(ns['app'])
     else:
         raise ValueError("%s needs to define an 'app', it didn't!" % stringOrFile)
@@ -381,7 +381,7 @@ class AOTUnjellier:
             elif c is Copyreg:
                 loadfunc = reflect.namedObject(ao.loadfunc)
                 d = self.unjellyLater(ao.state).addCallback(
-                    lambda result, _l: apply(_l, result), loadfunc)
+                    lambda result, _l: _l(*result), loadfunc)
                 return d
 
         #Types
@@ -504,7 +504,7 @@ class AOTJellier:
 #mutable inside one. The Ref() class will only print the "Ref(..)" around an
 #object if it has a Reference explicitly attached.
 
-            if self.prepared.has_key(id(obj)):
+            if id(obj) in self.prepared:
                 oldRef = self.prepared[id(obj)]
                 if oldRef.refnum:
                     # it's been referenced already
@@ -538,7 +538,7 @@ class AOTJellier:
                     state = self.jellyToAO(obj.__dict__)
                 retval.setObj(Instance(reflect.qual(obj.__class__), state))
 
-            elif copy_reg.dispatch_table.has_key(objType):
+            elif objType in copy_reg.dispatch_table:
                 unpickleFunc, state = copy_reg.dispatch_table[objType](obj)
 
                 retval.setObj(Copyreg( reflect.fullFuncName(unpickleFunc),

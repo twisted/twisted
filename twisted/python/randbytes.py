@@ -6,10 +6,19 @@
 Cryptographically secure random implementation, with fallback on normal random.
 """
 
-# System imports
-import warnings, os, random
+from __future__ import division, absolute_import
+
+import warnings, os, random, string
+
+from twisted.python.compat import _PY3
 
 getrandbits = getattr(random, 'getrandbits', None)
+
+if _PY3:
+    _fromhex = bytes.fromhex
+else:
+    def _fromhex(hexBytes):
+        return hexBytes.decode('hex')
 
 
 class SecureRandomNotAvailable(RuntimeError):
@@ -33,12 +42,11 @@ class RandomFactory(object):
     You shouldn't have to instantiate this class, use the module level
     functions instead: it is an implementation detail and could be removed or
     changed arbitrarily.
-
-    @cvar randomSources: list of file sources used when os.urandom is not
-        available.
-    @type randomSources: C{tuple}
     """
-    randomSources = ('/dev/urandom',)
+
+    # This variable is no longer used, and will eventually be removed.
+    randomSources = ()
+
     getrandbits = getrandbits
 
 
@@ -48,28 +56,8 @@ class RandomFactory(object):
         """
         try:
             return os.urandom(nbytes)
-        except (AttributeError, NotImplementedError), e:
+        except (AttributeError, NotImplementedError) as e:
             raise SourceNotAvailable(e)
-
-
-    def _fileUrandom(self, nbytes):
-        """
-        Wrapper around random file sources.
-
-        This method isn't meant to be call out of the class and could be
-        removed arbitrarily.
-        """
-        for src in self.randomSources:
-            try:
-                f = file(src, 'rb')
-            except (IOError, OSError):
-                pass
-            else:
-                bytes = f.read(nbytes)
-                f.close()
-                return bytes
-        raise SourceNotAvailable("File sources not available: %s" %
-                                 (self.randomSources,))
 
 
     def secureRandom(self, nbytes, fallback=False):
@@ -85,11 +73,11 @@ class RandomFactory(object):
         @return: a string of random bytes.
         @rtype: C{str}
         """
-        for src in ("_osUrandom", "_fileUrandom"):
-            try:
-                return getattr(self, src)(nbytes)
-            except SourceNotAvailable:
-                pass
+        try:
+            return self._osUrandom(nbytes)
+        except SourceNotAvailable:
+            pass
+
         if fallback:
             warnings.warn(
                 "urandom unavailable - "
@@ -108,18 +96,28 @@ class RandomFactory(object):
         if self.getrandbits is not None:
             n = self.getrandbits(nbytes * 8)
             hexBytes = ("%%0%dx" % (nbytes * 2)) % n
-            return hexBytes.decode('hex')
+            return _fromhex(hexBytes)
         raise SourceNotAvailable("random.getrandbits is not available")
 
 
-    def _randRange(self, nbytes):
-        """
-        Wrapper around C{random.randrange}.
-        """
-        bytes = ""
-        for i in xrange(nbytes):
-            bytes += chr(random.randrange(0, 255))
-        return bytes
+    if _PY3:
+        _maketrans = bytes.maketrans
+        def _randModule(self, nbytes):
+            """
+            Wrapper around the C{random} module.
+            """
+            return b"".join([
+                    bytes([random.choice(self._BYTES)]) for i in range(nbytes)])
+    else:
+        _maketrans = string.maketrans
+        def _randModule(self, nbytes):
+            """
+            Wrapper around the C{random} module.
+            """
+            return b"".join([
+                    random.choice(self._BYTES) for i in range(nbytes)])
+
+    _BYTES = _maketrans(b'', b'')
 
 
     def insecureRandom(self, nbytes):
@@ -132,7 +130,7 @@ class RandomFactory(object):
         @return: a string of random bytes.
         @rtype: C{str}
         """
-        for src in ("_randBits", "_randRange"):
+        for src in ("_randBits", "_randModule"):
             try:
                 return getattr(self, src)(nbytes)
             except SourceNotAvailable:

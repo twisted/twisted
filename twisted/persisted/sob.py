@@ -18,8 +18,8 @@ try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
+from hashlib import md5
 from twisted.python import log, runtime
-from twisted.python.hashlib import md5
 from twisted.persisted import styles
 from zope.interface import implements, Interface
 

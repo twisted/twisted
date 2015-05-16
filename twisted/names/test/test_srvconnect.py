@@ -9,7 +9,7 @@ from twisted.internet import defer, protocol
 from twisted.names import client, dns, srvconnect
 from twisted.names.common import ResolverBase
 from twisted.names.error import DNSNameError
-from twisted.internet.error import DNSLookupError
+from twisted.internet.error import DNSLookupError, ServiceNameUnknownError
 from twisted.trial import unittest
 from twisted.test.proto_helpers import MemoryReactor
 
@@ -52,7 +52,12 @@ class DummyFactory(protocol.ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         self.reason = reason
 
-class SRVConnectorTest(unittest.TestCase):
+
+
+class SRVConnectorTests(unittest.TestCase):
+    """
+    Tests for L{srvconnect.SRVConnector}.
+    """
 
     def setUp(self):
         self.patch(client, 'theResolver', FakeResolver())
@@ -73,7 +78,7 @@ class SRVConnectorTest(unittest.TestCase):
                                                    payload=payload)]
         self.connector.connect()
 
-        self.assertIdentical(None, self.factory.reason)
+        self.assertIs(None, self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('host.example.org', 6269))
 
@@ -85,7 +90,7 @@ class SRVConnectorTest(unittest.TestCase):
         client.theResolver.failure = DNSNameError('example.org')
         self.connector.connect()
 
-        self.assertIdentical(None, self.factory.reason)
+        self.assertIs(None, self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
 
@@ -97,9 +102,40 @@ class SRVConnectorTest(unittest.TestCase):
         client.theResolver.results = []
         self.connector.connect()
 
-        self.assertIdentical(None, self.factory.reason)
+        self.assertIs(None, self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
+
+
+    def test_SRVNoResultUnknownServiceDefaultPort(self):
+        """
+        connectTCP gets called with default port if the service is not defined.
+        """
+        self.connector = srvconnect.SRVConnector(self.reactor,
+                                                 'thisbetternotexist',
+                                                 'example.org', self.factory,
+                                                 defaultPort=5222)
+
+        client.theResolver.failure = ServiceNameUnknownError()
+        self.connector.connect()
+
+        self.assertIs(None, self.factory.reason)
+        self.assertEqual(
+            self.reactor.tcpClients.pop()[:2], ('example.org', 5222))
+
+
+    def test_SRVNoResultUnknownServiceNoDefaultPort(self):
+        """
+        Connect fails on no result, unknown service and no default port.
+        """
+        self.connector = srvconnect.SRVConnector(self.reactor,
+                                                 'thisbetternotexist',
+                                                 'example.org', self.factory)
+
+        client.theResolver.failure = ServiceNameUnknownError()
+        self.connector.connect()
+
+        self.assertTrue(self.factory.reason.check(ServiceNameUnknownError))
 
 
     def test_SRVBadResult(self):
@@ -112,7 +148,7 @@ class SRVConnectorTest(unittest.TestCase):
                                                    payload=None)]
         self.connector.connect()
 
-        self.assertIdentical(None, self.factory.reason)
+        self.assertIs(None, self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
 
@@ -128,6 +164,18 @@ class SRVConnectorTest(unittest.TestCase):
                                                    payload=payload)]
         self.connector.connect()
 
-        self.assertNotIdentical(None, self.factory.reason)
+        self.assertIsNot(None, self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
         self.assertEqual(self.reactor.tcpClients, [])
+
+
+    def test_unicodeDomain(self):
+        """
+        L{srvconnect.SRVConnector} automatically encodes unicode domain using
+        C{idna} encoding.
+        """
+        self.connector = srvconnect.SRVConnector(
+            self.reactor, 'xmpp-client', u'\u00e9chec.example.org',
+            self.factory)
+        self.assertIsInstance(self.connector.domain, bytes)
+        self.assertEqual(b'xn--chec-9oa.example.org', self.connector.domain)

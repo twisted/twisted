@@ -54,6 +54,8 @@ class UnauthorizedResource(object):
             request.responseHeaders.addRawHeader(
                 'www-authenticate',
                 generateWWWAuthenticate(fact.scheme, challenge))
+        if request.method == 'HEAD':
+            return ''
         return 'Unauthorized'
 
 

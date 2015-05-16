@@ -80,7 +80,7 @@ def subPost(sub, a, b):
     """
     sub.calledSubPost = sub.calledSubPost + 1
 
-class HookTestCase(unittest.TestCase):
+class HookTests(unittest.TestCase):
     """
     test case to make sure hooks are called
     """
@@ -147,4 +147,4 @@ class HookTestCase(unittest.TestCase):
         self.assertEqual(sub.calledSubPre, 2)
         self.assertEqual(sub.calledSub, 3)
 
-testCases = [HookTestCase]
+testCases = [HookTests]

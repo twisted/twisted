@@ -2,9 +2,7 @@
 # See LICENSE for details.
 
 """
-
-Twisted News: an NNTP-based news service.
-
+Twisted News: A NNTP-based news service.
 """
 
 from twisted.news._version import version

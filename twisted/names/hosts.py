@@ -6,8 +6,10 @@
 hosts(5) support.
 """
 
+from __future__ import division, absolute_import
+
+from twisted.python.compat import nativeString
 from twisted.names import dns
-from twisted.persisted import styles
 from twisted.python import failure
 from twisted.python.filepath import FilePath
 from twisted.internet import defer
@@ -37,7 +39,7 @@ def searchFileForAll(hostsFile, name):
 
     name = name.lower()
     for line in lines:
-        idx = line.find('#')
+        idx = line.find(b'#')
         if idx != -1:
             line = line[:idx]
         if not line:
@@ -45,7 +47,7 @@ def searchFileForAll(hostsFile, name):
         parts = line.split()
 
         if name.lower() in [s.lower() for s in parts[1:]]:
-            results.append(parts[0])
+            results.append(nativeString(parts[0]))
     return results
 
 
@@ -70,21 +72,11 @@ def searchFileFor(file, name):
 
 
 
-class Resolver(common.ResolverBase, styles.Versioned):
+class Resolver(common.ResolverBase):
     """
     A resolver that services hosts(5) format files.
     """
-
-    persistenceVersion = 1
-
-    def upgradeToVersion1(self):
-        # <3 exarkun
-        self.typeToMethod = {}
-        for (k, v) in common.typeToMethod.items():
-            self.typeToMethod[k] = getattr(self, v)
-
-
-    def __init__(self, file='/etc/hosts', ttl = 60 * 60):
+    def __init__(self, file=b'/etc/hosts', ttl = 60 * 60):
         common.ResolverBase.__init__(self)
         self.file = file
         self.ttl = ttl
@@ -146,8 +138,8 @@ class Resolver(common.ResolverBase, styles.Versioned):
 
     def lookupIPV6Address(self, name, timeout=None):
         """
-        Read any IPv4 addresses from C{self.file} and return them as L{Record_A}
-        instances.
+        Read any IPv6 addresses from C{self.file} and return them as
+        L{Record_AAAA} instances.
         """
         return self._respond(name, self._aaaaRecords(name))
 

@@ -291,7 +291,6 @@ class ZshArgumentsGenerator(object):
                     self.extraActions = data.extraActions
 
         aCL = reflect.accumulateClassList
-        aCD = reflect.accumulateClassDict
 
         optFlags = []
         optParams = []
@@ -379,9 +378,6 @@ class ZshArgumentsGenerator(object):
             is not the last item in the C{extraActions} list.
         """
         for i, action in enumerate(self.extraActions):
-            descr = ""
-            if action._descr:
-                descr = action._descr
             # a repeatable action must be the last action in the list
             if action._repeat and i != len(self.extraActions) - 1:
                 raise ValueError("Completer with repeat=True must be "

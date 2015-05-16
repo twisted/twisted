@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_internet -*-
+# -*- test-case-name: twisted.test.test_internet,twisted.internet.test.test_core -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -6,8 +6,10 @@
 Very basic functionality for a Reactor implementation.
 """
 
+from __future__ import division, absolute_import
+
 import socket # needed only for sync-dns
-from zope.interface import implements, classImplements
+from zope.interface import implementer, classImplements
 
 import sys
 import warnings
@@ -15,25 +17,23 @@ from heapq import heappush, heappop, heapify
 
 import traceback
 
-from twisted.python.compat import set
-from twisted.python.util import unsignedID
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import fdesc, main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
+from twisted.python.compat import unicode, iteritems
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
-from twisted.persisted import styles
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
 from twisted.python import threadable
 
 
-class DelayedCall(styles.Ephemeral):
+@implementer(IDelayedCall)
+class DelayedCall:
 
-    implements(IDelayedCall)
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
@@ -91,7 +91,7 @@ class DelayedCall(styles.Ephemeral):
             self.canceller(self)
             self.cancelled = 1
             if self.debug:
-                self._str = str(self)
+                self._str = bytes(self)
             del self.func, self.args, self.kw
 
     def reset(self, secondsFromNow):
@@ -175,7 +175,11 @@ class DelayedCall(styles.Ephemeral):
         if self._str is not None:
             return self._str
         if hasattr(self, 'func'):
-            if hasattr(self.func, 'func_name'):
+            # This code should be replaced by a utility function in reflect;
+            # see ticket #6066:
+            if hasattr(self.func, '__qualname__'):
+                func = self.func.__qualname__
+            elif hasattr(self.func, '__name__'):
                 func = self.func.func_name
                 if hasattr(self.func, 'im_class'):
                     func = self.func.im_class.__name__ + '.' + func
@@ -186,7 +190,7 @@ class DelayedCall(styles.Ephemeral):
 
         now = self.seconds()
         L = ["<DelayedCall 0x%x [%ss] called=%s cancelled=%s" % (
-                unsignedID(self), self.time - now, self.called,
+                id(self), self.time - now, self.called,
                 self.cancelled)]
         if func is not None:
             L.extend((" ", func, "("))
@@ -195,7 +199,7 @@ class DelayedCall(styles.Ephemeral):
                 if self.kw:
                     L.append(", ")
             if self.kw:
-                L.append(", ".join(['%s=%s' % (k, reflect.safe_repr(v)) for (k, v) in self.kw.iteritems()]))
+                L.append(", ".join(['%s=%s' % (k, reflect.safe_repr(v)) for (k, v) in self.kw.items()]))
             L.append(")")
 
         if self.debug:
@@ -206,6 +210,7 @@ class DelayedCall(styles.Ephemeral):
 
 
 
+@implementer(IResolverSimple)
 class ThreadedResolver(object):
     """
     L{ThreadedResolver} uses a reactor, a threadpool, and
@@ -217,7 +222,6 @@ class ThreadedResolver(object):
         L{socket.gethostbyname} and the I/O thread of which the result will be
         delivered.
     """
-    implements(IResolverSimple)
 
     def __init__(self, reactor):
         self.reactor = reactor
@@ -274,8 +278,8 @@ class ThreadedResolver(object):
 
 
 
+@implementer(IResolverSimple)
 class BlockingResolver:
-    implements(IResolverSimple)
 
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
         try:
@@ -429,6 +433,7 @@ class _ThreePhaseEvent(object):
 
 
 
+@implementer(IReactorCore, IReactorTime, IReactorPluggableResolver)
 class ReactorBase(object):
     """
     Default base class for Reactors.
@@ -457,7 +462,6 @@ class ReactorBase(object):
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
     """
-    implements(IReactorCore, IReactorTime, IReactorPluggableResolver)
 
     _registerAsIOThread = True
 
@@ -700,7 +704,7 @@ class ReactorBase(object):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert callable(_f), "%s is not callable" % _f
-        assert sys.maxint >= _seconds >= 0, \
+        assert _seconds >= 0, \
                "%s is not greater than or equal to 0 seconds" % (_seconds,)
         tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
                            self._cancelCallLater,
@@ -749,14 +753,35 @@ class ReactorBase(object):
                 heappush(self._pendingTimedCalls, call)
         self._newTimedCalls = []
 
+
     def timeout(self):
+        """
+        Determine the longest time the reactor may sleep (waiting on I/O
+        notification, perhaps) before it must wake up to service a time-related
+        event.
+
+        @return: The maximum number of seconds the reactor may sleep.
+        @rtype: L{float}
+        """
         # insert new delayed calls to make sure to include them in timeout value
         self._insertNewDelayedCalls()
 
         if not self._pendingTimedCalls:
             return None
 
-        return max(0, self._pendingTimedCalls[0].time - self.seconds())
+        delay = self._pendingTimedCalls[0].time - self.seconds()
+
+        # Pick a somewhat arbitrary maximum possible value for the timeout.
+        # This value is 2 ** 31 / 1000, which is the number of seconds which can
+        # be represented as an integer number of milliseconds in a signed 32 bit
+        # integer.  This particular limit is imposed by the epoll_wait(3)
+        # interface which accepts a timeout as a C "int" type and treats it as
+        # representing a number of milliseconds.
+        longest = 2147483
+
+        # Don't let the delay be in the past (negative) or exceed a plausible
+        # maximum (platform-imposed) interval.
+        return max(0, min(longest, delay))
 
 
     def runUntilCurrent(self):
@@ -871,8 +896,9 @@ class ReactorBase(object):
                     "reactor.spawnProcess should be str, not unicode.",
                     category=DeprecationWarning,
                     stacklevel=4)
-            if isinstance(arg, str) and '\0' not in arg:
+            if isinstance(arg, bytes) and b'\0' not in arg:
                 return arg
+
             return None
 
         # Make a few tests to check input validity
@@ -890,7 +916,7 @@ class ReactorBase(object):
         outputEnv = None
         if env is not None:
             outputEnv = {}
-            for key, val in env.iteritems():
+            for key, val in iteritems(env):
                 key = argChecker(key)
                 if key is None:
                     raise TypeError("Environment contains a non-string key")
@@ -988,14 +1014,12 @@ if platform.supportsThreads():
     classImplements(ReactorBase, IReactorThreads)
 
 
-class BaseConnector(styles.Ephemeral):
+@implementer(IConnector)
+class BaseConnector:
     """Basic implementation of connector.
 
     State can be: "connecting", "connected", "disconnected"
     """
-
-    implements(IConnector)
-
     timeoutID = None
     factoryStarted = 0
 
@@ -1015,7 +1039,7 @@ class BaseConnector(styles.Ephemeral):
     def connect(self):
         """Start connection to remote server."""
         if self.state != "disconnected":
-            raise RuntimeError, "can't connect in this state"
+            raise RuntimeError("can't connect in this state")
 
         self.state = "connecting"
         if not self.factoryStarted:
@@ -1029,7 +1053,7 @@ class BaseConnector(styles.Ephemeral):
     def stopConnecting(self):
         """Stop attempting to connect."""
         if self.state != "connecting":
-            raise error.NotConnectingError, "we're not trying to connect"
+            raise error.NotConnectingError("we're not trying to connect")
 
         self.state = "disconnected"
         self.transport.failIfNotConnected(error.UserError())
@@ -1091,7 +1115,8 @@ class BasePort(abstract.FileDescriptor):
 
     def doWrite(self):
         """Raises a RuntimeError"""
-        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
+        raise RuntimeError(
+            "doWrite called on a %s" % reflect.qual(self.__class__))
 
 
 

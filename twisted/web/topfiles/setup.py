@@ -1,8 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys
-
 try:
     from twisted.python import dist
 except ImportError:
@@ -27,4 +25,14 @@ Twisted Web is a complete web server, aimed at hosting web
 applications using Twisted and Python, but fully able to serve static
 pages, also.
 """,
+        classifiers=[
+            "Development Status :: 5 - Production/Stable",
+            "Environment :: No Input/Output (Daemon)",
+            "Intended Audience :: Developers",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python",
+            "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+            "Topic :: Internet :: WWW/HTTP :: WSGI",
+            "Topic :: Software Development :: Libraries :: Python Modules",
+            ],
         )

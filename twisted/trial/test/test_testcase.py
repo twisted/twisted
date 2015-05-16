@@ -2,24 +2,19 @@
 # See LICENSE for details.
 
 """
-Direct unit tests for L{twisted.trial.unittest.TestCase}.
+Direct unit tests for L{twisted.trial.unittest.SynchronousTestCase} and
+L{twisted.trial.unittest.TestCase}.
 """
 
-from twisted.trial.unittest import TestCase
+from __future__ import division, absolute_import
+
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
-class TestCaseTests(TestCase):
+class TestCaseMixin(object):
     """
     L{TestCase} tests.
     """
-    class MyTestCase(TestCase):
-        """
-        Some test methods which can be used to test behaviors of
-        L{TestCase}.
-        """
-        def test_1(self):
-            pass
-
     def setUp(self):
         """
         Create a couple instances of C{MyTestCase}, each for the same test
@@ -37,7 +32,7 @@ class TestCaseTests(TestCase):
         self.assertTrue(self.first == self.first)
         self.assertTrue(self.first != self.second)
         self.assertFalse(self.first == self.second)
-        
+
 
     def test_hashability(self):
         """
@@ -49,3 +44,27 @@ class TestCaseTests(TestCase):
         container[self.first] = None
         container[self.second] = None
         self.assertEqual(len(container), 2)
+
+
+
+class SynchronousTestCaseTests(TestCaseMixin, SynchronousTestCase):
+    class MyTestCase(SynchronousTestCase):
+        """
+        Some test methods which can be used to test behaviors of
+        L{SynchronousTestCase}.
+        """
+        def test_1(self):
+            pass
+
+
+
+# Yes, subclass SynchronousTestCase again.  There are no interesting behaviors
+# of self being tested below, only of self.MyTestCase.
+class AsynchronousTestCaseTests(TestCaseMixin, SynchronousTestCase):
+    class MyTestCase(TestCase):
+        """
+        Some test methods which can be used to test behaviors of
+        L{TestCase}.
+        """
+        def test_1(self):
+            pass

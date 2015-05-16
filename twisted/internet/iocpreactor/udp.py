@@ -10,7 +10,7 @@ import socket, operator, struct, warnings, errno
 from zope.interface import implements
 
 from twisted.internet import defer, address, error, interfaces
-from twisted.internet.abstract import isIPAddress
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log, failure
 
 from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
@@ -24,6 +24,9 @@ from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 class Port(abstract.FileHandle):
     """
     UDP port, listening for packets.
+
+    @ivar addressFamily: L{socket.AF_INET} or L{socket.AF_INET6}, depending on
+        whether this port is listening on an IPv4 address or an IPv6 address.
     """
     implements(
         IReadWriteHandle, interfaces.IListeningPort, interfaces.IUDPTransport,
@@ -49,6 +52,7 @@ class Port(abstract.FileHandle):
         self.interface = interface
         self.setLogStr()
         self._connectedAddr = None
+        self._setAddressFamily()
 
         abstract.FileHandle.__init__(self, reactor)
 
@@ -58,6 +62,19 @@ class Port(abstract.FileHandle):
         # WSARecvFrom takes an int
         self.addressLengthBuffer = _iocp.AllocateReadBuffer(
                 struct.calcsize('i'))
+
+
+    def _setAddressFamily(self):
+        """
+        Resolve address family for the socket.
+        """
+        if isIPv6Address(self.interface):
+            self.addressFamily = socket.AF_INET6
+        elif isIPAddress(self.interface):
+            self.addressFamily = socket.AF_INET
+        elif self.interface:
+            raise error.InvalidAddressError(
+                self.interface, 'not an IPv4 or IPv6 address')
 
 
     def __repr__(self):
@@ -95,7 +112,7 @@ class Port(abstract.FileHandle):
             skt = self.createSocket()
             skt.bind((self.interface, self.port))
         except socket.error, le:
-            raise error.CannotListenError, (self.interface, self.port, le)
+            raise error.CannotListenError(self.interface, self.port, le)
 
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
@@ -166,7 +183,7 @@ class Port(abstract.FileHandle):
                 if no == errno.WSAEINTR:
                     return self.write(datagram)
                 elif no == errno.WSAEMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
+                    raise error.MessageLengthError("message too long")
                 elif no in (errno.WSAECONNREFUSED, errno.WSAECONNRESET,
                             ERROR_CONNECTION_REFUSED, ERROR_PORT_UNREACHABLE):
                     self.protocol.connectionRefused()
@@ -174,9 +191,17 @@ class Port(abstract.FileHandle):
                     raise
         else:
             assert addr != None
-            if not addr[0].replace(".", "").isdigit():
-                warnings.warn("Please only pass IPs to write(), not hostnames",
-                              DeprecationWarning, stacklevel=2)
+            if (not isIPAddress(addr[0]) and not isIPv6Address(addr[0])
+                    and addr[0] != "<broadcast>"):
+                raise error.InvalidAddressError(
+                    addr[0],
+                    "write() only accepts IP addresses, not hostnames")
+            if isIPAddress(addr[0]) and self.addressFamily == socket.AF_INET6:
+                raise error.InvalidAddressError(
+                    addr[0], "IPv6 port write() called with IPv4 address")
+            if isIPv6Address(addr[0]) and self.addressFamily == socket.AF_INET:
+                raise error.InvalidAddressError(
+                    addr[0], "IPv4 port write() called with IPv6 address")
             try:
                 return self.socket.sendto(datagram, addr)
             except socket.error, se:
@@ -184,7 +209,7 @@ class Port(abstract.FileHandle):
                 if no == errno.WSAEINTR:
                     return self.write(datagram, addr)
                 elif no == errno.WSAEMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
+                    raise error.MessageLengthError("message too long")
                 elif no in (errno.WSAECONNREFUSED, errno.WSAECONNRESET,
                             ERROR_CONNECTION_REFUSED, ERROR_PORT_UNREACHABLE):
                     # in non-connected UDP ECONNREFUSED is platform dependent,
@@ -207,8 +232,9 @@ class Port(abstract.FileHandle):
             raise RuntimeError(
                 "already connected, reconnecting is not currently supported "
                 "(talk to itamar if you want this)")
-        if not isIPAddress(host):
-            raise ValueError, "please pass only IP addresses, not domain names"
+        if not isIPAddress(host) and not isIPv6Address(host):
+            raise error.InvalidAddressError(
+                host, 'not an IPv4 or IPv6 address.')
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 
@@ -268,11 +294,38 @@ class Port(abstract.FileHandle):
 
     def getHost(self):
         """
-        Returns an IPv4Address.
+        Return the local address of the UDP connection
 
-        This indicates the address from which I am connecting.
+        @returns: the local address of the UDP connection
+        @rtype: L{IPv4Address} or L{IPv6Address}
         """
-        return address.IPv4Address('UDP', *self.socket.getsockname())
+        addr = self.socket.getsockname()
+        if self.addressFamily == socket.AF_INET:
+            return address.IPv4Address('UDP', *addr)
+        elif self.addressFamily == socket.AF_INET6:
+            return address.IPv6Address('UDP', *(addr[:2]))
+
+
+    def setBroadcastAllowed(self, enabled):
+        """
+        Set whether this port may broadcast. This is disabled by default.
+
+        @param enabled: Whether the port may broadcast.
+        @type enabled: L{bool}
+        """
+        self.socket.setsockopt(
+            socket.SOL_SOCKET, socket.SO_BROADCAST, enabled)
+
+
+    def getBroadcastAllowed(self):
+        """
+        Checks if broadcast is currently allowed on this port.
+
+        @return: Whether this port may broadcast.
+        @rtype: L{bool}
+        """
+        return operator.truth(
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
 
 
 
@@ -378,5 +431,3 @@ class MulticastPort(MulticastMixin, Port):
             if hasattr(socket, "SO_REUSEPORT"):
                 skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         return skt
-
-

@@ -9,32 +9,33 @@ Maintainer: Jonathan Lange
 """
 
 __all__ = [
-    'suiteVisit', 'TestSuite',
+    'TestSuite',
 
-    'DestructiveTestSuite', 'DocTestCase', 'DryRunVisitor',
-    'ErrorHolder', 'LoggedSuite', 'PyUnitTestCase',
+    'DestructiveTestSuite', 'DryRunVisitor', 'ErrorHolder', 'LoggedSuite',
     'TestHolder', 'TestLoader', 'TrialRunner', 'TrialSuite',
 
     'filenameToModule', 'isPackage', 'isPackageDirectory', 'isTestCase',
     'name', 'samefile', 'NOT_IN_TEST',
     ]
 
-import pdb
 import os, types, warnings, sys, inspect, imp
 import doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.compat import set
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
 from twisted.trial.itrial import ITestCase
-from twisted.trial.reporter import UncleanWarningsReporterWrapper
+from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
+from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
+from twisted.trial._synctest import _logObserver
 
 # These are imported so that they remain in the public API for t.trial.runner
-from twisted.trial.unittest import suiteVisit, TestSuite
+from twisted.trial.unittest import TestSuite
 
-from zope.interface import implements
+from zope.interface import implementer
 
 pyunit = __import__('unittest')
 
@@ -174,7 +175,7 @@ class LoggedSuite(TestSuite):
 
         @param result: A L{TestResult} object.
         """
-        observer = unittest._logObserver
+        observer = _logObserver
         observer._add()
         super(LoggedSuite, self).run(result)
         observer._remove()
@@ -184,77 +185,6 @@ class LoggedSuite(TestSuite):
 
 
 
-class PyUnitTestCase(object):
-    """
-    DEPRECATED in Twisted 8.0.
-
-    This class decorates the pyunit.TestCase class, mainly to work around the
-    differences between unittest in Python 2.3, 2.4, and 2.5. These
-    differences are::
-
-        - The way doctest unittests describe themselves
-        - Where the implementation of TestCase.run is (used to be in __call__)
-        - Where the test method name is kept (mangled-private or non-mangled
-          private variable)
-
-    It also implements visit, which we like.
-    """
-
-    def __init__(self, test):
-        warnings.warn("Deprecated in Twisted 8.0.",
-                      category=DeprecationWarning)
-        self._test = test
-        test.id = self.id
-
-    def id(self):
-        cls = self._test.__class__
-        tmn = getattr(self._test, '_TestCase__testMethodName', None)
-        if tmn is None:
-            # python2.5's 'unittest' module is more sensible; but different.
-            tmn = self._test._testMethodName
-        return (cls.__module__ + '.' + cls.__name__ + '.' +
-                tmn)
-
-    def __repr__(self):
-        return 'PyUnitTestCase<%r>'%(self.id(),)
-
-    def __call__(self, results):
-        return self._test(results)
-
-
-    def visit(self, visitor):
-        """
-        Call the given visitor with the original, standard library, test case
-        that C{self} wraps. See L{unittest.TestCase.visit}.
-
-        Deprecated in Twisted 8.0.
-        """
-        warnings.warn("Test visitors deprecated in Twisted 8.0",
-                      category=DeprecationWarning)
-        visitor(self._test)
-
-
-    def __getattr__(self, name):
-        return getattr(self._test, name)
-
-
-
-class DocTestCase(PyUnitTestCase):
-    """
-    DEPRECATED in Twisted 8.0.
-    """
-
-    def id(self):
-        """
-        In Python 2.4, doctests have correct id() behaviour. In Python 2.3,
-        id() returns 'runit'.
-
-        Here we override id() so that at least it will always contain the
-        fully qualified Python name of the doctest.
-        """
-        return self._test.shortDescription()
-
-
 class TrialSuite(TestSuite):
     """
     Suite to wrap around every single test in a C{trial} run. Used internally
@@ -262,7 +192,14 @@ class TrialSuite(TestSuite):
     what context they are run in.
     """
 
-    def __init__(self, tests=()):
+    def __init__(self, tests=(), forceGarbageCollection=False):
+        if forceGarbageCollection:
+            newTests = []
+            for test in tests:
+                test = unittest.decorate(
+                    test, _ForceGarbageCollectionDecorator)
+                newTests.append(test)
+            tests = newTests
         suite = LoggedSuite(tests)
         super(TrialSuite, self).__init__([suite])
 
@@ -317,13 +254,12 @@ def isTestCase(obj):
 
 
 
+@implementer(ITestCase)
 class TestHolder(object):
     """
     Placeholder for a L{TestCase} inside a reporter. As far as a L{TestResult}
     is concerned, this looks exactly like a unit test.
     """
-
-    implements(ITestCase)
 
     failureException = None
 
@@ -351,7 +287,7 @@ class TestHolder(object):
         This test is just a placeholder. Run the test successfully.
 
         @param result: The C{TestResult} to store the results in.
-        @type result: L{twisted.trial.itrial.ITestResult}.
+        @type result: L{twisted.trial.itrial.IReporter}.
         """
         result.startTest(self)
         result.addSuccess(self)
@@ -384,10 +320,8 @@ class ErrorHolder(TestHolder):
 
 
     def __repr__(self):
-        return "<ErrorHolder description=%r error=%s%s>" % (
-            # Format the exception type and arguments explicitly, as exception
-            # objects do not have nice looking string formats on Python 2.4.
-            self.description, self.error[0].__name__, self.error[1].args)
+        return "<ErrorHolder description=%r error=%r>" % (
+            self.description, self.error[1])
 
 
     def run(self, result):
@@ -395,18 +329,11 @@ class ErrorHolder(TestHolder):
         Run the test, reporting the error.
 
         @param result: The C{TestResult} to store the results in.
-        @type result: L{twisted.trial.itrial.ITestResult}.
+        @type result: L{twisted.trial.itrial.IReporter}.
         """
         result.startTest(self)
         result.addError(self, self.error)
         result.stopTest(self)
-
-
-    def visit(self, visitor):
-        """
-        See L{unittest.TestCase.visit}.
-        """
-        visitor(self)
 
 
 
@@ -496,8 +423,8 @@ class TestLoader(object):
         if not hasattr(module, '__doctests__'):
             return suite
         docSuite = self.suiteFactory()
-        for doctest in module.__doctests__:
-            docSuite.addTest(self.loadDoctests(doctest))
+        for docTest in module.__doctests__:
+            docSuite.addTest(self.loadDoctests(docTest))
         return self.suiteFactory([suite, docSuite])
     loadTestsFromModule = loadModule
 
@@ -543,7 +470,7 @@ class TestLoader(object):
         Tests are only loaded from modules whose name begins with 'test_'
         (or whatever C{modulePrefix} is set to).
 
-        @param package: a types.ModuleType object (or reasonable facsimilie
+        @param package: a types.ModuleType object (or reasonable facsimile
         obtained by importing) which may contain tests.
 
         @param recurse: A boolean.  If True, inspect modules within packages
@@ -673,13 +600,16 @@ class TestLoader(object):
         to same value and collapse to one test unexpectedly if using simpler
         means: e.g. set().
         """
-        entries = []
+        seen = set()
         for thing in things:
             if isinstance(thing, types.MethodType):
-                entries.append((thing, thing.im_class))
+                thing = (thing, thing.im_class)
             else:
-                entries.append((thing,))
-        return [entry[0] for entry in set(entries)]
+                thing = (thing,)
+
+            if thing not in seen:
+                yield thing[0]
+                seen.add(thing)
 
 
 
@@ -688,6 +618,12 @@ class DryRunVisitor(object):
     A visitor that makes a reporter think that every test visited has run
     successfully.
     """
+
+    deprecatedModuleAttribute(
+            Version("Twisted", 13, 0, 0),
+            "Trial no longer has support for visitors",
+            "twisted.trial.runner", "DryRunVisitor")
+
 
     def __init__(self, reporter):
         """
@@ -714,24 +650,6 @@ class TrialRunner(object):
     DEBUG = 'debug'
     DRY_RUN = 'dry-run'
 
-    def _getDebugger(self):
-        dbg = pdb.Pdb()
-        try:
-            import readline
-        except ImportError:
-            print "readline module not available"
-            sys.exc_clear()
-        for path in ('.pdbrc', 'pdbrc'):
-            if os.path.exists(path):
-                try:
-                    rcFile = file(path, 'r')
-                except IOError:
-                    sys.exc_clear()
-                else:
-                    dbg.rcLines.extend(rcFile.readlines())
-        return dbg
-
-
     def _setUpTestdir(self):
         self._tearDownLogFile()
         currentDir = os.getcwd()
@@ -750,6 +668,8 @@ class TrialRunner(object):
     def _makeResult(self):
         reporter = self.reporterFactory(self.stream, self.tbformat,
                                         self.rterrors, self._log)
+        if self._exitFirst:
+            reporter = _ExitWrapper(reporter)
         if self.uncleanWarnings:
             reporter = UncleanWarningsReporterWrapper(reporter)
         return reporter
@@ -763,7 +683,9 @@ class TrialRunner(object):
                  realTimeErrors=False,
                  uncleanWarnings=False,
                  workingDirectory=None,
-                 forceGarbageCollection=False):
+                 forceGarbageCollection=False,
+                 debugger=None,
+                 exitFirst=False):
         self.reporterFactory = reporterFactory
         self.logfile = logfile
         self.mode = mode
@@ -776,6 +698,8 @@ class TrialRunner(object):
         self._logFileObserver = None
         self._logFileObject = None
         self._forceGarbageCollection = forceGarbageCollection
+        self.debugger = debugger
+        self._exitFirst = exitFirst
         if profile:
             self.run = util.profiled(self.run, 'profile.data')
 
@@ -803,13 +727,10 @@ class TrialRunner(object):
         Run the test or suite and return a result object.
         """
         test = unittest.decorate(test, ITestCase)
-        if self._forceGarbageCollection:
-            test = unittest.decorate(
-                test, unittest._ForceGarbageCollectionDecorator)
-        return self._runWithoutDecoration(test)
+        return self._runWithoutDecoration(test, self._forceGarbageCollection)
 
 
-    def _runWithoutDecoration(self, test):
+    def _runWithoutDecoration(self, test, forceGarbageCollection=False):
         """
         Private helper that runs the given test but doesn't decorate it.
         """
@@ -817,18 +738,16 @@ class TrialRunner(object):
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be
         # present
-        suite = TrialSuite([test])
+        suite = TrialSuite([test], forceGarbageCollection)
         startTime = time.time()
         if self.mode == self.DRY_RUN:
-            for single in unittest._iterateTests(suite):
+            for single in _iterateTests(suite):
                 result.startTest(single)
                 result.addSuccess(single)
                 result.stopTest(single)
         else:
             if self.mode == self.DEBUG:
-                # open question - should this be self.debug() instead.
-                debugger = self._getDebugger()
-                run = lambda: debugger.runcall(suite.run, result)
+                run = lambda: self.debugger.runcall(suite.run, result)
             else:
                 run = lambda: suite.run(result)
 

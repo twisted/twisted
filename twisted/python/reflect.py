@@ -7,335 +7,150 @@ Standardized versions of various cool and/or strange things that you can do
 with Python's reflection capabilities.
 """
 
+from __future__ import division, absolute_import, print_function
+
 import sys
-import os
 import types
+import os
 import pickle
-import traceback
 import weakref
 import re
+import traceback
 import warnings
-
-try:
-    from collections import deque
-except ImportError:
-    deque = list
+from collections import deque
 
 RegexType = type(re.compile(""))
 
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
-from twisted.python.util import unsignedID
+from twisted.python.compat import reraise, nativeString, NativeStringIO
+from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecated
+from twisted.python import compat
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
 
 
-
-class Settable:
+def prefixedMethodNames(classObj, prefix):
     """
-    A mixin class for syntactic sugar.  Lets you assign attributes by
-    calling with keyword arguments; for example, C{x(a=b,c=d,y=z)} is the
-    same as C{x.a=b;x.c=d;x.y=z}.  The most useful place for this is
-    where you don't want to name a variable, but you do want to set
-    some attributes; for example, C{X()(y=z,a=b)}.
+    Given a class object C{classObj}, returns a list of method names that match
+    the string C{prefix}.
+
+    @param classObj: A class object from which to collect method names.
+
+    @param prefix: A native string giving a prefix.  Each method with a name
+        which begins with this prefix will be returned.
+    @type prefix: L{str}
+
+    @return: A list of the names of matching methods of C{classObj} (and base
+        classes of C{classObj}).
+    @rtype: L{list} of L{str}
     """
-    def __init__(self, **kw):
-        self(**kw)
-
-    def __call__(self,**kw):
-        for key,val in kw.items():
-            setattr(self,key,val)
-        return self
+    dct = {}
+    addMethodNamesToDict(classObj, dct, prefix)
+    return list(dct.keys())
 
 
-class AccessorType(type):
-    """Metaclass that generates properties automatically.
 
-    This is for Python 2.2 and up.
-
-    Using this metaclass for your class will give you explicit accessor
-    methods; a method called set_foo, will automatically create a property
-    'foo' that uses set_foo as a setter method. Same for get_foo and del_foo.
-
-    Note that this will only work on methods that are present on class
-    creation. If you add methods after the class is defined they will not
-    automatically become properties. Likewise, class attributes will only
-    be used if they are present upon class creation, and no getter function
-    was set - if a getter is present, the class attribute will be ignored.
-
-    This is a 2.2-only alternative to the Accessor mixin - just set in your
-    class definition::
-
-        __metaclass__ = AccessorType
-
+def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
     """
+    This goes through C{classObj} (and its bases) and puts method names
+    starting with 'prefix' in 'dict' with a value of 1. if baseClass isn't
+    None, methods will only be added if classObj is-a baseClass
 
-    def __init__(self, name, bases, d):
-        type.__init__(self, name, bases, d)
-        accessors = {}
-        prefixs = ["get_", "set_", "del_"]
-        for k in d.keys():
-            v = getattr(self, k)
-            for i in range(3):
-                if k.startswith(prefixs[i]):
-                    accessors.setdefault(k[4:], [None, None, None])[i] = v
-        for name, (getter, setter, deler) in accessors.items():
-            # create default behaviours for the property - if we leave
-            # the getter as None we won't be able to getattr, etc..
-            if getter is None:
-                if hasattr(self, name):
-                    value = getattr(self, name)
-                    def getter(this, value=value, name=name):
-                        if name in this.__dict__:
-                            return this.__dict__[name]
-                        else:
-                            return value
-                else:
-                    def getter(this, name=name):
-                        if name in this.__dict__:
-                            return this.__dict__[name]
-                        else:
-                            raise AttributeError("no such attribute %r" % name)
-            if setter is None:
-                def setter(this, value, name=name):
-                    this.__dict__[name] = value
-            if deler is None:
-                def deler(this, name=name):
-                    del this.__dict__[name]
-            setattr(self, name, property(getter, setter, deler, ""))
+    If the class in question has the methods 'prefix_methodname' and
+    'prefix_methodname2', the resulting dict should look something like:
+    {"methodname": 1, "methodname2": 1}.
 
+    @param classObj: A class object from which to collect method names.
 
-class PropertyAccessor(object):
-    """A mixin class for Python 2.2 that uses AccessorType.
+    @param dict: A L{dict} which will be updated with the results of the
+        accumulation.  Items are added to this dictionary, with method names as
+        keys and C{1} as values.
+    @type dict: L{dict}
 
-    This provides compatability with the pre-2.2 Accessor mixin, up
-    to a point.
+    @param prefix: A native string giving a prefix.  Each method of C{classObj}
+        (and base classes of C{classObj}) with a name which begins with this
+        prefix will be returned.
+    @type prefix: L{str}
 
-    Extending this class will give you explicit accessor methods; a
-    method called set_foo, for example, is the same as an if statement
-    in __setattr__ looking for 'foo'.  Same for get_foo and del_foo.
+    @param baseClass: A class object at which to stop searching upwards for new
+        methods.  To collect all method names, do not pass a value for this
+        parameter.
 
-    There are also reallyDel and reallySet methods, so you can
-    override specifics in subclasses without clobbering __setattr__
-    and __getattr__, or using non-2.1 compatible code.
-
-    There is are incompatibilities with Accessor - accessor
-    methods added after class creation will *not* be detected. OTOH,
-    this method is probably way faster.
-
-    In addition, class attributes will only be used if no getter
-    was defined, and instance attributes will not override getter methods
-    whereas in original Accessor the class attribute or instance attribute
-    would override the getter method.
+    @return: C{None}
     """
-    # addendum to above:
-    # The behaviour of Accessor is wrong IMHO, and I've found bugs
-    # caused by it.
-    #  -- itamar
+    for base in classObj.__bases__:
+        addMethodNamesToDict(base, dict, prefix, baseClass)
 
-    __metaclass__ = AccessorType
-
-    def reallySet(self, k, v):
-        self.__dict__[k] = v
-
-    def reallyDel(self, k):
-        del self.__dict__[k]
+    if baseClass is None or baseClass in classObj.__bases__:
+        for name, method in classObj.__dict__.items():
+            optName = name[len(prefix):]
+            if ((type(method) is types.FunctionType)
+                and (name[:len(prefix)] == prefix)
+                and (len(optName))):
+                dict[optName] = 1
 
 
-class Accessor:
+
+def prefixedMethods(obj, prefix=''):
     """
-    Extending this class will give you explicit accessor methods; a
-    method called C{set_foo}, for example, is the same as an if statement
-    in L{__setattr__} looking for C{'foo'}.  Same for C{get_foo} and
-    C{del_foo}.  There are also L{reallyDel} and L{reallySet} methods,
-    so you can override specifics in subclasses without clobbering
-    L{__setattr__} and L{__getattr__}.
+    Given an object C{obj}, returns a list of method objects that match the
+    string C{prefix}.
 
-    This implementation is for Python 2.1.
+    @param obj: An arbitrary object from which to collect methods.
+
+    @param prefix: A native string giving a prefix.  Each method of C{obj} with
+        a name which begins with this prefix will be returned.
+    @type prefix: L{str}
+
+    @return: A list of the matching method objects.
+    @rtype: L{list}
     """
-
-    def __setattr__(self, k,v):
-        kstring='set_%s'%k
-        if hasattr(self.__class__,kstring):
-            return getattr(self,kstring)(v)
-        else:
-            self.reallySet(k,v)
-
-    def __getattr__(self, k):
-        kstring='get_%s'%k
-        if hasattr(self.__class__,kstring):
-            return getattr(self,kstring)()
-        raise AttributeError("%s instance has no accessor for: %s" % (qual(self.__class__),k))
-
-    def __delattr__(self, k):
-        kstring='del_%s'%k
-        if hasattr(self.__class__,kstring):
-            getattr(self,kstring)()
-            return
-        self.reallyDel(k)
-
-    def reallySet(self, k,v):
-        """
-        *actually* set self.k to v without incurring side-effects.
-        This is a hook to be overridden by subclasses.
-        """
-        if k == "__dict__":
-            self.__dict__.clear()
-            self.__dict__.update(v)
-        else:
-            self.__dict__[k]=v
-
-    def reallyDel(self, k):
-        """
-        *actually* del self.k without incurring side-effects.  This is a
-        hook to be overridden by subclasses.
-        """
-        del self.__dict__[k]
-
-# just in case
-OriginalAccessor = Accessor
+    dct = {}
+    accumulateMethods(obj, dct, prefix)
+    return list(dct.values())
 
 
-class Summer(Accessor):
+
+def accumulateMethods(obj, dict, prefix='', curClass=None):
     """
-    Extend from this class to get the capability to maintain 'related
-    sums'.  Have a tuple in your class like the following::
+    Given an object C{obj}, add all methods that begin with C{prefix}.
 
-        sums=(('amount','credit','credit_total'),
-              ('amount','debit','debit_total'))
+    @param obj: An arbitrary object to collect methods from.
 
-    and the 'credit_total' member of the 'credit' member of self will
-    always be incremented when the 'amount' member of self is
-    incremented, similiarly for the debit versions.
+    @param dict: A L{dict} which will be updated with the results of the
+        accumulation.  Items are added to this dictionary, with method names as
+        keys and corresponding instance method objects as values.
+    @type dict: L{dict}
+
+    @param prefix: A native string giving a prefix.  Each method of C{obj} with
+        a name which begins with this prefix will be returned.
+    @type prefix: L{str}
+
+    @param curClass: The class in the inheritance hierarchy at which to start
+        collecting methods.  Collection proceeds up.  To collect all methods
+        from C{obj}, do not pass a value for this parameter.
+
+    @return: C{None}
     """
+    if not curClass:
+        curClass = obj.__class__
+    for base in curClass.__bases__:
+        accumulateMethods(obj, dict, prefix, base)
 
-    def reallySet(self, k,v):
-        "This method does the work."
-        for sum in self.sums:
-            attr=sum[0]
-            obj=sum[1]
-            objattr=sum[2]
-            if k == attr:
-                try:
-                    oldval=getattr(self, attr)
-                except:
-                    oldval=0
-                diff=v-oldval
-                if hasattr(self, obj):
-                    ob=getattr(self,obj)
-                    if ob is not None:
-                        try:oldobjval=getattr(ob, objattr)
-                        except:oldobjval=0.0
-                        setattr(ob,objattr,oldobjval+diff)
+    for name, method in curClass.__dict__.items():
+        optName = name[len(prefix):]
+        if ((type(method) is types.FunctionType)
+            and (name[:len(prefix)] == prefix)
+            and (len(optName))):
+            dict[optName] = getattr(obj, name)
 
-            elif k == obj:
-                if hasattr(self, attr):
-                    x=getattr(self,attr)
-                    setattr(self,attr,0)
-                    y=getattr(self,k)
-                    Accessor.reallySet(self,k,v)
-                    setattr(self,attr,x)
-                    Accessor.reallySet(self,y,v)
-        Accessor.reallySet(self,k,v)
-
-
-class QueueMethod:
-    """ I represent a method that doesn't exist yet."""
-    def __init__(self, name, calls):
-        self.name = name
-        self.calls = calls
-    def __call__(self, *args):
-        self.calls.append((self.name, args))
-
-
-def funcinfo(function):
-    """
-    this is more documentation for myself than useful code.
-    """
-    warnings.warn(
-        "[v2.5] Use inspect.getargspec instead of twisted.python.reflect.funcinfo",
-        DeprecationWarning,
-        stacklevel=2)
-    code=function.func_code
-    name=function.func_name
-    argc=code.co_argcount
-    argv=code.co_varnames[:argc]
-    defaults=function.func_defaults
-
-    out = []
-
-    out.append('The function %s accepts %s arguments' % (name ,argc))
-    if defaults:
-        required=argc-len(defaults)
-        out.append('It requires %s arguments' % required)
-        out.append('The arguments required are: %s' % argv[:required])
-        out.append('additional arguments are:')
-        for i in range(argc-required):
-            j=i+required
-            out.append('%s which has a default of' % (argv[j], defaults[i]))
-    return out
-
-
-ISNT=0
-WAS=1
-IS=2
-
-
-def fullFuncName(func):
-    qualName = (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
-    if namedObject(qualName) is not func:
-        raise Exception("Couldn't find %s as %s." % (func, qualName))
-    return qualName
-
-
-def qual(clazz):
-    """Return full import path of a class."""
-    return clazz.__module__ + '.' + clazz.__name__
-
-
-def getcurrent(clazz):
-    assert type(clazz) == types.ClassType, 'must be a class...'
-    module = namedModule(clazz.__module__)
-    currclass = getattr(module, clazz.__name__, None)
-    if currclass is None:
-        return clazz
-    return currclass
-
-
-def getClass(obj):
-    """Return the class or type of object 'obj'.
-    Returns sensible result for oldstyle and newstyle instances and types."""
-    if hasattr(obj, '__class__'):
-        return obj.__class__
-    else:
-        return type(obj)
-
-# class graph nonsense
-
-# I should really have a better name for this...
-def isinst(inst,clazz):
-    if type(inst) != types.InstanceType or type(clazz)!= types.ClassType:
-        return isinstance(inst,clazz)
-    cl = inst.__class__
-    cl2 = getcurrent(cl)
-    clazz = getcurrent(clazz)
-    if issubclass(cl2,clazz):
-        if cl == cl2:
-            return WAS
-        else:
-            inst.__class__ = cl2
-            return IS
-    else:
-        return ISNT
 
 
 def namedModule(name):
-    """Return a module given its name."""
+    """
+    Return a module given its name.
+    """
     topLevel = __import__(name)
     packages = name.split(".")[1:]
     m = topLevel
@@ -344,8 +159,10 @@ def namedModule(name):
     return m
 
 
+
 def namedObject(name):
-    """Get a fully named module-global object.
+    """
+    Get a fully named module-global object.
     """
     classSplit = name.split('.')
     module = namedModule('.'.join(classSplit[:-1]))
@@ -355,16 +172,38 @@ namedClass = namedObject # backwards compat
 
 
 
+def requireModule(name, default=None):
+    """
+    Try to import a module given its name, returning C{default} value if
+    C{ImportError} is raised during import.
+
+    @param name: Module name as it would have been passed to C{import}.
+    @type name: C{str}.
+
+    @param default: Value returned in case C{ImportError} is raised while
+        importing the module.
+
+    @return: Module or default value.
+    """
+    try:
+        return namedModule(name)
+    except ImportError:
+        return default
+
+
+
 class _NoModuleFound(Exception):
     """
     No module was found because none exists.
     """
 
 
+
 class InvalidName(ValueError):
     """
     The given name is not a dot-separated list of Python objects.
     """
+
 
 
 class ModuleNotFound(InvalidName):
@@ -374,11 +213,13 @@ class ModuleNotFound(InvalidName):
     """
 
 
+
 class ObjectNotFound(InvalidName):
     """
     The object associated with the given name doesn't exist and it can't be
     imported.
     """
+
 
 
 def _importAndCheckStack(importName):
@@ -390,27 +231,25 @@ def _importAndCheckStack(importName):
     administrative error (entering the wrong module name), from programmer
     error (writing buggy code in a module that fails to import).
 
+    @param importName: The name of the module to import.
+    @type importName: C{str}
     @raise Exception: if something bad happens.  This can be any type of
-    exception, since nobody knows what loading some arbitrary code might do.
-
+        exception, since nobody knows what loading some arbitrary code might
+        do.
     @raise _NoModuleFound: if no module was found.
     """
     try:
-        try:
-            return __import__(importName)
-        except ImportError:
-            excType, excValue, excTraceback = sys.exc_info()
-            while excTraceback:
-                execName = excTraceback.tb_frame.f_globals["__name__"]
-                if (execName is None or # python 2.4+, post-cleanup
-                    execName == importName): # python 2.3, no cleanup
-                    raise excType, excValue, excTraceback
-                excTraceback = excTraceback.tb_next
-            raise _NoModuleFound()
-    except:
-        # Necessary for cleaning up modules in 2.3.
-        sys.modules.pop(importName, None)
-        raise
+        return __import__(importName)
+    except ImportError:
+        excType, excValue, excTraceback = sys.exc_info()
+        while excTraceback:
+            execName = excTraceback.tb_frame.f_globals["__name__"]
+            # in Python 2 execName is None when an ImportError is encountered,
+            # where in Python 3 execName is equal to the importName.
+            if execName is None or execName == importName:
+                reraise(excValue, excTraceback)
+            excTraceback = excTraceback.tb_next
+        raise _NoModuleFound()
 
 
 
@@ -478,43 +317,49 @@ def namedAny(name):
 
 
 
-def macro(name, filename, source, **identifiers):
-    """macro(name, source, **identifiers)
-
-    This allows you to create macro-like behaviors in python.
+def filenameToModuleName(fn):
     """
-    if not identifiers.has_key('name'):
-        identifiers['name'] = name
-    source = source % identifiers
-    codeplace = "<%s (macro)>" % filename
-    code = compile(source, codeplace, 'exec')
+    Convert a name in the filesystem to the name of the Python module it is.
 
-    # shield your eyes!
-    sm = sys.modules
-    tprm = "twisted.python.reflect.macros"
-    if not sm.has_key(tprm):
-        macros = types.ModuleType(tprm)
-        sm[tprm] = macros
-        macros.count = 0
-    macros = sm[tprm]
-    macros.count += 1
-    macroname = 'macro_' + str(macros.count)
-    tprmm = tprm + '.' + macroname
-    mymod = types.ModuleType(tprmm)
-    sys.modules[tprmm] = mymod
-    setattr(macros, macroname, mymod)
-    dict = mymod.__dict__
+    This is aggressive about getting a module name back from a file; it will
+    always return a string.  Aggressive means 'sometimes wrong'; it won't look
+    at the Python path or try to do any error checking: don't use this method
+    unless you already know that the filename you're talking about is a Python
+    module.
 
-    # Before we go on, I guess I should explain why I just did that.  Basically
-    # it's a gross hack to get epydoc to work right, but the general idea is
-    # that it will be a useful aid in debugging in _any_ app which expects
-    # sys.modules to have the same globals as some function.  For example, it
-    # would be useful if you were foolishly trying to pickle a wrapped function
-    # directly from a class that had been hooked.
+    @param fn: A filesystem path to a module or package; C{bytes} on Python 2,
+        C{bytes} or C{unicode} on Python 3.
 
-    exec code in dict, dict
-    return dict[name]
-macro = deprecated(Version("Twisted", 8, 2, 0))(macro)
+    @return: A hopefully importable module name.
+    @rtype: C{str}
+    """
+    if isinstance(fn, bytes):
+        initPy = b"__init__.py"
+    else:
+        initPy = "__init__.py"
+    fullName = os.path.abspath(fn)
+    base = os.path.basename(fn)
+    if not base:
+        # this happens when fn ends with a path separator, just skit it
+        base = os.path.basename(fn[:-1])
+    modName = nativeString(os.path.splitext(base)[0])
+    while 1:
+        fullName = os.path.dirname(fullName)
+        if os.path.exists(os.path.join(fullName, initPy)):
+            modName = "%s.%s" % (
+                nativeString(os.path.basename(fullName)),
+                nativeString(modName))
+        else:
+            break
+    return modName
+
+
+
+def qual(clazz):
+    """
+    Return full import path of a class.
+    """
+    return clazz.__module__ + '.' + clazz.__name__
 
 
 
@@ -534,158 +379,229 @@ def _determineClassName(x):
         try:
             return str(c)
         except:
-            return '<BROKEN CLASS AT 0x%x>' % unsignedID(c)
+            return '<BROKEN CLASS AT 0x%x>' % id(c)
 
 
 
 def _safeFormat(formatter, o):
     """
     Helper function for L{safe_repr} and L{safe_str}.
+
+    Called when C{repr} or C{str} fail. Returns a string containing info about
+    C{o} and the latest exception.
+
+    @param formatter: C{str} or C{repr}.
+    @type formatter: C{type}
+    @param o: Any object.
+
+    @rtype: C{str}
+    @return: A string containing information about C{o} and the raised
+        exception.
     """
-    try:
-        return formatter(o)
-    except:
-        io = StringIO()
-        traceback.print_exc(file=io)
-        className = _determineClassName(o)
-        tbValue = io.getvalue()
-        return "<%s instance at 0x%x with %s error:\n %s>" % (
-            className, unsignedID(o), formatter.__name__, tbValue)
+    io = NativeStringIO()
+    traceback.print_exc(file=io)
+    className = _determineClassName(o)
+    tbValue = io.getvalue()
+    return "<%s instance at 0x%x with %s error:\n %s>" % (
+        className, id(o), formatter.__name__, tbValue)
 
 
 
 def safe_repr(o):
     """
-    safe_repr(anything) -> string
-
     Returns a string representation of an object, or a string containing a
     traceback, if that object's __repr__ raised an exception.
+
+    @param o: Any object.
+
+    @rtype: C{str}
     """
-    return _safeFormat(repr, o)
+    try:
+        return repr(o)
+    except:
+        return _safeFormat(repr, o)
 
 
 
 def safe_str(o):
     """
-    safe_str(anything) -> string
-
     Returns a string representation of an object, or a string containing a
     traceback, if that object's __str__ raised an exception.
+
+    @param o: Any object.
+
+    @rtype: C{str}
     """
-    return _safeFormat(str, o)
+    if _PY3 and isinstance(o, bytes):
+        # If o is bytes and seems to holds a utf-8 encoded string,
+        # convert it to str.
+        try:
+            return o.decode('utf-8')
+        except:
+            pass
+    try:
+        return str(o)
+    except:
+        return _safeFormat(str, o)
 
 
-
-##the following were factored out of usage
-
-@deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
-def allYourBase(classObj, baseClass=None):
-    """allYourBase(classObj, baseClass=None) -> list of all base
-    classes that are subclasses of baseClass, unless it is None,
-    in which case all bases will be added.
+class QueueMethod:
     """
-    l = []
-    _accumulateBases(classObj, l, baseClass)
-    return l
-
-
-@deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
-def accumulateBases(classObj, l, baseClass=None):
-    _accumulateBases(classObj, l, baseClass)
-
-
-def _accumulateBases(classObj, l, baseClass=None):
-    for base in classObj.__bases__:
-        if baseClass is None or issubclass(base, baseClass):
-            l.append(base)
-        _accumulateBases(base, l, baseClass)
-
-
-def prefixedMethodNames(classObj, prefix):
-    """A list of method names with a given prefix in a given class.
+    I represent a method that doesn't exist yet.
     """
-    dct = {}
-    addMethodNamesToDict(classObj, dct, prefix)
-    return dct.keys()
+    def __init__(self, name, calls):
+        self.name = name
+        self.calls = calls
+    def __call__(self, *args):
+        self.calls.append((self.name, args))
 
 
-def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
+def funcinfo(function):
     """
-    addMethodNamesToDict(classObj, dict, prefix, baseClass=None) -> dict
-    this goes through 'classObj' (and its bases) and puts method names
-    starting with 'prefix' in 'dict' with a value of 1. if baseClass isn't
-    None, methods will only be added if classObj is-a baseClass
-
-    If the class in question has the methods 'prefix_methodname' and
-    'prefix_methodname2', the resulting dict should look something like:
-    {"methodname": 1, "methodname2": 1}.
+    this is more documentation for myself than useful code.
     """
-    for base in classObj.__bases__:
-        addMethodNamesToDict(base, dict, prefix, baseClass)
+    warnings.warn(
+        "[v2.5] Use inspect.getargspec instead of twisted.python.reflect.funcinfo",
+        DeprecationWarning,
+        stacklevel=2)
+    code=function.func_code
+    name=function.func_name
+    argc=code.co_argcount
+    argv=code.co_varnames[:argc]
+    defaults=function.func_defaults
 
-    if baseClass is None or baseClass in classObj.__bases__:
-        for name, method in classObj.__dict__.items():
-            optName = name[len(prefix):]
-            if ((type(method) is types.FunctionType)
-                and (name[:len(prefix)] == prefix)
-                and (len(optName))):
-                dict[optName] = 1
+    out = []
+
+    out.append('The function %s accepts %s arguments' % (name ,argc))
+    if defaults:
+        required=argc-len(defaults)
+        out.append('It requires %s arguments' % required)
+        out.append('The arguments required are: %s' % argv[:required])
+        out.append('additional arguments are:')
+        for i in range(argc-required):
+            j=i+required
+            out.append('%s which has a default of' % (argv[j], defaults[i]))
+    return out
 
 
-def prefixedMethods(obj, prefix=''):
-    """A list of methods with a given prefix on a given instance.
+ISNT=0
+WAS=1
+IS=2
+
+
+def fullFuncName(func):
+    qualName = (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
+    if namedObject(qualName) is not func:
+        raise Exception("Couldn't find %s as %s." % (func, qualName))
+    return qualName
+
+
+def getClass(obj):
     """
-    dct = {}
-    accumulateMethods(obj, dct, prefix)
-    return dct.values()
-
-
-def accumulateMethods(obj, dict, prefix='', curClass=None):
-    """accumulateMethods(instance, dict, prefix)
-    I recurse through the bases of instance.__class__, and add methods
-    beginning with 'prefix' to 'dict', in the form of
-    {'methodname':*instance*method_object}.
+    Return the class or type of object 'obj'.
+    Returns sensible result for oldstyle and newstyle instances and types.
     """
-    if not curClass:
-        curClass = obj.__class__
-    for base in curClass.__bases__:
-        accumulateMethods(obj, dict, prefix, base)
+    if hasattr(obj, '__class__'):
+        return obj.__class__
+    else:
+        return type(obj)
 
-    for name, method in curClass.__dict__.items():
-        optName = name[len(prefix):]
-        if ((type(method) is types.FunctionType)
-            and (name[:len(prefix)] == prefix)
-            and (len(optName))):
-            dict[optName] = getattr(obj, name)
+
+## the following were factored out of usage
+
+if not _PY3:
+    # The following functions aren't documented, nor tested, have much simpler
+    # builtin implementations and are not used within Twisted or "known"
+    # projects.
+
+    @deprecated(Version("Twisted", 14, 0, 0))
+    def getcurrent(clazz):
+        assert type(clazz) == types.ClassType, 'must be a class...'
+        module = namedModule(clazz.__module__)
+        currclass = getattr(module, clazz.__name__, None)
+        if currclass is None:
+            return clazz
+        return currclass
+
+
+    # Class graph nonsense
+    # I should really have a better name for this...
+    @deprecated(Version("Twisted", 14, 0, 0), "isinstance")
+    def isinst(inst,clazz):
+        if type(inst) != compat.InstanceType or type(clazz)!= types.ClassType:
+            return isinstance(inst,clazz)
+        cl = inst.__class__
+        cl2 = getcurrent(cl)
+        clazz = getcurrent(clazz)
+        if issubclass(cl2,clazz):
+            if cl == cl2:
+                return WAS
+            else:
+                inst.__class__ = cl2
+                return IS
+        else:
+            return ISNT
+
+
+    # These functions are still imported by libraries used in turn by the
+    # Twisted unit tests, like Nevow 0.10. Since they are deprecated,
+    # there's no need to port them to Python 3 (hence the condition above).
+    # https://bazaar.launchpad.net/~divmod-dev/divmod.org/trunk/revision/2716
+    # removed the dependency in Nevow. Once that is released, these functions
+    # can be safely removed from Twisted.
+
+    @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
+    def allYourBase(classObj, baseClass=None):
+        """
+        allYourBase(classObj, baseClass=None) -> list of all base
+        classes that are subclasses of baseClass, unless it is None,
+        in which case all bases will be added.
+        """
+        l = []
+        _accumulateBases(classObj, l, baseClass)
+        return l
+
+
+    @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
+    def accumulateBases(classObj, l, baseClass=None):
+        _accumulateBases(classObj, l, baseClass)
+
+
+    def _accumulateBases(classObj, l, baseClass=None):
+        for base in classObj.__bases__:
+            if baseClass is None or issubclass(base, baseClass):
+                l.append(base)
+            _accumulateBases(base, l, baseClass)
 
 
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
-    """Accumulate all attributes of a given name in a class heirarchy into a single dictionary.
+    """
+    Accumulate all attributes of a given name in a class hierarchy into a single dictionary.
 
     Assuming all class attributes of this name are dictionaries.
     If any of the dictionaries being accumulated have the same key, the
     one highest in the class heirarchy wins.
-    (XXX: If \"higest\" means \"closest to the starting class\".)
+    (XXX: If \"highest\" means \"closest to the starting class\".)
 
     Ex::
 
-    | class Soy:
-    |   properties = {\"taste\": \"bland\"}
-    |
-    | class Plant:
-    |   properties = {\"colour\": \"green\"}
-    |
-    | class Seaweed(Plant):
-    |   pass
-    |
-    | class Lunch(Soy, Seaweed):
-    |   properties = {\"vegan\": 1 }
-    |
-    | dct = {}
-    |
-    | accumulateClassDict(Lunch, \"properties\", dct)
-    |
-    | print dct
+      class Soy:
+        properties = {\"taste\": \"bland\"}
+
+      class Plant:
+        properties = {\"colour\": \"green\"}
+
+      class Seaweed(Plant):
+        pass
+
+      class Lunch(Soy, Seaweed):
+        properties = {\"vegan\": 1 }
+
+      dct = {}
+
+      accumulateClassDict(Lunch, \"properties\", dct)
+
+      print dct
 
     {\"taste\": \"bland\", \"colour\": \"green\", \"vegan\": 1}
     """
@@ -696,7 +612,8 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
 
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
-    """Accumulate all attributes of a given name in a class heirarchy into a single list.
+    """
+    Accumulate all attributes of a given name in a class heirarchy into a single list.
 
     Assuming all class attributes of this name are lists.
     """
@@ -720,7 +637,7 @@ def modgrep(goal):
 
 def isOfType(start, goal):
     return ((type(start) is goal) or
-            (isinstance(start, types.InstanceType) and
+            (isinstance(start, compat.InstanceType) and
              start.__class__ is goal))
 
 
@@ -728,76 +645,64 @@ def findInstances(start, t):
     return objgrep(start, t, isOfType)
 
 
-def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0, maxDepth=None):
-    '''An insanely CPU-intensive process for finding stuff.
-    '''
-    if paths is None:
-        paths = []
-    if seen is None:
-        seen = {}
-    if eq(start, goal):
-        paths.append(path)
-    if id(start) in seen:
-        if seen[id(start)] is start:
-            return
-    if maxDepth is not None:
-        if maxDepth == 0:
-            return
-        maxDepth -= 1
-    seen[id(start)] = start
-    if isinstance(start, types.DictionaryType):
-        for k, v in start.items():
-            objgrep(k, goal, eq, path+'{'+repr(v)+'}', paths, seen, showUnknowns, maxDepth)
-            objgrep(v, goal, eq, path+'['+repr(k)+']', paths, seen, showUnknowns, maxDepth)
-    elif isinstance(start, (list, tuple, deque)):
-        for idx in xrange(len(start)):
-            objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen, showUnknowns, maxDepth)
-    elif isinstance(start, types.MethodType):
-        objgrep(start.im_self, goal, eq, path+'.im_self', paths, seen, showUnknowns, maxDepth)
-        objgrep(start.im_func, goal, eq, path+'.im_func', paths, seen, showUnknowns, maxDepth)
-        objgrep(start.im_class, goal, eq, path+'.im_class', paths, seen, showUnknowns, maxDepth)
-    elif hasattr(start, '__dict__'):
-        for k, v in start.__dict__.items():
-            objgrep(v, goal, eq, path+'.'+k, paths, seen, showUnknowns, maxDepth)
-        if isinstance(start, types.InstanceType):
-            objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen, showUnknowns, maxDepth)
-    elif isinstance(start, weakref.ReferenceType):
-        objgrep(start(), goal, eq, path+'()', paths, seen, showUnknowns, maxDepth)
-    elif (isinstance(start, types.StringTypes+
-                    (types.IntType, types.FunctionType,
-                     types.BuiltinMethodType, RegexType, types.FloatType,
-                     types.NoneType, types.FileType)) or
-          type(start).__name__ in ('wrapper_descriptor', 'method_descriptor',
-                                   'member_descriptor', 'getset_descriptor')):
-        pass
-    elif showUnknowns:
-        print 'unknown type', type(start), start
-    return paths
-
-
-def filenameToModuleName(fn):
-    """
-    Convert a name in the filesystem to the name of the Python module it is.
-
-    This is agressive about getting a module name back from a file; it will
-    always return a string.  Agressive means 'sometimes wrong'; it won't look
-    at the Python path or try to do any error checking: don't use this method
-    unless you already know that the filename you're talking about is a Python
-    module.
-    """
-    fullName = os.path.abspath(fn)
-    base = os.path.basename(fn)
-    if not base:
-        # this happens when fn ends with a path separator, just skit it
-        base = os.path.basename(fn[:-1])
-    modName = os.path.splitext(base)[0]
-    while 1:
-        fullName = os.path.dirname(fullName)
-        if os.path.exists(os.path.join(fullName, "__init__.py")):
-            modName = "%s.%s" % (os.path.basename(fullName), modName)
-        else:
-            break
-    return modName
+if not _PY3:
+    # The function objgrep() currently doesn't work on Python 3 due to some
+    # edge cases, as described in #6986.
+    # twisted.python.reflect is quite important and objgrep is not used in
+    # Twisted itself, so in #5929, we decided to port everything but objgrep()
+    # and to finish the porting in #6986
+    def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
+                showUnknowns=0, maxDepth=None):
+        """
+        An insanely CPU-intensive process for finding stuff.
+        """
+        if paths is None:
+            paths = []
+        if seen is None:
+            seen = {}
+        if eq(start, goal):
+            paths.append(path)
+        if id(start) in seen:
+            if seen[id(start)] is start:
+                return
+        if maxDepth is not None:
+            if maxDepth == 0:
+                return
+            maxDepth -= 1
+        seen[id(start)] = start
+        # Make an alias for those arguments which are passed recursively to
+        # objgrep for container objects.
+        args = (paths, seen, showUnknowns, maxDepth)
+        if isinstance(start, dict):
+            for k, v in start.items():
+                objgrep(k, goal, eq, path+'{'+repr(v)+'}', *args)
+                objgrep(v, goal, eq, path+'['+repr(k)+']', *args)
+        elif isinstance(start, (list, tuple, deque)):
+            for idx, _elem in enumerate(start):
+                objgrep(start[idx], goal, eq, path+'['+str(idx)+']', *args)
+        elif isinstance(start, types.MethodType):
+            objgrep(start.__self__, goal, eq, path+'.__self__', *args)
+            objgrep(start.__func__, goal, eq, path+'.__func__', *args)
+            objgrep(start.__self__.__class__, goal, eq,
+                    path+'.__self__.__class__', *args)
+        elif hasattr(start, '__dict__'):
+            for k, v in start.__dict__.items():
+                objgrep(v, goal, eq, path+'.'+k, *args)
+            if isinstance(start, compat.InstanceType):
+                objgrep(start.__class__, goal, eq, path+'.__class__', *args)
+        elif isinstance(start, weakref.ReferenceType):
+            objgrep(start(), goal, eq, path+'()', *args)
+        elif (isinstance(start, (compat.StringType,
+                        int, types.FunctionType,
+                         types.BuiltinMethodType, RegexType, float,
+                         type(None), compat.FileType)) or
+              type(start).__name__ in ('wrapper_descriptor',
+                                       'method_descriptor', 'member_descriptor',
+                                       'getset_descriptor')):
+            pass
+        elif showUnknowns:
+            print('unknown type', type(start), start)
+        return paths
 
 
 
@@ -806,13 +711,18 @@ __all__ = [
 
     'ISNT', 'WAS', 'IS',
 
-    'Settable', 'AccessorType', 'PropertyAccessor', 'Accessor', 'Summer',
-    'QueueMethod', 'OriginalAccessor',
+    'QueueMethod',
 
     'funcinfo', 'fullFuncName', 'qual', 'getcurrent', 'getClass', 'isinst',
-    'namedModule', 'namedObject', 'namedClass', 'namedAny', 'macro',
+    'namedModule', 'namedObject', 'namedClass', 'namedAny', 'requireModule',
     'safe_repr', 'safe_str', 'allYourBase', 'accumulateBases',
     'prefixedMethodNames', 'addMethodNamesToDict', 'prefixedMethods',
+    'accumulateMethods',
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
     'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
     'fullyQualifiedName']
+
+
+if _PY3:
+    # This is to be removed when fixing #6986
+    __all__.remove('objgrep')

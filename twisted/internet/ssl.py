@@ -2,28 +2,64 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
-SSL transport. Requires PyOpenSSL (http://pyopenssl.sf.net).
+This module implements Transport Layer Security (TLS) support for Twisted.  It
+requires U{PyOpenSSL <https://pypi.python.org/pypi/pyOpenSSL>}.
 
-SSL connections require a ContextFactory so they can create SSL contexts.
-End users should only use the ContextFactory classes directly - for SSL
-connections use the reactor.connectSSL/listenSSL and so on, as documented
-in IReactorSSL.
+If you wish to establish a TLS connection, please use one of the following
+APIs:
 
-All server context factories should inherit from ContextFactory, and all
-client context factories should inherit from ClientContextFactory. At the
-moment this is not enforced, but in the future it might be.
+    - SSL endpoints for L{servers
+      <twisted.internet.endpoints.SSL4ServerEndpoint>} and L{clients
+      <twisted.internet.endpoints.SSL4ClientEndpoint>}
 
-Future Plans:
-    - split module so reactor-specific classes are in a separate module
+    - L{startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>}
+
+    - L{connectSSL <twisted.internet.interfaces.IReactorSSL.connectSSL>}
+
+    - L{listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>}
+
+These APIs all require a C{contextFactory} argument that specifies their
+security properties, such as certificate, private key, certificate authorities
+to verify the peer, allowed TLS protocol versions, cipher suites, and so on.
+The recommended value for this argument is a L{CertificateOptions} instance;
+see its documentation for an explanation of the available options.
+
+The C{contextFactory} name is a bit of an anachronism now, as context factories
+have been replaced with "connection creators", but these objects serve the same
+role.
+
+Be warned that implementing your own connection creator (i.e.: value for the
+C{contextFactory}) is both difficult and dangerous; the Twisted team has worked
+hard to make L{CertificateOptions}' API comprehensible and unsurprising, and
+the Twisted team is actively maintaining it to ensure that it becomes more
+secure over time.
+
+If you are really absolutely sure that you want to take on the risk of
+implementing your own connection creator based on the pyOpenSSL API, see the
+L{server connection creator
+<twisted.internet.interfaces.IOpenSSLServerConnectionCreator>} and L{client
+connection creator
+<twisted.internet.interfaces.IOpenSSLServerConnectionCreator>} interfaces.
+
+Developers using Twisted, please ignore the L{Port}, L{Connector}, and
+L{Client} classes defined here, as these are details of certain reactors' TLS
+implementations, exposed by accident (and remaining here only for compatibility
+reasons).  If you wish to establish a TLS connection, please use one of the
+APIs listed above.
+
+@note: "SSL" (Secure Sockets Layer) is an antiquated synonym for "TLS"
+    (Transport Layer Security).  You may see these terms used interchangeably
+    throughout the documentation.
 """
+
+from __future__ import division, absolute_import
 
 # System imports
 from OpenSSL import SSL
 supported = True
 
-from zope.interface import implements, implementsOnly, implementedBy
+from zope.interface import implementer, implementer_only, implementedBy
 
 # Twisted imports
 from twisted.internet import tcp, interfaces
@@ -115,13 +151,13 @@ class ClientContextFactory:
 
 
 
+@implementer_only(interfaces.ISSLTransport,
+                 *[i for i in implementedBy(tcp.Client)
+                   if i != interfaces.ITLSTransport])
 class Client(tcp.Client):
     """
     I am an SSL client.
     """
-
-    implementsOnly(interfaces.ISSLTransport,
-                   *[i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport])
 
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         # tcp.Client.__init__ depends on self.ctxFactory being set
@@ -135,11 +171,11 @@ class Client(tcp.Client):
 
 
 
+@implementer(interfaces.ISSLTransport)
 class Server(tcp.Server):
     """
     I am an SSL server.
     """
-    implements(interfaces.ISSLTransport)
 
     def __init__(self, *args, **kwargs):
         tcp.Server.__init__(self, *args, **kwargs)
@@ -174,16 +210,25 @@ class Connector(tcp.Connector):
         self.contextFactory = contextFactory
         tcp.Connector.__init__(self, host, port, factory, timeout, bindAddress, reactor)
 
+        # Force some parameter checking in pyOpenSSL.  It's better to fail now
+        # than after we've set up the transport.
+        contextFactory.getContext()
+
 
     def _makeTransport(self):
         return Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
 
 
 
-from twisted.internet._sslverify import DistinguishedName, DN, Certificate
-from twisted.internet._sslverify import CertificateRequest, PrivateCertificate
-from twisted.internet._sslverify import KeyPair
-from twisted.internet._sslverify import OpenSSLCertificateOptions as CertificateOptions
+from twisted.internet._sslverify import (
+    KeyPair, DistinguishedName, DN, Certificate,
+    CertificateRequest, PrivateCertificate,
+    OpenSSLAcceptableCiphers as AcceptableCiphers,
+    OpenSSLCertificateOptions as CertificateOptions,
+    OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
+    platformTrust, OpenSSLDefaultPaths, VerificationError,
+    optionsForClientTLS,
+)
 
 __all__ = [
     "ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory",
@@ -191,5 +236,8 @@ __all__ = [
     'DistinguishedName', 'DN',
     'Certificate', 'CertificateRequest', 'PrivateCertificate',
     'KeyPair',
-    'CertificateOptions',
-    ]
+    'AcceptableCiphers', 'CertificateOptions', 'DiffieHellmanParameters',
+    'platformTrust', 'OpenSSLDefaultPaths',
+
+    'VerificationError', 'optionsForClientTLS',
+]

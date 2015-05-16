@@ -26,30 +26,33 @@ Various other classes in this module support this usage:
     response.
 """
 
+from __future__ import division, absolute_import
 __metaclass__ = type
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python import log
+from twisted.python.compat import networkString
+from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
-from twisted.python.compat import set
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred, succeed, fail, maybeDeferred
+from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
-from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IResponse, IClientRequest
 from twisted.web.http_headers import Headers
 from twisted.web.http import NO_CONTENT, NOT_MODIFIED
 from twisted.web.http import _DataLoss, PotentialDataLoss
 from twisted.web.http import _IdentityTransferDecoder, _ChunkedTransferDecoder
 
 # States HTTPParser can be in
-STATUS = 'STATUS'
-HEADER = 'HEADER'
-BODY = 'BODY'
-DONE = 'DONE'
+STATUS = u'STATUS'
+HEADER = u'HEADER'
+BODY = u'BODY'
+DONE = u'DONE'
 
 
 class BadHeaders(Exception):
@@ -161,6 +164,14 @@ class ResponseFailed(_WrapperException):
         self.response = response
 
 
+
+class ResponseNeverReceived(ResponseFailed):
+    """
+    A L{ResponseFailed} that knows no response bytes at all have been received.
+    """
+
+
+
 class RequestNotSent(Exception):
     """
     L{RequestNotSent} indicates that an attempt was made to issue a request but
@@ -182,7 +193,7 @@ def _callAppFunction(function):
     try:
         function()
     except:
-        log.err(None, "Unexpected exception from %s" % (
+        log.err(None, u"Unexpected exception from %s" % (
                 fullyQualifiedName(function),))
 
 
@@ -224,11 +235,12 @@ class HTTPParser(LineReceiver):
 
     # Some servers (like http://news.ycombinator.com/) return status lines and
     # HTTP headers delimited by \n instead of \r\n.
-    delimiter = '\n'
+    delimiter = b'\n'
 
     CONNECTION_CONTROL_HEADERS = set([
-            'content-length', 'connection', 'keep-alive', 'te', 'trailers',
-            'transfer-encoding', 'upgrade', 'proxy-connection'])
+            b'content-length', b'connection', b'keep-alive', b'te',
+            b'trailers', b'transfer-encoding', b'upgrade',
+            b'proxy-connection'])
 
     def connectionMade(self):
         self.headers = Headers()
@@ -243,7 +255,7 @@ class HTTPParser(LineReceiver):
         part of the message body and deliver them to the given decoder.
         """
         if self.state == BODY:
-            raise RuntimeError("already in body mode")
+            raise RuntimeError(u"already in body mode")
 
         self.bodyDecoder = decoder
         self.state = BODY
@@ -255,17 +267,17 @@ class HTTPParser(LineReceiver):
         Handle one line from a response.
         """
         # Handle the normal CR LF case.
-        if line[-1:] == '\r':
+        if line[-1:] == b'\r':
             line = line[:-1]
 
         if self.state == STATUS:
             self.statusReceived(line)
             self.state = HEADER
         elif self.state == HEADER:
-            if not line or line[0] not in ' \t':
+            if not line or line[0] not in b' \t':
                 if self._partialHeader is not None:
-                    header = ''.join(self._partialHeader)
-                    name, value = header.split(':', 1)
+                    header = b''.join(self._partialHeader)
+                    name, value = header.split(b':', 1)
                     value = value.strip()
                     self.headerReceived(name, value)
                 if not line:
@@ -307,7 +319,7 @@ class HTTPParser(LineReceiver):
 
         @param status: The first line of an HTTP request or response message
             without trailing I{CR LF}.
-        @type status: C{str}
+        @type status: C{bytes}
         """
 
 
@@ -347,11 +359,13 @@ class HTTPClientParser(HTTPParser):
     @ivar _responseDeferred: A L{Deferred} which will be called back with the
         response when all headers in the response have been received.
         Thereafter, C{None}.
+
+    @ivar _everReceivedData: C{True} if any bytes have been received.
     """
     NO_BODY_CODES = set([NO_CONTENT, NOT_MODIFIED])
 
     _transferDecoders = {
-        'chunked': _ChunkedTransferDecoder,
+        b'chunked': _ChunkedTransferDecoder,
         }
 
     bodyDecoder = None
@@ -360,22 +374,32 @@ class HTTPClientParser(HTTPParser):
         self.request = request
         self.finisher = finisher
         self._responseDeferred = Deferred()
+        self._everReceivedData = False
+
+
+    def dataReceived(self, data):
+        """
+        Override so that we know if any response has been received.
+        """
+        self._everReceivedData = True
+        HTTPParser.dataReceived(self, data)
 
 
     def parseVersion(self, strversion):
         """
         Parse version strings of the form Protocol '/' Major '.' Minor. E.g.
-        'HTTP/1.1'.  Returns (protocol, major, minor).  Will raise ValueError
+        b'HTTP/1.1'.  Returns (protocol, major, minor).  Will raise ValueError
         on bad syntax.
         """
         try:
-            proto, strnumber = strversion.split('/')
-            major, minor = strnumber.split('.')
+            proto, strnumber = strversion.split(b'/')
+            major, minor = strnumber.split(b'.')
             major, minor = int(major), int(minor)
-        except ValueError, e:
+        except ValueError as e:
             raise BadResponseVersion(str(e), strversion)
         if major < 0 or minor < 0:
-            raise BadResponseVersion("version may not be negative", strversion)
+            raise BadResponseVersion(u"version may not be negative",
+                strversion)
         return (proto, major, minor)
 
 
@@ -384,21 +408,22 @@ class HTTPClientParser(HTTPParser):
         Parse the status line into its components and create a response object
         to keep track of this response's state.
         """
-        parts = status.split(' ', 2)
+        parts = status.split(b' ', 2)
         if len(parts) != 3:
-            raise ParseError("wrong number of parts", status)
+            raise ParseError(u"wrong number of parts", status)
 
         try:
             statusCode = int(parts[1])
         except ValueError:
-            raise ParseError("non-integer status code", status)
+            raise ParseError(u"non-integer status code", status)
 
-        self.response = Response(
+        self.response = Response._construct(
             self.parseVersion(parts[0]),
             statusCode,
             parts[2],
             self.headers,
-            self.transport)
+            self.transport,
+            self.request)
 
 
     def _finished(self, rest):
@@ -407,7 +432,7 @@ class HTTPClientParser(HTTPParser):
         bytes will be interpreted by this L{HTTPClientParser}.  Extra bytes are
         passed up and the state of this L{HTTPClientParser} is set to I{DONE}.
 
-        @param rest: A C{str} giving any extra bytes delivered to this
+        @param rest: A C{bytes} giving any extra bytes delivered to this
             L{HTTPClientParser} which are not part of the response being
             parsed.
         """
@@ -420,7 +445,7 @@ class HTTPClientParser(HTTPParser):
         Content-Length in the response to a HEAD request is an entity header,
         not a connection control header.
         """
-        if self.request.method == 'HEAD' and name == 'content-length':
+        if self.request.method == b'HEAD' and name == b'content-length':
             return False
         return HTTPParser.isConnectionControlHeader(self, name)
 
@@ -431,12 +456,15 @@ class HTTPClientParser(HTTPParser):
         headers and stuff.
         """
         if (self.response.code in self.NO_BODY_CODES
-            or self.request.method == 'HEAD'):
+            or self.request.method == b'HEAD'):
             self.response.length = 0
+            # The order of the next two lines might be of interest when adding
+            # support for pipelining.
             self._finished(self.clearLineBuffer())
+            self.response._bodyDataFinished()
         else:
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
-                'transfer-encoding')
+                b'transfer-encoding')
             if transferEncodingHeaders:
 
                 # This could be a KeyError.  However, that would mean we do not
@@ -452,7 +480,8 @@ class HTTPClientParser(HTTPParser):
                 # allow the transfer decoder to set the response object's
                 # length attribute.
             else:
-                contentLengthHeaders = self.connHeaders.getRawHeaders('content-length')
+                contentLengthHeaders = self.connHeaders.getRawHeaders(
+                    b'content-length')
                 if contentLengthHeaders is None:
                     contentLength = None
                 elif len(contentLengthHeaders) == 1:
@@ -461,8 +490,8 @@ class HTTPClientParser(HTTPParser):
                 else:
                     # "HTTP Message Splitting" or "HTTP Response Smuggling"
                     # potentially happening.  Or it's just a buggy server.
-                    raise ValueError(
-                        "Too many Content-Length headers; response is invalid")
+                    raise ValueError(u"Too many Content-Length headers; "
+                                     u"response is invalid")
 
                 if contentLength == 0:
                     self._finished(self.clearLineBuffer())
@@ -513,56 +542,108 @@ class HTTPClientParser(HTTPParser):
                 # making things difficult.
                 log.err()
         elif self.state != DONE:
-            self._responseDeferred.errback(Failure(ResponseFailed([reason])))
+            if self._everReceivedData:
+                exceptionClass = ResponseFailed
+            else:
+                exceptionClass = ResponseNeverReceived
+            self._responseDeferred.errback(Failure(exceptionClass([reason])))
             del self._responseDeferred
 
 
 
+@implementer(IClientRequest)
 class Request:
     """
     A L{Request} instance describes an HTTP request to be sent to an HTTP
     server.
 
-    @ivar method: The HTTP method to for this request, ex: 'GET', 'HEAD',
-        'POST', etc.
-    @type method: C{str}
+    @ivar method: See L{__init__}.
+    @ivar uri: See L{__init__}.
+    @ivar headers: See L{__init__}.
+    @ivar bodyProducer: See L{__init__}.
+    @ivar persistent: See L{__init__}.
 
-    @ivar uri: The relative URI of the resource to request.  For example,
-        C{'/foo/bar?baz=quux'}.
-    @type uri: C{str}
-
-    @ivar headers: Headers to be sent to the server.  It is important to
-        note that this object does not create any implicit headers.  So it
-        is up to the HTTP Client to add required headers such as 'Host'.
-    @type headers: L{twisted.web.http_headers.Headers}
-
-    @ivar bodyProducer: C{None} or an L{IBodyProducer} provider which
-        produces the content body to send to the remote HTTP server.
+    @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
+    @type _parsedURI: L{twisted.web.client.URI} or L{None}
     """
-    def __init__(self, method, uri, headers, bodyProducer):
+
+    def __init__(self, method, uri, headers, bodyProducer, persistent=False):
+        """
+        @param method: The HTTP method for this request, ex: b'GET', b'HEAD',
+            b'POST', etc.
+        @type method: L{bytes}
+
+        @param uri: The relative URI of the resource to request.  For example,
+            C{b'/foo/bar?baz=quux'}.
+        @type uri: L{bytes}
+
+        @param headers: Headers to be sent to the server.  It is important to
+            note that this object does not create any implicit headers.  So it
+            is up to the HTTP Client to add required headers such as 'Host'.
+        @type headers: L{twisted.web.http_headers.Headers}
+
+        @param bodyProducer: C{None} or an L{IBodyProducer} provider which
+            produces the content body to send to the remote HTTP server.
+
+        @param persistent: Set to C{True} when you use HTTP persistent
+            connection, defaults to C{False}.
+        @type persistent: L{bool}
+        """
         self.method = method
         self.uri = uri
         self.headers = headers
         self.bodyProducer = bodyProducer
+        self.persistent = persistent
+        self._parsedURI = None
+
+
+    @classmethod
+    def _construct(cls, method, uri, headers, bodyProducer, persistent=False,
+                   parsedURI=None):
+        """
+        Private constructor.
+
+        @param method: See L{__init__}.
+        @param uri: See L{__init__}.
+        @param headers: See L{__init__}.
+        @param bodyProducer: See L{__init__}.
+        @param persistent: See L{__init__}.
+        @param parsedURI: See L{Request._parsedURI}.
+
+        @return: L{Request} instance.
+        """
+        request = cls(method, uri, headers, bodyProducer, persistent)
+        request._parsedURI = parsedURI
+        return request
+
+
+    @property
+    def absoluteURI(self):
+        """
+        The absolute URI of the request as C{bytes}, or C{None} if the
+        absolute URI cannot be determined.
+        """
+        return getattr(self._parsedURI, 'toBytes', lambda: None)()
 
 
     def _writeHeaders(self, transport, TEorCL):
-        hosts = self.headers.getRawHeaders('host', ())
+        hosts = self.headers.getRawHeaders(b'host', ())
         if len(hosts) != 1:
-            raise BadHeaders("Exactly one Host header required")
+            raise BadHeaders(u"Exactly one Host header required")
 
         # In the future, having the protocol version be a parameter to this
         # method would probably be good.  It would be nice if this method
         # weren't limited to issueing HTTP/1.1 requests.
         requestLines = []
-        requestLines.append(
-            '%s %s HTTP/1.1\r\n' % (self.method, self.uri))
-        requestLines.append('Connection: close\r\n')
+        requestLines.append(b' '.join([self.method, self.uri,
+            b'HTTP/1.1\r\n']))
+        if not self.persistent:
+            requestLines.append(b'Connection: close\r\n')
         if TEorCL is not None:
             requestLines.append(TEorCL)
         for name, values in self.headers.getAllRawHeaders():
-            requestLines.extend(['%s: %s\r\n' % (name, v) for v in values])
-        requestLines.append('\r\n')
+            requestLines.extend([name + b': ' + v + b'\r\n' for v in values])
+        requestLines.append(b'\r\n')
         transport.writeSequence(requestLines)
 
 
@@ -571,7 +652,7 @@ class Request:
         Write this request to the given transport using chunked
         transfer-encoding to frame the body.
         """
-        self._writeHeaders(transport, 'Transfer-Encoding: chunked\r\n')
+        self._writeHeaders(transport, b'Transfer-Encoding: chunked\r\n')
         encoder = ChunkedEncoder(transport)
         encoder.registerProducer(self.bodyProducer, True)
         d = self.bodyProducer.startProducing(encoder)
@@ -597,7 +678,8 @@ class Request:
         """
         self._writeHeaders(
             transport,
-            'Content-Length: %d\r\n' % (self.bodyProducer.length,))
+            networkString(
+                'Content-Length: %d\r\n' % (self.bodyProducer.length,)))
 
         # This Deferred is used to signal an error in the data written to the
         # encoder below.  It can only errback and it will only do so before too
@@ -616,8 +698,11 @@ class Request:
 
         def combine(consuming, producing):
             # This Deferred is returned and will be fired when the first of
-            # consuming or producing fires.
-            ultimate = Deferred()
+            # consuming or producing fires. If it's cancelled, forward that
+            # cancellation to the producer.
+            def cancelConsuming(ign):
+                finishedProducing.cancel()
+            ultimate = Deferred(cancelConsuming)
 
             # Keep track of what has happened so far.  This initially
             # contains None, then an integer uniquely identifying what
@@ -642,8 +727,8 @@ class Request:
                     # there's a chance someone might notice and complain.
                     log.err(
                         err,
-                        "Buggy state machine in %r/[%d]: "
-                        "ebConsuming called" % (self, state[0]))
+                        u"Buggy state machine in %r/[%d]: "
+                        u"ebConsuming called" % (self, state[0]))
 
             def cbProducing(result):
                 if state == [None]:
@@ -681,7 +766,7 @@ class Request:
                     # Deferred failed.  It shouldn't have, so it's buggy.
                     # Log the exception in case anyone who can fix the code
                     # is watching.
-                    log.err(err, "Producer is buggy")
+                    log.err(err, u"Producer is buggy")
 
             consuming.addErrback(ebConsuming)
             producing.addCallbacks(cbProducing, ebProducing)
@@ -789,7 +874,7 @@ class LengthEnforcingConsumer:
             # better place than the direct caller of this method (some
             # arbitrary application code).
             _callAppFunction(self._producer.stopProducing)
-            self._finished.errback(WrongBodyLength("too many bytes written"))
+            self._finished.errback(WrongBodyLength(u"too many bytes written"))
             self._allowNoMoreWrites()
 
 
@@ -803,7 +888,7 @@ class LengthEnforcingConsumer:
         if self._finished is not None:
             self._allowNoMoreWrites()
             if self._length:
-                raise WrongBodyLength("too few bytes written")
+                raise WrongBodyLength(u"too few bytes written")
 
 
 
@@ -827,13 +912,14 @@ def makeStatefulDispatcher(name, template):
         func = getattr(self, '_' + name + '_' + self._state, None)
         if func is None:
             raise RuntimeError(
-                "%r has no %s method in state %s" % (self, name, self._state))
+                u"%r has no %s method in state %s" % (self, name, self._state))
         return func(*args, **kwargs)
     dispatcher.__doc__ = template.__doc__
     return dispatcher
 
 
 
+@implementer(IResponse)
 class Response:
     """
     A L{Response} instance describes an HTTP response received from an HTTP
@@ -841,7 +927,7 @@ class Response:
 
     L{Response} should not be subclassed or instantiated.
 
-    @ivar _transport: The transport which is delivering this response.
+    @ivar _transport: See L{__init__}.
 
     @ivar _bodyProtocol: The L{IProtocol} provider to which the body is
         delivered.  C{None} before one has been registered with
@@ -852,7 +938,7 @@ class Response:
 
     @ivar _state: Indicates what state this L{Response} instance is in,
         particularly with respect to delivering bytes from the response body
-        to an application-suppled protocol object.  This may be one of
+        to an application-supplied protocol object.  This may be one of
         C{'INITIAL'}, C{'CONNECTED'}, C{'DEFERRED_CLOSE'}, or C{'FINISHED'},
         with the following meanings:
 
@@ -876,8 +962,8 @@ class Response:
             in the CONNECTED state, if the transport indicates there is no
             more data, the L{Response} moves to this state.  Nothing else
             can happen once the L{Response} is in this state.
+    @type _state: C{str}
     """
-    implements(IResponse)
 
     length = UNKNOWN_LENGTH
 
@@ -885,6 +971,21 @@ class Response:
     _bodyFinished = False
 
     def __init__(self, version, code, phrase, headers, _transport):
+        """
+        @param version: HTTP version components protocol, major, minor. E.g.
+            C{(b'HTTP', 1, 1)} to mean C{b'HTTP/1.1'}.
+
+        @param code: HTTP status code.
+        @type code: L{int}
+
+        @param phrase: HTTP reason phrase, intended to give a short description
+            of the HTTP status code.
+
+        @param headers: HTTP response headers.
+        @type headers: L{twisted.web.http_headers.Headers}
+
+        @param _transport: The transport which is delivering this response.
+        """
         self.version = version
         self.code = code
         self.phrase = phrase
@@ -892,6 +993,31 @@ class Response:
         self._transport = _transport
         self._bodyBuffer = []
         self._state = 'INITIAL'
+        self.request = None
+        self.previousResponse = None
+
+
+    @classmethod
+    def _construct(cls, version, code, phrase, headers, _transport, request):
+        """
+        Private constructor.
+
+        @param version: See L{__init__}.
+        @param code: See L{__init__}.
+        @param phrase: See L{__init__}.
+        @param headers: See L{__init__}.
+        @param _transport: See L{__init__}.
+        @param request: See L{IResponse.request}.
+
+        @return: L{Response} instance.
+        """
+        response = Response(version, code, phrase, headers, _transport)
+        response.request = proxyForInterface(IClientRequest)(request)
+        return response
+
+
+    def setPreviousResponse(self, previousResponse):
+        self.previousResponse = previousResponse
 
 
     def deliverBody(self, protocol):
@@ -926,8 +1052,8 @@ class Response:
         already being delivered to another protocol.
         """
         raise RuntimeError(
-            "Response already has protocol %r, cannot deliverBody "
-            "again" % (self._bodyProtocol,))
+            u"Response already has protocol %r, cannot deliverBody "
+            u"again" % (self._bodyProtocol,))
 
 
     def _deliverBody_DEFERRED_CLOSE(self, protocol):
@@ -955,7 +1081,7 @@ class Response:
         response body has been delivered to another protocol.
         """
         raise RuntimeError(
-            "Response already finished, cannot deliverBody now.")
+            u"Response already finished, cannot deliverBody now.")
 
 
     def _bodyDataReceived(self, data):
@@ -993,15 +1119,16 @@ class Response:
         It is invalid for data to be delivered after it has been indicated
         that the response body has been completely delivered.
         """
-        raise RuntimeError("Cannot receive body data after _bodyDataFinished")
+        raise RuntimeError(u"Cannot receive body data after _bodyDataFinished")
 
 
     def _bodyDataReceived_FINISHED(self, data):
         """
-        It is invalid for data to be delivered after the response bofdy has
+        It is invalid for data to be delivered after the response body has
         been delivered to a protocol.
         """
-        raise RuntimeError("Cannot receive body data after protocol disconnected")
+        raise RuntimeError(u"Cannot receive body data after "
+                           u"protocol disconnected")
 
 
     def _bodyDataFinished(self, reason=None):
@@ -1021,7 +1148,7 @@ class Response:
         """
         self._state = 'DEFERRED_CLOSE'
         if reason is None:
-            reason = Failure(ResponseDone("Response body fully received"))
+            reason = Failure(ResponseDone(u"Response body fully received"))
         self._reason = reason
 
 
@@ -1030,7 +1157,7 @@ class Response:
         Disconnect the protocol and move to the C{'FINISHED'} state.
         """
         if reason is None:
-            reason = Failure(ResponseDone("Response body fully received"))
+            reason = Failure(ResponseDone(u"Response body fully received"))
         self._bodyProtocol.connectionLost(reason)
         self._bodyProtocol = None
         self._state = 'FINISHED'
@@ -1041,7 +1168,7 @@ class Response:
         It is invalid to attempt to notify the L{Response} of the end of the
         response body data more than once.
         """
-        raise RuntimeError("Cannot finish body data more than once")
+        raise RuntimeError(u"Cannot finish body data more than once")
 
 
     def _bodyDataFinished_FINISHED(self):
@@ -1049,16 +1176,17 @@ class Response:
         It is invalid to attempt to notify the L{Response} of the end of the
         response body data more than once.
         """
-        raise RuntimeError("Cannot finish body data after protocol disconnected")
+        raise RuntimeError(u"Cannot finish body data after "
+                           u"protocol disconnected")
 
 
 
+@implementer(IConsumer)
 class ChunkedEncoder:
     """
     Helper object which exposes L{IConsumer} on top of L{HTTP11ClientProtocol}
     for streaming request bodies to the server.
     """
-    implements(IConsumer)
 
     def __init__(self, transport):
         self.transport = transport
@@ -1084,23 +1212,25 @@ class ChunkedEncoder:
         Write the given request body bytes to the transport using chunked
         encoding.
 
-        @type data: C{str}
+        @type data: C{bytes}
         """
         if self.transport is None:
             raise ExcessWrite()
-        self.transport.writeSequence(("%x\r\n" % len(data), data, "\r\n"))
+        self.transport.writeSequence((networkString("%x\r\n" % len(data)),
+            data, b"\r\n"))
 
 
     def unregisterProducer(self):
         """
         Indicate that the request body is complete and finish the request.
         """
-        self.write('')
+        self.write(b'')
         self.transport.unregisterProducer()
         self._allowNoMoreWrites()
 
 
 
+@implementer(IPushProducer)
 class TransportProxyProducer:
     """
     An L{IPushProducer} implementation which wraps another such thing and
@@ -1109,7 +1239,6 @@ class TransportProxyProducer:
     @ivar _producer: The wrapped L{IPushProducer} provider or C{None} after
         this proxy has been stopped.
     """
-    implements(IPushProducer)
 
     # LineReceiver uses this undocumented attribute of transports to decide
     # when to stop calling lineReceived or rawDataReceived (if it finds it to
@@ -1215,10 +1344,28 @@ class HTTP11ClientProtocol(Protocol):
             be aborted.
 
           - CONNECTION_LOST: The connection has been lost.
+    @type _state: C{str}
 
+    @ivar _abortDeferreds: A list of C{Deferred} instances that will fire when
+        the connection is lost.
     """
     _state = 'QUIESCENT'
     _parser = None
+    _finishedRequest = None
+    _currentRequest = None
+    _transportProxy = None
+    _responseDeferred = None
+
+
+    def __init__(self, quiescentCallback=lambda c: None):
+        self._quiescentCallback = quiescentCallback
+        self._abortDeferreds = []
+
+
+    @property
+    def state(self):
+        return self._state
+
 
     def request(self, request):
         """
@@ -1244,7 +1391,17 @@ class HTTP11ClientProtocol(Protocol):
 
         self._state = 'TRANSMITTING'
         _requestDeferred = maybeDeferred(request.writeTo, self.transport)
-        self._finishedRequest = Deferred()
+
+        def cancelRequest(ign):
+            # Explicitly cancel the request's deferred if it's still trying to
+            # write when this request is cancelled.
+            if self._state in (
+                    'TRANSMITTING', 'TRANSMITTING_AFTER_RECEIVING_RESPONSE'):
+                _requestDeferred.cancel()
+            else:
+                self.transport.abortConnection()
+                self._disconnectParser(Failure(CancelledError()))
+        self._finishedRequest = Deferred(cancelRequest)
 
         # Keep track of the Request object in case we need to call stopWriting
         # on it.
@@ -1255,26 +1412,22 @@ class HTTP11ClientProtocol(Protocol):
         self._parser.makeConnection(self._transportProxy)
         self._responseDeferred = self._parser._responseDeferred
 
-        def cbRequestWrotten(ignored):
+        def cbRequestWritten(ignored):
             if self._state == 'TRANSMITTING':
                 self._state = 'WAITING'
-                # XXX We're stuck in WAITING until we lose the connection now.
-                # This will be wrong when persistent connections are supported.
-                # See #3420 for persistent connections.
-
                 self._responseDeferred.chainDeferred(self._finishedRequest)
 
         def ebRequestWriting(err):
             if self._state == 'TRANSMITTING':
                 self._state = 'GENERATION_FAILED'
-                self.transport.loseConnection()
+                self.transport.abortConnection()
                 self._finishedRequest.errback(
                     Failure(RequestGenerationFailed([err])))
             else:
-                log.err(err, 'Error writing request, but not in valid state '
-                             'to finalize request: %s' % self._state)
+                log.err(err, u'Error writing request, but not in valid state '
+                             u'to finalize request: %s' % self._state)
 
-        _requestDeferred.addCallbacks(cbRequestWrotten, ebRequestWriting)
+        _requestDeferred.addCallbacks(cbRequestWritten, ebRequestWriting)
 
         return self._finishedRequest
 
@@ -1284,22 +1437,20 @@ class HTTP11ClientProtocol(Protocol):
         Called by an L{HTTPClientParser} to indicate that it has parsed a
         complete response.
 
-        @param rest: A C{str} giving any trailing bytes which were given to
+        @param rest: A C{bytes} giving any trailing bytes which were given to
             the L{HTTPClientParser} which were not part of the response it
             was parsing.
         """
-        # XXX this is because Connection: close is hard-coded above, probably
-        # will want to change that at some point.  Either the client or the
-        # server can control this.
+    _finishResponse = makeStatefulDispatcher('finishResponse', _finishResponse)
 
-        # XXX If the connection isn't being closed at this point, it's
-        # important to make sure the transport isn't paused (after _giveUp,
-        # or inside it, or something - after the parser can no longer touch
-        # the transport)
 
-        # For both of the above, see #3420 for persistent connections.
-
-        if self._state == 'TRANSMITTING':
+    def _finishResponse_WAITING(self, rest):
+        # Currently the rest parameter is ignored. Don't forget to use it if
+        # we ever add support for pipelining. And maybe check what trailers
+        # mean.
+        if self._state == 'WAITING':
+            self._state = 'QUIESCENT'
+        else:
             # The server sent the entire response before we could send the
             # whole request.  That sucks.  Oh well.  Fire the request()
             # Deferred with the response.  But first, make sure that if the
@@ -1308,7 +1459,35 @@ class HTTP11ClientProtocol(Protocol):
             self._state = 'TRANSMITTING_AFTER_RECEIVING_RESPONSE'
             self._responseDeferred.chainDeferred(self._finishedRequest)
 
-        self._giveUp(Failure(ConnectionDone("synthetic!")))
+        # This will happen if we're being called due to connection being lost;
+        # if so, no need to disconnect parser again, or to call
+        # _quiescentCallback.
+        if self._parser is None:
+            return
+
+        reason = ConnectionDone(u"synthetic!")
+        connHeaders = self._parser.connHeaders.getRawHeaders(b'connection', ())
+        if ((b'close' in connHeaders) or self._state != "QUIESCENT" or
+            not self._currentRequest.persistent):
+            self._giveUp(Failure(reason))
+        else:
+            # Just in case we had paused the transport, resume it before
+            # considering it quiescent again.
+            self.transport.resumeProducing()
+
+            # We call the quiescent callback first, to ensure connection gets
+            # added back to connection pool before we finish the request.
+            try:
+                self._quiescentCallback(self)
+            except:
+                # If callback throws exception, just log it and disconnect;
+                # keeping persistent connections around is an optimisation:
+                log.err()
+                self.transport.loseConnection()
+            self._disconnectParser(reason)
+
+
+    _finishResponse_TRANSMITTING = _finishResponse_WAITING
 
 
     def _disconnectParser(self, reason):
@@ -1321,13 +1500,16 @@ class HTTP11ClientProtocol(Protocol):
         if self._parser is not None:
             parser = self._parser
             self._parser = None
+            self._currentRequest = None
+            self._finishedRequest = None
+            self._responseDeferred = None
 
             # The parser is no longer allowed to do anything to the real
             # transport.  Stop proxying from the parser's transport to the real
             # transport before telling the parser it's done so that it can't do
             # anything.
             self._transportProxy._stopProxying()
-
+            self._transportProxy = None
             parser.connectionLost(reason)
 
 
@@ -1417,6 +1599,9 @@ class HTTP11ClientProtocol(Protocol):
         """
         self._disconnectParser(Failure(ConnectionAborted()))
         self._state = 'CONNECTION_LOST'
+        for d in self._abortDeferreds:
+            d.callback(None)
+        self._abortDeferreds = []
 
 
     def abort(self):
@@ -1424,5 +1609,10 @@ class HTTP11ClientProtocol(Protocol):
         Close the connection and cause all outstanding L{request} L{Deferred}s
         to fire with an error.
         """
+        if self._state == "CONNECTION_LOST":
+            return succeed(None)
         self.transport.loseConnection()
         self._state = 'ABORTING'
+        d = Deferred()
+        self._abortDeferreds.append(d)
+        return d

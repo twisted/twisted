@@ -5,12 +5,13 @@
 Tests for L{twisted.python.threadpool}
 """
 
+from __future__ import division, absolute_import
+
 import pickle, time, weakref, gc, threading
 
-from twisted.trial import unittest, util
+from twisted.python.compat import _PY3
+from twisted.trial import unittest
 from twisted.python import threadpool, threadable, failure, context
-from twisted.internet import reactor
-from twisted.internet.defer import Deferred
 
 #
 # See the end of this module for the remainder of the imports.
@@ -55,12 +56,26 @@ threadable.synchronize(Synchronization)
 
 
 
-class ThreadPoolTestCase(unittest.TestCase):
+class ThreadPoolTests(unittest.SynchronousTestCase):
     """
     Test threadpools.
     """
+
+    def getTimeout(self):
+        """
+        Return number of seconds to wait before giving up.
+        """
+        return 5 # Really should be order of magnitude less
+
+
     def _waitForLock(self, lock):
-        for i in xrange(1000000):
+        # We could just use range(), but then we use an extra 30MB of memory
+        # on Python 2:
+        if _PY3:
+            items = range(1000000)
+        else:
+            items = xrange(1000000)
+        for i in items:
             if lock.acquire(False):
                 break
             time.sleep(1e-5)
@@ -92,6 +107,18 @@ class ThreadPoolTestCase(unittest.TestCase):
         pool.start()
         self.addCleanup(pool.stop)
         self.assertEqual(len(pool.threads), 3)
+
+
+    def test_adjustingWhenPoolStopped(self):
+        """
+        L{ThreadPool.adjustPoolsize} only modifies the pool size and does not
+        start new workers while the pool is not running.
+        """
+        pool = threadpool.ThreadPool(0, 5)
+        pool.start()
+        pool.stop()
+        pool.adjustPoolsize(2)
+        self.assertEqual(len(pool.threads), 0)
 
 
     def test_threadCreationArguments(self):
@@ -240,26 +267,13 @@ class ThreadPoolTestCase(unittest.TestCase):
         waiting.acquire()
         actor = Synchronization(N, waiting)
 
-        for i in xrange(N):
+        for i in range(N):
             method(tp, actor)
 
         self._waitForLock(waiting)
 
         self.failIf(actor.failures, "run() re-entered %d times" %
                                     (actor.failures,))
-
-
-    def test_dispatch(self):
-        """
-        Call C{_threadpoolTest} with C{dispatch}.
-        """
-        return self._threadpoolTest(
-            lambda tp, actor: tp.dispatch(actor, actor.run))
-
-    test_dispatch.suppress = [util.suppress(
-                message="dispatch\(\) is deprecated since Twisted 8.0, "
-                        "use callInThread\(\) instead",
-                category=DeprecationWarning)]
 
 
     def test_callInThread(self):
@@ -307,7 +321,7 @@ class ThreadPoolTestCase(unittest.TestCase):
             results.append(result)
 
         tp = threadpool.ThreadPool(0, 1)
-        tp.callInThreadWithCallback(onResult, lambda : "test")
+        tp.callInThreadWithCallback(onResult, lambda: "test")
         tp.start()
 
         try:
@@ -397,16 +411,14 @@ class ThreadPoolTestCase(unittest.TestCase):
         """
         threadIds = []
 
-        import thread
-
         event = threading.Event()
 
         def onResult(success, result):
-            threadIds.append(thread.get_ident())
+            threadIds.append(threading.currentThread().ident)
             event.set()
 
         def func():
-            threadIds.append(thread.get_ident())
+            threadIds.append(threading.currentThread().ident)
 
         tp = threadpool.ThreadPool(0, 1)
         tp.callInThreadWithCallback(onResult, func)
@@ -471,46 +483,88 @@ class ThreadPoolTestCase(unittest.TestCase):
             tp.stop()
 
 
-    def test_dispatchDeprecation(self):
+    def test_workerStateTransition(self):
         """
-        Test for the deprecation of the dispatch method.
+        As the worker receives and completes work, it transitions between
+        the working and waiting states.
         """
-        tp = threadpool.ThreadPool()
-        tp.start()
-        self.addCleanup(tp.stop)
+        pool = threadpool.ThreadPool(0, 1)
+        pool.start()
+        self.addCleanup(pool.stop)
 
-        def cb():
-            return tp.dispatch(None, lambda: None)
+        # sanity check
+        self.assertEqual(pool.workers, 0)
+        self.assertEqual(len(pool.waiters), 0)
+        self.assertEqual(len(pool.working), 0)
 
-        self.assertWarns(DeprecationWarning,
-                         "dispatch() is deprecated since Twisted 8.0, "
-                         "use callInThread() instead",
-                         __file__, cb)
+        # fire up a worker and give it some 'work'
+        threadWorking = threading.Event()
+        threadFinish = threading.Event()
+
+        def _thread():
+            threadWorking.set()
+            threadFinish.wait()
+
+        pool.callInThread(_thread)
+        threadWorking.wait()
+        self.assertEqual(pool.workers, 1)
+        self.assertEqual(len(pool.waiters), 0)
+        self.assertEqual(len(pool.working), 1)
+
+        # finish work, and spin until state changes
+        threadFinish.set()
+        while not len(pool.waiters):
+            time.sleep(0.0005)
+
+        # make sure state changed correctly
+        self.assertEqual(len(pool.waiters), 1)
+        self.assertEqual(len(pool.working), 0)
 
 
-    def test_dispatchWithCallbackDeprecation(self):
+    def test_workerState(self):
         """
-        Test for the deprecation of the dispatchWithCallback method.
+        Upon entering a _workerState block, the threads unique identifier is
+        added to a stateList and is removed upon exiting the block.
         """
-        tp = threadpool.ThreadPool()
-        tp.start()
-        self.addCleanup(tp.stop)
-
-        def cb():
-            return tp.dispatchWithCallback(
-                None,
-                lambda x: None,
-                lambda x: None,
-                lambda: None)
-
-        self.assertWarns(DeprecationWarning,
-                     "dispatchWithCallback() is deprecated since Twisted 8.0, "
-                     "use twisted.internet.threads.deferToThread() instead.",
-                     __file__, cb)
+        pool = threadpool.ThreadPool()
+        workerThread = object()
+        stateList = []
+        with pool._workerState(stateList, workerThread):
+            self.assertIn(workerThread, stateList)
+        self.assertNotIn(workerThread, stateList)
 
 
+    def test_workerStateExceptionHandling(self):
+        """
+        The _workerState block does not consume L{Exception}s or change the
+        L{Exception} that gets raised.
+        """
+        pool = threadpool.ThreadPool()
+        workerThread = object()
+        stateList = []
+        try:
+            with pool._workerState(stateList, workerThread):
+                self.assertIn(workerThread, stateList)
+                1 / 0
+        except ZeroDivisionError:
+            pass
+        except:
+            self.fail("_workerState shouldn't change raised exceptions")
+        else:
+            self.fail("_workerState shouldn't consume exceptions")
+        self.assertNotIn(workerThread, stateList)
 
-class RaceConditionTestCase(unittest.TestCase):
+
+
+class RaceConditionTests(unittest.SynchronousTestCase):
+
+    def getTimeout(self):
+        """
+        Return number of seconds to wait before giving up.
+        """
+        return 5 # Really should be order of magnitude less
+
+
     def setUp(self):
         self.event = threading.Event()
         self.threadpool = threadpool.ThreadPool(0, 10)
@@ -556,44 +610,16 @@ class RaceConditionTestCase(unittest.TestCase):
         # Ensure no threads running
         self.assertEqual(self.threadpool.workers, 0)
 
-        loopDeferred = Deferred()
+        event = threading.Event()
+        event.clear()
 
         def onResult(success, counter):
-            reactor.callFromThread(submit, counter)
+            event.set()
 
-        def submit(counter):
-            if counter:
-                self.threadpool.callInThreadWithCallback(
-                    onResult, lambda: counter - 1)
-            else:
-                loopDeferred.callback(None)
+        for i in range(10):
+            self.threadpool.callInThreadWithCallback(
+                onResult, lambda: None)
+            event.wait()
+            event.clear()
 
-        def cbLoop(ignored):
-            # Ensure there is only one thread running.
-            self.assertEqual(self.threadpool.workers, 1)
-
-        loopDeferred.addCallback(cbLoop)
-        submit(10)
-        return loopDeferred
-
-
-
-class ThreadSafeListDeprecationTestCase(unittest.TestCase):
-    """
-    Test deprecation of threadpool.ThreadSafeList in twisted.python.threadpool
-    """
-
-    def test_threadSafeList(self):
-        """
-        Test deprecation of L{threadpool.ThreadSafeList}.
-        """
-        threadpool.ThreadSafeList()
-
-        warningsShown = self.flushWarnings([self.test_threadSafeList])
-        self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningsShown[0]['message'],
-            "twisted.python.threadpool.ThreadSafeList was deprecated in "
-            "Twisted 10.1.0: This was an internal implementation detail of "
-            "support for Jython 2.1, which is now obsolete.")
+        self.assertEqual(self.threadpool.workers, 1)

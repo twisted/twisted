@@ -27,7 +27,7 @@ objects = [
 class FakeModule(object):
     pass
 
-class PersistTestCase(unittest.TestCase):
+class PersistTests(unittest.TestCase):
     def testStyles(self):
         for o in objects:
             p = sob.Persistent(o, '')

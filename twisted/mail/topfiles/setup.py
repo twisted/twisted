@@ -1,8 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys
-
 try:
     from twisted.python import dist
 except ImportError:
@@ -11,20 +9,17 @@ except ImportError:
                      "attempting to install any other Twisted projects.")
 
 if __name__ == '__main__':
-    if sys.version_info[:2] >= (2, 4):
-        extraMeta = dict(
-            classifiers=[
-                "Development Status :: 4 - Beta",
-                "Environment :: No Input/Output (Daemon)",
-                "Intended Audience :: Developers",
-                "License :: OSI Approved :: MIT License",
-                "Programming Language :: Python",
-                "Topic :: Communications :: Email :: Post-Office :: IMAP",
-                "Topic :: Communications :: Email :: Post-Office :: POP3",
-                "Topic :: Software Development :: Libraries :: Python Modules",
-            ])
-    else:
-        extraMeta = {}
+    extraMeta = dict(
+        classifiers=[
+            "Development Status :: 5 - Production/Stable",
+            "Environment :: No Input/Output (Daemon)",
+            "Intended Audience :: Developers",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python",
+            "Topic :: Communications :: Email :: Post-Office :: IMAP",
+            "Topic :: Communications :: Email :: Post-Office :: POP3",
+            "Topic :: Software Development :: Libraries :: Python Modules",
+        ])
 
     dist.setup(
         twisted_subproject="mail",

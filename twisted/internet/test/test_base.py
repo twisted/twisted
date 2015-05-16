@@ -6,12 +6,14 @@ Tests for L{twisted.internet.base}.
 """
 
 import socket
-from Queue import Queue
+try:
+    from Queue import Queue
+except ImportError:
+    from queue import Queue
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python.threadpool import ThreadPool
-from twisted.python.util import setIDFunction
 from twisted.internet.interfaces import IReactorTime, IReactorThreads
 from twisted.internet.error import DNSLookupError
 from twisted.internet.base import ThreadedResolver, DelayedCall
@@ -19,12 +21,12 @@ from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 
 
+@implementer(IReactorTime, IReactorThreads)
 class FakeReactor(object):
     """
     A fake reactor implementation which just supports enough reactor APIs for
     L{ThreadedResolver}.
     """
-    implements(IReactorTime, IReactorThreads)
 
     def __init__(self):
         self._clock = Clock()
@@ -154,6 +156,12 @@ class ThreadedResolverTests(TestCase):
 
 
 
+def nothing():
+    """
+    Function used by L{DelayedCallTests.test_str}.
+    """
+
+
 class DelayedCallTests(TestCase):
     """
     Tests for L{DelayedCall}.
@@ -161,7 +169,7 @@ class DelayedCallTests(TestCase):
     def _getDelayedCallAt(self, time):
         """
         Get a L{DelayedCall} instance at a given C{time}.
-        
+
         @param time: The absolute time at which the returned L{DelayedCall}
             will be scheduled.
         """
@@ -185,19 +193,11 @@ class DelayedCallTests(TestCase):
         C{str}, includes the unsigned id of the instance, as well as its state,
         the function to be called, and the function arguments.
         """
-        def nothing():
-            pass
         dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
-        ids = {dc: 200}
-        def fakeID(obj):
-            try:
-                return ids[obj]
-            except (TypeError, KeyError):
-                return id(obj)
-        self.addCleanup(setIDFunction, setIDFunction(fakeID))
         self.assertEqual(
             str(dc),
-            "<DelayedCall 0xc8 [10.5s] called=0 cancelled=0 nothing(3, A=5)>")
+            "<DelayedCall 0x%x [10.5s] called=0 cancelled=0 nothing(3, A=5)>"
+                % (id(dc),))
 
 
     def test_lt(self):

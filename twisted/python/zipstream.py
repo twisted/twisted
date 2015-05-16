@@ -7,18 +7,18 @@ An incremental approach to unzipping files.  This allows you to unzip a little
 bit of a file at a time, which means you can report progress as a file unzips.
 """
 
-import warnings
 import zipfile
 import os.path
 import zlib
 import struct
 
+
 _fileHeaderSize = struct.calcsize(zipfile.structFileHeader)
 
 class ChunkingZipFile(zipfile.ZipFile):
     """
-    A ZipFile object which, with readfile(), also gives you access to a
-    filelike object for each entry.
+    A C{ZipFile} object which, with L{readfile}, also gives you access to a
+    file-like object for each entry.
     """
 
     def readfile(self, name):
@@ -77,11 +77,11 @@ class _FileEntry(object):
 
     @ivar closed: File-like 'closed' attribute; True before this file has been
     closed, False after.
-    @type closed: L{bool}
+    @type closed: C{bool}
 
     @ivar finished: An older, broken synonym for 'closed'.  Do not touch this,
     please.
-    @type finished: L{int}
+    @type finished: C{int}
     """
     def __init__(self, chunkingZipFile, length):
         """
@@ -238,63 +238,7 @@ class DeflatedZipFileEntry(_FileEntry):
 
 
 
-def unzip(filename, directory=".", overwrite=0):
-    """
-    Unzip the file
-
-    @param filename: the name of the zip file
-    @param directory: the directory into which the files will be
-    extracted
-    @param overwrite: if on, overwrite files when they exist.  You can
-    still get an error if you try to create a directory over a file
-    with the same name or vice-versa.
-    """
-    warnings.warn("zipstream.unzip is deprecated since Twisted 11.0.0 for " +
-                  "security reasons.  Use Python's zipfile instead.",
-                  category=DeprecationWarning, stacklevel=2)
-
-    for i in unzipIter(filename, directory, overwrite, suppressWarning=True):
-        pass
-
 DIR_BIT = 16
-
-def unzipIter(filename, directory='.', overwrite=0, suppressWarning=False):
-    """
-    Return a generator for the zipfile.  This implementation will yield
-    after every file.
-
-    The value it yields is the number of files left to unzip.
-    """
-    if not suppressWarning:
-        warnings.warn("zipstream.unzipIter is deprecated since Twisted " +
-                      "11.0.0 for security reasons.  Use Python's " +
-                      "zipfile instead.",
-                      category=DeprecationWarning, stacklevel=2)
-
-    zf = zipfile.ZipFile(filename, 'r')
-    names = zf.namelist()
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    remaining = len(zf.namelist())
-    for entry in names:
-        remaining -= 1
-        isdir = zf.getinfo(entry).external_attr & DIR_BIT
-        f = os.path.join(directory, entry)
-        if isdir:
-            # overwrite flag only applies to files
-            if not os.path.exists(f):
-                os.makedirs(f)
-        else:
-            # create the directory the file will be in first,
-            # since we can't guarantee it exists
-            fdir = os.path.split(f)[0]
-            if not os.path.exists(fdir):
-                os.makedirs(fdir)
-            if overwrite or not os.path.exists(f):
-                outfile = file(f, 'wb')
-                outfile.write(zf.read(entry))
-                outfile.close()
-        yield remaining
 
 
 def countZipFileChunks(filename, chunksize):
@@ -311,32 +255,20 @@ def countZipFileChunks(filename, chunksize):
 
 def countFileChunks(zipinfo, chunksize):
     """
-    Count the number of chunks that will result from the given L{ZipInfo}.
+    Count the number of chunks that will result from the given C{ZipInfo}.
 
-    @param zipinfo: a L{zipfile.ZipInfo} instance describing an entry in a zip
+    @param zipinfo: a C{zipfile.ZipInfo} instance describing an entry in a zip
     archive to be counted.
 
     @return: the number of chunks present in the zip file.  (Even an empty file
     counts as one chunk.)
-    @rtype: L{int}
+    @rtype: C{int}
     """
     count, extra = divmod(zipinfo.file_size, chunksize)
     if extra > 0:
         count += 1
     return count or 1
 
-
-def countZipFileEntries(filename):
-    """
-    Count the number of entries in a zip archive.  (Don't use this function.)
-
-    @param filename: The filename of a zip archive.
-    @type filename: L{str}
-    """
-    warnings.warn("countZipFileEntries is deprecated.",
-                  DeprecationWarning, 2)
-    zf = zipfile.ZipFile(filename)
-    return len(zf.namelist())
 
 
 def unzipIterChunky(filename, directory='.', overwrite=0,

@@ -6,20 +6,44 @@ Tests for twisted.python.modules, abstract access to imported or importable
 objects.
 """
 
+from __future__ import division, absolute_import
+
 import sys
 import itertools
-import zipfile
 import compileall
 
 import twisted
-from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
+from twisted.python.compat import _PY3, networkString
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
-from twisted.python.test.modules_helpers import TwistedModulesTestCase
-from twisted.test.test_paths import zipit
+from twisted.trial.unittest import TestCase
+from twisted.python.test.modules_helpers import TwistedModulesMixin
+
+if not _PY3:
+    # TODO: Zipfile support isn't ported yet.
+    # See https://tm.tl/#6917
+    import zipfile
+    from twisted.python.test.test_zippath import zipit
+
+
+
+class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
+    """
+    Base class for L{modules} test cases.
+    """
+    def findByIteration(self, modname, where=modules, importPackages=False):
+        """
+        You don't ever actually want to do this, so it's not in the public
+        API, but sometimes we want to compare the result of an iterative call
+        with a lookup call and make sure they're the same for test purposes.
+        """
+        for modinfo in where.walkModules(importPackages=importPackages):
+            if modinfo.name == modname:
+                return modinfo
+        self.fail("Unable to find module %r through iteration." % (modname,))
 
 
 
@@ -36,8 +60,8 @@ class BasicTests(TwistedModulesTestCase):
         __import__('pkgutil')
 
         namespaceBoilerplate = (
-            'import pkgutil; '
-            '__path__ = pkgutil.extend_path(__path__, __name__)')
+            b'import pkgutil; '
+            b'__path__ = pkgutil.extend_path(__path__, __name__)')
 
         # Create two temporary directories with packages:
         #
@@ -67,7 +91,7 @@ class BasicTests(TwistedModulesTestCase):
         nestedEntry = testPackagePath.child('nested_package')
         nestedEntry.makedirs()
         nestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        nestedEntry.child('module.py').setContent('')
+        nestedEntry.child('module.py').setContent(b'')
 
         anotherEntry = self.pathEntryWithOnePackage()
         anotherPackagePath = anotherEntry.child('test_package')
@@ -76,7 +100,7 @@ class BasicTests(TwistedModulesTestCase):
         anotherNestedEntry = anotherPackagePath.child('nested_package')
         anotherNestedEntry.makedirs()
         anotherNestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        anotherNestedEntry.child('module2.py').setContent('')
+        anotherNestedEntry.child('module2.py').setContent(b'')
 
         self.replaceSysPath([entry.path, anotherEntry.path])
 
@@ -89,7 +113,7 @@ class BasicTests(TwistedModulesTestCase):
             walkedNames = [
                 mod.name for mod in module.walkModules(importPackages=True)]
         finally:
-            for module in sys.modules.keys():
+            for module in list(sys.modules.keys()):
                 if module.startswith('test_package'):
                     del sys.modules[module]
 
@@ -168,7 +192,7 @@ class BasicTests(TwistedModulesTestCase):
 
         nonDirectoryPath = FilePath(self.mktemp())
         self.failIf(nonDirectoryPath.exists())
-        nonDirectoryPath.setContent("zip file or whatever\n")
+        nonDirectoryPath.setContent(b"zip file or whatever\n")
 
         self.replaceSysPath([existentPath.path])
 
@@ -259,16 +283,16 @@ class BasicTests(TwistedModulesTestCase):
             def evilChildren():
                 # normally this order is random; let's make sure it always
                 # comes up .pyc-first.
-                x = originalChildren()
+                x = list(originalChildren())
                 x.sort()
                 x.reverse()
                 return x
             o.children = evilChildren
             return o
-        mypath.child("abcd.py").setContent('\n')
+        mypath.child("abcd.py").setContent(b'\n')
         compileall.compile_dir(mypath.path, quiet=True)
         # sanity check
-        self.assertEqual(len(mypath.children()), 2)
+        self.assertEqual(len(list(mypath.children())), 2)
         pp._smartPath = _evilSmartPath
         self.assertEqual(pp['abcd'].filePath,
                           mypath.child('abcd.py'))
@@ -284,7 +308,7 @@ class BasicTests(TwistedModulesTestCase):
         pp = modules.PythonPath(sysPath=[mypath.path])
         subpath = mypath.child("abcd")
         subpath.createDirectory()
-        subpath.child("__init__.py").setContent('del __path__\n')
+        subpath.child("__init__.py").setContent(b'del __path__\n')
         sys.path.append(mypath.path)
         __import__("abcd")
         try:
@@ -297,26 +321,26 @@ class BasicTests(TwistedModulesTestCase):
 
 
 
-class PathModificationTest(TwistedModulesTestCase):
+class PathModificationTests(TwistedModulesTestCase):
     """
     These tests share setup/cleanup behavior of creating a dummy package and
     stuffing some code in it.
     """
 
-    _serialnum = itertools.count().next # used to generate serial numbers for
-                                        # package names.
+    _serialnum = itertools.count() # used to generate serial numbers for
+                                   # package names.
 
     def setUp(self):
         self.pathExtensionName = self.mktemp()
         self.pathExtension = FilePath(self.pathExtensionName)
         self.pathExtension.createDirectory()
-        self.packageName = "pyspacetests%d" % (self._serialnum(),)
+        self.packageName = "pyspacetests%d" % (next(self._serialnum),)
         self.packagePath = self.pathExtension.child(self.packageName)
         self.packagePath.createDirectory()
-        self.packagePath.child("__init__.py").setContent("")
-        self.packagePath.child("a.py").setContent("")
-        self.packagePath.child("b.py").setContent("")
-        self.packagePath.child("c__init__.py").setContent("")
+        self.packagePath.child("__init__.py").setContent(b"")
+        self.packagePath.child("a.py").setContent(b"")
+        self.packagePath.child("b.py").setContent(b"")
+        self.packagePath.child("c__init__.py").setContent(b"")
         self.pathSetUp = False
 
 
@@ -330,9 +354,9 @@ class PathModificationTest(TwistedModulesTestCase):
         moddir2 = self.mktemp()
         fpmd = FilePath(moddir2)
         fpmd.createDirectory()
-        fpmd.child("foozle.py").setContent("x = 123\n")
+        fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            "__path__.append(%r)\n" % (moddir2,))
+            networkString("__path__.append({0})\n".format(repr(moddir2))))
         # Cut here
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName)
@@ -348,17 +372,6 @@ class PathModificationTest(TwistedModulesTestCase):
         Verify that iterModules will honor the __path__ of already-loaded packages.
         """
         self._underUnderPathTest()
-
-
-    def test_underUnderPathNotAlreadyImported(self):
-        """
-        Verify that iterModules will honor the __path__ of already-loaded packages.
-        """
-        self._underUnderPathTest(False)
-
-
-    test_underUnderPathNotAlreadyImported.todo = (
-        "This may be impossible but it sure would be nice.")
 
 
     def _listModules(self):
@@ -399,7 +412,7 @@ class PathModificationTest(TwistedModulesTestCase):
 
 
 
-class RebindingTest(PathModificationTest):
+class RebindingTests(PathModificationTests):
     """
     These tests verify that the default path interrogation API works properly
     even when sys.path has been rebound to a different object.
@@ -421,16 +434,16 @@ class RebindingTest(PathModificationTest):
 
 
 
-class ZipPathModificationTest(PathModificationTest):
+class ZipPathModificationTests(PathModificationTests):
     def _setupSysPath(self):
         assert not self.pathSetUp
         zipit(self.pathExtensionName, self.pathExtensionName+'.zip')
         self.pathExtensionName += '.zip'
         assert zipfile.is_zipfile(self.pathExtensionName)
-        PathModificationTest._setupSysPath(self)
+        PathModificationTests._setupSysPath(self)
 
 
-class PythonPathTestCase(TestCase):
+class PythonPathTests(TestCase):
     """
     Tests for the class which provides the implementation for all of the
     public API of L{twisted.python.modules}, L{PythonPath}.
@@ -476,3 +489,36 @@ class PythonPathTestCase(TestCase):
             "(PEP 302 violation - check your local configuration).")
         self.assertEqual(len(warnings), 1)
         self.assertEqual(thisModule.name, __name__)
+
+
+    def test_containsModule(self):
+        """
+        L{PythonPath} implements the C{in} operator so that when it is the
+        right-hand argument and the name of a module which exists on that
+        L{PythonPath} is the left-hand argument, the result is C{True}.
+        """
+        thePath = modules.PythonPath()
+        self.assertIn('os', thePath)
+
+
+    def test_doesntContainModule(self):
+        """
+        L{PythonPath} implements the C{in} operator so that when it is the
+        right-hand argument and the name of a module which does not exist on
+        that L{PythonPath} is the left-hand argument, the result is C{False}.
+        """
+        thePath = modules.PythonPath()
+        self.assertNotIn('bogusModule', thePath)
+
+
+__all__ = ["BasicTests", "PathModificationTests", "RebindingTests",
+           "ZipPathModificationTests", "PythonPathTests"]
+
+if _PY3:
+    __all3__ = ["BasicTests", "PathModificationTests", "RebindingTests",
+                "PythonPathTests"]
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__

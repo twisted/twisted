@@ -1,13 +1,14 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_write -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_write -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.test_write} to test that
+L{twisted.test.test_stdio.StandardInputOutputTests.test_write} to test that
 ITransport.write() works for process transports.
 """
 
+__import__('_preamble')
 import sys
 
 from twisted.internet import stdio, protocol
@@ -29,4 +30,3 @@ if __name__ == '__main__':
     from twisted.internet import reactor
     stdio.StandardIO(WriteChild())
     reactor.run()
-

@@ -6,17 +6,28 @@
 Tests for Twisted plugin system.
 """
 
+from __future__ import absolute_import, division
+
 import sys, errno, os, time
 import compileall
+import functools
 
 from zope.interface import Interface
 
 from twisted.trial import unittest
+from twisted.python.compat import _PY3
 from twisted.python.log import textFromEventDict, addObserver, removeObserver
 from twisted.python.filepath import FilePath
-from twisted.python.util import mergeFunctionMetadata
 
 from twisted import plugin
+
+if _PY3:
+    from importlib import invalidate_caches as invalidateImportCaches
+else:
+    def invalidateImportCaches():
+        """
+        On python 2, import caches don't need to be invalidated.
+        """
 
 
 
@@ -36,7 +47,7 @@ class ITestPlugin2(Interface):
 
 
 
-class PluginTestCase(unittest.TestCase):
+class PluginTests(unittest.TestCase):
     """
     Tests which verify the behavior of the current, active Twisted plugins
     directory.
@@ -53,7 +64,7 @@ class PluginTestCase(unittest.TestCase):
         self.root.createDirectory()
         self.package = self.root.child('mypackage')
         self.package.createDirectory()
-        self.package.child('__init__.py').setContent("")
+        self.package.child('__init__.py').setContent(b"")
 
         FilePath(__file__).sibling('plugin_basic.py'
             ).copyTo(self.package.child('testplugin.py'))
@@ -84,7 +95,7 @@ class PluginTestCase(unittest.TestCase):
         for ext in ['c', 'o'] + (deleteSource and [''] or []):
             try:
                 os.remove(module.__file__ + ext)
-            except OSError, ose:
+            except OSError as ose:
                 if ose.errno != errno.ENOENT:
                     raise
 
@@ -103,13 +114,15 @@ class PluginTestCase(unittest.TestCase):
         plugin system behaves correctly no matter what the state of the cache
         is.
         """
+        @functools.wraps(meth)
         def wrapped(self):
             meth(self)
             meth(self)
             self._clearCache()
             meth(self)
             meth(self)
-        return mergeFunctionMetadata(meth, wrapped)
+
+        return wrapped
 
 
     def test_cache(self):
@@ -148,6 +161,21 @@ class PluginTestCase(unittest.TestCase):
         self.assertIdentical(realPlugin, tp.TestPlugin)
 
     test_cache = _withCacheness(test_cache)
+
+
+    def test_cacheRepr(self):
+        """
+        L{CachedPlugin} has a helpful C{repr} which contains relevant
+        information about it.
+        """
+        cachedDropin = plugin.getCache(self.module)[self.originalPlugin]
+        cachedPlugin = list(p for p in cachedDropin.plugins
+                            if p.name == 'TestPlugin')[0]
+        self.assertEqual(
+            repr(cachedPlugin),
+            "<CachedPlugin 'TestPlugin'/'mypackage.testplugin' "
+            "(provides 'ITestPlugin, IPlugin')>"
+        )
 
 
     def test_plugins(self):
@@ -307,12 +335,13 @@ class PluginTestCase(unittest.TestCase):
         # Add a new plugin
         FilePath(__file__).sibling('plugin_extra1.py'
             ).copyTo(self.package.child('pluginextra.py'))
+        invalidateImportCaches()
 
-        os.chmod(self.package.path, 0500)
+        os.chmod(self.package.path, 0o500)
         # Change the right of dropin.cache too for windows
-        os.chmod(cachepath.path, 0400)
-        self.addCleanup(os.chmod, self.package.path, 0700)
-        self.addCleanup(os.chmod, cachepath.path, 0700)
+        os.chmod(cachepath.path, 0o400)
+        self.addCleanup(os.chmod, self.package.path, 0o700)
+        self.addCleanup(os.chmod, cachepath.path, 0o700)
 
         # Start observing log events to see the warning
         events = []
@@ -338,7 +367,7 @@ class PluginTestCase(unittest.TestCase):
 
 
 # This is something like the Twisted plugins file.
-pluginInitFile = """
+pluginInitFile = b"""
 from twisted.plugin import pluginPackagePaths
 __path__.extend(pluginPackagePaths(__name__))
 __all__ = []
@@ -346,12 +375,14 @@ __all__ = []
 
 def pluginFileContents(name):
     return (
-        "from zope.interface import classProvides\n"
+        "from zope.interface import provider\n"
         "from twisted.plugin import IPlugin\n"
         "from twisted.test.test_plugin import ITestPlugin\n"
         "\n"
-        "class %s(object):\n"
-        "    classProvides(IPlugin, ITestPlugin)\n") % (name,)
+        "@provider(IPlugin, ITestPlugin)\n"
+        "class {0}(object):\n"
+        "    pass\n"
+    ).format(name).encode('ascii')
 
 
 def _createPluginDummy(entrypath, pluginContent, real, pluginModule):
@@ -362,7 +393,7 @@ def _createPluginDummy(entrypath, pluginContent, real, pluginModule):
     pkg = entrypath.child('plugindummy')
     pkg.createDirectory()
     if real:
-        pkg.child('__init__.py').setContent('')
+        pkg.child('__init__.py').setContent(b'')
     plugs = pkg.child('plugins')
     plugs.createDirectory()
     if real:
@@ -429,16 +460,16 @@ class DeveloperSetupTests(unittest.TestCase):
         """
         Lock the system directories, as if they were unwritable by this user.
         """
-        os.chmod(self.sysplug.path, 0555)
-        os.chmod(self.syscache.path, 0555)
+        os.chmod(self.sysplug.path, 0o555)
+        os.chmod(self.syscache.path, 0o555)
 
 
     def unlockSystem(self):
         """
         Unlock the system directories, as if they were writable by this user.
         """
-        os.chmod(self.sysplug.path, 0777)
-        os.chmod(self.syscache.path, 0777)
+        os.chmod(self.sysplug.path, 0o777)
+        os.chmod(self.syscache.path, 0o777)
 
 
     def getAllPlugins(self):
@@ -468,6 +499,7 @@ class DeveloperSetupTests(unittest.TestCase):
         Change the Python environment back to what it was before the test was
         started.
         """
+        invalidateImportCaches()
         sys.modules.clear()
         sys.modules.update(self.savedModules)
         sys.path[:] = self.savedPath
@@ -515,7 +547,16 @@ class DeveloperSetupTests(unittest.TestCase):
         os.utime(mypath.path, (x, x))
         pyc = mypath.sibling('stale.pyc')
         # compile it
-        compileall.compile_dir(self.appPackage.path, quiet=1)
+        if _PY3:
+            # On python 3, don't use the __pycache__ directory; the intention
+            # of scanning for .pyc files is for configurations where you want
+            # to intentionally include them, which means we _don't_ scan for
+            # them inside cache directories.
+            extra = dict(legacy=True)
+        else:
+            # On python 2 this option doesn't exist.
+            extra = dict()
+        compileall.compile_dir(self.appPackage.path, quiet=1, **extra)
         os.utime(pyc.path, (x, x))
         # Eliminate the other option.
         mypath.remove()
@@ -613,7 +654,7 @@ class AdjacentPackageTests(unittest.TestCase):
         directory = root.child(name)
         package = directory.child('dummy')
         package.makedirs()
-        package.child('__init__.py').setContent('')
+        package.child('__init__.py').setContent(b'')
         plugins = package.child('plugins')
         plugins.makedirs()
         plugins.child('__init__.py').setContent(pluginInitFile)
@@ -712,7 +753,7 @@ class PackagePathTests(unittest.TestCase):
         root = FilePath(self.mktemp())
         foo = root.child('foo').child('dummy').child('plugins')
         foo.makedirs()
-        foo.child('__init__.py').setContent('')
+        foo.child('__init__.py').setContent(b'')
         sys.path = [root.child('foo').path, root.child('bar').path]
         self.assertEqual(
             plugin.pluginPackagePaths('dummy.plugins'),

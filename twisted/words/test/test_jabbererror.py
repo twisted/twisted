@@ -15,7 +15,7 @@ NS_STREAMS = 'http://etherx.jabber.org/streams'
 NS_XMPP_STREAMS = 'urn:ietf:params:xml:ns:xmpp-streams'
 NS_XMPP_STANZAS = 'urn:ietf:params:xml:ns:xmpp-stanzas'
 
-class BaseErrorTest(unittest.TestCase):
+class BaseErrorTests(unittest.TestCase):
 
     def test_getElementPlain(self):
         """
@@ -56,7 +56,7 @@ class BaseErrorTest(unittest.TestCase):
         self.assertEqual(len(element.children), 2)
         self.assertEqual(element.myerror, ac)
 
-class StreamErrorTest(unittest.TestCase):
+class StreamErrorTests(unittest.TestCase):
 
     def test_getElementPlain(self):
         """
@@ -84,7 +84,7 @@ class StreamErrorTest(unittest.TestCase):
 
 
 
-class StanzaErrorTest(unittest.TestCase):
+class StanzaErrorTests(unittest.TestCase):
     """
     Tests for L{error.StreamError}.
     """
@@ -164,7 +164,7 @@ class StanzaErrorTest(unittest.TestCase):
 
 
 
-class ParseErrorTest(unittest.TestCase):
+class ParseErrorTests(unittest.TestCase):
     """
     Tests for L{error._parseError}.
     """
@@ -216,18 +216,6 @@ class ParseErrorTest(unittest.TestCase):
         self.assertEqual('en_US', result['textLang'])
 
 
-    def test_textLangInherited(self):
-        """
-        Test parsing of an error element with a text with inherited language.
-        """
-        text = self.error.addElement(('errorns', 'text'))
-        self.error[NS_XML, 'lang'] = 'en_US'
-        text.addContent('test')
-        result = error._parseError(self.error, 'errorns')
-        self.assertEqual('en_US', result['textLang'])
-    test_textLangInherited.todo = "xml:lang inheritance not implemented"
-
-
     def test_appCondition(self):
         """
         Test parsing of an error element with an app specific condition.
@@ -248,7 +236,7 @@ class ParseErrorTest(unittest.TestCase):
 
 
 
-class ExceptionFromStanzaTest(unittest.TestCase):
+class ExceptionFromStanzaTests(unittest.TestCase):
 
     def test_basic(self):
         """
@@ -319,7 +307,7 @@ class ExceptionFromStanzaTest(unittest.TestCase):
         self.assertEqual('Unable to resolve hostname.', result.text)
         self.assertEqual([p], result.children)
 
-class ExceptionFromStreamErrorTest(unittest.TestCase):
+class ExceptionFromStreamErrorTests(unittest.TestCase):
 
     def test_basic(self):
         """

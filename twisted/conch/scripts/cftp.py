@@ -428,6 +428,8 @@ class StdioClient(basic.LineReceiver):
     def _cbPutTargetAttrs(self, attrs, path, local):
         if not stat.S_ISDIR(attrs['permissions']):
             return "Wildcard put with non-directory target."
+        # FIXME:7037:
+        # Check what `files` variable should do here.
         return self._cbPutMultipleNext(None, files, path)
 
     def _cbPutMultipleNext(self, res, files, path):
@@ -809,7 +811,7 @@ class SSHSession(channel.SSHChannel):
 
     def eofReceived(self):
         log.msg('got eof')
-        self.stdio.closeStdin()
+        self.stdio.loseWriteConnection()
 
     def closeReceived(self):
         log.msg('remote side closed %s' % self)

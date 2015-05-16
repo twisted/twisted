@@ -7,7 +7,7 @@
 External server-side components.
 
 Most Jabber server implementations allow for add-on components that act as a
-seperate entity on the Jabber network, but use the server-to-server
+separate entity on the Jabber network, but use the server-to-server
 functionality of a regular Jabber IM server. These so-called 'external
 components' are connected to the Jabber server using the Jabber Component
 Protocol as defined in U{JEP-0114<http://www.jabber.org/jeps/jep-0114.html>}.
@@ -34,9 +34,9 @@ def componentFactory(componentid, password):
     XML stream factory for external server-side components.
 
     @param componentid: JID of the component.
-    @type componentid: L{unicode}
+    @type componentid: C{unicode}
     @param password: password used to authenticate to the server.
-    @type password: L{str}
+    @type password: C{str}
     """
     a = ConnectComponentAuthenticator(componentid, password)
     return xmlstream.XmlStreamFactory(a)
@@ -84,10 +84,10 @@ class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
 
     def __init__(self, componentjid, password):
         """
-        @type componentjid: L{str}
+        @type componentjid: C{str}
         @param componentjid: Jabber ID that this component wishes to bind to.
 
-        @type password: L{str}
+        @type password: C{str}
         @param password: Password/secret this component uses to authenticate.
         """
         # Note that we are sending 'to' our desired component JID.

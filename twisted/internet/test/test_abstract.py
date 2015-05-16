@@ -6,11 +6,13 @@ Tests for L{twisted.internet.abstract}, a collection of APIs for implementing
 reactors.
 """
 
-from twisted.trial.unittest import TestCase
+from __future__ import division, absolute_import
+
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.internet.abstract import isIPv6Address
 
-class IPv6AddressTests(TestCase):
+class IPv6AddressTests(SynchronousTestCase):
     """
     Tests for L{isIPv6Address}, a function for determining if a particular
     string is an IPv6 address literal.

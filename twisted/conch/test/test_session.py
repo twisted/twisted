@@ -9,7 +9,7 @@ See also RFC 4254.
 
 import os, signal, sys, struct
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import ProcessTerminated, ProcessDone
@@ -59,6 +59,7 @@ class StubAvatar:
 
 
 
+@implementer(session.ISession)
 class StubSessionForStubAvatar(object):
     """
     A stub ISession implementation for our StubAvatar.  The instance
@@ -83,11 +84,6 @@ class StubSessionForStubAvatar(object):
     @ivar gotEOF: if present, an EOF message was received.
     @ivar gotClosed: if present, a closed message was received.
     """
-
-
-    implements(session.ISession)
-
-
     def __init__(self, avatar):
         """
         Store the avatar we're adapting.
@@ -498,7 +494,7 @@ class StubClient(object):
 
 
 
-class SessionInterfaceTestCase(unittest.TestCase):
+class SessionInterfaceTests(unittest.TestCase):
     """
     Tests for the SSHSession class interface.  This interface is not ideal, but
     it is tested in order to maintain backwards compatibility.
@@ -533,8 +529,8 @@ class SessionInterfaceTestCase(unittest.TestCase):
         s = session.SSHSession(avatar=object) # use object because it doesn't
                                               # have an adapter
         self.assertEqual(s.buf, '')
-        self.assertIdentical(s.client, None)
-        self.assertIdentical(s.session, None)
+        self.assertIs(s.client, None)
+        self.assertIs(s.session, None)
 
 
     def test_client_dataReceived(self):
@@ -591,7 +587,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         ret = self.session.requestReceived(
             'subsystem', common.NS('BadSubsystem'))
         self.assertFalse(ret)
-        self.assertIdentical(self.session.client, None)
+        self.assertIs(self.session.client, None)
 
 
     def test_lookupSubsystem(self):
@@ -604,8 +600,8 @@ class SessionInterfaceTestCase(unittest.TestCase):
             'subsystem', common.NS('TestSubsystem') + 'data')
         self.assertTrue(ret)
         self.assertIsInstance(self.session.client, protocol.ProcessProtocol)
-        self.assertIdentical(self.session.client.transport.proto,
-                             self.session.avatar.subsystem)
+        self.assertIs(self.session.client.transport.proto,
+                      self.session.avatar.subsystem)
 
 
 
@@ -620,8 +616,8 @@ class SessionInterfaceTestCase(unittest.TestCase):
         ret = s.request_subsystem(
             common.NS('subsystem') + 'data')
         self.assertTrue(ret)
-        self.assertNotIdentical(s.client, None)
-        self.assertIdentical(s.conn.closes.get(s), None)
+        self.assertIsNot(s.client, None)
+        self.assertIs(s.conn.closes.get(s), None)
         s.eofReceived()
         self.assertTrue(s.conn.closes.get(s))
         # these should not raise errors
@@ -687,8 +683,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.assertSessionIsStubSession()
         self.assertIsInstance(self.session.client,
                               session.SSHSessionProcessProtocol)
-        self.assertIdentical(self.session.session.shellProtocol,
-                self.session.client)
+        self.assertIs(self.session.session.shellProtocol, self.session.client)
         # doesn't get a shell the second time
         self.assertFalse(self.session.requestReceived('shell', ''))
         self.assertRequestRaisedRuntimeError()
@@ -723,15 +718,14 @@ class SessionInterfaceTestCase(unittest.TestCase):
                                            common.NS('failure'))
         self.assertFalse(ret)
         self.assertRequestRaisedRuntimeError()
-        self.assertIdentical(self.session.client, None)
+        self.assertIs(self.session.client, None)
 
         self.assertTrue(self.session.requestReceived('exec',
                                                      common.NS('success')))
         self.assertSessionIsStubSession()
         self.assertIsInstance(self.session.client,
                               session.SSHSessionProcessProtocol)
-        self.assertIdentical(self.session.session.execProtocol,
-                self.session.client)
+        self.assertIs(self.session.session.execProtocol, self.session.client)
         self.assertEqual(self.session.session.execCommandLine,
                 'success')
 
@@ -811,7 +805,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         When a close is received, the session should send a close message.
         """
         ret = self.session.closeReceived()
-        self.assertIdentical(ret, None)
+        self.assertIs(ret, None)
         self.assertTrue(self.session.conn.closes[self.session])
 
 
@@ -826,7 +820,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
 
 
 
-class SessionWithNoAvatarTestCase(unittest.TestCase):
+class SessionWithNoAvatarTests(unittest.TestCase):
     """
     Test for the SSHSession interface.  Several of the methods (request_shell,
     request_exec, request_pty_req, request_window_change) would create a
@@ -838,7 +832,7 @@ class SessionWithNoAvatarTestCase(unittest.TestCase):
     def setUp(self):
         self.session = session.SSHSession()
         self.session.avatar = StubAvatar()
-        self.assertIdentical(self.session.session, None)
+        self.assertIs(self.session.session, None)
 
 
     def assertSessionProvidesISession(self):
@@ -892,7 +886,7 @@ class SessionWithNoAvatarTestCase(unittest.TestCase):
 
 
 
-class WrappersTestCase(unittest.TestCase):
+class WrappersTests(unittest.TestCase):
     """
     A test for the wrapProtocol and wrapProcessProtocol functions.
     """
@@ -934,7 +928,7 @@ class WrappersTestCase(unittest.TestCase):
 
 
 
-class TestHelpers(unittest.TestCase):
+class HelpersTests(unittest.TestCase):
     """
     Tests for the 4 helper functions: parseRequest_* and packRequest_*.
     """
@@ -1009,7 +1003,7 @@ class TestHelpers(unittest.TestCase):
 
 
 
-class SSHSessionProcessProtocolTestCase(unittest.TestCase):
+class SSHSessionProcessProtocolTests(unittest.TestCase):
     """
     Tests for L{SSHSessionProcessProtocol}.
     """
@@ -1239,7 +1233,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
 
 
 
-class SSHSessionClientTestCase(unittest.TestCase):
+class SSHSessionClientTests(unittest.TestCase):
     """
     SSHSessionClient is an obsolete class used to connect standard IO to
     an SSHSession.

@@ -2,6 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from twisted.python.reflect import namedAny
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -99,7 +100,7 @@ class ByteGroupingsMixin(MockMixin):
 
 del _byteGroupingTestTemplate
 
-class ServerArrowKeys(ByteGroupingsMixin, unittest.TestCase):
+class ServerArrowKeysTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
 
     # All the arrow keys once
@@ -112,10 +113,10 @@ class ServerArrowKeys(ByteGroupingsMixin, unittest.TestCase):
                       parser.RIGHT_ARROW, parser.LEFT_ARROW):
             result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (arrow, None))
             self.assertEqual(occurrences(result), [])
-        self.failIf(occurrences(proto))
+        self.assertFalse(occurrences(proto))
 
 
-class PrintableCharacters(ByteGroupingsMixin, unittest.TestCase):
+class PrintableCharactersTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
 
     # Some letters and digits, first on their own, then capitalized,
@@ -135,9 +136,9 @@ class PrintableCharacters(ByteGroupingsMixin, unittest.TestCase):
             self.assertEqual(occurrences(result), [])
 
         occs = occurrences(proto)
-        self.failIf(occs, "%r should have been []" % (occs,))
+        self.assertFalse(occs, "%r should have been []" % (occs,))
 
-class ServerFunctionKeys(ByteGroupingsMixin, unittest.TestCase):
+class ServerFunctionKeysTests(ByteGroupingsMixin, unittest.TestCase):
     """Test for parsing and dispatching function keys (F1 - F12)
     """
     protocolFactory = ServerProtocol
@@ -156,9 +157,9 @@ class ServerFunctionKeys(ByteGroupingsMixin, unittest.TestCase):
             funcArg = getattr(parser, 'F%d' % (funcNum,))
             result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (funcArg, None))
             self.assertEqual(occurrences(result), [])
-        self.failIf(occurrences(proto))
+        self.assertFalse(occurrences(proto))
 
-class ClientCursorMovement(ByteGroupingsMixin, unittest.TestCase):
+class ClientCursorMovementTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ClientProtocol
 
     d2 = "\x1b[2B"
@@ -176,9 +177,9 @@ class ClientCursorMovement(ByteGroupingsMixin, unittest.TestCase):
                                 ('Backward', 2), ('Up', 1), ('Backward', 2)]:
             result = self.assertCall(occurrences(proto).pop(0), "cursor" + method, (count,))
             self.assertEqual(occurrences(result), [])
-        self.failIf(occurrences(proto))
+        self.assertFalse(occurrences(proto))
 
-class ClientControlSequences(unittest.TestCase, MockMixin):
+class ClientControlSequencesTests(unittest.TestCase, MockMixin):
     def setUp(self):
         self.transport = StringTransport()
         self.proto = Mock()
@@ -186,7 +187,7 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
         self.parser.factory = self
         self.parser.makeConnection(self.transport)
         result = self.assertCall(occurrences(self.proto).pop(0), "makeConnection", (self.parser,))
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
     def testSimpleCardinals(self):
         self.parser.dataReceived(
@@ -196,36 +197,36 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
         for meth in ("Down", "Up", "Forward", "Backward"):
             for count in (1, 2, 20, 200):
                 result = self.assertCall(occs.pop(0), "cursor" + meth, (count,))
-                self.failIf(occurrences(result))
-        self.failIf(occs)
+                self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testScrollRegion(self):
         self.parser.dataReceived('\x1b[5;22r\x1b[r')
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "setScrollRegion", (5, 22))
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "setScrollRegion", (None, None))
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testHeightAndWidth(self):
         self.parser.dataReceived("\x1b#3\x1b#4\x1b#5\x1b#6")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "doubleHeightLine", (True,))
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "doubleHeightLine", (False,))
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "singleWidthLine")
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "doubleWidthLine")
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testCharacterSet(self):
         self.parser.dataReceived(
@@ -235,74 +236,74 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
         for which in (G0, G1):
             for charset in (CS_UK, CS_US, CS_DRAWING, CS_ALTERNATE, CS_ALTERNATE_SPECIAL):
                 result = self.assertCall(occs.pop(0), "selectCharacterSet", (charset, which))
-                self.failIf(occurrences(result))
-        self.failIf(occs)
+                self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testShifting(self):
         self.parser.dataReceived("\x15\x14")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "shiftIn")
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "shiftOut")
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testSingleShifts(self):
         self.parser.dataReceived("\x1bN\x1bO")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "singleShift2")
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "singleShift3")
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testKeypadMode(self):
         self.parser.dataReceived("\x1b=\x1b>")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "applicationKeypadMode")
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "numericKeypadMode")
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testCursor(self):
         self.parser.dataReceived("\x1b7\x1b8")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "saveCursor")
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "restoreCursor")
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testReset(self):
         self.parser.dataReceived("\x1bc")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "reset")
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testIndex(self):
         self.parser.dataReceived("\x1bD\x1bM\x1bE")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "index")
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "reverseIndex")
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "nextLine")
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testModes(self):
         self.parser.dataReceived(
@@ -312,11 +313,11 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "setModes", ([modes.KAM, modes.IRM, modes.LNM],))
-        self.failIf(occurrences(result))
+        self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "resetModes", ([modes.KAM, modes.IRM, modes.LNM],))
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testErasure(self):
         self.parser.dataReceived(
@@ -327,11 +328,11 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
                      "eraseToDisplayEnd", "eraseToDisplayBeginning",
                      "eraseDisplay"):
             result = self.assertCall(occs.pop(0), meth)
-            self.failIf(occurrences(result))
+            self.assertFalse(occurrences(result))
 
         result = self.assertCall(occs.pop(0), "deleteCharacter", (3,))
-        self.failIf(occurrences(result))
-        self.failIf(occs)
+        self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testLineDeletion(self):
         self.parser.dataReceived("\x1b[M\x1b[3M")
@@ -339,8 +340,8 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
 
         for arg in (1, 3):
             result = self.assertCall(occs.pop(0), "deleteLine", (arg,))
-            self.failIf(occurrences(result))
-        self.failIf(occs)
+            self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testLineInsertion(self):
         self.parser.dataReceived("\x1b[L\x1b[3L")
@@ -348,8 +349,8 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
 
         for arg in (1, 3):
             result = self.assertCall(occs.pop(0), "insertLine", (arg,))
-            self.failIf(occurrences(result))
-        self.failIf(occs)
+            self.assertFalse(occurrences(result))
+        self.assertFalse(occs)
 
     def testCursorPosition(self):
         methods(self.proto)['reportCursorPosition'] = (6, 7)
@@ -461,7 +462,7 @@ class ServerProtocolOutputTests(unittest.TestCase):
 
 
 
-class Deprecations(unittest.TestCase):
+class DeprecationsTests(unittest.TestCase):
     """
     Tests to ensure deprecation of L{insults.colors} and L{insults.client}
     """
@@ -471,7 +472,7 @@ class Deprecations(unittest.TestCase):
         Ensures that the correct deprecation warning was issued.
         """
         warnings = self.flushWarnings()
-        self.assertIdentical(warnings[0]['category'], DeprecationWarning)
+        self.assertIs(warnings[0]['category'], DeprecationWarning)
         self.assertEqual(warnings[0]['message'], message)
         self.assertEqual(len(warnings), 1)
 
@@ -480,7 +481,7 @@ class Deprecations(unittest.TestCase):
         """
         The L{insults.colors} module is deprecated
         """
-        from twisted.conch.insults import colors
+        namedAny('twisted.conch.insults.colors')
         self.ensureDeprecated("twisted.conch.insults.colors was deprecated "
                               "in Twisted 10.1.0: Please use "
                               "twisted.conch.insults.helper instead.")
@@ -490,7 +491,7 @@ class Deprecations(unittest.TestCase):
         """
         The L{insults.client} module is deprecated
         """
-        from twisted.conch.insults import client
+        namedAny('twisted.conch.insults.client')
         self.ensureDeprecated("twisted.conch.insults.client was deprecated "
                               "in Twisted 10.1.0: Please use "
                               "twisted.conch.insults.insults instead.")

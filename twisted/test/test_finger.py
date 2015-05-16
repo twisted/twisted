@@ -10,7 +10,7 @@ from twisted.protocols import finger
 from twisted.test.proto_helpers import StringTransport
 
 
-class FingerTestCase(unittest.TestCase):
+class FingerTests(unittest.TestCase):
     """
     Tests for L{finger.Finger}.
     """

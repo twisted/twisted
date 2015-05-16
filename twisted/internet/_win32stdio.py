@@ -30,13 +30,14 @@ class StandardIO(_pollingfile._PollingTimer):
     disconnecting = False
     disconnected = False
 
-    def __init__(self, proto):
+    def __init__(self, proto, reactor=None):
         """
         Start talking to standard IO with the given protocol.
 
         Also, put it stdin/stdout/stderr into binary mode.
         """
-        from twisted.internet import reactor
+        if reactor is None:
+            from twisted.internet import reactor
 
         for stdfd in range(0, 1, 2):
             msvcrt.setmode(stdfd, os.O_BINARY)

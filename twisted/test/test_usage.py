@@ -5,6 +5,8 @@
 Tests for L{twisted.python.usage}, a command line option parsing library.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 from twisted.python import usage
 
@@ -34,9 +36,10 @@ class WellBehaved(usage.Options):
 
 
 
-class ParseCorrectnessTest(unittest.TestCase):
+class ParseCorrectnessTests(unittest.TestCase):
     """
-    Test Options.parseArgs for correct values under good conditions.
+    Test L{usage.Options.parseOptions} for correct values under
+    good conditions.
     """
     def setUp(self):
         """
@@ -53,7 +56,7 @@ class ParseCorrectnessTest(unittest.TestCase):
 
     def test_checkParameters(self):
         """
-        Checking that parameters have correct values.
+        Parameters have correct values.
         """
         self.assertEqual(self.nice.opts['long'], "Alpha")
         self.assertEqual(self.nice.opts['another'], "Beta")
@@ -62,14 +65,14 @@ class ParseCorrectnessTest(unittest.TestCase):
 
     def test_checkFlags(self):
         """
-        Checking that flags have correct values.
+        Flags have correct values.
         """
         self.assertEqual(self.nice.opts['aflag'], 1)
         self.assertEqual(self.nice.opts['flout'], 0)
 
     def test_checkCustoms(self):
         """
-        Checking that custom flags and parameters have correct values.
+        Custom flags and parameters have correct values.
         """
         self.assertEqual(self.nice.opts['myflag'], "PONY!")
         self.assertEqual(self.nice.opts['myparam'], "Tofu WITH A PONY!")
@@ -94,16 +97,16 @@ class TypedOptions(usage.Options):
 
 
 
-class TypedTestCase(unittest.TestCase):
+class TypedTests(unittest.TestCase):
     """
-    Test Options.parseArgs for options with forced types.
+    Test L{usage.Options.parseOptions} for options with forced types.
     """
     def setUp(self):
         self.usage = TypedOptions()
 
     def test_defaultValues(self):
         """
-        Test parsing of default values.
+        Default values are parsed.
         """
         argV = []
         self.usage.parseOptions(argV)
@@ -117,7 +120,7 @@ class TypedTestCase(unittest.TestCase):
 
     def test_parsingValues(self):
         """
-        Test basic parsing of int and float values.
+        int and float values are parsed.
         """
         argV = ("--fooint 912 --foofloat -823.1 "
                 "--eggint 32 --eggfloat 21").split()
@@ -151,7 +154,7 @@ class TypedTestCase(unittest.TestCase):
 
     def test_invalidValues(self):
         """
-        Check that passing wrong values raises an error.
+        Passing wrong values raises an error.
         """
         argV = "--fooint egg".split()
         self.assertRaises(usage.UsageError, self.usage.parseOptions, argV)
@@ -175,13 +178,13 @@ class WeirdCallableOptions(usage.Options):
     ]
 
 
-class WrongTypedTestCase(unittest.TestCase):
+class WrongTypedTests(unittest.TestCase):
     """
-    Test Options.parseArgs for wrong coerce options.
+    Test L{usage.Options.parseOptions} for wrong coerce options.
     """
     def test_nonCallable(self):
         """
-        Check that using a non callable type fails.
+        Using a non-callable type fails.
         """
         us =  WrongTypedOptions()
         argV = "--barwrong egg".split()
@@ -189,8 +192,7 @@ class WrongTypedTestCase(unittest.TestCase):
 
     def test_notCalledInDefault(self):
         """
-        Test that the coerce functions are not called if no values are
-        provided.
+        The coerce functions are not called if no values are provided.
         """
         us = WeirdCallableOptions()
         argV = []
@@ -198,7 +200,7 @@ class WrongTypedTestCase(unittest.TestCase):
 
     def test_weirdCallable(self):
         """
-        Test what happens when coerce functions raise errors.
+        Errors raised by coerce functions are handled properly.
         """
         us = WeirdCallableOptions()
         argV = "--foowrong blah".split()
@@ -212,7 +214,7 @@ class WrongTypedTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, us.parseOptions, argV)
 
 
-class OutputTest(unittest.TestCase):
+class OutputTests(unittest.TestCase):
     def test_uppercasing(self):
         """
         Error output case adjustment does not mangle options
@@ -253,9 +255,14 @@ class SubCommandOptions(usage.Options):
         ]
 
 
-class SubCommandTest(unittest.TestCase):
-
+class SubCommandTests(unittest.TestCase):
+    """
+    Test L{usage.Options.parseOptions} for options with subcommands.
+    """
     def test_simpleSubcommand(self):
+        """
+        A subcommand is recognized.
+        """
         o = SubCommandOptions()
         o.parseOptions(['--europian-swallow', 'inquisition'])
         self.assertEqual(o['europian-swallow'], True)
@@ -265,6 +272,9 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
     def test_subcommandWithFlagsAndOptions(self):
+        """
+        Flags and options of a subcommand are assigned.
+        """
         o = SubCommandOptions()
         o.parseOptions(['inquisition', '--expect', '--torture-device=feather'])
         self.assertEqual(o['europian-swallow'], False)
@@ -274,6 +284,9 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
     def test_subcommandAliasWithFlagsAndOptions(self):
+        """
+        Flags and options of a subcommand alias are assigned.
+        """
         o = SubCommandOptions()
         o.parseOptions(['inquest', '--expect', '--torture-device=feather'])
         self.assertEqual(o['europian-swallow'], False)
@@ -283,6 +296,9 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
     def test_anotherSubcommandWithFlagsAndOptions(self):
+        """
+        Flags and options of another subcommand are assigned.
+        """
         o = SubCommandOptions()
         o.parseOptions(['holyquest', '--for-grail'])
         self.assertEqual(o['europian-swallow'], False)
@@ -292,6 +308,10 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o.subOptions['for-grail'], True)
 
     def test_noSubcommand(self):
+        """
+        If no subcommand is specified and no default subcommand is assigned,
+        a subcommand will not be implied.
+        """
         o = SubCommandOptions()
         o.parseOptions(['--europian-swallow'])
         self.assertEqual(o['europian-swallow'], True)
@@ -299,6 +319,9 @@ class SubCommandTest(unittest.TestCase):
         self.failIf(hasattr(o, 'subOptions'))
 
     def test_defaultSubcommand(self):
+        """
+        Flags and options in the default subcommand are assigned.
+        """
         o = SubCommandOptions()
         o.defaultSubCommand = 'inquest'
         o.parseOptions(['--europian-swallow'])
@@ -309,6 +332,10 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
     def test_subCommandParseOptionsHasParent(self):
+        """
+        The parseOptions method from the Options object specified for the
+        given subcommand is called.
+        """
         class SubOpt(usage.Options):
             def parseOptions(self, *a, **kw):
                 self.sawParent = self.parent
@@ -347,7 +374,10 @@ class SubCommandTest(unittest.TestCase):
         self.failUnlessIdentical(oBar.subOptions.parent, oBar)
 
 
-class HelpStringTest(unittest.TestCase):
+class HelpStringTests(unittest.TestCase):
+    """
+    Test generated help strings.
+    """
     def setUp(self):
         """
         Instantiate a well-behaved Options class.
@@ -365,7 +395,7 @@ class HelpStringTest(unittest.TestCase):
         """
         try:
             self.nice.__str__()
-        except Exception, e:
+        except Exception as e:
             self.fail(e)
 
     def test_whitespaceStripFlagsAndParameters(self):
@@ -379,7 +409,7 @@ class HelpStringTest(unittest.TestCase):
         self.failUnless(lines[0].find("flagallicious") >= 0)
 
 
-class PortCoerceTestCase(unittest.TestCase):
+class PortCoerceTests(unittest.TestCase):
     """
     Test the behavior of L{usage.portCoerce}.
     """
@@ -402,7 +432,7 @@ class PortCoerceTestCase(unittest.TestCase):
 
 
 
-class ZshCompleterTestCase(unittest.TestCase):
+class ZshCompleterTests(unittest.TestCase):
     """
     Test the behavior of the various L{twisted.usage.Completer} classes
     for producing output usable by zsh tab-completion system.
@@ -560,7 +590,7 @@ class ZshCompleterTestCase(unittest.TestCase):
 
 
 
-class CompleterNotImplementedTestCase(unittest.TestCase):
+class CompleterNotImplementedTests(unittest.TestCase):
     """
     Using an unknown shell constant with the various Completer() classes
     should raise NotImplementedError
@@ -582,3 +612,104 @@ class CompleterNotImplementedTestCase(unittest.TestCase):
                 action = cls(None)
             self.assertRaises(NotImplementedError, action._shellCode,
                               None, "bad_shell_type")
+
+
+
+class FlagFunctionTests(unittest.TestCase):
+    """
+    Tests for L{usage.flagFunction}.
+    """
+
+    class SomeClass(object):
+        """
+        Dummy class for L{usage.flagFunction} tests.
+        """
+        def oneArg(self, a):
+            """
+            A one argument method to be tested by L{usage.flagFunction}.
+
+            @param a: a useless argument to satisfy the function's signature.
+            """
+
+        def noArg(self):
+            """
+            A no argument method to be tested by L{usage.flagFunction}.
+            """
+
+        def manyArgs(self, a, b, c):
+            """
+            A multipe arguments method to be tested by L{usage.flagFunction}.
+
+            @param a: a useless argument to satisfy the function's signature.
+            @param b: a useless argument to satisfy the function's signature.
+            @param c: a useless argument to satisfy the function's signature.
+            """
+
+
+    def test_hasArg(self):
+        """
+        L{usage.flagFunction} returns C{False} if the method checked allows
+        exactly one argument.
+        """
+        self.assertIs(False, usage.flagFunction(self.SomeClass().oneArg))
+
+
+    def test_noArg(self):
+        """
+        L{usage.flagFunction} returns C{True} if the method checked allows
+        exactly no argument.
+        """
+        self.assertIs(True, usage.flagFunction(self.SomeClass().noArg))
+
+
+    def test_tooManyArguments(self):
+        """
+        L{usage.flagFunction} raises L{usage.UsageError} if the method checked
+        allows more than one argument.
+        """
+        exc = self.assertRaises(
+            usage.UsageError, usage.flagFunction, self.SomeClass().manyArgs)
+        self.assertEqual("Invalid Option function for manyArgs", str(exc))
+
+
+    def test_tooManyArgumentsAndSpecificErrorMessage(self):
+        """
+        L{usage.flagFunction} uses the given method name in the error message
+        raised when the method allows too many arguments.
+        """
+        exc = self.assertRaises(
+            usage.UsageError,
+            usage.flagFunction, self.SomeClass().manyArgs, "flubuduf")
+        self.assertEqual("Invalid Option function for flubuduf", str(exc))
+
+
+
+class OptionsInternalTests(unittest.TestCase):
+    """
+    Tests internal behavior of C{usage.Options}.
+    """
+
+    def test_optionsAliasesOrder(self):
+        """
+        Options which are synonyms to another option are aliases towards the
+        longest option name.
+        """
+        class Opts(usage.Options):
+            def opt_very_very_long(self):
+                """
+                This is a option method with a very long name, that is going to
+                be aliased.
+                """
+
+            opt_short = opt_very_very_long
+            opt_s = opt_very_very_long
+
+        opts = Opts()
+
+        self.assertEqual(
+            dict.fromkeys(
+                ["s", "short", "very-very-long"], "very-very-long"), {
+                "s": opts.synonyms["s"],
+                "short": opts.synonyms["short"],
+                "very-very-long": opts.synonyms["very-very-long"],
+                })

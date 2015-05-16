@@ -68,7 +68,7 @@ def pickleModule(module):
 
 def unpickleModule(name):
     'support function for copy_reg to unpickle module refs'
-    if oldModules.has_key(name):
+    if name in oldModules:
         log.msg("Module has moved: %s" % name)
         name = oldModules[name]
         log.msg(name)
@@ -202,11 +202,11 @@ class Versioned:
         bases.reverse()
         bases.append(self.__class__) # don't forget me!!
         for base in bases:
-            if base.__dict__.has_key('persistenceForgets'):
+            if 'persistenceForgets' in base.__dict__:
                 for slot in base.persistenceForgets:
-                    if dct.has_key(slot):
+                    if slot in dct:
                         del dct[slot]
-            if base.__dict__.has_key('persistenceVersion'):
+            if 'persistenceVersion' in base.__dict__:
                 dct['%s.persistenceVersion' % reflect.qual(base)] = base.persistenceVersion
         return dct
 
@@ -219,7 +219,7 @@ class Versioned:
         bases.reverse()
         bases.append(self.__class__) # don't forget me!!
         # first let's look for old-skool versioned's
-        if self.__dict__.has_key("persistenceVersion"):
+        if "persistenceVersion" in self.__dict__:
 
             # Hacky heuristic: if more than one class subclasses Versioned,
             # we'll assume that the higher version number wins for the older
@@ -244,7 +244,7 @@ class Versioned:
         for base in bases:
             # ugly hack, but it's what the user expects, really
             if (Versioned not in base.__bases__ and
-                not base.__dict__.has_key('persistenceVersion')):
+                'persistenceVersion' not in base.__dict__):
                 continue
             currentVers = base.persistenceVersion
             pverName = '%s.persistenceVersion' % reflect.qual(base)

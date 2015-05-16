@@ -6,9 +6,12 @@
 Testing support for protocols -- loopback between client and server.
 """
 
+from __future__ import division, absolute_import
+
 # system imports
 import tempfile
-from zope.interface import implements
+
+from zope.interface import implementer
 
 # Twisted Imports
 from twisted.protocols import policies
@@ -41,6 +44,7 @@ class _LoopbackQueue(object):
 
     def __nonzero__(self):
         return bool(self._queue)
+    __bool__ = __nonzero__
 
 
     def get(self):
@@ -48,13 +52,14 @@ class _LoopbackQueue(object):
 
 
 
+@implementer(IAddress)
 class _LoopbackAddress(object):
-    implements(IAddress)
+    pass
 
 
+
+@implementer(interfaces.ITransport, interfaces.IConsumer)
 class _LoopbackTransport(object):
-    implements(interfaces.ITransport, interfaces.IConsumer)
-
     disconnecting = False
     producer = None
 
@@ -62,11 +67,13 @@ class _LoopbackTransport(object):
     def __init__(self, q):
         self.q = q
 
-    def write(self, bytes):
-        self.q.put(bytes)
+    def write(self, data):
+        if not isinstance(data, bytes):
+            raise TypeError("Can only write bytes to ITransport")
+        self.q.put(data)
 
     def writeSequence(self, iovec):
-        self.q.put(''.join(iovec))
+        self.q.put(b''.join(iovec))
 
     def loseConnection(self):
         self.q.disconnect = True
@@ -126,7 +133,7 @@ def collapsingPumpPolicy(queue, target):
             break
         bytes.append(chunk)
     if bytes:
-        target.dataReceived(''.join(bytes))
+        target.dataReceived(b''.join(bytes))
 
 
 
@@ -254,10 +261,8 @@ def _loopbackAsyncContinue(ignored, server, serverToClient, client,
 
 
 
+@implementer(interfaces.ITransport, interfaces.IConsumer)
 class LoopbackRelay:
-
-    implements(interfaces.ITransport, interfaces.IConsumer)
-
     buffer = ''
     shouldLose = 0
     disconnecting = 0

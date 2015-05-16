@@ -24,12 +24,8 @@ Maintainer: Itamar Shtull-Trauring
 import warnings
 warnings.warn("wxsupport is not fully functional on Windows, wxreactor is better.")
 
-# wxPython imports
-from wxPython.wx import wxApp
-
-# twisted imports
 from twisted.internet import reactor
-from twisted.python.runtime import platformType
+
 
 
 class wxRunner:

@@ -5,19 +5,23 @@
 Tests for Trial's interaction with the Python warning system.
 """
 
-import sys, warnings
-from StringIO import StringIO
+from __future__ import division, absolute_import
 
+import sys, warnings
+
+from unittest import TestResult
+
+from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import (TestCase, _collectWarnings,
-                                    _setWarningRegistryToNone)
-from twisted.trial.reporter import TestResult
+from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial._synctest import _collectWarnings, _setWarningRegistryToNone
+
 
 class Mask(object):
     """
-    Hide a L{TestCase} definition from trial's automatic discovery mechanism.
+    Hide a test case definition from trial's automatic discovery mechanism.
     """
-    class MockTests(TestCase):
+    class MockTests(SynchronousTestCase):
         """
         A test case which is used by L{FlushWarningsTests} to verify behavior
         which cannot be verified by code inside a single test method.
@@ -41,9 +45,9 @@ class Mask(object):
 
 
 
-class FlushWarningsTests(TestCase):
+class FlushWarningsTests(SynchronousTestCase):
     """
-    Tests for L{TestCase.flushWarnings}, an API for examining the warnings
+    Tests for C{flushWarnings}, an API for examining the warnings
     emitted so far in a test.
     """
 
@@ -52,7 +56,7 @@ class FlushWarningsTests(TestCase):
         Assert that all the keys present in C{subset} are also present in
         C{set} and that the corresponding values are equal.
         """
-        for k, v in subset.iteritems():
+        for k, v in subset.items():
             self.assertEqual(set[k], v)
 
 
@@ -69,16 +73,16 @@ class FlushWarningsTests(TestCase):
 
     def test_none(self):
         """
-        If no warnings are emitted by a test, L{TestCase.flushWarnings} returns
-        an empty list.
+        If no warnings are emitted by a test, C{flushWarnings} returns an empty
+        list.
         """
         self.assertEqual(self.flushWarnings(), [])
 
 
     def test_several(self):
         """
-        If several warnings are emitted by a test, L{TestCase.flushWarnings}
-        returns a list containing all of them.
+        If several warnings are emitted by a test, C{flushWarnings} returns a
+        list containing all of them.
         """
         firstMessage = "first warning message"
         firstCategory = UserWarning
@@ -97,7 +101,7 @@ class FlushWarningsTests(TestCase):
     def test_repeated(self):
         """
         The same warning triggered twice from the same place is included twice
-        in the list returned by L{TestCase.flushWarnings}.
+        in the list returned by C{flushWarnings}.
         """
         message = "the message"
         category = RuntimeWarning
@@ -111,8 +115,8 @@ class FlushWarningsTests(TestCase):
 
     def test_cleared(self):
         """
-        After a particular warning event has been returned by
-        L{TestCase.flushWarnings}, it is not returned by subsequent calls.
+        After a particular warning event has been returned by C{flushWarnings},
+        it is not returned by subsequent calls.
         """
         message = "the message"
         category = RuntimeWarning
@@ -135,7 +139,7 @@ class FlushWarningsTests(TestCase):
         self.assertEqual(warningsShown[0]['message'], 'some warning text')
         self.assertIdentical(warningsShown[0]['category'], UserWarning)
 
-        where = case.test_unflushed.im_func.func_code
+        where = type(case).test_unflushed.__code__
         filename = where.co_filename
         # If someone edits MockTests.test_unflushed, the value added to
         # firstlineno might need to change.
@@ -180,7 +184,11 @@ class FlushWarningsTests(TestCase):
             case.run(result)
             self.assertEqual(len(result.errors), 1)
             self.assertIdentical(result.errors[0][0], case)
-            result.errors[0][1].trap(CustomWarning)
+            self.assertTrue(
+                # Different python versions differ in whether they report the
+                # fully qualified class name or just the class name.
+                result.errors[0][1].splitlines()[-1].endswith(
+                    "CustomWarning: some warning text"))
         finally:
             warnings.filters[:] = originalWarnings
 
@@ -209,8 +217,8 @@ class FlushWarningsTests(TestCase):
 
     def test_multipleFlushes(self):
         """
-        Any warnings emitted after a call to L{TestCase.flushWarnings} can be
-        flushed by another call to L{TestCase.flushWarnings}.
+        Any warnings emitted after a call to C{flushWarnings} can be flushed by
+        another call to C{flushWarnings}.
         """
         warnings.warn("first message")
         self.assertEqual(len(self.flushWarnings()), 1)
@@ -220,7 +228,7 @@ class FlushWarningsTests(TestCase):
 
     def test_filterOnOffendingFunction(self):
         """
-        The list returned by L{TestCase.flushWarnings} includes only those
+        The list returned by C{flushWarnings} includes only those
         warnings which refer to the source of the function passed as the value
         for C{offendingFunction}, if a value is passed for that parameter.
         """
@@ -262,9 +270,9 @@ class FlushWarningsTests(TestCase):
 
     def test_invalidFilter(self):
         """
-        If an object which is neither a function nor a method is included in
-        the C{offendingFunctions} list, L{TestCase.flushWarnings} raises
-        L{ValueError}.  Such a call flushes no warnings.
+        If an object which is neither a function nor a method is included in the
+        C{offendingFunctions} list, C{flushWarnings} raises L{ValueError}.  Such
+        a call flushes no warnings.
         """
         warnings.warn("oh no")
         self.assertRaises(ValueError, self.flushWarnings, [None])
@@ -276,20 +284,21 @@ class FlushWarningsTests(TestCase):
         Warnings emitted by a function the source code of which is not
         available can still be flushed.
         """
-        package = FilePath(self.mktemp()).child('twisted_private_helper')
+        package = FilePath(self.mktemp().encode('utf-8')).child(b'twisted_private_helper')
         package.makedirs()
-        package.child('__init__.py').setContent('')
-        package.child('missingsourcefile.py').setContent('''
+        package.child(b'__init__.py').setContent(b'')
+        package.child(b'missingsourcefile.py').setContent(b'''
 import warnings
 def foo():
     warnings.warn("oh no")
 ''')
-        sys.path.insert(0, package.parent().path)
-        self.addCleanup(sys.path.remove, package.parent().path)
+        pathEntry = package.parent().path.decode('utf-8')
+        sys.path.insert(0, pathEntry)
+        self.addCleanup(sys.path.remove, pathEntry)
         from twisted_private_helper import missingsourcefile
         self.addCleanup(sys.modules.pop, 'twisted_private_helper')
         self.addCleanup(sys.modules.pop, missingsourcefile.__name__)
-        package.child('missingsourcefile.py').remove()
+        package.child(b'missingsourcefile.py').remove()
 
         missingsourcefile.foo()
         self.assertEqual(len(self.flushWarnings([missingsourcefile.foo])), 1)
@@ -306,16 +315,17 @@ def foo():
         various places.  If source files are renamed, .pyc files may not be
         regenerated, but they will contain incorrect filenames.
         """
-        package = FilePath(self.mktemp()).child('twisted_private_helper')
+        package = FilePath(self.mktemp().encode('utf-8')).child(b'twisted_private_helper')
         package.makedirs()
-        package.child('__init__.py').setContent('')
-        package.child('module.py').setContent('''
+        package.child(b'__init__.py').setContent(b'')
+        package.child(b'module.py').setContent(b'''
 import warnings
 def foo():
     warnings.warn("oh no")
 ''')
-        sys.path.insert(0, package.parent().path)
-        self.addCleanup(sys.path.remove, package.parent().path)
+        pathEntry = package.parent().path.decode('utf-8')
+        sys.path.insert(0, pathEntry)
+        self.addCleanup(sys.path.remove, pathEntry)
 
         # Import it to cause pycs to be generated
         from twisted_private_helper import module
@@ -325,8 +335,18 @@ def foo():
         del sys.modules['twisted_private_helper']
         del sys.modules[module.__name__]
 
+        # Some Python versions have extra state related to the just
+        # imported/renamed package.  Clean it up too.  See also
+        # http://bugs.python.org/issue15912
+        try:
+            from importlib import invalidate_caches
+        except ImportError:
+            pass
+        else:
+            invalidate_caches()
+
         # Rename the source directory
-        package.moveTo(package.sibling('twisted_renamed_helper'))
+        package.moveTo(package.sibling(b'twisted_renamed_helper'))
 
         # Import the newly renamed version
         from twisted_renamed_helper import module
@@ -346,7 +366,7 @@ class FakeWarning(Warning):
 
 
 
-class CollectWarningsTests(TestCase):
+class CollectWarningsTests(SynchronousTestCase):
     """
     Tests for L{_collectWarnings}.
     """

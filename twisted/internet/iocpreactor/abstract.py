@@ -22,7 +22,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
     """
     File handle that can read and write asynchronously
     """
-    implements(interfaces.IProducer, interfaces.IConsumer,
+    implements(interfaces.IPushProducer, interfaces.IConsumer,
                interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
     # read stuff
     maxReadBuffers = 16
@@ -226,7 +226,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
                     # do so.
                     self.connectionLost(failure.Failure(main.CONNECTION_DONE))
                 elif self._writeDisconnecting:
-                    # I was previously asked to to half-close the connection.
+                    # I was previously asked to half-close the connection.
                     self._writeDisconnected = True
                     self._closeWriteConnection()
                 return False
@@ -384,8 +384,8 @@ class FileHandle(_ConsumerMixin, _LogOwner):
     # producer interface implementation
 
     def resumeProducing(self):
-        assert self.connected and not self.disconnecting
-        self.startReading()
+        if self.connected and not self.disconnecting:
+            self.startReading()
 
 
     def pauseProducing(self):

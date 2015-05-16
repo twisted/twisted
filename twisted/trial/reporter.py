@@ -8,24 +8,30 @@
 Defines classes that handle the results of tests.
 """
 
-import sys, os
+from __future__ import division, absolute_import
+
+import sys
+import os
 import time
 import warnings
+import unittest as pyunit
 
-from twisted.python.compat import set
+from zope.interface import implementer
+
 from twisted.python import reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from twisted.python.util import OrderedDict, untilConcludes
+from twisted.python.util import untilConcludes
+try:
+    from collections import OrderedDict
+except ImportError:
+    from twisted.python.util import OrderedDict
 from twisted.trial import itrial, util
 
 try:
     from subunit import TestProtocolClient
 except ImportError:
     TestProtocolClient = None
-from zope.interface import implements
-
-pyunit = __import__('unittest')
 
 
 class BrokenTestCaseWarning(Warning):
@@ -37,7 +43,7 @@ class BrokenTestCaseWarning(Warning):
 class SafeStream(object):
     """
     Wraps a stream object so that all C{write} calls are wrapped in
-    L{untilConcludes}.
+    L{untilConcludes<twisted.python.util.untilConcludes>}.
     """
 
     def __init__(self, original):
@@ -50,6 +56,8 @@ class SafeStream(object):
         return untilConcludes(self.original.write, *a, **kw)
 
 
+
+@implementer(itrial.IReporter)
 class TestResult(pyunit.TestResult, object):
     """
     Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
@@ -57,7 +65,6 @@ class TestResult(pyunit.TestResult, object):
     @ivar successes: count the number of successes achieved by the test run.
     @type successes: C{int}
     """
-    implements(itrial.IReporter)
 
     def __init__(self):
         super(TestResult, self).__init__()
@@ -67,6 +74,7 @@ class TestResult(pyunit.TestResult, object):
         self.successes = 0
         self._timings = []
 
+
     def __repr__(self):
         return ('<%s run=%d errors=%d failures=%d todos=%d dones=%d skips=%d>'
                 % (reflect.qual(self.__class__), self.testsRun,
@@ -74,8 +82,10 @@ class TestResult(pyunit.TestResult, object):
                    len(self.expectedFailures), len(self.skips),
                    len(self.unexpectedSuccesses)))
 
+
     def _getTime(self):
         return time.time()
+
 
     def _getFailure(self, error):
         """
@@ -84,6 +94,7 @@ class TestResult(pyunit.TestResult, object):
         if isinstance(error, tuple):
             return Failure(error[1], error[0], error[2])
         return error
+
 
     def startTest(self, test):
         """
@@ -94,6 +105,7 @@ class TestResult(pyunit.TestResult, object):
         super(TestResult, self).startTest(test)
         self._testStarted = self._getTime()
 
+
     def stopTest(self, test):
         """
         This must be called after the given test is completed.
@@ -102,6 +114,7 @@ class TestResult(pyunit.TestResult, object):
         """
         super(TestResult, self).stopTest(test)
         self._lastTime = self._getTime() - self._testStarted
+
 
     def addFailure(self, test, fail):
         """
@@ -112,6 +125,7 @@ class TestResult(pyunit.TestResult, object):
         """
         self.failures.append((test, self._getFailure(fail)))
 
+
     def addError(self, test, error):
         """
         Report an error that occurred while running the given test.
@@ -121,25 +135,28 @@ class TestResult(pyunit.TestResult, object):
         """
         self.errors.append((test, self._getFailure(error)))
 
+
     def addSkip(self, test, reason):
         """
         Report that the given test was skipped.
 
-        In Trial, tests can be 'skipped'. Tests are skipped mostly because there
-        is some platform or configuration issue that prevents them from being
-        run correctly.
+        In Trial, tests can be 'skipped'. Tests are skipped mostly because
+        there is some platform or configuration issue that prevents them from
+        being run correctly.
 
         @type test: L{pyunit.TestCase}
         @type reason: L{str}
         """
         self.skips.append((test, reason))
 
-    def addUnexpectedSuccess(self, test, todo):
-        """Report that the given test succeeded against expectations.
 
-        In Trial, tests can be marked 'todo'. That is, they are expected to fail.
-        When a test that is expected to fail instead succeeds, it should call
-        this method to report the unexpected success.
+    def addUnexpectedSuccess(self, test, todo):
+        """
+        Report that the given test succeeded against expectations.
+
+        In Trial, tests can be marked 'todo'. That is, they are expected to
+        fail.  When a test that is expected to fail instead succeeds, it should
+        call this method to report the unexpected success.
 
         @type test: L{pyunit.TestCase}
         @type todo: L{unittest.Todo}
@@ -147,10 +164,13 @@ class TestResult(pyunit.TestResult, object):
         # XXX - 'todo' should just be a string
         self.unexpectedSuccesses.append((test, todo))
 
-    def addExpectedFailure(self, test, error, todo):
-        """Report that the given test failed, and was expected to do so.
 
-        In Trial, tests can be marked 'todo'. That is, they are expected to fail.
+    def addExpectedFailure(self, test, error, todo):
+        """
+        Report that the given test failed, and was expected to do so.
+
+        In Trial, tests can be marked 'todo'. That is, they are expected to
+        fail.
 
         @type test: L{pyunit.TestCase}
         @type error: L{Failure}
@@ -159,31 +179,29 @@ class TestResult(pyunit.TestResult, object):
         # XXX - 'todo' should just be a string
         self.expectedFailures.append((test, error, todo))
 
+
     def addSuccess(self, test):
-        """Report that the given test succeeded.
+        """
+        Report that the given test succeeded.
 
         @type test: L{pyunit.TestCase}
         """
         self.successes += 1
 
-    def upDownError(self, method, error, warn, printStatus):
-        warnings.warn("upDownError is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=3)
 
-    def cleanupErrors(self, errs):
-        """Report an error that occurred during the cleanup between tests.
+    def wasSuccessful(self):
         """
-        warnings.warn("Cleanup errors are actual errors. Use addError. "
-                      "Deprecated in Twisted 8.0",
-                      category=DeprecationWarning, stacklevel=2)
+        Report whether or not this test suite was successful or not.
 
-    def startSuite(self, name):
-        warnings.warn("startSuite deprecated in Twisted 8.0",
-                      category=DeprecationWarning, stacklevel=2)
+        The behaviour of this method changed in L{pyunit} in Python 3.4 to
+        fail if there are any errors, failures, or unexpected successes.
+        Previous to 3.4, it was only if there were errors or failures. This
+        method implements the old behaviour for backwards compatibility reasons,
+        checking just for errors and failures.
 
-    def endSuite(self, name):
-        warnings.warn("endSuite deprecated in Twisted 8.0",
-                      category=DeprecationWarning, stacklevel=2)
+        @rtype: L{bool}
+        """
+        return len(self.failures) == len(self.errors) == 0
 
 
     def done(self):
@@ -193,6 +211,7 @@ class TestResult(pyunit.TestResult, object):
 
 
 
+@implementer(itrial.IReporter)
 class TestResultDecorator(proxyForInterface(itrial.IReporter,
                                             "_originalReporter")):
     """
@@ -202,16 +221,14 @@ class TestResultDecorator(proxyForInterface(itrial.IReporter,
     @type _originalReporter: A provider of L{itrial.IReporter}
     """
 
-    implements(itrial.IReporter)
 
 
-
+@implementer(itrial.IReporter)
 class UncleanWarningsReporterWrapper(TestResultDecorator):
     """
     A wrapper for a reporter that converts L{util.DirtyReactorAggregateError}s
     to warnings.
     """
-    implements(itrial.IReporter)
 
     def addError(self, test, error):
         """
@@ -224,6 +241,24 @@ class UncleanWarningsReporterWrapper(TestResultDecorator):
             warnings.warn(error.getErrorMessage())
         else:
             self._originalReporter.addError(test, error)
+
+
+
+@implementer(itrial.IReporter)
+class _ExitWrapper(TestResultDecorator):
+    """
+    A wrapper for a reporter that causes the reporter to stop after
+    unsuccessful tests.
+    """
+
+    def addError(self, *args, **kwargs):
+        self.shouldStop = True
+        return self._originalReporter.addError(*args, **kwargs)
+
+
+    def addFailure(self, *args, **kwargs):
+        self.shouldStop = True
+        return self._originalReporter.addFailure(*args, **kwargs)
 
 
 
@@ -299,6 +334,7 @@ class _AdaptedReporter(TestResultDecorator):
 
 
 
+@implementer(itrial.IReporter)
 class Reporter(TestResult):
     """
     A basic L{TestResult} with support for writing to a stream.
@@ -315,10 +351,8 @@ class Reporter(TestResult):
 
     @ivar _publisher: The log publisher which will be observed for warning
         events.
-    @type _publisher: L{LogPublisher} (or another type sufficiently similar)
+    @type _publisher: L{twisted.python.log.LogPublisher}
     """
-
-    implements(itrial.IReporter)
 
     _separator = '-' * 79
     _doubleSeparator = '=' * 79
@@ -358,20 +392,6 @@ class Reporter(TestResult):
                 self._stream.write('%s:%s: %s: %s\n' % key)
 
 
-    def stream(self):
-        warnings.warn("stream is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        return self._stream
-    stream = property(stream)
-
-
-    def separator(self):
-        warnings.warn("separator is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        return self._separator
-    separator = property(separator)
-
-
     def startTest(self, test):
         """
         Called when a test begins to run. Records the time when it was first
@@ -387,7 +407,7 @@ class Reporter(TestResult):
 
     def addFailure(self, test, fail):
         """
-        Called when a test fails. If L{realtime} is set, then it prints the
+        Called when a test fails. If C{realtime} is set, then it prints the
         error to the stream.
 
         @param test: L{ITestCase} that failed.
@@ -401,7 +421,7 @@ class Reporter(TestResult):
 
     def addError(self, test, error):
         """
-        Called when a test raises an error. If L{realtime} is set, then it
+        Called when a test raises an error. If C{realtime} is set, then it
         prints the error to the stream.
 
         @param test: L{ITestCase} that raised the error.
@@ -412,12 +432,6 @@ class Reporter(TestResult):
         if self.realtime:
             error = self.errors[-1][1] # guarantee it's a Failure
             self._write(self._formatFailureTraceback(error))
-
-
-    def write(self, format, *args):
-        warnings.warn("write is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        self._write(format, *args)
 
 
     def _write(self, format, *args):
@@ -434,12 +448,6 @@ class Reporter(TestResult):
         else:
             self._stream.write(s)
         untilConcludes(self._stream.flush)
-
-
-    def writeln(self, format, *args):
-        warnings.warn("writeln is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        self._writeln(format, *args)
 
 
     def _writeln(self, format, *args):
@@ -472,49 +480,77 @@ class Reporter(TestResult):
 
 
     def _trimFrames(self, frames):
-        # when a method fails synchronously, the stack looks like this:
-        #  [0]: defer.maybeDeferred()
-        #  [1]: utils.runWithWarningsSuppressed()
-        #  [2:-2]: code in the test method which failed
-        #  [-1]: unittest.fail
+        """
+        Trim frames to remove internal paths.
 
-        # when a method fails inside a Deferred (i.e., when the test method
-        # returns a Deferred, and that Deferred's errback fires), the stack
-        # captured inside the resulting Failure looks like this:
-        #  [0]: defer.Deferred._runCallbacks
-        #  [1:-2]: code in the testmethod which failed
-        #  [-1]: unittest.fail
+        When a C{SynchronousTestCase} method fails synchronously, the stack
+        looks like this:
+         - [0]: C{SynchronousTestCase._run}
+         - [1]: C{util.runWithWarningsSuppressed}
+         - [2:-2]: code in the test method which failed
+         - [-1]: C{_synctest.fail}
 
-        # as a result, we want to trim either [maybeDeferred,runWWS] or
-        # [Deferred._runCallbacks] from the front, and trim the
-        # [unittest.fail] from the end.
+        When a C{TestCase} method fails synchronously, the stack looks like
+        this:
+         - [0]: C{defer.maybeDeferred}
+         - [1]: C{utils.runWithWarningsSuppressed}
+         - [2]: C{utils.runWithWarningsSuppressed}
+         - [3:-2]: code in the test method which failed
+         - [-1]: C{_synctest.fail}
 
-        # There is also another case, when the test method is badly defined and
-        # contains extra arguments.
+        When a method fails inside a C{Deferred} (i.e., when the test method
+        returns a C{Deferred}, and that C{Deferred}'s errback fires), the stack
+        captured inside the resulting C{Failure} looks like this:
+         - [0]: C{defer.Deferred._runCallbacks}
+         - [1:-2]: code in the testmethod which failed
+         - [-1]: C{_synctest.fail}
 
+        As a result, we want to trim either [maybeDeferred, runWWS, runWWS] or
+        [Deferred._runCallbacks] or [SynchronousTestCase._run, runWWS] from the
+        front, and trim the [unittest.fail] from the end.
+
+        There is also another case, when the test method is badly defined and
+        contains extra arguments.
+
+        If it doesn't recognize one of these cases, it just returns the
+        original frames.
+
+        @param frames: The C{list} of frames from the test failure.
+
+        @return: The C{list} of frames to display.
+        """
         newFrames = list(frames)
 
         if len(frames) < 2:
             return newFrames
 
-        first = newFrames[0]
-        second = newFrames[1]
-        if (first[0] == "maybeDeferred"
-            and os.path.splitext(os.path.basename(first[1]))[0] == 'defer'
-            and second[0] == "runWithWarningsSuppressed"
-            and os.path.splitext(os.path.basename(second[1]))[0] == 'utils'):
+        firstMethod = newFrames[0][0]
+        firstFile = os.path.splitext(os.path.basename(newFrames[0][1]))[0]
+
+        secondMethod = newFrames[1][0]
+        secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
+
+        syncCase = (("_run", "_synctest"),
+                    ("runWithWarningsSuppressed", "util"))
+        asyncCase = (("maybeDeferred", "defer"),
+                     ("runWithWarningsSuppressed", "utils"))
+
+        twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
+        if twoFrames == syncCase:
             newFrames = newFrames[2:]
-        elif (first[0] == "_runCallbacks"
-              and os.path.splitext(os.path.basename(first[1]))[0] == 'defer'):
+        elif twoFrames == asyncCase:
+            newFrames = newFrames[3:]
+        elif (firstMethod, firstFile) == ("_runCallbacks", "defer"):
             newFrames = newFrames[1:]
 
         if not newFrames:
-            # The method fails before getting called, probably an argument problem
+            # The method fails before getting called, probably an argument
+            # problem
             return newFrames
 
         last = newFrames[-1]
         if (last[0].startswith('fail')
-            and os.path.splitext(os.path.basename(last[1]))[0] == 'unittest'):
+            and os.path.splitext(os.path.basename(last[1]))[0] == '_synctest'):
             newFrames = newFrames[:-1]
 
         return newFrames
@@ -524,7 +560,8 @@ class Reporter(TestResult):
         if isinstance(fail, str):
             return fail.rstrip() + '\n'
         fail.frames, frames = self._trimFrames(fail.frames), fail.frames
-        result = fail.getTraceback(detail=self.tbformat, elideFrameworkCode=True)
+        result = fail.getTraceback(detail=self.tbformat,
+                                   elideFrameworkCode=True)
         fail.frames = frames
         return result
 
@@ -586,21 +623,12 @@ class Reporter(TestResult):
         return ret
 
 
-    def printErrors(self):
-        """
-        Print all of the non-success results in full to the stream.
-        """
-        warnings.warn("printErrors is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        self._printErrors()
-
-
     def _printErrors(self):
         """
         Print all of the non-success results to the stream in full.
         """
         self._write('\n')
-        self._printResults('[SKIPPED]', self.skips, lambda x : '%s\n' % x)
+        self._printResults('[SKIPPED]', self.skips, lambda x: '%s\n' % x)
         self._printResults('[TODO]', self.expectedFailures,
                            self._printExpectedFailure)
         self._printResults('[FAIL]', self.failures,
@@ -622,18 +650,9 @@ class Reporter(TestResult):
             if num:
                 summaries.append('%s=%d' % (stat, num))
         if self.successes:
-           summaries.append('successes=%d' % (self.successes,))
-        summary = (summaries and ' ('+', '.join(summaries)+')') or ''
+            summaries.append('successes=%d' % (self.successes,))
+        summary = (summaries and ' (' + ', '.join(summaries) + ')') or ''
         return summary
-
-
-    def printSummary(self):
-        """
-        Print a line summarising the test results to the stream.
-        """
-        warnings.warn("printSummary is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        self._printSummary()
 
 
     def _printSummary(self):
@@ -657,8 +676,8 @@ class Reporter(TestResult):
         tests that were run and how long it took to run them (not including
         load time).
 
-        Expects that L{_printErrors}, L{_writeln}, L{_write}, L{_printSummary}
-        and L{_separator} are all implemented.
+        Expects that C{_printErrors}, C{_writeln}, C{_write}, C{_printSummary}
+        and C{_separator} are all implemented.
         """
         if self._publisher is not None:
             self._publisher.removeObserver(self._observeWarnings)
@@ -919,6 +938,7 @@ class _NullColorizer(object):
 
 
 
+@implementer(itrial.IReporter)
 class SubunitReporter(object):
     """
     Reports test output via Subunit.
@@ -930,8 +950,6 @@ class SubunitReporter(object):
 
     @since: 10.0
     """
-    implements(itrial.IReporter)
-
 
     def __init__(self, stream=sys.stdout, tbformat='default',
                  realtime=False, publisher=None):
@@ -1158,7 +1176,7 @@ class TreeReporter(Reporter):
         if len(segments) == 0:
             return segments
         segments = [
-            seg for seg in '.'.join(segments[:-1]), segments[-1]
+            seg for seg in ('.'.join(segments[:-1]), segments[-1])
             if len(seg) > 0]
         return segments
 

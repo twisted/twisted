@@ -7,18 +7,17 @@ Tests for the inotify wrapper in L{twisted.internet.inotify}.
 
 from twisted.internet import defer, reactor
 from twisted.python import filepath, runtime
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-try:
-    from twisted.python import _inotify
-except ImportError:
-    inotify = None
-else:
+if requireModule('twisted.python._inotify') is not None:
     from twisted.internet import inotify
+else:
+    inotify = None
 
 
 
-class TestINotify(unittest.TestCase):
+class INotifyTests(unittest.TestCase):
     """
     Define all the tests for the basic functionality exposed by
     L{inotify.INotify}.
@@ -110,7 +109,7 @@ class TestINotify(unittest.TestCase):
 
     def test_attrib(self):
         """
-        Changing the metadata of a a file in a monitored directory
+        Changing the metadata of a file in a monitored directory
         sends an C{inotify.IN_ATTRIB} event to the callback.
         """
         def operation(path):

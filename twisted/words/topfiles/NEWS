@@ -1,6 +1,148 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 15.1.0 (2015-04-02)
+=================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.words.protocols.msn is now deprecated (#6395)
+
+Other
+-----
+ - #6494
+
+
+Twisted Words 15.0.0 (2015-01-24)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #6994, #7163, #7622
+
+
+Twisted Words 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Words 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Words 14.0.0 (2014-05-08)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.protocols.jabber.sasl_mechansisms.DigestMD5 now works
+   with unicode arguments. (#5066)
+
+Other
+-----
+ - #6696
+
+
+Twisted Words 13.2.0 (2013-10-29)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.service.IRCUser now properly reports an error, in
+   response to NICK commands with non-UTF8 and non-ASCII symbols.
+   (#5780)
+
+Other
+-----
+ - #5329, #5387, #6544
+
+
+Twisted Words 13.1.0 (2013-06-23)
+=================================
+
+Features
+--------
+ - twisted.words.protocols.irc.assembleFormattedText flattens a
+   formatting structure into mIRC-formatted markup; conversely
+   twisted.words.protocols.irc.stripFormatting removes all mIRC
+   formatting from text. (#3844)
+
+Deprecations and Removals
+-------------------------
+ - The `crippled` attribute in
+   twisted.words.protocols.jabber.xmpp_stringprep is deprecated now.
+   (#5386)
+
+Other
+-----
+ - #6315, #6342, #6392, #6402, #6479, #6481, #6482
+
+
+Twisted Words 13.0.0 (2013-03-19)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.im.ircsupport no longer logs a failure whenever
+   receiving ISUPPORT messages from an IRC server. (#6263)
+
+Other
+-----
+ - #6297
+
+
+Twisted Words 12.3.0 (2012-12-20)
+=================================
+
+Improved Documentation
+----------------------
+ - The Twisted Words code examples now documents inside each example
+   description on how to run it. (#5589)
+
+
+Twisted Words 12.2.0 (2012-08-26)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #5752, #5753
+
+
+Twisted Words 12.1.0 (2012-06-02)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.DccChatFactory.buildProtocol now
+   returns the protocol object that it creates (#3179)
+ - twisted.words.im no longer offers an empty threat of a rewrite on
+   import. (#5598)
+
+Other
+-----
+ - #5555, #5595
+
+
+Twisted Words 12.0.0 (2012-02-10)
+=================================
+
+Improved Documentation
+----------------------
+ - twisted.words.im.basechat now has improved API documentation.
+   (#2458)
+
+Other
+-----
+ - #5401
+
+
 Twisted Words 11.1.0 (2011-11-15)
 =================================
 

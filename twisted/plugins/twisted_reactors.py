@@ -11,6 +11,10 @@ select = Reactor(
     'select', 'twisted.internet.selectreactor', 'select(2)-based reactor.')
 wx = Reactor(
     'wx', 'twisted.internet.wxreactor', 'wxPython integration reactor.')
+gi = Reactor(
+    'gi', 'twisted.internet.gireactor', 'GObject Introspection integration reactor.')
+gtk3 = Reactor(
+    'gtk3', 'twisted.internet.gtk3reactor', 'Gtk3 integration reactor.')
 gtk = Reactor(
     'gtk', 'twisted.internet.gtkreactor', 'Gtk1 integration reactor.')
 gtk2 = Reactor(

@@ -5,8 +5,11 @@
 Tests for L{twisted.scripts.tap2rpm}.
 """
 import os
+
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.python import procutils
+from twisted.python import versions
+from twisted.python import deprecate
 from twisted.python.failure import Failure
 from twisted.internet import utils
 from twisted.scripts import tap2rpm
@@ -378,3 +381,19 @@ class TestTap2RPM(TestCase):
 
         # Try and make an RPM from that tapfile.
         _makeRPMs(tapfile=tapfile)
+
+
+    def test_unsignedFlagDeprecationWarning(self):
+        """
+        The 'unsigned' flag in tap2rpm should be deprecated, and its use
+        should raise a warning as such.
+        """
+        config = tap2rpm.MyOptions()
+        config.parseOptions(['--unsigned'])
+        warnings = self.flushWarnings()
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            deprecate.getDeprecationWarningString(
+                config.opt_unsigned, versions.Version("Twisted", 12, 1, 0)),
+            warnings[0]['message'])
+        self.assertEqual(1, len(warnings))

@@ -44,8 +44,8 @@ class SSHConnection(service.SSHService):
         self.channels = {} # local channel ID -> subclass of SSHChannel
         self.channelsToRemoteChannel = {} # subclass of SSHChannel ->
                                           # remote channel ID
-        self.deferreds = {"global": []} # local channel -> list of deferreds 
-                            # for pending requests or 'global' -> list of 
+        self.deferreds = {"global": []} # local channel -> list of deferreds
+                            # for pending requests or 'global' -> list of
                             # deferreds for global requests
         self.transport = None # gets set later
 
@@ -144,8 +144,7 @@ class SSHConnection(service.SSHService):
                     channel.localMaxPacket)+channel.specificData)
             log.callWithLogger(channel, channel.channelOpen, packet)
         except Exception, e:
-            log.msg('channel open failed')
-            log.err(e)
+            log.err(e, 'channel open failed')
             if isinstance(e, error.ConchError):
                 textualInfo, reason = e.args
                 if isinstance(textualInfo, (int, long)):
@@ -235,7 +234,7 @@ class SSHConnection(service.SSHService):
             #packet = packet[:channel.localWindowLeft+4]
         data = common.getNS(packet[4:])[0]
         channel.localWindowLeft -= dataLength
-        if channel.localWindowLeft < channel.localWindowSize / 2:
+        if channel.localWindowLeft < channel.localWindowSize // 2:
             self.adjustWindow(channel, channel.localWindowSize - \
                                        channel.localWindowLeft)
             #log.msg('local window left: %s/%s' % (channel.localWindowLeft,
@@ -250,7 +249,7 @@ class SSHConnection(service.SSHService):
             string  data
 
         Check to make sure the other side hasn't sent too much data (more
-        than what's in the window, or or than the maximum packet size).  If
+        than what's in the window, or than the maximum packet size).  If
         they have, close the channel.  Otherwise, decrease the available
         window and pass the data and type code to the channel's
         extReceived().
@@ -264,7 +263,7 @@ class SSHConnection(service.SSHService):
             return
         data = common.getNS(packet[8:])[0]
         channel.localWindowLeft -= dataLength
-        if channel.localWindowLeft < channel.localWindowSize / 2:
+        if channel.localWindowLeft < channel.localWindowSize // 2:
             self.adjustWindow(channel, channel.localWindowSize -
                                        channel.localWindowLeft)
         log.callWithLogger(channel, channel.extReceived, typeCode, data)
@@ -308,7 +307,7 @@ class SSHConnection(service.SSHService):
         other side wants a reply, add callbacks which will send the
         reply.
         """
-        localChannel = struct.unpack('>L', packet[: 4])[0]
+        localChannel = struct.unpack('>L', packet[:4])[0]
         requestType, rest = common.getNS(packet[4:])
         wantReply = ord(rest[0])
         channel = self.channels[localChannel]
@@ -353,7 +352,7 @@ class SSHConnection(service.SSHService):
 
     def ssh_CHANNEL_SUCCESS(self, packet):
         """
-        Our channel request to the other other side succeeded.  Payload::
+        Our channel request to the other side succeeded.  Payload::
             uint32  local channel number
 
         Get the C{Deferred} out of self.deferreds and call it back.

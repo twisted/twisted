@@ -5,128 +5,39 @@
 Test cases for Twisted.names' root resolver.
 """
 
-from random import randrange
-
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
 from twisted.python.log import msg
 from twisted.trial import util
-from twisted.trial.unittest import TestCase
-from twisted.internet.defer import Deferred, succeed, gatherResults
-from twisted.internet.task import Clock
-from twisted.internet.address import IPv4Address
-from twisted.internet.interfaces import IReactorUDP, IUDPTransport
-from twisted.names.root import Resolver, lookupNameservers, lookupAddress
-from twisted.names.root import extractAuthority, discoverAuthority, retry
-from twisted.names.dns import IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME
-from twisted.names.dns import Query, Message, RRHeader, Record_A, Record_NS
+from twisted.trial.unittest import SynchronousTestCase, TestCase
+from twisted.internet.defer import Deferred, succeed, gatherResults, TimeoutError
+from twisted.internet.interfaces import IResolverSimple
+from twisted.names import client, root
+from twisted.names.root import Resolver
+from twisted.names.dns import (
+    IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
+    Name, Query, Message, RRHeader, Record_A, Record_NS)
 from twisted.names.error import DNSNameError, ResolverError
+from twisted.names.test.test_util import MemoryReactor
 
 
-class MemoryDatagramTransport(object):
+
+def getOnePayload(results):
     """
-    This L{IUDPTransport} implementation enforces the usual connection rules
-    and captures sent traffic in a list for later inspection.
-
-    @ivar _host: The host address to which this transport is bound.
-    @ivar _protocol: The protocol connected to this transport.
-    @ivar _sentPackets: A C{list} of two-tuples of the datagrams passed to
-        C{write} and the addresses to which they are destined.
-
-    @ivar _connectedTo: C{None} if this transport is unconnected, otherwise an
-        address to which all traffic is supposedly sent.
-
-    @ivar _maxPacketSize: An C{int} giving the maximum length of a datagram
-        which will be successfully handled by C{write}.
+    From the result of a L{Deferred} returned by L{IResolver.lookupAddress},
+    return the payload of the first record in the answer section.
     """
-    implements(IUDPTransport)
-
-    def __init__(self, host, protocol, maxPacketSize):
-        self._host = host
-        self._protocol = protocol
-        self._sentPackets = []
-        self._connectedTo = None
-        self._maxPacketSize = maxPacketSize
+    ans, auth, add = results
+    return ans[0].payload
 
 
-    def getHost(self):
-        """
-        Return the address which this transport is pretending to be bound
-        to.
-        """
-        return IPv4Address('UDP', *self._host)
-
-
-    def connect(self, host, port):
-        """
-        Connect this transport to the given address.
-        """
-        if self._connectedTo is not None:
-            raise ValueError("Already connected")
-        self._connectedTo = (host, port)
-
-
-    def write(self, datagram, addr=None):
-        """
-        Send the given datagram.
-        """
-        if addr is None:
-            addr = self._connectedTo
-        if addr is None:
-            raise ValueError("Need an address")
-        if len(datagram) > self._maxPacketSize:
-            raise ValueError("Packet too big")
-        self._sentPackets.append((datagram, addr))
-
-
-    def stopListening(self):
-        """
-        Shut down this transport.
-        """
-        self._protocol.stopProtocol()
-        return succeed(None)
-
-verifyClass(IUDPTransport, MemoryDatagramTransport)
-
-
-
-class MemoryReactor(Clock):
+def getOneAddress(results):
     """
-    An L{IReactorTime} and L{IReactorUDP} provider.
-
-    Time is controlled deterministically via the base class, L{Clock}.  UDP is
-    handled in-memory by connecting protocols to instances of
-    L{MemoryDatagramTransport}.
-
-    @ivar udpPorts: A C{dict} mapping port numbers to instances of
-        L{MemoryDatagramTransport}.
+    From the result of a L{Deferred} returned by L{IResolver.lookupAddress},
+    return the first IPv4 address from the answer section.
     """
-    implements(IReactorUDP)
-
-    def __init__(self):
-        Clock.__init__(self)
-        self.udpPorts = {}
-
-
-    def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
-        """
-        Pretend to bind a UDP port and connect the given protocol to it.
-        """
-        if port == 0:
-            while True:
-                port = randrange(1, 2 ** 16)
-                if port not in self.udpPorts:
-                    break
-        if port in self.udpPorts:
-            raise ValueError("Address in use")
-        transport = MemoryDatagramTransport(
-            (interface, port), protocol, maxPacketSize)
-        self.udpPorts[port] = transport
-        protocol.makeConnection(transport)
-        return transport
-
-verifyClass(IReactorUDP, MemoryReactor)
+    return getOnePayload(results).dottedQuad()
 
 
 
@@ -146,7 +57,7 @@ class RootResolverTests(TestCase):
         reactor = MemoryReactor()
         resolver = Resolver([], reactor=reactor)
         d = resolver._query(
-            Query('foo.example.com', A, IN), [('1.1.2.3', 1053)], (30,),
+            Query(b'foo.example.com', A, IN), [('1.1.2.3', 1053)], (30,),
             filter)
 
         # A UDP port should have been started.
@@ -155,24 +66,26 @@ class RootResolverTests(TestCase):
         # And a DNS packet sent.
         [(packet, address)] = transport._sentPackets
 
-        msg = Message()
-        msg.fromStr(packet)
+        message = Message()
+        message.fromStr(packet)
 
         # It should be a query with the parameters used above.
-        self.assertEqual(msg.queries, [Query('foo.example.com', A, IN)])
-        self.assertEqual(msg.answers, [])
-        self.assertEqual(msg.authority, [])
-        self.assertEqual(msg.additional, [])
+        self.assertEqual(message.queries, [Query(b'foo.example.com', A, IN)])
+        self.assertEqual(message.answers, [])
+        self.assertEqual(message.authority, [])
+        self.assertEqual(message.additional, [])
 
         response = []
         d.addCallback(response.append)
         self.assertEqual(response, [])
 
         # Once a reply is received, the Deferred should fire.
-        del msg.queries[:]
-        msg.answer = 1
-        msg.answers.append(RRHeader('foo.example.com', payload=Record_A('5.8.13.21')))
-        transport._protocol.datagramReceived(msg.toStr(), ('1.1.2.3', 1053))
+        del message.queries[:]
+        message.answer = 1
+        message.answers.append(RRHeader(
+            b'foo.example.com', payload=Record_A('5.8.13.21')))
+        transport._protocol.datagramReceived(
+            message.toStr(), ('1.1.2.3', 1053))
         return response[0]
 
 
@@ -186,7 +99,7 @@ class RootResolverTests(TestCase):
         answer, authority, additional = self._queryTest(True)
         self.assertEqual(
             answer,
-            [RRHeader('foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
+            [RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
         self.assertEqual(authority, [])
         self.assertEqual(additional, [])
 
@@ -202,7 +115,7 @@ class RootResolverTests(TestCase):
         self.assertEqual(message.queries, [])
         self.assertEqual(
             message.answers,
-            [RRHeader('foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
+            [RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21', ttl=0))])
         self.assertEqual(message.authority, [])
         self.assertEqual(message.additional, [])
 
@@ -253,7 +166,7 @@ class RootResolverTests(TestCase):
                     server = serverResponses[addr]
                 except KeyError:
                     continue
-                records = server[str(query.name), query.type]
+                records = server[query.name.name, query.type]
                 return succeed(self._respond(**records))
         resolver._query = query
         return resolver
@@ -268,20 +181,20 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('foo.example.com', A): {
-                    'authority': [('foo.example.com', Record_NS('ns1.example.com'))],
-                    'additional': [('ns1.example.com', Record_A('34.55.89.144'))],
+                (b'foo.example.com', A): {
+                    'authority': [(b'foo.example.com', Record_NS(b'ns1.example.com'))],
+                    'additional': [(b'ns1.example.com', Record_A('34.55.89.144'))],
                     },
                 },
             ('34.55.89.144', 53): {
-                ('foo.example.com', A): {
-                    'answers': [('foo.example.com', Record_A('10.0.0.1'))],
+                (b'foo.example.com', A): {
+                    'answers': [(b'foo.example.com', Record_A('10.0.0.1'))],
                     }
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('foo.example.com')
-        d.addCallback(lambda (ans, auth, add): ans[0].payload.dottedQuad())
+        d = resolver.lookupAddress(b'foo.example.com')
+        d.addCallback(getOneAddress)
         d.addCallback(self.assertEqual, '10.0.0.1')
         return d
 
@@ -310,7 +223,7 @@ class RootResolverTests(TestCase):
         }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress('foo.example.com')
-        d.addCallback(lambda (ans, auth, add): ans[0].payload)
+        d.addCallback(getOnePayload)
         d.addCallback(self.assertEqual, Record_A('10.0.0.3'))
         return d
 
@@ -322,23 +235,23 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('foo.example.com', A): {
-                    'authority': [('foo.example.com', Record_NS('ns1.example.org'))],
+                (b'foo.example.com', A): {
+                    'authority': [(b'foo.example.com', Record_NS(b'ns1.example.org'))],
                     # Conspicuous lack of an additional section naming ns1.example.com
                     },
-                ('ns1.example.org', A): {
-                    'answers': [('ns1.example.org', Record_A('10.0.0.1'))],
+                (b'ns1.example.org', A): {
+                    'answers': [(b'ns1.example.org', Record_A('10.0.0.1'))],
                     },
                 },
             ('10.0.0.1', 53): {
-                ('foo.example.com', A): {
-                    'answers': [('foo.example.com', Record_A('10.0.0.2'))],
+                (b'foo.example.com', A): {
+                    'answers': [(b'foo.example.com', Record_A('10.0.0.2'))],
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('foo.example.com')
-        d.addCallback(lambda (ans, auth, add): ans[0].payload.dottedQuad())
+        d = resolver.lookupAddress(b'foo.example.com')
+        d.addCallback(getOneAddress)
         d.addCallback(self.assertEqual, '10.0.0.2')
         return d
 
@@ -350,13 +263,13 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('foo.example.com', A): {
+                (b'foo.example.com', A): {
                     'rCode': ENAME,
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('foo.example.com')
+        d = resolver.lookupAddress(b'foo.example.com')
         return self.assertFailure(d, DNSNameError)
 
 
@@ -425,18 +338,21 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
+                (b'example.com', A): {
                     'rCode': ENAME,
                     },
-                ('example.com', NS): {
-                    'answers': [('example.com', Record_NS('ns1.example.com'))],
+                (b'example.com', NS): {
+                    'answers': [(b'example.com', Record_NS(b'ns1.example.com'))],
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupNameservers('example.com')
-        d.addCallback(lambda (ans, auth, add): str(ans[0].payload.name))
-        d.addCallback(self.assertEqual, 'ns1.example.com')
+        d = resolver.lookupNameservers(b'example.com')
+        def getOneName(results):
+            ans, auth, add = results
+            return ans[0].payload.name
+        d.addCallback(getOneName)
+        d.addCallback(self.assertEqual, Name(b'ns1.example.com'))
         return d
 
 
@@ -447,19 +363,19 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
-                    'answers': [('example.com', Record_CNAME('example.net')),
-                                ('example.net', Record_A('10.0.0.7'))],
+                (b'example.com', A): {
+                    'answers': [(b'example.com', Record_CNAME(b'example.net')),
+                                (b'example.net', Record_A('10.0.0.7'))],
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('example.com')
-        d.addCallback(lambda (ans, auth, add): ans)
+        d = resolver.lookupAddress(b'example.com')
+        d.addCallback(lambda results: results[0]) # Get the answer section
         d.addCallback(
             self.assertEqual,
-            [RRHeader('example.com', CNAME, payload=Record_CNAME('example.net')),
-             RRHeader('example.net', A, payload=Record_A('10.0.0.7'))])
+            [RRHeader(b'example.com', CNAME, payload=Record_CNAME(b'example.net')),
+             RRHeader(b'example.net', A, payload=Record_A('10.0.0.7'))])
         return d
 
 
@@ -481,7 +397,7 @@ class RootResolverTests(TestCase):
         }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress('example.com')
-        d.addCallback(lambda (ans, auth, add): ans)
+        d.addCallback(lambda results: results[0]) # Get the answer section
         d.addCallback(
             self.assertEqual,
             [RRHeader('example.com', CNAME, payload=Record_CNAME('example.net')),
@@ -552,32 +468,252 @@ class RootResolverTests(TestCase):
 
         succeeder = self._getResolver(servers, 4)
         succeedD = succeeder.lookupAddress('example.com')
-        succeedD.addCallback(lambda (ans, auth, add): ans[0].payload)
+        succeedD.addCallback(getOnePayload)
         succeedD.addCallback(self.assertEqual, Record_A('10.0.0.4'))
 
         return gatherResults([failD, succeedD])
 
 
-    def test_discoveredAuthorityDeprecated(self):
-        """
-        Calling L{Resolver.discoveredAuthority} produces a deprecation warning.
-        """
-        resolver = Resolver([])
-        d = resolver.discoveredAuthority('127.0.0.1', 'example.com', IN, A, (0,))
 
-        warnings = self.flushWarnings([
-                self.test_discoveredAuthorityDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+class ResolverFactoryArguments(Exception):
+    """
+    Raised by L{raisingResolverFactory} with the *args and **kwargs passed to
+    that function.
+    """
+    def __init__(self, args, kwargs):
+        """
+        Store the supplied args and kwargs as attributes.
+
+        @param args: Positional arguments.
+        @param kwargs: Keyword arguments.
+        """
+        self.args = args
+        self.kwargs = kwargs
+
+
+
+def raisingResolverFactory(*args, **kwargs):
+    """
+    Raise a L{ResolverFactoryArguments} exception containing the
+    positional and keyword arguments passed to resolverFactory.
+
+    @param args: A L{list} of all the positional arguments supplied by
+        the caller.
+
+    @param kwargs: A L{list} of all the keyword arguments supplied by
+        the caller.
+    """
+    raise ResolverFactoryArguments(args, kwargs)
+
+
+
+class RootResolverResolverFactoryTests(TestCase):
+    """
+    Tests for L{root.Resolver._resolverFactory}.
+    """
+    def test_resolverFactoryArgumentPresent(self):
+        """
+        L{root.Resolver.__init__} accepts a C{resolverFactory}
+        argument and assigns it to C{self._resolverFactory}.
+        """
+        r = Resolver(hints=[None], resolverFactory=raisingResolverFactory)
+        self.assertIdentical(r._resolverFactory, raisingResolverFactory)
+
+
+    def test_resolverFactoryArgumentAbsent(self):
+        """
+        L{root.Resolver.__init__} sets L{client.Resolver} as the
+        C{_resolverFactory} if a C{resolverFactory} argument is not
+        supplied.
+        """
+        r = Resolver(hints=[None])
+        self.assertIdentical(r._resolverFactory, client.Resolver)
+
+
+    def test_resolverFactoryOnlyExpectedArguments(self):
+        """
+        L{root.Resolver._resolverFactory} is supplied with C{reactor} and
+        C{servers} keyword arguments.
+        """
+        dummyReactor = object()
+        r = Resolver(hints=['192.0.2.101'],
+                     resolverFactory=raisingResolverFactory,
+                     reactor=dummyReactor)
+
+        e = self.assertRaises(ResolverFactoryArguments,
+                              r.lookupAddress, 'example.com')
+
         self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.Resolver.discoveredAuthority is deprecated since '
-            'Twisted 10.0.  Use twisted.names.client.Resolver directly, instead.')
-        self.assertEqual(len(warnings), 1)
+            ((), {'reactor': dummyReactor, 'servers': [('192.0.2.101', 53)]}),
+            (e.args, e.kwargs)
+        )
 
-        # This will time out quickly, but we need to wait for it because there
-        # are resources associated with.
-        d.addErrback(lambda ignored: None)
+
+
+ROOT_SERVERS = [
+    'a.root-servers.net',
+    'b.root-servers.net',
+    'c.root-servers.net',
+    'd.root-servers.net',
+    'e.root-servers.net',
+    'f.root-servers.net',
+    'g.root-servers.net',
+    'h.root-servers.net',
+    'i.root-servers.net',
+    'j.root-servers.net',
+    'k.root-servers.net',
+    'l.root-servers.net',
+    'm.root-servers.net']
+
+
+
+@implementer(IResolverSimple)
+class StubResolver(object):
+    """
+    An L{IResolverSimple} implementer which traces all getHostByName
+    calls and their deferred results. The deferred results can be
+    accessed and fired synchronously.
+    """
+    def __init__(self):
+        """
+        @type calls: L{list} of L{tuple} containing C{args} and
+            C{kwargs} supplied to C{getHostByName} calls.
+        @type pendingResults: L{list} of L{Deferred} returned by
+            C{getHostByName}.
+        """
+        self.calls = []
+        self.pendingResults = []
+
+
+    def getHostByName(self, *args, **kwargs):
+        """
+        A fake implementation of L{IResolverSimple.getHostByName}
+
+        @param args: A L{list} of all the positional arguments supplied by
+           the caller.
+
+        @param kwargs: A L{list} of all the keyword arguments supplied by
+           the caller.
+
+        @return: A L{Deferred} which may be fired later from the test
+            fixture.
+        """
+        self.calls.append((args, kwargs))
+        d = Deferred()
+        self.pendingResults.append(d)
         return d
+
+
+
+verifyClass(IResolverSimple, StubResolver)
+
+
+
+class BootstrapTests(SynchronousTestCase):
+    """
+    Tests for L{root.bootstrap}
+    """
+    def test_returnsDeferredResolver(self):
+        """
+        L{root.bootstrap} returns an object which is initially a
+        L{root.DeferredResolver}.
+        """
+        deferredResolver = root.bootstrap(StubResolver())
+        self.assertIsInstance(deferredResolver, root.DeferredResolver)
+
+
+    def test_resolves13RootServers(self):
+        """
+        The L{IResolverSimple} supplied to L{root.bootstrap} is used to lookup
+        the IP addresses of the 13 root name servers.
+        """
+        stubResolver = StubResolver()
+        root.bootstrap(stubResolver)
+        self.assertEqual(
+            stubResolver.calls,
+            [((s,), {}) for s in ROOT_SERVERS])
+
+
+    def test_becomesResolver(self):
+        """
+        The L{root.DeferredResolver} initially returned by L{root.bootstrap}
+        becomes a L{root.Resolver} when the supplied resolver has successfully
+        looked up all root hints.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver)
+        for d in stubResolver.pendingResults:
+            d.callback('192.0.2.101')
+        self.assertIsInstance(deferredResolver, Resolver)
+
+
+    def test_resolverReceivesRootHints(self):
+        """
+        The L{root.Resolver} which eventually replaces L{root.DeferredResolver}
+        is supplied with the IP addresses of the 13 root servers.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver)
+        for d in stubResolver.pendingResults:
+            d.callback('192.0.2.101')
+        self.assertEqual(deferredResolver.hints, ['192.0.2.101'] * 13)
+
+
+    def test_continuesWhenSomeRootHintsFail(self):
+        """
+        The L{root.Resolver} is eventually created, even if some of the root
+        hint lookups fail. Only the working root hint IP addresses are supplied
+        to the L{root.Resolver}.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver)
+        results = iter(stubResolver.pendingResults)
+        d1 = next(results)
+        for d in results:
+            d.callback('192.0.2.101')
+        d1.errback(TimeoutError())
+
+        def checkHints(res):
+            self.assertEqual(deferredResolver.hints, ['192.0.2.101'] * 12)
+        d1.addBoth(checkHints)
+
+
+    def test_continuesWhenAllRootHintsFail(self):
+        """
+        The L{root.Resolver} is eventually created, even if all of the root hint
+        lookups fail. Pending and new lookups will then fail with
+        AttributeError.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver)
+        results = iter(stubResolver.pendingResults)
+        d1 = next(results)
+        for d in results:
+            d.errback(TimeoutError())
+        d1.errback(TimeoutError())
+
+        def checkHints(res):
+            self.assertEqual(deferredResolver.hints, [])
+        d1.addBoth(checkHints)
+
+        self.addCleanup(self.flushLoggedErrors, TimeoutError)
+
+
+    def test_passesResolverFactory(self):
+        """
+        L{root.bootstrap} accepts a C{resolverFactory} argument which is passed
+        as an argument to L{root.Resolver} when it has successfully looked up
+        root hints.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(
+            stubResolver, resolverFactory=raisingResolverFactory)
+
+        for d in stubResolver.pendingResults:
+            d.callback('192.0.2.101')
+
+        self.assertIdentical(
+            deferredResolver._resolverFactory, raisingResolverFactory)
 
 
 
@@ -596,110 +732,3 @@ _retrySuppression = util.suppress(
     message=(
         'twisted.names.root.retry is deprecated since Twisted 10.0.  Use a '
         'Resolver object for retry logic.'))
-
-
-class DiscoveryToolsTests(TestCase):
-    """
-    Tests for the free functions in L{twisted.names.root} which help out with
-    authority discovery.  Since these are mostly deprecated, these are mostly
-    deprecation tests.
-    """
-    def test_lookupNameserversDeprecated(self):
-        """
-        Calling L{root.lookupNameservers} produces a deprecation warning.
-        """
-        # Don't care about the return value, since it will never have a result,
-        # since StubDNSDatagramProtocol doesn't actually work.
-        lookupNameservers('example.com', '127.0.0.1', StubDNSDatagramProtocol())
-
-        warnings = self.flushWarnings([
-                self.test_lookupNameserversDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.lookupNameservers is deprecated since Twisted '
-            '10.0.  Use twisted.names.root.Resolver.lookupNameservers '
-            'instead.')
-        self.assertEqual(len(warnings), 1)
-    test_lookupNameserversDeprecated.suppress = [_retrySuppression]
-
-
-    def test_lookupAddressDeprecated(self):
-        """
-        Calling L{root.lookupAddress} produces a deprecation warning.
-        """
-        # Don't care about the return value, since it will never have a result,
-        # since StubDNSDatagramProtocol doesn't actually work.
-        lookupAddress('example.com', '127.0.0.1', StubDNSDatagramProtocol())
-
-        warnings = self.flushWarnings([
-                self.test_lookupAddressDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.lookupAddress is deprecated since Twisted '
-            '10.0.  Use twisted.names.root.Resolver.lookupAddress '
-            'instead.')
-        self.assertEqual(len(warnings), 1)
-    test_lookupAddressDeprecated.suppress = [_retrySuppression]
-
-
-    def test_extractAuthorityDeprecated(self):
-        """
-        Calling L{root.extractAuthority} produces a deprecation warning.
-        """
-        extractAuthority(Message(), {})
-
-        warnings = self.flushWarnings([
-                self.test_extractAuthorityDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.extractAuthority is deprecated since Twisted '
-            '10.0.  Please inspect the Message object directly.')
-        self.assertEqual(len(warnings), 1)
-
-
-    def test_discoverAuthorityDeprecated(self):
-        """
-        Calling L{root.discoverAuthority} produces a deprecation warning.
-        """
-        discoverAuthority(
-            'example.com', ['10.0.0.1'], p=StubDNSDatagramProtocol())
-
-        warnings = self.flushWarnings([
-                self.test_discoverAuthorityDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.discoverAuthority is deprecated since Twisted '
-            '10.0.  Use twisted.names.root.Resolver.lookupNameservers '
-            'instead.')
-        self.assertEqual(len(warnings), 1)
-
-    # discoverAuthority is implemented in terms of deprecated functions,
-    # too.  Ignore those.
-    test_discoverAuthorityDeprecated.suppress = [
-        util.suppress(
-            category=DeprecationWarning,
-            message=(
-                'twisted.names.root.lookupNameservers is deprecated since '
-                'Twisted 10.0.  Use '
-                'twisted.names.root.Resolver.lookupNameservers instead.')),
-        _retrySuppression]
-
-
-    def test_retryDeprecated(self):
-        """
-        Calling L{root.retry} produces a deprecation warning.
-        """
-        retry([0], StubDNSDatagramProtocol())
-
-        warnings = self.flushWarnings([
-                self.test_retryDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.retry is deprecated since Twisted '
-            '10.0.  Use a Resolver object for retry logic.')
-        self.assertEqual(len(warnings), 1)

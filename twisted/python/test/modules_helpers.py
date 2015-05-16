@@ -2,29 +2,22 @@
 # See LICENSE for details.
 
 """
-Facilities for helping test code which interacts with L{twisted.python.modules},
-or uses Python's own module system to load code.
+Facilities for helping test code which interacts with Python's module system
+to load code.
 """
+
+from __future__ import division, absolute_import
 
 import sys
 
-from twisted.trial.unittest import TestCase
-from twisted.python import modules
 from twisted.python.filepath import FilePath
 
-class TwistedModulesTestCase(TestCase):
 
-    def findByIteration(self, modname, where=modules, importPackages=False):
-        """
-        You don't ever actually want to do this, so it's not in the public API, but
-        sometimes we want to compare the result of an iterative call with a
-        lookup call and make sure they're the same for test purposes.
-        """
-        for modinfo in where.walkModules(importPackages=importPackages):
-            if modinfo.name == modname:
-                return modinfo
-        self.fail("Unable to find module %r through iteration." % (modname,))
-
+class TwistedModulesMixin:
+    """
+    A mixin for C{twisted.trial.unittest.SynchronousTestCase} providing useful
+    methods for manipulating Python's module system.
+    """
 
     def replaceSysPath(self, sysPath):
         """
@@ -58,7 +51,5 @@ class TwistedModulesTestCase(TestCase):
         entry = FilePath(self.mktemp())
         pkg = entry.child("test_package")
         pkg.makedirs()
-        pkg.child("__init__.py").setContent("")
+        pkg.child("__init__.py").setContent(b"")
         return entry
-
-

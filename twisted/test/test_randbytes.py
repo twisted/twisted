@@ -5,7 +5,7 @@
 Test cases for L{twisted.python.randbytes}.
 """
 
-import os
+from __future__ import division, absolute_import
 
 from twisted.trial import unittest
 from twisted.python import randbytes
@@ -35,7 +35,7 @@ class SecureRandomTestCaseBase(object):
 
 
 
-class SecureRandomTestCase(SecureRandomTestCaseBase, unittest.TestCase):
+class SecureRandomTests(SecureRandomTestCaseBase, unittest.TestCase):
     """
     Test secureRandom under normal conditions.
     """
@@ -49,8 +49,8 @@ class SecureRandomTestCase(SecureRandomTestCaseBase, unittest.TestCase):
 
 
 
-class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
-                                      unittest.TestCase):
+class ConditionalSecureRandomTests(SecureRandomTestCaseBase,
+                                   unittest.SynchronousTestCase):
     """
     Test random sources one by one, then remove it to.
     """
@@ -77,25 +77,12 @@ class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
         self._check(self.factory._osUrandom)
 
 
-    def test_fileUrandom(self):
-        """
-        L{RandomFactory._fileUrandom} should work as a random source whenever
-        C{/dev/urandom} is available.
-        """
-        try:
-            self._check(self.factory._fileUrandom)
-        except randbytes.SourceNotAvailable:
-            # The test should only fail in /dev/urandom doesn't exist
-            self.assertFalse(os.path.exists('/dev/urandom'))
-
-
     def test_withoutAnything(self):
         """
         Remove all secure sources and assert it raises a failure. Then try the
         fallback parameter.
         """
         self.factory._osUrandom = self.errorFactory
-        self.factory._fileUrandom = self.errorFactory
         self.assertRaises(randbytes.SecureRandomNotAvailable,
                           self.factory.secureRandom, 18)
         def wrapper():
@@ -110,7 +97,7 @@ class ConditionalSecureRandomTestCase(SecureRandomTestCaseBase,
 
 
 
-class RandomTestCaseBase(SecureRandomTestCaseBase, unittest.TestCase):
+class RandomBaseTests(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
     """
     'Normal' random test cases.
     """

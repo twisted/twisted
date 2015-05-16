@@ -8,20 +8,18 @@ I'm a test drop-in.  The plugin system's unit tests use me.  No one
 else should.
 """
 
-from zope.interface import classProvides
+from zope.interface import provider
 
 from twisted.plugin import IPlugin
 from twisted.test.test_plugin import ITestPlugin, ITestPlugin2
 
 
 
+@provider(ITestPlugin, IPlugin)
 class TestPlugin:
     """
     A plugin used solely for testing purposes.
     """
-
-    classProvides(ITestPlugin,
-                  IPlugin)
 
     def test1():
         pass
@@ -29,13 +27,11 @@ class TestPlugin:
 
 
 
+@provider(ITestPlugin2, IPlugin)
 class AnotherTestPlugin:
     """
     Another plugin used solely for testing purposes.
     """
-
-    classProvides(ITestPlugin2,
-                  IPlugin)
 
     def test():
         pass
@@ -43,13 +39,11 @@ class AnotherTestPlugin:
 
 
 
+@provider(ITestPlugin2, IPlugin)
 class ThirdTestPlugin:
     """
     Another plugin used solely for testing purposes.
     """
-
-    classProvides(ITestPlugin2,
-                  IPlugin)
 
     def test():
         pass

@@ -1,0 +1,18 @@
+<remote> is this where good habits were invented?
+<Jerub> remote: no, but this is where bad habits are ridiculed.
+%
+<Jerub> MFen: it's certainly a core pillar in the lollocopter zeitgeist.
+%
+<ivan> RFCs are generally known for their superb quality
+%
+<exarkun> Hm
+<exarkun> I fixed the build, but still no orange.
+<djmitche> I misunderstood that at first as a malapropism for "..but still no cigar"
+%
+[...]
+<exarkun> lvh: Find the frame the assertion came from and look into its locals
+<exarkun> lvh: Use the frame's bytecode offset to find out which line was running
+<exarkun> lvh: re-evaluate the expressions in the assertion in the context of the frame's locals
+<exarkun> lvh: viola
+<lvh> exarkun: viola...tion
+%

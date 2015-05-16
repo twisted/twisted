@@ -11,43 +11,32 @@ Future Plans::
 Maintainer: James Y Knight
 """
 
-import warnings, errno, os
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import process, error, interfaces
 from twisted.python import log, failure
 
 
+@implementer(interfaces.IAddress)
 class PipeAddress(object):
-    implements(interfaces.IAddress)
+    pass
 
 
+@implementer(interfaces.ITransport, interfaces.IProducer,
+             interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
 class StandardIO(object):
-    implements(interfaces.ITransport, interfaces.IProducer, interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
+
     _reader = None
     _writer = None
     disconnected = False
     disconnecting = False
 
-    def __init__(self, proto, stdin=0, stdout=1):
-        from twisted.internet import reactor
+    def __init__(self, proto, stdin=0, stdout=1, reactor=None):
+        if reactor is None:
+            from twisted.internet import reactor
         self.protocol = proto
 
         self._writer = process.ProcessWriter(reactor, self, 'write', stdout)
-        try:
-            self._writer.startReading()
-        except IOError, e:
-            if e.errno == errno.EPERM:
-                # epoll will reject certain file descriptors by raising
-                # EPERM.  Most commonly, this means stdout was redirected to
-                # a regular file.
-                raise RuntimeError(
-                    "This reactor does not support this type of file "
-                    "descriptor (fd %d, mode %d) (for example, epollreactor "
-                    "does not support normal files.  See #4429)." % (
-                        stdout, os.fstat(stdout).st_mode))
-            raise
-
         self._reader = process.ProcessReader(reactor, self, 'read', stdin)
         self._reader.startReading()
         self.protocol.makeConnection(self)
@@ -169,13 +158,6 @@ class StandardIO(object):
     def resumeProducing(self):
         if self._reader is not None:
             self._reader.resumeProducing()
-
-    # Stupid compatibility:
-    def closeStdin(self):
-        """Compatibility only, don't use. Same as loseWriteConnection."""
-        warnings.warn("This function is deprecated, use loseWriteConnection instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        self.loseWriteConnection()
 
     def stopReading(self):
         """Compatibility only, don't use. Call pauseProducing."""

@@ -250,7 +250,7 @@ def _parseError(error, errorNamespace):
     @return: Dictionary with extracted error information. If present, keys
              C{condition}, C{text}, C{textLang} have a string value,
              and C{appCondition} has an L{domish.Element} value.
-    @rtype: L{dict}
+    @rtype: C{dict}
     """
     condition = None
     text = None

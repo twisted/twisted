@@ -1,13 +1,14 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_consumer -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_consumer -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.test_consumer} to test
+L{twisted.test.test_stdio.StandardInputOutputTests.test_consumer} to test
 that process transports implement IConsumer properly.
 """
 
+__import__('_preamble')
 import sys
 
 from twisted.python import log, reflect

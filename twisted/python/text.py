@@ -3,31 +3,26 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Miscellany of text-munging functions.
 """
-
-import string, types
-
-from twisted.python import deprecate, versions
 
 
 def stringyString(object, indentation=''):
     """
     Expansive string formatting for sequence types.
 
-    list.__str__ and dict.__str__ use repr() to display their
+    C{list.__str__} and C{dict.__str__} use C{repr()} to display their
     elements.  This function also turns these sequence types
-    into strings, but uses str() on their elements instead.
+    into strings, but uses C{str()} on their elements instead.
 
-    Sequence elements are also displayed on seperate lines,
-    and nested sequences have nested indentation.
+    Sequence elements are also displayed on separate lines, and nested
+    sequences have nested indentation.
     """
     braces = ''
     sl = []
 
-    if type(object) is types.DictType:
+    if type(object) is dict:
         braces = '{}'
         for key, value in object.items():
             value = stringyString(value, indentation + '   ')
@@ -40,18 +35,18 @@ def stringyString(object, indentation=''):
                 sl.append("%s %s: %s" % (indentation, key,
                                          value[len(indentation) + 3:]))
 
-    elif type(object) in (types.TupleType, types.ListType):
-        if type(object) is types.TupleType:
+    elif type(object) is tuple or type(object) is list:
+        if type(object) is tuple:
             braces = '()'
         else:
             braces = '[]'
 
         for element in object:
             element = stringyString(element, indentation + ' ')
-            sl.append(string.rstrip(element) + ',')
+            sl.append(element.rstrip() + ',')
     else:
-        sl[:] = map(lambda s, i=indentation: i+s,
-                    string.split(str(object),'\n'))
+        sl[:] = map(lambda s, i=indentation: i + s,
+                   str(object).split('\n'))
 
     if not sl:
         sl.append(indentation)
@@ -60,67 +55,31 @@ def stringyString(object, indentation=''):
         sl[0] = indentation + braces[0] + sl[0][len(indentation) + 1:]
         sl[-1] = sl[-1] + braces[-1]
 
-    s = string.join(sl, "\n")
+    s = "\n".join(sl)
 
     if isMultiline(s) and not endsInNewline(s):
         s = s + '\n'
 
     return s
 
+
 def isMultiline(s):
-    """Returns True if this string has a newline in it."""
-    return (string.find(s, '\n') != -1)
+    """
+    Returns C{True} if this string has a newline in it.
+    """
+    return (s.find('\n') != -1)
+
 
 def endsInNewline(s):
-    """Returns True if this string ends in a newline."""
+    """
+    Returns C{True} if this string ends in a newline.
+    """
     return (s[-len('\n'):] == '\n')
 
 
-
-deprecate.deprecatedModuleAttribute(
-    versions.Version("Twisted", 10, 2, 0),
-    "Please use inspect.getdoc instead.",
-    __name__, "docstringLStrip")
-
-
-
-def docstringLStrip(docstring):
-    """
-    Gets rid of unsightly lefthand docstring whitespace residue.
-
-    You'd think someone would have done this already, but apparently
-    not in 1.5.2.
-
-    BUT since we're all using Python 2.1 now, use L{inspect.getdoc}
-    instead.  I{This function should go away soon.}
-    """
-
-    if not docstring:
-        return docstring
-
-    docstring = string.replace(docstring, '\t', ' ' * 8)
-    lines = string.split(docstring,'\n')
-
-    leading = 0
-    for l in xrange(1,len(lines)):
-        line = lines[l]
-        if string.strip(line):
-            while 1:
-                if line[leading] == ' ':
-                    leading = leading + 1
-                else:
-                    break
-        if leading:
-            break
-
-    outlines = lines[0:1]
-    for l in xrange(1,len(lines)):
-        outlines.append(lines[l][leading:])
-
-    return string.join(outlines, '\n')
-
 def greedyWrap(inString, width=80):
-    """Given a string and a column width, return a list of lines.
+    """
+    Given a string and a column width, return a list of lines.
 
     Caveat: I'm use a stupid greedy word-wrapping
     algorythm.  I won't put two spaces at the end
@@ -132,11 +91,11 @@ def greedyWrap(inString, width=80):
 
     #eww, evil hacks to allow paragraphs delimited by two \ns :(
     if inString.find('\n\n') >= 0:
-        paragraphs = string.split(inString, '\n\n')
+        paragraphs = inString.split('\n\n')
         for para in paragraphs:
             outLines.extend(greedyWrap(para, width) + [''])
         return outLines
-    inWords = string.split(inString)
+    inWords = inString.split()
 
     column = 0
     ptr_line = 0
@@ -152,13 +111,13 @@ def greedyWrap(inString, width=80):
                 # We've gone too far, stop the line one word back.
                 ptr_line = ptr_line - 1
             (l, inWords) = (inWords[0:ptr_line], inWords[ptr_line:])
-            outLines.append(string.join(l,' '))
+            outLines.append(' '.join(l))
 
             ptr_line = 0
             column = 0
         elif not (len(inWords) > ptr_line):
             # Clean up the last bit.
-            outLines.append(string.join(inWords, ' '))
+            outLines.append(' '.join(inWords))
             del inWords[:]
         else:
             # Space
@@ -170,12 +129,14 @@ def greedyWrap(inString, width=80):
 
 wordWrap = greedyWrap
 
+
 def removeLeadingBlanks(lines):
     ret = []
     for line in lines:
         if ret or line.strip():
             ret.append(line)
     return ret
+
 
 def removeLeadingTrailingBlanks(s):
     lines = removeLeadingBlanks(s.split('\n'))
@@ -184,14 +145,16 @@ def removeLeadingTrailingBlanks(s):
     lines.reverse()
     return '\n'.join(lines)+'\n'
 
-def splitQuoted(s):
-    """Like string.split, but don't break substrings inside quotes.
 
-    >>> splitQuoted('the \"hairy monkey\" likes pie')
+def splitQuoted(s):
+    """
+    Like a string split, but don't break substrings inside quotes.
+
+    >>> splitQuoted('the "hairy monkey" likes pie')
     ['the', 'hairy monkey', 'likes', 'pie']
 
-    Another one of those \"someone must have a better solution for
-    this\" things.  This implementation is a VERY DUMB hack done too
+    Another one of those "someone must have a better solution for
+    this" things.  This implementation is a VERY DUMB hack done too
     quickly.
     """
     out = []
@@ -217,8 +180,11 @@ def splitQuoted(s):
 
     return out
 
+
 def strFile(p, f, caseSensitive=True):
-    """Find whether string p occurs in a read()able object f
+    """
+    Find whether string C{p} occurs in a read()able object C{f}.
+
     @rtype: C{bool}
     """
     buf = ""

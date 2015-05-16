@@ -5,22 +5,29 @@
 Tests for L{twisted.internet.posixbase} and supporting code.
 """
 
-from twisted.python.compat import set
+from __future__ import division, absolute_import
+
+from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
 
-
 skipSockets = None
-try:
-    from twisted.internet import unix
-except ImportError:
-    skipSockets = "Platform does not support AF_UNIX sockets"
+if _PY3:
+    skipSockets = "Re-enable when Python 3 port supports AF_UNIX"
+else:
+    try:
+        from twisted.internet import unix
+        from twisted.test.test_unix import ClientProto
+    except ImportError:
+        skipSockets = "Platform does not support AF_UNIX sockets"
 
 from twisted.internet.tcp import Port
 from twisted.internet import reactor
-from twisted.test.test_unix import ClientProto
+
+
+
 
 class TrivialReactor(PosixReactorBase):
     def __init__(self):
@@ -98,80 +105,6 @@ class PosixReactorBaseTests(TestCase):
         self.assertNotIn(writer, reactor._writers)
 
 
-    def test_IReactorArbitraryIsDeprecated(self):
-        """
-        L{twisted.internet.interfaces.IReactorArbitrary} is redundant with
-        L{twisted.internet.interfaces.IReactorFDSet} and is deprecated.
-        """
-        from twisted.internet import interfaces
-        interfaces.IReactorArbitrary
-
-        warningsShown = self.flushWarnings(
-            [self.test_IReactorArbitraryIsDeprecated])
-        self.assertEqual(len(warningsShown), 1)
-        self.assertEqual(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            "twisted.internet.interfaces.IReactorArbitrary was deprecated "
-            "in Twisted 10.1.0: See IReactorFDSet.",
-            warningsShown[0]['message'])
-
-
-    def test_listenWithIsDeprecated(self):
-        """
-        L{PosixReactorBase} implements the deprecated L{IReactorArbitrary}, and
-        L{PosixReactorBase.listenWith} is a part of that interface. To avoid
-        unnecessary deprecation warnings when importing posixbase, the
-        L{twisted.internet.interfaces._IReactorArbitrary} alias that doesn't
-        have the deprecation warning is imported, and instead
-        L{PosixReactorBase.listenWith} generates its own deprecation warning.
-        """
-        class fakePort:
-            def __init__(self, *args, **kw):
-                pass
-
-            def startListening(self):
-                pass
-
-        reactor = TrivialReactor()
-        reactor.listenWith(fakePort)
-
-        warnings = self.flushWarnings([self.test_listenWithIsDeprecated])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            "listenWith is deprecated since Twisted 10.1.  "
-            "See IReactorFDSet.",
-            warnings[0]['message'])
-
-
-    def test_connectWithIsDeprecated(self):
-        """
-        L{PosixReactorBase} implements the deprecated L{IReactorArbitrary}, and
-        L{PosixReactorBase.connectWith} is a part of that interface. To avoid
-        unnecessary deprecation warnings when importing posixbase, the
-        L{twisted.internet.interfaces._IReactorArbitrary} alias that doesn't
-        have the deprecation warning is imported, and instead
-        L{PosixReactorBase.connectWith} generates its own deprecation warning.
-        """
-        class fakeConnector:
-            def __init__(self, *args, **kw):
-                pass
-
-            def connect(self):
-                pass
-
-        reactor = TrivialReactor()
-        reactor.connectWith(fakeConnector)
-
-        warnings = self.flushWarnings([self.test_connectWithIsDeprecated])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            "connectWith is deprecated since Twisted 10.1.  "
-            "See IReactorFDSet.",
-            warnings[0]['message'])
-
-
 
 class TCPPortTests(TestCase):
     """
@@ -188,7 +121,7 @@ class TCPPortTests(TestCase):
         """
         port = Port(12345, ServerFactory())
         port.connected = True
-        port.connectionLost = lambda reason: 1 / 0
+        port.connectionLost = lambda reason: 1 // 0
         return self.assertFailure(port.stopListening(), ZeroDivisionError)
 
 
@@ -342,7 +275,7 @@ class IterationTimeoutTests(TestCase):
 
 
 
-class ConnectedDatagramPortTestCase(TestCase):
+class ConnectedDatagramPortTests(TestCase):
     """
     Test connected datagram UNIX sockets.
     """

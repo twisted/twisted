@@ -16,19 +16,27 @@ Maintainer: Glyph Lefkowitz
     at the Deferred which is chained to the Deferred which has this marker.
 """
 
+from __future__ import division, absolute_import
+
 import traceback
 import types
 import warnings
 from sys import exc_info
+from functools import wraps
 
 # Twisted imports
-from twisted.python import log, failure, lockfile
-from twisted.python.util import unsignedID, mergeFunctionMetadata
+from twisted.python.compat import cmp, comparable
+from twisted.python import lockfile, failure
+from twisted.logger import Logger
+from twisted.python.deprecate import warnAboutFunction, deprecated
+from twisted.python.versions import Version
 
+log = Logger()
 
 
 class AlreadyCalledError(Exception):
     pass
+
 
 
 class CancelledError(Exception):
@@ -46,7 +54,15 @@ class TimeoutError(Exception):
 
 
 def logError(err):
-    log.err(err)
+    """
+    Log and return failure.
+
+    This method can be used as an errback that passes the failure on to the
+    next errback unmodified. Note that if this is the last errback, and the
+    deferred gets garbage collected after being this errback has been called,
+    the clean up code logs it again.
+    """
+    log.failure(None, err)
     return err
 
 
@@ -281,7 +297,7 @@ class Deferred:
         @rtype: a L{Deferred}
         """
         assert callable(callback)
-        assert errback == None or callable(errback)
+        assert errback is None or callable(errback)
         cbs = ((callback, callbackArgs, callbackKeywords),
                (errback or (passthru), errbackArgs, errbackKeywords))
         self.callbacks.append(cbs)
@@ -363,6 +379,15 @@ class Deferred:
         callback (or errback) returns another L{Deferred}, this L{Deferred}
         will be chained to it (and further callbacks will not run until that
         L{Deferred} has a result).
+
+        An instance of L{Deferred} may only have either L{callback} or
+        L{errback} called on it, and only once.
+
+        @param result: The object which will be passed to the first callback
+            added to this L{Deferred} (via L{addCallback}).
+
+        @raise AlreadyCalledError: If L{callback} or L{errback} has already been
+            called on this L{Deferred}.
         """
         assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
@@ -385,6 +410,18 @@ class Deferred:
 
         Passing a string as `fail' is deprecated, and will be punished with
         a warning message.
+
+        An instance of L{Deferred} may only have either L{callback} or
+        L{errback} called on it, and only once.
+
+        @param fail: The L{Failure} object which will be passed to the first
+            errback added to this L{Deferred} (via L{addErrback}).
+            Alternatively, a L{Exception} instance from which a L{Failure} will
+            be constructed (with no traceback) or C{None} to create a L{Failure}
+            instance from the current exception state (with a traceback).
+
+        @raise AlreadyCalledError: If L{callback} or L{errback} has already been
+            called on this L{Deferred}.
 
         @raise NoCurrentExceptionError: If C{fail} is C{None} but there is
             no current exception state.
@@ -549,6 +586,13 @@ class Deferred:
                     current._runningCallbacks = True
                     try:
                         current.result = callback(current.result, *args, **kw)
+                        if current.result is current:
+                            warnAboutFunction(
+                                callback,
+                                "Callback returned the Deferred "
+                                "it was attached to; this breaks the "
+                                "callback chain and will raise an "
+                                "exception in the future.")
                     finally:
                         current._runningCallbacks = False
                 except:
@@ -607,14 +651,14 @@ class Deferred:
         """
         cname = self.__class__.__name__
         result = getattr(self, 'result', _NO_RESULT)
-        myID = hex(unsignedID(self))
+        myID = id(self)
         if self._chainedTo is not None:
-            result = ' waiting on Deferred at %s' % (hex(unsignedID(self._chainedTo)),)
+            result = ' waiting on Deferred at 0x%x' % (id(self._chainedTo),)
         elif result is _NO_RESULT:
             result = ''
         else:
             result = ' current result: %r' % (result,)
-        return "<%s at %s%s>" % (cname, myID, result)
+        return "<%s at 0x%x%s>" % (cname, myID, result)
     __repr__ = __str__
 
 
@@ -630,11 +674,11 @@ class DebugInfo:
         info = ''
         if hasattr(self, "creator"):
             info += " C: Deferred was created:\n C:"
-            info += "".join(self.creator).rstrip().replace("\n","\n C:")
+            info += "".join(self.creator).rstrip().replace("\n", "\n C:")
             info += "\n"
         if hasattr(self, "invoker"):
             info += " I: First Invoker was:\n I:"
-            info += "".join(self.invoker).rstrip().replace("\n","\n I:")
+            info += "".join(self.invoker).rstrip().replace("\n", "\n I:")
             info += "\n"
         return info
 
@@ -647,14 +691,24 @@ class DebugInfo:
         state, print a traceback (if said errback is a L{Failure}).
         """
         if self.failResult is not None:
-            log.msg("Unhandled error in Deferred:", isError=True)
+            # Note: this is two separate messages for compatibility with
+            # earlier tests; arguably it should be a single error message.
+            log.critical("Unhandled error in Deferred:",
+                         isError=True)
+
             debugInfo = self._getDebugTracebacks()
-            if debugInfo != '':
-                log.msg("(debug: " + debugInfo + ")", isError=True)
-            log.err(self.failResult)
+            if debugInfo:
+                format = "(debug: {debugInfo})"
+            else:
+                format = None
+
+            log.failure(format,
+                        self.failResult,
+                        debugInfo=debugInfo)
 
 
 
+@comparable
 class FirstError(Exception):
     """
     First error to occur in a L{DeferredList} if C{fireOnOneErrback} is set.
@@ -725,6 +779,8 @@ class DeferredList(Deferred):
     they see.
 
     See the documentation for the C{__init__} arguments for more information.
+
+    @ivar _deferredList: The C{list} of L{Deferred}s to track.
     """
 
     fireOnOneCallback = False
@@ -765,9 +821,10 @@ class DeferredList(Deferred):
             logged.  This does not prevent C{fireOnOneErrback} from working.
         @type consumeErrors: C{bool}
         """
-        self.resultList = [None] * len(deferredList)
+        self._deferredList = list(deferredList)
+        self.resultList = [None] * len(self._deferredList)
         Deferred.__init__(self)
-        if len(deferredList) == 0 and not fireOnOneCallback:
+        if len(self._deferredList) == 0 and not fireOnOneCallback:
             self.callback(self.resultList)
 
         # These flags need to be set *before* attaching callbacks to the
@@ -779,7 +836,7 @@ class DeferredList(Deferred):
         self.finishedCount = 0
 
         index = 0
-        for deferred in deferredList:
+        for deferred in self._deferredList:
             deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
@@ -807,6 +864,28 @@ class DeferredList(Deferred):
         return result
 
 
+    def cancel(self):
+        """
+        Cancel this L{DeferredList}.
+
+        If the L{DeferredList} hasn't fired yet, cancel every L{Deferred} in
+        the list.
+
+        If the L{DeferredList} has fired, including the case where the
+        C{fireOnOneCallback}/C{fireOnOneErrback} flag is set and the
+        L{DeferredList} fires because one L{Deferred} in the list fires with a
+        non-failure/failure result, do nothing in the C{cancel} method.
+        """
+        if not self.called:
+            for deferred in self._deferredList:
+                try:
+                    deferred.cancel()
+                except:
+                    log.failure(
+                        "Exception raised from user supplied canceller"
+                    )
+
+
 
 def _parseDListResult(l, fireOnOneErrback=False):
     if __debug__:
@@ -823,6 +902,9 @@ def gatherResults(deferredList, consumeErrors=False):
 
     The returned L{Deferred} will fire when I{all} of the provided L{Deferred}s
     have fired, or when any one of them has failed.
+
+    This method can be cancelled by calling the C{cancel} method of the
+    L{Deferred}, all the L{Deferred}s in the list will be cancelled.
 
     This differs from L{DeferredList} in that you don't need to parse
     the result for success/failure.
@@ -860,6 +942,11 @@ class waitForDeferred:
     """
 
     def __init__(self, d):
+        warnings.warn(
+            "twisted.internet.defer.waitForDeferred was deprecated in "
+            "Twisted 15.0.0; please use twisted.internet.defer.inlineCallbacks "
+            "instead", DeprecationWarning, stacklevel=2)
+
         if not isinstance(d, Deferred):
             raise TypeError("You must give waitForDeferred a Deferred. You gave it %r." % (d,))
         self.d = d
@@ -888,7 +975,7 @@ def _deferGenerator(g, deferred):
 
     while 1:
         try:
-            result = g.next()
+            result = next(g)
         except StopIteration:
             deferred.callback(result)
             return deferred
@@ -928,12 +1015,14 @@ def _deferGenerator(g, deferred):
 
 
 
+@deprecated(Version('Twisted', 15, 0, 0),
+            "twisted.internet.defer.inlineCallbacks")
 def deferredGenerator(f):
     """
-    deferredGenerator and waitForDeferred help you write L{Deferred}-using code
-    that looks like a regular sequential function. If your code has a minimum
-    requirement of Python 2.5, consider the use of L{inlineCallbacks} instead,
-    which can accomplish the same thing in a more concise manner.
+    L{deferredGenerator} and L{waitForDeferred} help you write
+    L{Deferred}-using code that looks like a regular sequential function.
+    Consider the use of L{inlineCallbacks} instead, which can accomplish
+    the same thing in a more concise manner.
 
     There are two important functions involved: L{waitForDeferred}, and
     L{deferredGenerator}.  They are used together, like this::
@@ -984,19 +1073,13 @@ def deferredGenerator(f):
     L{Deferred} to the 'blocking' style, and L{deferredGenerator} converts from the
     'blocking' style to a L{Deferred}.
     """
-
+    @wraps(f)
     def unwindGenerator(*args, **kwargs):
         return _deferGenerator(f(*args, **kwargs), Deferred())
-    return mergeFunctionMetadata(f, unwindGenerator)
+    return unwindGenerator
 
 
 ## inlineCallbacks
-
-# BaseException is only in Py 2.5.
-try:
-    BaseException
-except NameError:
-    BaseException=Exception
 
 
 
@@ -1043,11 +1126,11 @@ def _inlineCallbacks(result, g, deferred):
                 result = result.throwExceptionIntoGenerator(g)
             else:
                 result = g.send(result)
-        except StopIteration:
+        except StopIteration as e:
             # fell off the end, or "return" statement
-            deferred.callback(None)
+            deferred.callback(getattr(e, "value", None))
             return deferred
-        except _DefGen_Return, e:
+        except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
             # Deferred.  First though, let's try to identify the potentially
             # confusing situation which results when returnValue() is
@@ -1124,18 +1207,13 @@ def _inlineCallbacks(result, g, deferred):
 
 def inlineCallbacks(f):
     """
-    WARNING: this function will not work in Python 2.4 and earlier!
+    inlineCallbacks helps you write L{Deferred}-using code that looks like a
+    regular sequential function. For example::
 
-    inlineCallbacks helps you write Deferred-using code that looks like a
-    regular sequential function. This function uses features of Python 2.5
-    generators.  If you need to be compatible with Python 2.4 or before, use
-    the L{deferredGenerator} function instead, which accomplishes the same
-    thing, but with somewhat more boilerplate.  For example::
-
-        @inlineCallBacks
+        @inlineCallbacks
         def thingummy():
             thing = yield makeSomeRequestResultingInDeferred()
-            print thing #the result! hoorj!
+            print(thing)  # the result! hoorj!
 
     When you call anything that results in a L{Deferred}, you can simply yield it;
     your generator will automatically be resumed when the Deferred's result is
@@ -1172,7 +1250,16 @@ def inlineCallbacks(f):
             else:
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
+
+    If you are using Python 3.3 or later, it is possible to use the C{return}
+    statement instead of L{returnValue}::
+
+        @inlineCallbacks
+        def loadData(url):
+            response = yield makeRequest(url)
+            return json.loads(response)
     """
+    @wraps(f)
     def unwindGenerator(*args, **kwargs):
         try:
             gen = f(*args, **kwargs)
@@ -1185,7 +1272,7 @@ def inlineCallbacks(f):
                 "inlineCallbacks requires %r to produce a generator; "
                 "instead got %r" % (f, gen))
         return _inlineCallbacks(None, gen, Deferred())
-    return mergeFunctionMetadata(f, unwindGenerator)
+    return unwindGenerator
 
 
 ## DeferredLock/DeferredQueue
@@ -1299,6 +1386,9 @@ class DeferredLock(_ConcurrencyPrimitive):
 class DeferredSemaphore(_ConcurrencyPrimitive):
     """
     A semaphore for event driven systems.
+
+    If you are looking into this as a means of limiting parallelism, you might
+    find L{twisted.internet.task.Cooperator} more useful.
 
     @ivar tokens: At most this many users may acquire this semaphore at
         once.
@@ -1469,7 +1559,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
     @ivar _interval: The retry interval for an L{IReactorTime} based scheduler.
 
     @ivar _tryLockCall: A L{DelayedCall} based on C{_interval} that will manage
-        the next retry for aquiring the lock.
+        the next retry for acquiring the lock.
 
     @ivar _timeoutCall: A L{DelayedCall} based on C{deferUntilLocked}'s timeout
         argument.  This is in charge of timing out our attempt to acquire the
@@ -1513,20 +1603,25 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
                 AlreadyTryingToLockError(
                     "deferUntilLocked isn't safe for concurrent use."))
 
-        d = Deferred()
+        def _cancelLock(reason):
+            """
+            Cancel a L{DeferredFilesystemLock.deferUntilLocked} call.
 
-        def _cancelLock():
+            @type reason: L{failure.Failure}
+            @param reason: The reason why the call is cancelled.
+            """
             self._tryLockCall.cancel()
             self._tryLockCall = None
-            self._timeoutCall = None
+            if self._timeoutCall is not None and self._timeoutCall.active():
+                self._timeoutCall.cancel()
+                self._timeoutCall = None
 
             if self.lock():
                 d.callback(None)
             else:
-                d.errback(failure.Failure(
-                        TimeoutError("Timed out aquiring lock: %s after %fs" % (
-                                self.name,
-                                timeout))))
+                d.errback(reason)
+
+        d = Deferred(lambda deferred: _cancelLock(CancelledError()))
 
         def _tryLock():
             if self.lock():
@@ -1539,8 +1634,12 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
                 d.callback(None)
             else:
                 if timeout is not None and self._timeoutCall is None:
+                    reason = failure.Failure(TimeoutError(
+                        "Timed out acquiring lock: %s after %fs" % (
+                            self.name,
+                            timeout)))
                     self._timeoutCall = self._scheduler.callLater(
-                        timeout, _cancelLock)
+                        timeout, _cancelLock, reason)
 
                 self._tryLockCall = self._scheduler.callLater(
                     self._interval, _tryLock)

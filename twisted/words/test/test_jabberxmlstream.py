@@ -24,7 +24,7 @@ NS_XMPP_TLS = 'urn:ietf:params:xml:ns:xmpp-tls'
 
 
 
-class HashPasswordTest(unittest.TestCase):
+class HashPasswordTests(unittest.TestCase):
     """
     Tests for L{xmlstream.hashPassword}.
     """
@@ -62,7 +62,7 @@ class HashPasswordTest(unittest.TestCase):
 
 
 
-class IQTest(unittest.TestCase):
+class IQTests(unittest.TestCase):
     """
     Tests both IQ and the associated IIQResponseTracker callback.
     """
@@ -88,8 +88,10 @@ class IQTest(unittest.TestCase):
     def testSend(self):
         self.xmlstream.transport.clear()
         self.iq.send()
-        self.assertEqual("<iq type='get' id='%s'/>" % self.iq['id'],
-                          self.xmlstream.transport.value())
+        self.assertIn(self.xmlstream.transport.value(), [
+                      "<iq type='get' id='%s'/>" % self.iq['id'],
+                      "<iq id='%s' type='get'/>" % self.iq['id'],
+                      ])
 
 
     def testResultResponse(self):
@@ -226,7 +228,7 @@ class IQTest(unittest.TestCase):
 
 
 
-class XmlStreamTest(unittest.TestCase):
+class XmlStreamTests(unittest.TestCase):
 
     def onStreamStart(self, obj):
         self.gotStreamStart = True
@@ -465,7 +467,7 @@ class TestError(Exception):
 
 
 
-class AuthenticatorTest(unittest.TestCase):
+class AuthenticatorTests(unittest.TestCase):
     def setUp(self):
         self.authenticator = xmlstream.Authenticator()
         self.xmlstream = xmlstream.XmlStream(self.authenticator)
@@ -529,7 +531,7 @@ class AuthenticatorTest(unittest.TestCase):
 
 
 
-class ConnectAuthenticatorTest(unittest.TestCase):
+class ConnectAuthenticatorTests(unittest.TestCase):
 
     def setUp(self):
         self.gotAuthenticated = False
@@ -608,7 +610,7 @@ class ConnectAuthenticatorTest(unittest.TestCase):
 
 
 
-class ListenAuthenticatorTest(unittest.TestCase):
+class ListenAuthenticatorTests(unittest.TestCase):
     """
     Tests for L{xmlstream.ListenAuthenticator}
     """
@@ -652,7 +654,7 @@ class ListenAuthenticatorTest(unittest.TestCase):
 
 
 
-class TLSInitiatingInitializerTest(unittest.TestCase):
+class TLSInitiatingInitializerTests(unittest.TestCase):
     def setUp(self):
         self.output = []
         self.done = []
@@ -777,7 +779,7 @@ class TestFeatureInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
 
 
-class BaseFeatureInitiatingInitializerTest(unittest.TestCase):
+class BaseFeatureInitiatingInitializerTests(unittest.TestCase):
 
     def setUp(self):
         self.xmlstream = xmlstream.XmlStream(xmlstream.Authenticator())
@@ -812,7 +814,7 @@ class BaseFeatureInitiatingInitializerTest(unittest.TestCase):
 
 
 
-class ToResponseTest(unittest.TestCase):
+class ToResponseTests(unittest.TestCase):
 
     def test_toResponse(self):
         """
@@ -938,7 +940,7 @@ class FailureReasonXMPPHandler(xmlstream.XMPPHandler):
 
 
 
-class XMPPHandlerTest(unittest.TestCase):
+class XMPPHandlerTests(unittest.TestCase):
     """
     Tests for L{xmlstream.XMPPHandler}.
     """
@@ -994,7 +996,7 @@ class XMPPHandlerTest(unittest.TestCase):
 
 
 
-class XMPPHandlerCollectionTest(unittest.TestCase):
+class XMPPHandlerCollectionTests(unittest.TestCase):
     """
     Tests for L{xmlstream.XMPPHandlerCollection}.
     """
@@ -1032,7 +1034,7 @@ class XMPPHandlerCollectionTest(unittest.TestCase):
 
 
 
-class StreamManagerTest(unittest.TestCase):
+class StreamManagerTests(unittest.TestCase):
     """
     Tests for L{xmlstream.StreamManager}.
     """
@@ -1139,7 +1141,6 @@ class StreamManagerTest(unittest.TestCase):
         sm = self.streamManager
         handler = FailureReasonXMPPHandler()
         handler.setHandlerParent(sm)
-        xs = xmlstream.XmlStream(xmlstream.Authenticator())
         sm._disconnected(failure.Failure(Exception("no reason")))
         self.assertEqual(True, handler.gotFailureReason)
 
@@ -1270,7 +1271,7 @@ class StreamManagerTest(unittest.TestCase):
 
 
 
-class XmlStreamServerFactoryTest(GenericXmlStreamFactoryTestsMixin):
+class XmlStreamServerFactoryTests(GenericXmlStreamFactoryTestsMixin):
     """
     Tests for L{xmlstream.XmlStreamServerFactory}.
     """

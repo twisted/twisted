@@ -307,7 +307,7 @@ if Crypto is not None and pyasn1 is not None:
     from twisted.conch.ssh import channel, connection, factory, keys
     from twisted.conch.ssh import transport, userauth
 
-    class UtilityTestCase(unittest.TestCase):
+    class UtilityTests(unittest.TestCase):
         def testCounter(self):
             c = transport._Counter('\x00\x00', 2)
             for i in xrange(256 * 256):
@@ -315,14 +315,6 @@ if Crypto is not None and pyasn1 is not None:
             # It should wrap around, too.
             for i in xrange(256 * 256):
                 self.assertEqual(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
-
-
-    class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
-        def checkKey(self, credentials):
-            blob = keys.Key.fromString(publicDSA_openssh).blob()
-            if credentials.username == 'testuser' and credentials.blob == blob:
-                return True
-            return False
 
 
     class ConchTestPasswordChecker:
@@ -446,7 +438,7 @@ if Crypto is not None and pyasn1 is not None:
     class ConchTestClientAuth(userauth.SSHUserAuthClient):
 
         hasTriedNone = 0 # have we tried the 'none' auth yet?
-        canSucceedPublicKey = 0 # can we succed with this yet?
+        canSucceedPublicKey = 0 # can we succeed with this yet?
         canSucceedPassword = 0
 
         def ssh_USERAUTH_SUCCESS(self, packet):
@@ -525,8 +517,20 @@ if Crypto is not None and pyasn1 is not None:
             self.onClose.callback(None)
 
 
+    def conchTestPublicKeyChecker():
+        """
+        Produces a SSHPublicKeyChecker with an in-memory key mapping with
+        a single use: 'testuser'
 
-class SSHProtocolTestCase(unittest.TestCase):
+        @return: L{twisted.conch.checkers.SSHPublicKeyChecker}
+        """
+        conchTestPublicKeyDB = checkers.InMemorySSHKeyDB(
+            {'testuser': [keys.Key.fromString(publicDSA_openssh)]})
+        return checkers.SSHPublicKeyChecker(conchTestPublicKeyDB)
+
+
+
+class SSHProtocolTests(unittest.TestCase):
     """
     Tests for communication between L{SSHServerTransport} and
     L{SSHClientTransport}.
@@ -536,7 +540,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
-        skip = "can't run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
     def _ourServerOurClientTest(self, name='session', **kwargs):
         """
@@ -549,7 +553,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         p = portal.Portal(self.realm)
         sshpc = ConchTestSSHChecker()
         sshpc.registerChecker(ConchTestPasswordChecker())
-        sshpc.registerChecker(ConchTestPublicKeyChecker())
+        sshpc.registerChecker(conchTestPublicKeyChecker())
         p.registerChecker(sshpc)
         fac = ConchTestServerFactory()
         fac.portal = p
@@ -631,7 +635,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         def cbPty(ignored):
             # The server-side object corresponding to our client side channel.
             session = self.realm.avatar.conn.channels[0].session
-            self.assertIdentical(session.avatar, self.realm.avatar)
+            self.assertIs(session.avatar, self.realm.avatar)
             self.assertEqual(session._terminalType, 'conch-test-term')
             self.assertEqual(session._windowSize, (24, 80, 0, 0))
             self.assertTrue(session.ptyReq)
@@ -705,7 +709,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         def cbClosed(ignored):
             # No data is expected
             self.assertEqual(self.channel.received, [])
-            self.assertNotEquals(self.channel.status, 0)
+            self.assertNotEqual(self.channel.status, 0)
         channel.addCallback(cbClosed)
         return channel
 
@@ -819,13 +823,13 @@ class SSHProtocolTestCase(unittest.TestCase):
 
 
 
-class TestSSHFactory(unittest.TestCase):
+class SSHFactoryTests(unittest.TestCase):
 
     if not Crypto:
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
-        skip = "can't run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
     def makeSSHFactory(self, primes=None):
         sshFactory = factory.SSHFactory()
@@ -866,14 +870,14 @@ class TestSSHFactory(unittest.TestCase):
         f2 = self.makeSSHFactory(primes={1:(2,3)})
         p1 = f1.buildProtocol(None)
         p2 = f2.buildProtocol(None)
-        self.failIf('diffie-hellman-group-exchange-sha1' in p1.supportedKeyExchanges,
-                p1.supportedKeyExchanges)
-        self.failUnless('diffie-hellman-group-exchange-sha1' in p2.supportedKeyExchanges,
-                p2.supportedKeyExchanges)
+        self.assertNotIn(
+            'diffie-hellman-group-exchange-sha1', p1.supportedKeyExchanges)
+        self.assertIn(
+            'diffie-hellman-group-exchange-sha1', p2.supportedKeyExchanges)
 
 
 
-class MPTestCase(unittest.TestCase):
+class MPTests(unittest.TestCase):
     """
     Tests for L{common.getMP}.
 
@@ -886,7 +890,7 @@ class MPTestCase(unittest.TestCase):
         skip = "can't run w/o PyCrypto"
 
     if not pyasn1:
-        skip = "can't run w/o PyASN1"
+        skip = "Cannot run without PyASN1"
 
 
     def test_getMP(self):
@@ -939,7 +943,7 @@ class MPTestCase(unittest.TestCase):
 
 
 
-class PyMPTestCase(MPTestCase):
+class PyMPTests(MPTests):
     """
     Tests for the python implementation of L{common.getMP}.
     """
@@ -947,14 +951,14 @@ class PyMPTestCase(MPTestCase):
 
 
 
-class GMPYMPTestCase(MPTestCase):
+class GMPYMPTests(MPTests):
     """
     Tests for the gmpy implementation of L{common.getMP}.
     """
     getMP = staticmethod(common._fastgetMP)
 
 
-class BuiltinPowHackTestCase(unittest.TestCase):
+class BuiltinPowHackTests(unittest.TestCase):
     """
     Tests that the builtin pow method is still correct after
     L{twisted.conch.ssh.common} monkeypatches it to use gmpy.
@@ -991,5 +995,5 @@ class BuiltinPowHackTestCase(unittest.TestCase):
 try:
     import gmpy
 except ImportError:
-    GMPYMPTestCase.skip = "gmpy not available"
+    GMPYMPTests.skip = "gmpy not available"
     gmpy = None

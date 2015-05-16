@@ -13,12 +13,14 @@ import struct
 import signal
 import sys
 import os
-from zope.interface import implements
+
+from zope.interface import implementer
 
 from twisted.internet import interfaces, protocol
 from twisted.python import log
 from twisted.conch.interfaces import ISession
 from twisted.conch.ssh import common, channel
+
 
 class SSHSession(channel.SSHChannel):
 
@@ -181,14 +183,13 @@ SUPPORTED_SIGNALS = ["ABRT", "ALRM", "FPE", "HUP", "ILL", "INT", "KILL",
 
 
 
+@implementer(interfaces.ITransport)
 class SSHSessionProcessProtocol(protocol.ProcessProtocol):
     """I am both an L{IProcessProtocol} and an L{ITransport}.
 
     I am a transport to the remote endpoint and a process protocol to the
     local subsystem.
     """
-
-    implements(interfaces.ITransport)
 
     # once initialized, a dictionary mapping signal values to strings
     # that follow RFC 4254.

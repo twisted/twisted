@@ -14,7 +14,7 @@ from twisted.spread import pb
 from twisted.protocols import basic
 from twisted.internet import interfaces
 
-from zope.interface import implements
+from zope.interface import implementer
 
 
 class LocalMethod:
@@ -149,11 +149,11 @@ class StringPager(Pager):
         return val
 
 
+@implementer(interfaces.IConsumer)
 class FilePager(Pager):
     """
     Reads a file in chunks and sends the chunks as they come.
     """
-    implements(interfaces.IConsumer)
 
     def __init__(self, collector, fd, callback=None, *args, **kw):
         self.chunks = []

@@ -5,8 +5,6 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
-import warnings
-
 from twisted.python import log
 from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
@@ -107,30 +105,6 @@ class ProcessMonitor(service.Service):
         self.timeStarted = {}
         self.murder = {}
         self.restart = {}
-
-    def _getActive(self):
-        warnings.warn("active is deprecated since Twisted 10.1.0.  "
-                      "Use running instead.", category=DeprecationWarning,
-                                              stacklevel=2)
-        return self.running
-
-    active = property(_getActive, None)
-
-
-    def _getConsistency(self):
-        warnings.warn("consistency is deprecated since Twisted 10.1.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        return None
-
-    consistency = property(_getConsistency, None)
-
-
-    def _getConsistencyDelay(self):
-        warnings.warn("consistencyDelay is deprecated since Twisted 10.1.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        return 60
-
-    consistencyDelay = property(_getConsistencyDelay, None)
 
 
     def __getstate__(self):

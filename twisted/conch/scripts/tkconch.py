@@ -2,15 +2,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-# $Id: tkconch.py,v 1.6 2003/02/22 08:10:15 z3p Exp $
-
-""" Implementation module for the `tkconch` command.
+"""
+Implementation module for the `tkconch` command.
 """
 
-from __future__ import nested_scopes
-
-import Tkinter, tkFileDialog, tkFont, tkMessageBox, string
+import Tkinter, tkFileDialog, tkMessageBox
+from twisted.conch import error
 from twisted.conch.ui import tkvt100
 from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding, channel
@@ -86,7 +83,7 @@ class TkConchMenu(Tkinter.Frame):
         self.grid_columnconfigure(2, weight=1, minsize=2)
 
         self.master.protocol("WM_DELETE_WINDOW", sys.exit)
-        
+
 
     def getIdentityFile(self):
         r = tkFileDialog.askopenfilename()
@@ -160,7 +157,7 @@ class TkConchMenu(Tkinter.Frame):
             finished = 0
         if finished:
             self.master.quit()
-            self.master.destroy()        
+            self.master.destroy()
             if options['log']:
                 realout = sys.stdout
                 log.startLogging(sys.stderr)
@@ -200,7 +197,7 @@ class GeneralOptions(usage.Options):
                 ['noshell', 'N', 'Do not execute a shell or command.'],
                 ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
                 ['log', 'v', 'Log to stderr'],
-                ['ansilog', 'a', 'Print the receieved data to stdout']]
+                ['ansilog', 'a', 'Print the received data to stdout']]
 
     _ciphers = transport.SSHClientTransport.supportedCiphers
     _macs = transport.SSHClientTransport.supportedMACs
@@ -337,7 +334,7 @@ def handleError():
     raise
 
 class SSHClientFactory(protocol.ClientFactory):
-    noisy = 1 
+    noisy = 1
 
     def stopFactory(self):
         reactor.stop()
@@ -379,15 +376,15 @@ class SSHClientTransport(transport.SSHClientTransport):
                 host = options['host']
                 khHost = options['host']
             else:
-                host = '%s (%s)' % (options['host'], 
+                host = '%s (%s)' % (options['host'],
                                     self.transport.getPeer()[1])
-                khHost = '%s,%s' % (options['host'], 
+                khHost = '%s,%s' % (options['host'],
                                     self.transport.getPeer()[1])
             keyType = common.getNS(pubKey)[0]
             ques = """The authenticity of host '%s' can't be established.\r
-%s key fingerprint is %s.""" % (host, 
-                                {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType], 
-                                fingerprint) 
+%s key fingerprint is %s.""" % (host,
+                                {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType],
+                                fingerprint)
             ques+='\r\nAre you sure you want to continue connecting (yes/no)? '
             return deferredAskFrame(ques, 1).addCallback(self._cbVerifyHostKey, pubKey, khHost, keyType)
 
@@ -405,7 +402,7 @@ class SSHClientTransport(transport.SSHClientTransport):
             known_hosts.close()
         except:
             log.deferr()
-            raise error.ConchError 
+            raise error.ConchError
 
     def connectionSecure(self):
         if options['user']:
@@ -420,7 +417,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     def getPassword(self, prompt = None):
         if not prompt:
             prompt = "%s@%s's password: " % (self.user, options['host'])
-        return deferredAskFrame(prompt,0) 
+        return deferredAskFrame(prompt,0)
 
     def getPublicKey(self):
         files = [x for x in options.identitys if x not in self.usedFiles]
@@ -429,15 +426,15 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         file = files[0]
         log.msg(file)
         self.usedFiles.append(file)
-        file = os.path.expanduser(file) 
+        file = os.path.expanduser(file)
         file += '.pub'
         if not os.path.exists(file):
             return
         try:
-            return keys.Key.fromFile(file).blob() 
+            return keys.Key.fromFile(file).blob()
         except:
             return self.getPublicKey() # try again
-    
+
     def getPrivateKey(self):
         file = os.path.expanduser(self.usedFiles[-1])
         if not os.path.exists(file):
@@ -467,7 +464,7 @@ class SSHConnection(connection.SSHConnection):
         if options.localForwards:
             for localPort, hostport in options.localForwards:
                 reactor.listenTCP(localPort,
-                            forwarding.SSHListenForwardingFactory(self, 
+                            forwarding.SSHListenForwardingFactory(self,
                                 hostport,
                                 forwarding.SSHListenClientForwardingChannel))
         if options.remoteForwards:
@@ -476,13 +473,13 @@ class SSHConnection(connection.SSHConnection):
                         (remotePort, hostport))
                 data = forwarding.packGlobal_tcpip_forward(
                     ('0.0.0.0', remotePort))
-                d = self.sendGlobalRequest('tcpip-forward', data)
+                self.sendGlobalRequest('tcpip-forward', data)
                 self.remoteForwards[remotePort] = hostport
 
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
-    
+
     def channelOpen(self, foo):
         #global globalSession
         #globalSession = self
@@ -505,7 +502,7 @@ class SSHSession(channel.SSHChannel):
                 #winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = (25,80,0,0) #struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
-                self.conn.sendRequest(self, 'pty-req', ptyReqData)                
+                self.conn.sendRequest(self, 'pty-req', ptyReqData)
             self.conn.sendRequest(self, 'exec', \
                 common.NS(options['command']))
         else:

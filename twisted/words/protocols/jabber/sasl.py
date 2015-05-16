@@ -5,24 +5,11 @@
 XMPP-specific SASL profile.
 """
 
+from base64 import b64decode, b64encode
 import re
 from twisted.internet import defer
 from twisted.words.protocols.jabber import sasl_mechanisms, xmlstream
 from twisted.words.xish import domish
-
-# The b64decode and b64encode functions from the base64 module are new in
-# Python 2.4. For Python 2.3 compatibility, the legacy interface is used while
-# working around MIMEisms.
-
-try:
-    from base64 import b64decode, b64encode
-except ImportError:
-    import base64
-
-    def b64encode(s):
-        return "".join(base64.encodestring(s).split("\n"))
-
-    b64decode = base64.decodestring
 
 NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
 
@@ -169,7 +156,7 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         sent along.
 
         @param data: initial client response.
-        @type data: L{str} or L{None}.
+        @type data: C{str} or C{None}.
         """
 
         auth = domish.Element((NS_XMPP_SASL, 'auth'))
@@ -184,7 +171,7 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         Send response to a challenge.
 
         @param data: client response.
-        @type data: L{str}.
+        @type data: C{str}.
         """
 
         response = domish.Element((NS_XMPP_SASL, 'response'))

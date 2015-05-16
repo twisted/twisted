@@ -304,3 +304,22 @@ class Comment(object):
     def __repr__(self):
         return 'Comment(%r)' % (self.data,)
 
+
+
+class CharRef(object):
+    """
+    A numeric character reference.  Given a separate representation in the DOM
+    so that non-ASCII characters may be output as pure ASCII.
+
+    @ivar ordinal: The ordinal value of the unicode character to which this is
+        object refers.
+    @type ordinal: C{int}
+
+    @since: 12.0
+    """
+    def __init__(self, ordinal):
+        self.ordinal = ordinal
+
+
+    def __repr__(self):
+        return "CharRef(%d)" % (self.ordinal,)

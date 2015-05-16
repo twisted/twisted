@@ -1,14 +1,25 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for returning Deferreds from a TestCase.
+"""
+
+from __future__ import division, absolute_import
+
+import unittest as pyunit
+
 from twisted.internet import defer
-from twisted.trial import unittest
-from twisted.trial import runner, reporter, util
+from twisted.trial import unittest, reporter
+from twisted.trial import util
 from twisted.trial.test import detests
 
 
-class TestSetUp(unittest.TestCase):
+class SetUpTests(unittest.TestCase):
     def _loadSuite(self, klass):
-        loader = runner.TestLoader()
+        loader = pyunit.TestLoader()
         r = reporter.TestResult()
-        s = loader.loadClass(klass)
+        s = loader.loadTestsFromTestCase(klass)
         return r, s
 
     def test_success(self):
@@ -59,7 +70,7 @@ class TestSetUp(unittest.TestCase):
         self.failIf(detests.DeferredSetUpSkip.testCalled)
 
 
-class TestNeverFire(unittest.TestCase):
+class NeverFireTests(unittest.TestCase):
     def setUp(self):
         self._oldTimeout = util.DEFAULT_TIMEOUT_DURATION
         util.DEFAULT_TIMEOUT_DURATION = 0.1
@@ -68,9 +79,9 @@ class TestNeverFire(unittest.TestCase):
         util.DEFAULT_TIMEOUT_DURATION = self._oldTimeout
 
     def _loadSuite(self, klass):
-        loader = runner.TestLoader()
+        loader = pyunit.TestLoader()
         r = reporter.TestResult()
-        s = loader.loadClass(klass)
+        s = loader.loadTestsFromTestCase(klass)
         return r, s
 
     def test_setUp(self):
@@ -95,7 +106,7 @@ class TestTester(unittest.TestCase):
         return result
 
 
-class TestDeferred(TestTester):
+class DeferredTests(TestTester):
     def getTest(self, name):
         return detests.DeferredTests(name)
 
@@ -106,6 +117,18 @@ class TestDeferred(TestTester):
 
     def test_passGenerated(self):
         result = self.runTest('test_passGenerated')
+        self.failUnless(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.failUnless(detests.DeferredTests.touched)
+    test_passGenerated.supress = [util.suppress(
+        message="twisted.internet.defer.deferredGenerator is deprecated")]
+
+
+    def test_passInlineCallbacks(self):
+        """
+        The body of a L{defer.inlineCallbacks} decorated test gets run.
+        """
+        result = self.runTest('test_passInlineCallbacks')
         self.failUnless(result.wasSuccessful())
         self.assertEqual(result.testsRun, 1)
         self.failUnless(detests.DeferredTests.touched)
@@ -149,7 +172,8 @@ class TestDeferred(TestTester):
         self.failUnless(result.wasSuccessful(), result.errors)
 
 
-class TestTimeout(TestTester):
+
+class TimeoutTests(TestTester):
     def getTest(self, name):
         return detests.TimeoutTests(name)
 
@@ -201,8 +225,8 @@ class TestTimeout(TestTester):
         self._wasTimeout(detests.TimeoutTests.timedOut)
 
     def test_classTimeout(self):
-        loader = runner.TestLoader()
-        suite = loader.loadClass(detests.TestClassTimeoutAttribute)
+        loader = pyunit.TestLoader()
+        suite = loader.loadTestsFromTestCase(detests.TestClassTimeoutAttribute)
         result = reporter.TestResult()
         suite.run(result)
         self.assertEqual(len(result.errors), 1)
@@ -218,3 +242,7 @@ class TestTimeout(TestTester):
             call.cancel()
         self.failIf(result.wasSuccessful())
         self._wasTimeout(result.errors[0][1])
+
+
+# The test loader erroneously attempts to run this:
+del TestTester

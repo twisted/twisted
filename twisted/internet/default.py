@@ -9,6 +9,8 @@ Depending on a specific application's needs, some other reactor may in
 fact be better.
 """
 
+from __future__ import division, absolute_import
+
 __all__ = ["install"]
 
 from twisted.python.runtime import platform
@@ -24,25 +26,29 @@ def _getInstallFunction(platform):
     @return: A zero-argument callable which will install the selected
         reactor.
     """
-    # Linux: Once <http://twistedmatrix.com/trac/ticket/4429> is fixed
-    # epoll should be the default.
+    # Linux: epoll(7) is the default, since it scales well.
     #
-    # OS X: poll(2) is not exposed by Python because it doesn't
-    # support all file descriptors (in particular, lack of PTY support
-    # is a problem) -- see <http://bugs.python.org/issue5154>. kqueue
-    # reactor is being rewritten (see
-    # <http://twistedmatrix.com/trac/ticket/1918>), and also has same
-    # restriction as poll(2) as far PTY support goes.
+    # OS X: poll(2) is not exposed by Python because it doesn't support all
+    # file descriptors (in particular, lack of PTY support is a problem) --
+    # see <http://bugs.python.org/issue5154>. kqueue has the same restrictions
+    # as poll(2) as far PTY support goes.
     #
-    # Windows: IOCP should eventually be default, but still has a few
-    # remaining bugs,
-    # e.g. <http://twistedmatrix.com/trac/ticket/4667>.
+    # Windows: IOCP should eventually be default, but still has some serious
+    # bugs, e.g. <http://twistedmatrix.com/trac/ticket/4667>.
     #
-    # We therefore choose poll(2) on non-OS X POSIX platforms, and
-    # select(2) everywhere else.
-    if platform.getType() == 'posix' and not platform.isMacOSX():
-        from twisted.internet.pollreactor import install
-    else:
+    # We therefore choose epoll(7) on Linux, poll(2) on other non-OS X POSIX
+    # platforms, and select(2) everywhere else.
+    try:
+        if platform.isLinux():
+            try:
+                from twisted.internet.epollreactor import install
+            except ImportError:
+                from twisted.internet.pollreactor import install
+        elif platform.getType() == 'posix' and not platform.isMacOSX():
+            from twisted.internet.pollreactor import install
+        else:
+            from twisted.internet.selectreactor import install
+    except ImportError:
         from twisted.internet.selectreactor import install
     return install
 

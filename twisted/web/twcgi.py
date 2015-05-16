@@ -8,17 +8,14 @@ I hold resource classes and helper classes that deal with CGI scripts.
 """
 
 # System Imports
-import string
 import os
 import urllib
 
 # Twisted Imports
 from twisted.web import http
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol
 from twisted.spread import pb
 from twisted.python import log, filepath
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
 from twisted.web import resource, server, static
 
 
@@ -42,6 +39,8 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
             "CGI directories do not support directory listing.")
         return notFound.render(request)
 
+
+
 class CGIScript(resource.Resource):
     """
     L{CGIScript} is a resource which runs child processes according to the CGI
@@ -51,11 +50,17 @@ class CGIScript(resource.Resource):
     IPC with an external process with an unpleasant protocol.
     """
     isLeaf = 1
-    def __init__(self, filename, registry=None):
+    def __init__(self, filename, registry=None, reactor=None):
         """
         Initialize, with the name of a CGI script file.
         """
         self.filename = filename
+        if reactor is None:
+            # This installs a default reactor, if None was installed before.
+            # We do a late import here, so that importing the current module
+            # won't directly trigger installing a default reactor.
+            from twisted.internet import reactor
+        self._reactor = reactor
 
 
     def render(self, request):
@@ -68,8 +73,8 @@ class CGIScript(resource.Resource):
         @type request: L{twisted.web.http.Request}
         @param request: An HTTP request.
         """
-        script_name = "/"+string.join(request.prepath, '/')
-        serverName = string.split(request.getRequestHostname(), ':')[0]
+        script_name = "/" + "/".join(request.prepath)
+        serverName = request.getRequestHostname().split(':')[0]
         env = {"SERVER_SOFTWARE":   server.version,
                "SERVER_NAME":       serverName,
                "GATEWAY_INTERFACE": "CGI/1.1",
@@ -81,15 +86,12 @@ class CGIScript(resource.Resource):
                "REQUEST_URI":       request.uri,
         }
 
-        client = request.getClient()
-        if client is not None:
-            env['REMOTE_HOST'] = client
         ip = request.getClientIP()
         if ip is not None:
             env['REMOTE_ADDR'] = ip
         pp = request.postpath
         if pp:
-            env["PATH_INFO"] = "/"+string.join(pp, '/')
+            env["PATH_INFO"] = "/" + "/".join(pp)
 
         if hasattr(request, "content"):
             # request.content is either a StringIO or a TemporaryFile, and
@@ -99,26 +101,27 @@ class CGIScript(resource.Resource):
             request.content.seek(0,0)
             env['CONTENT_LENGTH'] = str(length)
 
-        qindex = string.find(request.uri, '?')
-        if qindex != -1:
+        try:
+            qindex = request.uri.index('?')
+        except ValueError:
+            env['QUERY_STRING'] = ''
+            qargs = []
+        else:
             qs = env['QUERY_STRING'] = request.uri[qindex+1:]
             if '=' in qs:
                 qargs = []
             else:
                 qargs = [urllib.unquote(x) for x in qs.split('+')]
-        else:
-            env['QUERY_STRING'] = ''
-            qargs = []
 
-        # Propogate HTTP headers
+        # Propagate HTTP headers
         for title, header in request.getAllHeaders().items():
-            envname = string.upper(string.replace(title, '-', '_'))
+            envname = title.replace('-', '_').upper()
             if title not in ('content-type', 'content-length'):
                 envname = "HTTP_" + envname
             env[envname] = header
-        # Propogate our environment
+        # Propagate our environment
         for key, value in os.environ.items():
-            if not env.has_key(key):
+            if key not in env:
                 env[key] = value
         # And they're off!
         self.runProcess(env, request, qargs)
@@ -143,8 +146,8 @@ class CGIScript(resource.Resource):
             will get spawned.
         """
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filename, [self.filename] + qargs, env,
-                             os.path.dirname(self.filename))
+        self._reactor.spawnProcess(p, self.filename, [self.filename] + qargs,
+                                   env, os.path.dirname(self.filename))
 
 
 
@@ -185,44 +188,9 @@ class FilteredScript(CGIScript):
             will get spawned.
         """
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filter,
-                             [self.filter, self.filename] + qargs, env,
-                             os.path.dirname(self.filename))
-
-
-
-class PHP3Script(FilteredScript):
-    """
-    L{PHP3Script} is deprecated. See L{FilteredScript} for how to create a
-    platform-specific configuration for the location of a PHP CGI interpreter.
-
-    I am a L{FilteredScript} that uses the default PHP3 command on most systems.
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 10, 1, 0),
-        "PHP3Script is deprecated. Use twisted.web.twcgi.FilteredScript "
-        "instead.",
-        __name__, "PHP3Script")
-
-    filter = '/usr/bin/php3'
-
-
-
-class PHPScript(FilteredScript):
-    """
-    L{PHPScript} is deprecated. See L{FilteredScript} for how to create a
-    platform-specific configuration for the location of a PHP CGI interpreter.
-
-    I am a L{FilteredScript} that uses the PHP command on most systems.
-    Sometimes, PHP wants the path to itself as C{argv[0]}. This is that time.
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 10, 1, 0),
-        "PHPScript is deprecated. Use twisted.web.twcgi.FilteredScript "
-        "instead.",
-        __name__, "PHPScript")
-
-    filter = '/usr/bin/php4'
+        self._reactor.spawnProcess(p, self.filter,
+                                   [self.filter, self.filename] + qargs, env,
+                                   os.path.dirname(self.filename))
 
 
 
@@ -289,12 +257,14 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 headerend, delimiter = headerEnds[0]
                 self.headertext = text[:headerend]
                 # This is a final version of the header text.
-                linebreak = delimiter[:len(delimiter)/2]
+                linebreak = delimiter[:len(delimiter)//2]
                 headers = self.headertext.split(linebreak)
                 for header in headers:
                     br = header.find(': ')
                     if br == -1:
-                        log.msg( 'ignoring malformed CGI header: %s' % header )
+                        log.msg(
+                            format='ignoring malformed CGI header: %(header)r',
+                            header=header)
                     else:
                         headerName = header[:br].lower()
                         headerText = header[br+2:]

@@ -7,6 +7,7 @@ Tests for L{twisted.web.tap}.
 
 import os, stat
 
+from twisted.python.reflect import requireModule
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 from twisted.internet.interfaces import IReactorUNIX
@@ -20,7 +21,7 @@ from twisted.web.static import Data, File
 from twisted.web.distrib import ResourcePublisher, UserDirectory
 from twisted.web.wsgi import WSGIResource
 from twisted.web.tap import Options, makePersonalServerFactory, makeService
-from twisted.web.twcgi import CGIScript, PHP3Script, PHPScript
+from twisted.web.twcgi import CGIScript
 from twisted.web.script import PythonScript
 
 
@@ -68,26 +69,6 @@ class ServiceTests(TestCase):
         path, root = self._pathOption()
         path.child("foo.cgi").setContent("")
         self.assertIsInstance(root.getChild("foo.cgi", None), CGIScript)
-
-
-    def test_php3Processor(self):
-        """
-        The I{--path} option creates a root resource which serves a
-        L{PHP3Script} instance for any child with the C{".php3"} extension.
-        """
-        path, root = self._pathOption()
-        path.child("foo.php3").setContent("")
-        self.assertIsInstance(root.getChild("foo.php3", None), PHP3Script)
-
-
-    def test_phpProcessor(self):
-        """
-        The I{--path} option creates a root resource which serves a
-        L{PHPScript} instance for any child with the C{".php"} extension.
-        """
-        path, root = self._pathOption()
-        path.child("foo.php").setContent("")
-        self.assertIsInstance(root.getChild("foo.php", None), PHPScript)
 
 
     def test_epyProcessor(self):
@@ -214,3 +195,33 @@ class ServiceTests(TestCase):
             exc = self.assertRaises(
                 UsageError, options.parseOptions, ['--wsgi', name])
             self.assertEqual(str(exc), "No such WSGI application: %r" % (name,))
+
+
+    def test_HTTPSFailureOnMissingSSL(self):
+        """
+        An L{UsageError} is raised when C{https} is requested but there is no
+        support for SSL.
+        """
+        options = Options()
+
+        exception = self.assertRaises(
+            UsageError, options.parseOptions, ['--https=443'])
+
+        self.assertEqual('SSL support not installed', exception.message)
+
+    if requireModule('OpenSSL.SSL') is not None:
+        test_HTTPSFailureOnMissingSSL.skip = 'SSL module is available.'
+
+
+    def test_HTTPSAcceptedOnAvailableSSL(self):
+        """
+        When SSL support is present, it accepts the --https option.
+        """
+        options = Options()
+
+        options.parseOptions(['--https=443'])
+
+        self.assertEqual('443', options['https'])
+
+    if requireModule('OpenSSL.SSL') is None:
+        test_HTTPSAcceptedOnAvailableSSL.skip = 'SSL module is not available.'

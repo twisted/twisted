@@ -11,12 +11,14 @@ listeners or connectors are added)::
     pollreactor.install()
 """
 
+from __future__ import division, absolute_import
+
 # System imports
 import errno
 from select import error as SelectError, poll
 from select import POLLIN, POLLOUT, POLLHUP, POLLERR, POLLNVAL
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Twisted imports
 from twisted.python import log
@@ -25,6 +27,7 @@ from twisted.internet.interfaces import IReactorFDSet
 
 
 
+@implementer(IReactorFDSet)
 class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
     A reactor that uses poll(2).
@@ -50,7 +53,6 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         be dispatched to the corresponding L{FileDescriptor} instances in
         C{_selectables}.
     """
-    implements(IReactorFDSet)
 
     _POLL_DISCONNECTED = (POLLHUP | POLLERR | POLLNVAL)
     _POLL_IN = POLLIN
@@ -151,7 +153,7 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
         try:
             l = self._poller.poll(timeout)
-        except SelectError, e:
+        except SelectError as e:
             if e.args[0] == errno.EINTR:
                 return
             else:

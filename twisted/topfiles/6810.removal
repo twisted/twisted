@@ -1,0 +1,1 @@
+twisted.protocols.gps is deprecated in preference to twisted.positioning.

@@ -25,13 +25,7 @@ See U{http://code.sixapart.com/svn/memcached/trunk/server/doc/protocol.txt} for
 more information about the protocol.
 """
 
-try:
-    from collections import deque
-except ImportError:
-    class deque(list):
-        def popleft(self):
-            return self.pop(0)
-
+from collections import deque
 
 from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin

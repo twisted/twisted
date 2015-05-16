@@ -1,13 +1,14 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_hostAndPeer -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_hostAndPeer -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.test_hostAndPeer} to test
+L{twisted.test.test_stdio.StandardInputOutputTests.test_hostAndPeer} to test
 that ITransport.getHost() and ITransport.getPeer() work for process transports.
 """
 
+__import__('_preamble')
 import sys
 
 from twisted.internet import stdio, protocol

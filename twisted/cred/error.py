@@ -1,8 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Cred errors.
+"""
 
-"""Cred errors."""
+from __future__ import division, absolute_import
+
 
 class Unauthorized(Exception):
     """Standard unauthorized error."""
@@ -34,7 +38,7 @@ class UnhandledCredentials(LoginFailed):
 class LoginDenied(LoginFailed):
     """
     The realm rejected this login for some reason.
-    
+
     Examples of reasons this might be raised include an avatar logging in
     too frequently, a quota having been fully used, or the overall server
     load being too high.

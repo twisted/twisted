@@ -9,6 +9,7 @@ News server backend implementations.
 import getpass, pickle, time, socket
 import os
 import StringIO
+from hashlib import md5
 from email.Message import Message
 from email.Generator import Generator
 from zope.interface import implements, Interface
@@ -18,7 +19,6 @@ from twisted.mail import smtp
 from twisted.internet import defer
 from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
-from twisted.python.hashlib import md5
 
 
 
@@ -63,7 +63,7 @@ class Article:
 
     def getHeader(self, header):
         h = header.lower()
-        if self.headers.has_key(h):
+        if h in self.headers:
             return self.headers[h][1]
         else:
             return ''
@@ -350,7 +350,7 @@ class PickleStorage(_ModerationMixin):
             return self.notifyModerators(moderators, a)
 
         for group in groups:
-            if self.db.has_key(group):
+            if group in self.db:
                 if len(self.db[group].keys()):
                     index = max(self.db[group].keys()) + 1
                 else:
@@ -469,7 +469,7 @@ class PickleStorage(_ModerationMixin):
 
 
     def load(self, filename, groups = None, moderators = ()):
-        if PickleStorage.sharedDBs.has_key(filename):
+        if filename in PickleStorage.sharedDBs:
             self.db = PickleStorage.sharedDBs[filename]
         else:
             try:
@@ -646,7 +646,7 @@ class NewsShelf(_ModerationMixin):
             high = self.dbm['groups'][group].maxArticle
         r = []
         for i in range(low, high + 1):
-            if self.dbm['groups'][group].articles.has_key(i):
+            if i in self.dbm['groups'][group].articles:
                 r.append((i, self.dbm['groups'][group].articles[i].getHeader(header)))
         return defer.succeed(r)
 

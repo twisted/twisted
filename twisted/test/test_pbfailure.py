@@ -5,11 +5,9 @@
 Tests for error handling in PB.
 """
 
-import sys
 from StringIO import StringIO
 
 from twisted.trial import unittest
-
 from twisted.spread import pb, flavors, jelly
 from twisted.internet import reactor, defer
 from twisted.python import log
@@ -168,7 +166,7 @@ class PBConnTestCase(unittest.TestCase):
 
 
 
-class PBFailureTest(PBConnTestCase):
+class PBFailureTests(PBConnTestCase):
     compare = unittest.TestCase.assertEqual
 
 
@@ -394,13 +392,9 @@ class PBFailureTest(PBConnTestCase):
         self.assertEqual(exc.args, ("foo",))
         self.assertEqual(exc.remoteTraceback, 'Traceback unavailable\n')
 
-    if sys.version_info[:2] < (2, 5):
-        test_throwExceptionIntoGenerator.skip = (
-            "throwExceptionIntoGenerator is not supported in Python < 2.5")
 
 
-
-class PBFailureTestUnsafe(PBFailureTest):
+class PBFailureUnsafeTests(PBFailureTests):
     compare = unittest.TestCase.failIfEquals
     unsafeTracebacks = 1
 

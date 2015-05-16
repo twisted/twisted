@@ -23,6 +23,7 @@ from twisted import internet
 from twisted.mail import pop3
 from twisted.protocols import loopback
 from twisted.python import failure
+from twisted.python.util import OrderedDict
 
 from twisted import cred
 import twisted.cred.portal
@@ -32,7 +33,7 @@ import twisted.cred.credentials
 from twisted.test.proto_helpers import LineSendingProtocol
 
 
-class UtilityTestCase(unittest.TestCase):
+class UtilityTests(unittest.TestCase):
     """
     Test the various helper functions and classes used by the POP3 server
     protocol implementation.
@@ -188,7 +189,6 @@ class MyPOP3Downloader(pop3.POP3Client):
     def handle_APOP(self, line):
         parts = line.split()
         code = parts[0]
-        data = (parts[1:] or ['NONE'])[0]
         if code != '+OK':
             print parts
             raise AssertionError, 'code is ' + code
@@ -207,7 +207,7 @@ class MyPOP3Downloader(pop3.POP3Client):
             raise AssertionError, 'code is ' + line
 
 
-class POP3TestCase(unittest.TestCase):
+class POP3Tests(unittest.TestCase):
 
     message = '''\
 Subject: urgent
@@ -300,7 +300,7 @@ class DummyMailbox(pop3.Mailbox):
         self.messages[i] = ''
 
 
-class AnotherPOP3TestCase(unittest.TestCase):
+class AnotherPOP3Tests(unittest.TestCase):
 
     def runTest(self, lines, expectedOutput):
         dummy = DummyPOP3()
@@ -382,8 +382,9 @@ class AnotherPOP3TestCase(unittest.TestCase):
 
     def _cbTestAuthListing(self, ignored, client):
         self.failUnless(client.response[1].startswith('+OK'))
-        self.assertEqual(client.response[2:6],
-                          ["AUTH1", "SECONDAUTH", "AUTHLAST", "."])
+        self.assertEqual(sorted(client.response[2:5]),
+                         ["AUTH1", "AUTHLAST", "SECONDAUTH"])
+        self.assertEqual(client.response[5], ".")
 
     def testIllegalPASS(self):
         dummy = DummyPOP3()
@@ -423,7 +424,7 @@ class TestServerFactory:
     def cap_EXPIRE(self):
         return 60
 
-    challengers = {"SCHEME_1": None, "SCHEME_2": None}
+    challengers = OrderedDict([("SCHEME_1", None), ("SCHEME_2", None)])
 
     def cap_LOGIN_DELAY(self):
         return 120
@@ -442,7 +443,7 @@ class TestMailbox:
     messageExpiration = 25
 
 
-class CapabilityTestCase(unittest.TestCase):
+class CapabilityTests(unittest.TestCase):
     def setUp(self):
         s = StringIO.StringIO()
         p = pop3.POP3()
@@ -497,7 +498,7 @@ class CapabilityTestCase(unittest.TestCase):
 
 
 
-class GlobalCapabilitiesTestCase(unittest.TestCase):
+class GlobalCapabilitiesTests(unittest.TestCase):
     def setUp(self):
         s = StringIO.StringIO()
         p = pop3.POP3()
@@ -538,7 +539,7 @@ class TestRealm:
 
 
 
-class SASLTestCase(unittest.TestCase):
+class SASLTests(unittest.TestCase):
     def testValidLogin(self):
         p = pop3.POP3()
         p.factory = TestServerFactory()
@@ -932,7 +933,7 @@ _getUidlSuppression = util.suppress(
     message=_getUidlDeprecation,
     category=PendingDeprecationWarning)
 
-class IndexErrorCommandTestCase(CommandMixin, unittest.TestCase):
+class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
     """
     Run all of the command tests against a mailbox which raises IndexError
     when an out of bounds request is made.  This behavior will be deprecated
@@ -962,7 +963,7 @@ class IndexErrorCommandTestCase(CommandMixin, unittest.TestCase):
 
 
 
-class ValueErrorCommandTestCase(CommandMixin, unittest.TestCase):
+class ValueErrorCommandTests(CommandMixin, unittest.TestCase):
     """
     Run all of the command tests against a mailbox which raises ValueError
     when an out of bounds request is made.  This is the correct behavior and
@@ -984,18 +985,18 @@ class SyncDeferredMailbox(DummyMailbox):
 
 
 
-class IndexErrorSyncDeferredCommandTestCase(IndexErrorCommandTestCase):
+class IndexErrorSyncDeferredCommandTests(IndexErrorCommandTests):
     """
-    Run all of the L{IndexErrorCommandTestCase} tests with a
+    Run all of the L{IndexErrorCommandTests} tests with a
     synchronous-Deferred returning IMailbox implementation.
     """
     mailboxType = SyncDeferredMailbox
 
 
 
-class ValueErrorSyncDeferredCommandTestCase(ValueErrorCommandTestCase):
+class ValueErrorSyncDeferredCommandTests(ValueErrorCommandTests):
     """
-    Run all of the L{ValueErrorCommandTestCase} tests with a
+    Run all of the L{ValueErrorCommandTests} tests with a
     synchronous-Deferred returning IMailbox implementation.
     """
     mailboxType = SyncDeferredMailbox
@@ -1020,9 +1021,9 @@ class AsyncDeferredMailbox(DummyMailbox):
 
 
 
-class IndexErrorAsyncDeferredCommandTestCase(IndexErrorCommandTestCase):
+class IndexErrorAsyncDeferredCommandTests(IndexErrorCommandTests):
     """
-    Run all of the L{IndexErrorCommandTestCase} tests with an asynchronous-Deferred
+    Run all of the L{IndexErrorCommandTests} tests with an asynchronous-Deferred
     returning IMailbox implementation.
     """
     mailboxType = AsyncDeferredMailbox
@@ -1034,13 +1035,13 @@ class IndexErrorAsyncDeferredCommandTestCase(IndexErrorCommandTestCase):
         while self.pop3Server.mbox.waiting:
             d, a = self.pop3Server.mbox.waiting.pop()
             d.callback(a)
-        IndexErrorCommandTestCase._flush(self)
+        IndexErrorCommandTests._flush(self)
 
 
 
-class ValueErrorAsyncDeferredCommandTestCase(ValueErrorCommandTestCase):
+class ValueErrorAsyncDeferredCommandTests(ValueErrorCommandTests):
     """
-    Run all of the L{IndexErrorCommandTestCase} tests with an asynchronous-Deferred
+    Run all of the L{IndexErrorCommandTests} tests with an asynchronous-Deferred
     returning IMailbox implementation.
     """
     mailboxType = AsyncDeferredMailbox
@@ -1052,9 +1053,9 @@ class ValueErrorAsyncDeferredCommandTestCase(ValueErrorCommandTestCase):
         while self.pop3Server.mbox.waiting:
             d, a = self.pop3Server.mbox.waiting.pop()
             d.callback(a)
-        ValueErrorCommandTestCase._flush(self)
+        ValueErrorCommandTests._flush(self)
 
-class POP3MiscTestCase(unittest.TestCase):
+class POP3MiscTests(unittest.TestCase):
     """
     Miscellaneous tests more to do with module/package structure than
     anything to do with the Post Office Protocol.

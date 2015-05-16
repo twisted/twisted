@@ -13,8 +13,6 @@ from twisted.python.versions import Version
 from twisted.test import proto_helpers
 
 from twisted import cred
-import twisted.cred.portal
-import twisted.cred.checkers
 
 from zope.interface import implements
 
@@ -86,11 +84,29 @@ Via: SIP/2.0/UDP 10.0.0.1:5060;rport
 
 """.replace("\n", "\r\n")
 
+# multiline headers (example from RFC 3621).
+response_multiline = """\
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP server10.biloxi.com
+    ;branch=z9hG4bKnashds8;received=192.0.2.3
+Via: SIP/2.0/UDP bigbox3.site3.atlanta.com
+    ;branch=z9hG4bK77ef4c2312983.1;received=192.0.2.2
+Via: SIP/2.0/UDP pc33.atlanta.com
+    ;branch=z9hG4bK776asdhds ;received=192.0.2.1
+To: Bob <sip:bob@biloxi.com>;tag=a6c85cf
+From: Alice <sip:alice@atlanta.com>;tag=1928301774
+Call-ID: a84b4c76e66710@pc33.atlanta.com
+CSeq: 314159 INVITE
+Contact: <sip:bob@192.0.2.4>
+Content-Type: application/sdp
+Content-Length: 0
+\n""".replace("\n", "\r\n")
+
 class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         return sip.IContact, None, lambda: None
 
-class MessageParsingTestCase(unittest.TestCase):
+class MessageParsingTests(unittest.TestCase):
     def setUp(self):
         self.l = []
         self.parser = sip.MessagesParser(self.l.append)
@@ -178,7 +194,31 @@ class MessageParsingTestCase(unittest.TestCase):
         self.assertEqual(m.finished, 1)
 
 
-class MessageParsingTestCase2(MessageParsingTestCase):
+    def test_multiLine(self):
+        """
+        A header may be split across multiple lines.  Subsequent lines begin
+        with C{" "} or C{"\\t"}.
+        """
+        l = self.l
+        self.feedMessage(response_multiline)
+        self.assertEquals(len(l), 1)
+        m = l[0]
+        self.assertEquals(
+            m.headers['via'][0],
+            "SIP/2.0/UDP server10.biloxi.com;"
+            "branch=z9hG4bKnashds8;received=192.0.2.3")
+        self.assertEquals(
+            m.headers['via'][1],
+            "SIP/2.0/UDP bigbox3.site3.atlanta.com;"
+            "branch=z9hG4bK77ef4c2312983.1;received=192.0.2.2")
+        self.assertEquals(
+            m.headers['via'][2],
+            "SIP/2.0/UDP pc33.atlanta.com;"
+            "branch=z9hG4bK776asdhds ;received=192.0.2.1")
+
+
+
+class MessageParsingFeedDataCharByCharTests(MessageParsingTests):
     """Same as base class, but feed data char by char."""
 
     def feedMessage(self, message):
@@ -187,7 +227,7 @@ class MessageParsingTestCase2(MessageParsingTestCase):
         self.parser.dataDone()
 
 
-class MakeMessageTestCase(unittest.TestCase):
+class MakeMessageTests(unittest.TestCase):
 
     def testRequest(self):
         r = sip.Request("INVITE", "sip:foo")
@@ -210,7 +250,7 @@ class MakeMessageTestCase(unittest.TestCase):
         self.assertEqual(r.toString(), "SIP/2.0 200 OK\r\n\r\n")
 
 
-class ViaTestCase(unittest.TestCase):
+class ViaTests(unittest.TestCase):
 
     def checkRoundtrip(self, v):
         s = v.toString()
@@ -337,7 +377,7 @@ class ViaTestCase(unittest.TestCase):
 
 
 
-class URLTestCase(unittest.TestCase):
+class URLTests(unittest.TestCase):
 
     def testRoundtrip(self):
         for url in [
@@ -361,7 +401,7 @@ class URLTestCase(unittest.TestCase):
             self.assertEqual(getattr(url, k), v)
 
 
-class ParseTestCase(unittest.TestCase):
+class ParseTests(unittest.TestCase):
 
     def testParseAddress(self):
         for address, name, urls, params in [
@@ -390,7 +430,7 @@ class FailingLocator:
         return defer.fail(LookupError())
 
 
-class ProxyTestCase(unittest.TestCase):
+class ProxyTests(unittest.TestCase):
 
     def setUp(self):
         self.proxy = sip.Proxy("127.0.0.1")
@@ -496,7 +536,7 @@ class ProxyTestCase(unittest.TestCase):
     #testCantForwardResponse.skip = "not implemented yet"
 
 
-class RegistrationTestCase(unittest.TestCase):
+class RegistrationTests(unittest.TestCase):
 
     def setUp(self):
         self.proxy = sip.RegisterProxy(host="127.0.0.1")
@@ -580,7 +620,7 @@ class RegistrationTestCase(unittest.TestCase):
 
     def test_basicAuthentication(self):
         """
-        Test that registration with basic authentication suceeds.
+        Test that registration with basic authentication succeeds.
         """
         self.addPortal()
         self.proxy.authorizers = self.proxy.authorizers.copy()
@@ -684,7 +724,7 @@ class Client(sip.Base):
         self.deferred.callback(self.received)
 
 
-class LiveTest(unittest.TestCase):
+class LiveTests(unittest.TestCase):
 
     def setUp(self):
         self.proxy = sip.RegisterProxy(host="127.0.0.1")
@@ -842,7 +882,7 @@ class FakeRegistry(sip.InMemoryRegistry):
             self, domainURL, logicalURL, physicalURL)
         return d.addCallback(self._cbReg)
 
-class AuthorizationTestCase(unittest.TestCase):
+class AuthorizationTests(unittest.TestCase):
     def setUp(self):
         self.proxy = sip.RegisterProxy(host="intarweb.us")
         self.proxy.authorizers = self.proxy.authorizers.copy()

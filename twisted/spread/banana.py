@@ -17,6 +17,7 @@ import copy, cStringIO, struct
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
+from twisted.python.reflect import fullyQualifiedName
 
 class BananaError(Exception):
     pass
@@ -60,7 +61,7 @@ FLOAT    = chr(0x84)
 # "optional" -- these might be refused by a low-level implementation.
 LONGINT  = chr(0x85)
 LONGNEG  = chr(0x86)
-# really optional; this is is part of the 'pb' vocabulary
+# really optional; this is part of the 'pb' vocabulary
 VOCAB    = chr(0x87)
 
 HIGH_BIT_SET = chr(0x80)
@@ -79,11 +80,24 @@ def setPrefixLimit(limit):
     """
     global _PREFIX_LIMIT
     _PREFIX_LIMIT = limit
+
+_PREFIX_LIMIT = None
 setPrefixLimit(64)
 
 SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
 
 class Banana(protocol.Protocol, styles.Ephemeral):
+    """
+    L{Banana} implements the I{Banana} s-expression protocol, client and
+    server.
+
+    @ivar knownDialects: These are the profiles supported by this Banana
+        implementation.
+    @type knownDialects: L{list} of L{bytes}
+    """
+
+    # The specification calls these profiles but this implementation calls them
+    # dialects instead.
     knownDialects = ["pb", "none"]
 
     prefixLimit = None
@@ -209,7 +223,13 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             elif typebyte == VOCAB:
                 buffer = rest
                 num = b1282int(num)
-                gotItem(self.incomingVocabulary[num])
+                item = self.incomingVocabulary[num]
+                if self.currentDialect == b'pb':
+                    # the sender issues VOCAB only for dialect pb
+                    gotItem(item)
+                else:
+                    raise NotImplementedError(
+                        "Invalid item for pb protocol {0!r}".format(item))
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
                     buffer = rest[8:]
@@ -280,6 +300,16 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         self.isClient = isClient
 
     def sendEncoded(self, obj):
+        """
+        Send the encoded representation of the given object:
+
+        @param obj: An object to encode and send.
+
+        @raise BananaError: If the given object is not an instance of one of
+            the types supported by Banana.
+
+        @return: C{None}
+        """
         io = cStringIO.StringIO()
         self._encode(obj, io.write)
         value = io.getvalue()
@@ -327,7 +357,8 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(STRING)
                 write(obj)
         else:
-            raise BananaError("could not send object: %r" % (obj,))
+            raise BananaError("Banana cannot send {0} objects: {1!r}".format(
+                fullyQualifiedName(type(obj)), obj))
 
 
 # For use from the interactive interpreter

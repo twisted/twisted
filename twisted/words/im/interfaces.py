@@ -8,8 +8,6 @@ Pan-protocol chat client.
 
 from zope.interface import Interface, Attribute
 
-from twisted.words.im import locals
-
 # (Random musings, may not reflect on current state of code:)
 #
 # Accounts have Protocol components (clients)

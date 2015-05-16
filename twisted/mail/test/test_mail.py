@@ -13,7 +13,10 @@ import StringIO
 import rfc822
 import tempfile
 import signal
+import time
+from hashlib import md5
 
+from zope.interface.verify import verifyClass
 from zope.interface import Interface, implements
 
 from twisted.trial import unittest
@@ -31,7 +34,9 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet import address
 from twisted.python import failure
 from twisted.python.filepath import FilePath
-from twisted.python.hashlib import md5
+from twisted.python import log
+from twisted.mail.relaymanager import _AttemptManager
+from twisted.test.proto_helpers import MemoryReactorClock
 
 from twisted import mail
 import twisted.mail.mail
@@ -51,7 +56,7 @@ import twisted.cred.portal
 
 from twisted.test.proto_helpers import LineSendingProtocol
 
-class DomainWithDefaultsTestCase(unittest.TestCase):
+class DomainWithDefaultsTests(unittest.TestCase):
     def testMethods(self):
         d = dict([(x, x + 10) for x in range(10)])
         d = mail.mail.DomainWithDefaultDict(d, 'Default')
@@ -142,12 +147,14 @@ class DomainWithDefaultsTestCase(unittest.TestCase):
 
 
 
-class BounceTestCase(unittest.TestCase):
+class BounceTests(unittest.TestCase):
     def setUp(self):
         self.domain = mail.mail.BounceDomain()
 
+
     def testExists(self):
         self.assertRaises(smtp.AddressError, self.domain.exists, "any user")
+
 
     def testRelay(self):
         self.assertEqual(
@@ -155,14 +162,14 @@ class BounceTestCase(unittest.TestCase):
             False
         )
 
-    def testMessage(self):
-        self.assertRaises(NotImplementedError, self.domain.startMessage, "whomever")
 
     def testAddUser(self):
         self.domain.addUser("bob", "password")
         self.assertRaises(smtp.SMTPBadRcpt, self.domain.exists, "bob")
 
-class FileMessageTestCase(unittest.TestCase):
+
+
+class FileMessageTests(unittest.TestCase):
     def setUp(self):
         self.name = "fileMessage.testFile"
         self.final = "final.fileMessage.testFile"
@@ -206,7 +213,7 @@ class FileMessageTestCase(unittest.TestCase):
         self.failIf(os.path.exists(self.name))
         self.failIf(os.path.exists(self.final))
 
-class MailServiceTestCase(unittest.TestCase):
+class MailServiceTests(unittest.TestCase):
     def setUp(self):
         self.service = mail.mail.MailService()
 
@@ -358,7 +365,7 @@ class _AppendTestMixin(object):
 
 
 
-class MaildirAppendStringTestCase(unittest.TestCase, _AppendTestMixin):
+class MaildirAppendStringTests(unittest.TestCase, _AppendTestMixin):
     """
     Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
     """
@@ -438,7 +445,7 @@ class MaildirAppendStringTestCase(unittest.TestCase, _AppendTestMixin):
 
 
 
-class MaildirAppendFileTestCase(unittest.TestCase, _AppendTestMixin):
+class MaildirAppendFileTests(unittest.TestCase, _AppendTestMixin):
     """
     Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
     """
@@ -479,7 +486,7 @@ class MaildirAppendFileTestCase(unittest.TestCase, _AppendTestMixin):
 
 
 
-class MaildirTestCase(unittest.TestCase):
+class MaildirTests(unittest.TestCase):
     def setUp(self):
         self.d = self.mktemp()
         mail.maildir.initializeMaildir(self.d)
@@ -568,16 +575,49 @@ class MaildirTestCase(unittest.TestCase):
         self.failIf(os.path.exists(j(self.d, '.Trash', 'cur', f)))
         self.failUnless(os.path.exists(j(self.d, msgs[5])))
 
-class MaildirDirdbmDomainTestCase(unittest.TestCase):
+
+
+class AbstractMaildirDomainTests(unittest.TestCase):
+    """
+    Tests for L{twisted.mail.maildir.AbstractMaildirDomain}.
+    """
+    def test_interface(self):
+        """
+        L{maildir.AbstractMaildirDomain} implements L{mail.IAliasableDomain}.
+        """
+        verifyClass(mail.mail.IAliasableDomain,
+            mail.maildir.AbstractMaildirDomain)
+
+
+
+class MaildirDirdbmDomainTests(unittest.TestCase):
+    """
+    Tests for L{MaildirDirdbmDomain}.
+    """
     def setUp(self):
+        """
+        Create a temporary L{MaildirDirdbmDomain} and parent
+        L{MailService} before running each test.
+        """
         self.P = self.mktemp()
         self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.P)
 
+
     def tearDown(self):
+        """
+        Remove the temporary C{maildir} directory when the test has
+        finished.
+        """
         shutil.rmtree(self.P)
 
-    def testAddUser(self):
+
+    def test_addUser(self):
+        """
+        L{MaildirDirdbmDomain.addUser} accepts a user and password
+        argument. It stores those in a C{dbm} dictionary
+        attribute and creates a directory for each user.
+        """
         toAdd = (('user1', 'pwd1'), ('user2', 'pwd2'), ('user3', 'pwd3'))
         for (u, p) in toAdd:
             self.D.addUser(u, p)
@@ -587,14 +627,27 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
             self.assertEqual(self.D.dbm[u], p)
             self.failUnless(os.path.exists(os.path.join(self.P, u)))
 
-    def testCredentials(self):
+
+    def test_credentials(self):
+        """
+        L{MaildirDirdbmDomain.getCredentialsCheckers} initializes and
+        returns one L{ICredentialsChecker} checker by default.
+        """
         creds = self.D.getCredentialsCheckers()
 
         self.assertEqual(len(creds), 1)
         self.failUnless(cred.checkers.ICredentialsChecker.providedBy(creds[0]))
         self.failUnless(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
 
-    def testRequestAvatar(self):
+
+    def test_requestAvatar(self):
+        """
+        L{MaildirDirdbmDomain.requestAvatar} raises L{NotImplementedError}
+        unless it is supplied with an L{pop3.IMailbox} interface.
+        When called with an L{pop3.IMailbox}, it returns a 3-tuple
+        containing L{pop3.IMailbox}, an implementation of that interface
+        and a NOOP callable.
+        """
         class ISomething(Interface):
             pass
 
@@ -611,7 +664,14 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
         t[2]()
 
-    def testRequestAvatarId(self):
+
+    def test_requestAvatarId(self):
+        """
+        L{DirdbmDatabase.requestAvatarId} raises L{UnauthorizedLogin} if
+        supplied with invalid user credentials.
+        When called with valid credentials, L{requestAvatarId} returns
+        the username associated with the supplied credentials.
+        """
         self.D.addUser('user', 'password')
         database = self.D.getCredentialsCheckers()[0]
 
@@ -623,6 +683,27 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
         creds = cred.credentials.UsernamePassword('user', 'password')
         self.assertEqual(database.requestAvatarId(creds), 'user')
+
+
+    def test_userDirectory(self):
+        """
+        L{MaildirDirdbmDomain.userDirectory} is supplied with a user name
+        and returns the path to that user's maildir subdirectory.
+        Calling L{MaildirDirdbmDomain.userDirectory} with a
+        non-existent user returns the 'postmaster' directory if there
+        is a postmaster or returns L{None} if there is no postmaster.
+        """
+        self.D.addUser('user', 'password')
+        self.assertEqual(self.D.userDirectory('user'),
+                         os.path.join(self.D.root, 'user'))
+
+        self.D.postmaster = False
+        self.assertIdentical(self.D.userDirectory('nouser'), None)
+
+        self.D.postmaster = True
+        self.assertEqual(self.D.userDirectory('nouser'),
+                         os.path.join(self.D.root, 'postmaster'))
+
 
 
 class StubAliasableDomain(object):
@@ -664,7 +745,7 @@ class StubAliasableDomain(object):
         self.aliasGroup = aliases
 
 
-class ServiceDomainTestCase(unittest.TestCase):
+class ServiceDomainTests(unittest.TestCase):
     def setUp(self):
         self.S = mail.mail.MailService()
         self.D = mail.protocols.DomainDeliveryBase(self.S, None)
@@ -696,13 +777,13 @@ class ServiceDomainTestCase(unittest.TestCase):
     def testReceivedHeader(self):
          hdr = self.D.receivedHeader(
              ('remotehost', '123.232.101.234'),
-             smtp.Address('<someguy@somplace>'),
+             smtp.Address('<someguy@someplace>'),
              ['user@host.name']
          )
          fp = StringIO.StringIO(hdr)
          m = rfc822.Message(fp)
          self.assertEqual(len(m.items()), 1)
-         self.failUnless(m.has_key('Received'))
+         self.assertIn('Received', m)
 
     def testValidateTo(self):
         user = smtp.User('user@test.domain', 'helo', None, 'wherever@whatever')
@@ -743,7 +824,7 @@ class ServiceDomainTestCase(unittest.TestCase):
             self.D.validateFrom, None, origin
         )
 
-class VirtualPOP3TestCase(unittest.TestCase):
+class VirtualPOP3Tests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = self.mktemp()
         self.S = mail.mail.MailService()
@@ -807,11 +888,15 @@ class VirtualPOP3TestCase(unittest.TestCase):
             self.P.authenticateUserPASS('user', 'wrong password'),
             cred.error.UnauthorizedLogin)
 
+
+
 class empty(smtp.User):
     def __init__(self):
         pass
 
-class RelayTestCase(unittest.TestCase):
+
+
+class RelayTests(unittest.TestCase):
     def testExists(self):
         service = mail.mail.MailService()
         domain = mail.relay.DomainQueuer(service)
@@ -846,7 +931,9 @@ class RelayTestCase(unittest.TestCase):
 
             self.assertRaises(smtp.SMTPBadRcpt, domain.exists, user)
 
-class RelayerTestCase(unittest.TestCase):
+
+
+class RelayerTests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = self.mktemp()
         os.mkdir(self.tmpdir)
@@ -902,7 +989,7 @@ class Manager:
     def notifyDone(self, factory):
         self.done.append(factory)
 
-class ManagedRelayerTestCase(unittest.TestCase):
+class ManagedRelayerTests(unittest.TestCase):
     def setUp(self):
         self.manager = Manager()
         self.messages = range(0, 20, 2)
@@ -934,7 +1021,7 @@ class ManagedRelayerTestCase(unittest.TestCase):
         self.relay.connectionLost(failure.Failure(Exception()))
         self.assertEqual(self.manager.done, [self.factory])
 
-class DirectoryQueueTestCase(unittest.TestCase):
+class DirectoryQueueTests(unittest.TestCase):
     def setUp(self):
         # This is almost a test case itself.
         self.tmpdir = self.mktemp()
@@ -1043,15 +1130,13 @@ def tearDownDNS(self):
     dl = []
     dl.append(defer.maybeDeferred(self.port.stopListening))
     dl.append(defer.maybeDeferred(self.udpPort.stopListening))
-    if self.resolver.protocol.transport is not None:
-        dl.append(defer.maybeDeferred(self.resolver.protocol.transport.stopListening))
     try:
         self.resolver._parseCall.cancel()
     except:
         pass
     return defer.DeferredList(dl)
 
-class MXTestCase(unittest.TestCase):
+class MXTests(unittest.TestCase):
     """
     Tests for L{mail.relaymanager.MXCalculator}.
     """
@@ -1451,7 +1536,7 @@ class MXTestCase(unittest.TestCase):
     def _cbManyRecordsRepeatSpecificResult(self, againMX, nextMX):
         self.assertEqual(str(againMX.name), str(nextMX.name))
 
-class LiveFireExercise(unittest.TestCase):
+class LiveFireExerciseTests(unittest.TestCase):
     if interfaces.IReactorUDP(reactor, None) is None:
         skip = "UDP support is required to determining MX records"
 
@@ -1478,8 +1563,6 @@ class LiveFireExercise(unittest.TestCase):
         map(service.portals[''].registerChecker, domain.getCredentialsCheckers())
 
         service.setQueue(mail.relay.DomainQueuer(service))
-        manager = mail.relaymanager.SmartHostSMTPRelayingManager(service.queue, None)
-        helper = mail.relaymanager.RelayStateHelper(manager, 1)
 
         f = service.getSMTPFactory()
 
@@ -1540,7 +1623,6 @@ class LiveFireExercise(unittest.TestCase):
         destServ.addDomain('destination.domain', domain)
         os.mkdir('destinationQueue')
         destServ.setQueue(mail.relaymanager.Queue('destinationQueue'))
-        manager2 = mail.relaymanager.SmartHostSMTPRelayingManager(destServ.queue)
         helper = mail.relaymanager.RelayStateHelper(manager, 1)
         helper.startService()
 
@@ -1611,7 +1693,7 @@ class LineBufferMessage:
     def connectionLost(self):
         self.lost = True
 
-class AliasTestCase(unittest.TestCase):
+class AliasTests(unittest.TestCase):
     lines = [
         'First line',
         'Next line',
@@ -1695,6 +1777,76 @@ class AliasTestCase(unittest.TestCase):
 
 
 
+class DummyDomain(object):
+    """
+    Test domain for L{AddressAliasTests}.
+    """
+    def __init__(self, address):
+        self.address = address
+
+
+    def exists(self, user, memo=None):
+        """
+        @returns: When a C{memo} is passed in this will raise a
+            L{smtp.SMTPBadRcpt} exception, otherwise a boolean
+            indicating if the C{user} and string version of
+            L{self.address} are equal or not.
+        @rtype: C{bool}
+        """
+        if memo:
+            raise mail.smtp.SMTPBadRcpt('ham')
+
+        return lambda: user == str(self.address)
+
+
+
+class AddressAliasTests(unittest.TestCase):
+    """
+    Tests for L{twisted.mail.alias.AddressAlias}.
+    """
+
+    def setUp(self):
+        """
+        Setup an L{AddressAlias}.
+        """
+        self.address = mail.smtp.Address('foo@bar')
+        domains = {self.address.domain: DummyDomain(self.address)}
+        self.alias = mail.alias.AddressAlias(self.address, domains,
+            self.address)
+
+
+    def test_createMessageReceiver(self):
+        """
+        L{createMessageReceiever} calls C{exists()} on the domain object
+        which key matches the C{alias} passed to L{AddressAlias}.
+        """
+        self.assertTrue(self.alias.createMessageReceiver())
+
+
+    def test_str(self):
+        """
+        The string presentation of L{AddressAlias} includes the alias.
+        """
+        self.assertEqual(str(self.alias), '<Address foo@bar>')
+
+
+    def test_resolve(self):
+        """
+        L{resolve} will look for additional aliases when an C{aliasmap}
+        dictionary is passed, and returns C{None} if none were found.
+        """
+        self.assertEqual(self.alias.resolve({self.address: 'bar'}), None)
+
+
+    def test_resolveWithoutAliasmap(self):
+        """
+        L{resolve} returns C{None} when the alias could not be found in the
+        C{aliasmap} and no L{mail.smtp.User} with this alias exists either.
+        """
+        self.assertEqual(self.alias.resolve({}), None)
+
+
+
 class DummyProcess(object):
     __slots__ = ['onEnd']
 
@@ -1745,7 +1897,7 @@ class StubProcess(object):
 
 
 
-class ProcessAliasTestCase(unittest.TestCase):
+class ProcessAliasTests(unittest.TestCase):
     """
     Tests for alias resolution.
     """
@@ -2029,6 +2181,353 @@ class TestDomain:
             if aliases:
                 return lambda: aliases
             raise smtp.SMTPBadRcpt(user)
+
+
+
+class SSLContextFactoryTests(unittest.TestCase):
+    """
+    Tests for twisted.mail.protocols.SSLContextFactory.
+    """
+    def test_deprecation(self):
+        """
+        Accessing L{twisted.mail.protocols.SSLContextFactory} emits a
+        deprecation warning recommending the use of the more general SSL context
+        factory from L{twisted.internet.ssl}.
+        """
+        mail.protocols.SSLContextFactory
+        warningsShown = self.flushWarnings([self.test_deprecation])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.mail.protocols.SSLContextFactory was deprecated in '
+            'Twisted 12.2.0: Use twisted.internet.ssl.'
+            'DefaultOpenSSLContextFactory instead.')
+
+
+
+class DummyQueue(object):
+    """
+    A fake relay queue to use for testing.
+
+    This queue doesn't keep track of which messages are waiting to be relayed
+    or are in the process of being relayed.
+
+    @ivar directory: See L{__init__}.
+    """
+    def __init__(self, directory):
+        """
+        @type directory: L{bytes}
+        @param directory: The pathname of the directory holding messages in the
+            queue.
+        """
+        self.directory = directory
+
+
+    def done(self, message):
+        """
+        Remove a message from the queue.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+        """
+        message = os.path.basename(message)
+        os.remove(self.getPath(message) + '-D')
+        os.remove(self.getPath(message) + '-H')
+
+
+    def getEnvelopeFile(self, message):
+        """
+        Get the envelope file for a message in the queue.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+
+        @rtype: L{file}
+        @return: The envelope file for the message.
+        """
+        return open(os.path.join(self.directory, message+'-H'), 'rb')
+
+
+    def getPath(self, message):
+        """
+        Return the full base pathname of a message in the queue.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+
+        @rtype: L{bytes}
+        @return: The full base pathname of the message.
+        """
+        return os.path.join(self.directory, message)
+
+
+    def createNewMessage(self):
+        """
+        Create a new message in the queue.
+
+        @rtype: 2-L{tuple} of (E{1}) L{file}, (E{2}) L{FileMessage}
+        @return: The envelope file and a message receiver for a new message in
+            the queue.
+        """
+        fname = "%s_%s" % (time.time(), id(self))
+        headerFile = open(os.path.join(self.directory, fname+'-H'), 'wb')
+        tempFilename = os.path.join(self.directory, fname+'-C')
+        finalFilename = os.path.join(self.directory, fname+'-D')
+        messageFile = open(tempFilename, 'wb')
+
+        return headerFile, mail.mail.FileMessage(messageFile, tempFilename,
+                finalFilename)
+
+
+    def setWaiting(self, message):
+        """
+        Ignore the request to mark a message as waiting to be relayed.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+        """
+        pass
+
+
+
+class DummySmartHostSMTPRelayingManager(object):
+    """
+    A fake smart host to use for testing.
+
+    @type managed: L{dict} of L{bytes} -> L{list} of
+        L{list} of L{bytes}
+    @ivar managed: A mapping of a string identifying a managed relayer to
+        filenames of messages the managed relayer is responsible for.
+
+    @ivar queue: See L{__init__}.
+    """
+    def __init__(self, queue):
+        """
+        Initialize the minimum necessary members of a smart host.
+
+        @type queue: L{DummyQueue}
+        @param queue: A queue that can be used for testing purposes.
+        """
+        self.managed = {}
+        self.queue = queue
+
+
+
+class _AttemptManagerTests(unittest.TestCase):
+    """
+    Test the behavior of L{_AttemptManager}.
+
+    @type tmpdir: L{bytes}
+    @ivar tmpdir: The path to a temporary directory holding the message files.
+
+    @type reactor: L{MemoryReactorClock}
+    @ivar reactor: The reactor used for test purposes.
+
+    @type eventLog: L{types.NoneType} or L{dict} of L{bytes} -> L{object}
+    @ivar eventLog: Information about the last informational log message
+        generated or none if no log message has been generated.
+
+    @type noisyAttemptMgr: L{_AttemptManager}
+    @ivar noisyAttemptMgr: An attempt manager which generates informational
+        log messages.
+
+    @type quietAttemptMgr: L{_AttemptManager}
+    @ivar quietAttemptMgr: An attempt manager which does not generate
+        informational log messages.
+
+    @type noisyMessage: L{bytes}
+    @ivar noisyMessage: The full base pathname of the message to be used with
+        the noisy attempt manager.
+
+    @type quietMessage: L{bytes}
+    @ivar quietMessage: The full base pathname of the message to be used with
+        the quiet.
+    """
+    def setUp(self):
+        """
+        Set up a temporary directory for the queue, attempt managers with the
+        noisy flag on and off, message files for use with each attempt manager,
+        and a reactor.  Also, register to be notified when log messages are
+        generated.
+        """
+        self.tmpdir = self.mktemp()
+        os.mkdir(self.tmpdir)
+
+        self.reactor = MemoryReactorClock()
+
+        self.eventLog = None
+        log.addObserver(self._logObserver)
+
+        self.noisyAttemptMgr = _AttemptManager(
+                DummySmartHostSMTPRelayingManager(DummyQueue(self.tmpdir)),
+                True, self.reactor)
+        self.quietAttemptMgr = _AttemptManager(
+                DummySmartHostSMTPRelayingManager(DummyQueue(self.tmpdir)),
+                False, self.reactor)
+
+        noisyBaseName = "noisyMessage"
+        quietBaseName = "quietMessage"
+
+        self.noisyMessage = os.path.join(self.tmpdir, noisyBaseName)
+        self.quietMessage = os.path.join(self.tmpdir, quietBaseName)
+
+        message = file(self.noisyMessage+'-D', "w")
+        message.close()
+
+        message = file(self.quietMessage+'-D', "w")
+        message.close()
+
+        self.noisyAttemptMgr.manager.managed['noisyRelayer'] = [
+                noisyBaseName]
+        self.quietAttemptMgr.manager.managed['quietRelayer'] = [
+                quietBaseName]
+
+        envelope = file(self.noisyMessage+'-H', 'w')
+        pickle.dump(['from-noisy@domain', 'to-noisy@domain'], envelope)
+        envelope.close()
+
+        envelope = file(self.quietMessage+'-H', 'w')
+        pickle.dump(['from-quiet@domain', 'to-quiet@domain'], envelope)
+        envelope.close()
+
+
+    def tearDown(self):
+        """
+        Unregister for log events and remove the temporary directory.
+        """
+        log.removeObserver(self._logObserver)
+        shutil.rmtree(self.tmpdir)
+
+
+    def _logObserver(self, eventDict):
+        """
+        A log observer.
+
+        @type eventDict: L{dict} of L{bytes} -> L{object}
+        @param eventDict: Information about the last informational log message
+            generated.
+        """
+        self.eventLog = eventDict
+
+
+    def test_initNoisyDefault(self):
+        """
+        When an attempt manager is created without the noisy parameter, the
+        noisy instance variable should default to true.
+        """
+        am = _AttemptManager(DummySmartHostSMTPRelayingManager(
+            DummyQueue(self.tmpdir)))
+        self.assertTrue(am.noisy)
+
+
+    def test_initNoisy(self):
+        """
+        When an attempt manager is created with the noisy parameter set to
+        true, the noisy instance variable should be set to true.
+        """
+        self.assertTrue(self.noisyAttemptMgr.noisy)
+
+
+    def test_initQuiet(self):
+        """
+        When an attempt manager is created with the noisy parameter set to
+        false, the noisy instance variable should be set to false.
+        """
+        self.assertFalse(self.quietAttemptMgr.noisy)
+
+
+    def test_initReactorDefault(self):
+        """
+        When an attempt manager is created without the reactor parameter, the
+        reactor instance variable should default to the global reactor.
+        """
+        am = _AttemptManager(DummySmartHostSMTPRelayingManager(
+            DummyQueue(self.tmpdir)))
+        self.assertEqual(am.reactor, reactor)
+
+
+    def test_initReactor(self):
+        """
+        When an attempt manager is created with a reactor provided, the
+        reactor instance variable should default to that reactor.
+        """
+        self.assertEqual(self.noisyAttemptMgr.reactor, self.reactor)
+
+
+    def test_notifySuccessNoisy(self):
+        """
+        For an attempt manager with the noisy flag set, notifySuccess should
+        result in a log message.
+        """
+        self.noisyAttemptMgr.notifySuccess('noisyRelayer', self.noisyMessage)
+        self.assertTrue(self.eventLog)
+
+
+    def test_notifySuccessQuiet(self):
+        """
+        For an attempt manager with the noisy flag not set, notifySuccess
+        should result in no log message.
+        """
+        self.quietAttemptMgr.notifySuccess('quietRelayer', self.quietMessage)
+        self.assertFalse(self.eventLog)
+
+
+    def test_notifyFailureNoisy(self):
+        """
+        For an attempt manager with the noisy flag set, notifyFailure should
+        result in a log message.
+        """
+        self.noisyAttemptMgr.notifyFailure('noisyRelayer', self.noisyMessage)
+        self.assertTrue(self.eventLog)
+
+
+    def test_notifyFailureQuiet(self):
+        """
+        For an attempt manager with the noisy flag not set, notifyFailure
+        should result in no log message.
+        """
+        self.quietAttemptMgr.notifyFailure('quietRelayer', self.quietMessage)
+        self.assertFalse(self.eventLog)
+
+
+    def test_notifyDoneNoisy(self):
+        """
+        For an attempt manager with the noisy flag set, notifyDone should
+        result in a log message.
+        """
+        self.noisyAttemptMgr.notifyDone('noisyRelayer')
+        self.assertTrue(self.eventLog)
+
+
+    def test_notifyDoneQuiet(self):
+        """
+        For an attempt manager with the noisy flag not set, notifyDone
+        should result in no log message.
+        """
+        self.quietAttemptMgr.notifyDone('quietRelayer')
+        self.assertFalse(self.eventLog)
+
+
+    def test_notifyNoConnectionNoisy(self):
+        """
+        For an attempt manager with the noisy flag set, notifyNoConnection
+        should result in a log message.
+        """
+        self.noisyAttemptMgr.notifyNoConnection('noisyRelayer')
+        self.assertTrue(self.eventLog)
+        self.reactor.advance(60)
+
+
+    def test_notifyNoConnectionQuiet(self):
+        """
+        For an attempt manager with the noisy flag not set, notifyNoConnection
+        should result in no log message.
+        """
+        self.quietAttemptMgr.notifyNoConnection('quietRelayer')
+        self.assertFalse(self.eventLog)
+        self.reactor.advance(60)
+
 
 
 from twisted.python.runtime import platformType

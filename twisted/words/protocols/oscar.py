@@ -15,10 +15,10 @@ import socket
 import random
 import types
 import re
+from hashlib import md5
 
 from twisted.internet import reactor, defer, protocol
 from twisted.python import log
-from twisted.python.hashlib import md5
 
 def logPacketData(data):
     lines = len(data)/16
@@ -463,7 +463,7 @@ class BOSConnection(SNACBased):
 
     def oscar_01_07(self,snac):
         """
-        rate paramaters
+        rate parameters
         """
         self.sendSNACnr(0x01,0x08,"\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05") # ack
         self.initDone()
@@ -906,7 +906,7 @@ class BOSConnection(SNACBased):
 
     #def acceptSendFileRequest(self,
 
-    # methods to be overriden by the client
+    # methods to be overridden by the client
     def initDone(self):
         """
         called when we get the rate information, which means we should do other init. stuff.
@@ -1092,12 +1092,11 @@ class ChatService(OSCARService):
                 self.members.remove(u)
         self.bos.chatMemberLeft(self,user)
 
-    def oscar_0E_06(self,snac):
-        data = snac[3]
-        user,rest=self.bos.parseUser(snac[3][14:],1)
+    def oscar_0E_06(self, snac):
+        user, rest = self.bos.parseUser(snac[3][14:], 1)
         tlvs = readTLVs(rest[8:])
-        message=tlvs[1]
-        self.bos.chatReceiveMessage(self,user,message)
+        message = tlvs[1]
+        self.bos.chatReceiveMessage(self, user, message)
 
     def sendMessage(self,message):
         tlvs=TLV(0x02,"us-ascii")+TLV(0x03,"en")+TLV(0x01,message)

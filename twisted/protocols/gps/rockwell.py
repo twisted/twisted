@@ -2,7 +2,8 @@
 # See LICENSE for details.
  
 
-"""Rockwell Semiconductor Zodiac Serial Protocol
+"""
+Rockwell Semiconductor Zodiac Serial Protocol
 Coded from official protocol specs (Order No. GPS-25, 09/24/1996, Revision 11)
 
 Maintainer: Bob Ippolito
@@ -18,17 +19,22 @@ The following Rockwell Zodiac messages require implementation::
     None really, the others aren't quite so useful and require bidirectional communication w/ the device
 
 Other desired features::
-    - Compatability with the DeLorme Tripmate and other devices with this chipset (?)
+    - Compatibility with the DeLorme Tripmate and other devices with this chipset (?)
 """
 
-import struct, operator, math
+import math
+import struct
+
 from twisted.internet import protocol
 from twisted.python import log
 
 DEBUG = 1
 
+
 class ZodiacParseError(ValueError):
   pass
+
+
 
 class Zodiac(protocol.Protocol):
   dispatch = {
@@ -93,7 +99,7 @@ class Zodiac(protocol.Protocol):
       sync, msg_id, length, acknak, checksum = struct.unpack('<HHHHh', self.recvd[:10])
       
       # verify checksum
-      cksum = -(reduce(operator.add, (sync, msg_id, length, acknak)) & 0xFFFF)
+      cksum = -(sum(sync, msg_id, length, acknak) & 0xFFFF)
       cksum, = struct.unpack('<h', struct.pack('<h', cksum))
       if cksum != checksum:
         if DEBUG:
@@ -110,7 +116,7 @@ class Zodiac(protocol.Protocol):
         neededBytes += length + 2
       if len(self.recvd) < neededBytes:
         break
-      
+
       if neededBytes > self.MAX_LENGTH:
         raise ZodiacParseError("Invalid Header??")
 
@@ -119,16 +125,19 @@ class Zodiac(protocol.Protocol):
 
       # does this message have data ?
       if length:
-        message, checksum = self.recvd[10:10+length], struct.unpack('<h', self.recvd[10+length:neededBytes])[0]
-        cksum = 0x10000 - (reduce(operator.add, struct.unpack('<%dH' % (length/2), message)) & 0xFFFF)
+        message = self.recvd[10:10 + length], 
+        checksum = struct.unpack('<h', self.recvd[10 + length:neededBytes])[0]
+        cksum = 0x10000 - (sum(
+            struct.unpack('<%dH' % (length/2), message)) & 0xFFFF)
         cksum, = struct.unpack('<h', struct.pack('<h', cksum))
         if cksum != checksum:
           if DEBUG:
             log.dmsg('msg_id = %r length = %r' % (msg_id, length), debug=True)
-            raise ZodiacParseError('Invalid Data Checksum %r != %r %r' % (checksum, cksum, message))
+            raise ZodiacParseError('Invalid Data Checksum %r != %r %r' % (
+                checksum, cksum, message))
           else:
             raise ZodiacParseError
-      
+
       # discard used buffer, dispatch message
       self.recvd = self.recvd[neededBytes:]
       self.receivedMessage(msg_id, message, acknak)
@@ -182,7 +191,7 @@ class Zodiac(protocol.Protocol):
       altitude,
       # (geoid separation according to WGS-84 ellipsoid, units (always 'M' for meters))
       geoid,
-      # None, for compatability w/ NMEA code
+      # None, for compatibility w/ NMEA code
       dgps,
     )
 
@@ -256,7 +265,7 @@ class Zodiac(protocol.Protocol):
     raise NotImplementedError
 
   def decode_serial(self, message):
-    assert len(message) == 30, "Serial Port Communication Paramaters In Use Message should be 21 words total (30 byte message)"
+    assert len(message) == 30, "Serial Port Communication Parameters In Use Message should be 21 words total (30 byte message)"
     raise NotImplementedError
 
   def decode_eepromupdate(self, message):

@@ -1,0 +1,38 @@
+<hawkowl> you know what this email server needs
+<hawkowl> global state
+%
+<exarkun> I think there is probably a fundamental problem relying on TLS PFS to keep a baby announcement secret, anyway.
+%
+<glyph> all possible errors are #defines *somewhere*
+<glyph> #define EYOUWILLNEVERBELOVED 100002
+<glyph> just kidding that would never be what it would be called
+<glyph> WSAEYOUWILLNEVERBELOVED
+%
+<tenth> Philosophically, you only live once, whether you YOLO your way through that life or not
+<tenth> And yet nobody wears MEMENTO MORI t-shirts on spring break
+%
+<skreech> glyph: I will read https://twistedmatrix.com/trac/wiki/ReviewProcess
+
+... later ...
+
+<skreech> glyph: "This commit starts strong with hints of coffee, Fritos, and
+          carrots, finishing dry but sweet. The inclusion of optional parens at
+          line 102 enhances both taste and understandability. A good weekday
+          commit that can be enjoyed after a full day's work. 8.7/10"
+<skreech> hope this helps
+%
+<hawkowl> i love me some jars
+%
+<exarkun> SO MUCH FOR MODERN TECHNOLOGY
+<hawkowl_work> haha
+<exarkun> can't even chat to a dude flying tens of thousands of feet over my head at hundreds of miles an hour
+<hawkowl_work> brb systemd update
+<dash> hawkowl_work: SO MUCH FOR MODERN TECHNOLOGY
+%
+<jml> I'm so kaizen that it hurts
+%
+<exarkun> is there some way to stack vcs three deep yet?  Where is the voltron of version control?
+<exarkun> Who will form the head?
+<glyph> exarkun: ITYM "who will form the HEAD?"
+%
+

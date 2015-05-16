@@ -2,44 +2,85 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 This is a web-server which integrates with the twisted.internet
 infrastructure.
 """
 
-# System Imports
+from __future__ import division, absolute_import
 
-import warnings
-import string
-import types
 import copy
 import os
-from urllib import quote
+try:
+    from urllib import quote
+except ImportError:
+    from urllib.parse import quote as _quote
 
-from zope.interface import implements
+    def quote(string, *args, **kwargs):
+        return _quote(string.decode('charmap'), *args, **kwargs).encode('charmap')
 
-from urllib import unquote
+import zlib
 
-#some useful constants
-NOT_DONE_YET = 1
+from zope.interface import implementer
 
-# Twisted Imports
-from twisted.spread import pb
-from twisted.internet import address, task
-from twisted.web import iweb, http
+from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
+if _PY3:
+    class Copyable:
+        """
+        Fake mixin, until twisted.spread is ported.
+        """
+else:
+    from twisted.spread.pb import Copyable, ViewPoint
+from twisted.internet import address
+from twisted.web import iweb, http, html
+from twisted.web.http import unquote
 from twisted.python import log, reflect, failure, components
 from twisted import copyright
-from twisted.web import util as webutil, resource
+# Re-enable as part of #6178 when twisted.web.util is ported to Python 3:
+if not _PY3:
+    from twisted.web import util as webutil
+from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
-from twisted.web.microdom import escape
 
-# backwards compatability
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute
+
+if _PY3:
+    # cgi.escape is deprecated in Python 3.
+    from html import escape
+else:
+    from cgi import escape
+
+
+NOT_DONE_YET = 1
+
+__all__ = [
+    'supportedMethods',
+    'Request',
+    'Session',
+    'Site',
+    'version',
+    'NOT_DONE_YET',
+    'GzipEncoderFactory'
+]
+
+
+# backwards compatibility
+deprecatedModuleAttribute(
+    Version("Twisted", 12, 1, 0),
+    "Please use twisted.web.http.datetimeToString instead",
+    "twisted.web.server",
+    "date_time_string")
+deprecatedModuleAttribute(
+    Version("Twisted", 12, 1, 0),
+    "Please use twisted.web.http.stringToDatetime instead",
+    "twisted.web.server",
+    "string_date_time")
 date_time_string = http.datetimeToString
 string_date_time = http.stringToDatetime
 
 # Support for other methods may be implemented on a per-resource basis.
-supportedMethods = ('GET', 'HEAD', 'POST')
+supportedMethods = (b'GET', b'HEAD', b'POST')
 
 
 def _addressToTuple(addr):
@@ -50,22 +91,25 @@ def _addressToTuple(addr):
     else:
         return tuple(addr)
 
-class Request(pb.Copyable, http.Request, components.Componentized):
+
+
+@implementer(iweb.IRequest)
+class Request(Copyable, http.Request, components.Componentized):
     """
     An HTTP request.
 
-    @ivar defaultContentType: A C{str} giving the default I{Content-Type} value
-        to send in responses if no other value is set.  C{None} disables the
-        default.
+    @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
+        value to send in responses if no other value is set.  C{None} disables
+        the default.
     """
-    implements(iweb.IRequest)
 
-    defaultContentType = "text/html"
+    defaultContentType = b"text/html"
 
     site = None
     appRootURL = None
     __pychecker__ = 'unusednames=issuer'
     _inFakeHead = False
+    _encoder = None
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
@@ -81,7 +125,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         del x['site']
         self.content.seek(0, 0)
         x['content_data'] = self.content.read()
-        x['remote'] = pb.ViewPoint(issuer, self)
+        x['remote'] = ViewPoint(issuer, self)
 
         # Address objects aren't jellyable
         x['host'] = _addressToTuple(x['host'])
@@ -95,43 +139,57 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     # HTML generation helpers
 
     def sibLink(self, name):
-        "Return the text that links to a sibling of the requested resource."
+        """
+        Return the text that links to a sibling of the requested resource.
+        """
         if self.postpath:
-            return (len(self.postpath)*"../") + name
+            return (len(self.postpath)*b"../") + name
         else:
             return name
 
+
     def childLink(self, name):
-        "Return the text that links to a child of the requested resource."
+        """
+        Return the text that links to a child of the requested resource.
+        """
         lpp = len(self.postpath)
         if lpp > 1:
-            return ((lpp-1)*"../") + name
+            return ((lpp-1)*b"../") + name
         elif lpp == 1:
             return name
         else: # lpp == 0
             if len(self.prepath) and self.prepath[-1]:
-                return self.prepath[-1] + '/' + name
+                return self.prepath[-1] + b'/' + name
             else:
                 return name
 
+
     def process(self):
-        "Process a request."
+        """
+        Process a request.
+        """
 
         # get site from channel
         self.site = self.channel.site
 
         # set various default headers
-        self.setHeader('server', version)
-        self.setHeader('date', http.datetimeToString())
+        self.setHeader(b'server', version)
+        self.setHeader(b'date', http.datetimeToString())
 
         # Resource Identification
         self.prepath = []
-        self.postpath = map(unquote, string.split(self.path[1:], '/'))
+        self.postpath = list(map(unquote, self.path[1:].split(b'/')))
+
         try:
             resrc = self.site.getResourceFor(self)
+            if resource._IEncodingResource.providedBy(resrc):
+                encoder = resrc.getEncoder(self)
+                if encoder is not None:
+                    self._encoder = encoder
             self.render(resrc)
         except:
             self.processingFailed(failure.Failure())
+
 
     def write(self, data):
         """
@@ -143,10 +201,10 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             # Before doing the first write, check to see if a default
             # Content-Type header should be supplied.
             modified = self.code != http.NOT_MODIFIED
-            contentType = self.responseHeaders.getRawHeaders('content-type')
+            contentType = self.responseHeaders.getRawHeaders(b'content-type')
             if modified and contentType is None and self.defaultContentType is not None:
                 self.responseHeaders.setRawHeaders(
-                    'content-type', [self.defaultContentType])
+                    b'content-type', [self.defaultContentType])
 
         # Only let the write happen if we're not generating a HEAD response by
         # faking out the request method.  Note, if we are doing that,
@@ -154,7 +212,20 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         # multiple times.  It will only actually change the responseHeaders once
         # though, so it's still okay.
         if not self._inFakeHead:
+            if self._encoder:
+                data = self._encoder.encode(data)
             http.Request.write(self, data)
+
+
+    def finish(self):
+        """
+        Override C{http.Request.finish} for possible encoding.
+        """
+        if self._encoder:
+            data = self._encoder.finish()
+            if data:
+                http.Request.write(self, data)
+        return http.Request.finish(self)
 
 
     def render(self, resrc):
@@ -165,16 +236,16 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         """
         try:
             body = resrc.render(self)
-        except UnsupportedMethod, e:
+        except UnsupportedMethod as e:
             allowedMethods = e.allowedMethods
-            if (self.method == "HEAD") and ("GET" in allowedMethods):
+            if (self.method == b"HEAD") and (b"GET" in allowedMethods):
                 # We must support HEAD (RFC 2616, 5.1.1).  If the
                 # resource doesn't, fake it by giving the resource
                 # a 'GET' request and then return only the headers,
                 # not the body.
                 log.msg("Using GET to fake a HEAD request for %s" %
                         (resrc,))
-                self.method = "GET"
+                self.method = b"GET"
                 self._inFakeHead = True
                 body = resrc.render(self)
 
@@ -183,25 +254,26 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                             "it got away from me." % resrc)
                     # Oh well, I guess we won't include the content length.
                 else:
-                    self.setHeader('content-length', str(len(body)))
+                    self.setHeader(b'content-length', intToBytes(len(body)))
 
                 self._inFakeHead = False
-                self.method = "HEAD"
-                self.write('')
+                self.method = b"HEAD"
+                self.write(b'')
                 self.finish()
                 return
 
             if self.method in (supportedMethods):
                 # We MUST include an Allow header
                 # (RFC 2616, 10.4.6 and 14.7)
-                self.setHeader('Allow', ', '.join(allowedMethods))
+                self.setHeader(b'Allow', b', '.join(allowedMethods))
                 s = ('''Your browser approached me (at %(URI)s) with'''
                      ''' the method "%(method)s".  I only allow'''
                      ''' the method%(plural)s %(allowed)s here.''' % {
-                    'URI': escape(self.uri),
-                    'method': self.method,
+                    'URI': escape(nativeString(self.uri)),
+                    'method': nativeString(self.method),
                     'plural': ((len(allowedMethods) > 1) and 's') or '',
-                    'allowed': string.join(allowedMethods, ', ')
+                    'allowed': ', '.join([nativeString(x)
+                                          for x in allowedMethods])
                     })
                 epage = resource.ErrorPage(http.NOT_ALLOWED,
                                            "Method Not Allowed", s)
@@ -210,48 +282,51 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                 epage = resource.ErrorPage(
                     http.NOT_IMPLEMENTED, "Huh?",
                     "I don't know how to treat a %s request." %
-                    (escape(self.method),))
+                    (escape(self.method.decode("charmap")),))
                 body = epage.render(self)
         # end except UnsupportedMethod
 
         if body == NOT_DONE_YET:
             return
-        if type(body) is not types.StringType:
+        if not isinstance(body, bytes):
             body = resource.ErrorPage(
                 http.INTERNAL_SERVER_ERROR,
-                "Request did not return a string",
+                "Request did not return bytes",
                 "Request: " + html.PRE(reflect.safe_repr(self)) + "<br />" +
                 "Resource: " + html.PRE(reflect.safe_repr(resrc)) + "<br />" +
                 "Value: " + html.PRE(reflect.safe_repr(body))).render(self)
 
-        if self.method == "HEAD":
+        if self.method == b"HEAD":
             if len(body) > 0:
                 # This is a Bad Thing (RFC 2616, 9.4)
                 log.msg("Warning: HEAD request %s for resource %s is"
                         " returning a message body."
                         "  I think I'll eat it."
                         % (self, resrc))
-                self.setHeader('content-length', str(len(body)))
-            self.write('')
+                self.setHeader(b'content-length',
+                               intToBytes(len(body)))
+            self.write(b'')
         else:
-            self.setHeader('content-length', str(len(body)))
+            self.setHeader(b'content-length',
+                           intToBytes(len(body)))
             self.write(body)
         self.finish()
 
     def processingFailed(self, reason):
         log.err(reason)
-        if self.site.displayTracebacks:
+        # Re-enable on Python 3 as part of #6178:
+        if not _PY3 and self.site.displayTracebacks:
             body = ("<html><head><title>web.Server Traceback (most recent call last)</title></head>"
                     "<body><b>web.Server Traceback (most recent call last):</b>\n\n"
                     "%s\n\n</body></html>\n"
                     % webutil.formatFailure(reason))
         else:
-            body = ("<html><head><title>Processing Failed</title></head><body>"
-                  "<b>Processing Failed</b></body></html>")
+            body = (b"<html><head><title>Processing Failed</title></head><body>"
+                    b"<b>Processing Failed</b></body></html>")
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
-        self.setHeader('content-type',"text/html")
-        self.setHeader('content-length', str(len(body)))
+        self.setHeader(b'content-type', b"text/html")
+        self.setHeader(b'content-length', intToBytes(len(body)))
         self.write(body)
         self.finish()
         return reason
@@ -286,10 +361,13 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         """
         self.setETag(tag)
 
-    def view_setResponseCode(self, issuer, code):
-        """Remote version of setResponseCode; same interface.
+
+    def view_setResponseCode(self, issuer, code, message=None):
         """
-        self.setResponseCode(code)
+        Remote version of setResponseCode; same interface.
+        """
+        self.setResponseCode(code, message)
+
 
     def view_registerProducer(self, issuer, producer, streaming):
         """Remote version of registerProducer; same interface.
@@ -307,7 +385,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     def getSession(self, sessionInterface = None):
         # Session management
         if not self.session:
-            cookiename = string.join(['TWISTED_SESSION'] + self.sitepath, "_")
+            cookiename = b"_".join([b'TWISTED_SESSION'] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
                 try:
@@ -317,7 +395,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             # if it still hasn't been set, fix it up.
             if not self.session:
                 self.session = self.site.makeSession()
-                self.addCookie(cookiename, self.session.uid, path='/')
+                self.addCookie(cookiename, self.session.uid, path=b'/')
         self.session.touch()
         if sessionInterface:
             return self.session.getComponent(sessionInterface)
@@ -333,11 +411,12 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             hostport = ''
         else:
             hostport = ':%d' % port
-        return 'http%s://%s%s/%s' % (
+        prefix = networkString('http%s://%s%s/' % (
             self.isSecure() and 's' or '',
-            self.getRequestHostname(),
-            hostport,
-            '/'.join([quote(segment, safe='') for segment in prepath]))
+            nativeString(self.getRequestHostname()),
+            hostport))
+        path = b'/'.join([quote(segment, safe=b'') for segment in prepath])
+        return prefix + path
 
     def prePathURL(self):
         return self._prePathURL(self.prepath)
@@ -361,6 +440,83 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         return self.appRootURL
 
 
+
+@implementer(iweb._IRequestEncoderFactory)
+class GzipEncoderFactory(object):
+    """
+    @cvar compressLevel: The compression level used by the compressor, default
+        to 9 (highest).
+
+    @since: 12.3
+    """
+
+    compressLevel = 9
+
+    def encoderForRequest(self, request):
+        """
+        Check the headers if the client accepts gzip encoding, and encodes the
+        request if so.
+        """
+        acceptHeaders = request.requestHeaders.getRawHeaders(
+            'accept-encoding', [])
+        supported = ','.join(acceptHeaders).split(',')
+        if 'gzip' in supported:
+            encoding = request.responseHeaders.getRawHeaders(
+                'content-encoding')
+            if encoding:
+                encoding = '%s,gzip' % ','.join(encoding)
+            else:
+                encoding = 'gzip'
+
+            request.responseHeaders.setRawHeaders('content-encoding',
+                                                  [encoding])
+            return _GzipEncoder(self.compressLevel, request)
+
+
+
+@implementer(iweb._IRequestEncoder)
+class _GzipEncoder(object):
+    """
+    An encoder which supports gzip.
+
+    @ivar _zlibCompressor: The zlib compressor instance used to compress the
+        stream.
+
+    @ivar _request: A reference to the originating request.
+
+    @since: 12.3
+    """
+
+    _zlibCompressor = None
+
+    def __init__(self, compressLevel, request):
+        self._zlibCompressor = zlib.compressobj(
+            compressLevel, zlib.DEFLATED, 16 + zlib.MAX_WBITS)
+        self._request = request
+
+
+    def encode(self, data):
+        """
+        Write to the request, automatically compressing data on the fly.
+        """
+        if not self._request.startedWriting:
+            # Remove the content-length header, we can't honor it
+            # because we compress on the fly.
+            self._request.responseHeaders.removeHeader(b'content-length')
+        return self._zlibCompressor.compress(data)
+
+
+    def finish(self):
+        """
+        Finish handling the request request, flushing any data from the zlib
+        buffer.
+        """
+        remain = self._zlibCompressor.flush()
+        self._zlibCompressor = None
+        return remain
+
+
+
 class _RemoteProducerWrapper:
     def __init__(self, remote):
         self.resumeProducing = remote.remoteMethod("resumeProducing")
@@ -375,13 +531,12 @@ class Session(components.Componentized):
     This utility class contains no functionality, but is used to
     represent a session.
 
+    @ivar uid: A unique identifier for the session, C{bytes}.
     @ivar _reactor: An object providing L{IReactorTime} to use for scheduling
         expiration.
     @ivar sessionTimeout: timeout of a session, in seconds.
-    @ivar loopFactory: Deprecated in Twisted 9.0.  Does nothing.  Do not use.
     """
     sessionTimeout = 900
-    loopFactory = task.LoopingCall
 
     _expireCall = None
 
@@ -402,19 +557,12 @@ class Session(components.Componentized):
         self.sessionNamespaces = {}
 
 
-    def startCheckingExpiration(self, lifetime=None):
+    def startCheckingExpiration(self):
         """
         Start expiration tracking.
 
-        @param lifetime: Ignored; deprecated.
-
         @return: C{None}
         """
-        if lifetime is not None:
-            warnings.warn(
-                "The lifetime parameter to startCheckingExpiration is "
-                "deprecated since Twisted 9.0.  See Session.sessionTimeout "
-                "instead.", DeprecationWarning, stacklevel=2)
         self._expireCall = self._reactor.callLater(
             self.sessionTimeout, self.expire)
 
@@ -449,17 +597,7 @@ class Session(components.Componentized):
             self._expireCall.reset(self.sessionTimeout)
 
 
-    def checkExpired(self):
-        """
-        Deprecated; does nothing.
-        """
-        warnings.warn(
-            "Session.checkExpired is deprecated since Twisted 9.0; sessions "
-            "check themselves now, you don't need to.",
-            stacklevel=2, category=DeprecationWarning)
-
-
-version = "TwistedWeb/%s" % copyright.version
+version = networkString("TwistedWeb/%s" % (copyright.version,))
 
 
 class Site(http.HTTPFactory):
@@ -467,8 +605,8 @@ class Site(http.HTTPFactory):
     A web site: manage log, sessions, and resources.
 
     @ivar counter: increment value used for generating unique sessions ID.
-    @ivar requestFactory: factory creating requests objects. Default to
-        L{Request}.
+    @ivar requestFactory: A factory which is called with (channel, queued)
+        and creates L{Request} instances. Default to L{Request}.
     @ivar displayTracebacks: if set, Twisted internal errors are displayed on
         rendered pages. Default to C{True}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
@@ -480,13 +618,22 @@ class Site(http.HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
 
-    def __init__(self, resource, logPath=None, timeout=60*60*12):
+    def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """
-        Initialize.
+        @param resource: The root of the resource hierarchy.  All request
+            traversal for requests received by this factory will begin at this
+            resource.
+        @type resource: L{IResource} provider
+        @param requestFactory: Overwrite for default requestFactory.
+        @type requestFactory: C{callable} or C{class}.
+
+        @see: L{twisted.web.http.HTTPFactory.__init__}
         """
-        http.HTTPFactory.__init__(self, logPath=logPath, timeout=timeout)
+        http.HTTPFactory.__init__(self, *args, **kwargs)
         self.sessions = {}
         self.resource = resource
+        if requestFactory is not None:
+            self.requestFactory = requestFactory
 
     def _openLogFile(self, path):
         from twisted.python import logfile
@@ -501,10 +648,12 @@ class Site(http.HTTPFactory):
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
-        from twisted.python.hashlib import md5
+        from hashlib import md5
         import random
         self.counter = self.counter + 1
-        return md5("%s_%s" % (str(random.random()) , str(self.counter))).hexdigest()
+        return md5(networkString(
+                "%s_%s" % (str(random.random()) , str(self.counter)))
+                   ).hexdigest()
 
     def makeSession(self):
         """
@@ -537,7 +686,7 @@ class Site(http.HTTPFactory):
         """
         Redirect because a Site is always a directory.
         """
-        request.redirect(request.prePathURL() + '/')
+        request.redirect(request.prePathURL() + b'/')
         request.finish()
 
     def getChildWithDefault(self, pathEl, request):
@@ -560,7 +709,3 @@ class Site(http.HTTPFactory):
         # servers and disconnected sites.
         request.sitepath = copy.copy(request.prepath)
         return resource.getChildForRequest(self.resource, request)
-
-
-import html
-

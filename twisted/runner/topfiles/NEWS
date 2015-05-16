@@ -1,6 +1,94 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Runner 15.1.0 (2015-04-02)
+==================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #7726
+
+
+Twisted Runner 15.0.0 (2015-01-24)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 14.0.2 (2014-09-18)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 14.0.1 (2014-09-17)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 14.0.0 (2014-05-08)
+==================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #6992
+
+
+Twisted Runner 13.2.0 (2013-10-29)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 13.1.0 (2013-06-23)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 13.0.0 (2013-03-19)
+==================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #5740
+
+
+Twisted Runner 12.3.0 (2012-12-20)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 12.2.0 (2012-08-26)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 12.1.0 (2012-06-02)
+==================================
+
+Deprecations and Removals
+-------------------------
+ - ProcessMonitor.active, consistencyDelay, and consistency in
+   twisted.runner.procmon were deprecated since 10.1 have been
+   removed. (#5517)
+
+
+Twisted Runner 12.0.0 (2012-02-10)
+==================================
+
+No significant changes have been made for this release.
+
+
 Twisted Runner 11.1.0 (2011-11-15)
 ==================================
 

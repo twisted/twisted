@@ -13,16 +13,26 @@ nothing here in this module for you to use unless you are maintaining Trial.
 Any non-Trial Twisted code that uses this module will be shot.
 
 Maintainer: Jonathan Lange
+
+@var DEFAULT_TIMEOUT_DURATION: The default timeout which will be applied to
+    asynchronous (ie, Deferred-returning) test methods, in seconds.
 """
 
-import traceback, sys
+from __future__ import division, absolute_import, print_function
+
+import sys
 from random import randrange
 
 from twisted.internet import defer, utils, interfaces
 from twisted.python.failure import Failure
 from twisted.python import deprecate, versions
-from twisted.python.lockfile import FilesystemLock
 from twisted.python.filepath import FilePath
+from twisted.python.lockfile import FilesystemLock
+
+__all__ = [
+    'DEFAULT_TIMEOUT_DURATION',
+
+    'excInfoOrFailureToExcInfo', 'suppress', 'acquireAttribute']
 
 DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
@@ -34,7 +44,8 @@ class DirtyReactorAggregateError(Exception):
     Passed to L{twisted.trial.itrial.IReporter.addError} when the reactor is
     left in an unclean state after a test.
 
-    @ivar delayedCalls: The L{DelayedCall} objects which weren't cleaned up.
+    @ivar delayedCalls: The L{DelayedCall<twisted.internet.base.DelayedCall>}
+        objects which weren't cleaned up.
     @ivar selectables: The selectables which weren't cleaned up.
     """
 
@@ -82,7 +93,7 @@ class _Janitor(object):
     def postCaseCleanup(self):
         """
         Called by L{unittest.TestCase} after a test to catch any logged errors
-        or pending L{DelayedCall}s.
+        or pending L{DelayedCall<twisted.internet.base.DelayedCall>}s.
         """
         calls = self._cleanPending()
         if calls:
@@ -96,7 +107,8 @@ class _Janitor(object):
         """
         Called by L{unittest.TestCase} after the last test in a C{TestCase}
         subclass. Ensures the reactor is clean by murdering the threadpool,
-        catching any pending L{DelayedCall}s, open sockets etc.
+        catching any pending
+        L{DelayedCall<twisted.internet.base.DelayedCall>}s, open sockets etc.
         """
         selectables = self._cleanReactor()
         calls = self._cleanPending()
@@ -133,7 +145,7 @@ class _Janitor(object):
                 delayedString = str(p)
                 p.cancel()
             else:
-                print "WEIRDNESS! pending timed call not active!"
+                print("WEIRDNESS! pending timed call not active!")
             delayedCallStrings.append(delayedString)
         return delayedCallStrings
     _cleanPending = utils.suppressWarnings(
@@ -145,7 +157,7 @@ class _Janitor(object):
         reactor = self._getReactor()
         if interfaces.IReactorThreads.providedBy(reactor):
             if reactor.threadpool is not None:
-                # Stop the threadpool now so that a new one is created. 
+                # Stop the threadpool now so that a new one is created.
                 # This improves test isolation somewhat (although this is a
                 # post class cleanup hook, so it's only isolating classes
                 # from each other, not methods from each other).
@@ -165,6 +177,23 @@ class _Janitor(object):
         return selectableStrings
 
 
+
+_DEFAULT = object()
+def acquireAttribute(objects, attr, default=_DEFAULT):
+    """
+    Go through the list 'objects' sequentially until we find one which has
+    attribute 'attr', then return the value of that attribute.  If not found,
+    return 'default' if set, otherwise, raise AttributeError.
+    """
+    for obj in objects:
+        if hasattr(obj, attr):
+            return getattr(obj, attr)
+    if default is not _DEFAULT:
+        return default
+    raise AttributeError('attribute %r not found in %r' % (attr, objects))
+
+
+
 def excInfoOrFailureToExcInfo(err):
     """
     Coerce a Failure to an _exc_info, if err is a Failure.
@@ -178,6 +207,7 @@ def excInfoOrFailureToExcInfo(err):
         # Unwrap the Failure into a exc_info tuple.
         err = (err.type, err.value, err.getTracebackObject())
     return err
+
 
 
 def suppress(action='ignore', **kwarg):
@@ -206,28 +236,20 @@ def suppress(action='ignore', **kwarg):
     return ((action,), kwarg)
 
 
+
+# This should be deleted, and replaced with twisted.application's code; see
+# #6016:
 def profiled(f, outputFile):
     def _(*args, **kwargs):
-        if sys.version_info[0:2] != (2, 4):
-            import profile
-            prof = profile.Profile()
-            try:
-                result = prof.runcall(f, *args, **kwargs)
-                prof.dump_stats(outputFile)
-            except SystemExit:
-                pass
-            prof.print_stats()
-            return result
-        else: # use hotshot, profile is broken in 2.4
-            import hotshot.stats
-            prof = hotshot.Profile(outputFile)
-            try:
-                return prof.runcall(f, *args, **kwargs)
-            finally:
-                stats = hotshot.stats.load(outputFile)
-                stats.strip_dirs()
-                stats.sort_stats('cum')   # 'time'
-                stats.print_stats(100)
+        import profile
+        prof = profile.Profile()
+        try:
+            result = prof.runcall(f, *args, **kwargs)
+            prof.dump_stats(outputFile)
+        except SystemExit:
+            pass
+        prof.print_stats()
+        return result
     return _
 
 
@@ -245,69 +267,14 @@ def getPythonContainers(meth):
         moduleName = getattr(module, '__module__', None)
     return containers
 
-
-_DEFAULT = object()
-def acquireAttribute(objects, attr, default=_DEFAULT):
-    """Go through the list 'objects' sequentially until we find one which has
-    attribute 'attr', then return the value of that attribute.  If not found,
-    return 'default' if set, otherwise, raise AttributeError. """
-    for obj in objects:
-        if hasattr(obj, attr):
-            return getattr(obj, attr)
-    if default is not _DEFAULT:
-        return default
-    raise AttributeError('attribute %r not found in %r' % (attr, objects))
-
-
-
 deprecate.deprecatedModuleAttribute(
-    versions.Version("Twisted", 10, 1, 0),
-    "Please use twisted.python.reflect.namedAny instead.",
-    __name__, "findObject")
+    versions.Version("Twisted", 12, 3, 0),
+    "This function never worked correctly.  Implement lookup on your own.",
+    __name__, "getPythonContainers")
 
 
 
-def findObject(name):
-    """Get a fully-named package, module, module-global object or attribute.
-    Forked from twisted.python.reflect.namedAny.
-
-    Returns a tuple of (bool, obj).  If bool is True, the named object exists
-    and is returned as obj.  If bool is False, the named object does not exist
-    and the value of obj is unspecified.
-    """
-    names = name.split('.')
-    topLevelPackage = None
-    moduleNames = names[:]
-    while not topLevelPackage:
-        trialname = '.'.join(moduleNames)
-        if len(trialname) == 0:
-            return (False, None)
-        try:
-            topLevelPackage = __import__(trialname)
-        except ImportError:
-            # if the ImportError happened in the module being imported,
-            # this is a failure that should be handed to our caller.
-            # count stack frames to tell the difference.
-            exc_info = sys.exc_info()
-            if len(traceback.extract_tb(exc_info[2])) > 1:
-                try:
-                    # Clean up garbage left in sys.modules.
-                    del sys.modules[trialname]
-                except KeyError:
-                    # Python 2.4 has fixed this.  Yay!
-                    pass
-                raise exc_info[0], exc_info[1], exc_info[2]
-            moduleNames.pop()
-    obj = topLevelPackage
-    for n in names[1:]:
-        try:
-            obj = getattr(obj, n)
-        except AttributeError:
-            return (False, obj)
-    return (True, obj)
-
-
-
+@defer.inlineCallbacks
 def _runSequentially(callables, stopOnFirstError=False):
     """
     Run the given callables one after the other. If a callable returns a
@@ -325,16 +292,14 @@ def _runSequentially(callables, stopOnFirstError=False):
     results = []
     for f in callables:
         d = defer.maybeDeferred(f)
-        thing = defer.waitForDeferred(d)
-        yield thing
         try:
-            results.append((defer.SUCCESS, thing.getResult()))
+            thing = yield d
+            results.append((defer.SUCCESS, thing))
         except:
             results.append((defer.FAILURE, Failure()))
             if stopOnFirstError:
                 break
-    yield results
-_runSequentially = defer.deferredGenerator(_runSequentially)
+    defer.returnValue(results)
 
 
 
@@ -353,21 +318,22 @@ def _removeSafely(path):
     Safely remove a path, recursively.
 
     If C{path} does not contain a node named C{_trial_marker}, a
-    L{_NoTrialmarker} exception is raised and the path is not removed.
+    L{_NoTrialMarker} exception is raised and the path is not removed.
     """
-    if not path.child('_trial_marker').exists():
+    if not path.child(b'_trial_marker').exists():
         raise _NoTrialMarker(
             '%r is not a trial temporary path, refusing to remove it'
             % (path,))
     try:
         path.remove()
-    except OSError, e:
+    except OSError as e:
         print ("could not remove %r, caught OSError [Errno %s]: %s"
                % (path, e.errno, e.strerror))
         try:
-            newPath = FilePath('_trial_temp_old%s' % (randrange(1000000),))
+            newPath = FilePath(b'_trial_temp_old' +
+                               str(randrange(10000000)).encode("utf-8"))
             path.moveTo(newPath)
-        except OSError, e:
+        except OSError as e:
             print ("could not rename path, caught OSError [Errno %s]: %s"
                    % (e.errno,e.strerror))
             raise
@@ -396,9 +362,10 @@ def _unusedTestDirectory(base):
 
     @return: A two-tuple.  The first element is a L{FilePath} representing the
         directory which was found and created.  The second element is a locked
-        L{FilesystemLock}.  Another call to C{_unusedTestDirectory} will not be
-        able to reused the the same name until the lock is released, either
-        explicitly or by this process exiting.
+        L{FilesystemLock<twisted.python.lockfile.FilesystemLock>}.  Another
+        call to C{_unusedTestDirectory} will not be able to reused the
+        same name until the lock is released, either explicitly or by this
+        process exiting.
     """
     counter = 0
     while True:
@@ -427,4 +394,38 @@ def _unusedTestDirectory(base):
                 raise _WorkingDirectoryBusy()
 
 
-__all__ = ['excInfoOrFailureToExcInfo', 'suppress']
+
+def _listToPhrase(things, finalDelimiter, delimiter=', '):
+    """
+    Produce a string containing each thing in C{things},
+    separated by a C{delimiter}, with the last couple being separated
+    by C{finalDelimiter}
+
+    @param things: The elements of the resulting phrase
+    @type things: L{list} or L{tuple}
+
+    @param finalDelimiter: What to put between the last two things
+        (typically 'and' or 'or')
+    @type finalDelimiter: L{str}
+
+    @param delimiter: The separator to use between each thing,
+        not including the last two. Should typically include a trailing space.
+    @type delimiter: L{str}
+
+    @return: The resulting phrase
+    @rtype: L{str}
+    """
+    if not isinstance(things, (list, tuple)):
+        raise TypeError("Things must be a list or a tuple")
+    if not things:
+        return ''
+    if len(things) == 1:
+        return str(things[0])
+    if len(things) == 2:
+        return "%s %s %s" % (str(things[0]), finalDelimiter, str(things[1]))
+    else:
+        strThings = []
+        for thing in things:
+            strThings.append(str(thing))
+        return "%s%s%s %s" % (delimiter.join(strThings[:-1]),
+            delimiter, finalDelimiter, strThings[-1])

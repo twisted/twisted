@@ -132,10 +132,9 @@ class XMLParser(Protocol):
         # lenient behavior, because those may not have </script>
         # -radix
 
-        if (self.tagName == 'script'
-            and not self.tagAttributes.has_key('src')):
+        if (self.tagName == 'script' and 'src' not in self.tagAttributes):
             # we do this ourselves rather than having begin_waitforendscript
-            # becuase that can get called multiple times and we don't want
+            # because that can get called multiple times and we don't want
             # bodydata to get reset other than the first time.
             self.begin_bodydata(None)
             return 'waitforendscript'

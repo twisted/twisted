@@ -1,9 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# this module is a trivial class with doctests and a __test__ attribute
-# to test trial's doctest support with python2.4
-
+# this module is a trivial class with doctests to test trial's doctest
+# support.
+from __future__ import division, absolute_import
 
 class Counter(object):
     """a simple counter object for testing trial's doctest support

@@ -1,4 +1,4 @@
-#compdef twistd trial conch cftp tapconvert ckeygen lore pyhtmlizer tap2deb tkconch manhole tap2rpm
+#compdef twistd trial conch cftp ckeygen pyhtmlizer tap2deb tkconch manhole tap2rpm
 #
 # This is the ZSH completion file for Twisted commands. It calls the current
 # command-line with the special "--_shell-completion" option which is handled
@@ -27,7 +27,7 @@ else
     echo "\nCompletion error running command:" ${(qqq)cmd}
     echo -n "If output below is unhelpful you may need to edit this file and "
     echo    "redirect stderr to a file."
-    echo "Expected completion function, but instead got:" 
+    echo "Expected completion function, but instead got:"
     echo $output
     return 1
 fi

@@ -5,6 +5,8 @@
 Tests for L{twisted.python.monkey}.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 from twisted.python.monkey import MonkeyPatcher
 
@@ -16,7 +18,8 @@ class TestObj:
         self.baz = 'baz value'
 
 
-class MonkeyPatcherTest(unittest.TestCase):
+
+class MonkeyPatcherTests(unittest.SynchronousTestCase):
     """
     Tests for L{MonkeyPatcher} monkey-patching class.
     """
@@ -151,7 +154,7 @@ class MonkeyPatcherTest(unittest.TestCase):
         def _():
             self.assertEqual(self.testObject.foo, 'haha')
             self.assertEqual(self.testObject.bar, 'blahblah')
-            raise RuntimeError, "Something went wrong!"
+            raise RuntimeError("Something went wrong!")
 
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'haha')
         self.monkeyPatcher.addPatch(self.testObject, 'bar', 'blahblah')

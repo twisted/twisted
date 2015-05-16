@@ -2,7 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import Interface, Attribute, implements
+from zope.interface import Interface, Attribute
+
 
 class IProtocolPlugin(Interface):
     """Interface for plugins providing an interface to a Words service
@@ -41,7 +42,7 @@ class IGroup(Interface):
         """Return the number of participants in this group.
 
         @rtype: L{twisted.internet.defer.Deferred}
-        @return: A Deferred which fires with an C{int} representing the the
+        @return: A Deferred which fires with an C{int} representing the
         number of participants in this group.
         """
 
@@ -262,5 +263,5 @@ class IChatService(Interface):
         """
 
 __all__ = [
-    'IChatInterface', 'IGroup', 'IChatClient', 'IUser', 'IChatService',
+    'IGroup', 'IChatClient', 'IUser', 'IChatService',
     ]

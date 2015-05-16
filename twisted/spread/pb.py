@@ -18,7 +18,7 @@ The protocol is not opaque, because it provides objects which represent the
 remote proxies and require no context (server references, IDs) to operate on.
 
 It is not transparent because it does I{not} attempt to make remote objects
-behave identically, or even similiarly, to local objects.  Method calls are
+behave identically, or even similarly, to local objects.  Method calls are
 invoked asynchronously, and specific rules are applied when serializing
 arguments.
 
@@ -29,12 +29,12 @@ To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 
 import random
 import types
+from hashlib import md5
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
-from twisted.python.hashlib import md5
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials
@@ -204,6 +204,7 @@ class IPerspective(Interface):
 
 
 
+@implementer(IPerspective)
 class Avatar:
     """
     A default IPerspective implementor.
@@ -219,8 +220,6 @@ class Avatar:
     information on invoking methods on other objects, see
     L{flavors.ViewPoint}.)
     """
-
-    implements(IPerspective)
 
     def perspectiveMessageReceived(self, broker, message, args, kw):
         """
@@ -258,12 +257,13 @@ class AsReferenceable(Referenceable):
 
 
 
+@implementer(IUnjellyable)
 class RemoteReference(Serializable, styles.Ephemeral):
     """
     A translucent reference to a remote object.
 
     I may be a reference to a L{flavors.ViewPoint}, a
-    L{flavors.Referenceable}, or an L{IPerspective} implementor (e.g.,
+    L{flavors.Referenceable}, or an L{IPerspective} implementer (e.g.,
     pb.Avatar).  From the client's perspective, it is not possible to
     tell which except by convention.
 
@@ -276,8 +276,6 @@ class RemoteReference(Serializable, styles.Ephemeral):
     @ivar broker: The broker I am obtained through.
     @type broker: L{Broker}
     """
-
-    implements(IUnjellyable)
 
     def __init__(self, perspective, broker, luid, doRefCount):
         """(internal) Initialize me with a broker and a locally-unique ID.
@@ -434,7 +432,7 @@ class CopyableFailure(failure.Failure, Copyable):
 class CopiedFailure(RemoteCopy, failure.Failure):
     """
     A L{CopiedFailure} is a L{pb.RemoteCopy} of a L{failure.Failure}
-    transfered via PB.
+    transferred via PB.
 
     @ivar type: The full import path of the exception class which was raised on
         the remote end.
@@ -844,13 +842,13 @@ class Broker(banana.Banana):
         pbc = None
         pbe = None
         answerRequired = 1
-        if kw.has_key('pbcallback'):
+        if 'pbcallback' in kw:
             pbc = kw['pbcallback']
             del kw['pbcallback']
-        if kw.has_key('pberrback'):
+        if 'pberrback' in kw:
             pbe = kw['pberrback']
             del kw['pberrback']
-        if kw.has_key('pbanswer'):
+        if 'pbanswer' in kw:
             assert (not pbe) and (not pbc), "You can't specify a no-answer requirement."
             answerRequired = kw['pbanswer']
             del kw['pbanswer']
@@ -1299,10 +1297,9 @@ class IUsernameMD5Password(ICredentials):
         """
 
 
+@implementer(IPBRoot)
 class _PortalRoot:
     """Root object, used to login to portal."""
-
-    implements(IPBRoot)
 
     def __init__(self, portal):
         self.portal = portal
@@ -1381,12 +1378,11 @@ class _PortalWrapper(Referenceable, _JellyableAvatarMixin):
 
 
 
+@implementer(IUsernameHashedPassword, IUsernameMD5Password)
 class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
     """
     Called with response to password challenge.
     """
-    implements(IUsernameHashedPassword, IUsernameMD5Password)
-
     def __init__(self, portal, broker, username, challenge):
         self.portal = portal
         self.broker = broker

@@ -5,7 +5,7 @@ from twisted.trial import unittest
 from twisted.python import roots
 import types
 
-class RootsTest(unittest.TestCase):
+class RootsTests(unittest.TestCase):
 
     def testExceptions(self):
         request = roots.Request()

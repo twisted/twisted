@@ -93,7 +93,7 @@ class ContactsList:
         @type newnick: C{str}
         """
         oldname = person.name
-        if self.contacts.has_key(oldname):
+        if oldname in self.contacts:
             del self.contacts[oldname]
             person.name = newnick
             self.contacts[newnick] = person
@@ -502,7 +502,7 @@ class ChatUI:
         @param newnick: The new C{name} C{person} will take.
         """
         oldnick = person.name
-        if self.persons.has_key((oldnick, person.account)):
+        if (oldnick, person.account) in self.persons:
             conv = self.conversations.get(person)
             if conv:
                 conv.contactChangedNick(person, newnick)

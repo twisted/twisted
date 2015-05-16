@@ -9,7 +9,7 @@ import sys, os
 
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces, error
-from twisted.python import util, failure
+from twisted.python import util, failure, log
 from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
 from twisted.web import client, twcgi, server, resource
 from twisted.web.test._util import _render
@@ -24,6 +24,12 @@ print "cgi output"
 DUAL_HEADER_CGI = '''\
 print "Header: spam"
 print "Header: eggs"
+print
+print "cgi output"
+'''
+
+BROKEN_HEADER_CGI = '''\
+print "XYZ"
 print
 print "cgi output"
 '''
@@ -70,7 +76,7 @@ print "cgi output"
 class PythonScript(twcgi.FilteredScript):
     filter = sys.executable
 
-class CGI(unittest.TestCase):
+class CGITests(unittest.TestCase):
     """
     Tests for L{twcgi.FilteredScript}.
     """
@@ -87,7 +93,7 @@ class CGI(unittest.TestCase):
         return self.p.getHost().port
 
     def tearDown(self):
-        if self.p:
+        if getattr(self, 'p', None):
             return self.p.stopListening()
 
 
@@ -166,6 +172,32 @@ class CGI(unittest.TestCase):
         return factory.deferred
 
 
+    def test_malformedHeaderCGI(self):
+        """
+        Check for the error message in the duplicated header
+        """
+        cgiFilename = self.writeCGI(BROKEN_HEADER_CGI)
+
+        portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url)
+        reactor.connectTCP('localhost', portnum, factory)
+        loggedMessages = []
+
+        def addMessage(eventDict):
+            loggedMessages.append(log.textFromEventDict(eventDict))
+
+        log.addObserver(addMessage)
+        self.addCleanup(log.removeObserver, addMessage)
+
+        def checkResponse(ignored):
+            self.assertEqual(loggedMessages[0],
+                             "ignoring malformed CGI header: 'XYZ'")
+
+        factory.deferred.addCallback(checkResponse)
+        return factory.deferred
+
+
     def testReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
         cgiFile = file(cgiFilename, 'wt')
@@ -212,6 +244,69 @@ class CGI(unittest.TestCase):
     testReadAllInput.timeout = 5
     def _testReadAllInput_1(self, res):
         self.assertEqual(res, "readallinput ok%s" % os.linesep)
+
+
+    def test_useReactorArgument(self):
+        """
+        L{twcgi.FilteredScript.runProcess} uses the reactor passed as an
+        argument to the constructor.
+        """
+        class FakeReactor:
+            """
+            A fake reactor recording whether spawnProcess is called.
+            """
+            called = False
+            def spawnProcess(self, *args, **kwargs):
+                """
+                Set the C{called} flag to C{True} if C{spawnProcess} is called.
+
+                @param args: Positional arguments.
+                @param kwargs: Keyword arguments.
+                """
+                self.called = True
+
+        fakeReactor = FakeReactor()
+        request = DummyRequest(['a', 'b'])
+        resource = twcgi.FilteredScript("dummy-file", reactor=fakeReactor)
+        _render(resource, request)
+
+        self.assertTrue(fakeReactor.called)
+
+
+
+class CGIScriptTests(unittest.TestCase):
+    """
+    Tests for L{twcgi.CGIScript}.
+    """
+
+    def test_pathInfo(self):
+        """
+        L{twcgi.CGIScript.render} sets the process environment I{PATH_INFO} from
+        the request path.
+        """
+        class FakeReactor:
+            """
+            A fake reactor recording the environment passed to spawnProcess.
+            """
+            def spawnProcess(self, process, filename, args, env, wdir):
+                """
+                Store the C{env} L{dict} to an instance attribute.
+
+                @param process: Ignored
+                @param filename: Ignored
+                @param args: Ignored
+                @param env: The environment L{dict} which will be stored
+                @param wdir: Ignored
+                """
+                self.process_env = env
+
+        _reactor = FakeReactor()
+        resource = twcgi.CGIScript(self.mktemp(), reactor=_reactor)
+        request = DummyRequest(['a', 'b'])
+        _render(resource, request)
+
+        self.assertEqual(_reactor.process_env["PATH_INFO"],
+                         "/a/b")
 
 
 
@@ -267,37 +362,3 @@ class CGIProcessProtocolTests(unittest.TestCase):
         protocol = twcgi.CGIProcessProtocol(request)
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
-
-
-
-class CGIDeprecationTests(unittest.TestCase):
-    """
-    Tests for deprecations in L{twisted.web.twcgi}.
-    """
-
-    def test_PHP3ScriptIsDeprecated(self):
-        """
-        L{twcgi.PHP3Script} is deprecated.
-        """
-        twcgi.PHP3Script
-
-        warnings = self.flushWarnings([self.test_PHP3ScriptIsDeprecated])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertIn("PHP3Script is deprecated. "
-                      "Use twisted.web.twcgi.FilteredScript instead.",
-                      warnings[0]['message'])
-
-
-    def test_PHPScriptIsDeprecated(self):
-        """
-        L{twcgi.PHPScript} is deprecated.
-        """
-        twcgi.PHPScript
-
-        warnings = self.flushWarnings([self.test_PHPScriptIsDeprecated])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertIn("PHPScript is deprecated. "
-                      "Use twisted.web.twcgi.FilteredScript instead.",
-                      warnings[0]['message'])

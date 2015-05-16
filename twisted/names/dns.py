@@ -7,23 +7,23 @@ DNS protocol implementation.
 
 Future Plans:
     - Get rid of some toplevels, maybe.
-
-@author: Moshe Zadka
-@author: Jean-Paul Calderone
 """
+
+from __future__ import division, absolute_import
 
 __all__ = [
     'IEncodable', 'IRecord',
 
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
-    'NAPTR', 'NS', 'NULL', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT', 'WKS',
+    'NAPTR', 'NS', 'NULL', 'OPT', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT',
+    'WKS',
 
     'ANY', 'CH', 'CS', 'HS', 'IN',
 
     'ALL_RECORDS', 'AXFR', 'IXFR',
 
-    'EFORMAT', 'ENAME', 'ENOTIMP', 'EREFUSED', 'ESERVER',
+    'EFORMAT', 'ENAME', 'ENOTIMP', 'EREFUSED', 'ESERVER', 'EBADVERSION',
 
     'Record_A', 'Record_A6', 'Record_AAAA', 'Record_AFSDB', 'Record_CNAME',
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
@@ -44,15 +44,14 @@ __all__ = [
 
 
 # System imports
-import warnings
+import inspect, struct, random, socket
+from itertools import chain
 
-import struct, random, types, socket
-
-import cStringIO as StringIO
+from io import BytesIO
 
 AF_INET6 = socket.AF_INET6
 
-from zope.interface import implements, Interface, Attribute
+from zope.interface import implementer, Interface, Attribute
 
 
 # Twisted imports
@@ -61,6 +60,46 @@ from twisted.internet.error import CannotListenError
 from twisted.python import log, failure
 from twisted.python import util as tputil
 from twisted.python import randbytes
+from twisted.python.compat import _PY3, unicode, comparable, cmp, nativeString
+
+
+if _PY3:
+    def _ord2bytes(ordinal):
+        """
+        Construct a bytes object representing a single byte with the given
+        ordinal value.
+
+        @type ordinal: C{int}
+        @rtype: C{bytes}
+        """
+        return bytes([ordinal])
+
+
+    def _nicebytes(bytes):
+        """
+        Represent a mostly textful bytes object in a way suitable for presentation
+        to an end user.
+
+        @param bytes: The bytes to represent.
+        @rtype: C{str}
+        """
+        return repr(bytes)[1:]
+
+
+    def _nicebyteslist(list):
+        """
+        Represent a list of mostly textful bytes objects in a way suitable for
+        presentation to an end user.
+
+        @param list: The list of bytes to represent.
+        @rtype: C{str}
+        """
+        return '[%s]' % (
+            ', '.join([_nicebytes(b) for b in list]),)
+else:
+    _ord2bytes = chr
+    _nicebytes = _nicebyteslist = repr
+
 
 
 def randomSource():
@@ -79,6 +118,7 @@ SRV = 33
 NAPTR = 35
 A6 = 38
 DNAME = 39
+OPT = 41
 SPF = 99
 
 QUERY_TYPES = {
@@ -108,6 +148,7 @@ QUERY_TYPES = {
     NAPTR: 'NAPTR',
     A6: 'A6',
     DNAME: 'DNAME',
+    OPT: 'OPT',
     SPF: 'SPF'
 }
 
@@ -123,7 +164,7 @@ EXT_QUERIES = {
 }
 
 REV_TYPES = dict([
-    (v, k) for (k, v) in QUERY_TYPES.items() + EXT_QUERIES.items()
+    (v, k) for (k, v) in chain(QUERY_TYPES.items(), EXT_QUERIES.items())
 ])
 
 IN, CS, CH, HS = range(1, 5)
@@ -149,6 +190,8 @@ OP_UPDATE = 5 # RFC 2136
 
 # Response Codes
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
+# https://tools.ietf.org/html/rfc6891#section-9
+EBADVERSION = 16
 
 class IRecord(Interface):
     """
@@ -164,12 +207,79 @@ from twisted.names.error import DomainError, AuthoritativeDomainError
 from twisted.names.error import DNSQueryTimeoutError
 
 
+
+def _nameToLabels(name):
+    """
+    Split a domain name into its constituent labels.
+
+    @type name: C{str}
+    @param name: A fully qualified domain name (with or without a
+        trailing dot).
+
+    @return: A L{list} of labels ending with an empty label
+        representing the DNS root zone.
+    """
+    if name in (b'', b'.'):
+        return [b'']
+    labels = name.split(b'.')
+    if labels[-1] != b'':
+        labels.append(b'')
+    return labels
+
+
+
+def _isSubdomainOf(descendantName, ancestorName):
+    """
+    Test whether C{descendantName} is equal to or is a I{subdomain} of
+    C{ancestorName}.
+
+    The names are compared case-insensitively.
+
+    The names are treated as byte strings containing one or more
+    DNS labels separated by B{.}.
+
+    C{descendantName} is considered equal if its sequence of labels
+    exactly matches the labels of C{ancestorName}.
+
+    C{descendantName} is considered a I{subdomain} if its sequence of
+    labels ends with the labels of C{ancestorName}.
+
+    @type descendantName: C{bytes}
+    @param descendantName: The DNS subdomain name.
+
+    @type ancestorName: C{bytes}
+    @param ancestorName: The DNS parent or ancestor domain name.
+
+    @return: C{True} if C{descendantName} is equal to or if it is a
+        subdomain of C{ancestorName}. Otherwise returns C{False}.
+    """
+    descendantLabels = _nameToLabels(descendantName.lower())
+    ancestorLabels = _nameToLabels(ancestorName.lower())
+    return descendantLabels[-len(ancestorLabels):] == ancestorLabels
+
+
+
 def str2time(s):
+    """
+    Parse a string description of an interval into an integer number of seconds.
+
+    @param s: An interval definition constructed as an interval duration
+        followed by an interval unit.  An interval duration is a base ten
+        representation of an integer.  An interval unit is one of the following
+        letters: S (seconds), M (minutes), H (hours), D (days), W (weeks), or Y
+        (years).  For example: C{"3S"} indicates an interval of three seconds;
+        C{"5D"} indicates an interval of five days.  Alternatively, C{s} may be
+        any non-string and it will be returned unmodified.
+    @type s: text string (C{str}) for parsing; anything else for passthrough.
+
+    @return: an C{int} giving the interval represented by the string C{s}, or
+        whatever C{s} is if it is not a string.
+    """
     suffixes = (
         ('S', 1), ('M', 60), ('H', 60 * 60), ('D', 60 * 60 * 24),
         ('W', 60 * 60 * 24 * 7), ('Y', 60 * 60 * 24 * 365)
     )
-    if isinstance(s, types.StringType):
+    if isinstance(s, str):
         s = s.upper().strip()
         for (suff, mult) in suffixes:
             if s.endswith(suff):
@@ -177,7 +287,7 @@ def str2time(s):
         try:
             s = int(s)
         except ValueError:
-            raise ValueError, "Invalid time interval specifier: " + s
+            raise ValueError("Invalid time interval specifier: " + s)
     return s
 
 
@@ -204,7 +314,7 @@ class IEncodable(Interface):
 
         @type compDict: C{dict} or C{None}
         @param compDict: A dictionary of backreference addresses that have
-        have already been written to this stream and that may be used for
+        already been written to this stream and that may be used for
         compression.
         """
 
@@ -225,12 +335,12 @@ class IEncodable(Interface):
 
 
 
+@implementer(IEncodable)
 class Charstr(object):
-    implements(IEncodable)
 
-    def __init__(self, string=''):
-        if not isinstance(string, str):
-            raise ValueError("%r is not a string" % (string,))
+    def __init__(self, string=b''):
+        if not isinstance(string, bytes):
+            raise ValueError("%r is not a byte string" % (string,))
         self.string = string
 
 
@@ -244,13 +354,13 @@ class Charstr(object):
         """
         string = self.string
         ind = len(string)
-        strio.write(chr(ind))
+        strio.write(_ord2bytes(ind))
         strio.write(string)
 
 
     def decode(self, strio, length=None):
         """
-        Decode a byte string into this Name.
+        Decode a byte string into this Charstr.
 
         @type strio: file
         @param strio: Bytes will be read from this file until the full string
@@ -259,7 +369,7 @@ class Charstr(object):
         @raise EOFError: Raised when there are not enough bytes available from
             C{strio}.
         """
-        self.string = ''
+        self.string = b''
         l = ord(readPrecisely(strio, 1))
         self.string = readPrecisely(strio, l)
 
@@ -267,7 +377,13 @@ class Charstr(object):
     def __eq__(self, other):
         if isinstance(other, Charstr):
             return self.string == other.string
-        return False
+        return NotImplemented
+
+
+    def __ne__(self, other):
+        if isinstance(other, Charstr):
+            return self.string != other.string
+        return NotImplemented
 
 
     def __hash__(self):
@@ -275,16 +391,29 @@ class Charstr(object):
 
 
     def __str__(self):
-        return self.string
+        """
+        Represent this L{Charstr} instance by its string value.
+        """
+        return nativeString(self.string)
 
 
 
+@implementer(IEncodable)
 class Name:
-    implements(IEncodable)
+    """
+    A name in the domain name system, made up of multiple labels.  For example,
+    I{twistedmatrix.com}.
 
-    def __init__(self, name=''):
-        assert isinstance(name, types.StringTypes), "%r is not a string" % (name,)
+    @ivar name: A byte string giving the name.
+    @type name: C{bytes}
+    """
+    def __init__(self, name=b''):
+        if isinstance(name, unicode):
+            name = name.encode('idna')
+        if not isinstance(name, bytes):
+            raise TypeError("%r is not a byte string" % (name,))
         self.name = name
+
 
     def encode(self, strio, compDict=None):
         """
@@ -308,15 +437,17 @@ class Name:
                     return
                 else:
                     compDict[name] = strio.tell() + Message.headerSize
-            ind = name.find('.')
+            ind = name.find(b'.')
             if ind > 0:
                 label, name = name[:ind], name[ind + 1:]
             else:
-                label, name = name, ''
+                # This is the last label, end the loop after handling it.
+                label = name
+                name = None
                 ind = len(label)
-            strio.write(chr(ind))
+            strio.write(_ord2bytes(ind))
             strio.write(label)
-        strio.write(chr(0))
+        strio.write(b'\x00')
 
 
     def decode(self, strio, length=None):
@@ -334,7 +465,7 @@ class Name:
             because it contains a loop).
         """
         visited = set()
-        self.name = ''
+        self.name = b''
         off = 0
         while 1:
             l = ord(readPrecisely(strio, 1))
@@ -353,24 +484,37 @@ class Name:
                 strio.seek(new_off)
                 continue
             label = readPrecisely(strio, l)
-            if self.name == '':
+            if self.name == b'':
                 self.name = label
             else:
-                self.name = self.name + '.' + label
+                self.name = self.name + b'.' + label
 
     def __eq__(self, other):
         if isinstance(other, Name):
-            return str(self) == str(other)
-        return 0
+            return self.name == other.name
+        return NotImplemented
+
+
+    def __ne__(self, other):
+        if isinstance(other, Name):
+            return self.name != other.name
+        return NotImplemented
 
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.name)
 
 
     def __str__(self):
-        return self.name
+        """
+        Represent this L{Name} instance by its string name.
+        """
+        return nativeString(self.name)
 
+
+
+@comparable
+@implementer(IEncodable)
 class Query:
     """
     Represent a single DNS query.
@@ -379,16 +523,13 @@ class Query:
     @ivar type: The query type.
     @ivar cls: The query class.
     """
-
-    implements(IEncodable)
-
     name = None
     type = None
     cls = None
 
-    def __init__(self, name='', type=A, cls=IN):
+    def __init__(self, name=b'', type=A, cls=IN):
         """
-        @type name: C{str}
+        @type name: C{bytes}
         @param name: The name about which to request information.
 
         @type type: C{int}
@@ -418,10 +559,11 @@ class Query:
 
 
     def __cmp__(self, other):
-        return isinstance(other, Query) and cmp(
-            (str(self.name).lower(), self.type, self.cls),
-            (str(other.name).lower(), other.type, other.cls)
-        ) or cmp(self.__class__, other.__class__)
+        if isinstance(other, Query):
+            return cmp(
+                (str(self.name).lower(), self.type, self.cls),
+                (str(other.name).lower(), other.type, other.cls))
+        return NotImplemented
 
 
     def __str__(self):
@@ -434,6 +576,249 @@ class Query:
         return 'Query(%r, %r, %r)' % (str(self.name), self.type, self.cls)
 
 
+
+@implementer(IEncodable)
+class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+    """
+    An OPT record header.
+
+    @ivar name: The DNS name associated with this record. Since this
+        is a pseudo record, the name is always an L{Name} instance
+        with value b'', which represents the DNS root zone. This
+        attribute is a readonly property.
+
+    @ivar type: The DNS record type. This is a fixed value of 41
+        (C{dns.OPT} for OPT Record. This attribute is a readonly
+        property.
+
+    @see: L{_OPTHeader.__init__} for documentation of other public
+        instance attributes.
+
+    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+
+    @since: 13.2
+    """
+    showAttributes = (
+        ('name', lambda n: nativeString(n.name)), 'type', 'udpPayloadSize',
+        'extendedRCODE', 'version', 'dnssecOK', 'options')
+
+    compareAttributes = (
+        'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
+        'dnssecOK', 'options')
+
+    def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
+                 dnssecOK=False, options=None):
+        """
+        @type udpPayloadSize: L{int}
+        @param payload: The number of octets of the largest UDP
+            payload that can be reassembled and delivered in the
+            requestor's network stack.
+
+        @type extendedRCODE: L{int}
+        @param extendedRCODE: Forms the upper 8 bits of extended
+            12-bit RCODE (together with the 4 bits defined in
+            [RFC1035].  Note that EXTENDED-RCODE value 0 indicates
+            that an unextended RCODE is in use (values 0 through 15).
+
+        @type version: L{int}
+        @param version: Indicates the implementation level of the
+            setter.  Full conformance with this specification is
+            indicated by version C{0}.
+
+        @type dnssecOK: L{bool}
+        @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
+
+        @type options: L{list}
+        @param options: A L{list} of 0 or more L{_OPTVariableOption}
+            instances.
+        """
+        self.udpPayloadSize = udpPayloadSize
+        self.extendedRCODE = extendedRCODE
+        self.version = version
+        self.dnssecOK = dnssecOK
+
+        if options is None:
+            options = []
+        self.options = options
+
+
+    @property
+    def name(self):
+        """
+        A readonly property for accessing the C{name} attribute of
+        this record.
+
+        @return: The DNS name associated with this record. Since this
+            is a pseudo record, the name is always an L{Name} instance
+            with value b'', which represents the DNS root zone.
+        """
+        return Name(b'')
+
+
+    @property
+    def type(self):
+        """
+        A readonly property for accessing the C{type} attribute of
+        this record.
+
+        @return: The DNS record type. This is a fixed value of 41
+            (C{dns.OPT} for OPT Record.
+        """
+        return OPT
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Encode this L{_OPTHeader} instance to bytes.
+
+        @type strio: L{file}
+        @param strio: the byte representation of this L{_OPTHeader}
+            will be written to this file.
+
+        @type compDict: L{dict} or L{None}
+        @param compDict: A dictionary of backreference addresses that
+            have already been written to this stream and that may
+            be used for DNS name compression.
+        """
+        b = BytesIO()
+        for o in self.options:
+            o.encode(b)
+        optionBytes = b.getvalue()
+
+        RRHeader(
+            name=self.name.name,
+            type=self.type,
+            cls=self.udpPayloadSize,
+            ttl=(
+                self.extendedRCODE << 24
+                | self.version << 16
+                | self.dnssecOK << 15),
+            payload=UnknownRecord(optionBytes)
+        ).encode(strio, compDict)
+
+
+    def decode(self, strio, length=None):
+        """
+        Decode bytes into an L{_OPTHeader} instance.
+
+        @type strio: L{file}
+        @param strio: Bytes will be read from this file until the full
+            L{_OPTHeader} is decoded.
+
+        @type length: L{int} or L{None}
+        @param length: Not used.
+        """
+
+        h = RRHeader()
+        h.decode(strio, length)
+        h.payload = UnknownRecord(readPrecisely(strio, h.rdlength))
+
+        newOptHeader = self.fromRRHeader(h)
+
+        for attrName in self.compareAttributes:
+            if attrName not in ('name', 'type'):
+                setattr(self, attrName, getattr(newOptHeader, attrName))
+
+
+    @classmethod
+    def fromRRHeader(cls, rrHeader):
+        """
+        A classmethod for constructing a new L{_OPTHeader} from the
+        attributes and payload of an existing L{RRHeader} instance.
+
+        @type rrHeader: L{RRHeader}
+        @param rrHeader: An L{RRHeader} instance containing an
+            L{UnknownRecord} payload.
+
+        @return: An instance of L{_OPTHeader}.
+        @rtype: L{_OPTHeader}
+        """
+        options = None
+        if rrHeader.payload is not None:
+            options = []
+            optionsBytes = BytesIO(rrHeader.payload.data)
+            optionsBytesLength = len(rrHeader.payload.data)
+            while optionsBytes.tell() < optionsBytesLength:
+                o = _OPTVariableOption()
+                o.decode(optionsBytes)
+                options.append(o)
+
+        # Decode variable options if present
+        return cls(
+            udpPayloadSize=rrHeader.cls,
+            extendedRCODE=rrHeader.ttl >> 24,
+            version=rrHeader.ttl >> 16 & 0xff,
+            dnssecOK=(rrHeader.ttl & 0xffff) >> 15,
+            options=options
+            )
+
+
+
+@implementer(IEncodable)
+class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+    """
+    A class to represent OPT record variable options.
+
+    @see: L{_OPTVariableOption.__init__} for documentation of public
+        instance attributes.
+
+    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+
+    @since: 13.2
+    """
+    showAttributes = ('code', ('data', nativeString))
+    compareAttributes = ('code', 'data')
+
+    _fmt = '!HH'
+
+    def __init__(self, code=0, data=b''):
+        """
+        @type code: L{int}
+        @param code: The option code
+
+        @type data: L{bytes}
+        @param data: The option data
+        """
+        self.code = code
+        self.data = data
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Encode this L{_OPTVariableOption} to bytes.
+
+        @type strio: L{file}
+        @param strio: the byte representation of this
+            L{_OPTVariableOption} will be written to this file.
+
+        @type compDict: L{dict} or L{None}
+        @param compDict: A dictionary of backreference addresses that
+            have already been written to this stream and that may
+            be used for DNS name compression.
+        """
+        strio.write(
+            struct.pack(self._fmt, self.code, len(self.data)) + self.data)
+
+
+    def decode(self, strio, length=None):
+        """
+        Decode bytes into an L{_OPTVariableOption} instance.
+
+        @type strio: L{file}
+        @param strio: Bytes will be read from this file until the full
+            L{_OPTVariableOption} is decoded.
+
+        @type length: L{int} or L{None}
+        @param length: Not used.
+        """
+        l = struct.calcsize(self._fmt)
+        buff = readPrecisely(strio, l)
+        self.code, length = struct.unpack(self._fmt, buff)
+        self.data = readPrecisely(strio, length)
+
+
+
+@implementer(IEncodable)
 class RRHeader(tputil.FancyEqMixin):
     """
     A resource record header.
@@ -445,11 +830,10 @@ class RRHeader(tputil.FancyEqMixin):
     @ivar cls: The query class of the original request.
     @ivar ttl: The time-to-live for this record.
     @ivar payload: An object that implements the IEncodable interface
-    @ivar auth: Whether this header is authoritative or not.
+
+    @ivar auth: A C{bool} indicating whether this C{RRHeader} was parsed from an
+        authoritative message.
     """
-
-    implements(IEncodable)
-
     compareAttributes = ('name', 'type', 'cls', 'ttl', 'payload', 'auth')
 
     fmt = "!HHIH"
@@ -463,9 +847,9 @@ class RRHeader(tputil.FancyEqMixin):
 
     cachedResponse = None
 
-    def __init__(self, name='', type=A, cls=IN, ttl=0, payload=None, auth=False):
+    def __init__(self, name=b'', type=A, cls=IN, ttl=0, payload=None, auth=False):
         """
-        @type name: C{str}
+        @type name: C{bytes}
         @param name: The name about which this reply contains information.
 
         @type type: C{int}
@@ -479,8 +863,13 @@ class RRHeader(tputil.FancyEqMixin):
 
         @type payload: An object implementing C{IEncodable}
         @param payload: A Query Type specific data object.
+
+        @raises ValueError: if the ttl is negative.
         """
         assert (payload is None) or isinstance(payload, UnknownRecord) or (payload.TYPE == type)
+
+        if ttl < 0:
+            raise ValueError("TTL cannot be negative")
 
         self.name = Name(name)
         self.type = type
@@ -524,6 +913,7 @@ class RRHeader(tputil.FancyEqMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A Resource Record which consists of a single RFC 1035 domain-name.
@@ -535,15 +925,13 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    implements(IEncodable, IRecord)
-
     showAttributes = (('name', 'name', '%s'), 'ttl')
     compareAttributes = ('name', 'ttl')
 
     TYPE = None
     name = None
 
-    def __init__(self, name='', ttl=None):
+    def __init__(self, name=b'', ttl=None):
         self.name = Name(name)
         self.ttl = str2time(ttl)
 
@@ -664,6 +1052,7 @@ class Record_DNAME(SimpleRecord):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_A(tputil.FancyEqMixin):
     """
     An IPv4 host address.
@@ -676,8 +1065,6 @@ class Record_A(tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    implements(IEncodable, IRecord)
-
     compareAttributes = ('address', 'ttl')
 
     TYPE = A
@@ -711,6 +1098,7 @@ class Record_A(tputil.FancyEqMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Marks the start of a zone of authority.
@@ -750,15 +1138,14 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @type ttl: C{int}
     @ivar ttl: The default TTL to use for records served from this zone.
     """
-    implements(IEncodable, IRecord)
-
     fancybasename = 'SOA'
     compareAttributes = ('serial', 'mname', 'rname', 'refresh', 'expire', 'retry', 'minimum', 'ttl')
     showAttributes = (('mname', 'mname', '%s'), ('rname', 'rname', '%s'), 'serial', 'refresh', 'retry', 'expire', 'minimum', 'ttl')
 
     TYPE = SOA
 
-    def __init__(self, mname='', rname='', serial=0, refresh=0, retry=0, expire=0, minimum=0, ttl=None):
+    def __init__(self, mname=b'', rname=b'', serial=0, refresh=0, retry=0,
+                 expire=0, minimum=0, ttl=None):
         self.mname, self.rname = Name(mname), Name(rname)
         self.serial, self.refresh = str2time(serial), str2time(refresh)
         self.minimum, self.expire = str2time(minimum), str2time(expire)
@@ -794,6 +1181,7 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A null record.
@@ -804,10 +1192,9 @@ class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    implements(IEncodable, IRecord)
-
     fancybasename = 'NULL'
-    showAttributes = compareAttributes = ('payload', 'ttl')
+    showAttributes = (('payload', _nicebytes), 'ttl')
+    compareAttributes = ('payload', 'ttl')
 
     TYPE = NULL
 
@@ -829,6 +1216,7 @@ class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A well known service description.
@@ -851,8 +1239,6 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    implements(IEncodable, IRecord)
-
     fancybasename = "WKS"
     compareAttributes = ('address', 'protocol', 'map', 'ttl')
     showAttributes = [('_address', 'address', '%s'), 'protocol', 'ttl']
@@ -884,6 +1270,7 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     An IPv6 host address.
@@ -898,7 +1285,6 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc1886.html}
     """
-    implements(IEncodable, IRecord)
     TYPE = AAAA
 
     fancybasename = 'AAAA'
@@ -907,7 +1293,7 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     _address = property(lambda self: socket.inet_ntop(AF_INET6, self.address))
 
-    def __init__(self, address = '::', ttl=None):
+    def __init__(self, address='::', ttl=None):
         self.address = socket.inet_pton(AF_INET6, address)
         self.ttl = str2time(ttl)
 
@@ -925,6 +1311,7 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     An IPv6 address.
@@ -952,7 +1339,6 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @see: U{http://www.faqs.org/rfcs/rfc3363.html}
     @see: U{http://www.faqs.org/rfcs/rfc3364.html}
     """
-    implements(IEncodable, IRecord)
     TYPE = A6
 
     fancybasename = 'A6'
@@ -961,7 +1347,7 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
     _suffix = property(lambda self: socket.inet_ntop(AF_INET6, self.suffix))
 
-    def __init__(self, prefixLen=0, suffix='::', prefix='', ttl=None):
+    def __init__(self, prefixLen=0, suffix='::', prefix=b'', ttl=None):
         self.prefixLen = prefixLen
         self.suffix = socket.inet_pton(AF_INET6, suffix)
         self.prefix = Name(prefix)
@@ -982,7 +1368,7 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
         self.prefixLen = struct.unpack('!B', readPrecisely(strio, 1))[0]
         self.bytes = int((128 - self.prefixLen) / 8.0)
         if self.bytes:
-            self.suffix = '\x00' * (16 - self.bytes) + readPrecisely(strio, self.bytes)
+            self.suffix = b'\x00' * (16 - self.bytes) + readPrecisely(strio, self.bytes)
         if self.prefixLen:
             self.prefix.decode(strio)
 
@@ -1009,6 +1395,7 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The location of the server(s) for a specific protocol and domain.
@@ -1043,14 +1430,13 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc2782.html}
     """
-    implements(IEncodable, IRecord)
     TYPE = SRV
 
     fancybasename = 'SRV'
     compareAttributes = ('priority', 'weight', 'target', 'port', 'ttl')
     showAttributes = ('priority', 'weight', ('target', 'target', '%s'), 'port', 'ttl')
 
-    def __init__(self, priority=0, weight=0, port=0, target='', ttl=None):
+    def __init__(self, priority=0, weight=0, port=0, target=b'', ttl=None):
         self.priority = int(priority)
         self.weight = int(weight)
         self.port = int(port)
@@ -1076,6 +1462,7 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The location of the server(s) for a specific protocol and domain.
@@ -1093,7 +1480,7 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @type flag: L{Charstr}
     @ivar flag: A <character-string> containing flags to control aspects of the
         rewriting and interpretation of the fields in the record.  Flags
-        aresingle characters from the set [A-Z0-9].  The case of the alphabetic
+        are single characters from the set [A-Z0-9].  The case of the alphabetic
         characters is not significant.
 
         At this time only four flags, "S", "A", "U", and "P", are defined.
@@ -1120,18 +1507,18 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc2915.html}
     """
-    implements(IEncodable, IRecord)
     TYPE = NAPTR
 
     compareAttributes = ('order', 'preference', 'flags', 'service', 'regexp',
                          'replacement')
     fancybasename = 'NAPTR'
+
     showAttributes = ('order', 'preference', ('flags', 'flags', '%s'),
                       ('service', 'service', '%s'), ('regexp', 'regexp', '%s'),
                       ('replacement', 'replacement', '%s'), 'ttl')
 
-    def __init__(self, order=0, preference=0, flags='', service='', regexp='',
-                 replacement='', ttl=None):
+    def __init__(self, order=0, preference=0, flags=b'', service=b'', regexp=b'',
+                 replacement=b'', ttl=None):
         self.order = int(order)
         self.preference = int(preference)
         self.flags = Charstr(flags)
@@ -1170,6 +1557,7 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Map from a domain name to the name of an AFS cell database server.
@@ -1190,14 +1578,13 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc1183.html}
     """
-    implements(IEncodable, IRecord)
     TYPE = AFSDB
 
     fancybasename = 'AFSDB'
     compareAttributes = ('subtype', 'hostname', 'ttl')
     showAttributes = ('subtype', ('hostname', 'hostname', '%s'), 'ttl')
 
-    def __init__(self, subtype=0, hostname='', ttl=None):
+    def __init__(self, subtype=0, hostname=b'', ttl=None):
         self.subtype = int(subtype)
         self.hostname = Name(hostname)
         self.ttl = str2time(ttl)
@@ -1219,6 +1606,7 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The responsible person for a domain.
@@ -1237,14 +1625,13 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc1183.html}
     """
-    implements(IEncodable, IRecord)
     TYPE = RP
 
     fancybasename = 'RP'
     compareAttributes = ('mbox', 'txt', 'ttl')
     showAttributes = (('mbox', 'mbox', '%s'), ('txt', 'txt', '%s'), 'ttl')
 
-    def __init__(self, mbox='', txt='', ttl=None):
+    def __init__(self, mbox=b'', txt=b'', ttl=None):
         self.mbox = Name(mbox)
         self.txt = Name(txt)
         self.ttl = str2time(ttl)
@@ -1267,6 +1654,7 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Host information.
@@ -1281,11 +1669,11 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    implements(IEncodable, IRecord)
     TYPE = HINFO
 
     fancybasename = 'HINFO'
-    showAttributes = compareAttributes = ('cpu', 'os', 'ttl')
+    showAttributes = (('cpu', _nicebytes), ('os', _nicebytes), 'ttl')
+    compareAttributes = ('cpu', 'os', 'ttl')
 
     def __init__(self, cpu='', os='', ttl=None):
         self.cpu, self.os = cpu, os
@@ -1317,6 +1705,7 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Mailbox or mail list information.
@@ -1338,7 +1727,6 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    implements(IEncodable, IRecord)
     TYPE = MINFO
 
     rmailbx = None
@@ -1350,7 +1738,7 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
                       ('emailbx', 'errors', '%s'),
                       'ttl')
 
-    def __init__(self, rmailbx='', emailbx='', ttl=None):
+    def __init__(self, rmailbx=b'', emailbx=b'', ttl=None):
         self.rmailbx, self.emailbx = Name(rmailbx), Name(emailbx)
         self.ttl = str2time(ttl)
 
@@ -1371,6 +1759,7 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
+@implementer(IEncodable, IRecord)
 class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Mail exchange.
@@ -1387,14 +1776,13 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    implements(IEncodable, IRecord)
     TYPE = MX
 
     fancybasename = 'MX'
     compareAttributes = ('preference', 'name', 'ttl')
     showAttributes = ('preference', ('name', 'name', '%s'), 'ttl')
 
-    def __init__(self, preference=0, name='', ttl=None, **kwargs):
+    def __init__(self, preference=0, name=b'', ttl=None, **kwargs):
         self.preference, self.name = int(preference), Name(kwargs.get('exchange', name))
         self.ttl = str2time(ttl)
 
@@ -1408,34 +1796,27 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
         self.name = Name()
         self.name.decode(strio)
 
-    def exchange(self):
-        warnings.warn("use Record_MX.name instead", DeprecationWarning, stacklevel=2)
-        return self.name
-
-    exchange = property(exchange)
-
     def __hash__(self):
         return hash((self.preference, self.name))
 
 
 
-# Oh god, Record_TXT how I hate thee.
+@implementer(IEncodable, IRecord)
 class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Freeform text.
 
-    @type data: C{list} of C{str}
+    @type data: C{list} of C{bytes}
     @ivar data: Freeform text which makes up this record.
 
     @type ttl: C{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
     """
-    implements(IEncodable, IRecord)
-
     TYPE = TXT
 
     fancybasename = 'TXT'
-    showAttributes = compareAttributes = ('data', 'ttl')
+    showAttributes = (('data', _nicebyteslist), 'ttl')
+    compareAttributes = ('data', 'ttl')
 
     def __init__(self, *data, **kw):
         self.data = list(data)
@@ -1443,12 +1824,12 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.ttl = str2time(kw.get('ttl', None))
 
 
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         for d in self.data:
             strio.write(struct.pack('!B', len(d)) + d)
 
 
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         soFar = 0
         self.data = []
         while soFar < length:
@@ -1468,13 +1849,13 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-# This is a fallback record
+@implementer(IEncodable, IRecord)
 class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     """
-    Encapsulate the wire data for unkown record types so that they can
+    Encapsulate the wire data for unknown record types so that they can
     pass through the system unchanged.
 
-    @type data: C{str}
+    @type data: C{bytes}
     @ivar data: Wire data which makes up this record.
 
     @type ttl: C{int}
@@ -1482,13 +1863,11 @@ class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     @since: 11.1
     """
-    implements(IEncodable, IRecord)
-
     fancybasename = 'UNKNOWN'
     compareAttributes = ('data', 'ttl')
-    showAttributes = ('data', 'ttl')
+    showAttributes = (('data', _nicebytes), 'ttl')
 
-    def __init__(self, data='', ttl=None):
+    def __init__(self, data=b'', ttl=None):
         self.data = data
         self.ttl = str2time(ttl)
 
@@ -1532,11 +1911,143 @@ class Record_SPF(Record_TXT):
 
 
 
-class Message:
+def _responseFromMessage(responseConstructor, message, **kwargs):
+    """
+    Generate a L{Message} like instance suitable for use as the response to
+    C{message}.
+
+    The C{queries}, C{id} attributes will be copied from C{message} and the
+    C{answer} flag will be set to L{True}.
+
+    @param responseConstructor: A response message constructor with an
+         initializer signature matching L{dns.Message.__init__}.
+    @type responseConstructor: C{callable}
+
+    @param message: A request message.
+    @type message: L{Message}
+
+    @param kwargs: Keyword arguments which will be passed to the initialiser
+        of the response message.
+    @type kwargs: L{dict}
+
+    @return: A L{Message} like response instance.
+    @rtype: C{responseConstructor}
+    """
+    response = responseConstructor(id=message.id, answer=True, **kwargs)
+    response.queries = message.queries[:]
+    return response
+
+
+
+def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
+                 sectionNames=None):
+    """
+    Return a L{str} representation of C{obj} which only shows fields with
+    non-default values, flags which are True and sections which have been
+    explicitly set.
+
+    @param obj: The instance whose repr is being generated.
+    @param alwaysShow: A L{list} of field names which should always be shown.
+    @param flagNames: A L{list} of flag attribute names which should be shown if
+        they are L{True}.
+    @param fieldNames: A L{list} of field attribute names which should be shown
+        if they have non-default values.
+    @param sectionNames: A L{list} of section attribute names which should be
+        shown if they have been assigned a value.
+
+    @return: A L{str} representation of C{obj}.
+    """
+    if alwaysShow is None:
+        alwaysShow = []
+
+    if flagNames is None:
+        flagNames = []
+
+    if fieldNames is None:
+        fieldNames = []
+
+    if sectionNames is None:
+        sectionNames = []
+
+    setFlags = []
+    for name in flagNames:
+        if name in alwaysShow or getattr(obj, name, False) == True:
+            setFlags.append(name)
+
+    out = ['<', obj.__class__.__name__]
+
+    # Get the argument names and values from the constructor.
+    argspec = inspect.getargspec(obj.__class__.__init__)
+    # Reverse the args and defaults to avoid mapping positional arguments
+    # which don't have a default.
+    defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+    for name in fieldNames:
+        defaultValue = defaults.get(name)
+        fieldValue = getattr(obj, name, defaultValue)
+        if (name in alwaysShow) or (fieldValue != defaultValue):
+            out.append(' %s=%r' % (name, fieldValue))
+
+    if setFlags:
+        out.append(' flags=%s' % (','.join(setFlags),))
+
+    for name in sectionNames:
+        section = getattr(obj, name, [])
+        if section:
+            out.append(' %s=%r' % (name, section))
+
+    out.append('>')
+
+    return ''.join(out)
+
+
+
+class Message(tputil.FancyEqMixin):
     """
     L{Message} contains all the information represented by a single
     DNS request or response.
+
+    @ivar id: See L{__init__}
+    @ivar answer: See L{__init__}
+    @ivar opCode: See L{__init__}
+    @ivar recDes: See L{__init__}
+    @ivar recAv: See L{__init__}
+    @ivar auth: See L{__init__}
+    @ivar rCode: See L{__init__}
+    @ivar trunc: See L{__init__}
+    @ivar maxSize: See L{__init__}
+    @ivar authenticData: See L{__init__}
+    @ivar checkingDisabled: See L{__init__}
+
+    @ivar queries: The queries which are being asked of or answered by
+        DNS server.
+    @type queries: L{list} of L{Query}
+
+    @ivar answers: Records containing the answers to C{queries} if
+        this is a response message.
+    @type answers: L{list} of L{RRHeader}
+
+    @ivar authority: Records containing information about the
+        authoritative DNS servers for the names in C{queries}.
+    @type authority: L{list} of L{RRHeader}
+
+    @ivar additional: Records containing IP addresses of host names
+        in C{answers} and C{authority}.
+    @type additional: L{list} of L{RRHeader}
+
+    @ivar _flagNames: The names of attributes representing the flag header
+        fields.
+    @ivar _fieldNames: The names of attributes representing non-flag fixed
+        header fields.
+    @ivar _sectionNames: The names of attributes representing the record
+        sections of this message.
     """
+    compareAttributes = (
+        'id', 'answer', 'opCode', 'recDes', 'recAv',
+        'auth', 'rCode', 'trunc', 'maxSize',
+        'authenticData', 'checkingDisabled',
+        'queries', 'answers', 'authority', 'additional'
+    )
+
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize(headerFmt)
 
@@ -1544,7 +2055,68 @@ class Message:
     queries = answers = add = ns = None
 
     def __init__(self, id=0, answer=0, opCode=0, recDes=0, recAv=0,
-                       auth=0, rCode=OK, trunc=0, maxSize=512):
+                       auth=0, rCode=OK, trunc=0, maxSize=512,
+                       authenticData=0, checkingDisabled=0):
+        """
+        @param id: A 16 bit identifier assigned by the program that
+            generates any kind of query.  This identifier is copied to
+            the corresponding reply and can be used by the requester
+            to match up replies to outstanding queries.
+        @type id: L{int}
+
+        @param answer: A one bit field that specifies whether this
+            message is a query (0), or a response (1).
+        @type answer: L{int}
+
+        @param opCode: A four bit field that specifies kind of query in
+            this message.  This value is set by the originator of a query
+            and copied into the response.
+        @type opCode: L{int}
+
+        @param recDes: Recursion Desired - this bit may be set in a
+            query and is copied into the response.  If RD is set, it
+            directs the name server to pursue the query recursively.
+            Recursive query support is optional.
+        @type recDes: L{int}
+
+        @param recAv: Recursion Available - this bit is set or cleared
+            in a response and denotes whether recursive query support
+            is available in the name server.
+        @type recAv: L{int}
+
+        @param auth: Authoritative Answer - this bit is valid in
+            responses and specifies that the responding name server
+            is an authority for the domain name in question section.
+        @type auth: L{int}
+
+        @ivar rCode: A response code, used to indicate success or failure in a
+            message which is a response from a server to a client request.
+        @type rCode: C{0 <= int < 16}
+
+        @param trunc: A flag indicating that this message was
+            truncated due to length greater than that permitted on the
+            transmission channel.
+        @type trunc: L{int}
+
+        @param maxSize: The requestor's UDP payload size is the number
+            of octets of the largest UDP payload that can be
+            reassembled and delivered in the requestor's network
+            stack.
+        @type maxSize: L{int}
+
+        @param authenticData: A flag indicating in a response that all
+            the data included in the answer and authority portion of
+            the response has been authenticated by the server
+            according to the policies of that server.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{int}
+
+        @param checkingDisabled: A flag indicating in a query that
+            pending (non-authenticated) data is acceptable to the
+            resolver sending the query.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{int}
+        """
         self.maxSize = maxSize
         self.id = id
         self.answer = answer
@@ -1554,17 +2126,39 @@ class Message:
         self.recDes = recDes
         self.recAv = recAv
         self.rCode = rCode
+        self.authenticData = authenticData
+        self.checkingDisabled = checkingDisabled
+
         self.queries = []
         self.answers = []
         self.authority = []
         self.additional = []
 
 
+    def __repr__(self):
+        """
+        Generate a repr of this L{Message}.
+
+        Only includes the non-default fields and sections and only includes
+        flags which are set. The C{id} is always shown.
+
+        @return: The native string repr.
+        """
+        return _compactRepr(
+            self,
+            flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',
+                       'authenticData', 'checkingDisabled'),
+            fieldNames=('id', 'opCode', 'rCode', 'maxSize'),
+            sectionNames=('queries', 'answers', 'authority', 'additional'),
+            alwaysShow=('id',)
+        )
+
+
     def addQuery(self, name, type=ALL_RECORDS, cls=IN):
         """
         Add another query to this Message.
 
-        @type name: C{str}
+        @type name: C{bytes}
         @param name: The name to query.
 
         @type type: C{int}
@@ -1578,7 +2172,7 @@ class Message:
 
     def encode(self, strio):
         compDict = {}
-        body_tmp = StringIO.StringIO()
+        body_tmp = BytesIO()
         for q in self.queries:
             q.encode(body_tmp, compDict)
         for q in self.answers:
@@ -1598,6 +2192,8 @@ class Message:
                  | ((self.trunc & 1 ) << 1 )
                  | ( self.recDes & 1 ) )
         byte4 = ( ( (self.recAv & 1 ) << 7 )
+                  | ((self.authenticData & 1) << 5)
+                  | ((self.checkingDisabled & 1) << 4)
                   | (self.rCode & 0xf ) )
 
         strio.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
@@ -1617,6 +2213,8 @@ class Message:
         self.trunc = ( byte3 >> 1 ) & 1
         self.recDes = byte3 & 1
         self.recAv = ( byte4 >> 7 ) & 1
+        self.authenticData = ( byte4 >> 5 ) & 1
+        self.checkingDisabled = ( byte4 >> 4 ) & 1
         self.rCode = byte4 & 0xf
 
         self.queries = []
@@ -1628,14 +2226,18 @@ class Message:
                 return
             self.queries.append(q)
 
-        items = ((self.answers, nans), (self.authority, nns), (self.additional, nadd))
+        items = (
+            (self.answers, nans),
+            (self.authority, nns),
+            (self.additional, nadd))
+
         for (l, n) in items:
             self.parseRecords(l, n, strio)
 
 
     def parseRecords(self, list, num, strio):
         for i in range(num):
-            header = RRHeader()
+            header = RRHeader(auth=self.auth)
             try:
                 header.decode(strio)
             except EOFError:
@@ -1680,14 +2282,338 @@ class Message:
 
 
     def toStr(self):
-        strio = StringIO.StringIO()
+        """
+        Encode this L{Message} into a byte string in the format described by RFC
+        1035.
+
+        @rtype: C{bytes}
+        """
+        strio = BytesIO()
         self.encode(strio)
         return strio.getvalue()
 
 
     def fromStr(self, str):
-        strio = StringIO.StringIO(str)
+        """
+        Decode a byte string in the format described by RFC 1035 into this
+        L{Message}.
+
+        @param str: L{bytes}
+        """
+        strio = BytesIO(str)
         self.decode(strio)
+
+
+
+class _EDNSMessage(tputil.FancyEqMixin, object):
+    """
+    An I{EDNS} message.
+
+    Designed for compatibility with L{Message} but with a narrower public
+    interface.
+
+    Most importantly, L{_EDNSMessage.fromStr} will interpret and remove I{OPT}
+    records that are present in the additional records section.
+
+    The I{OPT} records are used to populate certain I{EDNS} specific attributes.
+
+    L{_EDNSMessage.toStr} will add suitable I{OPT} records to the additional
+    section to represent the extended EDNS information.
+
+    @see: U{https://tools.ietf.org/html/rfc6891}
+
+    @ivar id: See L{__init__}
+    @ivar answer: See L{__init__}
+    @ivar opCode: See L{__init__}
+    @ivar auth: See L{__init__}
+    @ivar trunc: See L{__init__}
+    @ivar recDes: See L{__init__}
+    @ivar recAv: See L{__init__}
+    @ivar rCode: See L{__init__}
+    @ivar ednsVersion: See L{__init__}
+    @ivar dnssecOK: See L{__init__}
+    @ivar authenticData: See L{__init__}
+    @ivar checkingDisabled: See L{__init__}
+    @ivar maxSize: See L{__init__}
+
+    @ivar queries: See L{__init__}
+    @ivar answers: See L{__init__}
+    @ivar authority: See L{__init__}
+    @ivar additional: See L{__init__}
+
+    @ivar _messageFactory: A constructor of L{Message} instances. Called by
+        C{_toMessage} and C{_fromMessage}.
+    """
+
+    compareAttributes = (
+        'id', 'answer', 'opCode', 'auth', 'trunc',
+        'recDes', 'recAv', 'rCode', 'ednsVersion', 'dnssecOK',
+        'authenticData', 'checkingDisabled', 'maxSize',
+        'queries', 'answers', 'authority', 'additional')
+
+    _messageFactory = Message
+
+    def __init__(self, id=0, answer=False, opCode=OP_QUERY, auth=False,
+                 trunc=False, recDes=False, recAv=False, rCode=0,
+                 ednsVersion=0, dnssecOK=False, authenticData=False,
+                 checkingDisabled=False, maxSize=512,
+                 queries=None, answers=None, authority=None, additional=None):
+        """
+        Construct a new L{_EDNSMessage}
+
+        @see U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+        @see U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
+        @see U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
+        @see U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
+
+        @param id: A 16 bit identifier assigned by the program that generates
+            any kind of query.  This identifier is copied the corresponding
+            reply and can be used by the requester to match up replies to
+            outstanding queries.
+        @type id: L{int}
+
+        @param answer: A one bit field that specifies whether this message is a
+            query (0), or a response (1).
+        @type answer: L{bool}
+
+        @param opCode: A four bit field that specifies kind of query in this
+            message.  This value is set by the originator of a query and copied
+            into the response.
+        @type opCode: L{int}
+
+        @param auth: Authoritative Answer - this bit is valid in responses, and
+            specifies that the responding name server is an authority for the
+            domain name in question section.
+        @type auth: L{bool}
+
+        @param trunc: Truncation - specifies that this message was truncated due
+            to length greater than that permitted on the transmission channel.
+        @type trunc: L{bool}
+
+        @param recDes: Recursion Desired - this bit may be set in a query and is
+            copied into the response.  If set, it directs the name server to
+            pursue the query recursively. Recursive query support is optional.
+        @type recDes: L{bool}
+
+        @param recAv: Recursion Available - this bit is set or cleared in a
+            response, and denotes whether recursive query support is available
+            in the name server.
+        @type recAv: L{bool}
+
+        @param rCode: Extended 12-bit RCODE. Derived from the 4 bits defined in
+            U{RFC1035 4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+            and the upper 8bits defined in U{RFC6891
+            6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}.
+        @type rCode: L{int}
+
+        @param ednsVersion: Indicates the EDNS implementation level. Set to
+            L{None} to prevent any EDNS attributes and options being added to
+            the encoded byte string.
+        @type ednsVersion: L{int} or L{None}
+
+        @param dnssecOK: DNSSEC OK bit as defined by
+            U{RFC3225 3<https://tools.ietf.org/html/rfc3225#section-3>}.
+        @type dnssecOK: C{bool}
+
+        @param authenticData: A flag indicating in a response that all the data
+            included in the answer and authority portion of the response has
+            been authenticated by the server according to the policies of that
+            server.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{bool}
+
+        @param checkingDisabled: A flag indicating in a query that pending
+            (non-authenticated) data is acceptable to the resolver sending the
+            query.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{bool}
+
+        @param maxSize: The requestor's UDP payload size is the number of octets
+            of the largest UDP payload that can be reassembled and delivered in
+            the requestor's network stack.
+        @type maxSize: L{int}
+
+        @param queries: The L{list} of L{Query} associated with this message.
+        @type queries: L{list} of L{Query}
+
+        @param answers: The L{list} of answers associated with this message.
+        @type answers: L{list} of L{RRHeader}
+
+        @param authority: The L{list} of authority records associated with this
+            message.
+        @type authority: L{list} of L{RRHeader}
+
+        @param additional: The L{list} of additional records associated with
+            this message.
+        @type additional: L{list} of L{RRHeader}
+        """
+        self.id = id
+        self.answer = answer
+        self.opCode = opCode
+        self.auth = auth
+        self.trunc = trunc
+        self.recDes = recDes
+        self.recAv = recAv
+        self.rCode = rCode
+        self.ednsVersion = ednsVersion
+        self.dnssecOK = dnssecOK
+        self.authenticData = authenticData
+        self.checkingDisabled = checkingDisabled
+        self.maxSize = maxSize
+
+        if queries is None:
+            queries = []
+        self.queries = queries
+
+        if answers is None:
+            answers = []
+        self.answers = answers
+
+        if authority is None:
+            authority = []
+        self.authority = authority
+
+        if additional is None:
+            additional = []
+        self.additional = additional
+
+
+    def __repr__(self):
+        return _compactRepr(
+            self,
+            flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',
+                       'authenticData', 'checkingDisabled', 'dnssecOK'),
+            fieldNames=('id', 'opCode', 'rCode', 'maxSize', 'ednsVersion'),
+            sectionNames=('queries', 'answers', 'authority', 'additional'),
+            alwaysShow=('id',)
+        )
+
+
+    def _toMessage(self):
+        """
+        Convert to a standard L{dns.Message}.
+
+        If C{ednsVersion} is not None, an L{_OPTHeader} instance containing all
+        the I{EDNS} specific attributes and options will be appended to the list
+        of C{additional} records.
+
+        @return: A L{dns.Message}
+        @rtype: L{dns.Message}
+        """
+        m = self._messageFactory(
+            id=self.id,
+            answer=self.answer,
+            opCode=self.opCode,
+            auth=self.auth,
+            trunc=self.trunc,
+            recDes=self.recDes,
+            recAv=self.recAv,
+            # Assign the lower 4 bits to the message
+            rCode=self.rCode & 0xf,
+            authenticData=self.authenticData,
+            checkingDisabled=self.checkingDisabled)
+
+        m.queries = self.queries[:]
+        m.answers = self.answers[:]
+        m.authority = self.authority[:]
+        m.additional = self.additional[:]
+
+        if self.ednsVersion is not None:
+            o = _OPTHeader(version=self.ednsVersion,
+                           dnssecOK=self.dnssecOK,
+                           udpPayloadSize=self.maxSize,
+                           # Assign the upper 8 bits to the OPT record
+                           extendedRCODE=self.rCode >> 4)
+            m.additional.append(o)
+
+        return m
+
+
+    def toStr(self):
+        """
+        Encode to wire format by first converting to a standard L{dns.Message}.
+
+        @return: A L{bytes} string.
+        """
+        return self._toMessage().toStr()
+
+
+    @classmethod
+    def _fromMessage(cls, message):
+        """
+        Construct and return a new L(_EDNSMessage} whose attributes and records
+        are derived from the attributes and records of C{message} (a L{Message}
+        instance)
+
+        If present, an I{OPT} record will be extracted from the C{additional}
+        section and its attributes and options will be used to set the EDNS
+        specific attributes C{extendedRCODE}, c{ednsVersion}, c{dnssecOK},
+        c{ednsOptions}.
+
+        The C{extendedRCODE} will be combined with C{message.rCode} and assigned
+        to C{self.rCode}.
+
+        @param message: The source L{Message}.
+        @type message: L{Message}
+
+        @return: A new L{_EDNSMessage}
+        @rtype: L{_EDNSMessage}
+        """
+        additional = []
+        optRecords = []
+        for r in message.additional:
+            if r.type == OPT:
+                optRecords.append(_OPTHeader.fromRRHeader(r))
+            else:
+                additional.append(r)
+
+        newMessage = cls(
+            id=message.id,
+            answer=message.answer,
+            opCode=message.opCode,
+            auth=message.auth,
+            trunc=message.trunc,
+            recDes=message.recDes,
+            recAv=message.recAv,
+            rCode=message.rCode,
+            authenticData=message.authenticData,
+            checkingDisabled=message.checkingDisabled,
+            # Default to None, it will be updated later when the OPT records are
+            # parsed.
+            ednsVersion=None,
+            dnssecOK=False,
+            queries=message.queries[:],
+            answers=message.answers[:],
+            authority=message.authority[:],
+            additional=additional,
+            )
+
+        if len(optRecords) == 1:
+            # XXX: If multiple OPT records are received, an EDNS server should
+            # respond with FORMERR. See ticket:5669#comment:1.
+            opt = optRecords[0]
+            newMessage.ednsVersion = opt.version
+            newMessage.dnssecOK = opt.dnssecOK
+            newMessage.maxSize = opt.udpPayloadSize
+            newMessage.rCode = opt.extendedRCODE << 4 | message.rCode
+
+        return newMessage
+
+
+    def fromStr(self, bytes):
+        """
+        Decode from wire format, saving flags, values and records to this
+        L{_EDNSMessage} instance in place.
+
+        @param bytes: The full byte string to be decoded.
+        @type bytes: L{bytes}
+        """
+        m = self._messageFactory()
+        m.fromStr(bytes)
+
+        ednsMessage = self._fromMessage(m)
+        for attrName in self.compareAttributes:
+            setattr(self, attrName, getattr(ednsMessage, attrName))
 
 
 
@@ -1881,7 +2807,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
     DNS protocol over TCP.
     """
     length = None
-    buffer = ''
+    buffer = b''
 
     def writeMessage(self, message):
         """

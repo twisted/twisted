@@ -6,6 +6,8 @@ This module contains tests for L{twisted.internet.task.Cooperator} and
 related functionality.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.internet import reactor, defer, task
 from twisted.trial import unittest
 
@@ -62,7 +64,7 @@ class FakeScheduler(object):
 
 
 
-class TestCooperator(unittest.TestCase):
+class CooperatorTests(unittest.TestCase):
     RESULT = 'done'
 
     def ebIter(self, err):
@@ -207,7 +209,7 @@ class TestCooperator(unittest.TestCase):
         c._tick()
         c.stop()
         self.failUnless(_TPF.stopped)
-        self.assertEqual(output, range(10))
+        self.assertEqual(output, list(range(10)))
 
 
     def testCallbackReCoiterate(self):
@@ -280,9 +282,49 @@ class TestCooperator(unittest.TestCase):
         self.assertEqual(coop._delayedCall, None)
 
         # Add another task; scheduled call will be recreated:
-        task3 = coop.cooperate(iter([1, 2]))
+        coop.cooperate(iter([1, 2]))
         self.assertEqual(calls[0].cancelled, False)
         self.assertEqual(coop._delayedCall, calls[0])
+
+
+    def test_runningWhenStarted(self):
+        """
+        L{Cooperator.running} reports C{True} if the L{Cooperator}
+        was started on creation.
+        """
+        c = task.Cooperator()
+        self.assertTrue(c.running)
+
+
+    def test_runningWhenNotStarted(self):
+        """
+        L{Cooperator.running} reports C{False} if the L{Cooperator}
+        has not been started.
+        """
+        c = task.Cooperator(started=False)
+        self.assertFalse(c.running)
+
+
+    def test_runningWhenRunning(self):
+        """
+        L{Cooperator.running} reports C{True} when the L{Cooperator}
+        is running.
+        """
+        c = task.Cooperator(started=False)
+        c.start()
+        self.addCleanup(c.stop)
+        self.assertTrue(c.running)
+
+
+    def test_runningWhenStopped(self):
+        """
+        L{Cooperator.running} reports C{False} after the L{Cooperator}
+        has been stopped.
+        """
+        c = task.Cooperator(started=False)
+        c.start()
+        c.stop()
+        self.assertFalse(c.running)
 
 
 

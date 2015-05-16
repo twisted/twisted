@@ -6,26 +6,41 @@
 Logging and metrics infrastructure.
 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 
 import sys
 import time
 import warnings
+
 from datetime import datetime
-import logging
 
 from zope.interface import Interface
 
-from twisted.python import util, context, reflect
+from twisted.python.compat import unicode, _PY3
+from twisted.python import context
+from twisted.python import reflect
+from twisted.python import util
+from twisted.python import failure
+from twisted.python.threadable import synchronize
+from twisted.logger import (
+    Logger as NewLogger, LogLevel as NewLogLevel,
+    STDLibLogObserver as NewSTDLibLogObserver,
+    LegacyLogObserverWrapper, LoggingFile, LogPublisher as NewPublisher,
+    globalLogPublisher as newGlobalLogPublisher,
+    globalLogBeginner as newGlobalLogBeginner,
+)
+
+from twisted.logger._global import LogBeginner
+from twisted.logger._legacy import publishToNewObserver as _publishNew
 
 
 
 class ILogContext:
     """
-    Actually, this interface is just a synoym for the dictionary interface,
+    Actually, this interface is just a synonym for the dictionary interface,
     but it serves as a key for the default information in a log.
 
-    I do not inherit from Interface because the world is a cruel place.
+    I do not inherit from C{Interface} because the world is a cruel place.
     """
 
 
@@ -63,15 +78,18 @@ context.setDefault(ILogContext,
                    {"isError": 0,
                     "system": "-"})
 
+
 def callWithContext(ctx, func, *args, **kw):
     newCtx = context.get(ILogContext).copy()
     newCtx.update(ctx)
     return context.call({ILogContext: newCtx}, func, *args, **kw)
 
+
+
 def callWithLogger(logger, func, *args, **kw):
     """
     Utility method which wraps a function in a try:/except:, logs a failure if
-    one occurrs, and uses the system's logPrefix.
+    one occurs, and uses the system's logPrefix.
     """
     try:
         lp = logger.logPrefix()
@@ -87,90 +105,6 @@ def callWithLogger(logger, func, *args, **kw):
     except:
         err(system=lp)
 
-
-
-_keepErrors = 0
-_keptErrors = []
-_ignoreErrors = []
-
-def startKeepingErrors():
-    """
-    DEPRECATED in Twisted 2.5.
-
-    Support function for testing frameworks.
-
-    Start keeping errors in a buffer which can be retrieved (and emptied) with
-    flushErrors.
-    """
-    warnings.warn("log.startKeepingErrors is deprecated since Twisted 2.5",
-                  category=DeprecationWarning, stacklevel=2)
-    global _keepErrors
-    _keepErrors = 1
-
-
-def flushErrors(*errorTypes):
-    """
-    DEPRECATED in Twisted 2.5.  See L{TestCase.flushLoggedErrors}.
-
-    Support function for testing frameworks.
-
-    Return a list of errors that occurred since the last call to flushErrors().
-    (This will return None unless startKeepingErrors has been called.)
-    """
-
-    warnings.warn("log.flushErrors is deprecated since Twisted 2.5. "
-                  "If you need to flush errors from within a unittest, "
-                  "use TestCase.flushLoggedErrors instead.",
-                  category=DeprecationWarning, stacklevel=2)
-    return _flushErrors(*errorTypes)
-
-
-def _flushErrors(*errorTypes):
-    """
-    PRIVATE. DEPRECATED. DON'T USE.
-    """
-    global _keptErrors
-    k = _keptErrors
-    _keptErrors = []
-    if errorTypes:
-        for erk in k:
-            shouldReLog = 1
-            for errT in errorTypes:
-                if erk.check(errT):
-                    shouldReLog = 0
-            if shouldReLog:
-                err(erk)
-    return k
-
-def ignoreErrors(*types):
-    """
-    DEPRECATED
-    """
-    warnings.warn("log.ignoreErrors is deprecated since Twisted 2.5",
-                  category=DeprecationWarning, stacklevel=2)
-    _ignore(*types)
-
-def _ignore(*types):
-    """
-    PRIVATE. DEPRECATED. DON'T USE.
-    """
-    for type in types:
-        _ignoreErrors.append(type)
-
-def clearIgnores():
-    """
-    DEPRECATED
-    """
-    warnings.warn("log.clearIgnores is deprecated since Twisted 2.5",
-                  category=DeprecationWarning, stacklevel=2)
-    _clearIgnores()
-
-def _clearIgnores():
-    """
-    PRIVATE. DEPRECATED. DON'T USE.
-    """
-    global _ignoreErrors
-    _ignoreErrors = []
 
 
 def err(_stuff=None, _why=None, **kw):
@@ -196,20 +130,6 @@ def err(_stuff=None, _why=None, **kw):
     if _stuff is None:
         _stuff = failure.Failure()
     if isinstance(_stuff, failure.Failure):
-        if _keepErrors:
-            if _ignoreErrors:
-                keep = 0
-                for err in _ignoreErrors:
-                    r = _stuff.check(err)
-                    if r:
-                        keep = 0
-                        break
-                    else:
-                        keep = 1
-                if keep:
-                    _keptErrors.append(_stuff)
-            else:
-                _keptErrors.append(_stuff)
         msg(failure=_stuff, why=_why, isError=1, **kw)
     elif isinstance(_stuff, Exception):
         msg(failure=failure.Failure(_stuff), why=_why, isError=1, **kw)
@@ -232,6 +152,7 @@ class Logger:
         return '-'
 
 
+
 class LogPublisher:
     """
     Class for singleton log message publishing.
@@ -239,8 +160,66 @@ class LogPublisher:
 
     synchronized = ['msg']
 
-    def __init__(self):
-        self.observers = []
+
+    def __init__(self, observerPublisher=None, publishPublisher=None,
+                 logBeginner=None, warningsModule=warnings):
+        if publishPublisher is None:
+            publishPublisher = NewPublisher()
+            if observerPublisher is None:
+                observerPublisher = publishPublisher
+        if observerPublisher is None:
+            observerPublisher = NewPublisher()
+        self._observerPublisher = observerPublisher
+        self._publishPublisher = publishPublisher
+        self._legacyObservers = []
+        if logBeginner is None:
+            # This default behavior is really only used for testing.
+            beginnerPublisher = NewPublisher()
+            beginnerPublisher.addObserver(observerPublisher)
+            logBeginner = LogBeginner(beginnerPublisher, NullFile(), sys,
+                                      warnings)
+        self._logBeginner = logBeginner
+        self._warningsModule = warningsModule
+        self._oldshowwarning = warningsModule.showwarning
+        self.showwarning = self._logBeginner.showwarning
+
+
+    @property
+    def observers(self):
+        """
+        Property returning all observers registered on this L{LogPublisher}.
+
+        @return: observers previously added with L{LogPublisher.addObserver}
+        @rtype: L{list} of L{callable}
+        """
+        return [x.legacyObserver for x in self._legacyObservers]
+
+
+    def _startLogging(self, other, setStdout):
+        """
+        Begin logging to the L{LogBeginner} associated with this
+        L{LogPublisher}.
+
+        @param other: the observer to log to.
+        @type other: L{LogBeginner}
+
+        @param setStdout: if true, send standard I/O to the observer as well.
+        @type setStdout: L{bool}
+        """
+        wrapped = LegacyLogObserverWrapper(other)
+        self._legacyObservers.append(wrapped)
+        self._logBeginner.beginLoggingTo([wrapped], True, setStdout)
+
+
+    def _stopLogging(self):
+        """
+        Clean-up hook for fixing potentially global state.  Only for testing of
+        this module itself.  If you want less global state, use the new
+        warnings system in L{twisted.logger}.
+        """
+        if self._warningsModule.showwarning == self.showwarning:
+            self._warningsModule.showwarning = self._oldshowwarning
+
 
     def addObserver(self, other):
         """
@@ -250,111 +229,152 @@ class LogPublisher:
         @param other: A callable object that will be called with each new log
             message (a dict).
         """
-        assert callable(other)
-        self.observers.append(other)
+        wrapped = LegacyLogObserverWrapper(other)
+        self._legacyObservers.append(wrapped)
+        self._observerPublisher.addObserver(wrapped)
+
 
     def removeObserver(self, other):
         """
         Remove an observer.
         """
-        self.observers.remove(other)
+        for observer in self._legacyObservers:
+            if observer.legacyObserver == other:
+                self._legacyObservers.remove(observer)
+                self._observerPublisher.removeObserver(observer)
+                break
+
 
     def msg(self, *message, **kw):
         """
         Log a new message.
 
-        For example::
+        The message should be a native string, i.e. bytes on Python 2 and
+        Unicode on Python 3. For compatibility with both use the native string
+        syntax, for example::
 
-        >>> log.msg('Hello, world.')
+            >>> log.msg('Hello, world.')
 
-        In particular, you MUST avoid the forms::
+        You MUST avoid passing in Unicode on Python 2, and the form::
 
-        >>> log.msg(u'Hello, world.')
-        >>> log.msg('Hello ', 'world.')
+            >>> log.msg('Hello ', 'world.')
 
-        These forms work (sometimes) by accident and will be disabled
-        entirely in the future.
+        This form only works (sometimes) by accident.
+
+        Keyword arguments will be converted into items in the event
+        dict that is passed to L{ILogObserver} implementations.
+        Each implementation, in turn, can define keys that are used
+        by it specifically, in addition to common keys listed at
+        L{ILogObserver.__call__}.
+
+        For example, to set the C{system} parameter while logging
+        a message::
+
+        >>> log.msg('Started', system='Foo')
+
         """
         actualEventDict = (context.get(ILogContext) or {}).copy()
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
-        for i in xrange(len(self.observers) - 1, -1, -1):
-            try:
-                self.observers[i](actualEventDict)
-            except KeyboardInterrupt:
-                # Don't swallow keyboard interrupt!
-                raise
-            except UnicodeEncodeError:
-                raise
-            except:
-                observer = self.observers[i]
-                self.observers[i] = lambda event: None
-                try:
-                    self._err(failure.Failure(),
-                        "Log observer %s failed." % (observer,))
-                except:
-                    # Sometimes err() will throw an exception,
-                    # e.g. RuntimeError due to blowing the stack; if that
-                    # happens, there's not much we can do...
-                    pass
-                self.observers[i] = observer
+
+        _publishNew(self._publishPublisher, actualEventDict, textFromEventDict)
 
 
-    def _err(self, failure, why):
+synchronize(LogPublisher)
+
+
+
+if 'theLogPublisher' not in globals():
+    def _actually(something):
         """
-        Log a failure.
+        A decorator that returns its argument rather than the thing it is
+        decorating.
 
-        Similar in functionality to the global {err} function, but the failure
-        gets published only to observers attached to this publisher.
+        This allows the documentation generator to see an alias for a method or
+        constant as an object with a docstring and thereby document it and
+        allow references to it statically.
 
-        @param failure: The failure to log.
-        @type failure: L{Failure}.
+        @param something: An object to create an alias for.
+        @type something: L{object}
 
-        @param why: The source of this failure.  This will be logged along with
-            the C{failure} and should describe the context in which the failure
-            occurred.
-        @type why: C{str}
+        @return: a 1-argument callable that returns C{something}
+        @rtype: L{object}
         """
-        self.msg(failure=failure, why=why, isError=1)
+        def decorate(thingWithADocstring):
+            return something
+        return decorate
+
+    theLogPublisher = LogPublisher(
+        observerPublisher=newGlobalLogPublisher,
+        publishPublisher=newGlobalLogPublisher,
+        logBeginner=newGlobalLogBeginner,
+    )
 
 
-    def showwarning(self, message, category, filename, lineno, file=None,
-                    line=None):
+    @_actually(theLogPublisher.addObserver)
+    def addObserver(observer):
         """
-        Twisted-enabled wrapper around L{warnings.showwarning}.
+        Add a log observer to the global publisher.
 
-        If C{file} is C{None}, the default behaviour is to emit the warning to
-        the log system, otherwise the original L{warnings.showwarning} Python
-        function is called.
+        @see: L{LogPublisher.addObserver}
+
+        @param observer: a log observer
+        @type observer: L{callable}
         """
-        if file is None:
-            self.msg(warning=message, category=reflect.qual(category),
-                     filename=filename, lineno=lineno,
-                     format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
-        else:
-            if sys.version_info < (2, 6):
-                _oldshowwarning(message, category, filename, lineno, file)
-            else:
-                _oldshowwarning(message, category, filename, lineno, file, line)
 
 
+    @_actually(theLogPublisher.removeObserver)
+    def removeObserver(observer):
+        """
+        Remove a log observer from the global publisher.
+
+        @see: L{LogPublisher.removeObserver}
+
+        @param observer: a log observer previously added with L{addObserver}
+        @type observer: L{callable}
+        """
 
 
-try:
-    theLogPublisher
-except NameError:
-    theLogPublisher = LogPublisher()
-    addObserver = theLogPublisher.addObserver
-    removeObserver = theLogPublisher.removeObserver
-    msg = theLogPublisher.msg
-    showwarning = theLogPublisher.showwarning
+    @_actually(theLogPublisher.msg)
+    def msg(*message, **event):
+        """
+        Publish a message to the global log publisher.
+
+        @see: L{LogPublisher.msg}
+
+        @param message: the log message
+        @type message: C{tuple} of L{str} (native string)
+
+        @param event: fields for the log event
+        @type event: L{dict} mapping L{str} (native string) to L{object}
+        """
+
+
+    @_actually(theLogPublisher.showwarning)
+    def showwarning():
+        """
+        Publish a Python warning through the global log publisher.
+
+        @see: L{LogPublisher.showwarning}
+        """
+
 
 
 def _safeFormat(fmtString, fmtDict):
     """
-    Try to format the string C{fmtString} using C{fmtDict} arguments,
-    swallowing all errors to always return a string.
+    Try to format a string, swallowing all errors to always return a string.
+
+    @note: For backward-compatibility reasons, this function ensures that it
+        returns a native string, meaning C{bytes} in Python 2 and C{unicode} in
+        Python 3.
+
+    @param fmtString: a C{%}-format string
+
+    @param fmtDict: string formatting arguments for C{fmtString}
+
+    @return: A native string, formatted from C{fmtString} and C{fmtDict}.
+    @rtype: L{str}
     """
     # There's a way we could make this if not safer at least more
     # informative: perhaps some sort of str/repr wrapper objects
@@ -368,13 +388,26 @@ def _safeFormat(fmtString, fmtDict):
         raise
     except:
         try:
-            text = ('Invalid format string or unformattable object in log message: %r, %s' % (fmtString, fmtDict))
+            text = ('Invalid format string or unformattable object in '
+                    'log message: %r, %s' % (fmtString, fmtDict))
         except:
             try:
-                text = 'UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, MESSAGE LOST' % (fmtString,)
+                text = ('UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, '
+                        'MESSAGE LOST' % (fmtString,))
             except:
-                text = 'PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND MESSAGE DETAILS, MESSAGE LOST'
+                text = ('PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND '
+                        'MESSAGE DETAILS, MESSAGE LOST')
+
+    # Return a native string
+    if _PY3:
+        if isinstance(text, bytes):
+            text = text.decode("utf-8")
+    else:
+        if isinstance(text, unicode):
+            text = text.encode("utf-8")
+
     return text
+
 
 
 def textFromEventDict(eventDict):
@@ -398,30 +431,62 @@ def textFromEventDict(eventDict):
     edm = eventDict['message']
     if not edm:
         if eventDict['isError'] and 'failure' in eventDict:
-            text = ((eventDict.get('why') or 'Unhandled Error')
-                    + '\n' + eventDict['failure'].getTraceback())
+            why = eventDict.get('why')
+            if why:
+                why = reflect.safe_str(why)
+            else:
+                why = 'Unhandled Error'
+            try:
+                traceback = eventDict['failure'].getTraceback()
+            except Exception as e:
+                traceback = '(unable to obtain traceback): ' + str(e)
+            text = (why + '\n' + traceback)
         elif 'format' in eventDict:
             text = _safeFormat(eventDict['format'], eventDict)
         else:
-            # we don't know how to log this
-            return
+            # We don't know how to log this
+            return None
     else:
         text = ' '.join(map(reflect.safe_str, edm))
     return text
 
 
-class FileLogObserver:
+
+class _GlobalStartStopMixIn:
+    """
+    Mix-in for global log observers that can start and stop.
+    """
+
+    def start(self):
+        """
+        Start observing log events.
+        """
+        addObserver(self.emit)
+
+
+    def stop(self):
+        """
+        Stop observing log events.
+        """
+        removeObserver(self.emit)
+
+
+
+class FileLogObserver(_GlobalStartStopMixIn):
     """
     Log observer that writes to a file-like object.
 
     @type timeFormat: C{str} or C{NoneType}
     @ivar timeFormat: If not C{None}, the format string passed to strftime().
     """
+
     timeFormat = None
 
     def __init__(self, f):
+        # Compatibility
         self.write = f.write
         self.flush = f.flush
+
 
     def getTimezoneOffset(self, when):
         """
@@ -437,6 +502,7 @@ class FileLogObserver:
         offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
         return offset.days * (60 * 60 * 24) + offset.seconds
 
+
     def formatTime(self, when):
         """
         Format the given UTC value as a string representing that time in the
@@ -445,7 +511,7 @@ class FileLogObserver:
         By default it's formatted as a ISO8601-like string (ISO8601 date and
         ISO8601 time separated by a space). It can be customized using the
         C{timeFormat} attribute, which will be used as input for the underlying
-        C{time.strftime} call.
+        L{datetime.datetime.strftime} call.
 
         @type when: C{int}
         @param when: POSIX (ie, UTC) timestamp for which to find the offset.
@@ -453,7 +519,7 @@ class FileLogObserver:
         @rtype: C{str}
         """
         if self.timeFormat is not None:
-            return time.strftime(self.timeFormat, time.localtime(when))
+            return datetime.fromtimestamp(when).strftime(self.timeFormat)
 
         tzOffset = -self.getTimezoneOffset(when)
         when = datetime.utcfromtimestamp(when + tzOffset)
@@ -468,32 +534,31 @@ class FileLogObserver:
             when.hour, when.minute, when.second,
             tzSign, tzHour, tzMin)
 
+
     def emit(self, eventDict):
+        """
+        Format the given log event as text and write it to the output file.
+
+        @param eventDict: a log event
+        @type eventDict: L{dict} mapping L{str} (native string) to L{object}
+        """
         text = textFromEventDict(eventDict)
         if text is None:
             return
 
-        timeStr = self.formatTime(eventDict['time'])
-        fmtDict = {'system': eventDict['system'], 'text': text.replace("\n", "\n\t")}
+        timeStr = self.formatTime(eventDict["time"])
+        fmtDict = {
+            "system": eventDict["system"],
+            "text": text.replace("\n", "\n\t")
+        }
         msgStr = _safeFormat("[%(system)s] %(text)s\n", fmtDict)
 
         util.untilConcludes(self.write, timeStr + " " + msgStr)
         util.untilConcludes(self.flush)  # Hoorj!
 
-    def start(self):
-        """
-        Start observing log events.
-        """
-        addObserver(self.emit)
-
-    def stop(self):
-        """
-        Stop observing log events.
-        """
-        removeObserver(self.emit)
 
 
-class PythonLoggingObserver(object):
+class PythonLoggingObserver(_GlobalStartStopMixIn, object):
     """
     Output twisted messages to Python standard library L{logging} module.
 
@@ -508,7 +573,8 @@ class PythonLoggingObserver(object):
         @param loggerName: identifier used for getting logger.
         @type loggerName: C{str}
         """
-        self.logger = logging.getLogger(loggerName)
+        self._newObserver = NewSTDLibLogObserver(loggerName)
+
 
     def emit(self, eventDict):
         """
@@ -517,31 +583,11 @@ class PythonLoggingObserver(object):
         By default the logging level used is info; log.err produces error
         level, and you can customize the level by using the C{logLevel} key::
 
-        >>> log.msg('debugging', logLevel=logging.DEBUG)
+            >>> log.msg('debugging', logLevel=logging.DEBUG)
+        """
+        if 'log_format' in eventDict:
+            _publishNew(self._newObserver, eventDict, textFromEventDict)
 
-        """
-        if 'logLevel' in eventDict:
-            level = eventDict['logLevel']
-        elif eventDict['isError']:
-            level = logging.ERROR
-        else:
-            level = logging.INFO
-        text = textFromEventDict(eventDict)
-        if text is None:
-            return
-        self.logger.log(level, text)
-
-    def start(self):
-        """
-        Start observing log events.
-        """
-        addObserver(self.emit)
-
-    def stop(self):
-        """
-        Stop observing log events.
-        """
-        removeObserver(self.emit)
 
 
 class StdioOnnaStick:
@@ -567,14 +613,18 @@ class StdioOnnaStick:
         self.encoding = encoding
         self.buf = ''
 
+
     def close(self):
         pass
+
 
     def fileno(self):
         return -1
 
+
     def flush(self):
         pass
+
 
     def read(self):
         raise IOError("can't read from the log!")
@@ -584,8 +634,9 @@ class StdioOnnaStick:
     seek = read
     tell = read
 
+
     def write(self, data):
-        if isinstance(data, unicode):
+        if not _PY3 and isinstance(data, unicode):
             data = data.encode(self.encoding)
         d = (self.buf + data).split('\n')
         self.buf = d[-1]
@@ -593,17 +644,13 @@ class StdioOnnaStick:
         for message in messages:
             msg(message, printed=1, isError=self.isError)
 
+
     def writelines(self, lines):
         for line in lines:
-            if isinstance(line, unicode):
+            if not _PY3 and isinstance(line, unicode):
                 line = line.encode(self.encoding)
             msg(line, printed=1, isError=self.isError)
 
-
-try:
-    _oldshowwarning
-except NameError:
-    _oldshowwarning = None
 
 
 def startLogging(file, *a, **kw):
@@ -612,7 +659,7 @@ def startLogging(file, *a, **kw):
 
     @return: A L{FileLogObserver} if a new observer is added, None otherwise.
     """
-    if isinstance(file, StdioOnnaStick):
+    if isinstance(file, LoggingFile):
         return
     flo = FileLogObserver(file)
     startLoggingWithObserver(flo.emit, *a, **kw)
@@ -626,46 +673,66 @@ def startLoggingWithObserver(observer, setStdout=1):
     (defaults to yes), also redirect sys.stdout and sys.stderr
     to the specified file.
     """
-    global defaultObserver, _oldshowwarning
-    if not _oldshowwarning:
-        _oldshowwarning = warnings.showwarning
-        warnings.showwarning = showwarning
-    if defaultObserver:
-        defaultObserver.stop()
-        defaultObserver = None
-    addObserver(observer)
+    theLogPublisher._startLogging(observer, setStdout)
     msg("Log opened.")
-    if setStdout:
-        sys.stdout = logfile
-        sys.stderr = logerr
+
 
 
 class NullFile:
+    """
+    A file-like object that discards everything.
+    """
     softspace = 0
-    def read(self): pass
-    def write(self, bytes): pass
-    def flush(self): pass
-    def close(self): pass
+
+    def read(self):
+        """
+        Do nothing.
+        """
+
+
+    def write(self, bytes):
+        """
+        Do nothing.
+
+        @param bytes: data
+        @type bytes: L{bytes}
+        """
+
+
+    def flush(self):
+        """
+        Do nothing.
+        """
+
+
+    def close(self):
+        """
+        Do nothing.
+        """
+
 
 
 def discardLogs():
     """
-    Throw away all logs.
+    Discard messages logged via the global C{logfile} object.
     """
     global logfile
     logfile = NullFile()
 
 
+
 # Prevent logfile from being erased on reload.  This only works in cpython.
-try:
-    logfile
-except NameError:
-    logfile = StdioOnnaStick(0, getattr(sys.stdout, "encoding", None))
-    logerr = StdioOnnaStick(1, getattr(sys.stderr, "encoding", None))
+if 'logfile' not in globals():
+    logfile = LoggingFile(logger=NewLogger(),
+                          level=NewLogLevel.info,
+                          encoding=getattr(sys.stdout, "encoding", None))
+    logerr = LoggingFile(logger=NewLogger(),
+                         level=NewLogLevel.error,
+                         encoding=getattr(sys.stderr, "encoding", None))
 
 
 
-class DefaultObserver:
+class DefaultObserver(_GlobalStartStopMixIn):
     """
     Default observer.
 
@@ -674,33 +741,19 @@ class DefaultObserver:
     """
     stderr = sys.stderr
 
-    def _emit(self, eventDict):
-        if eventDict["isError"]:
-            if 'failure' in eventDict:
-                text = ((eventDict.get('why') or 'Unhandled Error')
-                        + '\n' + eventDict['failure'].getTraceback())
-            else:
-                text = " ".join([str(m) for m in eventDict["message"]]) + "\n"
+    def emit(self, eventDict):
+        """
+        Emit an event dict.
 
+        @param eventDict: an event dict
+        @type eventDict: dict
+        """
+        if eventDict["isError"]:
+            text = textFromEventDict(eventDict)
             self.stderr.write(text)
             self.stderr.flush()
 
-    def start(self):
-        addObserver(self._emit)
-
-    def stop(self):
-        removeObserver(self._emit)
 
 
-# Some more sibling imports, at the bottom and unqualified to avoid
-# unresolvable circularity
-import threadable, failure
-threadable.synchronize(LogPublisher)
-
-
-try:
-    defaultObserver
-except NameError:
+if 'defaultObserver' not in globals():
     defaultObserver = DefaultObserver()
-    defaultObserver.start()
-

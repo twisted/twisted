@@ -29,11 +29,8 @@ fix::
 @see: U{Tcl/TkAqua FAQ for more info<http://wiki.tcl.tk/12987>}
 """
 
-# system imports
-import Tkinter, tkSimpleDialog, tkMessageBox
+import tkSimpleDialog, tkMessageBox
 
-# twisted imports
-from twisted.python import log
 from twisted.internet import task
 
 

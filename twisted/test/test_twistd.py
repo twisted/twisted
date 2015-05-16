@@ -5,12 +5,16 @@
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
 
-import signal, inspect, errno
-
-import os, sys, StringIO
+import errno
+import inspect
+import signal
+import os
+import sys
+import StringIO
 
 try:
-    import pwd, grp
+    import pwd
+    import grp
 except ImportError:
     pwd = grp = None
 
@@ -23,6 +27,7 @@ from zope.interface import implements
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
+from twisted.test.test_process import MockOS
 
 from twisted import plugin
 from twisted.application.service import IServiceMaker
@@ -31,16 +36,11 @@ from twisted.scripts import twistd
 from twisted.python import log
 from twisted.python.usage import UsageError
 from twisted.python.log import ILogObserver
-from twisted.python.versions import Version
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IReactorDaemonize
+from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.python.fakepwd import UserDatabase
-
-try:
-    from twisted.python import syslog
-except ImportError:
-    syslog = None
-
 try:
     from twisted.scripts import _twistd_unix
 except ImportError:
@@ -48,6 +48,13 @@ except ImportError:
 else:
     from twisted.scripts._twistd_unix import UnixApplicationRunner
     from twisted.scripts._twistd_unix import UnixAppLogger
+
+
+try:
+    from twisted.python import syslog
+except ImportError:
+    syslog = None
+
 
 try:
     import profile
@@ -73,6 +80,7 @@ if getattr(os, 'setuid', None) is None:
     setuidSkip = "Platform does not support --uid/--gid twistd options."
 else:
     setuidSkip = None
+
 
 
 def patchUserDatabase(patch, user, uid, group, gid):
@@ -164,7 +172,7 @@ class CrippledApplicationRunner(twistd._SomeApplicationRunner):
 
 
 
-class ServerOptionsTest(unittest.TestCase):
+class ServerOptionsTests(unittest.TestCase):
     """
     Non-platform-specific tests for the pltaform-specific ServerOptions class.
     """
@@ -309,7 +317,8 @@ class ServerOptionsTest(unittest.TestCase):
         an integer, L{UsageError} is raised by L{ServerOptions.parseOptions}.
         """
         config = twistd.ServerOptions()
-        self.assertRaises(UsageError, config.parseOptions, ['--umask', 'abcdef'])
+        self.assertRaises(UsageError, config.parseOptions,
+                          ['--umask', 'abcdef'])
 
     if _twistd_unix is None:
         msg = "twistd unix not available"
@@ -321,9 +330,11 @@ class ServerOptionsTest(unittest.TestCase):
         C{--logger} with an unimportable module raises a L{UsageError}.
         """
         config = twistd.ServerOptions()
-        e = self.assertRaises(UsageError, config.parseOptions,
-                          ['--logger', 'no.such.module.I.hope'])
-        self.assertTrue(e.args[0].startswith(
+        e = self.assertRaises(
+            UsageError, config.parseOptions,
+            ['--logger', 'no.such.module.I.hope'])
+        self.assertTrue(
+            e.args[0].startswith(
                 "Logger 'no.such.module.I.hope' could not be imported: "
                 "'no.such.module.I.hope' does not name an object"))
         self.assertNotIn('\n', e.args[0])
@@ -336,14 +347,15 @@ class ServerOptionsTest(unittest.TestCase):
         config = twistd.ServerOptions()
         e = self.assertRaises(UsageError, config.parseOptions,
                               ["--logger", "twisted.test.test_twistd.FOOBAR"])
-        self.assertTrue(e.args[0].startswith(
+        self.assertTrue(
+            e.args[0].startswith(
                 "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
                 "imported: 'module' object has no attribute 'FOOBAR'"))
         self.assertNotIn('\n', e.args[0])
 
 
 
-class TapFileTest(unittest.TestCase):
+class TapFileTests(unittest.TestCase):
     """
     Test twistd-related functionality that requires a tap file on disk.
     """
@@ -365,7 +377,8 @@ class TapFileTest(unittest.TestCase):
         """
         config = twistd.ServerOptions()
         config.parseOptions(['-f', self.tapfile])
-        application = CrippledApplicationRunner(config).createOrGetApplication()
+        application = CrippledApplicationRunner(
+            config).createOrGetApplication()
         self.assertEqual(service.IService(application).name, 'Hi!')
 
 
@@ -418,7 +431,7 @@ class TestApplicationRunner(app.ApplicationRunner):
 
 
 
-class ApplicationRunnerTest(unittest.TestCase):
+class ApplicationRunnerTests(unittest.TestCase):
     """
     Non-platform-specific tests for the platform-specific ApplicationRunner.
     """
@@ -477,6 +490,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         self.config.parseOptions(argv)
 
         events = []
+
         class FakeUnixApplicationRunner(twistd._SomeApplicationRunner):
             def setupEnvironment(self, chroot, rundir, nodaemon, umask,
                                  pidfile):
@@ -569,9 +583,9 @@ class ApplicationRunnerTest(unittest.TestCase):
         """
         reactor = DummyReactor()
         runner = app.ApplicationRunner({
-                "profile": False,
-                "profiler": "profile",
-                "debug": False})
+            "profile": False,
+            "profiler": "profile",
+            "debug": False})
         runner.startReactor(reactor, None, None)
         self.assertTrue(
             reactor.called, "startReactor did not call reactor.run()")
@@ -584,19 +598,19 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
 
     @ivar root: The root of the filesystem, or C{unset} if none has been
         specified with a call to L{os.chroot} (patched for this TestCase with
-        L{UnixApplicationRunnerSetupEnvironmentTests.chroot ).
+        L{UnixApplicationRunnerSetupEnvironmentTests.chroot}).
 
     @ivar cwd: The current working directory of the process, or C{unset} if
         none has been specified with a call to L{os.chdir} (patched for this
-        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.chdir).
+        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.chdir}).
 
     @ivar mask: The current file creation mask of the process, or C{unset} if
         none has been specified with a call to L{os.umask} (patched for this
-        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.umask).
+        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.umask}).
 
     @ivar daemon: A boolean indicating whether daemonization has been performed
         by a call to L{_twistd_unix.daemonize} (patched for this TestCase with
-        L{UnixApplicationRunnerSetupEnvironmentTests.
+        L{UnixApplicationRunnerSetupEnvironmentTests}.
     """
     if _twistd_unix is None:
         skip = "twistd unix not available"
@@ -612,11 +626,11 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         self.patch(os, 'chroot', lambda path: setattr(self, 'root', path))
         self.patch(os, 'chdir', lambda path: setattr(self, 'cwd', path))
         self.patch(os, 'umask', lambda mask: setattr(self, 'mask', mask))
-        self.patch(_twistd_unix, "daemonize", self.daemonize)
-        self.runner = UnixApplicationRunner({})
+        self.runner = UnixApplicationRunner(twistd.ServerOptions())
+        self.runner.daemonize = self.daemonize
 
 
-    def daemonize(self):
+    def daemonize(self, reactor):
         """
         Indicate that daemonization has happened and change the PID so that the
         value written to the pidfile can be tested in the daemonization case.
@@ -657,7 +671,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         L{UnixApplicationRunner.setupEnvironment} daemonizes the process if
         C{False} is passed for the C{nodaemon} parameter.
         """
-        self.runner.setupEnvironment(None, ".", False, None, None)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.setupEnvironment(None, ".", False, None, None)
         self.assertTrue(self.daemon)
 
 
@@ -690,7 +705,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         C{nodaemon} is C{False}.
         """
         pidfile = self.mktemp()
-        self.runner.setupEnvironment(None, ".", False, None, pidfile)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.setupEnvironment(None, ".", False, None, pidfile)
         fObj = file(pidfile)
         pid = int(fObj.read())
         fObj.close()
@@ -702,7 +718,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         L{UnixApplicationRunner.setupEnvironment} changes the process umask to
         the value specified by the C{umask} parameter.
         """
-        self.runner.setupEnvironment(None, ".", False, 123, None)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.setupEnvironment(None, ".", False, 123, None)
         self.assertEqual(self.mask, 123)
 
 
@@ -722,7 +739,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         C{0077} if C{None} is passed for the C{umask} parameter and C{False} is
         passed for the C{nodaemon} parameter.
         """
-        self.runner.setupEnvironment(None, ".", False, None, None)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.setupEnvironment(None, ".", False, None, None)
         self.assertEqual(self.mask, 0077)
 
 
@@ -734,6 +752,7 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
     if _twistd_unix is None:
         skip = "twistd unix not available"
 
+
     def test_setupEnvironment(self):
         """
         L{UnixApplicationRunner.startApplication} calls
@@ -743,16 +762,17 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
         """
         options = twistd.ServerOptions()
         options.parseOptions([
-                '--nodaemon',
-                '--umask', '0070',
-                '--chroot', '/foo/chroot',
-                '--rundir', '/foo/rundir',
-                '--pidfile', '/foo/pidfile'])
+            '--nodaemon',
+            '--umask', '0070',
+            '--chroot', '/foo/chroot',
+            '--rundir', '/foo/rundir',
+            '--pidfile', '/foo/pidfile'])
         application = service.Application("test_setupEnvironment")
         self.runner = UnixApplicationRunner(options)
 
         args = []
-        def fakeSetupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
+        def fakeSetupEnvironment(self, chroot, rundir, nodaemon, umask,
+                                 pidfile):
             args.extend((chroot, rundir, nodaemon, umask, pidfile))
 
         # Sanity check
@@ -760,8 +780,10 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
             inspect.getargspec(self.runner.setupEnvironment),
             inspect.getargspec(fakeSetupEnvironment))
 
-        self.patch(UnixApplicationRunner, 'setupEnvironment', fakeSetupEnvironment)
-        self.patch(UnixApplicationRunner, 'shedPrivileges', lambda *a, **kw: None)
+        self.patch(UnixApplicationRunner, 'setupEnvironment',
+                   fakeSetupEnvironment)
+        self.patch(UnixApplicationRunner, 'shedPrivileges',
+                   lambda *a, **kw: None)
         self.patch(app, 'startApplication', lambda *a, **kw: None)
         self.runner.startApplication(application)
 
@@ -771,7 +793,7 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
 
 
 
-class UnixApplicationRunnerRemovePID(unittest.TestCase):
+class UnixApplicationRunnerRemovePIDTests(unittest.TestCase):
     """
     Tests for L{UnixApplicationRunner.removePID}.
     """
@@ -795,14 +817,55 @@ class UnixApplicationRunnerRemovePID(unittest.TestCase):
 
     def test_removePIDErrors(self):
         """
-        Calling L{UnixApplicationRunner.removePID} with a non-existent filename logs
-        an OSError.
+        Calling L{UnixApplicationRunner.removePID} with a non-existent filename
+        logs an OSError.
         """
         runner = UnixApplicationRunner({})
         runner.removePID("fakepid")
         errors = self.flushLoggedErrors(OSError)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].value.errno, errno.ENOENT)
+
+
+
+class FakeNonDaemonizingReactor(object):
+    """
+    A dummy reactor, providing C{beforeDaemonize} and C{afterDaemonize}
+    methods, but not announcing this, and logging whether the methods have been
+    called.
+
+    @ivar _beforeDaemonizeCalled: if C{beforeDaemonize} has been called or not.
+    @type _beforeDaemonizeCalled: C{bool}
+    @ivar _afterDaemonizeCalled: if C{afterDaemonize} has been called or not.
+    @type _afterDaemonizeCalled: C{bool}
+    """
+
+    def __init__(self):
+        self._beforeDaemonizeCalled = False
+        self._afterDaemonizeCalled = False
+
+
+    def beforeDaemonize(self):
+        self._beforeDaemonizeCalled = True
+
+
+    def afterDaemonize(self):
+        self._afterDaemonizeCalled = True
+
+
+    def addSystemEventTrigger(self, *args, **kw):
+        """
+        Skip event registration.
+        """
+
+
+
+class FakeDaemonizingReactor(FakeNonDaemonizingReactor):
+    """
+    A dummy reactor, providing C{beforeDaemonize} and C{afterDaemonize}
+    methods, announcing this, and logging whether the methods have been called.
+    """
+    implements(IReactorDaemonize)
 
 
 
@@ -826,7 +889,7 @@ class DummyReactor(object):
 
 
 
-class AppProfilingTestCase(unittest.TestCase):
+class AppProfilingTests(unittest.TestCase):
     """
     Tests for L{app.AppProfiler}.
     """
@@ -1126,9 +1189,11 @@ def _patchFileLogObserver(patch):
     """
     logFiles = []
     oldFileLobObserver = log.FileLogObserver
+
     def FileLogObserver(logFile):
         logFiles.append(logFile)
         return oldFileLobObserver(logFile)
+
     patch(log, 'FileLogObserver', FileLogObserver)
     return logFiles
 
@@ -1140,17 +1205,20 @@ def _setupSyslog(testCase):
     messages will be appended if it is used.
     """
     logMessages = []
+
     class fakesyslogobserver(object):
         def __init__(self, prefix):
             logMessages.append(prefix)
+
         def emit(self, eventDict):
             logMessages.append(eventDict)
+
     testCase.patch(syslog, "SyslogObserver", fakesyslogobserver)
     return logMessages
 
 
 
-class AppLoggerTestCase(unittest.TestCase):
+class AppLoggerTests(unittest.TestCase):
     """
     Tests for L{app.AppLogger}.
 
@@ -1164,9 +1232,11 @@ class AppLoggerTestCase(unittest.TestCase):
         installed in C{self.observers}.
         """
         self.observers = []
+
         def startLoggingWithObserver(observer):
             self.observers.append(observer)
             log.addObserver(observer)
+
         self.patch(log, 'startLoggingWithObserver', startLoggingWithObserver)
 
 
@@ -1277,7 +1347,9 @@ class AppLoggerTestCase(unittest.TestCase):
         self.assertEqual(logs, [])
 
     if _twistd_unix is None or syslog is None:
-        test_configuredLogObserverBeatsSyslog.skip = "Not on POSIX, or syslog not available."
+        test_configuredLogObserverBeatsSyslog.skip = (
+            "Not on POSIX, or syslog not available."
+        )
 
 
     def test_configuredLogObserverBeatsLogfile(self):
@@ -1300,13 +1372,13 @@ class AppLoggerTestCase(unittest.TestCase):
         logger = app.AppLogger({"logfile": "-"})
         logFiles = _patchFileLogObserver(self.patch)
 
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertIdentical(logFiles[0], sys.stdout)
 
         logger = app.AppLogger({"logfile": ""})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 2)
         self.assertIdentical(logFiles[1], sys.stdout)
@@ -1321,11 +1393,11 @@ class AppLoggerTestCase(unittest.TestCase):
         filename = self.mktemp()
         logger = app.AppLogger({"logfile": filename})
 
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path,
-                          os.path.abspath(filename))
+                         os.path.abspath(filename))
 
 
     def test_stop(self):
@@ -1336,8 +1408,10 @@ class AppLoggerTestCase(unittest.TestCase):
         """
         removed = []
         observer = object()
+
         def remove(observer):
             removed.append(observer)
+
         self.patch(log, 'removeObserver', remove)
         logger = app.AppLogger({})
         logger._observer = observer
@@ -1349,7 +1423,7 @@ class AppLoggerTestCase(unittest.TestCase):
 
 
 
-class UnixAppLoggerTestCase(unittest.TestCase):
+class UnixAppLoggerTests(unittest.TestCase):
     """
     Tests for L{UnixAppLogger}.
 
@@ -1359,14 +1433,17 @@ class UnixAppLoggerTestCase(unittest.TestCase):
     if _twistd_unix is None:
         skip = "twistd unix not available"
 
+
     def setUp(self):
         """
         Fake C{signal.signal} for not installing the handlers but saving them
         in C{self.signals}.
         """
         self.signals = []
+
         def fakeSignal(sig, f):
             self.signals.append((sig, f))
+
         self.patch(signal, "signal", fakeSignal)
 
 
@@ -1379,12 +1456,12 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         logFiles = _patchFileLogObserver(self.patch)
 
         logger = UnixAppLogger({"logfile": "-", "nodaemon": True})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
         self.assertEqual(len(logFiles), 1)
         self.assertIdentical(logFiles[0], sys.stdout)
 
         logger = UnixAppLogger({"logfile": "", "nodaemon": True})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
         self.assertEqual(len(logFiles), 2)
         self.assertIdentical(logFiles[1], sys.stdout)
 
@@ -1408,18 +1485,19 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         logFiles = _patchFileLogObserver(self.patch)
         filename = self.mktemp()
         logger = UnixAppLogger({"logfile": filename})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
-        self.assertEqual(logFiles[0].path,
-                          os.path.abspath(filename))
+        self.assertEqual(logFiles[0].path, os.path.abspath(filename))
 
         self.assertEqual(len(self.signals), 1)
         self.assertEqual(self.signals[0][0], signal.SIGUSR1)
 
         d = Deferred()
+
         def rotate():
             d.callback(None)
+
         logFiles[0].rotate = rotate
 
         rotateLog = self.signals[0][1]
@@ -1438,7 +1516,7 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         self.patch(signal, "getsignal", fakeGetSignal)
         filename = self.mktemp()
         logger = UnixAppLogger({"logfile": filename})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(self.signals, [])
 
@@ -1451,11 +1529,10 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         """
         logFiles = _patchFileLogObserver(self.patch)
         logger = UnixAppLogger({"logfile": "", "nodaemon": False})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
-        self.assertEqual(logFiles[0].path,
-                          os.path.abspath("twistd.log"))
+        self.assertEqual(logFiles[0].path, os.path.abspath("twistd.log"))
 
 
     def test_getLogObserverSyslog(self):
@@ -1475,20 +1552,195 @@ class UnixAppLoggerTestCase(unittest.TestCase):
 
 
 
-
-class DeprecationTests(unittest.TestCase):
+class DaemonizeTests(unittest.TestCase):
     """
-    Tests for deprecated features.
+    Tests for L{_twistd_unix.UnixApplicationRunner} daemonization.
     """
 
-    def test_initialLog(self):
+    def setUp(self):
+        self.mockos = MockOS()
+        self.config = twistd.ServerOptions()
+        self.patch(_twistd_unix, 'os', self.mockos)
+        self.runner = _twistd_unix.UnixApplicationRunner(self.config)
+        self.runner.application = service.Application("Hi!")
+        self.runner.oldstdout = sys.stdout
+        self.runner.oldstderr = sys.stderr
+        self.runner.startReactor = lambda *args: None
+
+
+    def test_success(self):
         """
-        L{app.initialLog} is deprecated.
+        When double fork succeeded in C{daemonize}, the child process writes
+        B{0} to the status pipe.
         """
-        logs = []
-        log.addObserver(logs.append)
-        self.addCleanup(log.removeObserver, logs.append)
-        self.callDeprecated(Version("Twisted", 8, 2, 0), app.initialLog)
-        self.assertEqual(len(logs), 2)
-        self.assertIn("starting up", logs[0]["message"][0])
-        self.assertIn("reactor class", logs[1]["message"][0])
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.postApplication()
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+             ('fork', True), ('write', -2, '0'), ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-3, -2])
+
+
+    def test_successInParent(self):
+        """
+        The parent process initiating the C{daemonize} call reads data from the
+        status pipe and then exit the process.
+        """
+        self.mockos.child = False
+        self.mockos.readData = "0"
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(SystemError, self.runner.postApplication)
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True),
+             ('read', -1, 100), ('exit', 0), ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-1])
+
+
+    def test_successEINTR(self):
+        """
+        If the C{os.write} call to the status pipe raises an B{EINTR} error,
+        the process child retries to write.
+        """
+        written = []
+
+        def raisingWrite(fd, data):
+            written.append((fd, data))
+            if len(written) == 1:
+                raise IOError(errno.EINTR)
+
+        self.mockos.write = raisingWrite
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.postApplication()
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+             ('fork', True), ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-3, -2])
+        self.assertEqual([(-2, '0'), (-2, '0')], written)
+
+
+    def test_successInParentEINTR(self):
+        """
+        If the C{os.read} call on the status pipe raises an B{EINTR} error, the
+        parent child retries to read.
+        """
+        read = []
+
+        def raisingRead(fd, size):
+            read.append((fd, size))
+            if len(read) == 1:
+                raise IOError(errno.EINTR)
+            return "0"
+
+        self.mockos.read = raisingRead
+        self.mockos.child = False
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(SystemError, self.runner.postApplication)
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True),
+             ('exit', 0), ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-1])
+        self.assertEqual([(-1, 100), (-1, 100)], read)
+
+
+    def test_error(self):
+        """
+        If an error happens during daemonization, the child process writes the
+        exception error to the status pipe.
+        """
+
+        class FakeService(service.Service):
+
+            def startService(self):
+                raise RuntimeError("Something is wrong")
+
+        errorService = FakeService()
+        errorService.setServiceParent(self.runner.application)
+
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(RuntimeError, self.runner.postApplication)
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+             ('fork', True), ('write', -2, '1 Something is wrong'),
+             ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-3, -2])
+
+
+    def test_errorInParent(self):
+        """
+        When the child writes an error message to the status pipe during
+        daemonization, the parent writes the message to C{stderr} and exits
+        with non-zero status code.
+        """
+        self.mockos.child = False
+        self.mockos.readData = "1: An identified error"
+        errorIO = StringIO.StringIO()
+        self.patch(sys, '__stderr__', errorIO)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(SystemError, self.runner.postApplication)
+        self.assertEqual(
+            errorIO.getvalue(),
+            "An error has occurred: ' An identified error'\n"
+            "Please look at log file for more information.\n")
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True),
+             ('read', -1, 100), ('exit', 1), ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-1])
+
+
+    def test_errorMessageTruncated(self):
+        """
+        If an error in daemonize gives a too big error message, it's truncated
+        by the child.
+        """
+
+        class FakeService(service.Service):
+
+            def startService(self):
+                raise RuntimeError("x" * 200)
+
+        errorService = FakeService()
+        errorService.setServiceParent(self.runner.application)
+
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(RuntimeError, self.runner.postApplication)
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+             ('fork', True), ('write', -2, '1 ' + 'x' * 98),
+             ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-3, -2])
+
+
+    def test_hooksCalled(self):
+        """
+        C{daemonize} indeed calls L{IReactorDaemonize.beforeDaemonize} and
+        L{IReactorDaemonize.afterDaemonize} if the reactor implements
+        L{IReactorDaemonize}.
+        """
+        reactor = FakeDaemonizingReactor()
+        self.runner.daemonize(reactor)
+        self.assertTrue(reactor._beforeDaemonizeCalled)
+        self.assertTrue(reactor._afterDaemonizeCalled)
+
+
+    def test_hooksNotCalled(self):
+        """
+        C{daemonize} does NOT call L{IReactorDaemonize.beforeDaemonize} or
+        L{IReactorDaemonize.afterDaemonize} if the reactor does NOT implement
+        L{IReactorDaemonize}.
+        """
+        reactor = FakeNonDaemonizingReactor()
+        self.runner.daemonize(reactor)
+        self.assertFalse(reactor._beforeDaemonizeCalled)
+        self.assertFalse(reactor._afterDaemonizeCalled)
+
+
+
+if _twistd_unix is None:
+    DaemonizeTests.skip = "twistd unix support not available"

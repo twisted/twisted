@@ -7,12 +7,10 @@ TAP plugin for creating telnet- and ssh-accessible manhole servers.
 @author: Jp Calderone
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import protocol
 from twisted.application import service, strports
-from twisted.conch.ssh import session
-from twisted.conch import interfaces as iconch
 from twisted.cred import portal, checkers
 from twisted.python import usage
 
@@ -35,9 +33,10 @@ class chainedProtocolFactory:
     def __call__(self):
         return insults.ServerProtocol(manhole.ColoredManhole, self.namespace)
 
-class _StupidRealm:
-    implements(portal.IRealm)
 
+
+@implementer(portal.IRealm)
+class _StupidRealm:
     def __init__(self, proto, *a, **kw):
         self.protocolFactory = proto
         self.protocolArgs = a

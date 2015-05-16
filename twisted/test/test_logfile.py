@@ -7,7 +7,7 @@ from twisted.trial import unittest
 from twisted.python import logfile, runtime
 
 
-class LogFileTestCase(unittest.TestCase):
+class LogFileTests(unittest.TestCase):
     """
     Test the rotating log file.
     """
@@ -123,7 +123,7 @@ class LogFileTestCase(unittest.TestCase):
         """
         Check rotated files have same permissions as original.
         """
-        f = open(self.path, "w").close()
+        open(self.path, "w").close()
         os.chmod(self.path, 0707)
         mode = os.stat(self.path)[stat.ST_MODE]
         log = logfile.LogFile(self.name, self.dir)
@@ -206,7 +206,7 @@ class LogFileTestCase(unittest.TestCase):
         os.chmod(self.path, 0707)
         currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         f.close()
-        log1 = logfile.LogFile(self.name, self.dir)
+        logfile.LogFile(self.name, self.dir)
         self.assertEqual(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]),
                           currentMode)
 
@@ -215,7 +215,7 @@ class LogFileTestCase(unittest.TestCase):
         """
         Test specifying the permissions used on the log file.
         """
-        log1 = logfile.LogFile(self.name, self.dir, defaultMode=0066)
+        logfile.LogFile(self.name, self.dir, defaultMode=0066)
         mode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         if runtime.platform.isWindows():
             # The only thing we can get here is global read-only
@@ -271,7 +271,7 @@ class RiggedDailyLogFile(logfile.DailyLogFile):
             return time.gmtime(*args)[:3]
         return time.gmtime(self._clock)[:3]
 
-class DailyLogFileTestCase(unittest.TestCase):
+class DailyLogFileTests(unittest.TestCase):
     """
     Test rotating log file.
     """

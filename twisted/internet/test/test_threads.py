@@ -5,6 +5,8 @@
 Tests for implementations of L{IReactorThreads}.
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 from weakref import ref
@@ -13,12 +15,15 @@ import gc, threading
 from twisted.python.threadable import isInIOThread
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.threadpool import ThreadPool
+from twisted.internet.interfaces import IReactorThreads
 
 
 class ThreadTestsBuilder(ReactorBuilder):
     """
     Builder for defining tests relating to L{IReactorThreads}.
     """
+    requiredInterfaces = (IReactorThreads,)
+
     def test_getThreadPool(self):
         """
         C{reactor.getThreadPool()} returns an instance of L{ThreadPool} which
@@ -119,7 +124,7 @@ class ThreadTestsBuilder(ReactorBuilder):
                           reactor.callFromThread, threadCall)
         self.runReactor(reactor, 5)
 
-        self.assertEquals(result, [threading.currentThread()])
+        self.assertEqual(result, [threading.currentThread()])
 
 
     def test_stopThreadPool(self):
@@ -136,7 +141,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
         gc.collect()
-        self.assertIdentical(threadpool(), None)
+        self.assertIs(threadpool(), None)
 
 
     def test_stopThreadPoolWhenStartedAfterReactorRan(self):
@@ -159,7 +164,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(acquireThreadPool)
         self.runReactor(reactor)
         gc.collect()
-        self.assertIdentical(threadPoolRefs[0](), None)
+        self.assertIs(threadPoolRefs[0](), None)
 
 
     def test_cleanUpThreadPoolEvenBeforeReactorIsRun(self):
@@ -177,7 +182,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         threadPoolRef = ref(reactor.getThreadPool())
         reactor.fireSystemEvent("shutdown")
         gc.collect()
-        self.assertIdentical(threadPoolRef(), None)
+        self.assertIs(threadPoolRef(), None)
 
 
     def test_isInIOThread(self):

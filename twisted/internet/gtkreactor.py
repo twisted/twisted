@@ -106,7 +106,7 @@ class GtkReactor(posixbase.PosixReactorBase):
         # flush some pending events, return if there was something to do
         # don't use the usual "while gtk.events_pending(): mainiteration()"
         # idiom because lots of IO (in particular test_tcp's
-        # ProperlyCloseFilesTestCase) can keep us from ever exiting.
+        # ProperlyCloseFilesTests) can keep us from ever exiting.
         log.msg(channel='system', event='iteration', reactor=self)
         if gtk.events_pending():
             gtk.mainiteration(0)
@@ -220,8 +220,12 @@ class PortableGtkReactor(selectreactor.SelectReactor):
 
 
 
-def install():
-    """Configure the twisted mainloop to be run inside the gtk mainloop.
+def posixInstall():
+    """
+    Configure the twisted mainloop to be run inside the gtk mainloop.
+
+    @return: The new GTK reactor.
+    @rtype: L{IReactorFDSet}
     """
     reactor = GtkReactor()
     from twisted.internet.main import installReactor
@@ -244,7 +248,9 @@ deprecate.deprecatedModuleAttribute(deprecatedSince, deprecationMessage,
                                     __name__, "portableInstall")
 
 
-if runtime.platform.getType() != 'posix':
+if runtime.platform.getType() == 'posix':
+    install = posixInstall
+else:
     install = portableInstall
 
 __all__ = ['install']

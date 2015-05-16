@@ -11,7 +11,7 @@ from twisted.runner.procmon import ProcessMonitor
 from twisted.runner import procmontap as tap
 
 
-class ProcessMonitorTapTest(unittest.TestCase):
+class ProcessMonitorTapTests(unittest.TestCase):
     """
     Tests for L{twisted.runner.procmontap}'s option parsing and makeService
     method.

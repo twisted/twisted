@@ -7,7 +7,7 @@
 import StringIO
 
 from twisted.trial import unittest
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol
 from twisted.python import reflect
 
 from twisted.protocols.gps import nmea
@@ -43,7 +43,7 @@ class NMEATester(nmea.NMEAReceiver):
         for fn in reflect.prefixedMethodNames(self.__class__, 'decode_'):
             setattr(self, 'handle_' + fn, self.resultHarvester)
         
-class NMEAReceiverTestCase(unittest.TestCase):
+class NMEAReceiverTests(unittest.TestCase):
     messages = (
         # fix - signal acquired
         "$GPGGA,231713.0,3910.413,N,07641.994,W,1,05,1.35,00044,M,-033,M,,*69",
@@ -112,4 +112,4 @@ class NMEAReceiverTestCase(unittest.TestCase):
             else:
               self.assertEqual(expectedResult, actualResult, "\nInput:\n%s\nExpected: %r\nResults: %r\n" % (message, expectedResult, actualResult))
 
-testCases = [NMEAReceiverTestCase]
+testCases = [NMEAReceiverTests]

@@ -1,9 +1,10 @@
-Copyright (c) 2001-2011
+Copyright (c) 2001-2015
 Allen Short
 Andy Gayton
 Andrew Bennetts
 Antoine Pitrou
 Apple Computer, Inc.
+Ashwini Oruganti
 Benjamin Bruheim
 Bob Ippolito
 Canonical Limited
@@ -12,6 +13,10 @@ David Reid
 Donovan Preston
 Eric Mangold
 Eyal Lotem
+Google Inc.
+Hawkie Owl
+Hybrid Logic Ltd.
+Hynek Schlawack
 Itamar Turner-Trauring
 James Knight
 Jason A. Mobarak
@@ -21,8 +26,10 @@ Jonathan Jacobs
 Jonathan Lange
 Jonathan D. Simms
 Jürgen Hermann
+Julian Berman
 Kevin Horn
 Kevin Turner
+Laurens Van Houtven
 Mary Gardiner
 Matthew Lefkowitz
 Massachusetts Institute of Technology
@@ -30,12 +37,15 @@ Moshe Zadka
 Paul Swartz
 Pavel Pergamenshchik
 Ralph Meijer
+Richard Wall
 Sean Riley
 Software Freedom Conservancy
+Tavendo GmbH
 Travis B. Hartwell
 Thijs Triemstra
 Thomas Herve
 Timothy Allen
+Tom Prince
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

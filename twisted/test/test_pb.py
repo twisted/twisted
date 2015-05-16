@@ -369,7 +369,7 @@ class CachedReturner(pb.Root):
         return self.cache
 
 
-class NewStyleTestCase(unittest.TestCase):
+class NewStyleTests(unittest.TestCase):
     def setUp(self):
         """
         Create a pb server using L{Echoer} protocol and connect a client to it.
@@ -466,7 +466,7 @@ class ConnectionNotifyServerFactory(pb.PBServerFactory):
 
 
 
-class NewStyleCachedTestCase(unittest.TestCase):
+class NewStyleCachedTests(unittest.TestCase):
     def setUp(self):
         """
         Create a pb server using L{CachedReturner} protocol and connect a
@@ -520,7 +520,7 @@ class NewStyleCachedTestCase(unittest.TestCase):
 
 
 
-class BrokerTestCase(unittest.TestCase):
+class BrokerTests(unittest.TestCase):
     thunkResult = None
 
     def tearDown(self):
@@ -832,7 +832,7 @@ class FilePagerizer(pb.Referenceable):
 
 
 
-class PagingTestCase(unittest.TestCase):
+class PagingTests(unittest.TestCase):
     """
     Test pb objects sending data by pages.
     """
@@ -966,7 +966,7 @@ class GetPublisher(pb.Referenceable):
 
 pb.setUnjellyableForClass(DumbPublishable, DumbPub)
 
-class DisconnectionTestCase(unittest.TestCase):
+class DisconnectionTests(unittest.TestCase):
     """
     Test disconnection callbacks.
     """
@@ -1213,7 +1213,7 @@ class NewCredLeakTests(unittest.TestCase):
 
 
 
-class NewCredTestCase(unittest.TestCase):
+class NewCredTests(unittest.TestCase):
     """
     Tests related to the L{twisted.cred} support in PB.
     """
@@ -1648,7 +1648,7 @@ class NonSubclassingPerspective:
 
 
 
-class NSPTestCase(unittest.TestCase):
+class NSPTests(unittest.TestCase):
     """
     Tests for authentication against a realm where the L{IPerspective}
     implementation is not a subclass of L{Avatar}.
@@ -1736,7 +1736,7 @@ class Forwarded:
         return succeed(True)
 
 
-class SpreadUtilTestCase(unittest.TestCase):
+class SpreadUtilTests(unittest.TestCase):
     """
     Tests for L{twisted.spread.util}.
     """
@@ -1799,7 +1799,7 @@ class SpreadUtilTestCase(unittest.TestCase):
 
 
 
-class PBWithSecurityOptionsTest(unittest.TestCase):
+class PBWithSecurityOptionsTests(unittest.TestCase):
     """
     Test security customization.
     """

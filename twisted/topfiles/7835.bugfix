@@ -1,0 +1,1 @@
+twisted.cred.credentials.DigestedCredentials incorrectly handled md5-sess hashing according to the RFC, which has now been fixed.

@@ -10,7 +10,7 @@ from twisted.protocols import postfix
 from twisted.test.proto_helpers import StringTransport
 
 
-class PostfixTCPMapQuoteTestCase(unittest.TestCase):
+class PostfixTCPMapQuoteTests(unittest.TestCase):
     data = [
         # (raw, quoted, [aliasQuotedForms]),
         ('foo', 'foo'),
@@ -89,7 +89,7 @@ class PostfixTCPMapServerTestCase:
 
 
 
-class Valid(PostfixTCPMapServerTestCase, unittest.TestCase):
+class ValidTests(PostfixTCPMapServerTestCase, unittest.TestCase):
     data = {
         'foo': 'ThisIs Foo',
         'bar': ' bar really is found\r\n',

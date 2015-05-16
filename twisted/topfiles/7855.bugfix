@@ -1,0 +1,1 @@
+twisted.logger now correctly formats a log event with a key named `message` when passed to a legacy log observer.

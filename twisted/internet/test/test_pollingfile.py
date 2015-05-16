@@ -15,25 +15,32 @@ else:
 
 
 
-class TestPollableWritePipe(TestCase):
+class PollableWritePipeTests(TestCase):
     """
     Tests for L{_pollingfile._PollableWritePipe}.
     """
 
-    def test_checkWorkUnicode(self):
+    def test_writeUnicode(self):
         """
-        When one tries to pass unicode to L{_pollingfile._PollableWritePipe}, a
-        C{TypeError} is raised instead of passing the data to C{WriteFile}
-        call which is going to mangle it.
+        L{_pollingfile._PollableWritePipe.write} raises a C{TypeError} if an
+        attempt is made to append unicode data to the output buffer.
         """
         p = _pollingfile._PollableWritePipe(1, lambda: None)
-        p.write("test")
-        p.checkWork()
+        self.assertRaises(TypeError, p.write, u"test")
 
-        p.write(u"test")
-        self.assertRaises(TypeError, p.checkWork)
+
+    def test_writeSequenceUnicode(self):
+        """
+        L{_pollingfile._PollableWritePipe.writeSequence} raises a C{TypeError}
+        if unicode data is part of the data sequence to be appended to the
+        output buffer.
+        """
+        p = _pollingfile._PollableWritePipe(1, lambda: None)
+        self.assertRaises(TypeError, p.writeSequence, [u"test"])
+        self.assertRaises(TypeError, p.writeSequence, (u"test", ))
+
 
 
 
 if _pollingfile is None:
-    TestPollableWritePipe.skip = "_pollingfile is only avalable under Windows."
+    PollableWritePipeTests.skip = "Test will run only on Windows."

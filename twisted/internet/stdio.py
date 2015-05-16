@@ -25,8 +25,11 @@ Maintainer: James Y Knight
 from twisted.python.runtime import platform
 
 if platform.isWindows():
-    from twisted.internet._win32stdio import StandardIO
-else:
-    from twisted.internet._posixstdio import StandardIO
+    from twisted.internet import _win32stdio
+    StandardIO = _win32stdio.StandardIO
+    PipeAddress = _win32stdio.Win32PipeAddress
 
-__all__ = ['StandardIO']
+else:
+    from twisted.internet._posixstdio import StandardIO, PipeAddress 
+
+__all__ = ['StandardIO', 'PipeAddress']

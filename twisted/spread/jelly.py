@@ -54,8 +54,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString::
 The C{set} builtin and the C{sets.Set} class are serialized to the same
 thing, and unserialized to C{set} if available, else to C{sets.Set}. It means
 that there's a possibility of type switching in the serialization process. The
-solution is to always use C{set} if possible, and only use C{sets.Set} under
-Python 2.3; this can be accomplished by using L{twisted.python.compat.set}.
+solution is to always use C{set}.
 
 The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 
@@ -66,8 +65,9 @@ The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 import pickle
 import types
 import warnings
+import decimal
+from functools import reduce
 from types import StringType
-from types import UnicodeType
 from types import IntType
 from types import TupleType
 from types import ListType
@@ -86,16 +86,6 @@ import datetime
 from types import BooleanType
 
 try:
-    import decimal
-except ImportError:
-    decimal = None
-
-try:
-    _set = set
-except NameError:
-    _set = None
-
-try:
     # Filter out deprecation warning for Python >= 2.6
     warnings.filterwarnings("ignore", category=DeprecationWarning,
         message="the sets module is deprecated", append=True)
@@ -104,16 +94,19 @@ finally:
     warnings.filters.pop()
 
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Twisted Imports
+from twisted.python.compat import unicode
 from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
 from twisted.persisted.crefutil import _Container
-from twisted.python.compat import reduce
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
+
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
 
 DictTypes = (DictionaryType,)
 
@@ -139,6 +132,11 @@ tuple_atom = "tuple"                # t
 instance_atom = 'instance'          # i
 frozenset_atom = 'frozenset'
 
+
+deprecatedModuleAttribute(
+    Version("Twisted", 15, 0, 0),
+    "instance_atom is unused within Twisted.",
+    "twisted.spread.jelly", "instance_atom")
 
 # errors
 unpersistable_atom = "unpersistable"# u
@@ -315,12 +313,12 @@ class Unpersistable:
 
 
 
+@implementer(IJellyable)
 class Jellyable:
     """
     Inherit from me to Jelly yourself directly with the `getStateFor'
     convenience method.
     """
-    implements(IJellyable)
 
     def getStateFor(self, jellier):
         return self.__dict__
@@ -338,12 +336,12 @@ class Jellyable:
 
 
 
+@implementer(IUnjellyable)
 class Unjellyable:
     """
     Inherit from me to Unjelly yourself directly with the
     C{setStateFor} convenience method.
     """
-    implements(IUnjellyable)
 
     def setStateFor(self, unjellier, state):
         self.__dict__ = state
@@ -485,7 +483,7 @@ class _Jellier:
                         self.jelly(obj.im_self),
                         self.jelly(obj.im_class)]
 
-            elif UnicodeType and objType is UnicodeType:
+            elif objType is unicode:
                 return ['unicode', obj.encode('UTF-8')]
             elif objType is NoneType:
                 return ['None']
@@ -518,7 +516,7 @@ class _Jellier:
                                                    obj.microseconds)]
             elif objType is ClassType or issubclass(objType, type):
                 return ['class', qual(obj)]
-            elif decimal is not None and objType is decimal.Decimal:
+            elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
             else:
                 preRef = self._checkMutable(obj)
@@ -534,11 +532,9 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif (_set is not None and objType is set or
-                      objType is _sets.Set):
+                elif objType is set or objType is _sets.Set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif (_set is not None and objType is frozenset or
-                      objType is _sets.ImmutableSet):
+                elif objType is frozenset or objType is _sets.ImmutableSet:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
@@ -691,20 +687,13 @@ class _Unjellier:
 
 
     def _unjelly_unicode(self, exp):
-        if UnicodeType:
-            return unicode(exp[0], "UTF-8")
-        else:
-            return Unpersistable("Could not unpersist unicode: %s" % (exp[0],))
+        return unicode(exp[0], "UTF-8")
 
 
     def _unjelly_decimal(self, exp):
         """
-        Unjelly decimal objects, if decimal is available. If not, return a
-        L{Unpersistable} object instead.
+        Unjelly decimal objects.
         """
-        if decimal is None:
-            return Unpersistable(
-                "Could not unpersist decimal: %s" % (exp[0] * (10**exp[1]),))
         value = exp[0]
         exponent = exp[1]
         if value < 0:
@@ -816,26 +805,16 @@ class _Unjellier:
 
     def _unjelly_set(self, lst):
         """
-        Unjelly set using either the C{set} builtin if available, or
-        C{sets.Set} as fallback.
+        Unjelly set using the C{set} builtin.
         """
-        if _set is not None:
-            containerType = set
-        else:
-            containerType = _sets.Set
-        return self._unjellySetOrFrozenset(lst, containerType)
+        return self._unjellySetOrFrozenset(lst, set)
 
 
     def _unjelly_frozenset(self, lst):
         """
-        Unjelly frozenset using either the C{frozenset} builtin if available,
-        or C{sets.ImmutableSet} as fallback.
+        Unjelly frozenset using the C{frozenset} builtin.
         """
-        if _set is not None:
-            containerType = frozenset
-        else:
-            containerType = _sets.ImmutableSet
-        return self._unjellySetOrFrozenset(lst, containerType)
+        return self._unjellySetOrFrozenset(lst, frozenset)
 
 
     def _unjelly_dictionary(self, lst):
@@ -894,6 +873,20 @@ class _Unjellier:
 
 
     def _unjelly_instance(self, rest):
+        """
+        (internal) Unjelly an instance.
+
+        Called to handle the deprecated I{instance} token.
+
+        @param rest: The s-expression representing the instance.
+
+        @return: The unjellied instance.
+        """
+        warnings.warn_explicit(
+            "Unjelly support for the instance atom is deprecated since "
+            "Twisted 15.0.0.  Upgrade peer for modern instance support.",
+            category=DeprecationWarning, filename="", lineno=0)
+
         clz = self.unjelly(rest[0])
         if type(clz) is not types.ClassType:
             raise InsecureJelly("Instance found with non-class class.")
@@ -1039,10 +1032,8 @@ class SecurityOptions:
                              "date": 1,
                              "timedelta": 1,
                              "NoneType": 1}
-        if hasattr(types, 'UnicodeType'):
-            self.allowedTypes['unicode'] = 1
-        if decimal is not None:
-            self.allowedTypes['decimal'] = 1
+        self.allowedTypes['unicode'] = 1
+        self.allowedTypes['decimal'] = 1
         self.allowedTypes['set'] = 1
         self.allowedTypes['frozenset'] = 1
         self.allowedModules = {}

@@ -13,9 +13,39 @@ from sys import executable
 from subprocess import PIPE, Popen
 
 from twisted.trial.unittest import SkipTest, TestCase
+from twisted.python import reflect
 from twisted.python.modules import getModule
 from twisted.python.filepath import FilePath
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
+
+
+
+def outputFromPythonScript(script, *args):
+    """
+    Synchronously run a Python script, with the same Python interpreter that
+    ran the process calling this function, using L{Popen}, using the given
+    command-line arguments, with standard input and standard error both
+    redirected to L{os.devnull}, and return its output as a string.
+
+    @param script: The path to the script.
+    @type script: L{FilePath}
+
+    @param args: The command-line arguments to follow the script in its
+        invocation (the desired C{sys.argv[1:]}).
+    @type args: L{tuple} of L{str}
+
+    @return: the output passed to the proces's C{stdout}, without any messages
+        from C{stderr}.
+    @rtype: L{bytes}
+    """
+    nullInput = file(devnull, "rb")
+    nullError = file(devnull, "wb")
+    stdout = Popen([executable, script.path] + list(args),
+                   stdout=PIPE, stderr=nullError, stdin=nullInput).stdout.read()
+    nullInput.close()
+    nullError.close()
+    return stdout
+
 
 
 class ScriptTestsMixin:
@@ -47,9 +77,7 @@ class ScriptTestsMixin:
                 "Script tests do not apply to installed configuration.")
 
         from twisted.copyright import version
-        scriptVersion = Popen(
-            [executable, script.path, '--version'],
-            stdout=PIPE, stderr=file(devnull)).stdout.read()
+        scriptVersion = outputFromPythonScript(script, '--version')
 
         self.assertIn(str(version), scriptVersion)
 
@@ -80,9 +108,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         testDir.child("bar.tac").setContent(
             "import sys\n"
             "print sys.path\n")
-        output = Popen(
-            [executable, script.path, '-ny', 'bar.tac'],
-            stdout=PIPE, stderr=file(devnull)).stdout.read()
+        output = outputFromPythonScript(script, '-ny', 'bar.tac')
         self.assertIn(repr(testDir.path), output)
 
 
@@ -109,9 +135,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         testDir.makedirs()
         chdir(testDir.path)
         testDir.child("foo.py").setContent("")
-        output = Popen(
-            [executable, script.path, 'foo'],
-            stdout=PIPE, stderr=file(devnull)).stdout.read()
+        output = outputFromPythonScript(script, 'foo')
         self.assertIn("PASSED", output)
 
 
@@ -127,28 +151,8 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         self.scriptTest("tap2deb")
 
 
-    def test_tapconvert(self):
-        self.scriptTest("tapconvert")
 
-
-    def test_deprecatedTkunzip(self):
-        """
-        The entire L{twisted.scripts.tkunzip} module, part of the old Windows
-        installer tool chain, is deprecated.
-        """
-        from twisted.scripts import tkunzip
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_deprecatedTkunzip])
-        self.assertEqual(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(
-            "twisted.scripts.tkunzip was deprecated in Twisted 11.1.0: "
-            "Seek unzipping software outside of Twisted.",
-            warnings[0]['message'])
-        self.assertEqual(1, len(warnings))
-
-
-
-class ZshIntegrationTestCase(TestCase, ZshScriptTestMixin):
+class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
     """
     Test that zsh completion functions are generated without error
     """
@@ -157,7 +161,34 @@ class ZshIntegrationTestCase(TestCase, ZshScriptTestMixin):
                    ('pyhtmlizer', 'twisted.scripts.htmlizer.Options'),
                    ('tap2rpm', 'twisted.scripts.tap2rpm.MyOptions'),
                    ('tap2deb', 'twisted.scripts.tap2deb.MyOptions'),
-                   ('tapconvert', 'twisted.scripts.tapconvert.ConvertOptions'),
                    ('manhole', 'twisted.scripts.manhole.MyOptions')
                    ]
 
+
+
+class Tap2DeprecationTests(TestCase):
+    """
+    Contains tests to make sure tap2deb/tap2rpm are marked as deprecated.
+    """
+    def test_tap2debDeprecation(self):
+        """
+        L{twisted.scripts.tap2deb} is deprecated since Twisted 15.2.
+        """
+        reload(reflect.namedAny("twisted.scripts.tap2deb"))
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "tap2deb is deprecated since Twisted 15.2.",
+            warningsShown[0]['message'])
+
+
+    def test_tap2rpmDeprecation(self):
+        """
+        L{twisted.scripts.tap2rpm} is deprecated since Twisted 15.2.
+        """
+        reload(reflect.namedAny("twisted.scripts.tap2rpm"))
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "tap2rpm is deprecated since Twisted 15.2.",
+            warningsShown[0]['message'])

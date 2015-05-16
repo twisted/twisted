@@ -21,6 +21,7 @@ def send(long s, object buff, object obj, unsigned long flags = 0):
     if rc == SOCKET_ERROR:
         rc = WSAGetLastError()
         if rc != ERROR_IO_PENDING:
+            PyMem_Free(ov)
             return rc, bytes
 
     Py_XINCREF(obj)

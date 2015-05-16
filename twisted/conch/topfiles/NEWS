@@ -1,6 +1,202 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 15.1.0 (2015-04-02)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 15.0.0 (2015-01-24)
+=================================
+
+Features
+--------
+ - The new APIs: twisted.conch.checkers.IAuthorizedKeysDB,
+   twisted.conch.checkers.InMemorySSHKeyDB,
+   twisted.conch.checkers.UNIXAuthorizedKeyFiles, and
+   twisted.conch.checkers.SSHPublicKeyChecker have been added to
+   provide functionality to check the validity of SSH public keys and
+   specify where authorized keys are to be found. (#7144)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.checkers.SSHPublicKeyDatabase is now deprecated in
+   favor of a twisted.conch.checkers.SSHPublicKeyChecker instantiated
+   with a twisted.conch.checkers.UNIXAuthorizedKeyFiles. (#7144)
+
+Other
+-----
+ - #6626, #7002, #7526, #7532, #7698
+
+
+Twisted Conch 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 14.0.0 (2014-05-08)
+=================================
+
+Improved Documentation
+----------------------
+ - The docstring for twisted.conch.ssh.userauth.SSHUserAuthClient is
+   now clearer on how the preferredOrder instance variable is handled.
+   (#6850)
+
+Other
+-----
+ - #6696, #6807, #7054
+
+
+Twisted Conch 13.2.0 (2013-10-29)
+=================================
+
+Features
+--------
+ - ckeygen now accepts --no-passphrase to generate unprotected keys.
+   (#5998)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint.newConnection now
+   supplies a convenient default for the `ui` parameter if a value is
+   not passed in for it. (#6550)
+
+Bugfixes
+--------
+ - ckeygen --changepass now doesn't delete unencrypted keys or raise
+   an exception on encrypted ones. (#5894)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint now doesn't try
+   password authentication if there is no password specified. (#6553)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint now uses the
+   standard SSH port if no port is specified. (#6631)
+
+Other
+-----
+ - #5387, #6220
+
+
+Twisted Conch 13.1.0 (2013-06-23)
+=================================
+
+Features
+--------
+ - twisted.conch.endpoints.SSHCommandClientEndpoint is a new
+   IStreamClientEndpoint which supports connecting a protocol to the
+   stdio of a command running on a remote host via an SSH connection.
+   (#4698)
+ - twisted.conch.client.knownhosts.KnownHostsFile now has a public
+   `savePath` attribute giving the filesystem path where the known
+   hosts data is saved to and loaded from. (#6255)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint.connect() returns
+   a cancellable Deferred when using new connections. (#6532)
+
+Other
+-----
+ - #5386, #6342, #6386, #6405, #6541
+
+
+Twisted Conch 13.0.0 (2013-03-19)
+=================================
+
+Features
+--------
+ - twisted.conch.client.knownhosts.KnownHostsFile now takes care not
+   to overwrite changes to its save file made behind its back, making
+   it safer to use with the same known_hosts file as is being used by
+   other software. (#6256)
+
+Other
+-----
+ - #5864, #6257, #6297
+
+
+Twisted Conch 12.3.0 (2012-12-20)
+=================================
+
+Bugfixes
+--------
+ - Passing multiple --auth arguments to conch now correctly adds all
+   the specified checkers to the conch server (#5881)
+ - ckeygen --showpub now uses OPENSSH as default display, instead of
+   breaking because no display type was passed. (#5889)
+ - ckeygen --showpub catches EncryptedKeyError instead of BadKeyError
+   to detect that a key needs to be decrypted with a passphrase.
+   (#5890)
+
+Other
+-----
+ - #5923
+
+
+Twisted Conch 12.2.0 (2012-08-26)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.transport.SSHTransport now returns an
+   SSHTransportAddress from the getPeer() and getHost() methods.
+   (#2997)
+
+Bugfixes
+--------
+ - twisted.conch now supports commercial SSH implementations which
+   don't comply with the IETF standard (#1902)
+ - twisted.conch.ssh.userauth now works correctly with hash
+   randomization enabled. (#5776)
+ - twisted.conch no longer relies on __builtins__ being a dict, which
+   is a purely CPython implementation detail (#5779)
+
+Other
+-----
+ - #5496, #5617, #5700, #5748, #5777
+
+
+Twisted Conch 12.1.0 (2012-06-02)
+=================================
+
+Features
+--------
+ - twisted.conch.tap now supports cred plugins (#4753)
+
+Bugfixes
+--------
+ - twisted.conch.client.knownhosts now handles errors encountered
+   parsing hashed entries in a known hosts file. (#5616)
+
+Improved Documentation
+----------------------
+ - Conch examples window.tac and telnet_echo.tac now have better
+   explanations. (#5590)
+
+Other
+-----
+ - #5580
+
+
+Twisted Conch 12.0.0 (2012-02-10)
+=================================
+
+Features
+--------
+ - use Python shadow module for authentication if it's available
+   (#3242)
+
+Bugfixes
+--------
+ - twisted.conch.ssh.transport.messages no longer ends with with old
+   message IDs on platforms with differing dict() orderings (#5352)
+
+Other
+-----
+ - #5225
+
+
 Twisted Conch 11.1.0 (2011-11-15)
 =================================
 
@@ -287,7 +483,7 @@ Features
 
 Misc
 ----
- - #1673, #1636, #1892, #1943, #2057, #1180, #1185, #2148, #2159, #2291, 
+ - #1673, #1636, #1892, #1943, #2057, #1180, #1185, #2148, #2159, #2291,
 
 Deprecations and Removals
 -------------------------
@@ -335,7 +531,7 @@ Fixes
   - Add "cftp" -- Conch SFTP.
   - Deferred retrieval of public keys is supported
   - PAM support for client and server
-  - Bugfixes: 
+  - Bugfixes:
 	- fix conch failing to exit, and hangs.
 	- Remote->Local forwarding
 	- Channel closing

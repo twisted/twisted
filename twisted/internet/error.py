@@ -5,6 +5,8 @@
 Exceptions and errors for use in twisted.internet modules.
 """
 
+from __future__ import division, absolute_import
+
 import socket
 
 from twisted.python import deprecate
@@ -188,13 +190,18 @@ except ImportError:
 
 def getConnectError(e):
     """Given a socket exception, return connection error."""
+    if isinstance(e, Exception):
+        args = e.args
+    else:
+        args = e
     try:
-        number, string = e
+        number, string = args
     except ValueError:
         return ConnectError(string=e)
 
     if hasattr(socket, 'gaierror') and isinstance(e, socket.gaierror):
-        # only works in 2.2
+        # Only works in 2.2 in newer. Really that means always; #5978 covers
+        # this and other wierdnesses in this function.
         klass = UnknownHostError
     else:
         klass = errnoMapping.get(number, ConnectError)
@@ -213,7 +220,7 @@ class ConnectionLost(ConnectionClosed):
     """Connection to the other side was lost in a non-clean fashion"""
 
     def __str__(self):
-        s = self.__doc__
+        s = self.__doc__.strip().splitlines()[0]
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
@@ -240,6 +247,19 @@ class ConnectionDone(ConnectionClosed):
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
         return s
+
+
+
+class FileDescriptorOverrun(ConnectionLost):
+    """
+    A mis-use of L{IUNIXTransport.sendFileDescriptor} caused the connection to
+    be closed.
+
+    Each file descriptor sent using C{sendFileDescriptor} must be associated
+    with at least one byte sent using L{ITransport.write}.  If at any point
+    fewer bytes have been written than file descriptors have been sent, the
+    connection is closed with this exception.
+    """
 
 
 
@@ -307,9 +327,29 @@ class ProcessDone(ConnectionDone):
 
 
 class ProcessTerminated(ConnectionLost):
-    """A process has ended with a probable error condition"""
+    """
+    A process has ended with a probable error condition
 
+    @ivar exitCode: See L{__init__}
+    @ivar signal: See L{__init__}
+    @ivar status: See L{__init__}
+    """
     def __init__(self, exitCode=None, signal=None, status=None):
+        """
+        @param exitCode: The exit status of the process.  This is roughly like
+            the value you might pass to L{os.exit}.  This is L{None} if the
+            process exited due to a signal.
+        @type exitCode: L{int} or L{types.NoneType}
+
+        @param signal: The exit signal of the process.  This is L{None} if the
+            process did not exit due to a signal.
+        @type signal: L{int} or L{types.NoneType}
+
+        @param status: The exit code of the process.  This is a platform
+            specific combination of the exit code and the exit signal.  See
+            L{os.WIFEXITED} and related functions.
+        @type status: L{int}
+        """
         self.exitCode = exitCode
         self.signal = signal
         self.status = status
@@ -397,6 +437,59 @@ class ConnectingCancelledError(Exception):
 
 
 
+class NoProtocol(Exception):
+    """
+    An C{Exception} that will be raised when the factory given to a
+    L{IStreamClientEndpoint} returns C{None} from C{buildProtocol}.
+    """
+
+
+
+class UnsupportedAddressFamily(Exception):
+    """
+    An attempt was made to use a socket with an address family (eg I{AF_INET},
+    I{AF_INET6}, etc) which is not supported by the reactor.
+    """
+
+
+
+class UnsupportedSocketType(Exception):
+    """
+    An attempt was made to use a socket of a type (eg I{SOCK_STREAM},
+    I{SOCK_DGRAM}, etc) which is not supported by the reactor.
+    """
+
+
+class AlreadyListened(Exception):
+    """
+    An attempt was made to listen on a file descriptor which can only be
+    listened on once.
+    """
+
+
+
+class InvalidAddressError(ValueError):
+    """
+    An invalid address was specified (i.e. neither IPv4 or IPv6, or expected
+    one and got the other).
+
+    @ivar address: See L{__init__}
+    @ivar message: See L{__init__}
+    """
+
+    def __init__(self, address, message):
+        """
+        @param address: The address that was provided.
+        @type address: L{bytes}
+        @param message: A native string of additional information provided by
+            the calling context.
+        @type address: L{str}
+        """
+        self.address = address
+        self.message = message
+
+
+
 __all__ = [
     'BindError', 'CannotListenError', 'MulticastJoinError',
     'MessageLengthError', 'DNSLookupError', 'ConnectInProgressError',
@@ -409,4 +502,5 @@ __all__ = [
     'AlreadyCancelled', 'PotentialZombieWarning', 'ProcessDone',
     'ProcessTerminated', 'ProcessExitedAlready', 'NotConnectingError',
     'NotListeningError', 'ReactorNotRunning', 'ReactorAlreadyRunning',
-    'ReactorAlreadyInstalledError', 'ConnectingCancelledError']
+    'ReactorAlreadyInstalledError', 'ConnectingCancelledError',
+    'UnsupportedAddressFamily', 'UnsupportedSocketType', 'InvalidAddressError']

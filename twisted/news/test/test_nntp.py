@@ -5,6 +5,7 @@ from twisted.trial import unittest
 from twisted.news import database
 from twisted.news import nntp
 from twisted.protocols import loopback
+from twisted.test import proto_helpers
 
 ALL_GROUPS = ('alt.test.nntp', 0, 1, 'y'),
 GROUP = ('0', '1', '0', 'alt.test.nntp', 'group', 'selected')
@@ -99,7 +100,7 @@ class TestNNTPClient(nntp.NNTPClient):
         raise AssertionError("fetchArticle() failed: %s" % (error,))
 
 
-class NNTPTestCase(unittest.TestCase):
+class NNTPTests(unittest.TestCase):
     def setUp(self):
         self.server = nntp.NNTPServer()
         self.server.factory = self
@@ -109,6 +110,8 @@ class NNTPTestCase(unittest.TestCase):
         for s in SUBSCRIPTIONS:
             self.backend.addSubscription(s)
 
+        self.transport = proto_helpers.StringTransport()
+        self.server.makeConnection(self.transport)
         self.client = TestNNTPClient()
 
     def testLoopback(self):
@@ -122,3 +125,73 @@ class NNTPTestCase(unittest.TestCase):
         #         reactor.iterate(1) # fetchGroup()
         #         reactor.iterate(1) # postArticle()
 
+
+    def test_connectionMade(self):
+        """
+        When L{NNTPServer} is connected, it sends a server greeting to the
+        client.
+        """
+        self.assertEqual(
+            self.transport.value().split('\r\n'), [
+                '200 server ready - posting allowed',
+                ''])
+
+
+    def test_LIST(self):
+        """
+        When L{NTTPServer} receives a I{LIST} command, it sends a list of news
+        groups to the client (RFC 3977, section 7.6.1.1).
+        """
+        self.transport.clear()
+        self.server.do_LIST()
+        self.assertEqual(
+            self.transport.value().split('\r\n'), [
+                '215 newsgroups in form "group high low flags"',
+                'alt.test.nntp 0 1 y',
+                '.',
+                ''])
+
+
+    def test_GROUP(self):
+        """
+        When L{NNTPServer} receives a I{GROUP} command, it sends a line of
+        information about that group to the client (RFC 3977, section 6.1.1.1).
+        """
+        self.transport.clear()
+        self.server.do_GROUP('alt.test.nntp')
+        self.assertEqual(
+            self.transport.value().split('\r\n'), [
+                '211 0 1 0 alt.test.nntp group selected',
+                ''])
+
+
+    def test_LISTGROUP(self):
+        """
+        When L{NNTPServer} receives a I{LISTGROUP} command, it sends a list of
+        message numbers for the messages in a particular group (RFC 3977,
+        section 6.1.2.1).
+        """
+        self.transport.clear()
+        self.server.do_LISTGROUP('alt.test.nntp')
+        self.assertEqual(
+            self.transport.value().split('\r\n'), [
+                '211 list of article numbers follow',
+                '.',
+                ''])
+
+
+    def test_XROVER(self):
+        """
+        When L{NTTPServer} receives a I{XROVER} command, it sends a list of
+        I{References} header values for the messages in a particular group (RFC
+        2980, section 2.11).
+        """
+        self.server.do_GROUP('alt.test.nntp')
+        self.transport.clear()
+
+        self.server.do_XROVER()
+        self.assertEqual(
+            self.transport.value().split('\r\n'), [
+                '221 Header follows',
+                '.',
+                ''])

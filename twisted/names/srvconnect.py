@@ -2,15 +2,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import random
+from functools import reduce
 
 from zope.interface import implements
 
 from twisted.internet import error, interfaces
-
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import reduce
+from twisted.python.compat import unicode
+
 
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):
@@ -29,6 +29,8 @@ class _SRVConnector_ClientFactoryWrapper:
     def __getattr__(self, key):
         return getattr(self.__wrappedFactory, key)
 
+
+
 class SRVConnector:
     """A connector that looks up DNS SRV records. See RFC2782."""
 
@@ -40,9 +42,22 @@ class SRVConnector:
                  protocol='tcp', connectFuncName='connectTCP',
                  connectFuncArgs=(),
                  connectFuncKwArgs={},
+                 defaultPort=None,
                  ):
+        """
+        @param domain: The domain to connect to.  If passed as a unicode
+            string, it will be encoded using C{idna} encoding.
+        @type domain: L{bytes} or L{unicode}
+        @param defaultPort: Optional default port number to be used when SRV
+            lookup fails and the service name is unknown. This should be the
+            port number associated with the service name as defined by the IANA
+            registry.
+        @type defaultPort: C{int}
+        """
         self.reactor = reactor
         self.service = service
+        if isinstance(domain, unicode):
+            domain = domain.encode('idna')
         self.domain = domain
         self.factory = factory
 
@@ -50,6 +65,7 @@ class SRVConnector:
         self.connectFuncName = connectFuncName
         self.connectFuncArgs = connectFuncArgs
         self.connectFuncKwArgs = connectFuncKwArgs
+        self._defaultPort = defaultPort
 
         self.connector = None
         self.servers = None
@@ -69,6 +85,8 @@ class SRVConnector:
                                                      self.domain))
             d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
+            if self._defaultPort:
+                d.addErrback(self._ebServiceUnknown)
             d.addErrback(self.connectionFailed)
         elif self.connector is None:
             self._reallyConnect()
@@ -102,6 +120,20 @@ class SRVConnector:
             self.orderedServers.append((a.payload.priority, a.payload.weight,
                                         str(a.payload.target), a.payload.port))
 
+    def _ebServiceUnknown(self, failure):
+        """
+        Connect to the default port when the service name is unknown.
+
+        If no SRV records were found, the service name will be passed as the
+        port. If resolving the name fails with
+        L{error.ServiceNameUnknownError}, a final attempt is done using the
+        default port.
+        """
+        failure.trap(error.ServiceNameUnknownError)
+        self.servers = [(0, 0, self.domain, self._defaultPort)]
+        self.orderedServers = []
+        self.connect()
+
     def _serverCmp(self, a, b):
         if a[0]!=b[0]:
             return cmp(a[0], b[0])
@@ -129,7 +161,6 @@ class SRVConnector:
         weightIndex = zip(xrange(len(self.servers)), [x[1] for x in self.servers
                                                       if x[0]==minPriority])
         weightSum = reduce(lambda x, y: (None, x[1]+y[1]), weightIndex, (None, 0))[1]
-        rand = random.randint(0, weightSum)
 
         for index, weight in weightIndex:
             weightSum -= weight

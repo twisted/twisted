@@ -9,14 +9,15 @@ Tests for L{twisted.protocols.amp}.
 import datetime
 import decimal
 
-from zope.interface.verify import verifyObject
+from zope.interface import implements
+from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.python.util import setIDFunction
 from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.protocols import amp
 from twisted.trial import unittest
-from twisted.internet import protocol, defer, error, reactor, interfaces
+from twisted.internet import (
+    address, protocol, defer, error, reactor, interfaces)
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
 
@@ -33,6 +34,11 @@ if ssl is None:
     skipSSL = "SSL not available"
 else:
     skipSSL = None
+
+
+
+tz = amp._FixedOffsetTZInfo.fromSignHoursMinutes
+
 
 
 class TestProto(protocol.Protocol):
@@ -401,7 +407,7 @@ class AmpBoxTests(unittest.TestCase):
 
 
 
-class ParsingTest(unittest.TestCase):
+class ParsingTests(unittest.TestCase):
 
     def test_booleanValues(self):
         """
@@ -541,7 +547,7 @@ class CommandDispatchTests(unittest.TestCase):
     and responses using Command.responder decorator.
 
     Note: Originally, AMP's factoring was such that many tests for this
-    functionality are now implemented as full round-trip tests in L{AMPTest}.
+    functionality are now implemented as full round-trip tests in L{AMPTests}.
     Future tests should be written at this level instead, to ensure API
     compatibility and to provide more granular, readable units of test
     coverage.
@@ -654,7 +660,7 @@ class CommandDispatchTests(unittest.TestCase):
         self.sender.expectError()
 
         callResult = self.dispatcher.callRemote(Hello, hello='world')
-        callResult.addCallback(lambda result: 1 / 0)
+        callResult.addCallback(lambda result: 1 // 0)
 
         self.dispatcher.ampBoxReceived(amp.AmpBox({
                     'hello': "yay", 'print': "ignored", '_answer': "1"}))
@@ -670,7 +676,7 @@ class CommandDispatchTests(unittest.TestCase):
         self.sender.expectError()
 
         callResult = self.dispatcher.callRemote(Hello, hello='world')
-        callResult.addErrback(lambda result: 1 / 0)
+        callResult.addErrback(lambda result: 1 // 0)
 
         self.dispatcher.ampBoxReceived(amp.AmpBox({
                     '_error': '1', '_error_code': 'bugs',
@@ -1192,7 +1198,7 @@ class BinaryProtocolTests(unittest.TestCase):
 
 
 
-class AMPTest(unittest.TestCase):
+class AMPTests(unittest.TestCase):
 
     def test_interfaceDeclarations(self):
         """
@@ -1357,13 +1363,10 @@ class AMPTest(unittest.TestCase):
         otherProto = TestProto(None, "outgoing data")
         a = amp.AMP()
         a.innerProtocol = otherProto
-        def fakeID(obj):
-            return {a: 0x1234}.get(obj, id(obj))
-        self.addCleanup(setIDFunction, setIDFunction(fakeID))
 
         self.assertEqual(
-            repr(a), "<AMP inner <TestProto #%d> at 0x1234>" % (
-                otherProto.instanceId,))
+            repr(a), "<AMP inner <TestProto #%d> at 0x%x>" % (
+                otherProto.instanceId, id(a)))
 
 
     def test_innerProtocolNotInRepr(self):
@@ -1372,10 +1375,7 @@ class AMPTest(unittest.TestCase):
         is set.
         """
         a = amp.AMP()
-        def fakeID(obj):
-            return {a: 0x4321}.get(obj, id(obj))
-        self.addCleanup(setIDFunction, setIDFunction(fakeID))
-        self.assertEqual(repr(a), "<AMP at 0x4321>")
+        self.assertEqual(repr(a), "<AMP at 0x%x>" % (id(a),))
 
 
     def test_simpleSSLRepr(self):
@@ -1831,11 +1831,11 @@ class AMPTest(unittest.TestCase):
                     mixedCase='mixed case arg test',
                     dash_arg='x',
                     underscore_arg='y',
+                    From=s.transport.getPeer(),
 
                     # XXX - should optional arguments just not be passed?
                     # passing None seems a little odd, looking at the way it
                     # turns out here... -glyph
-                    From=('file', 'file'),
                     Print=None,
                     optional=None,
                     )))
@@ -1898,7 +1898,7 @@ class SecurableProto(FactoryNotifier):
 
 
 
-class TLSTest(unittest.TestCase):
+class TLSTests(unittest.TestCase):
     def test_startingTLS(self):
         """
         Verify that starting TLS and succeeding at handshaking sends all the
@@ -2005,7 +2005,7 @@ class TLSTest(unittest.TestCase):
 
 
 
-class TLSNotAvailableTest(unittest.TestCase):
+class TLSNotAvailableTests(unittest.TestCase):
     """
     Tests what happened when ssl is not available in current installation.
     """
@@ -2271,7 +2271,7 @@ if ssl is not None:
     tempcert = tempSelfSigned()
 
 
-class LiveFireTLSTestCase(LiveFireBase, unittest.TestCase):
+class LiveFireTLSTests(LiveFireBase, unittest.TestCase):
     clientProto = SecurableProto
     serverProto = SecurableProto
     def test_liveFireCustomTLS(self):
@@ -2323,7 +2323,7 @@ class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
     amp.StartTLS.responder(getTLSVars)
 
 
-class PlainVanillaLiveFire(LiveFireBase, unittest.TestCase):
+class PlainVanillaLiveFireTests(LiveFireBase, unittest.TestCase):
 
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SimpleSymmetricCommandProtocol
@@ -2341,7 +2341,7 @@ class PlainVanillaLiveFire(LiveFireBase, unittest.TestCase):
 
 
 
-class WithServerTLSVerification(LiveFireBase, unittest.TestCase):
+class WithServerTLSVerificationTests(LiveFireBase, unittest.TestCase):
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SlightlySmartTLS
 
@@ -2480,7 +2480,7 @@ class ProtocolIncludingCommandWithDifferentCommandType(
 
 
 
-class CommandTestCase(unittest.TestCase):
+class CommandTests(unittest.TestCase):
     """
     Tests for L{amp.Argument} and L{amp.Command}.
     """
@@ -2849,9 +2849,8 @@ class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
     elementType = amp.DateTime()
 
     strings = {
-        "christmas":
-            "\x00\x202010-12-25T00:00:00.000000-00:00"
-            "\x00\x202010-12-25T00:00:00.000000-00:00",
+        "christmas": "\x00\x202010-12-25T00:00:00.000000-00:00"
+                     "\x00\x202010-12-25T00:00:00.000000-00:00",
         "christmas in eu": "\x00\x202010-12-25T00:00:00.000000+01:00",
         "christmas in iran": "\x00\x202010-12-25T00:00:00.000000+03:30",
         "christmas in nyc": "\x00\x202010-12-25T00:00:00.000000-05:00",
@@ -2862,26 +2861,20 @@ class ListOfDateTimeTests(unittest.TestCase, ListOfTestsMixin):
     objects = {
         "christmas": [
             datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=amp.utc),
-            datetime.datetime(2010, 12, 25, 0, 0, 0,
-                tzinfo=amp._FixedOffsetTZInfo('+', 0, 0)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 0, 0)),
         ],
         "christmas in eu": [
-            datetime.datetime(2010, 12, 25, 0, 0, 0,
-                tzinfo=amp._FixedOffsetTZInfo('+', 1, 0)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 1, 0)),
         ],
         "christmas in iran": [
-            datetime.datetime(2010, 12, 25, 0, 0, 0,
-                tzinfo=amp._FixedOffsetTZInfo('+', 3, 30)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 3, 30)),
         ],
         "christmas in nyc": [
-            datetime.datetime(2010, 12, 25, 0, 0, 0,
-                tzinfo=amp._FixedOffsetTZInfo('-', 5, 0)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('-', 5, 0)),
         ],
         "previous tests": [
-            datetime.datetime(2010, 12, 25, 0, 0, 0,
-                tzinfo=amp._FixedOffsetTZInfo('+', 3, 19)),
-            datetime.datetime(2010, 12, 25, 0, 0, 0,
-                tzinfo=amp._FixedOffsetTZInfo('-', 6, 59)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('+', 3, 19)),
+            datetime.datetime(2010, 12, 25, 0, 0, 0, tzinfo=tz('-', 6, 59)),
         ],
     }
 
@@ -2946,12 +2939,151 @@ class ListOfOptionalTests(unittest.TestCase):
 
 
 
+class UNIXStringTransport(object):
+    """
+    An in-memory implementation of L{interfaces.IUNIXTransport} which collects
+    all data given to it for later inspection.
+
+    @ivar _queue: A C{list} of the data which has been given to this transport,
+        eg via C{write} or C{sendFileDescriptor}.  Elements are two-tuples of a
+        string (identifying the destination of the data) and the data itself.
+    """
+    implements(interfaces.IUNIXTransport)
+
+    def __init__(self, descriptorFuzz):
+        """
+        @param descriptorFuzz: An offset to apply to descriptors.
+        @type descriptorFuzz: C{int}
+        """
+        self._fuzz = descriptorFuzz
+        self._queue = []
+
+
+    def sendFileDescriptor(self, descriptor):
+        self._queue.append((
+                'fileDescriptorReceived', descriptor + self._fuzz))
+
+
+    def write(self, data):
+        self._queue.append(('dataReceived', data))
+
+
+    def writeSequence(self, seq):
+        for data in seq:
+            self.write(data)
+
+
+    def loseConnection(self):
+        self._queue.append(('connectionLost', Failure(error.ConnectionLost())))
+
+
+    def getHost(self):
+        return address.UNIXAddress('/tmp/some-path')
+
+
+    def getPeer(self):
+        return address.UNIXAddress('/tmp/another-path')
+
+# Minimal evidence that we got the signatures right
+verifyClass(interfaces.ITransport, UNIXStringTransport)
+verifyClass(interfaces.IUNIXTransport, UNIXStringTransport)
+
+
+class DescriptorTests(unittest.TestCase):
+    """
+    Tests for L{amp.Descriptor}, an argument type for passing a file descriptor
+    over an AMP connection over a UNIX domain socket.
+    """
+    def setUp(self):
+        self.fuzz = 3
+        self.transport = UNIXStringTransport(descriptorFuzz=self.fuzz)
+        self.protocol = amp.BinaryBoxProtocol(
+            amp.BoxDispatcher(amp.CommandLocator()))
+        self.protocol.makeConnection(self.transport)
+
+
+    def test_fromStringProto(self):
+        """
+        L{Descriptor.fromStringProto} constructs a file descriptor value by
+        extracting a previously received file descriptor corresponding to the
+        wire value of the argument from the L{_DescriptorExchanger} state of the
+        protocol passed to it.
+
+        This is a whitebox test which involves direct L{_DescriptorExchanger}
+        state inspection.
+        """
+        argument = amp.Descriptor()
+        self.protocol.fileDescriptorReceived(5)
+        self.protocol.fileDescriptorReceived(3)
+        self.protocol.fileDescriptorReceived(1)
+        self.assertEqual(
+            5, argument.fromStringProto("0", self.protocol))
+        self.assertEqual(
+            3, argument.fromStringProto("1", self.protocol))
+        self.assertEqual(
+            1, argument.fromStringProto("2", self.protocol))
+        self.assertEqual({}, self.protocol._descriptors)
+
+
+    def test_toStringProto(self):
+        """
+        To send a file descriptor, L{Descriptor.toStringProto} uses the
+        L{IUNIXTransport.sendFileDescriptor} implementation of the transport of
+        the protocol passed to it to copy the file descriptor.  Each subsequent
+        descriptor sent over a particular AMP connection is assigned the next
+        integer value, starting from 0.  The base ten string representation of
+        this value is the byte encoding of the argument.
+
+        This is a whitebox test which involves direct L{_DescriptorExchanger}
+        state inspection and mutation.
+        """
+        argument = amp.Descriptor()
+        self.assertEqual("0", argument.toStringProto(2, self.protocol))
+        self.assertEqual(
+            ("fileDescriptorReceived", 2 + self.fuzz), self.transport._queue.pop(0))
+        self.assertEqual("1", argument.toStringProto(4, self.protocol))
+        self.assertEqual(
+            ("fileDescriptorReceived", 4 + self.fuzz), self.transport._queue.pop(0))
+        self.assertEqual("2", argument.toStringProto(6, self.protocol))
+        self.assertEqual(
+            ("fileDescriptorReceived", 6 + self.fuzz), self.transport._queue.pop(0))
+        self.assertEqual({}, self.protocol._descriptors)
+
+
+    def test_roundTrip(self):
+        """
+        L{amp.Descriptor.fromBox} can interpret an L{amp.AmpBox} constructed by
+        L{amp.Descriptor.toBox} to reconstruct a file descriptor value.
+        """
+        name = "alpha"
+        strings = {}
+        descriptor = 17
+        sendObjects = {name: descriptor}
+
+        argument = amp.Descriptor()
+        argument.toBox(name, strings, sendObjects.copy(), self.protocol)
+
+        receiver = amp.BinaryBoxProtocol(
+            amp.BoxDispatcher(amp.CommandLocator()))
+        for event in self.transport._queue:
+            getattr(receiver, event[0])(*event[1:])
+
+        receiveObjects = {}
+        argument.fromBox(name, strings.copy(), receiveObjects, receiver)
+
+        # Make sure we got the descriptor.  Adjust by fuzz to be more convincing
+        # of having gone through L{IUNIXTransport.sendFileDescriptor}, not just
+        # converted to a string and then parsed back into an integer.
+        self.assertEqual(descriptor + self.fuzz, receiveObjects[name])
+
+
+
 class DateTimeTests(unittest.TestCase):
     """
     Tests for L{amp.DateTime}, L{amp._FixedOffsetTZInfo}, and L{amp.utc}.
     """
     string = '9876-01-23T12:34:56.054321-01:23'
-    tzinfo = amp._FixedOffsetTZInfo('-', 1, 23)
+    tzinfo = tz('-', 1, 23)
     object = datetime.datetime(9876, 1, 23, 12, 34, 56, 54321, tzinfo)
 
     def test_invalidString(self):
@@ -2995,9 +3127,9 @@ class DateTimeTests(unittest.TestCase):
 
 
 
-class FixedOffsetTZInfoTests(unittest.TestCase):
+class UTCTests(unittest.TestCase):
     """
-    Tests for L{amp._FixedOffsetTZInfo} and L{amp.utc}.
+    Tests for L{amp.utc}.
     """
 
     def test_tzname(self):
@@ -3023,16 +3155,16 @@ class FixedOffsetTZInfoTests(unittest.TestCase):
 
     def test_badSign(self):
         """
-        L{amp._FixedOffsetTZInfo} raises L{ValueError} if passed an offset sign
-        other than C{'+'} or C{'-'}.
+        L{amp._FixedOffsetTZInfo.fromSignHoursMinutes} raises L{ValueError} if
+        passed an offset sign other than C{'+'} or C{'-'}.
         """
-        self.assertRaises(ValueError, amp._FixedOffsetTZInfo, '?', 0, 0)
+        self.assertRaises(ValueError, tz, '?', 0, 0)
 
 
 
 if not interfaces.IReactorSSL.providedBy(reactor):
     skipMsg = 'This test case requires SSL support in the reactor'
-    TLSTest.skip = skipMsg
-    LiveFireTLSTestCase.skip = skipMsg
-    PlainVanillaLiveFire.skip = skipMsg
-    WithServerTLSVerification.skip = skipMsg
+    TLSTests.skip = skipMsg
+    LiveFireTLSTests.skip = skipMsg
+    PlainVanillaLiveFireTests.skip = skipMsg
+    WithServerTLSVerificationTests.skip = skipMsg

@@ -66,7 +66,7 @@ except ImportError:
         return set([FD_READ])
 
 from win32event import CreateEvent, MsgWaitForMultipleObjects
-from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT, QS_ALLEVENTS
+from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT
 
 import win32gui
 
@@ -248,7 +248,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         handles = self._events.keys() or [self.dummyEvent]
         timeout = int(timeout * 1000)
-        val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT | QS_ALLEVENTS)
+        val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:
             return
         elif val == WAIT_OBJECT_0 + len(handles):

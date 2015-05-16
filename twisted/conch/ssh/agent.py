@@ -76,13 +76,13 @@ class SSHAgentClient(protocol.Protocol):
         if ord(data[0]) != AGENT_IDENTITIES_ANSWER:
             raise ConchError('unexpected response: %i' % ord(data[0]))
         numKeys = struct.unpack('!L', data[1:5])[0]
-        keys = []
+        result = []
         data = data[5:]
         for i in range(numKeys):
             blob, data = getNS(data)
             comment, data = getNS(data)
-            keys.append((blob, comment))
-        return keys
+            result.append((blob, comment))
+        return result
 
 
     def addIdentity(self, blob, comment = ''):

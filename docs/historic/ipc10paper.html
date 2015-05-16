@@ -1,0 +1,1568 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The Twisted Network Framework</title>
+  </head>
+
+  <body>
+    <p><em><strong>Note:</strong> This document is relevant for the
+    version of Twisted that were current previous to <a
+    href="http://www.python10.com">IPC10</a>. Even at the time of
+    its release, <a href="ipc10errata.html">there were errata
+    issued</a> to make it current. It is remaining unaltered for
+    historical purposes but it is no longer accurate.</em></p>
+
+    <h1>The Twisted Network Framework</h1>
+
+    <h6>Moshe Zadka <a
+    href="mailto:m@moshez.org">m@moshez.org</a></h6>
+
+    <h6>Glyph Lefkowitz <a
+    href="mailto:glyph@twistedmatrix.com">glyph@twistedmatrix.com</a></h6>
+
+    <h3>Abstract</h3>
+
+    <p>Twisted is a framework for writing asynchronous,
+    event-driven networked programs in Python -- both clients and
+    servers. In addition to abstractions for low-level system calls
+    like <code>select(2)</code> and <code>socket(2)</code>, it also
+    includes a large number of utility functions and classes, which
+    make writing new servers easy. Twisted includes support for
+    popular network protocols like HTTP and SMTP, support for GUI
+    frameworks like <code>GTK+</code>/<code>GNOME</code> and
+    <code>Tk</code> and many other classes designed to make network
+    programs easy. Whenever possible, Twisted uses Python's
+    introspection facilities to save the client programmer as much
+    work as possible. Even though Twisted is still work in
+    progress, it is already usable for production systems -- it can
+    be used to bring up a Web server, a mail server or an IRC
+    server in a matter of minutes, and require almost no
+    configuration.</p>
+
+    <p><strong>Keywords:</strong> internet, network, framework,
+    event-based, asynchronous</p>
+
+    <h3>Introduction</h3>
+
+    <p>Python lends itself to writing frameworks. Python has a
+    simple class model, which facilitates inheritance. It has
+    dynamic typing, which means code needs to assume less. Python
+    also has built-in memory management, which means application
+    code does not need to track ownership. Thus, when writing a new
+    application, a programmer often finds himself writing a
+    framework to make writing this kind of application easier.
+    Twisted evolved from the need to write high-performance
+    interoperable servers in Python, and making them easy to use
+    (and difficult to use incorrectly).</p>
+
+    <p>There are three ways to write network programs:</p>
+
+    <ol>
+      <li>Handle each connection in a separate process</li>
+
+      <li>Handle each connection in a separate thread</li>
+
+      <li>Use non-blocking system calls to handle all connections
+      in one thread.</li>
+    </ol>
+
+    <p>When dealing with many connections in one thread, the
+    scheduling is the responsibility of the application, not the
+    operating system, and is usually implemented by calling a
+    registered function when each connection is ready to for
+    reading or writing -- commonly known as event-driven, or
+    callback-based, programming.</p>
+
+    <p>Since multi-threaded programming is often tricky, even with
+    high level abstractions, and since forking Python processes has
+    many disadvantages, like Python's reference counting not
+    playing well with copy-on-write and problems with shared state,
+    it was felt the best option was an event-driven framework. A
+    benefit of such approach is that by letting other event-driven
+    frameworks take over the main loop, server and client code are
+    essentially the same - making peer-to-peer a reality. While
+    Twisted includes its own event loop, Twisted can already
+    interoperate with <code>GTK+</code>'s and <code>Tk</code>'s
+    mainloops, as well as provide an emulation of event-based I/O
+    for Jython (specific support for the Swing toolkit is planned).
+    Client code is never aware of the loop it is running under, as
+    long as it is using Twisted's interface for registering for
+    interesting events.</p>
+
+    <p>Some examples of programs which were written using the
+    Twisted framework are <code>twisted.web</code> (a web server),
+    <code>twisted.mail</code> (a mail server, supporting both SMTP
+    and POP3, as well as relaying), <code>twisted.words</code> (a
+    chat application supporting integration between a variety of IM
+    protocols, like IRC, AOL Instant Messenger's TOC and
+    Perspective Broker, a remote-object protocol native to
+    Twisted), <code>im</code> (an instant messenger which connects
+    to twisted.words) and <code>faucet</code> (a GUI client for the
+    <code>twisted.reality</code> interactive-fiction framework).
+    Twisted can be useful for any network or GUI application
+    written in Python.</p>
+
+    <p>However, event-driven programming still contains some tricky
+    aspects. As each callback must be finished as soon as possible,
+    it is not possible to keep persistent state in function-local
+    variables. In addition, some programming techniques, such as
+    recursion, are impossible to use. Event-driven programming has
+    a reputation of being hard to use due to the frequent need to
+    write state machines. Twisted was built with the assumption
+    that with the right library, event-driven programming is easier
+    then multi-threaded programming. Twisted aims to be that
+    library.</p>
+
+    <p>Twisted includes both high-level and low-level support for
+    protocols. Most protocol implementation by twisted are in a
+    package which tries to implement "mechanisms, not policy". On
+    top of those implementations, Twisted includes usable
+    implementations of those protocols: for example, connecting the
+    abstract HTTP protocol handler to a concrete resource-tree, or
+    connecting the abstract mail protocol handler to deliver mail
+    to maildirs according to domains. Twisted tries to come with as
+    much functionality as possible out of the box, while not
+    constraining a programmer to a choice between using a
+    possibly-inappropriate class and rewriting the non-interesting
+    parts himself.</p>
+
+    <p>Twisted also includes Perspective Broker, a simple
+    remote-object framework, which allows Twisted servers to be
+    divided into separate processes as the end deployer (rather
+    then the original programmer) finds most convenient. This
+    allows, for example, Twisted web servers to pass requests for
+    specific URLs with co-operating servers so permissions are
+    granted according to the need of the specific application,
+    instead of being forced into giving all the applications all
+    permissions. The co-operation is truly symmetrical, although
+    typical deployments (such as the one which the Twisted web site
+    itself uses) use a master/slave relationship.</p>
+
+    <p>Twisted is not alone in the niche of a Python network
+    framework. One of the better known frameworks is Medusa. Medusa
+    is used, among other things, as Zope's native server serving
+    HTTP, FTP and other protocols. However, Medusa is no longer
+    under active development, and the Twisted development team had
+    a number of goals which would necessitate a rewrite of large
+    portions of Medusa. Twisted seperates protocols from the
+    underlying transport layer. This seperation has the advantages
+    of resuability (for example, using the same clients and servers
+    over SSL) and testability (because it is easy to test the
+    protocol with a much lighter test harness) among others.
+    Twisted also has a very flexible main-loop which can
+    interoperate with third-party main-loops, making it usable in
+    GUI programs too.</p>
+
+    <h3>Complementing Python</h3>
+
+    <p>Python comes out of the box with "batteries included".
+    However, it seems that many Python projects rewrite some basic
+    parts: logging to files, parsing options and high level
+    interfaces to reflection. When the Twisted project found itself
+    rewriting those, it moved them into a separate subpackage,
+    which does not depend on the rest of the twisted framework.
+    Hopefully, people will use <code>twisted.python</code> more and
+    solve interesting problems instead. Indeed, it is one of
+    Twisted's goals to serve as a repository for useful Python
+    code.</p>
+
+    <p>One useful module is <code>twisted.python.reflect</code>,
+    which has methods like <code>prefixedMethods</code>, which
+    returns all methods with a specific prefix. Even though some
+    modules in Python itself implement such functionality (notably,
+    <code>urllib2</code>), they do not expose it as a function
+    usable by outside code. Another useful module is
+    <code>twisted.python.hook</code>, which can add pre-hooks and
+    post-hooks to methods in classes.</p>
+
+    <blockquote>
+<pre class="python">
+# Add all method names beginning with opt_ to the given
+# dictionary. This cannot be done with dir(), since
+# it does not search in superclasses
+dct = {}
+reflect.addMethodNamesToDict(self.__class__, dct, "opt_")
+
+# Sum up all lists, in the given class and superclasses,
+# which have a given name. This gives us "different class
+# semantics": attributes do not override, but rather append
+flags = []
+reflect.accumulateClassList(self.__class__, 'optFlags', flags)
+
+# Add lock-acquire and lock-release to all methods which
+# are not multi-thread safe
+for methodName in klass.synchronized:
+    hook.addPre(klass, methodName, _synchPre)
+    hook.addPost(klass, methodName, _synchPost)
+
+</pre>
+
+      <h6>Listing 1: Using <code>twisted.python.reflect</code> and
+      <code>twisted.python.hook</code></h6>
+    </blockquote>
+
+    <p>The <code>twisted.python</code> subpackage also contains a
+    high-level interface to getopt which supplies as much power as
+    plain getopt while avoiding long
+    <code>if</code>/<code>elif</code> chains and making many common
+    cases easier to use. It uses the reflection interfaces in
+    <code>twisted.python.reflect</code> to find which options the
+    class is interested in, and constructs the argument to
+    <code>getopt</code>. Since in the common case options' values
+    are just saved in instance attributes, it is very easy to
+    indicate interest in such options. However, for the cases
+    custom code needs to be run for an option (for example,
+    counting how many <code>-v</code> options were given to
+    indicate verbosity level), it will call a method which is named
+    correctly.</p>
+
+    <blockquote>
+<pre class="python">
+class ServerOptions(usage.Options):
+    # Those are (short and long) options which
+    # have no argument. The corresponding attribute
+    # will be true iff this option was given
+    optFlags = [['nodaemon','n'],
+                ['profile','p'],
+                ['threaded','t'],
+                ['quiet','q'],
+                ['no_save','o']]
+    # This are options which require an argument
+    # The default is used if no such option was given
+    # Note: since options can only have string arguments,
+    # putting a non-string here is a reliable way to detect
+    # whether the option was given
+    optStrings = [['logfile','l',None],
+                  ['file','f','twistd.tap'],
+                  ['python','y',''],
+                  ['pidfile','','twistd.pid'],
+                  ['rundir','d','.']]
+
+    # For methods which can be called multiple times
+    # or have other unusual semantics, a method will be called
+    # Twisted assumes that the option needs an argument if and only if
+    # the method is defined to accept an argument.
+    def opt_plugin(self, pkgname):
+        pkg = __import__(pkgname)
+        self.python = os.path.join(os.path.dirname(
+                         os.path.abspath(pkg.__file__)), 'config.tac')
+
+    # Most long options based on methods are aliased to short
+    # options. If there is only one letter, Twisted knows it is a short
+    # option, so it is "-g", not "--g"
+    opt_g = opt_plugin
+
+try:
+    config = ServerOptions()
+    config.parseOptions()
+except usage.error, ue:
+    print "%s: %s" % (sys.argv[0], ue)
+    sys.exit(1)
+</pre>
+
+      <h6>Listing 2: <code>twistd</code>'s Usage Code</h6>
+    </blockquote>
+
+    <p>Unlike <code>getopt</code>, Twisted has a useful abstraction
+    for the non-option arguments: they are passed as arguments to
+    the <code>parsedArgs</code> method. This means too many
+    arguments, or too few, will cause a usage error, which will be
+    flagged. If an unknown number of arguments is desired,
+    explicitly using a tuple catch-all argument will work.</p>
+
+    <h3>Configuration</h3>
+
+    <p>The formats of configuration files have shown two visible
+    trends over the years. On the one hand, more and more
+    programmability has been added, until sometimes they become a
+    new language. The extreme end of this trend is using a regular
+    programming language, such as Python, as the configuration
+    language. On the other hand, some configuration files became
+    more and more machine editable, until they become a miniature
+    database formates. The extreme end of that trend is using a
+    generic database tool.</p>
+
+    <p>Both trends stem from the same rationale -- the need to use
+    a powerful general purpose tool instead of hacking domain
+    specific languages. Domain specific languages are usually
+    ad-hoc and not well designed, having neither the power of
+    general purpose languages nor the predictable machine editable
+    format of generic databases.</p>
+
+    <p>Twisted combines these two trends. It can read the
+    configuration either from a Python file, or from a pickled
+    file. To some degree, it integrates the approaches by
+    auto-pickling state on shutdown, so the configuration files can
+    migrate from Python into pickles. Currently, there is no way to
+    go back from pickles to equivalent Python source, although it
+    is planned for the future. As a proof of concept, the RPG
+    framework Twisted Reality already has facilities for creating
+    Python source which evaluates into a given Python object.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.internet import main
+from twisted.web import proxy, server
+site = server.Site(proxy.ReverseProxyResource('www.yahoo.com', 80, '/'))
+application = main.Application('web-proxy')
+application.listenOn(8080, site)
+</pre>
+
+      <h6>Listing 3: The configuration file for a reverse web
+      proxy</h6>
+    </blockquote>
+
+    <p>Twisted's main program, <code>twistd</code>, can receive
+    either a pickled <code>twisted.internet.main.Application</code>
+    or a Python file which defines a variable called
+    <code>application</code>. The application can be saved at any
+    time by calling its <code>save</code> method, which can take an
+    optional argument to save to a different file name. It would be
+    fairly easy, for example, to have a Twisted server which saves
+    the application every few seconds to a file whose name depends
+    on the time. Usually, however, one settles for the default
+    behavior which saves to a <code>shutdown</code> file. Then, if
+    the shutdown configuration proves suitable, the regular pickle
+    is replaced by the shutdown file. Hence, on the fly
+    configuration changes, regardless of complexity, can always
+    persist.</p>
+
+    <p>There are several client/server protocols which let a
+    suitably privileged user to access to application variable and
+    change it on the fly. The first, and least common denominator,
+    is telnet. The administrator can telnet into twisted, and issue
+    Python statements to her heart's content. For example, one can
+    add ports to listen on to the application, reconfigure the web
+    servers and various other ways by simple accessing
+    <code>__main__.application</code>. Some proof of concepts for a
+    simple suite of command-line utilities to control a Twisted
+    application were written, including commands which allow an
+    administrator to shut down the server or save the current state
+    to a tap file. These are especially useful on Microsoft
+    Windows(tm) platforms, where the normal UNIX way of
+    communicating shutdown requests via signals are less
+    reliable.</p>
+
+    <p>If reconfiguration on the fly is not necessary, Python
+    itself can be used as the configuration editor. Loading the
+    application is as simple as unpickling it, and saving it is
+    done by calling its <code>save</code> method. It is quite easy
+    to add more services or change existing ones from the Python
+    interactive mode.</p>
+
+    <p>A more sophisticated way to reconfigure the application on
+    the fly is via the manhole service. Manhole is a client/server
+    protocol based on top of Perspective Broker, Twisted's
+    translucent remote-object protocol which will be covered later.
+    Manhole has a graphical client called <code>gtkmanhole</code>
+    which can access the server and change its state. Since Twisted
+    is modular, it is possible to write more services for user
+    friendly configuration. For example, through-the-web
+    configuration is planned for several services, notably
+    mail.</p>
+
+    <p>For cases where a third party wants to distribute both the
+    code for a server and a ready to run configuration file, there
+    is the plugin configuration. Philosophically similar to the
+    <code>--python</code> option to <code>twistd</code>, it
+    simplifies the distribution process. A plugin is an archive
+    which is ready to be unpacked into the Python module path. In
+    order to keep a clean tree, <code>twistd</code> extends the
+    module path with some Twisted-specific paths, like the
+    directory <code>TwistedPlugins</code> in the user's home
+    directory. When a plugin is unpacked, it should be a Python
+    package which includes, alongside <code>__init__.py</code> a
+    file named <code>config.tac</code>. This file should define a
+    variable named <code>application</code>, in a similar way to
+    files loaded with <code>--python</code>. The plugin way of
+    distributing configurations is meant to reduce the temptation
+    to put large amount of codes inside the configuration file
+    itself.</p>
+
+    <p>Putting class and function definition inside the
+    configuration files would make the persistent servers which are
+    auto-generated on shutdown useless, since they would not have
+    access to the classes and functions defined inside the
+    configuration file. Thus, the plugin method is intended so
+    classes and functions can still be in regular, importable,
+    Python modules, but still allow third parties distribute
+    powerful configurations. Plugins are used by some of the
+    Twisted Reality virtual worlds.</p>
+
+    <h3>Ports, Protocol and Protocol Factories</h3>
+
+    <p><code>Port</code> is the Twisted class which represents a
+    socket listening on a port. Currently, twisted supports both
+    internet and unix-domain sockets, and there are SSL classes
+    with identical interface. A <code>Port</code> is only
+    responsible for handling the transfer layer. It calls
+    <code>accept</code> on the socket, checks that it actually
+    wants to deal with the connection and asks its factory for a
+    protocol. The factory is usually a subclass of
+    <code>twisted.protocols.protocol.Factory</code>, and its most
+    important method is <code>buildProtocol</code>. This should
+    return something that adheres to the protocol interface, and is
+    usually a subclass of
+    <code>twisted.protocols.protocol.Protocol</code>.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.protocols import protocol
+from twisted.internet import main, tcp
+
+class Echo(protocol.Protocol):
+    def dataReceived(self, data):
+        self.transport.write(data)
+
+factory = protocol.Factory()
+factory.protocol = Echo
+port = tcp.Port(8000, factory)
+app = main.Application("echo")
+app.addPort(port)
+app.run()
+</pre>
+
+      <h6>Listing 4: A Simple Twisted Application</h6>
+    </blockquote>
+
+    <p>The factory is responsible for two tasks: creating new
+    protocols, and keeping global configuration and state. Since
+    the factory builds the new protocols, it usually makes sure the
+    protocols have a reference to it. This allows protocols to
+    access, and change, the configuration. Keeping state
+    information in the factory is the primary reason for keeping an
+    abstraction layer between ports and protocols. Examples of
+    configuration information is the root directory of a web server
+    or the user database of a telnet server. Note that it is
+    possible to use the same factory in two different Ports. This
+    can be used to run the same server bound to several different
+    addresses but not to all of them, or to run the same server on
+    a TCP socket and a UNIX domain sockets.</p>
+
+    <p>A protocol begins and ends its life with
+    <code>connectionMade</code> and <code>connectionLost</code>;
+    both are called with no arguments. <code>connectionMade</code>
+    is called when a connection is first established. By then, the
+    protocol has a <code>transport</code> attribute. The
+    <code>transport</code> attribute is a <code>Transport</code> -
+    it supports <code>write</code> and <code>loseConnection</code>.
+    Both these methods never block: <code>write</code> actually
+    buffers data which will be written only when the transport is
+    signalled ready to for writing, and <code>loseConnection</code>
+    marks the transport for closing as soon as there is no buffered
+    data. Note that transports do <em>not</em> have a
+    <code>read</code> method: data arrives when it arrives, and the
+    protocol must be ready for its <code>dataReceived</code>
+    method, or its <code>connectionLost</code> method, to be
+    called. The transport also supports a <code>getPeer</code>
+    method, which returns parameters about the other side of the
+    transport. For TCP sockets, this includes the remote IP and
+    port.</p>
+
+    <blockquote>
+<pre class="python">
+# A tcp port-forwarder
+# A StupidProtocol sends all data it gets to its peer.
+# A StupidProtocolServer connects to the host/port,
+# and initializes the client connection to be its peer
+# and itself to be the client's peer
+from twisted.protocols import protocol
+
+class StupidProtocol(protocol.Protocol):
+    def connectionLost(self): self.peer.loseConnection();del self.peer
+    def dataReceived(self, data): self.peer.write(data)
+
+class StupidProtocolServer(StupidProtocol):
+    def connectionMade(self):
+        clientProtocol = StupidProtocol()
+        clientProtocol.peer = self.transport
+        self.peer = tcp.Client(self.factory.host, self.factory.port, 
+                               clientProtocol)
+
+# Create a factory which creates StupidProtocolServers, and
+# has the configuration information they assume
+def makeStupidFactory(host, port):
+    factory = protocol.Factory()
+    factory.host, factory.port = host, port
+    factory.protocol = StupidProtocolServer
+    return factory
+</pre>
+
+      <h6>Listing 5: TCP forwarder code</h6>
+    </blockquote>
+
+    <h3>The Event Loop</h3>
+
+    <p>While Twisted has the ability to let other event loops take
+    over for integration with GUI toolkits, it usually uses its own
+    event loop. The event loop code uses global variables to
+    maintain interested readers and writers, and uses Python's
+    <code>select()</code> function, which can accept any object
+    which has a <code>fileno()</code> method, not only raw file
+    descriptors. Objects can use the event loop interface to
+    indicate interest in either reading to or writing from a given
+    file descriptor. In addition, for those cases where time-based
+    events are needed (for example, queue flushing or periodic POP3
+    downloads), Twisted has a mechanism for repeating events at
+    known delays. While far from being real-time, this is enough
+    for most programs' needs.</p>
+
+    <h3>Going Higher Level</h3>
+
+    <p>Unfortunately, handling arbitrary data chunks is a hard way
+    to code a server. This is why twisted has many classes sitting
+    in submodules of the twisted.protocols package which give
+    higher level interface to the data. For line oriented
+    protocols, <code>LineReceiver</code> translates the low-level
+    <code>dataReceived</code> events into <code>lineReceived</code>
+    events. However, the first naive implementation of
+    <code>LineReceiver</code> proved to be too simple. Protocols
+    like HTTP/1.1 or Freenet have packets which begin with header
+    lines that include length information, and then byte streams.
+    <code>LineReceiver</code> was rewritten to have a simple
+    interface for switching at the protocol layer between
+    line-oriented parts and byte-stream parts.</p>
+
+    <p>Another format which is gathering popularity is Dan J.
+    Bernstein's netstring format. This format keeps ASCII text as
+    ASCII, but allows arbitrary bytes (including nulls and
+    newlines) to be passed freely. However, netstrings were never
+    designed to be used in event-based protocols where over-reading
+    is unavoidable. Twisted makes sure no user will have to deal
+    with the subtle problems handling netstrings in event-driven
+    programs by providing <code>NetstringReceiver</code>.</p>
+
+    <p>For even higher levels, there are the protocol-specific
+    protocol classes. These translate low-level chunks into
+    high-level events such as "HTTP request received" (for web
+    servers), "approve destination address" (for mail servers) or
+    "get user information" (for finger servers). Many RFCs have
+    been thus implemented for Twisted (at latest count, more then
+    12 RFCs have been implemented). One of Twisted's goals is to be
+    a repository of event-driven implementations for various
+    protocols in Python.</p>
+
+    <blockquote>
+<pre class="python">
+class DomainSMTP(SMTP):
+
+    def validateTo(self, helo, destination):
+        try:
+            user, domain = string.split(destination, '@', 1)
+        except ValueError:
+            return 0
+        if not self.factory.domains.has_key(domain): 
+            return 0
+        if not self.factory.domains[domain].exists(user, domain, self): 
+            return 0
+        return 1
+
+    def handleMessage(self, helo, origin, recipients, message):
+        # No need to check for existence -- only recipients which
+        # we approved at the validateTo stage are passed here
+        for recipient in recipients:
+            user, domain = string.split(recipient, '@', 1)
+            self.factory.domains[domain].saveMessage(origin, user, message,
+                                                     domain)
+</pre>
+
+      <h6>Listing 6: Implementation of virtual domains using the
+      SMTP protocol class</h6>
+    </blockquote>
+
+    <p>Copious documentation on writing new protocol abstraction
+    exists, since this is the largest amount of code written --
+    much like most operating system code is device drivers. Since
+    many different protocols have already been implemented, there
+    are also plenty of examples to draw on. Usually implementing
+    the client-side of a protocol is particularly challenging,
+    since protocol designers tend to assume much more state kept on
+    the client side of a connection then on the server side.</p>
+
+    <h3>The <code>twisted.tap</code> Package and
+    <code>mktap</code></h3>
+
+    <p>Since one of Twisted's configuration formats are pickles,
+    which are tricky to edit by hand, Twisted evolved a framework
+    for creating such pickles. This framework is contained in the
+    <code>twisted.tap</code> package and the <code>mktap</code>
+    script. New servers, or new ways to configure existing servers,
+    can easily participate in the twisted.tap framework by creating
+    a <code>twisted.tap</code> submodule.</p>
+
+    <p>All <code>twisted.tap</code> submodules must conform to a
+    rigid interface. The interface defines functions to accept the
+    command line parameters, and functions to take the processed
+    command line parameters and add servers to
+    <code>twisted.main.internet.Application</code>. Existing
+    <code>twisted.tap</code> submodules use
+    <code>twisted.python.usage</code>, so the command line format
+    is consistent between different modules.</p>
+
+    <p>The <code>mktap</code> utility gets some generic options,
+    and then the name of the server to build. It imports a
+    same-named <code>twisted.tap</code> submodule, and lets it
+    process the rest of the options and parameters. This makes sure
+    that the process configuring the <code>main.Application</code>
+    is agnostic for where it is used. This allowed
+    <code>mktap</code> to grow the <code>--append</code> option,
+    which appends to an existing pickle rather then creating a new
+    one. This option is frequently used to post-add a telnet server
+    to an application, for net-based on the fly configuration
+    later.</p>
+
+    <p>When running <code>mktap</code> under UNIX, it saves the
+    user id and group id inside the tap. Then, when feeding this
+    tap into <code>twistd</code>, it changes to this user/group id
+    after binding the ports. Such a feature is necessary in any
+    production-grade server, since ports below 1024 require root
+    privileges to use on UNIX -- but applications should not run as
+    root. In case changing to the specified user causes difficulty
+    in the build environment, it is also possible to give those
+    arguments to <code>mktap</code> explicitly.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.internet import tcp, stupidproxy
+from twisted.python import usage
+
+usage_message = """
+usage: mktap stupid [OPTIONS]
+
+Options are as follows:
+        --port &lt;#&gt;, -p:         set the port number to &lt;#&gt;.
+        --host &lt;host&gt;, -h:      set the host to &lt;host&gt;
+        --dest_port &lt;#&gt;, -d:    set the destination port to &lt;#&gt;
+"""
+
+class Options(usage.Options):
+    optStrings = [["port", "p", 6666],
+                  ["host", "h", "localhost"],
+                  ["dest_port", "d", 6665]]
+
+def getPorts(app, config):
+    s = stupidproxy.makeStupidFactory(config.host, int(config.dest_port))
+    return [(int(config.port), s)]
+</pre>
+
+      <h6>Listing 7: <code>twisted.tap.stupid</code></h6>
+    </blockquote>
+
+    <p>The <code>twisted.tap</code> framework is one of the reasons
+    servers can be set up with little knowledge and time. Simply
+    running <code>mktap</code> with arguments can bring up a web
+    server, a mail server or an integrated chat server -- with
+    hardly any need for maintainance. As a working
+    proof-on-concept, the <code>tap2deb</code> utility exists to
+    wrap up tap files in Debian packages, which include scripts for
+    running and stopping the server and interact with
+    <code>init(8)</code> to make sure servers are automatically run
+    on start-up. Such programs can also be written to interface
+    with the Red Hat Package Manager or the FreeBSD package
+    management systems.</p>
+
+    <blockquote>
+<pre class="shell">
+% mktap --uid 33 --gid 33 web --static /var/www --port 80
+% tap2deb -t web.tap -m 'Moshe Zadka &lt;moshez@debian.org&gt;'
+% su
+password:
+# dpkg -i .build/twisted-web_1.0_all.deb
+</pre>
+
+      <h6>Listing 8: Bringing up a web server on a Debian
+      system</h6>
+    </blockquote>
+
+    <h3>Multi-thread Support</h3>
+
+    <p>Sometimes, threads are unavoidable or hard to avoid. Many
+    legacy programs which use threads want to use Twisted, and some
+    vendor APIs have no non-blocking version -- for example, most
+    database systems' API. Twisted can work with threads, although
+    it supports only one thread in which the main select loop is
+    running. It can use other threads to simulate non-blocking API
+    over a blocking API -- it spawns a thread to call the blocking
+    API, and when it returns, the thread calls a callback in the
+    main thread. Threads can call callbacks in the main thread
+    safely by adding those callbacks to a list of pending events.
+    When the main thread is between select calls, it searches
+    through the list of pending events, and executes them. This is
+    used in the <code>twisted.enterprise</code> package to supply
+    an event driven interfaces to databases, which uses Python's DB
+    API.</p>
+
+    <p>Twisted tries to optimize for the common case -- no threads.
+    If there is need for threads, a special call must be made to
+    inform the <code>twisted.python.threadable</code> module that
+    threads will be used. This module is implemented differently
+    depending on whether threads will be used or not. The decision
+    must be made before importing any modules which use threadable,
+    and so is usually done in the main application. For example,
+    <code>twistd</code> has a command line option to initialize
+    threads.</p>
+
+    <p>Twisted also supplies a module which supports a threadpool,
+    so the common task of implementing non-blocking APIs above
+    blocking APIs will be both easy and efficient. Threads are kept
+    in a pool, and dispatch requests are done by threads which are
+    not working. The pool supports a maximum amount of threads, and
+    will throw exceptions when there are more requests than
+    allowable threads.</p>
+
+    <p>One of the difficulties about multi-threaded systems is
+    using locks to avoid race conditions. Twisted uses a mechanism
+    similar to Java's synchronized methods. A class can declare a
+    list of methods which cannot safely be called at the same time
+    from two different threads. A function in threadable then uses
+    <code>twisted.python.hook</code> to transparently add
+    lock/unlock around these methods. This allows Twisted classes
+    to be written without thought about threading, except for one
+    localized declaration which does not entail any performance
+    penalty for the single-threaded case.</p>
+
+    <h3>Twisted Mail Server</h3>
+
+    <p>Mail servers have a history of security flaws. Sendmail is
+    by now the poster boy of security holes, but no mail servers,
+    bar maybe qmail, are free of them. Like Dan Bernstein of qmail
+    fame said, mail cannot be simply turned off -- even the
+    simplest organization needs a mail server. Since Twisted is
+    written in a high-level language, many problems which plague
+    other mail servers, notably buffer overflows, simply do not
+    exist. Other holes are avoidable with correct design. Twisted
+    Mail is a project trying to see if it is possible to write a
+    high quality high performance mail server entirely in
+    Python.</p>
+
+    <p>Twisted Mail is built on the SMTP server and client protocol
+    classes. While these present a level of abstraction from the
+    specific SMTP line semantics, they do not contain any message
+    storage code. The SMTP server class does know how to divide
+    responsibility between domains. When a message arrives, it
+    analyzes the recipient's address, tries matching it with one of
+    the registered domain, and then passes validation of the
+    address and saving the message to the correct domain, or
+    refuses to handle the message if it cannot handle the domain.
+    It is possible to specify a catch-all domain, which will
+    usually be responsible for relaying mails outwards.</p>
+
+    <p>While correct relaying is planned for the future, at the
+    moment we have only so-called "smarthost" relaying. All e-mail
+    not recognized by a local domain is relayed to a single outside
+    upstream server, which is supposed to relay the mail further.
+    This is the configuration for most home machines, which are
+    Twisted Mail's current target audience.</p>
+
+    <p>Since the people involved in Twisted's development were
+    reluctant to run code that runs as a super user, or with any
+    special privileges, it had to be considered how delivery of
+    mail to users is possible. The solution decided upon was to
+    have Twisted deliver to its own directory, which should have
+    very strict permissions, and have users pull the mail using
+    some remote mail access protocol like POP3. This means only a
+    user would write to his own mail box, so no security holes in
+    Twisted would be able to adversely affect a user.</p>
+
+    <p>Future plans are to use a Perspective Broker-based service
+    to hand mail to users to a personal server using a UNIX domain
+    socket, as well as to add some more conventional delivery
+    methods, as scary as they may be.</p>
+
+    <p>Because the default configuration of Twisted Mail is to be
+    an integrated POP3/SMTP servers, it is ideally suited for the
+    so-called POP toaster configuration, where there are a
+    multitude of virtual users and domains, all using the same IP
+    address and computer to send and receive mails. It is fairly
+    easy to configure Twisted as a POP toaster. There are a number
+    of deployment choices: one can append a telnet server to the
+    tap for remote configuration, or simple scripts can add and
+    remove users from the user database. The user database is saved
+    as a directory, where file names are keys and file contents are
+    values, so concurrency is not usually a problem.</p>
+
+    <blockquote>
+<pre class="shell">
+% mktap mail -d foobar.com=$HOME/Maildir/ -u postmaster=secret -b \
+             -p 110 -s 25
+% twistd -f mail.tap
+
+</pre>
+
+      <h6>Bringing up a simple mail-server</h6>
+    </blockquote>
+
+    <p>Twisted's native mail storage format is Maildir, a format
+    that requires no locking and is safe and atomic. Twisted
+    supports a number of standardized extensions to Maildir,
+    commonly known as Maildir++. Most importantly, it supports
+    deletion as simply moving to a subfolder named
+    <code>Trash</code>, so mail is recoverable if accessed through
+    a protocol which allows multiple folders, like IMAP. However,
+    Twisted itself currently does not support any such protocol
+    yet.</p>
+
+    <h3>Introducing Perspective Broker</h3>
+
+    <h4>All the World's a Game</h4>
+
+    <p>Twisted was originally designed to support multi-player
+    games; a simulated "real world" environment. Experience with
+    game systems of that type is enlightening as to the nature of
+    computing on the whole. Almost all services on a computer are
+    modeled after some simulated real-world activity. For example,
+    e-"mail", or "document publishing" on the web. Even
+    "object-oriented" programming is based around the notion that
+    data structures in a computer simulate some analogous
+    real-world objects.</p>
+
+    <p>All such networked simulations have a few things in common.
+    They each represent a service provided by software, and there
+    is usually some object where "global" state is kept. Such a
+    service must provide an authentication mechanism. Often, there
+    is a representation of the authenticated user within the
+    context of the simulation, and there are also objects aside
+    from the user and the simulation itself that can be
+    accessed.</p>
+
+    <p>For most existing protocols, Twisted provides these
+    abstractions through <code>twisted.internet.passport</code>.
+    This is so named because the most important common
+    functionality it provides is authentication. A simulation
+    "world" as described above -- such as an e-mail system,
+    document publishing archive, or online video game -- is
+    represented by subclass of <code>Service</code>, the
+    authentication mechanism by an <code>Authorizer</code> (which
+    is a set of <code>Identities</code>), and the user of the
+    simulation by a <code>Perspective</code>. Other objects in the
+    simulation may be represented by arbitrary python objects,
+    depending upon the implementation of the given protocol.</p>
+
+    <p>New problem domains, however, often require new protocols,
+    and re-implementing these abstractions each time can be
+    tedious, especially when it's not necessary. Many efforts have
+    been made in recent years to create generic "remote object" or
+    "remote procedure call" protocols, but in developing Twisted,
+    these protocols were found to require too much overhead in
+    development, be too inefficient at runtime, or both.</p>
+
+    <p>Perspective Broker is a new remote-object protocol designed
+    to be lightweight and impose minimal constraints upon the
+    development process and use Python's dynamic nature to good
+    effect, but still relatively efficient in terms of bandwidth
+    and CPU utilization. <code>twisted.spread.pb</code> serves as a
+    reference implementation of the protocol, but implementation of
+    Perspective Broker in other languages is already underway.
+    <code>spread</code> is the <code>twisted</code> subpackage
+    dealing with remote calls and objects, and has nothing to do
+    with the <code>spread</code> toolkit.</p>
+
+    <p>Perspective Broker extends
+    <code>twisted.internet.passport</code>'s abstractions to be
+    concrete objects rather than design patterns. Rather than
+    having a <code>Protocol</code> implementation translate between
+    sequences of bytes and specifically named methods (as in the
+    other Twisted <code>Protocols</code>), Perspective Broker
+    defines a direct mapping between network messages and
+    quasi-arbitrary method calls.</p>
+
+    <h3>Translucent, not Transparent</h3>
+
+    <p>In a server application where a large number of clients may
+    be interacting at once, it is not feasible to have an
+    arbitrarily large number of OS threads blocking and waiting for
+    remote method calls to return. Additionally, the ability for
+    any client to call any method of an object would present a
+    significant security risk. Therefore, rather than attempting to
+    provide a transparent interface to remote objects,
+    <code>twisted.spread.pb</code> is "translucent", meaning that
+    while remote method calls have different semantics than local
+    ones, the similarities in semantics are mirrored by
+    similarities in the syntax. Remote method calls impose as
+    little overhead as possible in terms of volume of code, but "as
+    little as possible" is unfortunately not "nothing".</p>
+
+    <p><code>twisted.spread.pb</code> defines a method naming
+    standard for each type of remotely accessible object. For
+    example, if a client requests a method call with an expression
+    such as <code>myPerspective.doThisAction()</code>, the remote
+    version of <code>myPerspective</code> would be sent the message
+    <code>perspective_doThisAction</code>. Depending on the manner
+    in which an object is accessed, other method prefixes may be
+    <code>observe_</code>, <code>view_</code>, or
+    <code>remote_</code>. Any method present on a remotely
+    accessible object, and named appropriately, is considered to be
+    published -- since this is accomplished with
+    <code>getattr</code>, the definition of "present" is not just
+    limited to methods defined on the class, but instances may have
+    arbitrary callable objects associated with them as long as the
+    name is correct -- similarly to normal python objects.</p>
+
+    <p>Remote method calls are made on remote reference objects
+    (instances of <code>pb.RemoteReference</code>) by calling a
+    method with an appropriate name. However, that call will not
+    block -- if you need the result from a remote method call, you
+    pass in one of the two special keyword arguments to that method
+    -- <code>pbcallback</code> or <code>pberrback</code>.
+    <code>pbcallback</code> is a callable object which will be
+    called when the result is available, and <code>pberrback</code>
+    is a callable object which will be called if there was an
+    exception thrown either in transmission of the call or on the
+    remote side.</p>
+
+    <p>In the case that neither <code>pberrback</code> or
+    <code>pbcallback</code> is provided,
+    <code>twisted.spread.pb</code> will optimize network usage by
+    not sending confirmations of messages.</p>
+
+    <blockquote>
+<pre class="python">
+# Server Side
+class MyObject(pb.Referenceable):
+    def remote_doIt(self):
+        return "did it"
+
+# Client Side
+    ...
+    def myCallback(result):
+        print result # result will be 'did it'
+    def myErrback(stacktrace):
+        print 'oh no, mr. bill!'
+        print stacktrace
+    myRemoteReference.doIt(pbcallback=myCallback,
+                           pberrback=myErrback)
+</pre>
+
+      <h6>Listing 9: A remotely accessible object and accompanying
+      call</h6>
+    </blockquote>
+
+    <h3>Different Behavior for Different Perspectives</h3>
+
+    <p>Considering the problem of remote object access in terms of
+    a simulation demonstrates a requirement for the knowledge of an
+    actor with certain actions or requests. Often, when processing
+    message, it is useful to know who sent it, since different
+    results may be required depending on the permissions or state
+    of the caller.</p>
+
+    <p>A simple example is a game where certain an object is
+    invisible, but players with the "Heightened Perception"
+    enchantment can see it. When answering the question "What
+    objects are here?" it is important for the room to know who is
+    asking, to determine which objects they can see. Parallels to
+    the differences between "administrators" and "users" on an
+    average multi-user system are obvious.</p>
+
+    <p>Perspective Broker is named for the fact that it does not
+    broker only objects, but views of objects. As a user of the
+    <code>twisted.spread.pb</code> module, it is quite easy to
+    determine the caller of a method. All you have to do is
+    subclass <code>Viewable</code>.</p>
+
+    <blockquote>
+<pre class="python">
+# Server Side
+class Greeter(pb.Viewable):
+    def view_greet(self, actor):
+        return "Hello %s!\n" % actor.perspectiveName
+
+# Client Side
+    ...
+    remoteGreeter.greet(pbcallback=sys.stdout.write)
+    ...
+</pre>
+
+      <h6>Listing 10: An object responding to its calling
+      perspective</h6>
+    </blockquote>
+    Before any arguments sent by the client, the actor
+    (specifically, the Perspective instance through which this
+    object was retrieved) will be passed as the first argument to
+    any <code>view_xxx</code> methods. 
+
+    <h3>Mechanisms for Sharing State</h3>
+
+    <p>In a simulation of any decent complexity, client and server
+    will wish to share structured data. Perspective Broker provides
+    a mechanism for both transferring (copying) and sharing
+    (caching) that state.</p>
+
+    <p>Whenever an object is passed as an argument to or returned
+    from a remote method call, that object is serialized using
+    <code>twisted.spread.jelly</code>; a serializer similar in some
+    ways to Python's native <code>pickle</code>. Originally,
+    <code>pickle</code> itself was going to be used, but there were
+    several security issues with the <code>pickle</code> code as it
+    stands. It is on these issues of security that
+    <code>pickle</code> and <code>twisted.spread.jelly</code> part
+    ways.</p>
+
+    <p>While <code>twisted.spread.jelly</code> handles a few basic
+    types such as strings, lists, dictionaries and numbers
+    automatically, all user-defined types must be registered both
+    for serialization and unserialization. This registration
+    process is necessary on the sending side in order to determine
+    if a particular object is shared, and whether it is shared as
+    state or behavior. On the receiving end, it's necessary to
+    prevent arbitrary code from being run when an object is
+    unserialized -- a significant security hole in
+    <code>pickle</code> for networked applications.</p>
+
+    <p>On the sending side, the registration is accomplished by
+    making the object you want to serialize a subclass of one of
+    the "flavors" of object that are handled by Perspective Broker.
+    A class may be <code>Referenceable</code>,
+    <code>Viewable</code>, <code>Copyable</code> or
+    <code>Cacheable</code>. These four classes correspond to
+    different ways that the object will be seen remotely.
+    Serialization flavors are mutually exclusive -- these 4 classes
+    may not be mixed in with each other.</p>
+
+    <ul>
+      <li><code>Referenceable</code>: The remote side will refer to
+      this object directly. Methods with the prefix
+      <code>remote_</code> will be callable on it. No state will be
+      transferred.</li>
+
+      <li><code>Viewable</code>: The remote side will refer to a
+      proxy for this object, which indicates what perspective
+      accessed this; as discussed above. Methods with the prefix
+      <code>view_</code> will be callable on it, and have an
+      additional first argument inserted (the perspective that
+      called the method). No state will be transferred.</li>
+
+      <li><code>Copyable</code>: Each time this object is
+      serialized, its state will be copied and sent. No methods are
+      remotely callable on it. By default, the state sent will be
+      the instance's <code>__dict__</code>, but a method
+      <code>getStateToCopyFor(perspective)</code> may be defined
+      which returns an arbitrary serializable object for
+      state.</li>
+
+      <li><code>Cacheable</code>: The first time this object is
+      serialized, its state will be copied and sent. Each
+      subsequent time, however, a reference to the original object
+      will be sent to the receiver. No methods will be remotely
+      callable on this object. By default, again, the state sent
+      will be the instance's <code>__dict__</code>but a method
+      <code>getStateToCacheAndObserveFor(perspective,
+      observer)</code> may be defined to return alternative state.
+      Since the state for this object is only sent once, the
+      <code>observer</code> argument is an object representative of
+      the receiver's representation of the <code>Cacheable</code>
+      after unserialization -- method calls to this object will be
+      resolved to methods prefixed with <code>observe_</code>,
+      <em>on the receiver's <code>RemoteCache</code> of this
+      object</em>. This may be used to keep the receiver's cache
+      up-to-date as relevant portions of the <code>Cacheable</code>
+      object change.</li>
+    </ul>
+
+    <h3>Publishing Objects with PB</h3>
+
+    <p>The previous samples of code have shown how an individual
+    object will interact over a previously-established PB
+    connection. In order to get to that connection, you need to do
+    some set-up work on both the client and server side; PB
+    attempts to minimize this effort.</p>
+
+    <p>There are two different approaches for setting up a PB
+    server, depending on your application's needs. In the simplest
+    case, where your application does not deal with the
+    abstractions above -- services, identities, and perspectives --
+    you can simply publish an object on a particular port.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import main
+class Echoer(pb.Root):
+    def remote_echo(self, st):
+        print 'echoing:', st
+        return st
+if __name__ == '__main__':
+    app = main.Application("pbsimple")
+    app.listenOn(8789, pb.BrokerFactory(Echoer()))
+    app.run()
+</pre>
+
+      <h6>Listing 11: Creating a simple PB server</h6>
+    </blockquote>
+
+    <p>Listing 11 shows how to publish a simple object which
+    responds to a single message, "echo", and returns whatever
+    argument is sent to it. There is very little to explain: the
+    "Echoer" class is a pb.Root, which is a small subclass of
+    Referenceable designed to be used for objects published by a
+    BrokerFactory, so Echoer follows the same rule for remote
+    access that Referenceable does. Connecting to this service is
+    almost equally simple.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import main
+def gotObject(object):
+    print "got object:",object
+    object.echo("hello network", pbcallback=gotEcho)
+def gotEcho(echo):
+    print 'server echoed:',echo
+    main.shutDown()
+def gotNoObject(reason):
+    print "no object:",reason
+    main.shutDown()
+pb.getObjectAt("localhost", 8789, gotObject, gotNoObject, 30)
+main.run()
+</pre>
+
+      <h6>Listing 12: A client for Echoer objects.</h6>
+    </blockquote>
+
+    <p>The utility function <code>pb.getObjectAt</code> retrieves
+    the root object from a hostname/port-number pair and makes a
+    callback (in this case, <code>gotObject</code>) if it can
+    connect and retrieve the object reference successfully, and an
+    error callback (<code>gotNoObject</code>) if it cannot connect
+    or the connection times out.</p>
+
+    <p><code>gotObject</code> receives the remote reference, and
+    sends the <code>echo</code> message to it. This call is
+    visually noticeable as a remote method invocation by the
+    distinctive <code>pbcallback</code> keyword argument. When the
+    result from that call is received, <code>gotEcho</code> will be
+    called, notifying us that in fact, the server echoed our input
+    ("hello network").</p>
+
+    <p>While this setup might be useful for certain simple types of
+    applications where there is no notion of a "user", the
+    additional complexity necessary for authentication and service
+    segregation is worth it. In particular, re-use of server code
+    for things like chat (twisted.words) is a lot easier with a
+    unified notion of users and authentication.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import main
+class SimplePerspective(pb.Perspective):
+    def perspective_echo(self, text):
+        print 'echoing',text
+        return text
+class SimpleService(pb.Service):
+    def getPerspectiveNamed(self, name):
+        return SimplePerspective(name, self)
+if __name__ == '__main__':
+    import pbecho
+    app = main.Application("pbecho")
+    pbecho.SimpleService("pbecho",app).getPerspectiveNamed("guest")\
+        .makeIdentity("guest")
+    app.listenOn(pb.portno, pb.BrokerFactory(pb.AuthRoot(app)))
+    app.save("start")
+</pre>
+
+      <h6>Listing 13: A PB server using twisted's "passport"
+      authentication.</h6>
+    </blockquote>
+
+    <p>In terms of the "functionality" it offers, this server is
+    identical. It provides a method which will echo some simple
+    object sent to it. However, this server provides it in a manner
+    which will allow it to cooperate with multiple other
+    authenticated services running on the same connection, because
+    it uses the central Authorizer for the application.</p>
+
+    <p>On the line that creates the <code>SimpleService</code>,
+    several things happen.</p>
+
+    <ol>
+      <li>A SimpleService is created and persistently added to the
+      <code>Application</code> instance.</li>
+
+      <li>A SimplePerspective is created, via the overridden
+      <code>getPerspectiveNamed</code> method.</li>
+
+      <li>That <code>SimplePerspective</code> has an
+      <code>Identity</code> generated for it, and persistently
+      added to the <code>Application</code>'s
+      <code>Authorizer</code>. The created identity will have the
+      same name as the perspective ("guest"), and the password
+      supplied (also, "guest"). It will also have a reference to
+      the service "pbecho" and a perspective named "guest", by
+      name. The <code>Perspective.makeIdentity</code> utility
+      method prevents having to deal with the intricacies of the
+      passport <code>Authorizer</code> system when one doesn't
+      require strongly separate <code>Identity</code>s and
+      <code>Perspective</code>s.</li>
+    </ol>
+    <br />
+     <br />
+     
+
+    <p>Also, this server does not run itself, but instead persists
+    to a file which can be run with twistd, offering all the usual
+    amenities of daemonization, logging, etc. Once the server is
+    run, connecting to it is similar to the previous example.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import main
+def success(message):
+    print "Message received:",message
+    main.shutDown()
+def failure(error):
+    print "Failure...",error
+    main.shutDown()
+def connected(perspective):
+    perspective.echo("hello world",
+                     pbcallback=success,
+                     pberrback=failure)
+    print "connected."
+pb.connect(connected, failure,   "localhost", pb.portno,
+           "guest", "guest",     "pbecho", "guest", 30)
+main.run()
+</pre>
+
+      <h6>Listing 14: Connecting to an Authorized Service</h6>
+    </blockquote>
+    <br />
+     <br />
+     
+
+    <p>This introduces a new utility -- <code>pb.connect</code>.
+    This function takes a long list of arguments and manages the
+    handshaking and challenge/response aspects of connecting to a
+    PB service perspective, eventually calling back to indicate
+    either success or failure. In this particular example, we are
+    connecting to localhost on the default PB port (8787),
+    authenticating to the identity "guest" with the password
+    "guest", requesting the perspective "guest" from the service
+    "pbecho". If this can't be done within 30 seconds, the
+    connection will abort.</p>
+
+    <p>In these examples, I've attempted to show how Twisted makes
+    event-based scripting easier; this facilitates the ability to
+    run short scripts as part of a long-running process. However,
+    event-based programming is not natural to procedural scripts;
+    it is more generally accepted that GUI programs will be
+    event-driven whereas scripts will be blocking. An alternative
+    client to our <code>SimpleService</code> using GTK illustrates
+    the seamless meshing of Twisted and GTK.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.internet import main, ingtkernet
+from twisted.spread.ui import gtkutil
+import gtk
+ingtkernet.install()
+class EchoClient:
+    def __init__(self, echoer):
+        l.hide()
+        self.echoer = echoer
+        w = gtk.GtkWindow(gtk.WINDOW_TOPLEVEL)
+        vb = gtk.GtkVBox(); b = gtk.GtkButton("Echo:")
+        self.entry = gtk.GtkEntry(); self.outry = gtk.GtkEntry()
+        w.add(vb)
+        map(vb.add, [b, self.entry, self.outry])
+        b.connect('clicked', self.clicked)
+        w.connect('destroy', gtk.mainquit)
+        w.show_all()
+    def clicked(self, b):
+        txt = self.entry.get_text()
+        self.entry.set_text("")
+        self.echoer.echo(txt, pbcallback=self.outry.set_text)
+l = gtkutil.Login(EchoClient, None, initialService="pbecho")
+l.show_all()
+gtk.mainloop()
+</pre>
+
+      <h6>Listing 15: A Twisted GUI application</h6>
+    </blockquote>
+
+    <h3>Event-Driven Web Object Publishing with Web.Widgets</h3>
+
+    <p>Although PB will be interesting to those people who wish to
+    write custom clients for their networked applications, many
+    prefer or require a web-based front end. Twisted's built-in web
+    server has been designed to accommodate this desire, and the
+    presentation framework that one would use to write such an
+    application is <code>twisted.web.widgets</code>. Web.Widgets
+    has been designed to work in an event-based manner, without
+    adding overhead to the designer or the developer's
+    work-flow.</p>
+
+    <p>Surprisingly, asynchronous web interfaces fit very well into
+    the normal uses of purpose-built web toolkits such as PHP. Any
+    experienced PHP, Zope, or WebWare developer will tell you that
+    <em>separation of presentation, content, and logic</em> is very
+    important. In practice, this results in a "header" block of
+    code which sets up various functions which are called
+    throughout the page, some of which load blocks of content to
+    display. While PHP does not enforce this, it is certainly
+    idiomatic. Zope enforces it to a limited degree, although it
+    still allows control structures and other programmatic elements
+    in the body of the content.</p>
+
+    <p>In Web.Widgets, strict enforcement of this principle
+    coincides very neatly with a "hands-free" event-based
+    integration, where much of the work of declaring callbacks is
+    implicit. A "Presentation" has a very simple structure for
+    evaluating Python expressions and giving them a context to
+    operate in. The "header" block which is common to many
+    templating systems becomes a class, which represents an
+    enumeration of events that the template may generate, each of
+    which may be responded to either immediately or latently.</p>
+
+    <p>For the sake of simplicity, as well as maintaining
+    compatibility for potential document formats other than HTML,
+    Presentation widgets do not attempt to parse their template as
+    HTML tags. The structure of the template is <code>"HTML Text
+    %%%%python_expression()%%%% more HTML Text"</code>. Every set
+    of 4 percent signs (%%%%) switches back and forth between
+    evaluation and printing.</p>
+
+    <p>No control structures are allowed in the template. This was
+    originally thought to be a potentially major inconvenience, but
+    with use of the Web.Widgets code to develop a few small sites,
+    it has seemed trivial to encapsulate any table-formatting code
+    within a method; especially since those methods can take string
+    arguments if there's a need to customize the table's
+    appearance.</p>
+
+    <p>The namespace for evaluating the template expressions is
+    obtained by scanning the class hierarchy for attributes, and
+    getting each of those attributes from the current instance.
+    This means that all methods will be bound methods, so
+    indicating "self" explicitly is not required. While it is
+    possible to override the method for creating namespaces, using
+    this default has the effect of associating all presentation
+    code for a particular widget in one class, along with its
+    template. If one is working with a non-programmer designer, and
+    the template is in an external file, it is always very clear to
+    the designer what functionality is available to them in any
+    given scope, because there is a list of available methods for
+    any given class.</p>
+
+    <p>A convenient event to register for would be a response from
+    the PB service that we just implemented. We can use the
+    <code>Deferred</code> class in order to indicate to the widgets
+    framework that certain work has to be done later. This is a
+    Twisted convention which one can currently use in PB as well as
+    webwidgets; any framework which needs the ability to defer a
+    return value until later should use this facility. Elements of
+    the page will be rendered from top to bottom as data becomes
+    available, so the page will not be blocked on rendering until
+    all deferred elements have been completed.</p>
+
+    <blockquote>
+<pre class="python">
+from twisted.spread import pb
+from twisted.python import defer
+from twisted.web import widgets
+class EchoDisplay(widgets.Presentation):
+    template = """&lt;H1&gt;Welcome to my widget, displaying %%%%echotext%%%%.&lt;/h1&gt;
+    &lt;p&gt;Here it is: %%%%getEchoPerspective()%%%%&lt;/p&gt;"""
+    echotext = 'hello web!'
+    def getEchoPerspective(self):
+        d = defer.Deferred()
+        pb.connect(d.callback, d.errback, "localhost", pb.portno,
+                   "guest", "guest",      "pbecho", "guest", 1)
+        d.addCallbacks(self.makeListOf, self.formatTraceback)
+        return ['&lt;b&gt;',d,'&lt;/b&gt;']
+    def makeListOf(self, echoer):
+        d = defer.Deferred()
+        echoer.echo(self.echotext, pbcallback=d.callback, pberrback=d.errback)
+        d.addCallbacks(widgets.listify, self.formatTraceback)
+        return [d]
+if __name__ == "__main__":
+    from twisted.web import server
+    from twisted.internet import main
+    a = main.Application("pbweb")
+    gdgt = widgets.Gadget()
+    gdgt.widgets['index'] = EchoDisplay()
+    a.listenOn(8080, server.Site(gdgt))
+    a.run()
+</pre>
+
+      <h6>Listing 16: an event-based web widget.</h6>
+    </blockquote>
+
+    <p>Each time a Deferred is returned as part of the page, the
+    page will pause rendering until the deferred's
+    <code>callback</code> method is invoked. When that callback is
+    made, it is inserted at the point in the page where rendering
+    left off.</p>
+
+    <p>If necessary, there are options within web.widgets to allow
+    a widget to postpone or cease rendering of the entire page --
+    for example, it is possible to write a FileDownload widget,
+    which will override the rendering of the entire page and
+    replace it with a file download.</p>
+
+    <p>The final goal of web.widgets is to provide a framework
+    which encourages the development of usable library code. Too
+    much web-based code is thrown away due to its particular
+    environment requirements or stylistic preconceptions it carries
+    with it. The goal is to combine the fast-and-loose iterative
+    development cycle of PHP with the ease of installation and use
+    of Zope's "Product" plugins.</p>
+
+    <h3>Things That Twisted Does Not Do</h3>
+
+    <p>It is unfortunately well beyond the scope of this paper to
+    cover all the functionality that Twisted provides, but it
+    serves as a good overview. It may seem as though twisted does
+    anything and everything, but there are certain features we
+    never plan to implement because they are simply outside the
+    scope of the project.</p>
+
+    <p>Despite the multiple ways to publish and access objects,
+    Twisted does not have or support an interface definition
+    language. Some developers on the Twisted project have
+    experience with remote object interfaces that require explicit
+    specification of all datatypes during the design of an object's
+    interface. We feel that such interfaces are in the spirit of
+    statically-typed languages, and are therefore suited to the
+    domain of problems where statically-typed languages excel.
+    Twisted has no plans to implement a protocol schema or static
+    type-checking mechanism, as the efficiency gained by such an
+    approach would be quickly lost again by requiring the type
+    conversion between Python's dynamic types and the protocol's
+    static ones. Since one of the key advantages of Python is its
+    extremely flexible dynamic type system, we felt that a
+    dynamically typed approach to protocol design would share some
+    of those advantages.</p>
+
+    <p>Twisted does not assume that all data is stored in a
+    relational database, or even an efficient object database.
+    Currently, Twisted's configuration state is all stored in
+    memory at run-time, and the persistent parts of it are pickled
+    at one go. There are no plans to move the configuration objects
+    into a "real" database, as we feel it is easier to keep a naive
+    form of persistence for the default case and let
+    application-specific persistence mechanisms handle persistence.
+    Consequently, there is no object-relational mapping in Twisted;
+    <code>twisted.enterprise</code> is an interface to the
+    relational paradigm, not an object-oriented layer over it.</p>
+
+    <p>There are other things that Twisted will not do as well, but
+    these have been frequently discussed as possibilities for it.
+    The general rule of thumb is that if something will increase
+    the required installation overhead, then Twisted will probably
+    not do it. Optional additions that enhance integration with
+    external systems are always welcome: for example, database
+    drivers for Twisted or a CORBA IDL for PB objects.</p>
+
+    <h3>Future Directions</h3>
+
+    <p>Twisted is still a work in progress. The number of protocols
+    in the world is infinite for all practical purposes, and it
+    would be nice to have a central repository of event-based
+    protocol implementations. Better integration with frameworks
+    and operating systems is also a goal. Examples for integration
+    opportunities are automatic creation of installer for "tap"
+    files (for Red Hat Packager-based distributions, FreeBSD's
+    package management system or Microsoft Windows(tm) installers),
+    and integration with other event-dispatch mechanisms, such as
+    win32's native message dispatch.</p>
+
+    <p>A still-nascent feature of Twisted, which this paper only
+    touches briefly upon, is <code>twisted.enterprise</code>: it is
+    planned that Twisted will have first-class database support
+    some time in the near future. In particular, integration
+    between twisted.web and twisted.enterprise to allow developers
+    to have SQL conveniences that they are used to from other
+    frameworks.</p>
+
+    <p>Another direction that we hope Twisted will progress in is
+    standardization and porting of PB as a messaging protocol. Some
+    progress has already been made in that direction, with XEmacs
+    integration nearly ready for release as of this writing.</p>
+
+    <p>Tighter integration of protocols is also a future goal, such
+    an FTP server that can serve the same resources as a web
+    server, or a web server that allows users to change their POP3
+    password. While Twisted is already a very tightly integrated
+    framework, there is always room for more integration. Of
+    course, all this should be done in a flexible way, so the
+    end-user will choose which components to use -- and have those
+    components work well together.</p>
+
+    <h3>Conclusions</h3>
+
+    <p>As shown, Twisted provides a lot of functionality to the
+    Python network programmer, while trying to be in his way as
+    little as possible. Twisted gives good tools for both someone
+    trying to implement a new protocol, or someone trying to use an
+    existing protocol. Twisted allows developers to prototype and
+    develop object communication models with PB, without designing
+    a byte-level protocol. Twisted tries to have an easy way to
+    record useful deployment options, via the
+    <code>twisted.tap</code> and plugin mechanisms, while making it
+    easy to generate new forms of deployment. And last but not
+    least, even Twisted is written in a high-level language and
+    uses its dynamic facilities to give an easy API, it has
+    performance which is good enough for most situations -- for
+    example, the web server can easily saturate a T1 line serving
+    dynamic requests on low-end machines.</p>
+
+    <p>While still an active project, Twisted can already used for
+    production programs. Twisted can be downloaded from the main
+    Twisted site (http://www.twistedmatrix.com) where there is also
+    documentation for using and programming Twisted.</p>
+
+    <h3>Acknowledgements</h3>
+
+    <p>We wish to thank Sean Riley, Allen Short, Chris Armstrong,
+    Paul Swartz, J&uuml;rgen Hermann, Benjamin Bruheim, Travis B.
+    Hartwell, and Itamar Shtull-Trauring for being a part of the
+    Twisted development team with us.</p>
+
+    <p>Thanks also to Jason Asbahr, Tommi Virtanen, Gavin Cooper,
+    Erno Kuusela, Nick Moffit, Jeremy Fincher, Jerry Hebert, Keith
+    Zaback, Matthew Walker, and Dan Moniz, for providing insight,
+    commentary, bandwidth, crazy ideas, and bug-fixes (in no
+    particular order) to the Twisted team.</p>
+
+    <h3>References</h3>
+
+    <ol>
+      <li>The Twisted site, http://www.twistedmatrix.com</li>
+
+      <li>Douglas Schmidt, Michael Stal, Hans Rohnert and Frank
+      Buschmann, Pattern-Oriented Software Architecture, Volume 2,
+      Patterns for Concurrent and Networked Objects, John Wiley
+      &amp; Sons</li>
+
+      <li>Abhishek Chandra, David Mosberger, Scalability of Linux
+      Event-Dispatch Mechanisms, USENIX 2001,
+      http://lass.cs.umass.edu/~abhishek/papers/usenix01/paper.ps</li>
+
+      <li>Protocol specifications, http://www.rfc-editor.com</li>
+
+      <li>The Twisted Philosophical FAQ,
+      http://www.twistedmatrix.com/page.epy/twistedphil.html</li>
+
+      <li>Twisted Advocacy,
+      http://www.twistedmatrix.com/page.epy/whytwisted.html</li>
+
+      <li>Medusa, http://www.nightmare.com/medusa/index.html</li>
+
+      <li>Using Spreadable Web Servers,
+      http://www.twistedmatrix.com/users/jh.twistd/python/moin.cgi/TwistedWeb</li>
+
+      <li>Twisted Spread implementations for other languages,
+      http://www.twistedmatrix.com/users/washort/</li>
+
+      <li>PHP: Hypertext Preprocessor, http://www.php.net/</li>
+
+      <li>The Z Object Publishing Environment,
+      http://www.zope.org/, http://zope.com/</li>
+    </ol>
+  </body>
+</html>
+

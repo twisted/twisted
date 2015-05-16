@@ -12,14 +12,19 @@ U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
+from __future__ import print_function
+from __future__ import division, absolute_import
+
 # System Imports
+import inspect
 import os
 import sys
 import getopt
 from os import path
+import textwrap
 
 # Sibling Imports
-from twisted.python import reflect, text, util
+from twisted.python import reflect, util
 
 
 class UsageError(Exception):
@@ -52,7 +57,7 @@ class CoerceParameter(object):
                              % (parameterName,))
         try:
             value = self.coerce(value)
-        except ValueError, e:
+        except ValueError as e:
             raise UsageError("Parameter type enforcement failed: %s" % (e,))
 
         self.options.opts[parameterName] = value
@@ -71,8 +76,8 @@ class Options(dict):
     optFlags is assigned a list of lists. Each list represents
     a flag parameter, as so::
 
-    |    optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
-    |                ['quiet', 'q', 'Be vewy vewy quiet.']]
+       optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
+                   ['quiet', 'q', 'Be vewy vewy quiet.']]
 
     As you can see, the first item is the long option name
     (prefixed with '--' on the command line), followed by the
@@ -83,7 +88,7 @@ class Options(dict):
     C{optParameters} is much the same, except the list also contains
     a default value::
 
-    | optParameters = [['outfile', 'O', 'outfile.log', 'Description...']]
+       optParameters = [['outfile', 'O', 'outfile.log', 'Description...']]
 
     A coerce function can also be specified as the last element: it will be
     called with the argument and should return the value that will be stored
@@ -96,12 +101,12 @@ class Options(dict):
     instantiated and given the remainder of the arguments to parse and
     self.opts[command] is set to the command name.  For example::
 
-    | subCommands = [
-    |      ['inquisition', 'inquest', InquisitionOptions,
-    |           'Perform an inquisition'],
-    |      ['holyquest', 'quest', HolyQuestOptions,
-    |           'Embark upon a holy quest']
-    |  ]
+       subCommands = [
+            ['inquisition', 'inquest', InquisitionOptions,
+                 'Perform an inquisition'],
+            ['holyquest', 'quest', HolyQuestOptions,
+                 'Embark upon a holy quest']
+        ]
 
     In this case, C{"<program> holyquest --horseback --for-grail"} will cause
     C{HolyQuestOptions} to be instantiated and asked to parse
@@ -111,9 +116,9 @@ class Options(dict):
     subOptions attribute is set to the Option instance that parses the
     remaining options. If a subcommand is not given to parseOptions,
     the subCommand attribute will be None. You can also mark one of
-    the subCommands to be the default.
+    the subCommands to be the default::
 
-    | defaultSubCommand = 'holyquest'
+       defaultSubCommand = 'holyquest'
 
     In this case, the subCommand attribute will never be None, and
     the subOptions attribute will always be set.
@@ -182,19 +187,15 @@ class Options(dict):
             self.synonyms.update(synonyms)
             self._dispatch.update(dispatch)
 
-    def __hash__(self):
-        """
-        Define a custom hash function so that Options instances can be used
-        as dictionary keys.  This is an internal feature used to implement
-        the parser.  Do not rely on it in application code.
-        """
-        return int(id(self) % sys.maxint)
+
+    __hash__ = object.__hash__
+
 
     def opt_help(self):
         """
         Display this help and exit.
         """
-        print self.__str__()
+        print(self.__str__())
         sys.exit(0)
 
     def opt_version(self):
@@ -202,7 +203,7 @@ class Options(dict):
         Display Twisted version and exit.
         """
         from twisted import copyright
-        print "Twisted version:", copyright.version
+        print("Twisted version:", copyright.version)
         sys.exit(0)
 
     #opt_h = opt_help # this conflicted with existing 'host' options.
@@ -232,7 +233,7 @@ class Options(dict):
         try:
             opts, args = getopt.getopt(options,
                                        self.shortOpt, self.longOpt)
-        except getopt.error, e:
+        except getopt.error as e:
             raise UsageError(str(e))
 
         for opt, arg in opts:
@@ -432,15 +433,11 @@ class Options(dict):
                 reverse_dct[method] = []
             reverse_dct[method].append(name.replace('_', '-'))
 
-        cmpLength = lambda a, b: cmp(len(a), len(b))
-
         for method, names in reverse_dct.items():
             if len(names) < 2:
                 continue
-            names_ = names[:]
-            names_.sort(cmpLength)
-            longest = names_.pop()
-            for name in names_:
+            longest = max(names, key=len)
+            for name in names:
                 synonyms[name] = longest
 
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
@@ -535,7 +532,7 @@ class Options(dict):
 
         if longdesc:
             longdesc = ('\n' +
-                        '\n'.join(text.wordWrap(longdesc, width)).strip()
+                        '\n'.join(textwrap.wrap(longdesc, width)).strip()
                         + '\n')
 
         if optDicts:
@@ -806,7 +803,7 @@ class Completions(object):
         option will have either of the strings "one", "two", or "three"
         completed when the user presses Tab.
 
-        "colors" will allow multiple arguments to be completed, seperated by
+        "colors" will allow multiple arguments to be completed, separated by
         commas. The possible arguments are red, green, and blue. Examples::
 
             my_command --foo some-file.foo --colors=red,green
@@ -935,7 +932,7 @@ def docMakeChunks(optList, width=80):
                 doc = "%s. %s" % (doc, d.doc)
 
         if doc:
-            column2_l = text.wordWrap(doc, colWidth2)
+            column2_l = textwrap.wrap(doc, colWidth2)
         else:
             column2_l = ['']
 
@@ -949,15 +946,36 @@ def docMakeChunks(optList, width=80):
     return optChunks
 
 
+
 def flagFunction(method, name=None):
-    reqArgs = method.im_func.func_code.co_argcount
+    """
+    Determine whether a function is an optional handler for a I{flag} or an
+    I{option}.
+
+    A I{flag} handler takes no additional arguments.  It is used to handle
+    command-line arguments like I{--nodaemon}.
+
+    An I{option} handler takes one argument.  It is used to handle command-line
+    arguments like I{--path=/foo/bar}.
+
+    @param method: The bound method object to inspect.
+
+    @param name: The name of the option for which the function is a handle.
+    @type name: L{str}
+
+    @raise UsageError: If the method takes more than one argument.
+
+    @return: If the method is a flag handler, return C{True}.  Otherwise return
+        C{False}.
+    """
+    reqArgs = len(inspect.getargspec(method).args)
     if reqArgs > 2:
         raise UsageError('Invalid Option function for %s' %
-                         (name or method.func_name))
+                         (name or method.__name__))
     if reqArgs == 2:
-        # argName = method.im_func.func_code.co_varnames[1]
-        return 0
-    return 1
+        return False
+    return True
+
 
 
 def portCoerce(value):
@@ -969,5 +987,3 @@ def portCoerce(value):
         raise ValueError("Port number not in range: %s" % (value,))
     return value
 portCoerce.coerceDoc = "Must be an int between 0 and 65535."
-
-

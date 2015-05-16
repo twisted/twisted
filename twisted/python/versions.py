@@ -8,9 +8,13 @@ Versions for Python packages.
 See L{Version}.
 """
 
+from __future__ import division, absolute_import
+
 import sys, os
 
+from twisted.python.compat import cmp, comparable, nativeString
 
+@comparable
 class _inf(object):
     """
     An object that is bigger than all other objects.
@@ -30,11 +34,15 @@ class _inf(object):
 _inf = _inf()
 
 
+
 class IncomparableVersions(TypeError):
     """
     Two versions could not be compared.
     """
 
+
+
+@comparable
 class Version(object):
     """
     An object that represents a three-part version number.
@@ -70,7 +78,7 @@ class Version(object):
         s = self.base()
         svnver = self._getSVNVersion()
         if svnver:
-            s += '+r' + str(svnver)
+            s += '+r' + nativeString(svnver)
         return s
 
 
@@ -182,8 +190,8 @@ class Version(object):
         entriesFile.readline()
         entriesFile.readline()
         return entriesFile.readline().strip()
-    
-    
+
+
     # Add handlers for version 9 and 10 formats, which are the same as
     # version 8 as far as revision information is concerned.
     _parseSVNEntries_9 = _parseSVNEntries_8
@@ -192,7 +200,7 @@ class Version(object):
 
     def _getSVNVersion(self):
         """
-        Figure out the SVN revision number based on the existance of
+        Figure out the SVN revision number based on the existence of
         <package>/.svn/entries, and its contents. This requires discovering the
         format version from the 'format' file and parsing the entries file
         accordingly.
@@ -209,25 +217,26 @@ class Version(object):
             formatFile = os.path.join(svn, 'format')
             if os.path.exists(formatFile):
                 # It looks like a less-than-version-10 working copy.
-                format = file(formatFile).read().strip()
-                parser = getattr(self, '_parseSVNEntries_' + format, None)
+                with open(formatFile, 'rb') as fObj:
+                    format = fObj.read().strip()
+                parser = getattr(self, '_parseSVNEntries_' + format.decode('ascii'), None)
             else:
                 # It looks like a version-10-or-greater working copy, which
                 # has version information in the entries file.
                 parser = self._parseSVNEntriesTenPlus
 
             if parser is None:
-                return 'Unknown'
+                return b'Unknown'
 
             entriesFile = os.path.join(svn, 'entries')
-            entries = file(entriesFile)
+            entries = open(entriesFile, 'rb')
             try:
                 try:
                     return parser(entries)
                 finally:
                     entries.close()
             except:
-                return 'Unknown'
+                return b'Unknown'
 
 
     def _formatSVNVersion(self):

@@ -233,9 +233,9 @@ class Context:
         @param parent: Context object or C{None}
         @param scanner: Scanner object
         @param tokenpos: scanner token position
-        @type tokenpos: L{int}
+        @type tokenpos: C{int}
         @param rule: name of the rule
-        @type rule: L{str}
+        @type rule: C{str}
         @param args: tuple listing parameters to the rule
 
         """

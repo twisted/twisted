@@ -183,7 +183,7 @@ class TestConnection(connection.SSHConnection):
 
 
 
-class ConnectionTestCase(unittest.TestCase):
+class ConnectionTests(unittest.TestCase):
 
     if test_userauth.transport is None:
         skip = "Cannot run without both PyCrypto and pyasn1"
@@ -212,7 +212,7 @@ class ConnectionTestCase(unittest.TestCase):
         Test that the connection links itself to the avatar in the
         transport.
         """
-        self.assertIdentical(self.transport.avatar.conn, self.conn)
+        self.assertIs(self.transport.avatar.conn, self.conn)
 
     def test_serviceStopped(self):
         """
@@ -700,7 +700,7 @@ class ConnectionTestCase(unittest.TestCase):
 
 
 
-class TestCleanConnectionShutdown(unittest.TestCase):
+class CleanConnectionShutdownTests(unittest.TestCase):
     """
     Check whether correct cleanup is performed on connection shutdown.
     """

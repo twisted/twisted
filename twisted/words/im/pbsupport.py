@@ -2,9 +2,9 @@
 # See LICENSE for details.
 
 
-"""L{twisted.words} support for Instance Messenger."""
-
-from __future__ import nested_scopes
+"""
+L{twisted.words} support for Instance Messenger.
+"""
 
 from twisted.internet import defer
 from twisted.internet import error

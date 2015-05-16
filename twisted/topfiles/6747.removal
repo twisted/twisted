@@ -1,0 +1,1 @@
+tkunzip and tapconvert in twisted.scripts were deprecated in 11.0 and 12.1 respectively, and are now removed.

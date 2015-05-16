@@ -1,17 +1,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-#
 from twisted.trial import unittest
 
-from twisted.internet import protocol, reactor, error
-from twisted.python import failure, components
+from twisted.python import components
 from twisted.pair import ethernet, raw
 from zope.interface import implements
 
+
 class MyProtocol:
     implements(raw.IRawPacketProtocol)
-    
+
     def __init__(self, expecting):
         self.expecting = list(expecting)
 
@@ -23,7 +21,7 @@ class MyProtocol:
             expect, (data, kw),
             )
 
-class EthernetTestCase(unittest.TestCase):
+class EthernetTests(unittest.TestCase):
     def testPacketParsing(self):
         proto = ethernet.EthernetProtocol()
         p1 = MyProtocol([

@@ -6,16 +6,18 @@
 Test cases for Twisted component architecture.
 """
 
-from zope.interface import Interface, implements, Attribute
+from __future__ import division, absolute_import
+
+from functools import wraps
+
+from zope.interface import Interface, implementer, Attribute
 from zope.interface.adapter import AdapterRegistry
 
+from twisted.python.compat import comparable, cmp
 from twisted.trial import unittest
 from twisted.python import components
 from twisted.python.components import _addHook, _removeHook, proxyForInterface
 
-
-class InterfacesTestCase(unittest.TestCase):
-    """Test interfaces."""
 
 class Compo(components.Componentized):
     num = 0
@@ -33,8 +35,8 @@ class IElapsed(Interface):
         1!
         """
 
+@implementer(IAdept)
 class Adept(components.Adapter):
-    implements(IAdept)
     def __init__(self, orig):
         self.original = orig
         self.num = 0
@@ -42,8 +44,8 @@ class Adept(components.Adapter):
         self.num = self.num + 1
         return self.num, self.original.inc()
 
+@implementer(IElapsed)
 class Elapsed(components.Adapter):
-    implements(IElapsed)
     def elapsedFunc(self):
         return 1
 
@@ -56,18 +58,28 @@ class CComp(BComp):
 
 class ITest(Interface):
     pass
+
+
 class ITest2(Interface):
     pass
+
+
 class ITest3(Interface):
     pass
+
+
 class ITest4(Interface):
     pass
+
+
+@implementer(ITest, ITest3, ITest4)
 class Test(components.Adapter):
-    implements(ITest, ITest3, ITest4)
     def __init__(self, orig):
         pass
+
+
+@implementer(ITest2)
 class Test2:
-    implements(ITest2)
     temporaryAdapter = 1
     def __init__(self, orig):
         pass
@@ -95,7 +107,7 @@ class RegistryUsingMixin(object):
 
 
 
-class ComponentizedTestCase(unittest.TestCase, RegistryUsingMixin):
+class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
     """
     Simple test case for caching in Componentized.
     """
@@ -133,7 +145,6 @@ class ComponentizedTestCase(unittest.TestCase, RegistryUsingMixin):
     def testMultiAdapter(self):
         c = CComp()
         co1 = c.getComponent(ITest)
-        co2 = c.getComponent(ITest2)
         co3 = c.getComponent(ITest3)
         co4 = c.getComponent(ITest4)
         self.assertIdentical(None, co4)
@@ -158,8 +169,66 @@ class ComponentizedTestCase(unittest.TestCase, RegistryUsingMixin):
             None)
 
 
+    def test_setAdapter(self):
+        """
+        C{Componentized.setAdapter} sets a component for an interface by
+        wrapping the instance with the given adapter class.
+        """
+        componentized = components.Componentized()
+        componentized.setAdapter(IAdept, Adept)
+        component = componentized.getComponent(IAdept)
+        self.assertEqual(component.original, componentized)
+        self.assertIsInstance(component, Adept)
 
-class AdapterTestCase(unittest.TestCase):
+
+    def test_addAdapter(self):
+        """
+        C{Componentized.setAdapter} adapts the instance by wrapping it with
+        given adapter class, then stores it using C{addComponent}.
+        """
+        componentized = components.Componentized()
+        componentized.addAdapter(Adept, ignoreClass=True)
+        component = componentized.getComponent(IAdept)
+        self.assertEqual(component.original, componentized)
+        self.assertIsInstance(component, Adept)
+
+
+    def test_setComponent(self):
+        """
+        C{Componentized.setComponent} stores the given component using the
+        given interface as the key.
+        """
+        componentized = components.Componentized()
+        obj = object()
+        componentized.setComponent(ITest, obj)
+        self.assertIdentical(componentized.getComponent(ITest), obj)
+
+
+    def test_unsetComponent(self):
+        """
+        C{Componentized.setComponent} removes the cached component for the
+        given interface.
+        """
+        componentized = components.Componentized()
+        obj = object()
+        componentized.setComponent(ITest, obj)
+        componentized.unsetComponent(ITest)
+        self.assertIdentical(componentized.getComponent(ITest), None)
+
+
+    def test_reprableComponentized(self):
+        """
+        C{ReprableComponentized} has a C{__repr__} that lists its cache.
+        """
+        rc = components.ReprableComponentized()
+        rc.setComponent(ITest, "hello")
+        result = repr(rc)
+        self.assertIn("ITest", result)
+        self.assertIn("hello", result)
+
+
+
+class AdapterTests(unittest.SynchronousTestCase):
     """Test adapters."""
 
     def testAdapterGetComponent(self):
@@ -173,13 +242,13 @@ class AdapterTestCase(unittest.TestCase):
 class IMeta(Interface):
     pass
 
+@implementer(IMeta)
 class MetaAdder(components.Adapter):
-    implements(IMeta)
     def add(self, num):
         return self.original.num + num
 
+@implementer(IMeta)
 class BackwardsAdder(components.Adapter):
-    implements(IMeta)
     def add(self, num):
         return self.original.num - num
 
@@ -199,8 +268,8 @@ class ComponentNumber(components.Componentized):
         self.num = 0
         components.Componentized.__init__(self)
 
+implementer(IMeta)
 class ComponentMeta(components.Adapter):
-    implements(IMeta)
     def __init__(self, original):
         components.Adapter.__init__(self, original)
         self.num = self.original.num
@@ -223,11 +292,12 @@ class IAttrXX(Interface):
     def xx():
         pass
 
+@implementer(IAttrX)
 class Xcellent:
-    implements(IAttrX)
     def x(self):
         return 'x!'
 
+@comparable
 class DoubleXAdapter:
     num = 42
     def __init__(self, original):
@@ -238,7 +308,7 @@ class DoubleXAdapter:
         return cmp(self.num, other.num)
 
 
-class TestMetaInterface(RegistryUsingMixin, unittest.TestCase):
+class MetaInterfaceTests(RegistryUsingMixin, unittest.SynchronousTestCase):
     def testBasic(self):
         components.registerAdapter(MetaAdder, MetaNumber, IMeta)
         n = MetaNumber(1)
@@ -258,7 +328,7 @@ class TestMetaInterface(RegistryUsingMixin, unittest.TestCase):
         self.assertEqual(('x!', 'x!'), xx.xx())
 
 
-class RegistrationTestCase(RegistryUsingMixin, unittest.TestCase):
+class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
     """
     Tests for adapter registration.
     """
@@ -477,7 +547,7 @@ class IProxiedSubInterface(IProxiedInterface):
         """
 
 
-
+@implementer(IProxiedInterface)
 class Yayable(object):
     """
     A provider of L{IProxiedInterface} which increments a counter for
@@ -485,7 +555,6 @@ class Yayable(object):
 
     @ivar yays: The number of times C{yay} has been called.
     """
-    implements(IProxiedInterface)
 
     def __init__(self):
         self.yays = 0
@@ -500,11 +569,12 @@ class Yayable(object):
         return self.yays
 
 
+
+@implementer(IProxiedSubInterface)
 class Booable(object):
     """
     An implementation of IProxiedSubInterface
     """
-    implements(IProxiedSubInterface)
     yayed = False
     booed = False
     def yay(self):
@@ -559,7 +629,7 @@ class MultipleMethodImplementor(object):
 
 
 
-class ProxyForInterfaceTests(unittest.TestCase):
+class ProxyForInterfaceTests(unittest.SynchronousTestCase):
     """
     Tests for L{proxyForInterface}.
     """
@@ -585,6 +655,24 @@ class ProxyForInterfaceTests(unittest.TestCase):
         proxy.yay()
         self.assertEqual(proxy.yay(), 2)
         self.assertEqual(yayable.yays, 2)
+
+
+    def test_decoratedProxyMethod(self):
+        """
+        Methods of the class created from L{proxyForInterface} can be used with
+        the decorator-helper L{functools.wraps}.
+        """
+        base = proxyForInterface(IProxiedInterface)
+        class klass(base):
+            @wraps(base.yay)
+            def yay(self):
+                self.original.yays += 1
+                return base.yay(self)
+
+        original = Yayable()
+        yayable = klass(original)
+        yayable.yay()
+        self.assertEqual(2, original.yays)
 
 
     def test_proxyAttribute(self):

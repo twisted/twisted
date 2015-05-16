@@ -11,14 +11,16 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
+from __future__ import division, absolute_import
+
 # System Imports
 import sys
 import linecache
 import inspect
 import opcode
-from cStringIO import StringIO
 from inspect import getmro
 
+from twisted.python.compat import _PY3, NativeStringIO as StringIO
 from twisted.python import reflect
 
 count = 0
@@ -198,13 +200,8 @@ class Failure:
         self.type = self.value = tb = None
         self.captureVars = captureVars
 
-        #strings Exceptions/Failures are bad, mmkay?
-        if isinstance(exc_value, (str, unicode)) and exc_type is None:
-            import warnings
-            warnings.warn(
-                "Don't pass strings (like %r) to failure.Failure (replacing with a DefaultException)." %
-                exc_value, DeprecationWarning, stacklevel=2)
-            exc_value = DefaultException(exc_value)
+        if isinstance(exc_value, str) and exc_type is None:
+            raise TypeError("Strings are not supported by Failure")
 
         stackOffset = 0
 
@@ -231,11 +228,8 @@ class Failure:
         if tb is None:
             if exc_tb:
                 tb = exc_tb
-#             else:
-#                 log.msg("Erf, %r created with no traceback, %s %s." % (
-#                     repr(self), repr(exc_value), repr(exc_type)))
-#                 for s in traceback.format_stack():
-#                     log.msg(s)
+            elif _PY3:
+                tb = self.value.__traceback__
 
         frames = self.frames = []
         stack = self.stack = []
@@ -301,8 +295,8 @@ class Failure:
                 for d in globalz, localz:
                     if "__builtins__" in d:
                         del d["__builtins__"]
-                localz = localz.items()
-                globalz = globalz.items()
+                localz = list(localz.items())
+                globalz = list(globalz.items())
             else:
                 localz = globalz = ()
             frames.append((
@@ -315,7 +309,7 @@ class Failure:
             tb = tb.tb_next
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = getmro(self.type)
-            self.parents = map(reflect.qual, parentCs)
+            self.parents = list(map(reflect.qual, parentCs))
         else:
             self.parents = [self.type]
 
@@ -336,14 +330,18 @@ class Failure:
                 elif r == Eggs:
                     print 'Eggs did it!'
 
-        If the failure is not a Spam or an Eggs, then the Failure
-        will be 'passed on' to the next errback.
+        If the failure is not a Spam or an Eggs, then the Failure will be
+        'passed on' to the next errback. In Python 2 the Failure will be
+        raised; in Python 3 the underlying exception will be re-raised.
 
         @type errorTypes: L{Exception}
         """
         error = self.check(*errorTypes)
         if not error:
-            raise self
+            if _PY3:
+                self.raiseException()
+            else:
+                raise self
         return error
 
     def check(self, *errorTypes):
@@ -362,12 +360,21 @@ class Failure:
         return None
 
 
-    def raiseException(self):
+    # It would be nice to use twisted.python.compat.reraise, but that breaks
+    # the stack exploration in _findFailure; possibly this can be fixed in
+    # #5931.
+    if _PY3:
+        def raiseException(self):
+            raise self.value.with_traceback(self.tb)
+    else:
+        exec("""def raiseException(self):
+    raise self.type, self.value, self.tb""")
+
+    raiseException.__doc__ = (
         """
         raise the original exception, preserving traceback
         information if available.
-        """
-        raise self.type, self.value, self.tb
+        """)
 
 
     def throwExceptionIntoGenerator(self, g):
@@ -405,7 +412,7 @@ class Failure:
         # the tracebacks) here when it is used is not that big a deal.
 
         # handle raiseException-originated exceptions
-        if lastFrame.f_code is cls.raiseException.func_code:
+        if lastFrame.f_code is cls.raiseException.__code__:
             return lastFrame.f_locals.get('self')
 
         # handle throwExceptionIntoGenerator-originated exceptions
@@ -426,7 +433,7 @@ class Failure:
         # second last item):
         if secondLastTb:
             frame = secondLastTb.tb_frame
-            if frame.f_code is cls.throwExceptionIntoGenerator.func_code:
+            if frame.f_code is cls.throwExceptionIntoGenerator.__code__:
                 return frame.f_locals.get('self')
 
         # if the exception was caught below the generator.throw
@@ -435,7 +442,7 @@ class Failure:
         # generator frame itself, thus its caller is
         # throwExceptionIntoGenerator).
         frame = tb.tb_frame.f_back
-        if frame and frame.f_code is cls.throwExceptionIntoGenerator.func_code:
+        if frame and frame.f_code is cls.throwExceptionIntoGenerator.__code__:
             return frame.f_locals.get('self')
 
     _findFailure = classmethod(_findFailure)
@@ -478,10 +485,18 @@ class Failure:
         c['pickled'] = 1
         return c
 
+
     def cleanFailure(self):
-        """Remove references to other objects, replacing them with strings.
+        """
+        Remove references to other objects, replacing them with strings.
+
+        On Python 3, this will also set the C{__traceback__} attribute of the
+        exception instance to C{None}.
         """
         self.__dict__ = self.__getstate__()
+        if _PY3:
+            self.value.__traceback__ = None
+
 
     def getTracebackObject(self):
         """
@@ -533,6 +548,7 @@ class Failure:
             C{'verbose'}.
         """
         if file is None:
+            from twisted.python import log
             file = log.logerr
         w = file.write
 
@@ -573,16 +589,9 @@ class Failure:
 
         # postamble, if any
         if not detail == 'brief':
-            # Unfortunately, self.type will not be a class object if this
-            # Failure was created implicitly from a string exception.
-            # qual() doesn't make any sense on a string, so check for this
-            # case here and just write out the string if that's what we
-            # have.
-            if isinstance(self.type, (str, unicode)):
-                w(self.type + "\n")
-            else:
-                w("%s: %s\n" % (reflect.qual(self.type),
-                                reflect.safe_str(self.value)))
+            w("%s: %s\n" % (reflect.qual(self.type),
+                            reflect.safe_str(self.value)))
+
         # chaining
         if isinstance(self.value, Failure):
             # TODO: indentation for chained failures?
@@ -623,7 +632,7 @@ DO_POST_MORTEM = True
 
 def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
                captureVars=False,
-               Failure__init__=Failure.__init__.im_func):
+               Failure__init__=Failure.__init__):
     """
     Initialize failure object, possibly spawning pdb.
     """
@@ -634,7 +643,7 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
                 strrepr = str(exc[1])
             except:
                 strrepr = "broken str"
-            print "Jumping into debugger for post-mortem of exception '%s':" % (strrepr,)
+            print("Jumping into debugger for post-mortem of exception '%s':" % (strrepr,))
             import pdb
             pdb.post_mortem(exc[2])
     Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
@@ -643,8 +652,3 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
 def startDebugMode():
     """Enable debug hooks for Failures."""
     Failure.__init__ = _debuginit
-
-
-# Sibling imports - at the bottom and unqualified to avoid unresolvable
-# circularity
-import log

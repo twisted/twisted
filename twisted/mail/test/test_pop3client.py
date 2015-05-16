@@ -2,6 +2,9 @@
 # Copyright (c) 2001-2004 Divmod Inc.
 # See LICENSE for details.
 
+import sys
+import inspect
+
 from zope.interface import directlyProvides
 
 from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
@@ -49,7 +52,7 @@ def setUp(greet=True):
 def strip(f):
     return lambda result, f=f: f()
 
-class POP3ClientLoginTestCase(unittest.TestCase):
+class POP3ClientLoginTests(unittest.TestCase):
     def testNegativeGreeting(self):
         p, t = setUp(greet=False)
         p.allowInsecureLogin = True
@@ -184,7 +187,7 @@ class MessageConsumer:
     def consume(self, line):
         self.data.append(line)
 
-class POP3ClientListTestCase(unittest.TestCase):
+class POP3ClientListTests(unittest.TestCase):
     def testListSize(self):
         p, t = setUp()
         d = p.listSize()
@@ -245,7 +248,7 @@ class POP3ClientListTestCase(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Fatal doom server exploded"))
 
-class POP3ClientMessageTestCase(unittest.TestCase):
+class POP3ClientMessageTests(unittest.TestCase):
     def testRetrieve(self):
         p, t = setUp()
         d = p.retrieve(7)
@@ -342,7 +345,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
 
 
 
-class POP3ClientMiscTestCase(unittest.TestCase):
+class POP3ClientMiscTests(unittest.TestCase):
     def testCapability(self):
         p, t = setUp()
         d = p.capabilities(useCache=0)
@@ -479,7 +482,7 @@ class TLSServerFactory(protocol.ServerFactory):
                 self.transport.startTLS(self.context)
 
 
-class POP3TLSTestCase(unittest.TestCase):
+class POP3TLSTests(unittest.TestCase):
     """
     Tests for POP3Client's support for TLS connections.
     """
@@ -541,7 +544,7 @@ class POP3TLSTestCase(unittest.TestCase):
         return cp.deferred
 
 
-class POP3TimeoutTestCase(POP3HelperMixin, unittest.TestCase):
+class POP3TimeoutTests(POP3HelperMixin, unittest.TestCase):
     def testTimeout(self):
         def login():
             d = self.client.login('test', 'twisted')
@@ -574,9 +577,44 @@ class POP3TimeoutTestCase(POP3HelperMixin, unittest.TestCase):
 
 
 if ClientTLSContext is None:
-    for case in (POP3TLSTestCase,):
+    for case in (POP3TLSTests,):
         case.skip = "OpenSSL not present"
 elif interfaces.IReactorSSL(reactor, None) is None:
-    for case in (POP3TLSTestCase,):
+    for case in (POP3TLSTests,):
         case.skip = "Reactor doesn't support SSL"
 
+
+
+import twisted.mail.pop3client
+
+class POP3ClientModuleStructureTests(unittest.TestCase):
+    """
+    Miscellaneous tests more to do with module/package structure than
+    anything to do with the POP3 client.
+    """
+    def test_all(self):
+        """
+        twisted.mail.pop3client.__all__ should be empty because all classes
+        should be imported through twisted.mail.pop3.
+        """
+        self.assertEqual(twisted.mail.pop3client.__all__, [])
+
+
+    def test_import(self):
+        """
+        Every public class in twisted.mail.pop3client should be available as a
+        member of twisted.mail.pop3 with the exception of
+        twisted.mail.pop3client.POP3Client which should be available as
+        twisted.mail.pop3.AdvancedClient.
+        """
+        publicClasses = [c[0] for c in inspect.getmembers(
+                                       sys.modules['twisted.mail.pop3client'],
+                                       inspect.isclass)
+                         if not c[0][0] == '_']
+
+        for pc in publicClasses:
+            if not pc == 'POP3Client':
+                self.failUnless(hasattr(twisted.mail.pop3, pc))
+            else:
+                self.failUnless(hasattr(twisted.mail.pop3,
+                    'AdvancedPOP3Client'))

@@ -10,12 +10,17 @@ from twisted.trial.unittest import TestCase
 from twisted.python.usage import UsageError
 from twisted.mail import protocols
 from twisted.mail.tap import Options, makeService
-from twisted.python import deprecate, versions
 from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.internet import endpoints, defer
 
+if requireModule('OpenSSL') is None:
+    sslSkip = 'Missing OpenSSL package.'
+else:
+    sslSkip = None
 
-class OptionsTestCase(TestCase):
+
+class OptionsTests(TestCase):
     """
     Tests for the command line option parser used for I{twistd mail}.
     """
@@ -45,22 +50,6 @@ class OptionsTestCase(TestCase):
         Options().parseOptions([
             '--maildirdbmdomain', 'example.com=example.com',
             '--aliases', self.aliasFilename])
-
-
-    def testPasswordfileDeprecation(self):
-        """
-        Test that the --passwordfile option will emit a correct warning.
-        """
-        passwd = FilePath(self.mktemp())
-        passwd.setContent("")
-        options = Options()
-        options.opt_passwordfile(passwd.path)
-        warnings = self.flushWarnings([self.testPasswordfileDeprecation])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(len(warnings), 1)
-        msg = deprecate.getDeprecationWarningString(options.opt_passwordfile,
-                             versions.Version('twisted.mail', 11, 0, 0))
-        self.assertEqual(warnings[0]['message'], msg)
 
 
     def test_barePort(self):
@@ -157,8 +146,7 @@ class OptionsTestCase(TestCase):
         The deprecated I{--pop3s} and I{--certificate} options set up a POP3 SSL
         server.
         """
-        cert = FilePath(self.mktemp())
-        cert.setContent("")
+        cert = FilePath(__file__).sibling("server.pem")
         options = Options()
         options.parseOptions(['--pop3s', '8995',
                               '--certificate', cert.path])
@@ -175,6 +163,8 @@ class OptionsTestCase(TestCase):
             warnings[0]['message'],
             "Specifying plain ports and/or a certificate is deprecated since "
             "Twisted 11.0; use endpoint descriptions instead.")
+    if sslSkip is not None:
+        test_pop3sBackwardCompatibility.skip = sslSkip
 
 
     def test_esmtpWithoutHostname(self):
@@ -185,6 +175,20 @@ class OptionsTestCase(TestCase):
         options = Options()
         exc = self.assertRaises(UsageError, options.parseOptions, ['--esmtp'])
         self.assertEqual("--esmtp requires --hostname", str(exc))
+
+
+    def test_auth(self):
+        """
+        Tests that the --auth option registers a checker.
+        """
+        options = Options()
+        options.parseOptions(['--auth', 'memory:admin:admin:bob:password'])
+        self.assertEqual(len(options['credCheckers']), 1)
+        checker = options['credCheckers'][0]
+        interfaces = checker.credentialInterfaces
+        registered_checkers = options.service.smtpPortal.checkers
+        for iface in interfaces:
+            self.assertEqual(checker, registered_checkers[iface])
 
 
 

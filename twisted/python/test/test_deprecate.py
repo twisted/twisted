@@ -5,282 +5,37 @@
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
 
-import sys, types
-import warnings
-from os.path import normcase
+from __future__ import division, absolute_import
 
-from twisted.trial.unittest import TestCase
+import sys, types, warnings, inspect
+from os.path import normcase
+from warnings import simplefilter, catch_warnings
+try:
+    from importlib import invalidate_caches
+except ImportError:
+    invalidate_caches = None
 
 from twisted.python import deprecate
-from twisted.python.deprecate import _appendToDocstring
-from twisted.python.deprecate import _getDeprecationDocstring
-from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.deprecate import _getDeprecationWarningString
 from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
-from twisted.python.reflect import fullyQualifiedName
+from twisted.python.deprecate import (
+    getDeprecationWarningString,
+    deprecated, _appendToDocstring, _getDeprecationDocstring,
+    _fullyQualifiedName as fullyQualifiedName,
+    _passed, _mutuallyExclusiveArguments
+)
+
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 
 from twisted.python.test import deprecatedattributes
-from twisted.python.test.modules_helpers import TwistedModulesTestCase
+from twisted.python.test.modules_helpers import TwistedModulesMixin
 
+from twisted.trial.unittest import SynchronousTestCase
 
-
-def dummyCallable():
-    """
-    Do nothing.
-
-    This is used to test the deprecation decorators.
-    """
-
-
-def dummyReplacementMethod():
-    """
-    Do nothing.
-
-    This is used to test the replacement parameter to L{deprecated}.
-    """
-
-
-
-class TestDeprecationWarnings(TestCase):
-    def test_getDeprecationWarningString(self):
-        """
-        L{getDeprecationWarningString} returns a string that tells us that a
-        callable was deprecated at a certain released version of Twisted.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        self.assertEqual(
-            getDeprecationWarningString(self.test_getDeprecationWarningString,
-                                        version),
-            "twisted.python.test.test_deprecate.TestDeprecationWarnings."
-            "test_getDeprecationWarningString was deprecated in "
-            "Twisted 8.0.0")
-
-
-    def test_getDeprecationWarningStringWithFormat(self):
-        """
-        L{getDeprecationWarningString} returns a string that tells us that a
-        callable was deprecated at a certain released version of Twisted, with
-        a message containing additional information about the deprecation.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        format = deprecate.DEPRECATION_WARNING_FORMAT + ': This is a message'
-        self.assertEqual(
-            getDeprecationWarningString(self.test_getDeprecationWarningString,
-                                        version, format),
-            'twisted.python.test.test_deprecate.TestDeprecationWarnings.'
-            'test_getDeprecationWarningString was deprecated in '
-            'Twisted 8.0.0: This is a message')
-
-
-    def test_deprecateEmitsWarning(self):
-        """
-        Decorating a callable with L{deprecated} emits a warning.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(dummyCallable)
-        def addStackLevel():
-            dummy()
-        self.assertWarns(
-            DeprecationWarning,
-            getDeprecationWarningString(dummyCallable, version),
-            __file__,
-            addStackLevel)
-
-
-    def test_deprecatedPreservesName(self):
-        """
-        The decorated function has the same name as the original.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(dummyCallable)
-        self.assertEqual(dummyCallable.__name__, dummy.__name__)
-        self.assertEqual(fullyQualifiedName(dummyCallable),
-                         fullyQualifiedName(dummy))
-
-
-    def test_getDeprecationDocstring(self):
-        """
-        L{_getDeprecationDocstring} returns a note about the deprecation to go
-        into a docstring.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        self.assertEqual(
-            "Deprecated in Twisted 8.0.0.",
-            _getDeprecationDocstring(version, ''))
-
-
-    def test_deprecatedUpdatesDocstring(self):
-        """
-        The docstring of the deprecated function is appended with information
-        about the deprecation.
-        """
-
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(dummyCallable)
-
-        _appendToDocstring(
-            dummyCallable,
-            _getDeprecationDocstring(version, ''))
-
-        self.assertEqual(dummyCallable.__doc__, dummy.__doc__)
-
-
-    def test_versionMetadata(self):
-        """
-        Deprecating a function adds version information to the decorated
-        version of that function.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(dummyCallable)
-        self.assertEqual(version, dummy.deprecatedVersion)
-
-
-    def test_getDeprecationWarningStringReplacement(self):
-        """
-        L{getDeprecationWarningString} takes an additional replacement parameter
-        that can be used to add information to the deprecation.  If the
-        replacement parameter is a string, it will be interpolated directly into
-        the result.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        warningString = getDeprecationWarningString(
-            self.test_getDeprecationWarningString, version,
-            replacement="something.foobar")
-        self.assertEqual(
-            warningString,
-            "%s was deprecated in Twisted 8.0.0; please use something.foobar "
-            "instead" % (
-                fullyQualifiedName(self.test_getDeprecationWarningString),))
-
-
-    def test_getDeprecationWarningStringReplacementWithCallable(self):
-        """
-        L{getDeprecationWarningString} takes an additional replacement parameter
-        that can be used to add information to the deprecation. If the
-        replacement parameter is a callable, its fully qualified name will be
-        interpolated into the result.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        warningString = getDeprecationWarningString(
-            self.test_getDeprecationWarningString, version,
-            replacement=dummyReplacementMethod)
-        self.assertEqual(
-            warningString,
-            "%s was deprecated in Twisted 8.0.0; please use "
-            "twisted.python.test.test_deprecate.dummyReplacementMethod "
-            "instead" % (
-                fullyQualifiedName(self.test_getDeprecationWarningString),))
-
-
-    def test_deprecatedReplacement(self):
-        """
-        L{deprecated} takes an additional replacement parameter that can be used
-        to indicate the new, non-deprecated method developers should use.  If
-        the replacement parameter is a string, it will be interpolated directly
-        into the warning message.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version, "something.foobar")(dummyCallable)
-        self.assertEqual(dummy.__doc__,
-            "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
-            "something.foobar"
-            " instead.\n"
-            "    ")
-
-
-    def test_deprecatedReplacementWithCallable(self):
-        """
-        L{deprecated} takes an additional replacement parameter that can be used
-        to indicate the new, non-deprecated method developers should use.  If
-        the replacement parameter is a callable, its fully qualified name will
-        be interpolated into the warning message.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        decorator = deprecated(version, replacement=dummyReplacementMethod)
-        dummy = decorator(dummyCallable)
-        self.assertEqual(dummy.__doc__,
-            "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
-            "twisted.python.test.test_deprecate.dummyReplacementMethod"
-            " instead.\n"
-            "    ")
-
-
-
-class TestAppendToDocstring(TestCase):
-    """
-    Test the _appendToDocstring function.
-
-    _appendToDocstring is used to add text to a docstring.
-    """
-
-    def test_appendToEmptyDocstring(self):
-        """
-        Appending to an empty docstring simply replaces the docstring.
-        """
-
-        def noDocstring():
-            pass
-
-        _appendToDocstring(noDocstring, "Appended text.")
-        self.assertEqual("Appended text.", noDocstring.__doc__)
-
-
-    def test_appendToSingleLineDocstring(self):
-        """
-        Appending to a single line docstring places the message on a new line,
-        with a blank line separating it from the rest of the docstring.
-
-        The docstring ends with a newline, conforming to Twisted and PEP 8
-        standards. Unfortunately, the indentation is incorrect, since the
-        existing docstring doesn't have enough info to help us indent
-        properly.
-        """
-
-        def singleLineDocstring():
-            """This doesn't comply with standards, but is here for a test."""
-
-        _appendToDocstring(singleLineDocstring, "Appended text.")
-        self.assertEqual(
-            ["This doesn't comply with standards, but is here for a test.",
-             "",
-             "Appended text."],
-            singleLineDocstring.__doc__.splitlines())
-        self.assertTrue(singleLineDocstring.__doc__.endswith('\n'))
-
-
-    def test_appendToMultilineDocstring(self):
-        """
-        Appending to a multi-line docstring places the messade on a new line,
-        with a blank line separating it from the rest of the docstring.
-
-        Because we have multiple lines, we have enough information to do
-        indentation.
-        """
-
-        def multiLineDocstring():
-            """
-            This is a multi-line docstring.
-            """
-
-        def expectedDocstring():
-            """
-            This is a multi-line docstring.
-
-            Appended text.
-            """
-
-        _appendToDocstring(multiLineDocstring, "Appended text.")
-        self.assertEqual(
-            expectedDocstring.__doc__, multiLineDocstring.__doc__)
-
+# Note that various tests in this module require manual encoding of paths to
+# utf-8. This can be fixed once FilePath supports Unicode; see #2366, #4736,
+# #5203.
 
 
 class _MockDeprecatedAttribute(object):
@@ -301,7 +56,7 @@ class _MockDeprecatedAttribute(object):
 
 
 
-class ModuleProxyTests(TestCase):
+class ModuleProxyTests(SynchronousTestCase):
     """
     Tests for L{twisted.python.deprecate._ModuleProxy}, which proxies
     access to module-level attributes, intercepting access to deprecated
@@ -316,7 +71,7 @@ class ModuleProxyTests(TestCase):
         @rtype: L{twistd.python.deprecate._ModuleProxy}
         """
         mod = types.ModuleType('foo')
-        for key, value in attrs.iteritems():
+        for key, value in attrs.items():
             setattr(mod, key, value)
         return deprecate._ModuleProxy(mod)
 
@@ -325,7 +80,7 @@ class ModuleProxyTests(TestCase):
         """
         Getting a normal attribute on a L{twisted.python.deprecate._ModuleProxy}
         retrieves the underlying attribute's value, and raises C{AttributeError}
-        if a non-existant attribute is accessed.
+        if a non-existent attribute is accessed.
         """
         proxy = self._makeProxy(SOME_ATTRIBUTE='hello')
         self.assertIdentical(proxy.SOME_ATTRIBUTE, 'hello')
@@ -380,7 +135,7 @@ class ModuleProxyTests(TestCase):
 
 
 
-class DeprecatedAttributeTests(TestCase):
+class DeprecatedAttributeTests(SynchronousTestCase):
     """
     Tests for L{twisted.python.deprecate._DeprecatedAttribute} and
     L{twisted.python.deprecate.deprecatedModuleAttribute}, which issue
@@ -489,7 +244,7 @@ class DeprecatedAttributeTests(TestCase):
 
 
 
-class ImportedModuleAttributeTests(TwistedModulesTestCase):
+class ImportedModuleAttributeTests(TwistedModulesMixin, SynchronousTestCase):
     """
     Tests for L{deprecatedModuleAttribute} which involve loading a module via
     'import'.
@@ -522,7 +277,7 @@ deprecatedModuleAttribute(
             pathdict = {}
             for (key, value) in dirdict.items():
                 child = pathobj.child(key)
-                if isinstance(value, str):
+                if isinstance(value, bytes):
                     pathdict[key] = child
                     child.setContent(value)
                 elif isinstance(value, dict):
@@ -531,11 +286,12 @@ deprecatedModuleAttribute(
                 else:
                     raise ValueError("only strings and dicts allowed as values")
             return pathdict
-        base = FilePath(self.mktemp())
+        base = FilePath(self.mktemp().encode("utf-8"))
         base.makedirs()
 
         result = makeSomeFiles(base, tree)
-        self.replaceSysPath([base.path] + sys.path)
+        # On Python 3, sys.path cannot include byte paths:
+        self.replaceSysPath([base.path.decode("utf-8")] + sys.path)
         self.replaceSysModules(sys.modules.copy())
         return result
 
@@ -546,18 +302,18 @@ deprecatedModuleAttribute(
         pointing at the module which will be loadable as C{package.module}.
         """
         paths = self.pathEntryTree(
-            {"package": {"__init__.py": self._packageInit,
-                         "module.py": ""}})
-        return paths['package']['module.py']
+            {b"package": {b"__init__.py": self._packageInit.encode("utf-8"),
+                         b"module.py": b""}})
+        return paths[b'package'][b'module.py']
 
 
     def checkOneWarning(self, modulePath):
         """
         Verification logic for L{test_deprecatedModule}.
         """
-        # import package.module
         from package import module
-        self.assertEqual(module.__file__, modulePath.path)
+        self.assertEqual(FilePath(module.__file__.encode("utf-8")),
+                         modulePath)
         emitted = self.flushWarnings([self.checkOneWarning])
         self.assertEqual(len(emitted), 1)
         self.assertEqual(emitted[0]['message'],
@@ -597,7 +353,7 @@ deprecatedModuleAttribute(
 
 
 
-class WarnAboutFunctionTests(TestCase):
+class WarnAboutFunctionTests(SynchronousTestCase):
     """
     Tests for L{twisted.python.deprecate.warnAboutFunction} which allows the
     callers of a function to issue a C{DeprecationWarning} about that function.
@@ -606,10 +362,11 @@ class WarnAboutFunctionTests(TestCase):
         """
         Create a file that will have known line numbers when emitting warnings.
         """
-        self.package = FilePath(self.mktemp()).child('twisted_private_helper')
+        self.package = FilePath(self.mktemp().encode("utf-8")
+                                ).child(b'twisted_private_helper')
         self.package.makedirs()
-        self.package.child('__init__.py').setContent('')
-        self.package.child('module.py').setContent('''
+        self.package.child(b'__init__.py').setContent(b'')
+        self.package.child(b'module.py').setContent(b'''
 "A module string"
 
 from twisted.python import deprecate
@@ -624,8 +381,10 @@ def callTestFunction():
     if b == 3:
         deprecate.warnAboutFunction(testFunction, "A Warning String")
 ''')
-        sys.path.insert(0, self.package.parent().path)
-        self.addCleanup(sys.path.remove, self.package.parent().path)
+        # Python 3 doesn't accept bytes in sys.path:
+        packagePath = self.package.parent().path.decode("utf-8")
+        sys.path.insert(0, packagePath)
+        self.addCleanup(sys.path.remove, packagePath)
 
         modules = sys.modules.copy()
         self.addCleanup(
@@ -659,8 +418,8 @@ def callTestFunction():
         module.callTestFunction()
         warningsShown = self.flushWarnings()
         self.assertSamePath(
-            FilePath(warningsShown[0]["filename"]),
-            self.package.sibling('twisted_private_helper').child('module.py'))
+            FilePath(warningsShown[0]["filename"].encode("utf-8")),
+            self.package.sibling(b'twisted_private_helper').child(b'module.py'))
         # Line number 9 is the last line in the testFunction in the helper
         # module.
         self.assertEqual(warningsShown[0]["lineno"], 9)
@@ -697,7 +456,11 @@ def callTestFunction():
         del sys.modules[module.__name__]
 
         # Rename the source directory
-        self.package.moveTo(self.package.sibling('twisted_renamed_helper'))
+        self.package.moveTo(self.package.sibling(b'twisted_renamed_helper'))
+
+        # Make sure importlib notices we've changed importable packages:
+        if invalidate_caches:
+            invalidate_caches()
 
         # Import the newly renamed version
         from twisted_renamed_helper import module
@@ -706,9 +469,9 @@ def callTestFunction():
 
         module.callTestFunction()
         warningsShown = self.flushWarnings()
-        warnedPath = FilePath(warningsShown[0]["filename"])
+        warnedPath = FilePath(warningsShown[0]["filename"].encode("utf-8"))
         expectedPath = self.package.sibling(
-            'twisted_renamed_helper').child('module.py')
+            b'twisted_renamed_helper').child(b'module.py')
         self.assertSamePath(warnedPath, expectedPath)
         self.assertEqual(warningsShown[0]["lineno"], 9)
         self.assertEqual(warningsShown[0]["message"], "A Warning String")
@@ -765,3 +528,390 @@ def callTestFunction():
             msg.endswith("module.py:9: DeprecationWarning: A Warning String\n"
                          "  return a\n"),
             "Unexpected warning string: %r" % (msg,))
+
+
+def dummyCallable():
+    """
+    Do nothing.
+
+    This is used to test the deprecation decorators.
+    """
+
+
+
+def dummyReplacementMethod():
+    """
+    Do nothing.
+
+    This is used to test the replacement parameter to L{deprecated}.
+    """
+
+
+
+class DeprecationWarningsTests(SynchronousTestCase):
+    def test_getDeprecationWarningString(self):
+        """
+        L{getDeprecationWarningString} returns a string that tells us that a
+        callable was deprecated at a certain released version of Twisted.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        self.assertEqual(
+            getDeprecationWarningString(self.test_getDeprecationWarningString,
+                                        version),
+            "%s.DeprecationWarningsTests.test_getDeprecationWarningString "
+            "was deprecated in Twisted 8.0.0" % (__name__,))
+
+
+    def test_getDeprecationWarningStringWithFormat(self):
+        """
+        L{getDeprecationWarningString} returns a string that tells us that a
+        callable was deprecated at a certain released version of Twisted, with
+        a message containing additional information about the deprecation.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        format = DEPRECATION_WARNING_FORMAT + ': This is a message'
+        self.assertEqual(
+            getDeprecationWarningString(self.test_getDeprecationWarningString,
+                                        version, format),
+            '%s.DeprecationWarningsTests.test_getDeprecationWarningString was '
+            'deprecated in Twisted 8.0.0: This is a message' % (__name__,))
+
+
+    def test_deprecateEmitsWarning(self):
+        """
+        Decorating a callable with L{deprecated} emits a warning.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version)(dummyCallable)
+        def addStackLevel():
+            dummy()
+        with catch_warnings(record=True) as caught:
+            simplefilter("always")
+            addStackLevel()
+            self.assertEqual(caught[0].category, DeprecationWarning)
+            self.assertEqual(str(caught[0].message), getDeprecationWarningString(dummyCallable, version))
+            # rstrip in case .pyc/.pyo
+            self.assertEqual(caught[0].filename.rstrip('co'), __file__.rstrip('co'))
+
+
+    def test_deprecatedPreservesName(self):
+        """
+        The decorated function has the same name as the original.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version)(dummyCallable)
+        self.assertEqual(dummyCallable.__name__, dummy.__name__)
+        self.assertEqual(fullyQualifiedName(dummyCallable),
+                         fullyQualifiedName(dummy))
+
+
+    def test_getDeprecationDocstring(self):
+        """
+        L{_getDeprecationDocstring} returns a note about the deprecation to go
+        into a docstring.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        self.assertEqual(
+            "Deprecated in Twisted 8.0.0.",
+            _getDeprecationDocstring(version, ''))
+
+
+    def test_deprecatedUpdatesDocstring(self):
+        """
+        The docstring of the deprecated function is appended with information
+        about the deprecation.
+        """
+
+        def localDummyCallable():
+            """
+            Do nothing.
+
+            This is used to test the deprecation decorators.
+            """
+
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version)(localDummyCallable)
+
+        _appendToDocstring(
+            localDummyCallable,
+            _getDeprecationDocstring(version, ''))
+
+        self.assertEqual(localDummyCallable.__doc__, dummy.__doc__)
+
+
+    def test_versionMetadata(self):
+        """
+        Deprecating a function adds version information to the decorated
+        version of that function.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version)(dummyCallable)
+        self.assertEqual(version, dummy.deprecatedVersion)
+
+
+    def test_getDeprecationWarningStringReplacement(self):
+        """
+        L{getDeprecationWarningString} takes an additional replacement parameter
+        that can be used to add information to the deprecation.  If the
+        replacement parameter is a string, it will be interpolated directly into
+        the result.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        warningString = getDeprecationWarningString(
+            self.test_getDeprecationWarningString, version,
+            replacement="something.foobar")
+        self.assertEqual(
+            warningString,
+            "%s was deprecated in Twisted 8.0.0; please use something.foobar "
+            "instead" % (
+                fullyQualifiedName(self.test_getDeprecationWarningString),))
+
+
+    def test_getDeprecationWarningStringReplacementWithCallable(self):
+        """
+        L{getDeprecationWarningString} takes an additional replacement parameter
+        that can be used to add information to the deprecation. If the
+        replacement parameter is a callable, its fully qualified name will be
+        interpolated into the result.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        warningString = getDeprecationWarningString(
+            self.test_getDeprecationWarningString, version,
+            replacement=dummyReplacementMethod)
+        self.assertEqual(
+            warningString,
+            "%s was deprecated in Twisted 8.0.0; please use "
+            "%s.dummyReplacementMethod instead" % (
+                fullyQualifiedName(self.test_getDeprecationWarningString),
+                __name__))
+
+
+    def test_deprecatedReplacement(self):
+        """
+        L{deprecated} takes an additional replacement parameter that can be used
+        to indicate the new, non-deprecated method developers should use.  If
+        the replacement parameter is a string, it will be interpolated directly
+        into the warning message.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version, "something.foobar")(dummyCallable)
+        self.assertEqual(dummy.__doc__,
+            "\n"
+            "    Do nothing.\n\n"
+            "    This is used to test the deprecation decorators.\n\n"
+            "    Deprecated in Twisted 8.0.0; please use "
+            "something.foobar"
+            " instead.\n"
+            "    ")
+
+
+    def test_deprecatedReplacementWithCallable(self):
+        """
+        L{deprecated} takes an additional replacement parameter that can be used
+        to indicate the new, non-deprecated method developers should use.  If
+        the replacement parameter is a callable, its fully qualified name will
+        be interpolated into the warning message.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        decorator = deprecated(version, replacement=dummyReplacementMethod)
+        dummy = decorator(dummyCallable)
+        self.assertEqual(dummy.__doc__,
+            "\n"
+            "    Do nothing.\n\n"
+            "    This is used to test the deprecation decorators.\n\n"
+            "    Deprecated in Twisted 8.0.0; please use "
+            "%s.dummyReplacementMethod instead.\n"
+            "    " % (__name__,))
+
+
+
+class AppendToDocstringTests(SynchronousTestCase):
+    """
+    Test the _appendToDocstring function.
+
+    _appendToDocstring is used to add text to a docstring.
+    """
+
+    def test_appendToEmptyDocstring(self):
+        """
+        Appending to an empty docstring simply replaces the docstring.
+        """
+
+        def noDocstring():
+            pass
+
+        _appendToDocstring(noDocstring, "Appended text.")
+        self.assertEqual("Appended text.", noDocstring.__doc__)
+
+
+    def test_appendToSingleLineDocstring(self):
+        """
+        Appending to a single line docstring places the message on a new line,
+        with a blank line separating it from the rest of the docstring.
+
+        The docstring ends with a newline, conforming to Twisted and PEP 8
+        standards. Unfortunately, the indentation is incorrect, since the
+        existing docstring doesn't have enough info to help us indent
+        properly.
+        """
+
+        def singleLineDocstring():
+            """This doesn't comply with standards, but is here for a test."""
+
+        _appendToDocstring(singleLineDocstring, "Appended text.")
+        self.assertEqual(
+            ["This doesn't comply with standards, but is here for a test.",
+             "",
+             "Appended text."],
+            singleLineDocstring.__doc__.splitlines())
+        self.assertTrue(singleLineDocstring.__doc__.endswith('\n'))
+
+
+    def test_appendToMultilineDocstring(self):
+        """
+        Appending to a multi-line docstring places the messade on a new line,
+        with a blank line separating it from the rest of the docstring.
+
+        Because we have multiple lines, we have enough information to do
+        indentation.
+        """
+
+        def multiLineDocstring():
+            """
+            This is a multi-line docstring.
+            """
+
+        def expectedDocstring():
+            """
+            This is a multi-line docstring.
+
+            Appended text.
+            """
+
+        _appendToDocstring(multiLineDocstring, "Appended text.")
+        self.assertEqual(
+            expectedDocstring.__doc__, multiLineDocstring.__doc__)
+
+
+
+class MutualArgumentExclusionTests(SynchronousTestCase):
+    """
+    Tests for L{mutuallyExclusiveArguments}.
+    """
+
+    def checkPassed(self, func, *args, **kw):
+        """
+        Test an invocation of L{passed} with the given function, arguments, and
+        keyword arguments.
+
+        @param func: A function whose argspec to pass to L{_passed}.
+        @type func: A callable.
+
+        @param args: The arguments which could be passed to L{func}.
+
+        @param kw: The keyword arguments which could be passed to L{func}.
+
+        @return: L{_passed}'s return value
+        @rtype: L{dict}
+        """
+        return _passed(inspect.getargspec(func), args, kw)
+
+
+    def test_passed_simplePositional(self):
+        """
+        L{passed} identifies the arguments passed by a simple
+        positional test.
+        """
+        def func(a, b):
+            pass
+        self.assertEqual(self.checkPassed(func, 1, 2), dict(a=1, b=2))
+
+
+    def test_passed_tooManyArgs(self):
+        """
+        L{passed} raises a L{TypeError} if too many arguments are
+        passed.
+        """
+        def func(a, b):
+            pass
+        self.assertRaises(TypeError, self.checkPassed, func, 1, 2, 3)
+
+
+    def test_passed_doublePassKeyword(self):
+        """
+        L{passed} raises a L{TypeError} if a argument is passed both
+        positionally and by keyword.
+        """
+        def func(a):
+            pass
+        self.assertRaises(TypeError, self.checkPassed, func, 1, a=2)
+
+
+    def test_passed_unspecifiedKeyword(self):
+        """
+        L{passed} raises a L{TypeError} if a keyword argument not
+        present in the function's declaration is passed.
+        """
+        def func(a):
+            pass
+        self.assertRaises(TypeError, self.checkPassed, func, 1, z=2)
+
+
+    def test_passed_star(self):
+        """
+        L{passed} places additional positional arguments into a tuple
+        under the name of the star argument.
+        """
+        def func(a, *b):
+            pass
+        self.assertEqual(self.checkPassed(func, 1, 2, 3),
+                         dict(a=1, b=(2, 3)))
+
+
+    def test_passed_starStar(self):
+        """
+        Additional keyword arguments are passed as a dict to the star star
+        keyword argument.
+        """
+        def func(a, **b):
+            pass
+        self.assertEqual(self.checkPassed(func, 1, x=2, y=3, z=4),
+                         dict(a=1, b=dict(x=2, y=3, z=4)))
+
+
+    def test_passed_noDefaultValues(self):
+        """
+        The results of L{passed} only include arguments explicitly
+        passed, not default values.
+        """
+        def func(a, b, c=1, d=2, e=3):
+            pass
+        self.assertEqual(self.checkPassed(func, 1, 2, e=7),
+                         dict(a=1, b=2, e=7))
+
+
+    def test_mutualExclusionPrimeDirective(self):
+        """
+        L{mutuallyExclusiveArguments} does not interfere in its
+        decoratee's operation, either its receipt of arguments or its return
+        value.
+        """
+        @_mutuallyExclusiveArguments([('a', 'b')])
+        def func(x, y, a=3, b=4):
+            return x + y + a + b
+
+        self.assertEqual(func(1, 2), 10)
+        self.assertEqual(func(1, 2, 7), 14)
+        self.assertEqual(func(1, 2, b=7), 13)
+
+
+    def test_mutualExclusionExcludesByKeyword(self):
+        """
+        L{mutuallyExclusiveArguments} raises a L{TypeError}n if its
+        decoratee is passed a pair of mutually exclusive arguments.
+        """
+        @_mutuallyExclusiveArguments([['a', 'b']])
+        def func(a=3, b=4):
+            return a + b
+
+        self.assertRaises(TypeError, func, a=3, b=4)

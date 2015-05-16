@@ -111,7 +111,7 @@ class VT100Frame(Tkinter.Frame):
                 if self.x:
                     self.x-=1
             elif b == 9: # TAB
-                [self._write(' ',fg,bg) for i in range(8)]
+                [self._write(' ',fg,bg) for index in range(8)]
             elif b == 10:
                 if self.y == self.height-1:
                     self._delete(0,0,self.width,0)

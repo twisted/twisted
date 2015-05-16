@@ -35,7 +35,7 @@ class BaseProcessTests(TestCase):
         process = BaseProcess(FakeProto())
         process._callProcessExited(reason)
         process.proto.reason.trap(RuntimeError)
-        self.assertIdentical(reason, process.proto.reason.value)
+        self.assertIs(reason, process.proto.reason.value)
 
 
     def test_callProcessExitedMissing(self):
@@ -64,7 +64,7 @@ class BaseProcessTests(TestCase):
             "Since Twisted 8.2, IProcessProtocol.processExited is required.  "
             "%s.%s must implement it." % (
                 FakeProto.__module__, FakeProto.__name__))
-        self.assertIdentical(category, DeprecationWarning)
+        self.assertIs(category, DeprecationWarning)
         # The stacklevel doesn't really make sense for this kind of
         # deprecation.  Requiring it to be 0 will at least avoid pointing to
         # any part of Twisted or a random part of the application's code, which

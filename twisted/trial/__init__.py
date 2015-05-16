@@ -4,12 +4,10 @@
 # Maintainer: Jonathan Lange
 
 """
-Asynchronous unit testing framework.
+Twisted Trial: Asynchronous unit testing framework.
 
 Trial extends Python's builtin C{unittest} to provide support for asynchronous
 tests.
-
-Maintainer: Jonathan Lange
 
 Trial strives to be compatible with other Python xUnit testing frameworks.
 "Compatibility" is a difficult things to define. In practice, it means that:

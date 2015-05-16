@@ -19,6 +19,7 @@ import types
 
 from zope.interface import implements
 
+from twisted.python.filepath import FilePath
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
 from twisted.protocols import loopback
@@ -28,14 +29,14 @@ from twisted.internet import reactor
 from twisted.internet import interfaces
 from twisted.internet.task import Clock
 from twisted.trial import unittest
-from twisted.python import util
+from twisted.python import util, log
 from twisted.python import failure
 
-from twisted import cred
-import twisted.cred.error
-import twisted.cred.checkers
-import twisted.cred.credentials
-import twisted.cred.portal
+from twisted.cred.portal import Portal
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.credentials import (
+    IUsernameHashedPassword, IUsernamePassword, CramMD5Credentials)
 
 from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
 
@@ -57,7 +58,7 @@ def sortNest(l):
             l[i] = tuple(sortNest(list(l[i])))
     return l
 
-class IMAP4UTF7TestCase(unittest.TestCase):
+class IMAP4UTF7Tests(unittest.TestCase):
     tests = [
         [u'Hello world', 'Hello world'],
         [u'Hello & world', 'Hello &- world'],
@@ -157,7 +158,7 @@ class BufferingConsumer:
     def unregisterProducer(self):
         self.consumer = None
 
-class MessageProducerTestCase(unittest.TestCase):
+class MessageProducerTests(unittest.TestCase):
     def testSinglePart(self):
         body = 'This is body text.  Rar.'
         headers = util.OrderedDict()
@@ -284,7 +285,7 @@ class MessageProducerTestCase(unittest.TestCase):
 
 
 
-class IMAP4HelperTestCase(unittest.TestCase):
+class IMAP4HelperTests(unittest.TestCase):
     """
     Tests for various helper utilities in the IMAP4 module.
     """
@@ -349,12 +350,19 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
 
     def test_headerFormatter(self):
+        """
+        L{imap4._formatHeaders} accepts a C{dict} of header name/value pairs and
+        returns a string representing those headers in the standard multiline,
+        C{":"}-separated format.
+        """
         cases = [
             ({'Header1': 'Value1', 'Header2': 'Value2'}, 'Header2: Value2\r\nHeader1: Value1\r\n'),
         ]
 
-        for (input, output) in cases:
-            self.assertEqual(imap4._formatHeaders(input), output)
+        for (input, expected) in cases:
+            output = imap4._formatHeaders(input)
+            self.assertEqual(sorted(output.splitlines(True)),
+                             sorted(expected.splitlines(True)))
 
 
     def test_messageSet(self):
@@ -606,10 +614,10 @@ class IMAP4HelperTestCase(unittest.TestCase):
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), outp[0])
-            p = [str(p).lower() for p in p.result]
-            p.sort()
+            expectedResult = [str(token).lower() for token in p.result]
+            expectedResult.sort()
             outp[1].sort()
-            self.assertEqual(p, outp[1])
+            self.assertEqual(expectedResult, outp[1])
 
 
     def test_fetchParserBody(self):
@@ -790,6 +798,83 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
         for (query, expected) in zip(inputs, outputs):
             self.assertEqual(query, expected)
+
+
+    def test_queryKeywordFlagWithQuotes(self):
+        """
+        When passed the C{keyword} argument, L{imap4.Query} returns an unquoted
+        string.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+        """
+        query = imap4.Query(keyword='twisted')
+        self.assertEqual('(KEYWORD twisted)', query)
+
+
+    def test_queryUnkeywordFlagWithQuotes(self):
+        """
+        When passed the C{unkeyword} argument, L{imap4.Query} returns an
+        unquoted string.
+
+        @see: U{http://tools.ietf.org/html/rfc3501#section-9}
+        @see: U{http://tools.ietf.org/html/rfc3501#section-6.4.4}
+        """
+        query = imap4.Query(unkeyword='twisted')
+        self.assertEqual('(UNKEYWORD twisted)', query)
+
+
+    def _keywordFilteringTest(self, keyword):
+        """
+        Helper to implement tests for value filtering of KEYWORD and UNKEYWORD
+        queries.
+
+        @param keyword: A native string giving the name of the L{imap4.Query}
+            keyword argument to test.
+        """
+        # Check all the printable exclusions
+        self.assertEqual(
+            '(%s twistedrocks)' % (keyword.upper(),),
+            imap4.Query(**{keyword: r'twisted (){%*"\] rocks'}))
+
+        # Check all the non-printable exclusions
+        self.assertEqual(
+            '(%s twistedrocks)' % (keyword.upper(),),
+            imap4.Query(**{
+                    keyword: 'twisted %s rocks' % (
+                    ''.join(chr(ch) for ch in range(33)),)}))
+
+
+    def test_queryKeywordFlag(self):
+        """
+        When passed the C{keyword} argument, L{imap4.Query} returns an
+        C{atom} that consists of one or more non-special characters.
+
+        List of the invalid characters:
+
+            ( ) { % * " \ ] CTL SP
+
+        @see: U{ABNF definition of CTL and SP<https://tools.ietf.org/html/rfc2234>}
+        @see: U{IMAP4 grammar<http://tools.ietf.org/html/rfc3501#section-9>}
+        @see: U{IMAP4 SEARCH specification<http://tools.ietf.org/html/rfc3501#section-6.4.4>}
+        """
+        self._keywordFilteringTest("keyword")
+
+
+    def test_queryUnkeywordFlag(self):
+        """
+        When passed the C{unkeyword} argument, L{imap4.Query} returns an
+        C{atom} that consists of one or more non-special characters.
+
+        List of the invalid characters:
+
+            ( ) { % * " \ ] CTL SP
+
+        @see: U{ABNF definition of CTL and SP<https://tools.ietf.org/html/rfc2234>}
+        @see: U{IMAP4 grammar<http://tools.ietf.org/html/rfc3501#section-9>}
+        @see: U{IMAP4 SEARCH specification<http://tools.ietf.org/html/rfc3501#section-6.4.4>}
+        """
+        self._keywordFilteringTest("unkeyword")
 
 
     def test_invalidIdListParser(self):
@@ -973,8 +1058,8 @@ class SimpleServer(imap4.IMAP4Server):
         imap4.IMAP4Server.__init__(self, *args, **kw)
         realm = TestRealm()
         realm.theAccount = Account('testuser')
-        portal = cred.portal.Portal(realm)
-        c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        portal = Portal(realm)
+        c = InMemoryUsernamePasswordDatabaseDontUse()
         self.checker = c
         self.portal = portal
         portal.registerChecker(c)
@@ -992,7 +1077,7 @@ class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
         if username == self._username and password == self._password:
             return imap4.IAccount, self.theAccount, lambda: None
-        raise cred.error.UnauthorizedLogin()
+        raise UnauthorizedLogin()
 
 
 class SimpleClient(imap4.IMAP4Client):
@@ -1034,23 +1119,29 @@ class IMAP4HelperMixin:
         theAccount.mboxType = SimpleMailbox
         SimpleServer.theAccount = theAccount
 
+
     def tearDown(self):
         del self.server
         del self.client
         del self.connected
 
+
     def _cbStopClient(self, ignore):
         self.client.transport.loseConnection()
+
 
     def _ebGeneral(self, failure):
         self.client.transport.loseConnection()
         self.server.transport.loseConnection()
-        failure.raiseException()
+        log.err(failure, "Problem with %r" % (self.function,))
+
 
     def loopback(self):
         return loopback.loopbackAsync(self.server, self.client)
 
-class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
+
+
+class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
     def testCapability(self):
         caps = {}
         def getCaps():
@@ -1065,7 +1156,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def testCapabilityWithAuth(self):
         caps = {}
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         def getCaps():
             def gotCaps(c):
                 caps.update(c)
@@ -1555,7 +1646,8 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        message = open(infile)
+        # Create the initial file.
+        FilePath(infile).touch()
         SimpleServer.theAccount.addMailbox('PARTIAL/SUBTHING')
         def login():
             return self.client.login('testuser', 'password-test')
@@ -1664,7 +1756,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
+class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
     """
     Tests for the behavior of the search_* functions in L{imap4.IMAP4Server}.
     """
@@ -1785,7 +1877,7 @@ class TestRealm:
         return imap4.IAccount, self.theAccount, lambda: None
 
 class TestChecker:
-    credentialInterfaces = (cred.credentials.IUsernameHashedPassword, cred.credentials.IUsernamePassword)
+    credentialInterfaces = (IUsernameHashedPassword, IUsernamePassword)
 
     users = {
         'testuser': 'secret'
@@ -1800,15 +1892,15 @@ class TestChecker:
     def _cbCheck(self, result, username):
         if result:
             return username
-        raise cred.error.UnauthorizedLogin()
+        raise UnauthorizedLogin()
 
-class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
+class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
     def setUp(self):
         IMAP4HelperMixin.setUp(self)
 
         realm = TestRealm()
         realm.theAccount = Account('testuser')
-        portal = cred.portal.Portal(realm)
+        portal = Portal(realm)
         portal.registerChecker(TestChecker())
         self.server.portal = portal
 
@@ -1816,7 +1908,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.account = realm.theAccount
 
     def testCramMD5(self):
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
         self.client.registerAuthenticator(cAuth)
 
@@ -1837,7 +1929,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(self.server.account, self.account)
 
     def testFailedCramMD5(self):
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
         self.client.registerAuthenticator(cAuth)
 
@@ -1944,7 +2036,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class SASLPLAINTestCase(unittest.TestCase):
+class SASLPLAINTests(unittest.TestCase):
     """
     Tests for I{SASL PLAIN} authentication, as implemented by
     L{imap4.PLAINAuthenticator} and L{imap4.PLAINCredentials}.
@@ -1996,7 +2088,7 @@ class SASLPLAINTestCase(unittest.TestCase):
 
 
 
-class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
+class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
     def testReadWrite(self):
         def login():
             return self.client.login('testuser', 'password-test')
@@ -2184,7 +2276,7 @@ class StillSimplerClient(imap4.IMAP4Client):
 
 
 
-class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
+class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
     def testTrailingLiteral(self):
         transport = StringTransport()
         c = imap4.IMAP4Client()
@@ -2235,7 +2327,7 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
         If unsolicited data is received along with solicited data in the
         response to a I{FETCH} command issued by L{IMAP4Client.fetchSpecific},
         the unsolicited data is passed to the appropriate callback and not
-        included in the result with wihch the L{Deferred} returned by
+        included in the result with which the L{Deferred} returned by
         L{IMAP4Client.fetchSpecific} fires.
         """
         transport = StringTransport()
@@ -2341,7 +2433,8 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
             protocol.lineReceived('0002 OK SELECT')
             return d
         def fetch():
-            d = protocol.fetchSpecific('1:*',
+            protocol.fetchSpecific(
+                '1:*',
                 headerType='HEADER.FIELDS',
                 headerArgs=['SUBJECT'])
             self.assertRaises(
@@ -2448,6 +2541,36 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
             ).addCallback(strip(select)
             ).addCallback(strip(fetch)
             ).addCallback(test)
+
+
+    def test_authenticationChallengeDecodingException(self):
+        """
+        When decoding a base64 encoded authentication message from the server,
+        decoding errors are logged and then the client closes the connection.
+        """
+        transport = StringTransportWithDisconnection()
+        protocol = imap4.IMAP4Client()
+        transport.protocol = protocol
+
+        protocol.makeConnection(transport)
+        protocol.lineReceived(
+            '* OK [CAPABILITY IMAP4rev1 IDLE NAMESPACE AUTH=CRAM-MD5] '
+            'Twisted IMAP4rev1 Ready')
+        cAuth = imap4.CramMD5ClientAuthenticator('testuser')
+        protocol.registerAuthenticator(cAuth)
+
+        d = protocol.authenticate('secret')
+        # Should really be something describing the base64 decode error.  See
+        # #6021.
+        self.assertFailure(d, error.ConnectionDone)
+
+        protocol.dataReceived('+ Something bad! and bad\r\n')
+
+        # This should not really be logged.  See #6021.
+        logged = self.flushLoggedErrors(imap4.IllegalServerResponse)
+        self.assertEqual(len(logged), 1)
+        self.assertEqual(logged[0].value.args[0], "Something bad! and bad")
+        return d
 
 
 
@@ -2970,7 +3093,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
 
     def test_fetchSpecificNumbered(self):
         """
-        L{IMAP4Client.fetchSpecific}, when passed a sequence for for
+        L{IMAP4Client.fetchSpecific}, when passed a sequence for
         C{headerNumber}, sends the I{BODY[N.M]} command.  It returns a
         L{Deferred} which fires with a C{dict} mapping message sequence numbers
         to C{list}s of corresponding message data given by the server's
@@ -3276,7 +3399,7 @@ class FakeyMessage(util.FancyStrMixin):
     def __init__(self, headers, flags, date, body, uid, subpart):
         self.headers = headers
         self.flags = flags
-        self.body = StringIO(body)
+        self._body = body
         self.size = len(body)
         self.date = date
         self.uid = uid
@@ -3293,7 +3416,7 @@ class FakeyMessage(util.FancyStrMixin):
         return self.date
 
     def getBodyFile(self):
-        return self.body
+        return StringIO(self._body)
 
     def getSize(self):
         return self.size
@@ -3308,7 +3431,7 @@ class FakeyMessage(util.FancyStrMixin):
         self.got_subpart = part
         return self.subpart[part]
 
-class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
+class NewStoreTests(unittest.TestCase, IMAP4HelperMixin):
     result = None
     storeArgs = None
 
@@ -3372,7 +3495,213 @@ class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         return self._storeWork()
 
 
-class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
+
+class GetBodyStructureTests(unittest.TestCase):
+    """
+    Tests for L{imap4.getBodyStructure}, a helper for constructing a list which
+    directly corresponds to the wire information needed for a I{BODY} or
+    I{BODYSTRUCTURE} response.
+    """
+    def test_singlePart(self):
+        """
+        L{imap4.getBodyStructure} accepts a L{IMessagePart} provider and returns
+        a list giving the basic fields for the I{BODY} response for that
+        message.
+        """
+        body = 'hello, world'
+        major = 'image'
+        minor = 'jpeg'
+        charset = 'us-ascii'
+        identifier = 'some kind of id'
+        description = 'great justice'
+        encoding = 'maximum'
+        msg = FakeyMessage({
+                'content-type': '%s/%s; charset=%s; x=y' % (
+                    major, minor, charset),
+                'content-id': identifier,
+                'content-description': description,
+                'content-transfer-encoding': encoding,
+                }, (), '', body, 123, None)
+        structure = imap4.getBodyStructure(msg)
+        self.assertEqual(
+            [major, minor, ["charset", charset, 'x', 'y'], identifier,
+             description, encoding, len(body)],
+            structure)
+
+
+    def test_singlePartExtended(self):
+        """
+        L{imap4.getBodyStructure} returns a list giving the basic and extended
+        fields for a I{BODYSTRUCTURE} response if passed C{True} for the
+        C{extended} parameter.
+        """
+        body = 'hello, world'
+        major = 'image'
+        minor = 'jpeg'
+        charset = 'us-ascii'
+        identifier = 'some kind of id'
+        description = 'great justice'
+        encoding = 'maximum'
+        md5 = 'abcdefabcdef'
+        msg = FakeyMessage({
+                'content-type': '%s/%s; charset=%s; x=y' % (
+                    major, minor, charset),
+                'content-id': identifier,
+                'content-description': description,
+                'content-transfer-encoding': encoding,
+                'content-md5': md5,
+                'content-disposition': 'attachment; name=foo; size=bar',
+                'content-language': 'fr',
+                'content-location': 'France',
+                }, (), '', body, 123, None)
+        structure = imap4.getBodyStructure(msg, extended=True)
+        self.assertEqual(
+            [major, minor, ["charset", charset, 'x', 'y'], identifier,
+             description, encoding, len(body), md5,
+             ['attachment', ['name', 'foo', 'size', 'bar']], 'fr', 'France'],
+            structure)
+
+
+    def test_singlePartWithMissing(self):
+        """
+        For fields with no information contained in the message headers,
+        L{imap4.getBodyStructure} fills in C{None} values in its result.
+        """
+        major = 'image'
+        minor = 'jpeg'
+        body = 'hello, world'
+        msg = FakeyMessage({
+                'content-type': '%s/%s' % (major, minor),
+                }, (), '', body, 123, None)
+        structure = imap4.getBodyStructure(msg, extended=True)
+        self.assertEqual(
+            [major, minor, None, None, None, None, len(body), None, None,
+             None, None],
+            structure)
+
+
+    def test_textPart(self):
+        """
+        For a I{text/*} message, the number of lines in the message body are
+        included after the common single-part basic fields.
+        """
+        body = 'hello, world\nhow are you?\ngoodbye\n'
+        major = 'text'
+        minor = 'jpeg'
+        charset = 'us-ascii'
+        identifier = 'some kind of id'
+        description = 'great justice'
+        encoding = 'maximum'
+        msg = FakeyMessage({
+                'content-type': '%s/%s; charset=%s; x=y' % (
+                    major, minor, charset),
+                'content-id': identifier,
+                'content-description': description,
+                'content-transfer-encoding': encoding,
+                }, (), '', body, 123, None)
+        structure = imap4.getBodyStructure(msg)
+        self.assertEqual(
+            [major, minor, ["charset", charset, 'x', 'y'], identifier,
+             description, encoding, len(body), len(body.splitlines())],
+            structure)
+
+
+    def test_rfc822Message(self):
+        """
+        For a I{message/rfc822} message, the common basic fields are followed
+        by information about the contained message.
+        """
+        body = 'hello, world\nhow are you?\ngoodbye\n'
+        major = 'text'
+        minor = 'jpeg'
+        charset = 'us-ascii'
+        identifier = 'some kind of id'
+        description = 'great justice'
+        encoding = 'maximum'
+        msg = FakeyMessage({
+                'content-type': '%s/%s; charset=%s; x=y' % (
+                    major, minor, charset),
+                'from': 'Alice <alice@example.com>',
+                'to': 'Bob <bob@example.com>',
+                'content-id': identifier,
+                'content-description': description,
+                'content-transfer-encoding': encoding,
+                }, (), '', body, 123, None)
+
+        container = FakeyMessage({
+                'content-type': 'message/rfc822',
+                }, (), '', '', 123, [msg])
+
+        structure = imap4.getBodyStructure(container)
+        self.assertEqual(
+            ['message', 'rfc822', None, None, None, None, 0,
+             imap4.getEnvelope(msg), imap4.getBodyStructure(msg), 3],
+            structure)
+
+
+    def test_multiPart(self):
+        """
+        For a I{multipart/*} message, L{imap4.getBodyStructure} returns a list
+        containing the body structure information for each part of the message
+        followed by an element giving the MIME subtype of the message.
+        """
+        oneSubPart = FakeyMessage({
+                'content-type': 'image/jpeg; x=y',
+                'content-id': 'some kind of id',
+                'content-description': 'great justice',
+                'content-transfer-encoding': 'maximum',
+                }, (), '', 'hello world', 123, None)
+
+        anotherSubPart = FakeyMessage({
+                'content-type': 'text/plain; charset=us-ascii',
+                }, (), '', 'some stuff', 321, None)
+
+        container = FakeyMessage({
+                'content-type': 'multipart/related',
+                }, (), '', '', 555, [oneSubPart, anotherSubPart])
+
+        self.assertEqual(
+            [imap4.getBodyStructure(oneSubPart),
+             imap4.getBodyStructure(anotherSubPart),
+             'related'],
+            imap4.getBodyStructure(container))
+
+
+    def test_multiPartExtended(self):
+        """
+        When passed a I{multipart/*} message and C{True} for the C{extended}
+        argument, L{imap4.getBodyStructure} includes extended structure
+        information from the parts of the multipart message and extended
+        structure information about the multipart message itself.
+        """
+        oneSubPart = FakeyMessage({
+                'content-type': 'image/jpeg; x=y',
+                'content-id': 'some kind of id',
+                'content-description': 'great justice',
+                'content-transfer-encoding': 'maximum',
+                }, (), '', 'hello world', 123, None)
+
+        anotherSubPart = FakeyMessage({
+                'content-type': 'text/plain; charset=us-ascii',
+                }, (), '', 'some stuff', 321, None)
+
+        container = FakeyMessage({
+                'content-type': 'multipart/related; foo=bar',
+                'content-language': 'es',
+                'content-location': 'Spain',
+                'content-disposition': 'attachment; name=monkeys',
+                }, (), '', '', 555, [oneSubPart, anotherSubPart])
+
+        self.assertEqual(
+            [imap4.getBodyStructure(oneSubPart, extended=True),
+             imap4.getBodyStructure(anotherSubPart, extended=True),
+             'related', ['foo', 'bar'], ['attachment', ['name', 'monkeys']],
+             'es', 'Spain'],
+            imap4.getBodyStructure(container, extended=True))
+
+
+
+class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
     def setUp(self):
         self.received_messages = self.received_uid = None
         self.result = None
@@ -3513,7 +3842,15 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     def testFetchEnvelopeUID(self):
         return self.testFetchEnvelope(1)
 
-    def testFetchBodyStructure(self, uid=0):
+
+    def test_fetchBodyStructure(self, uid=0):
+        """
+        L{IMAP4Client.fetchBodyStructure} issues a I{FETCH BODYSTRUCTURE}
+        command and returns a Deferred which fires with a structure giving the
+        result of parsing the server's response.  The structure is a list
+        reflecting the parenthesized data sent by the server, as described by
+        RFC 3501, section 7.4.2.
+        """
         self.function = self.client.fetchBodyStructure
         self.messages = '3:9,10:*'
         self.msgObjs = [FakeyMessage({
@@ -3521,15 +3858,59 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
                 'content-id': 'this-is-the-content-id',
                 'content-description': 'describing-the-content-goes-here!',
                 'content-transfer-encoding': '8BIT',
+                'content-md5': 'abcdef123456',
+                'content-disposition': 'attachment; filename=monkeys',
+                'content-language': 'es',
+                'content-location': 'http://example.com/monkeys',
             }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)]
         self.expected = {0: {'BODYSTRUCTURE': [
-            'text', 'plain', [['name', 'thing'], ['key', 'value']],
+            'text', 'plain', ['key', 'value', 'name', 'thing'],
             'this-is-the-content-id', 'describing-the-content-goes-here!',
-            '8BIT', '20', '4', None, None, None]}}
+            '8BIT', '20', '4', 'abcdef123456',
+            ['attachment', ['filename', 'monkeys']], 'es',
+             'http://example.com/monkeys']}}
         return self._fetchWork(uid)
 
+
     def testFetchBodyStructureUID(self):
-        return self.testFetchBodyStructure(1)
+        """
+        If passed C{True} for the C{uid} argument, C{fetchBodyStructure} can
+        also issue a I{UID FETCH BODYSTRUCTURE} command.
+        """
+        return self.test_fetchBodyStructure(1)
+
+
+    def test_fetchBodyStructureMultipart(self, uid=0):
+        """
+        L{IMAP4Client.fetchBodyStructure} can also parse the response to a
+        I{FETCH BODYSTRUCTURE} command for a multipart message.
+        """
+        self.function = self.client.fetchBodyStructure
+        self.messages = '3:9,10:*'
+        innerMessage = FakeyMessage({
+                'content-type': 'text/plain; name=thing; key="value"',
+                'content-id': 'this-is-the-content-id',
+                'content-description': 'describing-the-content-goes-here!',
+                'content-transfer-encoding': '8BIT',
+                'content-language': 'fr',
+                'content-md5': '123456abcdef',
+                'content-disposition': 'inline',
+                'content-location': 'outer space',
+            }, (), '', 'Body\nText\nGoes\nHere\n', 919293, None)
+        self.msgObjs = [FakeyMessage({
+                'content-type': 'multipart/mixed; boundary="xyz"',
+                'content-language': 'en',
+                'content-location': 'nearby',
+            }, (), '', '', 919293, [innerMessage])]
+        self.expected = {0: {'BODYSTRUCTURE': [
+            ['text', 'plain', ['key', 'value', 'name', 'thing'],
+             'this-is-the-content-id', 'describing-the-content-goes-here!',
+             '8BIT', '20', '4', '123456abcdef', ['inline', None], 'fr',
+             'outer space'],
+            'mixed', ['boundary', 'xyz'], None, 'en', 'nearby'
+            ]}}
+        return self._fetchWork(uid)
+
 
     def testFetchSimplifiedBody(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
@@ -3541,7 +3922,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         )]
         self.expected = {0:
             {'BODY':
-                [None, None, [], None, None, None,
+                [None, None, None, None, None, None,
                     '12'
                 ]
             }
@@ -3559,7 +3940,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             (), '', 'Yea whatever', 91825, None)]
         self.expected = {0:
             {'BODY':
-                ['text', 'plain', [], None, None, None,
+                ['text', 'plain', None, None, None, None,
                     '12', '1'
                 ]
             }
@@ -3581,10 +3962,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         )]
         self.expected = {0:
             {'BODY':
-                ['message', 'rfc822', [], None, None, None,
+                ['message', 'rfc822', None, None, None, None,
                     '12', [None, None, [[None, None, None]],
                     [[None, None, None]], None, None, None,
-                    None, None, None], ['image', 'jpg', [],
+                    None, None, None], ['image', 'jpg', None,
                     None, None, None, '14'], '1'
                 ]
             }
@@ -3594,6 +3975,55 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchSimplifiedBodyRFC822UID(self):
         return self.testFetchSimplifiedBodyRFC822(1)
+
+
+    def test_fetchSimplifiedBodyMultipart(self):
+        """
+        L{IMAP4Client.fetchSimplifiedBody} returns a dictionary mapping message
+        sequence numbers to fetch responses for the corresponding messages.  In
+        particular, for a multipart message, the value in the dictionary maps
+        the string C{"BODY"} to a list giving the body structure information for
+        that message, in the form of a list of subpart body structure
+        information followed by the subtype of the message (eg C{"alternative"}
+        for a I{multipart/alternative} message).  This structure is self-similar
+        in the case where a subpart is itself multipart.
+        """
+        self.function = self.client.fetchSimplifiedBody
+        self.messages = '21'
+
+        # A couple non-multipart messages to use as the inner-most payload
+        singles = [
+            FakeyMessage(
+                {'content-type': 'text/plain'},
+                (), 'date', 'Stuff', 54321,  None),
+            FakeyMessage(
+                {'content-type': 'text/html'},
+                (), 'date', 'Things', 32415, None)]
+
+        # A multipart/alternative message containing the above non-multipart
+        # messages.  This will be the payload of the outer-most message.
+        alternative = FakeyMessage(
+            {'content-type': 'multipart/alternative'},
+            (), '', 'Irrelevant', 12345, singles)
+
+        # The outer-most message, also with a multipart type, containing just
+        # the single middle message.
+        mixed = FakeyMessage(
+            # The message is multipart/mixed
+            {'content-type': 'multipart/mixed'},
+            (), '', 'RootOf', 98765, [alternative])
+
+        self.msgObjs = [mixed]
+
+        self.expected = {
+            0: {'BODY': [
+                    [['text', 'plain', None, None, None, None, '5', '1'],
+                     ['text', 'html', None, None, None, None, '6', '1'],
+                     'alternative'],
+                    'mixed']}}
+
+        return self._fetchWork(False)
+
 
     def testFetchMessage(self, uid=0):
         self.function = self.client.fetchMessage
@@ -3743,12 +4173,12 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
                 'INTERNALDATE': '25-Jul-2010 06:20:30 -0400',
                 'RFC822.SIZE': '6',
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
-                'BODY': [None, None, [], None, None, None, '6']},
+                'BODY': [None, None, None, None, None, None, '6']},
             1: {'FLAGS': ['\\One', '\\Two', 'Three'],
                 'INTERNALDATE': '14-Apr-2003 19:43:44 -0400',
                 'RFC822.SIZE': '12',
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
-                'BODY': [None, None, [], None, None, None, '12']},
+                'BODY': [None, None, None, None, None, None, '12']},
         }
         return self._fetchWork(uid)
 
@@ -3797,7 +4227,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
 
 
-class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
+class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
     """
     Test the behavior of the server's SEARCH implementation, particularly in
     the face of unhandled search terms.
@@ -3951,9 +4381,43 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         """
         return self._messageSetSearchTest('2:* 3', [3])
 
+    def test_searchInvalidCriteria(self):
+        """
+        If the search criteria is not a valid key, a NO result is returned to
+        the client (resulting in an error callback), and an IllegalQueryError is
+        logged on the server side.
+        """
+        queryTerms = 'FOO'
+        def search():
+            return self.client.search(queryTerms)
+
+        d = self.connected.addCallback(strip(search))
+        d = self.assertFailure(d, imap4.IMAP4Exception)
+
+        def errorReceived(results):
+            """
+            Verify that the server logs an IllegalQueryError and the
+            client raises an IMAP4Exception with 'Search failed:...'
+            """
+            self.client.transport.loseConnection()
+            self.server.transport.loseConnection()
+
+            # Check what the server logs
+            errors = self.flushLoggedErrors(imap4.IllegalQueryError)
+            self.assertEqual(len(errors), 1)
+
+            # Verify exception given to client has the correct message
+            self.assertEqual(
+                "SEARCH failed: Invalid search command FOO", str(results))
+
+        d.addCallback(errorReceived)
+        d.addErrback(self._ebGeneral)
+        self.loopback()
+        return d
 
 
-class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
+
+class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
     implements(imap4.ISearchableMailbox)
 
     def setUp(self):
@@ -3970,6 +4434,10 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.client = SimpleClient(self.connected)
 
     def search(self, query, uid):
+        # Look for a specific bad query, so we can verify we handle it properly
+        if query == ['FOO']:
+            raise imap4.IllegalQueryError("FOO is not a valid search criteria")
+
         self.server_received_query = query
         self.server_received_uid = uid
         return self.expected
@@ -3990,7 +4458,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addErrback(self._ebGeneral)
 
         def check(ignored):
-            # Ensure no short-circuiting wierdness is going on
+            # Ensure no short-circuiting weirdness is going on
             self.failIf(self.result is self.expected)
 
             self.assertEqual(self.result, self.expected)
@@ -4044,7 +4512,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addErrback(self._ebGeneral)
 
         def check(ignored):
-            # Ensure no short-circuiting wierdness is going on
+            # Ensure no short-circuiting weirdness is going on
             self.failIf(self.result is self.expected)
 
             self.parts and self.parts.sort()
@@ -4062,6 +4530,43 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         d = loopback.loopbackTCP(self.server, self.client, noisy=False)
         d.addCallback(check)
+        return d
+
+
+    def test_invalidTerm(self):
+        """
+        If, as part of a search, an ISearchableMailbox raises an
+        IllegalQueryError (e.g. due to invalid search criteria), client sees a
+        failure response, and an IllegalQueryError is logged on the server.
+        """
+        query = 'FOO'
+
+        def search():
+            return self.client.search(query)
+
+        d = self.connected.addCallback(strip(search))
+        d = self.assertFailure(d, imap4.IMAP4Exception)
+
+        def errorReceived(results):
+            """
+            Verify that the server logs an IllegalQueryError and the
+            client raises an IMAP4Exception with 'Search failed:...'
+            """
+            self.client.transport.loseConnection()
+            self.server.transport.loseConnection()
+
+            # Check what the server logs
+            errors = self.flushLoggedErrors(imap4.IllegalQueryError)
+            self.assertEqual(len(errors), 1)
+
+            # Verify exception given to client has the correct message
+            self.assertEqual(
+                "SEARCH failed: FOO is not a valid search criteria",
+                str(results))
+
+        d.addCallback(errorReceived)
+        d.addErrback(self._ebGeneral)
+        self.loopback()
         return d
 
 
@@ -4095,7 +4600,7 @@ class MessageCopierMailbox:
         self.msgs.append(msg)
         return len(self.msgs)
 
-class CopyWorkerTestCase(unittest.TestCase):
+class CopyWorkerTests(unittest.TestCase):
     def testFeaturefulMessage(self):
         s = imap4.IMAP4Server()
 
@@ -4171,7 +4676,7 @@ class CopyWorkerTestCase(unittest.TestCase):
         return d.addCallback(cbCopy)
 
 
-class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
+class TLSTests(IMAP4HelperMixin, unittest.TestCase):
     serverCTX = ServerTLSContext and ServerTLSContext()
     clientCTX = ClientTLSContext and ClientTLSContext()
 
@@ -4249,19 +4754,20 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testFailedStartTLS(self):
-        failure = []
+        failures = []
         def breakServerTLS(ign):
             self.server.canStartTLS = False
 
         self.connected.addCallback(breakServerTLS)
         self.connected.addCallback(lambda ign: self.client.startTLS())
-        self.connected.addErrback(lambda err: failure.append(err.trap(imap4.IMAP4Exception)))
+        self.connected.addErrback(
+            lambda err: failures.append(err.trap(imap4.IMAP4Exception)))
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
 
         def check(ignored):
-            self.failUnless(failure)
-            self.assertIdentical(failure[0], imap4.IMAP4Exception)
+            self.failUnless(failures)
+            self.assertIdentical(failures[0], imap4.IMAP4Exception)
         return self.loopback().addCallback(check)
 
 
@@ -4279,7 +4785,7 @@ class SlowMailbox(SimpleMailbox):
         self.fetchDeferred.callback(None)
         return d
 
-class Timeout(IMAP4HelperMixin, unittest.TestCase):
+class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
 
     def test_serverTimeout(self):
         """
@@ -4373,7 +4879,7 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class Disconnection(unittest.TestCase):
+class DisconnectionTests(unittest.TestCase):
     def testClientDisconnectFailsDeferreds(self):
         c = imap4.IMAP4Client()
         t = StringTransportWithDisconnection()
@@ -4410,7 +4916,7 @@ class StringTransportConsumer(StringTransport):
 
 
 
-class Pipelining(unittest.TestCase):
+class PipeliningTests(unittest.TestCase):
     """
     Tests for various aspects of the IMAP4 server's pipelining support.
     """
@@ -4482,8 +4988,41 @@ class Pipelining(unittest.TestCase):
 
 
 if ClientTLSContext is None:
-    for case in (TLSTestCase,):
+    for case in (TLSTests,):
         case.skip = "OpenSSL not present"
 elif interfaces.IReactorSSL(reactor, None) is None:
-    for case in (TLSTestCase,):
+    for case in (TLSTests,):
         case.skip = "Reactor doesn't support SSL"
+
+
+
+class IMAP4ServerFetchTests(unittest.TestCase):
+    """
+    This test case is for the FETCH tests that require
+    a C{StringTransport}.
+    """
+
+    def setUp(self):
+        self.transport = StringTransport()
+        self.server = imap4.IMAP4Server()
+        self.server.state = 'select'
+        self.server.makeConnection(self.transport)
+
+
+    def test_fetchWithPartialValidArgument(self):
+        """
+        If by any chance, extra bytes got appended at the end of a valid
+        FETCH arguments, the client should get a BAD - arguments invalid
+        response.
+
+        See U{RFC 3501<http://tools.ietf.org/html/rfc3501#section-6.4.5>},
+        section 6.4.5,
+        """
+        # We need to clear out the welcome message.
+        self.transport.clear()
+        # Let's send out the faulty command.
+        self.server.dataReceived("0001 FETCH 1 FULLL\r\n")
+        expected = "0001 BAD Illegal syntax: Invalid Argument\r\n"
+        self.assertEqual(self.transport.value(), expected)
+        self.transport.clear()
+        self.server.connectionLost(error.ConnectionDone("Connection closed"))

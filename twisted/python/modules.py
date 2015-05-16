@@ -53,21 +53,29 @@ the modules outside the standard library's python-files directory::
                 modinfo.name, modinfo.filePath.path)
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 # let's try to keep path imports to a minimum...
 from os.path import dirname, split as splitpath
 
 import sys
-import zipimport
 import inspect
 import warnings
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
+from twisted.python.compat import nativeString, _PY3
 from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
-from twisted.python.zippath import ZipArchive
 from twisted.python.reflect import namedAny
+
+if not _PY3:
+    # TODO: Zippath isn't ported yet.
+    # See https://tm.tl/#6917.
+    from twisted.python.zippath import ZipArchive
+    import zipimport
+
 
 _nothing = object()
 
@@ -82,13 +90,14 @@ def _isPythonIdentifier(string):
     """
     cheezy fake test for proper identifier-ness.
 
-    @param string: a str which might or might not be a valid python identifier.
-
+    @param string: a L{str} which might or might not be a valid python
+        identifier.
     @return: True or False
     """
-    return (' ' not in string and
-            '.' not in string and
-            '-' not in string)
+    textString = nativeString(string)
+    return (' ' not in textString and
+            '.' not in textString and
+            '-' not in textString)
 
 
 
@@ -127,11 +136,10 @@ class _ModuleIteratorHelper:
 
         for placeToLook in self._packagePaths():
             try:
-                children = placeToLook.children()
+                children = sorted(placeToLook.children())
             except UnlistableError:
                 continue
 
-            children.sort()
             for potentialTopLevel in children:
                 ext = potentialTopLevel.splitext()[1]
                 potentialBasename = potentialTopLevel.basename()[:-len(ext)]
@@ -310,8 +318,9 @@ class PythonModule(_ModuleIteratorHelper):
         @param filePath: see ivar
         @param pathEntry: see ivar
         """
-        assert not name.endswith(".__init__")
-        self.name = name
+        _name = nativeString(name)
+        assert not _name.endswith(".__init__")
+        self.name = _name
         self.filePath = filePath
         self.parentPath = filePath.parent()
         self.pathEntry = pathEntry
@@ -476,43 +485,49 @@ class IPathImportMapper(Interface):
         L{ZipPath}, but more might be added later).
         """
 
+
+
+@implementer(IPathImportMapper)
 class _DefaultMapImpl:
     """ Wrapper for the default importer, i.e. None.  """
-    implements(IPathImportMapper)
     def mapPath(self, fsPathString):
         return FilePath(fsPathString)
 _theDefaultMapper = _DefaultMapImpl()
 
-class _ZipMapImpl:
-    """ IPathImportMapper implementation for zipimport.ZipImporter.  """
-    implements(IPathImportMapper)
-    def __init__(self, importer):
-        self.importer = importer
 
-    def mapPath(self, fsPathString):
-        """
-        Map the given FS path to a ZipPath, by looking at the ZipImporter's
-        "archive" attribute and using it as our ZipArchive root, then walking
-        down into the archive from there.
+if not _PY3:
+    @implementer(IPathImportMapper)
+    class _ZipMapImpl:
+        """ IPathImportMapper implementation for zipimport.ZipImporter.  """
+        def __init__(self, importer):
+            self.importer = importer
 
-        @return: a L{zippath.ZipPath} or L{zippath.ZipArchive} instance.
-        """
-        za = ZipArchive(self.importer.archive)
-        myPath = FilePath(self.importer.archive)
-        itsPath = FilePath(fsPathString)
-        if myPath == itsPath:
-            return za
-        # This is NOT a general-purpose rule for sys.path or __file__:
-        # zipimport specifically uses regular OS path syntax in its pathnames,
-        # even though zip files specify that slashes are always the separator,
-        # regardless of platform.
-        segs = itsPath.segmentsFrom(myPath)
-        zp = za
-        for seg in segs:
-            zp = zp.child(seg)
-        return zp
+        def mapPath(self, fsPathString):
+            """
+            Map the given FS path to a ZipPath, by looking at the ZipImporter's
+            "archive" attribute and using it as our ZipArchive root, then walking
+            down into the archive from there.
 
-registerAdapter(_ZipMapImpl, zipimport.zipimporter, IPathImportMapper)
+            @return: a L{zippath.ZipPath} or L{zippath.ZipArchive} instance.
+            """
+            za = ZipArchive(self.importer.archive)
+            myPath = FilePath(self.importer.archive)
+            itsPath = FilePath(fsPathString)
+            if myPath == itsPath:
+                return za
+            # This is NOT a general-purpose rule for sys.path or __file__:
+            # zipimport specifically uses regular OS path syntax in its
+            # pathnames, even though zip files specify that slashes are always
+            # the separator, regardless of platform.
+            segs = itsPath.segmentsFrom(myPath)
+            zp = za
+            for seg in segs:
+                zp = zp.child(seg)
+            return zp
+
+    registerAdapter(_ZipMapImpl, zipimport.zipimporter, IPathImportMapper)
+
+
 
 def _defaultSysPathFactory():
     """
@@ -527,18 +542,21 @@ def _defaultSysPathFactory():
 class PythonPath:
     """
     I represent the very top of the Python object-space, the module list in
-    sys.path and the modules list in sys.modules.
+    C{sys.path} and the modules list in C{sys.modules}.
 
-    @ivar _sysPath: a sequence of strings like sys.path.  This attribute is
+    @ivar _sysPath: A sequence of strings like C{sys.path}.  This attribute is
     read-only.
 
-    @ivar moduleDict: a dictionary mapping string module names to module
-    objects, like sys.modules.
+    @ivar sysPath: The current value of the module search path list.
+    @type sysPath: C{list}
 
-    @ivar sysPathHooks: a list of PEP-302 path hooks, like sys.path_hooks.
+    @ivar moduleDict: A dictionary mapping string module names to module
+    objects, like C{sys.modules}.
 
-    @ivar moduleLoader: a function that takes a fully-qualified python name and
-    returns a module, like twisted.python.reflect.namedAny.
+    @ivar sysPathHooks: A list of PEP-302 path hooks, like C{sys.path_hooks}.
+
+    @ivar moduleLoader: A function that takes a fully-qualified python name and
+    returns a module, like L{twisted.python.reflect.namedAny}.
     """
 
     def __init__(self,
@@ -707,6 +725,20 @@ class PythonPath:
             if module.name == modname:
                 return module
         raise KeyError(modname)
+
+
+    def __contains__(self, module):
+        """
+        Check to see whether or not a module exists on my import path.
+
+        @param module: The name of the module to look for on my import path.
+        @type module: C{str}
+        """
+        try:
+            self.__getitem__(module)
+            return True
+        except KeyError:
+            return False
 
 
     def __repr__(self):

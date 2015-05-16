@@ -5,11 +5,16 @@
 Tests for L{twisted.internet._newtls}.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet import protocol
-from twisted.internet.defer import Deferred
-from twisted.internet.test.test_tls import ContextGeneratingMixin, TLSMixin
+from twisted.internet.test.connectionmixins import (
+    ConnectableProtocol, runProtocolsWithReactor)
+from twisted.internet.test.test_tls import SSLCreator, TLSMixin
+from twisted.internet.test.test_tls import StartTLSClientCreator
+from twisted.internet.test.test_tls import ContextGeneratingMixin
+from twisted.internet.test.test_tcp import TCPCreator
 try:
     from twisted.protocols import tls
     from twisted.internet import _newtls
@@ -69,16 +74,15 @@ class FakeProducer(object):
 
 
 
-class ProducerProtocol(protocol.Protocol):
+class ProducerProtocol(ConnectableProtocol):
     """
     Register a producer, unregister it, and verify the producer hooks up to
     innards of C{TLSMemoryBIOProtocol}.
     """
 
-    def __init__(self, producer, result, doneDeferred):
+    def __init__(self, producer, result):
         self.producer = producer
         self.result = result
-        self.done = doneDeferred
 
 
     def connectionMade(self):
@@ -97,11 +101,6 @@ class ProducerProtocol(protocol.Protocol):
         self.transport.loseConnection()
 
 
-    def connectionLost(self, reason):
-        self.done.callback(None)
-        del self.done
-
-
 
 class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
     """
@@ -118,28 +117,11 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
         C{TLSMemoryBIOProtocol}, not the underlying transport directly.
         """
         result = []
-        done = Deferred()
         producer = FakeProducer()
 
-        serverFactory = protocol.ServerFactory
-        serverFactory.protocol = protocol.Protocol
-        reactor = self.buildReactor()
-        serverPort = reactor.listenSSL(0, protocol.ServerFactory(),
-                                       self.getServerContext(),
-                                       interface="127.0.0.1")
-        self.addCleanup(serverPort.stopListening)
-
-        factory = protocol.ClientFactory()
-        factory.buildProtocol = lambda addr: ProducerProtocol(producer,
-                                                              result, done)
-        reactor.connectSSL("127.0.0.1", serverPort.getHost().port, factory,
-                           self.getClientContext())
-
-        def gotResult(_):
-            reactor.stop()
-        done.addCallback(gotResult)
-        self.runReactor(reactor)
-
+        runProtocolsWithReactor(self, ConnectableProtocol(),
+                                ProducerProtocol(producer, result),
+                                SSLCreator())
         self.assertEqual(result, [producer, None])
 
 
@@ -150,38 +132,11 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
         the underlying transport directly.
         """
         result = []
-        done = Deferred()
-        clientContext = self.getClientContext()
-        serverContext = self.getServerContext()
-
         producer = FakeProducer()
 
-        class StartTLSProtocol(protocol.Protocol):
-            def connectionMade(self):
-                self.transport.startTLS(serverContext)
-
-        serverFactory = protocol.ServerFactory
-        serverFactory.protocol = StartTLSProtocol
-        reactor = self.buildReactor()
-        serverPort = reactor.listenTCP(0, protocol.ServerFactory(),
-                                       interface="127.0.0.1")
-        self.addCleanup(serverPort.stopListening)
-
-        class TLSProducerProtocol(ProducerProtocol):
-            def connectionMade(self):
-                self.transport.startTLS(clientContext)
-                ProducerProtocol.connectionMade(self)
-
-        factory = protocol.ClientFactory()
-        factory.buildProtocol = lambda addr: TLSProducerProtocol(producer,
-                                                                 result, done)
-        reactor.connectTCP("127.0.0.1", serverPort.getHost().port, factory)
-
-        def gotResult(_):
-            reactor.stop()
-        done.addCallback(gotResult)
-        self.runReactor(reactor)
-
+        runProtocolsWithReactor(self, ConnectableProtocol(),
+                                ProducerProtocol(producer, result),
+                                StartTLSClientCreator())
         self.assertEqual(result, [producer, None])
 
 
@@ -190,15 +145,12 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
         When a producer is registered, and then startTLS is called,
         the producer is re-registered with the C{TLSMemoryBIOProtocol}.
         """
-        result = []
-        done = Deferred()
         clientContext = self.getClientContext()
         serverContext = self.getServerContext()
-
+        result = []
         producer = FakeProducer()
-        reactor = self.buildReactor()
 
-        class RegisterTLSProtocol(protocol.Protocol):
+        class RegisterTLSProtocol(ConnectableProtocol):
             def connectionMade(self):
                 self.transport.registerProducer(producer, streaming)
                 self.transport.startTLS(serverContext)
@@ -216,24 +168,12 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
                 self.transport.unregisterProducer()
                 self.transport.loseConnection()
 
-            def connectionLost(self, reason):
-                reactor.stop()
-
-        serverFactory = protocol.ServerFactory
-        serverFactory.protocol = RegisterTLSProtocol
-        serverPort = reactor.listenTCP(0, protocol.ServerFactory(),
-                                       interface="127.0.0.1")
-        self.addCleanup(serverPort.stopListening)
-
-        class StartTLSProtocol(protocol.Protocol):
+        class StartTLSProtocol(ConnectableProtocol):
             def connectionMade(self):
                 self.transport.startTLS(clientContext)
 
-        factory = protocol.ClientFactory()
-        factory.protocol = StartTLSProtocol
-        reactor.connectTCP("127.0.0.1", serverPort.getHost().port, factory)
-        self.runReactor(reactor, timeout=2)
-
+        runProtocolsWithReactor(self, RegisterTLSProtocol(),
+                                StartTLSProtocol(), TCPCreator())
         self.assertEqual(result, [producer, producer])
 
 

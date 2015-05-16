@@ -36,7 +36,7 @@ unhashableObject = None # set in test_hashException
 
 
 
-class RebuildTestCase(unittest.TestCase):
+class RebuildTests(unittest.TestCase):
     """
     Simple testcase for rebuilding, to at least exercise the code.
     """
@@ -68,7 +68,7 @@ class RebuildTestCase(unittest.TestCase):
             class C(myrebuilder.B):
                 pass
             test_rebuild.C = C
-            c = C()
+            C()
         i = myrebuilder.Inherit()
         self.assertEqual(a.a(), 'a')
         # necessary because the file has not "changed" if a second has not gone
@@ -111,7 +111,7 @@ class RebuildTestCase(unittest.TestCase):
     def testComponentInteraction(self):
         x = crash_test_dummy.XComponent()
         x.setAdapter(crash_test_dummy.IX, crash_test_dummy.XA)
-        oldComponent = x.getComponent(crash_test_dummy.IX)
+        x.getComponent(crash_test_dummy.IX)
         rebuild.rebuild(crash_test_dummy, 0)
         newComponent = x.getComponent(crash_test_dummy.IX)
 
@@ -162,7 +162,7 @@ class RebuildTestCase(unittest.TestCase):
 
 
 
-class NewStyleTestCase(unittest.TestCase):
+class NewStyleTests(unittest.TestCase):
     """
     Tests for rebuilding new-style classes of various sorts.
     """

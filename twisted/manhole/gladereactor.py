@@ -10,7 +10,7 @@ suspend, resume and inspect transports interactively.
 __all__ = ['install']
 
 # Twisted Imports
-from twisted.python import log, threadable, runtime, failure, util, reflect
+from twisted.python import util, reflect
 from twisted.internet.gtk2reactor import Gtk2Reactor as sup
 
 import gtk

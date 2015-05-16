@@ -16,7 +16,7 @@ from twisted.web.proxy import ProxyClient, ProxyRequest, ReverseProxyRequest
 from twisted.web.test.test_web import DummyRequest
 
 
-class ReverseProxyResourceTestCase(TestCase):
+class ReverseProxyResourceTests(TestCase):
     """
     Tests for L{ReverseProxyResource}.
     """
@@ -123,7 +123,7 @@ class DummyChannel(object):
 
 
 
-class ProxyClientTestCase(TestCase):
+class ProxyClientTests(TestCase):
     """
     Tests for L{ProxyClient}.
     """
@@ -374,7 +374,7 @@ class ProxyClientTestCase(TestCase):
 
 
 
-class ProxyClientFactoryTestCase(TestCase):
+class ProxyClientFactoryTests(TestCase):
     """
     Tests for L{ProxyClientFactory}.
     """
@@ -418,7 +418,7 @@ class ProxyClientFactoryTestCase(TestCase):
 
 
 
-class ProxyRequestTestCase(TestCase):
+class ProxyRequestTests(TestCase):
     """
     Tests for L{ProxyRequest}.
     """
@@ -513,7 +513,7 @@ class DummyFactory(object):
 
 
 
-class ReverseProxyRequestTestCase(TestCase):
+class ReverseProxyRequestTests(TestCase):
     """
     Tests for L{ReverseProxyRequest}.
     """
@@ -522,7 +522,7 @@ class ReverseProxyRequestTestCase(TestCase):
         """
         L{ReverseProxyRequest.process} should create a connection to its
         factory host/port, using a L{ProxyClientFactory} instantiated with the
-        correct parameters, and particulary set the B{host} header to the
+        correct parameters, and particularly set the B{host} header to the
         factory host.
         """
         transport = StringTransportWithDisconnection()

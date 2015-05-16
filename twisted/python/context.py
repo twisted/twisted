@@ -2,8 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
 """
 Dynamic pseudo-scoping for Python.
 
@@ -13,6 +11,8 @@ retrieve 'value'.
 
 This is thread-safe.
 """
+
+from __future__ import division, absolute_import
 
 from threading import local
 

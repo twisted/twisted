@@ -14,6 +14,7 @@ except ImportError:
 
 from zope.interface.verify import verifyObject
 
+from twisted.python.failure import Failure
 from twisted.python.threadable import isInIOThread
 from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.defer import Deferred
@@ -137,12 +138,20 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactorThreadID = get_ident()
         reactor = self.buildReactor()
         event = win32event.CreateEvent(None, False, False, None)
-        finished = self.assertFailure(Deferred(), RuntimeError)
-        finished.addCallback(lambda ignored: reactor.stop())
+
+        result = []
+        finished = Deferred()
+        finished.addBoth(result.append)
+        finished.addBoth(lambda ignored: reactor.stop())
+
         listener = Listener(finished)
         reactor.addEvent(event, listener, 'brokenOccurred')
         reactor.callWhenRunning(win32event.SetEvent, event)
         self.runReactor(reactor)
+
+        self.assertIsInstance(result[0], Failure)
+        result[0].trap(RuntimeError)
+
         self.assertEqual(reactorThreadID, listener.connLostThreadID)
         self.assertEqual(1, len(self.flushLoggedErrors(RuntimeError)))
 
@@ -156,12 +165,20 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactorThreadID = get_ident()
         reactor = self.buildReactor()
         event = win32event.CreateEvent(None, False, False, None)
-        finished = self.assertFailure(Deferred(), EnvironmentError)
-        finished.addCallback(lambda ignored: reactor.stop())
+
+        result = []
+        finished = Deferred()
+        finished.addBoth(result.append)
+        finished.addBoth(lambda ignored: reactor.stop())
+
         listener = Listener(finished)
         reactor.addEvent(event, listener, 'returnValueOccurred')
         reactor.callWhenRunning(win32event.SetEvent, event)
         self.runReactor(reactor)
+
+        self.assertIsInstance(result[0], Failure)
+        result[0].trap(EnvironmentError)
+
         self.assertEqual(reactorThreadID, listener.connLostThreadID)
 
 
@@ -178,6 +195,6 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactor.addEvent(event, listener, 'occurred')
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
-        self.assertIdentical(None, listener.connLostThreadID)
+        self.assertIs(None, listener.connLostThreadID)
 
 globals().update(Win32EventsTestsBuilder.makeTestCaseClasses())

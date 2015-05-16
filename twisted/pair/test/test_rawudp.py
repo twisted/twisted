@@ -4,8 +4,7 @@
 #
 from twisted.trial import unittest
 
-from twisted.internet import protocol, reactor, error
-from twisted.python import failure
+from twisted.internet import protocol
 from twisted.pair import rawudp
 
 class MyProtocol(protocol.DatagramProtocol):
@@ -20,7 +19,7 @@ class MyProtocol(protocol.DatagramProtocol):
         assert expectHost == host, "Expected host %r, got %r" % (expectHost, host)
         assert expectPort == port, "Expected port %d=0x%04x, got %d=0x%04x" % (expectPort, expectPort, port, port)
 
-class RawUDPTestCase(unittest.TestCase):
+class RawUDPTests(unittest.TestCase):
     def testPacketParsing(self):
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol([

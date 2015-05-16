@@ -7,7 +7,7 @@ from twisted.trial import unittest
 
 
 
-class WordsTap(unittest.TestCase):
+class WordsTapTests(unittest.TestCase):
     """
     Ensures that the twisted.words.tap API works.
     """

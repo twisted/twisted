@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-This module represents flavors of remotely acessible objects.
+This module represents flavors of remotely accessible objects.
 
 Currently this is only objects accessible through Perspective Broker, but will
 hopefully encompass all forms of remote access which can emulate subsets of PB
@@ -23,7 +23,7 @@ but may have a small impact on users who subclass and override methods.
 
 # system imports
 import sys
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 # twisted imports
 from twisted.python import log, reflect
@@ -127,6 +127,7 @@ class Referenceable(Serializable):
         return ["remote", jellier.invoker.registerReference(self)]
 
 
+@implementer(IPBRoot)
 class Root(Referenceable):
     """I provide a root object to L{pb.Broker}s for a L{pb.BrokerFactory}.
 
@@ -135,8 +136,6 @@ class Root(Referenceable):
     by calling my rootObject method.
     """
 
-    implements(IPBRoot)
-    
     def rootObject(self, broker):
         """A L{pb.BrokerFactory} is requesting to publish me as a root object.
 
@@ -210,7 +209,7 @@ class ViewPoint(Referenceable):
         kw = broker.unserialize(kw, self.perspective)
         method = getattr(self.object, "view_%s" % message)
         try:
-            state = apply(method, (self.perspective,)+args, kw)
+            state = method(*(self.perspective,)+args, **kw)
         except TypeError:
             log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise
@@ -325,7 +324,7 @@ class Cacheable(Copyable):
         Cacheable instances to keep their RemoteCaches up to date when
         they change, such that no changes can occur between the point
         at which the state is initially copied and the client receives
-        it that are not propogated.
+        it that are not propagated.
         """
 
         return self.getStateToCopyFor(perspective)
@@ -417,7 +416,7 @@ class RemoteCache(RemoteCopy, Serializable):
         kw = broker.unserialize(kw)
         method = getattr(self, "observe_%s" % message)
         try:
-            state = apply(method, args, kw)
+            state = method(*args, **kw)
         except TypeError:
             log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise

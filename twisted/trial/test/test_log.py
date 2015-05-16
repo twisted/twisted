@@ -4,12 +4,13 @@
 """
 Test the interaction between trial and errors logged during test run.
 """
+from __future__ import division, absolute_import
 
 import time
 
 from twisted.internet import reactor, task
 from twisted.python import failure, log
-from twisted.trial import unittest, reporter
+from twisted.trial import unittest, reporter, _synctest
 
 
 def makeFailure():
@@ -23,12 +24,12 @@ def makeFailure():
     return f
 
 
+
 class Mask(object):
     """
     Hide C{MockTest}s from Trial's automatic test finder.
     """
-
-    class MockTest(unittest.TestCase):
+    class FailureLoggingMixin(object):
         def test_silent(self):
             """
             Don't log any errors.
@@ -47,6 +48,12 @@ class Mask(object):
             log.err(makeFailure())
             log.err(makeFailure())
 
+
+    class SynchronousFailureLogging(FailureLoggingMixin, unittest.SynchronousTestCase):
+        pass
+
+
+    class AsynchronousFailureLogging(FailureLoggingMixin, unittest.TestCase):
         def test_inCallback(self):
             """
             Log an error in an asynchronous callback.
@@ -54,14 +61,15 @@ class Mask(object):
             return task.deferLater(reactor, 0, lambda: log.err(makeFailure()))
 
 
-class TestObserver(unittest.TestCase):
+
+class ObserverTests(unittest.SynchronousTestCase):
     """
-    Tests for L{unittest._LogObserver}, a helper for the implementation of
-    L{TestCase.flushLoggedErrors}.
+    Tests for L{_synctest._LogObserver}, a helper for the implementation of
+    L{SynchronousTestCase.flushLoggedErrors}.
     """
     def setUp(self):
         self.result = reporter.TestResult()
-        self.observer = unittest._LogObserver()
+        self.observer = _synctest._LogObserver()
 
 
     def test_msg(self):
@@ -144,7 +152,7 @@ class TestObserver(unittest.TestCase):
 
 
 
-class LogErrors(unittest.TestCase):
+class LogErrorsMixin(object):
     """
     High-level tests demonstrating the expected behaviour of logged errors
     during tests.
@@ -156,42 +164,72 @@ class LogErrors(unittest.TestCase):
     def tearDown(self):
         self.flushLoggedErrors(ZeroDivisionError)
 
+
     def test_singleError(self):
         """
         Test that a logged error gets reported as a test error.
         """
-        test = Mask.MockTest('test_single')
+        test = self.MockTest('test_single')
         test(self.result)
         self.assertEqual(len(self.result.errors), 1)
         self.assertTrue(self.result.errors[0][1].check(ZeroDivisionError),
                         self.result.errors[0][1])
+        self.assertEqual(0, self.result.successes)
+
 
     def test_twoErrors(self):
         """
         Test that when two errors get logged, they both get reported as test
         errors.
         """
-        test = Mask.MockTest('test_double')
+        test = self.MockTest('test_double')
         test(self.result)
         self.assertEqual(len(self.result.errors), 2)
+        self.assertEqual(0, self.result.successes)
 
-    def test_inCallback(self):
-        """
-        Test that errors logged in callbacks get reported as test errors.
-        """
-        test = Mask.MockTest('test_inCallback')
-        test(self.result)
-        self.assertEqual(len(self.result.errors), 1)
-        self.assertTrue(self.result.errors[0][1].check(ZeroDivisionError),
-                        self.result.errors[0][1])
 
     def test_errorsIsolated(self):
         """
         Check that an error logged in one test doesn't fail the next test.
         """
-        t1 = Mask.MockTest('test_single')
-        t2 = Mask.MockTest('test_silent')
+        t1 = self.MockTest('test_single')
+        t2 = self.MockTest('test_silent')
         t1(self.result)
         t2(self.result)
         self.assertEqual(len(self.result.errors), 1)
         self.assertEqual(self.result.errors[0][0], t1)
+        self.assertEqual(1, self.result.successes)
+
+
+    def test_boundedObservers(self):
+        """
+        There are no extra log observers after a test runs.
+        """
+        # XXX trial is *all about* global log state.  It should really be fixed.
+        observer = _synctest._LogObserver()
+        self.patch(_synctest, '_logObserver', observer)
+        observers = log.theLogPublisher.observers[:]
+        test = self.MockTest()
+        test(self.result)
+        self.assertEqual(observers, log.theLogPublisher.observers)
+
+
+
+class SynchronousLogErrorsTests(LogErrorsMixin, unittest.SynchronousTestCase):
+    MockTest = Mask.SynchronousFailureLogging
+
+
+
+class AsynchronousLogErrorsTests(LogErrorsMixin, unittest.TestCase):
+    MockTest = Mask.AsynchronousFailureLogging
+
+    def test_inCallback(self):
+        """
+        Test that errors logged in callbacks get reported as test errors.
+        """
+        test = self.MockTest('test_inCallback')
+        test(self.result)
+        self.assertEqual(len(self.result.errors), 1)
+        self.assertTrue(self.result.errors[0][1].check(ZeroDivisionError),
+                        self.result.errors[0][1])
+

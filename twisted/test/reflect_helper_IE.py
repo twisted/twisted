@@ -1,4 +1,4 @@
 
 # Helper for a test_reflect test
 
-import idonotexist
+__import__('idonotexist')

@@ -1,17 +1,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-#
 from twisted.trial import unittest
 
-from twisted.internet import protocol, reactor, error
-from twisted.python import failure, components
+from twisted.python import components
 from twisted.pair import ip, raw
 from zope import interface
 
+
 class MyProtocol:
     interface.implements(raw.IRawDatagramProtocol)
-    
+
     def __init__(self, expecting):
         self.expecting = list(expecting)
 
@@ -28,7 +26,7 @@ class MyProtocol:
         assert expectKw == kw, "Expected %r, got %r" % (expectKw, kw)
         assert expectData == data, "Expected %r, got %r" % (expectData, data)
 
-class IPTestCase(unittest.TestCase):
+class IPTests(unittest.TestCase):
     def testPacketParsing(self):
         proto = ip.IPProtocol()
         p1 = MyProtocol([

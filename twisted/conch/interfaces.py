@@ -58,9 +58,9 @@ class ISession(Interface):
 
     def getPty(term, windowSize, modes):
         """
-        Get a psuedo-terminal for use by a shell or command.
+        Get a pseudo-terminal for use by a shell or command.
 
-        If a psuedo-terminal is not available, or the request otherwise
+        If a pseudo-terminal is not available, or the request otherwise
         fails, raise an exception.
         """
 
@@ -96,11 +96,17 @@ class ISession(Interface):
 
 class ISFTPServer(Interface):
     """
-    The only attribute of this class is "avatar".  It is the avatar
-    returned by the Realm that we are authenticated with, and
-    represents the logged-in user.  Each method should check to verify
-    that the user has permission for their actions.
+    SFTP subsystem for server-side communication.
+
+    Each method should check to verify that the user has permission for
+    their actions.
     """
+
+    avatar = Attribute(
+        """
+        The avatar returned by the Realm that we are authenticated with,
+        and represents the logged-in user.
+        """)
 
     def gotVersion(otherVersion, extData):
         """

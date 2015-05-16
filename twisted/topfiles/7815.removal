@@ -1,0 +1,1 @@
+twisted.trial.reporter.TestResult and twisted.trial.reporter.Reporter contained deprecated methods (since 8.0) which have now been removed.

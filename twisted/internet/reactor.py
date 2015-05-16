@@ -6,10 +6,10 @@ The reactor is the Twisted event loop within Twisted, the loop which drives
 applications using Twisted. The reactor provides APIs for networking,
 threading, dispatching events, and more.
 
-The default reactor is based on C{select(2)} and will be installed if this
-module is imported without another reactor being explicitly installed.
-Regardless of which reactor is installed, importing this module is the correct
-way to get a reference to it.
+The default reactor depends on the platform and will be installed if this
+module is imported without another reactor being explicitly installed
+beforehand. Regardless of which reactor is installed, importing this module is
+the correct way to get a reference to it.
 
 New application code should prefer to pass and accept the reactor as a
 parameter where it is needed, rather than relying on being able to import this
@@ -28,9 +28,10 @@ this is not currently possible.
 @see: L{IReactorUNIXDatagram<twisted.internet.interfaces.IReactorUNIXDatagram>}
 @see: L{IReactorFDSet<twisted.internet.interfaces.IReactorFDSet>}
 @see: L{IReactorThreads<twisted.internet.interfaces.IReactorThreads>}
-@see: L{IReactorArbitrary<twisted.internet.interfaces.IReactorArbitrary>}
 @see: L{IReactorPluggableResolver<twisted.internet.interfaces.IReactorPluggableResolver>}
 """
+
+from __future__ import division, absolute_import
 
 import sys
 del sys.modules['twisted.internet.reactor']

@@ -26,14 +26,14 @@ class TestBucketBase(unittest.TestCase):
     def tearDown(self):
         htb.time = self._realTimeFunc
 
-class TestBucket(TestBucketBase):
+class BucketTests(TestBucketBase):
     def testBucketSize(self):
         """Testing the size of the bucket."""
         b = SomeBucket()
         fit = b.add(1000)
         self.assertEqual(100, fit)
 
-    def testBucketDrian(self):
+    def testBucketDrain(self):
         """Testing the bucket's drain rate."""
         b = SomeBucket()
         fit = b.add(1000)
@@ -41,7 +41,20 @@ class TestBucket(TestBucketBase):
         fit = b.add(1000)
         self.assertEqual(20, fit)
 
-class TestBucketNesting(TestBucketBase):
+    def test_bucketEmpty(self):
+        """
+        L{htb.Bucket.drip} returns C{True} if the bucket is empty after that drip.
+        """
+        b = SomeBucket()
+        b.add(20)
+        self.clock.set(9)
+        empty = b.drip()
+        self.assertFalse(empty)
+        self.clock.set(10)
+        empty = b.drip()
+        self.assertTrue(empty)
+
+class BucketNestingTests(TestBucketBase):
     def setUp(self):
         TestBucketBase.setUp(self)
         self.parent = SomeBucket()
@@ -72,7 +85,7 @@ class TestBucketNesting(TestBucketBase):
 
 from test_pcp import DummyConsumer
 
-class ConsumerShaperTest(TestBucketBase):
+class ConsumerShaperTests(TestBucketBase):
     def setUp(self):
         TestBucketBase.setUp(self)
         self.underlying = DummyConsumer()
@@ -80,7 +93,7 @@ class ConsumerShaperTest(TestBucketBase):
         self.shaped = htb.ShapedConsumer(self.underlying, self.bucket)
 
     def testRate(self):
-        # Start off with a full bucket, so the burst-size dosen't factor in
+        # Start off with a full bucket, so the burst-size doesn't factor in
         # to the calculations.
         delta_t = 10
         self.bucket.add(100)

@@ -11,12 +11,13 @@ from twisted.python.reflect import qual
 from twisted.python.deprecate import getWarningMethod
 from twisted.python.failure import Failure
 from twisted.python.log import err
-from twisted.persisted.styles import Ephemeral
 
 _missingProcessExited = ("Since Twisted 8.2, IProcessProtocol.processExited "
                          "is required.  %s must implement it.")
 
-class BaseProcess(Ephemeral):
+
+
+class BaseProcess(object):
     pid = None
     status = None
     lostProcess = 0
@@ -34,7 +35,10 @@ class BaseProcess(Ephemeral):
                 _missingProcessExited % (qual(self.proto.__class__),),
                 DeprecationWarning, stacklevel=0)
         else:
-            processExited(Failure(reason))
+            try:
+                processExited(Failure(reason))
+            except:
+                err(None, "unexpected error in processExited")
 
 
     def processEnded(self, status):
