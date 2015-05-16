@@ -1,0 +1,20 @@
+from twisted.lore import default
+from myhtml import spitters
+
+class MyProcessingFunctionFactory(default.ProcessingFunctionFactory):
+    latexSpitters={None: spitters.MyLatexSpitter,
+                   }
+
+    # redefine getLintChecker to validate our classes
+    def getLintChecker(self):
+        # use the default checker from parent
+        checker = lint.getDefaultChecker()
+        checker.allowedClasses = checker.allowedClasses.copy()
+        oldSpan = checker.allowedClasses['span']
+        checkfunc=lambda cl: oldSpan(cl) or cl in ['marketinglie',
+                                                   'productname']
+        checker.allowedClasses['span'] = checkfunc
+        return checker
+
+# initialize the global variable factory with an instance of your new factory
+factory=MyProcessingFunctionFactory()

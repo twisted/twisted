@@ -331,11 +331,24 @@ Jelly
 
 
 
-
+  
   The serialization layer for :ref:`Twisted Spread <core-howto-glossary-spread>` , although it
   can be used separately from Twisted Spread as well.  It is similar in purpose
   to Python's standard ``pickle`` module, but is more
   network-friendly, and depends on a separate marshaller (:ref:`Banana <core-howto-glossary-banana>` , in most cases).  See :api:`twisted.spread.jelly <twisted.spread.jelly>` .
+
+.. _core-howto-glossary-lore:
+
+Lore
+
+
+
+
+
+
+  `Lore <http://twistedmatrix.com/trac/wiki/TwistedLore/>`_ is
+  Twisted's documentation system.  The source format is a subset of
+  XHTML, and output formats include HTML and LaTeX.
 
 .. _core-howto-glossary-manhole:
 

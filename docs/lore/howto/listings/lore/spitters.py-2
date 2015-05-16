@@ -1,0 +1,26 @@
+from twisted.lore import latex
+from twisted.lore.latex import processFile
+import os.path
+
+# 2. Create a new mixin that does what the old MyLatexSpitter used to do:
+# process the new classes we defined
+class MySpitterMixin:
+    def visitNode_span_productname(self, node):
+        self.writer('\\underline{')
+        self.visitNodeDefault(node) 
+        self.writer('}')
+
+    def visitNode_span_marketinglie(self, node):
+        self.writer('\\begin{bf}\\begin{Large}')
+        self.visitNodeDefault(node)
+        self.writer('\\end{Large}\\end{bf}')
+
+# 3. inherit from the mixin class for each of the three sub-spitters
+class MyLatexSpitter(MySpitterMixin, latex.LatexSpitter):
+    pass
+    
+class MySectionLatexSpitter(MySpitterMixin, latex.SectionLatexSpitter):
+    pass
+
+class MyChapterLatexSpitter(MySpitterMixin, latex.ChapterLatexSpitter):
+    pass
