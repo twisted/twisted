@@ -10,6 +10,7 @@ from zope.interface import implements, Interface
 from twisted.trial import unittest
 from twisted.cred import portal, checkers, credentials, error
 from twisted.python import components
+from twisted.python import versions
 from twisted.internet import defer
 
 try:

@@ -17,6 +17,7 @@ import hmac
 import random
 import re
 import time
+import warnings
 
 from binascii import hexlify
 from hashlib import md5
