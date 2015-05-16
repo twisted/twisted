@@ -10,7 +10,6 @@ Contents:
     installation/index
     core/index
     conch/index
-    lore/index
     mail/index
     names/index
     pair/index

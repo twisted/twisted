@@ -61,9 +61,8 @@ on event-based network programming and multiprotocol integration.
     )
 
 
-twisted_subprojects = ["conch", "lore", "mail", "names",
-                       "news", "pair", "runner", "web",
-                       "words"]
+twisted_subprojects = ["conch", "mail", "names", "news", "pair", "runner",
+                       "web", "words"]
 
 _EXTRA_OPTIONS = dict(
     dev=['twistedchecker >= 0.2.0',
