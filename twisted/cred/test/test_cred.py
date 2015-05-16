@@ -201,7 +201,12 @@ class OnDiskDatabaseTests(unittest.TestCase):
         for (u, p) in self.users:
             f.write('%s:%s\n' % (u, p))
         f.close()
-        creds = [credentials.UsernameHashedPassword(u, p) for u, p in self.users]
+        creds = [
+            self.callDeprecated(
+                versions.Version("Twisted", 15, 2, 0),
+                credentials.UsernameHashedPassword, username, password)
+            for (username, password) in self.users
+        ]
         d = defer.gatherResults(
             [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
@@ -254,8 +259,16 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         return d
 
     def testHashedCredentials(self):
-        hashedCreds = [credentials.UsernameHashedPassword(u, crypt(p, u[:2]))
-                       for u, p in self.users]
+        """
+        L{twisted.cred.credentials.UsernameHashedPassword} does not, in fact,
+        do any hashing, and we cannot login with crypt'd passwords.
+        """
+        hashedCreds = [
+            self.callDeprecated(
+                versions.Version("Twisted", 15, 2, 0),
+                credentials.UsernameHashedPassword, username, password)
+            for (username, password) in self.users
+        ]
         d = defer.DeferredList([self.port.login(c, None, ITestable)
                                 for c in hashedCreds], consumeErrors=True)
         d.addCallback(self._assertFailures, error.UnhandledCredentials)

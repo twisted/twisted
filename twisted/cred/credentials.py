@@ -450,6 +450,11 @@ class UsernameHashedPassword:
     def __init__(self, username, hashed):
         self.username = username
         self.hashed = hashed
+        warnings.warn(
+            "twisted.cred.credentials.UsernameHashedPassword was deprecated "
+            "in Twisted 15.2.0",
+            category=DeprecationWarning,
+            stacklevel=2)
 
     def checkPassword(self, password):
         return self.hashed == password
