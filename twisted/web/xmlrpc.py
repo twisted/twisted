@@ -8,10 +8,17 @@ A generic resource for publishing objects via XML-RPC.
 Maintainer: Itamar Shtull-Trauring
 """
 
+from __future__ import division, absolute_import
+
+from twisted.python.compat import _PY3, intToBytes, nativeString, urllib_parse
+from twisted.python.compat import unicode
+
 # System Imports
 import base64
-import xmlrpclib
-import urlparse
+if _PY3:
+    import xmlrpc.client as xmlrpclib
+else:
+    import xmlrpclib
 
 # Sibling Imports
 from twisted.web import resource, server, http
@@ -114,7 +121,7 @@ class XMLRPC(resource.Resource):
 
     isLeaf = 1
     separator = '.'
-    allowedMethods = ('POST',)
+    allowedMethods = (b'POST',)
 
     def __init__(self, allowNone=False, useDateTime=False):
         resource.Resource.__init__(self)
@@ -134,21 +141,21 @@ class XMLRPC(resource.Resource):
         return self.subHandlers.get(prefix, None)
 
     def getSubHandlerPrefixes(self):
-        return self.subHandlers.keys()
+        return list(self.subHandlers.keys())
 
     def render_POST(self, request):
         request.content.seek(0, 0)
-        request.setHeader("content-type", "text/xml")
+        request.setHeader(b"content-type", b"text/xml; charset=utf-8")
         try:
             args, functionPath = xmlrpclib.loads(request.content.read(),
                 use_datetime=self.useDateTime)
-        except Exception, e:
+        except Exception as e:
             f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
             self._cbRender(f, request)
         else:
             try:
                 function = self.lookupProcedure(functionPath)
-            except Fault, f:
+            except Fault as f:
                 self._cbRender(f, request)
             else:
                 # Use this list to track whether the response has failed or not.
@@ -178,12 +185,15 @@ class XMLRPC(resource.Resource):
                 content = xmlrpclib.dumps(
                     result, methodresponse=True,
                     allow_none=self.allowNone)
-            except Exception, e:
+            except Exception as e:
                 f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
                 content = xmlrpclib.dumps(f, methodresponse=True,
                                           allow_none=self.allowNone)
 
-            request.setHeader("content-length", str(len(content)))
+            if isinstance(content, unicode):
+                content = content.encode('utf8')
+            request.setHeader(
+                b"content-length", intToBytes(len(content)))
             request.write(content)
         except:
             log.err()
@@ -320,23 +330,24 @@ def addIntrospection(xmlrpc):
 
 
 class QueryProtocol(http.HTTPClient):
-
     def connectionMade(self):
         self._response = None
-        self.sendCommand('POST', self.factory.path)
-        self.sendHeader('User-Agent', 'Twisted/XMLRPClib')
-        self.sendHeader('Host', self.factory.host)
-        self.sendHeader('Content-type', 'text/xml')
-        self.sendHeader('Content-length', str(len(self.factory.payload)))
+        self.sendCommand(b'POST', self.factory.path)
+        self.sendHeader(b'User-Agent', b'Twisted/XMLRPClib')
+        self.sendHeader(b'Host', self.factory.host)
+        self.sendHeader(b'Content-type', b'text/xml; charset=utf-8')
+        payload = self.factory.payload
+        self.sendHeader(b'Content-length', intToBytes(len(payload)))
+
         if self.factory.user:
-            auth = '%s:%s' % (self.factory.user, self.factory.password)
-            auth = base64.b64encode(auth)
-            self.sendHeader('Authorization', 'Basic %s' % (auth,))
+            auth = b':'.join([self.factory.user, self.factory.password])
+            authHeader = b''.join([b'Basic ', base64.b64encode(auth)])
+            self.sendHeader(b'Authorization', authHeader)
         self.endHeaders()
-        self.transport.write(self.factory.payload)
+        self.transport.write(payload)
 
     def handleStatus(self, version, status, message):
-        if status != '200':
+        if status != b'200':
             self.factory.badStatus(status, message)
 
     def handleResponse(self, contents):
@@ -376,18 +387,18 @@ class _QueryFactory(protocol.ClientFactory):
     XML-RPC Client Factory
 
     @ivar path: The path portion of the URL to which to post method calls.
-    @type path: C{str}
+    @type path: L{bytes}
 
     @ivar host: The value to use for the Host HTTP header.
-    @type host: C{str}
+    @type host: L{bytes}
 
     @ivar user: The username with which to authenticate with the server
         when making calls.
-    @type user: C{str} or C{NoneType}
+    @type user: L{bytes} or C{NoneType}
 
     @ivar password: The password with which to authenticate with the server
         when making calls.
-    @type password: C{str} or C{NoneType}
+    @type password: L{bytes} or C{NoneType}
 
     @ivar useDateTime: Accept datetime values as datetime.datetime objects.
         also passed to the underlying xmlrpclib implementation.  Defaults to
@@ -420,6 +431,8 @@ class _QueryFactory(protocol.ClientFactory):
         self.user, self.password = user, password
         self.payload = payloadTemplate % (method,
             xmlrpclib.dumps(args, allow_none=allowNone))
+        if isinstance(self.payload, unicode):
+            self.payload = self.payload.encode('utf8')
         self.deferred = defer.Deferred(canceller)
         self.useDateTime = useDateTime
 
@@ -462,13 +475,13 @@ class Proxy:
         when making calls.  If specified, overrides any username information
         embedded in C{url}.  If not specified, a value may be taken from
         C{url} if present.
-    @type user: C{str} or C{NoneType}
+    @type user: L{bytes} or C{NoneType}
 
     @ivar password: The password with which to authenticate with the server
         when making calls.  If specified, overrides any password information
         embedded in C{url}.  If not specified, a value may be taken from
         C{url} if present.
-    @type password: C{str} or C{NoneType}
+    @type password: L{bytes} or C{NoneType}
 
     @ivar allowNone: allow the use of None values in parameters. It's
         passed to the underlying L{xmlrpclib} implementation. Defaults to
@@ -499,13 +512,14 @@ class Proxy:
             over SSL if the scheme is HTTPS.  If netloc contains username or
             password information, these will be used to authenticate, as long as
             the C{user} and C{password} arguments are not specified.
-        @type url: C{str}
+        @type url: L{bytes}
 
         """
-        scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-        netlocParts = netloc.split('@')
+        scheme, netloc, path, params, query, fragment = urllib_parse.urlparse(
+            url)
+        netlocParts = netloc.split(b'@')
         if len(netlocParts) == 2:
-            userpass = netlocParts.pop(0).split(':')
+            userpass = netlocParts.pop(0).split(b':')
             self.user = userpass.pop(0)
             try:
                 self.password = userpass.pop(0)
@@ -513,16 +527,16 @@ class Proxy:
                 self.password = None
         else:
             self.user = self.password = None
-        hostport = netlocParts[0].split(':')
+        hostport = netlocParts[0].split(b':')
         self.host = hostport.pop(0)
         try:
             self.port = int(hostport.pop(0))
         except:
             self.port = None
         self.path = path
-        if self.path in ['', None]:
-            self.path = '/'
-        self.secure = (scheme == 'https')
+        if self.path in [b'', None]:
+            self.path = b'/'
+        self.secure = (scheme == b'https')
         if user is not None:
             self.user = user
         if password is not None:
@@ -556,12 +570,12 @@ class Proxy:
         if self.secure:
             from twisted.internet import ssl
             connector = self._reactor.connectSSL(
-                self.host, self.port or 443,
+                nativeString(self.host), self.port or 443,
                 factory, ssl.ClientContextFactory(),
                 timeout=self.connectTimeout)
         else:
             connector = self._reactor.connectTCP(
-                self.host, self.port or 80, factory,
+                nativeString(self.host), self.port or 80, factory,
                 timeout=self.connectTimeout)
         return factory.deferred
 

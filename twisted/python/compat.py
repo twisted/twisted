@@ -505,6 +505,10 @@ except ImportError:
     # Python 3+
     FileType = IOBase
 
+if _PY3:
+    import urllib.parse as urllib_parse
+else:
+    import urlparse as urllib_parse
 
 
 # Dealing with the differences in items/iteritems
@@ -563,4 +567,5 @@ __all__ = [
     "items",
     "iteritems",
     "xrange",
-]
+    "urllib_parse",
+    ]

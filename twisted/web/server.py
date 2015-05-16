@@ -80,7 +80,7 @@ date_time_string = http.datetimeToString
 string_date_time = http.stringToDatetime
 
 # Support for other methods may be implemented on a per-resource basis.
-supportedMethods = ('GET', 'HEAD', 'POST')
+supportedMethods = (b'GET', b'HEAD', b'POST')
 
 
 def _addressToTuple(addr):
@@ -265,14 +265,15 @@ class Request(Copyable, http.Request, components.Componentized):
             if self.method in (supportedMethods):
                 # We MUST include an Allow header
                 # (RFC 2616, 10.4.6 and 14.7)
-                self.setHeader('Allow', ', '.join(allowedMethods))
+                self.setHeader(b'Allow', b', '.join(allowedMethods))
                 s = ('''Your browser approached me (at %(URI)s) with'''
                      ''' the method "%(method)s".  I only allow'''
                      ''' the method%(plural)s %(allowed)s here.''' % {
-                    'URI': escape(self.uri),
-                    'method': self.method,
+                    'URI': escape(nativeString(self.uri)),
+                    'method': nativeString(self.method),
                     'plural': ((len(allowedMethods) > 1) and 's') or '',
-                    'allowed': ', '.join(allowedMethods)
+                    'allowed': ', '.join([nativeString(x)
+                                          for x in allowedMethods])
                     })
                 epage = resource.ErrorPage(http.NOT_ALLOWED,
                                            "Method Not Allowed", s)
