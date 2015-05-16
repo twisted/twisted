@@ -60,12 +60,3 @@ from twisted._version import version
 __version__ = version.short()
 
 del compat
-
-# Deprecating lore.
-from twisted.python.versions import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-
-deprecatedModuleAttribute(
-    Version("Twisted", 14, 0, 0),
-    "Use Sphinx instead.",
-    "twisted", "lore")
