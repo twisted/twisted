@@ -16,8 +16,9 @@ from twisted.python import reflect
 
 class WriteChild(protocol.Protocol):
     def connectionMade(self):
-        for ch in 'ok!':
-            self.transport.write(ch)
+        self.transport.write(b'o')
+        self.transport.write(b'k')
+        self.transport.write(b'!')
         self.transport.loseConnection()
 
 

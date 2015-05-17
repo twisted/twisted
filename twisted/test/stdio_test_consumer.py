@@ -24,7 +24,8 @@ class ConsumerChild(protocol.Protocol):
         self.junkPath = junkPath
 
     def connectionMade(self):
-        d = basic.FileSender().beginFileTransfer(file(self.junkPath), self.transport)
+        d = basic.FileSender().beginFileTransfer(open(self.junkPath, 'rb'),
+                                                 self.transport)
         d.addErrback(failed)
         d.addCallback(lambda ign: self.transport.loseConnection())
 

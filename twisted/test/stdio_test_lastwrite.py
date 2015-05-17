@@ -34,7 +34,7 @@ class LastWriteChild(Protocol):
 
 
 def main(reactor, magicString):
-    p = LastWriteChild(reactor, magicString)
+    p = LastWriteChild(reactor, magicString.encode('ascii'))
     StandardIO(p)
     reactor.run()
 

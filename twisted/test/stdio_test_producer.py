@@ -16,7 +16,7 @@ from twisted.python import log, reflect
 
 class ProducerChild(protocol.Protocol):
     _paused = False
-    buf = ''
+    buf = b''
 
     def connectionLost(self, reason):
         log.msg("*****OVER*****")
@@ -24,15 +24,15 @@ class ProducerChild(protocol.Protocol):
         # reactor.stop()
 
 
-    def dataReceived(self, bytes):
-        self.buf += bytes
+    def dataReceived(self, data):
+        self.buf += data
         if self._paused:
             log.startLogging(sys.stderr)
             log.msg("dataReceived while transport paused!")
             self.transport.loseConnection()
         else:
-            self.transport.write(bytes)
-            if self.buf.endswith('\n0\n'):
+            self.transport.write(data)
+            if self.buf.endswith(b'\n0\n'):
                 self.transport.loseConnection()
             else:
                 self.pause()

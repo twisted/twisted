@@ -16,7 +16,7 @@ from twisted.python import reflect
 
 class WriteSequenceChild(protocol.Protocol):
     def connectionMade(self):
-        self.transport.writeSequence(list('ok!'))
+        self.transport.writeSequence([b'o', b'k', b'!'])
         self.transport.loseConnection()
 
 
