@@ -22,6 +22,8 @@ Future Plans::
 Maintainer: James Y Knight
 """
 
+from __future__ import absolute_import, division
+
 from twisted.python.runtime import platform
 
 if platform.isWindows():
@@ -30,6 +32,6 @@ if platform.isWindows():
     PipeAddress = _win32stdio.Win32PipeAddress
 
 else:
-    from twisted.internet._posixstdio import StandardIO, PipeAddress 
+    from twisted.internet._posixstdio import StandardIO, PipeAddress
 
 __all__ = ['StandardIO', 'PipeAddress']
