@@ -8,11 +8,15 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_producer} to test
 that process transports implement IProducer properly.
 """
 
+from __future__ import absolute_import, division
+
 __import__('_preamble')
 import sys
 
 from twisted.internet import stdio, protocol
 from twisted.python import log, reflect
+
+
 
 class ProducerChild(protocol.Protocol):
     _paused = False
@@ -21,7 +25,6 @@ class ProducerChild(protocol.Protocol):
     def connectionLost(self, reason):
         log.msg("*****OVER*****")
         reactor.callLater(1, reactor.stop)
-        # reactor.stop()
 
 
     def dataReceived(self, data):
@@ -47,6 +50,7 @@ class ProducerChild(protocol.Protocol):
     def unpause(self):
         self._paused = False
         self.transport.resumeProducing()
+
 
 
 if __name__ == '__main__':

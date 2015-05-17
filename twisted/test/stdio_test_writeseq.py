@@ -4,15 +4,19 @@
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTests.test_writeSequence} to test that
-ITransport.writeSequence() works for process transports.
+L{twisted.test.test_stdio.StandardInputOutputTests.test_writeSequence} to test
+that ITransport.writeSequence() works for process transports.
 """
+
+from __future__ import absolute_import, division
 
 __import__('_preamble')
 import sys
 
 from twisted.internet import stdio, protocol
 from twisted.python import reflect
+
+
 
 class WriteSequenceChild(protocol.Protocol):
     def connectionMade(self):
@@ -22,6 +26,7 @@ class WriteSequenceChild(protocol.Protocol):
 
     def connectionLost(self, reason):
         reactor.stop()
+
 
 
 if __name__ == '__main__':

@@ -8,6 +8,8 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_loseConnection} to
 test that ITransport.loseConnection() works for process transports.
 """
 
+from __future__ import absolute_import, division
+
 __import__('_preamble')
 import sys
 

@@ -8,6 +8,8 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_consumer} to test
 that process transports implement IConsumer properly.
 """
 
+from __future__ import absolute_import, division
+
 __import__('_preamble')
 import sys
 
@@ -19,9 +21,12 @@ def failed(err):
     log.startLogging(sys.stderr)
     log.err(err)
 
+
+
 class ConsumerChild(protocol.Protocol):
     def __init__(self, junkPath):
         self.junkPath = junkPath
+
 
     def connectionMade(self):
         d = basic.FileSender().beginFileTransfer(open(self.junkPath, 'rb'),
@@ -32,6 +37,7 @@ class ConsumerChild(protocol.Protocol):
 
     def connectionLost(self, reason):
         reactor.stop()
+
 
 
 if __name__ == '__main__':

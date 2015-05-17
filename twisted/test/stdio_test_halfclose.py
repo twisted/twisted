@@ -9,6 +9,8 @@ to test that IHalfCloseableProtocol.readConnectionLost works for process
 transports.
 """
 
+from __future__ import absolute_import, division
+
 __import__('_preamble')
 import sys
 
