@@ -305,6 +305,7 @@ almostModules = [
     # Required by twisted.web.template
     "twisted.web._element",
     "twisted.web._flatten",
+    "twisted.web._stan",
     "twisted.web.util",
     # Agent code and downloadPage aren't ported, test coverage isn't complete:
     "twisted.web.client",
