@@ -395,5 +395,4 @@ def _processDataFileList(dataFiles):
     return list(files.items())
 
 
-testDataFiles = _processDataFileList(testDataFiles)
 modulesToInstall = modules + testModules + almostModules
