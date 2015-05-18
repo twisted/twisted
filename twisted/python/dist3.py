@@ -296,6 +296,25 @@ testModules = [
 ]
 
 
+testDataFiles = [
+    ("./twisted/internet/test", [
+        "./twisted/internet/test/process_cli.py",
+        "./twisted/internet/test/process_helper.py"
+    ]),
+    ("./twisted/test", [
+        "./twisted/test/process_twisted.py",
+        "./twisted/test/process_echoer.py",
+        "./twisted/test/process_tester.py",
+        "./twisted/test/process_cmdline.py",
+        "./twisted/test/process_reader.py",
+        "./twisted/test/process_fds.py",
+        "./twisted/test/process_linger.py",
+        "./twisted/test/process_signal.py",
+        "./twisted/test/process_tty.py",
+        "./twisted/test/process_stdinreader.py",
+    ])
+]
+
 
 almostModules = [
     # Missing test coverage, see #6156:
