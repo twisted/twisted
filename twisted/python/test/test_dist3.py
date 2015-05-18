@@ -57,9 +57,9 @@ class ModulesToInstallTests(TestCase):
         L{_processDataFileList} translates a list of files into a distutils
         friendly format.
         """
-        result = _processDataFileList(["foo/bar.py", "foo/baz/bar.py",
-                                       "foo/z.out", "baz/spam.py"])
-        self.assertIn(("foo", ["foo/bar.py", "foo/z.out"]),
+        result = _processDataFileList(["foo.bar", "foo.baz.bar",
+                                       "foo.z", "baz.spam"])
+        self.assertIn(("foo", ["foo/bar.py", "foo/z.py"]),
                       result)
         self.assertIn(("foo/baz", ["foo/baz/bar.py"]),
                       result)
