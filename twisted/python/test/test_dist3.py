@@ -49,7 +49,8 @@ class ModulesToInstallTests(TestCase):
         """
         root = os.path.dirname(os.path.dirname(twisted.__file__))
         for file in testDataFiles:
-            self.assertTrue(os.path.exists(os.path.join(root, file)))
+            self.assertTrue(os.path.exists(
+                os.path.join(root, os.path.sep.join(file.split(".")) + ".py")))
 
 
     def test_processDataFileList(self):
@@ -59,9 +60,11 @@ class ModulesToInstallTests(TestCase):
         """
         result = _processDataFileList(["foo.bar", "foo.baz.bar",
                                        "foo.z", "baz.spam"])
-        self.assertIn(("foo", ["foo/bar.py", "foo/z.py"]),
+        self.assertIn(("foo", [os.path.sep.join(["foo", "bar.py"]),
+                               os.path.sep.join(["foo", "z.py"])]),
                       result)
-        self.assertIn(("foo/baz", ["foo/baz/bar.py"]),
+        self.assertIn((os.path.sep.join(["foo", "baz"]),
+                       [os.path.sep.join(["foo", "baz", "bar.py"])]),
                       result)
-        self.assertIn(("baz", ["baz/spam.py"]),
+        self.assertIn(("baz", [os.path.sep.join(["baz", "spam.py"])]),
                       result)
