@@ -17,6 +17,10 @@ Only necessary while parts of Twisted are unported.
     "twisted.python.test.test_versions". To reduce merge conflicts, add new
     lines in alphabetical sort.
 
+@var testDataFiles: A list of filenames that are data files used by tests.
+    These are generally used by another Python process that the test case
+    spawns.
+
 @var almostModules: A list of any other modules which are needed by any of the
     modules in the other two lists, but which themselves have not actually
     been properly ported to Python 3.  These modules might work well enough to
@@ -28,6 +32,8 @@ Only necessary while parts of Twisted are unported.
 """
 
 from __future__ import division
+
+from os import path
 
 
 modules = [
@@ -297,22 +303,30 @@ testModules = [
 
 
 testDataFiles = [
-    ("./twisted/internet/test", [
-        "./twisted/internet/test/process_cli.py",
-        "./twisted/internet/test/process_helper.py"
-    ]),
-    ("./twisted/test", [
-        "./twisted/test/process_twisted.py",
-        "./twisted/test/process_echoer.py",
-        "./twisted/test/process_tester.py",
-        "./twisted/test/process_cmdline.py",
-        "./twisted/test/process_reader.py",
-        "./twisted/test/process_fds.py",
-        "./twisted/test/process_linger.py",
-        "./twisted/test/process_signal.py",
-        "./twisted/test/process_tty.py",
-        "./twisted/test/process_stdinreader.py",
-    ])
+    "twisted/internet/test/process_cli.py",
+    "twisted/internet/test/process_helper.py",
+    "twisted/test/_preamble.py",
+    "twisted/test/process_cmdline.py",
+    "twisted/test/process_echoer.py",
+    "twisted/test/process_fds.py",
+    "twisted/test/process_linger.py",
+    "twisted/test/process_reader.py",
+    "twisted/test/process_signal.py",
+    "twisted/test/process_stdinreader.py",
+    "twisted/test/process_tester.py",
+    "twisted/test/process_tty.py",
+    "twisted/test/process_twisted.py",
+    "twisted/test/stdio_test_consumer.py",
+    "twisted/test/stdio_test_halfclose.py",
+    "twisted/test/stdio_test_hostpeer.py",
+    "twisted/test/stdio_test_lastwrite.py",
+    "twisted/test/stdio_test_loseconn.py",
+    "twisted/test/stdio_test_producer.py",
+    "twisted/test/stdio_test_write.py",
+    "twisted/test/stdio_test_writeseq.py",
+    "twisted/test/plugin_basic.py",
+    "twisted/test/plugin_extra1.py",
+    "twisted/test/plugin_extra2.py",
 ]
 
 
@@ -356,5 +370,30 @@ almostModules = [
 ]
 
 
+def _processDataFileList(dataFiles):
+    """
+    Turn a list of file names into a format that distutils likes.
 
+    For example:
+
+        ["foo/bar.py", "baz/spam.py"]
+
+    ...is transformed into...
+
+        [("foo", ["foo/bar.py"]), ("baz", "baz/spam.py")]
+    """
+    files = {}
+
+    for file in dataFiles:
+        pathFragments = file.split(path.sep)
+        targetDir = path.sep.join(pathFragments[:-1])
+
+        if not files.get(targetDir):
+            files[targetDir] = []
+        files[targetDir].append(file)
+
+    return list(files.items())
+
+
+testDataFiles = _processDataFileList(testDataFiles)
 modulesToInstall = modules + testModules + almostModules
