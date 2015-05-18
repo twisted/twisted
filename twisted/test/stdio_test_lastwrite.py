@@ -9,6 +9,8 @@ to test that L{os.write} can be reliably used after
 L{twisted.internet.stdio.StandardIO} has finished.
 """
 
+from __future__ import absolute_import, division
+
 __import__('_preamble')
 import sys
 
@@ -34,7 +36,7 @@ class LastWriteChild(Protocol):
 
 
 def main(reactor, magicString):
-    p = LastWriteChild(reactor, magicString)
+    p = LastWriteChild(reactor, magicString.encode('ascii'))
     StandardIO(p)
     reactor.run()
 
