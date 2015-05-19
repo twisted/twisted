@@ -85,7 +85,10 @@ class LegacyLogObserverWrapper(object):
             if "why" not in event:
                 event["why"] = formatEvent(event)
         elif "isError" not in event:
-            event["isError"] = 0
+            if event["log_level"] == LogLevel.error:
+                event["isError"] = 1
+            else:
+                event["isError"] = 0
 
         self.legacyObserver(event)
 
