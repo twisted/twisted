@@ -245,24 +245,6 @@ class FilePasswordDB:
 
 
 
-class PluggableAuthenticationModulesChecker:
-    implements(ICredentialsChecker)
-    credentialInterfaces = credentials.IPluggableAuthenticationModules,
-    service = 'Twisted'
-
-    def requestAvatarId(self, credentials):
-        try:
-            from twisted.cred import pamauth
-        except ImportError: # PyPAM is missing
-            return defer.fail(error.UnauthorizedLogin())
-        else:
-            d = pamauth.pamAuthenticate(self.service, credentials.username,
-                                        credentials.pamConversion)
-            d.addCallback(lambda x: credentials.username)
-            return d
-
-
-
 # For backwards compatibility
 # Allow access as the old name.
 OnDiskUsernamePasswordDatabase = FilePasswordDB

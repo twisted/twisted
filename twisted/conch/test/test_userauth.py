@@ -12,7 +12,6 @@ from zope.interface import implementer
 
 from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
-from twisted.cred.credentials import IPluggableAuthenticationModules
 from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
@@ -241,24 +240,6 @@ class PrivateKeyChecker(object):
 
 
 @implementer(ICredentialsChecker)
-class PAMChecker(object):
-    """
-    A simple PAM checker which asks the user for a password, verifying them
-    if the password is the same as their username.
-    """
-    credentialInterfaces = (IPluggableAuthenticationModules,)
-
-    def requestAvatarId(self, creds):
-        d = creds.pamConversion([('Name: ', 2), ("Password: ", 1)])
-        def check(values):
-            if values == [(creds.username, 0), (creds.username, 0)]:
-                return creds.username
-            raise UnauthorizedLogin()
-        return d.addCallback(check)
-
-
-
-@implementer(ICredentialsChecker)
 class AnonymousChecker(object):
     """
     A simple checker which isn't supported by L{SSHUserAuthServer}.
@@ -282,7 +263,6 @@ class SSHUserAuthServerTests(unittest.TestCase):
         self.portal = Portal(self.realm)
         self.portal.registerChecker(PasswordChecker())
         self.portal.registerChecker(PrivateKeyChecker())
-        self.portal.registerChecker(PAMChecker())
         self.authServer = userauth.SSHUserAuthServer()
         self.authServer.transport = FakeTransport(self.portal)
         self.authServer.serviceStarted()
@@ -301,7 +281,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
         """
         self.assertEqual(self.authServer.transport.packets[-1],
                 (userauth.MSG_USERAUTH_FAILURE,
-                NS('keyboard-interactive,password,publickey') + '\x00'))
+                NS('password,publickey') + '\x00'))
 
 
     def test_noneAuthentication(self):
@@ -437,83 +417,6 @@ class SSHUserAuthServerTests(unittest.TestCase):
         return d.addCallback(self._checkFailed)
 
 
-    def test_successfulPAMAuthentication(self):
-        """
-        Test that keyboard-interactive authentication succeeds.
-        """
-        packet = (NS('foo') + NS('none') + NS('keyboard-interactive')
-                + NS('') + NS(''))
-        response = '\x00\x00\x00\x02' + NS('foo') + NS('foo')
-        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.authServer.ssh_USERAUTH_INFO_RESPONSE(response)
-        def check(ignored):
-            self.assertEqual(self.authServer.transport.packets,
-                    [(userauth.MSG_USERAUTH_INFO_REQUEST, (NS('') + NS('')
-                        + NS('') + '\x00\x00\x00\x02' + NS('Name: ') + '\x01'
-                        + NS('Password: ') + '\x00')),
-                     (userauth.MSG_USERAUTH_SUCCESS, '')])
-
-        return d.addCallback(check)
-
-
-    def test_failedPAMAuthentication(self):
-        """
-        Test that keyboard-interactive authentication fails.
-        """
-        packet = (NS('foo') + NS('none') + NS('keyboard-interactive')
-                + NS('') + NS(''))
-        response = '\x00\x00\x00\x02' + NS('bar') + NS('bar')
-        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.authServer.ssh_USERAUTH_INFO_RESPONSE(response)
-        def check(ignored):
-            self.assertEqual(self.authServer.transport.packets[0],
-                    (userauth.MSG_USERAUTH_INFO_REQUEST, (NS('') + NS('')
-                        + NS('') + '\x00\x00\x00\x02' + NS('Name: ') + '\x01'
-                        + NS('Password: ') + '\x00')))
-        return d.addCallback(check).addCallback(self._checkFailed)
-
-
-    def test_invalid_USERAUTH_INFO_RESPONSE_not_enough_data(self):
-        """
-        If ssh_USERAUTH_INFO_RESPONSE gets an invalid packet,
-        the user authentication should fail.
-        """
-        packet = (NS('foo') + NS('none') + NS('keyboard-interactive')
-                + NS('') + NS(''))
-        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.authServer.ssh_USERAUTH_INFO_RESPONSE(NS('\x00\x00\x00\x00' +
-            NS('hi')))
-        return d.addCallback(self._checkFailed)
-
-
-    def test_invalid_USERAUTH_INFO_RESPONSE_too_much_data(self):
-        """
-        If ssh_USERAUTH_INFO_RESPONSE gets too much data, the user
-        authentication should fail.
-        """
-        packet = (NS('foo') + NS('none') + NS('keyboard-interactive')
-                + NS('') + NS(''))
-        response = '\x00\x00\x00\x02' + NS('foo') + NS('foo') + NS('foo')
-        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.authServer.ssh_USERAUTH_INFO_RESPONSE(response)
-        return d.addCallback(self._checkFailed)
-
-
-    def test_onlyOnePAMAuthentication(self):
-        """
-        Because it requires an intermediate message, one can't send a second
-        keyboard-interactive request while the first is still pending.
-        """
-        packet = (NS('foo') + NS('none') + NS('keyboard-interactive')
-                + NS('') + NS(''))
-        self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.authServer.ssh_USERAUTH_REQUEST(packet)
-        self.assertEqual(self.authServer.transport.packets[-1][0],
-                transport.MSG_DISCONNECT)
-        self.assertEqual(self.authServer.transport.packets[-1][1][3],
-                chr(transport.DISCONNECT_PROTOCOL_ERROR))
-
-
     def test_ignoreUnknownCredInterfaces(self):
         """
         L{SSHUserAuthServer} sets up
@@ -530,7 +433,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
         server.serviceStopped()
         server.supportedAuthentications.sort() # give a consistent order
         self.assertEqual(server.supportedAuthentications,
-                          ['keyboard-interactive', 'password', 'publickey'])
+                          ['password', 'publickey'])
 
 
     def test_removePasswordIfUnencrypted(self):
@@ -553,31 +456,6 @@ class SSHUserAuthServerTests(unittest.TestCase):
         halfAuthServer.serviceStarted()
         halfAuthServer.serviceStopped()
         self.assertIn('password', halfAuthServer.supportedAuthentications)
-
-
-    def test_removeKeyboardInteractiveIfUnencrypted(self):
-        """
-        Test that the userauth service does not advertise keyboard-interactive
-        authentication if the password would be send in cleartext.
-        """
-        self.assertIn('keyboard-interactive',
-                self.authServer.supportedAuthentications)
-        # no encryption
-        clearAuthServer = userauth.SSHUserAuthServer()
-        clearAuthServer.transport = FakeTransport(self.portal)
-        clearAuthServer.transport.isEncrypted = lambda x: False
-        clearAuthServer.serviceStarted()
-        clearAuthServer.serviceStopped()
-        self.assertNotIn(
-            'keyboard-interactive', clearAuthServer.supportedAuthentications)
-        # only encrypt incoming (the direction the password is sent)
-        halfAuthServer = userauth.SSHUserAuthServer()
-        halfAuthServer.transport = FakeTransport(self.portal)
-        halfAuthServer.transport.isEncrypted = lambda x: x == 'in'
-        halfAuthServer.serviceStarted()
-        halfAuthServer.serviceStopped()
-        self.assertIn('keyboard-interactive',
-                halfAuthServer.supportedAuthentications)
 
 
     def test_unencryptedConnectionWithoutPasswords(self):
@@ -669,18 +547,6 @@ class SSHUserAuthServerTests(unittest.TestCase):
         self.authServer.clock = task.Clock()
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
         return d.addCallback(self._checkFailed)
-
-
-    def test__pamConvErrors(self):
-        """
-        _pamConv should fail if it gets a message that's not 1 or 2.
-        """
-        def secondTest(ignored):
-            d2 = self.authServer._pamConv([('', 90)])
-            return self.assertFailure(d2, ConchError)
-
-        d = self.authServer._pamConv([('', 3)])
-        return self.assertFailure(d, ConchError).addCallback(secondTest)
 
 
     def test_tryAuthEdgeCases(self):
@@ -838,23 +704,6 @@ class SSHUserAuthClientTests(unittest.TestCase):
         self.assertFalse(self.authClient.tryAuth('password'))
 
 
-    def test_keyboardInteractive(self):
-        """
-        Test that the client can authenticate using keyboard-interactive
-        authentication.
-        """
-        self.authClient.ssh_USERAUTH_FAILURE(NS('keyboard-interactive')
-               + '\x00')
-        self.assertEqual(self.authClient.transport.packets[-1],
-                (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy')
-                    + NS('keyboard-interactive') + NS('')*2))
-        self.authClient.ssh_USERAUTH_PK_OK(NS('')*3 + '\x00\x00\x00\x02'
-                + NS('Name: ') + '\xff' + NS('Password: ') + '\x00')
-        self.assertEqual(self.authClient.transport.packets[-1],
-                (userauth.MSG_USERAUTH_INFO_RESPONSE, '\x00\x00\x00\x02'
-                    + NS('foo')*2))
-
-
     def test_USERAUTH_PK_OK_unknown_method(self):
         """
         If C{SSHUserAuthClient} gets a MSG_USERAUTH_PK_OK packet when it's not
@@ -996,9 +845,8 @@ class LoopbackTests(unittest.TestCase):
         checker = SSHProtocolChecker()
         checker.registerChecker(PasswordChecker())
         checker.registerChecker(PrivateKeyChecker())
-        checker.registerChecker(PAMChecker())
         checker.areDone = lambda aId: (
-            len(checker.successfulCredentials[aId]) == 3)
+            len(checker.successfulCredentials[aId]) == 2)
         portal.registerChecker(checker)
         server.transport.factory.portal = portal
 
