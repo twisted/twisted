@@ -55,7 +55,7 @@ Bugfixes
 
 Improved Documentation
 ----------------------
- -  (#7875)
+ - Fix a typo in narrative documentation for logger (#7875)
 
 Deprecations and Removals
 -------------------------
