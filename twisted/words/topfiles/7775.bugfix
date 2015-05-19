@@ -1,1 +1,0 @@
-The resumeOffset argument to twisted.words.protocol.irc.DccFileReceive now works as it is documented.

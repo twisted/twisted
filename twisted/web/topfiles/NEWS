@@ -1,6 +1,25 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 15.2.0 (2015-05-18)
+===============================
+
+Features
+--------
+ - twisted.web.static is now ported to Python 3. (#6177)
+ - twisted.web.server.Site accepts requestFactory as constructor
+   argument. (#7016)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.util had some HTML generation functions deprecated
+   since 12.1 that have now been removed. (#7828)
+
+Other
+-----
+ - #6927, #7797, #7802, #7846
+
+
 Twisted Web 15.1.0 (2015-04-02)
 ===============================
 
