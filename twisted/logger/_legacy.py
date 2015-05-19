@@ -85,7 +85,7 @@ class LegacyLogObserverWrapper(object):
             if "why" not in event:
                 event["why"] = formatEvent(event)
         elif "isError" not in event:
-            if event["log_level"] == LogLevel.error:
+            if event["log_level"] in (LogLevel.error, LogLevel.critical):
                 event["isError"] = 1
             else:
                 event["isError"] = 0
@@ -134,8 +134,11 @@ def publishToNewObserver(observer, eventDict, textFromEventDict):
                 level = fromStdlibLogLevelMapping[eventDict["logLevel"]]
             except KeyError:
                 level = None
-        elif eventDict["isError"]:
-            level = LogLevel.critical
+        elif "isError" in eventDict:
+            if eventDict["isError"]:
+                level = LogLevel.critical
+            else:
+                level = LogLevel.info
         else:
             level = LogLevel.info
 

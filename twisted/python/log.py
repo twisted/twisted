@@ -75,8 +75,7 @@ class ILogObserver(Interface):
 
 
 context.setDefault(ILogContext,
-                   {"isError": 0,
-                    "system": "-"})
+                   {"system": "-"})
 
 
 def callWithContext(ctx, func, *args, **kw):
@@ -277,6 +276,8 @@ class LogPublisher:
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
+        if not "isError" in actualEventDict:
+            actualEventDict["isError"] = 0
 
         _publishNew(self._publishPublisher, actualEventDict, textFromEventDict)
 
