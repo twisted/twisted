@@ -193,12 +193,15 @@ Developer Guides
 
   Utilities
 
-  - :doc:`Logging <logging>`
+  - :doc:`Emitting and Observing Logs <logger>`
 
-    Keep a record of what your application is up to.
+    Keep a record of what your application is up to, and inspect that record to discover interesting information.
+    (You may also be interested in the :doc:`legacy logging system <logging>` if you are maintaining code written to work with older versions of Twisted.)
+
   - :doc:`Symbolic constants <constants>`
 
     enum-like constants.
+
   - :doc:`Twisted RDBMS support with adbapi <rdbms>`
 
     Using SQL with your relational database via DB-API adapters.
@@ -214,7 +217,6 @@ Developer Guides
   - :doc:`Extremely Low-Level Socket Operations <sendmsg>`
 
     Using wrappers for sendmsg(2) and recvmsg(2).
-
 
 - .. _core-howto-index-amp:
 
