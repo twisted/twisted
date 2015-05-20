@@ -631,6 +631,24 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         self.addCleanup(setattr, sys, 'stderr', sys.stderr)
 
 
+    def test_printToStderrSetsIsError(self):
+        """
+        startLogging()'s overridden sys.stderr should consider everything
+        written to it an error.
+        """
+        self._startLoggingCleanup()
+        fakeFile = StringIO()
+        log.startLogging(fakeFile)
+
+        def observe(event):
+            observed.append(event)
+        observed = []
+        log.addObserver(observe)
+
+        print("Hello, world.", file=sys.stderr)
+        self.assertEqual(observed[0]["isError"], 1)
+
+
     def test_startLogging(self):
         """
         startLogging() installs FileLogObserver and overrides sys.stdout and
