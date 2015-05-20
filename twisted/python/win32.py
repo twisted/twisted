@@ -46,7 +46,7 @@ except NameError:
     WindowsError = FakeWindowsError
 
 
-@deprecated(Version("Twisted", 15, 3, 0))
+@deprecated(Version("Twisted", 15, 3))
 def getProgramsMenuPath():
     """
     Get the path to the Programs menu.
@@ -64,7 +64,7 @@ def getProgramsMenuPath():
     return win32api.RegQueryValueEx(hShellFolders, 'Common Programs')[0]
 
 
-@deprecated(Version("Twisted", 15, 3, 0))
+@deprecated(Version("Twisted", 15, 3))
 def getProgramFilesPath():
     """Get the path to the Program Files folder."""
     keyname = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
