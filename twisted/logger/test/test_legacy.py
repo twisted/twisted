@@ -93,6 +93,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         # Make sure keys that are expected by the logging system are present
         event.setdefault("log_time", time())
         event.setdefault("log_system", "-")
+        event.setdefault("log_level", LogLevel.info)
 
         # Send a copy: don't mutate me, bro
         observed = self.observe(dict(event))
@@ -155,10 +156,22 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         If the new-style C{"log_system"} key is absent, the old-style
         C{"system"} key is set to C{"-"}.
         """
-        # Don't use forwardAndVerify(), since that's sets log_system.
-        event = dict(log_time=time())
+        # Don't use forwardAndVerify(), since that sets log_system.
+        event = dict(log_time=time(), log_level=LogLevel.info)
         observed = self.observe(dict(event))
         self.assertEqual(observed["system"], "-")
+
+
+    def test_levelNotChange(self):
+        """
+        If explicitly set, the C{isError} key will be preserved when forwarding
+        from a new-style logging emitter to a legacy logging observer,
+        regardless of log level.
+        """
+        self.forwardAndVerify(dict(log_level=LogLevel.info, isError=1))
+        self.forwardAndVerify(dict(log_level=LogLevel.warn, isError=1))
+        self.forwardAndVerify(dict(log_level=LogLevel.error, isError=0))
+        self.forwardAndVerify(dict(log_level=LogLevel.critical, isError=0))
 
 
     def test_pythonLogLevelNotSet(self):
@@ -327,6 +340,8 @@ class PublishToNewObserverTests(unittest.TestCase):
         event.update(values)
         event["message"] = message
         event["time"] = time()
+        if "isError" not in event:
+            event["isError"] = 0
         return event
 
 
