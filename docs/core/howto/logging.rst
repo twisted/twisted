@@ -3,21 +3,17 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Logging with twisted.python.log
-===============================
+Twisted's Legacy Logging System: ``twisted.python.log``
+=======================================================
 
 
-Note: New Logging System
-------------------------
+.. note::
 
-There is now a new logging system in Twisted (:api:`twisted.logger <twisted.logger>`) which is a replacement for :api:`twisted.python.log <twisted.python.log>`.
+    There is now a new logging system in Twisted (:doc:`you can read about how to use it here <logger>` and :api:`twisted.logger <its API reference here>`) which is a replacement for :api:`twisted.python.log <twisted.python.log>`.
 
-The old logging API, described here, remains for compatibility, and is now implemented as a client of the new logging system.
+    The old logging API, described here, remains for compatibility, and is now implemented as a client of the new logging system.
 
-New code should adopt the new API.
-The new API, and notes on transitioning from the old API, is documented in the :ref:`logger HOWTO <core-howto-logger-main>`.
-
-
+    New code should adopt the new API.
 
 Basic usage
 -----------
