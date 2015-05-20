@@ -164,8 +164,9 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
 
     def test_levelNotChange(self):
         """
-        Seemingly conflicting C{"log_level"} and C{"isError"} keys do not
-        conflict.
+        If explicitly set, the C{isError} key will be preserved when forwarding
+        from a new-style logging emitter to a legacy logging observer,
+        regardless of log level.
         """
         self.forwardAndVerify(dict(log_level=LogLevel.info, isError=1))
         self.forwardAndVerify(dict(log_level=LogLevel.warn, isError=1))
@@ -339,7 +340,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         event.update(values)
         event["message"] = message
         event["time"] = time()
-        if not "isError" in event:
+        if "isError" not in event:
             event["isError"] = 0
         return event
 

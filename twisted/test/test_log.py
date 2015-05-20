@@ -635,9 +635,6 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         """
         startLogging()'s overridden sys.stderr should consider everything
         written to it an error.
-
-        A modified version of exarkun's original reproduction as in
-        https://twistedmatrix.com/trac/ticket/7903 .
         """
         self._startLoggingCleanup()
         fakeFile = StringIO()

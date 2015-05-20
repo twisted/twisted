@@ -276,7 +276,7 @@ class LogPublisher:
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
-        if not "isError" in actualEventDict:
+        if "isError" not in actualEventDict:
             actualEventDict["isError"] = 0
 
         _publishNew(self._publishPublisher, actualEventDict, textFromEventDict)
