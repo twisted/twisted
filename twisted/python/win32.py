@@ -22,7 +22,9 @@ try:
 except ImportError:
     pass
 
+from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
+from twisted.python.versions import Version
 
 # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
 ERROR_FILE_NOT_FOUND = 2
@@ -43,8 +45,8 @@ try:
 except NameError:
     WindowsError = FakeWindowsError
 
-# XXX fix this to use python's builtin _winreg?
 
+@deprecated(Version("Twisted", 15, 3, 0))
 def getProgramsMenuPath():
     """
     Get the path to the Programs menu.
@@ -62,6 +64,7 @@ def getProgramsMenuPath():
     return win32api.RegQueryValueEx(hShellFolders, 'Common Programs')[0]
 
 
+@deprecated(Version("Twisted", 15, 3, 0))
 def getProgramFilesPath():
     """Get the path to the Program Files folder."""
     keyname = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
