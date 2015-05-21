@@ -58,14 +58,13 @@ else:
         pydoctorSkip = skip
 
 
-if which("sphinx-build"):
+if not skip and which("sphinx-build"):
     sphinxSkip = None
 else:
     sphinxSkip = "Sphinx not available."
 
 
-
-if which("git"):
+if not skip and which("git"):
     gitVersion = runCommand(["git", "--version"]).split(" ")[2].split(".")
 
     # We want git 2.0 or above.
@@ -77,7 +76,7 @@ else:
     gitSkip = "git is not present."
 
 
-if which("svn") and which("svnadmin"):
+if not skip and which("svn") and which("svnadmin"):
     svnSkip = skip
 else:
     svnSkip = "svn is not present."
