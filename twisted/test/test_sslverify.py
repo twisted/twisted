@@ -861,6 +861,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
         certificate.
         """
         c = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
+        pk = c.getPublicKey()
+        keyHash = pk.keyHash()
         self.assertEqual(
             c.inspect().split('\n'),
             ["Certificate For Subject:",
@@ -887,7 +889,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
              # "public key hash" is highly dubious and might break at some
              # point in the future.  See the docstring for PublicKey.keyHash
              # for information on how this might be addressed in the future.
-             "Public Key with Hash: 50d4b8070143375b3330dedf3a8b9e91"])
+             "Public Key with Hash: " + keyHash])
 
 
     def test_publicKeyMatching(self):
