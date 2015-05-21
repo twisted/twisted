@@ -863,6 +863,13 @@ class OpenSSLOptionsTests(unittest.TestCase):
         c = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
         pk = c.getPublicKey()
         keyHash = pk.keyHash()
+        # Maintenance Note: the algorithm used to compute the "public key hash"
+        # is highly dubious and can differ between underlying versions of
+        # OpenSSL (and across versions of Twisted), since it is not actually
+        # the hash of the public key by itself.  If we can get the appropriate
+        # APIs to get the hash of the key itself out of OpenSSL, then we should
+        # be able to make it statically declared inline below again rather than
+        # computing it here.
         self.assertEqual(
             c.inspect().split('\n'),
             ["Certificate For Subject:",
@@ -885,10 +892,6 @@ class OpenSSLOptionsTests(unittest.TestCase):
              "",
              "Serial Number: 12345",
              "Digest: C4:96:11:00:30:C3:EC:EE:A3:55:AA:ED:8C:84:85:18",
-             # Maintenance Note: the algorithm used to compute the following
-             # "public key hash" is highly dubious and might break at some
-             # point in the future.  See the docstring for PublicKey.keyHash
-             # for information on how this might be addressed in the future.
              "Public Key with Hash: " + keyHash])
 
 
