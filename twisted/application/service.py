@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.application.test.test_service -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -17,8 +18,8 @@ from zope.interface import implementer, Interface, Attribute
 
 from twisted.python.reflect import namedAny
 from twisted.python import components
+from twisted.python.compat import _PY3
 from twisted.internet import defer
-from twisted.persisted import sob
 from twisted.plugin import IPlugin
 
 
@@ -369,6 +370,7 @@ class Process:
         self.gid = gid
 
 
+
 def Application(name, uid=None, gid=None):
     """
     Return a compound class.
@@ -379,7 +381,15 @@ def Application(name, uid=None, gid=None):
     one of the interfaces.
     """
     ret = components.Componentized()
-    for comp in (MultiService(), sob.Persistent(ret, name), Process(uid, gid)):
+    availableComponents = [MultiService(), Process(uid, gid)]
+
+    if not _PY3:
+        # FIXME: https://twistedmatrix.com/trac/ticket/7827
+        # twisted.persisted is not yet ported to Python 3, so import it here.
+        from twisted.persisted import sob
+        availableComponents.append(sob.Persistent(ret, name))
+
+    for comp in availableComponents:
         ret.addComponent(comp, ignoreClass=1)
     IService(ret).setName(name)
     return ret
@@ -399,8 +409,13 @@ def loadApplication(filename, kind, passphrase=None):
     @type kind: C{str}
     @type passphrase: C{str}
     """
+    # FIXME: https://twistedmatrix.com/trac/ticket/7827
+    # twisted.persisted is not yet ported to Python 3, so import it here.
+    from twisted.persisted import sob
+
     if kind == 'python':
-        application = sob.loadValueFromFile(filename, 'application', passphrase)
+        application = sob.loadValueFromFile(filename, 'application',
+                                            passphrase)
     else:
         application = sob.load(filename, kind, passphrase)
     return application

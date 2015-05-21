@@ -1,10 +1,9 @@
 # -*- test-case-name: twisted.trial.test.test_script -*-
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import, division, print_function
 
-from __future__ import print_function
 import gc
 import inspect
 import os
@@ -20,7 +19,6 @@ from twisted.python import usage, reflect, failure
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
 from twisted import plugin
-from twisted.python.util import spewer
 from twisted.trial import runner, itrial, reporter
 
 
@@ -277,6 +275,7 @@ class _BasicOptions(object):
         Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code.
         """
+        from twisted.python.util import spewer
         sys.settrace(spewer)
 
 
