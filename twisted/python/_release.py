@@ -12,14 +12,16 @@ Only Linux is supported by this code.  It should not be used by any tools
 which must run on multiple platforms (eg the setup.py script).
 """
 
-import textwrap
-from datetime import date
+import os
 import re
 import sys
-import os
-from tempfile import mkdtemp
 import tarfile
+import textwrap
 
+from zope.interface import Interface, implementer
+
+from datetime import date
+from tempfile import mkdtemp
 from subprocess import PIPE, STDOUT, Popen
 
 from twisted.python.versions import Version
@@ -32,20 +34,23 @@ from twisted.python.usage import Options, UsageError
 VERSION_OFFSET = 2000
 
 
-def runCommand(args):
+def runCommand(args, cwd=None):
     """
     Execute a vector of arguments.
 
-    @type args: C{list} of C{str}
+    @type args: L{list} of L{bytes}
     @param args: A list of arguments, the first of which will be used as the
         executable to run.
 
-    @rtype: C{str}
+    @type cwd: L{bytes}
+    @param: The current working directory that the command should run with.
+
+    @rtype: L{bytes}
     @return: All of the standard output.
 
     @raise CommandFailed: when the program exited with a non-0 exit code.
     """
-    process = Popen(args, stdout=PIPE, stderr=STDOUT)
+    process = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=cwd)
     stdout = process.stdout.read()
     exitCode = process.wait()
     if exitCode < 0:
@@ -74,6 +79,216 @@ class CommandFailed(Exception):
         self.exitStatus = exitStatus
         self.exitSignal = exitSignal
         self.output = output
+
+
+
+class IVCSCommand(Interface):
+    """
+    An interface for VCS commands.
+    """
+    def ensureIsWorkingDirectory(path):
+        """
+        Ensure that C{path} is a working directory of this VCS.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to check.
+        """
+
+
+    def isStatusClean(path):
+        """
+        Return the Git status of the files in the specified path.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to get the status from (can be a directory or a
+            file.)
+        """
+
+
+    def remove(path):
+        """
+        Remove the specified path from a the VCS.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to remove from the repository.
+        """
+
+
+    def exportTo(fromDir, exportDir):
+        """
+        Export the content of the VCSrepository to the specified directory.
+
+        @type fromDir: L{twisted.python.filepath.FilePath}
+        @param fromDir: The path to the VCS repository to export.
+
+        @type exportDir: L{twisted.python.filepath.FilePath}
+        @param exportDir: The directory to export the content of the
+            repository to. This directory doesn't have to exist prior to
+            exporting the repository.
+        """
+
+
+
+@implementer(IVCSCommand)
+class GitCommand(object):
+    """
+    Subset of Git commands to release Twisted from a Git repository.
+    """
+    @staticmethod
+    def ensureIsWorkingDirectory(path):
+        """
+        Ensure that C{path} is a Git working directory.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to check.
+        """
+        try:
+            runCommand(["git", "rev-parse"], cwd=path.path)
+        except (CommandFailed, OSError):
+            raise NotWorkingDirectory(
+                "%s does not appear to be a Git repository."
+                % (path.path,))
+
+
+    @staticmethod
+    def isStatusClean(path):
+        """
+        Return the Git status of the files in the specified path.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to get the status from (can be a directory or a
+            file.)
+        """
+        status = runCommand(
+            ["git", "-C", path.path, "status", "--short"]).strip()
+        return status == ''
+
+
+    @staticmethod
+    def remove(path):
+        """
+        Remove the specified path from a Git repository.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to remove from the repository.
+        """
+        runCommand(["git", "-C", path.dirname(), "rm", path.path])
+
+
+    @staticmethod
+    def exportTo(fromDir, exportDir):
+        """
+        Export the content of a Git repository to the specified directory.
+
+        @type fromDir: L{twisted.python.filepath.FilePath}
+        @param fromDir: The path to the Git repository to export.
+
+        @type exportDir: L{twisted.python.filepath.FilePath}
+        @param exportDir: The directory to export the content of the
+            repository to. This directory doesn't have to exist prior to
+            exporting the repository.
+        """
+        runCommand(["git", "-C", fromDir.path,
+                    "checkout-index", "--all", "--force",
+                    # prefix has to end up with a "/" so that files get copied
+                    # to a directory whose name is the prefix.
+                    "--prefix", exportDir.path + "/"])
+
+
+
+@implementer(IVCSCommand)
+class SVNCommand(object):
+    """
+    Subset of SVN commands to release Twisted from a Subversion checkout.
+    """
+    @staticmethod
+    def ensureIsWorkingDirectory(path):
+        """
+        Ensure that C{path} is a SVN working directory.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to check.
+        """
+        if "is not a working copy" in runCommand(
+                ["svn", "status", path.path]):
+            raise NotWorkingDirectory(
+                "%s does not appear to be an SVN working directory."
+                % (path.path,))
+
+
+    @staticmethod
+    def isStatusClean(path):
+        """
+        Return the SVN status of the files in the specified path.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to get the status from (can be a directory or a
+            file.)
+        """
+        status = runCommand(["svn", "status", path.path]).strip()
+        return status == ''
+
+
+    @staticmethod
+    def remove(path):
+        """
+        Remove the specified path from a Subversion checkout.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to remove from the checkout.
+        """
+        runCommand(["svn", "rm", path.path])
+
+
+    @staticmethod
+    def exportTo(fromDir, exportDir):
+        """
+        Export the content of a SVN checkout to the specified directory.
+
+        @type fromDir: L{twisted.python.filepath.FilePath}
+        @param fromDir: The path to the Subversion checkout to export.
+
+        @type exportDir: L{twisted.python.filepath.FilePath}
+        @param exportDir: The directory to export the content of the checkout
+            to. This directory doesn't have to exist prior to exporting the
+            repository.
+        """
+        runCommand(["svn", "export", fromDir.path, exportDir.path])
+
+
+
+def getRepositoryCommand(directory):
+    """
+    Detect the VCS used in the specified directory and return either a
+    L{SVNCommand} or a L{GitCommand} if the directory is a Subversion checkout
+    or a Git repository, respectively.
+    If the directory is neither one nor the other, it raises a
+    L{NotWorkingDirectory} exception.
+
+    @type directory: L{FilePath}
+    @param directory: The directory to detect the VCS used from.
+
+    @rtype: L{SVNCommand} or L{GitCommand}
+
+    @raise NotWorkingDirectory: if no supported VCS can be found from the
+        specified directory.
+    """
+    try:
+        SVNCommand.ensureIsWorkingDirectory(directory)
+        return SVNCommand
+    except (NotWorkingDirectory, OSError):
+        # It's not SVN, but that's okay, eat the error
+        pass
+
+    try:
+        GitCommand.ensureIsWorkingDirectory(directory)
+        return GitCommand
+    except (NotWorkingDirectory, OSError):
+        # It's not Git, but that's okay, eat the error
+        pass
+
+    raise NotWorkingDirectory("No supported VCS can be found in %s" %
+                              (directory.path,))
 
 
 
@@ -525,7 +740,8 @@ class NewsBuilder(object):
         @param header: The top-level header to use when writing the news.
         @type header: L{str}
 
-        @raise NotWorkingDirectory: If the C{path} is not an SVN checkout.
+        @raise NotWorkingDirectory: If the C{path} is not a supported VCS
+            repository.
         """
         changes = []
         for part in (self._FEATURE, self._BUGFIX, self._DOC, self._REMOVAL):
@@ -557,18 +773,19 @@ class NewsBuilder(object):
     def _deleteFragments(self, path):
         """
         Delete the change information, to clean up the repository  once the
-        NEWS files have been built. It requires C{path} to be in a SVN
-        directory.
+        NEWS files have been built. It requires C{path} to be in a supported
+        VCS repository.
 
         @param path: A directory (probably a I{topfiles} directory) containing
             change information in the form of <ticket>.<change type> files.
         @type path: L{FilePath}
         """
+        cmd = getRepositoryCommand(path)
         ticketTypes = self._headings.keys()
         for child in path.children():
             base, ext = os.path.splitext(child.basename())
             if ext in ticketTypes:
-                runCommand(["svn", "rm", child.path])
+                cmd.remove(child)
 
 
     def _getNewsName(self, project):
@@ -626,12 +843,8 @@ class NewsBuilder(object):
             beneath which to find Twisted projects for which to generate
             news (see L{findTwistedProjects}).
         """
-        try:
-            runCommand(["svn", "info", baseDirectory.path])
-        except CommandFailed:
-            raise NotWorkingDirectory(
-                "%s does not appear to be an SVN working directory."
-                % (baseDirectory.path,))
+        cmd = getRepositoryCommand(baseDirectory)
+        cmd.ensureIsWorkingDirectory(baseDirectory)
 
         today = self._today()
         for topfiles, name, version in self._iterProjects(baseDirectory):
@@ -988,14 +1201,15 @@ class DistributionBuilder(object):
 
 class UncleanWorkingDirectory(Exception):
     """
-    Raised when the working directory of an SVN checkout is unclean.
+    Raised when the working directory of a repository is unclean.
     """
 
 
 
 class NotWorkingDirectory(Exception):
     """
-    Raised when a directory does not appear to be an SVN working directory.
+    Raised when a directory does not appear to be a repository directory of a
+    supported VCS.
     """
 
 
@@ -1009,8 +1223,8 @@ def buildAllTarballs(checkout, destination, templatePath=None):
     NEWS files created.
 
     @type checkout: L{FilePath}
-    @param checkout: The SVN working copy from which a pristine source tree
-        will be exported.
+    @param checkout: The repository from which a pristine source tree will be
+        exported.
     @type destination: L{FilePath}
     @param destination: The directory in which tarballs will be placed.
     @type templatePath: L{FilePath}
@@ -1019,20 +1233,20 @@ def buildAllTarballs(checkout, destination, templatePath=None):
 
     @raise UncleanWorkingDirectory: If there are modifications to the
         working directory of C{checkout}.
-    @raise NotWorkingDirectory: If the C{checkout} path is not an SVN checkout.
+    @raise NotWorkingDirectory: If the C{checkout} path is not a supported VCS
+        repository.
     """
-    if not checkout.child(".svn").exists():
-        raise NotWorkingDirectory(
-            "%s does not appear to be an SVN working directory."
-            % (checkout.path,))
-    if runCommand(["svn", "st", checkout.path]).strip():
+    cmd = getRepositoryCommand(checkout)
+    cmd.ensureIsWorkingDirectory(checkout)
+
+    if not cmd.isStatusClean(checkout):
         raise UncleanWorkingDirectory(
-            "There are local modifications to the SVN checkout in %s."
+            "There are local modifications to the repository in %s."
             % (checkout.path,))
 
     workPath = FilePath(mkdtemp())
     export = workPath.child("export")
-    runCommand(["svn", "export", checkout.path, export.path])
+    cmd.exportTo(checkout, export)
     twistedPath = export.child("twisted")
     version = Project(twistedPath).getVersion()
     versionString = version.base()
