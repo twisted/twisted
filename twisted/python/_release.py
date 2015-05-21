@@ -276,14 +276,14 @@ def getRepositoryCommand(directory):
     try:
         SVNCommand.ensureIsWorkingDirectory(directory)
         return SVNCommand
-    except NotWorkingDirectory:
+    except (NotWorkingDirectory, OSError):
         # It's not SVN, but that's okay, eat the error
         pass
 
     try:
         GitCommand.ensureIsWorkingDirectory(directory)
         return GitCommand
-    except NotWorkingDirectory:
+    except (NotWorkingDirectory, OSError):
         # It's not Git, but that's okay, eat the error
         pass
 
