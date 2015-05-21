@@ -7,6 +7,7 @@
 The point of integration of application and authentication.
 """
 
+from __future__ import division, absolute_import
 
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
@@ -42,7 +43,7 @@ class IRealm(Interface):
         """
 
 
-class Portal:
+class Portal(object):
     """
     A mediator between clients and a realm.
 
@@ -63,17 +64,20 @@ class Portal:
         for checker in checkers:
             self.registerChecker(checker)
 
+
     def listCredentialsInterfaces(self):
         """
         Return list of credentials interfaces that can be used to login.
         """
-        return self.checkers.keys()
+        return list(self.checkers.keys())
+
 
     def registerChecker(self, checker, *credentialInterfaces):
         if not credentialInterfaces:
             credentialInterfaces = checker.credentialInterfaces
         for credentialInterface in credentialInterfaces:
             self.checkers[credentialInterface] = checker
+
 
     def login(self, credentials, mind, *interfaces):
         """
