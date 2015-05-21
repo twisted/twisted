@@ -37,11 +37,15 @@ def main():
         sys.path.insert(0, '.')
 
     from twisted.python.dist3 import modulesToInstall
-    from twisted.python.dist import STATIC_PACKAGE_METADATA
+    from twisted.python.dist3 import testDataFiles, _processDataFileList
+    from twisted.python.dist import STATIC_PACKAGE_METADATA, getDataFiles
 
+    _dataFiles = _processDataFileList(testDataFiles)
     args = STATIC_PACKAGE_METADATA.copy()
     args['install_requires'] = ["zope.interface >= 4.0.2"]
     args['py_modules'] = modulesToInstall
+    args['data_files'] = getDataFiles('twisted') + _dataFiles
+    args['zip_safe'] = False
     args['cmdclass'] = {'sdist': DisabledSdist}
 
     setup(**args)

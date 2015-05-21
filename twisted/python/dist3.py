@@ -17,6 +17,10 @@ Only necessary while parts of Twisted are unported.
     "twisted.python.test.test_versions". To reduce merge conflicts, add new
     lines in alphabetical sort.
 
+@var testDataFiles: A list of filenames that are data files used by tests.
+    These are generally used by another Python process that the test case
+    spawns.
+
 @var almostModules: A list of any other modules which are needed by any of the
     modules in the other two lists, but which themselves have not actually
     been properly ported to Python 3.  These modules might work well enough to
@@ -28,6 +32,8 @@ Only necessary while parts of Twisted are unported.
 """
 
 from __future__ import division
+
+from os import path
 
 
 modules = [
@@ -296,6 +302,33 @@ testModules = [
 ]
 
 
+testDataFiles = [
+    "twisted.internet.test.process_cli",
+    "twisted.internet.test.process_helper",
+    "twisted.test._preamble",
+    "twisted.test.process_cmdline",
+    "twisted.test.process_echoer",
+    "twisted.test.process_fds",
+    "twisted.test.process_linger",
+    "twisted.test.process_reader",
+    "twisted.test.process_signal",
+    "twisted.test.process_stdinreader",
+    "twisted.test.process_tester",
+    "twisted.test.process_tty",
+    "twisted.test.process_twisted",
+    "twisted.test.stdio_test_consumer",
+    "twisted.test.stdio_test_halfclose",
+    "twisted.test.stdio_test_hostpeer",
+    "twisted.test.stdio_test_lastwrite",
+    "twisted.test.stdio_test_loseconn",
+    "twisted.test.stdio_test_producer",
+    "twisted.test.stdio_test_write",
+    "twisted.test.stdio_test_writeseq",
+    "twisted.test.plugin_basic",
+    "twisted.test.plugin_extra1",
+    "twisted.test.plugin_extra2",
+]
+
 
 almostModules = [
     # Missing test coverage, see #6156:
@@ -336,6 +369,30 @@ almostModules = [
     "twisted.web.util",
 ]
 
+
+def _processDataFileList(dataFiles):
+    """
+    Turn a list of file names into a format that distutils likes.
+
+    For example:
+
+        ["foo/bar.py", "baz/spam.py"]
+
+    ...is transformed into...
+
+        [("foo", ["foo/bar.py"]), ("baz", "baz/spam.py")]
+    """
+    files = {}
+
+    for file in dataFiles:
+        pathFragments = file.split(".")
+        targetDir = path.sep.join(pathFragments[:-1])
+
+        if not files.get(targetDir):
+            files[targetDir] = []
+        files[targetDir].append(path.sep.join(pathFragments) + ".py")
+
+    return list(files.items())
 
 
 modulesToInstall = modules + testModules + almostModules
