@@ -18,6 +18,12 @@ except AttributeError:
 else:
     symlinkSkip = None
 
+try:
+    from socket import AF_UNIX
+    unixSkip = None
+except ImportError:
+    unixSkip = "Platform doesn't support UNIX sockets."
+
 
 class AddressTestCaseMixin(object):
     def test_addressComparison(self):
@@ -229,6 +235,7 @@ class IPv6AddressTests(unittest.SynchronousTestCase, AddressTestCaseMixin):
 
 
 class UNIXAddressTests(unittest.SynchronousTestCase):
+    skip = unixSkip
     addressArgSpec = (("name", "%r"),)
 
     def setUp(self):
@@ -292,6 +299,7 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
     """
     Tests for L{UNIXAddress} operations involving a C{None} address.
     """
+    skip = unixSkip
     addressArgSpec = (("name", "%r"),)
 
     def setUp(self):
