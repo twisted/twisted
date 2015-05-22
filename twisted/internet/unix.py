@@ -32,7 +32,7 @@ from twisted.python.compat import lazyByteSlice
 
 
 try:
-    from twisted.python import sendmsg, SCM_RIGHTS
+    from twisted.python import sendmsg
 except ImportError:
     sendmsg = None
 
@@ -44,7 +44,7 @@ def _ancillaryDescriptor(fd):
     L{sendmsg.sendmsg}.
     """
     packed = struct.pack("i", fd)
-    return [(socket.SOL_SOCKET, SCM_RIGHTS, packed)]
+    return [(socket.SOL_SOCKET, sendmsg.SCM_RIGHTS, packed)]
 
 
 
