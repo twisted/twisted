@@ -15,7 +15,7 @@ from twisted.trial import unittest
 from twisted.python.compat import (
     reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
     unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType
+    iterbytes, intToBytes, ioType, bytesEnviron, iteritems
 )
 from twisted.python.filepath import FilePath
 
@@ -730,3 +730,23 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         """
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data, 2, 3)), data[2:5])
+
+
+
+class BytesEnvironTests(unittest.TestCase):
+    """
+    Tests for L{BytesEnviron}.
+    """
+    def test_alwaysBytes(self):
+        """
+        The output of L{BytesEnviron} should always be a L{dict} with L{bytes}
+        values and L{bytes} keys.
+        """
+        result = bytesEnviron()
+        types = set()
+
+        for key, val in iteritems(result):
+            types.add(type(key))
+            types.add(type(val))
+
+        self.assertEqual(list(types), [bytes])

@@ -32,8 +32,8 @@ extensions = [
               libraries=["ws2_32"],
               condition=lambda _: _isCPython and sys.platform == "win32"),
 
-    Extension("twisted.python.sendmsg",
-              sources=["twisted/python/sendmsg.c"],
+    Extension("twisted.python._sendmsg",
+              sources=["twisted/python/_sendmsg.c"],
               condition=lambda _: sys.platform != "win32"),
 ]
 

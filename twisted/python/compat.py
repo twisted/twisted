@@ -18,9 +18,15 @@ the latest version of Python directly from your code, if possible.
     string type (bytes in Python 2, unicode in Python 3).
 """
 
-from __future__ import division
+from __future__ import absolute_import, division
 
-import sys, string, socket, struct, inspect
+import inspect
+import os
+import socket
+import string
+import struct
+import sys
+
 from io import TextIOBase, IOBase
 
 
@@ -546,6 +552,23 @@ Return a list of the items of C{d}.
 
 
 
+def bytesEnviron():
+    """
+    Return a L{dict} of L{os.environ} where all text-strings are encoded into
+    L{bytes}.
+    """
+    if not _PY3:
+        # On py2, nothing to do.
+        return dict(os.environ)
+
+    target = dict()
+    for x, y in os.environ.items():
+        target[os.environ.encodekey(x)] = os.environ.encodevalue(y)
+
+    return target
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -568,4 +591,5 @@ __all__ = [
     "iteritems",
     "xrange",
     "urllib_parse",
-    ]
+    "bytesEnviron",
+]
