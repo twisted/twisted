@@ -28,7 +28,7 @@ from twisted.internet import protocol, address
 from twisted.python import lockfile, log, reflect, failure
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import untilConcludes
-from twisted.python.compat import _PY3, lazyByteSlice
+from twisted.python.compat import lazyByteSlice
 
 
 try:
@@ -129,15 +129,9 @@ class _SendmsgMixin(object):
             while index < len(self._sendmsgQueue):
                 fd = self._sendmsgQueue[index]
                 try:
-                    if _PY3:
-                        _data = [bytes([data[index]])]
-                    else:
-                        _data = data[index]
-
                     untilConcludes(
-                        sendmsg.sendmsg, self.socket, data[index],
+                        sendmsg.sendmsg, self.socket, bytes([data[index]]),
                         _ancillaryDescriptor(fd))
-
                 except socket.error as se:
                     if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                         return index
