@@ -5,6 +5,7 @@ from __future__ import division, absolute_import
 
 import re
 import os
+import socket
 
 from twisted.trial import unittest
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
@@ -19,10 +20,11 @@ else:
     symlinkSkip = None
 
 try:
-    from socket import AF_UNIX
-    unixSkip = None
+    socket.AF_UNIX
 except ImportError:
     unixSkip = "Platform doesn't support UNIX sockets."
+else:
+    unixSkip = None
 
 
 class AddressTestCaseMixin(object):

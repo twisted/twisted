@@ -42,11 +42,11 @@ from twisted.python.compat import nativeString, _PY3, iteritems
 from twisted.python.failure import Failure
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
+from twisted.python.reflect import requireModule
 
-try:
-    from twisted.internet.unix import sendmsg
+if requireModule("twisted.python.sendmsg"):
     sendmsgSkip = None
-except ImportError:
+else:
     sendmsgSkip = (
         "sendmsg extension unavailable, extended UNIX features disabled")
 
