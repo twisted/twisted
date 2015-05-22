@@ -114,23 +114,23 @@ class _SendmsgMixin(object):
         descriptors.
         """
         # Make it a programming error to send more file descriptors than you
-        # send regular bytes.  Otherwise, due to the limitation mentioned below,
-        # we could end up with file descriptors left, but no bytes to send with
-        # them, therefore no way to send those file descriptors.
+        # send regular bytes.  Otherwise, due to the limitation mentioned
+        # below, we could end up with file descriptors left, but no bytes to
+        # send with them, therefore no way to send those file descriptors.
         if len(self._sendmsgQueue) > len(data):
             return error.FileDescriptorOverrun()
 
-        # If there are file descriptors to send, try sending them first, using a
-        # little bit of data from the stream-oriented write buffer too.  It is
-        # not possible to send a file descriptor without sending some regular
-        # data.
+        # If there are file descriptors to send, try sending them first, using
+        # a little bit of data from the stream-oriented write buffer too.  It
+        # is not possible to send a file descriptor without sending some
+        # regular data.
         index = 0
         try:
             while index < len(self._sendmsgQueue):
                 fd = self._sendmsgQueue[index]
                 try:
                     untilConcludes(
-                        sendmsg.sendmsg, self.socket, bytes([data[index]]),
+                        sendmsg.sendmsg, self.socket, data[index:index+1],
                         _ancillaryDescriptor(fd))
                 except socket.error as se:
                     if se.args[0] in (EWOULDBLOCK, ENOBUFS):
