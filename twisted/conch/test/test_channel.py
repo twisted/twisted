@@ -12,8 +12,8 @@ try:
     from twisted.conch.ssh.address import SSHTransportAddress
     from twisted.conch.ssh.transport import SSHServerTransport
     from twisted.conch.ssh.service import SSHService
+    from twisted.internet import interfaces
     from twisted.internet.address import IPv4Address
-    from twisted.internet.interfaces import ITransport
     from twisted.test.proto_helpers import StringTransport
     skipTest = None
 except ImportError:
@@ -88,9 +88,9 @@ class ChannelTests(unittest.TestCase):
 
     def test_interface(self):
         """
-        L{SSHChannel} instances provide L{ITransport}.
+        L{SSHChannel} instances provide L{interfaces.ITransport}.
         """
-        self.assertTrue(verifyObject(ITransport, self.channel))
+        self.assertTrue(verifyObject(interfaces.ITransport, self.channel))
 
 
     def test_init(self):
@@ -284,6 +284,12 @@ class ChannelTests(unittest.TestCase):
         """
         Connect a SSHTransport which is already connected to a remote peer to
         the channel under test.
+
+        @param hostAddress: Local address of the connected transport.
+        @type hostAddress: L{interfaces.IAddress}
+
+        @param peerAddress: Remote address of the connected transport.
+        @type peerAddress: L{interfaces.IAddress}
         """
         transport = SSHServerTransport()
         transport.makeConnection(StringTransport(
