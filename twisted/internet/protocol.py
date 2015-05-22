@@ -16,6 +16,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
+from twisted.logger import Logger
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
@@ -32,6 +33,8 @@ class Factory:
 
     numPorts = 0
     noisy = True
+
+    log = Logger()
 
     @classmethod
     def forProtocol(cls, protocol, *args, **kwargs):
@@ -68,7 +71,7 @@ class Factory:
         """
         if not self.numPorts:
             if self.noisy:
-                log.msg("Starting factory %r" % self)
+                self.log.info("Starting factory {factory!r}", factory=self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
 
@@ -84,7 +87,7 @@ class Factory:
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
-                log.msg("Stopping factory %r" % self)
+                self.log.info("Stopping factory {factory!r}", factory=self)
             self.stopFactory()
 
     def startFactory(self):
