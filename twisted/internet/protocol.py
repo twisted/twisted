@@ -34,7 +34,7 @@ class Factory:
     numPorts = 0
     noisy = True
 
-    log = Logger()
+    _log = Logger()
 
     @classmethod
     def forProtocol(cls, protocol, *args, **kwargs):
@@ -71,7 +71,7 @@ class Factory:
         """
         if not self.numPorts:
             if self.noisy:
-                self.log.info("Starting factory {factory!r}", factory=self)
+                self._log.info("Starting factory {factory!r}", factory=self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
 
@@ -87,7 +87,7 @@ class Factory:
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
-                self.log.info("Stopping factory {factory!r}", factory=self)
+                self._log.info("Stopping factory {factory!r}", factory=self)
             self.stopFactory()
 
     def startFactory(self):

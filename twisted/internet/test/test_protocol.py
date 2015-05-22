@@ -401,7 +401,7 @@ class FactoryTests(TestCase):
         """
         events = []
         class MyFactory(Factory):
-            log = Logger(observer=events.append)
+            _log = Logger(observer=events.append)
         f = MyFactory()
 
         f.doStart()
@@ -410,10 +410,6 @@ class FactoryTests(TestCase):
         self.assertEqual(events[0]['log_level'], LogLevel.info)
         self.assertEqual(events[0]['log_format'],
                          'Starting factory {factory!r}')
-        self.assertEqual(
-            formatEvent(events[0]),
-            u'Starting factory {factory!r}'.format(factory=f)
-        )
 
 
     def test_doStopLoggingStatement(self):
@@ -423,7 +419,7 @@ class FactoryTests(TestCase):
         """
         events = []
         class MyFactory(Factory):
-            log = Logger(observer=events.append)
+            _log = Logger(observer=events.append)
             numPorts = 1
         f = MyFactory()
 
@@ -433,10 +429,6 @@ class FactoryTests(TestCase):
         self.assertEqual(events[0]['log_level'], LogLevel.info)
         self.assertEqual(events[0]['log_format'],
                          'Stopping factory {factory!r}')
-        self.assertEqual(
-            formatEvent(events[0]),
-            u'Stopping factory {factory!r}'.format(factory=f)
-        )
 
 
 
