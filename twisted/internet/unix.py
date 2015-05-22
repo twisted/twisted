@@ -31,25 +31,17 @@ from twisted.python.util import untilConcludes
 from twisted.python.compat import _PY3, lazyByteSlice
 
 
-if _PY3:
-    if "sendmsg" in dir(socket.socket):
-        SCM_RIGHTS = socket.SCM_RIGHTS
-        sendmsg = True
-    else:
-        sendmsg = None
-else:
-    try:
-        from twisted.python import sendmsg
-        SCM_RIGHTS = sendmsg.SCM_RIGHTS
-    except ImportError:
-        sendmsg = None
+try:
+    from twisted.python import sendmsg, SCM_RIGHTS
+except ImportError:
+    sendmsg = None
 
 
 
 def _ancillaryDescriptor(fd):
     """
     Pack an integer into an ancillary data structure suitable for use with
-    L{sendmsg.send1msg} or L{socket.socket.sendmsg}.
+    L{sendmsg.sendmsg}.
     """
     packed = struct.pack("i", fd)
     return [(socket.SOL_SOCKET, SCM_RIGHTS, packed)]
@@ -89,7 +81,7 @@ class _SendmsgMixin(object):
         or not.
 
         This extends the base determination by adding consideration of how many
-        file descriptors need to be sent using L{sendmsg.send1msg}.  When there
+        file descriptors need to be sent using L{sendmsg.sendmsg}.  When there
         are more than C{self._fileDescriptorBufferSize}, the buffer is
         considered full.
 
@@ -138,13 +130,14 @@ class _SendmsgMixin(object):
                 fd = self._sendmsgQueue[index]
                 try:
                     if _PY3:
-                        untilConcludes(
-                            self.socket.sendmsg, [bytes([data[index]])],
-                            _ancillaryDescriptor(fd))
+                        _data = [bytes([data[index]])]
                     else:
-                        untilConcludes(
-                            sendmsg.send1msg, self.socket.fileno(), data[index],
-                            0, _ancillaryDescriptor(fd))
+                        _data = data[index]
+
+                    untilConcludes(
+                        sendmsg.sendmsg, self.socket, data[index],
+                        _ancillaryDescriptor(fd))
+
                 except socket.error as se:
                     if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                         return index
@@ -176,19 +169,8 @@ class _SendmsgMixin(object):
         this function will return the result of the dataReceived call.
         """
         try:
-            if _PY3:
-                # In Twisted's sendmsg.c, the csmg_space is defined as:
-                #     int cmsg_size = 4096;
-                #     cmsg_space = CMSG_SPACE(cmsg_size);
-                # Since the default in Python 3's socket is 0, we need to define
-                # it ourselves, and since it worked for sendmsg.c, it probably
-                # works fine here. -hawkie
-                data, ancillary, flags = untilConcludes(
-                    self.socket.recvmsg, self.bufferSize,
-                    socket.CMSG_SPACE(4096))[0:3]
-            else:
-                data, flags, ancillary = untilConcludes(
-                    sendmsg.recv1msg, self.socket.fileno(), 0, self.bufferSize)
+            data, ancillary, flags = untilConcludes(
+                sendmsg.recvmsg, self.socket, self.bufferSize)
         except socket.error as se:
             if se.args[0] == EWOULDBLOCK:
                 return
