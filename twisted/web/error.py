@@ -7,6 +7,10 @@ Exception definitions for L{twisted.web}.
 """
 
 from __future__ import division, absolute_import
+try:
+    from future_builtins import ascii
+except ImportError:
+    pass
 
 __all__ = [
     'Error', 'PageRedirect', 'InfiniteRedirection', 'RenderError',
@@ -18,6 +22,24 @@ __all__ = [
 from collections import Sequence
 
 from twisted.web._responses import RESPONSES
+from twisted.python.compat import unicode
+
+
+def _codeToMessage(code):
+    """
+    Returns the response message corresponding to an HTTP code, or None
+    if the code is unknown or unrecognized.
+
+    @type code: L{str}
+    @param code: Refers to an HTTP status code, for example C{http.NOT_FOUND}.
+
+    @return: A string message or none
+    @rtype: L{str}
+    """
+    try:
+        return RESPONSES.get(int(code))
+    except ValueError:
+        return None
 
 
 class Error(Exception):
@@ -48,14 +70,7 @@ class Error(Exception):
         @type response: C{bytes}
         @param response: A complete HTML document for an error page.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
+        message = message or _codeToMessage(code)
 
         Exception.__init__(self, code, message, response)
         self.status = code
@@ -95,19 +110,9 @@ class PageRedirect(Error):
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
-
-        if location and message:
-            message = "%s to %s" % (message, location)
-
         Error.__init__(self, code, message, response)
+        if self.message and location:
+            self.message = "%s to %s" % (self.message, location)
         self.location = location
 
 
@@ -140,19 +145,9 @@ class InfiniteRedirection(Error):
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
-
-        if location and message:
-            message = "%s to %s" % (message, location)
-
         Error.__init__(self, code, message, response)
+        if self.message and location:
+            self.message = "%s to %s" % (self.message, location)
         self.location = location
 
 
@@ -161,6 +156,10 @@ class RedirectWithNoLocation(Error):
     """
     Exception passed to L{ResponseFailed} if we got a redirect without a
     C{Location} header field.
+
+    @type uri: C{str}
+    @ivar uri: The URI which failed to give a proper location header
+        field.
 
     @since: 11.1
     """
@@ -322,20 +321,21 @@ class FlattenerError(Exception):
         # There's a circular dependency between this class and 'Tag', although
         # only for an isinstance() check.
         from twisted.web.template import Tag
-        if isinstance(obj, (str, unicode)):
+
+        if isinstance(obj, (bytes, str, unicode)):
             # It's somewhat unlikely that there will ever be a str in the roots
             # list.  However, something like a MemoryError during a str.replace
             # call (eg, replacing " with &quot;) could possibly cause this.
             # Likewise, UTF-8 encoding a unicode string to a byte string might
             # fail like this.
             if len(obj) > 40:
-                if isinstance(obj, str):
-                    prefix = 1
+                if isinstance(obj, unicode):
+                    ellipsis = u'<...>'
                 else:
-                    prefix = 2
-                return repr(obj[:20])[:-1] + '<...>' + repr(obj[-20:])[prefix:]
+                    ellipsis = b'<...>'
+                return ascii(obj[:20] + ellipsis + obj[-20:])
             else:
-                return repr(obj)
+                return ascii(obj)
         elif isinstance(obj, Tag):
             if obj.filename is None:
                 return 'Tag <' + obj.tagName + '>'
@@ -344,7 +344,7 @@ class FlattenerError(Exception):
                     obj.filename, obj.lineNumber,
                     obj.columnNumber, obj.tagName)
         else:
-            return repr(obj)
+            return ascii(obj)
 
 
     def __repr__(self):
