@@ -5,13 +5,12 @@
 #
 
 from __future__ import division, absolute_import
-
+from twisted.python.compat import urllib_parse as urlparse
 from twisted.python.compat import _PY3
+
 if not _PY3:
-    import urlparse
     from urllib import unquote as unquoteFunc
 else:
-    import urllib.parse as urlparse
     from urllib.parse import unquote as unquoteFunc
 
 
@@ -128,4 +127,3 @@ class URLPath(object):
     def __repr__(self):
         return ('URLPath(scheme=%r, netloc=%r, path=%r, query=%r, fragment=%r)'
                 % (self.scheme, self.netloc, self.path, self.query, self.fragment))
-

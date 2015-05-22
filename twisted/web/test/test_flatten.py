@@ -431,47 +431,6 @@ class FlattenerErrorTests(TestCase):
     Tests for L{FlattenerError}.
     """
 
-    def test_string(self):
-        """
-        If a L{FlattenerError} is created with a string root, up to around 40
-        bytes from that string are included in the string representation of the
-        exception.
-        """
-        self.assertEqual(
-            str(FlattenerError(RuntimeError("reason"), ['abc123xyz'], [])),
-            "Exception while flattening:\n"
-            "  'abc123xyz'\n"
-            "RuntimeError: reason\n")
-        self.assertEqual(
-            str(FlattenerError(
-                    RuntimeError("reason"), ['0123456789' * 10], [])),
-            "Exception while flattening:\n"
-            "  '01234567890123456789<...>01234567890123456789'\n"
-            "RuntimeError: reason\n")
-
-
-    def test_unicode(self):
-        """
-        If a L{FlattenerError} is created with a unicode root, up to around 40
-        characters from that string are included in the string representation
-        of the exception.
-        """
-        self.assertEqual(
-            str(FlattenerError(
-                    RuntimeError("reason"), [u'abc\N{SNOWMAN}xyz'], [])),
-            "Exception while flattening:\n"
-            "  u'abc\\u2603xyz'\n" # Codepoint for SNOWMAN
-            "RuntimeError: reason\n")
-        self.assertEqual(
-            str(FlattenerError(
-                    RuntimeError("reason"), [u'01234567\N{SNOWMAN}9' * 10],
-                    [])),
-            "Exception while flattening:\n"
-            "  u'01234567\\u2603901234567\\u26039<...>01234567\\u2603901234567"
-            "\\u26039'\n"
-            "RuntimeError: reason\n")
-
-
     def test_renderable(self):
         """
         If a L{FlattenerError} is created with an L{IRenderable} provider root,

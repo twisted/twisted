@@ -16,6 +16,9 @@ the latest version of Python directly from your code, if possible.
 
 @var NativeStringIO: An in-memory file-like object that operates on the native
     string type (bytes in Python 2, unicode in Python 3).
+
+@var urllib_parse: a URL-parsing module (urlparse on Python 2, urllib.parse on
+    Python 3)
 """
 
 from __future__ import absolute_import, division

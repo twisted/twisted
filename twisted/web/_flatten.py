@@ -7,17 +7,17 @@ Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
 
-from cStringIO import StringIO
+from __future__ import division, absolute_import
+
 from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
+
 from twisted.internet.defer import Deferred
+from twisted.python.compat import NativeStringIO
+from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-
 from twisted.web.iweb import IRenderable
-from twisted.web._stan import (
-    Tag, slot, voidElements, Comment, CDATA, CharRef)
-
 
 
 def escapeForContent(data):
@@ -317,7 +317,7 @@ def _flattenTree(request, root):
             element = stack[-1].next()
         except StopIteration:
             stack.pop()
-        except Exception, e:
+        except Exception as e:
             stack.pop()
             roots = []
             for generator in stack:
@@ -328,7 +328,8 @@ def _flattenTree(request, root):
             if type(element) is str:
                 yield element
             elif isinstance(element, Deferred):
-                def cbx((original, toFlatten)):
+                def cbx(originalAndToFlatten):
+                    original, toFlatten = originalAndToFlatten
                     stack.append(toFlatten)
                     return original
                 yield element.addCallback(cbx)
@@ -408,15 +409,15 @@ def flattenString(request, root):
     """
     Collate a string representation of C{root} into a single string.
 
-    This is basically gluing L{flatten} to a C{StringIO} and returning the
-    results. See L{flatten} for the exact meanings of C{request} and
+    This is basically gluing L{flatten} to a L{NativeStringIO} and returning
+    the results. See L{flatten} for the exact meanings of C{request} and
     C{root}.
 
     @return: A L{Deferred} which will be called back with a single string as
         its result when C{root} has been completely flattened into C{write} or
         which will be errbacked if an unexpected exception occurs.
     """
-    io = StringIO()
+    io = NativeStringIO()
     d = flatten(request, root, io.write)
     d.addCallback(lambda _: io.getvalue())
     return d
