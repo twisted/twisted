@@ -63,6 +63,7 @@ __all__ = ["clientFromString", "serverFromString",
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "TCP4ClientEndpoint", "TCP6ClientEndpoint",
             "SSL4ServerEndpoint", "SSL4ClientEndpoint",
+            "UNIXServerEndpoint", "UNIXClientEndpoint",
             "connectProtocol", "HostnameEndpoint",
             "ProcessEndpoint", "StandardErrorBehavior"]
 

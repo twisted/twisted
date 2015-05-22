@@ -3344,7 +3344,7 @@ class ConnectProtocolTests(unittest.TestCase):
 
 
 if _PY3:
-    del (StandardIOEndpointsTests, UNIXEndpointsTests, ParserTests,
+    del (StandardIOEndpointsTests, ParserTests,
          ServerStringTests, ClientStringTests, SSLClientStringTests,
          AdoptedStreamServerEndpointTests, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests

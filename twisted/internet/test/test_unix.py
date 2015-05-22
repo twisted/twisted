@@ -5,8 +5,10 @@
 Tests for implementations of L{IReactorUNIX}.
 """
 
+from __future__ import division, absolute_import
+
 from stat import S_IMODE
-from os import stat, close
+from os import stat, close, urandom
 from tempfile import mktemp
 from socket import AF_INET, SOCK_STREAM, socket
 from pprint import pformat
@@ -17,29 +19,32 @@ try:
 except ImportError:
     AF_UNIX = None
 
-from zope.interface import implements
+from zope.interface import implementer
 
-from twisted.python.log import addObserver, removeObserver, err
-from twisted.python.failure import Failure
-from twisted.python.reflect import requireModule
-from twisted.python.runtime import platform
-from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
-from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
-from twisted.internet.address import UNIXAddress
-from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
-from twisted.internet.defer import Deferred, fail
-from twisted.internet.task import LoopingCall
 from twisted.internet import interfaces
-from twisted.internet.protocol import (
-    ServerFactory, ClientFactory, DatagramProtocol)
+from twisted.internet.address import UNIXAddress
+from twisted.internet.defer import Deferred, fail
+from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
+from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
+from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
+from twisted.internet.protocol import DatagramProtocol
+from twisted.internet.protocol import ServerFactory, ClientFactory
+from twisted.internet.task import LoopingCall
+from twisted.internet.test.connectionmixins import EndpointCreator
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import StreamTransportTestsMixin
-from twisted.internet.test.connectionmixins import (
-    EndpointCreator, ConnectableProtocol, runProtocolsWithReactor,
-    ConnectionTestsMixin, StreamClientTestsMixin)
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.test.connectionmixins import ConnectableProtocol
+from twisted.internet.test.connectionmixins import ConnectionTestsMixin
+from twisted.internet.test.connectionmixins import StreamClientTestsMixin
+from twisted.internet.test.connectionmixins import runProtocolsWithReactor
+from twisted.internet.unix import sendmsg
+from twisted.python.compat import nativeString, _PY3, iteritems
+from twisted.python.failure import Failure
+from twisted.python.log import addObserver, removeObserver, err
+from twisted.python.runtime import platform
 
-if requireModule('twisted.python.sendmsg') is None:
+if sendmsg is None:
     sendmsgSkip = (
         "sendmsg extension unavailable, extended UNIX features disabled")
 else:
@@ -56,7 +61,7 @@ class UNIXFamilyMixin:
         Assert that the mode of the created unix socket is set to the mode
         specified to the reactor method.
         """
-        mode = 0600
+        mode = 0o600
         reactor = self.buildReactor()
         unixPort = getattr(reactor, methodName)(path, factory, mode=mode)
         unixPort.stopListening()
@@ -70,7 +75,7 @@ def _abstractPath(case):
     # Use the test cases's mktemp to get something unique, but also squash it
     # down to make sure it fits in the unix socket path limit (something around
     # 110 bytes).
-    return md5(case.mktemp()).hexdigest()
+    return md5(urandom(110)).hexdigest()
 
 
 
@@ -136,6 +141,7 @@ class SendFileDescriptor(ConnectableProtocol):
 
 
 
+@implementer(IFileDescriptorReceiver)
 class ReceiveFileDescriptor(ConnectableProtocol):
     """
     L{ReceiveFileDescriptor} provides an API for waiting for file descriptors to
@@ -148,7 +154,6 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         received, or with a failure if the connection is lost with no descriptor
         arriving.
     """
-    implements(IFileDescriptorReceiver)
 
     reason = None
     waiting = None
@@ -243,8 +248,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         path = _abstractPath(self)
         reactor = self.buildReactor()
         connector = reactor.connectUNIX('\0' + path, ClientFactory())
-        self.assertEqual(
-            connector.getDestination(), UNIXAddress('\0' + path))
+        self.assertEqual(connector.getDestination(), UNIXAddress('\0' + path))
     if not platform.isLinux():
         test_connectToLinuxAbstractNamespace.skip = (
             'Abstract namespace UNIX sockets only supported on Linux.')
@@ -280,7 +284,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         s = socket()
         s.bind(('', 0))
-        server = SendFileDescriptor(s.fileno(), "junk")
+        server = SendFileDescriptor(s.fileno(), b"junk")
 
         client = ReceiveFileDescriptor()
         d = client.waitForDescriptor()
@@ -323,7 +327,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 self.transport.registerProducer(self, True)
                 def sender():
                     self.transport.sendFileDescriptor(self.socket.fileno())
-                    self.transport.write("x")
+                    self.transport.write(b"x")
                 self.task = LoopingCall(sender)
                 self.task.clock = self.transport.reactor
                 self.task.start(0).addErrback(err, "Send loop failure")
@@ -405,7 +409,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 self.peerAddress = self.transport.getPeer()
                 SendFileDescriptor.connectionMade(self)
 
-        server = RecordEndpointAddresses(probeClient.fileno(), "junk")
+        server = RecordEndpointAddresses(probeClient.fileno(), b"junk")
         client = ConnectableProtocol()
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
@@ -418,7 +422,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # duplicate file descriptor is still open, it will fail with EAGAIN
         # instead.
         probeServer.setblocking(False)
-        self.assertEqual("", probeServer.recv(1024))
+        self.assertEqual(b"", probeServer.recv(1024))
 
         # This is a surprising circumstance, so it should be logged.
         format = (
@@ -435,7 +439,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                              format=format)
 
         for logEvent in events:
-            for k, v in expectedEvent.iteritems():
+            for k, v in iteritems(expectedEvent):
                 if v != logEvent.get(k):
                     break
             else:
@@ -455,8 +459,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         L{IUNIXTransport.sendFileDescriptor} sends file descriptors before
         L{ITransport.write} sends normal bytes.
         """
+        @implementer(IFileDescriptorReceiver)
         class RecordEvents(ConnectableProtocol):
-            implements(IFileDescriptorReceiver)
 
             def connectionMade(self):
                 ConnectableProtocol.connectionMade(self)
@@ -470,12 +474,16 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 self.events.extend(data)
 
         cargo = socket()
-        server = SendFileDescriptor(cargo.fileno(), "junk")
+        server = SendFileDescriptor(cargo.fileno(), b"junk")
         client = RecordEvents()
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
 
-        self.assertEqual([int, "j", "u", "n", "k"], client.events)
+        self.assertEqual(int, client.events[0])
+        if _PY3:
+            self.assertEqual(b"junk", bytes(client.events[1:]))
+        else:
+            self.assertEqual(b"junk", b"".join(client.events[1:]))
     if sendmsgSkip is not None:
         test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
 
@@ -534,14 +542,15 @@ class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
         """
         Get the message expected to be logged when a UNIX port starts listening.
         """
-        return "%s starting on %r" % (factory, port.getHost().name)
+        return "%s starting on %r" % (factory,
+                                      nativeString(port.getHost().name))
 
 
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
-        return "(UNIX Port %s Closed)" % (repr(port.port),)
+        return "(UNIX Port %s Closed)" % (nativeString(port.getHost().name),)
 
 
 
