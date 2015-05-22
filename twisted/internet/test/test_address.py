@@ -21,7 +21,7 @@ else:
 
 try:
     socket.AF_UNIX
-except ImportError:
+except AttributeError:
     unixSkip = "Platform doesn't support UNIX sockets."
 else:
     unixSkip = None
