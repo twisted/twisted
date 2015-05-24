@@ -5,6 +5,9 @@
 Tests for L{twisted.python.win32}.
 """
 
+import inspect
+import warnings
+
 from twisted.trial import unittest
 from twisted.python.runtime import platform
 from twisted.python import win32
@@ -68,3 +71,64 @@ class ProgramPathsTests(unittest.TestCase):
         test_getProgramFilesPath.skip = (
             "Cannot figure out the program files path on non-win32 platform")
 
+
+    def test_deprecationWarninggetProgramFilesPath(self):
+        """
+        Tests to ensure that L{getProgramFilesPath} has been deprecated. A
+        call to the deprecated function should cause a deprecation warning
+        to be emitted.
+        """
+        with warnings.catch_warnings(record=True) as emitted_warnings:
+            warnings.simplefilter("always")
+            win32.getProgramFilesPath()
+
+        if not emitted_warnings:
+            self.fail("No warnings emitted")
+
+        self.assertEqual(
+            emitted_warnings[0].message.args[0],
+            "twisted.python.win32.getProgramFilesPath was deprecated in "
+            "Twisted 15.3.0")
+
+    if not platform.isWindows():
+        test_deprecationWarninggetProgramFilesPath.skip = (
+            "Deprecation test is Windows only")
+
+
+    def test_deprecatedDocStringgetProgramsMenuPath(self):
+        """
+        Tests to ensure that L{getProgramFilesPath} has been deprecated.  The
+        last line should always be the deprecation message.
+        """
+        documentation = inspect.getdoc(win32.getProgramsMenuPath)
+        self.assertEqual(
+            documentation.splitlines()[-1], "Deprecated in Twisted 15.3.0.")
+
+
+    def test_deprecatedDocStringgetProgramFilesPath(self):
+        """
+        Tests to ensure that L{getProgramFilesPath} has been deprecated.  The
+        last line should always be the deprecation message.
+        """
+        documentation = inspect.getdoc(win32.getProgramFilesPath)
+        self.assertEqual(
+            documentation.splitlines()[-1], "Deprecated in Twisted 15.3.0.")
+
+
+    def test_deprecationWarninggetProgramsMenuPath(self):
+        """
+        Tests to ensure that L{getProgramsMenuPath} has been deprecated. A
+        call to the deprecated function should cause a deprecation warning
+        to be emitted.
+        """
+        with warnings.catch_warnings(record=True) as emitted_warnings:
+            warnings.simplefilter("always")
+            win32.getProgramsMenuPath()
+
+        if not emitted_warnings:
+            self.fail("No warnings emitted")
+
+        self.assertEqual(
+            emitted_warnings[0].message.args[0],
+            "twisted.python.win32.getProgramsMenuPath was deprecated in "
+            "Twisted 15.3.0")
