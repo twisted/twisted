@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Various asynchronous TCP/IP classes.
+UNIX socket support for Twisted.
 
 End users shouldn't use this module directly - use the reactor APIs instead.
 

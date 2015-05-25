@@ -72,10 +72,7 @@ def _abstractPath(case):
     """
     Return a new, unique abstract namespace path to be listened on.
     """
-    # Use the test cases's mktemp to get something unique, but also squash it
-    # down to make sure it fits in the unix socket path limit (something around
-    # 110 bytes).
-    return md5(urandom(110)).hexdigest()
+    return md5(urandom(100)).hexdigest()
 
 
 
