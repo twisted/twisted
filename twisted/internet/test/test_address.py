@@ -276,10 +276,10 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         linkName = self.mktemp()
         with open(self._socketAddress, 'w') as self.fd:
             os.symlink(os.path.abspath(self._socketAddress), linkName)
-            self.assertTrue(
-                UNIXAddress(self._socketAddress) == UNIXAddress(linkName))
-            self.assertTrue(
-                UNIXAddress(linkName) == UNIXAddress(self._socketAddress))
+            self.assertEqual(UNIXAddress(self._socketAddress),
+                             UNIXAddress(linkName))
+            self.assertEqual(UNIXAddress(linkName),
+                             UNIXAddress(self._socketAddress))
     test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
@@ -290,8 +290,8 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         linkName = self.mktemp()
         self.fd = open(self._socketAddress, 'w')
         os.symlink(os.path.abspath(self._socketAddress), linkName)
-        self.assertEqual(
-            hash(UNIXAddress(self._socketAddress)), hash(UNIXAddress(linkName)))
+        self.assertEqual(hash(UNIXAddress(self._socketAddress)),
+                         hash(UNIXAddress(linkName)))
     test_hashOfLinkedFiles.skip = symlinkSkip
 
 
@@ -332,10 +332,10 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
         linkName = self.mktemp()
         with open(self._socketAddress, 'w') as self.fd:
             os.symlink(os.path.abspath(self._socketAddress), linkName)
-            self.assertTrue(
-                UNIXAddress(self._socketAddress) != UNIXAddress(None))
-            self.assertTrue(
-                UNIXAddress(None) != UNIXAddress(self._socketAddress))
+            self.assertNotEqual(UNIXAddress(self._socketAddress),
+                                UNIXAddress(None))
+            self.assertNotEqual(UNIXAddress(None),
+                                UNIXAddress(self._socketAddress))
     test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 

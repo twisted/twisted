@@ -145,11 +145,14 @@ class UNIXAddress(FancyEqMixin, object):
     @name.setter
     def name(self, name):
         """
-        On Linux, paths are always bytes. However, as paths are L{unicode} on
-        Python 3, and this technically takes a file path, we convert it to bytes
-        if required to maintain compatibility with C{os.path} on Python 3.
+        On UNIX, paths are always bytes. However, as paths are L{unicode} on
+        Python 3, and L{UNIXAddress} technically takes a file path, we convert
+        it to bytes to maintain compatibility with C{os.path} on Python 3.
         """
-        self._name = _asFilesystemBytes(name) if name else None
+        if name is not None:
+            self._name = _asFilesystemBytes(name)
+        else:
+            self._name = None
 
 
     if getattr(os.path, 'samefile', None) is not None:
@@ -165,8 +168,8 @@ class UNIXAddress(FancyEqMixin, object):
                 except OSError:
                     pass
                 except (TypeError, ValueError) as e:
-                    # On Linux, abstract namespace UNIX sockets start with a \0,
-                    # which os.path doesn't like.
+                    # On Linux, abstract namespace UNIX sockets start with a
+                    # \0, which os.path doesn't like.
                     if not _PY3 and not platform.isLinux():
                         raise e
             return res

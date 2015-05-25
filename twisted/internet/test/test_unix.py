@@ -44,7 +44,7 @@ from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.runtime import platform
 from twisted.python.reflect import requireModule
 
-if requireModule("twisted.python.sendmsg"):
+if requireModule("twisted.python.sendmsg") is not None:
     sendmsgSkip = None
 else:
     sendmsgSkip = (
