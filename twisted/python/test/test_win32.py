@@ -69,13 +69,12 @@ class ProgramPathsTests(unittest.TestCase):
             "Cannot figure out the program files path on non-win32 platform")
 
 
-    def test_deprecationWarninggetProgramFilesPath(self):
+    def test_deprecationGetProgramFilesPath(self):
         """
-        Tests to ensure that L{getProgramFilesPath} has been deprecated. A
-        call to the deprecated function should cause a deprecation warning
-        to be emitted.
+        L{getProgramFilesPath} has been deprecated.
         """
         win32.getProgramFilesPath()
+
         emittedWarnings = self.flushWarnings(
             [self.test_deprecationWarninggetProgramFilesPath])
         self.assertEqual(len(emittedWarnings), 1)
@@ -86,17 +85,16 @@ class ProgramPathsTests(unittest.TestCase):
             "Twisted 15.3.0")
 
     if not platform.isWindows():
-        test_deprecationWarninggetProgramFilesPath.skip = (
+        test_deprecationGetProgramFilesPath.skip = (
             "Deprecation test for getProgramFilesPath() is Windows only")
 
 
-    def test_deprecationWarninggetProgramsMenuPath(self):
+    def test_deprecationGetProgramsMenuPath(self):
         """
-        Tests to ensure that L{getProgramsMenuPath} has been deprecated. A
-        call to the deprecated function should cause a deprecation warning
-        to be emitted.
+        L{getProgramsMenuPath} has been deprecated.
         """
         win32.getProgramsMenuPath()
+
         emittedWarnings = self.flushWarnings(
             [self.test_deprecationWarninggetProgramsMenuPath])
         self.assertEqual(len(emittedWarnings), 1)
