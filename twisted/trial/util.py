@@ -352,8 +352,8 @@ def _unusedTestDirectory(base):
     """
     Find an unused directory named similarly to C{base}.
 
-    Once a directory is found, it will be locked and a marker dropped into it to
-    identify it as a trial temporary directory.
+    Once a directory is found, it will be locked and a marker dropped into it
+    to identify it as a trial temporary directory.
 
     @param base: A template path for the discovery process.  If this path
         exactly cannot be used, a path which varies only in a suffix of the
@@ -381,10 +381,10 @@ def _unusedTestDirectory(base):
                 # It exists though - delete it
                 _removeSafely(testdir)
 
-            # Create it anew and mark it as ours so the next _removeSafely on it
-            # succeeds.
+            # Create it anew and mark it as ours so the next _removeSafely on
+            # it succeeds.
             testdir.makedirs()
-            testdir.child('_trial_marker').setContent('')
+            testdir.child('_trial_marker').setContent(b'')
             return testdir, testDirLock
         else:
             # It is in use
