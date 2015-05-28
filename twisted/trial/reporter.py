@@ -540,7 +540,6 @@ class Reporter(TestResult):
 
         if _PY3:
             # On PY3, we have an extra frame which is reraising the exception
-            reraiseFrames = []
             for frame in newFrames:
                 frameFile = os.path.splitext(os.path.basename(frame[1]))[0]
                 if frameFile == "compat" and frame[0] == "reraise":
