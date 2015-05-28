@@ -986,7 +986,9 @@ class ReporterTests(ReporterInterfaceTests):
         result = self.resultFactory(stream=BrokenStream(self.stream))
         result._writeln("Hello")
         self.assertEqual(self.stream.getvalue(), 'Hello\n')
+        # Truncate on StringIO does not seek on Py3, but it's safe to do on Py2
         self.stream.truncate(0)
+        self.stream.seek(0)
         result._writeln("Hello %s!", 'World')
         self.assertEqual(self.stream.getvalue(), 'Hello World!\n')
 

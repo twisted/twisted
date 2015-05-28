@@ -1,7 +1,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import StringIO
+from __future__ import absolute_import, division
+
 import gc
 import re
 import sys
@@ -9,15 +10,18 @@ import textwrap
 import types
 
 from twisted.trial import unittest
-from twisted.trial.runner import (
-    TrialRunner, TestSuite, DestructiveTestSuite, TestLoader)
-from twisted.trial._dist.disttrial import DistTrialRunner
+from twisted.trial.runner import TrialRunner, TestSuite, DestructiveTestSuite
+from twisted.trial.runner import TestLoader
 from twisted.scripts import trial
 from twisted.python import util
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
+from twisted.python.compat import NativeStringIO, _PY3
 
 from twisted.trial.test.test_loader import testNames
+
+if not _PY3:
+    from twisted.trial._dist.disttrial import DistTrialRunner
 
 pyunit = __import__('unittest')
 
@@ -62,7 +66,7 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
         Return a L{TrialRunner} object that is safe to use in tests.
         """
         runner = trial._makeRunner(self.config)
-        runner.stream = StringIO.StringIO()
+        runner.stream = NativeStringIO()
         return runner
 
 
@@ -200,7 +204,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         Check that --testmodule displays a meaningful error message when
         passed a non-existent filename.
         """
-        buffy = StringIO.StringIO()
+        buffy = NativeStringIO()
         stderr, sys.stderr = sys.stderr, buffy
         filename = 'test_thisbetternoteverexist.py'
         try:
@@ -224,7 +228,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         Check that --testmodule does *not* support module names as arguments
         and that it displays a meaningful error message.
         """
-        buffy = StringIO.StringIO()
+        buffy = NativeStringIO()
         stderr, sys.stderr = sys.stderr, buffy
         moduleName = 'twisted.trial.test.test_script'
         try:
@@ -571,6 +575,8 @@ class MakeRunnerTests(unittest.TestCase):
         self.assertEqual(4, runner._workerNumber)
         self.assertEqual(["--force-gc"], runner._workerArguments)
 
+    if _PY3:
+        test_jobs.skip = "DistTrialRunner is not yet ported to Python 3"
 
     def test_dryRunWithJobs(self):
         """
@@ -798,25 +804,25 @@ class OrderTests(unittest.TestCase):
         --order=toptobottom detects the source line of methods from modules
         whose source file is missing.
         """
-        tempdir = self.mktemp().encode('utf-8')
-        package = FilePath(tempdir).child(b'twisted_toptobottom_temp')
+        tempdir = self.mktemp()
+        package = FilePath(tempdir).child('twisted_toptobottom_temp')
         package.makedirs()
-        package.child(b'__init__.py').setContent(b'')
-        package.child(b'test_missing.py').setContent(textwrap.dedent(b'''
+        package.child('__init__.py').setContent(b'')
+        package.child('test_missing.py').setContent(textwrap.dedent('''
         from twisted.trial.unittest import TestCase
         class TestMissing(TestCase):
             def test_second(self): pass
             def test_third(self): pass
             def test_fourth(self): pass
             def test_first(self): pass
-        '''))
-        pathEntry = package.parent().path.decode('utf-8')
+        ''').encode('utf8'))
+        pathEntry = package.parent().path
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
         from twisted_toptobottom_temp import test_missing
         self.addCleanup(sys.modules.pop, 'twisted_toptobottom_temp')
         self.addCleanup(sys.modules.pop, test_missing.__name__)
-        package.child(b'test_missing.py').remove()
+        package.child('test_missing.py').remove()
 
         self.config.parseOptions([
             "--order", "toptobottom", "twisted.trial.test.ordertests"])
@@ -849,7 +855,7 @@ class HelpOrderTests(unittest.TestCase):
         """
         --help-orders prints each of the available orders and then exits.
         """
-        self.patch(sys, "stdout", StringIO.StringIO())
+        self.patch(sys, "stdout", NativeStringIO())
 
         exc = self.assertRaises(
             SystemExit, trial.Options().parseOptions, ["--help-orders"])

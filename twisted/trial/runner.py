@@ -54,7 +54,7 @@ def isPackageDirectory(dirname):
     """Is the directory at path 'dirname' a Python package directory?
     Returns the name of the __init__ file (it may have a weird extension)
     if dirname is a package directory.  Otherwise, returns False"""
-    for ext in zip(*imp.get_suffixes())[0]:
+    for ext in list(zip(*imp.get_suffixes()))[0]:
         initFile = '__init__' + ext
         if os.path.exists(os.path.join(dirname, initFile)):
             return initFile
@@ -434,8 +434,12 @@ class TestLoader(object):
         Given a class which contains test cases, return a sorted list of
         C{TestCase} instances.
         """
-        if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
-            raise TypeError("%r is not a class" % (klass,))
+        if not _PY3:
+            if not (isinstance(klass, type), isinstance(klass, types.ClassType)):
+                raise TypeError("%r is not a class" % (klass,))
+        else:
+            if not isinstance(klass, type):
+                raise TypeError("%r is not a class" % (klass,))
         if not isTestCase(klass):
             raise ValueError("%r is not a test case" % (klass,))
         names = self.getTestCaseNames(klass)
@@ -571,12 +575,17 @@ class TestLoader(object):
             if isPackage(thing):
                 return self.loadPackage(thing, recurse)
             return self.loadModule(thing)
-        elif isinstance(thing, types.ClassType):
+
+        if not _PY3:
+            if isinstance(thing, types.ClassType):
+                return self.loadClass(thing)
+
+        if isinstance(thing, type):
             return self.loadClass(thing)
-        elif isinstance(thing, type):
-            return self.loadClass(thing)
-        elif isinstance(thing, types.MethodType):
+
+        if isinstance(thing, types.MethodType):
             return self.loadMethod(thing)
+
         raise TypeError("No loader for %r. Unrecognized type" % (thing,))
 
     def loadByName(self, name, recurse=False):
