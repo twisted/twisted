@@ -163,6 +163,7 @@ modules = [
     "twisted.trial.test.suppression",
     "twisted.trial.test.suppression",
     "twisted.trial.unittest",
+    "twisted.trial.runner",
     "twisted.trial.util",
     "twisted.web",
     "twisted.web._newclient",
@@ -297,6 +298,7 @@ testModules = [
     "twisted.trial.test.test_tests",
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
+    "twisted.trial.test.test_runner",
     "twisted.web.test._util",
     "twisted.web.test.test_error",
     # The downloadPage tests weren't ported:
