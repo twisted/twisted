@@ -112,6 +112,8 @@ modules = [
     "twisted.names.resolve",
     "twisted.names.test",
     "twisted.plugin",
+    "twisted.plugins",
+    "twisted.plugins.twisted_trial",
     "twisted.protocols",
     "twisted.protocols.basic",
     "twisted.protocols.policies",
@@ -146,6 +148,8 @@ modules = [
     "twisted.python.usage",
     "twisted.python.util",
     "twisted.python.versions",
+    "twisted.scripts",
+    "twisted.scripts.trial",
     "twisted.test",
     "twisted.test.iosim",
     "twisted.test.proto_helpers",
@@ -164,6 +168,7 @@ modules = [
     "twisted.trial.test.suppression",
     "twisted.trial.unittest",
     "twisted.trial.runner",
+    "twisted.trial.reporter",
     "twisted.trial.util",
     "twisted.web",
     "twisted.web._newclient",
@@ -291,14 +296,21 @@ testModules = [
     "twisted.trial.test.test_assertions",
     "twisted.trial.test.test_asyncassertions",
     "twisted.trial.test.test_deferred",
+    "twisted.trial.test.test_doctest",
+    "twisted.trial.test.test_keyboard",
     "twisted.trial.test.test_log",
+    "twisted.trial.test.test_log",
+    "twisted.trial.test.test_output",
+    "twisted.trial.test.test_plugins",
     "twisted.trial.test.test_pyunitcompat",
+    "twisted.trial.test.test_reporter",
+    "twisted.trial.test.test_runner",
+    "twisted.trial.test.test_script",
     "twisted.trial.test.test_suppression",
     "twisted.trial.test.test_testcase",
     "twisted.trial.test.test_tests",
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
-    "twisted.trial.test.test_runner",
     "twisted.web.test._util",
     "twisted.web.test.test_error",
     # The downloadPage tests weren't ported:
@@ -340,10 +352,19 @@ testDataFiles = [
     "twisted.test.plugin_basic",
     "twisted.test.plugin_extra1",
     "twisted.test.plugin_extra2",
+    "twisted.trial.test.mockdoctest",
+    "twisted.trial.test.packages",
+    "twisted.trial.test.sample",
 ]
 
 
 almostModules = [
+    # Required for Trial
+    "twisted.application",
+    "twisted.application.app",
+    "twisted.application.service",
+    "twisted.application.reactors",
+    "twisted.python.logfile",
     # Missing test coverage, see #6156:
     "twisted.internet._sslverify",
     # twisted.names.client semi-depends on twisted.names.root, but only on
