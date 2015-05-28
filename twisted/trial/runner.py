@@ -435,7 +435,8 @@ class TestLoader(object):
         C{TestCase} instances.
         """
         if not _PY3:
-            if not (isinstance(klass, type), isinstance(klass, types.ClassType)):
+            if not (isinstance(klass, type) or
+                    isinstance(klass, types.ClassType)):
                 raise TypeError("%r is not a class" % (klass,))
         else:
             if not isinstance(klass, type):

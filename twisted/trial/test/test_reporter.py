@@ -20,7 +20,7 @@ from twisted.trial.test import erroneous
 from twisted.trial.unittest import makeTodo, SkipTest, Todo
 from twisted.trial.test import sample
 
-from twisted.python.compat import NativeStringIO
+from twisted.python.compat import NativeStringIO, _PY3
 
 
 class BrokenStream(object):
@@ -194,7 +194,10 @@ class ErrorReportingTests(StringTest):
         """
         test = erroneous.DelayedCall('testHiddenException')
         output = self.getOutput(test).splitlines()
-        errorQual = RuntimeError.__qualname__
+        if _PY3:
+            errorQual = RuntimeError.__qualname__
+        else:
+            errorQual = "exceptions.RuntimeError"
         match = [
             self.doubleSeparator,
             '[FAIL]',
