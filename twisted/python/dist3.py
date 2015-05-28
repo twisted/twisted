@@ -328,6 +328,7 @@ testModules = [
 
 
 testDataFiles = [
+    "twisted.python.test.pullpipe",
     "twisted.internet.test.process_cli",
     "twisted.internet.test.process_helper",
     "twisted.test._preamble",
@@ -355,6 +356,13 @@ testDataFiles = [
     "twisted.trial.test.mockdoctest",
     "twisted.trial.test.packages",
     "twisted.trial.test.sample",
+    "twisted.trial.test.moduleself",
+    "twisted.trial.test.ordertests",
+    "twisted.trial.test.moduletest",
+    "twisted.trial.test.scripttest",
+    "twisted.trial.test.novars",
+    # Not running, but something else imports it
+    "twisted.trial.test.test_loader",
 ]
 
 
