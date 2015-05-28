@@ -989,7 +989,6 @@ class ReporterTests(ReporterInterfaceTests):
         result = self.resultFactory(stream=BrokenStream(self.stream))
         result._writeln("Hello")
         self.assertEqual(self.stream.getvalue(), 'Hello\n')
-        # Truncate on StringIO does not seek on Py3, but it's safe to do on Py2
         self.stream.truncate(0)
         self.stream.seek(0)
         result._writeln("Hello %s!", 'World')
@@ -1165,6 +1164,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
             self.result.addExpectedFailure(self.test, sys.exc_info(), "todo")
         expectedFailureOutput = self.stream.getvalue()
         self.stream.truncate(0)
+        self.stream.seek(0)
         self.result.addSuccess(self.test)
         successOutput = self.stream.getvalue()
         self.assertEqual(successOutput, expectedFailureOutput)
@@ -1179,6 +1179,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
         self.result.addSkip(self.test, "reason")
         skipOutput = self.stream.getvalue()
         self.stream.truncate(0)
+        self.stream.seek(0)
         self.result.addSuccess(self.test)
         successOutput = self.stream.getvalue()
         self.assertEqual(successOutput, skipOutput)
