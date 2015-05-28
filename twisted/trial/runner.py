@@ -716,7 +716,7 @@ class TrialRunner(object):
         if self.logfile == '-':
             logFile = sys.stdout
         else:
-            logFile = file(self.logfile, 'a')
+            logFile = open(self.logfile, 'a')
         self._logFileObject = logFile
         self._logFileObserver = log.FileLogObserver(logFile)
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)
