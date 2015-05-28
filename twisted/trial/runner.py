@@ -24,6 +24,7 @@ import doctest, time
 from twisted.python import reflect, log, failure, modules, filepath
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
+from twisted.python.compat import _PY3
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -455,9 +456,32 @@ class TestLoader(object):
         Given a method of a C{TestCase} that represents a test, return a
         C{TestCase} instance for that test.
         """
-        if not isinstance(method, types.MethodType):
-            raise TypeError("%r not a method" % (method,))
-        return self._makeCase(method.im_class, _getMethodNameInClass(method))
+        if not _PY3:
+            if not isinstance(method, types.MethodType):
+                raise TypeError("%r not a method" % (method,))
+            return self._makeCase(method.im_class, _getMethodNameInClass(method))
+        else:
+
+            if not isinstance(method, types.FunctionType):
+                raise TypeError("%r not a method" % (method,))
+
+            # Unbound methods don't exist anymore...
+            # Try and cheese it. -hawkie
+            qualifiedName = method.__qualname__.split(".")
+            module = reflect.namedAny(method.__module__)
+
+            # Walk down the qualified name
+            resultant = module
+            for item in qualifiedName[:-1]:
+                resultant = getattr(resultant, item)
+
+            # If it's a class (type) and a TestCase, must be fine.
+            if (isinstance(resultant, type) and
+                issubclass(resultant, pyunit.TestCase)):
+                return self._makeCase(resultant, qualifiedName[-1])
+            else:
+                raise TypeError("%r not a method" % (method,))
+
 
     def _makeCase(self, klass, methodName):
         return klass(methodName)

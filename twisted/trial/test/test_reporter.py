@@ -8,7 +8,7 @@ Tests for L{twisted.trial.reporter}.
 """
 from __future__ import division
 
-import errno, sys, os, re, StringIO
+import errno, sys, os, re
 from inspect import getmro
 
 from twisted.internet.utils import suppressWarnings
@@ -19,6 +19,8 @@ from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
 from twisted.trial.test import erroneous
 from twisted.trial.unittest import makeTodo, SkipTest, Todo
 from twisted.trial.test import sample
+
+from twisted.python.compat import NativeStringIO
 
 
 class BrokenStream(object):
@@ -47,7 +49,7 @@ class BrokenStream(object):
 
 class StringTest(unittest.SynchronousTestCase):
     def stringComparison(self, expect, output):
-        output = filter(None, output)
+        output = list(filter(None, output))
         self.failUnless(len(expect) <= len(output),
                         "Must have more observed than expected"
                         "lines %d < %d" % (len(output), len(expect)))
@@ -75,7 +77,8 @@ class TestResultTests(unittest.SynchronousTestCase):
         # pyunit passes an exc_info tuple directly to addError
         try:
             raise RuntimeError('foo')
-        except RuntimeError, excValue:
+        except RuntimeError as e:
+            excValue = e
             self.result.addError(self, sys.exc_info())
         failure = self.result.errors[0][1]
         self.assertEqual(excValue, failure.value)
@@ -85,7 +88,8 @@ class TestResultTests(unittest.SynchronousTestCase):
         # pyunit passes an exc_info tuple directly to addFailure
         try:
             raise self.failureException('foo')
-        except self.failureException, excValue:
+        except self.failureException as e:
+            excValue = e
             self.result.addFailure(self, sys.exc_info())
         failure = self.result.failures[0][1]
         self.assertEqual(excValue, failure.value)
@@ -94,7 +98,7 @@ class TestResultTests(unittest.SynchronousTestCase):
 
 class ReporterRealtimeTests(TestResultTests):
     def setUp(self):
-        output = StringIO.StringIO()
+        output = NativeStringIO()
         self.result = reporter.Reporter(output, realtime=True)
 
 
@@ -103,7 +107,7 @@ class ErrorReportingTests(StringTest):
 
     def setUp(self):
         self.loader = runner.TestLoader()
-        self.output = StringIO.StringIO()
+        self.output = NativeStringIO()
         self.result = reporter.Reporter(self.output)
 
     def getOutput(self, suite):
@@ -190,6 +194,7 @@ class ErrorReportingTests(StringTest):
         """
         test = erroneous.DelayedCall('testHiddenException')
         output = self.getOutput(test).splitlines()
+        errorQual = RuntimeError.__qualname__
         match = [
             self.doubleSeparator,
             '[FAIL]',
@@ -208,7 +213,7 @@ class ErrorReportingTests(StringTest):
             re.compile(r'^\s+.*'),
             re.compile('^\s+File .*erroneous\.py", line \d+, in go'),
             re.compile('^\s+raise RuntimeError\(self.hiddenExceptionMsg\)'),
-            'exceptions.RuntimeError: something blew up',
+            errorQual + ': something blew up',
             'twisted.trial.test.erroneous.DelayedCall.testHiddenException']
         self.stringComparison(match, output)
 
@@ -221,7 +226,7 @@ class UncleanWarningWrapperErrorReportingTests(ErrorReportingTests):
     """
     def setUp(self):
         self.loader = runner.TestLoader()
-        self.output = StringIO.StringIO()
+        self.output = NativeStringIO()
         self.result = UncleanWarningsReporterWrapper(
             reporter.Reporter(self.output))
 
@@ -238,7 +243,7 @@ class TracebackHandlingTests(unittest.SynchronousTestCase):
 
         @return: The C{list} of frames trimmed.
         """
-        stream = StringIO.StringIO()
+        stream = NativeStringIO()
         result = reporter.Reporter(stream)
         test.run(result)
         bads = result.failures + result.errors
@@ -308,7 +313,7 @@ class FormatFailuresTests(StringTest):
             ['foo', 'foo/bar.py', 5, [('x', 5)], [('y', 'orange')]],
             ['qux', 'foo/bar.py', 10, [('a', 'two')], [('b', 'MCMXCIX')]]
             ]
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.result = reporter.Reporter(self.stream)
 
     def test_formatDefault(self):
@@ -345,7 +350,7 @@ exceptions.TypeError: iterable argument required
 
 class PyunitNamesTests(unittest.SynchronousTestCase):
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.test = sample.PyunitTest('test_foo')
 
     def test_verboseReporter(self):
@@ -425,7 +430,7 @@ class DirtyReactorTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.dirtyError = Failure(
             util.DirtyReactorAggregateError(['foo'], ['bar']))
-        self.output = StringIO.StringIO()
+        self.output = NativeStringIO()
         self.test = DirtyReactorTests('test_errorByDefault')
 
 
@@ -488,7 +493,7 @@ class DirtyReactorTests(unittest.SynchronousTestCase):
 class TrialNamesTests(unittest.SynchronousTestCase):
 
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.test = sample.FooTest('test_foo')
 
     def test_verboseReporter(self):
@@ -521,7 +526,7 @@ class SkipTests(unittest.SynchronousTestCase):
     Tests for L{reporter.Reporter}'s handling of skips.
     """
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.result = reporter.Reporter(self.stream)
         self.test = sample.FooTest('test_foo')
 
@@ -583,12 +588,12 @@ class SkipTests(unittest.SynchronousTestCase):
         """
         try:
             1/0
-        except Exception, e:
+        except Exception as e:
             error = e
         self.result.addSkip(self.test, error)
         self.result.done()
         output = '\n'.join(self.stream.getvalue().splitlines()[3:5]).strip()
-        self.assertEqual(output, str(e))
+        self.assertEqual(output, str(error))
 
 
 class UncleanWarningSkipTests(SkipTests):
@@ -615,7 +620,7 @@ class TodoTests(unittest.SynchronousTestCase):
     """
 
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.result = reporter.Reporter(self.stream)
         self.test = sample.FooTest('test_foo')
 
@@ -708,13 +713,13 @@ class TodoTests(unittest.SynchronousTestCase):
         """
         try:
             1/0
-        except Exception, e:
+        except Exception as e:
             error = e
         self.result.addExpectedFailure(self.test, Failure(error),
                                        makeTodo("todo!"))
         self.result.done()
         output = '\n'.join(self.stream.getvalue().splitlines()[3:]).strip()
-        self.assertTrue(str(e) in output)
+        self.assertTrue(str(error) in output)
 
 
 
@@ -762,7 +767,7 @@ class MockColorizer:
 class TreeReporterTests(unittest.SynchronousTestCase):
     def setUp(self):
         self.test = sample.FooTest('test_foo')
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.result = reporter.TreeReporter(self.stream)
         self.result._colorizer = MockColorizer(self.stream)
         self.log = self.result._colorizer.log
@@ -891,7 +896,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.test = sample.FooTest('test_foo')
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.publisher = log.LogPublisher()
         self.result = self.resultFactory(self.stream, publisher=self.publisher)
 
@@ -1071,7 +1076,7 @@ class SafeStreamTests(unittest.SynchronousTestCase):
         Test that L{reporter.SafeStream} successfully write to its original
         stream even if an interrupt happens during the write.
         """
-        stream = StringIO.StringIO()
+        stream = NativeStringIO()
         broken = BrokenStream(stream)
         safe = reporter.SafeStream(broken)
         safe.write("Hello")
@@ -1108,7 +1113,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
         Assumes that the method on subunit has the same name as the method on
         L{SubunitReporter}.
         """
-        stream = StringIO.StringIO()
+        stream = NativeStringIO()
         subunitClient = reporter.TestProtocolClient(stream)
         subunitReturn = getattr(subunitClient, methodName)(*args, **kwargs)
         subunitOutput = stream.getvalue()
@@ -1269,7 +1274,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
         SubunitReporter.addFailure() sends the subunit 'addSuccess' message,
         since subunit doesn't model unexpected success.
         """
-        stream = StringIO.StringIO()
+        stream = NativeStringIO()
         subunitClient = reporter.TestProtocolClient(stream)
         subunitClient.addSuccess(self.test)
         subunitOutput = stream.getvalue()
@@ -1300,7 +1305,7 @@ class SubunitReporterNotInstalledTests(unittest.SynchronousTestCase):
         If subunit is not installed, TestProtocolClient will be None, and
         SubunitReporter will raise an error when you try to construct it.
         """
-        stream = StringIO.StringIO()
+        stream = NativeStringIO()
         self.patch(reporter, 'TestProtocolClient', None)
         e = self.assertRaises(Exception, reporter.SubunitReporter, stream)
         self.assertEqual("Subunit not available", str(e))
