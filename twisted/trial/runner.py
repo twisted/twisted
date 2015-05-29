@@ -426,8 +426,7 @@ class TestLoader(object):
             return module.test_suite()
         suite = self.suiteFactory()
         for testClass in self.findTestClasses(module):
-            for test in self.loadClass(testClass):
-                suite.addTest(test)
+            suite.addTest(self.loadClass(testClass))
         if not hasattr(module, '__doctests__'):
             return suite
         docSuite = self.suiteFactory()
