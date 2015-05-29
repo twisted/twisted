@@ -641,6 +641,13 @@ class Py3TestLoader(TestLoader):
         obj = None
 
         for item in range(len(qualParts)):
+            # FIXME: jml pointed out that this code is confusing, and it's true
+            # and so I need to fix that.
+            # The better implementation is a generator that produces the next
+            # name to try, and the remaining portion, and is more obvious than
+            # :-item (or at least one layer deeper :D ).
+            # A for loop could maybe be replaced with a while, or something.
+
             # Walk down the qualified name, trying to import a module. For
             # example, `twisted.test.test_paths.FilePathTests` would try
             # the full qualified name, then just up to test_paths, and then
@@ -661,7 +668,7 @@ class Py3TestLoader(TestLoader):
 
             except ImportError:
                 if item == len(qualParts):
-                    raise reflect.ModuleNotFound("The module {} does not exist.".ormat(name))
+                    raise reflect.ModuleNotFound("The module {} does not exist.".format(name))
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
