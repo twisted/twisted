@@ -96,7 +96,7 @@ class ProgramPathsTests(unittest.TestCase):
         win32.getProgramsMenuPath()
 
         emittedWarnings = self.flushWarnings(
-            [self.test_deprecationGetProgramFilesPath])
+            [self.test_deprecationGetProgramsMenuPath])
         self.assertEqual(len(emittedWarnings), 1)
         self.assertIs(emittedWarnings[0]["category"], DeprecationWarning)
         self.assertEqual(
