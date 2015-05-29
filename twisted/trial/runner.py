@@ -18,8 +18,14 @@ __all__ = [
     'name', 'samefile', 'NOT_IN_TEST',
     ]
 
-import os, types, warnings, sys, inspect, imp
-import doctest, time
+import doctest
+import imp
+import inspect
+import os
+import sys
+import time
+import types
+import warnings
 
 from twisted.python import reflect, log, failure, modules, filepath
 from twisted.python.deprecate import deprecatedModuleAttribute
@@ -549,14 +555,11 @@ class TestLoader(object):
             if isPackage(thing):
                 return self.loadPackage(thing, recurse)
             return self.loadModule(thing)
-
-        if isinstance(thing, types.ClassType):
+        elif isinstance(thing, types.ClassType):
             return self.loadClass(thing)
-
-        if isinstance(thing, type):
+        elif isinstance(thing, type):
             return self.loadClass(thing)
-
-        if isinstance(thing, types.MethodType):
+        elif isinstance(thing, types.MethodType):
             return self.loadMethod(thing)
         raise TypeError("No loader for %r. Unrecognized type" % (thing,))
 
@@ -629,21 +632,24 @@ class Py3TestLoader(TestLoader):
         self._importErrors = []
 
     def findByName(self, name, recurse=False):
+        """
+        Find and load tests, given C{name}.
 
-
-        import os
-
+        This partially duplicates the logic in L{unittest.loader.TestLoader}.
+        """
         if os.sep in name:
-
+            # Looks like a file, and therefore must be a module
             name = reflect.filenameToModuleName(name)
 
         qualParts = name.split(".")
         obj = None
 
         for item in range(len(qualParts)):
-
-
-
+            # Walk down the qualified name, trying to import a module. For
+            # example, `twisted.test.test_paths.FilePathTests` would try
+            # the full qualified name, then just up to test_paths, and then
+            # just up to test, and so forth.
+            # This gets us the highest level thing which is a module.
             try:
                 if item == 0:
                     name = ".".join(qualParts)
@@ -652,45 +658,57 @@ class Py3TestLoader(TestLoader):
 
                 remaining = qualParts[len(qualParts)-item:]
                 obj = reflect.namedModule(name)
-
+                # If we reach here, we have successfully found a module.
+                # obj will be the module, and remaining will be the remaining
+                # part of the qualified name.
                 break
 
             except ImportError:
                 if item == len(qualParts):
-                    raise reflect.ModuleNotFound("The module {} is not here.".ormat(name))
+                    raise reflect.ModuleNotFound("The module {} does not exist.".ormat(name))
 
 
         if obj is None:
+            # If it's none here, we didn't get to import anything.
             raise reflect.ModuleNotFound("{} does not exist.".format(name))
-
-
 
         try:
             for part in remaining:
+                # Walk down the remaining modules. Hold on to the parent for
+                # methods, as on Python 3, you can no longer get the parent
+                # class from just holding onto the method.
                 parent, obj = obj, getattr(obj, part)
         except AttributeError:
             raise reflect.ObjectNotFound("{} does not exist.".format(name))
 
-
-
         if isinstance(obj, types.ModuleType):
+            # It looks like a module
             if isPackage(obj):
+                # It's a package, so recurse down it.
                 return self.loadPackage(obj, recurse=True)
+            # Otherwise get all the tests in the module.
             return self.loadTestsFromModule(obj)
         elif isinstance(obj, type) and issubclass(obj, pyunit.TestCase):
+            # We've found a raw test case, get the tests from it.
             return self.loadTestsFromTestCase(obj)
         elif (isinstance(obj, types.FunctionType) and
               isinstance(parent, type) and
               issubclass(parent, pyunit.TestCase)):
+            # We've found a method, and its parent is a TestCase. Instantiate
+            # it.
             name = remaining[-1]
             inst = parent(name)
-            # static methods follow a different path
             if not isinstance(getattr(inst, name), types.FunctionType):
+                # If it's still a function, and not a bound method, then it's a
+                # callable that we take care of later.
                 return self.suiteFactory([inst])
         elif isinstance(obj, TestSuite):
+            # We've found a test suite.
             return obj
 
         if callable(obj):
+            # It looks callable, so, see if it returns a TestSuite or a
+            # TestCase.
             test = obj()
             if isinstance(test, TestSuite):
                 return test
@@ -703,17 +721,10 @@ class Py3TestLoader(TestLoader):
             raise TypeError("don't know how to make test from: %s" % obj)
 
 
-        raise TypeError("idk lol")
-
     def loadByName(self, name, recurse=False):
 
         item = self.findByName(name)
-        return TestSuite(item)
-
-
-
-
-
+        return item
 
     def loadByNames(self, names, recurse=False):
 
@@ -731,8 +742,7 @@ class Py3TestLoader(TestLoader):
 
     def loadClass(self, klass):
         """
-        Given a class which contains test cases, return a sorted list of
-        C{TestCase} instances.
+        Given a class which contains test cases, return a L{TestSuite}.
         """
         if not isinstance(klass, type):
             raise TypeError("%r is not a class" % (klass,))
@@ -754,14 +764,15 @@ class Py3TestLoader(TestLoader):
         for testthing in things:
             testthings = testthing._tests
             for thing in testthings:
+                # This is horrible.
                 if str(thing) not in seen:
                     yield thing
                     seen.add(str(thing))
 
-
 if _PY3:
     del TestLoader
     TestLoader = Py3TestLoader
+
 
 
 class DryRunVisitor(object):
