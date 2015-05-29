@@ -1030,22 +1030,3 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
             "%s should implement done() but doesn't. Falling back to "
             "printErrors() and friends." % reflect.qual(result.__class__),
             __file__, f)
-
-
-
-class DryRunVisitorDeprecationTests(unittest.TestCase):
-    """
-    Test for L{DryRunVisitor}
-    """
-
-    def test_deprecated(self):
-        """
-        L{DryRunVisitor} is deprecated.
-        """
-        runner.DryRunVisitor
-        warningsShown = self.flushWarnings([self.test_deprecated])
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-                "twisted.trial.runner.DryRunVisitor was deprecated in "
-                "Twisted 13.0.0: Trial no longer has support for visitors",
-                warningsShown[0]['message'])
