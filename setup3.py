@@ -49,7 +49,7 @@ def main():
     args['cmdclass'] = {'sdist': DisabledSdist}
     args['entry_points'] = {
         'console_scripts': [
-            'trial3=twisted.scripts.trial:run'
+            'trial3=twisted.scripts._bin.trial:run'
         ]
     }
 

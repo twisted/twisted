@@ -6,9 +6,13 @@
 """
 Tests for L{twisted.trial.reporter}.
 """
-from __future__ import division
+from __future__ import absolute_import, division
 
-import errno, sys, os, re
+import errno
+import os
+import re
+import sys
+
 from inspect import getmro
 
 from twisted.internet.utils import suppressWarnings

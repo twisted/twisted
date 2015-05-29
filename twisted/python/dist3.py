@@ -150,6 +150,7 @@ modules = [
     "twisted.python.versions",
     "twisted.scripts",
     "twisted.scripts.trial",
+    "twisted.scripts._bin.trial",
     "twisted.test",
     "twisted.test.iosim",
     "twisted.test.proto_helpers",

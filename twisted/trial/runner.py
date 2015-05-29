@@ -8,6 +8,8 @@ A miscellany of code used to run Trial tests.
 Maintainer: Jonathan Lange
 """
 
+from __future__ import absolute_import, division
+
 __all__ = [
     'TestSuite',
 
