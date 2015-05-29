@@ -11,7 +11,7 @@ Maintainer: Jonathan Lange
 __all__ = [
     'TestSuite',
 
-    'DestructiveTestSuite', 'DryRunVisitor', 'ErrorHolder', 'LoggedSuite',
+    'DestructiveTestSuite', 'ErrorHolder', 'LoggedSuite',
     'TestHolder', 'TestLoader', 'TrialRunner', 'TrialSuite',
 
     'filenameToModule', 'isPackage', 'isPackageDirectory', 'isTestCase',
@@ -22,7 +22,6 @@ import os, types, warnings, sys, inspect, imp
 import doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.versions import Version
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
