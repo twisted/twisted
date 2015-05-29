@@ -147,7 +147,8 @@ class ErrorReportingTests(StringTest):
         reported in the output stream with the I{FAIL} tag along with a summary
         of what failure was reported and the ID of the test.
         """
-        suite = self.loader.loadMethod(erroneous.TestRegularFail.test_fail)
+        suite = self.loader.loadByName(
+            "twisted.trial.test.erroneous.TestRegularFail.test_fail")
         output = self.getOutput(suite).splitlines()
         match = [
             self.doubleSeparator,
