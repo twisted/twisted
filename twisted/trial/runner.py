@@ -22,7 +22,6 @@ import os, types, warnings, sys, inspect, imp
 import doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 
 from twisted.internet import defer
@@ -610,35 +609,6 @@ class TestLoader(object):
             if thing not in seen:
                 yield thing[0]
                 seen.add(thing)
-
-
-
-class DryRunVisitor(object):
-    """
-    A visitor that makes a reporter think that every test visited has run
-    successfully.
-    """
-
-    deprecatedModuleAttribute(
-            Version("Twisted", 13, 0, 0),
-            "Trial no longer has support for visitors",
-            "twisted.trial.runner", "DryRunVisitor")
-
-
-    def __init__(self, reporter):
-        """
-        @param reporter: A C{TestResult} object.
-        """
-        self.reporter = reporter
-
-
-    def markSuccessful(self, testCase):
-        """
-        Convince the reporter that this test has been run successfully.
-        """
-        self.reporter.startTest(testCase)
-        self.reporter.addSuccess(testCase)
-        self.reporter.stopTest(testCase)
 
 
 
