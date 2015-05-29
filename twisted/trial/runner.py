@@ -622,23 +622,18 @@ class TestLoader(object):
 
 class Py3TestLoader(TestLoader):
 
-    methodPrefix = 'test'
-    modulePrefix = 'test_'
-
-    def __init__(self):
-        self.suiteFactory = TestSuite
-        self.sorter = name
-        self._importErrors = []
-
-    def findByName(self, name, recurse=False):
+    def findByName(self, _name, recurse=False):
         """
         Find and load tests, given C{name}.
 
         This partially duplicates the logic in L{unittest.loader.TestLoader}.
         """
-        if os.sep in name:
+
+        if os.sep in _name:
             # Looks like a file, and therefore must be a module
-            name = reflect.filenameToModuleName(name)
+            name = reflect.filenameToModuleName(_name)
+        else:
+            name = _name
 
         qualParts = name.split(".")
         obj = None
@@ -666,10 +661,15 @@ class Py3TestLoader(TestLoader):
                 if item == len(qualParts):
                     raise reflect.ModuleNotFound("The module {} does not exist.".ormat(name))
 
-
         if obj is None:
             # If it's none here, we didn't get to import anything.
-            raise reflect.ModuleNotFound("{} does not exist.".format(name))
+            # Try something drastic.
+            try:
+                obj = filenameToModule(_name)
+                remaining = qualParts[len(".".split(obj.__name__))+1:]
+            except Exception as e:
+                # Reflect will give a better understanding of what went wrong
+                reflect.namedAny(_name)
 
         try:
             for part in remaining:
@@ -718,12 +718,8 @@ class Py3TestLoader(TestLoader):
                                 (obj, test))
         else:
             raise TypeError("don't know how to make test from: %s" % obj)
+    loadByName = findByName
 
-
-    def loadByName(self, name, recurse=False):
-
-        item = self.findByName(name)
-        return item
 
     def loadByNames(self, names, recurse=False):
 
