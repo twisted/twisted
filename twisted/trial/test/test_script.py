@@ -197,7 +197,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         self.config.opt_testmodule(sibpath('scripttest.py'))
         self.assertSuitesEqual(trial._getSuite(self.config),
                                ['twisted.trial.test.test_log',
-                                'twisted.trial.test.test_class'])
+                                'twisted.trial.test.test_runner'])
 
     def test_testmoduleOnNonexistentFile(self):
         """
@@ -296,7 +296,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         localVars = trial.loadLocalVariables(sibpath('scripttest.py'))
         self.assertEqual(
             {'test-case-name': ('twisted.trial.test.test_log,'
-                                'twisted.trial.test.test_class')},
+                                'twisted.trial.test.test_runner')},
             localVars)
 
     def test_getTestModules(self):
@@ -311,7 +311,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         modules = trial.getTestModules(sibpath('scripttest.py'))
         self.assertEqual(set(modules),
                              set(['twisted.trial.test.test_log',
-                                  'twisted.trial.test.test_class']))
+                                  'twisted.trial.test.test_runner']))
 
     def test_looksLikeTestModule(self):
         for filename in ['test_script.py', 'twisted/trial/test/test_script.py']:
@@ -662,7 +662,7 @@ class TestArgumentOrderTests(unittest.TestCase):
         tests = [
             "twisted.trial.test.test_tests",
             "twisted.trial.test.test_assertions",
-            "twisted.trial.test.test_deferreds",
+            "twisted.trial.test.test_deferred",
             ]
         self.config.parseOptions(tests)
 

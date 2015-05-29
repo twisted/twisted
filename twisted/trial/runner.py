@@ -420,7 +420,8 @@ class TestLoader(object):
             return module.test_suite()
         suite = self.suiteFactory()
         for testClass in self.findTestClasses(module):
-            suite.addTest(self.loadClass(testClass))
+            for test in self.loadClass(testClass):
+                suite.addTest(test)
         if not hasattr(module, '__doctests__'):
             return suite
         docSuite = self.suiteFactory()
@@ -434,13 +435,8 @@ class TestLoader(object):
         Given a class which contains test cases, return a sorted list of
         C{TestCase} instances.
         """
-        if not _PY3:
-            if not (isinstance(klass, type) or
-                    isinstance(klass, types.ClassType)):
-                raise TypeError("%r is not a class" % (klass,))
-        else:
-            if not isinstance(klass, type):
-                raise TypeError("%r is not a class" % (klass,))
+        if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
+            raise TypeError("%r is not a class" % (klass,))
         if not isTestCase(klass):
             raise ValueError("%r is not a test case" % (klass,))
         names = self.getTestCaseNames(klass)
@@ -461,32 +457,9 @@ class TestLoader(object):
         Given a method of a C{TestCase} that represents a test, return a
         C{TestCase} instance for that test.
         """
-        if not _PY3:
-            if not isinstance(method, types.MethodType):
-                raise TypeError("%r not a method" % (method,))
-            return self._makeCase(method.im_class, _getMethodNameInClass(method))
-        else:
-
-            if not isinstance(method, types.FunctionType):
-                raise TypeError("%r not a method" % (method,))
-
-            # Unbound methods don't exist anymore...
-            # Try and cheese it. -hawkie
-            qualifiedName = method.__qualname__.split(".")
-            module = reflect.namedAny(method.__module__)
-
-            # Walk down the qualified name
-            resultant = module
-            for item in qualifiedName[:-1]:
-                resultant = getattr(resultant, item)
-
-            # If it's a class (type) and a TestCase, must be fine.
-            if (isinstance(resultant, type) and
-                issubclass(resultant, pyunit.TestCase)):
-                return self._makeCase(resultant, qualifiedName[-1])
-            else:
-                raise TypeError("%r not a method" % (method,))
-
+        if not isinstance(method, types.MethodType):
+            raise TypeError("%r not a method" % (method,))
+        return self._makeCase(method.im_class, _getMethodNameInClass(method))
 
     def _makeCase(self, klass, methodName):
         return klass(methodName)
@@ -577,16 +550,14 @@ class TestLoader(object):
                 return self.loadPackage(thing, recurse)
             return self.loadModule(thing)
 
-        if not _PY3:
-            if isinstance(thing, types.ClassType):
-                return self.loadClass(thing)
+        if isinstance(thing, types.ClassType):
+            return self.loadClass(thing)
 
         if isinstance(thing, type):
             return self.loadClass(thing)
 
         if isinstance(thing, types.MethodType):
             return self.loadMethod(thing)
-
         raise TypeError("No loader for %r. Unrecognized type" % (thing,))
 
     def loadByName(self, name, recurse=False):
@@ -645,6 +616,152 @@ class TestLoader(object):
                 yield thing[0]
                 seen.add(thing)
 
+
+
+class Py3TestLoader(TestLoader):
+
+    methodPrefix = 'test'
+    modulePrefix = 'test_'
+
+    def __init__(self):
+        self.suiteFactory = TestSuite
+        self.sorter = name
+        self._importErrors = []
+
+    def findByName(self, name, recurse=False):
+
+
+        import os
+
+        if os.sep in name:
+
+            name = reflect.filenameToModuleName(name)
+
+        qualParts = name.split(".")
+        obj = None
+
+        for item in range(len(qualParts)):
+
+
+
+            try:
+                if item == 0:
+                    name = ".".join(qualParts)
+                else:
+                    name = ".".join(qualParts[:-item])
+
+                remaining = qualParts[len(qualParts)-item:]
+                obj = reflect.namedModule(name)
+
+                break
+
+            except ImportError:
+                if item == len(qualParts):
+                    raise reflect.ModuleNotFound("The module {} is not here.".ormat(name))
+
+
+        if obj is None:
+            raise reflect.ModuleNotFound("{} does not exist.".format(name))
+
+
+
+        try:
+            for part in remaining:
+                parent, obj = obj, getattr(obj, part)
+        except AttributeError:
+            raise reflect.ObjectNotFound("{} does not exist.".format(name))
+
+
+
+        if isinstance(obj, types.ModuleType):
+            if isPackage(obj):
+                return self.loadPackage(obj, recurse=True)
+            return self.loadTestsFromModule(obj)
+        elif isinstance(obj, type) and issubclass(obj, pyunit.TestCase):
+            return self.loadTestsFromTestCase(obj)
+        elif (isinstance(obj, types.FunctionType) and
+              isinstance(parent, type) and
+              issubclass(parent, pyunit.TestCase)):
+            name = remaining[-1]
+            inst = parent(name)
+            # static methods follow a different path
+            if not isinstance(getattr(inst, name), types.FunctionType):
+                return self.suiteFactory([inst])
+        elif isinstance(obj, TestSuite):
+            return obj
+
+        if callable(obj):
+            test = obj()
+            if isinstance(test, TestSuite):
+                return test
+            elif isinstance(test, pyunit.TestCase):
+                return self.suiteFactory([test])
+            else:
+                raise TypeError("calling %s returned %s, not a test" %
+                                (obj, test))
+        else:
+            raise TypeError("don't know how to make test from: %s" % obj)
+
+
+        raise TypeError("idk lol")
+
+    def loadByName(self, name, recurse=False):
+
+        item = self.findByName(name)
+        return TestSuite(item)
+
+
+
+
+
+
+    def loadByNames(self, names, recurse=False):
+
+        things = []
+        errors = []
+        for name in names:
+            try:
+                things.append(self.findByName(name))
+            except:
+                errors.append(self.suiteFactory([
+                    ErrorHolder(name, failure.Failure())]))
+        things.extend(errors)
+        return self.suiteFactory(self._uniqueTests(things))
+
+
+    def loadClass(self, klass):
+        """
+        Given a class which contains test cases, return a sorted list of
+        C{TestCase} instances.
+        """
+        if not isinstance(klass, type):
+            raise TypeError("%r is not a class" % (klass,))
+        if not isTestCase(klass):
+            raise ValueError("%r is not a test case" % (klass,))
+        names = self.getTestCaseNames(klass)
+        tests = self.sort([self._makeCase(klass, self.methodPrefix+name)
+                           for name in names])
+        return self.suiteFactory(tests)
+
+    def _uniqueTests(self, things):
+        """
+        Gather unique suite objects from loaded things. This will guarantee
+        uniqueness of inherited methods on TestCases which would otherwise hash
+        to same value and collapse to one test unexpectedly if using simpler
+        means: e.g. set().
+        """
+        seen = set()
+        for testthing in things:
+            testthings = testthing._tests
+            for thing in testthings:
+                if str(thing) not in seen:
+                    yield thing
+                    seen.add(str(thing))
+
+
+if _PY3:
+    del TestLoader
+    TestLoader = Py3TestLoader
 
 
 class DryRunVisitor(object):
