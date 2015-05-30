@@ -22,6 +22,7 @@ TwistedXMPPRouter = ServiceMaker(
     "xmpp-router")
 
 
+
 @provider(IPlugin, iwords.IProtocolPlugin)
 class RelayChatInterface(object):
 
@@ -31,6 +32,7 @@ class RelayChatInterface(object):
         from twisted.words import service
         return service.IRCFactory(realm, portal)
     getFactory = classmethod(getFactory)
+
 
 
 @provider(IPlugin, iwords.IProtocolPlugin)

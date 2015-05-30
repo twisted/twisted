@@ -33,6 +33,7 @@ def verifyCryptedPassword(crypted, pw):
     return crypt.crypt(pw, salt) == crypted
 
 
+
 @implementer(ICredentialsChecker)
 class UNIXChecker(object):
     """
