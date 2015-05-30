@@ -1,7 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import classProvides
+from zope.interface import provider
 
 from twisted.plugin import IPlugin
 
@@ -21,8 +21,9 @@ TwistedXMPPRouter = ServiceMaker(
     "An XMPP Router server",
     "xmpp-router")
 
+
+@provider(IPlugin, iwords.IProtocolPlugin)
 class RelayChatInterface(object):
-    classProvides(IPlugin, iwords.IProtocolPlugin)
 
     name = 'irc'
 
@@ -31,8 +32,9 @@ class RelayChatInterface(object):
         return service.IRCFactory(realm, portal)
     getFactory = classmethod(getFactory)
 
+
+@provider(IPlugin, iwords.IProtocolPlugin)
 class PBChatInterface(object):
-    classProvides(IPlugin, iwords.IProtocolPlugin)
 
     name = 'pb'
 

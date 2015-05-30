@@ -7,7 +7,7 @@
 Cred plugin for an in-memory user database.
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted import plugin
 from twisted.cred.strcred import ICheckerFactory
@@ -26,6 +26,7 @@ really don't want to use this for anything else. It is a toy.
 
 
 
+@implementer(ICheckerFactory, plugin.IPlugin)
 class InMemoryCheckerFactory(object):
     """
     A factory for in-memory credentials checkers.
@@ -37,7 +38,6 @@ class InMemoryCheckerFactory(object):
     toy.  If you need a simple credentials checker for a real application,
     see L{cred_passwd.PasswdCheckerFactory}.
     """
-    implements(ICheckerFactory, plugin.IPlugin)
     authType = 'memory'
     authHelp = inMemoryCheckerFactoryHelp
     argStringFormat = 'A colon-separated list (name:password:...)'

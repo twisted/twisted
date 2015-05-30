@@ -257,7 +257,7 @@ class Key(object):
 
         try:
             decodedKey = berDecoder.decode(keyData)[0]
-        except PyAsn1Error, e:
+        except PyAsn1Error as e:
             raise BadKeyError('Failed to decode key (Bad Passphrase?): %s' % e)
 
         if kind == 'RSA':
@@ -794,8 +794,10 @@ class Key(object):
             digest = pkcs1Digest(data, self.keyObject.size() / 8)
         elif self.type() == 'DSA':
             signature = common.getNS(signature)[0]
-            numbers = [Util.number.bytes_to_long(n) for n in signature[:20],
-                       signature[20:]]
+            numbers = [
+                Util.number.bytes_to_long(signature[:20]),
+                Util.number.bytes_to_long(signature[20:]),
+                ]
             digest = sha1(data).digest()
         return self.keyObject.verify(digest, numbers)
 
