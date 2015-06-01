@@ -7,7 +7,7 @@
 Cred plugin for UNIX user accounts.
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted import plugin
 from twisted.cred.strcred import ICheckerFactory
@@ -34,6 +34,7 @@ def verifyCryptedPassword(crypted, pw):
 
 
 
+@implementer(ICredentialsChecker)
 class UNIXChecker(object):
     """
     A credentials checker for a UNIX server. This will check that
@@ -44,7 +45,6 @@ class UNIXChecker(object):
     Right now this supports Python's pwd and spwd modules, if they are
     installed. It does not support PAM.
     """
-    implements(ICredentialsChecker)
     credentialInterfaces = (IUsernamePassword,)
 
 
@@ -113,12 +113,11 @@ Future versions may include support for PAM authentication.
 """
 
 
-
+@implementer(ICheckerFactory, plugin.IPlugin)
 class UNIXCheckerFactory(object):
     """
     A factory for L{UNIXChecker}.
     """
-    implements(ICheckerFactory, plugin.IPlugin)
     authType = 'unix'
     authHelp = unixCheckerFactoryHelp
     argStringFormat = 'No argstring required.'

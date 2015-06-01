@@ -9,7 +9,7 @@ Cred plugin for a file of the format 'username:password'.
 
 import sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted import plugin
 from twisted.cred.checkers import FilePasswordDB
@@ -27,12 +27,11 @@ should be of the format 'username:password', in plain text.
 invalidFileWarning = 'Warning: not a valid file'
 
 
-
+@implementer(ICheckerFactory, plugin.IPlugin)
 class FileCheckerFactory(object):
     """
     A factory for instances of L{FilePasswordDB}.
     """
-    implements(ICheckerFactory, plugin.IPlugin)
     authType = 'file'
     authHelp = fileCheckerFactoryHelp
     argStringFormat = 'Location of a FilePasswordDB-formatted file.'
@@ -50,7 +49,7 @@ class FileCheckerFactory(object):
         """
         from twisted.python.filepath import FilePath
         if not argstring.strip():
-            raise ValueError, '%r requires a filename' % self.authType
+            raise ValueError('%r requires a filename' % self.authType)
         elif not FilePath(argstring).isfile():
             self.errorOutput.write('%s: %s\n' % (invalidFileWarning, argstring))
         return FilePasswordDB(argstring)
