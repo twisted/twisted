@@ -795,8 +795,8 @@ class Key(object):
         elif self.type() == 'DSA':
             signature = common.getNS(signature)[0]
             numbers = [
-                Util.number.bytes_to_long(signature[:20]),
-                Util.number.bytes_to_long(signature[20:]),
+                Util.number.bytes_to_long(n) for n in
+                    (signature[:20], signature[20:])
                 ]
             digest = sha1(data).digest()
         return self.keyObject.verify(digest, numbers)
