@@ -561,6 +561,7 @@ class _FDDetector(object):
         See the implementation for the details of how a method is selected.
         """
         for impl in self._implementations:
+            print(impl)
             try:
                 before = impl()
             except Exception as e:
