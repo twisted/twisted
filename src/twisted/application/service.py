@@ -97,6 +97,8 @@ class IService(Interface):
     @ivar name:            The name of the service (or None)
     @type running:         C{boolean}
     @ivar running:         Whether the service is running.
+    @type parent:          C{IService}
+    @ivar parent:         The parent of the service (or None)
     """
 
     def setName(name):
