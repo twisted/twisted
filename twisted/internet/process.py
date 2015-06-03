@@ -564,16 +564,15 @@ class _FDDetector(object):
             print(impl)
             try:
                 before = impl()
-            except Exception as e:
-                print(e)
+            except:
                 continue
             try:
                 fp = self.openfile("/dev/null", "r")
                 after = impl()
-            except Exception as e:
-                print(e)
             finally:
                 fp.close()
+            print(before)
+            print(after)
             if before != after:
                 return impl
         # If no implementation can detect the newly opened file above, then just
