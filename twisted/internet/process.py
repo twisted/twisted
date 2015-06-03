@@ -563,11 +563,14 @@ class _FDDetector(object):
         for impl in self._implementations:
             try:
                 before = impl()
-            except:
+            except Exception as e:
+                print(e)
                 continue
             try:
                 fp = self.openfile("/dev/null", "r")
                 after = impl()
+            except Exception as e:
+                print(e)
             finally:
                 fp.close()
             if before != after:
