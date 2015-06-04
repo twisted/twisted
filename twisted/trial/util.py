@@ -252,6 +252,7 @@ def profiled(f, outputFile):
 
 
 
+@defer.inlineCallbacks
 def _runSequentially(callables, stopOnFirstError=False):
     """
     Run the given callables one after the other. If a callable returns a
