@@ -49,6 +49,10 @@ class ServiceInterfaceTests(TestCase):
         self.almostService.running = False
         self.almostService.name = None
 
+    def test_realService(self):
+        myService = Service()
+        verifyObject(IService, myService)
+
     def test_hasAll(self):
         verifyObject(IService, self.almostService)
 
