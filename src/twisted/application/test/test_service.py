@@ -21,54 +21,72 @@ from twisted.trial.unittest import TestCase
 
 @implementer(IService)
 class AlmostService(object):
+    """
+    Almost implement IService
 
-
+    Implement IService except for the
+    attributes.
+    """
     def setName(self, name):
+        """Do nothing"""
         pass
 
     def setServiceParent(self, parent):
+        """Do nothing"""
         pass
 
     def disownServiceParent(self):
+        """Do nothing"""
         pass
 
     def privilegedStartService(self):
+        """Do nothing"""
         pass
 
     def startService(self):
+        """Do nothing"""
         pass
 
     def stopService(self):
+        """Do nothing"""
         pass
 
 
 
 class ServiceInterfaceTests(TestCase):
-
+    """
+    Tests for IService implementation
+    """
     def setUp(self):
+        """Build something that implements IService"""
         self.almostService = AlmostService()
         self.almostService.parent = None
         self.almostService.running = False
         self.almostService.name = None
 
     def test_realService(self):
+        """Service implements IService"""
         myService = Service()
         verifyObject(IService, myService)
 
     def test_hasAll(self):
+        """AlmostService implements IService"""
         verifyObject(IService, self.almostService)
 
     def test_noName(self):
+        """AlmostService with no name does not implement IService"""
         del self.almostService.name
         with self.assertRaises(BrokenImplementation):
             verifyObject(IService, self.almostService)
 
     def test_noParent(self):
+        """AlmostService with no parent does not implement IService"""
         del self.almostService.parent
         with self.assertRaises(BrokenImplementation):
             verifyObject(IService, self.almostService)
 
     def test_noRunning(self):
+        """AlmostService with no running does not implement IService"""
         del self.almostService.running
         with self.assertRaises(BrokenImplementation):
             verifyObject(IService, self.almostService)
