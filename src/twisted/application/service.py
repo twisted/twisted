@@ -94,11 +94,14 @@ class IService(Interface):
     Run start-up and shut-down code at the appropriate times.
     """
 
-    name = Attribute("A C{string} which is the name of the service or c{None}")
+    name = Attribute(
+        "A C{string} which is the name of the service or c{None}")
 
-    running = Attribute("A C{boolean} which indicates whether the service is running")
+    running = Attribute(
+        "A C{boolean} which indicates whether the service is running")
 
-    parent = Attribute("An C{IServiceCollection} which is the parent or c{None}")
+    parent = Attribute(
+        "An C{IServiceCollection} which is the parent or c{None}")
 
     def setName(name):
         """
