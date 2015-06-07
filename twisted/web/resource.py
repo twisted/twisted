@@ -118,6 +118,7 @@ class Resource:
         Initialize.
         """
         self.children = {}
+        self.allowedMethods = []
 
     isLeaf = 0
 
