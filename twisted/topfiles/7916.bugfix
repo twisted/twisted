@@ -1,0 +1,1 @@
+twisted.logger._global.MORE_THAN_ONCE_WARNING now is properly formattable
