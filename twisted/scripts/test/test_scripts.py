@@ -184,12 +184,9 @@ class Tap2DeprecationTests(TestCase):
         """
         L{twisted.scripts.tap2deb} is deprecated since Twisted 15.2.
         """
-        reflect.namedAny("twisted.scripts.tap2deb")
-        self.flushWarnings()
-
         imp.reload(reflect.namedAny("twisted.scripts.tap2deb"))
 
-        warningsShown = self.flushWarnings()
+        warningsShown = self.flushWarnings([self.test_tap2debDeprecation])
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
             "tap2deb is deprecated since Twisted 15.2.",
@@ -200,12 +197,9 @@ class Tap2DeprecationTests(TestCase):
         """
         L{twisted.scripts.tap2rpm} is deprecated since Twisted 15.2.
         """
-        reflect.namedAny("twisted.scripts.tap2rpm")
-        self.flushWarnings()
-
         imp.reload(reflect.namedAny("twisted.scripts.tap2rpm"))
 
-        warningsShown = self.flushWarnings()
+        warningsShown = self.flushWarnings([self.test_tap2rpmDeprecation])
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
             "tap2rpm is deprecated since Twisted 15.2.",
