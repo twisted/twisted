@@ -13,13 +13,6 @@ from twisted.python import lockfile
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 
-skipKill = None
-if platform.isWindows():
-    if(requireModule('win32api.OpenProcess') is None and
-        requireModule('pywintypes') is None
-            ):
-        skipKill = ("On windows, lockfile.kill is not implemented in the "
-                    "absence of win32api and/or pywintypes.")
 
 class UtilTests(unittest.TestCase):
     """
@@ -94,7 +87,6 @@ class UtilTests(unittest.TestCase):
         process which exists and signal C{0}.
         """
         lockfile.kill(os.getpid(), 0)
-    test_kill.skip = skipKill
 
 
     def test_killESRCH(self):
@@ -105,7 +97,6 @@ class UtilTests(unittest.TestCase):
         # Hopefully there is no process with PID 2 ** 31 - 1
         exc = self.assertRaises(OSError, lockfile.kill, 2 ** 31 - 1, 0)
         self.assertEqual(exc.errno, errno.ESRCH)
-    test_killESRCH.skip = skipKill
 
 
     def test_noKillCall(self):

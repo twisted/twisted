@@ -27,27 +27,19 @@ if not platform.isWindows():
     _windows = False
 else:
     _windows = True
+    from twisted.python._winapi import OpenProcess, WindowsAPIError, kernel32
 
-    try:
-        from win32api import OpenProcess
-        import pywintypes
-    except ImportError:
-        kill = None
-    else:
-        ERROR_ACCESS_DENIED = 5
-        ERROR_INVALID_PARAMETER = 87
-
-        def kill(pid, signal):
-            try:
-                OpenProcess(0, 0, pid)
-            except pywintypes.error as e:
-                if e.args[0] == ERROR_ACCESS_DENIED:
-                    return
-                elif e.args[0] == ERROR_INVALID_PARAMETER:
-                    raise OSError(errno.ESRCH, None)
-                raise
-            else:
-                raise RuntimeError("OpenProcess is required to fail.")
+    def kill(pid, signal):
+        try:
+            OpenProcess(pid)
+        except WindowsAPIError as e:
+            if e.args[0] == kernel32.ERROR_ACCESS_DENIED:
+                return
+            elif e.args[0] == kernel32.ERROR_INVALID_PARAMETER:
+                raise OSError(errno.ESRCH, None)
+            raise
+        else:
+            raise RuntimeError("OpenProcess is required to fail.")
 
     _open = file
 
