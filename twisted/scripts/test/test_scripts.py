@@ -8,6 +8,7 @@ Tests for actual functionality belong elsewhere, written in a way that doesn't
 involve launching child processes.
 """
 
+import imp
 from os import devnull, getcwd, chdir
 from sys import executable
 from subprocess import PIPE, Popen
@@ -169,17 +170,24 @@ class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
 class Tap2DeprecationTests(TestCase):
     """
     Contains tests to make sure tap2deb/tap2rpm are marked as deprecated.
-    """
 
-    def setUp(self):
-        # Flush any warnings which are present before the test starts.
-        self.flushWarnings()
+    The script need to be triggered using C{reload} as otherwise they
+    are not re-imported for the test as they might have been already
+    imported in previous tests.
+
+    Before each test we also need to flush all existing warnings as when a
+    single test is executed the setUp phase might trigger warnings which
+    are not related to this test but are general process startup warnings.
+    """
 
     def test_tap2debDeprecation(self):
         """
         L{twisted.scripts.tap2deb} is deprecated since Twisted 15.2.
         """
         reflect.namedAny("twisted.scripts.tap2deb")
+        self.flushWarnings()
+
+        imp.reload(reflect.namedAny("twisted.scripts.tap2deb"))
 
         warningsShown = self.flushWarnings()
         self.assertEqual(1, len(warningsShown))
@@ -193,6 +201,9 @@ class Tap2DeprecationTests(TestCase):
         L{twisted.scripts.tap2rpm} is deprecated since Twisted 15.2.
         """
         reflect.namedAny("twisted.scripts.tap2rpm")
+        self.flushWarnings()
+
+        imp.reload(reflect.namedAny("twisted.scripts.tap2rpm"))
 
         warningsShown = self.flushWarnings()
         self.assertEqual(1, len(warningsShown))
