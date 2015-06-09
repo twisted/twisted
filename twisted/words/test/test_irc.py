@@ -1640,7 +1640,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         Passing a command and parameters to L{IRC.sendMessage} results in a
         query string that consists of the command and parameters, separated by
         a space, ending with '\r\n'.  The format is described in more detail in
-        RFC 1459 (U{http://tools.ietf.org/html/rfc1459.html#section-2.3}).
+        U{RFC 1459 <https://tools.ietf.org/html/rfc1459.html#section-2.3>}.
         """
         self.p.sendMessage('CMD', 'param1', 'param2')
         self.check('CMD param1 param2\r\n')
@@ -1651,7 +1651,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         Passing a command and parameters to L{IRC.sendMsg} results in a query
         string that consists of the command and parameters, separated by a
         space, ending with '\r\n'.  The format is described in more detail in
-        RFC 1459 (U{http://tools.ietf.org/html/rfc1459.html#section-2.3}).
+        U{RFC 1459 <https://tools.ietf.org/html/rfc1459.html#section-2.3>}.
         """
         self.p.sendMsg(u"CMD", (u"param1", u"param2"))
         self.check(b"CMD param1 param2\r\n")
@@ -1729,8 +1729,8 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         @tags :prefix COMMAND param1 param2\r\n
         The tags are a string of IRCv3 tags, preceded by '@'.  The rest
         of the string is as described in test_sendMessage.  For more on
-        the message tag format, see
-        U{http://ircv3.org/specification/message-tags-3.2}.
+        the message tag format, see U{the IRCv3 specification
+        <http://ircv3.net/specs/core/message-tags-3.2.html>}.
         """
         sendTags = {
             'aaa': 'bbb',
@@ -1758,8 +1758,8 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         @tags :prefix COMMAND param1 param2\r\n
         The tags are a string of IRCv3 tags, preceded by '@'.  The rest
         of the string is as described in test_sendMessage.  For more on
-        the message tag format, see
-        U{http://ircv3.org/specification/message-tags-3.2}.
+        the message tag format, see U{the IRCv3 specification
+        <https://ircv3.net/specs/core/message-tags-3.2.html>}.
         """
         sendTags = {
             u"aaa": u"bbb",
@@ -1781,8 +1781,9 @@ class BasicServerFunctionalityTests(unittest.TestCase):
     def test_stringTags(self):
         """
         Stringing tags together results in a proper IRC tag string.
-        See U{http://ircv3.org/specification/message-tags-3.2} for more on
-        the message tag format.
+        See U{the IRCv3 specification
+        <https://ircv3.net/specs/core/message-tags-3.2.html>} for more on the
+        message tag format.
         """
         sendTags = {
             'aaa': 'bbb',

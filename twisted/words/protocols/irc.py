@@ -279,7 +279,7 @@ class IRC(protocol.Protocol):
             to send with the tag, or either None or "" if no value is to
             be sent with the tag.
         @type tags: L{dict} of tags (L{bytes}) => values (L{bytes})
-        @see: U{http://ircv3.org/specification/message-tags-3.2}
+        @see: U{https://ircv3.net/specs/core/message-tags-3.2.html}
         """
         if self.encoding is None:
             encoding = "utf-8" # Default the encoding to UTF-8 (safe for IRC)
@@ -331,7 +331,7 @@ class IRC(protocol.Protocol):
             to send with the tag, or either None or "" if no value is to
             be sent with the tag.
         @type tags: L{dict} of tags (L{unicode}) => values (L{unicode})
-        @see: U{http://ircv3.org/specification/message-tags-3.2}
+        @see: U{https://ircv3.net/specs/core/message-tags-3.2.html}
         """
         if not command:
             raise ValueError("IRC message requires a command.")
@@ -355,7 +355,7 @@ class IRC(protocol.Protocol):
 
         if len(params) > 15:
             log.msg("Message has %d parameters (RFC allows 15):\n%s" %
-                    (len(parameter_list), line))
+                    (len(params), line))
 
 
     def _stringTags(self, tags):
@@ -363,6 +363,9 @@ class IRC(protocol.Protocol):
         Converts a tag dictionary to a string.
 
         @param tags: The tag dict passed to sendMsg.
+
+        @rtype: L{unicode}
+        @return: IRCv3-format tag string
         """
         self._validateTags(tags)
         tagStrings = []
@@ -391,16 +394,18 @@ class IRC(protocol.Protocol):
 
     def _escapeTagValue(self, value):
         """
-        Escape the given tag value according to escaping rules
-        in IRCv3: http://ircv3.org/specification/message-tags-3.2
+        Escape the given tag value according to U{escaping rules in IRCv3
+        <https://ircv3.net/specs/core/message-tags-3.2.html>}.
 
         @param value: The string value to escape.
         @type value: L{str}
+        
+        @rtype: L{str}
+        @return: The escaped string for sending as a message value
         """
         return (value.replace("\\", "\\\\")
             .replace(";", "\\:")
             .replace(" ", "\\s")
-            .replace("\0", "\\0")
             .replace("\r", "\\r")
             .replace("\n", "\\n")
             )
