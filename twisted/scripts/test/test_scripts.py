@@ -170,11 +170,17 @@ class Tap2DeprecationTests(TestCase):
     """
     Contains tests to make sure tap2deb/tap2rpm are marked as deprecated.
     """
+
+    def setUp(self):
+        # Flush any warnings which are present before the test starts.
+        self.flushWarnings()
+
     def test_tap2debDeprecation(self):
         """
         L{twisted.scripts.tap2deb} is deprecated since Twisted 15.2.
         """
-        reload(reflect.namedAny("twisted.scripts.tap2deb"))
+        reflect.namedAny("twisted.scripts.tap2deb")
+
         warningsShown = self.flushWarnings()
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
@@ -186,7 +192,8 @@ class Tap2DeprecationTests(TestCase):
         """
         L{twisted.scripts.tap2rpm} is deprecated since Twisted 15.2.
         """
-        reload(reflect.namedAny("twisted.scripts.tap2rpm"))
+        reflect.namedAny("twisted.scripts.tap2rpm")
+
         warningsShown = self.flushWarnings()
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
