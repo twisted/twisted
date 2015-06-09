@@ -172,12 +172,8 @@ class Tap2DeprecationTests(TestCase):
     Contains tests to make sure tap2deb/tap2rpm are marked as deprecated.
 
     The script need to be triggered using C{reload} as otherwise they
-    are not re-imported for the test as they might have been already
+    are not re-imported for the test. They might have been already
     imported in previous tests.
-
-    Before each test we also need to flush all existing warnings as when a
-    single test is executed the setUp phase might trigger warnings which
-    are not related to this test but are general process startup warnings.
     """
 
     def test_tap2debDeprecation(self):
