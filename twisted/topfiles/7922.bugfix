@@ -1,0 +1,1 @@
+IService now properly requires the 'runner', 'name' and 'parent' attributes.
