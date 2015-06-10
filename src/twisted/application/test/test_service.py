@@ -22,13 +22,11 @@ from twisted.trial.unittest import TestCase
 @implementer(IService)
 class AlmostService(object):
     """
-    Almost implement IService.
-
     Implement IService except for the attributes.
     """
     def setName(self, name):
         """
-        Do nothing.
+        See L{twisted.application.service.IService}.
 
         @param name: ignored
         """
@@ -37,7 +35,7 @@ class AlmostService(object):
 
     def setServiceParent(self, parent):
         """
-        Do nothing.
+        See L{twisted.application.service.IService}.
 
         @param parent: ignored
         """
@@ -46,28 +44,28 @@ class AlmostService(object):
 
     def disownServiceParent(self):
         """
-        Do nothing.
+        See L{twisted.application.service.IService}.
         """
         pass
 
 
     def privilegedStartService(self):
         """
-        Do nothing.
+        See L{twisted.application.service.IService}.
         """
         pass
 
 
     def startService(self):
         """
-        Do nothing.
+        See L{twisted.application.service.IService}.
         """
         pass
 
 
     def stopService(self):
         """
-        Do nothing.
+        See L{twisted.application.service.IService}.
         """
         pass
 
@@ -75,7 +73,7 @@ class AlmostService(object):
 
 class ServiceInterfaceTests(TestCase):
     """
-    Tests for IService implementation.
+    Tests for L{twisted.application.service.IService} implementation.
     """
     def setUp(self):
         """
