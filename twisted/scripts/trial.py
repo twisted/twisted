@@ -18,6 +18,7 @@ from twisted.application import app
 from twisted.python import usage, reflect, failure
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
+from twisted.python.compat import long
 from twisted import plugin
 from twisted.trial import runner, itrial, reporter
 
@@ -67,7 +68,7 @@ def loadLocalVariables(filename):
 
     See http://www.gnu.org/software/emacs/manual/html_node/File-Variables.html
     """
-    f = file(filename, "r")
+    f = open(filename, "r")
     lines = [f.readline(), f.readline()]
     f.close()
     for line in lines:

@@ -280,8 +280,10 @@ def comparable(klass):
 
 if _PY3:
     unicode = str
+    long = int
 else:
     unicode = unicode
+    long = long
 
 
 

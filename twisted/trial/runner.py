@@ -8,6 +8,8 @@ A miscellany of code used to run Trial tests.
 Maintainer: Jonathan Lange
 """
 
+from __future__ import absolute_import, division
+
 __all__ = [
     'TestSuite',
 
@@ -18,10 +20,19 @@ __all__ = [
     'name', 'samefile', 'NOT_IN_TEST',
     ]
 
-import os, types, warnings, sys, inspect, imp
-import doctest, time
+import doctest
+import imp
+import inspect
+import os
+import sys
+import time
+import types
+import warnings
 
 from twisted.python import reflect, log, failure, modules, filepath
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
+from twisted.python.compat import _PY3
 
 from twisted.internet import defer
 from twisted.trial import util, unittest
@@ -51,7 +62,7 @@ def isPackageDirectory(dirname):
     """Is the directory at path 'dirname' a Python package directory?
     Returns the name of the __init__ file (it may have a weird extension)
     if dirname is a package directory.  Otherwise, returns False"""
-    for ext in zip(*imp.get_suffixes())[0]:
+    for ext in list(zip(*imp.get_suffixes()))[0]:
         initFile = '__init__' + ext
         if os.path.exists(os.path.join(dirname, initFile)):
             return initFile
@@ -611,6 +622,170 @@ class TestLoader(object):
 
 
 
+class Py3TestLoader(TestLoader):
+
+    def findByName(self, _name, recurse=False):
+        """
+        Find and load tests, given C{name}.
+
+        This partially duplicates the logic in L{unittest.loader.TestLoader}.
+        """
+        if os.sep in _name:
+            # Looks like a file, and therefore must be a module
+            name = reflect.filenameToModuleName(_name)
+        else:
+            name = _name
+
+        qualParts = name.split(".")
+        obj = None
+
+        for item in range(len(qualParts)):
+            # FIXME: jml pointed out that this code is confusing, and it's true
+            # and so I need to fix that.
+            # The better implementation is a generator that produces the next
+            # name to try, and the remaining portion, and is more obvious than
+            # :-item (or at least one layer deeper :D ).
+            # A for loop could maybe be replaced with a while, or something.
+
+            # Walk down the qualified name, trying to import a module. For
+            # example, `twisted.test.test_paths.FilePathTests` would try
+            # the full qualified name, then just up to test_paths, and then
+            # just up to test, and so forth.
+            # This gets us the highest level thing which is a module.
+            try:
+                if item == 0:
+                    name = ".".join(qualParts)
+                else:
+                    name = ".".join(qualParts[:-item])
+
+                remaining = qualParts[len(qualParts)-item:]
+                obj = reflect.namedModule(name)
+                # If we reach here, we have successfully found a module.
+                # obj will be the module, and remaining will be the remaining
+                # part of the qualified name.
+                break
+
+            except ImportError:
+                if item == len(qualParts):
+                    raise reflect.ModuleNotFound("The module {} does not exist.".format(_name))
+
+        if obj is None:
+            # If it's none here, we didn't get to import anything.
+            # Try something drastic.
+            try:
+                obj = filenameToModule(_name)
+                remaining = qualParts[len(".".split(obj.__name__))+1:]
+            except Exception as e:
+                # Reflect will give a better understanding of what went wrong
+                reflect.namedAny(_name)
+
+        try:
+            for part in remaining:
+                # Walk down the remaining modules. Hold on to the parent for
+                # methods, as on Python 3, you can no longer get the parent
+                # class from just holding onto the method.
+                parent, obj = obj, getattr(obj, part)
+        except AttributeError:
+            raise reflect.ObjectNotFound("{} does not exist.".format(_name))
+
+        if isinstance(obj, types.ModuleType):
+            # It looks like a module
+            if isPackage(obj):
+                # It's a package, so recurse down it.
+                return self.loadPackage(obj, recurse=True)
+            # Otherwise get all the tests in the module.
+            return self.loadTestsFromModule(obj)
+        elif isinstance(obj, type) and issubclass(obj, pyunit.TestCase):
+            # We've found a raw test case, get the tests from it.
+            return self.loadTestsFromTestCase(obj)
+        elif (isinstance(obj, types.FunctionType) and
+              isinstance(parent, type) and
+              issubclass(parent, pyunit.TestCase)):
+            # We've found a method, and its parent is a TestCase. Instantiate
+            # it.
+            name = remaining[-1]
+            inst = parent(name)
+            if not isinstance(getattr(inst, name), types.FunctionType):
+                # If it's still a function, and not a bound method, then it's a
+                # callable that we take care of later.
+                return self.suiteFactory([inst])
+        elif isinstance(obj, TestSuite):
+            # We've found a test suite.
+            return obj
+
+        if callable(obj):
+            # It looks callable, so, see if it returns a TestSuite or a
+            # TestCase.
+            test = obj()
+            if isinstance(test, TestSuite):
+                return test
+            elif isinstance(test, pyunit.TestCase):
+                return self.suiteFactory([test])
+            else:
+                raise TypeError("calling %s returned %s, not a test" %
+                                (obj, test))
+        else:
+            raise TypeError("don't know how to make test from: %s" % obj)
+
+
+    def loadByName(self, name, recurse=False):
+
+        try:
+            thing = self.findByName(name)
+        except:
+            return ErrorHolder(name, failure.Failure())
+        return thing
+
+
+    def loadByNames(self, names, recurse=False):
+
+        things = []
+        errors = []
+        for name in names:
+            try:
+                things.append(self.findByName(name))
+            except:
+                errors.append(self.suiteFactory([
+                    ErrorHolder(name, failure.Failure())]))
+        things.extend(errors)
+        return self.suiteFactory(self._uniqueTests(things))
+
+
+    def loadClass(self, klass):
+        """
+        Given a class which contains test cases, return a L{TestSuite}.
+        """
+        if not isinstance(klass, type):
+            raise TypeError("%r is not a class" % (klass,))
+        if not isTestCase(klass):
+            raise ValueError("%r is not a test case" % (klass,))
+        names = self.getTestCaseNames(klass)
+        tests = self.sort([self._makeCase(klass, self.methodPrefix+name)
+                           for name in names])
+        return self.suiteFactory(tests)
+
+    def _uniqueTests(self, things):
+        """
+        Gather unique suite objects from loaded things. This will guarantee
+        uniqueness of inherited methods on TestCases which would otherwise hash
+        to same value and collapse to one test unexpectedly if using simpler
+        means: e.g. set().
+        """
+        seen = set()
+        for testthing in things:
+            testthings = testthing._tests
+            for thing in testthings:
+                # This is horrible.
+                if str(thing) not in seen:
+                    yield thing
+                    seen.add(str(thing))
+
+if _PY3:
+    del TestLoader
+    TestLoader = Py3TestLoader
+
+
+
 class TrialRunner(object):
     """
     A specialised runner that the trial front end uses.
@@ -685,7 +860,7 @@ class TrialRunner(object):
         if self.logfile == '-':
             logFile = sys.stdout
         else:
-            logFile = file(self.logfile, 'a')
+            logFile = open(self.logfile, 'a')
         self._logFileObject = logFile
         self._logFileObserver = log.FileLogObserver(logFile)
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)

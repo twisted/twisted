@@ -137,9 +137,8 @@ class PackageTest(unittest.SynchronousTestCase):
         for filename, contents in self.files:
             filename = os.path.join(parentDir, filename)
             self._createDirectory(filename)
-            fd = open(filename, 'w')
-            fd.write(contents)
-            fd.close()
+            with open(filename, 'w') as fd:
+                fd.write(contents)
 
 
     def _createDirectory(self, filename):
@@ -178,4 +177,3 @@ class SysPathManglingTest(PackageTest):
 
     def mangleSysPath(self, pathVar):
         sys.path[:] = pathVar
-
