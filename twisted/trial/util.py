@@ -20,12 +20,10 @@ Maintainer: Jonathan Lange
 
 from __future__ import division, absolute_import, print_function
 
-import sys
 from random import randrange
 
 from twisted.internet import defer, utils, interfaces
 from twisted.python.failure import Failure
-from twisted.python import deprecate, versions
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
 
@@ -251,26 +249,6 @@ def profiled(f, outputFile):
         prof.print_stats()
         return result
     return _
-
-
-def getPythonContainers(meth):
-    """Walk up the Python tree from method 'meth', finding its class, its module
-    and all containing packages."""
-    containers = []
-    containers.append(meth.im_class)
-    moduleName = meth.im_class.__module__
-    while moduleName is not None:
-        module = sys.modules.get(moduleName, None)
-        if module is None:
-            module = __import__(moduleName)
-        containers.append(module)
-        moduleName = getattr(module, '__module__', None)
-    return containers
-
-deprecate.deprecatedModuleAttribute(
-    versions.Version("Twisted", 12, 3, 0),
-    "This function never worked correctly.  Implement lookup on your own.",
-    __name__, "getPythonContainers")
 
 
 

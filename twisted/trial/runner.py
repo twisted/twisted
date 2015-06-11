@@ -13,7 +13,7 @@ from __future__ import absolute_import, division
 __all__ = [
     'TestSuite',
 
-    'DestructiveTestSuite', 'DryRunVisitor', 'ErrorHolder', 'LoggedSuite',
+    'DestructiveTestSuite', 'ErrorHolder', 'LoggedSuite',
     'TestHolder', 'TestLoader', 'TrialRunner', 'TrialSuite',
 
     'filenameToModule', 'isPackage', 'isPackageDirectory', 'isTestCase',
@@ -630,7 +630,6 @@ class Py3TestLoader(TestLoader):
 
         This partially duplicates the logic in L{unittest.loader.TestLoader}.
         """
-
         if os.sep in _name:
             # Looks like a file, and therefore must be a module
             name = reflect.filenameToModuleName(_name)
@@ -776,35 +775,6 @@ class Py3TestLoader(TestLoader):
 if _PY3:
     del TestLoader
     TestLoader = Py3TestLoader
-
-
-
-class DryRunVisitor(object):
-    """
-    A visitor that makes a reporter think that every test visited has run
-    successfully.
-    """
-
-    deprecatedModuleAttribute(
-            Version("Twisted", 13, 0, 0),
-            "Trial no longer has support for visitors",
-            "twisted.trial.runner", "DryRunVisitor")
-
-
-    def __init__(self, reporter):
-        """
-        @param reporter: A C{TestResult} object.
-        """
-        self.reporter = reporter
-
-
-    def markSuccessful(self, testCase):
-        """
-        Convince the reporter that this test has been run successfully.
-        """
-        self.reporter.startTest(testCase)
-        self.reporter.addSuccess(testCase)
-        self.reporter.stopTest(testCase)
 
 
 
