@@ -34,7 +34,7 @@ from twisted.python.components import getAdapterFactory
 from twisted.python.reflect import namedAny
 from twisted.python import log
 from twisted.python.modules import getModule
-from twisted.python.compat import iteritems, _PY3
+from twisted.python.compat import iteritems
 
 
 
@@ -171,10 +171,7 @@ def getCache(module):
                     provider = pluginModule.load()
                 except:
                     # dropinDotCache.pop(pluginKey, None)
-                    if _PY3:
-                        log.msg("Failed loading plugin -- probably not ported to Python 3")
-                    else:
-                        log.err()
+                    log.err()
                 else:
                     entry = _generateCacheEntry(provider)
                     dropinDotCache[pluginKey] = entry
@@ -219,10 +216,7 @@ def getPlugins(interface, package=None):
             try:
                 adapted = interface(plugin, None)
             except:
-                if _PY3:
-                    log.msg("Failed loading plugin -- probably not ported to Python 3")
-                else:
-                    log.err()
+                log.err()
             else:
                 if adapted is not None:
                     yield adapted

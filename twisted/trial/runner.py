@@ -668,7 +668,7 @@ class Py3TestLoader(TestLoader):
 
             except ImportError:
                 if item == len(qualParts):
-                    raise reflect.ModuleNotFound("The module {} does not exist.".format(name))
+                    raise reflect.ModuleNotFound("The module {} does not exist.".format(_name))
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
@@ -687,7 +687,7 @@ class Py3TestLoader(TestLoader):
                 # class from just holding onto the method.
                 parent, obj = obj, getattr(obj, part)
         except AttributeError:
-            raise reflect.ObjectNotFound("{} does not exist.".format(name))
+            raise reflect.ObjectNotFound("{} does not exist.".format(_name))
 
         if isinstance(obj, types.ModuleType):
             # It looks like a module
