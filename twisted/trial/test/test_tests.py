@@ -26,12 +26,12 @@ from __future__ import division, absolute_import
 import gc, sys, weakref
 import unittest as pyunit
 
-from twisted.python.compat import _PY3, NativeStringIO
+from twisted.python.compat import NativeStringIO
 from twisted.python.reflect import namedAny
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, reporter, util
-if not _PY3:
-    from twisted.trial import runner
+
+from twisted.trial import runner
 from twisted.trial.test import erroneous
 from twisted.trial.test.test_suppression import SuppressionMixin
 from twisted.trial._asyncrunner import (
@@ -39,9 +39,6 @@ from twisted.trial._asyncrunner import (
     _ForceGarbageCollectionDecorator,
     _iterateTests,
     )
-
-# Skip messages that are used in multiple places:
-_PY3PORTNEEDED = "Requires runner and/or reporter to be ported (#5964, #5965)"
 
 
 class ResultsTestMixin(object):
@@ -592,8 +589,6 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
     Tests for cleanup and reporting of reactor event sources left behind by test
     methods.
     """
-    if _PY3:
-        skip = _PY3PORTNEEDED
 
     def setUp(self):
         """
@@ -716,9 +711,6 @@ class GCMixin:
     garbage collection. I'm used to test whether gc.collect gets called.
     """
 
-    if _PY3:
-        skip = _PY3PORTNEEDED
-
     class BasicTest(unittest.SynchronousTestCase):
         """
         Mock test to run.
@@ -804,9 +796,6 @@ class UnhandledDeferredTests(unittest.SynchronousTestCase):
     Test what happens when we have an unhandled deferred left around after
     a test.
     """
-
-    if _PY3:
-        skip = _PY3PORTNEEDED
 
     def setUp(self):
         """
@@ -983,8 +972,6 @@ class SuiteClearingMixin(object):
     """
     Tests for our extension that allows us to clear out a L{TestSuite}.
     """
-    if _PY3:
-        skip = _PY3PORTNEEDED
 
     def test_clearSuite(self):
         """
@@ -1040,9 +1027,6 @@ class TestDecoratorMixin(object):
     """
     Tests for our test decoration features.
     """
-    if _PY3:
-        skip = _PY3PORTNEEDED
-
     def assertTestsEqual(self, observed, expected):
         """
         Assert that the given decorated tests are equal.
@@ -1294,9 +1278,6 @@ class IterateTestsMixin(object):
     L{_iterateTests} returns a list of all test cases in a test suite or test
     case.
     """
-    if _PY3:
-        skip = _PY3PORTNEEDED
-
     def test_iterateTestCase(self):
         """
         L{_iterateTests} on a single test case returns a list containing that

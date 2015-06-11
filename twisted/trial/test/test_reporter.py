@@ -13,6 +13,8 @@ import os
 import re
 import sys
 
+from io import BytesIO
+
 from inspect import getmro
 
 from twisted.internet.utils import suppressWarnings
@@ -1107,7 +1109,11 @@ class SubunitReporterTests(ReporterInterfaceTests):
         if reporter.TestProtocolClient is None:
             raise SkipTest(
                 "Subunit not installed, cannot test SubunitReporter")
-        ReporterInterfaceTests.setUp(self)
+
+        self.test = sample.FooTest('test_foo')
+        self.stream = BytesIO()
+        self.publisher = log.LogPublisher()
+        self.result = self.resultFactory(self.stream, publisher=self.publisher)
 
 
     def assertForwardsToSubunit(self, methodName, *args, **kwargs):
@@ -1122,7 +1128,8 @@ class SubunitReporterTests(ReporterInterfaceTests):
         Assumes that the method on subunit has the same name as the method on
         L{SubunitReporter}.
         """
-        stream = NativeStringIO()
+        stream = BytesIO()
+
         subunitClient = reporter.TestProtocolClient(stream)
         subunitReturn = getattr(subunitClient, methodName)(*args, **kwargs)
         subunitOutput = stream.getvalue()
@@ -1234,7 +1241,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
         of results is everything. Thus, done() does nothing.
         """
         self.result.done()
-        self.assertEqual('', self.stream.getvalue())
+        self.assertEqual(b'', self.stream.getvalue())
 
 
     def test_startTestSendsSubunitStartTest(self):
@@ -1285,7 +1292,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
         SubunitReporter.addFailure() sends the subunit 'addSuccess' message,
         since subunit doesn't model unexpected success.
         """
-        stream = NativeStringIO()
+        stream = BytesIO()
         subunitClient = reporter.TestProtocolClient(stream)
         subunitClient.addSuccess(self.test)
         subunitOutput = stream.getvalue()
@@ -1302,7 +1309,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
         output = self.stream.getvalue()
         # Just check that 'doesntexist' is in the output, rather than
         # assembling the expected stack trace.
-        self.assertIn('doesntexist', output)
+        self.assertIn(b'doesntexist', output)
 
 
 

@@ -726,7 +726,15 @@ class Py3TestLoader(TestLoader):
                                 (obj, test))
         else:
             raise TypeError("don't know how to make test from: %s" % obj)
-    loadByName = findByName
+
+
+    def loadByName(self, name, recurse=False):
+
+        try:
+            thing = self.findByName(name)
+        except:
+            return ErrorHolder(name, failure.Failure())
+        return thing
 
 
     def loadByNames(self, names, recurse=False):
