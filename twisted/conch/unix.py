@@ -80,10 +80,10 @@ class UnixConchUser(ConchUser):
     def getShell(self):
         return self.pwdData[6]
 
+
     # Twistedchecker warns of bad name for these two methods (they should be
     # camelCase) but we can't change the names without breaking backwards
     # compatibility, so suppress the warnings.
-
 
     def global_tcpip_forward(self, data):  # pylint: disable=C0103
         hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
