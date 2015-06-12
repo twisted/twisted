@@ -73,18 +73,20 @@ class UnixConchUser(ConchUser):
     def global_tcpip_forward(self, data):
         hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
         from twisted.internet import reactor
-        try: listener = self._runAsUser(
-                            reactor.listenTCP, portToBind,
-                            forwarding.SSHListenForwardingFactory(self.conn,
-                                (hostToBind, portToBind),
-                                forwarding.SSHListenServerForwardingChannel),
-                            interface = hostToBind)
+        try:
+            listener = self._runAsUser(
+                reactor.listenTCP, portToBind,
+                forwarding.SSHListenForwardingFactory(
+                    self.conn,
+                    (hostToBind, portToBind),
+                    forwarding.SSHListenServerForwardingChannel),
+                interface=hostToBind)
         except:
             return 0
         else:
             self.listeners[(hostToBind, portToBind)] = listener
             if portToBind == 0:
-                portToBind = listener.getHost()[2] # the port
+                portToBind = listener.getHost()[2]  # the port
                 return 1, struct.pack('>L', portToBind)
             else:
                 return 1
@@ -102,7 +104,9 @@ class UnixConchUser(ConchUser):
         # remove all listeners
         for listener in self.listeners.itervalues():
             self._runAsUser(listener.stopListening)
-        log.msg('avatar %s logging out (%i)' % (self.username, len(self.listeners)))
+        log.msg(
+            'avatar %s logging out (%i)'
+            % (self.username, len(self.listeners)))
 
     def _runAsUser(self, f, *args, **kw):
         euid = os.geteuid()
@@ -121,8 +125,8 @@ class UnixConchUser(ConchUser):
         try:
             for i in f:
                 func = i[0]
-                args = len(i)>1 and i[1] or ()
-                kw = len(i)>2 and i[2] or {}
+                args = len(i) > 1 and i[1] or ()
+                kw = len(i) > 2 and i[2] or {}
                 r = func(*args, **kw)
         finally:
             os.setegid(0)
@@ -138,7 +142,7 @@ class UnixConchUser(ConchUser):
 class SSHSessionForUnixConchUser:
     def __init__(self, avatar):
         self.avatar = avatar
-        self. environ = {'PATH':'/bin:/usr/bin:/usr/local/bin'}
+        self.environ = {'PATH': '/bin:/usr/bin:/usr/local/bin'}
         self.pty = None
         self.ptyTuple = 0
 
@@ -146,7 +150,7 @@ class SSHSessionForUnixConchUser:
         if not utmp:
             return
         ipAddress = self.avatar.conn.transport.transport.getPeer().host
-        packedIp ,= struct.unpack('L', socket.inet_aton(ipAddress))
+        packedIp, = struct.unpack('L', socket.inet_aton(ipAddress))
         ttyName = self.ptyTuple[2][5:]
         t = time.time()
         t1 = int(t)
@@ -156,7 +160,7 @@ class SSHSessionForUnixConchUser:
         entry.ut_pid = self.pty.pid
         entry.ut_line = ttyName
         entry.ut_id = ttyName[-4:]
-        entry.ut_tv = (t1,t2)
+        entry.ut_tv = (t1, t2)
         if loggedIn:
             entry.ut_user = self.avatar.username
             entry.ut_host = socket.gethostbyaddr(ipAddress)[0]
@@ -180,7 +184,7 @@ class SSHSessionForUnixConchUser:
 
     def openShell(self, proto):
         from twisted.internet import reactor
-        if not self.ptyTuple: # we didn't get a pty-req
+        if not self.ptyTuple:  # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             raise ConchError("no pty")
         uid, gid = self.avatar.getUserGroupId()
@@ -192,11 +196,12 @@ class SSHSessionForUnixConchUser:
         shellExec = os.path.basename(shell)
         peer = self.avatar.conn.transport.transport.getPeer()
         host = self.avatar.conn.transport.transport.getHost()
-        self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
+        self.environ['SSH_CLIENT'] = '%s %s %s' % (
+            peer.host, peer.port, host.port)
         self.getPtyOwnership()
-        self.pty = reactor.spawnProcess(proto, \
-                  shell, ['-%s' % shellExec], self.environ, homeDir, uid, gid,
-                   usePTY = self.ptyTuple)
+        self.pty = reactor.spawnProcess(
+            proto, shell, ['-%s' % shellExec], self.environ, homeDir, uid, gid,
+            usePTY=self.ptyTuple)
         self.addUTMPEntry()
         fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ,
                     struct.pack('4H', *self.winSize))
@@ -214,12 +219,13 @@ class SSHSessionForUnixConchUser:
         command = (shell, '-c', cmd)
         peer = self.avatar.conn.transport.transport.getPeer()
         host = self.avatar.conn.transport.transport.getHost()
-        self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
+        self.environ['SSH_CLIENT'] = '%s %s %s' % (
+            peer.host, peer.port, host.port)
         if self.ptyTuple:
             self.getPtyOwnership()
-        self.pty = reactor.spawnProcess(proto, \
-                shell, command, self.environ, homeDir,
-                uid, gid, usePTY = self.ptyTuple or 0)
+        self.pty = reactor.spawnProcess(
+            proto, shell, command, self.environ, homeDir, uid, gid,
+            usePTY=self.ptyTuple or 0)
         if self.ptyTuple:
             self.addUTMPEntry()
             if self.modes:
@@ -244,22 +250,25 @@ class SSHSessionForUnixConchUser:
         pty = self.pty
         attr = tty.tcgetattr(pty.fileno())
         for mode, modeValue in self.modes:
-            if not ttymodes.TTYMODES.has_key(mode): continue
+            if mode not in ttymodes.TTYMODES:
+                continue
             ttyMode = ttymodes.TTYMODES[mode]
-            if len(ttyMode) == 2: # flag
+            if len(ttyMode) == 2:  # flag
                 flag, ttyAttr = ttyMode
-                if not hasattr(tty, ttyAttr): continue
+                if not hasattr(tty, ttyAttr):
+                    continue
                 ttyval = getattr(tty, ttyAttr)
                 if modeValue:
-                    attr[flag] = attr[flag]|ttyval
+                    attr[flag] = attr[flag] | ttyval
                 else:
-                    attr[flag] = attr[flag]&~ttyval
+                    attr[flag] = attr[flag] & ~ttyval
             elif ttyMode == 'OSPEED':
-                attr[tty.OSPEED] = getattr(tty, 'B%s'%modeValue)
+                attr[tty.OSPEED] = getattr(tty, 'B%s' % modeValue)
             elif ttyMode == 'ISPEED':
-                attr[tty.ISPEED] = getattr(tty, 'B%s'%modeValue)
+                attr[tty.ISPEED] = getattr(tty, 'B%s' % modeValue)
             else:
-                if not hasattr(tty, ttyMode): continue
+                if not hasattr(tty, ttyMode):
+                    continue
                 ttyval = getattr(tty, ttyMode)
                 attr[tty.CC][ttyval] = chr(modeValue)
         tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
@@ -275,7 +284,7 @@ class SSHSessionForUnixConchUser:
         if self.pty:
             try:
                 self.pty.signalProcess('HUP')
-            except (OSError,ProcessExitedAlready):
+            except (OSError, ProcessExitedAlready):
                 pass
             self.pty.loseConnection()
             self.addUTMPEntry(0)
@@ -283,8 +292,9 @@ class SSHSessionForUnixConchUser:
 
     def windowChanged(self, winSize):
         self.winSize = winSize
-        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ,
-                        struct.pack('4H', *self.winSize))
+        fcntl.ioctl(
+            self.pty.fileno(), tty.TIOCSWINSZ,
+            struct.pack('4H', *self.winSize))
 
     def _writeHack(self, data):
         """
@@ -292,7 +302,7 @@ class SSHSessionForUnixConchUser:
         """
         if self.pty is not None:
             attr = tty.tcgetattr(self.pty.fileno())[3]
-            if not attr & tty.ECHO and attr & tty.ICANON: # no echo
+            if not attr & tty.ECHO and attr & tty.ICANON:  # no echo
                 self.avatar.conn.transport.sendIgnore('\x00'*(8+len(data)))
         self.oldWrite(data)
 
@@ -318,12 +328,12 @@ class SFTPServerForUnixConchUser:
 
     def _getAttrs(self, s):
         return {
-            "size" : s.st_size,
-            "uid" : s.st_uid,
-            "gid" : s.st_gid,
-            "permissions" : s.st_mode,
-            "atime" : int(s.st_atime),
-            "mtime" : int(s.st_mtime)
+            "size": s.st_size,
+            "uid": s.st_uid,
+            "gid": s.st_gid,
+            "permissions": s.st_mode,
+            "atime": int(s.st_atime),
+            "mtime": int(s.st_mtime)
         }
 
     def _absPath(self, path):
@@ -347,8 +357,8 @@ class SFTPServerForUnixConchUser:
 
     def makeDirectory(self, path, attrs):
         path = self._absPath(path)
-        return self.avatar._runAsUser([(os.mkdir, (path,)),
-                                (self._setAttrs, (path, attrs))])
+        return self.avatar._runAsUser(
+            [(os.mkdir, (path,)), (self._setAttrs, (path, attrs))])
 
     def removeDirectory(self, path):
         path = self._absPath(path)
@@ -419,12 +429,14 @@ class UnixSFTPFile:
         return self.server.avatar._runAsUser(os.close, self.fd)
 
     def readChunk(self, offset, length):
-        return self.server.avatar._runAsUser([ (os.lseek, (self.fd, offset, 0)),
-                                               (os.read, (self.fd, length)) ])
+        return self.server.avatar._runAsUser(
+            [(os.lseek, (self.fd, offset, 0)),
+             (os.read, (self.fd, length))])
 
     def writeChunk(self, offset, data):
-        return self.server.avatar._runAsUser([(os.lseek, (self.fd, offset, 0)),
-                                       (os.write, (self.fd, data))])
+        return self.server.avatar._runAsUser(
+            [(os.lseek, (self.fd, offset, 0)),
+             (os.write, (self.fd, data))])
 
     def getAttrs(self):
         s = self.server.avatar._runAsUser(os.fstat, self.fd)
@@ -450,7 +462,8 @@ class UnixSFTPDirectory:
         except IndexError:
             raise StopIteration
         else:
-            s = self.server.avatar._runAsUser(os.lstat, os.path.join(self.dir, f))
+            s = self.server.avatar._runAsUser(
+                os.lstat, os.path.join(self.dir, f))
             longname = lsLine(f, s)
             attrs = self.server._getAttrs(s)
             return (f, longname, attrs)
@@ -459,5 +472,7 @@ class UnixSFTPDirectory:
         self.files = []
 
 
-components.registerAdapter(SFTPServerForUnixConchUser, UnixConchUser, filetransfer.ISFTPServer)
-components.registerAdapter(SSHSessionForUnixConchUser, UnixConchUser, session.ISession)
+components.registerAdapter(
+    SFTPServerForUnixConchUser, UnixConchUser, filetransfer.ISFTPServer)
+components.registerAdapter(
+    SSHSessionForUnixConchUser, UnixConchUser, session.ISession)
