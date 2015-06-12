@@ -220,8 +220,8 @@ class SSHSessionForUnixConchUser:
             peer.host, peer.port, host.port)
         self.getPtyOwnership()
         self.pty = reactor.spawnProcess(
-            proto, shell, ['-%s' % shellExec], self.environ, homeDir, uid, gid,
-            usePTY=self.ptyTuple)
+            proto, shell, ['-%s' % (shellExec,)], self.environ, homeDir, uid,
+            gid, usePTY=self.ptyTuple)
         self.addUTMPEntry()
         fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ,
                     struct.pack('4H', *self.winSize))
@@ -284,9 +284,9 @@ class SSHSessionForUnixConchUser:
                 else:
                     attr[flag] = attr[flag] & ~ttyval
             elif ttyMode == 'OSPEED':
-                attr[tty.OSPEED] = getattr(tty, 'B%s' % modeValue)
+                attr[tty.OSPEED] = getattr(tty, 'B%s' % (modeValue,))
             elif ttyMode == 'ISPEED':
-                attr[tty.ISPEED] = getattr(tty, 'B%s' % modeValue)
+                attr[tty.ISPEED] = getattr(tty, 'B%s' % (modeValue,))
             else:
                 if not hasattr(tty, ttyMode):
                     continue
