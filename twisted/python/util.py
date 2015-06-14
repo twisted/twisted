@@ -2,7 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import os, sys, errno, warnings
 try:
@@ -68,7 +68,7 @@ class InsensitiveDict:
         k = self._lowerOrReturn(key)
         return k in self.data
 
-    __contains__=has_key
+    __contains__ = has_key
 
     def _doPreserve(self, key):
         if not self.preserve and (isinstance(key, bytes)
@@ -162,6 +162,7 @@ class OrderedDict(UserDict):
                     self[k] = v
         if len(kwargs):
             self.update(kwargs)
+
     def __repr__(self):
         return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
 
@@ -212,6 +213,14 @@ class OrderedDict(UserDict):
     def update(self, d):
         for k, v in d.items():
             self[k] = v
+
+
+if _PY3:
+    # Python 3 has its own OrderedDict that we should use instead.
+    del OrderedDict
+    from collections import OrderedDict
+
+
 
 def uniquify(lst):
     """Make the elements of a list unique by inserting them into a dictionary.
@@ -317,7 +326,7 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
             if forceTTY:
                 try:
                     old = sys.stdin, sys.stdout
-                    sys.stdin = sys.stdout = open('/dev/tty', 'r+')
+                    sys.stdin = sys.stdout = open('/dev/tty', 'rb+')
                 except:
                     raise RuntimeError("Cannot obtain a TTY")
             else:
@@ -474,7 +483,7 @@ def raises(exception, f, *args, **kwargs):
     return 0
 
 
-class IntervalDifferential:
+class IntervalDifferential(object):
     """
     Given a list of intervals, generate the amount of time to sleep between
     "instants".
@@ -509,7 +518,7 @@ class IntervalDifferential:
         return _IntervalDifferentialIterator(self.intervals, self.default)
 
 
-class _IntervalDifferentialIterator:
+class _IntervalDifferentialIterator(object):
     def __init__(self, i, d):
 
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
@@ -525,6 +534,9 @@ class _IntervalDifferentialIterator:
         result = last - self.last
         self.last = last
         return result, index
+
+    # Iterators on Python 3 use __next__(), not next()
+    __next__ = next
 
     def addInterval(self, i):
         if self.intervals:
@@ -1032,14 +1044,3 @@ __all__ = [
     "untilConcludes",
     "runWithWarningsSuppressed",
     ]
-
-
-if _PY3:
-    __all3__ = ["FancyEqMixin", "untilConcludes",
-                "runWithWarningsSuppressed", "FancyStrMixin", "nameToLabel",
-                "InsensitiveDict", "padTo", "switchUID", "sibpath"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__
