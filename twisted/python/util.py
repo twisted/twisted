@@ -326,7 +326,7 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
             if forceTTY:
                 try:
                     old = sys.stdin, sys.stdout
-                    sys.stdin = sys.stdout = open('/dev/tty', 'rb+')
+                    sys.stdin = sys.stdout = open('/dev/tty', 'r+')
                 except:
                     raise RuntimeError("Cannot obtain a TTY")
             else:
