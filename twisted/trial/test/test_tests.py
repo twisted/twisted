@@ -597,13 +597,14 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         self.result = reporter.Reporter(NativeStringIO())
         self.loader = runner.TestLoader()
 
+
     def test_leftoverSockets(self):
         """
         Trial reports a L{util.DirtyReactorAggregateError} if a test leaves
         sockets behind.
         """
-        suite = self.loader.loadMethod(
-            erroneous.SocketOpenTest.test_socketsLeftOpen)
+        suite = self.loader.loadByName(
+            "twisted.trial.test.erroneous.SocketOpenTest.test_socketsLeftOpen")
         suite.run(self.result)
         self.failIf(self.result.wasSuccessful())
         # socket cleanup happens at end of class's tests.
@@ -612,6 +613,7 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         self.assertEqual(self.result.successes, 1)
         failure = self.result.errors[0][1]
         self.failUnless(failure.check(util.DirtyReactorAggregateError))
+
 
     def test_leftoverPendingCalls(self):
         """
@@ -624,6 +626,7 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         failure = self.result.errors[0][1]
         self.assertEqual(self.result.successes, 0)
         self.failUnless(failure.check(util.DirtyReactorAggregateError))
+
 
 
 class FixtureMixin(object):

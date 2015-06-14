@@ -764,6 +764,9 @@ class Py3TestLoader(TestLoader):
                            for name in names])
         return self.suiteFactory(tests)
 
+    def loadMethod(self, method):
+        raise NotImplementedError("Can't happen on Py3")
+
     def _uniqueTests(self, things):
         """
         Gather unique suite objects from loaded things. This will guarantee
