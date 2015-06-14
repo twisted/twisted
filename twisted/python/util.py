@@ -1041,6 +1041,15 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
-    "untilConcludes",
-    "runWithWarningsSuppressed",
-    ]
+    "untilConcludes", "runWithWarningsSuppressed",
+]
+
+
+if _PY3:
+    __notported__ = ["SubclassableCStringIO", "LineLog", "spewer",
+                     "makeStatBar"]
+    for name in __all__[:]:
+        if name in __notported__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __notported__
