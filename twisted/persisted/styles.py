@@ -10,15 +10,16 @@ Different styles of persisted objects.
 
 # System Imports
 import types
-import copy_reg
+try:
+    import copy_reg
+except ImportError:
+    import copyreg as copy_reg
 import copy
 import inspect
 import sys
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+import io
+from twisted.python.compat import _PY3, unicode
 
 # Twisted Imports
 from twisted.python import log
@@ -31,36 +32,67 @@ oldModules = {}
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
-    return unpickleMethod, (method.im_func.__name__,
-                             method.im_self,
-                             method.im_class)
+    if _PY3:
+        return (unpickleMethod, (method.__name__,
+                                 method.__self__,
+                                 method.__self__.__class__))
+    else:
+        return (unpickleMethod, (method.im_func.__name__,
+                                 method.im_self,
+                                 method.im_class))
 
-def unpickleMethod(im_name,
-                    im_self,
-                    im_class):
+
+
+def _methodFunction(classObject, methodName):
+    """
+    Retrieve the function object implementing a method name given the class
+    it's on and a method name.
+    """
+    methodObject = getattr(classObject, methodName)
+    if _PY3:
+        return methodObject
+    return methodObject.im_func
+
+
+
+def unpickleMethod(im_name, im_self, im_class):
     'support function for copy_reg to unpickle method refs'
     try:
-        unbound = getattr(im_class,im_name)
         if im_self is None:
-            return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_class)
+            return getattr(im_class, im_name)
+        methodFunction = _methodFunction(im_class, im_name)
+        if _PY3:
+            maybeClass = ()
+        else:
+            maybeClass = tuple([im_class])
+        bound = types.MethodType(methodFunction, im_self, *maybeClass)
         return bound
     except AttributeError:
-        log.msg("Method",im_name,"not on class",im_class)
-        assert im_self is not None,"No recourse: no instance to guess from."
-        # Attempt a common fix before bailing -- if classes have
-        # changed around since we pickled this method, we may still be
-        # able to get it by looking on the instance's current class.
-        unbound = getattr(im_self.__class__,im_name)
-        log.msg("Attempting fixup with",unbound)
-        if im_self is None:
-            return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_self.__class__)
-        return bound
+        log.msg("Method", im_name, "not on class", im_class)
+        assert im_self is not None, "No recourse: no instance to guess from."
+        if im_self.__class__ is im_class:
+            raise
+        return unpickleMethod(im_name, im_self, im_self.__class__)
 
-copy_reg.pickle(types.MethodType,
-                pickleMethod,
-                unpickleMethod)
+copy_reg.pickle(types.MethodType, pickleMethod, unpickleMethod)
+
+
+def _pickleFunction(f):
+    """
+    
+    """
+    return (_unpickleFunction, tuple([".".join([f.__module__, f.__qualname__])]))
+
+
+def _unpickleFunction(fullyQualifiedName):
+    """
+    
+    """
+    from twisted.python.reflect import namedAny
+    return namedAny(fullyQualifiedName)
+
+
+copy_reg.pickle(types.FunctionType, _pickleFunction, _unpickleFunction)
 
 def pickleModule(module):
     'support function for copy_reg to pickle module refs'
@@ -83,36 +115,47 @@ def pickleStringO(stringo):
     'support function for copy_reg to pickle StringIO.OutputTypes'
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
 
+_ioTypeMap = {
+    unicode: io.StringIO,
+    bytes: io.BytesIO,
+}
+
 def unpickleStringO(val, sek):
-    x = StringIO.StringIO()
+    x = _ioTypeMap[type(val)]()
     x.write(val)
     x.seek(sek)
     return x
 
-if hasattr(StringIO, 'OutputType'):
-    copy_reg.pickle(StringIO.OutputType,
-                    pickleStringO,
-                    unpickleStringO)
 
 def pickleStringI(stringi):
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
 
 def unpickleStringI(val, sek):
-    x = StringIO.StringIO(val)
+    x = _ioTypeMap[type(val)](val)
     x.seek(sek)
     return x
 
-
-if hasattr(StringIO, 'InputType'):
-    copy_reg.pickle(StringIO.InputType,
-                pickleStringI,
-                unpickleStringI)
+try:
+    import cStringIO
+except ImportError:
+    pass
+else:
+    _ioTypeMap[bytes] = cStringIO.StringIO
+    copy_reg.pickle(cStringIO.OutputType, pickleStringO, unpickleStringO)
+    copy_reg.pickle(cStringIO.InputType, pickleStringI, unpickleStringI)
 
 class Ephemeral:
     """
     This type of object is never persisted; if possible, even references to it
     are eliminated.
     """
+
+    def __reduce__(self):
+        """
+        Serialize any subclass of L{Ephemeral} in a way which replaces it with
+        L{Ephemeral} itself.
+        """
+        return (Ephemeral, ())
 
     def __getstate__(self):
         log.msg( "WARNING: serializing ephemeral %s" % self )
@@ -133,7 +176,7 @@ upgraded = {}
 
 def doUpgrade():
     global versionedsToUpgrade, upgraded
-    for versioned in versionedsToUpgrade.values():
+    for versioned in list(versionedsToUpgrade.values()):
         requireUpgrade(versioned)
     versionedsToUpgrade = {}
     upgraded = {}
