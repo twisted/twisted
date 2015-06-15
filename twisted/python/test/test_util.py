@@ -327,7 +327,8 @@ class MergeFunctionMetadataTests(unittest.TestCase):
 
 class OrderedDictTests(unittest.TestCase):
     """
-    Tests for L{util.OrderedDict}.
+    Tests for L{util.OrderedDict}. On Python 3, this is not the version in
+    L{util}, but L{collections.OrderedDict}.
     """
     def test_maintainedOrder(self):
         """
@@ -351,11 +352,13 @@ class OrderedDictTests(unittest.TestCase):
 
 
 class Py2OrderedDictTests(unittest.TestCase):
-
+    """
+    Tests for L{util.OrderedDict} on Python 2.
+    """
     if _PY3:
-        skip = "Python 3 has its own OrderedDict implementation."
+        skip = "These tests are only applicable on Python 2."
 
-    def testOrderedDict(self):
+    def test_orderedDict(self):
         d = util.OrderedDict()
         d['a'] = 'b'
         d['b'] = 'a'
@@ -372,7 +375,7 @@ class Py2OrderedDictTests(unittest.TestCase):
         item = d.popitem()
         self.assertEqual(item, (1234, 4321))
 
-    def testInitialization(self):
+    def test_initialization(self):
         d = util.OrderedDict({'monkey': 'ook',
                               'apple': 'red'})
         self.failUnless(d._order)
