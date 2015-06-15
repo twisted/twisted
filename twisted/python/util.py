@@ -525,7 +525,7 @@ class _IntervalDifferentialIterator(object):
         self.default = d
         self.last = 0
 
-    def next(self):
+    def __next__(self):
         if not self.intervals:
             return (self.default, None)
         last, index = self.intervals[0][0], self.intervals[0][2]
@@ -535,8 +535,8 @@ class _IntervalDifferentialIterator(object):
         self.last = last
         return result, index
 
-    # Iterators on Python 3 use __next__(), not next()
-    __next__ = next
+    # Iterators on Python 2 use next(), not __next__()
+    next = __next__
 
     def addInterval(self, i):
         if self.intervals:
