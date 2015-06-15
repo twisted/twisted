@@ -326,6 +326,31 @@ class MergeFunctionMetadataTests(unittest.TestCase):
 
 
 class OrderedDictTests(unittest.TestCase):
+    """
+    Tests for L{util.OrderedDict}.
+    """
+    def test_maintainedOrder(self):
+        """
+        Entries added to the dict have a maintained order.
+        """
+        d = util.OrderedDict()
+        d['a'] = 'b'
+        d['b'] = 'a'
+        d[3] = 12
+        d[1234] = 4321
+
+        self.assertEqual(list(d.values()), ['b', 'a', 12, 4321])
+        del d[3]
+        self.assertEqual(d, {'a': 'b', 'b': 'a', 1234:4321})
+        self.assertEqual(list(d.keys()), ['a', 'b', 1234])
+        self.assertEqual(list(d.items()),
+                         [('a', 'b'), ('b','a'), (1234, 4321)])
+        item = d.popitem()
+        self.assertEqual(item, (1234, 4321))
+
+
+
+class Py2OrderedDictTests(unittest.TestCase):
 
     if _PY3:
         skip = "Python 3 has its own OrderedDict implementation."
