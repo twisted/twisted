@@ -2,11 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-
 """
 Different styles of persisted objects.
 """
+
+from __future__ import division, absolute_import
 
 # System Imports
 import types

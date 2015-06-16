@@ -8,6 +8,8 @@
 Utility classes for dealing with circular references.
 """
 
+from __future__ import division, absolute_import
+
 import types
 
 from twisted.python import log, reflect
