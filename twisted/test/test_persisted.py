@@ -234,7 +234,14 @@ class PicklingTests(unittest.TestCase):
         pickl = pickle.dumps(Pickleable.getX)
         o = pickle.loads(pickl)
         self.assertEqual(o, Pickleable.getX)
-    
+
+
+    if sys.version_info > (3, 4):
+        test_classMethod.skip = (
+            "As of Python 3.4 it is no longer possible to globally change "
+            "the behavior of function pickling."
+        )
+
     def test_instanceMethod(self):
         obj = Pickleable(4)
         pickl = pickle.dumps(obj.getX)
