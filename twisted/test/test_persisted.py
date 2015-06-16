@@ -400,12 +400,14 @@ class AOTTests(unittest.TestCase):
         L{aot.jellyToAOT} can persist circular references through tuples.
         """
         l = []
-        t = (l,)
+        t = (l, 4321)
         l.append(t)
         j1 = aot.jellyToAOT(l)
         oj = aot.unjellyFromAOT(j1)
         self.assertIsInstance(oj[0], tuple)
         self.assertIs(oj[0][0], oj)
+        self.assertEqual(oj[0][1], 4321)
+
 
 
 
