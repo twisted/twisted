@@ -222,16 +222,16 @@ def indentify(s):
     out = []
     stack = []
     l = ['', s]
-    for (token_type, token_string, (start_row, start_column),
-         (end_row, end_column), logical_line) in tokenize(l.pop):
-        if token_string in ['[', '(', '{']:
-            stack.append(token_string)
-        elif token_string in [']', ')', '}']:
+    for (tokenType, tokenString, (startRow, startColumn),
+         (endRow, endColumn), logicalLine) in tokenize(l.pop):
+        if tokenString in ['[', '(', '{']:
+            stack.append(tokenString)
+        elif tokenString in [']', ')', '}']:
             stack.pop()
-        if token_string == '\0':
+        if tokenString == '\0':
             out.append('  '*len(stack))
         else:
-            out.append(token_string)
+            out.append(tokenString)
     return ''.join(out)
 
 
