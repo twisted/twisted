@@ -135,11 +135,8 @@ class _Dereference(NotKnown):
         self.id = id
 
 
-from twisted.internet.defer import Deferred
 
-class _Catcher:
-    def catch(self, value):
-        self.value = value
+from twisted.internet.defer import Deferred
 
 class _Defer(Deferred, NotKnown):
     def __init__(self):
