@@ -395,6 +395,20 @@ class AOTTests(unittest.TestCase):
         assert oj.c is not oj.c.c
 
 
+    def test_circularTuple(self):
+        """
+        L{aot.jellyToAOT} can persist circular references through tuples.
+        """
+        l = []
+        t = (l,)
+        l.append(t)
+        j1 = aot.jellyToAOT(l)
+        oj = aot.unjellyFromAOT(j1)
+        self.assertIsInstance(oj[0], tuple)
+        self.assertIs(oj[0][0], oj)
+
+
+
 class CrefUtilTests(unittest.TestCase):
     """
     Tests for L{crefutil}.
