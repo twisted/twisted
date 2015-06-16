@@ -51,16 +51,17 @@ class KQueueTests(TestCase):
 
     def test_EINTR(self):
         """
-        L{KQueueReactor} should handle L{errno.EINTR} by returning.
+        L{KQueueReactor} handles L{errno.EINTR} in C{doKEvent} by returning.
         """
         class FakeKQueue(object):
             """
-            A fake KQueue that raises L{errno.EINTR} when C{control} is called.
+            A fake KQueue that raises L{errno.EINTR} when C{control} is called,
+            a a real KQueue would if it was interrupted.
             """
             def control(self, *args, **kwargs):
                 raise OSError(errno.EINTR, "Interrupted")
 
         reactor = KQueueReactor(makeFakeKQueue(FakeKQueue, _fakeKEvent))
-        result = reactor.doKEvent(0)
-
-        self.assertEqual(result, None)
+        # This should return cleanly -- should not raise the OSError we're
+        # spawning, nor get upset and raise about the incomplete KQueue fake.
+        reactor.doKEvent(0)
