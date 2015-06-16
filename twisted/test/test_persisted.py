@@ -254,6 +254,11 @@ class CopyRegisteredLoaded(object):
 def reduceCopyRegistered(cr):
     """
     Externally implement C{__reduce__} for L{CopyRegistered}.
+
+    @param cr: The L{CopyRegistered} instance.
+
+    @return: a 2-tuple of callable and argument list, in this case
+        L{CopyRegisteredLoaded} and no arguments.
     """
     return CopyRegisteredLoaded, ()
 
@@ -362,13 +367,15 @@ class AOTTests(unittest.TestCase):
         rtObj = aot.unjellyFromSource(aot.jellyToSource(obj))
         self.assertEqual(obj, rtObj)
 
+
     def test_methodSelfIdentity(self):
         a = A()
         b = B()
         a.bmethod = b.bmethod
         b.a = a
         im_ = aot.unjellyFromSource(aot.jellyToSource(b)).a.bmethod
-        self.assertEqual(aot._selfOfMethod(im_).__class__, aot._classOfMethod(im_))
+        self.assertEqual(aot._selfOfMethod(im_).__class__,
+                         aot._classOfMethod(im_))
 
 
     def test_methodNotSelfIdentity(self):
