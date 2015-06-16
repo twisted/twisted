@@ -13,6 +13,7 @@ from __future__ import division, absolute_import
 import types
 
 from twisted.python import log, reflect
+from twisted.python.compat import xrange
 
 
 class NotKnown:
@@ -54,7 +55,7 @@ class _Container(NotKnown):
         NotKnown.__init__(self)
         self.containerType = containerType
         self.l = l
-        self.locs = range(len(l))
+        self.locs = list(xrange(len(l)))
         for idx in xrange(len(l)):
             if not isinstance(l[idx], NotKnown):
                 self.locs.remove(idx)

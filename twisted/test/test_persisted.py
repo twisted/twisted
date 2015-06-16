@@ -17,11 +17,16 @@ except ImportError:
 import io
 
 try:
-    from cStringIO import StringIO
+    from cStringIO import StringIO as _oldStyleCStringIO
 except ImportError:
     skipStringIO = "No cStringIO available."
 else:
     skipStringIO = None
+
+try:
+    import copyreg
+except:
+    import copy_reg as copyreg
 
 # Twisted Imports
 from twisted.persisted import styles, aot, crefutil
@@ -210,6 +215,52 @@ class Pickleable:
     def getX(self):
         return self.x
 
+
+
+class NotPickleable(object):
+    """
+    A class that is not pickleable.
+    """
+
+    def __reduce__(self):
+        """
+        Raise an exception instead of pickling.
+        """
+        raise TypeError("Not serializable.")
+
+
+
+class CopyRegistered(object):
+    """
+    A class that is pickleable only because it is registered with the
+    C{copyreg} module.
+    """
+
+    def __init__(self):
+        """
+        Ensure that this object is normally not pickleable.
+        """
+        self.notPickleable = NotPickleable()
+
+
+
+class CopyRegisteredLoaded(object):
+    """
+    L{CopyRegistered} after unserialization.
+    """
+
+
+
+def reduceCopyRegistered(cr):
+    """
+    Externally implement C{__reduce__} for L{CopyRegistered}.
+    """
+    return CopyRegisteredLoaded, ()
+
+
+
+copyreg.pickle(CopyRegistered, reduceCopyRegistered)
+
 class A:
     """
     dummy class
@@ -255,7 +306,7 @@ class PicklingTests(unittest.TestCase):
         self.assertEqual(type(o), type(obj.getX))
     
     def test_stringIO(self):
-        f = StringIO()
+        f = _oldStyleCStringIO()
         f.write("abc")
         pickl = pickle.dumps(f)
         o = pickle.loads(pickl)
@@ -377,13 +428,15 @@ class AOTTests(unittest.TestCase):
         a.state = "meringue!"
         assert aot.unjellyFromSource(aot.jellyToSource(a)).state == a.state
 
+
     def test_copyReg(self):
-        s = "foo_bar"
-        sio = StringIO()
-        sio.write(s)
-        uj = aot.unjellyFromSource(aot.jellyToSource(sio))
-        # print repr(uj.__dict__)
-        assert uj.getvalue() == s
+        """
+        L{aot.jellyToSource} and L{aot.unjellyFromSource} honor functions
+        registered in the pickle copy registry.
+        """
+        uj = aot.unjellyFromSource(aot.jellyToSource(CopyRegistered()))
+        self.assertIsInstance(uj, CopyRegisteredLoaded)
+
 
     def test_funkyReferences(self):
         o = EvilSourceror(EvilSourceror([]))

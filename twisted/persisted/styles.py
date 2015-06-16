@@ -206,7 +206,7 @@ def unpickleStringI(val, sek):
 try:
     from cStringIO import InputType, OutputType, StringIO as _cStringIO
 except ImportError:
-    from io import BytesIO as _cStringIO
+    from io import StringIO as _cStringIO
 else:
     copy_reg.pickle(OutputType, pickleStringO, unpickleStringO)
     copy_reg.pickle(InputType, pickleStringI, unpickleStringI)
