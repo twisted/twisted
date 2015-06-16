@@ -14,13 +14,18 @@ try:
 except ImportError:
     import pickle
 
+import io
+
 try:
     from cStringIO import StringIO
 except ImportError:
-    from io import StringIO
+    skipStringIO = "No cStringIO available."
+else:
+    skipStringIO = None
 
 # Twisted Imports
 from twisted.persisted import styles, aot, crefutil
+from twisted.python.compat import _PY3
 
 
 class VersionTests(unittest.TestCase):
@@ -256,6 +261,35 @@ class PicklingTests(unittest.TestCase):
         o = pickle.loads(pickl)
         self.assertEqual(type(o), type(f))
         self.assertEqual(f.getvalue(), "abc")
+
+    if skipStringIO:
+        test_stringIO.skip = skipStringIO
+
+
+
+class StringIOTransitionTests(unittest.TestCase):
+    """
+    When pickling a cStringIO in Python 2, it should unpickle as a BytesIO or a
+    StringIO in Python 3, depending on the type of its contents.
+    """
+
+    if not _PY3:
+        skip = "In Python 2 we can still unpickle cStringIO as such."
+
+
+    def test_unpickleBytesIO(self):
+        """
+        A cStringIO pickled with bytes in it will yield an L{io.BytesIO} on
+        python 3.
+        """
+        pickledStringIWithText = (
+            b"ctwisted.persisted.styles\nunpickleStringI\np0\n"
+            b"(S'test'\np1\nI0\ntp2\nRp3\n."
+        )
+        loaded = pickle.loads(pickledStringIWithText)
+        self.assertIsInstance(loaded, io.StringIO)
+        self.assertEqual(loaded.getvalue(), u"test")
+
 
 
 class EvilSourceror:
