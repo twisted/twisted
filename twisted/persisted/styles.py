@@ -18,8 +18,7 @@ import copy
 import inspect
 import sys
 
-import io
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import _PY3
 
 # Twisted Imports
 from twisted.python import log
@@ -77,19 +76,41 @@ def unpickleMethod(im_name, im_self, im_class):
 copy_reg.pickle(types.MethodType, pickleMethod, unpickleMethod)
 
 
+
 def _pickleFunction(f):
     """
-    
+    Reduce, in the sense of L{pickle}'s C{object.__reduce__} special method, a
+    function object into its constituent parts.
+
+    @param f: The function to reduce.
+    @type f: L{types.FunctionType}
+
+    @return: a 2-tuple of a reference to L{_unpickleFunction} and a tuple of
+        its arguments, a 1-tuple of the function's fully qualified name.
+    @rtype: 2-tuple of C{(callable, native string}}
     """
-    return (_unpickleFunction, tuple([".".join([f.__module__, f.__qualname__])]))
+    return (_unpickleFunction,
+            tuple([".".join([f.__module__, f.__qualname__])]))
+
 
 
 def _unpickleFunction(fullyQualifiedName):
     """
-    
+    Convert a function name into a function by importing it.
+
+    This is a synonym for L{twisted.python.reflect.namedAny}, but imported
+    locally to avoid circular imports, and also to provide a persistent name
+    that can be stored (and deprecated) independently of C{namedAny}.
+
+    @param fullyQualifiedName: The fully qualified name of a function.
+    @type fullyQualifiedName: native C{str}
+
+    @return: A function object imported from the given location.
+    @rtype: L{types.FunctionType}
     """
     from twisted.python.reflect import namedAny
     return namedAny(fullyQualifiedName)
+
 
 
 copy_reg.pickle(types.FunctionType, _pickleFunction, _unpickleFunction)
@@ -111,38 +132,86 @@ copy_reg.pickle(types.ModuleType,
                 pickleModule,
                 unpickleModule)
 
+
+
 def pickleStringO(stringo):
+    """
+    Reduce the given cStringO.
+
+    @param stringo: The string output to pickle.
+    @type stringo: L{cStringIO.OutputType}
+    """
     'support function for copy_reg to pickle StringIO.OutputTypes'
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
 
-_ioTypeMap = {
-    unicode: io.StringIO,
-    bytes: io.BytesIO,
-}
+
 
 def unpickleStringO(val, sek):
-    x = _ioTypeMap[type(val)]()
+    """
+    Convert the output of L{pickleStringO} into an appropriate type for the
+    current python version.
+
+    @param val: The content of the file.
+    @type val: L{bytes}
+
+    @param sek: The seek position of the file.
+    @type sek: L{int}
+
+    @return: a file-like object which you can write bytes to.
+    @rtype: L{cStringIO.OutputType} on Python 2, L{io.BytesIO} on Python 3.
+    """
+    x = _cStringIO()
     x.write(val)
     x.seek(sek)
     return x
 
 
+
 def pickleStringI(stringi):
+    """
+    Reduce the given cStringI.
+
+    This is only called on Python 2.
+
+    @param stringi: The string input to pickle.
+    @type stringi: L{cStringIO.InputType}
+
+    @return: a 2-tuple of (C{unpickleStringI}, (bytes, pointer))
+    @rtype: 2-tuple of (function, (bytes, int))
+    """
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
 
+
+
 def unpickleStringI(val, sek):
-    x = _ioTypeMap[type(val)](val)
+    """
+    Convert the output of L{pickleStringI} into an appropriate type for the
+    current Python version.
+
+    @param val: The content of the file.
+    @type val: L{bytes}
+
+    @param sek: The seek position of the file.
+    @type sek: L{int}
+
+    @return: a file-like object which you can read bytes from.
+    @rtype: L{cStringIO.OutputType} on Python 2, L{io.BytesIO} on Python 3.
+    """
+    x = _cStringIO(val)
     x.seek(sek)
     return x
 
+
+
 try:
-    import cStringIO
+    from cStringIO import InputType, OutputType, StringIO as _cStringIO
 except ImportError:
-    pass
+    from io import BytesIO as _cStringIO
 else:
-    _ioTypeMap[bytes] = cStringIO.StringIO
-    copy_reg.pickle(cStringIO.OutputType, pickleStringO, unpickleStringO)
-    copy_reg.pickle(cStringIO.InputType, pickleStringI, unpickleStringI)
+    copy_reg.pickle(OutputType, pickleStringO, unpickleStringO)
+    copy_reg.pickle(InputType, pickleStringI, unpickleStringI)
+
+
 
 class Ephemeral:
     """
