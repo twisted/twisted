@@ -158,7 +158,7 @@ def unpickleStringO(val, sek):
     @type sek: L{int}
 
     @return: a file-like object which you can write bytes to.
-    @rtype: L{cStringIO.OutputType} on Python 2, L{io.BytesIO} on Python 3.
+    @rtype: L{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
     """
     x = _cStringIO()
     x.write(val)
@@ -195,7 +195,7 @@ def unpickleStringI(val, sek):
     @type sek: L{int}
 
     @return: a file-like object which you can read bytes from.
-    @rtype: L{cStringIO.OutputType} on Python 2, L{io.BytesIO} on Python 3.
+    @rtype: L{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
     """
     x = _cStringIO(val)
     x.seek(sek)
