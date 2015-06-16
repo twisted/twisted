@@ -173,6 +173,7 @@ def load(filename, style, passphrase=None):
     finally:
         # restore __main__ if an exception is raised.
         sys.modules['__main__'] = ee.mainMod
+        fp.close()
 
     styles.doUpgrade()
     ee.initRun = 0
@@ -197,9 +198,9 @@ def loadValueFromFile(filename, variable, passphrase=None):
         mode = 'rb'
     else:
         mode = 'r'
-    fileObj = open(filename, mode)
+    with open(filename, mode) as fileObj:
+        data = fileObj.read()
     d = {'__file__': filename}
-    data = fileObj.read()
     if passphrase:
         data = _decrypt(passphrase, data)
     codeObj = compile(data, filename, "exec")
