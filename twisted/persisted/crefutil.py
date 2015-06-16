@@ -31,8 +31,7 @@ class NotKnown:
         self.resolvedObject = newObject
         for mut, key in self.dependants:
             mut[key] = newObject
-            if isinstance(newObject, NotKnown):
-                newObject.addDependant(mut, key)
+
 
     def __hash__(self):
         assert 0, "I am not to be used as a dictionary key."
