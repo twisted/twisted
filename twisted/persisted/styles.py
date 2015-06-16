@@ -55,27 +55,42 @@ def _methodFunction(classObject, methodName):
 
 
 def unpickleMethod(im_name, im_self, im_class):
-    'support function for copy_reg to unpickle method refs'
+    """
+    Support function for copy_reg to unpickle method refs.
+
+    @param im_name: The name of the method.
+    @type im_name: native L{str}
+
+    @param im_self: The instance that the method was present on.
+    @type im_self: L{object}
+
+    @param im_class: The class where the method was declared.
+    @type im_class: L{types.ClassType} or L{type} or L{None}
+    """
+    if im_self is None:
+        return getattr(im_class, im_name)
     try:
-        if im_self is None:
-            return getattr(im_class, im_name)
         methodFunction = _methodFunction(im_class, im_name)
+    except AttributeError:
+        log.msg("Method", im_name, "not on class", im_class)
+        assert im_self is not None, "No recourse: no instance to guess from."
+        # Attempt a last-ditch fix before giving up. If classes have changed
+        # around since we pickled this method, we may still be able to get it
+        # by looking on the instance's current class.
+        if im_self.__class__ is im_class:
+            raise
+        return unpickleMethod(im_name, im_self, im_self.__class__)
+    else:
         if _PY3:
             maybeClass = ()
         else:
             maybeClass = tuple([im_class])
         bound = types.MethodType(methodFunction, im_self, *maybeClass)
         return bound
-    except AttributeError:
-        log.msg("Method", im_name, "not on class", im_class)
-        assert im_self is not None, "No recourse: no instance to guess from."
-        if im_self.__class__ is im_class:
-            raise
-        return unpickleMethod(im_name, im_self, im_self.__class__)
+
+
 
 copy_reg.pickle(types.MethodType, pickleMethod, unpickleMethod)
-
-
 
 def _pickleFunction(f):
     """
