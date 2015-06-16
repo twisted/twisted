@@ -290,18 +290,23 @@ class PicklingTests(unittest.TestCase):
         pickl = pickle.dumps(styles)
         o = pickle.loads(pickl)
         self.assertEqual(o, styles)
-    
+
+
     def test_classMethod(self):
+        """
+        After importing L{twisted.persisted.styles}, it is possible to pickle
+        classmethod objects.
+        """
         pickl = pickle.dumps(Pickleable.getX)
         o = pickle.loads(pickl)
         self.assertEqual(o, Pickleable.getX)
-
 
     if sys.version_info > (3, 4):
         test_classMethod.skip = (
             "As of Python 3.4 it is no longer possible to globally change "
             "the behavior of function pickling."
         )
+
 
     def test_instanceMethod(self):
         obj = Pickleable(4)
