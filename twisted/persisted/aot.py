@@ -222,20 +222,17 @@ def indentify(s):
     out = []
     stack = []
     l = ['', s]
-    for (type, val, r, c, IGNORED) in tokenize(l.pop):
-        #import sys
-        #sys.stdout.write(val)
-        if val in ['[', '(', '{']:
-            stack.append(val)
-        elif val in [']', ')', '}']:
+    for (token_type, token_string, (start_row, start_column),
+         (end_row, end_column), logical_line) in tokenize(l.pop):
+        if token_string in ['[', '(', '{']:
+            stack.append(token_string)
+        elif token_string in [']', ')', '}']:
             stack.pop()
-        if val == '\0':
+        if token_string == '\0':
             out.append('  '*len(stack))
         else:
-            out.append(val)
+            out.append(token_string)
     return ''.join(out)
-
-
 
 
 
