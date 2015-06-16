@@ -79,17 +79,15 @@ class PersistTests(unittest.TestCase):
         testEncryptedStyles.skip = "PyCrypto required for encrypted config"
 
     def testPython(self):
-        f = open("persisttest.python", 'w')
-        f.write('foo=[1,2,3] ')
-        f.close()
+        with open("persisttest.python", 'w') as f:
+            f.write('foo=[1,2,3] ')
         o = sob.loadValueFromFile('persisttest.python', 'foo')
         self.assertEqual(o, [1,2,3])
 
     def testEncryptedPython(self):
         phrase = b'once I was the king of spain'
-        f = open("epersisttest.python", 'wb')
-        f.write(sob._encrypt(phrase, b'foo=[1,2,3]'))
-        f.close()
+        with open("epersisttest.python", 'wb') as f:
+            f.write(sob._encrypt(phrase, b'foo=[1,2,3]'))
         o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
         self.assertEqual(o, [1,2,3])
     if Crypto is None:
@@ -154,11 +152,10 @@ class PersistTests(unittest.TestCase):
         os.mkdir(dirname)
 
         filename = os.path.join(dirname, 'persisttest.ee_setattr')
-        f = open(filename, 'w')
-        f.write('import __main__\n')
-        f.write('__main__.testMainModSetattr = 2\n')
-        f.write('app = None\n')
-        f.close()
+        with open(filename, 'w') as f:
+            f.write('import __main__\n')
+            f.write('__main__.testMainModSetattr = 2\n')
+            f.write('app = None\n')
 
         sob.load(filename, 'source')
 
@@ -172,9 +169,8 @@ class PersistTests(unittest.TestCase):
         os.mkdir(dirname)
         filename = os.path.join(dirname, 'persisttest.ee_exception')
 
-        f = open(filename, 'w')
-        f.write('raise ValueError\n')
-        f.close()
+        with open(filename, 'w') as f:
+            f.write('raise ValueError\n')
 
         self.assertRaises(ValueError, sob.load, filename, 'source')
         self.assertEqual(type(sys.modules['__main__']), FakeModule)
