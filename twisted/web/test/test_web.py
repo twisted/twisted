@@ -766,7 +766,11 @@ class NewRenderTests(unittest.TestCase):
         When implemented C{render} method does not return bytes an internal
         server error is returned.
         """
-        result = object()
+        class RiggedRepr(object):
+            def __repr__(self):
+                return 'my>repr'
+
+        result = RiggedRepr()
         no_bytes_resource = resource.Resource()
         no_bytes_resource.render = lambda request: result
         request = self._getReq(no_bytes_resource)
@@ -782,13 +786,11 @@ class NewRenderTests(unittest.TestCase):
             '  <body>',
             '    <h1>Request did not return bytes</h1>',
             '    <p>Request: <pre>&lt;Request at %s method=GET '
-                'uri=/newrender clientproto=HTTP/1.0&gt;</pre><br />Resource:'
-                ' <pre>&lt;twisted.web.resource.Resource object at '
-                '%s&gt;</pre><br />Value: <pre>&lt;object object '
-                'at %s&gt;</pre></p>' % (
+                'uri=/newrender clientproto=HTTP/1.0&gt;</pre><br />Resource: '
+                '<pre>Resource object at %s</pre>'
+                '<br />Value: <pre>my&gt;repr</pre></p>' % (
                     hex(id(request)),
                     hex(id(no_bytes_resource)),
-                    hex(id(result)),
                     ),
             '  </body>',
             '</html>',

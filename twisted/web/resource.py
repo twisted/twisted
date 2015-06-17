@@ -101,7 +101,7 @@ def getChildForRequest(resource, request):
 
 
 @implementer(IResource)
-class Resource(object):
+class Resource:
     """
     Define a web-accessible resource.
 
@@ -118,6 +118,9 @@ class Resource(object):
         Initialize.
         """
         self.children = {}
+
+    def __repr__(self):
+        return 'Resource object at 0x%x' % (id(self),)
 
     isLeaf = 0
 
