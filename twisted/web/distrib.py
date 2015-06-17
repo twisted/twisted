@@ -21,7 +21,7 @@ from xml.dom.minidom import Element, Text
 # Twisted Imports
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
-from twisted.web import http, resource, server, html, static
+from twisted.web import http, resource, server, util, static
 from twisted.web.http_headers import Headers
 from twisted.python import log
 from twisted.persisted import styles
@@ -124,7 +124,7 @@ class Issue:
             resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
                                "Server Connection Lost",
                                "Connection to distributed server lost:" +
-                               html.PRE(failure)).
+                               util._PRE(failure)).
             render(self.request))
         self.request.finish()
         log.msg(failure)

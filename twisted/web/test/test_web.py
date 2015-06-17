@@ -761,6 +761,41 @@ class NewRenderTests(unittest.TestCase):
         self.assertEqual(body, b'')
 
 
+    def test_noBytesResult(self):
+        """
+        When implemented C{render} method does not return bytes an internal
+        server error is returned.
+        """
+        result = object()
+        no_bytes_resource = resource.Resource()
+        no_bytes_resource.render = lambda request: result
+        request = self._getReq(no_bytes_resource)
+
+        request.requestReceived(b"GET", b"/newrender", b"HTTP/1.0")
+
+        headers, body = request.transport.getvalue().split(b'\r\n\r\n')
+        self.assertEqual(request.code, 500)
+        expected = [
+            '',
+            '<html>',
+            '  <head><title>500 - Request did not return bytes</title></head>',
+            '  <body>',
+            '    <h1>Request did not return bytes</h1>',
+            '    <p>Request: <pre>&lt;Request at %s method=GET '
+                'uri=/newrender clientproto=HTTP/1.0&gt;</pre><br />Resource:'
+                ' <pre>&lt;twisted.web.resource.Resource instance at '
+                '%s&gt;</pre><br />Value: <pre>&lt;object object '
+                'at %s&gt;</pre></p>' % (
+                    hex(id(request)),
+                    hex(id(no_bytes_resource)),
+                    hex(id(result)),
+                    ),
+            '  </body>',
+            '</html>',
+            '']
+        self.assertEqual('\n'.join(expected), body)
+
+
 
 class GettableResource(resource.Resource):
     """
