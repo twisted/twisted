@@ -1,29 +1,42 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.trial.unittest import TestCase
-
+from twisted.trial import unittest
 from twisted.web import html
 
 
-class HtmlTestCase(TestCase):
-    def test_moduleMostlyDeprecated(self):
+
+class WebHtmlTests(unittest.TestCase):
+    """
+    Unit tests for L{twisted.web.html}.
+    """
+
+    def test_deprecation(self):
         """
-        Calling L{PRE}, L{UL}, L{linkList} or L{output} results in a
-        deprecation warning.
+        Calls to L{twisted.web.html} members emit a deprecation warning.
         """
+        def assertDeprecationWarningOf(method):
+            """
+            Check that a deprecation warning is present.
+            """
+            warningsShown = self.flushWarnings([self.test_deprecation])
+            self.assertEqual(len(warningsShown), 1)
+            self.assertIdentical(
+                warningsShown[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                warningsShown[0]['message'],
+                'twisted.web.html.%s was deprecated in Twisted 15.3.0' % (
+                    method,),
+                )
+
         html.PRE('')
+        assertDeprecationWarningOf('PRE')
+
         html.UL([])
+        assertDeprecationWarningOf('UL')
+
         html.linkList([])
+        assertDeprecationWarningOf('linkList')
+
         html.output(lambda: None)
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_moduleMostlyDeprecated])
-        for name, warning in zip(['PRE', 'UL', 'linkList', 'output'],
-                                 warnings):
-            self.assertEquals(
-                warning['message'],
-                "twisted.web.html.%s was deprecated in Twisted 11.0.0" % (
-                    name,))
-            self.assertEquals(warning['category'], DeprecationWarning)
-        self.assertEquals(len(warnings), 4)
+        assertDeprecationWarningOf('output')
