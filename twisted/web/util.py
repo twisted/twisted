@@ -39,7 +39,7 @@ def _PRE(text):
     This is here since once twisted.web.html was deprecated it was hard to
     migrate the html.PRE from current code to twisted.web.template.
 
-    For now code consider using twisted.web.template.
+    For new code consider using twisted.web.template.
 
     @return: Escaped text wrapped in <pre> tags.
     @rtype: C{str}
