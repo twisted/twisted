@@ -793,7 +793,7 @@ class NewRenderTests(unittest.TestCase):
             '  </body>',
             '</html>',
             '']
-        self.assertEqual('\n'.join(expected), body)
+        self.assertEqual('\n'.join(expected).encode('ascii'), body)
 
 
 
