@@ -11,6 +11,7 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+from twisted.python import reflect
 from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
@@ -785,12 +786,11 @@ class NewRenderTests(unittest.TestCase):
             '  <head><title>500 - Request did not return bytes</title></head>',
             '  <body>',
             '    <h1>Request did not return bytes</h1>',
-            '    <p>Request: <pre>&lt;Request at %s method=GET '
-                'uri=/newrender clientproto=HTTP/1.0&gt;</pre><br />Resource: '
-                '<pre>Resource object at %s</pre>'
-                '<br />Value: <pre>my&gt;repr</pre></p>' % (
-                    hex(id(request)),
-                    hex(id(no_bytes_resource)),
+            '    <p>Request: <pre>&lt;%s&gt;</pre><br />'
+                'Resource: <pre>&lt;%s&gt;</pre><br />'
+                'Value: <pre>my&gt;repr</pre></p>' % (
+                    reflect.safe_repr(request)[1:-1],
+                    reflect.safe_repr(no_bytes_resource)[1:-1],
                     ),
             '  </body>',
             '</html>',

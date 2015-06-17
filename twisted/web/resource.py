@@ -119,9 +119,6 @@ class Resource:
         """
         self.children = {}
 
-    def __repr__(self):
-        return 'Resource object at 0x%x' % (id(self),)
-
     isLeaf = 0
 
     ### Abstract Collection Interface
