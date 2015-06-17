@@ -783,7 +783,7 @@ class NewRenderTests(unittest.TestCase):
             '    <h1>Request did not return bytes</h1>',
             '    <p>Request: <pre>&lt;Request at %s method=GET '
                 'uri=/newrender clientproto=HTTP/1.0&gt;</pre><br />Resource:'
-                ' <pre>&lt;twisted.web.resource.Resource instance at '
+                ' <pre>&lt;twisted.web.resource.Resource object at '
                 '%s&gt;</pre><br />Value: <pre>&lt;object object '
                 'at %s&gt;</pre></p>' % (
                     hex(id(request)),

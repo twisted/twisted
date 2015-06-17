@@ -101,7 +101,7 @@ def getChildForRequest(resource, request):
 
 
 @implementer(IResource)
-class Resource:
+class Resource(object):
     """
     Define a web-accessible resource.
 
