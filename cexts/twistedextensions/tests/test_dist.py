@@ -3,7 +3,7 @@
 
 import os
 
-from setuptools import Distribution
+from distutils.core import Distribution
 
 from twisted.trial.unittest import TestCase
 

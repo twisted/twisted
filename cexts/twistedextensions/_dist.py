@@ -5,8 +5,9 @@ import os
 import platform
 import sys
 
-from setuptools import Extension, setup as _setup
-from setuptools.command import build_ext
+from distutils.core import Extension, setup as _setup
+from distutils.command import build_ext
+from distutils.errors import CompileError
 
 
 
