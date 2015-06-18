@@ -117,13 +117,13 @@ static PyMethodDef sendmsg_methods[] = {
 };
 
 
-PyMODINIT_FUNC init_sendmsg(void) {
+PyMODINIT_FUNC initsendmsg(void) {
     PyObject *module;
 
     sendmsg_socket_error = NULL; /* Make sure that this has a known value
                                     before doing anything that might exit. */
 
-    module = Py_InitModule3("_sendmsg", sendmsg_methods, sendmsg_doc);
+    module = Py_InitModule3("sendmsg", sendmsg_methods, sendmsg_doc);
 
     if (!module) {
         return;

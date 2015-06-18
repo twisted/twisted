@@ -4,3 +4,8 @@
 """
 Twisted's unit tests.
 """
+
+try:
+    from twistedextensions import raiser
+except ImportError:
+    pass

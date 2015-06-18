@@ -1,51 +1,8 @@
-Copyright (c) 2001-2015
-Allen Short
-Andy Gayton
-Andrew Bennetts
-Antoine Pitrou
-Apple Computer, Inc.
-Ashwini Oruganti
-Benjamin Bruheim
-Bob Ippolito
-Canonical Limited
-Christopher Armstrong
-David Reid
-Donovan Preston
-Eric Mangold
-Eyal Lotem
-Google Inc.
-Amber Brown (HawkOwl)
-Hybrid Logic Ltd.
-Hynek Schlawack
-Itamar Turner-Trauring
-James Knight
-Jason A. Mobarak
-Jean-Paul Calderone
-Jessica McKellar
-Jonathan Jacobs
-Jonathan Lange
-Jonathan D. Simms
-Jürgen Hermann
-Julian Berman
-Kevin Horn
-Kevin Turner
-Laurens Van Houtven
-Mary Gardiner
-Matthew Lefkowitz
-Massachusetts Institute of Technology
-Moshe Zadka
-Paul Swartz
-Pavel Pergamenshchik
-Ralph Meijer
-Richard Wall
-Sean Riley
-Software Freedom Conservancy
-Tavendo GmbH
-Travis B. Hartwell
-Thijs Triemstra
-Thomas Herve
-Timothy Allen
-Tom Prince
+Copyright (c) 2001-2015, Twisted Matrix Laboratories and others
+
+This code is extracted from the Twisted project, and is under the same
+license as it. For the full contributor list, see Twisted's LICENSE file:
+https://github.com/twisted/twisted/blob/trunk/LICENSE
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

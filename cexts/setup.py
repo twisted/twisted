@@ -1,13 +1,17 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 import os
 import sys
+
+from setuptools import find_packages
 
 if os.path.exists('twistedextensions'):
     sys.path.insert(0, '.') # So we can import twistedextensions
 
-
-from setuptools import find_packages
 from twistedextensions._dist import ConditionalExtension as Extension, setup
 from twistedextensions._dist import _isCPython
+
 
 extensions = [
     Extension("twistedextensions.raiser",
@@ -23,11 +27,18 @@ extensions = [
     Extension("twistedextensions.sendmsg",
               sources=["twistedextensions/sendmsg.c"],
               condition=lambda _: sys.platform != "win32"),
+
+    Extension("twistedextensions.portmap",
+              ["twistedextensions/portmap.c"],
+              condition=lambda builder: builder._check_header("rpc/rpc.h")),
 ]
 
 
-
-__version__ = "1.0.0"
+if sys.version_info[:2] <= (2, 6):
+    extensions.append(
+        Extension(
+            "twisted.python._initgroups",
+            ["twisted/python/_initgroups.c"]))
 
 
 setup(
@@ -35,7 +46,8 @@ setup(
     description='C Extensions for Twisted',
     version=__version__,
     author='Twisted Matrix Laboratories',
-    url='https://github.com/twisted/twisted',
+    author_email="twisted-python@twistedmatrix.com",
+    url="http://twistedmatrix.com/",
     packages=find_packages(),
     license='MIT',
     long_description=file('README.rst').read(),

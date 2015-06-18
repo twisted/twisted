@@ -1,7 +1,9 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
+import os
 import platform
 import sys
-import os
 
 from setuptools import Extension, setup as _setup
 from setuptools.command import build_ext
@@ -23,18 +25,17 @@ class ConditionalExtension(Extension):
         Extension.__init__(self, *args, **kwargs)
 
 
+
 def setup(**kw):
     """
     An alternative to distutils' setup() which is specially designed
-    for Twisted subprojects.
-
-    Pass twisted_subproject=projname if you want package and data
-    files to automatically be found for you.
+    for building conditional extensions.
 
     @param conditionalExtensions: Extensions to optionally build.
     @type conditionalExtensions: C{list} of L{ConditionalExtension}
     """
     return _setup(**get_setup_args(**kw))
+
 
 
 def get_setup_args(**kw):
@@ -58,7 +59,6 @@ def get_setup_args(**kw):
             conditionalExtensions = extensions
         kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
     return kw
-
 
 
 

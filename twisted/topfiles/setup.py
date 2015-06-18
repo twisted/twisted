@@ -16,32 +16,9 @@ if sys.version_info < (2, 6):
 if os.path.exists('twisted'):
     sys.path.insert(0, '.') # eek! need this to import twisted. sorry.
 from twisted import copyright
-from twisted.python.dist import setup, ConditionalExtension as Extension
+from twisted.python.dist import setup
 from twisted.python.dist import getPackages, getDataFiles, getScripts
-from twisted.python.dist import twisted_subprojects, _isCPython
-
-
-extensions = [
-    Extension("twisted.test.raiser",
-              ["twisted/test/raiser.c"],
-              condition=lambda _: _isCPython),
-
-    Extension("twisted.internet.iocpreactor.iocpsupport",
-              ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
-               "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
-              libraries=["ws2_32"],
-              condition=lambda _: _isCPython and sys.platform == "win32"),
-
-    Extension("twisted.python._sendmsg",
-              sources=["twisted/python/_sendmsg.c"],
-              condition=lambda _: sys.platform != "win32"),
-]
-
-if sys.version_info[:2] <= (2, 6):
-    extensions.append(
-        Extension(
-            "twisted.python._initgroups",
-            ["twisted/python/_initgroups.c"]))
+from twisted.python.dist import twisted_subprojects
 
 
 # Figure out which plugins to include: all plugins except subproject ones
@@ -82,7 +59,6 @@ This is the core of Twisted, including:
                          ignore=twisted_subprojects + ['plugins']),
     plugins=plugins,
     data_files=getDataFiles('twisted', ignore=twisted_subprojects),
-    conditionalExtensions=extensions,
     scripts = getScripts(""),
 )
 
