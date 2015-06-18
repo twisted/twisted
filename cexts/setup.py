@@ -7,6 +7,7 @@ if os.path.exists('twistedextensions'):
 
 from setuptools import find_packages
 from twistedextensions._dist import ConditionalExtension as Extension, setup
+from twistedextensions._dist import _isCPython
 
 extensions = [
     Extension("twistedextensions.raiser",
@@ -38,5 +39,5 @@ setup(
     packages=find_packages(),
     license='MIT',
     long_description=file('README.rst').read(),
-    ext_modules=extensions
+    conditionalExtensions=extensions
 )
