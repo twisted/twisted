@@ -11,6 +11,7 @@ if os.path.exists('twistedextensions'):
 
 from twistedextensions._dist import ConditionalExtension as Extension, setup
 from twistedextensions._dist import _isCPython
+from twistedextensions import __version__
 
 
 extensions = [
@@ -34,11 +35,13 @@ extensions = [
 ]
 
 
+
 if sys.version_info[:2] <= (2, 6):
     extensions.append(
         Extension(
             "twisted.python._initgroups",
             ["twisted/python/_initgroups.c"]))
+
 
 
 setup(

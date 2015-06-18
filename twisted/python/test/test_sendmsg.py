@@ -41,8 +41,7 @@ else:
 try:
     from twisted.python.sendmsg import sendmsg, recvmsg
     from twisted.python.sendmsg import SCM_RIGHTS, getSocketFamily
-except ImportError as e:
-    print(e)
+except ImportError:
     importSkip = "Platform doesn't support sendmsg."
 else:
     importSkip = None

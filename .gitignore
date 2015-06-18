@@ -9,3 +9,5 @@ doc/
 docs/_build/
 *~
 .coverage
+dist/
+cexts/dist/
