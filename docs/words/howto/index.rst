@@ -11,6 +11,7 @@ Developer Guides
 
    im
    ircclient
+   ircserverclientcomm
 
 
 - :doc:`Twisted IM <im>`

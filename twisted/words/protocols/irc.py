@@ -45,6 +45,8 @@ from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 
 NUL = chr(0)
 CR = chr(015)
@@ -266,10 +268,10 @@ class IRC(protocol.Protocol):
         self.transport.write("%s%s%s" % (line, CR, LF))
 
 
+    @deprecated(Version("Twisted", 15, 3, 0), "IRC.sendCommand")
     def sendMessage(self, command, *parameter_list, **prefix):
         """
         Send a line formatted as an IRC message.
-        This method remains for backward compatibility.
 
         @param command: The command or numeric to send.
         @type command: L{bytes}
@@ -316,10 +318,10 @@ class IRC(protocol.Protocol):
                 val = val.decode(encoding)
             unicodeTags[key] = val
 
-        self.sendMsg(command, params, cmdPrefix, unicodeTags)
+        self.sendCommand(command, params, cmdPrefix, unicodeTags)
 
 
-    def sendMsg(self, command, params, prefix = None, tags = {}):
+    def sendCommand(self, command, params, prefix = None, tags = None):
         """
         Send a line formatted as an IRC message.
 
@@ -349,6 +351,9 @@ class IRC(protocol.Protocol):
             # sanity checking to catch likely dumb mistakes.
             raise ValueError("Somebody screwed up, 'cuz this doesn't" \
                   " look like a command to me: %s" % command)
+
+        if tags is None:
+            tags = {}
 
         line = " ".join([command] + list(params))
         if prefix:
@@ -408,8 +413,8 @@ class IRC(protocol.Protocol):
         @param value: The string value to escape.
         @type value: L{str}
         
-        @rtype: L{str}
         @return: The escaped string for sending as a message value
+        @rtype: L{str}
         """
         return (value.replace("\\", "\\\\")
             .replace(";", "\\:")
