@@ -173,6 +173,12 @@ A server can use this to verify that a client provides a valid certificate signe
 
 .. literalinclude:: ../examples/ssl_clientauth_server.py
 
+Or using endpoints:
+
+:download:`ssl_clientauth_server_endpoints.py <../examples/ssl_clientauth_server_endpoints.py>
+
+.. literalinclude:: ../examples/ssl_clientauth_server_endpoints.py
+
 Client with certificates
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
