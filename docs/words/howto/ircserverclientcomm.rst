@@ -1,4 +1,3 @@
-
 :LastChangedDate: $LastChangedDate$
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
@@ -9,16 +8,19 @@ Communicating With IRC Clients
 Communicating with clients is the whole point of an IRC server, so you want to make sure you're doing it properly.
 Today, we'll be looking at receiving messages from a client and sending messages to the client.
 
+
 Representing Clients in Twisted
 -------------------------------
 
 Users in Twisted IRC are represented as subclasses of :api:`twisted.words.protocols.irc.IRC <the IRC class>`.
 This works as the protocol for your Factory class. It will also give you IRC features (like automatically parsing incoming lines) without you having to implement them yourself. The rest of this guide assumes this setup.
 
+
 Sending Messages
 ----------------
 
 Messages are sent to users using the user object's :api:`twisted.words.protocols.irc.IRC.sendMessage <sendMessage>` method.
+
 
 Sending Basic Messages
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -77,6 +79,7 @@ Receiving Messages
 ------------------
 Twisted Words will handle receiving messages and parsing lines into tokens. The parsed messages are passed into your command through the user's :api:`twisted.words.protocols.irc.IRC.handleCommand <handleCommand>` method.
 
+
 Handling Commands
 ~~~~~~~~~~~~~~~~~
 The default IRC handleCommand method calls the ``irc_COMMAND`` method when it receives the command ``COMMAND``, and it calls irc_unknown if the method for the command received isn't defined.
@@ -97,6 +100,8 @@ The default IRC handleCommand method calls the ``irc_COMMAND`` method when it re
 
 If you have a server setup that doesn't allow you to do this (e.g. a modular server program), you may, of course, override the handleCommand function to route commands to your own handlers.
 
+
 Receiving Messages with Tags
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 This has not yet been implemented.

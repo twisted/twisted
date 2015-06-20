@@ -45,8 +45,6 @@ from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
-from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
 
 NUL = chr(0)
 CR = chr(015)
@@ -268,68 +266,42 @@ class IRC(protocol.Protocol):
         self.transport.write("%s%s%s" % (line, CR, LF))
 
 
-    @deprecated(Version("Twisted", 15, 3, 0), "IRC.sendCommand")
     def sendMessage(self, command, *parameter_list, **prefix):
         """
         Send a line formatted as an IRC message.
 
-        @param command: The command or numeric to send.
-        @type command: L{bytes}
-
-        @param parameter_list: The parameters to send with the command.
-        @type parameter_list: L{bytes} parameters
-
-        @param prefix: The prefix to send with the command.  If not
-            given, no prefix is sent.
-        @type prefix: L{bytes}
-
-        @param tags: A dict of message tags.  If not given, no message
-            tags are sent.  The dict key should be the name of the tag
-            to send as a string; the value should be the unescaped value
-            to send with the tag, or either None or "" if no value is to
-            be sent with the tag.
-        @type tags: L{dict} of tags (L{bytes}) => values (L{bytes})
-        @see: U{https://ircv3.net/specs/core/message-tags-3.2.html}
+        First argument is the command, all subsequent arguments are parameters
+        to that command.  If a prefix is desired, it may be specified with the
+        keyword argument 'prefix'.
         """
-        if self.encoding is None:
-            encoding = "utf-8" # Default the encoding to UTF-8 (safe for IRC)
-        else:
-            # If the user specified an encoding, we'll assume we're getting
-            # byte strings in that encoding
-            encoding = self.encoding
-        params = []
-        cmdPrefix = prefix['prefix'] if 'prefix' in prefix else None
-        tags = prefix['tags'] if 'tags' in prefix else {}
-        unicodeTags = {}
+        if not command:
+            raise ValueError("IRC message requires a command.")
 
-        if isinstance(command, bytes):
-            command = command.decode(encoding)
-        for param in parameter_list:
-            if isinstance(param, bytes):
-                params.append(param.decode(encoding))
-            else:
-                params.append(param)
-        if cmdPrefix:
-            cmdPrefix = cmdPrefix.decode(encoding)
-        for key, val in tags.items():
-            if isinstance(key, bytes):
-                key = key.decode(encoding)
-            if isinstance(val, bytes):
-                val = val.decode(encoding)
-            unicodeTags[key] = val
+        if ' ' in command or command[0] == ':':
+            # Not the ONLY way to screw up, but provides a little
+            # sanity checking to catch likely dumb mistakes.
+            raise ValueError("Somebody screwed up, 'cuz this doesn't" \
+                  " look like a command to me: %s" % command)
 
-        self.sendCommand(command, params, cmdPrefix, unicodeTags)
+        line = ' '.join([command] + list(parameter_list))
+        if 'prefix' in prefix:
+            line = ":%s %s" % (prefix['prefix'], line)
+        self.sendLine(line)
+
+        if len(parameter_list) > 15:
+            log.msg("Message has %d parameters (RFC allows 15):\n%s" %
+                    (len(parameter_list), line))
 
 
-    def sendCommand(self, command, params, prefix = None, tags = None):
+    def sendCommand(self, command, parameters, prefix=None, tags=None):
         """
-        Send a line formatted as an IRC message.
+        Send to the remote peer a line formatted as an IRC message.
 
         @param command: The command or numeric to send.
         @type command: L{unicode}
 
-        @param params: The parameters to send with the command.
-        @type params: A L{tuple} or L{list} of L{unicode} parameters
+        @param parameters: The parameters to send with the command.
+        @type parameters: A L{tuple} or L{list} of L{unicode} parameters
 
         @param prefix: The prefix to send with the command.  If not
             given, no prefix is sent.
@@ -349,13 +321,12 @@ class IRC(protocol.Protocol):
         if " " in command or command[0] == ":":
             # Not the ONLY way to screw up, but provides a little
             # sanity checking to catch likely dumb mistakes.
-            raise ValueError("Somebody screwed up, 'cuz this doesn't" \
-                  " look like a command to me: %s" % command)
+            raise ValueError('Invalid command: %s' % (command,))
 
         if tags is None:
             tags = {}
 
-        line = " ".join([command] + list(params))
+        line = " ".join([command] + list(parameters))
         if prefix:
             line = ":%s %s" % (prefix, line)
         if tags:
@@ -366,9 +337,9 @@ class IRC(protocol.Protocol):
             line = line.encode("utf-8")
         self.sendLine(line)
 
-        if len(params) > 15:
+        if len(parameters) > 15:
             log.msg("Message has %d parameters (RFC allows 15):\n%s" %
-                    (len(params), line))
+                    (len(parameters), line))
 
 
     def _stringTags(self, tags):
@@ -412,7 +383,7 @@ class IRC(protocol.Protocol):
 
         @param value: The string value to escape.
         @type value: L{str}
-        
+
         @return: The escaped string for sending as a message value
         @rtype: L{str}
         """

@@ -1,0 +1,1 @@
+twisted.words.protocol.irc.IRC now has a sendCommand() method which can send messages with tags.

@@ -18,9 +18,5 @@ Developer Guides
 - IRC
 
 
-
   - :doc:`Using the Twisted Words IRC client <ircclient>`
-
   - :doc:`IRC Servers: Communicating With Clients <ircserverclientcomm>`
-
-
