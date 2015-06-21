@@ -1708,8 +1708,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         """
         error = self.assertRaises(ValueError, self.p.sendCommand, u" ",
             (u"param1", u"param2"))
-        self.assertEqual(error.message, "Somebody screwed up, 'cuz this "
-            "doesn't look like a command to me:  ")
+        self.assertEqual(error.message, 'Invalid command: " "')
 
 
     def test_sendCommandWithPrefix(self):

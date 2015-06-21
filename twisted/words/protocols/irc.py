@@ -321,7 +321,7 @@ class IRC(protocol.Protocol):
         if " " in command or command[0] == ":":
             # Not the ONLY way to screw up, but provides a little
             # sanity checking to catch likely dumb mistakes.
-            raise ValueError('Invalid command: %s' % (command,))
+            raise ValueError('Invalid command: "%s"' % (command,))
 
         if tags is None:
             tags = {}
