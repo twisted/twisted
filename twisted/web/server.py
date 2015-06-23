@@ -17,8 +17,8 @@ except ImportError:
     from urllib.parse import quote as _quote
 
     def quote(string, *args, **kwargs):
-        return _quote(string.decode('charmap'), *args, **kwargs)\
-            .encode('charmap')
+        return _quote(
+            string.decode('charmap'), *args, **kwargs).encode('charmap')
 
 import zlib
 
@@ -205,8 +205,9 @@ class Request(Copyable, http.Request, components.Componentized):
             # Content-Type header should be supplied.
             modified = self.code != http.NOT_MODIFIED
             contentType = self.responseHeaders.getRawHeaders(b'content-type')
-            if modified and contentType is None and\
-               self.defaultContentType is not None:
+            if (modified and contentType is None and
+                self.defaultContentType is not None
+                    ):
                 self.responseHeaders.setRawHeaders(
                     b'content-type', [self.defaultContentType])
 
@@ -272,13 +273,12 @@ class Request(Copyable, http.Request, components.Componentized):
                 self.setHeader(b'Allow', b', '.join(allowedMethods))
                 s = ('''Your browser approached me (at %(URI)s) with'''
                      ''' the method "%(method)s".  I only allow'''
-                     ''' the method%(plural)s %(allowed)s here.''' %
-                     {
+                     ''' the method%(plural)s %(allowed)s here.''' % {
                          'URI': escape(nativeString(self.uri)),
                          'method': nativeString(self.method),
                          'plural': ((len(allowedMethods) > 1) and 's') or '',
-                         'allowed': ', '.join([nativeString(x)
-                                              for x in allowedMethods])
+                         'allowed': ', '.join(
+                            [nativeString(x) for x in allowedMethods])
                      })
                 epage = resource.ErrorPage(http.NOT_ALLOWED,
                                            "Method Not Allowed", s)
