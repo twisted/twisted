@@ -17,7 +17,8 @@ except ImportError:
     from urllib.parse import quote as _quote
 
     def quote(string, *args, **kwargs):
-        return _quote(string.decode('charmap'), *args, **kwargs).encode('charmap')
+        return _quote(string.decode('charmap'), *args, **kwargs)\
+            .encode('charmap')
 
 import zlib
 
@@ -115,6 +116,7 @@ class Request(Copyable, http.Request, components.Componentized):
         http.Request.__init__(self, *args, **kw)
         components.Componentized.__init__(self)
 
+
     def getStateToCopyFor(self, issuer):
         x = self.__dict__.copy()
         del x['transport']
@@ -138,6 +140,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
     # HTML generation helpers
 
+
     def sibLink(self, name):
         """
         Return the text that links to a sibling of the requested resource.
@@ -157,7 +160,7 @@ class Request(Copyable, http.Request, components.Componentized):
             return ((lpp-1)*b"../") + name
         elif lpp == 1:
             return name
-        else: # lpp == 0
+        else:  # lpp == 0
             if len(self.prepath) and self.prepath[-1]:
                 return self.prepath[-1] + b'/' + name
             else:
@@ -202,15 +205,16 @@ class Request(Copyable, http.Request, components.Componentized):
             # Content-Type header should be supplied.
             modified = self.code != http.NOT_MODIFIED
             contentType = self.responseHeaders.getRawHeaders(b'content-type')
-            if modified and contentType is None and self.defaultContentType is not None:
+            if modified and contentType is None and\
+               self.defaultContentType is not None:
                 self.responseHeaders.setRawHeaders(
                     b'content-type', [self.defaultContentType])
 
         # Only let the write happen if we're not generating a HEAD response by
         # faking out the request method.  Note, if we are doing that,
         # startedWriting will never be true, and the above logic may run
-        # multiple times.  It will only actually change the responseHeaders once
-        # though, so it's still okay.
+        # multiple times.  It will only actually change the responseHeaders
+        # once though, so it's still okay.
         if not self._inFakeHead:
             if self._encoder:
                 data = self._encoder.encode(data)
@@ -268,13 +272,14 @@ class Request(Copyable, http.Request, components.Componentized):
                 self.setHeader(b'Allow', b', '.join(allowedMethods))
                 s = ('''Your browser approached me (at %(URI)s) with'''
                      ''' the method "%(method)s".  I only allow'''
-                     ''' the method%(plural)s %(allowed)s here.''' % {
-                    'URI': escape(nativeString(self.uri)),
-                    'method': nativeString(self.method),
-                    'plural': ((len(allowedMethods) > 1) and 's') or '',
-                    'allowed': ', '.join([nativeString(x)
-                                          for x in allowedMethods])
-                    })
+                     ''' the method%(plural)s %(allowed)s here.''' %
+                     {
+                         'URI': escape(nativeString(self.uri)),
+                         'method': nativeString(self.method),
+                         'plural': ((len(allowedMethods) > 1) and 's') or '',
+                         'allowed': ', '.join([nativeString(x)
+                                              for x in allowedMethods])
+                     })
                 epage = resource.ErrorPage(http.NOT_ALLOWED,
                                            "Method Not Allowed", s)
                 body = epage.render(self)
@@ -312,16 +317,20 @@ class Request(Copyable, http.Request, components.Componentized):
             self.write(body)
         self.finish()
 
+
     def processingFailed(self, reason):
         log.err(reason)
         # Re-enable on Python 3 as part of #6178:
         if not _PY3 and self.site.displayTracebacks:
-            body = ("<html><head><title>web.Server Traceback (most recent call last)</title></head>"
-                    "<body><b>web.Server Traceback (most recent call last):</b>\n\n"
+            body = ("<html><head><title>web.Server Traceback"
+                    " (most recent call last)</title></head>"
+                    "<body><b>web.Server Traceback"
+                    " (most recent call last):</b>\n\n"
                     "%s\n\n</body></html>\n"
                     % webutil.formatFailure(reason))
         else:
-            body = (b"<html><head><title>Processing Failed</title></head><body>"
+            body = (b"<html><head><title>Processing Failed"
+                    b"</title></head><body>"
                     b"<b>Processing Failed</b></body></html>")
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
@@ -331,30 +340,36 @@ class Request(Copyable, http.Request, components.Componentized):
         self.finish()
         return reason
 
+
     def view_write(self, issuer, data):
         """Remote version of write; same interface.
         """
         self.write(data)
+
 
     def view_finish(self, issuer):
         """Remote version of finish; same interface.
         """
         self.finish()
 
+
     def view_addCookie(self, issuer, k, v, **kwargs):
         """Remote version of addCookie; same interface.
         """
         self.addCookie(k, v, **kwargs)
+
 
     def view_setHeader(self, issuer, k, v):
         """Remote version of setHeader; same interface.
         """
         self.setHeader(k, v)
 
+
     def view_setLastModified(self, issuer, when):
         """Remote version of setLastModified; same interface.
         """
         self.setLastModified(when)
+
 
     def view_setETag(self, issuer, tag):
         """Remote version of setETag; same interface.
@@ -375,6 +390,7 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         self.registerProducer(_RemoteProducerWrapper(producer), streaming)
 
+
     def view_unregisterProducer(self, issuer):
         self.unregisterProducer()
 
@@ -382,7 +398,8 @@ class Request(Copyable, http.Request, components.Componentized):
 
     session = None
 
-    def getSession(self, sessionInterface = None):
+
+    def getSession(self, sessionInterface=None):
         # Session management
         if not self.session:
             cookiename = b"_".join([b'TWISTED_SESSION'] + self.sitepath)
@@ -401,6 +418,7 @@ class Request(Copyable, http.Request, components.Componentized):
             return self.session.getComponent(sessionInterface)
         return self.session
 
+
     def _prePathURL(self, prepath):
         port = self.getHost().port
         if self.isSecure():
@@ -418,12 +436,15 @@ class Request(Copyable, http.Request, components.Componentized):
         path = b'/'.join([quote(segment, safe=b'') for segment in prepath])
         return prefix + path
 
+
     def prePathURL(self):
         return self._prePathURL(self.prepath)
+
 
     def URLPath(self):
         from twisted.python import urlpath
         return urlpath.URLPath.fromRequest(self)
+
 
     def rememberRootURL(self):
         """
@@ -432,6 +453,7 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         url = self._prePathURL(self.prepath[:-1])
         self.appRootURL = url
+
 
     def getRootURL(self):
         """
@@ -522,6 +544,7 @@ class _RemoteProducerWrapper:
         self.resumeProducing = remote.remoteMethod("resumeProducing")
         self.pauseProducing = remote.remoteMethod("pauseProducing")
         self.stopProducing = remote.remoteMethod("stopProducing")
+
 
 
 class Session(components.Componentized):
@@ -635,14 +658,17 @@ class Site(http.HTTPFactory):
         if requestFactory is not None:
             self.requestFactory = requestFactory
 
+
     def _openLogFile(self, path):
         from twisted.python import logfile
         return logfile.LogFile(os.path.basename(path), os.path.dirname(path))
+
 
     def __getstate__(self):
         d = self.__dict__.copy()
         d['sessions'] = {}
         return d
+
 
     def _mkuid(self):
         """
@@ -652,8 +678,9 @@ class Site(http.HTTPFactory):
         import random
         self.counter = self.counter + 1
         return md5(networkString(
-                "%s_%s" % (str(random.random()) , str(self.counter)))
+                "%s_%s" % (str(random.random()), str(self.counter)))
                    ).hexdigest()
+
 
     def makeSession(self):
         """
@@ -664,12 +691,14 @@ class Site(http.HTTPFactory):
         session.startCheckingExpiration()
         return session
 
+
     def getSession(self, uid):
         """
         Get a previously generated session, by its unique ID.
         This raises a KeyError if the session is not found.
         """
         return self.sessions[uid]
+
 
     def buildProtocol(self, addr):
         """
@@ -689,12 +718,14 @@ class Site(http.HTTPFactory):
         request.redirect(request.prePathURL() + b'/')
         request.finish()
 
+
     def getChildWithDefault(self, pathEl, request):
         """
         Emulate a resource's getChild method.
         """
         request.site = self
         return self.resource.getChildWithDefault(pathEl, request)
+
 
     def getResourceFor(self, request):
         """
