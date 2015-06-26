@@ -1,4 +1,3 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -6,6 +5,8 @@
 Tests for L{twisted.web._stan} portion of the L{twisted.web.template}
 implementation.
 """
+
+from __future__ import absolute_import, division
 
 from twisted.web.template import Comment, CDATA, CharRef, Tag
 from twisted.trial.unittest import TestCase
