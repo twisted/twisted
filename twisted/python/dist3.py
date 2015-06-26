@@ -167,6 +167,7 @@ modules = [
     "twisted.web",
     "twisted.web._newclient",
     "twisted.web._responses",
+    "twisted.web._stan",
     "twisted.web._version",
     "twisted.web.error",
     "twisted.web.http_headers",
@@ -306,6 +307,7 @@ testModules = [
     "twisted.web.test.test_resource",
     "twisted.web.test.test_script",
     "twisted.web.test.test_static",
+    "twisted.web.test.test_stan",
     "twisted.web.test.test_web__responses",
     "twisted.web.test.test_web",
     "twisted.web.test.test_webclient",
@@ -362,7 +364,6 @@ almostModules = [
     # Required by twisted.web.template
     "twisted.web._element",
     "twisted.web._flatten",
-    "twisted.web._stan",
     "twisted.web.util",
     # Agent code and downloadPage aren't ported, test coverage isn't complete:
     "twisted.web.client",
