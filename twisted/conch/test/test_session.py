@@ -459,6 +459,13 @@ class StubTransport:
         self.close = True
 
 
+    def setTcpNoDelay(self, enabled):
+        """
+        Pretend to set the TCP_NODELAY.
+        """
+        # Required for testing SSHSessionForUnixConchUser.
+
+
 class StubTransportWithWriteErr(StubTransport):
     """
     A version of StubTransport which records the error data sent to it.

@@ -154,7 +154,17 @@ class UnixConchUser(ConchUser):
 
 @implementer(ISession)
 class SSHSessionForUnixConchUser:
-    def __init__(self, avatar):
+    def __init__(self, avatar, reactor=None):
+        """
+        Construct an ``SSHSessionForUnixConchUser``.
+
+        :param avatar: The ``UnixConchUser`` for whom this is an SSH session.
+        :param reactor: An ``IReactorProcess`` used to handle shell and exec
+            requests. Uses the default reactor if None.
+        """
+        if reactor is None:
+            from twisted.internet import reactor
+        self._reactor = reactor
         self.avatar = avatar
         self.environ = {'PATH': '/bin:/usr/bin:/usr/local/bin'}
         self.pty = None
@@ -199,7 +209,6 @@ class SSHSessionForUnixConchUser:
 
 
     def openShell(self, proto):
-        from twisted.internet import reactor
         if not self.ptyTuple:  # We didn't get a pty-req.
             log.msg('tried to get shell without pty, failing')
             raise ConchError("no pty")
@@ -215,7 +224,7 @@ class SSHSessionForUnixConchUser:
         self.environ['SSH_CLIENT'] = '%s %s %s' % (
             peer.host, peer.port, host.port)
         self.getPtyOwnership()
-        self.pty = reactor.spawnProcess(
+        self.pty = self._reactor.spawnProcess(
             proto, shell, ['-%s' % (shellExec,)], self.environ, homeDir, uid,
             gid, usePTY=self.ptyTuple)
         self.addUTMPEntry()
@@ -229,10 +238,10 @@ class SSHSessionForUnixConchUser:
 
 
     def execCommand(self, proto, cmd):
-        from twisted.internet import reactor
         uid, gid = self.avatar.getUserGroupId()
         homeDir = self.avatar.getHomeDir()
         shell = self.avatar.getShell() or '/bin/sh'
+        self.environ['HOME'] = homeDir
         command = (shell, '-c', cmd)
         peer = self.avatar.conn.transport.transport.getPeer()
         host = self.avatar.conn.transport.transport.getHost()
@@ -240,7 +249,7 @@ class SSHSessionForUnixConchUser:
             peer.host, peer.port, host.port)
         if self.ptyTuple:
             self.getPtyOwnership()
-        self.pty = reactor.spawnProcess(
+        self.pty = self._reactor.spawnProcess(
             proto, shell, command, self.environ, homeDir, uid, gid,
             usePTY=self.ptyTuple or 0)
         if self.ptyTuple:
