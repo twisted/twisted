@@ -1,21 +1,27 @@
+# -*- test-case-name: twisted.conch.test.test_unix -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import
+
 from zope.interface import implementer
 
-from twisted.conch import unix
-from twisted.conch.test.test_session import (
-    StubConnection,
-    StubClient,
-)
 from twisted.internet.interfaces import IReactorProcess
 from twisted.trial import unittest
+
+from .test_session import StubConnection, StubClient
+
+try:
+    from .. import unix
+except ImportError:
+    unix = None
+
 
 
 @implementer(IReactorProcess)
 class MockProcessSpawner(object):
     """
-    An IReactorProcess that logs calls to ``spawnProcess``.
+    An L{IReactorProcess} that logs calls to C{spawnProcess}.
     """
 
     def __init__(self):
@@ -25,7 +31,7 @@ class MockProcessSpawner(object):
     def spawnProcess(self, processProtocol, executable, args=(), env={},
                      path=None, uid=None, gid=None, usePTY=0, childFDs=None):
         """
-        Log a call to spawnProcess. Do not actually spawn a process.
+        Log a call to C{spawnProcess}. Do not actually spawn a process.
         """
         self._spawnProcessCalls.append(
             {'processProtocol': processProtocol,
@@ -50,11 +56,14 @@ class StubUnixConchUser(object):
         self._homeDirectory = homeDirectory
         self.conn = StubConnection(transport=StubClient())
 
+
     def getUserGroupId(self):
         return (None, None)
 
+
     def getHomeDir(self):
         return self._homeDirectory
+
 
     def getShell(self):
         pass
@@ -63,9 +72,13 @@ class StubUnixConchUser(object):
 
 class TestSSHSessionForUnixConchUser(unittest.TestCase):
 
+    if not unix:
+        skip = "Unix system required"
+
+
     def testExecCommandEnvironment(self):
         """
-        execCommand sets the HOME environment variable to the avatar's home
+        C{execCommand} sets the C{HOME} environment variable to the avatar's home
         directory.
         """
         mockReactor = MockProcessSpawner()

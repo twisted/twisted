@@ -156,10 +156,10 @@ class UnixConchUser(ConchUser):
 class SSHSessionForUnixConchUser:
     def __init__(self, avatar, reactor=None):
         """
-        Construct an ``SSHSessionForUnixConchUser``.
+        Construct an C{SSHSessionForUnixConchUser}.
 
-        :param avatar: The ``UnixConchUser`` for whom this is an SSH session.
-        :param reactor: An ``IReactorProcess`` used to handle shell and exec
+        @param avatar: The L{UnixConchUser} for whom this is an SSH session.
+        @param reactor: An L{IReactorProcess} used to handle shell and exec
             requests. Uses the default reactor if None.
         """
         if reactor is None:

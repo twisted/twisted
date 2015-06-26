@@ -461,7 +461,7 @@ class StubTransport:
 
     def setTcpNoDelay(self, enabled):
         """
-        Pretend to set the TCP_NODELAY.
+        Pretend to set C{TCP_NODELAY}.
         """
         # Required for testing SSHSessionForUnixConchUser.
 
