@@ -1,0 +1,1 @@
+The Conch Unix server now sets the HOME environment variable when executing commands.
