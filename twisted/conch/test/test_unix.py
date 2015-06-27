@@ -7,14 +7,12 @@ from __future__ import absolute_import
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IReactorProcess
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
 from .test_session import StubConnection, StubClient
 
-try:
-    from .. import unix
-except ImportError:
-    unix = None
+unix = requireModule('twisted.conch.unix')
 
 
 
@@ -72,7 +70,7 @@ class StubUnixConchUser(object):
 
 class TestSSHSessionForUnixConchUser(unittest.TestCase):
 
-    if not unix:
+    if unix is None:
         skip = "Unix system required"
 
 
