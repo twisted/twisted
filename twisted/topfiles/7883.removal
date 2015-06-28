@@ -1,0 +1,1 @@
+twisted.python.win32.getProgramsMenuPath and twisted.python.win32.getProgramFilesPath are now deprecated.
