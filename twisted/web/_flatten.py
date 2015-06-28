@@ -14,7 +14,7 @@ from types import GeneratorType
 from traceback import extract_tb
 
 from twisted.internet.defer import Deferred
-from twisted.python.compat import NativeStringIO
+from twisted.python.compat import NativeStringIO, _PY3, unicode, networkString
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
@@ -37,9 +37,9 @@ def escapeForContent(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    data = data.replace('&', '&amp;'
-        ).replace('<', '&lt;'
-        ).replace('>', '&gt;')
+    data = data.replace(b'&', b'&amp;'
+        ).replace(b'<', b'&lt;'
+        ).replace(b'>', b'&gt;')
     return data
 
 
@@ -139,7 +139,7 @@ def escapedCDATA(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    return data.replace(']]>', ']]]]><![CDATA[>')
+    return data.replace(b']]>', b']]]]><![CDATA[>')
 
 
 
@@ -156,9 +156,9 @@ def escapedComment(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    data = data.replace('--', '- - ').replace('>', '&gt;')
-    if data and data[-1] == '-':
-        data += ' '
+    data = data.replace(b'--', b'- - ').replace(b'>', b'&gt;')
+    if data and data[-1] == b'-':
+        data += b' '
     return data
 
 
@@ -223,13 +223,13 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         slotValue = _getSlotValue(root.name, slotData, root.default)
         yield keepGoing(slotValue)
     elif isinstance(root, CDATA):
-        yield '<![CDATA['
+        yield b'<![CDATA['
         yield escapedCDATA(root.data)
-        yield ']]>'
+        yield b']]>'
     elif isinstance(root, Comment):
-        yield '<!--'
+        yield b'<!--'
         yield escapedComment(root.data)
-        yield '-->'
+        yield b'-->'
     elif isinstance(root, Tag):
         slotData.append(root.slotData)
         if root.render is not None:
@@ -246,23 +246,23 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             yield keepGoing(root.children)
             return
 
-        yield '<'
+        yield b'<'
         if isinstance(root.tagName, unicode):
             tagName = root.tagName.encode('ascii')
         else:
-            tagName = str(root.tagName)
+            tagName = networkString(root.tagName)
         yield tagName
         for k, v in root.attributes.iteritems():
             if isinstance(k, unicode):
                 k = k.encode('ascii')
-            yield ' ' + k + '="'
+            yield b' ' + k + b'="'
             # Serialize the contents of the attribute, wrapping the results of
             # that serialization so that _everything_ is quoted.
             attribute = keepGoing(v, attributeEscapingDoneOutside)
             yield flattenWithAttributeEscaping(attribute)
-            yield '"'
+            yield b'"'
         if root.children or tagName not in voidElements:
-            yield '>'
+            yield b'>'
             # Regardless of whether we're in an attribute or not, switch back
             # to the escapeForContent dataEscaper.  The contents of a tag must
             # be quoted no matter what; in the top-level document, just so
@@ -271,9 +271,9 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             # parse the tag within the attribute, all the quoting is still
             # correct.
             yield keepGoing(root.children, escapeForContent)
-            yield '</' + tagName + '>'
+            yield b'</' + tagName + b'>'
         else:
-            yield ' />'
+            yield b' />'
 
     elif isinstance(root, (tuple, list, GeneratorType)):
         for element in root:
@@ -313,8 +313,9 @@ def _flattenTree(request, root):
         try:
             # In Python 2.5, after an exception, a generator's gi_frame is
             # None.
+            print(stack)
             frame = stack[-1].gi_frame
-            element = stack[-1].next()
+            element = next(stack[-1])
         except StopIteration:
             stack.pop()
         except Exception as e:
@@ -325,7 +326,7 @@ def _flattenTree(request, root):
             roots.append(frame.f_locals['root'])
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
-            if type(element) is str:
+            if type(element) is bytes:
                 yield element
             elif isinstance(element, Deferred):
                 def cbx(originalAndToFlatten):
@@ -357,7 +358,7 @@ def _writeFlattenedData(state, write, result):
     """
     while True:
         try:
-            element = state.next()
+            element = next(state)
         except StopIteration:
             result.callback(None)
         except:

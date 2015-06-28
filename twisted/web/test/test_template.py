@@ -1,13 +1,11 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Tests for L{twisted.web.template}
 """
 
-from cStringIO import StringIO
+from __future__ import division, absolute_import
 
 from zope.interface.verify import verifyObject
 
@@ -27,6 +25,8 @@ from twisted.web._element import UnexposedMethodError
 from twisted.web.test._util import FlattenTestCase
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.server import NOT_DONE_YET
+
+from twisted.python.compat import NativeStringIO as StringIO
 
 
 _xmlFileSuppress = SUPPRESS(category=DeprecationWarning,
@@ -281,7 +281,7 @@ class XMLFileWithFilePathTests(TestCase, XMLLoaderTestsMixin):
             file that contains C{self.templateString}.
         """
         fp = FilePath(self.mktemp())
-        fp.setContent(self.templateString)
+        fp.setContent(self.templateString.encode("utf8"))
         return XMLFile(fp)
 
 
@@ -311,7 +311,7 @@ class XMLFileWithFilenameTests(TestCase, XMLLoaderTestsMixin):
             file containing C{self.templateString}.
         """
         fp = FilePath(self.mktemp())
-        fp.setContent(self.templateString)
+        fp.setContent(self.templateString.encode('utf8'))
         return XMLFile(fp.path)
 
 
@@ -329,13 +329,13 @@ class FlattenIntegrationTests(FlattenTestCase):
         input when sent on a round trip.
         """
         fragments = [
-            "<p>Hello, world.</p>",
-            "<p><!-- hello, world --></p>",
-            "<p><![CDATA[Hello, world.]]></p>",
-            '<test1 xmlns:test2="urn:test2">'
-                '<test2:test3></test2:test3></test1>',
-            '<test1 xmlns="urn:test2"><test3></test3></test1>',
-            '<p>\xe2\x98\x83</p>',
+            b"<p>Hello, world.</p>",
+            b"<p><!-- hello, world --></p>",
+            b"<p><![CDATA[Hello, world.]]></p>",
+            b'<test1 xmlns:test2="urn:test2">'
+            b'<test2:test3></test2:test3></test1>',
+            b'<test1 xmlns="urn:test2"><test3></test3></test1>',
+            b'<p>\xe2\x98\x83</p>',
         ]
         deferreds = [
             self.assertFlattensTo(Element(loader=XMLString(xml)), xml)
@@ -349,7 +349,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         representation if possible.
         """
         element = Element(loader=XMLString('<p>&#9731;</p>'))
-        return self.assertFlattensTo(element, '<p>\xe2\x98\x83</p>')
+        return self.assertFlattensTo(element, b'<p>\xe2\x98\x83</p>')
 
 
     def test_missingTemplateLoader(self):
@@ -703,9 +703,9 @@ class RenderElementTests(TestCase):
 
         def check(_):
             self.assertEqual(
-                "".join(self.request.written),
-                "<!DOCTYPE html>\n"
-                "<p>Hello, world.</p>")
+                b"".join(self.request.written),
+                b"<!DOCTYPE html>\n"
+                b"<p>Hello, world.</p>")
             self.assertTrue(self.request.finished)
 
         d.addCallback(check)
@@ -728,12 +728,12 @@ class RenderElementTests(TestCase):
             flushed = self.flushLoggedErrors(FlattenerError)
             self.assertEqual(len(flushed), 1)
             self.assertEqual(
-                "".join(self.request.written),
-                ('<!DOCTYPE html>\n'
-                 '<div style="font-size:800%;'
-                 'background-color:#FFF;'
-                 'color:#F00'
-                 '">An error occurred while rendering the response.</div>'))
+                b"".join(self.request.written),
+                (b'<!DOCTYPE html>\n'
+                 b'<div style="font-size:800%;'
+                 b'background-color:#FFF;'
+                 b'color:#F00'
+                 b'">An error occurred while rendering the response.</div>'))
             self.assertTrue(self.request.finished)
 
         d.addCallback(check)
@@ -758,8 +758,8 @@ class RenderElementTests(TestCase):
             flushed = self.flushLoggedErrors(FlattenerError)
             self.assertEqual(len(flushed), 1)
             self.assertEqual(
-                "".join(self.request.written),
-                "<!DOCTYPE html>\n<p>I failed.</p>")
+                b"".join(self.request.written),
+                b"<!DOCTYPE html>\n<p>I failed.</p>")
             self.assertTrue(self.request.finished)
 
         d.addCallback(check)
@@ -774,17 +774,16 @@ class RenderElementTests(TestCase):
         L{renderElement} will write the doctype string specified by the
         doctype keyword argument.
         """
-
         element = TestElement()
 
         d = self.request.notifyFinish()
 
         def check(_):
             self.assertEqual(
-                "".join(self.request.written),
-                ('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
-                 ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
-                 '<p>Hello, world.</p>'))
+                b"".join(self.request.written),
+                (b'<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
+                 b' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
+                 b'<p>Hello, world.</p>'))
 
         d.addCallback(check)
 
@@ -792,8 +791,8 @@ class RenderElementTests(TestCase):
             self.request,
             element,
             doctype=(
-                '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
-                ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">'))
+                b'<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
+                b' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">'))
 
         return d
 
@@ -803,15 +802,14 @@ class RenderElementTests(TestCase):
         L{renderElement} will not write out a doctype if the doctype keyword
         argument is C{None}.
         """
-
         element = TestElement()
 
         d = self.request.notifyFinish()
 
         def check(_):
             self.assertEqual(
-                "".join(self.request.written),
-                '<p>Hello, world.</p>')
+                b"".join(self.request.written),
+                b'<p>Hello, world.</p>')
 
         d.addCallback(check)
 

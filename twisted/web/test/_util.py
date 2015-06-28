@@ -1,4 +1,3 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -14,11 +13,8 @@ from twisted.trial.unittest import TestCase
 from twisted.python.failure import Failure
 from twisted.python.compat import _PY3
 
-if not _PY3:
-    # TODO: Remove when twisted.web.template and _flatten is ported
-    # https://tm.tl/#7811
-    from twisted.web._flatten import flattenString
-    from twisted.web.error import FlattenerError
+from twisted.web._flatten import flattenString
+from twisted.web.error import FlattenerError
 
 
 
@@ -87,11 +83,3 @@ class FlattenTestCase(TestCase):
 
 
 __all__ = ["_render", "FlattenTestCase"]
-
-if _PY3:
-    __all3__ = ["_render"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__

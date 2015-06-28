@@ -522,7 +522,7 @@ tags = _TagFactory()
 
 
 def renderElement(request, element,
-                  doctype='<!DOCTYPE html>', _failElement=None):
+                  doctype=b'<!DOCTYPE html>', _failElement=None):
     """
     Render an element or other C{IRenderable}.
 
@@ -539,23 +539,27 @@ def renderElement(request, element,
     """
     if doctype is not None:
         request.write(doctype)
-        request.write('\n')
+        request.write(b'\n')
 
     if _failElement is None:
         _failElement = twisted.web.util.FailureElement
 
-    d = flatten(request, element, request.write)
+    def _write(string):
+        request.write(string.encode('utf8'))
+
+    d = flatten(request, element, _write)
 
     def eb(failure):
         log.err(failure, "An error occurred while rendering the response.")
         if request.site.displayTracebacks:
-            return flatten(request, _failElement(failure), request.write)
+            return flatten(request, _failElement(failure),
+                           request.write).encode('utf8')
         else:
             request.write(
-                ('<div style="font-size:800%;'
-                 'background-color:#FFF;'
-                 'color:#F00'
-                 '">An error occurred while rendering the response.</div>'))
+                (b'<div style="font-size:800%;'
+                 b'background-color:#FFF;'
+                 b'color:#F00'
+                 b'">An error occurred while rendering the response.</div>'))
 
     d.addErrback(eb)
     d.addBoth(lambda _: request.finish())
