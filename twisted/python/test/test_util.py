@@ -8,8 +8,12 @@ Tests for L{twisted.python.util}.
 
 from __future__ import division, absolute_import
 
-import os.path, sys
-import shutil, errno, warnings
+import errno
+import os.path
+import shutil
+import sys
+import warnings
+
 try:
     import pwd, grp
 except ImportError:
@@ -21,17 +25,16 @@ from twisted.trial.util import suppress as SUPPRESS
 from twisted.python.compat import _PY3
 from twisted.python import util
 from twisted.python.reflect import fullyQualifiedName
+from twisted.python.filepath import FilePath
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ProcessDone
+from twisted.test.test_process import MockOS
 
-if _PY3:
-    MockOS = None
-else:
-    from twisted.test.test_process import MockOS
 
+pyExe = FilePath(sys.executable)._asBytesPath()
 
 
 class UtilTests(unittest.TestCase):
@@ -323,7 +326,39 @@ class MergeFunctionMetadataTests(unittest.TestCase):
 
 
 class OrderedDictTests(unittest.TestCase):
-    def testOrderedDict(self):
+    """
+    Tests for L{util.OrderedDict}. On Python 3, this is not the version in
+    L{util}, but L{collections.OrderedDict}.
+    """
+    def test_maintainedOrder(self):
+        """
+        Entries added to the dict have a maintained order.
+        """
+        d = util.OrderedDict()
+        d['a'] = 'b'
+        d['b'] = 'a'
+        d[3] = 12
+        d[1234] = 4321
+
+        self.assertEqual(list(d.values()), ['b', 'a', 12, 4321])
+        del d[3]
+        self.assertEqual(d, {'a': 'b', 'b': 'a', 1234:4321})
+        self.assertEqual(list(d.keys()), ['a', 'b', 1234])
+        self.assertEqual(list(d.items()),
+                         [('a', 'b'), ('b','a'), (1234, 4321)])
+        item = d.popitem()
+        self.assertEqual(item, (1234, 4321))
+
+
+
+class Py2OrderedDictTests(unittest.TestCase):
+    """
+    Tests for L{util.OrderedDict} on Python 2.
+    """
+    if _PY3:
+        skip = "These tests are only applicable on Python 2."
+
+    def test_orderedDict(self):
         d = util.OrderedDict()
         d['a'] = 'b'
         d['b'] = 'a'
@@ -340,7 +375,7 @@ class OrderedDictTests(unittest.TestCase):
         item = d.popitem()
         self.assertEqual(item, (1234, 4321))
 
-    def testInitialization(self):
+    def test_initialization(self):
         d = util.OrderedDict({'monkey': 'ook',
                               'apple': 'red'})
         self.failUnless(d._order)
@@ -428,7 +463,7 @@ class PasswordTestingProcessProtocol(ProcessProtocol):
     """
     def connectionMade(self):
         self.output = []
-        self.transport.write('secret\n')
+        self.transport.write(b'secret\n')
 
     def childDataReceived(self, fd, output):
         self.output.append((fd, output))
@@ -451,20 +486,19 @@ class GetPasswordTests(unittest.TestCase):
         p = PasswordTestingProcessProtocol()
         p.finished = Deferred()
         reactor.spawnProcess(
-            p,
-            sys.executable,
-            [sys.executable,
-             '-c',
-             ('import sys\n'
-             'from twisted.python.util import getPassword\n'
-              'sys.stdout.write(getPassword())\n'
-              'sys.stdout.flush()\n')],
-            env={'PYTHONPATH': os.pathsep.join(sys.path)})
+            p, pyExe,
+            [pyExe,
+             b'-c',
+             (b'import sys\n'
+              b'from twisted.python.util import getPassword\n'
+              b'sys.stdout.write(getPassword())\n'
+              b'sys.stdout.flush()\n')],
+            env={b'PYTHONPATH': os.pathsep.join(sys.path).encode("utf8")})
 
         def processFinished(result):
             (reason, output) = result
             reason.trap(ProcessDone)
-            self.assertIn((1, 'secret'), output)
+            self.assertIn((1, b'secret'), output)
 
         return p.finished.addCallback(processFinished)
 
@@ -473,9 +507,9 @@ class GetPasswordTests(unittest.TestCase):
 class SearchUpwardsTests(unittest.TestCase):
     def testSearchupwards(self):
         os.makedirs('searchupwards/a/b/c')
-        file('searchupwards/foo.txt', 'w').close()
-        file('searchupwards/a/foo.txt', 'w').close()
-        file('searchupwards/a/b/c/foo.txt', 'w').close()
+        open('searchupwards/foo.txt', 'w').close()
+        open('searchupwards/a/foo.txt', 'w').close()
+        open('searchupwards/a/b/c/foo.txt', 'w').close()
         os.mkdir('searchupwards/bar')
         os.mkdir('searchupwards/bam')
         os.mkdir('searchupwards/a/bar')
@@ -498,76 +532,76 @@ class IntervalDifferentialTests(unittest.TestCase):
     def testDefault(self):
         d = iter(util.IntervalDifferential([], 10))
         for i in range(100):
-            self.assertEqual(d.next(), (10, None))
+            self.assertEqual(next(d), (10, None))
 
     def testSingle(self):
         d = iter(util.IntervalDifferential([5], 10))
         for i in range(100):
-            self.assertEqual(d.next(), (5, 0))
+            self.assertEqual(next(d), (5, 0))
 
     def testPair(self):
         d = iter(util.IntervalDifferential([5, 7], 10))
         for i in range(100):
-            self.assertEqual(d.next(), (5, 0))
-            self.assertEqual(d.next(), (2, 1))
-            self.assertEqual(d.next(), (3, 0))
-            self.assertEqual(d.next(), (4, 1))
-            self.assertEqual(d.next(), (1, 0))
-            self.assertEqual(d.next(), (5, 0))
-            self.assertEqual(d.next(), (1, 1))
-            self.assertEqual(d.next(), (4, 0))
-            self.assertEqual(d.next(), (3, 1))
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (5, 0))
-            self.assertEqual(d.next(), (0, 1))
+            self.assertEqual(next(d), (5, 0))
+            self.assertEqual(next(d), (2, 1))
+            self.assertEqual(next(d), (3, 0))
+            self.assertEqual(next(d), (4, 1))
+            self.assertEqual(next(d), (1, 0))
+            self.assertEqual(next(d), (5, 0))
+            self.assertEqual(next(d), (1, 1))
+            self.assertEqual(next(d), (4, 0))
+            self.assertEqual(next(d), (3, 1))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (5, 0))
+            self.assertEqual(next(d), (0, 1))
 
     def testTriple(self):
         d = iter(util.IntervalDifferential([2, 4, 5], 10))
         for i in range(100):
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (0, 1))
-            self.assertEqual(d.next(), (1, 2))
-            self.assertEqual(d.next(), (1, 0))
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (0, 1))
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (0, 2))
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (0, 1))
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (1, 2))
-            self.assertEqual(d.next(), (1, 0))
-            self.assertEqual(d.next(), (0, 1))
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (2, 0))
-            self.assertEqual(d.next(), (0, 1))
-            self.assertEqual(d.next(), (0, 2))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (0, 1))
+            self.assertEqual(next(d), (1, 2))
+            self.assertEqual(next(d), (1, 0))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (0, 1))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (0, 2))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (0, 1))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (1, 2))
+            self.assertEqual(next(d), (1, 0))
+            self.assertEqual(next(d), (0, 1))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (2, 0))
+            self.assertEqual(next(d), (0, 1))
+            self.assertEqual(next(d), (0, 2))
 
     def testInsert(self):
         d = iter(util.IntervalDifferential([], 10))
-        self.assertEqual(d.next(), (10, None))
+        self.assertEqual(next(d), (10, None))
         d.addInterval(3)
-        self.assertEqual(d.next(), (3, 0))
-        self.assertEqual(d.next(), (3, 0))
+        self.assertEqual(next(d), (3, 0))
+        self.assertEqual(next(d), (3, 0))
         d.addInterval(6)
-        self.assertEqual(d.next(), (3, 0))
-        self.assertEqual(d.next(), (3, 0))
-        self.assertEqual(d.next(), (0, 1))
-        self.assertEqual(d.next(), (3, 0))
-        self.assertEqual(d.next(), (3, 0))
-        self.assertEqual(d.next(), (0, 1))
+        self.assertEqual(next(d), (3, 0))
+        self.assertEqual(next(d), (3, 0))
+        self.assertEqual(next(d), (0, 1))
+        self.assertEqual(next(d), (3, 0))
+        self.assertEqual(next(d), (3, 0))
+        self.assertEqual(next(d), (0, 1))
 
     def testRemove(self):
         d = iter(util.IntervalDifferential([3, 5], 10))
-        self.assertEqual(d.next(), (3, 0))
-        self.assertEqual(d.next(), (2, 1))
-        self.assertEqual(d.next(), (1, 0))
+        self.assertEqual(next(d), (3, 0))
+        self.assertEqual(next(d), (2, 1))
+        self.assertEqual(next(d), (1, 0))
         d.removeInterval(3)
-        self.assertEqual(d.next(), (4, 0))
-        self.assertEqual(d.next(), (5, 0))
+        self.assertEqual(next(d), (4, 0))
+        self.assertEqual(next(d), (5, 0))
         d.removeInterval(5)
-        self.assertEqual(d.next(), (10, None))
+        self.assertEqual(next(d), (10, None))
         self.assertRaises(ValueError, d.removeInterval, 10)
 
 
@@ -1152,11 +1186,3 @@ class PadToTests(unittest.TestCase):
         items = []
         util.padTo(4, items)
         self.assertEqual([], items)
-
-
-if _PY3:
-    del (SwitchUIDTests, SearchUpwardsTests, RunAsEffectiveUserTests,
-         OrderedDictTests, IntervalDifferentialTests, UtilTests,
-         MergeFunctionMetadataTests, DeprecationTests, InitGroupsTests,
-         GetPasswordTests,
-         )

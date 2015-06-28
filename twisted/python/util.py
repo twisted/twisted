@@ -2,7 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import os, sys, errno, warnings
 try:
@@ -68,7 +68,7 @@ class InsensitiveDict:
         k = self._lowerOrReturn(key)
         return k in self.data
 
-    __contains__=has_key
+    __contains__ = has_key
 
     def _doPreserve(self, key):
         if not self.preserve and (isinstance(key, bytes)
@@ -162,6 +162,7 @@ class OrderedDict(UserDict):
                     self[k] = v
         if len(kwargs):
             self.update(kwargs)
+
     def __repr__(self):
         return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
 
@@ -212,6 +213,14 @@ class OrderedDict(UserDict):
     def update(self, d):
         for k, v in d.items():
             self[k] = v
+
+
+if _PY3:
+    # Python 3 has its own OrderedDict that we should use instead.
+    del OrderedDict
+    from collections import OrderedDict
+
+
 
 def uniquify(lst):
     """Make the elements of a list unique by inserting them into a dictionary.
@@ -474,7 +483,7 @@ def raises(exception, f, *args, **kwargs):
     return 0
 
 
-class IntervalDifferential:
+class IntervalDifferential(object):
     """
     Given a list of intervals, generate the amount of time to sleep between
     "instants".
@@ -509,14 +518,14 @@ class IntervalDifferential:
         return _IntervalDifferentialIterator(self.intervals, self.default)
 
 
-class _IntervalDifferentialIterator:
+class _IntervalDifferentialIterator(object):
     def __init__(self, i, d):
 
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
 
-    def next(self):
+    def __next__(self):
         if not self.intervals:
             return (self.default, None)
         last, index = self.intervals[0][0], self.intervals[0][2]
@@ -525,6 +534,9 @@ class _IntervalDifferentialIterator:
         result = last - self.last
         self.last = last
         return result, index
+
+    # Iterators on Python 2 use next(), not __next__()
+    next = __next__
 
     def addInterval(self, i):
         if self.intervals:
@@ -1029,17 +1041,15 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "switchUID", "SubclassableCStringIO", "mergeFunctionMetadata",
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
-    "untilConcludes",
-    "runWithWarningsSuppressed",
-    ]
+    "untilConcludes", "runWithWarningsSuppressed",
+]
 
 
 if _PY3:
-    __all3__ = ["FancyEqMixin", "untilConcludes",
-                "runWithWarningsSuppressed", "FancyStrMixin", "nameToLabel",
-                "InsensitiveDict", "padTo", "switchUID", "sibpath"]
+    __notported__ = ["SubclassableCStringIO", "LineLog", "spewer",
+                     "makeStatBar"]
     for name in __all__[:]:
-        if name not in __all3__:
+        if name in __notported__:
             __all__.remove(name)
             del globals()[name]
-    del name, __all3__
+    del name, __notported__
