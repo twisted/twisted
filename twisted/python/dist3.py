@@ -174,6 +174,7 @@ modules = [
     "twisted.web.resource",
     "twisted.web.script",
     "twisted.web.static",
+    "twisted.web.template",
     "twisted.web.test",
     "twisted.web.test.requesthelper",
     "twisted.web._version",
@@ -308,6 +309,7 @@ testModules = [
     "twisted.web.test.test_script",
     "twisted.web.test.test_static",
     "twisted.web.test.test_stan",
+    "twisted.web.test.test_template",
     "twisted.web.test.test_web__responses",
     "twisted.web.test.test_web",
     "twisted.web.test.test_webclient",
@@ -380,8 +382,6 @@ almostModules = [
     "twisted.web.server",
     # Parts are ported for twisted.web.static
     "twisted.web.util",
-    # Required by twisted.web.error when formatting flattener roots
-    "twisted.web.template",
 ]
 
 

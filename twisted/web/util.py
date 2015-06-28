@@ -16,17 +16,13 @@ from twisted.python.modules import getModule
 
 from twisted.web import resource
 
+from twisted.web.template import (
+    TagLoader, XMLFile, Element, renderer, flattenString)
+
 if not _PY3:
-    # TODO: Remove when twisted.web.template and _flatten is ported
-    # https://tm.tl/#7811
-    from twisted.web.template import (
-        TagLoader, XMLFile, Element, renderer, flattenString)
     # TODO: Remove when twisted.python.urlpath is ported
     # https://tm.tl/#7831
     from twisted.python import urlpath
-else:
-    Element = object
-    renderer = XMLFile = lambda a: a
 
 
 def redirectTo(URL, request):
@@ -345,12 +341,12 @@ def formatFailure(myFailure):
 
     @type myFailure: L{Failure<twisted.python.failure.Failure>}
 
-    @rtype: C{str}
+    @rtype: C{bytes}
     @return: A string containing the HTML representation of the given failure.
     """
     result = []
     flattenString(None, FailureElement(myFailure)).addBoth(result.append)
-    if isinstance(result[0], str):
+    if isinstance(result[0], bytes):
         # Ensure the result string is all ASCII, for compatibility with the
         # default encoding expected by browsers.
         return result[0].decode('utf-8').encode('ascii', 'xmlcharrefreplace')
@@ -361,11 +357,3 @@ def formatFailure(myFailure):
 __all__ = [
     "redirectTo", "Redirect", "ChildRedirector", "ParentRedirect",
     "DeferredResource", "FailureElement", "formatFailure"]
-
-if _PY3:
-    __all3__ = ["redirectTo", "Redirect"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__
