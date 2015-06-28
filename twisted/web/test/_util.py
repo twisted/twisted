@@ -77,7 +77,7 @@ class FlattenTestCase(TestCase):
         """
         Assert flattening a root element raises a particular exception.
         """
-        d = self.assertFailure(self.assertFlattensTo(root, ''), FlattenerError)
+        d = self.assertFailure(self.assertFlattensTo(root, b''), FlattenerError)
         d.addCallback(lambda exc: self.assertIsInstance(exc._exception, exn))
         return d
 

@@ -423,7 +423,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 # be a string which agrees with the one the traceback module will put into a
 # traceback for frames associated with functions defined in this file.
 
-HERE = (lambda: None).func_code.co_filename
+HERE = (lambda: None).__code__.co_filename
 
 
 class FlattenerErrorTests(TestCase):
@@ -494,7 +494,7 @@ class FlattenerErrorTests(TestCase):
 
         try:
             f()
-        except RuntimeError, exc:
+        except RuntimeError as exc:
             # Get the traceback, minus the info for *this* frame
             tbinfo = traceback.extract_tb(sys.exc_info()[2])[1:]
         else:
@@ -510,4 +510,3 @@ class FlattenerErrorTests(TestCase):
             "RuntimeError: reason\n" % (
                 HERE, f.func_code.co_firstlineno + 1,
                 HERE, g.func_code.co_firstlineno + 1))
-

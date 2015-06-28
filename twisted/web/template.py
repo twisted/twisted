@@ -33,10 +33,15 @@ from zope.interface import implementer
 from xml.sax import make_parser, handler
 
 from twisted.python import log
-from twisted.python.compat import NativeStringIO, items
+from twisted.python.compat import NativeStringIO, items, _PY3
 from twisted.python.filepath import FilePath
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 from twisted.web.iweb import ITemplateLoader
+
+if _PY3:
+    from collections import OrderedDict
+else:
+    from twisted.python.util import OrderedDict
 
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 
@@ -63,7 +68,7 @@ class _NSContext(object):
         """
         self.parent = parent
         if parent is not None:
-            self.nss = dict(parent.nss)
+            self.nss = OrderedDict(parent.nss)
         else:
             self.nss = {'http://www.w3.org/XML/1998/namespace':'xml'}
 
@@ -206,7 +211,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         render = None
 
-        attrs = dict(attrs)
+        attrs = OrderedDict(attrs)
         for k, v in items(attrs):
             attrNS, justTheName = k
             if attrNS != TEMPLATE_NAMESPACE:
@@ -222,7 +227,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # specified as having a namespace in the template) or prefix:name,
         # preserving the xml namespace prefix given in the document.
 
-        nonTemplateAttrs = {}
+        nonTemplateAttrs = OrderedDict()
         for (attrNs, attrName), v in items(attrs):
             nsPrefix = self.prefixMap.get(attrNs)
             if nsPrefix is None:
@@ -249,7 +254,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         # Apply any xmlns attributes
         if self.xmlnsAttrs:
-            nonTemplateAttrs.update(dict(self.xmlnsAttrs))
+            nonTemplateAttrs.update(OrderedDict(self.xmlnsAttrs))
             self.xmlnsAttrs = []
 
         # Add the prefix that was used in the parsed template for non-template
@@ -259,7 +264,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             if prefix is not None:
                 name = '%s:%s' % (self.prefixMap[ns],name)
         el = Tag(
-            name, attributes=dict(nonTemplateAttrs), render=render,
+            name, attributes=OrderedDict(nonTemplateAttrs), render=render,
             filename=filename, lineNumber=lineNumber,
             columnNumber=columnNumber)
         self.stack.append(el)
@@ -391,8 +396,11 @@ class XMLString(object):
         Run the parser on a L{NativeStringIO} copy of the string.
 
         @param s: The string from which to load the XML.
-        @type s: C{str}
+        @type s: C{str}, or a UTF-8 encoded L{bytes}.
         """
+        if not isinstance(s, str):
+            s = s.decode('utf8')
+
         self._loadedTemplate = _flatsaxParse(NativeStringIO(s))
 
 
@@ -544,10 +552,7 @@ def renderElement(request, element,
     if _failElement is None:
         _failElement = twisted.web.util.FailureElement
 
-    def _write(string):
-        request.write(string.encode('utf8'))
-
-    d = flatten(request, element, _write)
+    d = flatten(request, element, request.write)
 
     def eb(failure):
         log.err(failure, "An error occurred while rendering the response.")

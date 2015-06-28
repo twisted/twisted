@@ -384,7 +384,7 @@ class FlattenIntegrationTests(FlattenTestCase):
             'Hello, world.'
             '</t:transparent>'
         ))
-        return self.assertFlattensTo(element, "Hello, world.")
+        return self.assertFlattensTo(element, b"Hello, world.")
 
 
     def test_attrRendering(self):
@@ -399,7 +399,7 @@ class FlattenIntegrationTests(FlattenTestCase):
             '</a>'
         ))
         return self.assertFlattensTo(element,
-            '<a href="http://example.com">Hello, world.</a>')
+            b'<a href="http://example.com">Hello, world.</a>')
 
 
     def test_errorToplevelAttr(self):
@@ -440,7 +440,7 @@ class FlattenIntegrationTests(FlattenTestCase):
             'xmlns:hello="http://made-up.example.com/ns/not-real">'
             'This is a made-up tag.</hello:world>')
         element = Element(loader=XMLString(theInput))
-        self.assertFlattensTo(element, theInput)
+        self.assertFlattensTo(element, theInput.encode('utf8'))
 
 
     def test_deferredRendering(self):
@@ -458,7 +458,7 @@ class FlattenIntegrationTests(FlattenTestCase):
             Goodbye, world.
         </p>
         """))
-        return self.assertFlattensTo(element, "Hello, world.")
+        return self.assertFlattensTo(element, b"Hello, world.")
 
 
     def test_loaderClassAttribute(self):
@@ -468,7 +468,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
         class SubElement(Element):
             loader = XMLString("<p>Hello, world.</p>")
-        return self.assertFlattensTo(SubElement(), "<p>Hello, world.</p>")
+        return self.assertFlattensTo(SubElement(), b"<p>Hello, world.</p>")
 
 
     def test_directiveRendering(self):
@@ -486,7 +486,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         <p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1"
           t:render="renderMethod" />
         """))
-        return self.assertFlattensTo(element, "<p>Hello, world.</p>")
+        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
 
 
     def test_directiveRenderingOmittingTag(self):
@@ -504,7 +504,7 @@ class FlattenIntegrationTests(FlattenTestCase):
             Goodbye, world.
         </p>
         """))
-        return self.assertFlattensTo(element, "Hello, world.")
+        return self.assertFlattensTo(element, b"Hello, world.")
 
 
     def test_elementContainingStaticElement(self):
@@ -521,7 +521,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         <p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1"
           t:render="renderMethod" />
         """))
-        return self.assertFlattensTo(element, "<p><em>Hello, world.</em></p>")
+        return self.assertFlattensTo(element, b"<p><em>Hello, world.</em></p>")
 
 
     def test_elementUsingSlots(self):
@@ -540,7 +540,7 @@ class FlattenIntegrationTests(FlattenTestCase):
             '<t:slot name="test2" />'
             '</p>'
         ))
-        return self.assertFlattensTo(element, "<p>Hello, world.</p>")
+        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
 
 
     def test_elementContainingDynamicElement(self):
@@ -565,7 +565,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         <p xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1"
           t:render="outerMethod" />
         """))
-        return self.assertFlattensTo(element, "<p>Hello, world.</p>")
+        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
 
 
     def test_sameLoaderTwice(self):
@@ -595,9 +595,9 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         e1 = DestructiveElement()
         e2 = DestructiveElement()
-        self.assertFlattensImmediately(e1, "<p>1 1</p>")
-        self.assertFlattensImmediately(e1, "<p>2 2</p>")
-        self.assertFlattensImmediately(e2, "<p>3 1</p>")
+        self.assertFlattensImmediately(e1, b"<p>1 1</p>")
+        self.assertFlattensImmediately(e1, b"<p>2 2</p>")
+        self.assertFlattensImmediately(e2, b"<p>3 1</p>")
 
 
 
@@ -629,7 +629,7 @@ class TagLoaderTests(FlattenTestCase):
         to construct the L{TagLoader} would flatten.
         """
         e = Element(self.loader)
-        self.assertFlattensImmediately(e, '<i>test</i>')
+        self.assertFlattensImmediately(e, b'<i>test</i>')
 
 
 

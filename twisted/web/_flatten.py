@@ -9,12 +9,14 @@ complex or arbitrarily nested, as strings.
 
 from __future__ import division, absolute_import
 
+from io import BytesIO
+
 from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
 
 from twisted.internet.defer import Deferred
-from twisted.python.compat import NativeStringIO, _PY3, unicode, networkString
+from twisted.python.compat import _PY3, unicode, networkString, iteritems
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
@@ -116,7 +118,7 @@ def flattenWithAttributeEscaping(root):
     """
     if isinstance(root, bytes):
         root = escapeForContent(root)
-        root = root.replace('"', '&quot;')
+        root = root.replace(b'"', b'&quot;')
         yield root
     elif isinstance(root, Deferred):
         yield root.addCallback(flattenWithAttributeEscaping)
@@ -250,9 +252,9 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         if isinstance(root.tagName, unicode):
             tagName = root.tagName.encode('ascii')
         else:
-            tagName = networkString(root.tagName)
+            tagName = root.tagName
         yield tagName
-        for k, v in root.attributes.iteritems():
+        for k, v in iteritems(root.attributes):
             if isinstance(k, unicode):
                 k = k.encode('ascii')
             yield b' ' + k + b'="'
@@ -311,9 +313,6 @@ def _flattenTree(request, root):
     stack = [_flattenElement(request, root, [], None, escapeForContent)]
     while stack:
         try:
-            # In Python 2.5, after an exception, a generator's gi_frame is
-            # None.
-            print(stack)
             frame = stack[-1].gi_frame
             element = next(stack[-1])
         except StopIteration:
@@ -364,7 +363,7 @@ def _writeFlattenedData(state, write, result):
         except:
             result.errback()
         else:
-            if type(element) is str:
+            if type(element) is bytes:
                 write(element)
                 continue
             else:
@@ -418,7 +417,7 @@ def flattenString(request, root):
         its result when C{root} has been completely flattened into C{write} or
         which will be errbacked if an unexpected exception occurs.
     """
-    io = NativeStringIO()
+    io = BytesIO()
     d = flatten(request, root, io.write)
     d.addCallback(lambda _: io.getvalue())
     return d
