@@ -160,7 +160,7 @@ def escapedComment(data):
     if isinstance(data, unicode):
         data = data.encode('utf-8')
     data = data.replace(b'--', b'- - ').replace(b'>', b'&gt;')
-    if data and data[-1] == b'-':
+    if data and data[-1:] == b'-':
         data += b' '
     return data
 
