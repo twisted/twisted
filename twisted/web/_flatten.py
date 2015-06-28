@@ -16,10 +16,11 @@ from types import GeneratorType
 from traceback import extract_tb
 
 from twisted.internet.defer import Deferred
-from twisted.python.compat import _PY3, unicode, nativeString, iteritems
+from twisted.python.compat import unicode, nativeString, iteritems
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
+
 
 
 def escapeForContent(data):

@@ -11,7 +11,6 @@ from twisted.internet.defer import succeed
 from twisted.web import server
 from twisted.trial.unittest import TestCase
 from twisted.python.failure import Failure
-from twisted.python.compat import _PY3
 
 from twisted.web._flatten import flattenString
 from twisted.web.error import FlattenerError
