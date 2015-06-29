@@ -33,13 +33,10 @@ if _PY3:
 else:
     from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address
-from twisted.web import iweb, http, html
+from twisted.web import iweb, http, util
 from twisted.web.http import unquote
 from twisted.python import log, reflect, failure, components
 from twisted import copyright
-# Re-enable as part of #6178 when twisted.web.util is ported to Python 3:
-if not _PY3:
-    from twisted.web import util as webutil
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
 
@@ -297,9 +294,9 @@ class Request(Copyable, http.Request, components.Componentized):
             body = resource.ErrorPage(
                 http.INTERNAL_SERVER_ERROR,
                 "Request did not return bytes",
-                "Request: " + html.PRE(reflect.safe_repr(self)) + "<br />" +
-                "Resource: " + html.PRE(reflect.safe_repr(resrc)) + "<br />" +
-                "Value: " + html.PRE(reflect.safe_repr(body))).render(self)
+                "Request: " + util._PRE(reflect.safe_repr(self)) + "<br />" +
+                "Resource: " + util._PRE(reflect.safe_repr(resrc)) + "<br />" +
+                "Value: " + util._PRE(reflect.safe_repr(body))).render(self)
 
         if self.method == b"HEAD":
             if len(body) > 0:
@@ -327,7 +324,7 @@ class Request(Copyable, http.Request, components.Componentized):
                     "<body><b>web.Server Traceback"
                     " (most recent call last):</b>\n\n"
                     "%s\n\n</body></html>\n"
-                    % webutil.formatFailure(reason))
+                    % util.formatFailure(reason))
         else:
             body = (b"<html><head><title>Processing Failed"
                     b"</title></head><body>"

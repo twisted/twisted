@@ -11,6 +11,7 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+from twisted.python import reflect
 from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
@@ -759,6 +760,42 @@ class NewRenderTests(unittest.TestCase):
         headers, body = req.transport.getvalue().split(b'\r\n\r\n')
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b'')
+
+
+    def test_noBytesResult(self):
+        """
+        When implemented C{render} method does not return bytes an internal
+        server error is returned.
+        """
+        class RiggedRepr(object):
+            def __repr__(self):
+                return 'my>repr'
+
+        result = RiggedRepr()
+        no_bytes_resource = resource.Resource()
+        no_bytes_resource.render = lambda request: result
+        request = self._getReq(no_bytes_resource)
+
+        request.requestReceived(b"GET", b"/newrender", b"HTTP/1.0")
+
+        headers, body = request.transport.getvalue().split(b'\r\n\r\n')
+        self.assertEqual(request.code, 500)
+        expected = [
+            '',
+            '<html>',
+            '  <head><title>500 - Request did not return bytes</title></head>',
+            '  <body>',
+            '    <h1>Request did not return bytes</h1>',
+            '    <p>Request: <pre>&lt;%s&gt;</pre><br />'
+                'Resource: <pre>&lt;%s&gt;</pre><br />'
+                'Value: <pre>my&gt;repr</pre></p>' % (
+                    reflect.safe_repr(request)[1:-1],
+                    reflect.safe_repr(no_bytes_resource)[1:-1],
+                    ),
+            '  </body>',
+            '</html>',
+            '']
+        self.assertEqual('\n'.join(expected).encode('ascii'), body)
 
 
 

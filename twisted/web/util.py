@@ -24,9 +24,28 @@ if not _PY3:
     # TODO: Remove when twisted.python.urlpath is ported
     # https://tm.tl/#7831
     from twisted.python import urlpath
+    from cgi import escape
 else:
     Element = object
     renderer = XMLFile = lambda a: a
+    from html import escape
+
+
+
+def _PRE(text):
+    """
+    Wraps <pre> tags around some text and HTML-escape it.
+
+    This is here since once twisted.web.html was deprecated it was hard to
+    migrate the html.PRE from current code to twisted.web.template.
+
+    For new code consider using twisted.web.template.
+
+    @return: Escaped text wrapped in <pre> tags.
+    @rtype: C{str}
+    """
+    return '<pre>%s</pre>' % (escape(text),)
+
 
 
 def redirectTo(URL, request):
