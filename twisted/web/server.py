@@ -399,7 +399,7 @@ class Request(Copyable, http.Request, components.Componentized):
     def getSession(self, sessionInterface=None):
         # Session management
         if not self.session:
-            cookiename = b"_".join([b'TWISTED_SESSION'] + self.sitepath)
+            cookiename = self.site.makeSessionCookieName(self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
                 try:
@@ -626,17 +626,20 @@ class Site(http.HTTPFactory):
 
     @ivar counter: increment value used for generating unique sessions ID.
     @ivar requestFactory: A factory which is called with (channel, queued)
-        and creates L{Request} instances. Default to L{Request}.
+        and creates L{Request} instances. Defaults to L{Request}.
     @ivar displayTracebacks: if set, Twisted internal errors are displayed on
         rendered pages. Default to C{True}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
     @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
+    @ivar sessionCookiePrefix: A prefix for session cookies. The default is
+    C{b'TWISTED_SESSION'}
     """
     counter = 0
     requestFactory = Request
     displayTracebacks = True
     sessionFactory = Session
     sessionCheckTime = 1800
+    sessionCookiePrefix = b'TWISTED_SESSION'
 
     def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """
@@ -646,9 +649,19 @@ class Site(http.HTTPFactory):
         @type resource: L{IResource} provider
         @param requestFactory: Overwrite for default requestFactory.
         @type requestFactory: C{callable} or C{class}.
+        @param sessionCookiePrefix: Overwrite the default session cookie
+        prefix.
+        @type sessionCookiePrefix: C{bytes}
 
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
+        # Handling and deleting it here, since the HTTPFactory throws
+        # unexpected argument on it.
+        sessionCookiePrefix = None
+        if 'sessionCookiePrefix' in kwargs:
+            self.sessionCookiePrefix = kwargs['sessionCookiePrefix']
+            del kwargs['sessionCookiePrefix']
+
         http.HTTPFactory.__init__(self, *args, **kwargs)
         self.sessions = {}
         self.resource = resource
@@ -677,6 +690,18 @@ class Site(http.HTTPFactory):
         return md5(networkString(
                 "%s_%s" % (str(random.random()), str(self.counter)))
                    ).hexdigest()
+
+
+    def makeSessionCookieName(self, sitepath=None):
+        """
+        Generate a cookie name used to identify a session.
+
+        @return The generated cookie name. Type: C{bytes}
+        """
+        if sitepath:
+            return b"_".join([self.sessionCookiePrefix] + sitepath)
+        else:
+            return self.sessionCookiePrefix
 
 
     def makeSession(self):

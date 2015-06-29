@@ -8,9 +8,10 @@ Tests for various parts of L{twisted.web}.
 import os
 import zlib
 
-from zope.interface import implementer
+from zope.interface import Attribute, Interface, implementer
 from zope.interface.verify import verifyObject
 
+from twisted.python import components
 from twisted.python import reflect
 from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
@@ -55,6 +56,20 @@ class SimpleResource(resource.Resource):
 
 
 
+class TaskClockSession(server.Session):
+    """
+    A session which uses task.Clock for `touch` method.
+    """
+    def __init__(self, site=None, uid=0):
+        server.Session.__init__(
+            self, site=site, uid=uid, reactor=Clock())
+
+    def touch(self):
+        self._reactor.advance(1)
+        return server.Session.touch(self)
+
+
+
 class SiteTest(unittest.TestCase):
     """
     Unit tests for L{server.Site}.
@@ -67,7 +82,7 @@ class SiteTest(unittest.TestCase):
         """
         sres1 = SimpleResource()
         sres2 = SimpleResource()
-        sres1.putChild(b"",sres2)
+        sres1.putChild(b"", sres2)
         site = server.Site(sres1)
         self.assertIdentical(
             site.getResourceFor(DummyRequest([b''])),
@@ -106,6 +121,21 @@ class SiteTest(unittest.TestCase):
 
         self.assertIs(site, channel.site)
         self.assertIs(site.requestFactory, channel.requestFactory)
+
+
+    def test_makeSessionCookieName(self):
+        """
+        A custom prefix for session cookies.
+        """
+        prefix = b'CUSTOM_COOKIE_PREFIX'
+        sitepath = [b'TEST', b'SUFFIX']
+        site = server.Site(resource=SimpleResource(),
+                           sessionCookiePrefix=prefix)
+
+        self.assertEqual(site.sessionCookiePrefix, prefix)
+        self.assertEqual(site.makeSessionCookieName(), prefix)
+        self.assertEqual(site.makeSessionCookieName(sitepath=sitepath),
+                         prefix + b'_TEST_SUFFIX')
 
 
 
@@ -414,12 +444,14 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar/', b'HTTP/1.0')
         self.assertEqual(request.childLink(b'baz'), b'baz')
 
+
     def testPrePathURLSimple(self):
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         request.setHost(b'example.com', 80)
         self.assertEqual(request.prePathURL(), b'http://example.com/foo/bar')
+
 
     def testPrePathURLNonDefault(self):
         d = DummyChannel()
@@ -430,6 +462,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'http://example.com:81/foo/bar')
 
+
     def testPrePathURLSSLPort(self):
         d = DummyChannel()
         d.transport.port = 443
@@ -438,6 +471,7 @@ class RequestTests(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'http://example.com:443/foo/bar')
+
 
     def testPrePathURLSSLPortAndSSL(self):
         d = DummyChannel()
@@ -449,6 +483,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'https://example.com/foo/bar')
 
+
     def testPrePathURLHTTPPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
@@ -459,6 +494,7 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'https://example.com:80/foo/bar')
 
+
     def testPrePathURLSSLNonDefault(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
@@ -468,6 +504,7 @@ class RequestTests(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'https://example.com:81/foo/bar')
+
 
     def testPrePathURLSetSSLHost(self):
         d = DummyChannel()
@@ -490,6 +527,87 @@ class RequestTests(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
+
+
+    def test_getSessionAlreadyExists(self):
+        """
+        When a session already exists, it will return the same session and
+        update its modification.
+        """
+        channel = DummyChannel()
+        request = server.Request(channel, 1)
+        session = TaskClockSession()
+        initialTime = session.lastModified
+        request.session = session
+
+        result = request.getSession()
+
+        self.assertIs(session, result)
+        self.assertGreater(result.lastModified, initialTime)
+
+
+    class ISessionObject(Interface):
+        """
+        A simple interface for testing session components.
+        """
+        value = Attribute("A marker value for this component.")
+
+
+    @implementer(ISessionObject)
+    class SessionObject(object):
+        """
+        A simple component.
+        """
+        def __init__(self, session):
+            self.value = 42
+
+
+    def test_getSessionComponent(self):
+        """
+        When sessionInterface is provided it will return the
+        C{sessionInterface} component associated with this session.
+        """
+        # Register adapter for this test and remove it once test is done.
+        components.registerAdapter(
+            self.SessionObject, server.Session, self.ISessionObject)
+        # Un-registration is done by registering None.
+        self.addCleanup(
+            components.getRegistry().register,
+            [self.ISessionObject], server.Session, '', None)
+        channel = DummyChannel()
+        request = server.Request(channel, 1)
+        session = TaskClockSession()
+        request.session = session
+
+        result = request.getSession(sessionInterface=self.ISessionObject)
+
+        self.assertIsInstance(result, self.SessionObject)
+        self.assertEqual(42, result.value)
+
+
+    def test_getSessionNonExistent(self):
+        """
+        When request (or the site associated with this request) has no
+        previous session, a new one is created using the name provided by the
+        site's `makeSessionCookieName` as cookie which stores the session id on
+        the web client (browser).
+        """
+        site = server.Site(resource.Resource())
+        site.sessionFactory = TaskClockSession
+        channel = DummyChannel()
+        channel.site = site
+        request = server.Request(channel, 1)
+        request.sitepath = []
+        request.site = site
+
+        session = request.getSession()
+
+        sessionRawCookie = '%s=%s; Path=/' % (
+            site.makeSessionCookieName(), session.uid,)
+        self.assertEqual(sessionRawCookie, request.cookies[0])
+
+        # Getting the session again, should return the same object as before.
+        self.assertIs(session, request.getSession())
 
 
 
