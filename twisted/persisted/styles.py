@@ -162,6 +162,9 @@ def pickleStringO(stringo):
     """
     Reduce the given cStringO.
 
+    This is only called on Python 2, because the cStringIO module only exists
+    on Python 2.
+
     @param stringo: The string output to pickle.
     @type stringo: L{cStringIO.OutputType}
     """
@@ -173,7 +176,8 @@ def pickleStringO(stringo):
 def unpickleStringO(val, sek):
     """
     Convert the output of L{pickleStringO} into an appropriate type for the
-    current python version.
+    current python version.  This may be called on Python 3 and will convert a
+    cStringIO into an L{io.StringIO}.
 
     @param val: The content of the file.
     @type val: L{bytes}
@@ -195,7 +199,8 @@ def pickleStringI(stringi):
     """
     Reduce the given cStringI.
 
-    This is only called on Python 2.
+    This is only called on Python 2, because the cStringIO module only exists
+    on Python 2.
 
     @param stringi: The string input to pickle.
     @type stringi: L{cStringIO.InputType}
@@ -211,6 +216,9 @@ def unpickleStringI(val, sek):
     """
     Convert the output of L{pickleStringI} into an appropriate type for the
     current Python version.
+
+    This may be called on Python 3 and will convert a cStringIO into an
+    L{io.StringIO}.
 
     @param val: The content of the file.
     @type val: L{bytes}
