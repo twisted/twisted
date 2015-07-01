@@ -536,8 +536,7 @@ def _constructMethod(cls, name, self):
     func = cls.__dict__[name]
     if _PY3:
         return types.MethodType(func, self)
-    else:
-        return types.MethodType(func, self, cls)
+    return types.MethodType(func, self, cls)
 
 
 
