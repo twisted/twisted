@@ -96,7 +96,7 @@ class _InstanceMethod(NotKnown):
         NotKnown.__init__(self)
         self.my_class = im_class
         self.name = im_name
-        # im_self _must_ be a
+        # im_self _must_ be a NotKnown
         im_self.addDependant(self, 0)
 
     def __call__(self, *args, **kw):
