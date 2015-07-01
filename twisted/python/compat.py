@@ -29,6 +29,7 @@ import socket
 import string
 import struct
 import sys
+from types import MethodType as _MethodType
 
 from io import TextIOBase, IOBase
 
@@ -569,6 +570,29 @@ def bytesEnviron():
         target[os.environ.encodekey(x)] = os.environ.encodevalue(y)
 
     return target
+
+
+
+def _constructMethod(cls, name, self):
+    """
+    Construct a bound method.
+
+    @param cls: The class that the method should be bound to.
+    @type cls: L{types.ClassType} or L{type}.
+
+    @param name: The name of the method.
+    @type name: native L{str}
+
+    @param self: The object that the method is bound to.
+    @type self: any object
+
+    @return: a bound method
+    @rtype: L{types.MethodType}
+    """
+    func = cls.__dict__[name]
+    if _PY3:
+        return _MethodType(func, self)
+    return _MethodType(func, self, cls)
 
 
 

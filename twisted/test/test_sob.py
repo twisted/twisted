@@ -1,6 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import division, absolute_import
 
 import sys, os
 
@@ -9,9 +10,12 @@ try:
 except ImportError:
     Crypto = None
 
+from textwrap import dedent
+
 from twisted.trial import unittest
 from twisted.persisted import sob
 from twisted.python import components
+from twisted.persisted.styles import Ephemeral
 
 class Dummy(components.Componentized):
     pass
@@ -61,10 +65,10 @@ class PersistTests(unittest.TestCase):
                 p.save(tag)
                 o1 = sob.load('object-'+tag+'.ta'+style[0], style)
                 self.assertEqual(o, o1)
-      
+
     def testEncryptedStyles(self):
         for o in objects:
-            phrase='once I was the king of spain'
+            phrase = b'once I was the king of spain'
             p = sob.Persistent(o, '')
             for style in 'source pickle'.split():
                 p.setStyle(style)
@@ -75,18 +79,15 @@ class PersistTests(unittest.TestCase):
         testEncryptedStyles.skip = "PyCrypto required for encrypted config"
 
     def testPython(self):
-        f = open("persisttest.python", 'w')
-        f.write('foo=[1,2,3] ')
-        f.close()
+        with open("persisttest.python", 'w') as f:
+            f.write('foo=[1,2,3] ')
         o = sob.loadValueFromFile('persisttest.python', 'foo')
         self.assertEqual(o, [1,2,3])
 
     def testEncryptedPython(self):
-        phrase='once I was the king of spain'
-        f = open("epersisttest.python", 'w')
-        f.write(
-            sob._encrypt(phrase, 'foo=[1,2,3]'))
-        f.close()
+        phrase = b'once I was the king of spain'
+        with open("epersisttest.python", 'wb') as f:
+            f.write(sob._encrypt(phrase, b'foo=[1,2,3]'))
         o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
         self.assertEqual(o, [1,2,3])
     if Crypto is None:
@@ -104,7 +105,9 @@ class PersistTests(unittest.TestCase):
 
     def testEverythingEphemeralGetattr(self):
         """
-        Verify that _EverythingEphermal.__getattr__ works.
+        L{_EverythingEphermal.__getattr__} will proxy the __main__ module as an
+        L{Ephemeral} object, and during load will be transparent, but after
+        load will return L{Ephemeral} objects from any accessed attributes.
         """
         self.fakeMain.testMainModGetattr = 1
 
@@ -113,13 +116,31 @@ class PersistTests(unittest.TestCase):
 
         filename = os.path.join(dirname, 'persisttest.ee_getattr')
 
-        f = file(filename, 'w')
-        f.write('import __main__\n')
-        f.write('if __main__.testMainModGetattr != 1: raise AssertionError\n')
-        f.write('app = None\n')
-        f.close()
+        global mainWhileLoading
+        mainWhileLoading = None
+        with open(filename, "w") as f:
+            f.write(dedent("""
+            app = []
+            import __main__
+            app.append(__main__.testMainModGetattr == 1)
+            try:
+                __main__.somethingElse
+            except AttributeError:
+                app.append(True)
+            else:
+                app.append(False)
+            from twisted.test import test_sob
+            test_sob.mainWhileLoading = __main__
+            """))
 
-        sob.load(filename, 'source')
+        loaded = sob.load(filename, 'source')
+        self.assertIsInstance(loaded, list)
+        self.assertTrue(loaded[0], "Expected attribute not set.")
+        self.assertTrue(loaded[1], "Unexpected attribute set.")
+        self.assertIsInstance(mainWhileLoading, Ephemeral)
+        self.assertIsInstance(mainWhileLoading.somethingElse, Ephemeral)
+        del mainWhileLoading
+
 
     def testEverythingEphemeralSetattr(self):
         """
@@ -131,11 +152,10 @@ class PersistTests(unittest.TestCase):
         os.mkdir(dirname)
 
         filename = os.path.join(dirname, 'persisttest.ee_setattr')
-        f = file(filename, 'w')
-        f.write('import __main__\n')
-        f.write('__main__.testMainModSetattr = 2\n')
-        f.write('app = None\n')
-        f.close()
+        with open(filename, 'w') as f:
+            f.write('import __main__\n')
+            f.write('__main__.testMainModSetattr = 2\n')
+            f.write('app = None\n')
 
         sob.load(filename, 'source')
 
@@ -149,9 +169,8 @@ class PersistTests(unittest.TestCase):
         os.mkdir(dirname)
         filename = os.path.join(dirname, 'persisttest.ee_exception')
 
-        f = file(filename, 'w')
-        f.write('raise ValueError\n')
-        f.close()
+        with open(filename, 'w') as f:
+            f.write('raise ValueError\n')
 
         self.assertRaises(ValueError, sob.load, filename, 'source')
         self.assertEqual(type(sys.modules['__main__']), FakeModule)
