@@ -10,10 +10,8 @@ Utility classes for dealing with circular references.
 
 from __future__ import division, absolute_import
 
-import types
-
 from twisted.python import log, reflect
-from twisted.python.compat import xrange
+from twisted.python.compat import xrange, _constructMethod
 
 
 class NotKnown:
@@ -111,8 +109,7 @@ class _InstanceMethod(NotKnown):
     def __setitem__(self, n, obj):
         assert n == 0, "only zero index allowed"
         if not isinstance(obj, NotKnown):
-            method = types.MethodType(self.my_class.__dict__[self.name],
-                                      obj, *([self.my_class]*(bytes is str)))
+            method = _constructMethod(self.my_class, self.name, obj)
             self.resolveDependants(method)
 
 class _DictKeyAndValue:

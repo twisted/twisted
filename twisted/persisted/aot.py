@@ -26,7 +26,7 @@ except:
 
 from twisted.python import reflect, log
 from twisted.persisted import crefutil
-from twisted.python.compat import unicode, _PY3
+from twisted.python.compat import unicode, _PY3, _constructMethod
 
 ###########################
 # Abstract Object Classes #
@@ -514,29 +514,6 @@ def _selfOfMethod(methodObject):
     if _PY3:
         return methodObject.__self__
     return methodObject.im_self
-
-
-
-def _constructMethod(cls, name, self):
-    """
-    Construct a bound method.
-
-    @param cls: The class that the method should be bound to.
-    @type cls: L{types.ClassType} or L{type}.
-
-    @param name: The name of the method.
-    @type name: native L{str}
-
-    @param self: The object that the method is bound to.
-    @type self: any object
-
-    @return: a bound method
-    @rtype: L{types.MethodType}
-    """
-    func = cls.__dict__[name]
-    if _PY3:
-        return types.MethodType(func, self)
-    return types.MethodType(func, self, cls)
 
 
 
