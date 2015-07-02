@@ -13,12 +13,13 @@ import signal
 
 from operator import attrgetter
 
-from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.python.reflect import qual, namedAny
-from twisted.python.log import ILogObserver
+from twisted import copyright, plugin
 from twisted.application import service, reactors
 from twisted.internet import defer
-from twisted import copyright, plugin
+from twisted.persisted import sob
+from twisted.python import runtime, log, usage, failure, util, logfile
+from twisted.python.log import ILogObserver
+from twisted.python.reflect import qual, namedAny
 
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
@@ -660,9 +661,6 @@ def run(runApp, ServerOptions):
 
 
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
-    # FIXME: https://twistedmatrix.com/trac/ticket/7827
-    # twisted.persisted is not yet ported to Python 3, so import it here.
-    from twisted.persisted import sob
     application = service.loadApplication(filein, typein, passphrase)
     sob.IPersistable(application).setStyle(typeout)
     passphrase = getSavePassphrase(encrypt)
@@ -676,9 +674,6 @@ def startApplication(application, save):
     from twisted.internet import reactor
     service.IService(application).startService()
     if save:
-        # FIXME: https://twistedmatrix.com/trac/ticket/7827
-        # twisted.persisted is not yet ported to Python 3, so import it here.
-        from twisted.persisted import sob
         p = sob.IPersistable(application)
         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
     reactor.addSystemEventTrigger('before', 'shutdown',
