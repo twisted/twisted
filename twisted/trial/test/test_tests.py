@@ -26,12 +26,12 @@ from __future__ import division, absolute_import
 import gc, sys, weakref
 import unittest as pyunit
 
-from twisted.python.compat import _PY3, NativeStringIO
+from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python.reflect import namedAny
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, reporter, util
-if not _PY3:
-    from twisted.trial import runner
+
+from twisted.trial import runner
 from twisted.trial.test import erroneous
 from twisted.trial.test.test_suppression import SuppressionMixin
 from twisted.trial._asyncrunner import (
@@ -39,9 +39,6 @@ from twisted.trial._asyncrunner import (
     _ForceGarbageCollectionDecorator,
     _iterateTests,
     )
-
-# Skip messages that are used in multiple places:
-_PY3PORTNEEDED = "Requires runner and/or reporter to be ported (#5964, #5965)"
 
 
 class ResultsTestMixin(object):
@@ -592,8 +589,6 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
     Tests for cleanup and reporting of reactor event sources left behind by test
     methods.
     """
-    if _PY3:
-        skip = _PY3PORTNEEDED
 
     def setUp(self):
         """
@@ -602,13 +597,14 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         self.result = reporter.Reporter(NativeStringIO())
         self.loader = runner.TestLoader()
 
+
     def test_leftoverSockets(self):
         """
         Trial reports a L{util.DirtyReactorAggregateError} if a test leaves
         sockets behind.
         """
-        suite = self.loader.loadMethod(
-            erroneous.SocketOpenTest.test_socketsLeftOpen)
+        suite = self.loader.loadByName(
+            "twisted.trial.test.erroneous.SocketOpenTest.test_socketsLeftOpen")
         suite.run(self.result)
         self.failIf(self.result.wasSuccessful())
         # socket cleanup happens at end of class's tests.
@@ -617,6 +613,7 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         self.assertEqual(self.result.successes, 1)
         failure = self.result.errors[0][1]
         self.failUnless(failure.check(util.DirtyReactorAggregateError))
+
 
     def test_leftoverPendingCalls(self):
         """
@@ -629,6 +626,7 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         failure = self.result.errors[0][1]
         self.assertEqual(self.result.successes, 0)
         self.failUnless(failure.check(util.DirtyReactorAggregateError))
+
 
 
 class FixtureMixin(object):
@@ -716,9 +714,6 @@ class GCMixin:
     garbage collection. I'm used to test whether gc.collect gets called.
     """
 
-    if _PY3:
-        skip = _PY3PORTNEEDED
-
     class BasicTest(unittest.SynchronousTestCase):
         """
         Mock test to run.
@@ -805,9 +800,6 @@ class UnhandledDeferredTests(unittest.SynchronousTestCase):
     a test.
     """
 
-    if _PY3:
-        skip = _PY3PORTNEEDED
-
     def setUp(self):
         """
         Setup our test case
@@ -838,7 +830,10 @@ class UnhandledDeferredTests(unittest.SynchronousTestCase):
         self.flushLoggedErrors() # test1 logs errors that get caught be us.
         # test1 created unreachable cycle.
         # it & all others should have been collected by now.
-        n = gc.collect()
+        if _PY3:
+            n = len(gc.garbage)
+        else:
+            n = gc.collect()
         self.assertEqual(n, 0, 'unreachable cycle still existed')
         # check that last gc.collect didn't log more errors
         x = self.flushLoggedErrors()
@@ -983,8 +978,6 @@ class SuiteClearingMixin(object):
     """
     Tests for our extension that allows us to clear out a L{TestSuite}.
     """
-    if _PY3:
-        skip = _PY3PORTNEEDED
 
     def test_clearSuite(self):
         """
@@ -1040,9 +1033,6 @@ class TestDecoratorMixin(object):
     """
     Tests for our test decoration features.
     """
-    if _PY3:
-        skip = _PY3PORTNEEDED
-
     def assertTestsEqual(self, observed, expected):
         """
         Assert that the given decorated tests are equal.
@@ -1294,9 +1284,6 @@ class IterateTestsMixin(object):
     L{_iterateTests} returns a list of all test cases in a test suite or test
     case.
     """
-    if _PY3:
-        skip = _PY3PORTNEEDED
-
     def test_iterateTestCase(self):
         """
         L{_iterateTests} on a single test case returns a list containing that

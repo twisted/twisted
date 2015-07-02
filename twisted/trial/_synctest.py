@@ -35,6 +35,11 @@ else:
         entire TestCase.
         """
 
+if getattr(pyunit, "installHandler", None):
+    # On Python 2.7+, installHandler will raise KeyboardInterrupts in tests
+    # We want to turn this on, so users can control-C during synchronous
+    # tests.
+    pyunit.installHandler()
 
 
 class FailTest(AssertionError):
@@ -1303,6 +1308,9 @@ class SynchronousTestCase(_Assertions):
             if todo is None or not todo.expected(reason):
                 if reason.check(self.failureException):
                     addResult = result.addFailure
+                elif reason.check(KeyboardInterrupt):
+                    addResult = result.addError
+                    result.stop()
                 else:
                     addResult = result.addError
                 addResult(self, reason)

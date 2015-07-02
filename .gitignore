@@ -7,3 +7,8 @@ build/
 dropin.cache
 doc/
 docs/_build/
+dist/
+venv/
+htmlcov/
+.coverage
+*~
