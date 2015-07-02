@@ -40,7 +40,9 @@ modules = [
     "twisted",
     "twisted._version",
     "twisted.application",
+    "twisted.application.app",
     "twisted.application.internet",
+    "twisted.application.reactors",
     "twisted.application.service",
     "twisted.copyright",
     "twisted.cred",
@@ -262,6 +264,7 @@ testModules = [
     "twisted.python.test.test_versions",
     "twisted.test.testutils",
     "twisted.test.test_abstract",
+    "twisted.test.test_application",
     "twisted.test.test_compat",
     "twisted.test.test_context",
     "twisted.test.test_cooperator",
@@ -298,6 +301,7 @@ testModules = [
     "twisted.test.test_threadpool",
     "twisted.test.test_threads",
     "twisted.test.test_twisted",
+    "twisted.test.test_twistd",
     "twisted.test.test_udp",
     "twisted.test.test_unix",
     "twisted.test.test_usage",
@@ -362,6 +366,11 @@ almostModules = [
     # twisted.names.client semi-depends on twisted.names.root, but only on
     # Windows really:
     "twisted.names.root",
+    # Echo is ported for twisted.application tests:
+    "twisted.protocols.wire",
+    # Required by twisted.test.test_twistd, which tests twisted.application:
+    "twisted.scripts.twistd",
+    "twisted.scripts._twistd_unix",
     # Missing test coverage:
     "twisted.protocols.loopback",
     # Minimally used by setup3.py:

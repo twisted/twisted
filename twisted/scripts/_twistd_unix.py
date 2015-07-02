@@ -2,9 +2,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import, division, print_function
+
 import os, errno, sys
 
-from twisted.python import log, syslog, logfile, usage
+from twisted.python import log, logfile, usage
+from twisted.python.compat import intToBytes
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
@@ -56,8 +59,8 @@ class ServerOptions(app.ServerOptions):
     def opt_version(self):
         """Print version information and exit.
         """
-        print 'twistd (the Twisted daemon) %s' % copyright.version
-        print copyright.copyright
+        print('twistd (the Twisted daemon) %s' % copyright.version)
+        print(copyright.copyright)
         sys.exit()
 
 
@@ -77,7 +80,7 @@ def checkPID(pidfile):
             sys.exit('Pidfile %s contains non-numeric value' % pidfile)
         try:
             os.kill(pid, 0)
-        except OSError, why:
+        except OSError as why:
             if why[0] == errno.ESRCH:
                 # The pid doesn't exists.
                 log.msg('Removing stale pidfile %s' % pidfile, isError=True)
@@ -130,6 +133,9 @@ class UnixAppLogger(app.AppLogger):
         @return: An object suitable to be passed to C{log.addObserver}.
         """
         if self._syslog:
+            # FIXME: Requires twisted.python.syslog to be ported to Py3
+            # https://twistedmatrix.com/trac/ticket/7957
+            from twisted.python import syslog
             return syslog.SyslogObserver(self._syslogPrefix).emit
 
         if self._logfilename == '-':
@@ -139,6 +145,9 @@ class UnixAppLogger(app.AppLogger):
         elif self._nodaemon and not self._logfilename:
             logFile = sys.stdout
         else:
+            # FIXME: Requires twisted.python.logfile to be ported to Py3
+            # https://twistedmatrix.com/trac/ticket/6749
+            from twisted.python import logfile
             if not self._logfilename:
                 self._logfilename = 'twistd.log'
             logFile = logfile.LogFile.fromFullPath(self._logfilename)
@@ -221,7 +230,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
             return
         try:
             os.unlink(pidfile)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.EACCES or e.errno == errno.EPERM:
                 log.msg("Warning: No permission to delete pid file")
             else:
@@ -260,16 +269,15 @@ class UnixApplicationRunner(app.ApplicationRunner):
                 rundir = '/'
         os.chdir(rundir)
         if daemon and umask is None:
-            umask = 077
+            umask = 0o077
         if umask is not None:
             os.umask(umask)
         if daemon:
             from twisted.internet import reactor
             self.config["statusPipe"] = self.daemonize(reactor)
         if pidfile:
-            f = open(pidfile, 'wb')
-            f.write(str(os.getpid()))
-            f.close()
+            with open(pidfile, 'wb') as f:
+                f.write(intToBytes(os.getpid()))
 
 
     def daemonize(self, reactor):
