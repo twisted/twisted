@@ -124,6 +124,7 @@ modules = [
     "twisted.protocols.tls",
     "twisted.persisted",
     "twisted.persisted.aot",
+    "twisted.persisted.crefutil",
     "twisted.persisted.sob",
     "twisted.persisted.styles",
     "twisted.python",
@@ -371,6 +372,9 @@ almostModules = [
     # Required by twisted.test.test_twistd, which tests twisted.application:
     "twisted.scripts.twistd",
     "twisted.scripts._twistd_unix",
+    # Required by twisted.test.test_twistd
+    # https://twistedmatrix.com/trac/ticket/7958
+    "twisted.python.fakepwd",
     # Missing test coverage:
     "twisted.protocols.loopback",
     # Minimally used by setup3.py:
