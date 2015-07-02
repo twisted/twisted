@@ -39,6 +39,9 @@ from os import path
 modules = [
     "twisted",
     "twisted._version",
+    "twisted.application",
+    "twisted.application.internet",
+    "twisted.application.service",
     "twisted.copyright",
     "twisted.cred",
     "twisted.cred._digest",
@@ -187,6 +190,9 @@ modules = [
 
 
 testModules = [
+    "twisted.application.test",
+    "twisted.application.test.test_internet",
+    "twisted.application.test.test_service",
     "twisted.cred.test",
     "twisted.cred.test.test_cramauth",
     "twisted.cred.test.test_cred",
