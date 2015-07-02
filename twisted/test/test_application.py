@@ -6,13 +6,15 @@ Tests for L{twisted.application} and its interaction with
 L{twisted.persisted.sob}.
 """
 
-import copy, os, pickle
-from StringIO import StringIO
+import copy
+import os
+import pickle
 
 from twisted.trial import unittest
 from twisted.application import service, internet, app
 from twisted.persisted import sob
 from twisted.python import usage
+from twisted.python.compat import NativeStringIO
 from twisted.internet import interfaces, defer
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
@@ -395,8 +397,6 @@ class InternetTests(unittest.TestCase):
     def testUNIX(self):
         # FIXME: This test is far too dense.  It needs comments.
         #  -- spiv, 2004-11-07
-        if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         s = service.MultiService()
         s.startService()
         factory = protocol.ServerFactory()
@@ -415,6 +415,7 @@ class InternetTests(unittest.TestCase):
         factory.d.addCallback(self._cbTestUnix, factory, s)
         return factory.d
 
+
     def _cbTestUnix(self, ignored, factory, s):
         TestEcho.d = defer.Deferred()
         factory.line = None
@@ -426,8 +427,6 @@ class InternetTests(unittest.TestCase):
         return factory.d
 
     def testVolatile(self):
-        if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
         t = internet.UNIXServer('echo.skt', factory)
@@ -451,8 +450,6 @@ class InternetTests(unittest.TestCase):
         self.failIf(t.running)
 
     def testStoppingServer(self):
-        if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
         t = internet.UNIXServer('echo.skt', factory)
@@ -464,6 +461,12 @@ class InternetTests(unittest.TestCase):
         factory.clientConnectionFailed = lambda *args: d.callback(None)
         reactor.connectUNIX('echo.skt', factory)
         return d
+
+
+        if not interfaces.IReactorUNIX(reactor, None):
+            testUNIX = "This reactor does not support UNIX domain sockets"
+            testVolatile = "This reactor does not support UNIX domain sockets"
+            testStoppingServer.skip = "This reactor does not support UNIX domain sockets"
 
     def testPickledTimer(self):
         target = TimerTarget()
@@ -851,7 +854,7 @@ class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
         self.pluginResults = []
 
         options = ReactorSelectionOptions()
-        options.messageOutput = StringIO()
+        options.messageOutput = NativeStringIO()
         e = self.assertRaises(usage.UsageError, options.parseOptions,
                               ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn("fakereactortest", e.args[0])
@@ -876,7 +879,7 @@ class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
         self.pluginResults = [FakeReactor(install, name, package, description)]
 
         options = ReactorSelectionOptions()
-        options.messageOutput = StringIO()
+        options.messageOutput = NativeStringIO()
         e =  self.assertRaises(usage.UsageError, options.parseOptions,
                                ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn(message, e.args[0])
