@@ -4,9 +4,11 @@
 
 from __future__ import absolute_import, division, print_function
 
-import os, errno, sys
+import errno
+import os
+import sys
 
-from twisted.python import log, logfile, usage
+from twisted.python import log, usage
 from twisted.python.compat import intToBytes
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
