@@ -206,7 +206,6 @@ on arguments to the reactor method.
 """,
 }
 
-import types
 for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
         if tran == "Multicast" and side == "Client":
