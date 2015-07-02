@@ -467,7 +467,6 @@ class InternetTests(unittest.TestCase):
         reactor.connectUNIX('echo.skt', factory)
         return d
 
-
     if not interfaces.IReactorUNIX(reactor, None):
         _skipMsg = "This reactor does not support UNIX domain sockets"
         testUNIX.skip = _skipMsg
