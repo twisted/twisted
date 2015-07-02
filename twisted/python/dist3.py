@@ -358,6 +358,7 @@ testDataFiles = [
     "twisted.test.plugin_basic",
     "twisted.test.plugin_extra1",
     "twisted.test.plugin_extra2",
+    "twisted.python.test.pullpipe",
 ]
 
 
