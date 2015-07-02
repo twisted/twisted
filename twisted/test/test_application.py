@@ -6,19 +6,22 @@ Tests for L{twisted.application} and its interaction with
 L{twisted.persisted.sob}.
 """
 
-import copy, os, pickle
-from StringIO import StringIO
+from __future__ import absolute_import, division
 
-from twisted.trial import unittest
-from twisted.application import service, internet, app
+import copy
+import os
+import pickle
+
+from twisted.application import service, internet, app, reactors
+from twisted.internet import interfaces, defer, protocol, reactor
 from twisted.persisted import sob
-from twisted.python import usage
-from twisted.internet import interfaces, defer
 from twisted.protocols import wire, basic
-from twisted.internet import protocol, reactor
-from twisted.application import reactors
-from twisted.test.proto_helpers import MemoryReactor
+from twisted.python import usage
+from twisted.python.compat import NativeStringIO
 from twisted.python.test.modules_helpers import TwistedModulesMixin
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.trial import unittest
+
 
 
 class Dummy:
@@ -290,7 +293,7 @@ class AppSupportTests(unittest.TestCase):
 
 class Foo(basic.LineReceiver):
     def connectionMade(self):
-        self.transport.write('lalala\r\n')
+        self.transport.write(b'lalala\r\n')
     def lineReceived(self, line):
         self.factory.line = line
         self.transport.loseConnection()
@@ -312,9 +315,13 @@ class TimerTarget:
     def append(self, what):
         self.l.append(what)
 
+
+
 class TestEcho(wire.Echo):
     def connectionLost(self, reason):
         self.d.callback(True)
+
+
 
 class InternetTests(unittest.TestCase):
 
@@ -332,7 +339,7 @@ class InternetTests(unittest.TestCase):
         factory.protocol = Foo
         factory.line = None
         internet.TCPClient('127.0.0.1', num, factory).setServiceParent(s)
-        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(self.assertEqual, b'lalala')
         factory.d.addCallback(lambda x : s.stopService())
         factory.d.addCallback(lambda x : TestEcho.d)
         return factory.d
@@ -372,7 +379,7 @@ class InternetTests(unittest.TestCase):
         factory.line = None
         c = internet.TCPClient('127.0.0.1', num, factory)
         c.startService()
-        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(self.assertEqual, b'lalala')
         factory.d.addCallback(lambda x : c.stopService())
         factory.d.addCallback(lambda x : t.stopService())
         factory.d.addCallback(lambda x : TestEcho.d)
@@ -395,8 +402,6 @@ class InternetTests(unittest.TestCase):
     def testUNIX(self):
         # FIXME: This test is far too dense.  It needs comments.
         #  -- spiv, 2004-11-07
-        if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         s = service.MultiService()
         s.startService()
         factory = protocol.ServerFactory()
@@ -409,25 +414,24 @@ class InternetTests(unittest.TestCase):
         factory.d = defer.Deferred()
         factory.line = None
         internet.UNIXClient('echo.skt', factory).setServiceParent(s)
-        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(self.assertEqual, b'lalala')
         factory.d.addCallback(lambda x : s.stopService())
         factory.d.addCallback(lambda x : TestEcho.d)
         factory.d.addCallback(self._cbTestUnix, factory, s)
         return factory.d
+
 
     def _cbTestUnix(self, ignored, factory, s):
         TestEcho.d = defer.Deferred()
         factory.line = None
         factory.d = defer.Deferred()
         s.startService()
-        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(self.assertEqual, b'lalala')
         factory.d.addCallback(lambda x : s.stopService())
         factory.d.addCallback(lambda x : TestEcho.d)
         return factory.d
 
     def testVolatile(self):
-        if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
         t = internet.UNIXServer('echo.skt', factory)
@@ -451,8 +455,6 @@ class InternetTests(unittest.TestCase):
         self.failIf(t.running)
 
     def testStoppingServer(self):
-        if not interfaces.IReactorUNIX(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
         t = internet.UNIXServer('echo.skt', factory)
@@ -464,6 +466,13 @@ class InternetTests(unittest.TestCase):
         factory.clientConnectionFailed = lambda *args: d.callback(None)
         reactor.connectUNIX('echo.skt', factory)
         return d
+
+    if not interfaces.IReactorUNIX(reactor, None):
+        _skipMsg = "This reactor does not support UNIX domain sockets"
+        testUNIX.skip = _skipMsg
+        testVolatile.skip = _skipMsg
+        testStoppingServer.skip = _skipMsg
+
 
     def testPickledTimer(self):
         target = TimerTarget()
@@ -851,7 +860,7 @@ class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
         self.pluginResults = []
 
         options = ReactorSelectionOptions()
-        options.messageOutput = StringIO()
+        options.messageOutput = NativeStringIO()
         e = self.assertRaises(usage.UsageError, options.parseOptions,
                               ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn("fakereactortest", e.args[0])
@@ -876,7 +885,7 @@ class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
         self.pluginResults = [FakeReactor(install, name, package, description)]
 
         options = ReactorSelectionOptions()
-        options.messageOutput = StringIO()
+        options.messageOutput = NativeStringIO()
         e =  self.assertRaises(usage.UsageError, options.parseOptions,
                                ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn(message, e.args[0])

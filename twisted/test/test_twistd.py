@@ -5,12 +5,13 @@
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
 
+from __future__ import absolute_import, division
+
 import errno
 import inspect
 import signal
 import os
 import sys
-import StringIO
 
 try:
     import pwd
@@ -23,7 +24,7 @@ try:
 except ImportError:
     import pickle
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
@@ -34,6 +35,7 @@ from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
 from twisted.python import log
+from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python.usage import UsageError
 from twisted.python.log import ILogObserver
 from twisted.python.components import Componentized
@@ -242,7 +244,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = twistd.ServerOptions()
         self.assertEqual(config._getReactorTypes, reactors.getReactorTypes)
         config._getReactorTypes = getReactorTypes
-        config.messageOutput = StringIO.StringIO()
+        config.messageOutput = NativeStringIO()
 
         self.assertRaises(SystemExit, config.parseOptions, ['--help-reactors'])
         helpOutput = config.messageOutput.getvalue()
@@ -365,9 +367,8 @@ class TapFileTests(unittest.TestCase):
         Create a trivial Application and put it in a tap file on disk.
         """
         self.tapfile = self.mktemp()
-        f = file(self.tapfile, 'wb')
-        pickle.dump(service.Application("Hi!"), f)
-        f.close()
+        with open(self.tapfile, 'wb') as f:
+            pickle.dump(service.Application("Hi!"), f)
 
 
     def test_createOrGetApplicationWithTapFile(self):
@@ -505,9 +506,8 @@ class ApplicationRunnerTests(unittest.TestCase):
             def removePID(self, pidfile):
                 pass
 
-
+        @implementer(service.IService, service.IProcess)
         class FakeService(object):
-            implements(service.IService, service.IProcess)
 
             processName = None
             uid = None
@@ -692,9 +692,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         """
         pidfile = self.mktemp()
         self.runner.setupEnvironment(None, ".", True, None, pidfile)
-        fObj = file(pidfile)
-        pid = int(fObj.read())
-        fObj.close()
+        with open(pidfile, 'rb') as f:
+            pid = int(f.read())
         self.assertEqual(pid, self.pid)
 
 
@@ -707,9 +706,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         pidfile = self.mktemp()
         with AlternateReactor(FakeDaemonizingReactor()):
             self.runner.setupEnvironment(None, ".", False, None, pidfile)
-        fObj = file(pidfile)
-        pid = int(fObj.read())
-        fObj.close()
+        with open(pidfile, 'rb') as f:
+            pid = int(f.read())
         self.assertEqual(pid, self.pid + 1)
 
 
@@ -741,7 +739,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         """
         with AlternateReactor(FakeDaemonizingReactor()):
             self.runner.setupEnvironment(None, ".", False, None, None)
-        self.assertEqual(self.mask, 0077)
+        self.assertEqual(self.mask, 0o077)
 
 
 
@@ -810,7 +808,7 @@ class UnixApplicationRunnerRemovePIDTests(unittest.TestCase):
         path = self.mktemp()
         os.makedirs(path)
         pidfile = os.path.join(path, "foo.pid")
-        file(pidfile, "w").close()
+        open(pidfile, "w").close()
         runner.removePID(pidfile)
         self.assertFalse(os.path.exists(pidfile))
 
@@ -860,12 +858,12 @@ class FakeNonDaemonizingReactor(object):
 
 
 
+@implementer(IReactorDaemonize)
 class FakeDaemonizingReactor(FakeNonDaemonizingReactor):
     """
     A dummy reactor, providing C{beforeDaemonize} and C{afterDaemonize}
     methods, announcing this, and logging whether the methods have been called.
     """
-    implements(IReactorDaemonize)
 
 
 
@@ -908,7 +906,8 @@ class AppProfilingTests(unittest.TestCase):
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
-        data = file(config["profile"]).read()
+        with open(config["profile"]) as f:
+            data = f.read()
         self.assertIn("DummyReactor.run", data)
         self.assertIn("function calls", data)
 
@@ -917,7 +916,7 @@ class AppProfilingTests(unittest.TestCase):
 
 
     def _testStats(self, statsClass, profile):
-        out = StringIO.StringIO()
+        out = NativeStringIO()
 
         # Patch before creating the pstats, because pstats binds self.stream to
         # sys.stdout early in 2.5 and newer.
@@ -1012,7 +1011,8 @@ class AppProfilingTests(unittest.TestCase):
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
-        data = file(config["profile"]).read()
+        with open(config["profile"]) as f:
+            data = f.read()
         self.assertIn("run", data)
         self.assertIn("function calls", data)
 
@@ -1097,7 +1097,8 @@ class AppProfilingTests(unittest.TestCase):
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
-        data = file(config["profile"]).read()
+        with open(config["profile"]) as f:
+            data = f.read()
         self.assertIn("run", data)
         self.assertIn("function calls", data)
 
@@ -1225,6 +1226,10 @@ class AppLoggerTests(unittest.TestCase):
     @ivar observers: list of observers installed during the tests.
     @type observers: C{list}
     """
+    if _PY3:
+        skip = ("Requires twisted.python.logfile to be ported. "
+                "(https://twistedmatrix.com/trac/ticket/6749)")
+
 
     def setUp(self):
         """
@@ -1432,6 +1437,9 @@ class UnixAppLoggerTests(unittest.TestCase):
     """
     if _twistd_unix is None:
         skip = "twistd unix not available"
+    elif _PY3:
+        skip = ("Requires twisted.python.logfile to be ported. "
+                "(https://twistedmatrix.com/trac/ticket/6749)")
 
 
     def setUp(self):
@@ -1577,7 +1585,7 @@ class DaemonizeTests(unittest.TestCase):
             self.runner.postApplication()
         self.assertEqual(
             self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+            [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
              ('fork', True), ('write', -2, '0'), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
 
@@ -1593,7 +1601,7 @@ class DaemonizeTests(unittest.TestCase):
             self.assertRaises(SystemError, self.runner.postApplication)
         self.assertEqual(
             self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True),
+            [('chdir', '.'), ('umask', 0o077), ('fork', True),
              ('read', -1, 100), ('exit', 0), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-1])
 
@@ -1615,7 +1623,7 @@ class DaemonizeTests(unittest.TestCase):
             self.runner.postApplication()
         self.assertEqual(
             self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+            [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
              ('fork', True), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
         self.assertEqual([(-2, '0'), (-2, '0')], written)
@@ -1640,7 +1648,7 @@ class DaemonizeTests(unittest.TestCase):
             self.assertRaises(SystemError, self.runner.postApplication)
         self.assertEqual(
             self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True),
+            [('chdir', '.'), ('umask', 0o077), ('fork', True),
              ('exit', 0), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-1])
         self.assertEqual([(-1, 100), (-1, 100)], read)
@@ -1664,7 +1672,7 @@ class DaemonizeTests(unittest.TestCase):
             self.assertRaises(RuntimeError, self.runner.postApplication)
         self.assertEqual(
             self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+            [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
              ('fork', True), ('write', -2, '1 Something is wrong'),
              ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
@@ -1678,7 +1686,7 @@ class DaemonizeTests(unittest.TestCase):
         """
         self.mockos.child = False
         self.mockos.readData = "1: An identified error"
-        errorIO = StringIO.StringIO()
+        errorIO = NativeStringIO()
         self.patch(sys, '__stderr__', errorIO)
         with AlternateReactor(FakeDaemonizingReactor()):
             self.assertRaises(SystemError, self.runner.postApplication)
@@ -1688,7 +1696,7 @@ class DaemonizeTests(unittest.TestCase):
             "Please look at log file for more information.\n")
         self.assertEqual(
             self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True),
+            [('chdir', '.'), ('umask', 0o077), ('fork', True),
              ('read', -1, 100), ('exit', 1), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-1])
 
@@ -1711,7 +1719,7 @@ class DaemonizeTests(unittest.TestCase):
             self.assertRaises(RuntimeError, self.runner.postApplication)
         self.assertEqual(
             self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+            [('chdir', '.'), ('umask', 0o077), ('fork', True), 'setsid',
              ('fork', True), ('write', -2, '1 ' + 'x' * 98),
              ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])

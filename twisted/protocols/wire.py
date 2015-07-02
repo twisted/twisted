@@ -6,34 +6,39 @@
 These protocols are either provided by inetd, or are not provided at all.
 """
 
-# system imports
-import time, struct
-from zope.interface import implements
+from __future__ import absolute_import, division
 
-# twisted import
+import time
+import struct
+
+from zope.interface import implementer
+
 from twisted.internet import protocol, interfaces
+from twisted.python.compat import _PY3
+
 
 
 class Echo(protocol.Protocol):
     """As soon as any data is received, write it back (RFC 862)"""
-    
+
     def dataReceived(self, data):
         self.transport.write(data)
 
 
+
 class Discard(protocol.Protocol):
     """Discard any received data (RFC 863)"""
-    
+
     def dataReceived(self, data):
         # I'm ignoring you, nyah-nyah
         pass
 
 
+
+@implementer(interfaces.IProducer)
 class Chargen(protocol.Protocol):
     """Generate repeating noise (RFC 864)"""
     noise = r'@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&?'
-
-    implements(interfaces.IProducer)
 
     def connectionMade(self):
         self.transport.registerProducer(self, 0)
@@ -48,9 +53,10 @@ class Chargen(protocol.Protocol):
         pass
 
 
+
 class QOTD(protocol.Protocol):
     """Return a quote of the day (RFC 865)"""
-    
+
     def connectionMade(self):
         self.transport.write(self.getQuote())
         self.transport.loseConnection()
@@ -59,32 +65,47 @@ class QOTD(protocol.Protocol):
         """Return a quote. May be overrriden in subclasses."""
         return "An apple a day keeps the doctor away.\r\n"
 
+
+
 class Who(protocol.Protocol):
     """Return list of active users (RFC 866)"""
-    
+
     def connectionMade(self):
         self.transport.write(self.getUsers())
         self.transport.loseConnection()
-    
+
     def getUsers(self):
         """Return active users. Override in subclasses."""
         return "root\r\n"
 
 
+
 class Daytime(protocol.Protocol):
     """Send back the daytime in ASCII form (RFC 867)"""
-    
+
     def connectionMade(self):
         self.transport.write(time.asctime(time.gmtime(time.time())) + '\r\n')
         self.transport.loseConnection()
 
 
+
 class Time(protocol.Protocol):
     """Send back the time in machine readable form (RFC 868)"""
-    
+
     def connectionMade(self):
         # is this correct only for 32-bit machines?
         result = struct.pack("!i", int(time.time()))
         self.transport.write(result)
         self.transport.loseConnection()
 
+
+__all__ = ["Echo", "Discard", "Chargen", "QOTD", "Who", "Daytime", "Time"]
+
+
+if _PY3:
+    __all3__ = ["Echo"]
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__
