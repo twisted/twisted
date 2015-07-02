@@ -468,10 +468,10 @@ class InternetTests(unittest.TestCase):
         return d
 
 
-        if not interfaces.IReactorUNIX(reactor, None):
-            testUNIX.skip = "This reactor does not support UNIX domain sockets"
-            testVolatile.skip = "This reactor does not support UNIX domain sockets"
-            testStoppingServer.skip = "This reactor does not support UNIX domain sockets"
+    if not interfaces.IReactorUNIX(reactor, None):
+        testUNIX.skip = "This reactor does not support UNIX domain sockets"
+        testVolatile.skip = "This reactor does not support UNIX domain sockets"
+        testStoppingServer.skip = "This reactor does not support UNIX domain sockets"
 
 
     def testPickledTimer(self):
