@@ -15,6 +15,12 @@ from twisted.python.util import (
 from twisted.application import app, service
 from twisted.internet.interfaces import IReactorDaemonize
 from twisted import copyright
+from twisted.python.runtime import platformType
+
+
+
+if platformType == "win32":
+    raise ImportError("_twistd_unix doesn't work on Windows.")
 
 
 def _umask(value):
