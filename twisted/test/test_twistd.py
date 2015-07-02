@@ -906,7 +906,8 @@ class AppProfilingTests(unittest.TestCase):
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
-        data = open(config["profile"]).read()
+        with open(config["profile"]) as f:
+            data = f.read()
         self.assertIn("DummyReactor.run", data)
         self.assertIn("function calls", data)
 
@@ -1095,7 +1096,8 @@ class AppProfilingTests(unittest.TestCase):
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
-        data = open(config["profile"]).read()
+        with open(config["profile"]) as f:
+            data = f.read()
         self.assertIn("run", data)
         self.assertIn("function calls", data)
 
@@ -1226,6 +1228,7 @@ class AppLoggerTests(unittest.TestCase):
     if _PY3:
         skip = ("Requires twisted.python.logfile to be ported. "
                 "(https://twistedmatrix.com/trac/ticket/6749)")
+
 
     def setUp(self):
         """
