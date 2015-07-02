@@ -5,9 +5,11 @@
 Tests for (new code in) L{twisted.application.internet}.
 """
 
+from __future__ import absolute_import, division
+
 import pickle
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
 from twisted.internet.protocol import Factory
@@ -29,6 +31,7 @@ def fakeTargetFunction():
 
 
 
+@implementer(IStreamServerEndpoint)
 class FakeServer(object):
     """
     In-memory implementation of L{IStreamServerEndpoint}.
@@ -49,9 +52,6 @@ class FakeServer(object):
     @ivar failImmediately: If set, the exception to fail the L{Deferred}
         returned from C{listen} before it is returned.
     """
-
-    implements(IStreamServerEndpoint)
-
     result = None
     factory = None
     failImmediately = None
@@ -98,15 +98,13 @@ verifyClass(IStreamServerEndpoint, FakeServer)
 
 
 
+@implementer(IListeningPort)
 class FakePort(object):
     """
     Fake L{IListeningPort} implementation.
 
     @ivar deferred: The L{Deferred} returned by C{stopListening}.
     """
-
-    implements(IListeningPort)
-
     deferred = None
 
     def stopListening(self):

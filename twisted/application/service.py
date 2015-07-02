@@ -14,11 +14,13 @@ a sibling).
 Maintainer: Moshe Zadka
 """
 
+from __future__ import absolute_import, division
+
 from zope.interface import implementer, Interface, Attribute
 
+from twisted.persisted import sob
 from twisted.python.reflect import namedAny
 from twisted.python import components
-from twisted.python.compat import _PY3
 from twisted.internet import defer
 from twisted.plugin import IPlugin
 
@@ -154,7 +156,7 @@ class IService(Interface):
 
 
 @implementer(IService)
-class Service:
+class Service(object):
     """
     Base class for services.
 
@@ -381,13 +383,8 @@ def Application(name, uid=None, gid=None):
     one of the interfaces.
     """
     ret = components.Componentized()
-    availableComponents = [MultiService(), Process(uid, gid)]
-
-    if not _PY3:
-        # FIXME: https://twistedmatrix.com/trac/ticket/7827
-        # twisted.persisted is not yet ported to Python 3, so import it here.
-        from twisted.persisted import sob
-        availableComponents.append(sob.Persistent(ret, name))
+    availableComponents = [MultiService(), Process(uid, gid),
+                           sob.Persistent(ret, name)]
 
     for comp in availableComponents:
         ret.addComponent(comp, ignoreClass=1)
@@ -409,10 +406,6 @@ def loadApplication(filename, kind, passphrase=None):
     @type kind: C{str}
     @type passphrase: C{str}
     """
-    # FIXME: https://twistedmatrix.com/trac/ticket/7827
-    # twisted.persisted is not yet ported to Python 3, so import it here.
-    from twisted.persisted import sob
-
     if kind == 'python':
         application = sob.loadValueFromFile(filename, 'application',
                                             passphrase)
