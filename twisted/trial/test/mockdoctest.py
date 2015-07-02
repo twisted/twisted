@@ -38,14 +38,14 @@ class Counter(object):
              True
         """
         if self.maxval is not None and ((self._count + other) > self.maxval):
-            raise ValueError, "sorry, counter got too big"
+            raise ValueError("sorry, counter got too big")
         else:
             self._count += other
         return self
 
     def __eq__(self, other):
         """equality operator, compare other to my value()
-           
+
            >>> c = Counter()
            >>> c == 0
            True
@@ -97,8 +97,6 @@ class Counter(object):
     def unexpectedException(self):
         """i will raise an unexpected exception...
         ... *CAUSE THAT'S THE KINDA GUY I AM*
-            
+
               >>> 1/0
         """
-
-
