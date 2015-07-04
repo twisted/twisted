@@ -33,15 +33,10 @@ from zope.interface import implementer
 from xml.sax import make_parser, handler
 
 from twisted.python import log
-from twisted.python.compat import NativeStringIO, items, _PY3
+from twisted.python.compat import NativeStringIO, items, _PY3, OrderedDict
 from twisted.python.filepath import FilePath
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 from twisted.web.iweb import ITemplateLoader
-
-if _PY3:
-    from collections import OrderedDict
-else:
-    from twisted.python.util import OrderedDict
 
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
 
