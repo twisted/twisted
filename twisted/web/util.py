@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 import linecache
 
+from twisted.python import urlpath
 from twisted.python.compat import _PY3, unicode, nativeString
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.modules import getModule
@@ -18,16 +19,6 @@ from twisted.web import resource
 
 from twisted.web.template import (
     TagLoader, XMLFile, Element, renderer, flattenString)
-
-if not _PY3:
-    # TODO: Remove when twisted.python.urlpath is ported
-    # https://tm.tl/#7831
-    from twisted.python import urlpath
-    from cgi import escape
-else:
-    Element = object
-    renderer = XMLFile = lambda a: a
-    from html import escape
 
 
 

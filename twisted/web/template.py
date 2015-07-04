@@ -33,7 +33,7 @@ from zope.interface import implementer
 from xml.sax import make_parser, handler
 
 from twisted.python import log
-from twisted.python.compat import NativeStringIO, items, _PY3, OrderedDict
+from twisted.python.compat import NativeStringIO, items, OrderedDict
 from twisted.python.filepath import FilePath
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 from twisted.web.iweb import ITemplateLoader
