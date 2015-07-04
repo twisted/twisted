@@ -16,7 +16,7 @@ from zope.interface import implementer
 from twisted.trial.unittest import TestCase
 from twisted.test.testutils import XMLAssertionMixin
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import OrderedDict
 
 from twisted.internet.defer import passthru, succeed, gatherResults
 
@@ -27,11 +27,6 @@ from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
 from twisted.web.template import Element, renderer, TagLoader, flattenString
 
 from twisted.web.test._util import FlattenTestCase
-
-if _PY3:
-    from collections import OrderedDict as OrderedAttributes
-else:
-    from twisted.python.util import OrderedDict as OrderedAttributes
 
 
 
@@ -79,7 +74,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         form.
         """
         tag = tags.img()
-        tag.attributes = OrderedAttributes([("src", "foo"), ("name", "bar")])
+        tag.attributes = OrderedDict([("src", "foo"), ("name", "bar")])
         self.assertFlattensImmediately(tag, b'<img src="foo" name="bar" />')
 
 

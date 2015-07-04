@@ -17,8 +17,8 @@ from twisted.python.modules import getModule
 
 from twisted.web import resource
 
-from twisted.web.template import (
-    TagLoader, XMLFile, Element, renderer, flattenString)
+from twisted.web.template import TagLoader, XMLFile, Element, renderer
+from twisted.web.template import flattenString
 
 
 
