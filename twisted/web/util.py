@@ -11,7 +11,7 @@ from __future__ import division, absolute_import
 import linecache
 
 from twisted.python import urlpath
-from twisted.python.compat import _PY3, unicode, nativeString
+from twisted.python.compat import _PY3, unicode, nativeString, escape
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.modules import getModule
 
