@@ -1,0 +1,1 @@
+twisted.application.app.HotshotRunner, twistd's hotshot profiler module, is deprecated and twistd now uses profile by default.
