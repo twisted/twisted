@@ -1055,7 +1055,6 @@ class AppProfilingTests(unittest.TestCase):
         profiler = app.AppProfiler(config)
         reactor = DummyReactor()
 
-
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
