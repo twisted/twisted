@@ -10,6 +10,7 @@ import pdb
 import getpass
 import traceback
 import signal
+import warnings
 
 from operator import attrgetter
 
@@ -18,6 +19,8 @@ from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
+from twisted.python.deprecate import getDeprecationWarningString
+from twisted.python.versions import Version
 from twisted.python.log import ILogObserver
 from twisted.python.reflect import qual, namedAny
 
@@ -95,6 +98,13 @@ class HotshotRunner(_BasicProfiler):
         """
         Run reactor under the hotshot profiler.
         """
+        warnings.warn(
+            getDeprecationWarningString(
+                HotshotRunner,
+                Version("Twisted", 15, 3, 0),
+                replacement="the profile or cProfile profilers"),
+            DeprecationWarning, stacklevel=2)
+
         try:
             import hotshot.stats
         except (ImportError, SystemExit) as e:
@@ -170,7 +180,7 @@ class AppProfiler(object):
     def __init__(self, options):
         saveStats = options.get("savestats", False)
         profileOutput = options.get("profile", None)
-        self.profiler = options.get("profiler", "hotshot").lower()
+        self.profiler = options.get("profiler", "profile").lower()
         if self.profiler in self.profilers:
             profiler = self.profilers[self.profiler](profileOutput, saveStats)
             self.run = profiler.run
@@ -563,7 +573,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                      ['profile', 'p', None,
                       "Run in profile mode, dumping results to specified "
                       "file."],
-                     ['profiler', None, "hotshot",
+                     ['profiler', None, "profile",
                       "Name of the profiler to use (%s)." %
                       ", ".join(AppProfiler.profilers)],
                      ['file', 'f', 'twistd.tap',

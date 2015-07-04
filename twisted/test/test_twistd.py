@@ -1020,6 +1020,29 @@ class AppProfilingTests(unittest.TestCase):
         test_hotshot.skip = "hotshot module not available"
 
 
+    def test_hotshotDeprecation(self):
+        """
+        L{app.HotshotRunner} is deprecated.
+        """
+        config = twistd.ServerOptions()
+        config["profile"] = self.mktemp()
+        config["profiler"] = "hotshot"
+        profiler = app.AppProfiler(config)
+        reactor = DummyReactor()
+
+        profiler.run(reactor)
+
+        warningsShown = self.flushWarnings([self.test_hotshotDeprecation])
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            ("twisted.application.app.HotshotRunner was deprecated in Twisted "
+             "15.3.0; please use the profile or cProfile profilers instead"),
+            warningsShown[0]['message'])
+
+    if hotshot is None:
+        test_hotshotDeprecation.skip = "hotshot module not available"
+
+
     def test_hotshotSaveStats(self):
         """
         With the C{savestats} option specified, L{app.HotshotRunner.run} should
@@ -1031,6 +1054,7 @@ class AppProfilingTests(unittest.TestCase):
         config["savestats"] = True
         profiler = app.AppProfiler(config)
         reactor = DummyReactor()
+
 
         profiler.run(reactor)
 
@@ -1162,10 +1186,10 @@ class AppProfilingTests(unittest.TestCase):
 
     def test_defaultProfiler(self):
         """
-        L{app.Profiler} defaults to the hotshot profiler if not specified.
+        L{app.Profiler} defaults to the profile profiler if not specified.
         """
         profiler = app.AppProfiler({})
-        self.assertEqual(profiler.profiler, "hotshot")
+        self.assertEqual(profiler.profiler, "profile")
 
 
     def test_profilerNameCaseInsentive(self):
@@ -1173,8 +1197,8 @@ class AppProfilingTests(unittest.TestCase):
         The case of the profiler name passed to L{app.AppProfiler} is not
         relevant.
         """
-        profiler = app.AppProfiler({"profiler": "HotShot"})
-        self.assertEqual(profiler.profiler, "hotshot")
+        profiler = app.AppProfiler({"profiler": "PrOfIlE"})
+        self.assertEqual(profiler.profiler, "profile")
 
 
 
