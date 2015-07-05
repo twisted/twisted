@@ -189,7 +189,7 @@ modules = [
     "twisted.web.template",
     "twisted.web.test",
     "twisted.web.test.requesthelper",
-    "twisted.web._version",
+    "twisted.web.util",
     "twisted.web.xmlrpc",
 ]
 
@@ -407,8 +407,6 @@ almostModules = [
     # GzipEncoder and allowed methods functionality not ported, no doubt
     # missing lots of test coverage:
     "twisted.web.server",
-    # Parts are ported for twisted.web.static
-    "twisted.web.util",
 ]
 
 
