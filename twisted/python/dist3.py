@@ -331,6 +331,7 @@ testModules = [
     "twisted.web.test.test_stan",
     "twisted.web.test.test_static",
     "twisted.web.test.test_template",
+    "twisted.web.test.test_util",
     "twisted.web.test.test_web",
     "twisted.web.test.test_web__responses",
     "twisted.web.test.test_webclient",

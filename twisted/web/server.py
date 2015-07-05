@@ -42,13 +42,7 @@ from twisted.web.error import UnsupportedMethod
 
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
-
-if _PY3:
-    # cgi.escape is deprecated in Python 3.
-    from html import escape
-else:
-    from cgi import escape
-
+from twisted.python.compat import escape
 
 NOT_DONE_YET = 1
 
@@ -318,7 +312,7 @@ class Request(Copyable, http.Request, components.Componentized):
     def processingFailed(self, reason):
         log.err(reason)
         # Re-enable on Python 3 as part of #6178:
-        if not _PY3 and self.site.displayTracebacks:
+        if self.site.displayTracebacks:
             body = ("<html><head><title>web.Server Traceback"
                     " (most recent call last)</title></head>"
                     "<body><b>web.Server Traceback"
