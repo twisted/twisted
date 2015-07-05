@@ -22,7 +22,7 @@ else:
     # imports will work.
     from OpenSSL.crypto import X509Type
     from OpenSSL.SSL import (TLSv1_METHOD, Error, Context, ConnectionType,
-                             WantReadError)
+                             WantReadError, ZeroReturnError)
     from twisted.internet.ssl import PrivateCertificate
     from twisted.test.ssl_helpers import (ClientTLSContext, ServerTLSContext,
                                           certPath)
@@ -37,6 +37,7 @@ from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
 from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
+from twisted.protocols.policies import ProtocolWrapper
 from twisted.trial.unittest import TestCase
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.test.proto_helpers import StringTransport
@@ -852,6 +853,54 @@ class TLSMemoryBIOTests(TestCase):
         disconnectDeferred.addCallback(disconnected)
         return disconnectDeferred
 
+
+    def test_peerIgnoresCloseAlert(self):
+        """
+        L{TLSMemoryBIOProtocol.loseConnection} must
+        close the TLS connection even when remote peer does not
+        respond to the tls close alert.
+        """
+        clientFactory = ClientFactory()
+        clientFactory.protocol = Protocol
+
+        clientContextFactory, handshakeDeferred = (
+            HandshakeCallbackContextFactory.factoryAndDeferred())
+        wrapperFactory = TLSMemoryBIOFactory(
+            clientContextFactory, True, clientFactory)
+        sslClientProtocol = wrapperFactory.buildProtocol(None)
+
+        serverFactory = ServerFactory()
+        serverFactory.protocol = Protocol
+
+        serverContextFactory = ServerTLSContext()
+        wrapperFactory = TLSMemoryBIOFactory(
+            serverContextFactory, False, serverFactory)
+        sslServerProtocol = wrapperFactory.buildProtocol(None)
+
+        def patched__flush_receiveBIO(self):
+            # Patch receiveBIO, so that server ignores close alert.
+            while not self._lostTLSConnection:
+                try:
+                    bytes = self._tlsConnection.recv(2 ** 15)
+                except WantReadError:
+                    break
+                except ZeroReturnError:
+                    # Ignore close alert
+                    break
+                else:
+                    self._handshakeDone = True
+                    if not self._aborted:
+                        ProtocolWrapper.dataReceived(self, bytes)
+            self._flushSendBIO()
+
+        sslServerProtocol._flush_receiveBIO = patched__flush_receiveBIO
+        connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
+
+        def cbHandshake(ignored):
+            # Shutdown the client
+            sslClientProtocol.loseConnection()
+        handshakeDeferred.addCallback(cbHandshake)
+        return connectionDeferred
 
 
 class TLSProducerTests(TestCase):
