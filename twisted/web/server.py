@@ -311,7 +311,6 @@ class Request(Copyable, http.Request, components.Componentized):
 
     def processingFailed(self, reason):
         log.err(reason)
-        # Re-enable on Python 3 as part of #6178:
         if self.site.displayTracebacks:
             body = ("<html><head><title>web.Server Traceback"
                     " (most recent call last)</title></head>"
