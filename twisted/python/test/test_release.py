@@ -1696,26 +1696,6 @@ class BuildAllTarballsTestBase(object):
                             "twisted_yay.py": "import YAY"}},
             "doc": smellsLikeSphinxOutput}
 
-        coreStructure = {
-            "setup.py": "import TOPINSTALL",
-            "README": "CORE!",
-            "LICENSE": "copyright!",
-            "bin": {"twistd": "TWISTD"},
-            "twisted": {
-                "_version.py": genVersion("twisted", 1, 2, 0),
-                "plugins": {"twisted_yay.py": "import YAY"}},
-        }
-
-        wordsStructure = {
-            "README": "WORDS!",
-            "LICENSE": "copyright!",
-            "setup.py": "import WORDSINSTALL",
-            "bin": {"im": "import im"},
-            "twisted": {
-                "words": {"__init__.py": "import WORDS",
-                          "_version.py": genVersion("twisted.words", 1, 2, 0)},
-                "plugins": {"twisted_words.py": "import WORDPLUG"}}}
-
         self.createStructure(checkout, structure)
         childs = [x.path for x in checkout.children()]
         self._addAndCommit(checkout, childs)
