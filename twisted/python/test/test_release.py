@@ -347,9 +347,9 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
 
     def test_changeAllProjectVersions(self):
         """
-        L{changeAllProjectVersions} changes all version numbers in _version.py
-        and README files for all projects as well as in the top-level
-        README file.
+        L{changeAllProjectVersions} changes the version numbers in the
+        _version.py
+        and README file.
         """
         root = FilePath(self.mktemp())
         structure = {
@@ -357,11 +357,9 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 1.0.0"},
-                "_version.py": genVersion("twisted", 1, 0, 0),
-                "web": {
-                    "topfiles": {
-                        "README": "Hi this is 1.0.0"},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
+                "_version.py": genVersion("twisted", 1, 0, 0)
+                }
+            }
         self.createStructure(root, structure)
         releaseDate = date(2010, 1, 1)
         changeAllProjectVersions(root, False, False, releaseDate)
@@ -371,10 +369,7 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
                 "topfiles": {
                     "README": "Hi this is 10.0.0"},
                 "_version.py": genVersion("twisted", 10, 0, 0),
-                "web": {
-                    "topfiles": {
-                        "README": "Hi this is 10.0.0"},
-                    "_version.py": genVersion("twisted.web", 10, 0, 0)}}}
+            }}
         self.assertStructure(root, outStructure)
 
 
@@ -387,13 +382,35 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         """
         root = FilePath(self.mktemp())
 
-        coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
+        coreNews = ("Twisted Core 1.0.0pre1 (2009-12-25)\n"
                     "===============================\n"
                     "\n")
         webNews = ("Twisted Web 1.0.0pre1 (2009-12-25)\n"
                    "==================================\n"
                    "\n")
         structure = {
+            "README": "Hi this is 1.0.0pre1.",
+            "NEWS": coreNews + webNews,
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 1.0.0pre1",
+                    "NEWS": coreNews},
+                "_version.py": genVersion("twisted", 1, 0, 0, 1),
+                "web": {
+                    "topfiles": {
+                        "README": "Hi this is 1.0.0pre1",
+                        "NEWS": webNews}
+                }}}
+        self.createStructure(root, structure)
+        releaseDate = date(2010, 1, 1)
+        changeAllProjectVersions(root, False, False, releaseDate)
+        coreNews = ("Twisted Core 1.0.0 (2010-01-01)\n"
+                    "===============================\n"
+                    "\n")
+        webNews = ("Twisted Web 1.0.0 (2010-01-01)\n"
+                   "==============================\n"
+                   "\n")
+        outStructure = {
             "README": "Hi this is 1.0.0.",
             "NEWS": coreNews + webNews,
             "twisted": {
@@ -403,31 +420,9 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0pre1",
-                        "NEWS": webNews},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0, 1)}}}
-        self.createStructure(root, structure)
-        releaseDate = date(2010, 1, 1)
-        changeAllProjectVersions(root, False, False, releaseDate)
-        coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
-                    "===============================\n"
-                    "\n")
-        webNews = ("Twisted Web 1.0.0 (2010-01-01)\n"
-                   "==============================\n"
-                   "\n")
-        outStructure = {
-            "README": "Hi this is 10.0.0.",
-            "NEWS": coreNews + webNews,
-            "twisted": {
-                "topfiles": {
-                    "README": "Hi this is 10.0.0",
-                    "NEWS": coreNews},
-                "_version.py": genVersion("twisted", 10, 0, 0),
-                "web": {
-                    "topfiles": {
                         "README": "Hi this is 1.0.0",
-                        "NEWS": webNews},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
+                        "NEWS": webNews}
+                }}}
         self.assertStructure(root, outStructure)
 
 
@@ -491,7 +486,7 @@ class ProjectTests(ExternalTempdirTestCase):
         """
         Project objects know their version.
         """
-        version = Version('foo', 2, 1, 0)
+        version = Version('twisted', 2, 1, 0)
         project = self.makeProject(version)
         self.assertEqual(project.getVersion(), version)
 
@@ -501,8 +496,8 @@ class ProjectTests(ExternalTempdirTestCase):
         Project objects know how to update the version numbers in those
         projects.
         """
-        project = self.makeProject(Version("bar", 2, 1, 0))
-        newVersion = Version("bar", 3, 2, 9)
+        project = self.makeProject(Version("twisted", 2, 1, 0))
+        newVersion = Version("twisted", 3, 2, 9)
         project.updateVersion(newVersion)
         self.assertEqual(project.getVersion(), newVersion)
         self.assertEqual(
@@ -649,6 +644,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
                       outputPath)
 
         indexPath = outputPath.child("index.html")
+
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
@@ -1215,7 +1211,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
 
         conchTopfiles = self.project.child("conch").child("topfiles")
         conchNews = conchTopfiles.child("NEWS")
-        conchHeader = "Twisted Conch 3.4.5 (2009-12-01)"
+        conchHeader = "Twisted Conch 1.2.3 (2009-12-01)"
 
         aggregateNews = self.project.child("NEWS")
 

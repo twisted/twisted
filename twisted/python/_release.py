@@ -347,10 +347,7 @@ def getNextVersion(version, prerelease, patch, today):
 
 def changeAllProjectVersions(root, prerelease, patch, today=None):
     """
-    Change the version of all projects (including core and all subprojects).
-
-    If the current version of a project is pre-release, then also change the
-    versions in the current NEWS entries for that project.
+    Change the version of the project.
 
     @type root: L{FilePath}
     @param root: The root of the Twisted source tree.
@@ -367,31 +364,33 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
     if not today:
         today = date.today()
     formattedToday = today.strftime('%Y-%m-%d')
-    for project in findTwistedProjects(root):
-        if project.directory.basename() == "twisted":
-            packageName = "twisted"
-        else:
-            packageName = "twisted." + project.directory.basename()
-        oldVersion = project.getVersion()
-        newVersion = getNextVersion(oldVersion, prerelease, patch, today)
-        if oldVersion.prerelease:
-            builder = NewsBuilder()
-            builder._changeNewsVersion(
-                root.child("NEWS"), builder._getNewsName(project),
-                oldVersion, newVersion, formattedToday)
+
+    twistedProject = Project(root.child("twisted"))
+    oldVersion = twistedProject.getVersion()
+    newVersion = getNextVersion(oldVersion, prerelease, patch, today)
+
+    def _makeNews(project, underTopfiles=True):
+        builder = NewsBuilder()
+        builder._changeNewsVersion(
+            root.child("NEWS"), builder._getNewsName(project),
+            oldVersion, newVersion, formattedToday)
+        if underTopfiles:
             builder._changeNewsVersion(
                 project.directory.child("topfiles").child("NEWS"),
                 builder._getNewsName(project), oldVersion, newVersion,
                 formattedToday)
 
-        # The placement of the top-level README with respect to other files (eg
-        # _version.py) is sufficiently different from the others that we just
-        # have to handle it specially.
-        if packageName == "twisted":
-            _changeVersionInFile(
-                oldVersion, newVersion, root.child('README').path)
+    if oldVersion.prerelease:
+        _makeNews(twistedProject, underTopfiles=False)
 
-        project.updateVersion(newVersion)
+    for project in findTwistedProjects(root):
+        if oldVersion.prerelease:
+            _makeNews(project)
+        project.updateREADME(newVersion)
+
+    # Then change the global version.
+    twistedProject.updateVersion(newVersion)
+    _changeVersionInFile(oldVersion, newVersion, root.child('README').path)
 
 
 
@@ -420,7 +419,14 @@ class Project(object):
         based on live python modules.
         """
         namespace = {}
-        execfile(self.directory.child("_version.py").path, namespace)
+        directory = self.directory
+        while not namespace:
+            if directory.path == "/":
+                raise Exception("Not inside a Twisted project.")
+            elif not directory.basename() == "twisted":
+                directory = directory.parent()
+            else:
+                execfile(directory.child("_version.py").path, namespace)
         return namespace["version"]
 
 
@@ -429,9 +435,22 @@ class Project(object):
         Replace the existing version numbers in _version.py and README files
         with the specified version.
         """
+        if not self.directory.basename() == "twisted":
+            raise Exception("Can't change the version of subprojects.")
+
         oldVersion = self.getVersion()
         replaceProjectVersion(self.directory.child("_version.py").path,
                               version)
+        _changeVersionInFile(
+            oldVersion, version,
+            self.directory.child("topfiles").child("README").path)
+
+    def updateREADME(self, version):
+        """
+        Replace the existing version numbers in the README file with the
+        specified version.
+        """
+        oldVersion = self.getVersion()
         _changeVersionInFile(
             oldVersion, version,
             self.directory.child("topfiles").child("README").path)
@@ -451,7 +470,6 @@ def findTwistedProjects(baseDirectory):
             projectDirectory = filePath.parent()
             projects.append(Project(projectDirectory))
     return projects
-
 
 
 
