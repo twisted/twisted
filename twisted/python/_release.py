@@ -26,7 +26,6 @@ from subprocess import PIPE, STDOUT, Popen
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
-from twisted.python.dist import twisted_subprojects
 from twisted.python.compat import execfile
 from twisted.python.usage import Options, UsageError
 
@@ -347,10 +346,7 @@ def getNextVersion(version, prerelease, patch, today):
 
 def changeAllProjectVersions(root, prerelease, patch, today=None):
     """
-    Change the version of all projects (including core and all subprojects).
-
-    If the current version of a project is pre-release, then also change the
-    versions in the current NEWS entries for that project.
+    Change the version of the project.
 
     @type root: L{FilePath}
     @param root: The root of the Twisted source tree.
@@ -367,31 +363,33 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
     if not today:
         today = date.today()
     formattedToday = today.strftime('%Y-%m-%d')
-    for project in findTwistedProjects(root):
-        if project.directory.basename() == "twisted":
-            packageName = "twisted"
-        else:
-            packageName = "twisted." + project.directory.basename()
-        oldVersion = project.getVersion()
-        newVersion = getNextVersion(oldVersion, prerelease, patch, today)
-        if oldVersion.prerelease:
-            builder = NewsBuilder()
-            builder._changeNewsVersion(
-                root.child("NEWS"), builder._getNewsName(project),
-                oldVersion, newVersion, formattedToday)
+
+    twistedProject = Project(root.child("twisted"))
+    oldVersion = twistedProject.getVersion()
+    newVersion = getNextVersion(oldVersion, prerelease, patch, today)
+
+    def _makeNews(project, underTopfiles=True):
+        builder = NewsBuilder()
+        builder._changeNewsVersion(
+            root.child("NEWS"), builder._getNewsName(project),
+            oldVersion, newVersion, formattedToday)
+        if underTopfiles:
             builder._changeNewsVersion(
                 project.directory.child("topfiles").child("NEWS"),
                 builder._getNewsName(project), oldVersion, newVersion,
                 formattedToday)
 
-        # The placement of the top-level README with respect to other files (eg
-        # _version.py) is sufficiently different from the others that we just
-        # have to handle it specially.
-        if packageName == "twisted":
-            _changeVersionInFile(
-                oldVersion, newVersion, root.child('README').path)
+    if oldVersion.prerelease:
+        _makeNews(twistedProject, underTopfiles=False)
 
-        project.updateVersion(newVersion)
+    for project in findTwistedProjects(root):
+        if oldVersion.prerelease:
+            _makeNews(project)
+        project.updateREADME(newVersion)
+
+    # Then change the global version.
+    twistedProject.updateVersion(newVersion)
+    _changeVersionInFile(oldVersion, newVersion, root.child('README').path)
 
 
 
@@ -420,7 +418,14 @@ class Project(object):
         based on live python modules.
         """
         namespace = {}
-        execfile(self.directory.child("_version.py").path, namespace)
+        directory = self.directory
+        while not namespace:
+            if directory.path == "/":
+                raise Exception("Not inside a Twisted project.")
+            elif not directory.basename() == "twisted":
+                directory = directory.parent()
+            else:
+                execfile(directory.child("_version.py").path, namespace)
         return namespace["version"]
 
 
@@ -429,9 +434,22 @@ class Project(object):
         Replace the existing version numbers in _version.py and README files
         with the specified version.
         """
+        if not self.directory.basename() == "twisted":
+            raise Exception("Can't change the version of subprojects.")
+
         oldVersion = self.getVersion()
         replaceProjectVersion(self.directory.child("_version.py").path,
                               version)
+        _changeVersionInFile(
+            oldVersion, version,
+            self.directory.child("topfiles").child("README").path)
+
+    def updateREADME(self, version):
+        """
+        Replace the existing version numbers in the README file with the
+        specified version.
+        """
+        oldVersion = self.getVersion()
         _changeVersionInFile(
             oldVersion, version,
             self.directory.child("topfiles").child("README").path)
@@ -451,7 +469,6 @@ def findTwistedProjects(baseDirectory):
             projectDirectory = filePath.parent()
             projects.append(Project(projectDirectory))
     return projects
-
 
 
 
@@ -1001,9 +1018,8 @@ class DistributionBuilder(object):
     """
     A builder of Twisted distributions.
 
-    This knows how to build tarballs for Twisted and all of its subprojects.
+    This knows how to build tarballs for Twisted.
     """
-    subprojects = twisted_subprojects
 
     def __init__(self, rootDirectory, outputDirectory, templatePath=None):
         """
@@ -1077,127 +1093,6 @@ class DistributionBuilder(object):
         return outputFile
 
 
-    def buildCore(self, version):
-        """
-        Build a core distribution in C{TwistedCore-<version>.tar.bz2}.
-
-        This is very similar to L{buildSubProject}, but core tarballs and the
-        input are laid out slightly differently.
-
-         - scripts are in the top level of the C{bin} directory.
-         - code is included directly from the C{twisted} directory, excluding
-           subprojects.
-         - all plugins except the subproject plugins are included.
-
-        @type version: C{str}
-        @param version: The version of Twisted to build.
-
-        @return: The tarball file.
-        @rtype: L{FilePath}.
-        """
-        releaseName = "TwistedCore-%s" % (version,)
-        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
-        buildPath = lambda *args: '/'.join((releaseName,) + args)
-        tarball = self._createBasicSubprojectTarball(
-            "core", version, outputFile)
-
-        # Include the bin directory for the subproject.
-        for path in self.rootDirectory.child("bin").children():
-            if not path.isdir():
-                tarball.add(path.path, buildPath("bin", path.basename()))
-
-        # Include all files within twisted/ that aren't part of a subproject.
-        for path in self.rootDirectory.child("twisted").children():
-            if path.basename() == "plugins":
-                for plugin in path.children():
-                    for subproject in self.subprojects:
-                        if (plugin.basename() ==
-                                "twisted_%s.py" % (subproject,)):
-                            break
-                    else:
-                        tarball.add(plugin.path,
-                                    buildPath("twisted", "plugins",
-                                              plugin.basename()))
-            elif not path.basename() in self.subprojects + ["topfiles"]:
-                tarball.add(path.path, buildPath("twisted", path.basename()))
-
-        tarball.add(self.rootDirectory.child("twisted").child("topfiles").path,
-                    releaseName)
-        tarball.close()
-
-        return outputFile
-
-
-    def buildSubProject(self, projectName, version):
-        """
-        Build a subproject distribution in
-        C{Twisted<Projectname>-<version>.tar.bz2}.
-
-        @type projectName: C{str}
-        @param projectName: The lowercase name of the subproject to build.
-        @type version: C{str}
-        @param version: The version of Twisted to build.
-
-        @return: The tarball file.
-        @rtype: L{FilePath}.
-        """
-        releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
-        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
-        buildPath = lambda *args: '/'.join((releaseName,) + args)
-        subProjectDir = self.rootDirectory.child("twisted").child(projectName)
-
-        tarball = self._createBasicSubprojectTarball(projectName, version,
-                                                     outputFile)
-
-        tarball.add(subProjectDir.child("topfiles").path, releaseName)
-
-        # Include all files in the subproject package except for topfiles.
-        for child in subProjectDir.children():
-            name = child.basename()
-            if name != "topfiles":
-                tarball.add(
-                    child.path,
-                    buildPath("twisted", projectName, name))
-
-        pluginsDir = self.rootDirectory.child("twisted").child("plugins")
-        # Include the plugin for the subproject.
-        pluginFileName = "twisted_%s.py" % (projectName,)
-        pluginFile = pluginsDir.child(pluginFileName)
-        if pluginFile.exists():
-            tarball.add(pluginFile.path,
-                        buildPath("twisted", "plugins", pluginFileName))
-
-        # Include the bin directory for the subproject.
-        binPath = self.rootDirectory.child("bin").child(projectName)
-        if binPath.isdir():
-            tarball.add(binPath.path, buildPath("bin"))
-        tarball.close()
-
-        return outputFile
-
-
-    def _createBasicSubprojectTarball(self, projectName, version, outputFile):
-        """
-        Helper method to create and fill a tarball with things common between
-        subprojects and core.
-
-        @param projectName: The subproject's name.
-        @type projectName: C{str}
-        @param version: The version of the release.
-        @type version: C{str}
-        @param outputFile: The location of the tar file to create.
-        @type outputFile: L{FilePath}
-        """
-        releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
-        buildPath = lambda *args: '/'.join((releaseName,) + args)
-
-        tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
-
-        tarball.add(self.rootDirectory.child("LICENSE").path,
-                    buildPath("LICENSE"))
-        return tarball
-
-
 
 class UncleanWorkingDirectory(Exception):
     """
@@ -1216,8 +1111,7 @@ class NotWorkingDirectory(Exception):
 
 def buildAllTarballs(checkout, destination, templatePath=None):
     """
-    Build complete tarballs (including documentation) for Twisted and all
-    subprojects.
+    Build the complete tarball (including documentation) for Twisted.
 
     This should be called after the version numbers have been updated and
     NEWS files created.
@@ -1254,12 +1148,6 @@ def buildAllTarballs(checkout, destination, templatePath=None):
     if not destination.exists():
         destination.createDirectory()
     db = DistributionBuilder(export, destination, templatePath=templatePath)
-
-    db.buildCore(versionString)
-    for subproject in twisted_subprojects:
-        if twistedPath.child(subproject).exists():
-            db.buildSubProject(subproject, versionString)
-
     db.buildTwisted(versionString)
     workPath.remove()
 

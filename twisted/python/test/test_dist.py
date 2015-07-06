@@ -332,20 +332,6 @@ version = versions.Version("twisted", 0, 1, 2)
         f.close()
         self.assertEqual(dist.getVersion("core", base=self.dirname), "0.1.2")
 
-    def test_getVersionOther(self):
-        """
-        Test that getting the version of a non-core project reads from
-        the [base]/[projname]/_version.py file.
-        """
-        os.mkdir(os.path.join(self.dirname, "blat"))
-        f = open(os.path.join(self.dirname, "blat", "_version.py"), "w")
-        f.write("""
-from twisted.python import versions
-version = versions.Version("twisted.blat", 9, 8, 10)
-""")
-        f.close()
-        self.assertEqual(dist.getVersion("blat", base=self.dirname), "9.8.10")
-
 
 
 class GetScriptsTests(TestCase):
