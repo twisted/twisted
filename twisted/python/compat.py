@@ -517,8 +517,10 @@ except ImportError:
 
 if _PY3:
     import urllib.parse as urllib_parse
+    from html import escape
 else:
     import urlparse as urllib_parse
+    from cgi import escape
 
 
 # Dealing with the differences in items/iteritems
@@ -596,6 +598,13 @@ def _constructMethod(cls, name, self):
 
 
 
+if _PY3:
+    from collections import OrderedDict
+else:
+    from twisted.python.util import OrderedDict
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -619,4 +628,6 @@ __all__ = [
     "xrange",
     "urllib_parse",
     "bytesEnviron",
+    "OrderedDict",
+    "escape",
 ]
