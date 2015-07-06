@@ -22,6 +22,7 @@ from twisted.python import reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
+from twisted.python.compat import _PY3, items
 try:
     from collections import OrderedDict
 except ImportError:
@@ -333,6 +334,10 @@ class _AdaptedReporter(TestResultDecorator):
         return self._originalReporter.stopTest(self.testAdapter(test))
 
 
+    def stop(self):
+        return self._originalReporter.stop()
+
+
 
 @implementer(itrial.IReporter)
 class Reporter(TestResult):
@@ -536,6 +541,15 @@ class Reporter(TestResult):
                      ("runWithWarningsSuppressed", "utils"))
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
+
+        if _PY3:
+            # On PY3, we have an extra frame which is reraising the exception
+            for frame in newFrames:
+                frameFile = os.path.splitext(os.path.basename(frame[1]))[0]
+                if frameFile == "compat" and frame[0] == "reraise":
+                    # If it's in the compat module and is reraise, BLAM IT
+                    newFrames.pop(newFrames.index(frame))
+
         if twoFrames == syncCase:
             newFrames = newFrames[2:]
         elif twoFrames == asyncCase:
@@ -590,7 +604,7 @@ class Reporter(TestResult):
             outcome = content[1:]
             key = formatter(*outcome)
             groups.setdefault(key, []).append(case)
-        return groups.items()
+        return items(groups)
 
 
     def _printResults(self, flavor, errors, formatter):
