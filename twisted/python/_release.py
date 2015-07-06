@@ -433,6 +433,7 @@ class Project(object):
         """
         Replace the existing version numbers in _version.py and README files
         with the specified version.
+        @param version: The version to update to.
         """
         if not self.directory.basename() == "twisted":
             raise Exception("Can't change the version of subprojects.")
@@ -444,10 +445,13 @@ class Project(object):
             oldVersion, version,
             self.directory.child("topfiles").child("README").path)
 
+
     def updateREADME(self, version):
         """
         Replace the existing version numbers in the README file with the
         specified version.
+
+        @param version: The version to update to.
         """
         oldVersion = self.getVersion()
         _changeVersionInFile(
