@@ -1,1 +1,1 @@
-twisted.web.template is now ported to Python 3.
+twisted.web.template and twisted.web.util are now ported to Python 3.
