@@ -1113,8 +1113,7 @@ class NotWorkingDirectory(Exception):
 
 def buildAllTarballs(checkout, destination, templatePath=None):
     """
-    Build complete tarballs (including documentation) for Twisted and all
-    subprojects.
+    Build the complete tarball (including documentation) for Twisted.
 
     This should be called after the version numbers have been updated and
     NEWS files created.
