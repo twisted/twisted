@@ -165,7 +165,7 @@ def get_setup_args(**kw):
     return kw
 
 
-def getVersion(proj):
+def getVersion(base):
     """
     Extract the version number.
 
