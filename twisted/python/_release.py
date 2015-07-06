@@ -433,6 +433,7 @@ class Project(object):
         """
         Replace the existing version numbers in _version.py and README files
         with the specified version.
+
         @param version: The version to update to.
         """
         if not self.directory.basename() == "twisted":
