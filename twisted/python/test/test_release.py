@@ -1607,115 +1607,6 @@ class DistributionBuilderTests(DistributionBuilderTestBase):
         self.assertExtractedStructure(outputFile, outStructure)
 
 
-    def test_subProjectLayout(self):
-        """
-        The subproject tarball includes files like so:
-
-        1. twisted/<subproject>/topfiles defines the files that will be in the
-           top level in the tarball, except LICENSE, which comes from the real
-           top-level directory.
-        2. twisted/<subproject> is included, but without the topfiles entry
-           in that directory. No other twisted subpackages are included.
-        3. twisted/plugins/twisted_<subproject>.py is included, but nothing
-           else in plugins is.
-        """
-        structure = {
-            "README": "HI!@",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"web": {"websetroot": "SET ROOT"},
-                    "words": {"im": "#!im"}},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}},
-                "words": {"__init__.py": "import WORDS"},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG"}}}
-
-        outStructure = {
-            "README": "WEB!",
-            "LICENSE": "copyright!",
-            "setup.py": "import WEBINSTALL",
-            "bin": {"websetroot": "SET ROOT"},
-            "twisted": {"web": {"__init__.py": "import WEB"},
-                        "plugins": {"twisted_web.py": "import WEBPLUG"}}}
-
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildSubProject("web", "0.3.0")
-
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
-    def test_minimalSubProjectLayout(self):
-        """
-        buildSubProject should work with minimal subprojects.
-        """
-        structure = {
-            "LICENSE": "copyright!",
-            "bin": {},
-            "twisted": {
-                "web": {"__init__.py": "import WEB",
-                        "topfiles": {"setup.py": "import WEBINSTALL"}},
-                "plugins": {}}}
-
-        outStructure = {
-            "setup.py": "import WEBINSTALL",
-            "LICENSE": "copyright!",
-            "twisted": {"web": {"__init__.py": "import WEB"}}}
-
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildSubProject("web", "0.3.0")
-
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
-    def test_coreProjectLayout(self):
-        """
-        The core tarball looks a lot like a subproject tarball, except it
-        doesn't include:
-
-        - Python packages from other subprojects
-        - plugins from other subprojects
-        - scripts from other subprojects
-        """
-        structure = {
-            "LICENSE": "copyright!",
-            "twisted": {"__init__.py": "twisted",
-                        "python": {"__init__.py": "python",
-                                   "roots.py": "roots!"},
-                        "conch": {"__init__.py": "conch",
-                                  "unrelated.py": "import conch"},
-                        "plugin.py": "plugin",
-                        "plugins": {"twisted_web.py": "webplug",
-                                    "twisted_whatever.py": "include!",
-                                    "cred.py": "include!"},
-                        "topfiles": {"setup.py": "import CORE",
-                                     "README": "core readme"}},
-            "bin": {"twistd": "TWISTD",
-                    "web": {"websetroot": "websetroot"}}}
-
-        outStructure = {
-            "LICENSE": "copyright!",
-            "setup.py": "import CORE",
-            "README": "core readme",
-            "twisted": {"__init__.py": "twisted",
-                        "python": {"__init__.py": "python",
-                                   "roots.py": "roots!"},
-                        "plugin.py": "plugin",
-                        "plugins": {"twisted_whatever.py": "include!",
-                                    "cred.py": "include!"}},
-            "bin": {"twistd": "TWISTD"}}
-
-        self.createStructure(self.rootDir, structure)
-        outputFile = self.builder.buildCore("8.0.0")
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
     def test_setup3(self):
         """
         setup3.py is included in the release tarball.
@@ -1832,19 +1723,11 @@ class BuildAllTarballsTestBase(object):
         buildAllTarballs(checkout, self.outputDir)
         self.assertEqual(
             set(self.outputDir.children()),
-            set([self.outputDir.child("Twisted-1.2.0.tar.bz2"),
-                 self.outputDir.child("TwistedCore-1.2.0.tar.bz2"),
-                 self.outputDir.child("TwistedWords-1.2.0.tar.bz2")]))
+            set([self.outputDir.child("Twisted-1.2.0.tar.bz2")]))
 
         self.assertExtractedStructure(
             self.outputDir.child("Twisted-1.2.0.tar.bz2"),
             twistedStructure)
-        self.assertExtractedStructure(
-            self.outputDir.child("TwistedCore-1.2.0.tar.bz2"),
-            coreStructure)
-        self.assertExtractedStructure(
-            self.outputDir.child("TwistedWords-1.2.0.tar.bz2"),
-            wordsStructure)
 
 
     def test_buildAllTarballsEnsuresCleanCheckout(self):
