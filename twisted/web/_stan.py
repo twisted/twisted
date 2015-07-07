@@ -229,7 +229,7 @@ class Tag(object):
         else:
             newchildren = self.children[:]
         newattrs = self.attributes.copy()
-        for key in newattrs:
+        for key in newattrs.keys():
             newattrs[key] = self._clone(newattrs[key], True)
 
         newslotdata = None

@@ -5,21 +5,23 @@
 Tests for L{twisted.web.util}.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
 from twisted.internet import defer
-from twisted.web import util
+from twisted.python.compat import _PY3, intToBytes, networkString
+from twisted.web import resource, util
 from twisted.web.error import FlattenerError
-from twisted.web.util import (
-    redirectTo, _SourceLineElement,
-    _SourceFragmentElement, _FrameElement, _StackElement,
-    FailureElement, formatFailure, DeferredResource)
-
 from twisted.web.http import FOUND
 from twisted.web.server import Request
 from twisted.web.template import TagLoader, flattenString, tags
-from twisted.web import resource
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
+from twisted.web.util import DeferredResource
+from twisted.web.util import _SourceFragmentElement, _FrameElement
+from twisted.web.util import _StackElement, FailureElement, formatFailure
+from twisted.web.util import redirectTo, _SourceLineElement
+
 
 
 class RedirectToTests(TestCase):
@@ -34,15 +36,15 @@ class RedirectToTests(TestCase):
         be redirected.
         """
         request = Request(DummyChannel(), True)
-        request.method = 'GET'
-        targetURL = "http://target.example.com/4321"
+        request.method = b'GET'
+        targetURL = b"http://target.example.com/4321"
         redirectTo(targetURL, request)
         self.assertEqual(request.code, FOUND)
         self.assertEqual(
-            request.responseHeaders.getRawHeaders('location'), [targetURL])
+            request.responseHeaders.getRawHeaders(b'location'), [targetURL])
         self.assertEqual(
-            request.responseHeaders.getRawHeaders('content-type'),
-            ['text/html; charset=utf-8'])
+            request.responseHeaders.getRawHeaders(b'content-type'),
+            [b'text/html; charset=utf-8'])
 
 
     def test_redirectToUnicodeURL(self) :
@@ -50,7 +52,7 @@ class RedirectToTests(TestCase):
         L{redirectTo} will raise TypeError if unicode object is passed in URL
         """
         request = Request(DummyChannel(), True)
-        request.method = 'GET'
+        request.method = b'GET'
         targetURL = u'http://target.example.com/4321'
         self.assertRaises(TypeError, redirectTo, targetURL, request)
 
@@ -69,7 +71,7 @@ class FailureElementTests(TestCase):
             message = "This is a problem"
             raise Exception(message)
         # Figure out the line number from which the exception will be raised.
-        self.base = lineNumberProbeAlsoBroken.func_code.co_firstlineno + 1
+        self.base = lineNumberProbeAlsoBroken.__code__.co_firstlineno + 1
 
         try:
             lineNumberProbeAlsoBroken()
@@ -117,17 +119,27 @@ class FailureElementTests(TestCase):
             u'raised.',
         ]
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual,
-            ''.join([
-                    '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-                    '</div>' % (
-                        ["", "Highlight"][lineNumber == 1],
-                        self.base + lineNumber,
-                        (u" \N{NO-BREAK SPACE}" * 4 + sourceLine).encode(
-                            'utf-8'))
-                    for (lineNumber, sourceLine)
-                    in enumerate(source)]))
+        if _PY3:
+            stringToCheckFor = ''.join([
+                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
+                '</div>' % (
+                    ["", "Highlight"][lineNumber == 1],
+                    self.base + lineNumber,
+                    (u" \N{NO-BREAK SPACE}" * 4 + sourceLine))
+                for (lineNumber, sourceLine)
+                in enumerate(source)]).encode("utf8")
+
+        else:
+            stringToCheckFor = ''.join([
+                '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
+                '</div>' % (
+                    ["", "Highlight"][lineNumber == 1],
+                    self.base + lineNumber,
+                    (u" \N{NO-BREAK SPACE}" * 4 + sourceLine).encode('utf8'))
+                for (lineNumber, sourceLine)
+                in enumerate(source)])
+
+        d.addCallback(self.assertEqual, stringToCheckFor)
         return d
 
 
@@ -144,7 +156,8 @@ class FailureElementTests(TestCase):
         d.addCallback(
             # __file__ differs depending on whether an up-to-date .pyc file
             # already existed.
-            self.assertEqual, "<span>" + __file__.rstrip('c') + "</span>")
+            self.assertEqual,
+            b"<span>" + networkString(__file__.rstrip('c')) + b"</span>")
         return d
 
 
@@ -159,7 +172,7 @@ class FailureElementTests(TestCase):
             self.frame)
         d = flattenString(None, element)
         d.addCallback(
-            self.assertEqual, "<span>" + str(self.base + 1) + "</span>")
+            self.assertEqual, b"<span>" + intToBytes(self.base + 1) + b"</span>")
         return d
 
 
@@ -174,7 +187,7 @@ class FailureElementTests(TestCase):
             self.frame)
         d = flattenString(None, element)
         d.addCallback(
-            self.assertEqual, "<span>lineNumberProbeAlsoBroken</span>")
+            self.assertEqual, b"<span>lineNumberProbeAlsoBroken</span>")
         return d
 
 
@@ -234,8 +247,12 @@ class FailureElementTests(TestCase):
         element = FailureElement(
             self.failure, TagLoader(tags.span(render="type")))
         d = flattenString(None, element)
+        if _PY3:
+            exc = b"builtins.Exception"
+        else:
+            exc = b"exceptions.Exception"
         d.addCallback(
-            self.assertEqual, "<span>exceptions.Exception</span>")
+            self.assertEqual, b"<span>" + exc + b"</span>")
         return d
 
 
@@ -248,7 +265,7 @@ class FailureElementTests(TestCase):
             self.failure, TagLoader(tags.span(render="value")))
         d = flattenString(None, element)
         d.addCallback(
-            self.assertEqual, '<span>This is a problem</span>')
+            self.assertEqual, b'<span>This is a problem</span>')
         return d
 
 
@@ -277,10 +294,13 @@ class FormatFailureTests(TestCase):
         except:
             result = formatFailure(Failure())
 
-        self.assertIsInstance(result, str)
-        self.assertTrue(all(ord(ch) < 128 for ch in result))
+        self.assertIsInstance(result, bytes)
+        if _PY3:
+            self.assertTrue(all(ch < 128 for ch in result))
+        else:
+            self.assertTrue(all(ord(ch) < 128 for ch in result))
         # Indentation happens to rely on NO-BREAK SPACE
-        self.assertIn("&#160;", result)
+        self.assertIn(b"&#160;", result)
 
 
 

@@ -664,7 +664,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
             quuxPath.getContent())
         self.assertIn(
-            '<a href="%s/%s/__init__.py#L1" class="functionSourceLink">' % (
+            '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">' % (
                 sourceURL, packageName),
             quuxPath.getContent())
         self.assertIn(privateDocstring, quuxPath.getContent())
