@@ -9,18 +9,15 @@ complex or arbitrarily nested, as strings.
 
 from __future__ import division, absolute_import
 
-from io import BytesIO
-
 from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
 
 from twisted.internet.defer import Deferred
-from twisted.python.compat import unicode, nativeString, iteritems
+from twisted.python.compat import NativeStringIO
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
-
 
 
 def escapeForContent(data):
@@ -40,9 +37,9 @@ def escapeForContent(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    data = data.replace(b'&', b'&amp;'
-        ).replace(b'<', b'&lt;'
-        ).replace(b'>', b'&gt;')
+    data = data.replace('&', '&amp;'
+        ).replace('<', '&lt;'
+        ).replace('>', '&gt;')
     return data
 
 
@@ -119,7 +116,7 @@ def flattenWithAttributeEscaping(root):
     """
     if isinstance(root, bytes):
         root = escapeForContent(root)
-        root = root.replace(b'"', b'&quot;')
+        root = root.replace('"', '&quot;')
         yield root
     elif isinstance(root, Deferred):
         yield root.addCallback(flattenWithAttributeEscaping)
@@ -142,7 +139,7 @@ def escapedCDATA(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    return data.replace(b']]>', b']]]]><![CDATA[>')
+    return data.replace(']]>', ']]]]><![CDATA[>')
 
 
 
@@ -159,9 +156,9 @@ def escapedComment(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    data = data.replace(b'--', b'- - ').replace(b'>', b'&gt;')
-    if data and data[-1:] == b'-':
-        data += b' '
+    data = data.replace('--', '- - ').replace('>', '&gt;')
+    if data and data[-1] == '-':
+        data += ' '
     return data
 
 
@@ -226,13 +223,13 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         slotValue = _getSlotValue(root.name, slotData, root.default)
         yield keepGoing(slotValue)
     elif isinstance(root, CDATA):
-        yield b'<![CDATA['
+        yield '<![CDATA['
         yield escapedCDATA(root.data)
-        yield b']]>'
+        yield ']]>'
     elif isinstance(root, Comment):
-        yield b'<!--'
+        yield '<!--'
         yield escapedComment(root.data)
-        yield b'-->'
+        yield '-->'
     elif isinstance(root, Tag):
         slotData.append(root.slotData)
         if root.render is not None:
@@ -249,23 +246,23 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             yield keepGoing(root.children)
             return
 
-        yield b'<'
+        yield '<'
         if isinstance(root.tagName, unicode):
             tagName = root.tagName.encode('ascii')
         else:
-            tagName = root.tagName
+            tagName = str(root.tagName)
         yield tagName
-        for k, v in iteritems(root.attributes):
+        for k, v in root.attributes.iteritems():
             if isinstance(k, unicode):
                 k = k.encode('ascii')
-            yield b' ' + k + b'="'
+            yield ' ' + k + '="'
             # Serialize the contents of the attribute, wrapping the results of
             # that serialization so that _everything_ is quoted.
             attribute = keepGoing(v, attributeEscapingDoneOutside)
             yield flattenWithAttributeEscaping(attribute)
-            yield b'"'
-        if root.children or nativeString(tagName) not in voidElements:
-            yield b'>'
+            yield '"'
+        if root.children or tagName not in voidElements:
+            yield '>'
             # Regardless of whether we're in an attribute or not, switch back
             # to the escapeForContent dataEscaper.  The contents of a tag must
             # be quoted no matter what; in the top-level document, just so
@@ -274,16 +271,15 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             # parse the tag within the attribute, all the quoting is still
             # correct.
             yield keepGoing(root.children, escapeForContent)
-            yield b'</' + tagName + b'>'
+            yield '</' + tagName + '>'
         else:
-            yield b' />'
+            yield ' />'
 
     elif isinstance(root, (tuple, list, GeneratorType)):
         for element in root:
             yield keepGoing(element)
     elif isinstance(root, CharRef):
-        escaped = '&#%d;' % (root.ordinal,)
-        yield escaped.encode('ascii')
+        yield '&#%d;' % (root.ordinal,)
     elif isinstance(root, Deferred):
         yield root.addCallback(lambda result: (result, keepGoing(result)))
     elif IRenderable.providedBy(root):
@@ -315,8 +311,10 @@ def _flattenTree(request, root):
     stack = [_flattenElement(request, root, [], None, escapeForContent)]
     while stack:
         try:
+            # In Python 2.5, after an exception, a generator's gi_frame is
+            # None.
             frame = stack[-1].gi_frame
-            element = next(stack[-1])
+            element = stack[-1].next()
         except StopIteration:
             stack.pop()
         except Exception as e:
@@ -327,7 +325,7 @@ def _flattenTree(request, root):
             roots.append(frame.f_locals['root'])
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
-            if type(element) is bytes:
+            if type(element) is str:
                 yield element
             elif isinstance(element, Deferred):
                 def cbx(originalAndToFlatten):
@@ -359,13 +357,13 @@ def _writeFlattenedData(state, write, result):
     """
     while True:
         try:
-            element = next(state)
+            element = state.next()
         except StopIteration:
             result.callback(None)
         except:
             result.errback()
         else:
-            if type(element) is bytes:
+            if type(element) is str:
                 write(element)
                 continue
             else:
@@ -419,7 +417,7 @@ def flattenString(request, root):
         its result when C{root} has been completely flattened into C{write} or
         which will be errbacked if an unexpected exception occurs.
     """
-    io = BytesIO()
+    io = NativeStringIO()
     d = flatten(request, root, io.write)
     d.addCallback(lambda _: io.getvalue())
     return d

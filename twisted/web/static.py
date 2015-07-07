@@ -23,7 +23,6 @@ from twisted.web import http
 from twisted.web.util import redirectTo
 
 from twisted.python.compat import networkString, intToBytes, nativeString, _PY3
-from twisted.python.compat import escape
 
 from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
@@ -32,8 +31,10 @@ from twisted.python.runtime import platformType
 
 if _PY3:
     from urllib.parse import quote, unquote
+    from html import escape
 else:
     from urllib import quote, unquote
+    from cgi import escape
 
 dangerousPathError = resource.NoResource("Invalid request URL.")
 

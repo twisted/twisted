@@ -11,12 +11,10 @@ import traceback
 
 from xml.etree.cElementTree import XML
 
-from zope.interface import implementer
+from zope.interface import implements, implementer
 
 from twisted.trial.unittest import TestCase
 from twisted.test.testutils import XMLAssertionMixin
-
-from twisted.python.compat import OrderedDict
 
 from twisted.internet.defer import passthru, succeed, gatherResults
 
@@ -30,6 +28,31 @@ from twisted.web.test._util import FlattenTestCase
 
 
 
+class OrderedAttributes(object):
+    """
+    An L{OrderedAttributes} is a stand-in for the L{Tag.attributes} dictionary
+    that orders things in a deterministic order.  It doesn't do any sorting, so
+    whatever order the attributes are passed in, they will be returned.
+
+    @ivar attributes: The result of a L{dict}C{.items} call.
+    @type attributes: L{list} of 2-L{tuples}
+    """
+
+    def __init__(self, attributes):
+        self.attributes = attributes
+
+
+    def iteritems(self):
+        """
+        Like L{dict}C{.iteritems}.
+
+        @return: an iterator
+        @rtype: list iterator
+        """
+        return iter(self.attributes)
+
+
+
 class SerializationTests(FlattenTestCase, XMLAssertionMixin):
     """
     Tests for flattening various things.
@@ -40,7 +63,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         return self.assertFlattensTo(
             tags.html(tags.body('42'), hi='there'),
-            b'<html hi="there"><body>42</body></html>')
+            '<html hi="there"><body>42</body></html>')
 
 
     def test_serializeString(self):
@@ -48,8 +71,8 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         Test that strings will be flattened and escaped correctly.
         """
         return gatherResults([
-            self.assertFlattensTo('one', b'one'),
-            self.assertFlattensTo('<abc&&>123', b'&lt;abc&amp;&amp;&gt;123'),
+            self.assertFlattensTo('one', 'one'),
+            self.assertFlattensTo('<abc&&>123', '&lt;abc&amp;&amp;&gt;123'),
         ])
 
 
@@ -57,7 +80,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         The serialized form of a self-closing tag is C{'<tagName />'}.
         """
-        return self.assertFlattensTo(tags.img(), b'<img />')
+        return self.assertFlattensTo(tags.img(), '<img />')
 
 
     def test_serializeAttribute(self):
@@ -65,7 +88,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         The serialized form of attribute I{a} with value I{b} is C{'a="b"'}.
         """
         self.assertFlattensImmediately(tags.img(src='foo'),
-                                       b'<img src="foo" />')
+                                       '<img src="foo" />')
 
 
     def test_serializedMultipleAttributes(self):
@@ -74,8 +97,8 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         form.
         """
         tag = tags.img()
-        tag.attributes = OrderedDict([("src", "foo"), ("name", "bar")])
-        self.assertFlattensImmediately(tag, b'<img src="foo" name="bar" />')
+        tag.attributes = OrderedAttributes([("src", "foo"), ("name", "bar")])
+        self.assertFlattensImmediately(tag, '<img src="foo" name="bar" />')
 
 
     def checkAttributeSanitization(self, wrapData, wrapTag):
@@ -95,7 +118,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.assertFlattensImmediately(
             wrapTag(tags.img(src=wrapData("<>&\""))),
-            b'<img src="&lt;&gt;&amp;&quot;" />')
+            '<img src="&lt;&gt;&amp;&quot;" />')
 
 
     def test_serializedAttributeWithSanitization(self):
@@ -185,9 +208,9 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         outerTag = tags.img(src=wrapTag(innerTag))
         outer = self.assertFlattensImmediately(
             outerTag,
-            b'<img src="&lt;a&gt;&amp;lt;&amp;gt;&amp;amp;&quot;&lt;/a&gt;" />')
+            '<img src="&lt;a&gt;&amp;lt;&amp;gt;&amp;amp;&quot;&lt;/a&gt;" />')
         inner = self.assertFlattensImmediately(
-            innerTag, b'<a>&lt;&gt;&amp;"</a>')
+            innerTag, '<a>&lt;&gt;&amp;"</a>')
 
         # Since the above quoting is somewhat tricky, validate it by making sure
         # that the main use-case for tag-within-attribute is supported here: if
@@ -221,20 +244,20 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         flattened = self.assertFlattensImmediately(
             tags.img(src=tags.a(href='<>&"')),
-            b'<img src="&lt;a href='
-            b'&quot;&amp;lt;&amp;gt;&amp;amp;&amp;quot;&quot;&gt;'
-            b'&lt;/a&gt;" />')
+            '<img src="&lt;a href='
+            '&quot;&amp;lt;&amp;gt;&amp;amp;&amp;quot;&quot;&gt;'
+            '&lt;/a&gt;" />')
 
         # As in checkTagAttributeSerialization, belt-and-suspenders:
         self.assertXMLEqual(XML(flattened).attrib['src'],
-                            b'<a href="&lt;&gt;&amp;&quot;"></a>')
+                            '<a href="&lt;&gt;&amp;&quot;"></a>')
 
 
     def test_serializeComment(self):
         """
         Test that comments are correctly flattened and escaped.
         """
-        return self.assertFlattensTo(Comment('foo bar'), b'<!--foo bar-->'),
+        return self.assertFlattensTo(Comment('foo bar'), '<!--foo bar-->'),
 
 
     def test_commentEscaping(self):
@@ -253,10 +276,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         def verifyComment(c):
             self.assertTrue(
-                c.startswith(b'<!--'),
+                c.startswith('<!--'),
                 "%r does not start with the comment prefix" % (c,))
             self.assertTrue(
-                c.endswith(b'-->'),
+                c.endswith('-->'),
                 "%r does not end with the comment suffix" % (c,))
             # If it is shorter than 7, then the prefix and suffix overlap
             # illegally.
@@ -264,10 +287,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
                 len(c) >= 7,
                 "%r is too short to be a legal comment" % (c,))
             content = c[4:-3]
-            self.assertNotIn(b'--', content)
-            self.assertNotIn(b'>', content)
+            self.assertNotIn('--', content)
+            self.assertNotIn('>', content)
             if content:
-                self.assertNotEqual(content[-1], b'-')
+                self.assertNotEqual(content[-1], '-')
 
         results = []
         for c in [
@@ -289,10 +312,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         Test that CDATA is correctly flattened and escaped.
         """
         return gatherResults([
-            self.assertFlattensTo(CDATA('foo bar'), b'<![CDATA[foo bar]]>'),
+            self.assertFlattensTo(CDATA('foo bar'), '<![CDATA[foo bar]]>'),
             self.assertFlattensTo(
                 CDATA('foo ]]> bar'),
-                b'<![CDATA[foo ]]]]><![CDATA[> bar]]>'),
+                '<![CDATA[foo ]]]]><![CDATA[> bar]]>'),
         ])
 
 
@@ -303,10 +326,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         snowman = u'\N{SNOWMAN}'
         return gatherResults([
-            self.assertFlattensTo(snowman, b'\xe2\x98\x83'),
-            self.assertFlattensTo(tags.p(snowman), b'<p>\xe2\x98\x83</p>'),
-            self.assertFlattensTo(Comment(snowman), b'<!--\xe2\x98\x83-->'),
-            self.assertFlattensTo(CDATA(snowman), b'<![CDATA[\xe2\x98\x83]]>'),
+            self.assertFlattensTo(snowman, '\xe2\x98\x83'),
+            self.assertFlattensTo(tags.p(snowman), '<p>\xe2\x98\x83</p>'),
+            self.assertFlattensTo(Comment(snowman), '<!--\xe2\x98\x83-->'),
+            self.assertFlattensTo(CDATA(snowman), '<![CDATA[\xe2\x98\x83]]>'),
             self.assertFlatteningRaises(
                 Tag(snowman), UnicodeEncodeError),
             self.assertFlatteningRaises(
@@ -320,7 +343,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         syntax.
         """
         ref = CharRef(ord(u"\N{SNOWMAN}"))
-        return self.assertFlattensTo(ref, b"&#9731;")
+        return self.assertFlattensTo(ref, "&#9731;")
 
 
     def test_serializeDeferred(self):
@@ -328,7 +351,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         Test that a deferred is substituted with the current value in the
         callback chain when flattened.
         """
-        return self.assertFlattensTo(succeed('two'), b'two')
+        return self.assertFlattensTo(succeed('two'), 'two')
 
 
     def test_serializeSameDeferredTwice(self):
@@ -337,8 +360,8 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         d = succeed('three')
         return gatherResults([
-            self.assertFlattensTo(d, b'three'),
-            self.assertFlattensTo(d, b'three'),
+            self.assertFlattensTo(d, 'three'),
+            self.assertFlattensTo(d, 'three'),
         ])
 
 
@@ -346,8 +369,8 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         Test that flattening respects all of the IRenderable interface.
         """
-        @implementer(IRenderable)
         class FakeElement(object):
+            implements(IRenderable)
             def render(ign,ored):
                 return tags.p(
                     'hello, ',
@@ -358,7 +381,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
                 return lambda ign, node: node('world')
 
         return gatherResults([
-            self.assertFlattensTo(FakeElement(), b'<p>hello, world - world</p>'),
+            self.assertFlattensTo(FakeElement(), '<p>hello, world - world</p>'),
         ])
 
 
@@ -371,7 +394,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         t2.fillSlots(test='hello, world')
         return gatherResults([
             self.assertFlatteningRaises(t1, UnfilledSlot),
-            self.assertFlattensTo(t2, b'<p>hello, world</p>'),
+            self.assertFlattensTo(t2, '<p>hello, world</p>'),
         ])
 
 
@@ -382,7 +405,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         t = tags.p(slot('test'))
         t.fillSlots(test=succeed(tags.em('four>')))
-        return self.assertFlattensTo(t, b'<p><em>four&gt;</em></p>')
+        return self.assertFlattensTo(t, '<p><em>four&gt;</em></p>')
 
 
     def test_unknownTypeRaises(self):
@@ -400,7 +423,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 # be a string which agrees with the one the traceback module will put into a
 # traceback for frames associated with functions defined in this file.
 
-HERE = (lambda: None).__code__.co_filename
+HERE = (lambda: None).func_code.co_filename
 
 
 class FlattenerErrorTests(TestCase):
@@ -414,8 +437,9 @@ class FlattenerErrorTests(TestCase):
         the repr of that object is included in the string representation of the
         exception.
         """
-        @implementer(IRenderable)
         class Renderable(object):
+            implements(IRenderable)
+
             def __repr__(self):
                 return "renderable repr"
 
@@ -470,10 +494,9 @@ class FlattenerErrorTests(TestCase):
 
         try:
             f()
-        except RuntimeError as e:
+        except RuntimeError, exc:
             # Get the traceback, minus the info for *this* frame
             tbinfo = traceback.extract_tb(sys.exc_info()[2])[1:]
-            exc = e
         else:
             self.fail("f() must raise RuntimeError")
 
@@ -485,5 +508,6 @@ class FlattenerErrorTests(TestCase):
             "  File \"%s\", line %d, in g\n"
             "    raise RuntimeError(\"reason\")\n"
             "RuntimeError: reason\n" % (
-                HERE, f.__code__.co_firstlineno + 1,
-                HERE, g.__code__.co_firstlineno + 1))
+                HERE, f.func_code.co_firstlineno + 1,
+                HERE, g.func_code.co_firstlineno + 1))
+

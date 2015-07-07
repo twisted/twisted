@@ -33,7 +33,7 @@ from zope.interface import implementer
 from xml.sax import make_parser, handler
 
 from twisted.python import log
-from twisted.python.compat import NativeStringIO, items, OrderedDict
+from twisted.python.compat import NativeStringIO, items
 from twisted.python.filepath import FilePath
 from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
 from twisted.web.iweb import ITemplateLoader
@@ -63,7 +63,7 @@ class _NSContext(object):
         """
         self.parent = parent
         if parent is not None:
-            self.nss = OrderedDict(parent.nss)
+            self.nss = dict(parent.nss)
         else:
             self.nss = {'http://www.w3.org/XML/1998/namespace':'xml'}
 
@@ -206,7 +206,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         render = None
 
-        attrs = OrderedDict(attrs)
+        attrs = dict(attrs)
         for k, v in items(attrs):
             attrNS, justTheName = k
             if attrNS != TEMPLATE_NAMESPACE:
@@ -222,7 +222,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # specified as having a namespace in the template) or prefix:name,
         # preserving the xml namespace prefix given in the document.
 
-        nonTemplateAttrs = OrderedDict()
+        nonTemplateAttrs = {}
         for (attrNs, attrName), v in items(attrs):
             nsPrefix = self.prefixMap.get(attrNs)
             if nsPrefix is None:
@@ -249,7 +249,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         # Apply any xmlns attributes
         if self.xmlnsAttrs:
-            nonTemplateAttrs.update(OrderedDict(self.xmlnsAttrs))
+            nonTemplateAttrs.update(dict(self.xmlnsAttrs))
             self.xmlnsAttrs = []
 
         # Add the prefix that was used in the parsed template for non-template
@@ -259,7 +259,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             if prefix is not None:
                 name = '%s:%s' % (self.prefixMap[ns],name)
         el = Tag(
-            name, attributes=OrderedDict(nonTemplateAttrs), render=render,
+            name, attributes=dict(nonTemplateAttrs), render=render,
             filename=filename, lineNumber=lineNumber,
             columnNumber=columnNumber)
         self.stack.append(el)
@@ -391,11 +391,8 @@ class XMLString(object):
         Run the parser on a L{NativeStringIO} copy of the string.
 
         @param s: The string from which to load the XML.
-        @type s: C{str}, or a UTF-8 encoded L{bytes}.
+        @type s: C{str}
         """
-        if not isinstance(s, str):
-            s = s.decode('utf8')
-
         self._loadedTemplate = _flatsaxParse(NativeStringIO(s))
 
 
@@ -525,13 +522,13 @@ tags = _TagFactory()
 
 
 def renderElement(request, element,
-                  doctype=b'<!DOCTYPE html>', _failElement=None):
+                  doctype='<!DOCTYPE html>', _failElement=None):
     """
     Render an element or other C{IRenderable}.
 
     @param request: The C{Request} being rendered to.
     @param element: An C{IRenderable} which will be rendered.
-    @param doctype: A C{bytes} which will be written as the first line of
+    @param doctype: A C{str} which will be written as the first line of
         the request, or C{None} to disable writing of a doctype.  The C{string}
         should not include a trailing newline and will default to the HTML5
         doctype C{'<!DOCTYPE html>'}.
@@ -542,7 +539,7 @@ def renderElement(request, element,
     """
     if doctype is not None:
         request.write(doctype)
-        request.write(b'\n')
+        request.write('\n')
 
     if _failElement is None:
         _failElement = twisted.web.util.FailureElement
@@ -552,14 +549,13 @@ def renderElement(request, element,
     def eb(failure):
         log.err(failure, "An error occurred while rendering the response.")
         if request.site.displayTracebacks:
-            return flatten(request, _failElement(failure),
-                           request.write).encode('utf8')
+            return flatten(request, _failElement(failure), request.write)
         else:
             request.write(
-                (b'<div style="font-size:800%;'
-                 b'background-color:#FFF;'
-                 b'color:#F00'
-                 b'">An error occurred while rendering the response.</div>'))
+                ('<div style="font-size:800%;'
+                 'background-color:#FFF;'
+                 'color:#F00'
+                 '">An error occurred while rendering the response.</div>'))
 
     d.addErrback(eb)
     d.addBoth(lambda _: request.finish())
