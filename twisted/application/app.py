@@ -86,47 +86,6 @@ class ProfileRunner(_BasicProfiler):
 
 
 
-class HotshotRunner(_BasicProfiler):
-    """
-    Runner for the hotshot profile module.
-    """
-
-    def run(self, reactor):
-        """
-        Run reactor under the hotshot profiler.
-        """
-        try:
-            import hotshot.stats
-        except (ImportError, SystemExit) as e:
-            # Certain versions of Debian (and Debian derivatives) raise
-            # SystemExit when importing hotshot if the "non-free" profiler
-            # module is not installed.  Someone eventually recognized this
-            # as a bug and changed the Debian packaged Python to raise
-            # ImportError instead.  Handle both exception types here in
-            # order to support the versions of Debian which have this
-            # behavior.  The bug report which prompted the introduction of
-            # this highly undesirable behavior should be available online at
-            # <http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=334067>.
-            # There seems to be no corresponding bug report which resulted
-            # in the behavior being removed. -exarkun
-            self._reportImportError("hotshot", e)
-
-        # this writes stats straight out
-        p = hotshot.Profile(self.profileOutput)
-        p.runcall(reactor.run)
-        if self.saveStats:
-            # stats are automatically written to file, nothing to do
-            return
-        else:
-            s = hotshot.stats.load(self.profileOutput)
-            s.strip_dirs()
-            s.sort_stats(-1)
-            s.stream = open(self.profileOutput, 'w')
-            s.print_stats()
-            s.stream.close()
-
-
-
 class CProfileRunner(_BasicProfiler):
     """
     Runner for the cProfile module.
@@ -164,13 +123,12 @@ class AppProfiler(object):
     @ivar profiler: the name of the selected profiler.
     @type profiler: C{str}
     """
-    profilers = {"profile": ProfileRunner, "hotshot": HotshotRunner,
-                 "cprofile": CProfileRunner}
+    profilers = {"profile": ProfileRunner, "cprofile": CProfileRunner}
 
     def __init__(self, options):
         saveStats = options.get("savestats", False)
         profileOutput = options.get("profile", None)
-        self.profiler = options.get("profiler", "hotshot").lower()
+        self.profiler = options.get("profiler", "cprofile").lower()
         if self.profiler in self.profilers:
             profiler = self.profilers[self.profiler](profileOutput, saveStats)
             self.run = profiler.run
@@ -563,7 +521,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                      ['profile', 'p', None,
                       "Run in profile mode, dumping results to specified "
                       "file."],
-                     ['profiler', None, "hotshot",
+                     ['profiler', None, "cprofile",
                       "Name of the profiler to use (%s)." %
                       ", ".join(AppProfiler.profilers)],
                      ['file', 'f', 'twistd.tap',

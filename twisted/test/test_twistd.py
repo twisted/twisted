@@ -63,14 +63,6 @@ try:
 except ImportError:
     profile = None
 
-try:
-    import hotshot
-    import hotshot.stats
-except (ImportError, SystemExit):
-    # For some reasons, hotshot.stats seems to raise SystemExit on some
-    # distributions, probably when considered non-free.  See the import of
-    # this module in twisted.application.app for more details.
-    hotshot = None
 
 try:
     import pstats
@@ -997,92 +989,6 @@ class AppProfilingTests(unittest.TestCase):
         test_profilePrintStatsError.skip = "profile module not available"
 
 
-    def test_hotshot(self):
-        """
-        L{app.HotshotRunner.run} should call the C{run} method of the reactor
-        and save profile data in the specified file.
-        """
-        config = twistd.ServerOptions()
-        config["profile"] = self.mktemp()
-        config["profiler"] = "hotshot"
-        profiler = app.AppProfiler(config)
-        reactor = DummyReactor()
-
-        profiler.run(reactor)
-
-        self.assertTrue(reactor.called)
-        with open(config["profile"]) as f:
-            data = f.read()
-        self.assertIn("run", data)
-        self.assertIn("function calls", data)
-
-    if hotshot is None:
-        test_hotshot.skip = "hotshot module not available"
-
-
-    def test_hotshotSaveStats(self):
-        """
-        With the C{savestats} option specified, L{app.HotshotRunner.run} should
-        save the raw stats object instead of a summary output.
-        """
-        config = twistd.ServerOptions()
-        config["profile"] = self.mktemp()
-        config["profiler"] = "hotshot"
-        config["savestats"] = True
-        profiler = app.AppProfiler(config)
-        reactor = DummyReactor()
-
-        profiler.run(reactor)
-
-        self.assertTrue(reactor.called)
-        self._testStats(hotshot.stats.load, config['profile'])
-
-    if hotshot is None:
-        test_hotshotSaveStats.skip = "hotshot module not available"
-
-
-    def test_withoutHotshot(self):
-        """
-        When the C{hotshot} module is not present, L{app.HotshotRunner.run}
-        should raise a C{SystemExit} exception and log the C{ImportError}.
-        """
-        savedModules = sys.modules.copy()
-        sys.modules["hotshot"] = None
-
-        config = twistd.ServerOptions()
-        config["profiler"] = "hotshot"
-        profiler = app.AppProfiler(config)
-        try:
-            self.assertRaises(SystemExit, profiler.run, None)
-        finally:
-            sys.modules.clear()
-            sys.modules.update(savedModules)
-
-
-    def test_hotshotPrintStatsError(self):
-        """
-        When an error happens while printing the stats, C{sys.stdout}
-        should be restored to its initial value.
-        """
-        class ErroneousStats(pstats.Stats):
-            def print_stats(self):
-                raise RuntimeError("Boom")
-        self.patch(pstats, "Stats", ErroneousStats)
-
-        config = twistd.ServerOptions()
-        config["profile"] = self.mktemp()
-        config["profiler"] = "hotshot"
-        profiler = app.AppProfiler(config)
-        reactor = DummyReactor()
-
-        oldStdout = sys.stdout
-        self.assertRaises(RuntimeError, profiler.run, reactor)
-        self.assertIdentical(sys.stdout, oldStdout)
-
-    if hotshot is None:
-        test_hotshotPrintStatsError.skip = "hotshot module not available"
-
-
     def test_cProfile(self):
         """
         L{app.CProfileRunner.run} should call the C{run} method of the
@@ -1162,10 +1068,10 @@ class AppProfilingTests(unittest.TestCase):
 
     def test_defaultProfiler(self):
         """
-        L{app.Profiler} defaults to the hotshot profiler if not specified.
+        L{app.Profiler} defaults to the cprofile profiler if not specified.
         """
         profiler = app.AppProfiler({})
-        self.assertEqual(profiler.profiler, "hotshot")
+        self.assertEqual(profiler.profiler, "cprofile")
 
 
     def test_profilerNameCaseInsentive(self):
@@ -1173,8 +1079,8 @@ class AppProfilingTests(unittest.TestCase):
         The case of the profiler name passed to L{app.AppProfiler} is not
         relevant.
         """
-        profiler = app.AppProfiler({"profiler": "HotShot"})
-        self.assertEqual(profiler.profiler, "hotshot")
+        profiler = app.AppProfiler({"profiler": "CprOfile"})
+        self.assertEqual(profiler.profiler, "cprofile")
 
 
 
