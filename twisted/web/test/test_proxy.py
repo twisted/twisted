@@ -28,8 +28,8 @@ class ReverseProxyResourceTests(TestCase):
         """
         root = Resource()
         reactor = MemoryReactor()
-        resource = ReverseProxyResource("127.0.0.1", 1234, "/path", reactor)
-        root.putChild('index', resource)
+        resource = ReverseProxyResource(u"127.0.0.1", 1234, b"/path", reactor)
+        root.putChild(b'index', resource)
         site = Site(root)
 
         transport = StringTransportWithDisconnection()
@@ -38,19 +38,20 @@ class ReverseProxyResourceTests(TestCase):
         # Clear the timeout if the tests failed
         self.addCleanup(channel.connectionLost, None)
 
-        channel.dataReceived("GET %s HTTP/1.1\r\nAccept: text/html\r\n\r\n" %
-                             (uri,))
+        channel.dataReceived(b"GET " +
+                             uri +
+                             b" HTTP/1.1\r\nAccept: text/html\r\n\r\n")
 
         # Check that one connection has been created, to the good host/port
         self.assertEqual(len(reactor.tcpClients), 1)
-        self.assertEqual(reactor.tcpClients[0][0], "127.0.0.1")
+        self.assertEqual(reactor.tcpClients[0][0], u"127.0.0.1")
         self.assertEqual(reactor.tcpClients[0][1], 1234)
 
         # Check the factory passed to the connect, and its given path
         factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
         self.assertEqual(factory.rest, expectedURI)
-        self.assertEqual(factory.headers["host"], "127.0.0.1:1234")
+        self.assertEqual(factory.headers[b"host"], b"127.0.0.1:1234")
 
 
     def test_render(self):
@@ -58,7 +59,7 @@ class ReverseProxyResourceTests(TestCase):
         Test that L{ReverseProxyResource.render} initiates a connection to the
         given server with a L{ProxyClientFactory} as parameter.
         """
-        return self._testRender("/index", "/path")
+        return self._testRender(b"/index", b"/path")
 
 
     def test_renderWithQuery(self):
@@ -66,7 +67,7 @@ class ReverseProxyResourceTests(TestCase):
         Test that L{ReverseProxyResource.render} passes query parameters to the
         created factory.
         """
-        return self._testRender("/index?foo=bar", "/path?foo=bar")
+        return self._testRender(b"/index?foo=bar", b"/path?foo=bar")
 
 
     def test_getChild(self):
@@ -77,13 +78,13 @@ class ReverseProxyResourceTests(TestCase):
         value passed.
         """
         reactor = MemoryReactor()
-        resource = ReverseProxyResource("127.0.0.1", 1234, "/path", reactor)
-        child = resource.getChild('foo', None)
+        resource = ReverseProxyResource(u"127.0.0.1", 1234, b"/path", reactor)
+        child = resource.getChild(b'foo', None)
         # The child should keep the same class
         self.assertIsInstance(child, ReverseProxyResource)
-        self.assertEqual(child.path, "/path/foo")
+        self.assertEqual(child.path, b"/path/foo")
         self.assertEqual(child.port, 1234)
-        self.assertEqual(child.host, "127.0.0.1")
+        self.assertEqual(child.host, u"127.0.0.1")
         self.assertIdentical(child.reactor, resource.reactor)
 
 
@@ -92,9 +93,9 @@ class ReverseProxyResourceTests(TestCase):
         The L{ReverseProxyResource} return by C{getChild} has a path which has
         already been quoted.
         """
-        resource = ReverseProxyResource("127.0.0.1", 1234, "/path")
-        child = resource.getChild(' /%', None)
-        self.assertEqual(child.path, "/path/%20%2F%25")
+        resource = ReverseProxyResource(u"127.0.0.1", 1234, b"/path")
+        child = resource.getChild(b' /%', None)
+        self.assertEqual(child.path, b"/path/%20%2F%25")
 
 
 
@@ -137,11 +138,11 @@ class ProxyClientTests(TestCase):
             of headers, C{requestLine} is the first line (e.g. "POST /foo ...")
             and C{body} is whatever is left.
         """
-        headers, body = content.split('\r\n\r\n')
-        headers = headers.split('\r\n')
+        headers, body = content.split(b'\r\n\r\n')
+        headers = headers.split(b'\r\n')
         requestLine = headers.pop(0)
         return (
-            requestLine, dict(header.split(': ') for header in headers), body)
+            requestLine, dict(header.split(b': ') for header in headers), body)
 
 
     def makeRequest(self, path):
@@ -154,8 +155,8 @@ class ProxyClientTests(TestCase):
         return DummyRequest(path)
 
 
-    def makeProxyClient(self, request, method="GET", headers=None,
-                        requestBody=""):
+    def makeProxyClient(self, request, method=b"GET", headers=None,
+                        requestBody=b""):
         """
         Make a L{ProxyClient} object used for testing.
 
@@ -168,10 +169,10 @@ class ProxyClientTests(TestCase):
         @return: A L{ProxyClient}
         """
         if headers is None:
-            headers = {"accept": "text/html"}
-        path = '/' + request.postpath
+            headers = {b"accept": b"text/html"}
+        path = b'/' + request.postpath
         return ProxyClient(
-            method, path, 'HTTP/1.0', headers, requestBody, request)
+            method, path, b'HTTP/1.0', headers, requestBody, request)
 
 
     def connectProxy(self, proxyClient):
@@ -207,12 +208,12 @@ class ProxyClientTests(TestCase):
 
 
     def makeResponseBytes(self, code, message, headers, body):
-        lines = ["HTTP/1.0 %d %s" % (code, message)]
+        lines = [b"HTTP/1.0 " + str(code).encode('utf_8') + b' ' + message]
         for header, values in headers:
             for value in values:
-                lines.append("%s: %s" % (header, value))
-        lines.extend(['', body])
-        return '\r\n'.join(lines)
+                lines.append(header + b': ' + value)
+        lines.extend([b'', body])
+        return b'\r\n'.join(lines)
 
 
     def assertForwardsResponse(self, request, code, message, headers, body):
@@ -232,22 +233,22 @@ class ProxyClientTests(TestCase):
         expectedHeaders = headers[:]
         expectedHeaders.sort()
         self.assertEqual(receivedHeaders, expectedHeaders)
-        self.assertEqual(''.join(request.written), body)
+        self.assertEqual(b''.join(request.written), body)
 
 
-    def _testDataForward(self, code, message, headers, body, method="GET",
-                         requestBody="", loseConnection=True):
+    def _testDataForward(self, code, message, headers, body, method=b"GET",
+                         requestBody=b"", loseConnection=True):
         """
         Build a fake proxy connection, and send C{data} over it, checking that
         it's forwarded to the originating request.
         """
-        request = self.makeRequest('foo')
+        request = self.makeRequest(b'foo')
         client = self.makeProxyClient(
-            request, method, {'accept': 'text/html'}, requestBody)
+            request, method, {b'accept': b'text/html'}, requestBody)
 
         receivedBody = self.assertForwardsHeaders(
-            client, '%s /foo HTTP/1.0' % (method,),
-            {'connection': 'close', 'accept': 'text/html'})
+            client, method + b' /foo HTTP/1.0',
+            {b'connection': b'close', b'accept': b'text/html'})
 
         self.assertEqual(receivedBody, requestBody)
 
@@ -277,7 +278,7 @@ class ProxyClientTests(TestCase):
         to the parent request.
         """
         return self._testDataForward(
-            200, "OK", [("Foo", ["bar", "baz"])], "Some data\r\n")
+            200, b"OK", [(b"Foo", [b"bar", b"baz"])], b"Some data\r\n")
 
 
     def test_postData(self):
@@ -286,7 +287,7 @@ class ProxyClientTests(TestCase):
         forward the body of the request.
         """
         return self._testDataForward(
-            200, "OK", [("Foo", ["bar"])], "Some data\r\n", "POST", "Some content")
+            200, b"OK", [(b"Foo", [b"bar"])], b"Some data\r\n", b"POST", b"Some content")
 
 
     def test_statusWithMessage(self):
@@ -295,7 +296,7 @@ class ProxyClientTests(TestCase):
         forwarded to the parent request with all the information.
         """
         return self._testDataForward(
-            404, "Not Found", [], "")
+            404, b"Not Found", [], b"")
 
 
     def test_contentLength(self):
@@ -303,9 +304,9 @@ class ProxyClientTests(TestCase):
         If the response contains a I{Content-Length} header, the inbound
         request object should still only have C{finish} called on it once.
         """
-        data = "foo bar baz"
+        data = b"foo bar baz"
         return self._testDataForward(
-            200, "OK", [("Content-Length", [str(len(data))])], data)
+            200, b"OK", [(b"Content-Length", [str(len(data)).encode('utf-8')])], data)
 
 
     def test_losesConnection(self):
@@ -313,9 +314,9 @@ class ProxyClientTests(TestCase):
         If the response contains a I{Content-Length} header, the outgoing
         connection is closed when all response body data has been received.
         """
-        data = "foo bar baz"
+        data = b"foo bar baz"
         return self._testDataForward(
-            200, "OK", [("Content-Length", [str(len(data))])], data,
+            200, b"OK", [(b"Content-Length", [str(len(data)).encode('utf-8')])], data,
             loseConnection=False)
 
 
@@ -325,10 +326,10 @@ class ProxyClientTests(TestCase):
         B{proxy-connection} should be removed if present, and B{connection}
         should be added.
         """
-        client = ProxyClient('GET', '/foo', 'HTTP/1.0',
-                {"accept": "text/html", "proxy-connection": "foo"}, '', None)
+        client = ProxyClient(b'GET', b'/foo', b'HTTP/1.0',
+                {b"accept": b"text/html", b"proxy-connection": b"foo"}, b'', None)
         self.assertEqual(client.headers,
-                {"accept": "text/html", "connection": "close"})
+                {b"accept": b"text/html", b"connection": b"close"})
 
 
     def test_keepaliveNotForwarded(self):
@@ -338,16 +339,16 @@ class ProxyClientTests(TestCase):
         the client.
         """
         headers = {
-            "accept": "text/html",
-            'keep-alive': '300',
-            'connection': 'keep-alive',
+            b"accept": b"text/html",
+            b'keep-alive': b'300',
+            b'connection': b'keep-alive',
             }
         expectedHeaders = headers.copy()
-        expectedHeaders['connection'] = 'close'
-        del expectedHeaders['keep-alive']
-        client = ProxyClient('GET', '/foo', 'HTTP/1.0', headers, '', None)
+        expectedHeaders[b'connection'] = b'close'
+        del expectedHeaders[b'keep-alive']
+        client = ProxyClient(b'GET', b'/foo', b'HTTP/1.0', headers, b'', None)
         self.assertForwardsHeaders(
-            client, 'GET /foo HTTP/1.0', expectedHeaders)
+            client, b'GET /foo HTTP/1.0', expectedHeaders)
 
 
     def test_defaultHeadersOverridden(self):
@@ -356,21 +357,21 @@ class ProxyClientTests(TestCase):
         default. When we get these headers back from the remote server, the
         defaults are overridden rather than simply appended.
         """
-        request = self.makeRequest('foo')
-        request.responseHeaders.setRawHeaders('server', ['old-bar'])
-        request.responseHeaders.setRawHeaders('date', ['old-baz'])
-        request.responseHeaders.setRawHeaders('content-type', ["old/qux"])
-        client = self.makeProxyClient(request, headers={'accept': 'text/html'})
+        request = self.makeRequest(b'foo')
+        request.responseHeaders.setRawHeaders(b'server', [b'old-bar'])
+        request.responseHeaders.setRawHeaders(b'date', [b'old-baz'])
+        request.responseHeaders.setRawHeaders(b'content-type', [b"old/qux"])
+        client = self.makeProxyClient(request, headers={b'accept': b'text/html'})
         self.connectProxy(client)
         headers = {
-            'Server': ['bar'],
-            'Date': ['2010-01-01'],
-            'Content-Type': ['application/x-baz'],
+            b'Server': [b'bar'],
+            b'Date': [b'2010-01-01'],
+            b'Content-Type': [b'application/x-baz'],
             }
         client.dataReceived(
-            self.makeResponseBytes(200, "OK", headers.items(), ''))
+            self.makeResponseBytes(200, b"OK", headers.items(), b''))
         self.assertForwardsResponse(
-            request, 200, 'OK', headers.items(), '')
+            request, 200, b'OK', list(headers.items()), b'')
 
 
 
@@ -384,19 +385,19 @@ class ProxyClientFactoryTests(TestCase):
         Check that L{ProxyClientFactory.clientConnectionFailed} produces
         a B{501} response to the parent request.
         """
-        request = DummyRequest(['foo'])
-        factory = ProxyClientFactory('GET', '/foo', 'HTTP/1.0',
-                                     {"accept": "text/html"}, '', request)
+        request = DummyRequest([b'foo'])
+        factory = ProxyClientFactory(b'GET', b'/foo', b'HTTP/1.0',
+                                     {b"accept": b"text/html"}, '', request)
 
         factory.clientConnectionFailed(None, None)
         self.assertEqual(request.responseCode, 501)
-        self.assertEqual(request.responseMessage, "Gateway error")
+        self.assertEqual(request.responseMessage, b"Gateway error")
         self.assertEqual(
             list(request.responseHeaders.getAllRawHeaders()),
-            [("Content-Type", ["text/html"])])
+            [(b"Content-Type", [b"text/html"])])
         self.assertEqual(
-            ''.join(request.written),
-            "<H1>Could not connect</H1>")
+            b''.join(request.written),
+            b"<H1>Could not connect</H1>")
         self.assertEqual(request.finished, 1)
 
 
@@ -405,16 +406,16 @@ class ProxyClientFactoryTests(TestCase):
         L{ProxyClientFactory.buildProtocol} should produce a L{ProxyClient}
         with the same values of attributes (with updates on the headers).
         """
-        factory = ProxyClientFactory('GET', '/foo', 'HTTP/1.0',
-                                     {"accept": "text/html"}, 'Some data',
+        factory = ProxyClientFactory(b'GET', b'/foo', b'HTTP/1.0',
+                                     {b"accept": b"text/html"}, b'Some data',
                                      None)
         proto = factory.buildProtocol(None)
         self.assertIsInstance(proto, ProxyClient)
-        self.assertEqual(proto.command, 'GET')
-        self.assertEqual(proto.rest, '/foo')
-        self.assertEqual(proto.data, 'Some data')
+        self.assertEqual(proto.command, b'GET')
+        self.assertEqual(proto.rest, b'/foo')
+        self.assertEqual(proto.data, b'Some data')
         self.assertEqual(proto.headers,
-                          {"accept": "text/html", "connection": "close"})
+                          {b"accept": b"text/html", b"connection": b"close"})
 
 
 
@@ -423,7 +424,7 @@ class ProxyRequestTests(TestCase):
     Tests for L{ProxyRequest}.
     """
 
-    def _testProcess(self, uri, expectedURI, method="GET", data=""):
+    def _testProcess(self, uri, expectedURI, method=b"GET", data=b""):
         """
         Build a request pointing at C{uri}, and check that a proxied request
         is created, pointing a C{expectedURI}.
@@ -434,18 +435,18 @@ class ProxyRequestTests(TestCase):
         request = ProxyRequest(channel, False, reactor)
         request.gotLength(len(data))
         request.handleContentChunk(data)
-        request.requestReceived(method, 'http://example.com%s' % (uri,),
-                                'HTTP/1.0')
+        request.requestReceived(method, b'http://example.com' + uri,
+                                b'HTTP/1.0')
 
         self.assertEqual(len(reactor.tcpClients), 1)
-        self.assertEqual(reactor.tcpClients[0][0], "example.com")
+        self.assertEqual(reactor.tcpClients[0][0], u"example.com")
         self.assertEqual(reactor.tcpClients[0][1], 80)
 
         factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
         self.assertEqual(factory.command, method)
-        self.assertEqual(factory.version, 'HTTP/1.0')
-        self.assertEqual(factory.headers, {'host': 'example.com'})
+        self.assertEqual(factory.version, b'HTTP/1.0')
+        self.assertEqual(factory.headers, {b'host': b'example.com'})
         self.assertEqual(factory.data, data)
         self.assertEqual(factory.rest, expectedURI)
         self.assertEqual(factory.father, request)
@@ -461,7 +462,7 @@ class ProxyRequestTests(TestCase):
             - remove the host from the URL
             - pass the request as parent request
         """
-        return self._testProcess("/foo/bar", "/foo/bar")
+        return self._testProcess(b"/foo/bar", b"/foo/bar")
 
 
     def test_processWithoutTrailingSlash(self):
@@ -470,7 +471,7 @@ class ProxyRequestTests(TestCase):
         L{ProxyRequest.process} should add one when instantiating
         L{ProxyClientFactory}.
         """
-        return self._testProcess("", "/")
+        return self._testProcess(b"", b"/")
 
 
     def test_processWithData(self):
@@ -479,7 +480,7 @@ class ProxyRequestTests(TestCase):
         to forward it.
         """
         return self._testProcess(
-            "/foo/bar", "/foo/bar", "POST", "Some content")
+            b"/foo/bar", b"/foo/bar", b"POST", b"Some content")
 
 
     def test_processWithPort(self):
@@ -492,12 +493,12 @@ class ProxyRequestTests(TestCase):
         reactor = MemoryReactor()
         request = ProxyRequest(channel, False, reactor)
         request.gotLength(0)
-        request.requestReceived('GET', 'http://example.com:1234/foo/bar',
-                                'HTTP/1.0')
+        request.requestReceived(b'GET', b'http://example.com:1234/foo/bar',
+                                b'HTTP/1.0')
 
         # That should create one connection, with the port parsed from the URL
         self.assertEqual(len(reactor.tcpClients), 1)
-        self.assertEqual(reactor.tcpClients[0][0], "example.com")
+        self.assertEqual(reactor.tcpClients[0][0], u"example.com")
         self.assertEqual(reactor.tcpClients[0][1], 1234)
 
 
@@ -529,16 +530,16 @@ class ReverseProxyRequestTests(TestCase):
         channel = DummyChannel(transport)
         reactor = MemoryReactor()
         request = ReverseProxyRequest(channel, False, reactor)
-        request.factory = DummyFactory("example.com", 1234)
+        request.factory = DummyFactory(u"example.com", 1234)
         request.gotLength(0)
-        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
 
         # Check that one connection has been created, to the good host/port
         self.assertEqual(len(reactor.tcpClients), 1)
-        self.assertEqual(reactor.tcpClients[0][0], "example.com")
+        self.assertEqual(reactor.tcpClients[0][0], u"example.com")
         self.assertEqual(reactor.tcpClients[0][1], 1234)
 
         # Check the factory passed to the connect, and its headers
         factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
-        self.assertEqual(factory.headers, {'host': 'example.com'})
+        self.assertEqual(factory.headers, {b'host': b'example.com'})
