@@ -63,13 +63,13 @@ on event-based network programming and multiprotocol integration.
 
 
 _EXTRA_OPTIONS = dict(
-    dev=['twistedchecker >= 0.2.0',
-         'pyflakes >= 0.8.1',
+    dev=['twistedchecker >= 0.4.0',
+         'pyflakes >= 0.9.2',
          'twisted-dev-tools >= 0.0.2',
          'python-subunit',
-         'sphinx >= 1.2.2',
-         'pydoctor >= 0.5'],
-    tls=['pyopenssl >= 0.11',
+         'sphinx >= 1.3.1',
+         'pydoctor >= 15.0.0'],
+    tls=['pyopenssl >= 0.13',
          'service_identity',
          'idna >= 0.6'],
     conch=['gmpy',
