@@ -1,14 +1,16 @@
 Requirements
 
-  Python 2.6 or 2.7.
+  Python 2.6, 2.7, 3.3 (subset of functionality), or 3.4 (subset of
+  functionality).
 
-  Zope Interface 3.6.0 or better (http://pypi.python.org/pypi/zope.interface)
+  Zope Interface 3.6.0 or newer (http://pypi.python.org/pypi/zope.interface).
+  Zope Interface 4.0 or newer is required for Python 3.
 
-  pyOpenSSL (<http://launchpad.net/pyopenssl>) is required for any SSL APIs.
-  Version 0.10 or newer is required.
+  pyOpenSSL (<https://github.com/pyca/pyopenssl>) is required for any SSL APIs.
+  Version 0.13 or newer is required, but 0.15.1 or newer is recommended.
 
-  On Windows pywin32 (<http://sourceforge.net/projects/pywin32/files/>) is
-  required.  Build 215 or later is highly recommended for reliable operation
+  On Windows pywin32 (<https://pypi.python.org/pypi/pypiwin32>) is required.
+  Build 215 or later is highly recommended for reliable operation
   (this is already included in ActivePython).
 
   If you would like to use Trial's subunit reporter, then you will need to
