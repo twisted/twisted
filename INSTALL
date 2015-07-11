@@ -25,6 +25,11 @@ Installation
   * Win32
     Installers are available from http://twistedmatrix.com/
 
+  * pip
+    The latest released version of Twisted can be installed by pip:
+
+      pip install Twisted
+
   * Other
     As with other Python packages, the standard way of installing from source
     is:
