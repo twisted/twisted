@@ -12,6 +12,22 @@ required.
 import ctypes
 import ctypes.util
 
+from twisted.python.filepath import FilePath
+
+# Check for lxc/Docker, which has broken INotify support
+initCGroups = FilePath("/proc/1/cgroup") # Ask for the cgroups of init (pid 1)
+if initCGroups.exists():
+    # The cgroups file looks like "2:cpu:/". The third element will be / on
+    # standard systems, and the mount point of the Docker container otherwise.
+    controlGroups = [x.split(b":")
+                     for x in initCGroups.getContent().split(b"\n")]
+
+    for group in controlGroups:
+        if group[2] != b"/":
+            raise ImportError("INotify support is broken in lxc/Docker.")
+
+del initCGroups
+
 
 
 class INotifyError(Exception):
