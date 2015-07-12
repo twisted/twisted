@@ -23,7 +23,7 @@ if initCGroups.exists():
                      for x in initCGroups.getContent().split(b"\n")]
 
     for group in controlGroups:
-        if group[2] != b"/":
+        if group and group[2] != b"/":
             raise ImportError("INotify support is broken in lxc/Docker.")
 
 del initCGroups
