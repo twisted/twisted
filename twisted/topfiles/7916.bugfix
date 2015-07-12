@@ -1,1 +1,1 @@
-twisted.logger._global.MORE_THAN_ONCE_WARNING now is properly formattable
+twisted.logger.LogBeginner.beginLoggingTo now outputs the correct warning when it is called more than once.
