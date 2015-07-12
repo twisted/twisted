@@ -3,7 +3,7 @@ Requirements
   Python 2.6, 2.7, 3.3 (subset of functionality), or 3.4 (subset of
   functionality).
 
-  Zope Interface 3.6.0 or newer (http://pypi.python.org/pypi/zope.interface).
+  Zope Interface 3.6.0 or newer (<https://pypi.python.org/pypi/zope.interface>).
   Zope Interface 4.0 or newer is required for Python 3.
 
   pyOpenSSL (<https://github.com/pyca/pyopenssl>) is required for any SSL APIs.
@@ -14,7 +14,7 @@ Requirements
   (this is already included in ActivePython).
 
   If you would like to use Trial's subunit reporter, then you will need to
-  install Subunit 0.0.2 or later (https://launchpad.net/subunit).
+  install Subunit 0.0.2 or later (<https://launchpad.net/subunit>).
 
 Installation
 
@@ -25,7 +25,7 @@ Installation
     Twisted is in their package repositories.
 
   * Win32
-    Installers are available from http://twistedmatrix.com/
+    Installers are available from <https://twistedmatrix.com/>.
 
   * pip
     The latest released version of Twisted can be installed by pip:
