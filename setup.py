@@ -53,14 +53,13 @@ dependency resolution is disabled.
         setup_args['zip_safe'] = False
 
     from twisted.python.dist import (
-        STATIC_PACKAGE_METADATA, getDataFiles, getExtensions, getScripts,
+        STATIC_PACKAGE_METADATA, getDataFiles, getScripts,
         getPackages, setup, _EXTRAS_REQUIRE)
 
     scripts = getScripts()
 
     setup_args.update(dict(
         packages=getPackages('twisted'),
-        conditionalExtensions=getExtensions(),
         scripts=scripts,
         extras_require=_EXTRAS_REQUIRE,
         data_files=getDataFiles('twisted'),
