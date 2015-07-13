@@ -10,7 +10,7 @@ import time
 import imp
 import warnings
 
-from twisted.python import compat
+from twisted.python import compat, filepath
 
 if compat._PY3:
     _threadModule = "_thread"
@@ -143,6 +143,33 @@ class Platform:
         return self._platform.startswith("linux")
 
 
+    def isLXC(self):
+        """
+        Check if the current platform is Linux in an lxc container.
+
+        @return: C{True} if the current platform has been detected as Linux
+            inside an lxc container.
+        @rtype: C{bool}
+        """
+        if not self.isLinux():
+            return False
+
+        # Ask for the cgroups of init (pid 1)
+        initCGroups = filepath.FilePath("/proc/1/cgroup")
+        if initCGroups.exists():
+            # The cgroups file looks like "2:cpu:/". The third element will be
+            # / on standard systems, and the mount point of the Docker/lxc
+            # container otherwise.
+            controlGroups = [x.split(b":")
+                             for x in initCGroups.getContent().split(b"\n")]
+
+            for group in controlGroups:
+                if len(group) == 3 and group[2] != b"/":
+                    # If it's not /, we're in a lxc container
+                    return True
+        return False
+
+
     def supportsThreads(self):
         """
         Can threads be created?
@@ -165,6 +192,8 @@ class Platform:
         try:
             from twisted.python._inotify import INotifyError, init
         except ImportError:
+            return False
+        if self.isLXC():
             return False
         try:
             os.close(init())
