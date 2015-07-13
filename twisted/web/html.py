@@ -15,14 +15,14 @@ from twisted.python.versions import Version
 
 
 
-@deprecated(Version('Twisted', 15, 3, 0))
+@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def PRE(text):
     "Wrap <pre> tags around some text and HTML-escape it."
     return "<pre>"+escape(text)+"</pre>"
 
 
 
-@deprecated(Version('Twisted', 15, 3, 0))
+@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def UL(lst):
     io = StringIO()
     io.write("<ul>\n")
@@ -33,7 +33,7 @@ def UL(lst):
 
 
 
-@deprecated(Version('Twisted', 15, 3, 0))
+@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def linkList(lst):
     io = StringIO()
     io.write("<ul>\n")
@@ -44,7 +44,7 @@ def linkList(lst):
 
 
 
-@deprecated(Version('Twisted', 15, 3, 0))
+@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def output(func, *args, **kw):
     """output(func, *args, **kw) -> html string
     Either return the result of a function (which presumably returns an

@@ -25,7 +25,8 @@ class WebHtmlTests(unittest.TestCase):
                 warningsShown[0]['category'], DeprecationWarning)
             self.assertEqual(
                 warningsShown[0]['message'],
-                'twisted.web.html.%s was deprecated in Twisted 15.3.0' % (
+                'twisted.web.html.%s was deprecated in Twisted 15.3.0; '
+                'please use twisted.web.template instead' % (
                     method,),
                 )
 
