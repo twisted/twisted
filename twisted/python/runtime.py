@@ -10,7 +10,7 @@ import time
 import imp
 import warnings
 
-from twisted.python import compat, filepath
+from twisted.python import compat
 
 if compat._PY3:
     _threadModule = "_thread"
@@ -154,8 +154,10 @@ class Platform:
         if not self.isLinux():
             return False
 
+        from twisted.python.filepath import FilePath
+
         # Ask for the cgroups of init (pid 1)
-        initCGroups = filepath.FilePath("/proc/1/cgroup")
+        initCGroups = FilePath("/proc/1/cgroup")
         if initCGroups.exists():
             # The cgroups file looks like "2:cpu:/". The third element will be
             # / on standard systems, and the mount point of the Docker/lxc
