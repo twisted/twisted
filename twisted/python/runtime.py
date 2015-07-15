@@ -143,12 +143,12 @@ class Platform:
         return self._platform.startswith("linux")
 
 
-    def isLXC(self):
+    def isDocker(self, _initCGroupLocation="/proc/1/cgroup"):
         """
-        Check if the current platform is Linux in an lxc container.
+        Check if the current platform is Linux in a Docker container.
 
         @return: C{True} if the current platform has been detected as Linux
-            inside an lxc container.
+            inside a Docker container.
         @rtype: C{bool}
         """
         if not self.isLinux():
@@ -157,18 +157,18 @@ class Platform:
         from twisted.python.filepath import FilePath
 
         # Ask for the cgroups of init (pid 1)
-        initCGroups = FilePath("/proc/1/cgroup")
+        initCGroups = FilePath(_initCGroupLocation)
         if initCGroups.exists():
-            # The cgroups file looks like "2:cpu:/". The third element will be
-            # / on standard systems, and the mount point of the Docker/lxc
-            # container otherwise.
+            # The cgroups file looks like "2:cpu:/". The third element will
+            # begin with /docker if it is inside a Docker container.
             controlGroups = [x.split(b":")
                              for x in initCGroups.getContent().split(b"\n")]
 
             for group in controlGroups:
-                if len(group) == 3 and group[2] != b"/":
-                    # If it's not /, we're in a lxc container
+                if len(group) == 3 and group[2].startswith(b"/docker/"):
+                    # If it starts with /docker/, we're in a docker container
                     return True
+
         return False
 
 
@@ -195,8 +195,10 @@ class Platform:
             from twisted.python._inotify import INotifyError, init
         except ImportError:
             return False
-        if self.isLXC():
+
+        if self.isDocker():
             return False
+
         try:
             os.close(init())
         except INotifyError:
