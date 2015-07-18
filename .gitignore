@@ -12,3 +12,4 @@ venv/
 htmlcov/
 .coverage
 *~
+*.lock
