@@ -12,9 +12,6 @@ change at any time.
 
 import os
 import sys
-import tempfile
-import unittest
-
 
 
 testModules = []
@@ -60,8 +57,5 @@ if not installed:
 from twisted.scripts import trial
 
 # Run the tests.
-testArguments = ["run-python3-tests"] + extraArguments + testModules
-
-sys.argv = testArguments
-
+sys.argv = ["run-python3-tests"] + extraArguments + testModules
 trial.run()
