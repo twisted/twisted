@@ -39,9 +39,6 @@ class FinderTests(packages.PackageTest):
     """
     Tests for L{runner.TestLoader.findByName}.
     """
-    if _PY3:
-        skip = "Only relevant on Python 3."
-
     def setUp(self):
         packages.PackageTest.setUp(self)
         self.loader = runner.TestLoader()
@@ -450,7 +447,7 @@ class LoaderTests(packages.SysPathManglingTest):
         errors = [test.id() for test, error in result.errors]
         errors.sort()
         self.assertEqual(errors, ['package.test_bad_module',
-                                      'package.test_import_module'])
+                                  'package.test_import_module'])
 
 
     def test_differentInstances(self):
