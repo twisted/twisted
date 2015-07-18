@@ -651,9 +651,11 @@ class Py3TestLoader(TestLoader):
         from importlib.machinery import SourceFileLoader
 
         name = reflect.filenameToModuleName(fileName)
-        module = SourceFileLoader(name, fileName).load_module()
-
-        return self.loadAnything(module, recurse=recurse)
+        try:
+            module = SourceFileLoader(name, fileName).load_module()
+            return self.loadAnything(module, recurse=recurse)
+        except FileNotFoundError:
+            raise ValueError("{} is not a Python file.".format(fileName))
 
 
     def findByName(self, _name, recurse=False):

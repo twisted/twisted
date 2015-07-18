@@ -67,6 +67,14 @@ class FinderTests(packages.PackageTest):
         from twisted.trial.test import sample
         self.assertEqual(sample.FooTest, sample1)
 
+    if _PY3:
+        _Py3SkipMsg = ("On Python 3, 'findByName' returns TestCases, "
+                       "not objects.")
+        test_findPackage.skip = _Py3SkipMsg
+        test_findModule.skip = _Py3SkipMsg
+        test_findFile.skip = _Py3SkipMsg
+        test_findObject.skip = _Py3SkipMsg
+
     def test_findNonModule(self):
         self.failUnlessRaises(AttributeError,
                               self.loader.findByName,
