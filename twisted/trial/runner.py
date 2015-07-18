@@ -654,7 +654,7 @@ class Py3TestLoader(TestLoader):
         try:
             module = SourceFileLoader(name, fileName).load_module()
             return self.loadAnything(module, recurse=recurse)
-        except FileNotFoundError:
+        except OSError:
             raise ValueError("{} is not a Python file.".format(fileName))
 
 
