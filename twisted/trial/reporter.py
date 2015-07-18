@@ -334,10 +334,6 @@ class _AdaptedReporter(TestResultDecorator):
         return self._originalReporter.stopTest(self.testAdapter(test))
 
 
-    def stop(self):
-        return self._originalReporter.stop()
-
-
 
 @implementer(itrial.IReporter)
 class Reporter(TestResult):
