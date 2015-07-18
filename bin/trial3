@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 import os, sys
@@ -6,10 +6,10 @@ import os, sys
 try:
     import _preamble
 except ImportError:
-    sys.exc_clear()
+    pass
 
 # begin chdir armor
-sys.path[:] = map(os.path.abspath, sys.path)
+sys.path[:] = list(map(os.path.abspath, sys.path))
 # end chdir armor
 
 sys.path.insert(0, os.path.abspath(os.getcwd()))

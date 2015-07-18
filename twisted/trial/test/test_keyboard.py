@@ -5,7 +5,9 @@
 Tests for interrupting tests with Control-C.
 """
 
-import StringIO
+from __future__ import absolute_import, division
+
+from twisted.python.compat import NativeStringIO
 
 from twisted.trial import unittest
 from twisted.trial import reporter, runner
@@ -13,7 +15,7 @@ from twisted.trial import reporter, runner
 
 class TrialTest(unittest.SynchronousTestCase):
     def setUp(self):
-        self.output = StringIO.StringIO()
+        self.output = NativeStringIO()
         self.reporter = reporter.TestResult()
         self.loader = runner.TestLoader()
 
