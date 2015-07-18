@@ -652,10 +652,11 @@ class Py3TestLoader(TestLoader):
 
         name = reflect.filenameToModuleName(fileName)
         module = SourceFileLoader(name, fileName).load_module()
+
         return self.loadAnything(module, recurse=recurse)
 
 
-    def findByName(self, name, recurse=False):
+    def findByName(self, _name, recurse=False):
         """
         Find and load tests, given C{name}.
 
@@ -666,9 +667,23 @@ class Py3TestLoader(TestLoader):
             within the given package (and so on), otherwise, only inspect
             modules in the package itself.
         """
-        if os.sep in name:
-            # It's a file, load it instead
-            return self.loadFile(name, recurse=recurse)
+        if os.sep in _name:
+            # It's a file, try and get the module name for this file.
+            name = reflect.filenameToModuleName(_name)
+
+            try:
+                # Try and import it, if it's on the path.
+                # CAVEAT: If you have two twisteds, and you try and import the
+                # one NOT on your path, it'll load the one on your path. But
+                # that's silly, nobody should do that, and existing Trial does
+                # that anyway.
+                __import__(name)
+            except ImportError:
+                # If we can't import it, look for one NOT on the path.
+                return self.loadFile(_name, recurse=recurse)
+
+        else:
+            name = _name
 
         qualParts = name.split(".")
         obj = parent = None
