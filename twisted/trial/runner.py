@@ -687,44 +687,31 @@ class Py3TestLoader(TestLoader):
         else:
             name = _name
 
-        qualParts = name.split(".")
-        obj = parent = None
+        obj = parent = remaining = None
 
-        for item in range(len(qualParts)):
-            # FIXME: jml pointed out that this code is confusing, and it's true
-            # and so I need to fix that.
-            # The better implementation is a generator that produces the next
-            # name to try, and the remaining portion, and is more obvious than
-            # :-item (or at least one layer deeper :D ).
-            # A for loop could maybe be replaced with a while, or something.
-
+        for searchName, remainingName in _qualNameWalker(name):
             # Walk down the qualified name, trying to import a module. For
             # example, `twisted.test.test_paths.FilePathTests` would try
             # the full qualified name, then just up to test_paths, and then
             # just up to test, and so forth.
             # This gets us the highest level thing which is a module.
             try:
-                if item == 0:
-                    searchName = ".".join(qualParts)
-                else:
-                    searchName = ".".join(qualParts[:-item])
-
-                remaining = qualParts[len(qualParts)-item:]
                 obj = reflect.namedModule(searchName)
                 # If we reach here, we have successfully found a module.
                 # obj will be the module, and remaining will be the remaining
                 # part of the qualified name.
+                remaining = remainingName
                 break
 
             except ImportError:
-                if item == len(qualParts):
+                if remaining == "":
                     raise reflect.ModuleNotFound("The module {} does not exist.".format(name))
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
             # Try something drastic.
             obj = reflect.namedAny(name)
-            remaining = qualParts[len(".".split(obj.__name__))+1:]
+            remaining = name.split(".")[len(".".split(obj.__name__))+1:]
 
         try:
             for part in remaining:
@@ -855,6 +842,27 @@ class Py3TestLoader(TestLoader):
                     yield thing
                     seen.add(str(thing))
 
+
+def _qualNameWalker(qualName):
+    """
+    Given a Python qualified name, this function yields a 2-tuple of the most
+    specific qualified name first, followed by the next-most-specific qualified
+    name, and so on, paired with the remainder of the qualified name.
+
+    @param qualName: A Python qualified name.
+    @type qualName: L{str}
+    """
+    # Yield what we were just given
+    yield (qualName, [])
+
+    # If they want more, split the qualified name up
+    qualParts = qualName.split(".")
+
+    for index in range(1, len(qualParts)):
+        # This code here will produce, from the example walker.texas.ranger:
+        # (walker.texas, ["ranger"])
+        # (walker, ["texas", "ranger"])
+        yield (".".join(qualParts[:-index]), qualParts[-index:])
 
 
 if _PY3:

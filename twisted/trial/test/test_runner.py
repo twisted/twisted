@@ -1035,3 +1035,23 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
             "%s should implement done() but doesn't. Falling back to "
             "printErrors() and friends." % reflect.qual(result.__class__),
             __file__, f)
+
+
+
+class QualifiedNameWalkerTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.trial.runner._qualNameWalker}.
+    """
+
+    def test_walksDownPath(self):
+        """
+        C{_qualNameWalker} is a generator that, when given a Python qualified
+        name, yields that name, and then the parent of that name, and so forth,
+        along with a list of the tried components, in a 2-tuple.
+        """
+        walkerResults = list(runner._qualNameWalker("walker.texas.ranger"))
+
+        self.assertEqual(walkerResults,
+                         [("walker.texas.ranger", []),
+                          ("walker.texas", ["ranger"]),
+                          ("walker", ["texas", "ranger"])])
