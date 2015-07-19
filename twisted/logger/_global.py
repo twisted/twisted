@@ -26,8 +26,8 @@ from ._file import FileLogObserver
 
 MORE_THAN_ONCE_WARNING = (
     "Warning: primary log target selected twice at <{fileNow}:{lineNow}> - "
-    "previously selected at <{fileThen:logThen}>.  Remove one of the calls to "
-    "beginLoggingTo."
+    "previously selected at <{fileThen}:{lineThen}>.  Remove one of the calls "
+    "to beginLoggingTo."
 )
 
 

@@ -1,0 +1,1 @@
+twisted.logger.LogBeginner.beginLoggingTo now outputs the correct warning when it is called more than once.
