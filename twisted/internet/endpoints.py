@@ -23,33 +23,25 @@ from socket import AF_INET6, AF_INET
 
 from zope.interface import implementer, directlyProvides
 
-from twisted.python.compat import _PY3
 from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.protocol import ClientFactory, Factory
-from twisted.internet.protocol import ProcessProtocol, Protocol
+from twisted.internet.abstract import isIPv6Address
+from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.internet.interfaces import (
     IStreamServerEndpointStringParser, IStreamClientEndpointStringParser,
     IStreamClientEndpointStringParserWithReactor)
+from twisted.internet.protocol import ClientFactory, Factory
+from twisted.internet.protocol import ProcessProtocol, Protocol
+from twisted.internet.stdio import StandardIO, PipeAddress
+from twisted.internet.task import LoopingCall
+from twisted.plugin import IPlugin, getPlugins
+from twisted.python import log
+from twisted.python.compat import _PY3, iterbytes, nativeString
+from twisted.python.components import proxyForInterface
+from twisted.python.constants import NamedConstant, Names
+from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
-from twisted.internet.abstract import isIPv6Address
-from twisted.python.failure import Failure
-from twisted.python import log
-from twisted.internet.address import _ProcessAddress, HostnameAddress
-from twisted.python.components import proxyForInterface
-from twisted.internet.task import LoopingCall
 
-if not _PY3:
-    from twisted.plugin import IPlugin, getPlugins
-    from twisted.internet.stdio import StandardIO, PipeAddress
-    from twisted.python.constants import NamedConstant, Names
-else:
-    from zope.interface import Interface
-    class IPlugin(Interface):
-        pass
-    NamedConstant = object
-    Names = object
-    StandardIO = None
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -60,7 +52,8 @@ __all__ = ["clientFromString", "serverFromString",
            "ProcessEndpoint", "HostnameEndpoint",
            "StandardErrorBehavior", "connectProtocol"]
 
-__all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
+__all3__ = ["clientFromString",
+            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "TCP4ClientEndpoint", "TCP6ClientEndpoint",
             "SSL4ServerEndpoint", "SSL4ClientEndpoint",
             "UNIXServerEndpoint", "UNIXClientEndpoint",
