@@ -21,34 +21,31 @@ from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
 from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 
+from twisted import plugins
 from twisted.internet import error, interfaces, defer, endpoints, protocol
-from twisted.internet import reactor, threads
+from twisted.internet import reactor, threads, stdio
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.internet.endpoints import StandardErrorBehavior
 from twisted.internet.interfaces import IConsumer, IPushProducer, ITransport
 from twisted.internet.protocol import ClientFactory, Protocol, Factory
+from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
+from twisted.plugin import getPlugins
 from twisted.python import log
 from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
+from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
 
-pemPath = FilePath(testInitPath).sibling("server.pem").asBytesMode()
 
-if not _PY3:
-    from twisted.plugin import getPlugins
-    from twisted import plugins
-    from twisted.python.modules import getModule
-    from twisted.internet import stdio
-    from twisted.internet.stdio import PipeAddress
-
-    casPath = getModule(__name__).filePath.sibling("fake_CAs")
-    chainPath = casPath.child("chain.pem")
-    escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
-    escapedCAsPathName = endpoints.quoteStringArgument(casPath.path)
-    escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
+pemPath = FilePath(testInitPath).sibling("server.pem")
+casPath = getModule(__name__).filePath.sibling("fake_CAs")
+chainPath = casPath.child("chain.pem")
+escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
+escapedCAsPathName = endpoints.quoteStringArgument(casPath.path)
+escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
 
 try:
