@@ -271,7 +271,8 @@ class LoaderTests(packages.SysPathManglingTest):
 
     def test_loadFailure(self):
         """
-        Load a test that fails.
+        Loading a test that fails and getting the result of it ends up with one
+        test ran and one failure.
         """
         suite = self.loader.loadByName(
             "twisted.trial.test.erroneous.TestRegularFail.test_fail")
