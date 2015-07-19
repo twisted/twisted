@@ -1,0 +1,1 @@
+twisted.application.app.HotshotRunner (twistd's hotshot profiler module) is removed and twistd now uses cProfile by default.
