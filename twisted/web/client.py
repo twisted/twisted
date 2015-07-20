@@ -750,12 +750,11 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # feature equivalent.
 
 from twisted.web.error import SchemeNotSupported
-if not _PY3:
-    from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
-    from twisted.web._newclient import ResponseDone, ResponseFailed
-    from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
-    from twisted.web._newclient import (
-        ResponseNeverReceived, PotentialDataLoss, _WrapperException)
+from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
+from twisted.web._newclient import ResponseDone, ResponseFailed
+from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
+from twisted.web._newclient import (
+    ResponseNeverReceived, PotentialDataLoss, _WrapperException)
 
 
 
