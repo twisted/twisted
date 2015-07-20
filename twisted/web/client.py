@@ -28,7 +28,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, nativeString, intToBytes
+from twisted.python.compat import nativeString, intToBytes
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.deprecate import deprecatedModuleAttribute
