@@ -8,18 +8,20 @@ Implementation of RFC2617: HTTP Digest Authentication
 @see: U{http://www.faqs.org/rfcs/rfc2617.html}
 """
 
-from zope.interface import implements
+from __future__ import division, absolute_import
+
+from zope.interface import implementer
 from twisted.cred import credentials
 from twisted.web.iweb import ICredentialFactory
 
+@implementer(ICredentialFactory)
 class DigestCredentialFactory(object):
     """
     Wrapper for L{digest.DigestCredentialFactory} that implements the
     L{ICredentialFactory} interface.
     """
-    implements(ICredentialFactory)
 
-    scheme = 'digest'
+    scheme = b'digest'
 
     def __init__(self, algorithm, authenticationRealm):
         """

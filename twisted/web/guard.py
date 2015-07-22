@@ -6,6 +6,8 @@ Resource traversal integration with L{twisted.cred} to allow for
 authentication and authorization of HTTP requests.
 """
 
+from __future__ import division, absolute_import
+
 # Expose HTTP authentication classes here.
 from twisted.web._auth.wrapper import HTTPAuthSessionWrapper
 from twisted.web._auth.basic import BasicCredentialFactory

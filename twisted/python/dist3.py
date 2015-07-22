@@ -175,6 +175,7 @@ modules = [
     "twisted.trial.unittest",
     "twisted.trial.util",
     "twisted.web",
+    "twisted.web._auth",
     "twisted.web._element",
     "twisted.web._flatten",
     "twisted.web._newclient",
@@ -182,6 +183,7 @@ modules = [
     "twisted.web._stan",
     "twisted.web._version",
     "twisted.web.error",
+    "twisted.web.guard",
     "twisted.web.http_headers",
     "twisted.web.resource",
     "twisted.web.script",
@@ -324,6 +326,7 @@ testModules = [
     # The downloadPage tests weren't ported:
     "twisted.web.test.test_http",
     "twisted.web.test.test_flatten",
+    "twisted.web.test.test_httpauth",
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_newclient",
     "twisted.web.test.test_resource",
