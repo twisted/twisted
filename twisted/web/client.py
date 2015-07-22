@@ -28,7 +28,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, nativeString, intToBytes
+from twisted.python.compat import nativeString, intToBytes
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.deprecate import deprecatedModuleAttribute
@@ -750,12 +750,11 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # feature equivalent.
 
 from twisted.web.error import SchemeNotSupported
-if not _PY3:
-    from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
-    from twisted.web._newclient import ResponseDone, ResponseFailed
-    from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
-    from twisted.web._newclient import (
-        ResponseNeverReceived, PotentialDataLoss, _WrapperException)
+from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
+from twisted.web._newclient import ResponseDone, ResponseFailed
+from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
+from twisted.web._newclient import (
+    ResponseNeverReceived, PotentialDataLoss, _WrapperException)
 
 
 
