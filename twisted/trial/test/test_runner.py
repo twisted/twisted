@@ -4,8 +4,12 @@
 # Maintainer: Jonathan Lange
 # Author: Robert Collins
 
+from __future__ import absolute_import, division
 
-import StringIO, os, pdb, sys
+import os
+import pdb
+import sys
+
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
@@ -15,6 +19,7 @@ from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator
 from twisted.python import failure, log, reflect
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
+from twisted.python.compat import NativeStringIO
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
@@ -161,7 +166,7 @@ class TrialRunnerTests(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
     into warnings disabled.
     """
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
         self.test = TrialRunnerTests('test_empty')
 
@@ -184,7 +189,7 @@ class TrialRunnerWithUncleanWarningsReporterTests(TrialRunnerTestsMixin,
     """
 
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream,
                                          uncleanWarnings=True)
         self.test = TrialRunnerTests('test_empty')
@@ -199,7 +204,7 @@ class DryRunMixin(object):
 
     def setUp(self):
         self.log = []
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.runner = runner.TrialRunner(CapturingReporter,
                                          runner.TrialRunner.DRY_RUN,
                                          stream=self.stream)
@@ -328,7 +333,7 @@ class RunnerTests(unittest.SynchronousTestCase):
 
     def getRunner(self):
         r = trial._makeRunner(self.config)
-        r.stream = StringIO.StringIO()
+        r.stream = NativeStringIO()
         # XXX The runner should always take care of cleaning this up itself.
         # It's not clear why this is necessary.  The runner always tears down
         # its log file.
@@ -598,7 +603,7 @@ class UntilFailureTests(unittest.SynchronousTestCase):
     def setUp(self):
         UntilFailureTests.FailAfter.count = []
         self.test = UntilFailureTests.FailAfter('test_foo')
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream)
 
 
@@ -896,7 +901,7 @@ class MalformedMethodTests(unittest.SynchronousTestCase):
         """
         Wrapper for one of the test method of L{ContainMalformed}.
         """
-        stream = StringIO.StringIO()
+        stream = NativeStringIO()
         trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
         test = MalformedMethodTests.ContainMalformed(method)
         result = trialRunner.run(test)
@@ -1030,3 +1035,23 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
             "%s should implement done() but doesn't. Falling back to "
             "printErrors() and friends." % reflect.qual(result.__class__),
             __file__, f)
+
+
+
+class QualifiedNameWalkerTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.trial.runner._qualNameWalker}.
+    """
+
+    def test_walksDownPath(self):
+        """
+        C{_qualNameWalker} is a generator that, when given a Python qualified
+        name, yields that name, and then the parent of that name, and so forth,
+        along with a list of the tried components, in a 2-tuple.
+        """
+        walkerResults = list(runner._qualNameWalker("walker.texas.ranger"))
+
+        self.assertEqual(walkerResults,
+                         [("walker.texas.ranger", []),
+                          ("walker.texas", ["ranger"]),
+                          ("walker", ["texas", "ranger"])])

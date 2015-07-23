@@ -5,6 +5,8 @@
 Tests for loading tests by name.
 """
 
+from __future__ import absolute_import, division
+
 import os
 import sys
 
@@ -18,6 +20,7 @@ from twisted.trial.itrial import ITestCase
 from twisted.trial._asyncrunner import _iterateTests
 
 from twisted.python.modules import getModule
+from twisted.python.compat import _PY3
 
 
 
@@ -50,19 +53,27 @@ class FinderTests(packages.PackageTest):
 
     def test_findModule(self):
         sample1 = self.loader.findByName('twisted.trial.test.sample')
-        import sample as sample2
+        from twisted.trial.test import sample as sample2
         self.assertEqual(sample1, sample2)
 
     def test_findFile(self):
         path = util.sibpath(__file__, 'sample.py')
         sample1 = self.loader.findByName(path)
-        import sample as sample2
+        from twisted.trial.test import sample as sample2
         self.assertEqual(sample1, sample2)
 
     def test_findObject(self):
         sample1 = self.loader.findByName('twisted.trial.test.sample.FooTest')
-        import sample
+        from twisted.trial.test import sample
         self.assertEqual(sample.FooTest, sample1)
+
+    if _PY3:
+        _Py3SkipMsg = ("On Python 3, 'findByName' returns TestCases, "
+                       "not objects.")
+        test_findPackage.skip = _Py3SkipMsg
+        test_findModule.skip = _Py3SkipMsg
+        test_findFile.skip = _Py3SkipMsg
+        test_findObject.skip = _Py3SkipMsg
 
     def test_findNonModule(self):
         self.failUnlessRaises(AttributeError,
@@ -99,7 +110,7 @@ class FileTests(packages.SysPathManglingTest):
         properly import and return that module.
         """
         sample1 = runner.filenameToModule(util.sibpath(__file__, 'sample.py'))
-        import sample as sample2
+        from twisted.trial.test import sample as sample2
         self.assertEqual(sample2, sample1)
 
 
@@ -181,7 +192,7 @@ class FileTests(packages.SysPathManglingTest):
         file is passed.
         """
         filename = filepath.FilePath(self.parent).child('notpython')
-        filename.setContent("This isn't python")
+        filename.setContent(b"This isn't python")
         self.failUnlessRaises(
             SyntaxError, runner.filenameToModule, filename.path)
 
@@ -191,7 +202,7 @@ class FileTests(packages.SysPathManglingTest):
         The C{__file__} attribute of the module should match the package name.
         """
         filename = filepath.FilePath(self.parent).child('goodpackage.py')
-        filename.setContent(packages.testModule)
+        filename.setContent(packages.testModule.encode("utf8"))
 
         try:
             module = runner.filenameToModule(filename.path)
@@ -207,7 +218,7 @@ class FileTests(packages.SysPathManglingTest):
         """
         goodDir = filepath.FilePath(self.parent).child('goodDirectory')
         goodDir.createDirectory()
-        goodDir.child('__init__.py').setContent('')
+        goodDir.child('__init__.py').setContent(b'')
 
         try:
             module = runner.filenameToModule(goodDir.path)
@@ -223,14 +234,13 @@ class LoaderTests(packages.SysPathManglingTest):
     """
     Tests for L{trial.TestLoader}.
     """
-
     def setUp(self):
         self.loader = runner.TestLoader()
         packages.SysPathManglingTest.setUp(self)
 
 
     def test_sortCases(self):
-        import sample
+        from twisted.trial.test import sample
         suite = self.loader.loadClass(sample.AlphabetTest)
         self.assertEqual(['test_a', 'test_b', 'test_c'],
                              [test._testMethodName for test in suite._tests])
@@ -243,7 +253,7 @@ class LoaderTests(packages.SysPathManglingTest):
 
 
     def test_loadMethod(self):
-        import sample
+        from twisted.trial.test import sample
         suite = self.loader.loadMethod(sample.FooTest.test_foo)
         self.assertEqual(1, suite.countTestCases())
         self.assertEqual('test_foo', suite._testMethodName)
@@ -251,7 +261,7 @@ class LoaderTests(packages.SysPathManglingTest):
 
     def test_loadFailingMethod(self):
         # test added for issue1353
-        import erroneous
+        from twisted.trial.test import erroneous
         suite = self.loader.loadMethod(erroneous.TestRegularFail.test_fail)
         result = reporter.TestResult()
         suite.run(result)
@@ -259,8 +269,21 @@ class LoaderTests(packages.SysPathManglingTest):
         self.assertEqual(len(result.failures), 1)
 
 
+    def test_loadFailure(self):
+        """
+        Loading a test that fails and getting the result of it ends up with one
+        test ran and one failure.
+        """
+        suite = self.loader.loadByName(
+            "twisted.trial.test.erroneous.TestRegularFail.test_fail")
+        result = reporter.TestResult()
+        suite.run(result)
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.failures), 1)
+
+
     def test_loadNonMethod(self):
-        import sample
+        from twisted.trial.test import sample
         self.failUnlessRaises(TypeError, self.loader.loadMethod, sample)
         self.failUnlessRaises(TypeError,
                               self.loader.loadMethod, sample.FooTest)
@@ -275,8 +298,11 @@ class LoaderTests(packages.SysPathManglingTest):
         method's __name__ correctly is loaded and its name in the class scope
         discovered.
         """
-        import sample
-        suite = self.loader.loadMethod(sample.DecorationTest.test_badDecorator)
+        from twisted.trial.test import sample
+        suite = self.loader.loadAnything(
+            sample.DecorationTest.test_badDecorator,
+            parent=sample.DecorationTest,
+            qualName=["sample", "DecorationTest", "test_badDecorator"])
         self.assertEqual(1, suite.countTestCases())
         self.assertEqual('test_badDecorator', suite._testMethodName)
 
@@ -286,9 +312,11 @@ class LoaderTests(packages.SysPathManglingTest):
         A decorated test method for which the decorator has set the method's
         __name__ correctly is loaded and the only name by which it goes is used.
         """
-        import sample
-        suite = self.loader.loadMethod(
-            sample.DecorationTest.test_goodDecorator)
+        from twisted.trial.test import sample
+        suite = self.loader.loadAnything(
+            sample.DecorationTest.test_goodDecorator,
+            parent=sample.DecorationTest,
+            qualName=["sample", "DecorationTest", "test_goodDecorator"])
         self.assertEqual(1, suite.countTestCases())
         self.assertEqual('test_goodDecorator', suite._testMethodName)
 
@@ -299,15 +327,17 @@ class LoaderTests(packages.SysPathManglingTest):
         class.  Thus its __name__ and its key in the class's __dict__ no
         longer match.
         """
-        import sample
-        suite = self.loader.loadMethod(
-            sample.DecorationTest.test_renamedDecorator)
+        from twisted.trial.test import sample
+        suite = self.loader.loadAnything(
+            sample.DecorationTest.test_renamedDecorator,
+            parent=sample.DecorationTest,
+            qualName=["sample", "DecorationTest", "test_renamedDecorator"])
         self.assertEqual(1, suite.countTestCases())
         self.assertEqual('test_renamedDecorator', suite._testMethodName)
 
 
     def test_loadClass(self):
-        import sample
+        from twisted.trial.test import sample
         suite = self.loader.loadClass(sample.FooTest)
         self.assertEqual(2, suite.countTestCases())
         self.assertEqual(['test_bar', 'test_foo'],
@@ -315,7 +345,7 @@ class LoaderTests(packages.SysPathManglingTest):
 
 
     def test_loadNonClass(self):
-        import sample
+        from twisted.trial.test import sample
         self.failUnlessRaises(TypeError, self.loader.loadClass, sample)
         self.failUnlessRaises(TypeError,
                               self.loader.loadClass, sample.FooTest.test_foo)
@@ -325,19 +355,19 @@ class LoaderTests(packages.SysPathManglingTest):
 
 
     def test_loadNonTestCase(self):
-        import sample
+        from twisted.trial.test import sample
         self.failUnlessRaises(ValueError, self.loader.loadClass,
                               sample.NotATest)
 
 
     def test_loadModule(self):
-        import sample
+        from twisted.trial.test import sample
         suite = self.loader.loadModule(sample)
         self.assertEqual(10, suite.countTestCases())
 
 
     def test_loadNonModule(self):
-        import sample
+        from twisted.trial.test import sample
         self.failUnlessRaises(TypeError,
                               self.loader.loadModule, sample.FooTest)
         self.failUnlessRaises(TypeError,
@@ -354,7 +384,7 @@ class LoaderTests(packages.SysPathManglingTest):
 
 
     def test_loadNonPackage(self):
-        import sample
+        from twisted.trial.test import sample
         self.failUnlessRaises(TypeError,
                               self.loader.loadPackage, sample.FooTest)
         self.failUnlessRaises(TypeError,
@@ -365,7 +395,7 @@ class LoaderTests(packages.SysPathManglingTest):
 
 
     def test_loadModuleAsPackage(self):
-        import sample
+        from twisted.trial.test import sample
         ## XXX -- should this instead raise a ValueError? -- jml
         self.failUnlessRaises(TypeError, self.loader.loadPackage, sample)
 
@@ -377,20 +407,20 @@ class LoaderTests(packages.SysPathManglingTest):
 
 
     def test_loadAnythingOnModule(self):
-        import sample
+        from twisted.trial.test import sample
         suite = self.loader.loadAnything(sample)
         self.assertEqual(sample.__name__,
                              suite._tests[0]._tests[0].__class__.__module__)
 
 
     def test_loadAnythingOnClass(self):
-        import sample
+        from twisted.trial.test import sample
         suite = self.loader.loadAnything(sample.FooTest)
         self.assertEqual(2, suite.countTestCases())
 
 
     def test_loadAnythingOnMethod(self):
-        import sample
+        from twisted.trial.test import sample
         suite = self.loader.loadAnything(sample.FooTest.test_foo)
         self.assertEqual(1, suite.countTestCases())
 
@@ -426,7 +456,7 @@ class LoaderTests(packages.SysPathManglingTest):
         errors = [test.id() for test, error in result.errors]
         errors.sort()
         self.assertEqual(errors, ['package.test_bad_module',
-                                      'package.test_import_module'])
+                                  'package.test_import_module'])
 
 
     def test_differentInstances(self):
@@ -553,8 +583,23 @@ class LoaderTests(packages.SysPathManglingTest):
         self.assertSuitesEqual(suite1, suite2)
 
 
+    if _PY3:
+        """
+        These tests are unable to work on Python 3, as Python 3 has no concept
+        of "unbound methods".
+        """
+        _msg = "Not possible on Python 3."
+        test_loadMethod.skip = _msg
+        test_loadNonMethod.skip = _msg
+        test_loadFailingMethod.skip = _msg
+        test_loadAnythingOnMethod.skip = _msg
+        del _msg
+
+
 
 class ZipLoadingTests(LoaderTests):
+    if _PY3:
+        skip = "Not ported."
     def setUp(self):
         from twisted.python.test.test_zippath import zipit
         LoaderTests.setUp(self)
@@ -652,6 +697,6 @@ class PackageOrderingTests(packages.SysPathManglingTest):
 #             if isinstance(s, type) or isinstance(s, types.ClassType):
 #                 return s.__module__+'.'+s.__name__
             n = runner.name(s)
-            d = md5(n).hexdigest()
+            d = md5(n.encode('utf8')).hexdigest()
             return d
         self.loadSortedPackages(sillySorter)

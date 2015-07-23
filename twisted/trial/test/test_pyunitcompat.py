@@ -8,7 +8,6 @@ import traceback
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, PyUnitResultAdapter
 from twisted.trial.itrial import IReporter, ITestCase
@@ -35,10 +34,6 @@ class PyUnitTestTests(SynchronousTestCase):
         """
         self.assertTrue(callable(self.test),
                         "%r is not callable." % (self.test,))
-
-# Remove this when we port twisted.trial._synctest to Python 3:
-if _PY3:
-    del PyUnitTestTests
 
 
 
@@ -284,4 +279,3 @@ class PyUnitResultTests(SynchronousTestCase):
         del message
     else:
         test_skip26.skip = "This test is only relevant to Python 2.6"
-
