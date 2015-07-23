@@ -1,1 +1,0 @@
-Deprecated zsh tab-complete files are now removed in preference to twisted.python.usage's tab-complete functionality.
