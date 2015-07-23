@@ -10,25 +10,27 @@ HTTP BASIC authentication.
 @see: U{http://tools.ietf.org/html/rfc2617}
 """
 
+from __future__ import division, absolute_import
+
 import binascii
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.cred import credentials, error
 from twisted.web.iweb import ICredentialFactory
 
 
+@implementer(ICredentialFactory)
 class BasicCredentialFactory(object):
     """
     Credential Factory for HTTP Basic Authentication
 
-    @type authenticationRealm: C{str}
+    @type authenticationRealm: L{bytes}
     @ivar authenticationRealm: The HTTP authentication realm which will be issued in
         challenges.
     """
-    implements(ICredentialFactory)
 
-    scheme = 'basic'
+    scheme = b'basic'
 
     def __init__(self, authenticationRealm):
         self.authenticationRealm = authenticationRealm
@@ -48,11 +50,11 @@ class BasicCredentialFactory(object):
         L{credentials.UsernamePassword} instance.
         """
         try:
-            creds = binascii.a2b_base64(response + '===')
+            creds = binascii.a2b_base64(response + b'===')
         except binascii.Error:
             raise error.LoginFailed('Invalid credentials')
 
-        creds = creds.split(':', 1)
+        creds = creds.split(b':', 1)
         if len(creds) == 2:
             return credentials.UsernamePassword(*creds)
         else:
