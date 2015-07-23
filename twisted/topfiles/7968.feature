@@ -1,0 +1,1 @@
+The isDocker method has been introduced on twisted.python.runtime.Platform to detect if the running Python is inside a Docker container. Additionally, Platform.supportsINotify() now returns False if isDocker() is True, because of many Docker storage layers having broken INotify.

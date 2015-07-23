@@ -143,6 +143,35 @@ class Platform:
         return self._platform.startswith("linux")
 
 
+    def isDocker(self, _initCGroupLocation="/proc/1/cgroup"):
+        """
+        Check if the current platform is Linux in a Docker container.
+
+        @return: C{True} if the current platform has been detected as Linux
+            inside a Docker container.
+        @rtype: C{bool}
+        """
+        if not self.isLinux():
+            return False
+
+        from twisted.python.filepath import FilePath
+
+        # Ask for the cgroups of init (pid 1)
+        initCGroups = FilePath(_initCGroupLocation)
+        if initCGroups.exists():
+            # The cgroups file looks like "2:cpu:/". The third element will
+            # begin with /docker if it is inside a Docker container.
+            controlGroups = [x.split(b":")
+                             for x in initCGroups.getContent().split(b"\n")]
+
+            for group in controlGroups:
+                if len(group) == 3 and group[2].startswith(b"/docker/"):
+                    # If it starts with /docker/, we're in a docker container
+                    return True
+
+        return False
+
+
     def supportsThreads(self):
         """
         Can threads be created?
@@ -166,6 +195,10 @@ class Platform:
             from twisted.python._inotify import INotifyError, init
         except ImportError:
             return False
+
+        if self.isDocker():
+            return False
+
         try:
             os.close(init())
         except INotifyError:
