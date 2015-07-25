@@ -208,7 +208,7 @@ class ProxyClientTests(TestCase):
 
 
     def makeResponseBytes(self, code, message, headers, body):
-        lines = [b"HTTP/1.0 " + str(code).encode('utf_8') + b' ' + message]
+        lines = [b"HTTP/1.0 " + str(code).encode('ascii') + b' ' + message]
         for header, values in headers:
             for value in values:
                 lines.append(header + b': ' + value)
@@ -306,7 +306,10 @@ class ProxyClientTests(TestCase):
         """
         data = b"foo bar baz"
         return self._testDataForward(
-            200, b"OK", [(b"Content-Length", [str(len(data)).encode('utf-8')])], data)
+            200,
+            b"OK",
+            [(b"Content-Length", [str(len(data)).encode('ascii')])],
+            data)
 
 
     def test_losesConnection(self):
@@ -316,7 +319,10 @@ class ProxyClientTests(TestCase):
         """
         data = b"foo bar baz"
         return self._testDataForward(
-            200, b"OK", [(b"Content-Length", [str(len(data)).encode('utf-8')])], data,
+            200,
+            b"OK",
+            [(b"Content-Length", [str(len(data)).encode('ascii')])],
+            data,
             loseConnection=False)
 
 
@@ -327,9 +333,9 @@ class ProxyClientTests(TestCase):
         should be added.
         """
         client = ProxyClient(b'GET', b'/foo', b'HTTP/1.0',
-                {b"accept": b"text/html", b"proxy-connection": b"foo"}, b'', None)
+            {b"accept": b"text/html", b"proxy-connection": b"foo"}, b'', None)
         self.assertEqual(client.headers,
-                {b"accept": b"text/html", b"connection": b"close"})
+            {b"accept": b"text/html", b"connection": b"close"})
 
 
     def test_keepaliveNotForwarded(self):
