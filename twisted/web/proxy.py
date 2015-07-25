@@ -18,10 +18,9 @@ and returns the result.
 Normally, a Proxy is used on the client end of an Internet connection, while a
 ReverseProxy is used on the server end.
 """
+from __future__ import absolute_import, division
 
-import urlparse
-from urllib import quote as urlquote
-
+from twisted.python.compat import urllib_parse, urlquote
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.web.resource import Resource
@@ -43,10 +42,10 @@ class ProxyClient(HTTPClient):
         self.father = father
         self.command = command
         self.rest = rest
-        if "proxy-connection" in headers:
-            del headers["proxy-connection"]
-        headers["connection"] = "close"
-        headers.pop('keep-alive', None)
+        if b"proxy-connection" in headers:
+            del headers[b"proxy-connection"]
+        headers[b"connection"] = b"close"
+        headers.pop(b'keep-alive', None)
         self.headers = headers
         self.data = data
 
@@ -68,7 +67,7 @@ class ProxyClient(HTTPClient):
         # 'process' method. When these headers are received from the remote
         # server, they ought to override the defaults, rather than append to
         # them.
-        if key.lower() in ['server', 'date', 'content-type']:
+        if key.lower() in [b'server', b'date', b'content-type']:
             self.father.responseHeaders.setRawHeaders(key, [value])
         else:
             self.father.responseHeaders.addRawHeader(key, value)
@@ -117,9 +116,9 @@ class ProxyClientFactory(ClientFactory):
         Report a connection failure in a response to the incoming request as
         an error.
         """
-        self.father.setResponseCode(501, "Gateway error")
-        self.father.responseHeaders.addRawHeader("Content-Type", "text/html")
-        self.father.write("<H1>Could not connect</H1>")
+        self.father.setResponseCode(501, b"Gateway error")
+        self.father.responseHeaders.addRawHeader(b"Content-Type", b"text/html")
+        self.father.write(b"<H1>Could not connect</H1>")
         self.father.finish()
 
 
@@ -132,8 +131,8 @@ class ProxyRequest(Request):
     @type reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
     """
 
-    protocols = {'http': ProxyClientFactory}
-    ports = {'http': 80}
+    protocols = {b'http': ProxyClientFactory}
+    ports = {b'http': 80}
 
     def __init__(self, channel, queued, reactor=reactor):
         Request.__init__(self, channel, queued)
@@ -141,20 +140,20 @@ class ProxyRequest(Request):
 
 
     def process(self):
-        parsed = urlparse.urlparse(self.uri)
+        parsed = urllib_parse.urlparse(self.uri)
         protocol = parsed[0]
-        host = parsed[1]
+        host = parsed[1].decode('ascii')
         port = self.ports[protocol]
         if ':' in host:
             host, port = host.split(':')
             port = int(port)
-        rest = urlparse.urlunparse(('', '') + parsed[2:])
+        rest = urllib_parse.urlunparse((b'', b'') + parsed[2:])
         if not rest:
-            rest = rest + '/'
+            rest = rest + b'/'
         class_ = self.protocols[protocol]
         headers = self.getAllHeaders().copy()
-        if 'host' not in headers:
-            headers['host'] = host
+        if b'host' not in headers:
+            headers[b'host'] = host.encode('ascii')
         self.content.seek(0, 0)
         s = self.content.read()
         clientFactory = class_(self.method, rest, self.clientproto, headers,
@@ -207,7 +206,8 @@ class ReverseProxyRequest(Request):
         it there, then forwarding the response back as the response to this
         request.
         """
-        self.requestHeaders.setRawHeaders(b"host", [self.factory.host])
+        self.requestHeaders.setRawHeaders(b"host",
+                                          [self.factory.host.encode('ascii')])
         clientFactory = self.proxyClientFactoryClass(
             self.method, self.uri, self.clientproto, self.getAllHeaders(),
             self.content.read(), self)
@@ -275,7 +275,7 @@ class ReverseProxyResource(Resource):
         C{path} at the end.
         """
         return ReverseProxyResource(
-            self.host, self.port, self.path + '/' + urlquote(path, safe=""),
+            self.host, self.port, self.path + b'/' + urlquote(path, safe=b"").encode('utf-8'),
             self.reactor)
 
 
@@ -288,12 +288,12 @@ class ReverseProxyResource(Resource):
         if self.port == 80:
             host = self.host
         else:
-            host = "%s:%d" % (self.host, self.port)
-        request.requestHeaders.setRawHeaders(b"host", [host])
+            host = self.host + u":" + str(self.port)
+        request.requestHeaders.setRawHeaders(b"host", [host.encode('ascii')])
         request.content.seek(0, 0)
-        qs = urlparse.urlparse(request.uri)[4]
+        qs = urllib_parse.urlparse(request.uri)[4]
         if qs:
-            rest = self.path + '?' + qs
+            rest = self.path + b'?' + qs
         else:
             rest = self.path
         clientFactory = self.proxyClientFactoryClass(
