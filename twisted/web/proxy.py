@@ -20,16 +20,7 @@ ReverseProxy is used on the server end.
 """
 from __future__ import absolute_import, division
 
-try:
-    from urlparse import urlparse, urlunparse
-except ImportError:
-    from urllib.parse import urlparse, urlunparse
-
-try:
-    from urllib import quote as urlquote
-except ImportError:
-    from urllib.parse import quote as urlquote
-
+from twisted.python.compat import urllib_parse, urlquote
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.web.resource import Resource
@@ -149,20 +140,20 @@ class ProxyRequest(Request):
 
 
     def process(self):
-        parsed = urlparse(self.uri)
+        parsed = urllib_parse.urlparse(self.uri)
         protocol = parsed[0]
-        host = parsed[1].decode('utf-8')
+        host = parsed[1].decode('ascii')
         port = self.ports[protocol]
         if ':' in host:
             host, port = host.split(':')
             port = int(port)
-        rest = urlunparse((b'', b'') + parsed[2:])
+        rest = urllib_parse.urlunparse((b'', b'') + parsed[2:])
         if not rest:
             rest = rest + b'/'
         class_ = self.protocols[protocol]
         headers = self.getAllHeaders().copy()
         if b'host' not in headers:
-            headers[b'host'] = host.encode('utf-8')
+            headers[b'host'] = host.encode('ascii')
         self.content.seek(0, 0)
         s = self.content.read()
         clientFactory = class_(self.method, rest, self.clientproto, headers,
@@ -216,7 +207,7 @@ class ReverseProxyRequest(Request):
         request.
         """
         self.requestHeaders.setRawHeaders(b"host",
-                                          [self.factory.host.encode('utf8')])
+                                          [self.factory.host.encode('ascii')])
         clientFactory = self.proxyClientFactoryClass(
             self.method, self.uri, self.clientproto, self.getAllHeaders(),
             self.content.read(), self)
@@ -298,9 +289,9 @@ class ReverseProxyResource(Resource):
             host = self.host
         else:
             host = self.host + u":" + str(self.port)
-        request.requestHeaders.setRawHeaders(b"host", [host.encode('utf8')])
+        request.requestHeaders.setRawHeaders(b"host", [host.encode('ascii')])
         request.content.seek(0, 0)
-        qs = urlparse(request.uri)[4]
+        qs = urllib_parse.urlparse(request.uri)[4]
         if qs:
             rest = self.path + b'?' + qs
         else:

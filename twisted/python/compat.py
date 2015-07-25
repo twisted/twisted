@@ -518,9 +518,11 @@ except ImportError:
 if _PY3:
     import urllib.parse as urllib_parse
     from html import escape
+    from urllib.parse import quote as urlquote
 else:
     import urlparse as urllib_parse
     from cgi import escape
+    from urllib import quote as urlquote
 
 
 # Dealing with the differences in items/iteritems
@@ -630,4 +632,5 @@ __all__ = [
     "bytesEnviron",
     "OrderedDict",
     "escape",
+    "urlquote",
 ]
