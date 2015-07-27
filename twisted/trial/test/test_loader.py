@@ -68,8 +68,11 @@ class FinderTests(packages.PackageTest):
         self.assertEqual(sample.FooTest, sample1)
 
     if _PY3:
-        _Py3SkipMsg = ("On Python 3, 'findByName' returns TestCases, "
-                       "not objects.")
+        # In Python 3, `findByName` returns full TestCases, not the objects
+        # inside them. This because on Python 3, unbound methods don't exist,
+        # so you can't simply make a TestCase after finding it -- it's easier
+        # to just find it and put it in a TestCase immediately.
+        _Py3SkipMsg = ("Not relevant on Python 3")
         test_findPackage.skip = _Py3SkipMsg
         test_findModule.skip = _Py3SkipMsg
         test_findFile.skip = _Py3SkipMsg
