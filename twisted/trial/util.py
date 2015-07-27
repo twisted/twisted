@@ -273,7 +273,7 @@ def _runSequentially(callables, stopOnFirstError=False):
         try:
             thing = yield d
             results.append((defer.SUCCESS, thing))
-        except:
+        except Exception:
             results.append((defer.FAILURE, Failure()))
             if stopOnFirstError:
                 break
