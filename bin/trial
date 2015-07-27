@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 import os, sys
@@ -6,7 +6,10 @@ import os, sys
 try:
     import _preamble
 except ImportError:
-    sys.exc_clear()
+    try:
+        sys.exc_clear()
+    except AttributeError:
+        pass
 
 # begin chdir armor
 sys.path[:] = map(os.path.abspath, sys.path)
