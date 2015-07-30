@@ -11,14 +11,9 @@ instead of creating a thread pool directly.
 
 from __future__ import division, absolute_import
 
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
-
 import threading
 
-from twisted.threads import ThreadWorker, Team, LockWorker
+from twisted.threads import teamWithLimit
 from twisted.python import log, context
 from twisted.python.failure import Failure
 
@@ -116,26 +111,18 @@ class ThreadPool:
         self.name = name
         self.threads = []
 
-        def workerCreator(name):
-            def makeAThread(target):
-                thread = self.threadFactory(name=name,
-                                            target=target)
-                self.threads.append(thread)
-                return thread
-            return ThreadWorker(makeAThread, Queue)
+        def trackingThreadFactory(target):
+            thread = self.threadFactory(name=self._generateName(),
+                                        target=target)
+            self.threads.append(thread)
+            return thread
 
-        def limitedWorkerCreator():
+        def currentLimit():
             if not self.started:
-                return None
-            stats = self._team.statistics()
-            if stats.busyWorkerCount + stats.idleWorkerCount >= self.max:
-                return None
-            return workerCreator(self._generateName())
+                return 0
+            return self.max
 
-        self._team = Team(lambda: LockWorker(threading.Lock(),
-                                             threading.local()),
-                          createWorker=limitedWorkerCreator,
-                          logException=log.err)
+        self._team = teamWithLimit(currentLimit, trackingThreadFactory)
 
 
     @property
