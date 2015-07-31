@@ -127,13 +127,9 @@ class KQueueReactor(posixbase.PosixReactorBase):
         # in between beforeDaemonize() and afterDaemonize()!
         self._kq = self._impl.kqueue()
         for fd in self._reads:
-            self._updateRegistration(fd,
-                                     KQ_FILTER_READ,
-                                     KQ_EV_ADD)
+            self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_ADD)
         for fd in self._writes:
-            self._updateRegistration(fd,
-                                     KQ_FILTER_WRITE,
-                                     KQ_EV_ADD)
+            self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_ADD)
 
 
     def addReader(self, reader):
@@ -143,9 +139,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         fd = reader.fileno()
         if fd not in self._reads:
             try:
-                self._updateRegistration(fd,
-                                         KQ_FILTER_READ,
-                                         KQ_EV_ADD)
+                self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_ADD)
             except OSError:
                 pass
             finally:
@@ -160,9 +154,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         fd = writer.fileno()
         if fd not in self._writes:
             try:
-                self._updateRegistration(fd,
-                                         KQ_FILTER_WRITE,
-                                         KQ_EV_ADD)
+                self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_ADD)
             except OSError:
                 pass
             finally:
@@ -192,9 +184,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 del self._selectables[fd]
             if not wasLost:
                 try:
-                    self._updateRegistration(fd,
-                                             KQ_FILTER_READ,
-                                             KQ_EV_DELETE)
+                    self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_DELETE)
                 except OSError:
                     pass
 
@@ -221,9 +211,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 del self._selectables[fd]
             if not wasLost:
                 try:
-                    self._updateRegistration(fd,
-                                             KQ_FILTER_WRITE,
-                                             KQ_EV_DELETE)
+                    self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_DELETE)
                 except OSError:
                     pass
 
