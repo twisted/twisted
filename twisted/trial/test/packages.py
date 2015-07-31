@@ -16,6 +16,8 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 
 if _PY3:
+    # Python 3 has some funny import caching, which we don't want.
+    # invalidate_caches clears it out for us.
     from importlib import invalidate_caches as invalidateImportCaches
 else:
     def invalidateImportCaches():
