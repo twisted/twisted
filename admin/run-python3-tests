@@ -12,9 +12,6 @@ change at any time.
 
 import os
 import sys
-import tempfile
-import unittest
-
 
 
 testModules = []
@@ -36,7 +33,7 @@ if "--installed" in extraArguments:
 
 # Add default arguments.
 if not extraArguments:
-    extraArguments = ['-v']
+    extraArguments = []
 
 
 # Add default modules.
@@ -57,11 +54,8 @@ if not installed:
     # Make sure checkout's code is used:
     sys.path.insert(0, twistedPath)
 
-
-# Avoid dumping trash all over the place.
-os.chdir(tempfile.mkdtemp(prefix="tw-py3-"))
-
+from twisted.scripts import trial
 
 # Run the tests.
-testArguments = ["run-python3-tests"] + extraArguments + testModules
-unittest.main(module=None, argv=testArguments)
+sys.argv = ["run-python3-tests"] + extraArguments + testModules
+trial.run()
