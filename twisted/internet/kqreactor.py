@@ -247,14 +247,11 @@ class KQueueReactor(posixbase.PosixReactorBase):
             timeout = 1
 
         try:
-            # kqueue.control takes a changelist (which is always none), how
-            # many selectables we have, and the timeout.
             events = self._kq.control([], len(self._selectables), timeout)
         except OSError as e:
             # Since this command blocks for potentially a while, it's possible
-            # the user can hit Control^C while KQueue is working and raise
-            # EINTR. If it is not EINTR, raise it up, as something bad has
-            # happened.
+            # EINTR can be raised for various reasons (for example, if the user
+            # hits ^C).
             if e.errno == errno.EINTR:
                 return
             else:
