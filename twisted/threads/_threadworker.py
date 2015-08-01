@@ -66,7 +66,7 @@ class ThreadWorker(object):
 
 
 
-@implementer(IWorker)
+@implementer(IExclusiveWorker)
 class LockWorker(object):
     """
     An L{IWorker} implemented based on a mutual-exclusion lock.
