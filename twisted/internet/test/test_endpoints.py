@@ -21,34 +21,31 @@ from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
 from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 
+from twisted import plugins
 from twisted.internet import error, interfaces, defer, endpoints, protocol
-from twisted.internet import reactor, threads
+from twisted.internet import reactor, threads, stdio
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.internet.endpoints import StandardErrorBehavior
 from twisted.internet.interfaces import IConsumer, IPushProducer, ITransport
 from twisted.internet.protocol import ClientFactory, Protocol, Factory
+from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
+from twisted.plugin import getPlugins
 from twisted.python import log
 from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
+from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
 
-pemPath = FilePath(testInitPath).sibling("server.pem").asBytesMode()
 
-if not _PY3:
-    from twisted.plugin import getPlugins
-    from twisted import plugins
-    from twisted.python.modules import getModule
-    from twisted.internet import stdio
-    from twisted.internet.stdio import PipeAddress
-
-    casPath = getModule(__name__).filePath.sibling("fake_CAs")
-    chainPath = casPath.child("chain.pem")
-    escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
-    escapedCAsPathName = endpoints.quoteStringArgument(casPath.path)
-    escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
+pemPath = FilePath(testInitPath).sibling("server.pem")
+casPath = getModule(__name__).filePath.sibling("fake_CAs")
+chainPath = casPath.child("chain.pem")
+escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
+escapedCAsPathName = endpoints.quoteStringArgument(casPath.path)
+escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
 
 try:
@@ -2692,13 +2689,13 @@ class ClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(
             reactor,
-            b"tcp:host=example.com:port=1234:timeout=7:bindAddress=10.0.0.2")
+            "tcp:host=example.com:port=1234:timeout=7:bindAddress=10.0.0.2")
         self.assertIsInstance(client, endpoints.TCP4ClientEndpoint)
         self.assertIs(client._reactor, reactor)
-        self.assertEqual(client._host, b"example.com")
+        self.assertEqual(client._host, "example.com")
         self.assertEqual(client._port, 1234)
         self.assertEqual(client._timeout, 7)
-        self.assertEqual(client._bindAddress, (b"10.0.0.2", 0))
+        self.assertEqual(client._bindAddress, ("10.0.0.2", 0))
 
 
     def test_tcpPositionalArgs(self):
@@ -2710,13 +2707,13 @@ class ClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(
             reactor,
-            b"tcp:example.com:1234:timeout=7:bindAddress=10.0.0.2")
+            "tcp:example.com:1234:timeout=7:bindAddress=10.0.0.2")
         self.assertIsInstance(client, endpoints.TCP4ClientEndpoint)
         self.assertIs(client._reactor, reactor)
-        self.assertEqual(client._host, b"example.com")
+        self.assertEqual(client._host, "example.com")
         self.assertEqual(client._port, 1234)
         self.assertEqual(client._timeout, 7)
-        self.assertEqual(client._bindAddress, (b"10.0.0.2", 0))
+        self.assertEqual(client._bindAddress, ("10.0.0.2", 0))
 
 
     def test_tcpHostPositionalArg(self):
@@ -2729,8 +2726,8 @@ class ClientStringTests(unittest.TestCase):
 
         client = endpoints.clientFromString(
             reactor,
-            b"tcp:example.com:port=1234:timeout=7:bindAddress=10.0.0.2")
-        self.assertEqual(client._host, b"example.com")
+            "tcp:example.com:port=1234:timeout=7:bindAddress=10.0.0.2")
+        self.assertEqual(client._host, "example.com")
         self.assertEqual(client._port, 1234)
 
 
@@ -2743,8 +2740,8 @@ class ClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(
             reactor,
-            b"tcp:host=example.com:1234:timeout=7:bindAddress=10.0.0.2")
-        self.assertEqual(client._host, b"example.com")
+            "tcp:host=example.com:1234:timeout=7:bindAddress=10.0.0.2")
+        self.assertEqual(client._host, "example.com")
         self.assertEqual(client._port, 1234)
 
 
@@ -2756,7 +2753,7 @@ class ClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(
             reactor,
-            b"tcp:host=example.com:port=1234")
+            "tcp:host=example.com:port=1234")
         self.assertEqual(client._timeout, 30)
         self.assertEqual(client._bindAddress, None)
 
@@ -2770,7 +2767,7 @@ class ClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(
             reactor,
-            b"unix:path=/var/foo/bar:lockfile=1:timeout=9")
+            "unix:path=/var/foo/bar:lockfile=1:timeout=9")
         self.assertIsInstance(client, endpoints.UNIXClientEndpoint)
         self.assertIs(client._reactor, reactor)
         self.assertEqual(client._path, "/var/foo/bar")
@@ -2784,7 +2781,7 @@ class ClientStringTests(unittest.TestCase):
         the defaults to be used.
         """
         client = endpoints.clientFromString(
-            object(), b"unix:path=/var/foo/bar")
+            object(), "unix:path=/var/foo/bar")
         self.assertEqual(client._timeout, 30)
         self.assertEqual(client._checkPID, False)
 
@@ -2798,10 +2795,10 @@ class ClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(
             reactor,
-            b"unix:/var/foo/bar:lockfile=1:timeout=9")
+            "unix:/var/foo/bar:lockfile=1:timeout=9")
         self.assertIsInstance(client, endpoints.UNIXClientEndpoint)
         self.assertIs(client._reactor, reactor)
-        self.assertEqual(client._path, b"/var/foo/bar")
+        self.assertEqual(client._path, "/var/foo/bar")
         self.assertEqual(client._timeout, 9)
         self.assertEqual(client._checkPID, True)
 
@@ -2814,11 +2811,11 @@ class ClientStringTests(unittest.TestCase):
         addFakePlugin(self)
         notAReactor = object()
         clientEndpoint = endpoints.clientFromString(
-            notAReactor, b"cfake:alpha:beta:cee=dee:num=1")
+            notAReactor, "cfake:alpha:beta:cee=dee:num=1")
         from twisted.plugins.fakeendpoint import fakeClient
         self.assertIs(clientEndpoint.parser, fakeClient)
-        self.assertEqual(clientEndpoint.args, (b'alpha', b'beta'))
-        self.assertEqual(clientEndpoint.kwargs, dict(cee=b'dee', num=b'1'))
+        self.assertEqual(clientEndpoint.args, ('alpha', 'beta'))
+        self.assertEqual(clientEndpoint.kwargs, dict(cee='dee', num='1'))
 
 
     def test_unknownType(self):
@@ -2829,7 +2826,7 @@ class ClientStringTests(unittest.TestCase):
         value = self.assertRaises(
             # faster-than-light communication not supported
             ValueError, endpoints.clientFromString, None,
-            b"ftl:andromeda/carcosa/hali/2387")
+            "ftl:andromeda/carcosa/hali/2387")
         self.assertEqual(
             str(value),
             "Unknown endpoint type: 'ftl'")
@@ -2844,15 +2841,15 @@ class ClientStringTests(unittest.TestCase):
         addFakePlugin(self)
         reactor = object()
         clientEndpoint = endpoints.clientFromString(
-            reactor, b'crfake:alpha:beta:cee=dee:num=1')
+            reactor, 'crfake:alpha:beta:cee=dee:num=1')
         from twisted.plugins.fakeendpoint import fakeClientWithReactor
         self.assertEqual(
             (clientEndpoint.parser,
              clientEndpoint.args,
              clientEndpoint.kwargs),
             (fakeClientWithReactor,
-             (reactor, b'alpha', b'beta'),
-             dict(cee=b'dee', num=b'1')))
+             (reactor, 'alpha', 'beta'),
+             dict(cee='dee', num='1')))
 
 
     def test_stringParserWithReactorHasPreference(self):
@@ -2865,7 +2862,7 @@ class ClientStringTests(unittest.TestCase):
         addFakePlugin(self)
         reactor = object()
         clientEndpoint = endpoints.clientFromString(
-            reactor, b'cpfake:alpha:beta:cee=dee:num=1')
+            reactor, 'cpfake:alpha:beta:cee=dee:num=1')
         from twisted.plugins.fakeendpoint import (
             fakeClientWithReactorAndPreference)
         self.assertEqual(
@@ -2873,8 +2870,8 @@ class ClientStringTests(unittest.TestCase):
              clientEndpoint.args,
              clientEndpoint.kwargs),
             (fakeClientWithReactorAndPreference,
-             (reactor, b'alpha', b'beta'),
-             dict(cee=b'dee', num=b'1')))
+             (reactor, 'alpha', 'beta'),
+             dict(cee='dee', num='1')))
 
 
 
@@ -3345,7 +3342,7 @@ class ConnectProtocolTests(unittest.TestCase):
 
 if _PY3:
     del (StandardIOEndpointsTests, ParserTests,
-         ServerStringTests, ClientStringTests, SSLClientStringTests,
+         ServerStringTests, SSLClientStringTests,
          AdoptedStreamServerEndpointTests, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests
      )
