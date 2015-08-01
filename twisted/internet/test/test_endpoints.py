@@ -33,7 +33,6 @@ from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
 from twisted.plugin import getPlugins
 from twisted.python import log
-from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
