@@ -74,7 +74,7 @@ class TeamTests(SynchronousTestCase):
         self.failures = []
         def logException():
             self.failures.append(Failure())
-        self.team = Team(lambda: coordinator, createWorker, logException)
+        self.team = Team(coordinator, createWorker, logException)
 
 
     def coordinate(self):

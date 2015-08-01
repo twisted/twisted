@@ -137,12 +137,12 @@ class ThreadWorkerTests(SynchronousTestCase):
         """
         self.fakeThreads = []
         self.fakeQueue = FakeQueue()
-        self.worker = ThreadWorker(
-            lambda *a, **kw:
-            self.fakeThreads.append(FakeThread(*a, **kw)) or
-            self.fakeThreads[-1],
-            lambda: self.fakeQueue
-        )
+        def startThread(target):
+            newThread = FakeThread(target=target)
+            newThread.start()
+            self.fakeThreads.append(newThread)
+            return newThread
+        self.worker = ThreadWorker(startThread, self.fakeQueue)
 
 
     def test_startsThreadAndPerformsWork(self):

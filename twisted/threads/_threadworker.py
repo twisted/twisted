@@ -7,35 +7,42 @@ Implementation of an L{IWorker} based on native threads and queues.
 """
 
 from zope.interface import implementer
-from ._ithreads import IWorker
+from ._ithreads import IExclusiveWorker
 from ._convenience import Quit
 
 
 _stop = object()
 
-@implementer(IWorker)
+@implementer(IExclusiveWorker)
 class ThreadWorker(object):
     """
-    An L{IWorker} implemented based on a thread and a queue.
+    An L{IExclusiveWorker} implemented based on a single thread and a queue.
+
+    This worker ensures exclusivity (i.e. it is an L{IExclusiveWorker} and not
+    an L{IWorker}) by performing all of the work passed to C{do} on the I{same}
+    thread.
     """
 
-    def __init__(self, createThread, createQueue):
+    def __init__(self, startThread, queue):
         """
-        @param createThread: create a L{threading.Thread} to perform work on.
-        @type createThread: 1-argument callable taking a 0-argument callable
-            and returning a L{threading.Thread}
+        Create a L{ThreadWorker} with a function to start a thread and a queue
+        to use to communicate with that thread.
 
-        @param createQueue: Create an object like a L{Queue.Queue}, with C{put}
-            and C{get} methods.
-        @param createQueue: 0-argument callable returning a L{Queue.Queue}
+        @param startThread: a callable that takes a callable to run in another
+            thread.
+        @type startThread: callable taking a 0-argument callable and returning
+            nothing.
+
+        @param queue: A L{Queue} to use to give tasks to the thread created by
+            L{startThread}.
+        @param queue: L{Queue}
         """
-        self._q = createQueue()
-        def work():
-            for task in iter(self._q.get, _stop):
-                task()
-        self._thread = createThread(work)
-        self._thread.start()
+        self._q = queue
         self._hasQuit = Quit()
+        def work():
+            for task in iter(queue.get, _stop):
+                task()
+        startThread(work)
 
 
     def do(self, task):
