@@ -47,7 +47,7 @@ class ThreadWorker(object):
 
     def do(self, task):
         """
-        Perform the given task on a thread.
+        Perform the given task on the thread owned by this L{ThreadWorker}.
 
         @param task: the function to call on a thread.
         """
