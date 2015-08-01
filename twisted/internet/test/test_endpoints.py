@@ -3248,12 +3248,12 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         'tcp6' endpoint string description.
         """
         ep = endpoints.serverFromString(
-            MemoryReactor(), b"tcp6:8080:backlog=12:interface=\:\:1")
+            MemoryReactor(), "tcp6:8080:backlog=12:interface=\:\:1")
         self.assertIsInstance(ep, endpoints.TCP6ServerEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
         self.assertEqual(ep._port, 8080)
         self.assertEqual(ep._backlog, 12)
-        self.assertEqual(ep._interface, b'::1')
+        self.assertEqual(ep._interface, '::1')
 
 
 
@@ -3293,7 +3293,7 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         L{serverFromString} returns a L{StandardIOEndpoint} instance with a
         'stdio' endpoint string description.
         """
-        ep = endpoints.serverFromString(MemoryReactor(), b"stdio:")
+        ep = endpoints.serverFromString(MemoryReactor(), "stdio:")
         self.assertIsInstance(ep, endpoints.StandardIOEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
 
@@ -3337,11 +3337,3 @@ class ConnectProtocolTests(unittest.TestCase):
 
         endpoint = Endpoint()
         self.assertIs(result, endpoints.connectProtocol(endpoint, object()))
-
-
-
-if _PY3:
-    del (StandardIOEndpointsTests, ParserTests,
-         AdoptedStreamServerEndpointTests, SystemdEndpointPluginTests,
-         TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests
-     )
