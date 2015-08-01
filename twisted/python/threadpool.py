@@ -102,7 +102,13 @@ class ThreadPool:
         Create a new threadpool.
 
         @param minthreads: minimum number of threads in the pool
+        @type minthreads: L{int}
+
         @param maxthreads: maximum number of threads in the pool
+        @type maxthreads: L{int}
+
+        @param name: The name to give this threadpool; visible in log messages.
+        @type name: native L{str}
         """
         assert minthreads >= 0, 'minimum is negative'
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
