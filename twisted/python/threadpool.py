@@ -128,7 +128,6 @@ class ThreadPool:
             return self.max
 
         self._team = Team.withLimit(currentLimit, trackingThreadFactory)
-        return self
 
 
     @property
