@@ -52,13 +52,6 @@ __all__ = ["clientFromString", "serverFromString",
            "ProcessEndpoint", "HostnameEndpoint",
            "StandardErrorBehavior", "connectProtocol"]
 
-__all3__ = ["clientFromString", "serverFromString",
-            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
-            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
-            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-            "UNIXServerEndpoint", "UNIXClientEndpoint",
-            "connectProtocol", "HostnameEndpoint",
-            "ProcessEndpoint", "StandardErrorBehavior"]
 
 
 class _WrappingProtocol(Protocol):
@@ -1777,12 +1770,3 @@ def connectProtocol(endpoint, protocol):
         def buildProtocol(self, addr):
             return protocol
     return endpoint.connect(OneShotFactory())
-
-
-
-if _PY3:
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__
