@@ -34,7 +34,7 @@ class ThreadWorker(object):
             nothing.
 
         @param queue: A L{Queue} to use to give tasks to the thread created by
-            L{startThread}.
+            C{startThread}.
         @param queue: L{Queue}
         """
         self._q = queue
