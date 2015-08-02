@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.threads._team}.
+Tests for L{twisted._threads._team}.
 """
 
 from twisted.trial.unittest import SynchronousTestCase
@@ -38,7 +38,7 @@ class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):
 
 class TeamTests(SynchronousTestCase):
     """
-    Tests for L{twisted.threads.Team}
+    Tests for L{Team}
     """
 
     def setUp(self):

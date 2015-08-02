@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.threads._threadworker}.
+Tests for L{twisted._threads._threadworker}.
 """
 
 import gc

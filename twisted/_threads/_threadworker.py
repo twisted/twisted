@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.threads.test.test_threadworker -*-
+# -*- test-case-name: twisted._threads.test.test_threadworker -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

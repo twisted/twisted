@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.threads.test.test_memory -*-
+# -*- test-case-name: twisted._threads.test.test_memory -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

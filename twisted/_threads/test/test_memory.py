@@ -2,13 +2,13 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.threads._memory}.
+Tests for L{twisted._threads._memory}.
 """
 
 from zope.interface.verify import verifyObject
 
 from twisted.trial.unittest import SynchronousTestCase
-from twisted.threads import AlreadyQuit, IWorker, createMemoryWorker
+from .. import AlreadyQuit, IWorker, createMemoryWorker
 
 
 class MemoryWorkerTests(SynchronousTestCase):

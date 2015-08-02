@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Test cases for convenience functionality in L{twisted.threads._convenience}.
+Test cases for convenience functionality in L{twisted._threads._convenience}.
 """
 
 from twisted.trial.unittest import SynchronousTestCase
