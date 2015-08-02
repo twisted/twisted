@@ -19,7 +19,7 @@ from twisted.internet.protocol import (
     ConsumerToProtocolAdapter)
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
-from twisted.logger import Logger, LogLevel, globalLogPublisher
+from twisted.logger import LogLevel, globalLogPublisher
 
 
 
