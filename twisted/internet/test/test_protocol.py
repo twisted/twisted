@@ -401,7 +401,8 @@ class FactoryTests(TestCase):
         """
         events = []
         globalLogPublisher.addObserver(events.append)
-        self.addCleanup(lambda: globalLogPublisher.remove(events.append))
+        self.addCleanup(
+            lambda: globalLogPublisher.removeObserver(events.append))
 
         f = Factory()
         f.doStart()
@@ -419,7 +420,8 @@ class FactoryTests(TestCase):
         """
         events = []
         globalLogPublisher.addObserver(events.append)
-        self.addCleanup(lambda: globalLogPublisher.remove(events.append))
+        self.addCleanup(
+            lambda: globalLogPublisher.removeObserver(events.append))
 
         class MyFactory(Factory):
             numPorts = 1
