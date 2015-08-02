@@ -45,15 +45,42 @@ class Statistics(object):
 class Team(object):
     """
     A composite L{IWorker} implementation.
+
+    @ivar _quit: A L{Quit} flag indicating whether this L{Team} has been quit
+        yet.  This may be set by an arbitrary thread since L{Team.quit} may be
+        called from anywhere.
+
+    @ivar _coordinator: the L{IExclusiveWorker} coordinating access to this
+        L{Team}'s internal resources.
+
+    @ivar _createWorker: a callable that will create new workers.
+
+    @ivar _logException: a 0-argument callable called in an exception context
+        when there is an unhandled error from a task passed to L{Team.do}
+
+    @ivar _idle: a L{set} of idle workers.
+
+    @ivar _busyCount: the number of workers currently busy.
+
+    @ivar _pending: a L{deque} of tasks - that is, 0-argument callables passed
+        to L{Team.do} - that are outstanding.
+
+    @ivar _shouldQuitCoordinator: A flag indicating that the coordinator should
+        be quit at the next available opportunity.  Unlike L{Team._quit}, this
+        flag is only set by the coordinator.
+
+    @ivar _toShrink: the number of workers to shrink this L{Team} by at the
+        next available opportunity; set in the coordinator.
     """
 
     def __init__(self, coordinator, createWorker, logException):
         """
-        @param coordinator: an L{IWorker} which will coordinate access to
-            resources on this L{Team}; that is to say, an L{IWorker} whose
-            C{do} method ensures that its given work will be executed in a
-            mutually exclusive context, not in parallel with other work
-            enqueued by C{do} (although possibly in parallel with the caller).
+        @param coordinator: an L{IExclusiveWorker} which will coordinate access
+            to resources on this L{Team}; that is to say, an
+            L{IExclusiveWorker} whose C{do} method ensures that its given work
+            will be executed in a mutually exclusive context, not in parallel
+            with other work enqueued by C{do} (although possibly in parallel
+            with the caller).
 
         @param createWorker: A 0-argument callable that will create an
             L{IWorker} to perform work.
@@ -71,7 +98,6 @@ class Team(object):
         self._busyCount = 0
         self._pending = deque()
         self._shouldQuitCoordinator = False
-        self._coordinatorQuit = False
         self._toShrink = 0
 
 
@@ -126,14 +152,7 @@ class Team(object):
                 self._idle.pop().quit()
             else:
                 self._toShrink += 1
-        # TODO: the following expression is insufficiently tested.
-        if (
-                (not self._coordinatorQuit) and
-                (self._busyCount == 0) and
-                (len(self._pending) == 0) and
-                self._shouldQuitCoordinator
-        ):
-            self._coordinatorQuit = True
+        if self._shouldQuitCoordinator and self._busyCount == 0:
             self._coordinator.quit()
 
 
