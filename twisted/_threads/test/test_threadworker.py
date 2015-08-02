@@ -287,3 +287,22 @@ class LockWorkerTests(SynchronousTestCase):
         gc.collect()
         self.assertIs(ref(), None)
 
+
+    def test_quitWhileGettingLock(self):
+        """
+        If L{LockWorker.do} is called concurrently with L{LockWorker.quit}, and
+        C{quit} wins the race before C{do} gets the lock attribute, then
+        L{AlreadyQuit} will be raised.
+        """
+        class RacyLockWorker(LockWorker):
+            def _lock_get(self):
+                self.quit()
+                return self.__dict__['_lock']
+            def _lock_set(self, value):
+                self.__dict__['_lock'] = value
+
+            _lock = property(_lock_get, _lock_set)
+
+        worker = RacyLockWorker(FakeLock(), local())
+        self.assertRaises(AlreadyQuit, worker.do, list)
+
