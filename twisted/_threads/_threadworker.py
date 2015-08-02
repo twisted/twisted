@@ -94,7 +94,7 @@ class LockWorker(object):
         called re-entrantly, return and wait for the outer invocation to do the
         work.
 
-        @param work: the work to do
+        @param work: the work to do with the lock held.
         """
         self._quit.check()
         local = self._local
