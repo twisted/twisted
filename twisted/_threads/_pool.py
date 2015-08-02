@@ -9,10 +9,22 @@ def pool(currentLimit, threadFactory=None):
     Construct a L{Team} that spawns threads as a thread pool, with the given
     limiting function.
 
-    @param withLimit: a callable that returns the current limit on the number
-        of workers that the returned L{Team} should create; if it already has
-        more workers than that value, no new workers will be created.
-    @type withLimit: 0-argument callable returning L{int}
+    @note: Future maintainers: while the public API for the eventual move to
+        twisted.threads should look I{something} like this, and while this
+        function is necessary to implement the API described by
+        L{twisted.python.threadpool}, I am starting to think the idea of a hard
+        upper limit on threadpool size is just bad (turning memory performance
+        issues into correctness issues well before we run into memory
+        pressure), and instead we should build something with reactor
+        integration for slowly releasing idle threads when they're not needed
+        and I{rate} limiting the creation of new threads rather than just
+        hard-capping it.
+
+    @param currentLimit: a callable that returns the current limit on the
+        number of workers that the returned L{Team} should create; if it
+        already has more workers than that value, no new workers will be
+        created.
+    @type currentLimit: 0-argument callable returning L{int}
 
     @param reactor: If passed, the L{IReactorFromThreads} / L{IReactorCore} to
         be used to coordinate actions on the L{Team} itself.  Otherwise, a
