@@ -1226,7 +1226,7 @@ class IReactorFromThreads(Interface):
     This interface is the set of thread-safe methods which may be invoked on
     the reactor from other threads.
 
-    @since: 15.3
+    @since: 15.4
     """
 
     def callFromThread(callable, *args, **kw):
@@ -1245,8 +1245,23 @@ class IReactorFromThreads(Interface):
         """
 
 
+class IReactorInThreads(Interface):
+    """
+    This interface contains the methods exposed by a reactor which will let you
+    run functions in another thread.
 
-class IReactorThreads(IReactorFromThreads):
+    @since: 15.4
+    """
+
+    def callInThread(callable, *args, **kwargs):
+        """
+        Run the given callable object in a separate thread, with the given
+        arguments and keyword arguments.
+        """
+
+
+
+class IReactorThreads(IReactorFromThreads, IReactorInThreads):
     """
     Dispatch methods to be run in threads.
 
@@ -1259,12 +1274,6 @@ class IReactorThreads(IReactorFromThreads):
         necessary.
 
         @rtype: L{twisted.python.threadpool.ThreadPool}
-        """
-
-
-    def callInThread(callable, *args, **kwargs):
-        """
-        Run the callable object in a separate thread.
         """
 
 
