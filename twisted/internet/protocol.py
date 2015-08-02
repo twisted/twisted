@@ -19,7 +19,7 @@ from twisted.internet import interfaces, error, defer
 from twisted.logger import Logger
 
 _log = Logger()
-_logFor = _log.__get__
+_logFor = lambda _:_log.__get__(_, _.__class__)
 
 
 
@@ -73,7 +73,7 @@ class Factory:
         """
         if not self.numPorts:
             if self.noisy:
-                _getLog(self).info("Starting factory {factory!r}",
+                _logFor(self).info("Starting factory {factory!r}",
                                    factory=self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
@@ -90,7 +90,7 @@ class Factory:
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
-                _getLog(self).info("Stopping factory {factory!r}",
+                _logFor(self).info("Stopping factory {factory!r}",
                                    factory=self)
             self.stopFactory()
 
