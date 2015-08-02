@@ -23,7 +23,7 @@ class IWorker(Interface):
     All methods on this interface must be thread-safe.
     """
 
-    def do(task):  # Pragma: nocover
+    def do(task):
         """
         Perform the given task.
 
@@ -43,7 +43,7 @@ class IWorker(Interface):
         @raise AlreadyQuit: if C{quit} has been called.
         """
 
-    def quit():  # Pragma: nocover
+    def quit():
         """
         Free any resources associated with this L{IWorker} and cause it to
         reject all future work.
