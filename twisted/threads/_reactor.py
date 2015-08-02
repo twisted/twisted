@@ -47,8 +47,6 @@ class ReactorWorker(object):
         Quit this worker, potentially stopping the reactor if C{stopOnQuit} was
         passed to this L{ReactorWorker}'s constructor.
         """
-        print("quitting reactor worker")
         self._quit.set()
-        print("quitted")
         if self._stopOnQuit:
             self._reactor.callFromThread(self.reactor.stop)
