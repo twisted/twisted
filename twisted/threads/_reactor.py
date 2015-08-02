@@ -19,8 +19,9 @@ class ReactorWorker(object):
         @param reactor: the reactor where we should perform the work passed to
             this worker.
         @type reactor: a provider of
-            L{twisted.internet.interfaces.IReactorFromThreads} and
-            L{twisted.internet.interfaces.IReactorCore}
+            L{twisted.internet.interfaces.IReactorFromThreads} (and
+            L{twisted.internet.interfaces.IReactorCore}, if C{stopOnQuit} is
+            true)
 
         @param stopOnQuit: A flag indicating whether the C{quit} method of this
             worker should cause the reactor to stop.  If this L{ReactorWorker}
