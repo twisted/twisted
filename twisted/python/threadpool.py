@@ -20,30 +20,6 @@ from twisted.python.failure import Failure
 
 WorkerStop = object()
 
-def _workCtxArgsResult(ctx, func, args, kwargs, onResult):
-    """
-    A work object that contains information about context, arguments, and
-    callback for a thread pool.
-
-    @param ctx: the context to run the function in.
-    @type ctx: L{dict}
-
-    @param func: the function to run.
-    @type func: L{callable}
-
-    @param args: arguments for C{func}
-    @type args: L{tuple}
-
-    @param kwargs: keyword arguments for C{func}
-    @type kwargs: L{dict}
-
-    @param onResult: callback to run after C{func} is invoked
-    @type onResult: L{callable}
-    """
-
-
-
-
 class ThreadPool:
     """
     This class (hopefully) generalizes the functionality of a pool of threads
