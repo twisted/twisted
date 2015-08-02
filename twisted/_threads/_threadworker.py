@@ -96,13 +96,13 @@ class LockWorker(object):
 
         @param work: the work to do with the lock held.
         """
-        self._quit.check()
+        lock = self._lock
         local = self._local
+        self._quit.check()
         working = getattr(local, "working", None)
         if working is None:
             working = local.working = []
             working.append(work)
-            lock = self._lock
             lock.acquire()
             try:
                 while working:
