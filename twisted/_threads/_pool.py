@@ -12,7 +12,6 @@ from ._team import Team
 from ._threadworker import ThreadWorker
 
 
-@classmethod
 def pool(currentLimit, threadFactory=Thread):
     """
     Construct a L{Team} that spawns threads as a thread pool, with the given
