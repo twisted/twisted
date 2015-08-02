@@ -6,6 +6,8 @@
 Twisted integration with operating system threads.
 """
 
+from __future__ import absolute_import, division, print_function
+
 from ._threadworker import ThreadWorker, LockWorker
 from ._ithreads import IWorker, AlreadyQuit
 from ._team import Team
