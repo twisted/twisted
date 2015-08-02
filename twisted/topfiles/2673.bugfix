@@ -1,0 +1,1 @@
+fixed a bug which could lead to a hang at shutdown in twisted.python.threadpool.
