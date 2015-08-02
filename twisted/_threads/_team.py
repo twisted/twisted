@@ -62,7 +62,7 @@ class Team(object):
 
     @ivar _busyCount: the number of workers currently busy.
 
-    @ivar _pending: a L{deque} of tasks - that is, 0-argument callables passed
+    @ivar _pending: a C{deque} of tasks - that is, 0-argument callables passed
         to L{Team.do} - that are outstanding.
 
     @ivar _shouldQuitCoordinator: A flag indicating that the coordinator should
