@@ -1235,8 +1235,8 @@ class IReactorFromThreads(Interface):
 
         Use this method when you want to run a function in the reactor's thread
         from another thread.  Calling L{callFromThread} should wake up the main
-        thread (where L{reactor.run()<reactor.run>} is executing) and run the
-        given callable in that thread.
+        thread (where L{reactor.run() <IReactorCore.run>} is executing) and run
+        the given callable in that thread.
 
         If you're writing a multi-threaded application the C{callable} may need
         to be thread safe, but this method doesn't require it as such.  If you
@@ -1270,8 +1270,8 @@ class IReactorThreads(IReactorFromThreads, IReactorInThreads):
 
     def getThreadPool():
         """
-        Return the threadpool used by L{callInThread}.  Create it first if
-        necessary.
+        Return the threadpool used by L{IReactorInThreads.callInThread}.
+        Create it first if necessary.
 
         @rtype: L{twisted.python.threadpool.ThreadPool}
         """
@@ -1280,7 +1280,7 @@ class IReactorThreads(IReactorFromThreads, IReactorInThreads):
     def suggestThreadPoolSize(size):
         """
         Suggest the size of the internal threadpool used to dispatch functions
-        passed to L{callInThread}.
+        passed to L{IReactorInThreads.callInThread}.
         """
 
 
