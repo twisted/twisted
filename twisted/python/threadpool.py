@@ -20,57 +20,27 @@ from twisted.python.failure import Failure
 
 WorkerStop = object()
 
-class _WorkCtxArgsResult(object):
+def _workCtxArgsResult(ctx, func, args, kwargs, onResult):
     """
     A work object that contains information about context, arguments, and
     callback for a thread pool.
 
-    @ivar ctx: the context to run the function in.
+    @param ctx: the context to run the function in.
     @type ctx: L{dict}
 
-    @ivar func: the function to run.
+    @param func: the function to run.
     @type func: L{callable}
 
-    @ivar args: arguments for C{func}
+    @param args: arguments for C{func}
     @type args: L{tuple}
 
-    @ivar kwargs: keyword arguments for C{func}
+    @param kwargs: keyword arguments for C{func}
     @type kwargs: L{dict}
 
-    @ivar onResult: callback to run after C{func} is invoked
+    @param onResult: callback to run after C{func} is invoked
     @type onResult: L{callable}
     """
 
-    def __init__(self, ctx, func, args, kwargs, onResult):
-        self.ctx = ctx
-        self.func = func
-        self.args = args
-        self.kwargs = kwargs
-        self.onResult = onResult
-
-
-    def __call__(self):
-        """
-        Call C{self.func} with C{self.args} and C{self.kwargs} in C{self.ctx}.
-        """
-        try:
-            result = context.call(self.ctx, self.func,
-                                  *self.args, **self.kwargs)
-        except:
-            ok, result = False, Failure()
-        else:
-            ok = True
-
-        self.ctx = None
-        self.func = None
-        self.args = None
-        self.kwargs = None
-
-        if self.onResult is not None:
-            self.onResult(ok, result)
-        elif not ok:
-            log.err(result)
-        del self.onResult
 
 
 
@@ -289,7 +259,29 @@ class ThreadPool:
         if self.joined:
             return
         ctx = context.theContextTracker.currentContext().contexts[-1]
-        self._team.do(_WorkCtxArgsResult(ctx, func, args, kw, onResult))
+
+        def inContext():
+            try:
+                result = inContext.theWork()
+                ok = True
+            except:
+                result = Failure()
+                ok = False
+
+            inContext.theWork = None
+            if inContext.onResult is not None:
+                inContext.onResult(ok, result)
+                inContext.onResult = None
+            elif not ok:
+                log.err(result)
+
+        # Avoid closing over func, ctx, args, kw so that we can carefully
+        # manage their lifecycle.  See
+        # test_threadCreationArgumentsCallInThreadWithCallback.
+        inContext.theWork = lambda: context.call(ctx, func, *args, **kw)
+        inContext.onResult = onResult
+
+        self._team.do(inContext)
 
 
     def stop(self):
