@@ -18,7 +18,7 @@ One prominent example of this is system hostname resolution: unless you have con
 However, this is something you only need to know about for resource-tuning purposes, like setting the number of threads to use; otherwise, it is an implementation detail you can ignore.
 
 It is a common mistake is to think that because Twisted can manage multiple connections once, things are happening in multiple threads, and so you need to carefully manage locks.
-Lucky for you, twisted does most things in one thread!
+Lucky for you, Twisted does most things in one thread!
 This document will explain how to interact with existing APIs which need to be run within their own threads because they block.
 If you're just using Twisted's own APIs, the rule for threads is simply "don't use them".
 
