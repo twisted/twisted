@@ -1,10 +1,19 @@
-from threading import Lock, local as LocalStorage
+
+from threading import Thread, Lock, local as LocalStorage
+try:
+    from Queue import Queue
+except ImportError:
+    from queue import Queue
+
+from twisted.python.log import err
+
 from ._threadworker import LockWorker
 from ._team import Team
+from ._threadworker import ThreadWorker
 
 
 @classmethod
-def pool(currentLimit, threadFactory=None):
+def pool(currentLimit, threadFactory=Thread):
     """
     Construct a L{Team} that spawns threads as a thread pool, with the given
     limiting function.
@@ -32,27 +41,17 @@ def pool(currentLimit, threadFactory=None):
 
     @return: a new L{Team}.
     """
-    try:
-        from Queue import Queue
-    except ImportError:
-        from queue import Queue
 
-    from ._threadworker import ThreadWorker
-
-    from twisted.python.log import err
-    if threadFactory is None:
-        from threading import Thread as threadFactory
     def startThread(target):
         return threadFactory(target=target).start()
+
     def limitedWorkerCreator():
         stats = team.statistics()
         if stats.busyWorkerCount + stats.idleWorkerCount >= currentLimit():
             return None
         return ThreadWorker(startThread, Queue())
 
-    coordinator = LockWorker(Lock(), LocalStorage())
-
-    team = Team(coordinator=coordinator,
+    team = Team(coordinator=LockWorker(Lock(), LocalStorage()),
                 createWorker=limitedWorkerCreator,
                 logException=err)
     return team
