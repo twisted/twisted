@@ -70,6 +70,7 @@ class Team(object):
         self._idle = set()
         self._busyCount = 0
         self._pending = deque()
+        self._shouldQuitCoordinator = False
         self._coordinatorQuit = False
         self._toShrink = 0
 
@@ -126,8 +127,12 @@ class Team(object):
             else:
                 self._toShrink += 1
         # TODO: the following expression is insufficiently tested.
-        if ((not self._coordinatorQuit) and (self._busyCount == 0) and
-            (len(self._pending) == 0) and (self._quit.isSet)):
+        if (
+                (not self._coordinatorQuit) and
+                (self._busyCount == 0) and
+                (len(self._pending) == 0) and
+                self._shouldQuitCoordinator
+        ):
             self._coordinatorQuit = True
             self._coordinator.quit()
 
@@ -187,7 +192,7 @@ class Team(object):
             # Re-try the first enqueued thing.
             # (Explicitly do _not_ honor _quit.)
             self._coordinateThisTask(self._pending.popleft())
-        elif self._quit.isSet:
+        elif self._shouldQuitCoordinator:
             self._quitIdlers()
         elif self._toShrink > 0:
             self._toShrink -= 1
@@ -201,4 +206,7 @@ class Team(object):
         """
         self._quit.set()
         # In case all the workers are idle when we do this.
-        self._coordinator.do(self._quitIdlers)
+        @self._coordinator.do
+        def startFinishing():
+            self._shouldQuitCoordinator = True
+            self._quitIdlers()
