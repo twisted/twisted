@@ -13,7 +13,7 @@ from __future__ import division, absolute_import
 
 import threading
 
-from twisted.threads import Team
+from twisted._threads import pool as _pool
 from twisted.python import log, context
 from twisted.python.failure import Failure
 
@@ -127,7 +127,7 @@ class ThreadPool:
                 return 0
             return self.max
 
-        self._team = Team.withLimit(currentLimit, trackingThreadFactory)
+        self._team = _pool(currentLimit, trackingThreadFactory)
 
 
     @property

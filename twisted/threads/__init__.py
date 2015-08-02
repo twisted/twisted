@@ -10,7 +10,7 @@ from ._threadworker import ThreadWorker, LockWorker
 from ._ithreads import IWorker, AlreadyQuit
 from ._team import Team
 from ._memory import createMemoryWorker
-from ._pool import teamWithLimit
+from ._pool import pool
 
 __all__ = [
     "ThreadWorker",
@@ -19,5 +19,5 @@ __all__ = [
     "AlreadyQuit",
     "Team",
     "createMemoryWorker",
-    "teamWithLimit",
+    "pool",
 ]
