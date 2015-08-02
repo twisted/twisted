@@ -136,7 +136,7 @@ Managing the Reactor Thread Pool
 --------------------------------
 
 We may want to modify the size of the thread pool, increasing or decreasing the number of threads in use.
-We can do this do this ::
+We can do this::
 
     from twisted.internet import reactor
 
