@@ -18,6 +18,10 @@ from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
 from twisted.logger import Logger
 
+_log = Logger()
+_logFor = _log.__get__
+
+
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
 class Factory:
@@ -33,8 +37,6 @@ class Factory:
 
     numPorts = 0
     noisy = True
-
-    _log = Logger()
 
     @classmethod
     def forProtocol(cls, protocol, *args, **kwargs):
@@ -71,7 +73,8 @@ class Factory:
         """
         if not self.numPorts:
             if self.noisy:
-                self._log.info("Starting factory {factory!r}", factory=self)
+                _getLog(self).info("Starting factory {factory!r}",
+                                   factory=self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
 
@@ -87,7 +90,8 @@ class Factory:
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
-                self._log.info("Stopping factory {factory!r}", factory=self)
+                _getLog(self).info("Stopping factory {factory!r}",
+                                   factory=self)
             self.stopFactory()
 
     def startFactory(self):
