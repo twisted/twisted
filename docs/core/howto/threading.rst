@@ -12,7 +12,7 @@ How Twisted Uses Threads Itself
 All callbacks registered with the reactor - for example, ``dataReceived``, ``connectionLost``, or any higher-level method that comes from these, such as ``render_GET`` in twisted.web, or a callback added to a ``Deferred`` - are called from ``reactor.run``.
 The terminology around this is that we say these callbacks are run in the "main thread", or "reactor thread" or "I/O thread".
 
-Therefore, internally, twisted makes very little use of threads.
+Therefore, internally, Twisted makes very little use of threads.
 This is not to say that it makes *no* use of threads; there are plenty of APIs which have no non-blocking equivalent, so when Twisted needs to call those, it calls them in a thread.
 One prominent example of this is system hostname resolution: unless you have configured Twisted to use its own DNS client in ``twisted.names``, it will have to use your operating system's blocking APIs to map host names to IP addresses, in the reactor's thread pool.
 However, this is something you only need to know about for resource-tuning purposes, like setting the number of threads to use; otherwise, it is an implementation detail you can ignore.
@@ -70,8 +70,22 @@ For example, to run a method in a non-reactor thread we can do::
 ``callInThread`` will put your code into a queue, to be run by the next available thread in the reactor's thread pool.
 This means that depending on what other work has been submitted to the pool, your method may not run immediately.
 
-You should be careful to avoid submitting work to callInThread which blocks and waits for other work submitted to callInThread to be completed; since more work won't be taken on until the existing work has completed, that can lead to deadlocks.
+.. note::
+    Keep in mind that ``callInThread`` can only concurrently run a fixed maximum number of tasks, and all users of the reactor are sharing that limit.
+    Therefore, you should not submit *tasks which depend on other tasks in order to complete* to be executed by ``callInThread``.
+    An example of such a task would be something like this::
 
+        q = Queue()
+        def blocker():
+            print(q.get() + q.get())
+        def unblocker(a, b):
+            q.put(a)
+            q.put(b)
+
+    In this case, ``blocker`` will block *forever* unless ``unblocker`` can successfully run to give it inputs; similarly, ``unblocker`` might block forever if ``blocker`` is not run to consume its outputs.
+    So if you had a threadpool of maximum size X, and you ran ``for each in range(X): reactor.callInThread(blocker)``, the reactor threadpool would be wedged forever, unable to process more work or even shut down.
+
+    See "Managing the Reactor Thread Pool" below to tune these limits.
 
 Getting Results
 ---------------
