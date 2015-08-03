@@ -19,7 +19,7 @@ from twisted.internet.protocol import (
     ConsumerToProtocolAdapter)
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
-from twisted.logger import Logger, LogLevel
+from twisted.logger import LogLevel, globalLogPublisher
 
 
 
@@ -400,10 +400,11 @@ class FactoryTests(TestCase):
         the L{repr} of the L{Factory} instance that is being started.
         """
         events = []
-        class MyFactory(Factory):
-            _log = Logger(observer=events.append)
-        f = MyFactory()
+        globalLogPublisher.addObserver(events.append)
+        self.addCleanup(
+            lambda: globalLogPublisher.removeObserver(events.append))
 
+        f = Factory()
         f.doStart()
 
         self.assertIs(events[0]['factory'], f)
@@ -418,11 +419,14 @@ class FactoryTests(TestCase):
         the L{repr} of the L{Factory} instance that is being stopped.
         """
         events = []
-        class MyFactory(Factory):
-            _log = Logger(observer=events.append)
-            numPorts = 1
-        f = MyFactory()
+        globalLogPublisher.addObserver(events.append)
+        self.addCleanup(
+            lambda: globalLogPublisher.removeObserver(events.append))
 
+        class MyFactory(Factory):
+            numPorts = 1
+
+        f = MyFactory()
         f.doStop()
 
         self.assertIs(events[0]['factory'], f)
