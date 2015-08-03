@@ -1219,7 +1219,49 @@ class IDelayedCall(Interface):
                  called or cancelled.
         """
 
-class IReactorThreads(Interface):
+
+
+class IReactorFromThreads(Interface):
+    """
+    This interface is the set of thread-safe methods which may be invoked on
+    the reactor from other threads.
+
+    @since: 15.4
+    """
+
+    def callFromThread(callable, *args, **kw):
+        """
+        Cause a function to be executed by the reactor thread.
+
+        Use this method when you want to run a function in the reactor's thread
+        from another thread.  Calling L{callFromThread} should wake up the main
+        thread (where L{reactor.run() <IReactorCore.run>} is executing) and run
+        the given callable in that thread.
+
+        If you're writing a multi-threaded application the C{callable} may need
+        to be thread safe, but this method doesn't require it as such.  If you
+        want to call a function in the next mainloop iteration, but you're in
+        the same thread, use L{callLater} with a delay of 0.
+        """
+
+
+class IReactorInThreads(Interface):
+    """
+    This interface contains the methods exposed by a reactor which will let you
+    run functions in another thread.
+
+    @since: 15.4
+    """
+
+    def callInThread(callable, *args, **kwargs):
+        """
+        Run the given callable object in a separate thread, with the given
+        arguments and keyword arguments.
+        """
+
+
+
+class IReactorThreads(IReactorFromThreads, IReactorInThreads):
     """
     Dispatch methods to be run in threads.
 
@@ -1228,40 +1270,19 @@ class IReactorThreads(Interface):
 
     def getThreadPool():
         """
-        Return the threadpool used by L{callInThread}.  Create it first if
-        necessary.
+        Return the threadpool used by L{IReactorInThreads.callInThread}.
+        Create it first if necessary.
 
         @rtype: L{twisted.python.threadpool.ThreadPool}
-        """
-
-
-    def callInThread(callable, *args, **kwargs):
-        """
-        Run the callable object in a separate thread.
-        """
-
-
-    def callFromThread(callable, *args, **kw):
-        """
-        Cause a function to be executed by the reactor thread.
-
-        Use this method when you want to run a function in the reactor's thread
-        from another thread.  Calling L{callFromThread} should wake up the main
-        thread (where L{reactor.run()<reactor.run>} is executing) and run the
-        given callable in that thread.
-
-        If you're writing a multi-threaded application the C{callable} may need
-        to be thread safe, but this method doesn't require it as such. If you
-        want to call a function in the next mainloop iteration, but you're in
-        the same thread, use L{callLater} with a delay of 0.
         """
 
 
     def suggestThreadPoolSize(size):
         """
         Suggest the size of the internal threadpool used to dispatch functions
-        passed to L{callInThread}.
+        passed to L{IReactorInThreads.callInThread}.
         """
+
 
 
 class IReactorCore(Interface):
