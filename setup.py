@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 """
-Distutils installer for Twisted.
+Setuptools installer for Twisted.
 """
 
 import os
