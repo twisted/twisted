@@ -36,17 +36,9 @@ def main(args):
         sys.path.insert(0, '.')
 
     setup_args = {}
+    requirements = ["zope.interface >= 3.6.0"]
 
-    requirements = ["zope.interface >= 3.6.0", "six"]
-    try:
-        list(parse_requirements(requirements))
-    except:
-        print("""You seem to be running a very old version of setuptools.
-This version of setuptools has a bug parsing dependencies, so automatic
-dependency resolution is disabled.
-""")
-    else:
-        setup_args['install_requires'] = requirements
+    setup_args['install_requires'] = requirements
     setup_args['include_package_data'] = True
     setup_args['zip_safe'] = False
 
