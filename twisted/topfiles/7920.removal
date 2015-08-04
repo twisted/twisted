@@ -1,1 +1,0 @@
-twisted.trial.util.getPythonContainers, deprecated since Twisted 12.3, is now removed.

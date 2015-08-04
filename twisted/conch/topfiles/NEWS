@@ -1,6 +1,19 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 15.3.0 (2015-08-04)
+=================================
+
+Bugfixes
+--------
+ - The Conch Unix server now sets the HOME environment variable when
+   executing commands. (#7936)
+
+Other
+-----
+ - #7937
+
+
 Twisted Conch 15.2.1 (2015-05-23)
 =================================
 
