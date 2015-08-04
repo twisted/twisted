@@ -1,11 +1,11 @@
-Twisted 15.3.0pre1
+Twisted 15.3.0
 
 Quote of the Release:
 
   <hynek> is there a race condition in threading tests? how could that happen :>
 
 
-For information on what's new in Twisted 15.3.0pre1, see the NEWS file that comes
+For information on what's new in Twisted 15.3.0, see the NEWS file that comes
 with the distribution.
 
 What is this?
