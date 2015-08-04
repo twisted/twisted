@@ -1,6 +1,26 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 15.3.0pre1 (2015-08-04)
+===================================
+
+Features
+--------
+ - twisted.web.xmlrpc is now ported to Python 3. (#7795)
+ - twisted.web.template and twisted.web.util are now ported to Python
+   3. (#7811)
+ - twisted.web.error is now ported to Python 3. (#7845)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.html is now deprecated in favor of
+   twisted.web.template. (#4948)
+
+Other
+-----
+ - #7895, #7942, #7949, #7952, #7975
+
+
 Twisted Web 15.2.1 (2015-05-23)
 ===============================
 
