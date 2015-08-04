@@ -1,57 +1,6 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 15.3.0pre1 (2015-07-23)
-====================================
-
-Features
---------
- - twisted.application.app is now ported to Python 3 (#6914)
- - twisted.plugin now supports Python 3 (#7182)
- - twisted.cred.checkers is now ported to Python 3. (#7834)
- - twisted.internet.unix is now ported to Python 3. (#7874)
- - twisted.python.sendmsg has now been ported to Python 3, using the
-   stdlib sendmsg/recvmsg functionality when available. (#7884)
- - twisted.internet.protocol.Factory now uses the new logging system
-   (twisted.logger) for all its logging statements. (#7897)
- - twisted.internet.stdio is now ported to Python 3. (#7899)
- - The isDocker method has been introduced on
-   twisted.python.runtime.Platform to detect if the running Python is
-   inside a Docker container. Additionally, Platform.supportsINotify()
-   now returns False if isDocker() is True, because of many Docker
-   storage layers having broken INotify. (#7968)
-
-Bugfixes
---------
- - twisted.logger.LogBeginner.beginLoggingTo now outputs the correct
-   warning when it is called more than once. (#7916)
-
-Deprecations and Removals
--------------------------
- - twisted.cred.pamauth (providing PAM support) has been removed due
-   to it being unusable in current supported Python versions. (#3728)
- - twisted.application.app.HotshotRunner (twistd's hotshot profiler
-   module) is removed and twistd now uses cProfile by default. (#5137)
- - twisted.python.win32.getProgramsMenuPath and
-   twisted.python.win32.getProgramFilesPath are now deprecated.
-   (#7883)
- - twisted.lore has now been removed, in preference to Sphinx. (#7892)
- - Deprecated zsh tab-complete files are now removed in preference to
-   twisted.python.usage's tab-complete functionality. (#7898)
- - twisted.python.hashlib, deprecated since 13.1, has now been
-   removed. (#7905)
- - twisted.trial.runner.DryRunVisitor, deprecated in Twisted 13.0, has
-   now been removed. (#7919)
- - twisted.trial.util.getPythonContainers, deprecated since Twisted
-   12.3, is now removed. (#7920)
- - Twisted no longer supports being packaged as subprojects. (#7964)
-
-Other
------
- - #6136, #7035, #7803, #7817, #7827, #7844, #7876, #7906, #7908,
-   #7915, #7931, #7940, #7967
-
-
 Twisted Core 15.2.1 (2015-05-23)
 ================================
 
