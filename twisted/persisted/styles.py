@@ -113,6 +113,8 @@ def _pickleFunction(f):
         its arguments, a 1-tuple of the function's fully qualified name.
     @rtype: 2-tuple of C{(callable, native string}}
     """
+    if f.__name__ == '<lambda>':
+        return None
     return (_unpickleFunction,
             tuple([".".join([f.__module__, f.__qualname__])]))
 
