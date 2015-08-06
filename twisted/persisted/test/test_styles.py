@@ -74,14 +74,15 @@ class UnpickleMethodTests(unittest.TestCase):
                     "c" + __name__,
                     sampleFunction.__name__, "p" + n, "."
                 ]).encode("ascii")
-        self.assertEqual(pickle.dumps(sampleFunction), expected("0"))
+        self.assertEqual(pickle.dumps(sampleFunction, protocol=0),
+                         expected("0"))
         try:
             import cPickle
         except:
             pass
         else:
             self.assertEqual(
-                cPickle.dumps(sampleFunction),
+                cPickle.dumps(sampleFunction, protocol=0),
                 expected("1")
             )
 
