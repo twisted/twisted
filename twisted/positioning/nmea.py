@@ -28,12 +28,7 @@ from twisted.positioning import base, ipositioning, _sentence
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
 from twisted.python.constants import Values, ValueConstant
-from twisted.python.compat import reduce
-
-try:
-    from itertools import izip
-except ImportError:
-    izip = zip
+from twisted.python.compat import reduce, izip, nativeString, iterbytes
 
 
 
@@ -133,16 +128,16 @@ def _validateChecksum(sentence):
     Validates the checksum of an NMEA sentence.
 
     @param sentence: The NMEA sentence to check the checksum of.
-    @type sentence: C{str}
+    @type sentence: C{bytes}
 
     @raise ValueError: If the sentence has an invalid checksum.
 
     Simply returns on sentences that either don't have a checksum,
     or have a valid checksum.
     """
-    if sentence[-3] == b'*':  # Sentence has a checksum
+    if sentence[-3:-2] == b'*':  # Sentence has a checksum
         reference, source = int(sentence[-2:], 16), sentence[1:-3]
-        computed = reduce(operator.xor, (ord(x) for x in source))
+        computed = reduce(operator.xor, [ord(x) for x in iterbytes(source)])
         if computed != reference:
             raise base.InvalidChecksum("%02x != %02x" % (computed, reference))
 
@@ -188,14 +183,15 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
         Parses the data from the sentence and validates the checksum.
 
         @param rawSentence: The NMEA positioning sentence.
-        @type rawSentence: C{str}
+        @type rawSentence: C{bytes}
         """
         sentence = rawSentence.strip()
 
         _validateChecksum(sentence)
         splitSentence = _split(sentence)
 
-        sentenceType, contents = splitSentence[0], splitSentence[1:]
+        sentenceType = nativeString(splitSentence[0])
+        contents = [nativeString(x) for x in splitSentence[1:]]
 
         try:
             keys = self._SENTENCE_CONTENTS[sentenceType]

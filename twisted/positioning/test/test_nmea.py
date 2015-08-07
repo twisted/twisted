@@ -7,7 +7,7 @@ import datetime
 from operator import attrgetter
 from zope.interface import implementer
 
-from twisted.python.compat import iteritems
+from twisted.python.compat import iteritems, networkString, intToBytes
 from twisted.positioning import base, nmea, ipositioning
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
@@ -84,12 +84,12 @@ class CallbackTests(TestCase):
         The correct callbacks fire, and that *only* those fire.
         """
         sentencesByType = {
-            b'GPGGA': [b'$GPGGA*56'],
-            b'GPGLL': [b'$GPGLL*50'],
-            b'GPGSA': [b'$GPGSA*42'],
-            b'GPGSV': [b'$GPGSV*55'],
-            b'GPHDT': [b'$GPHDT*4f'],
-            b'GPRMC': [b'$GPRMC*4b']
+            'GPGGA': [b'$GPGGA*56'],
+            'GPGLL': [b'$GPGLL*50'],
+            'GPGSA': [b'$GPGSA*42'],
+            'GPGSV': [b'$GPGSV*55'],
+            'GPHDT': [b'$GPHDT*4f'],
+            'GPRMC': [b'$GPRMC*4b']
         }
 
         for sentenceType, sentences in iteritems(sentencesByType):
@@ -173,8 +173,8 @@ class ChecksumTests(TestCase):
         validate = nmea._validateChecksum
 
         bareSentence, checksum = GPGGA.split(b"*")
-        badChecksum = "%x" % (int(checksum, 16) + 1)
-        sentences = ["%s*%s" % (bareSentence, badChecksum)]
+        badChecksum = intToBytes(int(checksum, 16) + 1)
+        sentences = [bareSentence + b"*" + badChecksum]
 
         for s in sentences:
             self.assertRaises(base.InvalidChecksum, validate, s)
@@ -262,7 +262,7 @@ class BogusSentenceTests(NMEAReceiverSetup, TestCase):
         Receiving a well-formed sentence of unknown type raises
         C{ValueError}.
         """
-        self.assertRaisesOnSentence(ValueError, "$GPBOGUS*5b")
+        self.assertRaisesOnSentence(ValueError, b"$GPBOGUS*5b")
 
 
     def test_raiseOnMalformedSentences(self):
