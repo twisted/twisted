@@ -119,9 +119,9 @@ def _split(sentence):
     @param sentence: The NMEA sentence to split.
     @type sentence: C{bytes}
     """
-    if sentence[-3] == b"*": # Sentence with checksum
+    if sentence[-3:-2] == b"*": # Sentence with checksum
         return sentence[1:-3].split(b',')
-    elif sentence[-1] == b"*": # Sentence without checksum
+    elif sentence[-1:] == b"*": # Sentence without checksum
         return sentence[1:-1].split(b',')
     else:
         raise base.InvalidSentence("malformed sentence %s" % (sentence,))
@@ -140,7 +140,7 @@ def _validateChecksum(sentence):
     Simply returns on sentences that either don't have a checksum,
     or have a valid checksum.
     """
-    if sentence[-3] == '*':  # Sentence has a checksum
+    if sentence[-3] == b'*':  # Sentence has a checksum
         reference, source = int(sentence[-2:], 16), sentence[1:-3]
         computed = reduce(operator.xor, (ord(x) for x in source))
         if computed != reference:
