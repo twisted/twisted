@@ -113,16 +113,16 @@ def _split(sentence):
     Returns the split version of an NMEA sentence, minus header
     and checksum.
 
-    @param sentence: The NMEA sentence to split.
-    @type sentence: C{str}
+    >>> _split(b"$GPGGA,spam,eggs*00")
+    [b'GPGGA', b'spam', b'eggs']
 
-    >>> _split("$GPGGA,spam,eggs*00")
-    ['GPGGA', 'spam', 'eggs']
+    @param sentence: The NMEA sentence to split.
+    @type sentence: C{bytes}
     """
-    if sentence[-3] == "*": # Sentence with checksum
-        return sentence[1:-3].split(',')
-    elif sentence[-1] == "*": # Sentence without checksum
-        return sentence[1:-1].split(',')
+    if sentence[-3] == b"*": # Sentence with checksum
+        return sentence[1:-3].split(b',')
+    elif sentence[-1] == b"*": # Sentence without checksum
+        return sentence[1:-1].split(b',')
     else:
         raise base.InvalidSentence("malformed sentence %s" % (sentence,))
 
