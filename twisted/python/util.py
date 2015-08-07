@@ -597,7 +597,7 @@ class FancyStrMixin:
 
 
 
-class FancyEqMixin:
+class FancyEqMixin(object):
     """
     Mixin that implements C{__eq__} and C{__ne__}.
 

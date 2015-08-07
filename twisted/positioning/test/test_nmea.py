@@ -7,6 +7,7 @@ import datetime
 from operator import attrgetter
 from zope.interface import implementer
 
+from twisted.python.compat import iteritems
 from twisted.positioning import base, nmea, ipositioning
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
@@ -91,7 +92,7 @@ class CallbackTests(TestCase):
             'GPRMC': ['$GPRMC*4b']
         }
 
-        for sentenceType, sentences in sentencesByType.iteritems():
+        for sentenceType, sentences in iteritems(sentencesByType):
             for sentence in sentences:
                 self.protocol.lineReceived(sentence)
                 self.assertEqual(self.sentenceTypes, set([sentenceType]))
