@@ -9,6 +9,7 @@ from __future__ import absolute_import, division
 
 import sys
 
+from twisted.python.compat import _PY3
 from ._levels import LogLevel
 
 
@@ -166,7 +167,8 @@ class LoggingFile(object):
             except UnicodeDecodeError:
                 # If it's invalid unicode, just repr it to try and save
                 # as much as possible, but preserving newlines.
-                string = repr(string)[1:-1].replace(u"\\n", u"\n")
+                stringStart = 2 if _PY3 else 1
+                string = repr(string)[stringStart:-1].replace(u"\\n", u"\n")
 
         lines = (self._buffer + string).split(u"\n")
         self._buffer = lines[-1]
