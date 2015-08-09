@@ -657,7 +657,7 @@ class PrivateCertificate(Certificate):
 
 
     def certificateRequest(self, format=crypto.FILETYPE_ASN1,
-                           digestAlgorithm='md5'):
+                           digestAlgorithm='sha256'):
         return self.privateKey.certificateRequest(
             self.getSubject(),
             format,
@@ -682,7 +682,7 @@ class PrivateCertificate(Certificate):
 
     def signRequestObject(self, certificateRequest, serialNumber,
                           secondsToExpiry=60 * 60 * 24 * 365, # One year
-                          digestAlgorithm='md5'):
+                          digestAlgorithm='sha256'):
         return self.privateKey.signRequestObject(self.getSubject(),
                                                  certificateRequest,
                                                  serialNumber,
@@ -816,7 +816,7 @@ class KeyPair(PublicKey):
     generate = classmethod(generate)
 
 
-    def requestObject(self, distinguishedName, digestAlgorithm='md5'):
+    def requestObject(self, distinguishedName, digestAlgorithm='sha256'):
         req = crypto.X509Req()
         req.set_pubkey(self.original)
         distinguishedName._copyInto(req.get_subject())
@@ -826,7 +826,7 @@ class KeyPair(PublicKey):
 
     def certificateRequest(self, distinguishedName,
                            format=crypto.FILETYPE_ASN1,
-                           digestAlgorithm='md5'):
+                           digestAlgorithm='sha256'):
         """Create a certificate request signed with this key.
 
         @return: a string, formatted according to the 'format' argument.
@@ -842,7 +842,7 @@ class KeyPair(PublicKey):
                                requestFormat=crypto.FILETYPE_ASN1,
                                certificateFormat=crypto.FILETYPE_ASN1,
                                secondsToExpiry=60 * 60 * 24 * 365, # One year
-                               digestAlgorithm='md5'):
+                               digestAlgorithm='sha256'):
         """
         Given a blob of certificate request data and a certificate authority's
         DistinguishedName, return a blob of signed certificate data.
@@ -872,7 +872,7 @@ class KeyPair(PublicKey):
                           requestObject,
                           serialNumber,
                           secondsToExpiry=60 * 60 * 24 * 365, # One year
-                          digestAlgorithm='md5'):
+                          digestAlgorithm='sha256'):
         """
         Sign a CertificateRequest instance, returning a Certificate instance.
         """
