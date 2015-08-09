@@ -171,6 +171,7 @@ modules = [
     "twisted._threads._convenience",
     "twisted._threads._ithreads",
     "twisted._threads._memory",
+    "twisted._threads._pool",
     "twisted._threads._team",
     "twisted._threads._threadworker",
     "twisted.trial",
