@@ -5,6 +5,7 @@
 """
 File-like object that logs.
 """
+from __future__ import absolute_import, division
 
 import sys
 
@@ -160,9 +161,14 @@ class LoggingFile(object):
             raise ValueError("I/O operation on closed file")
 
         if isinstance(string, bytes):
-            string = string.decode(self._encoding)
+            try:
+                string = string.decode(self._encoding)
+            except UnicodeDecodeError:
+                # If it's invalid unicode, just repr it to try and save
+                # as much as possible, but preserving newlines.
+                string = repr(string)[1:-1].replace(u"\\n", u"\n")
 
-        lines = (self._buffer + string).split("\n")
+        lines = (self._buffer + string).split(u"\n")
         self._buffer = lines[-1]
         lines = lines[0:-1]
 
