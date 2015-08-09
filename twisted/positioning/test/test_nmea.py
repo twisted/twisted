@@ -7,7 +7,7 @@ import datetime
 from operator import attrgetter
 from zope.interface import implementer
 
-from twisted.python.compat import iteritems, networkString, intToBytes
+from twisted.python.compat import iteritems, intToBytes
 from twisted.positioning import base, nmea, ipositioning
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase

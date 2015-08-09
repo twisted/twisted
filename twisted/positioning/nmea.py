@@ -31,7 +31,6 @@ from twisted.python.constants import Values, ValueConstant
 from twisted.python.compat import reduce, izip, nativeString, iterbytes
 
 
-
 class GPGGAFixQualities(Values):
     """
     The possible fix quality indications for GPGGA sentences.
