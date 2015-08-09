@@ -171,6 +171,16 @@ class LoggingFileTests(unittest.TestCase):
         )
 
 
+    def test_writeBytesInvalidUnicode(self):
+        """
+        Bytes that are invalid Unicode are repr'd to maintain the content the
+        best we can.
+        """
+        f = self.observedFile(encoding="utf-8")
+        f.write(b"My favourite letter is \xae\n")
+        self.assertEqual(f.messages, [u"My favourite letter is \\xae"])
+
+
     def test_writeBytesDecoded(self):
         """
         Bytes are decoded to unicode.
