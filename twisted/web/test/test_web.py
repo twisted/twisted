@@ -11,7 +11,7 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python import reflect
+from twisted.python import reflect, failure
 from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
@@ -490,6 +490,20 @@ class RequestTests(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
+
+
+    def test_processingFailed(self):
+        """
+        L{Request.processingFailed} writes out the failure.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        fail = failure.Failure(Exception("Oh no!"))
+        request.processingFailed(fail)
+
+        self.assertIn(b"Oh no!", request.transport.getvalue())
+        self.assertEqual(1, len(self.flushLoggedErrors()))
 
 
 
