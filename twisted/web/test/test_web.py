@@ -492,17 +492,54 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
 
 
-    def test_processingFailed(self):
+    def test_processingFailedNoTraceback(self):
         """
-        L{Request.processingFailed} writes out the failure.
+        L{Request.processingFailed} when the site has C{displayTracebacks} set
+        to C{False} does not write out the failure, but give a generic error
+        message.
         """
         d = DummyChannel()
         request = server.Request(d, 1)
         request.site = server.Site(resource.Resource())
+        request.site.displayTracebacks = False
+        fail = failure.Failure(Exception("Oh no!"))
+        request.processingFailed(fail)
+
+        self.assertNotIn(b"Oh no!", request.transport.getvalue())
+        self.assertIn(b"Processing Failed", request.transport.getvalue())
+        self.assertEqual(1, len(self.flushLoggedErrors()))
+
+
+    def test_processingFailedDisplayTraceback(self):
+        """
+        L{Request.processingFailed} when the site has C{displayTracebacks} set
+        to C{True} writes out the failure.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        request.site.displayTracebacks = True
         fail = failure.Failure(Exception("Oh no!"))
         request.processingFailed(fail)
 
         self.assertIn(b"Oh no!", request.transport.getvalue())
+        self.assertEqual(1, len(self.flushLoggedErrors()))
+
+
+    def test_processingFailedDisplayTracebackHandlesUnicode(self):
+        """
+        L{Request.processingFailed} when the site has C{displayTracebacks} set
+        to C{True} writes out the failure, making UTF-8 items into HTML
+        entities.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        request.site.displayTracebacks = True
+        fail = failure.Failure(Exception(u"\u2603"))
+        request.processingFailed(fail)
+
+        self.assertIn(b"&#9731;", request.transport.getvalue())
         self.assertEqual(1, len(self.flushLoggedErrors()))
 
 
