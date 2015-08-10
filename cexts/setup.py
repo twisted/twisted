@@ -46,6 +46,15 @@ setup(
     author='Twisted Matrix Laboratories',
     author_email="twisted-python@twistedmatrix.com",
     url="http://twistedmatrix.com/",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 2 :: Only",
+        "Programming Language :: Python :: Implementation :: CPython"
+    ]
     packages=find_packages(),
     license='MIT',
     long_description=file('README.rst').read(),
