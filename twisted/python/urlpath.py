@@ -72,6 +72,8 @@ class URLPath(object):
 
         @param url: A L{bytes} representation of a URL.
         @rtype: L{URLPath}
+
+        @since: 15.4
         """
         assert isinstance(url, bytes), "'url' must be bytes."
         parts = urlparse.urlsplit(url)
