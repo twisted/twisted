@@ -317,7 +317,7 @@ class Request(Copyable, http.Request, components.Componentized):
                     "<body><b>web.Server Traceback"
                     " (most recent call last):</b>\n\n"
                     "%s\n\n</body></html>\n"
-                    % util.formatFailure(reason)).encode('utf-8')
+                    % util.formatFailure(reason)).encode('ascii')
         else:
             body = (b"<html><head><title>Processing Failed"
                     b"</title></head><body>"
