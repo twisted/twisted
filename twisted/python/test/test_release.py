@@ -1480,7 +1480,7 @@ class SphinxBuilderTests(TestCase):
         htmlDir = self.sphinxDir.sibling('doc')
         self.assertTrue(htmlDir.isdir())
         doctreeDir = htmlDir.child("doctrees")
-        self.assertTrue(doctreeDir.isdir())
+        self.assertFalse(doctreeDir.exists())
 
         self.verifyFileExists(htmlDir, 'index.html')
         self.verifyFileExists(htmlDir, 'genindex.html')
