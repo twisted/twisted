@@ -536,6 +536,7 @@ if _PY3:
         return list(d.items())
 
     xrange = range
+    izip = zip
 else:
     def iteritems(d):
         return d.iteritems()
@@ -544,6 +545,8 @@ else:
         return d.items()
 
     xrange = xrange
+    from itertools import izip
+    izip # shh pyflakes
 
 
 iteritems.__doc__ = """

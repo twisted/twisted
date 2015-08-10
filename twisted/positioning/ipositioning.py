@@ -5,6 +5,9 @@ Positioning interfaces.
 
 @since: 14.0
 """
+
+from __future__ import absolute_import, division
+
 from zope.interface import Attribute, Interface
 
 

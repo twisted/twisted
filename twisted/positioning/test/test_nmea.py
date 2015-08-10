@@ -3,10 +3,14 @@
 """
 Test cases for using NMEA sentences.
 """
+
+from __future__ import absolute_import, division
+
 import datetime
 from operator import attrgetter
 from zope.interface import implementer
 
+from twisted.python.compat import iteritems, intToBytes
 from twisted.positioning import base, nmea, ipositioning
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
@@ -14,16 +18,16 @@ from twisted.trial.unittest import TestCase
 from twisted.positioning.base import Angles
 
 # Sample sentences
-GPGGA = '$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47'
-GPRMC = '$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A'
-GPGSA = '$GPGSA,A,3,19,28,14,18,27,22,31,39,,,,,1.7,1.0,1.3*34'
-GPHDT = '$GPHDT,038.005,T*3B'
-GPGLL = '$GPGLL,4916.45,N,12311.12,W,225444,A*31'
-GPGLL_PARTIAL = '$GPGLL,3751.65,S,14507.36,E*77'
+GPGGA = b'$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47'
+GPRMC = b'$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A'
+GPGSA = b'$GPGSA,A,3,19,28,14,18,27,22,31,39,,,,,1.7,1.0,1.3*34'
+GPHDT = b'$GPHDT,038.005,T*3B'
+GPGLL = b'$GPGLL,4916.45,N,12311.12,W,225444,A*31'
+GPGLL_PARTIAL = b'$GPGLL,3751.65,S,14507.36,E*77'
 
-GPGSV_SINGLE = '$GPGSV,1,1,11,03,03,111,00,04,15,270,00,06,01,010,00,,,,*4b'
-GPGSV_EMPTY_MIDDLE = '$GPGSV,1,1,11,03,03,111,00,,,,,,,,,13,06,292,00*75'
-GPGSV_SEQ = GPGSV_FIRST, GPGSV_MIDDLE, GPGSV_LAST = """
+GPGSV_SINGLE = b'$GPGSV,1,1,11,03,03,111,00,04,15,270,00,06,01,010,00,,,,*4b'
+GPGSV_EMPTY_MIDDLE = b'$GPGSV,1,1,11,03,03,111,00,,,,,,,,,13,06,292,00*75'
+GPGSV_SEQ = GPGSV_FIRST, GPGSV_MIDDLE, GPGSV_LAST = b"""
 $GPGSV,3,1,11,03,03,111,00,04,15,270,00,06,01,010,00,13,06,292,00*74
 $GPGSV,3,2,11,14,25,170,00,16,57,208,39,18,67,296,40,19,40,246,00*74
 $GPGSV,3,3,11,22,42,067,42,24,14,311,43,27,05,244,00,,,,*4D
@@ -83,15 +87,15 @@ class CallbackTests(TestCase):
         The correct callbacks fire, and that *only* those fire.
         """
         sentencesByType = {
-            'GPGGA': ['$GPGGA*56'],
-            'GPGLL': ['$GPGLL*50'],
-            'GPGSA': ['$GPGSA*42'],
-            'GPGSV': ['$GPGSV*55'],
-            'GPHDT': ['$GPHDT*4f'],
-            'GPRMC': ['$GPRMC*4b']
+            'GPGGA': [b'$GPGGA*56'],
+            'GPGLL': [b'$GPGLL*50'],
+            'GPGSA': [b'$GPGSA*42'],
+            'GPGSV': [b'$GPGSV*55'],
+            'GPHDT': [b'$GPHDT*4f'],
+            'GPRMC': [b'$GPRMC*4b']
         }
 
-        for sentenceType, sentences in sentencesByType.iteritems():
+        for sentenceType, sentences in iteritems(sentencesByType):
             for sentence in sentences:
                 self.protocol.lineReceived(sentence)
                 self.assertEqual(self.sentenceTypes, set([sentenceType]))
@@ -121,7 +125,7 @@ class BrokenSentenceCallbackTests(TestCase):
         doesn't get swallowed.
         """
         lineReceived = self.protocol.lineReceived
-        self.assertRaises(AttributeError, lineReceived, '$GPGGA*56')
+        self.assertRaises(AttributeError, lineReceived, b'$GPGGA*56')
 
 
 
@@ -133,16 +137,16 @@ class SplitTests(TestCase):
         """
         An NMEA sentence with a checksum gets split correctly.
         """
-        splitSentence = nmea._split("$GPGGA,spam,eggs*00")
-        self.assertEqual(splitSentence, ['GPGGA', 'spam', 'eggs'])
+        splitSentence = nmea._split(b"$GPGGA,spam,eggs*00")
+        self.assertEqual(splitSentence, [b'GPGGA', b'spam', b'eggs'])
 
 
     def test_noCheckum(self):
         """
         An NMEA sentence without a checksum gets split correctly.
         """
-        splitSentence = nmea._split("$GPGGA,spam,eggs*")
-        self.assertEqual(splitSentence, ['GPGGA', 'spam', 'eggs'])
+        splitSentence = nmea._split(b"$GPGGA,spam,eggs*")
+        self.assertEqual(splitSentence, [b'GPGGA', b'spam', b'eggs'])
 
 
 
@@ -171,9 +175,9 @@ class ChecksumTests(TestCase):
         """
         validate = nmea._validateChecksum
 
-        bareSentence, checksum = GPGGA.split("*")
-        badChecksum = "%x" % (int(checksum, 16) + 1)
-        sentences = ["%s*%s" % (bareSentence, badChecksum)]
+        bareSentence, checksum = GPGGA.split(b"*")
+        badChecksum = intToBytes(int(checksum, 16) + 1)
+        sentences = [bareSentence + b"*" + badChecksum]
 
         for s in sentences:
             self.assertRaises(base.InvalidChecksum, validate, s)
@@ -261,7 +265,7 @@ class BogusSentenceTests(NMEAReceiverSetup, TestCase):
         Receiving a well-formed sentence of unknown type raises
         C{ValueError}.
         """
-        self.assertRaisesOnSentence(ValueError, "$GPBOGUS*5b")
+        self.assertRaisesOnSentence(ValueError, b"$GPBOGUS*5b")
 
 
     def test_raiseOnMalformedSentences(self):
