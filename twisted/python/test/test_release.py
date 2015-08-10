@@ -1452,7 +1452,7 @@ class SphinxBuilderTests(TestCase):
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
         if fpath.path.endswith('.html'):
-            parseXMLString(fcontents)
+            self.assertIn("<body", fcontents)
 
 
     def test_build(self):
