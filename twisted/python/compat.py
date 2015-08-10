@@ -546,6 +546,7 @@ else:
 
     xrange = xrange
     from itertools import izip
+    izip # shh pyflakes
 
 
 iteritems.__doc__ = """
