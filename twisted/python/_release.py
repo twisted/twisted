@@ -387,14 +387,6 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
             _makeNews(project)
         project.updateREADME(newVersion)
 
-    # Change the C Extensions version
-    _changeVersionInFile(
-        oldVersion, newVersion,
-        root.child("cexts").child("README.rst").path)
-    _changeVersionInFile(
-        oldVersion, newVersion,
-        root.child("cexts").child("twisted").child("_c").child("__init__.py").path)
-
     # Then change the global version.
     twistedProject.updateVersion(newVersion)
     _changeVersionInFile(oldVersion, newVersion, root.child('README').path)
