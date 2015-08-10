@@ -389,10 +389,10 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
 
     # Change the C Extensions version
     _changeVersionInFile(
-        oldVersion, version,
-        root.child("cexts").child("README").path)
+        oldVersion, newVersion,
+        root.child("cexts").child("README.rst").path)
     _changeVersionInFile(
-        oldVersion, version,
+        oldVersion, newVersion,
         root.child("cexts").child("twisted").child("_c").child("__init__.py").path)
 
     # Then change the global version.
