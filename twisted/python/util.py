@@ -625,14 +625,9 @@ class FancyEqMixin:
 
 
 try:
-    # Python 2.7 / Python 3.3
     from os import initgroups as _c_initgroups
 except ImportError:
-    try:
-        # Python 2.6
-        from twisted.python._initgroups import initgroups as _c_initgroups
-    except ImportError:
-        _c_initgroups = None
+    _c_initgroups = None
 
 
 
