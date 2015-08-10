@@ -3,6 +3,8 @@ Requirements
   Python 2.6, 2.7, 3.3 (subset of functionality), or 3.4 (subset of
   functionality).
 
+  setuptools <https://pypi.python.org/pypi/setuptools>.
+
   Zope Interface 3.6.0 or newer (<https://pypi.python.org/pypi/zope.interface>).
   Zope Interface 4.0 or newer is required for Python 3.
 
