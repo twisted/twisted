@@ -8,7 +8,7 @@ L{URLPath}, a representation of a URL.
 
 from __future__ import division, absolute_import
 
-from twisted.python.compat import urllib_parse as urlparse, urlunquote, _PY3
+from twisted.python.compat import urllib_parse as urlparse, urlunquote
 
 
 class URLPath(object):
