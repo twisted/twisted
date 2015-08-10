@@ -317,14 +317,14 @@ class Request(Copyable, http.Request, components.Componentized):
                     "<body><b>web.Server Traceback"
                     " (most recent call last):</b>\n\n"
                     "%s\n\n</body></html>\n"
-                    % util.formatFailure(reason))
+                    % util.formatFailure(reason)).encode('utf-8')
         else:
             body = (b"<html><head><title>Processing Failed"
                     b"</title></head><body>"
                     b"<b>Processing Failed</b></body></html>")
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
-        self.setHeader(b'content-type', b"text/html")
+        self.setHeader(b'content-type', b"text/html; charset=utf-8")
         self.setHeader(b'content-length', intToBytes(len(body)))
         self.write(body)
         self.finish()
