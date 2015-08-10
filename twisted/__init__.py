@@ -8,6 +8,9 @@
 Twisted: The Framework Of Your Internet.
 """
 
+__import__('pkg_resources').declare_namespace(__name__)
+
+
 def _checkRequirements():
     # Don't allow the user to run a version of Python we don't support.
     import sys

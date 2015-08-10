@@ -6,46 +6,41 @@ import sys
 
 from setuptools import find_packages
 
-if os.path.exists('twistedextensions'):
-    sys.path.insert(0, '.') # So we can import twistedextensions
+if os.path.exists('twisted/_c'):
+    sys.path.insert(0, '.') # So we can import twisted._c
 
-from twistedextensions._dist import ConditionalExtension as Extension, setup
-from twistedextensions._dist import _isCPython
-from twistedextensions import __version__
+from twisted._c._dist import ConditionalExtension, setup
+from twisted._c._dist import _isCPython
+from twisted._c import __version__
 
 
 extensions = [
-    Extension("twistedextensions.raiser",
-              ["twistedextensions/raiser.c"],
-              condition=lambda _: _isCPython),
+    ConditionalExtension(
+        "twisted._c.raiser",
+        ["twisted/_c/raiser.c"],
+        condition=lambda _: _isCPython),
 
-    Extension("twistedextensions.iocpsupport",
-              ["twistedextensions/iocpsupport/iocpsupport.c",
-               "twistedextensions/iocpsupport/winsock_pointers.c"],
-              libraries=["ws2_32"],
-              condition=lambda _: _isCPython and sys.platform == "win32"),
+    ConditionalExtension(
+        "twisted._c.iocpsupport",
+        ["twisted/_c/iocpsupport/iocpsupport.c",
+         "twisted/_c/iocpsupport/winsock_pointers.c"],
+        libraries=["ws2_32"],
+        condition=lambda _: _isCPython and sys.platform == "win32"),
 
-    Extension("twistedextensions.sendmsg",
-              sources=["twistedextensions/sendmsg.c"],
-              condition=lambda _: sys.platform != "win32"),
+    ConditionalExtension(
+        "twisted._c.sendmsg",
+        sources=["twisted/_c/sendmsg.c"],
+        condition=lambda _: sys.platform != "win32"),
 
-    Extension("twistedextensions.portmap",
-              ["twistedextensions/portmap.c"],
-              condition=lambda builder: builder._check_header("rpc/rpc.h")),
+    ConditionalExtension(
+        "twisted._c.portmap",
+        ["twisted/_c/portmap.c"],
+        condition=lambda builder: builder._check_header("rpc/rpc.h")),
 ]
 
 
-
-if sys.version_info[:2] <= (2, 6):
-    extensions.append(
-        Extension(
-            "twisted.python._initgroups",
-            ["twisted/python/_initgroups.c"]))
-
-
-
 setup(
-    name='twistedextensions',
+    name='twisted._c',
     description='C Extensions for Twisted',
     version=__version__,
     author='Twisted Matrix Laboratories',
@@ -54,5 +49,6 @@ setup(
     packages=find_packages(),
     license='MIT',
     long_description=file('README.rst').read(),
-    conditionalExtensions=extensions
+    conditionalExtensions=extensions,
+    namespace_packages = ['twisted']
 )
