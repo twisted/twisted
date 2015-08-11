@@ -344,7 +344,8 @@ def getNextVersion(version, prerelease, patch, today):
 
 
 
-def changeAllProjectVersions(root, prerelease, patch, today=None):
+def changeAllProjectVersions(root, prerelease, patch, today=None,
+                             includeExtensions=False):
     """
     Change the version of the project.
 
@@ -387,12 +388,13 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
             _makeNews(project)
         project.updateREADME(newVersion)
 
-    # Change the cexts version
-    _changeVersionInFile(oldVersion, newVersion,
-                         root.child('cexts').child('README.rst').path)
-    _changeVersionInFile(oldVersion, newVersion,
-                         root.child('cexts').child('_twistedextensions').child(
-                             "__init__.py").path)
+    if includeExtensions:
+        # Change the cexts version
+        _changeVersionInFile(oldVersion, newVersion,
+                             root.child('cexts').child('README.rst').path)
+        _changeVersionInFile(oldVersion, newVersion,
+                             root.child('cexts').child('_twistedextensions').child(
+                                 "__init__.py").path)
 
     # Then change the global version.
     twistedProject.updateVersion(newVersion)
@@ -1170,7 +1172,9 @@ class ChangeVersionsScriptOptions(Options):
     Options for L{ChangeVersionsScript}.
     """
     optFlags = [["prerelease", None, "Change to the next prerelease"],
-                ["patch", None, "Make a patch version"]]
+                ["patch", None, "Make a patch version"],
+                ["excludeExtensions", True, ("Exclude changing the C extension"
+                                             "package version.")]]
 
 
 
@@ -1196,8 +1200,9 @@ class ChangeVersionsScript(object):
         except UsageError as e:
             raise SystemExit(e)
 
-        self.changeAllProjectVersions(FilePath("."), options["prerelease"],
-                                      options["patch"])
+        self.changeAllProjectVersions(
+            FilePath("."), options["prerelease"], options["patch"],
+            includeExtensions=False if options["includeExtensions"] else True)
 
 
 
