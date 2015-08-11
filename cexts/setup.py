@@ -6,40 +6,40 @@ import sys
 
 from setuptools import find_packages
 
-if os.path.exists('twisted/_c'):
-    sys.path.insert(0, '.') # So we can import twisted._c
+if os.path.exists('_twistedextensions'):
+    sys.path.insert(0, '.') # So we can import _twistedextensions
 
-from twisted._c._dist import ConditionalExtension, setup
-from twisted._c._dist import _isCPython
+from _twistedextensions._dist import ConditionalExtension, setup
+from _twistedextensions._dist import _isCPython
 
 
 extensions = [
     ConditionalExtension(
-        "twisted._c.raiser",
-        ["twisted/_c/raiser.c"],
+        "_twistedextensions.raiser",
+        ["_twistedextensions/raiser.c"],
         condition=lambda _: _isCPython),
 
     ConditionalExtension(
-        "twisted._c.iocpsupport",
-        ["twisted/_c/iocpsupport/iocpsupport.c",
-         "twisted/_c/iocpsupport/winsock_pointers.c"],
+        "_twistedextensions.iocpsupport",
+        ["_twistedextensions/iocpsupport/iocpsupport.c",
+         "_twistedextensions/iocpsupport/winsock_pointers.c"],
         libraries=["ws2_32"],
         condition=lambda _: _isCPython and sys.platform == "win32"),
 
     ConditionalExtension(
-        "twisted._c.sendmsg",
-        sources=["twisted/_c/sendmsg.c"],
+        "_twistedextensions.sendmsg",
+        sources=["_twistedextensions/sendmsg.c"],
         condition=lambda _: sys.platform != "win32"),
 
     ConditionalExtension(
-        "twisted._c.portmap",
-        ["twisted/_c/portmap.c"],
+        "_twistedextensions.portmap",
+        ["_twistedextensions/portmap.c"],
         condition=lambda builder: builder._check_header("rpc/rpc.h")),
 ]
 
 
 setup(
-    name='twisted._c',
+    name='_twistedextensions',
     description='C Extensions for Twisted',
     version="15.3.0",
     author='Twisted Matrix Laboratories',
@@ -58,5 +58,4 @@ setup(
     license='MIT',
     long_description=file('README.rst').read(),
     conditionalExtensions=extensions,
-    namespace_packages = ['twisted'],
 )

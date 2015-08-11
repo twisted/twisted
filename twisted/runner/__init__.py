@@ -9,6 +9,6 @@ from twisted.runner._version import version
 __version__ = version.short()
 
 try:
-    from twisted._c import portmap
+    from _twistedextensions import portmap
 except ImportError:
     pass
