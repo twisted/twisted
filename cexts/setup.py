@@ -11,7 +11,6 @@ if os.path.exists('twisted/_c'):
 
 from twisted._c._dist import ConditionalExtension, setup
 from twisted._c._dist import _isCPython
-from twisted._c import __version__
 
 
 extensions = [
@@ -42,7 +41,7 @@ extensions = [
 setup(
     name='twisted._c',
     description='C Extensions for Twisted',
-    version=__version__,
+    version="15.3.0",
     author='Twisted Matrix Laboratories',
     author_email="twisted-python@twistedmatrix.com",
     url="http://twistedmatrix.com/",
@@ -54,10 +53,10 @@ setup(
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 2 :: Only",
         "Programming Language :: Python :: Implementation :: CPython"
-    ]
+    ],
     packages=find_packages(),
     license='MIT',
     long_description=file('README.rst').read(),
     conditionalExtensions=extensions,
-    namespace_packages = ['twisted']
+    namespace_packages = ['twisted'],
 )
