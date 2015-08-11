@@ -6,6 +6,6 @@ Twisted's unit tests.
 """
 
 try:
-    from twistedextensions import raiser
+    from twisted._c import raiser
 except ImportError:
     pass
