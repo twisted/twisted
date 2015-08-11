@@ -1,5 +1,5 @@
-twisted._c -- C Extensions for Twisted
-======================================
+_twistedextensions -- C Extensions for Twisted
+==============================================
 
 Version: 15.3.0
 
@@ -11,7 +11,7 @@ Installing
 ----------
 
 ```
-pip install twisted._c
+pip install _twistedextensions
 ```
 
 Or from a checkout:
