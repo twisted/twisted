@@ -389,7 +389,7 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
 
     # Change the cexts version
     _changeVersionInFile(oldVersion, newVersion,
-                         root.child('cexts').child('README').path)
+                         root.child('cexts').child('README.rst').path)
     _changeVersionInFile(oldVersion, newVersion,
                          root.child('cexts').child('setup.py').path)
 
