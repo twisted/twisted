@@ -387,6 +387,12 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
             _makeNews(project)
         project.updateREADME(newVersion)
 
+    # Change the cexts version
+    _changeVersionInFile(oldVersion, newVersion,
+                         root.child('cexts').child('README').path)
+    _changeVersionInFile(oldVersion, newVersion,
+                         root.child('cexts').child('setup.py').path)
+
     # Then change the global version.
     twistedProject.updateVersion(newVersion)
     _changeVersionInFile(oldVersion, newVersion, root.child('README').path)
