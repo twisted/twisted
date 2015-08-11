@@ -391,7 +391,8 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
     _changeVersionInFile(oldVersion, newVersion,
                          root.child('cexts').child('README.rst').path)
     _changeVersionInFile(oldVersion, newVersion,
-                         root.child('cexts').child('setup.py').path)
+                         root.child('cexts').child('_twistedextensions').child(
+                             "__init__.py").path)
 
     # Then change the global version.
     twistedProject.updateVersion(newVersion)

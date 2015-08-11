@@ -11,6 +11,7 @@ if os.path.exists('_twistedextensions'):
 
 from _twistedextensions._dist import ConditionalExtension, setup
 from _twistedextensions._dist import _isCPython
+from _twistedextensions import __version__
 
 
 extensions = [
@@ -41,7 +42,7 @@ extensions = [
 setup(
     name='_twistedextensions',
     description='C Extensions for Twisted',
-    version="15.3.0",
+    version=__version__,
     author='Twisted Matrix Laboratories',
     author_email="twisted-python@twistedmatrix.com",
     url="http://twistedmatrix.com/",
