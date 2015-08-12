@@ -978,6 +978,9 @@ class SphinxBuilder(object):
                     '-d', doctreeDir.path, docDir.path,
                     buildDir.path])
 
+        # Delete the doctrees, as we don't want them after the docs are built
+        doctreeDir.remove()
+
         for path in docDir.walk():
             if path.basename() == "man":
                 segments = path.segmentsFrom(docDir)

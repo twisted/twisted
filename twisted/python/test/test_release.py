@@ -1452,7 +1452,7 @@ class SphinxBuilderTests(TestCase):
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
         if fpath.path.endswith('.html'):
-            parseXMLString(fcontents)
+            self.assertIn("<body", fcontents)
 
 
     def test_build(self):
@@ -1480,7 +1480,7 @@ class SphinxBuilderTests(TestCase):
         htmlDir = self.sphinxDir.sibling('doc')
         self.assertTrue(htmlDir.isdir())
         doctreeDir = htmlDir.child("doctrees")
-        self.assertTrue(doctreeDir.isdir())
+        self.assertFalse(doctreeDir.exists())
 
         self.verifyFileExists(htmlDir, 'index.html')
         self.verifyFileExists(htmlDir, 'genindex.html')
