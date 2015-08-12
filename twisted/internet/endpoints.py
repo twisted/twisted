@@ -35,7 +35,7 @@ from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
-from twisted.python.compat import _PY3
+from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.failure import Failure
@@ -52,13 +52,6 @@ __all__ = ["clientFromString", "serverFromString",
            "ProcessEndpoint", "HostnameEndpoint",
            "StandardErrorBehavior", "connectProtocol"]
 
-__all3__ = ["clientFromString",
-            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
-            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
-            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-            "UNIXServerEndpoint", "UNIXClientEndpoint",
-            "connectProtocol", "HostnameEndpoint",
-            "ProcessEndpoint", "StandardErrorBehavior"]
 
 
 class _WrappingProtocol(Protocol):
@@ -1092,12 +1085,12 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     @param extraCertChain: The path of a file containing one or more
         certificates in PEM format that establish the chain from a root CA to
         the CA that signed your C{certKey}.
-    @type extraCertChain: L{bytes}
+    @type extraCertChain: L{str}
 
     @param dhParameters: The file name of a file containing parameters that are
         required for Diffie-Hellman key exchange.  If this is not specified,
         the forward secret C{DHE} ciphers aren't available for servers.
-    @type dhParameters: L{bytes}
+    @type dhParameters: L{str}
 
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
         L{IReactorSSL.listenSSL} (or, modulo argument 2, the factory, arguments
@@ -1113,9 +1106,10 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     keyPEM = FilePath(privateKey).getContent()
     privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
     if extraCertChain is not None:
+        extraCertChain = FilePath(extraCertChain).getContent()
         matches = re.findall(
             r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',
-            FilePath(extraCertChain).getContent(),
+            nativeString(extraCertChain),
             flags=re.DOTALL
         )
         chainCertificates = [ssl.Certificate.loadPEM(chainCertPEM).original
@@ -1423,20 +1417,20 @@ def serverFromString(reactor, description):
     For example, you can call it like this to create an endpoint that will
     listen on TCP port 80::
 
-        serverFromString(reactor, b"tcp:80")
+        serverFromString(reactor, "tcp:80")
 
     Additional arguments may be specified as keywords, separated with colons.
     For example, you can specify the interface for a TCP server endpoint to
     bind to like this::
 
-        serverFromString(reactor, b"tcp:80:interface=127.0.0.1")
+        serverFromString(reactor, "tcp:80:interface=127.0.0.1")
 
     SSL server endpoints may be specified with the 'ssl' prefix, and the
     private key and certificate files may be specified by the C{privateKey} and
     C{certKey} arguments::
 
         serverFromString(
-            reactor, b"ssl:443:privateKey=key.pem:certKey=crt.pem")
+            reactor, "ssl:443:privateKey=key.pem:certKey=crt.pem")
 
     If a private key file name (C{privateKey}) isn't provided, a "server.pem"
     file is assumed to exist which contains the private key. If the certificate
@@ -1447,14 +1441,14 @@ def serverFromString(reactor, description):
     use if you want to specify a full pathname argument on Windows::
 
         serverFromString(reactor,
-            b"ssl:443:privateKey=C\\:/key.pem:certKey=C\\:/cert.pem")
+            "ssl:443:privateKey=C\\:/key.pem:certKey=C\\:/cert.pem")
 
     finally, the 'unix' prefix may be used to specify a filesystem UNIX socket,
     optionally with a 'mode' argument to specify the mode of the socket file
     created by C{listen}::
 
-        serverFromString(reactor, b"unix:/var/run/finger")
-        serverFromString(reactor, b"unix:/var/run/finger:mode=660")
+        serverFromString(reactor, "unix:/var/run/finger")
+        serverFromString(reactor, "unix:/var/run/finger:mode=660")
 
     This function is also extensible; new endpoint types may be registered as
     L{IStreamServerEndpointStringParser} plugins.  See that interface for more
@@ -1463,7 +1457,7 @@ def serverFromString(reactor, description):
     @param reactor: The server endpoint will be constructed with this reactor.
 
     @param description: The strports description to parse.
-    @type description: L{bytes}
+    @type description: L{str}
 
     @return: A new endpoint which can be used to listen with the parameters
         given by C{description}.
@@ -1776,12 +1770,3 @@ def connectProtocol(endpoint, protocol):
         def buildProtocol(self, addr):
             return protocol
     return endpoint.connect(OneShotFactory())
-
-
-
-if _PY3:
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__
