@@ -1053,7 +1053,8 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
 
 def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
               sslmethod=None, interface='', backlog=50, extraCertChain=None,
-              dhParameters=None):
+              dhParameters=None, verifyCACerts=None, requireCert=None,
+              retrieveCerts=None):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
@@ -1068,6 +1069,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     @type port: C{str}
 
     @param interface: the interface IP to listen on
+
     @param backlog: the length of the listen queue
     @type backlog: C{str}
 
@@ -1092,7 +1094,23 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         the forward secret C{DHE} ciphers aren't available for servers.
     @type dhParameters: L{str}
 
-    @return: a 2-tuple of (args, kwargs), describing  the parameters to
+    @param verifyCACerts: The file name of a file containing CA certs against
+        which to verify peer certificates.
+    @type verifyCACerts: L{bytes}
+
+    @param requireCert: If this parameter is enabled with certificate
+        verification, clients will be required to present a certificate in
+        order for the connection to be accepted.  This parameter is a boolean
+        parameter and should take one of a "yes" or a "no" value.
+    @type requireCert: L{bytes}
+
+    @param retrieveCerts: If this parameter is enabled, sets the certificate
+        options to allow simply retrieving remote certificates without
+        performing verification.  This parameter is a boolean parameter and
+        should take one of a "yes" or a "no" value.
+    @type retrieveCerts: L{bytes}
+
+    @return: a 2-tuple of (args, kwargs), describing the parameters to
         L{IReactorSSL.listenSSL} (or, modulo argument 2, the factory, arguments
         to L{SSL4ServerEndpoint}.
     """
@@ -1105,22 +1123,36 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     certPEM = FilePath(certKey).getContent()
     keyPEM = FilePath(privateKey).getContent()
     privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
-    if extraCertChain is not None:
-        extraCertChain = FilePath(extraCertChain).getContent()
-        matches = re.findall(
-            r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',
-            nativeString(extraCertChain),
-            flags=re.DOTALL
-        )
-        chainCertificates = [ssl.Certificate.loadPEM(chainCertPEM).original
-                             for chainCertPEM in matches]
-        if not chainCertificates:
-            raise ValueError(
-                "Specified chain file '%s' doesn't contain any valid "
-                "certificates in PEM format." % (extraCertChain,)
-            )
+    chainCertificates = _getCertificatesFromFile(
+        extraCertChain,
+        "Specified chain file '%s' doesn't contain any "
+        "valid certificates in PEM format."
+        % (extraCertChain,)
+    )
+    verifyCertificates = _getCertificatesFromFile(
+        verifyCACerts,
+        "Specified CA certificate file '%s' doesn't "
+        "contain any valid certificates in PEM format."
+        % (verifyCACerts,)
+    )
+    requireCertificate = False
+    if verifyCertificates:
+        verify = True
+        requireCertificate = _valueToBool(requireCert, False)
+        if requireCertificate is None:
+            raise ValueError("The value of requireCert must be a yes/no "
+                             "value.")
     else:
-        chainCertificates = None
+        verify = False
+    if not verify:
+        receiveCertOnly = _valueToBool(retrieveCerts, False)
+        if receiveCertOnly is None:
+            raise ValueError("The value of retrieveCerts must be a yes/no "
+                             "value.")
+    if retrieveCerts and not verify:
+        retrieveCertOnly = True
+    else:
+        retrieveCertOnly = False
     if dhParameters is not None:
         dhParameters = ssl.DiffieHellmanParameters.fromFile(
             FilePath(dhParameters),
@@ -1131,10 +1163,46 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         certificate=privateCertificate.original,
         extraCertChain=chainCertificates,
         dhParameters=dhParameters,
+        caCerts=verifyCertificates,
+        requireCertificate=requireCertificate,
+        verify=verify,
+        retrieveCertOnly=retrieveCertOnly,
         **kw
     )
     return ((int(port), factory, cf),
             {'interface': interface, 'backlog': int(backlog)})
+
+
+def _getCertificatesFromFile(fileName, errorMsg):
+    from twisted.internet import ssl
+    if fileName is None:
+        return None
+    matches = re.findall(
+        r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',
+        FilePath(fileName).getContent(),
+        flags=re.DOTALL
+    )
+    certificates = [ssl.Certificate.loadPEM(certPEM).original
+                    for certPEM in matches]
+    if not certificates:
+        raise ValueError(errorMsg)
+    return certificates
+
+
+def _valueToBool(value, default):
+    """
+    Verifies that values are reasonable strings that we can parse into some
+    boolean value, and returns that boolean value.
+    Returns None if we can't make a boolean value out of the given string.
+    """
+    if value is None:
+        return default
+    lowerValue = value.lower()
+    if lowerValue in ("yes", "true", "y", "t"):
+        return True
+    if lowerValue in ("no", "false", "n", "f"):
+        return False
+    return None
 
 
 
