@@ -37,8 +37,8 @@ def _codeToMessage(code):
     @rtype: L{str}
     """
     try:
-        return RESPONSES.get(int(code))
-    except ValueError:
+        return RESPONSES.get(int(code)).decode('ascii')
+    except (ValueError, AttributeError):
         return None
 
 

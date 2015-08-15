@@ -1366,11 +1366,22 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         channel = DummyChannel()
         req = http.Request(channel, False)
-        req.setResponseCode(202, "happily accepted")
+        req.setResponseCode(202, b"happily accepted")
         req.write(b'')
         self.assertEqual(
             channel.transport.written.getvalue().splitlines()[0],
             b'(no clientproto yet) 202 happily accepted')
+
+
+    def test_setResponseCodeAndMessageNotBytes(self):
+        """
+        L{http.Request.setResponseCode} accepts C{bytes} for the message
+        parameter and raises L{TypeError} if passed anything else.
+        """
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        self.assertRaises(TypeError, req.setResponseCode,
+                          202, u"happily accepted")
 
 
     def test_setResponseCodeAcceptsIntegers(self):
