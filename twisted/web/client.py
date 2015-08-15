@@ -27,7 +27,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
+from twisted.python.compat import nativeString, intToBytes, unicode, itervalues, _PY3, networkString
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.deprecate import deprecatedModuleAttribute
@@ -1645,20 +1645,24 @@ class _FakeUrllib2Request(object):
     @since: 11.1
     """
     def __init__(self, uri):
-        self.uri = uri
+        self.uri = nativeString(uri)
         self.headers = Headers()
 
         _uri = URI.fromBytes(uri)
-        self.type = _uri.scheme
-        self.host = _uri.host
+        self.type = nativeString(_uri.scheme)
+        self.host = nativeString(_uri.host)
+
+        if _PY3:
+            self.origin_req_host = nativeString(_uri.host)
+            self.unverifiable = lambda _: False
 
 
     def has_header(self, header):
-        return self.headers.hasHeader(header)
+        return self.headers.hasHeader(networkString(header))
 
 
     def add_unredirected_header(self, name, value):
-        self.headers.addRawHeader(name, value)
+        self.headers.addRawHeader(networkString(name), networkString(value))
 
 
     def get_full_url(self):
@@ -1666,7 +1670,7 @@ class _FakeUrllib2Request(object):
 
 
     def get_header(self, name, default=None):
-        headers = self.headers.getRawHeaders(name, default)
+        headers = self.headers.getRawHeaders(networkString(name), default)
         if headers is not None:
             return headers[0]
         return None
@@ -1702,7 +1706,15 @@ class _FakeUrllib2Response(object):
     def info(self):
         class _Meta(object):
             def getheaders(zelf, name):
-                return self.response.headers.getRawHeaders(name, [])
+                # PY2
+                headers = self.response.headers.getRawHeaders(name, [])
+                return headers
+            def get_all(zelf, name, default):
+                # PY3
+                headers = self.response.headers.getRawHeaders(
+                    networkString(name), default)
+                h = [nativeString(x) for x in headers]
+                return h
         return _Meta()
 
 
@@ -1751,7 +1763,7 @@ class CookieAgent(object):
         # cookies.
         if not headers.hasHeader(b'cookie'):
             self.cookieJar.add_cookie_header(lastRequest)
-            cookieHeader = lastRequest.get_header(b'Cookie', None)
+            cookieHeader = lastRequest.get_header('Cookie', None)
             if cookieHeader is not None:
                 headers = headers.copy()
                 headers.addRawHeader(b'cookie', cookieHeader)

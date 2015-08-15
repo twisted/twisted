@@ -1724,21 +1724,21 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         jar = self.makeCookieJar()[0]
         cookies = dict([(c.name, c) for c in jar])
 
-        cookie = cookies[b'foo']
+        cookie = cookies['foo']
         self.assertEqual(cookie.version, 0)
-        self.assertEqual(cookie.name, b'foo')
-        self.assertEqual(cookie.value, b'1')
-        self.assertEqual(cookie.path, b'/foo')
-        self.assertEqual(cookie.comment, b'hello')
+        self.assertEqual(cookie.name, 'foo')
+        self.assertEqual(cookie.value, '1')
+        self.assertEqual(cookie.path, '/foo')
+        self.assertEqual(cookie.comment, 'hello')
         self.assertEqual(cookie.get_nonstandard_attr('cow'), 'moo')
 
-        cookie = cookies[b'bar']
+        cookie = cookies['bar']
         self.assertEqual(cookie.version, 0)
-        self.assertEqual(cookie.name, b'bar')
-        self.assertEqual(cookie.value, b'2')
-        self.assertEqual(cookie.path, b'/')
-        self.assertEqual(cookie.comment, b'goodbye')
-        self.assertIdentical(cookie.get_nonstandard_attr(b'cow'), None)
+        self.assertEqual(cookie.name, 'bar')
+        self.assertEqual(cookie.value, '2')
+        self.assertEqual(cookie.path, '/')
+        self.assertEqual(cookie.comment, 'goodbye')
+        self.assertIdentical(cookie.get_nonstandard_attr('cow'), None)
 
 
     def test_sendCookie(self):
@@ -1749,12 +1749,12 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         jar, (request, response) = self.makeCookieJar()
 
         self.assertIdentical(
-            request.get_header(b'Cookie', None),
+            request.get_header('Cookie', None),
             None)
 
         jar.add_cookie_header(request)
         self.assertEqual(
-            request.get_header(b'Cookie', None),
+            request.get_header('Cookie', None),
             b'foo=1; bar=2')
 
 
@@ -1795,8 +1795,8 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         def _checkCookie(ignored):
             cookies = list(cookieJar)
             self.assertEqual(len(cookies), 1)
-            self.assertEqual(cookies[0].name, b'foo')
-            self.assertEqual(cookies[0].value, b'1')
+            self.assertEqual(cookies[0].name, 'foo')
+            self.assertEqual(cookies[0].value, '1')
 
         d.addCallback(_checkCookie)
 
