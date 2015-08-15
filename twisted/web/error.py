@@ -180,8 +180,8 @@ class RedirectWithNoLocation(Error):
         @param uri: The URI which failed to give a proper location header
             field.
         """
-        message = message + b" to " + uri
         Error.__init__(self, code, message)
+        self.message = self.message + b" to " + uri
         self.uri = uri
 
 
