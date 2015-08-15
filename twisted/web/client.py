@@ -1134,9 +1134,10 @@ class _RetryingHTTP11ClientProtocol(object):
         requirement may be relaxed in the future, and PUT added to approved
         method list.
         """
-        if method not in ("GET", "HEAD", "OPTIONS", "DELETE", "TRACE"):
+        if method not in (b"GET", b"HEAD", b"OPTIONS", b"DELETE", b"TRACE"):
             return False
-        if not isinstance(exception, (RequestNotSent, RequestTransmissionFailed,
+        if not isinstance(exception, (RequestNotSent,
+                                      RequestTransmissionFailed,
                                       ResponseNeverReceived)):
             return False
         if isinstance(exception, _WrapperException):

@@ -1274,8 +1274,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         expectedCreatorCreator = StubBrowserLikePolicyForHTTPS()
         reactor = self.Reactor()
         agent = client.Agent(reactor, expectedCreatorCreator)
-        self.agent._getEndpoint(URI.fromBytes(
-            b'http://' + expectedHost + b":" + intToBytes(expectedPort)))
+        endpoint = agent._getEndpoint(URI.fromBytes(
+            b'https://' + expectedHost + b":" + intToBytes(expectedPort)))
         endpoint.connect(Factory.forProtocol(Protocol))
         passedFactory = reactor.sslClients[-1][2]
         passedContextFactory = reactor.sslClients[-1][3]
@@ -2153,7 +2153,7 @@ class ContentDecoderAgentWithGzipTests(TestCase,
         response.length = 12
         res.callback(response)
 
-        data = "not gzipped content"
+        data = b"not gzipped content"
 
         def checkResponse(result):
             response._bodyDataReceived(data)
@@ -2182,10 +2182,10 @@ class ContentDecoderAgentWithGzipTests(TestCase,
                 pass
 
             def decompress(self, data):
-                return 'x'
+                return b'x'
 
             def flush(self):
-                return 'y'
+                return b'y'
 
 
         oldDecompressObj = zlib.decompressobj
@@ -2196,19 +2196,19 @@ class ContentDecoderAgentWithGzipTests(TestCase,
 
         req, res = self.protocol.requests.pop()
 
-        headers = http_headers.Headers({'content-encoding': ['gzip']})
+        headers = http_headers.Headers({b'content-encoding': [b'gzip']})
         transport = StringTransport()
         response = Response((b'HTTP', 1, 1), 200, b'OK', headers, transport)
         res.callback(response)
 
         def checkResponse(result):
-            response._bodyDataReceived('data')
+            response._bodyDataReceived(b'data')
             response._bodyDataFinished()
 
             protocol = SimpleAgentProtocol()
             result.deliverBody(protocol)
 
-            self.assertEqual(protocol.received, ['x', 'y'])
+            self.assertEqual(protocol.received, [b'x', b'y'])
             return defer.gatherResults([protocol.made, protocol.finished])
 
         deferred.addCallback(checkResponse)
@@ -2227,7 +2227,7 @@ class ContentDecoderAgentWithGzipTests(TestCase,
                 pass
 
             def decompress(self, data):
-                return 'x'
+                return b'x'
 
             def flush(self):
                 raise zlib.error()
@@ -2241,19 +2241,19 @@ class ContentDecoderAgentWithGzipTests(TestCase,
 
         req, res = self.protocol.requests.pop()
 
-        headers = http_headers.Headers({'content-encoding': ['gzip']})
+        headers = http_headers.Headers({b'content-encoding': [b'gzip']})
         transport = StringTransport()
         response = Response((b'HTTP', 1, 1), 200, b'OK', headers, transport)
         res.callback(response)
 
         def checkResponse(result):
-            response._bodyDataReceived('data')
+            response._bodyDataReceived(b'data')
             response._bodyDataFinished()
 
             protocol = SimpleAgentProtocol()
             result.deliverBody(protocol)
 
-            self.assertEqual(protocol.received, ['x', 'y'])
+            self.assertEqual(protocol.received, [b'x', b'y'])
             return defer.gatherResults([protocol.made, protocol.finished])
 
         deferred.addCallback(checkResponse)
