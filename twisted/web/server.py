@@ -312,12 +312,12 @@ class Request(Copyable, http.Request, components.Componentized):
     def processingFailed(self, reason):
         log.err(reason)
         if self.site.displayTracebacks:
-            body = ("<html><head><title>web.Server Traceback"
-                    " (most recent call last)</title></head>"
-                    "<body><b>web.Server Traceback"
-                    " (most recent call last):</b>\n\n"
-                    "%s\n\n</body></html>\n"
-                    % util.formatFailure(reason))
+            body = (b"<html><head><title>web.Server Traceback"
+                    b" (most recent call last)</title></head>"
+                    b"<body><b>web.Server Traceback"
+                    b" (most recent call last):</b>\n\n" +
+                    util.formatFailure(reason) +
+                    b"\n\n</body></html>\n")
         else:
             body = (b"<html><head><title>Processing Failed"
                     b"</title></head><body>"

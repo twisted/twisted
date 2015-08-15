@@ -332,7 +332,7 @@ class FailureElement(Element):
         """
         Render the exception value as a child of C{tag}.
         """
-        return tag(str(self.failure.value))
+        return tag(unicode(self.failure.value).encode('utf8'))
 
 
     @renderer
