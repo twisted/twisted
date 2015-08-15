@@ -1381,7 +1381,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         channel = DummyChannel()
         req = http.Request(channel, False)
         self.assertRaises(TypeError, req.setResponseCode,
-                          202, u"happily accepted")
+                          202, u"not happily accepted")
 
 
     def test_setResponseCodeAcceptsIntegers(self):
