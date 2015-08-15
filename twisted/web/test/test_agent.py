@@ -1755,7 +1755,7 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         jar.add_cookie_header(request)
         self.assertEqual(
             request.get_header('Cookie', None),
-            b'foo=1; bar=2')
+            'foo=1; bar=2')
 
 
 

@@ -1672,6 +1672,7 @@ class _FakeUrllib2Request(object):
     def get_header(self, name, default=None):
         headers = self.headers.getRawHeaders(networkString(name), default)
         if headers is not None:
+            headers = [nativeString(x) for x in headers]
             return headers[0]
         return None
 
@@ -1766,7 +1767,7 @@ class CookieAgent(object):
             cookieHeader = lastRequest.get_header('Cookie', None)
             if cookieHeader is not None:
                 headers = headers.copy()
-                headers.addRawHeader(b'cookie', cookieHeader)
+                headers.addRawHeader(b'cookie', networkString(cookieHeader))
 
         d = self._agent.request(method, uri, headers, bodyProducer)
         d.addCallback(self._extractCookies, lastRequest)
