@@ -23,17 +23,17 @@ class CodeToMessageTests(unittest.TestCase):
     L{_codeToMessages} inverts L{_responses.RESPONSES}
     """
     def test_validCode(self):
-        m = error._codeToMessage("302")
-        self.assertEqual(m, "Found")
+        m = error._codeToMessage(b"302")
+        self.assertEqual(m, b"Found")
 
 
     def test_invalidCode(self):
-        m = error._codeToMessage("987")
+        m = error._codeToMessage(b"987")
         self.assertEqual(m, None)
 
 
     def test_nonintegerCode(self):
-        m = error._codeToMessage("InvalidCode")
+        m = error._codeToMessage(b"InvalidCode")
         self.assertEqual(m, None)
 
 
@@ -48,8 +48,8 @@ class ErrorTests(unittest.TestCase):
         C{code} argument is a valid HTTP status code, C{code} is mapped to a
         descriptive string to which C{message} is assigned.
         """
-        e = error.Error("200")
-        self.assertEqual(e.message, "OK")
+        e = error.Error(b"200")
+        self.assertEqual(e.message, b"OK")
 
 
     def test_noMessageInvalidStatus(self):
@@ -57,7 +57,7 @@ class ErrorTests(unittest.TestCase):
         If no C{message} argument is passed to the L{Error} constructor and
         C{code} isn't a valid HTTP status code, C{message} stays C{None}.
         """
-        e = error.Error("InvalidCode")
+        e = error.Error(b"InvalidCode")
         self.assertEqual(e.message, None)
 
 
@@ -66,8 +66,16 @@ class ErrorTests(unittest.TestCase):
         If a C{message} argument is passed to the L{Error} constructor, the
         C{message} isn't affected by the value of C{status}.
         """
-        e = error.Error("200", "My own message")
-        self.assertEqual(e.message, "My own message")
+        e = error.Error(b"200", b"My own message")
+        self.assertEqual(e.message, b"My own message")
+
+    def test_str(self):
+        """
+        C{str()} on an L{Error} returns the code and message it was
+        instantiated with.
+        """
+        e = error.Error(200, b"OK")
+        self.assertEqual(str(e), "200 OK")
 
 
 
@@ -81,8 +89,8 @@ class PageRedirectTests(unittest.TestCase):
         and the C{code} argument is a valid HTTP status code, C{code} is mapped
         to a descriptive string to which C{message} is assigned.
         """
-        e = error.PageRedirect("200", location="/foo")
-        self.assertEqual(e.message, "OK to /foo")
+        e = error.PageRedirect(b"200", location=b"/foo")
+        self.assertEqual(e.message, b"OK to /foo")
 
 
     def test_noMessageValidStatusNoLocation(self):
@@ -92,8 +100,8 @@ class PageRedirectTests(unittest.TestCase):
         status code, C{code} is mapped to a descriptive string to which
         C{message} is assigned without trying to include an empty location.
         """
-        e = error.PageRedirect("200")
-        self.assertEqual(e.message, "OK")
+        e = error.PageRedirect(b"200")
+        self.assertEqual(e.message, b"OK")
 
 
     def test_noMessageInvalidStatusLocationExists(self):
@@ -101,7 +109,7 @@ class PageRedirectTests(unittest.TestCase):
         If no C{message} argument is passed to the L{PageRedirect} constructor
         and C{code} isn't a valid HTTP status code, C{message} stays C{None}.
         """
-        e = error.PageRedirect("InvalidCode", location="/foo")
+        e = error.PageRedirect(b"InvalidCode", location=b"/foo")
         self.assertEqual(e.message, None)
 
 
@@ -110,8 +118,8 @@ class PageRedirectTests(unittest.TestCase):
         If a C{message} argument is passed to the L{PageRedirect} constructor,
         the C{message} isn't affected by the value of C{status}.
         """
-        e = error.PageRedirect("200", "My own message", location="/foo")
-        self.assertEqual(e.message, "My own message to /foo")
+        e = error.PageRedirect(b"200", b"My own message", location=b"/foo")
+        self.assertEqual(e.message, b"My own message to /foo")
 
 
     def test_messageExistsNoLocation(self):
@@ -120,8 +128,8 @@ class PageRedirectTests(unittest.TestCase):
         and no location is provided, C{message} doesn't try to include the
         empty location.
         """
-        e = error.PageRedirect("200", "My own message")
-        self.assertEqual(e.message, "My own message")
+        e = error.PageRedirect(b"200", b"My own message")
+        self.assertEqual(e.message, b"My own message")
 
 
 
@@ -136,8 +144,8 @@ class InfiniteRedirectionTests(unittest.TestCase):
         C{code} is mapped to a descriptive string to which C{message} is
         assigned.
         """
-        e = error.InfiniteRedirection("200", location="/foo")
-        self.assertEqual(e.message, "OK to /foo")
+        e = error.InfiniteRedirection(b"200", location=b"/foo")
+        self.assertEqual(e.message, b"OK to /foo")
 
 
     def test_noMessageValidStatusNoLocation(self):
@@ -148,8 +156,8 @@ class InfiniteRedirectionTests(unittest.TestCase):
         which C{message} is assigned without trying to include an empty
         location.
         """
-        e = error.InfiniteRedirection("200")
-        self.assertEqual(e.message, "OK")
+        e = error.InfiniteRedirection(b"200")
+        self.assertEqual(e.message, b"OK")
 
 
     def test_noMessageInvalidStatusLocationExists(self):
@@ -158,7 +166,7 @@ class InfiniteRedirectionTests(unittest.TestCase):
         constructor and C{code} isn't a valid HTTP status code, C{message} stays
         C{None}.
         """
-        e = error.InfiniteRedirection("InvalidCode", location="/foo")
+        e = error.InfiniteRedirection(b"InvalidCode", location=b"/foo")
         self.assertEqual(e.message, None)
 
 
@@ -167,8 +175,9 @@ class InfiniteRedirectionTests(unittest.TestCase):
         If a C{message} argument is passed to the L{InfiniteRedirection}
         constructor, the C{message} isn't affected by the value of C{status}.
         """
-        e = error.InfiniteRedirection("200", "My own message", location="/foo")
-        self.assertEqual(e.message, "My own message to /foo")
+        e = error.InfiniteRedirection(b"200", b"My own message",
+                                      location=b"/foo")
+        self.assertEqual(e.message, b"My own message to /foo")
 
 
     def test_messageExistsNoLocation(self):
@@ -177,8 +186,8 @@ class InfiniteRedirectionTests(unittest.TestCase):
         constructor and no location is provided, C{message} doesn't try to
         include the empty location.
         """
-        e = error.InfiniteRedirection("200", "My own message")
-        self.assertEqual(e.message, "My own message")
+        e = error.InfiniteRedirection(b"200", b"My own message")
+        self.assertEqual(e.message, b"My own message")
 
 
 
@@ -193,10 +202,10 @@ class RedirectWithNoLocationTests(unittest.TestCase):
         L{RedirectWithNoLocation} constructor, the C{message} and C{uri}
         attributes are set, respectively.
         """
-        e = error.RedirectWithNoLocation("302", "REDIRECT",
-                                         "https://example.com")
-        self.assertEqual(e.message, "REDIRECT to https://example.com")
-        self.assertEqual(e.uri, "https://example.com")
+        e = error.RedirectWithNoLocation(b"302", b"REDIRECT",
+                                         b"https://example.com")
+        self.assertEqual(e.message, b"REDIRECT to https://example.com")
+        self.assertEqual(e.uri, b"https://example.com")
 
 
 

@@ -15,7 +15,7 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urljoin
 
-from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
+from twisted.python.compat import networkString, nativeString, intToBytes
 from twisted.trial import unittest
 from twisted.web import server, client, error, resource
 from twisted.web.static import Data
@@ -32,11 +32,8 @@ except:
     ssl = None
 
 from twisted import test
-serverPEM = FilePath(test.__file__.encode("utf-8")).sibling(b'server.pem')
-serverPEMPath = nativeString(serverPEM.path)
-
-
-_PY3DownloadSkip = "downloadPage will be ported to Python 3 in ticket #6197."
+serverPEM = FilePath(test.__file__.encode("utf-8")).sibling('server.pem')
+serverPEMPath = serverPEM.asBytesMode().path
 
 
 class ExtendedRedirect(resource.Resource):
@@ -45,7 +42,7 @@ class ExtendedRedirect(resource.Resource):
 
     The HTTP status code is set according to the C{code} query parameter.
 
-    @type lastMethod: C{str}
+    @type lastMethod: C{bytes}
     @ivar lastMethod: Last handled HTTP request method
     """
     isLeaf = True
@@ -477,8 +474,8 @@ class WebClientTests(unittest.TestCase):
 
     def testDownloadPage(self):
         downloads = []
-        downloadData = [(b"file", self.mktemp(), b"0123456789"),
-                        (b"nolength", self.mktemp(), b"nolength")]
+        downloadData = [("file", self.mktemp(), b"0123456789"),
+                        ("nolength", self.mktemp(), b"nolength")]
 
         for (url, name, data) in downloadData:
             d = client.downloadPage(self.getURL(url), name)
@@ -487,7 +484,7 @@ class WebClientTests(unittest.TestCase):
         return defer.gatherResults(downloads)
 
     def _cbDownloadPageTest(self, ignored, data, name):
-        bytes = file(name, "rb").read()
+        bytes = open(name, "rb").read()
         self.assertEqual(bytes, data)
 
     def testDownloadPageError1(self):
@@ -655,7 +652,7 @@ class WebClientTests(unittest.TestCase):
                 "With afterFoundGet, the HTTP method must change to GET")
 
         d = client.downloadPage(url, "downloadTemp",
-            followRedirect=True, afterFoundGet=True, method="POST")
+            followRedirect=True, afterFoundGet=True, method=b"POST")
         d.addCallback(gotPage)
         return d
 
@@ -761,7 +758,7 @@ class WebClientTests(unittest.TestCase):
         def cbFinished(ignored):
             self.assertEqual(
                 FilePath(output).getContent(),
-                "[('foo', 'bar')]")
+                b"[('foo', 'bar')]")
         factory.deferred.addCallback(cbFinished)
         return factory.deferred
 
@@ -783,24 +780,6 @@ class WebClientTests(unittest.TestCase):
         d = self.assertFailure(f.deferred, error.InfiniteRedirection)
         d.addCallback(checkRedirectCount)
         return d
-
-    if _PY3:
-        for method in (
-            test_downloadPageBrokenDownload,
-            test_downloadPageLogsFileCloseError,
-            testDownloadPage,
-            testDownloadPageError1,
-            testDownloadPageError2,
-            testDownloadPageError3,
-            testDownloadServerError,
-            test_downloadAfterFoundGet,
-            testPartial,
-            test_downloadTimeout,
-            test_downloadHeaders,
-            test_downloadCookies,
-            test_downloadRedirectLimit):
-            method.skip = _PY3DownloadSkip
-        del method
 
 
     def test_setURL(self):
