@@ -1647,8 +1647,10 @@ class _FakeUrllib2Request(object):
     def __init__(self, uri):
         self.uri = uri
         self.headers = Headers()
-        self.type, rest = splittype(self.uri)
-        self.host, rest = splithost(rest)
+
+        _uri = URI.fromBytes(uri)
+        self.type = _uri.scheme
+        self.host = _uri.host
 
 
     def has_header(self, header):
