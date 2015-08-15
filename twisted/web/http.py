@@ -964,7 +964,7 @@ class Request:
             l.append(
                 version + b" " +
                 intToBytes(self.code) + b" " +
-                networkString(self.code_message) + b"\r\n")
+                self.code_message + b"\r\n")
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
@@ -1056,9 +1056,11 @@ class Request:
             raise TypeError("HTTP response code must be int or long")
         self.code = code
         if message:
+            if not isinstance(message, bytes):
+                raise TypeError("HTTP response status message must be bytes")
             self.code_message = message
         else:
-            self.code_message = RESPONSES.get(code, "Unknown Status")
+            self.code_message = RESPONSES.get(code, b"Unknown Status")
 
 
     def setHeader(self, name, value):
