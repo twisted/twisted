@@ -507,6 +507,9 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.getvalue())
         self.assertIn(b"Processing Failed", request.transport.getvalue())
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
 
 
@@ -523,6 +526,9 @@ class RequestTests(unittest.TestCase):
         request.processingFailed(fail)
 
         self.assertIn(b"Oh no!", request.transport.getvalue())
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
 
 
@@ -540,6 +546,9 @@ class RequestTests(unittest.TestCase):
         request.processingFailed(fail)
 
         self.assertIn(b"&#9731;", request.transport.getvalue())
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
 
 
