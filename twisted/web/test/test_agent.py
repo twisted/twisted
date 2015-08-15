@@ -857,7 +857,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         expectedPort = 1234
         endpoint = self.agent._getEndpoint(URI.fromBytes(
             b'http://' + expectedHost + b":" + intToBytes(expectedPort)))
-        self.assertEqual(endpoint._host, expectedHost)
+        self.assertEqual(endpoint._host, "example.com")
         self.assertEqual(endpoint._port, expectedPort)
         self.assertIsInstance(endpoint, TCP4ClientEndpoint)
 
@@ -881,8 +881,8 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
                 return expectedContext
 
         agent = client.Agent(self.reactor, StubWebContextFactory())
-        endpoint = self.agent._getEndpoint(URI.fromBytes(
-            b'http://' + expectedHost + b":" + intToBytes(expectedPort)))
+        endpoint = agent._getEndpoint(URI.fromBytes(
+            b'https://' + expectedHost + b":" + intToBytes(expectedPort)))
         contextFactory = endpoint._sslContextFactory
         context = contextFactory.getContext()
         self.assertEqual(context, expectedContext)
@@ -943,7 +943,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         the host name passed to it.
         """
         self.assertEqual(
-            self.agent._computeHostValue('http', b'example.com', 80),
+            self.agent._computeHostValue(b'http', b'example.com', 80),
             b'example.com')
 
 
@@ -954,7 +954,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         host passed to it joined together with the port number by C{":"}.
         """
         self.assertEqual(
-            self.agent._computeHostValue('http', b'example.com', 54321),
+            self.agent._computeHostValue(b'http', b'example.com', 54321),
             b'example.com:54321')
 
 
@@ -965,7 +965,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         the host name passed to it.
         """
         self.assertEqual(
-            self.agent._computeHostValue('https', b'example.com', 443),
+            self.agent._computeHostValue(b'https', b'example.com', 443),
             b'example.com')
 
 
@@ -976,7 +976,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         host passed to it joined together with the port number by C{":"}.
         """
         self.assertEqual(
-            self.agent._computeHostValue('https', b'example.com', 54321),
+            self.agent._computeHostValue(b'https', b'example.com', 54321),
             b'example.com:54321')
 
 
@@ -1039,7 +1039,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         L{Agent} takes a C{bindAddress} argument which is forwarded to the
         following C{connectTCP} call.
         """
-        agent = client.Agent(self.reactor, bindAddress=b'192.168.0.1')
+        agent = client.Agent(self.reactor, bindAddress='192.168.0.1')
         agent.request(b'GET', b'http://foo/')
         address = self.reactor.tcpClients.pop()[4]
         self.assertEqual('192.168.0.1', address)
@@ -1051,7 +1051,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         following C{connectSSL} call.
         """
         agent = client.Agent(self.reactor, self.StubPolicy(),
-                             bindAddress=b'192.168.0.1')
+                             bindAddress='192.168.0.1')
         agent.request(b'GET', b'https://foo/')
         address = self.reactor.sslClients.pop()[5]
         self.assertEqual('192.168.0.1', address)
@@ -1155,7 +1155,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         skip = "SSL not present, cannot run SSL tests"
 
 
-    def makeEndpoint(self, host='example.com', port=443):
+    def makeEndpoint(self, host=b'example.com', port=443):
         """
         Create an L{Agent} with an https scheme and return its endpoint
         created according to the arguments.
@@ -1185,9 +1185,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         """
         If a host is passed, the endpoint respects it.
         """
-        expectedHost = b'example.com'
-        endpoint = self.makeEndpoint(host=expectedHost)
-        self.assertEqual(endpoint._host, expectedHost)
+        endpoint = self.makeEndpoint(host=b"example.com")
+        self.assertEqual(endpoint._host, "example.com")
 
 
     def test_portArgumentIsRespected(self):
@@ -2393,7 +2392,7 @@ class _RedirectAgentTestsMixin(object):
         self.agent.request(b'GET', b'http://example.com/foo')
 
         host, port = self.reactor.tcpClients.pop()[:2]
-        self.assertEqual(b"example.com", host)
+        self.assertEqual("example.com", host)
         self.assertEqual(80, port)
 
         req, res = self.protocol.requests.pop()
@@ -2408,7 +2407,7 @@ class _RedirectAgentTestsMixin(object):
         self.assertEqual(b'/bar', req2.uri)
 
         host, port = self.reactor.sslClients.pop()[:2]
-        self.assertEqual(b"example.com", host)
+        self.assertEqual("example.com", host)
         self.assertEqual(443, port)
 
 
