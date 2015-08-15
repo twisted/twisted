@@ -6,7 +6,7 @@
 HTTP client.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import os
 import types
@@ -28,7 +28,7 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import nativeString, intToBytes
+from twisted.python.compat import nativeString, intToBytes, unicode
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.deprecate import deprecatedModuleAttribute
@@ -156,7 +156,7 @@ class HTTPPageGetter(http.HTTPClient):
             if self.factory._redirectCount >= self.factory.redirectLimit:
                 err = error.InfiniteRedirection(
                     self.status,
-                    'Infinite redirection detected',
+                    b'Infinite redirection detected',
                     location=url)
                 self.factory.noPage(Failure(err))
                 self.quietLoss = True
@@ -438,18 +438,19 @@ class HTTPClientFactory(protocol.ClientFactory):
 
 
 class HTTPDownloader(HTTPClientFactory):
-    """Download to a file."""
-
+    """
+    Download to a file.
+    """
     protocol = HTTPPageDownloader
     value = None
 
     def __init__(self, url, fileOrName,
-                 method='GET', postdata=None, headers=None,
-                 agent="Twisted client", supportPartial=0,
-                 timeout=0, cookies=None, followRedirect=1,
+                 method=b'GET', postdata=None, headers=None,
+                 agent=b"Twisted client", supportPartial=False,
+                 timeout=0, cookies=None, followRedirect=True,
                  redirectLimit=20, afterFoundGet=False):
         self.requestedPartial = 0
-        if isinstance(fileOrName, types.StringTypes):
+        if isinstance(fileOrName, (str, unicode)):
             self.fileName = fileOrName
             self.file = None
             if supportPartial and os.path.exists(self.fileName):
@@ -458,7 +459,7 @@ class HTTPDownloader(HTTPClientFactory):
                     self.requestedPartial = fileLength
                     if headers == None:
                         headers = {}
-                    headers["range"] = "bytes=%d-" % fileLength
+                    headers[b"range"] = b"bytes=" + intToBytes(fileLength) + b"-"
         else:
             self.file = fileOrName
         HTTPClientFactory.__init__(
@@ -471,7 +472,7 @@ class HTTPDownloader(HTTPClientFactory):
     def gotHeaders(self, headers):
         HTTPClientFactory.gotHeaders(self, headers)
         if self.requestedPartial:
-            contentRange = headers.get("content-range", None)
+            contentRange = headers.get(b"content-range", None)
             if not contentRange:
                 # server doesn't support partial requests, oh well
                 self.requestedPartial = 0
