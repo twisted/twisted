@@ -22,7 +22,7 @@ __all__ = [
 from collections import Sequence
 
 from twisted.web._responses import RESPONSES
-from twisted.python.compat import unicode, nativeString
+from twisted.python.compat import unicode, nativeString, intToBytes
 
 
 def _codeToMessage(code):
@@ -61,8 +61,8 @@ class Error(Exception):
 
         @type code: C{bytes}
         @param code: Refers to an HTTP status code, for example
-            C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
-            descriptive bytestring that is used instead.
+            C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to
+            a descriptive bytestring that is used instead.
 
         @type message: C{bytes}
         @param message: A short error message, for example "NOT FOUND".
@@ -73,6 +73,10 @@ class Error(Exception):
         message = message or _codeToMessage(code)
 
         Exception.__init__(self, code, message, response)
+
+        if isinstance(code, int):
+            code = intToBytes(code)
+
         self.status = code
         self.message = message
         self.response = response

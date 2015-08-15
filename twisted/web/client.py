@@ -126,6 +126,17 @@ class HTTPPageGetter(http.HTTPClient):
         l.append(value)
 
     def handleStatus(self, version, status, message):
+        """
+        Handle the HTTP status line.
+
+        @param version: The HTTP version.
+        @type version: L{bytes}
+        @param status: The HTTP status code, an integer represented as a
+            bytestring.
+        @type status: L{bytes}
+        @param message: The HTTP status message.
+        @type message: L{bytes}
+        """
         self.version, self.status, self.message = version, status, message
         self.factory.gotStatus(version, status, message)
 
@@ -409,6 +420,17 @@ class HTTPClientFactory(protocol.ClientFactory):
                 self.cookies[k.lstrip()] = v.lstrip()
 
     def gotStatus(self, version, status, message):
+        """
+        Set the status of the request on us.
+
+        @param version: The HTTP version.
+        @type version: L{bytes}
+        @param status: The HTTP status code, an integer represented as a
+            bytestring.
+        @type status: L{bytes}
+        @param message: The HTTP status message.
+        @type message: L{bytes}
+        """
         self.version, self.status, self.message = version, status, message
 
     def page(self, page):
