@@ -13,9 +13,8 @@ import warnings
 
 try:
     from urlparse import urlunparse, urljoin, urldefrag
-    from urllib import splithost, splittype
 except ImportError:
-    from urllib.parse import splithost, splittype, urljoin, urldefrag
+    from urllib.parse import urljoin, urldefrag
     from urllib.parse import urlunparse as _urlunparse
 
     def urlunparse(parts):
