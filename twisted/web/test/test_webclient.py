@@ -15,7 +15,7 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urljoin
 
-from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
+from twisted.python.compat import networkString, nativeString, intToBytes
 from twisted.trial import unittest
 from twisted.web import server, client, error, resource
 from twisted.web.static import Data

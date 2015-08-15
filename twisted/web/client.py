@@ -6,10 +6,9 @@
 HTTP client.
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import division, absolute_import
 
 import os
-import types
 import warnings
 
 try:
