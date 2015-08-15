@@ -1652,6 +1652,10 @@ class _FakeUrllib2Request(object):
         self.type = nativeString(_uri.scheme)
         self.host = nativeString(_uri.host)
 
+        if (_uri.scheme, _uri.port) not in ((b'http', 80), (b'https', 443)):
+            # If it's not a schema on the regular port, add the port.
+            self.host += ":" + str(_uri.port)
+
         if _PY3:
             self.origin_req_host = nativeString(_uri.host)
             self.unverifiable = lambda _: False
