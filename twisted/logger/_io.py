@@ -166,9 +166,14 @@ class LoggingFile(object):
                 string = string.decode(self._encoding)
             except UnicodeDecodeError:
                 # If it's invalid unicode, just repr it to try and save
-                # as much as possible, but preserving newlines.
-                stringStart = 2 if _PY3 else 1
-                string = repr(string)[stringStart:-1].replace(u"\\n", u"\n")
+                # as much as possible.
+                # -1 to get rid of the trailing newline
+                string = repr(string[:-1])
+                if isinstance(string, bytes):
+                    string = "b" + string.decode(self._encoding)
+
+                # Add the newline back
+                string = u"UNDECODABLE BYTES: " + string + u"\n"
 
         lines = (self._buffer + string).split(u"\n")
         self._buffer = lines[-1]

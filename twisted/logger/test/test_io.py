@@ -178,7 +178,9 @@ class LoggingFileTests(unittest.TestCase):
         """
         f = self.observedFile(encoding="utf-8")
         f.write(b"My favourite letter is \xae\n")
-        self.assertEqual(f.messages, [u"My favourite letter is \\xae"])
+        self.assertEqual(
+            f.messages,
+            [u"UNDECODABLE BYTES: b'My favourite letter is \\xae'"])
 
 
     def test_writeBytesDecoded(self):
