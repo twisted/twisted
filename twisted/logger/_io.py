@@ -5,11 +5,11 @@
 """
 File-like object that logs.
 """
+
 from __future__ import absolute_import, division
 
 import sys
 
-from twisted.python.compat import _PY3
 from ._levels import LogLevel
 
 
