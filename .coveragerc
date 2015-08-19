@@ -1,0 +1,10 @@
+[run]
+include =
+    twisted/*
+    bin/*
+    admin/*
+branch = True
+
+[report]
+precision = 2
+ignore_errors = True
