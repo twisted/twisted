@@ -24,12 +24,11 @@ from Crypto import Util
 # twisted imports
 from twisted.internet import protocol, defer
 
-from twisted.conch import error
 from twisted.python import log, randbytes
 
 
 # sibling imports
-from twisted.conch.ssh import address, keys
+from twisted.conch.ssh import address, kex, keys
 from twisted.conch.ssh.common import NS, getNS, MP, getMP, _MPpow, ffs
 
 
@@ -86,146 +85,6 @@ class _MACParams(tuple):
 
     @ivar key: The HMAC key which will be used.
     """
-
-
-class KexAlgorithms(object):
-    """
-    Key exchange algorithm helper class containing key exchange algorithm
-    definitions and helper functions.
-
-    @ivar _kex_algo_map: A C{dict} of C{dict} contianing key exchange
-    algorithm attributes::
-
-        preference : C{int}
-           The preference of the algorithm when negotiating key exchange.
-           1 being the most preferred.
-
-        fixedGroup: C{bool}
-           True if the key exchange algorithm prime / generator group
-           is predefined. These are handled differently within transport
-           logic. Key exchange algorithms with a fixed group must define
-           prime and generator numbers.
-
-        prime : C{long}
-           Prime number used in diffie-hellman key exchange if applicable.
-
-        generator : C{long}
-           Generator number used in diffie-hellman key exchange if applicable.
-           Note: note related to python generator functions
-
-        Note that primes are not present for key exchange algorithms that do
-        not have a fixed group (fixedGroup=False). In these cases, a prime /
-        generator group is chosen at run time based on the requested size.
-        See RFC 4419.
-        
-    @type _kex_algo_map: C{dict} of C{dict}
-
-    """
-    _kex_algo_map = {
-
-        'diffie-hellman-group-exchange-sha1': {
-           'preference' : 1,
-           'fixedGroup': False
-        },
-
-        'diffie-hellman-group1-sha1': {
-           'preference' : 2,
-           'fixedGroup': True,
-           # Diffie-Hellman primes from Oakley Group 2 [RFC 2409]
-           'prime' : long('1797693134862315907708391567937874531978602960487560'
-               '117064444236841971802161585193689478337958649255415021805654859'
-               '805036464405481992391000507928770033558166392295531362390765087'
-               '357599148225748625750074253020774477125895509579377784244424266'
-               '173347276292993876687092056060502708108429076929320191281944676'
-               '27007L'),
-           'generator' : 2L
-        },
-
-        'diffie-hellman-group14-sha1': {
-            'preference': 3,
-            'fixedGroup': True,
-            # Diffie-Hellman primes from Oakley Group 14 [RFC 3526]
-            'prime' : long('323170060713110073003389139264238282488179412411402'
-                '39112842009751400741706634354222619689417363569347117901737909'
-                '70419175460587320919502885375898618562215321217541251490177452'
-                '02702357960782362488842461894775876411059286460994117232454266'
-                '22522193230540919037680524235519125679715870117001058055877651'
-                '03886184728025797605490356973256152616708133936179954133647655'
-                '91603683178967290731783845896806396719009772021941686472258710'
-                '31411336429319536193471636533209717077448227988588565369208645'
-                '29663607725026895550592836275112117409697299806841055435958486'
-                '65832916421362182310789909994486524682624169720359118525070453'
-                '61090559L'),
-           'generator' : 2L
-
-        }
-    }
-
-    @classmethod
-    def _getKexAttr(cls, kexAlgo, kexAttr):
-        """
-        Returns the attribute named by kexAttr in the key exchange algorithm kexAlgo
-        defined in _kex_algo_map.
-
-        @type kexAlgo: C{str}
-        @param kexAlgo: The key exchange algorithm in _kex_algo_map
-
-        @type kexAttr: C{str}
-        @param kexAttr: The key exchange algorithm attribute
-
-        @raises ConchError: if the key algorithm is not found in _kex_algo_map or
-            the requested attribute does not exist in the key algorithm's definition
-        """
-
-        if not kexAlgo in cls._kex_algo_map.keys():
-            raise error.ConchError('Unsupported key exchange algorithm: %s' %(kexAlgo,))
-
-        if not kexAttr in cls._kex_algo_map[kexAlgo].keys():
-            raise error.ConchError('The requested attribute "%s" does not exist in the'
-                            ' %s algorithm' % (kexAttr, kexAlgo))
-
-        return cls._kex_algo_map[kexAlgo][kexAttr]
-
-
-    @classmethod
-    def isFixedGroup(cls, kexAlgo):
-        """
-        Uses _getKexAttr to return True if kexAlgo is a has a fixed prime /
-        generator group. Used to determine the correct key exchange logic to perform.
-
-        @type kexAlgo: C{str}
-        @param kexAlgo: The key exchange algorithm in _kex_algo_map
-
-        @rtype: C{bool}
-        """
-        return cls._getKexAttr(kexAlgo, 'fixedGroup')
-
-
-    @classmethod
-    def getDHPrime(cls, kexAlgo):
-        """
-        Uses _getKexAttr to return the prime and generator to use in the key exchange
-        algorithm
-
-        @type kexAlgo: C{str}
-        @param kexAlgo: The key exchange algorithm in _kex_algo_map
-
-        @rtype: C{tuple} containing C{long} generator and C{long} prime
-        """
-        return (cls._getKexAttr(kexAlgo, 'generator'),
-                cls._getKexAttr(kexAlgo, 'prime'))
-
-
-    @classmethod
-    def getSupportedKeyExchanges(cls):
-        """
-        Return a list of supported key exchange algorithm names in order
-        of preference.
-
-        @rtype C{list} of L{str}
-        """
-        return sorted(cls._kex_algo_map,
-            key = lambda kexAlgo: cls._kex_algo_map[kexAlgo]['preference'])
 
 
 class SSHTransportBase(protocol.Protocol):
@@ -357,7 +216,7 @@ class SSHTransportBase(protocol.Protocol):
     # both of the above support 'none', but for security are disabled by
     # default.  to enable them, subclass this class and add it, or do:
     #   SSHTransportBase.supportedCiphers.append('none')
-    supportedKeyExchanges = KexAlgorithms.getSupportedKeyExchanges()
+    supportedKeyExchanges = kex.getSupportedKeyExchanges()
     supportedPublicKeys = ['ssh-rsa', 'ssh-dss']
     supportedCompressions = ['none', 'zlib']
     supportedLanguages = ()
@@ -1057,7 +916,7 @@ class SSHServerTransport(SSHTransportBase):
         """
         clientDHpublicKey, foo = getMP(packet)
         y = _getRandomNumber(randbytes.secureRandom, 512)
-        self.g, self.p = KexAlgorithms.getDHPrime(self.kexAlg)
+        self.g, self.p = kex.getDHPrime(self.kexAlg)
         serverDHpublicKey = _MPpow(self.g, y, self.p)
         sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
         h = sha1()
@@ -1099,7 +958,7 @@ class SSHServerTransport(SSHTransportBase):
 
         # KEXDH_INIT and KEX_DH_GEX_REQUEST_OLD have the same value, so use
         # another cue to decide what kind of message the peer sent us.
-        if KexAlgorithms.isFixedGroup(self.kexAlg):
+        if kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_INIT(packet)
         else:
             self.dhGexRequest = packet
@@ -1249,9 +1108,9 @@ class SSHClientTransport(SSHTransportBase):
         """
         if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
             return # we disconnected
-        if KexAlgorithms.isFixedGroup(self.kexAlg):
+        if kex.isFixedGroup(self.kexAlg):
             self.x = _generateX(randbytes.secureRandom, 512)
-            self.g, self.p = KexAlgorithms.getDHPrime(self.kexAlg)
+            self.g, self.p = kex.getDHPrime(self.kexAlg)
             self.e = _MPpow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
         else:
@@ -1301,7 +1160,7 @@ class SSHClientTransport(SSHTransportBase):
             string g (group generator)
             string p (group prime)
         """
-        if KexAlgorithms.isFixedGroup(self.kexAlg):
+        if kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)

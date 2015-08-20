@@ -17,7 +17,7 @@ try:
 except ImportError:
     pyasn1 = None
 
-from twisted.conch.ssh import common, session, forwarding
+from twisted.conch.ssh import common, session, forwarding, kex
 from twisted.conch import avatar, error
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
@@ -373,7 +373,7 @@ if Crypto is not None and pyasn1 is not None:
             OpenSSHFactory.getPrimes.
             """
             return {
-                2048:[transport.KexAlgorithms.getDHPrime('diffie-hellman-group1-sha1')]
+                2048:[kex.getDHPrime('diffie-hellman-group1-sha1')]
             }
 
         def getService(self, trans, name):

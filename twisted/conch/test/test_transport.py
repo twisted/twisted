@@ -42,7 +42,7 @@ from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.reflect import getClass
-from twisted.conch.ssh import address, service, common
+from twisted.conch.ssh import address, service, common, kex
 from twisted.test import proto_helpers
 
 from twisted.conch.error import ConchError
@@ -280,8 +280,8 @@ class MockFactory(factory.SSHFactory):
         OpenSSHFactory.getPrimes.
         """
         return {
-            1024: ((2, transport.KexAlgorithms.getDHPrime('diffie-hellman-group1-sha1')[1]),),
-            2048: ((3, transport.KexAlgorithms.getDHPrime('diffie-hellman-group1-sha1')[1]),),
+            1024: ((2, kex.getDHPrime('diffie-hellman-group1-sha1')[1]),),
+            2048: ((3, kex.getDHPrime('diffie-hellman-group1-sha1')[1]),),
             4096: ((5, 7),)}
 
 
@@ -614,11 +614,11 @@ class BaseSSHTransportTestCase(TransportTestCase):
         packet = self.proto.getPacket()
         self.assertEqual(packet[0], chr(transport.MSG_KEXINIT))
         self.assertEqual(packet[1:17], '\x99' * 16)
-        (kex, pubkeys, ciphers1, ciphers2, macs1, macs2, compressions1,
+        (kexes, pubkeys, ciphers1, ciphers2, macs1, macs2, compressions1,
          compressions2, languages1, languages2,
          buf) = common.getNS(packet[17:], 10)
 
-        self.assertEqual(kex, ','.join(self.proto.supportedKeyExchanges))
+        self.assertEqual(kexes, ','.join(self.proto.supportedKeyExchanges))
         self.assertEqual(pubkeys, ','.join(self.proto.supportedPublicKeys))
         self.assertEqual(ciphers1, ','.join(self.proto.supportedCiphers))
         self.assertEqual(ciphers2, ','.join(self.proto.supportedCiphers))
@@ -1312,7 +1312,7 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.proto.supportedPublicKeys = ['ssh-rsa']
         self.proto.dataReceived(self.transport.value())
 
-        g, p = transport.KexAlgorithms.getDHPrime(kexAlgorithm)
+        g, p = kex.getDHPrime(kexAlgorithm)
         e = pow(g, 5000, p)
 
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.MP(e))
@@ -2156,9 +2156,9 @@ class TransportLoopbackTestCase(unittest.TestCase):
         Like test_ciphers, but for the various key exchanges.
         """
         deferreds = []
-        for kex in transport.SSHTransportBase.supportedKeyExchanges:
+        for kexAlgo in transport.SSHTransportBase.supportedKeyExchanges:
             def setKeyExchange(proto):
-                proto.supportedKeyExchanges = [kex]
+                proto.supportedKeyExchanges = [kexAlgo]
                 return proto
             deferreds.append(self._runClientServer(setKeyExchange))
         return defer.DeferredList(deferreds, fireOnOneErrback=True)
