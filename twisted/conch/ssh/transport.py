@@ -1572,6 +1572,9 @@ class _Counter:
 
 
 
+DH_GENERATOR, DH_PRIME = kex.getDHPrime("diffie-hellman-group1-sha1")
+
+
 MSG_DISCONNECT = 1
 MSG_IGNORE = 2
 MSG_UNIMPLEMENTED = 3
