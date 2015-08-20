@@ -1628,8 +1628,8 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         Test that a KEXINIT packet with a group1 or group14 key exchange
         results valid key setup.
 
-        @type kexAlgorithm : C{str}
-        @param kexAlgorithm : The key exchange algorithm to use
+        @type kexAlgorithm: C{str}
+        @param kexAlgorithm: The key exchange algorithm to use
         """
         self.proto.supportedKeyExchanges = [kexAlgorithm]
 
