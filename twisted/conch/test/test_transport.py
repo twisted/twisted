@@ -1368,9 +1368,11 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(self.proto.factory.getPrimes().get(1024)[0][1]) + '\x00\x00\x00\x01\x02')])
+              common.MP(self.proto.factory.getPrimes().get(1024)[0][1]) +
+              '\x00\x00\x00\x01\x02')])
         self.assertEqual(self.proto.g, 2)
-        self.assertEqual(self.proto.p, self.proto.factory.getPrimes().get(1024)[0][1])
+        self.assertEqual(
+            self.proto.p, self.proto.factory.getPrimes().get(1024)[0][1])
 
 
     def test_KEX_DH_GEX_REQUEST_OLD_badKexAlg(self):
@@ -1398,9 +1400,11 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(self.proto.factory.getPrimes().get(1024)[0][1]) + '\x00\x00\x00\x01\x03')])
+              common.MP(self.proto.factory.getPrimes().get(1024)[0][1]) +
+              '\x00\x00\x00\x01\x03')])
         self.assertEqual(self.proto.g, 3)
-        self.assertEqual(self.proto.p, self.proto.factory.getPrimes().get(1024)[0][1])
+        self.assertEqual(
+            self.proto.p, self.proto.factory.getPrimes().get(1024)[0][1])
 
 
     def test_KEX_DH_GEX_INIT_after_REQUEST(self):
