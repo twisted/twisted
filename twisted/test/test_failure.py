@@ -556,10 +556,14 @@ class FailureTests(SynchronousTestCase):
         representation of the underlying exception.
         """
         f = getDivisionFailure()
+        if _PY3:
+            type_name = 'builtins.ZeroDivisionError'
+        else:
+            type_name = 'exceptions.ZeroDivisionError'
         self.assertEqual(
             repr(f),
             '<twisted.python.failure.Failure '
-            'exceptions.ZeroDivisionError: division by zero>')
+            '%s: division by zero>' % (type_name,))
 
 
 
