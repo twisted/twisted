@@ -16,6 +16,7 @@ import socket
 import sys
 import operator
 import struct
+import zero_buffer
 
 from zope.interface import implementer
 
@@ -235,15 +236,28 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         """
         # Limit length of buffer to try to send, because some OSes are too
         # stupid to do so themselves (ahem windows)
-        limitedData = lazyByteSlice(data, 0, self.SEND_LIMIT)
+        if isinstance(data, zero_buffer.BufferView):
+            limitedData = data[:self.SEND_LIMIT]
 
-        try:
-            return untilConcludes(self.socket.send, limitedData)
-        except socket.error as se:
-            if se.args[0] in (EWOULDBLOCK, ENOBUFS):
-                return 0
-            else:
-                return main.CONNECTION_LOST
+            try:
+                return untilConcludes(limitedData.write_to_socket,
+                                      self.socket.fileno())
+            except OSError as se:
+                if se.args[0] in (EWOULDBLOCK, ENOBUFS):
+                    return 0
+                else:
+                    return main.CONNECTION_LOST
+
+        else:
+            limitedData = lazyByteSlice(data, 0, self.SEND_LIMIT)
+
+            try:
+                return untilConcludes(self.socket.send, limitedData)
+            except socket.error as se:
+                if se.args[0] in (EWOULDBLOCK, ENOBUFS):
+                    return 0
+                else:
+                    return main.CONNECTION_LOST
 
 
     def _closeWriteConnection(self):

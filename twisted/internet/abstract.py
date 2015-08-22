@@ -8,6 +8,8 @@ Support for generic select()able objects.
 
 from __future__ import division, absolute_import
 
+from collections import deque
+
 from socket import AF_INET6, inet_pton, error
 
 from zope.interface import implementer
@@ -16,6 +18,8 @@ from zope.interface import implementer
 from twisted.python.compat import _PY3, unicode, lazyByteSlice
 from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
+
+import zero_buffer
 
 if _PY3:
     def _concatenate(bObj, offset, bArray):
@@ -170,7 +174,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     disconnecting = 0
     _writeDisconnecting = False
     _writeDisconnected = False
-    dataBuffer = b""
     offset = 0
 
     SEND_LIMIT = 128*1024
@@ -184,7 +187,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if not reactor:
             from twisted.internet import reactor
         self.reactor = reactor
-        self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
+        self._tempDataBuffer = deque() # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
 
 
@@ -240,32 +243,33 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
         @see: L{twisted.internet.interfaces.IWriteDescriptor.doWrite}.
         """
-        if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
-            # If there is currently less than SEND_LIMIT bytes left to send
-            # in the string, extend it with the array data.
-            self.dataBuffer = _concatenate(
-                self.dataBuffer, self.offset, self._tempDataBuffer)
-            self.offset = 0
-            self._tempDataBuffer = []
-            self._tempDataLen = 0
+        done = False
 
-        # Send as much data as you can.
-        if self.offset:
-            l = self.writeSomeData(lazyByteSlice(self.dataBuffer, self.offset))
-        else:
-            l = self.writeSomeData(self.dataBuffer)
+        while not done:
+            if len(self._tempDataBuffer) == 0:
+                done = True
+                continue
 
-        # There is no writeSomeData implementation in Twisted which returns
-        # < 0, but the documentation for writeSomeData used to claim negative
-        # integers meant connection lost.  Keep supporting this here,
-        # although it may be worth deprecating and removing at some point.
-        if isinstance(l, Exception) or l < 0:
-            return l
-        self.offset += l
+            l = self.writeSomeData(self._tempDataBuffer[0])
+
+            # There is no writeSomeData implementation in Twisted which returns
+            # < 0, but the documentation for writeSomeData used to claim negative
+            # integers meant connection lost.  Keep supporting this here,
+            # although it may be worth deprecating and removing at some point.
+            if isinstance(l, Exception) or l < 0:
+                return l
+
+            if l > 0:
+                self._tempDataLen -= len(self._tempDataBuffer[0]) - l
+                self._tempDataBuffer[0] = self._tempDataBuffer[0][l:]
+                done = True
+                continue
+            else:
+                self._tempDataLen -= len(self._tempDataBuffer[0])
+                self._tempDataBuffer.popleft()
+
         # If there is nothing left to send,
-        if self.offset == len(self.dataBuffer) and not self._tempDataLen:
-            self.dataBuffer = b""
-            self.offset = 0
+        if len(self._tempDataBuffer) == 0:
             # stop writing.
             self.stopWriting()
             # If I've got a producer who is supposed to supply me with data,
@@ -320,7 +324,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
         @return: C{True} if it is full, C{False} otherwise.
         """
-        return len(self.dataBuffer) + self._tempDataLen > self.bufferSize
+        return self._tempDataLen > self.bufferSize
 
 
     def _maybePauseProducer(self):
