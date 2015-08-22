@@ -550,7 +550,7 @@ class FailureTests(SynchronousTestCase):
         test_cleanFailureRemovesTracebackInPython3.skip = "Python 3 only."
 
 
-    def test_failureRepr(self):
+    def test_repr(self):
         """
         The C{repr} of a L{failure.Failure} shows the type and string
         representation of the underlying exception.
@@ -559,7 +559,7 @@ class FailureTests(SynchronousTestCase):
         self.assertEqual(
             repr(f),
             '<twisted.python.failure.Failure '
-            'ZeroDivisionError: division by zero>')
+            'exceptions.ZeroDivisionError: division by zero>')
 
 
 
