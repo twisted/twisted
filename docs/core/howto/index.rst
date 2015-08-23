@@ -121,7 +121,7 @@ Developer Guides
   - :doc:`Reactor basics <reactor-basics>`
 
     The event loop at the core of your program.
-  - :doc:`Using SSL in Twisted <ssl>`
+  - :doc:`Using TLS in Twisted <tls>`
 
     Add some security to your network transport.
   - :doc:`UDP Networking <udp>`
@@ -159,7 +159,7 @@ Developer Guides
 
   - :doc:`Getting Connected with Endpoints <endpoints>`
 
-    Create configurable applications that support multiple transports (e.g. TCP and SSL).
+    Create configurable applications that support multiple transports (e.g. TCP and TLS).
   - :doc:`Interfaces and Adapters (Component Architecture) <components>`
 
     When inheritance isn't enough.
