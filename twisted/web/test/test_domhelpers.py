@@ -15,7 +15,7 @@ from twisted.web import microdom
 from twisted.web import domhelpers
 
 
-class DOMHelpersTestsMixin:
+class DOMHelpersTestsMixin(object):
     """
     A mixin for L{TestCase} subclasses which defines test methods for
     domhelpers functionality based on a DOM creation function provided by a

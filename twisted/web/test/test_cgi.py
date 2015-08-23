@@ -251,7 +251,7 @@ class CGITests(unittest.TestCase):
         L{twcgi.FilteredScript.runProcess} uses the reactor passed as an
         argument to the constructor.
         """
-        class FakeReactor:
+        class FakeReactor(object):
             """
             A fake reactor recording whether spawnProcess is called.
             """
@@ -284,7 +284,7 @@ class CGIScriptTests(unittest.TestCase):
         L{twcgi.CGIScript.render} sets the process environment I{PATH_INFO} from
         the request path.
         """
-        class FakeReactor:
+        class FakeReactor(object):
             """
             A fake reactor recording the environment passed to spawnProcess.
             """

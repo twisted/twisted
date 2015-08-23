@@ -392,7 +392,7 @@ class WebClientTests(unittest.TestCase):
         If there is an exception closing the file being written to after the
         connection is prematurely closed, that exception is logged.
         """
-        class BrokenFile:
+        class BrokenFile(object):
             def write(self, bytes):
                 pass
 
@@ -491,7 +491,7 @@ class WebClientTests(unittest.TestCase):
         self.assertEqual(bytes, data)
 
     def testDownloadPageError1(self):
-        class errorfile:
+        class errorfile(object):
             def write(self, data):
                 raise IOError("badness happened during write")
             def close(self):
@@ -502,7 +502,7 @@ class WebClientTests(unittest.TestCase):
             IOError)
 
     def testDownloadPageError2(self):
-        class errorfile:
+        class errorfile(object):
             def write(self, data):
                 pass
             def close(self):

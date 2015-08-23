@@ -574,7 +574,7 @@ class XMLRPCPublicLookupProcedureTests(unittest.TestCase):
 
 
 
-class SerializationConfigMixin:
+class SerializationConfigMixin(object):
     """
     Mixin which defines a couple tests which should pass when a particular flag
     is passed to L{XMLRPC}.

@@ -26,7 +26,7 @@ from zope.interface import implementer
 
 from twisted.python.compat import _PY3, networkString, nativeString, intToBytes
 if _PY3:
-    class Copyable:
+    class Copyable(object):
         """
         Fake mixin, until twisted.spread is ported.
         """
@@ -529,7 +529,7 @@ class _GzipEncoder(object):
 
 
 
-class _RemoteProducerWrapper:
+class _RemoteProducerWrapper(object):
     def __init__(self, remote):
         self.resumeProducing = remote.remoteMethod("resumeProducing")
         self.pauseProducing = remote.remoteMethod("pauseProducing")

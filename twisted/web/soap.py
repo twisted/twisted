@@ -114,7 +114,7 @@ class SOAPPublisher(resource.Resource):
         request.finish()
 
 
-class Proxy:
+class Proxy(object):
     """A Proxy for making remote SOAP calls.
 
     Pass the URL of the remote SOAP server to the constructor.

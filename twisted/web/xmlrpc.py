@@ -63,7 +63,7 @@ class NoSuchFunction(Fault):
     """
 
 
-class Handler:
+class Handler(object):
     """
     Handle a XML-RPC request and store the state for a request in progress.
 
@@ -462,7 +462,7 @@ class _QueryFactory(protocol.ClientFactory):
 
 
 
-class Proxy:
+class Proxy(object):
     """
     A Proxy for making remote XML-RPC calls.
 

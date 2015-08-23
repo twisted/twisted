@@ -552,7 +552,7 @@ class HTTPClientParser(HTTPParser):
 
 
 @implementer(IClientRequest)
-class Request:
+class Request(object):
     """
     A L{Request} instance describes an HTTP request to be sent to an HTTP
     server.
@@ -818,7 +818,7 @@ class Request:
 
 
 
-class LengthEnforcingConsumer:
+class LengthEnforcingConsumer(object):
     """
     An L{IConsumer} proxy which enforces an exact length requirement on the
     total data written to it.
@@ -920,7 +920,7 @@ def makeStatefulDispatcher(name, template):
 
 
 @implementer(IResponse)
-class Response:
+class Response(object):
     """
     A L{Response} instance describes an HTTP response received from an HTTP
     server.
@@ -1182,7 +1182,7 @@ class Response:
 
 
 @implementer(IConsumer)
-class ChunkedEncoder:
+class ChunkedEncoder(object):
     """
     Helper object which exposes L{IConsumer} on top of L{HTTP11ClientProtocol}
     for streaming request bodies to the server.
@@ -1231,7 +1231,7 @@ class ChunkedEncoder:
 
 
 @implementer(IPushProducer)
-class TransportProxyProducer:
+class TransportProxyProducer(object):
     """
     An L{IPushProducer} implementation which wraps another such thing and
     proxies calls to it until it is told to stop.

@@ -39,7 +39,7 @@ def b64encode(s):
     return base64.b64encode(s).strip()
 
 
-class BasicAuthTestsMixin:
+class BasicAuthTestsMixin(object):
     """
     L{TestCase} mixin class which defines a number of tests for
     L{basic.BasicCredentialFactory}.  Because this mixin defines C{setUp}, it
@@ -121,7 +121,7 @@ class BasicAuthTestsMixin:
             response, self.makeRequest())
 
 
-class RequestMixin:
+class RequestMixin(object):
     def makeRequest(self, method=b'GET', clientAddress=None):
         """
         Create a L{DummyRequest} (change me to create a

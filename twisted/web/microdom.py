@@ -991,7 +991,7 @@ def parseXMLString(st):
 
 # Utility
 
-class lmx:
+class lmx(object):
     """Easy creation of XML."""
 
     def __init__(self, node='div'):

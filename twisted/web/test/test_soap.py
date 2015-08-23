@@ -9,7 +9,7 @@ try:
     import SOAPpy
 except ImportError:
     SOAPpy = None
-    class SOAPPublisher: pass
+    class SOAPPublisher(object): pass
 else:
     from twisted.web import soap
     SOAPPublisher = soap.SOAPPublisher

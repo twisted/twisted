@@ -357,7 +357,7 @@ def parseContentRange(header):
 
 
 
-class StringTransport:
+class StringTransport(object):
     """
     I am a StringIO wrapper that conforms for the transport API. I support
     the `writeSequence' method.
@@ -526,7 +526,7 @@ NO_BODY_CODES = (204, 304)
 
 
 @implementer(interfaces.IConsumer)
-class Request:
+class Request(object):
     """
     A HTTP request.
 
@@ -662,7 +662,7 @@ class Request:
                 headers.setRawHeaders(k, [v])
             self._warnHeaders("headers", "responseHeaders")
         else:
-            self.__dict__[name] = value
+            super(Request, self).__setattr__(name, value)
 
 
     def _cleanup(self):

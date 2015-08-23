@@ -24,8 +24,8 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
 
 
-class DummyChannel:
-    class TCP:
+class DummyChannel(object):
+    class TCP(object):
         port = 80
         disconnected = False
 

@@ -154,7 +154,7 @@ class MakeStatefulDispatcherTests(TestCase):
         A method defined with L{makeStatefulDispatcher} invokes a second
         method based on the current state of the object.
         """
-        class Foo:
+        class Foo(object):
             _state = 'A'
 
             def bar(self):
@@ -841,7 +841,7 @@ class HTTPClientParserTests(TestCase):
 
 
 
-class SlowRequest:
+class SlowRequest(object):
     """
     L{SlowRequest} is a fake implementation of L{Request} which is easily
     controlled externally (for example, by code in a test method).
@@ -866,7 +866,7 @@ class SlowRequest:
 
 
 
-class SimpleRequest:
+class SimpleRequest(object):
     """
     L{SimpleRequest} is a fake implementation of L{Request} which writes a
     short, fixed string to the transport passed to its C{writeTo} method and
@@ -942,7 +942,7 @@ class HTTP11ClientProtocolTests(TestCase):
         and returns a L{Deferred} which fires with a L{Failure} of
         L{RequestGenerationFailed} wrapping the underlying failure.
         """
-        class BrokenRequest:
+        class BrokenRequest(object):
             persistent = False
             def writeTo(self, transport):
                 return fail(ArbitraryException())
@@ -965,7 +965,7 @@ class HTTP11ClientProtocolTests(TestCase):
         L{HTTP11ClientProtocol.request} returns a L{Deferred} which fires with
         a L{Failure} of L{RequestGenerationFailed} wrapping that exception.
         """
-        class BrokenRequest:
+        class BrokenRequest(object):
             persistent = False
             def writeTo(self, transport):
                 raise ArbitraryException()
@@ -1731,7 +1731,7 @@ class HTTP11ClientProtocolTests(TestCase):
 
 
 @implementer(IBodyProducer)
-class StringProducer:
+class StringProducer(object):
     """
     L{StringProducer} is a dummy body producer.
 

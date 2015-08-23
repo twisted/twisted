@@ -106,7 +106,7 @@ class Request(pb.RemoteCopy, server.Request):
 
 pb.setUnjellyableForClass(server.Request, Request)
 
-class Issue:
+class Issue(object):
     def __init__(self, request):
         self.request = request
 

@@ -301,7 +301,7 @@ class DistribTests(unittest.TestCase):
 
 
 
-class _PasswordDatabase:
+class _PasswordDatabase(object):
     def __init__(self, users):
         self._users = users
 

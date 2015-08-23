@@ -28,7 +28,7 @@ from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
 
 
-class SynchronousThreadPool:
+class SynchronousThreadPool(object):
     """
     A single-threaded implementation of part of the L{ThreadPool} interface.
     This implementation calls functions synchronously rather than running
@@ -50,7 +50,7 @@ class SynchronousThreadPool:
 
 
 
-class SynchronousReactorThreads:
+class SynchronousReactorThreads(object):
     """
     A single-threaded implementation of part of the L{IReactorThreads}
     interface.  This implementation assumes that it will only be invoked
@@ -103,7 +103,7 @@ class WSGIResourceTests(TestCase):
             "foo", Resource())
 
 
-class WSGITestsMixin:
+class WSGITestsMixin(object):
     """
     @ivar channelFactory: A no-argument callable which will be invoked to
         create a new HTTP channel to associate with request objects.
@@ -1256,7 +1256,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         """
         channel = DummyChannel()
 
-        class Result:
+        class Result(object):
             def __init__(self):
                 self.open = True
 

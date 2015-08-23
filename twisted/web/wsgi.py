@@ -19,7 +19,7 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web.http import INTERNAL_SERVER_ERROR
 
 
-class _ErrorStream:
+class _ErrorStream(object):
     """
     File-like object instances of which are used as the value for the
     C{'wsgi.errors'} key in the C{environ} dictionary passed to the application
@@ -63,7 +63,7 @@ class _ErrorStream:
 
 
 
-class _InputStream:
+class _InputStream(object):
     """
     File-like object instances of which are used as the value for the
     C{'wsgi.input'} key in the C{environ} dictionary passed to the application
@@ -130,7 +130,7 @@ class _InputStream:
 
 
 
-class _WSGIResponse:
+class _WSGIResponse(object):
     """
     Helper for L{WSGIResource} which drives the WSGI application using a
     threadpool and hooks it up to the L{Request}.
@@ -341,7 +341,7 @@ class _WSGIResponse:
 
 
 
-class WSGIResource:
+class WSGIResource(object):
     """
     An L{IResource} implementation which delegates responsibility for all
     resources hierarchically inferior to it to a WSGI application.

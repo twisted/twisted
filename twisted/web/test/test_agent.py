@@ -291,7 +291,7 @@ class FileBodyProducerTests(TestCase):
 
 
 
-class FakeReactorAndConnectMixin:
+class FakeReactorAndConnectMixin(object):
     """
     A test mixin providing a testable C{Reactor} class and a dummy C{connect}
     method which allows instances to pretend to be endpoints.
@@ -686,7 +686,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         self.assertEqual(self.pool._connections, {})
         connectionResult = Deferred()
 
-        class Endpoint:
+        class Endpoint(object):
             def connect(self, factory):
                 return connectionResult
 
