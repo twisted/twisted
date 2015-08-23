@@ -12,7 +12,7 @@ import string
 # Twisted imports
 from twisted.python import log
 
-class ColorText:
+class ColorText(object):
     """
     Represents an element of text along with the texts colors and
     additional attributes.
@@ -39,7 +39,7 @@ class ColorText:
             self.fg, self.bg = self.bg, self.fg
 
 
-class AnsiParser:
+class AnsiParser(object):
     """
     Parser class for ANSI codes.
     """

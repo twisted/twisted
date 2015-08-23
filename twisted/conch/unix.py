@@ -38,7 +38,7 @@ except ImportError:
 
 
 @implementer(portal.IRealm)
-class UnixSSHRealm:
+class UnixSSHRealm(object):
     def requestAvatar(self, username, mind, *interfaces):
         user = UnixConchUser(username)
         return interfaces[0], user, user.logout
@@ -153,7 +153,7 @@ class UnixConchUser(ConchUser):
 
 
 @implementer(ISession)
-class SSHSessionForUnixConchUser:
+class SSHSessionForUnixConchUser(object):
     def __init__(self, avatar, reactor=None):
         """
         Construct an C{SSHSessionForUnixConchUser}.
@@ -339,7 +339,7 @@ class SSHSessionForUnixConchUser:
 
 
 @implementer(ISFTPServer)
-class SFTPServerForUnixConchUser:
+class SFTPServerForUnixConchUser(object):
     def __init__(self, avatar):
         self.avatar = avatar
 
@@ -442,7 +442,7 @@ class SFTPServerForUnixConchUser:
 
 
 @implementer(ISFTPFile)
-class UnixSFTPFile:
+class UnixSFTPFile(object):
     def __init__(self, server, filename, flags, attrs):
         self.server = server
         openFlags = 0
@@ -497,7 +497,7 @@ class UnixSFTPFile:
 
 
 
-class UnixSFTPDirectory:
+class UnixSFTPDirectory(object):
 
     def __init__(self, server, directory):
         self.server = server
