@@ -28,7 +28,7 @@ class _MethodWrapper(object):
 
 
 
-class CallbackList:
+class CallbackList(object):
     """
     Container for callbacks.
 
@@ -123,7 +123,7 @@ class CallbackList:
 
 
 
-class EventDispatcher:
+class EventDispatcher(object):
     """
     Event dispatching service.
 

@@ -6,7 +6,7 @@
 #
 
 
-class AccountManager:
+class AccountManager(object):
     """I am responsible for managing a user's accounts.
 
     That is, remembering what accounts are available, their settings,

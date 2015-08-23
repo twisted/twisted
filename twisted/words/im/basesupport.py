@@ -19,7 +19,7 @@ from twisted.persisted import styles
 
 from twisted.internet import error
 
-class AbstractGroup:
+class AbstractGroup(object):
     def __init__(self, name, account):
         self.name = name
         self.account = account
@@ -59,7 +59,7 @@ class AbstractGroup:
     def __str__(self):
         return '%s@%s' % (self.name, self.account.accountName)
 
-class AbstractPerson:
+class AbstractPerson(object):
     def __init__(self, name, baseAccount):
         self.name = name
         self.account = baseAccount
@@ -85,7 +85,7 @@ class AbstractPerson:
     def __str__(self):
         return '%s@%s' % (self.name, self.account.accountName)
 
-class AbstractClientMixin:
+class AbstractClientMixin(object):
     """Designed to be mixed in to a Protocol implementing class.
 
     Inherit from me first.

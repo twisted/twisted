@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 
-class Enum:
+class Enum(object):
     group = None
 
     def __init__(self, label):

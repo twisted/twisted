@@ -328,7 +328,7 @@ class MSNCommandFailed(Exception):
                 % (errorCodes[self.errorCode], self.errorCode))
 
 
-class MSNMessage:
+class MSNMessage(object):
     """
     I am the class used to represent an 'instant' message.
 
@@ -396,7 +396,7 @@ class MSNMessage:
         """ set the message text """
         self.message = message
 
-class MSNContact:
+class MSNContact(object):
 
     """
     This class represents a contact (user).
@@ -467,7 +467,7 @@ class MSNContact:
         """
         self.lists ^= listType
 
-class MSNContactList:
+class MSNContactList(object):
     """
     This class represents a basic MSN contact list.
 

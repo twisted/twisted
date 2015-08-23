@@ -117,7 +117,7 @@ class DomishTests(unittest.TestCase):
 
 
 
-class DomishStreamTestsMixin:
+class DomishStreamTestsMixin(object):
     """
     Mixin defining tests for different stream implementations.
 

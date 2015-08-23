@@ -28,7 +28,7 @@ def _splitPrefix(name):
 # mean they're always _USED_)
 G_PREFIXES = { "http://www.w3.org/XML/1998/namespace":"xml" }
 
-class _ListSerializer:
+class _ListSerializer(object):
     """ Internal class which serializes an Element tree into a buffer """
     def __init__(self, prefixes=None, prefixesInScope=None):
         self.writelist = []
@@ -201,7 +201,7 @@ class SerializedXML(unicode):
     pass
 
 
-class Namespace:
+class Namespace(object):
     """ Convenience object for tracking namespace declarations. """
     def __init__(self, uri):
         self._uri = uri
@@ -731,7 +731,7 @@ else:
                     self.currElem = self.currElem.parent
 
 
-class ExpatElementStream:
+class ExpatElementStream(object):
     def __init__(self):
         import pyexpat
         self.DocumentStartEvent = None

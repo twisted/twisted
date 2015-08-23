@@ -51,7 +51,7 @@ class NoMoreTokens(Exception):
     """Another exception object, for when we run out of tokens"""
     pass
 
-class Scanner:
+class Scanner(object):
     """Yapps scanner.
 
     The Yapps scanner can work in context sensitive or context
@@ -196,7 +196,7 @@ class Scanner:
                 # This token should be ignored ..
                 self.pos = self.pos + best_match
 
-class Parser:
+class Parser(object):
     """Base class for Yapps-generated parsers.
 
     """
@@ -219,7 +219,7 @@ class Parser:
         self._pos = 1 + self._pos
         return tok[3]
 
-class Context:
+class Context(object):
     """Class to represent the parser's call stack.
 
     Every rule creates a Context that links to its parent rule.  The

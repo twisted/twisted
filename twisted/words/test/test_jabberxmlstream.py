@@ -438,7 +438,7 @@ class XmlStreamTests(unittest.TestCase):
         streamStartedCalls = []
         associateWithStreamCalls = []
 
-        class TestAuthenticator:
+        class TestAuthenticator(object):
             def connectionMade(self):
                 connectionMadeCalls.append(None)
 
@@ -554,7 +554,7 @@ class ConnectAuthenticatorTests(unittest.TestCase):
         """
         Test successful completion of an initialization step.
         """
-        class Initializer:
+        class Initializer(object):
             def initialize(self):
                 pass
 
@@ -570,7 +570,7 @@ class ConnectAuthenticatorTests(unittest.TestCase):
         """
         Test failure of an initialization step.
         """
-        class Initializer:
+        class Initializer(object):
             def initialize(self):
                 raise TestError
 

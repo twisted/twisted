@@ -57,7 +57,7 @@ def hashPassword(sid, password):
 
 
 
-class Authenticator:
+class Authenticator(object):
     """
     Base class for business logic of initializing an XmlStream
 

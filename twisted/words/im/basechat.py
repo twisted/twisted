@@ -9,7 +9,7 @@ Base classes for Instance Messenger clients.
 from twisted.words.im.locals import OFFLINE, ONLINE, AWAY
 
 
-class ContactsList:
+class ContactsList(object):
     """
     A GUI object that displays a contacts list.
 
@@ -103,7 +103,7 @@ class ContactsList:
 
 
 
-class Conversation:
+class Conversation(object):
     """
     A GUI window of a conversation with a specific person.
 
@@ -176,7 +176,7 @@ class Conversation:
 
 
 
-class GroupConversation:
+class GroupConversation(object):
     """
     A GUI window of a conversation with a group of people.
 
@@ -307,7 +307,7 @@ class GroupConversation:
 
 
 
-class ChatUI:
+class ChatUI(object):
     """
     A GUI chat client.
 

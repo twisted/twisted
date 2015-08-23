@@ -21,7 +21,7 @@ class LiteralValue(str):
         return self
 
 
-class IndexValue:
+class IndexValue(object):
     def __init__(self, index):
         self.index = int(index) - 1
 
@@ -29,7 +29,7 @@ class IndexValue:
         return elem.children[self.index]
 
 
-class AttribValue:
+class AttribValue(object):
     def __init__(self, attribname):
         self.attribname = attribname
         if self.attribname == "xmlns":
@@ -45,7 +45,7 @@ class AttribValue:
             return None
 
 
-class CompareValue:
+class CompareValue(object):
     def __init__(self, lhs, op, rhs):
         self.lhs = lhs
         self.rhs = rhs
@@ -61,7 +61,7 @@ class CompareValue:
         return self.lhs.value(elem) != self.rhs.value(elem)
 
 
-class BooleanValue:
+class BooleanValue(object):
     """
     Provide boolean XPath expression operators.
 
@@ -105,7 +105,7 @@ def Function(fname):
     return c
 
 
-class _not_Function:
+class _not_Function(object):
     def __init__(self):
         self.baseValue = None
 
@@ -116,7 +116,7 @@ class _not_Function:
         return not self.baseValue.value(elem)
 
 
-class _text_Function:
+class _text_Function(object):
     def setParams(self):
         pass
 
@@ -124,7 +124,7 @@ class _text_Function:
         return str(elem)
 
 
-class _Location:
+class _Location(object):
     def __init__(self):
         self.predicates = []
         self.elementName  = None
@@ -186,7 +186,7 @@ class _Location:
                     resultlist.append(c)
 
 
-class _AnyLocation:
+class _AnyLocation(object):
     def __init__(self):
         self.predicates = []
         self.elementName = None
@@ -275,7 +275,7 @@ class _AnyLocation:
             self.queryForStringList(c, resultlist)
 
 
-class XPathQuery:
+class XPathQuery(object):
     def __init__(self, queryStr):
         self.queryStr = queryStr
         from twisted.words.xish.xpathparser import parse

@@ -48,7 +48,7 @@ class IMappingTable(Interface):
 
 
 
-class LookupTableFromFunction:
+class LookupTableFromFunction(object):
 
     implements(ILookupTable)
 
@@ -57,7 +57,7 @@ class LookupTableFromFunction:
 
 
 
-class LookupTable:
+class LookupTable(object):
 
     implements(ILookupTable)
 
@@ -69,7 +69,7 @@ class LookupTable:
 
 
 
-class MappingTableFromFunction:
+class MappingTableFromFunction(object):
 
     implements(IMappingTable)
 
@@ -78,7 +78,7 @@ class MappingTableFromFunction:
 
 
 
-class EmptyMappingTable:
+class EmptyMappingTable(object):
 
     implements(IMappingTable)
 
@@ -93,7 +93,7 @@ class EmptyMappingTable:
 
 
 
-class Profile:
+class Profile(object):
     def __init__(self, mappings=[],  normalize=True, prohibiteds=[],
                        check_unassigneds=True, check_bidi=True):
         self.mappings = mappings
@@ -158,7 +158,7 @@ class Profile:
             raise UnicodeError, "Violation of BIDI Requirement 3"
 
 
-class NamePrep:
+class NamePrep(object):
     """ Implements preparation of internationalized domain names.
 
     This class implements preparing internationalized domain names using the

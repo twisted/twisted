@@ -94,7 +94,7 @@ def html(text):
     text=string.replace(text,"\n","<br>")
     return '<html><body bgcolor="white"><font color="black">%s</font></body></html>'%text
 
-class OSCARUser:
+class OSCARUser(object):
     def __init__(self, name, warn, tlvs):
         self.name = name
         self.warning = warn
@@ -176,7 +176,7 @@ class OSCARUser:
         return s
 
 
-class SSIGroup:
+class SSIGroup(object):
     def __init__(self, name, tlvs = {}):
         self.name = name
         #self.tlvs = []
@@ -204,7 +204,7 @@ class SSIGroup:
                struct.pack('!HH', groupID, buddyID) + '\000\001' + tlvData
 
 
-class SSIBuddy:
+class SSIBuddy(object):
     def __init__(self, name, tlvs = {}):
         self.name = name
         self.tlvs = tlvs

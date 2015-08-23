@@ -12,7 +12,7 @@ from twisted.words.xish import utility
 from twisted.words.xish.domish import Element
 from twisted.words.xish.utility import EventDispatcher
 
-class CallbackTracker:
+class CallbackTracker(object):
     """
     Test helper for tracking callbacks.
 
@@ -31,7 +31,7 @@ class CallbackTracker:
 
 
 
-class OrderedCallbackTracker:
+class OrderedCallbackTracker(object):
     """
     Test helper for tracking callbacks and their order.
     """
