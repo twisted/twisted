@@ -12,7 +12,7 @@ from twisted.internet import protocol
 from twisted.pair import raw
 from zope.interface import implements
 
-class UDPHeader:
+class UDPHeader(object):
     def __init__(self, data):
 
         (self.source, self.dest, self.len, self.check) \

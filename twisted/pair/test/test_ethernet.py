@@ -7,7 +7,7 @@ from twisted.pair import ethernet, raw
 from zope.interface import implements
 
 
-class MyProtocol:
+class MyProtocol(object):
     implements(raw.IRawPacketProtocol)
 
     def __init__(self, expecting):

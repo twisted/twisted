@@ -23,7 +23,7 @@ class IEthernetProtocol(Interface):
     def datagramReceived():
         """An Ethernet frame has been received"""
 
-class EthernetHeader:
+class EthernetHeader(object):
     def __init__(self, data):
 
         (self.dest, self.source, self.proto) \

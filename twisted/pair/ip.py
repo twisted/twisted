@@ -15,7 +15,7 @@ from twisted.pair import raw
 from zope.interface import implements
 
 
-class IPHeader:
+class IPHeader(object):
     def __init__(self, data):
 
         (ihlversion, self.tos, self.tot_len, self.fragment_id, frag_off,
