@@ -14,7 +14,7 @@ you need is in the top-level of the zope.interface package, e.g.::
    class IFoo(Interface):
        pass
 
-   class Foo:
+   class Foo(object):
        implements(IFoo)
 
    print IFoo.implementedBy(Foo) # True
@@ -146,7 +146,7 @@ def getRegistry():
 # FIXME: deprecate attribute somehow?
 CannotAdapt = TypeError
 
-class Adapter:
+class Adapter(object):
     """I am the default implementation of an Adapter for some interface.
 
     This docstring contains a limerick, by popular demand::
@@ -189,7 +189,7 @@ class Adapter:
         return self.original.isuper(iface, adapter)
 
 
-class Componentized:
+class Componentized(object):
     """I am a mixin to allow you to be adapted in various ways persistently.
 
     I define a list of persistent adapters.  This is to allow adapter classes

@@ -19,7 +19,7 @@ from twisted.python import log, reflect
 lastRebuild = time.time()
 
 
-class Sensitive:
+class Sensitive(object):
     """
     A utility mixin that's sensitive to rebuilds.
 

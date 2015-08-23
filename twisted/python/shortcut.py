@@ -23,7 +23,7 @@ def open(filename):
     return sc
 
 
-class Shortcut:
+class Shortcut(object):
     """A shortcut on Win32.
     >>> sc=Shortcut(path, arguments, description, workingdir, iconpath, iconidx)
     @param path: Location of the target

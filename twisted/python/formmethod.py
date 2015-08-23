@@ -26,7 +26,7 @@ class InputError(FormException):
     """
 
 
-class Argument:
+class Argument(object):
     """Base class for form arguments."""
 
     # default value for argument, if no other default is given
@@ -326,13 +326,13 @@ class Submit(Choice):
             return Choice.coerce(self, value)
 
 
-class PresentationHint:
+class PresentationHint(object):
     """
     A hint to a particular system.
     """
 
 
-class MethodSignature:
+class MethodSignature(object):
 
     def __init__(self, *sigList):
         """
@@ -348,7 +348,7 @@ class MethodSignature:
         return FormMethod(self, callable, takesRequest)
 
 
-class FormMethod:
+class FormMethod(object):
     """A callable object with a signature."""
 
     def __init__(self, signature, callable, takesRequest=False):

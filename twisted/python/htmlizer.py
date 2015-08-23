@@ -9,7 +9,7 @@ HTML rendering of Python source.
 import tokenize, cgi, keyword
 import reflect
 
-class TokenPrinter:
+class TokenPrinter(object):
 
     currentCol, currentLine = 0, 1
     lastIdentifier = parameters = 0
@@ -48,7 +48,7 @@ class TokenPrinter:
             self.parameters = 0
 
 
-class HTMLWriter:
+class HTMLWriter(object):
 
     noSpan = []
 

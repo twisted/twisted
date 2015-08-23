@@ -20,7 +20,7 @@ from twisted.python.failure import Failure
 
 WorkerStop = object()
 
-class ThreadPool:
+class ThreadPool(object):
     """
     This class (hopefully) generalizes the functionality of a pool of threads
     to which work can be dispatched.

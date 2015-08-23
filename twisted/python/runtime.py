@@ -44,7 +44,7 @@ _timeFunctions = {
 
 
 
-class Platform:
+class Platform(object):
     """
     Gives us information about the platform we're running on.
     """

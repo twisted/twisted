@@ -445,7 +445,7 @@ def safe_str(o):
         return _safeFormat(str, o)
 
 
-class QueueMethod:
+class QueueMethod(object):
     """
     I represent a method that doesn't exist yet.
     """
@@ -585,10 +585,10 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
     Ex::
 
-      class Soy:
+      class Soy(object):
         properties = {\"taste\": \"bland\"}
 
-      class Plant:
+      class Plant(object):
         properties = {\"colour\": \"green\"}
 
       class Seaweed(Plant):

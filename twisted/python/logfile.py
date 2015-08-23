@@ -14,7 +14,7 @@ from twisted.python import threadable
 
 
 
-class BaseLogFile:
+class BaseLogFile(object):
     """
     The base class for a log file that can be rotated.
     """
@@ -300,7 +300,7 @@ class DailyLogFile(BaseLogFile):
 threadable.synchronize(DailyLogFile)
 
 
-class LogReader:
+class LogReader(object):
     """Read from a log file."""
 
     def __init__(self, name):

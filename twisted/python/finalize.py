@@ -26,7 +26,7 @@ if __name__ == '__main__':
     def fin():
         print 'I am _so_ dead.'
 
-    class Finalizeable:
+    class Finalizeable(object):
         """
         An un-sucky __del__
         """

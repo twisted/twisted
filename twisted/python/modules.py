@@ -110,7 +110,7 @@ def _isPackagePath(fpath):
 
 
 
-class _ModuleIteratorHelper:
+class _ModuleIteratorHelper(object):
     """
     This mixin provides common behavior between python module and path entries,
     since the mechanism for searching sys.path and __path__ attributes is
@@ -243,7 +243,7 @@ class _ModuleIteratorHelper:
         """
         raise NotImplementedError()
 
-class PythonAttribute:
+class PythonAttribute(object):
     """
     I represent a function, class, or other object that is present.
 
@@ -488,7 +488,7 @@ class IPathImportMapper(Interface):
 
 
 @implementer(IPathImportMapper)
-class _DefaultMapImpl:
+class _DefaultMapImpl(object):
     """ Wrapper for the default importer, i.e. None.  """
     def mapPath(self, fsPathString):
         return FilePath(fsPathString)
@@ -497,7 +497,7 @@ _theDefaultMapper = _DefaultMapImpl()
 
 if not _PY3:
     @implementer(IPathImportMapper)
-    class _ZipMapImpl:
+    class _ZipMapImpl(object):
         """ IPathImportMapper implementation for zipimport.ZipImporter.  """
         def __init__(self, importer):
             self.importer = importer
@@ -539,7 +539,7 @@ def _defaultSysPathFactory():
     return sys.path
 
 
-class PythonPath:
+class PythonPath(object):
     """
     I represent the very top of the Python object-space, the module list in
     C{sys.path} and the modules list in C{sys.modules}.

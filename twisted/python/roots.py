@@ -19,7 +19,7 @@ class NotSupportedError(NotImplementedError):
     """
 
 
-class Request:
+class Request(object):
     """I am an abstract representation of a request for an entity.
 
     I also function as the response.  The request is responded to by calling
@@ -40,7 +40,7 @@ class Request:
         raise NotImplementedError("%s.finish" % reflect.qual(self.__class__))
 
 
-class Entity:
+class Entity(object):
     """I am a terminal object in a hierarchy, with no children.
 
     I represent a null interface; certain non-instance objects (strings and
@@ -58,7 +58,7 @@ class Entity:
         raise NotImplementedError("%s.render" % reflect.qual(self.__class__))
 
 
-class Collection:
+class Collection(object):
     """I represent a static collection of entities.
 
     I contain methods designed to represent collections that can be dynamically

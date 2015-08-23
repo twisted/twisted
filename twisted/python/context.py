@@ -20,7 +20,7 @@ defaultContextDict = {}
 
 setDefault = defaultContextDict.__setitem__
 
-class ContextTracker:
+class ContextTracker(object):
     """
     A L{ContextTracker} provides a way to pass arbitrary key/value data up and
     down a call stack without passing them as parameters to the functions on

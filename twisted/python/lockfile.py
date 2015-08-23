@@ -85,7 +85,7 @@ else:
 
 
 
-class FilesystemLock:
+class FilesystemLock(object):
     """
     A mutex.
 

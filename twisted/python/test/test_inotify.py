@@ -30,7 +30,7 @@ class INotifyTests(TestCase):
         If the I{libc} object passed to L{initializeModule} has no
         C{inotify_init} attribute, L{ImportError} is raised.
         """
-        class libc:
+        class libc(object):
             def inotify_add_watch(self):
                 pass
             def inotify_rm_watch(self):
@@ -43,7 +43,7 @@ class INotifyTests(TestCase):
         If the I{libc} object passed to L{initializeModule} has no
         C{inotify_add_watch} attribute, L{ImportError} is raised.
         """
-        class libc:
+        class libc(object):
             def inotify_init(self):
                 pass
             def inotify_rm_watch(self):
@@ -56,7 +56,7 @@ class INotifyTests(TestCase):
         If the I{libc} object passed to L{initializeModule} has no
         C{inotify_rm_watch} attribute, L{ImportError} is raised.
         """
-        class libc:
+        class libc(object):
             def inotify_init(self):
                 pass
             def inotify_add_watch(self):
@@ -70,7 +70,7 @@ class INotifyTests(TestCase):
         necessary attributes, it sets the C{argtypes} and C{restype} attributes
         of the three ctypes methods used from libc.
         """
-        class libc:
+        class libc(object):
             def inotify_init(self):
                 pass
             inotify_init = staticmethod(inotify_init)
@@ -101,7 +101,7 @@ class INotifyTests(TestCase):
         If C{inotify_init} returns a negative number, L{init} raises
         L{INotifyError}.
         """
-        class libc:
+        class libc(object):
             def inotify_init(self):
                 return -1
         self.patch(_inotify, 'libc', libc())
@@ -113,7 +113,7 @@ class INotifyTests(TestCase):
         If C{inotify_add_watch} returns a negative number, L{add}
         raises L{INotifyError}.
         """
-        class libc:
+        class libc(object):
             def inotify_add_watch(self, fd, path, mask):
                 return -1
         self.patch(_inotify, 'libc', libc())

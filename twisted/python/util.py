@@ -22,7 +22,7 @@ else:
 
 
 
-class InsensitiveDict:
+class InsensitiveDict(object):
     """Dictionary, that has case-insensitive keys.
 
     Normally keys are retained in their original form when queried with
@@ -437,7 +437,7 @@ def searchupwards(start, files=[], dirs=[]):
     return None
 
 
-class LineLog:
+class LineLog(object):
     """
     A limited-size line-based log, useful for logging line-based
     protocols such as SMTP.
@@ -559,7 +559,7 @@ class _IntervalDifferentialIterator(object):
 
 
 
-class FancyStrMixin:
+class FancyStrMixin(object):
     """
     Mixin providing a flexible implementation of C{__str__}.
 
@@ -597,7 +597,7 @@ class FancyStrMixin:
 
 
 
-class FancyEqMixin:
+class FancyEqMixin(object):
     """
     Mixin that implements C{__eq__} and C{__ne__}.
 

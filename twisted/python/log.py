@@ -35,7 +35,7 @@ from twisted.logger._legacy import publishToNewObserver as _publishNew
 
 
 
-class ILogContext:
+class ILogContext(object):
     """
     Actually, this interface is just a synonym for the dictionary interface,
     but it serves as a key for the default information in a log.
@@ -138,7 +138,7 @@ def err(_stuff=None, _why=None, **kw):
 deferr = err
 
 
-class Logger:
+class Logger(object):
     """
     This represents a class which may 'own' a log. Used by subclassing.
     """
@@ -152,7 +152,7 @@ class Logger:
 
 
 
-class LogPublisher:
+class LogPublisher(object):
     """
     Class for singleton log message publishing.
     """
@@ -453,7 +453,7 @@ def textFromEventDict(eventDict):
 
 
 
-class _GlobalStartStopMixIn:
+class _GlobalStartStopMixIn(object):
     """
     Mix-in for global log observers that can start and stop.
     """
@@ -591,7 +591,7 @@ class PythonLoggingObserver(_GlobalStartStopMixIn, object):
 
 
 
-class StdioOnnaStick:
+class StdioOnnaStick(object):
     """
     Class that pretends to be stdout/err, and turns writes into log messages.
 
@@ -679,7 +679,7 @@ def startLoggingWithObserver(observer, setStdout=1):
 
 
 
-class NullFile:
+class NullFile(object):
     """
     A file-like object that discards everything.
     """

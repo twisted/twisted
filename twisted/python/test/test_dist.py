@@ -290,7 +290,7 @@ class GetScriptsTests(TestCase):
 
 
 
-class DummyCommand:
+class DummyCommand(object):
     """
     A fake Command.
     """

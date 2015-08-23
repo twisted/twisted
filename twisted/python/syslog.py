@@ -18,7 +18,7 @@ DEFAULT_FACILITY = syslog.LOG_USER
 
 
 
-class SyslogObserver:
+class SyslogObserver(object):
     """
     A log observer for logging to syslog.
 

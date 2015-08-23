@@ -142,7 +142,7 @@ class _Code(object):
         self.co_filename = filename
 
 
-class Failure:
+class Failure(object):
     """
     A basic abstraction for an error that has occurred.
 
