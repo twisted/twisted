@@ -349,7 +349,7 @@ class IProcess(Interface):
 
 
 @implementer(IProcess)
-class Process:
+class Process(object):
     """
     Process running parameters.
 

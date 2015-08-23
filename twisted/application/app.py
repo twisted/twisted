@@ -448,7 +448,7 @@ def _reactorAction():
 
 
 
-class ReactorSelectionMixin:
+class ReactorSelectionMixin(object):
     """
     Provides options for selecting a reactor to install.
 
