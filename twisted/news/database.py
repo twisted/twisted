@@ -32,7 +32,7 @@ OVERVIEW_FMT = [
 def hexdigest(md5): #XXX: argh. 1.5.2 doesn't have this.
     return ''.join(map(lambda x: hex(ord(x))[2:], md5.digest()))
 
-class Article:
+class Article(object):
     def __init__(self, head, body):
         self.body = body
         self.headers = {}
@@ -193,7 +193,7 @@ class INewsStorage(Interface):
         exist.
         """
 
-class NewsStorage:
+class NewsStorage(object):
     """
     Backwards compatibility class -- There is no reason to inherit from this,
     just implement INewsStorage instead.
@@ -225,7 +225,7 @@ class NewsStorage:
 
 
 
-class _ModerationMixin:
+class _ModerationMixin(object):
     """
     Storage implementations can inherit from this class to get the easy-to-use
     C{notifyModerators} method which will take care of sending messages which
@@ -485,7 +485,7 @@ class PickleStorage(_ModerationMixin):
                 self.flush()
 
 
-class Group:
+class Group(object):
     name = None
     flags = ''
     minArticle = 1
@@ -732,7 +732,7 @@ class NewsShelf(_ModerationMixin):
             return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
 
 
-class NewsStorageAugmentation:
+class NewsStorageAugmentation(object):
     """
     A NewsStorage implementation using Twisted's asynchronous DB-API
     """

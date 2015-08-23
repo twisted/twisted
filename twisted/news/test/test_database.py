@@ -17,7 +17,7 @@ from twisted.news.database import Article, PickleStorage, NewsShelf
 
 
 
-class ModerationTestsMixin:
+class ModerationTestsMixin(object):
     """
     Tests for the moderation features of L{INewsStorage} implementations.
     """
