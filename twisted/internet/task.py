@@ -744,12 +744,16 @@ class Clock:
 
     @property
     def calls(self):
-        # XXX: This used to be the actual list of pending DelayedCalls.
-        #      It's undocumented (and therefore an implicitly private API),
-        #      but there are tests that use it instead of getDelayedCalls().
-        #      It should probably be deprecated, and ideally made immutable
-        #      so that attempts to modify it fail instead of silently doing
-        #      nothing.
+        """
+        Return all the outstanding delayed calls, ordered by time.
+
+        XXX: This used to be the actual list of pending DelayedCalls.
+             It's undocumented (and therefore an implicitly private API),
+             but there are tests that use it instead of getDelayedCalls().
+             It should probably be deprecated, and ideally made immutable
+             so that attempts to modify it fail instead of silently doing
+             nothing.
+        """
         return sorted(self._pendingDelayedCalls.getDelayedCalls(),
                       key=lambda x: x.getTime())
 

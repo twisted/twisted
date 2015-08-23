@@ -211,6 +211,10 @@ class DelayedCall:
 
 
 class _PendingDelayedCalls(object):
+    """
+    Efficient manager for a collection of pending L{DelayedCall}s, used by
+    L{ReactorBase} and L{twisted.internet.task.Clock}.
+    """
 
     def __init__(self):
         self._pendingTimedCalls = []
@@ -227,10 +231,20 @@ class _PendingDelayedCalls(object):
 
 
     def add(self, tple):
+        """
+        Add C{tple} to the 'new calls' list for later scheduling.
+
+        @param tple: The L{DelayedCall} to add.
+        """
         self._newTimedCalls.append(tple)
 
 
     def moveCallLaterSooner(self, tple):
+        """
+        Move C{tple} up the heap (if necessary) after its schedule changes.
+
+        @param tple: The L{DelayedCall} to move.
+        """
         # Linear time find: slow.
         heap = self._pendingTimedCalls
         try:
@@ -242,29 +256,41 @@ class _PendingDelayedCalls(object):
                 parent = (pos-1) // 2
                 if heap[parent] <= elt:
                     break
-                # move parent down
+                # Move parent down.
                 heap[pos] = heap[parent]
                 pos = parent
             heap[pos] = elt
         except ValueError:
-            # element was not found in heap - oh well...
+            # Element was not found in heap - oh well...
             pass
 
 
     def cancelCallLater(self, tple):
+        """
+        Track the cancellation for later garbage collection.
+
+        @param tple: The L{DelayedCall} being cancelled. (Unused)
+        """
         self._cancellations += 1
 
 
     def getDelayedCalls(self):
-        """Return all the outstanding delayed calls in the system.
+        """
+        Return all the outstanding delayed calls in the system.
         They are returned in no particular order.
         This method is not efficient -- it is really only meant for
-        test cases."""
+        test cases.
+
+        @return: List of L{DelayedCall}s.
+        """
         return [x for x in (self._pendingTimedCalls + self._newTimedCalls)
                 if not x.cancelled]
 
 
     def insertNewDelayedCalls(self):
+        """
+        Add all unscheduled L{DelayedCall}s to the schedule.
+        """
         for call in self._newTimedCalls:
             if call.cancelled:
                 self._cancellations -= 1
@@ -275,6 +301,15 @@ class _PendingDelayedCalls(object):
 
 
     def popEarliestBefore(self, time):
+        """
+        Remove and return the earliest L{DelayedCall} scheduled before C{time}.
+
+        If none are found, C{None} is returned instead.
+
+        @param time: Only calls scheduled this time will be popped.
+
+        @return: The earliest schedule L{DelayedCall} or C{None}
+        """
         while self and self[0].time <= time:
             call = heappop(self._pendingTimedCalls)
             if call.cancelled:
