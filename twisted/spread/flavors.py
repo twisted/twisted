@@ -381,8 +381,8 @@ class RemoteCopy(Unjellyable):
         object's dictionary (or a filtered approximation of it depending
         on my peer's perspective).
         """
-
-        self.__dict__ = state
+        for key, val in state.items():
+            setattr(self, key, val)
 
     def unjellyFor(self, unjellier, jellyList):
         if unjellier.invoker is None:

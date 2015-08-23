@@ -412,6 +412,8 @@ class CopyableFailure(failure.Failure, Copyable):
         Collect state related to the exception which occurred, discarding
         state which cannot reasonably be serialized.
         """
+        print("a")
+        print(self.__dict__)
         state = self.__dict__.copy()
         state['tb'] = None
         state['frames'] = []
@@ -425,6 +427,7 @@ class CopyableFailure(failure.Failure, Copyable):
             state['traceback'] = self.getTraceback()
         else:
             state['traceback'] = 'Traceback unavailable\n'
+        print("aaa")
         return state
 
 
@@ -475,9 +478,11 @@ setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
 
 def failure2Copyable(fail, unsafeTracebacks=0):
-    f = types.InstanceType(CopyableFailure, fail.__dict__)
-    f.unsafeTracebacks = unsafeTracebacks
-    return f
+    print(fail)
+    setattr(fail, "__mro__", (CopyableFailure,))
+    fail.unsafeTracebacks = unsafeTracebacks
+    print(fail)
+    return fail
 
 
 
@@ -573,7 +578,6 @@ class Broker(banana.Banana):
         Check to make sure that both ends of the protocol are speaking
         the same version dialect.
         """
-
         if vnum != self.version:
             raise ProtocolError("Version Incompatibility: %s %s" % (self.version, vnum))
 

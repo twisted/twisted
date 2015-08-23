@@ -551,6 +551,13 @@ class _Jellier:
                         else:
                             state = obj.__dict__
                         sxp.append(self.jelly(state))
+                    elif self.taster.isTypeAllowed(obj.__class__):
+                        sxp.append(className)
+                        if hasattr(obj, "__getstate__"):
+                            state = obj.__getstate__()
+                        else:
+                            state = obj.__dict__
+                        sxp.append(self.jelly(state))
                     else:
                         self.unpersistable(
                             "instance of class %s deemed insecure" %
@@ -1010,7 +1017,7 @@ class SecurityOptions:
     This will by default disallow everything, except for 'none'.
     """
 
-    basicTypes = ["dictionary", "list", "tuple",
+    basicTypes = ["dictionary", "list", "tuple", "BaseException"
                   "reference", "dereference", "unpersistable",
                   "persistent", "long_int", "long", "dict"]
 
@@ -1031,7 +1038,8 @@ class SecurityOptions:
                              "time": 1,
                              "date": 1,
                              "timedelta": 1,
-                             "NoneType": 1}
+                             "NoneType": 1,
+                             "twisted.python.failure.Failure": 1}
         self.allowedTypes['unicode'] = 1
         self.allowedTypes['decimal'] = 1
         self.allowedTypes['set'] = 1
@@ -1109,7 +1117,6 @@ class SecurityOptions:
         Returns 1 if the given type is allowed, 0 otherwise.
         """
         return (typeName in self.allowedTypes or '.' in typeName)
-
 
 globalSecurity = SecurityOptions()
 globalSecurity.allowBasicTypes()
