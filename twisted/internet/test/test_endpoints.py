@@ -58,9 +58,9 @@ try:
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
 
-    skipSSL = False
+    skipTLS = False
 except ImportError:
-    skipSSL = "OpenSSL is required to construct SSL Endpoints"
+    skipTLS = "OpenSSL is required to construct TLS Endpoints"
 
 
 
@@ -427,7 +427,7 @@ class ClientEndpointTestCaseMixin(object):
     def retrieveConnectedFactory(self, reactor):
         """
         Retrieve a single factory that has connected using the given reactor.
-        (This behavior is valid for TCP and SSL but needs to be overridden for
+        (This behavior is valid for TCP and TLS but needs to be overridden for
         UNIX.)
 
         @param reactor: a L{MemoryReactor}
@@ -2074,13 +2074,13 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
 
 
-class SSL4EndpointsTests(EndpointTestCaseMixin,
+class TLS4EndpointsTests(EndpointTestCaseMixin,
                          unittest.TestCase):
     """
-    Tests for SSL Endpoints.
+    Tests for TLS Endpoints.
     """
-    if skipSSL:
-        skip = skipSSL
+    if skipTLS:
+        skip = skipTLS
 
     def expectedServers(self, reactor):
         """
@@ -2157,19 +2157,19 @@ class SSL4EndpointsTests(EndpointTestCaseMixin,
 
     def createServerEndpoint(self, reactor, factory, **listenArgs):
         """
-        Create an L{SSL4ServerEndpoint} and return the tools to verify its
+        Create an L{TLS4ServerEndpoint} and return the tools to verify its
         behaviour.
 
         @param factory: The thing that we expect to be passed to our
             L{IStreamServerEndpoint.listen} implementation.
-        @param reactor: A fake L{IReactorSSL} that L{SSL4ServerEndpoint} can
+        @param reactor: A fake L{IReactorSSL} that L{TLS4ServerEndpoint} can
             call L{IReactorSSL.listenSSL} on.
         @param listenArgs: Optional dictionary of arguments to
             L{IReactorSSL.listenSSL}.
         """
         address = IPv4Address("TCP", "0.0.0.0", 0)
 
-        return (endpoints.SSL4ServerEndpoint(reactor,
+        return (endpoints.TLS4ServerEndpoint(reactor,
                                              address.port,
                                              self.serverSSLContext,
                                              **listenArgs),
@@ -2181,10 +2181,10 @@ class SSL4EndpointsTests(EndpointTestCaseMixin,
 
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         """
-        Create an L{SSL4ClientEndpoint} and return the values needed to verify
+        Create an L{TLS4ClientEndpoint} and return the values needed to verify
         its behaviour.
 
-        @param reactor: A fake L{IReactorSSL} that L{SSL4ClientEndpoint} can
+        @param reactor: A fake L{IReactorSSL} that L{TLS4ClientEndpoint} can
             call L{IReactorSSL.connectSSL} on.
         @param clientFactory: The thing that we expect to be passed to our
             L{IStreamClientEndpoint.connect} implementation.
@@ -2196,7 +2196,7 @@ class SSL4EndpointsTests(EndpointTestCaseMixin,
         if connectArgs is None:
             connectArgs = {}
 
-        return (endpoints.SSL4ClientEndpoint(reactor,
+        return (endpoints.TLS4ClientEndpoint(reactor,
                                              address.host,
                                              address.port,
                                              self.clientSSLContext,
@@ -2468,8 +2468,8 @@ class ServerStringTests(unittest.TestCase):
     def test_ssl(self):
         """
         When passed an SSL strports description, L{endpoints.serverFromString}
-        returns a L{SSL4ServerEndpoint} instance initialized with the values
-        from the string.
+        returns a L{TLS4ServerEndpoint} instance initialized with the values
+        from the string, and emits a L{DeprecationWarning}.
         """
         reactor = object()
         server = endpoints.serverFromString(
@@ -2486,16 +2486,45 @@ class ServerStringTests(unittest.TestCase):
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 1)
+        self.assertIn(
+            ("twisted.internet.endpoints.SSL4ServerEndpoint was deprecated in "
+             "Twisted 15.5.0: Use TLS4ServerEndpoint instead."),
+            warnings[0]["message"])
 
-    def test_sslWithDefaults(self):
+
+    def test_tls(self):
         """
-        An SSL string endpoint description with minimal arguments returns
-        a properly initialized L{SSL4ServerEndpoint} instance.
+        When passed an TLS strports description, L{endpoints.serverFromString}
+        returns a L{TLS4ServerEndpoint} instance initialized with the values
+        from the string.
         """
         reactor = object()
         server = endpoints.serverFromString(
-            reactor, "ssl:4321:privateKey=%s" % (escapedPEMPathName,))
-        self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
+            reactor,
+            "tls:1234:backlog=12:privateKey=%s:"
+            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            % (escapedPEMPathName, escapedPEMPathName))
+        self.assertIsInstance(server, endpoints.TLS4ServerEndpoint)
+        self.assertIs(server._reactor, reactor)
+        self.assertEqual(server._port, 1234)
+        self.assertEqual(server._backlog, 12)
+        self.assertEqual(server._interface, "10.0.0.1")
+        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        ctx = server._sslContextFactory.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+
+    def test_tlsWithDefaults(self):
+        """
+        An TLS string endpoint description with minimal arguments returns
+        a properly initialized L{TLS4ServerEndpoint} instance.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor, "tls:4321:privateKey=%s" % (escapedPEMPathName,))
+        self.assertIsInstance(server, endpoints.TLS4ServerEndpoint)
         self.assertIs(server._reactor, reactor)
         self.assertEqual(server._port, 4321)
         self.assertEqual(server._backlog, 50)
@@ -2510,17 +2539,17 @@ class ServerStringTests(unittest.TestCase):
 
     # Use a class variable to ensure we use the exactly same endpoint string
     # except for the chain file itself.
-    SSL_CHAIN_TEMPLATE = "ssl:1234:privateKey=%s:extraCertChain=%s"
+    TLS_CHAIN_TEMPLATE = "tls:1234:privateKey=%s:extraCertChain=%s"
 
 
-    def test_sslChainLoads(self):
+    def test_tlsChainLoads(self):
         """
         Specifying a chain file loads the contained certificates in the right
         order.
         """
         server = endpoints.serverFromString(
             object(),
-            self.SSL_CHAIN_TEMPLATE % (escapedPEMPathName,
+            self.TLS_CHAIN_TEMPLATE % (escapedPEMPathName,
                                        escapedChainPathName,)
         )
         # Test chain file is just a concatenation of thing1.pem and thing2.pem
@@ -2538,7 +2567,7 @@ class ServerStringTests(unittest.TestCase):
                          expectedChainCerts[1].digest('sha1'))
 
 
-    def test_sslChainFileMustContainCert(self):
+    def test_tlsChainFileMustContainCert(self):
         """
         If C{extraCertChain} is passed, it has to contain at least one valid
         certificate in PEM format.
@@ -2552,14 +2581,14 @@ class ServerStringTests(unittest.TestCase):
             ValueError,
             endpoints.serverFromString,
             object(),
-            self.SSL_CHAIN_TEMPLATE % (
+            self.TLS_CHAIN_TEMPLATE % (
                 escapedPEMPathName,
                 endpoints.quoteStringArgument(fp.path),
             )
         )
 
 
-    def test_sslDHparameters(self):
+    def test_tlsDHparameters(self):
         """
         If C{dhParameters} are specified, they are passed as
         L{DiffieHellmanParameters} into L{CertificateOptions}.
@@ -2568,7 +2597,7 @@ class ServerStringTests(unittest.TestCase):
         reactor = object()
         server = endpoints.serverFromString(
             reactor,
-            "ssl:4321:privateKey={0}:certKey={1}:dhParameters={2}"
+            "tls:4321:privateKey={0}:certKey={1}:dhParameters={2}"
             .format(escapedPEMPathName, escapedPEMPathName, fileName)
         )
         cf = server._sslContextFactory
@@ -2576,11 +2605,11 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
 
-    if skipSSL:
-        test_ssl.skip = test_sslWithDefaults.skip = skipSSL
-        test_sslChainLoads.skip = skipSSL
-        test_sslChainFileMustContainCert.skip = skipSSL
-        test_sslDHparameters.skip = skipSSL
+    if skipTLS:
+        test_tls.skip = test_tlsWithDefaults.skip = skipTLS
+        test_tlsChainLoads.skip = skipTLS
+        test_tlsChainFileMustContainCert.skip = skipTLS
+        test_tlsDHparameters.skip = skipTLS
 
 
     def test_unix(self):
@@ -2879,13 +2908,13 @@ class SSLClientStringTests(unittest.TestCase):
     Tests for L{twisted.internet.endpoints.clientFromString} which require SSL.
     """
 
-    if skipSSL:
-        skip = skipSSL
+    if skipTLS:
+        skip = skipTLS
 
     def test_ssl(self):
         """
         When passed an SSL strports description, L{clientFromString} returns a
-        L{SSL4ClientEndpoint} instance initialized with the values from the
+        L{TLS4ClientEndpoint} instance initialized with the values from the
         string.
         """
         reactor = object()
@@ -2894,7 +2923,7 @@ class SSLClientStringTests(unittest.TestCase):
             "ssl:host=example.net:port=4321:privateKey=%s:"
             "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
             (escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
-        self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
+        self.assertIsInstance(client, endpoints.TLS4ClientEndpoint)
         self.assertIs(client._reactor, reactor)
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
@@ -2924,7 +2953,7 @@ class SSLClientStringTests(unittest.TestCase):
     def test_sslPositionalArgs(self):
         """
         When passed an SSL strports description, L{clientFromString} returns a
-        L{SSL4ClientEndpoint} instance initialized with the values from the
+        L{TLS4ClientEndpoint} instance initialized with the values from the
         string.
         """
         reactor = object()
@@ -2933,7 +2962,7 @@ class SSLClientStringTests(unittest.TestCase):
             "ssl:example.net:4321:privateKey=%s:"
             "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
             (escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
-        self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
+        self.assertIsInstance(client, endpoints.TLS4ClientEndpoint)
         self.assertIs(client._reactor, reactor)
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
@@ -2944,12 +2973,12 @@ class SSLClientStringTests(unittest.TestCase):
     def test_sslWithDefaults(self):
         """
         When passed an SSL strports description without extra arguments,
-        L{clientFromString} returns a L{SSL4ClientEndpoint} instance
+        L{clientFromString} returns a L{TLS4ClientEndpoint} instance
         whose context factory is initialized with default values.
         """
         reactor = object()
         client = endpoints.clientFromString(reactor, "ssl:example.net:4321")
-        self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
+        self.assertIsInstance(client, endpoints.TLS4ClientEndpoint)
         self.assertIs(client._reactor, reactor)
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)

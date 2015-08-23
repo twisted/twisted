@@ -13,7 +13,7 @@ def main(reactor):
     certData = getModule(__name__).filePath.sibling('public.pem').getContent()
     authority = ssl.Certificate.loadPEM(certData)
     options = ssl.optionsForClientTLS(u'example.com', authority)
-    endpoint = endpoints.SSL4ClientEndpoint(reactor, 'localhost', 8000,
+    endpoint = endpoints.TLS4ClientEndpoint(reactor, 'localhost', 8000,
                                             options)
     echoClient = yield endpoint.connect(factory)
 
@@ -22,5 +22,5 @@ def main(reactor):
     yield done
 
 if __name__ == '__main__':
-    import echoclient_ssl
-    task.react(echoclient_ssl.main)
+    import echoclient_tls
+    task.react(echoclient_tls.main)

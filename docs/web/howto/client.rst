@@ -15,7 +15,7 @@ Overview
 --------
 
 
-    
+
 
 This document describes how to use the HTTP client included in Twisted
 Web.  After reading it, you should be able to make HTTP and HTTPS
@@ -24,7 +24,7 @@ method, headers, and body and you will be able to retrieve the response
 code, headers, and body.
 
 
-    
+
 
 
 
@@ -32,7 +32,7 @@ A number of higher-level features are also explained, including proxying,
 automatic content encoding negotiation, and cookie handling.
 
 
-    
+
 
 
 
@@ -40,17 +40,17 @@ Prerequisites
 ~~~~~~~~~~~~~
 
 
-    
+
 
 
 This document assumes that you are familiar with :doc:`Deferreds and Failures <../../core/howto/defer>` , and :doc:`producers and consumers <../../core/howto/producers>` .
 It also assumes you are familiar with the basic concepts of HTTP, such
 as requests and responses, methods, headers, and message bodies.  The
 HTTPS section of this document also assumes you are somewhat familiar with
-SSL and have read about :doc:`using SSL in Twisted <../../core/howto/ssl>` .
+TLS and have read about :doc:`using TLS in Twisted <../../core/howto/tls>` .
 
 
-    
+
 
 
 
@@ -58,13 +58,13 @@ The Agent
 ---------
 
 
-    
+
 
 Issuing Requests
 ~~~~~~~~~~~~~~~~
 
 
-    
+
 
 The :api:`twisted.web.client.Agent <twisted.web.client.Agent>` class is the entry
 point into the client API.  Requests are issued using the :api:`twisted.web.client.Agent.request <request>` method, which
@@ -75,7 +75,7 @@ requires a reactor as an argument to its initializer.  An example of
 creating an agent and issuing a request using it might look like this:
 
 
-    
+
 
 
 
@@ -85,10 +85,10 @@ creating an agent and issuing a request using it might look like this:
 
 
 
-As may be obvious, this issues a new *GET* request for */* 
+As may be obvious, this issues a new *GET* request for */*
 to the web server on ``example.com`` .  ``Agent`` is
 responsible for resolving the hostname into an IP address and connecting
-to it on port 80 (for *HTTP* URIs), port 443 (for *HTTPS* 
+to it on port 80 (for *HTTP* URIs), port 443 (for *HTTPS*
 URIs), or on the port number specified in the URI itself.  It is also
 responsible for cleaning up the connection afterwards.  This code sends
 a request which includes one custom header, *User-Agent* .  The
@@ -96,24 +96,24 @@ last argument passed to ``Agent.request`` is ``None`` ,
 though, so the request has no body.
 
 
-    
+
 
 
 
 Sending a request which does include a body requires passing an object
-providing :api:`twisted.web.iweb.IBodyProducer <twisted.web.iweb.IBodyProducer>` 
+providing :api:`twisted.web.iweb.IBodyProducer <twisted.web.iweb.IBodyProducer>`
 to ``Agent.request`` .  This interface extends the more general
-:api:`twisted.internet.interfaces.IPushProducer <IPushProducer>` 
+:api:`twisted.internet.interfaces.IPushProducer <IPushProducer>`
 by adding a new ``length`` attribute and adding several
 constraints to the way the producer and consumer interact.
 
 
-    
 
 
 
 
-- 
+
+-
   The length attribute must be a non-negative integer or the constant
   ``twisted.web.iweb.UNKNOWN_LENGTH`` .  If the length is known,
   it will be used to specify the value for the
@@ -121,19 +121,19 @@ constraints to the way the producer and consumer interact.
   unknown the attribute should be set to ``UNKNOWN_LENGTH`` .
   Since more servers support *Content-Length* , if a length can be
   provided it should be.
-- 
-  An additional method is required on ``IBodyProducer`` 
+-
+  An additional method is required on ``IBodyProducer``
   implementations: ``startProducing`` .  This method is used to
   associate a consumer with the producer.  It should return a
   ``Deferred`` which fires when all data has been produced.
-- 
+-
   ``IBodyProducer`` implementations should never call the
   consumer's ``unregisterProducer`` method.  Instead, when it
   has produced all of the data it is going to produce, it should only
   fire the ``Deferred`` returned by ``startProducing`` .
 
 
-    
+
 
 
 
@@ -141,7 +141,7 @@ For additional details about the requirements of :api:`twisted.web.iweb.IBodyPro
 the API documentation.
 
 
-    
+
 
 
 
@@ -149,7 +149,7 @@ Here's a simple ``IBodyProducer`` implementation which
 writes an in-memory string to the consumer:
 
 
-    
+
 
 
 
@@ -162,7 +162,7 @@ writes an in-memory string to the consumer:
 This producer can be used to issue a request with a body:
 
 
-    
+
 
 
 
@@ -182,7 +182,7 @@ as ``StringProducer`` from the previous example, but with a
 little extra code to only send data as fast as the server will take it.
 
 
-    
+
 
 
 
@@ -195,7 +195,7 @@ little extra code to only send data as fast as the server will take it.
 ``FileBodyProducer`` closes the file when it no longer needs it.
 
 
-    
+
 
 
 
@@ -205,7 +205,7 @@ This will abort the connection, and the ``Deferred`` will errback
 with :api:`twisted.internet.defer.CancelledError <CancelledError>` .
 
 
-    
+
 
 
 
@@ -213,7 +213,7 @@ Receiving Responses
 ~~~~~~~~~~~~~~~~~~~
 
 
-    
+
 
 So far, the examples have demonstrated how to issue a request.  However,
 they have ignored the response, except for showing that it is a
@@ -222,7 +222,7 @@ received.  Next we'll cover what that response is and how to interpret
 it.
 
 
-    
+
 
 
 
@@ -236,7 +236,7 @@ any other problem which arises which prevents the response from being
 received.  It does *not* include responses with an error status.
 
 
-    
+
 
 
 
@@ -256,7 +256,7 @@ attributes of the response object and this method, here's an example
 which displays part of the response to a request:
 
 
-    
+
 
 
 
@@ -269,8 +269,8 @@ which displays part of the response to a request:
 The ``BeginningPrinter`` protocol in this example is passed to
 ``Response.deliverBody`` and the response body is then delivered
 to its ``dataReceived`` method as it arrives.  When the body has
-been completely delivered, the protocol's ``connectionLost`` 
-method is called.  It is important to inspect the ``Failure`` 
+been completely delivered, the protocol's ``connectionLost``
+method is called.  It is important to inspect the ``Failure``
 passed to ``connectionLost`` .  If the response body has been
 completely received, the failure will wrap a :api:`twisted.web.client.ResponseDone <twisted.web.client.ResponseDone>` exception.  This
 indicates that it is *known* that all data has been received.  It
@@ -282,7 +282,7 @@ the exception to be of another type, indicating guaranteed data loss for
 some reason (a lost connection, a memory error, etc).
 
 
-    
+
 
 
 
@@ -299,7 +299,7 @@ after this, the protocol's ``connectionLost`` method will be
 called.
 
 
-    
+
 
 
 
@@ -313,7 +313,7 @@ application is not interested in the body, it should issue a
 ``stopProducing`` on its transport.
 
 
-    
+
 
 
 
@@ -321,7 +321,7 @@ If the body of the response isn't going to be consumed incrementally, then :api:
 This function returns a ``Deferred`` that fires with the body after the request has been completed; cancelling this ``Deferred`` will close the connection to the HTTP server immediately.
 
 
-    
+
 
 
 
@@ -331,32 +331,32 @@ This function returns a ``Deferred`` that fires with the body after the request 
 
 
 
-HTTP over SSL
+HTTP over TLS
 ~~~~~~~~~~~~~
 
 
-    
+
 
 Everything you've read so far applies whether the scheme of the request
-URI is *HTTP* or *HTTPS* .  However, to control the SSL
+URI is *HTTP* or *HTTPS* .  However, to control the TLS
 negotiation performed when an *HTTPS* URI is requested, there's
 one extra object to pay attention to: the SSL context factory.
 
 
-    
+
 
 
 
 ``Agent`` 's constructor takes an optional second argument, a
 context factory.  This is an object like the context factory described
-in :doc:`Using SSL in Twisted <../../core/howto/ssl>` but has
+in :doc:`Using TLS in Twisted <../../core/howto/tls>` but has
 one small difference.  The ``getContext`` method of this factory
 accepts the address from the URL being requested.  This allows it to
 return a context object which verifies that the server's certificate
 matches the URL being requested.
 
 
-    
+
 
 
 
@@ -364,26 +364,26 @@ Here's an example which shows how to use ``Agent`` to request
 an *HTTPS* URL with no certificate verification.
 
 
-    
+
 
 
 
 .. code-block:: python
 
-    
+
     from twisted.python.log import err
     from twisted.web.client import Agent
     from twisted.internet import reactor
     from twisted.internet.ssl import ClientContextFactory
-    
+
     class WebClientContextFactory(ClientContextFactory):
         def getContext(self, hostname, port):
             return ClientContextFactory.getContext(self)
-    
+
     def display(response):
         print "Received response"
         print response
-    
+
     def main():
         contextFactory = WebClientContextFactory()
         agent = Agent(reactor, contextFactory)
@@ -391,13 +391,13 @@ an *HTTPS* URL with no certificate verification.
         d.addCallbacks(display, err)
         d.addCallback(lambda ignored: reactor.stop())
         reactor.run()
-    
+
     if __name__ == "__main__":
         main()
 
 
 
-    
+
 
 The important point to notice here is that ``getContext`` now
 accepts two arguments, a hostname and a port number.  These two arguments,
@@ -410,16 +410,16 @@ may re-use an existing connection, and therefore will re-use the
 previously returned context object.
 
 
-    
 
 
 
-To configure SSL options or enable certificate verification or hostname
+
+To configure TLS options or enable certificate verification or hostname
 checking, provide a context factory which creates suitably configured
 context objects.
 
 
-    
+
 
 
 
@@ -427,18 +427,18 @@ HTTP Persistent Connection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-    
+
 
 HTTP persistent connections use the same TCP connection to send and
 receive multiple HTTP requests/responses. This reduces latency and TCP
 connection establishment overhead.
 
 
-    
 
 
 
-The constructor of :api:`twisted.web.client.Agent <twisted.web.client.Agent>` 
+
+The constructor of :api:`twisted.web.client.Agent <twisted.web.client.Agent>`
 takes an optional parameter pool, which should be an instance
 of :api:`twisted.web.client.HTTPConnectionPool <HTTPConnectionPool>` , which will be used
 to manage the connections.  If the pool is created with the
@@ -447,62 +447,62 @@ default), it will not close connections when the request is done, and
 instead hold them in its cache to be re-used.
 
 
-    
+
 
 
 
 Here's an example which sends requests over a persistent connection:
 
 
-    
+
 
 
 
 .. code-block:: python
 
-    
+
     from twisted.internet import reactor
     from twisted.internet.defer import Deferred, DeferredList
     from twisted.internet.protocol import Protocol
     from twisted.web.client import Agent, HTTPConnectionPool
-    
+
     class IgnoreBody(Protocol):
         def __init__(self, deferred):
             self.deferred = deferred
-    
+
         def dataReceived(self, bytes):
             pass
-    
+
         def connectionLost(self, reason):
             self.deferred.callback(None)
-    
-    
+
+
     def cbRequest(response):
         print 'Response code:', response.code
         finished = Deferred()
         response.deliverBody(IgnoreBody(finished))
         return finished
-    
+
     pool = HTTPConnectionPool(reactor)
     agent = Agent(reactor, pool=pool)
-    
+
     def requestGet(url):
         d = agent.request('GET', url)
         d.addCallback(cbRequest)
         return d
-    
+
     # Two requests to the same host:
     d = requestGet('http://localhost:8080/foo').addCallback(
         lambda ign: requestGet("http://localhost:8080/bar"))
     def cbShutdown(ignored):
         reactor.stop()
     d.addCallback(cbShutdown)
-    
+
     reactor.run()
 
 
 
-    
+
 
 Here, the two requests are to the same host, one after the each
 other. In most cases, the same connection will be used for the second
@@ -510,7 +510,7 @@ request, instead of two different connections when using a
 non-persistent pool.
 
 
-    
+
 
 
 
@@ -518,7 +518,7 @@ Multiple Connections to the Same Server
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-    
+
 
 :api:`twisted.web.client.HTTPConnectionPool <twisted.web.client.HTTPConnectionPool>` instances
 have an attribute
@@ -528,33 +528,33 @@ value is 2.  This is effective only when the :api:`twisted.web.client.HTTPConnec
 True. You can change the value like bellow:
 
 
-    
+
 
 
 
 .. code-block:: python
 
-    
+
     from twisted.web.client import HTTPConnectionPool
-    
+
     pool = HTTPConnectionPool(reactor, persistent=True)
     pool.maxPersistentPerHost = 1
 
 
 
-    
+
 
 With the default value of 2, the pool keeps around two connections to
 the same host at most. Eventually the cached persistent connections will
 be closed, by default after 240 seconds; you can change this timeout
-value with the ``cachedConnectionTimeout`` 
+value with the ``cachedConnectionTimeout``
 attribute of the pool. To force all connections to close use
-the :api:`twisted.web.client.HTTPConnectionPool.closeCachedConnections <closeCachedConnections>` 
+the :api:`twisted.web.client.HTTPConnectionPool.closeCachedConnections <closeCachedConnections>`
 method.
 
 
 
-    
+
 
 
 
@@ -562,17 +562,17 @@ Automatic Retries
 ^^^^^^^^^^^^^^^^^
 
 
-    
+
 If a request fails without getting a response, and the request is
 something that hopefully can be retried without having any side-effects
 (e.g. a request with method GET), it will be retried automatically when
 sending a request over a previously-cached persistent connection. You can
-disable this behavior by setting :api:`twisted.web.client.HTTPConnectionPool.retryAutomatically <retryAutomatically>` 
+disable this behavior by setting :api:`twisted.web.client.HTTPConnectionPool.retryAutomatically <retryAutomatically>`
 to ``False`` . Note that each request will only be retried
 once.
 
 
-    
+
 
 
 
@@ -580,50 +580,50 @@ Following redirects
 ~~~~~~~~~~~~~~~~~~~
 
 
-    
+
 
 By itself, ``Agent`` doesn't follow HTTP redirects (responses
 with 301, 302, 303, 307 status codes and a ``location`` header
 field). You need to use the :api:`twisted.web.client.RedirectAgent <twisted.web.client.RedirectAgent>` class to do so. It
 implements a rather strict behavior of the RFC, meaning it will redirect
-301 and 302 as 307, only on ``GET`` and ``HEAD`` 
+301 and 302 as 307, only on ``GET`` and ``HEAD``
 requests.
 
-    
+
 
 
 
 The following example shows how to have a redirect-enabled agent.
 
 
-    
+
 
 
 
 .. code-block:: python
 
-    
+
     from twisted.python.log import err
     from twisted.web.client import Agent, RedirectAgent
     from twisted.internet import reactor
-    
+
     def display(response):
         print "Received response"
         print response
-    
+
     def main():
         agent = RedirectAgent(Agent(reactor))
         d = agent.request("GET", "http://example.com/")
         d.addCallbacks(display, err)
         d.addCallback(lambda ignored: reactor.stop())
         reactor.run()
-    
+
     if __name__ == "__main__":
         main()
 
 
 
-    
+
 
 In contrast, :api:`twisted.web.client.BrowserLikeRedirectAgent <twisted.web.client.BrowserLikeRedirectAgent>` implements
 more lenient behaviour that closely emulates what web browsers do; in
@@ -632,7 +632,7 @@ meaning the method is changed to ``GET`` before making the redirect
 request.
 
 
-    
+
 
 
 
@@ -644,7 +644,7 @@ In most cases there will not be a previous response, but in the case of
 following the previous responses from response to response.
 
 
-    
+
 
 
 
@@ -652,13 +652,13 @@ Using a HTTP proxy
 ~~~~~~~~~~~~~~~~~~
 
 
-    
+
 
 To be able to use HTTP proxies with an agent, you can use the :api:`twisted.web.client.ProxyAgent <twisted.web.client.ProxyAgent>` class.
 It supports the same interface as ``Agent``, but takes the endpoint of the proxy as initializer argument.
 This is specifically intended for talking to servers that implement the proxying variation of the HTTP protocol; for other types of proxies you will want :api:`twisted.web.client.Agent.usingEndpointFactory <Agent.usingEndpointFactory>` (see documentation below).
 
-    
+
 
 
 
@@ -666,22 +666,22 @@ Here's an example demonstrating the use of an HTTP proxy running on
 localhost:8000.
 
 
-    
+
 
 
 
 .. code-block:: python
 
-    
+
     from twisted.python.log import err
     from twisted.web.client import ProxyAgent
     from twisted.internet import reactor
     from twisted.internet.endpoints import TCP4ClientEndpoint
-    
+
     def display(response):
         print "Received response"
         print response
-    
+
     def main():
         endpoint = TCP4ClientEndpoint(reactor, "localhost", 8000)
         agent = ProxyAgent(endpoint)
@@ -689,20 +689,20 @@ localhost:8000.
         d.addCallbacks(display, err)
         d.addCallback(lambda ignored: reactor.stop())
         reactor.run()
-    
+
     if __name__ == "__main__":
         main()
 
 
 
-    
+
 
 Please refer to the :doc:`endpoints documentation <../../core/howto/endpoints>` for
 more information about how they work and the :api:`twisted.internet.endpoints <twisted.internet.endpoints>` API documentation to learn
 what other kinds of endpoints exist.
 
 
-    
+
 
 
 
@@ -710,11 +710,11 @@ Handling HTTP cookies
 ~~~~~~~~~~~~~~~~~~~~~
 
 
-    
+
 
 An existing agent instance can be wrapped with
 :api:`twisted.web.client.CookieAgent <twisted.web.client.CookieAgent>` to automatically
-store, send and track HTTP cookies. A ``CookieJar`` 
+store, send and track HTTP cookies. A ``CookieJar``
 instance, from the Python standard library module
 `cookielib <http://docs.python.org/library/cookielib.html>`_ , is
 used to store the cookie information. An example of using
@@ -722,7 +722,7 @@ used to store the cookie information. An example of using
 cookies might look like this:
 
 
-    
+
 
 
 
@@ -736,7 +736,7 @@ Automatic Content Encoding Negotiation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-    
+
 
 :api:`twisted.web.client.ContentDecoderAgent <twisted.web.client.ContentDecoderAgent>` adds
 support for sending *Accept-Encoding* request headers and
@@ -752,7 +752,7 @@ accordingly.  To application code using such an agent, there is no visible
 difference in the data delivered.
 
 
-    
+
 
 
 
@@ -786,25 +786,25 @@ Conclusion
 ----------
 
 
-    
+
 
 You should now understand the basics of the Twisted Web HTTP client.  In
 particular, you should understand:
 
 
-    
 
 
 
 
-- 
+
+-
   How to issue requests with arbitrary methods, headers, and bodies.
-- 
+-
   How to access the response version, code, phrase, headers, and body.
-- 
+-
   How to store, send, and track cookies.
-- 
+-
   How to control the streaming of the response body.
-- 
+-
   How to enable the HTTP persistent connection, and control the
   number of connections.

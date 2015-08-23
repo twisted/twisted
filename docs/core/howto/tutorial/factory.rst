@@ -22,8 +22,8 @@ This is the eighth part of the Twisted tutorial :doc:`Twisted from Scratch, or T
 
 
 In this part, we add HTTPS support to our web frontend, showing how to have a
-single factory listen on multiple ports. More information on using SSL in
-Twisted can be found in the :doc:`SSL howto <../ssl>` .
+single factory listen on multiple ports. More information on using TLS in
+Twisted can be found in the :doc:`TLS howto <../tls>` .
 
 
 
@@ -46,4 +46,3 @@ case, a site) can listen on multiple ports with multiple protocols.
 :download:`finger22.py <listings/finger/finger22.py>`
 
 .. literalinclude:: listings/finger/finger22.py
-
