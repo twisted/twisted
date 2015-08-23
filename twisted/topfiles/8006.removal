@@ -1,0 +1,1 @@
+twisted.internet.endpoints.SSL4{Client,Server}Endpoint have been moved to TLS4{Client,Server}Endpoint, and the strports prefix has been changed to 'tls:' from 'ssl:'. Using the SSL4 endpoints or 'ssl:' strports prefix is now deprecated.
