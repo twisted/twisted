@@ -17,7 +17,7 @@ from twisted.internet import defer, interfaces
 from twisted.names import dns, common, error
 
 
-class FailureHandler:
+class FailureHandler(object):
     def __init__(self, resolver, query, timeout):
         self.resolver = resolver
         self.query = query

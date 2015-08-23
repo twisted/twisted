@@ -399,7 +399,7 @@ class Charstr(object):
 
 
 @implementer(IEncodable)
-class Name:
+class Name(object):
     """
     A name in the domain name system, made up of multiple labels.  For example,
     I{twistedmatrix.com}.
@@ -515,7 +515,7 @@ class Name:
 
 @comparable
 @implementer(IEncodable)
-class Query:
+class Query(object):
     """
     Represent a single DNS query.
 

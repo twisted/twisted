@@ -29,7 +29,7 @@ EMPTY_RESULT = (), (), ()
 
 
 @implementer(interfaces.IResolver)
-class ResolverBase:
+class ResolverBase(object):
     """
     L{ResolverBase} is a base class for implementations of
     L{interfaces.IResolver} which deals with a lot

@@ -12,7 +12,7 @@ from twisted.names.error import DNSNameError
 from twisted.python.compat import unicode
 
 
-class _SRVConnector_ClientFactoryWrapper:
+class _SRVConnector_ClientFactoryWrapper(object):
     def __init__(self, connector, wrappedFactory):
         self.__connector = connector
         self.__wrappedFactory = wrappedFactory
@@ -31,7 +31,7 @@ class _SRVConnector_ClientFactoryWrapper:
 
 
 
-class SRVConnector:
+class SRVConnector(object):
     """A connector that looks up DNS SRV records. See RFC2782."""
 
     implements(interfaces.IConnector)

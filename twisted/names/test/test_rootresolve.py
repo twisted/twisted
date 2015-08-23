@@ -717,7 +717,7 @@ class BootstrapTests(SynchronousTestCase):
 
 
 
-class StubDNSDatagramProtocol:
+class StubDNSDatagramProtocol(object):
     """
     A do-nothing stand-in for L{DNSDatagramProtocol} which can be used to avoid
     network traffic in tests where that kind of thing doesn't matter.

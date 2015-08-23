@@ -19,7 +19,7 @@ from twisted.names import dns, common, error
 
 
 
-class _DummyController:
+class _DummyController(object):
     """
     A do-nothing DNS controller.  This is useful when all messages received
     will be responses to previously issued queries.  Anything else received
@@ -280,7 +280,7 @@ def makePlaceholder(deferred, name):
         return deferred
     return placeholder
 
-class DeferredResolver:
+class DeferredResolver(object):
     def __init__(self, resolverDeferred):
         self.waiting = []
         resolverDeferred.addCallback(self.gotRealResolver)

@@ -439,7 +439,7 @@ class Resolver(common.ResolverBase):
 
 
 
-class AXFRController:
+class AXFRController(object):
     timeoutCall = None
 
     def __init__(self, name, deferred):

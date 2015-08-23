@@ -3128,7 +3128,7 @@ class MessageAuthoritative(object):
 
 
 
-class MessageComplete:
+class MessageComplete(object):
     """
     An example of a fully populated non-edns response message.
 
