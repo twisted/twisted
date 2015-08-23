@@ -75,7 +75,7 @@ class Connection(object):
         return getattr(self._connection, name)
 
 
-class Transaction:
+class Transaction(object):
     """A lightweight wrapper for a DB-API 'cursor' object.
 
     Relays attribute access to the DB cursor. That is, you can call
@@ -122,7 +122,7 @@ class Transaction:
         return getattr(self._cursor, name)
 
 
-class ConnectionPool:
+class ConnectionPool(object):
     """
     Represent a pool of connections to a DB-API 2.0 compliant database.
 
