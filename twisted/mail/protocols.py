@@ -25,7 +25,7 @@ from zope.interface import implements
 
 
 
-class DomainDeliveryBase:
+class DomainDeliveryBase(object):
     """
     A base class for message delivery using the domains of a mail service.
 
@@ -469,7 +469,7 @@ class POP3Factory(protocol.ServerFactory):
 # And then cat file.key and file.crt together.  The number of days and bits
 # can be changed, of course.
 #
-class SSLContextFactory:
+class SSLContextFactory(object):
     """
     An SSL context factory.
 

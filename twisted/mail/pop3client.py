@@ -86,7 +86,7 @@ class LineTooLong(POP3ClientError):
 
 
 
-class _ListSetter:
+class _ListSetter(object):
     """
     A utility class to construct a list from a multi-line response accounting
     for deleted messages.

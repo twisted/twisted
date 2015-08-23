@@ -39,7 +39,7 @@ Subject: An Error Occurred
 
 
 
-class _MaildirNameGenerator:
+class _MaildirNameGenerator(object):
     """
     A utility class to generate a unique maildir name.
 
@@ -165,7 +165,7 @@ class MaildirMessage(mail.FileMessage):
 
 
 @implementer(mail.IAliasableDomain)
-class AbstractMaildirDomain:
+class AbstractMaildirDomain(object):
     """
     An abstract maildir-backed domain.
 
@@ -317,7 +317,7 @@ class AbstractMaildirDomain:
 
 
 @implementer(interfaces.IConsumer)
-class _MaildirMailboxAppendMessageTask:
+class _MaildirMailboxAppendMessageTask(object):
     """
     A task which adds a message to a maildir mailbox.
 
@@ -659,7 +659,7 @@ class MaildirMailbox(pop3.Mailbox):
 
 
 @implementer(pop3.IMailbox)
-class StringListMailbox:
+class StringListMailbox(object):
     """
     An in-memory mailbox.
 
@@ -900,7 +900,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
 
 
 @implementer(checkers.ICredentialsChecker)
-class DirdbmDatabase:
+class DirdbmDatabase(object):
     """
     A credentials checker which authenticates users out of a
     L{DirDBM <dirdbm.DirDBM>} database.

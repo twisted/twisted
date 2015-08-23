@@ -32,7 +32,7 @@ from twisted.application import internet
 
 
 
-class ManagedRelayerMixin:
+class ManagedRelayerMixin(object):
     """SMTP Relayer which notifies a manager
 
     Notify the manager about successful mail, failed mail
@@ -266,7 +266,7 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
 
 
 
-class Queue:
+class Queue(object):
     """
     A queue for messages to be relayed.
 
@@ -641,7 +641,7 @@ class _AttemptManager(object):
 
 
 
-class SmartHostSMTPRelayingManager:
+class SmartHostSMTPRelayingManager(object):
     """
     A smart host which uses SMTP managed relayers to send messages from the
     relay queue.
@@ -911,7 +911,7 @@ class CanonicalNameChainTooLong(Exception):
 
 
 
-class MXCalculator:
+class MXCalculator(object):
     """
     A utility for looking up mail exchange hosts and tracking whether they are
     working or not.

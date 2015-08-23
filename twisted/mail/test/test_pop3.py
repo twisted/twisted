@@ -143,7 +143,7 @@ class MyVirtualPOP3(mail.protocols.VirtualPOP3):
         user, domain = self.lookupDomain(user)
         return self.service.domains['baz.com'].authenticateUserAPOP(user, digest, self.magic, domain)
 
-class DummyDomain:
+class DummyDomain(object):
 
    def __init__(self):
        self.users = {}
@@ -158,7 +158,7 @@ class DummyDomain:
        return pop3.IMailbox, ListMailbox(self.users[name]), lambda: None
 
 
-class ListMailbox:
+class ListMailbox(object):
 
     def __init__(self, list):
         self.list = list
@@ -415,7 +415,7 @@ class AnotherPOP3Tests(unittest.TestCase):
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
 
-class TestServerFactory:
+class TestServerFactory(object):
     implements(pop3.IServerFactory)
 
     def cap_IMPLEMENTATION(self):
@@ -438,7 +438,7 @@ class TestServerFactory:
         return self.puld
 
 
-class TestMailbox:
+class TestMailbox(object):
     loginDelay = 100
     messageExpiration = 25
 
@@ -531,7 +531,7 @@ class GlobalCapabilitiesTests(unittest.TestCase):
 
 
 
-class TestRealm:
+class TestRealm(object):
     def requestAvatar(self, avatarId, mind, *interfaces):
         if avatarId == 'testuser':
             return pop3.IMailbox, DummyMailbox(ValueError), lambda: None
@@ -568,7 +568,7 @@ class SASLTests(unittest.TestCase):
 
 
 
-class CommandMixin:
+class CommandMixin(object):
     """
     Tests for all the commands a POP3 server is allowed to receive.
     """

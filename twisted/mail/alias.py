@@ -131,7 +131,7 @@ class IAlias(Interface):
 
 
 
-class AliasBase:
+class AliasBase(object):
     """
     The default base class for aliases.
 
@@ -262,7 +262,7 @@ class AddressAlias(AliasBase):
 
 
 
-class FileWrapper:
+class FileWrapper(object):
     """
     A message receiver which delivers a message to a file.
 
@@ -387,7 +387,7 @@ class ProcessAliasTimeout(Exception):
 
 
 
-class MessageWrapper:
+class MessageWrapper(object):
     """
     A message receiver which delivers a message to a child process.
 
@@ -642,7 +642,7 @@ class ProcessAlias(AliasBase):
 
 
 
-class MultiWrapper:
+class MultiWrapper(object):
     """
     A message receiver which delivers a single message to multiple other
     message receivers.

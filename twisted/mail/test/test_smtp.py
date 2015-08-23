@@ -171,7 +171,7 @@ Subject: hello
 Goodbye
 '''
 
-class MyClient:
+class MyClient(object):
     def __init__(self, messageInfo=None):
         if messageInfo is None:
             messageInfo = (
@@ -215,7 +215,7 @@ class MyESMTPClient(MyClient, smtp.ESMTPClient):
         smtp.ESMTPClient.__init__(self, secret, contextFactory, 'foo.baz')
         MyClient.__init__(self)
 
-class LoopbackMixin:
+class LoopbackMixin(object):
     def loopback(self, server, client):
         return loopback.loopbackTCP(server, client)
 
@@ -382,7 +382,7 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
 
 
 
-class DummySMTPMessage:
+class DummySMTPMessage(object):
 
     def __init__(self, protocol, users):
         self.protocol = protocol
@@ -403,7 +403,7 @@ class DummySMTPMessage:
 
 
 
-class DummyProto:
+class DummyProto(object):
     def connectionMade(self):
         self.dummyMixinBase.connectionMade(self)
         self.message = {}
@@ -429,7 +429,7 @@ class DummySMTP(DummyProto, smtp.SMTP):
 class DummyESMTP(DummyProto, smtp.ESMTP):
     dummyMixinBase = smtp.ESMTP
 
-class AnotherTestCase:
+class AnotherTestCase(object):
     serverClass = None
     clientClass = None
 
@@ -485,7 +485,7 @@ To: foo
         """
         transport = StringTransport()
         a = self.serverClass()
-        class fooFactory:
+        class fooFactory(object):
             domain = 'foo.com'
 
         a.factory = fooFactory()
@@ -530,7 +530,7 @@ class AnotherSMTPTests(AnotherTestCase, unittest.TestCase):
 
 
 
-class DummyChecker:
+class DummyChecker(object):
     implements(cred.checkers.ICredentialsChecker)
 
     users = {
@@ -576,7 +576,7 @@ class SimpleDelivery(object):
 
 
 
-class DummyRealm:
+class DummyRealm(object):
     def requestAvatar(self, avatarId, mind, *interfaces):
         return smtp.IMessageDelivery, SimpleDelivery(None), lambda: None
 
@@ -830,7 +830,7 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         The timeout is not allowed to expire after the server has accepted a
         DATA command and the client is actively sending data to it.
         """
-        class SlowFile:
+        class SlowFile(object):
             """
             A file-like which returns one byte from each read call until the
             specified number of bytes have been returned.
@@ -1320,7 +1320,7 @@ class ESMTPAuthenticationTests(unittest.TestCase):
 
 
     def portalFactory(self, loginList):
-        class DummyPortal:
+        class DummyPortal(object):
             def login(self, credentials, mind, *interfaces):
                 d = defer.Deferred()
                 loginList.append((d, credentials, mind, interfaces))

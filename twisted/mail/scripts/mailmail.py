@@ -38,7 +38,7 @@ The Twisted sendmail application.
 def log(message, *args):
     sys.stderr.write(str(message) % args + '\n')
 
-class Options:
+class Options(object):
     """
     @type to: C{list} of C{str}
     @ivar to: The addresses to which to deliver this message.
@@ -181,7 +181,7 @@ def parseOptions(argv):
     o.body = StringIO.StringIO(buffer.getvalue() + sys.stdin.read())
     return o
 
-class Configuration:
+class Configuration(object):
     """
     @ivar allowUIDs: A list of UIDs which are allowed to send mail.
     @ivar allowGIDs: A list of GIDs which are allowed to send mail.

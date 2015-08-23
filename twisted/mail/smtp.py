@@ -350,7 +350,7 @@ class AddressError(SMTPError):
 # Character classes for parsing addresses
 atom = r"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
 
-class Address:
+class Address(object):
     """Parse and hold an RFC 2821 address.
 
     Source routes are stipped and ignored, UUCP-style bang-paths
@@ -450,7 +450,7 @@ class Address:
         return "%s.%s(%s)" % (self.__module__, self.__class__.__name__,
                               repr(str(self)))
 
-class User:
+class User(object):
     """Hold information about and SMTP message recipient,
     including information on where the message came from
     """
@@ -1806,7 +1806,7 @@ class ESMTP(SMTP):
 
 
 
-class SenderMixin:
+class SenderMixin(object):
     """Utility class for sending emails easily.
 
     Use with SMTPSenderFactory or ESMTPSenderFactory.
@@ -1987,7 +1987,7 @@ class LOGINCredentials(_lcredentials):
 
 
 
-class PLAINAuthenticator:
+class PLAINAuthenticator(object):
     implements(IClientAuthentication)
 
     def __init__(self, user):

@@ -264,7 +264,7 @@ class MessageSet(object):
         return False
 
 
-class LiteralString:
+class LiteralString(object):
     def __init__(self, size, defered):
         self.size = size
         self.data = []
@@ -290,7 +290,7 @@ class LiteralString:
         """
         self.defer.callback((''.join(self.data), line))
 
-class LiteralFile:
+class LiteralFile(object):
     _memoryFileLimit = 1024 * 1024 * 10
 
     def __init__(self, size, defered):
@@ -323,7 +323,7 @@ class LiteralFile:
         self.defer.callback((self.data, line))
 
 
-class WriteBuffer:
+class WriteBuffer(object):
     """Buffer up a bunch of writes before sending them all to a transport at once.
     """
     def __init__(self, transport, size=8192):
@@ -345,7 +345,7 @@ class WriteBuffer:
             self._length = 0
 
 
-class Command:
+class Command(object):
     _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH', 'NAMESPACE')
     _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH', 'RECENT')
     _OK_RESPONSES = ('UIDVALIDITY', 'UNSEEN', 'READ-WRITE', 'READ-ONLY', 'UIDNEXT', 'PERMANENTFLAGS')
@@ -4355,7 +4355,7 @@ def _quote(s):
 def _literal(s):
     return '{%d}\r\n%s' % (len(s), s)
 
-class DontQuoteMe:
+class DontQuoteMe(object):
     def __init__(self, value):
         self.value = value
 
@@ -4435,7 +4435,7 @@ class IClientAuthentication(Interface):
 
 
 
-class CramMD5ClientAuthenticator:
+class CramMD5ClientAuthenticator(object):
     implements(IClientAuthentication)
 
     def __init__(self, user):
@@ -4450,7 +4450,7 @@ class CramMD5ClientAuthenticator:
 
 
 
-class LOGINAuthenticator:
+class LOGINAuthenticator(object):
     implements(IClientAuthentication)
 
     def __init__(self, user):
@@ -4469,7 +4469,7 @@ class LOGINAuthenticator:
         # Respond to something like "Password:"
         return secret
 
-class PLAINAuthenticator:
+class PLAINAuthenticator(object):
     implements(IClientAuthentication)
 
     def __init__(self, user):
@@ -5676,7 +5676,7 @@ def iterateInReactor(i):
     go(None)
     return d
 
-class MessageProducer:
+class MessageProducer(object):
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2
 
     def __init__(self, msg, buffer = None, scheduler = None):
@@ -5743,8 +5743,8 @@ class MessageProducer:
                 ).addCallback(lambda _: self
                 )
 
-class _FetchParser:
-    class Envelope:
+class _FetchParser(object):
+    class Envelope(object):
         # Response should be a list of fields from the message:
         #   date, subject, from, sender, reply-to, to, cc, bcc, in-reply-to,
         #   and message-id.
@@ -5758,35 +5758,35 @@ class _FetchParser:
         type = 'envelope'
         __str__ = lambda self: 'envelope'
 
-    class Flags:
+    class Flags(object):
         type = 'flags'
         __str__ = lambda self: 'flags'
 
-    class InternalDate:
+    class InternalDate(object):
         type = 'internaldate'
         __str__ = lambda self: 'internaldate'
 
-    class RFC822Header:
+    class RFC822Header(object):
         type = 'rfc822header'
         __str__ = lambda self: 'rfc822.header'
 
-    class RFC822Text:
+    class RFC822Text(object):
         type = 'rfc822text'
         __str__ = lambda self: 'rfc822.text'
 
-    class RFC822Size:
+    class RFC822Size(object):
         type = 'rfc822size'
         __str__ = lambda self: 'rfc822.size'
 
-    class RFC822:
+    class RFC822(object):
         type = 'rfc822'
         __str__ = lambda self: 'rfc822'
 
-    class UID:
+    class UID(object):
         type = 'uid'
         __str__ = lambda self: 'uid'
 
-    class Body:
+    class Body(object):
         type = 'body'
         peek = False
         header = None
@@ -5817,12 +5817,12 @@ class _FetchParser:
                 base += '<%d.%d>' % (self.partialBegin, self.partialLength)
             return base
 
-    class BodyStructure:
+    class BodyStructure(object):
         type = 'bodystructure'
         __str__ = lambda self: 'bodystructure'
 
     # These three aren't top-level, they don't need type indicators
-    class Header:
+    class Header(object):
         negate = False
         fields = None
         part = None
@@ -5843,10 +5843,10 @@ class _FetchParser:
                 base = '.'.join([str(x + 1) for x in self.part]) + '.' + base
             return base
 
-    class Text:
+    class Text(object):
         pass
 
-    class MIME:
+    class MIME(object):
         pass
 
     parts = None
@@ -6059,7 +6059,7 @@ class _FetchParser:
 
         return end + 1
 
-class FileProducer:
+class FileProducer(object):
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2
 
     firstWrite = True

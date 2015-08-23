@@ -22,7 +22,7 @@ import os
 from zope.interface import implements, Interface
 
 
-class DomainWithDefaultDict:
+class DomainWithDefaultDict(object):
     """
     A simulated dictionary for mapping domain names to domain objects with
     a default value for non-existing keys.
@@ -432,7 +432,7 @@ class IAliasableDomain(IDomain):
 
 
 
-class BounceDomain:
+class BounceDomain(object):
     """
     A domain with no users.
 
@@ -494,7 +494,7 @@ class BounceDomain:
 
 
 
-class FileMessage:
+class FileMessage(object):
     """
     A message receiver which delivers a message to a file.
 

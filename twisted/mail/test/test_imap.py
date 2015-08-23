@@ -142,7 +142,7 @@ class IMAP4UTF7Tests(unittest.TestCase):
 
 
 
-class BufferingConsumer:
+class BufferingConsumer(object):
     def __init__(self):
         self.buffer = []
 
@@ -970,7 +970,7 @@ class IMAP4HelperTests(unittest.TestCase):
                 self.assertEqual(L, expected,
                                   "len(%r) = %r != %r" % (input, L, expected))
 
-class SimpleMailbox:
+class SimpleMailbox(object):
     implements(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
@@ -1103,7 +1103,7 @@ class SimpleClient(imap4.IMAP4Client):
 
 
 
-class IMAP4HelperMixin:
+class IMAP4HelperMixin(object):
 
     serverCTX = None
     clientCTX = None
@@ -1870,13 +1870,13 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class TestRealm:
+class TestRealm(object):
     theAccount = None
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         return imap4.IAccount, self.theAccount, lambda: None
 
-class TestChecker:
+class TestChecker(object):
     credentialInterfaces = (IUsernameHashedPassword, IUsernamePassword)
 
     users = {
@@ -2574,7 +2574,7 @@ class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class PreauthIMAP4ClientMixin:
+class PreauthIMAP4ClientMixin(object):
     """
     Mixin for L{unittest.TestCase} subclasses which provides a C{setUp} method
     which creates an L{IMAP4Client} connected to a L{StringTransport} and puts
@@ -4571,14 +4571,14 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
 
 
 
-class FakeMailbox:
+class FakeMailbox(object):
     def __init__(self):
         self.args = []
     def addMessage(self, body, flags, date):
         self.args.append((body, flags, date))
         return defer.succeed(None)
 
-class FeaturefulMessage:
+class FeaturefulMessage(object):
     implements(imap4.IMessageFile)
 
     def getFlags(self):
@@ -4590,7 +4590,7 @@ class FeaturefulMessage:
     def open(self):
         return StringIO("open")
 
-class MessageCopierMailbox:
+class MessageCopierMailbox(object):
     implements(imap4.IMessageCopier)
 
     def __init__(self):

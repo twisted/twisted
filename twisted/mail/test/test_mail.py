@@ -974,7 +974,7 @@ class RelayerTests(unittest.TestCase):
             self.R.sentMail(250, None, None, None, None)
         self.assertEqual(self.R.getMailData(), None)
 
-class Manager:
+class Manager(object):
     def __init__(self):
         self.success = []
         self.failure = []
@@ -1677,7 +1677,7 @@ usertwo:thisaddress,thataddress, lastaddress
 lastuser:       :/includable, /filename, |/program, address
 """)
 
-class LineBufferMessage:
+class LineBufferMessage(object):
     def __init__(self):
         self.lines = []
         self.eom = False
@@ -2163,7 +2163,7 @@ done""")
 
 
 
-class TestDomain:
+class TestDomain(object):
     def __init__(self, aliases, users):
         self.aliases = aliases
         self.users = users

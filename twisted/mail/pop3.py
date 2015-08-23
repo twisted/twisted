@@ -31,7 +31,7 @@ from twisted import cred
 ##
 ## Authentication
 ##
-class APOPCredentials:
+class APOPCredentials(object):
     """
     Credentials for use in APOP authentication.
 
@@ -76,7 +76,7 @@ class APOPCredentials:
 
 
 
-class _HeadersPlusNLines:
+class _HeadersPlusNLines(object):
     """
     A utility class to retrieve the header and some lines of the body of a mail
     message.
@@ -1498,7 +1498,7 @@ class IMailbox(Interface):
 
 
 
-class Mailbox:
+class Mailbox(object):
     """
     A base class for mailboxes.
     """

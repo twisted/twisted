@@ -342,7 +342,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
 
 
 
-class AliasUpdater:
+class AliasUpdater(object):
     """
     A callable object which updates the aliases for a domain from an aliases(5)
     file.

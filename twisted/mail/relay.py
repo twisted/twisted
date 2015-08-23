@@ -19,7 +19,7 @@ except ImportError:
 
 
 
-class DomainQueuer:
+class DomainQueuer(object):
     """
     An SMTP domain which add messages to a queue intended for relaying.
     """
@@ -86,7 +86,7 @@ class DomainQueuer:
 
 
 
-class RelayerMixin:
+class RelayerMixin(object):
 
     # XXX - This is -totally- bogus
     # It opens about a -hundred- -billion- files

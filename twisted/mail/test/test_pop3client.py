@@ -173,14 +173,14 @@ class POP3ClientLoginTests(unittest.TestCase):
 
 
 
-class ListConsumer:
+class ListConsumer(object):
     def __init__(self):
         self.data = {}
 
     def consume(self, (item, value)):
         self.data.setdefault(item, []).append(value)
 
-class MessageConsumer:
+class MessageConsumer(object):
     def __init__(self):
         self.data = []
 
@@ -439,7 +439,7 @@ class SimpleClient(POP3Client):
     def serverGreeting(self, challenge):
         self.deferred.callback(None)
 
-class POP3HelperMixin:
+class POP3HelperMixin(object):
     serverCTX = None
     clientCTX = None
 
