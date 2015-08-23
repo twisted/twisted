@@ -37,7 +37,7 @@ except NameError:
     _open = open
 
 
-class DirDBM:
+class DirDBM(object):
     """A directory with a DBM interface.
     
     This class presents a hash-like interface to a directory of small,

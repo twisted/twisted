@@ -14,7 +14,7 @@ from twisted.python import log, reflect
 from twisted.python.compat import xrange, _constructMethod
 
 
-class NotKnown:
+class NotKnown(object):
     def __init__(self):
         self.dependants = []
         self.resolved = 0
@@ -112,7 +112,7 @@ class _InstanceMethod(NotKnown):
             method = _constructMethod(self.my_class, self.name, obj)
             self.resolveDependants(method)
 
-class _DictKeyAndValue:
+class _DictKeyAndValue(object):
     def __init__(self, dict):
         self.dict = dict
     def __setitem__(self, n, obj):

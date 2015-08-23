@@ -58,7 +58,7 @@ class IPersistable(Interface):
 
 
 @implementer(IPersistable)
-class Persistent:
+class Persistent(object):
 
     style = "pickle"
 

@@ -35,7 +35,7 @@ from twisted.python.compat import unicode, _PY3, _constructMethod
 #"\0" in a getSource means "insert variable-width indention here".
 #see `indentify'.
 
-class Named:
+class Named(object):
     def __init__(self, name):
         self.name = name
 
@@ -52,7 +52,7 @@ class Module(Named):
         return "Module(%r)" % self.name
 
 
-class InstanceMethod:
+class InstanceMethod(object):
     def __init__(self, name, klass, inst):
         if not (isinstance(inst, Ref) or isinstance(inst, Instance) or isinstance(inst, Deref)):
             raise TypeError("%s isn't an Instance, Ref, or Deref!" % inst)
@@ -64,7 +64,7 @@ class InstanceMethod:
         return "InstanceMethod(%r, %r, \n\0%s)" % (self.name, self.klass, prettify(self.instance))
 
 
-class _NoStateObj:
+class _NoStateObj(object):
     pass
 NoStateObj = _NoStateObj()
 
@@ -78,7 +78,7 @@ try:
 except NameError:
     pass
 
-class Instance:
+class Instance(object):
     def __init__(self, className, __stateObj__=NoStateObj, **state):
         if not isinstance(className, str):
             raise TypeError("%s isn't a string!" % className)
@@ -105,7 +105,7 @@ class Instance:
                 return "Instance(%r, %s)" % (self.klass, prettify(stateDict))
         return "Instance(%r, %s)" % (self.klass, prettify(self.state))
 
-class Ref:
+class Ref(object):
 
     def __init__(self, *args):
         #blargh, lame.
@@ -134,7 +134,7 @@ class Ref:
         return prettify(self.obj)
 
 
-class Deref:
+class Deref(object):
     def __init__(self, num):
         self.refnum = num
 
@@ -144,7 +144,7 @@ class Deref:
     __repr__ = getSource
 
 
-class Copyreg:
+class Copyreg(object):
     def __init__(self, loadfunc, state):
         self.loadfunc = loadfunc
         self.state = state
@@ -276,7 +276,7 @@ def unjellyFromSource(stringOrFile):
         raise ValueError("%s needs to define an 'app', it didn't!" % stringOrFile)
 
 
-class AOTUnjellier:
+class AOTUnjellier(object):
     """I handle the unjellying of an Abstract Object Tree.
     See AOTUnjellier.unjellyAO
     """
@@ -517,7 +517,7 @@ def _selfOfMethod(methodObject):
 
 
 
-class AOTJellier:
+class AOTJellier(object):
     def __init__(self):
         # dict of {id(obj): (obj, node)}
         self.prepared = {}

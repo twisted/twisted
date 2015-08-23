@@ -247,7 +247,7 @@ else:
 
 
 
-class Ephemeral:
+class Ephemeral(object):
     """
     This type of object is never persisted; if possible, even references to it
     are eliminated.
@@ -313,7 +313,7 @@ def _aybabtu(c):
     # return all except the unwanted classes
     return l[2:]
 
-class Versioned:
+class Versioned(object):
     """
     This type of object is persisted with versioning information.
 
