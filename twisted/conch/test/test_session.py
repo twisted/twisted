@@ -39,7 +39,7 @@ class SubsystemOnlyAvatar(object):
 
 
 
-class StubAvatar:
+class StubAvatar(object):
     """
     A stub class representing the avatar representing the authenticated user.
     It implements the I{ISession} interface.
@@ -243,7 +243,7 @@ class MockProcessProtocol(protocol.ProcessProtocol):
 
 
 
-class EchoTransport:
+class EchoTransport(object):
     """
     A transport for a ProcessProtocol which echos data that is sent to it with
     a Window newline (CR LF) appended to it.  If a null byte is in the data,
@@ -416,7 +416,7 @@ class StubConnection(object):
 
 
 
-class StubTransport:
+class StubTransport(object):
     """
     A stub transport which records the data written.
 

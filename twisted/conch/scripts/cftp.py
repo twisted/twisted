@@ -113,7 +113,7 @@ def _ebExit(f):
 
 def _ignore(*args): pass
 
-class FileWrapper:
+class FileWrapper(object):
 
     def __init__(self, f):
         self.f = f
@@ -831,4 +831,3 @@ class SSHSession(channel.SSHChannel):
 
 if __name__ == '__main__':
     run()
-

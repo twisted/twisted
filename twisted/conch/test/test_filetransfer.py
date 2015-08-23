@@ -53,7 +53,7 @@ class FileTransferTestAvatar(TestAvatar):
         return os.path.join(os.getcwd(), self.homeDir)
 
 
-class ConchSessionForTestAvatar:
+class ConchSessionForTestAvatar(object):
 
     def __init__(self, avatar):
         self.avatar = avatar
@@ -471,7 +471,7 @@ class OurServerOurClientTests(SFTPTestBase):
         return self.assertFailure(d, NotImplementedError)
 
 
-class FakeConn:
+class FakeConn(object):
     def sendClose(self, channel):
         pass
 
@@ -488,7 +488,7 @@ class FileTransferCloseTests(unittest.TestCase):
         # make a server connection
         conn = connection.SSHConnection()
         # server connections have a 'self.transport.avatar'.
-        class DummyTransport:
+        class DummyTransport(object):
             def __init__(self):
                 self.transport = self
             def sendPacket(self, kind, data):

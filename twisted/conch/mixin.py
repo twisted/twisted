@@ -13,7 +13,7 @@ collapse numerous small writes into a single larger one.
 
 from twisted.internet import reactor
 
-class BufferingMixin:
+class BufferingMixin(object):
     """Mixin which adds write buffering.
     """
     _delayedWriteCall = None

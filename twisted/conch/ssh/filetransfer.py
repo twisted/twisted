@@ -772,7 +772,7 @@ class FileTransferClient(FileTransferBase):
 
 
 @implementer(ISFTPFile)
-class ClientFile:
+class ClientFile(object):
     def __init__(self, parent, handle):
         self.parent = parent
         self.handle = NS(handle)
@@ -795,7 +795,7 @@ class ClientFile:
         data = self.handle + self.parent._packAttributes(attrs)
         return self.parent._sendRequest(FXP_FSTAT, data)
 
-class ClientDirectory:
+class ClientDirectory(object):
 
     def __init__(self, parent, handle):
         self.parent = parent

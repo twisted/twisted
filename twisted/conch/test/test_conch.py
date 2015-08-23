@@ -273,7 +273,7 @@ run()""" % mod]
 
 
 
-class ConchServerSetupMixin:
+class ConchServerSetupMixin(object):
     if not Crypto:
         skip = "can't run w/o PyCrypto"
 
@@ -452,7 +452,7 @@ class RekeyAvatar(ConchUser):
 
 
 
-class RekeyRealm:
+class RekeyRealm(object):
     """
     This realm gives out new L{RekeyAvatar} instances for any avatar request.
     """
@@ -484,7 +484,7 @@ class RekeyTestsMixin(ConchServerSetupMixin):
 
 
 
-class OpenSSHClientMixin:
+class OpenSSHClientMixin(object):
     if not which('ssh'):
         skip = "no ssh command-line client available"
 

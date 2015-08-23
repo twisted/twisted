@@ -384,7 +384,7 @@ class Telnet(protocol.Protocol):
     def _write(self, bytes):
         self.transport.write(bytes)
 
-    class _OptionState:
+    class _OptionState(object):
         """
         Represents the state of an option on both sides of a telnet
         connection.
@@ -394,7 +394,7 @@ class Telnet(protocol.Protocol):
         @ivar him: The state of the option on the other side of the
             connection.
         """
-        class _Perspective:
+        class _Perspective(object):
             """
             Represents the state of an option on side of the telnet
             connection.  Some options can be enabled on a particular side of
@@ -810,7 +810,7 @@ class Telnet(protocol.Protocol):
 
 
 
-class ProtocolTransportMixin:
+class ProtocolTransportMixin(object):
     def write(self, bytes):
         self.transport.write(bytes.replace('\n', '\r\n'))
 

@@ -207,7 +207,7 @@ class CrazySubsystem(protocol.Protocol):
 
 
 
-class FalseTransport:
+class FalseTransport(object):
     """
     False transport should act like a /bin/false execution, i.e. just exit with
     nonzero status, writing nothing to the terminal.
@@ -239,7 +239,7 @@ class FalseTransport:
 
 
 
-class EchoTransport:
+class EchoTransport(object):
 
     def __init__(self, p):
         self.proto = p
@@ -261,7 +261,7 @@ class EchoTransport:
         self.proto.errConnectionLost()
         self.proto.processEnded(failure.Failure(ProcessTerminated(0, None, None)))
 
-class ErrEchoTransport:
+class ErrEchoTransport(object):
 
     def __init__(self, p):
         self.proto = p
@@ -280,7 +280,7 @@ class ErrEchoTransport:
         self.proto.errConnectionLost()
         self.proto.processEnded(failure.Failure(ProcessTerminated(0, None, None)))
 
-class SuperEchoTransport:
+class SuperEchoTransport(object):
 
     def __init__(self, p):
         self.proto = p
@@ -317,7 +317,7 @@ if Crypto is not None and pyasn1 is not None:
                 self.assertEqual(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
 
 
-    class ConchTestPasswordChecker:
+    class ConchTestPasswordChecker(object):
         credentialInterfaces = checkers.IUsernamePassword,
 
         def requestAvatarId(self, credentials):
@@ -372,7 +372,7 @@ if Crypto is not None and pyasn1 is not None:
         def getService(self, trans, name):
             return factory.SSHFactory.getService(self, trans, name)
 
-    class ConchTestBase:
+    class ConchTestBase(object):
 
         done = 0
 

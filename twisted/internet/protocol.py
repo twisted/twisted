@@ -24,7 +24,7 @@ _logFor = lambda _:_log.__get__(_, _.__class__)
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
-class Factory:
+class Factory(object):
     """
     This is a factory which produces protocols.
 
@@ -225,7 +225,7 @@ class _InstanceFactory(ClientFactory):
 
 
 
-class ClientCreator:
+class ClientCreator(object):
     """
     Client connections that do not require a factory.
 
@@ -472,7 +472,7 @@ class ServerFactory(Factory):
 
 
 
-class BaseProtocol:
+class BaseProtocol(object):
     """
     This is the abstract superclass of all protocols.
 
@@ -663,7 +663,7 @@ class ProcessProtocol(BaseProtocol):
 
 
 
-class AbstractDatagramProtocol:
+class AbstractDatagramProtocol(object):
     """
     Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP.
     """
@@ -779,7 +779,7 @@ class ConnectedDatagramProtocol(DatagramProtocol):
 
 
 @implementer(interfaces.ITransport)
-class FileWrapper:
+class FileWrapper(object):
     """A wrapper around a file-like object to make it behave as a Transport.
 
     This doesn't actually stream the file to the attached protocol,

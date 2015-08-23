@@ -1344,7 +1344,7 @@ class SSHClientTransport(SSHTransportBase):
 
 
 
-class _DummyCipher:
+class _DummyCipher(object):
     """
     A cipher for the none encryption method.
 
@@ -1361,7 +1361,7 @@ class _DummyCipher:
     decrypt = encrypt
 
 
-class SSHCiphers:
+class SSHCiphers(object):
     """
     SSHCiphers represents all the encryption operations that need to occur
     to encrypt and authenticate the SSH connection.
@@ -1541,7 +1541,7 @@ class SSHCiphers:
         return mac == outer
 
 
-class _Counter:
+class _Counter(object):
     """
     Stateful counter which returns results packed in a byte string
     """

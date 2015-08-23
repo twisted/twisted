@@ -16,7 +16,7 @@ from twisted.python import components
 
 from twisted.conch.insults import insults
 
-class _Glue:
+class _Glue(object):
     """A feeble class for making one attribute look like another.
 
     This should be replaced with a real class at some point, probably.
@@ -28,7 +28,7 @@ class _Glue:
     def __getattr__(self, name):
         raise AttributeError(self.name, "has no attribute", name)
 
-class TerminalSessionTransport:
+class TerminalSessionTransport(object):
     def __init__(self, proto, chainedProtocol, avatar, width, height):
         self.proto = proto
         self.avatar = avatar
@@ -85,7 +85,7 @@ class TerminalUser(avatar.ConchUser, components.Adapter):
         avatar.ConchUser.__init__(self)
         self.channelLookup['session'] = session.SSHSession
 
-class TerminalRealm:
+class TerminalRealm(object):
     userFactory = TerminalUser
     sessionFactory = TerminalSession
 

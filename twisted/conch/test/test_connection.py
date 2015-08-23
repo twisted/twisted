@@ -102,7 +102,7 @@ class TestChannel(channel.SSHChannel):
         """
         self.gotClosed = True
 
-class TestAvatar:
+class TestAvatar(object):
     """
     A mocked-up version of twisted.conch.avatar.ConchUser
     """

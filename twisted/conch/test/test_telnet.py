@@ -19,7 +19,7 @@ from twisted.test import proto_helpers
 
 
 @implementer(telnet.ITelnetProtocol)
-class TestProtocol:
+class TestProtocol(object):
     localEnableable = ()
     remoteEnableable = ()
 

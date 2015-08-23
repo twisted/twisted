@@ -435,7 +435,7 @@ class BufferTests(unittest.TestCase):
             s3 + '\n' +
             '\n' * (HEIGHT - 3))
 
-class FakeDelayedCall:
+class FakeDelayedCall(object):
     called = False
     cancelled = False
     def __init__(self, fs, timeout, f, a, kw):
@@ -456,7 +456,7 @@ class FakeDelayedCall:
         self.called = True
         self.f(*self.a, **self.kw)
 
-class FakeScheduler:
+class FakeScheduler(object):
     def __init__(self):
         self.calls = []
 

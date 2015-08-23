@@ -17,7 +17,7 @@ from twisted.python import usage
 from twisted.conch.insults import insults
 from twisted.conch import manhole, manhole_ssh, telnet
 
-class makeTelnetProtocol:
+class makeTelnetProtocol(object):
     def __init__(self, portal):
         self.portal = portal
 
@@ -26,17 +26,17 @@ class makeTelnetProtocol:
         args = (self.portal,)
         return telnet.TelnetTransport(auth, *args)
 
-class chainedProtocolFactory:
+class chainedProtocolFactory(object):
     def __init__(self, namespace):
         self.namespace = namespace
-    
+
     def __call__(self):
         return insults.ServerProtocol(manhole.ColoredManhole, self.namespace)
 
 
 
 @implementer(portal.IRealm)
-class _StupidRealm:
+class _StupidRealm(object):
     def __init__(self, proto, *a, **kw):
         self.protocolFactory = proto
         self.protocolArgs = a
@@ -58,7 +58,7 @@ class Options(usage.Options):
     def __init__(self):
         usage.Options.__init__(self)
         self['namespace'] = None
-    
+
     def postOptions(self):
         if self['telnetPort'] is None and self['sshPort'] is None:
             raise usage.UsageError("At least one of --telnetPort and --sshPort must be specified")

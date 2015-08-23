@@ -228,7 +228,7 @@ def stopConnection():
     if not options['reconnect']:
         reactor.callLater(0.1, _stopReactor)
 
-class _KeepAlive:
+class _KeepAlive(object):
 
     def __init__(self, conn):
         self.conn = conn
@@ -505,4 +505,3 @@ def _enterRawMode():
 
 if __name__ == '__main__':
     run()
-

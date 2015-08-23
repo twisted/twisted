@@ -9,7 +9,7 @@ from twisted.python import log
 
 
 @implementer(IConchUser)
-class ConchUser:
+class ConchUser(object):
     def __init__(self):
         self.channelLookup = {}
         self.subsystemLookup = {}

@@ -58,7 +58,7 @@ class Mock(object):
         _append(self, (name, attrValue))
         return attrValue
 
-class MockMixin:
+class MockMixin(object):
     def assertCall(self, occurrence, methodName, expectedPositionalArgs=(),
                    expectedKeywordArgs={}):
         attr, mock = occurrence

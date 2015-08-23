@@ -425,7 +425,7 @@ class NotifyingExpectableBuffer(helper.ExpectableBuffer):
         self.onDisconnection.errback(reason)
 
 
-class _BaseMixin:
+class _BaseMixin(object):
     WIDTH = 80
     HEIGHT = 24
 
@@ -595,7 +595,7 @@ class _StdioMixin(_BaseMixin):
     def _testwrite(self, bytes):
         self.clientTransport.write(bytes)
 
-class RecvlineLoopbackMixin:
+class RecvlineLoopbackMixin(object):
     serverProtocol = EchoServer
 
     def testSimple(self):
@@ -672,7 +672,7 @@ class RecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, RecvlineLoopbac
         skip = "Terminal requirements missing, can't run recvline tests over stdio"
 
 
-class HistoricRecvlineLoopbackMixin:
+class HistoricRecvlineLoopbackMixin(object):
     serverProtocol = EchoServer
 
     def testUpArrow(self):

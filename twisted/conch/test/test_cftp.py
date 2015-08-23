@@ -220,7 +220,7 @@ class StdioClientTests(TestCase):
         Create a L{cftp.StdioClient} hooked up to dummy transport and a fake
         user database.
         """
-        class Connection:
+        class Connection(object):
             pass
 
         conn = Connection()
@@ -335,7 +335,7 @@ class StdioClientTests(TestCase):
 
 
 
-class FileTransferTestRealm:
+class FileTransferTestRealm(object):
     def __init__(self, testDir):
         self.testDir = testDir
 

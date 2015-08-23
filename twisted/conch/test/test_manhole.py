@@ -96,7 +96,7 @@ class WriterTests(unittest.TestCase):
         manhole.lastColorizedLine("class foo:")
 
 
-class ManholeLoopbackMixin:
+class ManholeLoopbackMixin(object):
     serverProtocol = manhole.ColoredManhole
 
     def wfd(self, d):

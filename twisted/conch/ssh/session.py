@@ -148,7 +148,7 @@ class _ProtocolWrapper(protocol.ProcessProtocol):
 
     def processEnded(self, reason): self.proto.connectionLost(reason)
 
-class _DummyTransport:
+class _DummyTransport(object):
 
     def __init__(self, proto):
         self.proto = proto

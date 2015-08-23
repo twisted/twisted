@@ -273,7 +273,7 @@ class ITerminalTransport(iinternet.ITransport):
 CSI = '\x1b'
 CST = {'~': 'tilde'}
 
-class modes:
+class modes(object):
     """ECMA 48 standardized modes
     """
 
@@ -300,7 +300,7 @@ class modes:
     LINEFEED_NEWLINE = LNM = 20
 
 
-class privateModes:
+class privateModes(object):
     """ANSI-Compatible Private Modes
     """
     ERROR = 0
@@ -342,7 +342,7 @@ UNDERLINE = 4
 BLINK = 5
 REVERSE_VIDEO = 7
 
-class Vector:
+class Vector(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -479,7 +479,7 @@ class ServerProtocol(protocol.Protocol):
         else:
             self.terminalProtocol.unhandledControlSequence('\x1b[O' + ch)
 
-    class ControlSequenceParser:
+    class ControlSequenceParser(object):
         def A(self, proto, handler, buf):
             if buf == '\x1b[':
                 handler.keystrokeReceived(proto.UP_ARROW, None)
@@ -924,7 +924,7 @@ class ClientProtocol(protocol.Protocol):
         else:
             f(self, self.terminal, buf)
 
-    class ControlSequenceParser:
+    class ControlSequenceParser(object):
         def _makeSimple(ch, fName):
             n = 'cursor' + fName
             def simple(self, proto, handler, buf):

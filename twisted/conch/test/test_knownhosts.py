@@ -67,7 +67,7 @@ sampleHashedLine = (
     sampleEncodedKey + "\n")
 
 
-class EntryTestsMixin:
+class EntryTestsMixin(object):
     """
     Tests for implementations of L{IKnownHostEntry}.  Subclasses must set the
     'entry' attribute to a provider of that interface, the implementation of

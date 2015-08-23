@@ -27,12 +27,12 @@ else:
     elif Crypto is None:
         dependencySkip = "can't run w/o PyCrypto"
 
-    class transport: # fictional modules to make classes work
-        class SSHTransportBase: pass
-        class SSHServerTransport: pass
-        class SSHClientTransport: pass
-    class factory:
-        class SSHFactory:
+    class transport(object): # fictional modules to make classes work
+        class SSHTransportBase(object): pass
+        class SSHServerTransport(object): pass
+        class SSHClientTransport(object): pass
+    class factory(object):
+        class SSHFactory(object):
             pass
 
 from hashlib import md5, sha1
@@ -187,7 +187,7 @@ class MockCipher(object):
 
 
 
-class MockCompression:
+class MockCompression(object):
     """
     A mocked-up compression, based on the zlib interface.  Instead of
     compressing, it reverses the data and adds a 0x66 byte to the end.
@@ -1074,7 +1074,7 @@ here's some other stuff
 
 
 
-class ServerAndClientSSHTransportBaseCase:
+class ServerAndClientSSHTransportBaseCase(object):
     """
     Tests that need to be run on both the server and the client.
     """

@@ -20,7 +20,7 @@ from twisted.conch import recvline
 from twisted.internet import defer
 from twisted.python.htmlizer import TokenPrinter
 
-class FileWrapper:
+class FileWrapper(object):
     """Minimal write-file-like object.
 
     Writes are translated into addOutput calls on an object passed to
@@ -234,7 +234,7 @@ class Manhole(recvline.HistoricRecvLine):
             self.terminal.nextLine()
         self.terminal.write(self.ps[self.pn])
 
-class VT102Writer:
+class VT102Writer(object):
     """Colorizer for Python tokens.
 
     A series of tokens are written to instances of this object.  Each is

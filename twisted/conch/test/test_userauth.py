@@ -30,14 +30,14 @@ else:
     keys = None
 
 
-    class transport:
-        class SSHTransportBase:
+    class transport(object):
+        class SSHTransportBase(object):
             """
             A stub class so that later class definitions won't die.
             """
 
-    class userauth:
-        class SSHUserAuthClient:
+    class userauth(object):
+        class SSHUserAuthClient(object):
             """
             A stub class so that later class definitions won't die.
             """
@@ -802,8 +802,8 @@ class LoopbackTests(unittest.TestCase):
         skip = "cannot run w/o PyCrypto or PyASN1"
 
 
-    class Factory:
-        class Service:
+    class Factory(object):
+        class Service(object):
             name = 'TestService'
 
 

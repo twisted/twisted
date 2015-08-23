@@ -81,7 +81,7 @@ def _shadowGetByName(username):
 
 
 @implementer(ICredentialsChecker)
-class UNIXPasswordDatabase:
+class UNIXPasswordDatabase(object):
     """
     A checker which validates users out of the UNIX password databases, or
     databases of a compatible format.
@@ -117,7 +117,7 @@ class UNIXPasswordDatabase:
 
 
 @implementer(ICredentialsChecker)
-class SSHPublicKeyDatabase:
+class SSHPublicKeyDatabase(object):
     """
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.
@@ -226,7 +226,7 @@ class SSHPublicKeyDatabase:
 
 
 @implementer(ICredentialsChecker)
-class SSHProtocolChecker:
+class SSHProtocolChecker(object):
     """
     SSHProtocolChecker is a checker that requires multiple authentications
     to succeed.  To add a checker, call my registerChecker method with

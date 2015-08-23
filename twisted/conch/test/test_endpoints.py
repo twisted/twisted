@@ -1451,7 +1451,7 @@ class NewConnectionHelperTests(TestCase):
         L{_NewConnectionHelper.cleanupConnection} closes the transport with
         C{abortConnection} if called with C{immediate} set to C{True}.
         """
-        class Abortable:
+        class Abortable(object):
             aborted = False
             def abortConnection(self):
                 """
