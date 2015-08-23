@@ -557,8 +557,7 @@ def makeSQLTests(base, suffix, globals):
                   PsycopgConnector, MySQLConnector, FirebirdConnector]
     for connclass in connectors:
         name = connclass.TEST_PREFIX + suffix
-        klass = types.ClassType(name, (connclass, base, unittest.TestCase),
-                                base.__dict__)
+        klass = type(name, (connclass, base, unittest.TestCase), {})
         globals[name] = klass
 
 # GadflyADBAPITests SQLiteADBAPITests PyPgSQLADBAPITests
