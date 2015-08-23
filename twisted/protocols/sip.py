@@ -368,7 +368,7 @@ def parseViaHeader(value):
     return Via(**result)
 
 
-class URL:
+class URL(object):
     """A SIP URL."""
 
     def __init__(self, host, username=None, password=None, port=None,
@@ -533,7 +533,7 @@ class RegistrationError(SIPError):
     """Registration was not possible."""
 
 
-class Message:
+class Message(object):
     """A SIP message."""
 
     length = None
@@ -851,7 +851,7 @@ class IContact(Interface):
     """A user of a registrar or proxy"""
 
 
-class Registration:
+class Registration(object):
     def __init__(self, secondsToExpiry, contactURL):
         self.secondsToExpiry = secondsToExpiry
         self.contactURL = contactURL
@@ -1017,7 +1017,7 @@ class IAuthorizer(Interface):
         @type response: C{str}
         """
 
-class BasicAuthorizer:
+class BasicAuthorizer(object):
     """Authorizer for insecure Basic (base64-encoded plaintext) authentication.
 
     This form of authentication is broken and insecure.  Do not use it.
@@ -1097,7 +1097,7 @@ class DigestedCredentials(UsernameHashedPassword):
 
         return expected == response
 
-class DigestAuthorizer:
+class DigestAuthorizer(object):
     CHALLENGE_LIFETIME = 15
 
     implements(IAuthorizer)
@@ -1289,7 +1289,7 @@ class RegisterProxy(Proxy):
         pass
 
 
-class InMemoryRegistry:
+class InMemoryRegistry(object):
     """A simplistic registry for a specific domain."""
 
     implements(IRegistry, ILocator)

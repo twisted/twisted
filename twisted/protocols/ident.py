@@ -134,7 +134,7 @@ class IdentServer(basic.LineOnlyReceiver):
         """
         raise IdentError()
 
-class ProcServerMixin:
+class ProcServerMixin(object):
     """Implements lookup() to grab entries for responses from /proc/net/tcp
     """
 

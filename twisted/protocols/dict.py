@@ -68,7 +68,7 @@ def parseText(line):
             line = line[1:]
         return line
 
-class Definition:
+class Definition(object):
     """A word definition"""
     def __init__(self, name, db, dbdesc, text):
         self.name = name

@@ -485,7 +485,7 @@ class LineOnlyReceiver(protocol.Protocol):
 
 
 
-class _PauseableMixin:
+class _PauseableMixin(object):
     paused = False
 
     def pauseProducing(self):
@@ -841,7 +841,7 @@ class Int8StringReceiver(IntNStringReceiver):
 
 
 
-class StatefulStringProtocol:
+class StatefulStringProtocol(object):
     """
     A stateful string protocol.
 
@@ -881,7 +881,7 @@ class StatefulStringProtocol:
 
 
 @implementer(interfaces.IProducer)
-class FileSender:
+class FileSender(object):
     """
     A producer that sends the contents of a file to a consumer.
 

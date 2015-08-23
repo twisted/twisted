@@ -2183,7 +2183,7 @@ class _FileWriter(object):
 
 
 
-class BaseFTPRealm:
+class BaseFTPRealm(object):
     """
     Base class for simple FTP realms which provides an easy hook for specifying
     the home directory for each user.
@@ -2296,7 +2296,7 @@ class UnexpectedResponse(FTPError):
 class UnexpectedData(FTPError):
     pass
 
-class FTPCommand:
+class FTPCommand(object):
     def __init__(self, text=None, public=0):
         self.text = text
         self.deferred = defer.Deferred()

@@ -11,7 +11,7 @@ from zope.interface import implements
 from twisted.internet import interfaces
 
 
-class BasicProducerConsumerProxy:
+class BasicProducerConsumerProxy(object):
     """
     I can act as a man in the middle between any Producer and Consumer.
 

@@ -25,7 +25,7 @@ from zope.interface import implements, Interface
 from twisted.protocols import pcp
 
 
-class Bucket:
+class Bucket(object):
     """
     Implementation of a Token bucket.
 
@@ -117,7 +117,7 @@ class IBucketFilter(Interface):
         @returntype: L{Bucket}
         """
 
-class HierarchicalBucketFilter:
+class HierarchicalBucketFilter(object):
     """
     Filter things into buckets that can be nested.
 
@@ -249,7 +249,7 @@ class ShapedTransport(ShapedConsumer):
         return getattr(self.consumer, name)
 
 
-class ShapedProtocolFactory:
+class ShapedProtocolFactory(object):
     """
     Dispense C{Protocols} with traffic shaping on their transports.
 

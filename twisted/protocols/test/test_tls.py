@@ -42,7 +42,7 @@ from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.test.proto_helpers import StringTransport
 
 
-class HandshakeCallbackContextFactory:
+class HandshakeCallbackContextFactory(object):
     """
     L{HandshakeCallbackContextFactory} is a factory for SSL contexts which
     allows applications to get notification when the SSL handshake completes.

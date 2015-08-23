@@ -665,7 +665,7 @@ class TrafficLoggingFactory(WrappingFactory):
 
 
 
-class TimeoutMixin:
+class TimeoutMixin(object):
     """
     Mixin for protocols which wish to timeout connections.
 

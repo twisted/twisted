@@ -262,7 +262,7 @@ def _loopbackAsyncContinue(ignored, server, serverToClient, client,
 
 
 @implementer(interfaces.ITransport, interfaces.IConsumer)
-class LoopbackRelay:
+class LoopbackRelay(object):
     buffer = ''
     shouldLose = 0
     disconnecting = 0

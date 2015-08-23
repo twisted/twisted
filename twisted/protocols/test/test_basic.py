@@ -491,7 +491,7 @@ class LineOnlyReceiverTests(unittest.SynchronousTestCase):
 
 
 
-class TestMixin:
+class TestMixin(object):
 
     def connectionMade(self):
         self.received = []
@@ -517,7 +517,7 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 
 
-class LPTestCaseMixin:
+class LPTestCaseMixin(object):
 
     illegalStrings = []
     protocol = None
