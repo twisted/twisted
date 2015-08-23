@@ -25,7 +25,7 @@ def main(reactor, host, port=443):
             done.callback(None)
 
     endpoints.connectProtocol(
-        endpoints.SSL4ClientEndpoint(reactor, host, port, options),
+        endpoints.TLS4ClientEndpoint(reactor, host, port, options),
         ShowCertificate()
     )
     return done

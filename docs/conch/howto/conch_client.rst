@@ -22,7 +22,7 @@ that the passwords and commands were sent in the clear. To solve this
 problem, the SSH protocol was created. Twisted Conch implements the
 second version of this protocol.
 
-    
+
 
 
 
@@ -30,7 +30,7 @@ Using an SSH Command Endpoint
 -----------------------------
 
 
-    
+
 
 If your objective is to execute a command on a remote host over an SSH
 connection, then the easiest approach may be to
@@ -40,7 +40,7 @@ at :doc:`the endpoint howto <../../core/howto/endpoints>` to
 get an idea of how endpoints work in general.
 
 
-    
+
 
 
 
@@ -51,10 +51,10 @@ command with the input of a protocol you supply, and associates output
 from that protocol with the input of that command.  Effectively,
 this lets you ignore most of the complexity of SSH and just interact with
 a remote process as though it were any other stream-oriented connection -
-such as TCP or SSL.
+such as TCP or TLS.
 
 
-    
+
 
 
 
@@ -63,7 +63,7 @@ established SSH connection.  This endpoint just opens a new channel on the
 existing connection and launches a command in that.
 
 
-    
+
 
 
 
@@ -74,7 +74,7 @@ protocol to use to interact with the command and let them get to work
 using the endpoint's ``connect`` method.
 
 
-    
+
 
 
 
@@ -100,7 +100,7 @@ attempt can be cancelled by calling ``cancel()`` on this
 ``Deferred`` .
 
 
-    
+
 
 
 
@@ -111,7 +111,7 @@ and bounced back by the ``/bin/cat`` process the
 protocol is interacting with.
 
 
-    
+
 
 
 
@@ -123,14 +123,14 @@ It takes an optional password argument which will also be used for authenticatio
 It takes a host (either a name or an IP address) and a port number, defining where to connect.
 
 
-    
+
 
 
 
 Some of the other options may bear further explanation.
 
 
-    
+
 
 
 
@@ -140,7 +140,7 @@ This argument is optional.
 If key authentication against the server is either unnecessary or undesired, it may be omitted entirely.
 
 
-    
+
 
 
 
@@ -152,7 +152,7 @@ Often in a typical *NIX desktop environment, the *SSH_AUTH_SOCK* environment var
 This explains the value ``echoclient_ssh.py`` assigns this parameter when *--no-agent* is not given.
 
 
-    
+
 
 
 
@@ -161,7 +161,7 @@ This object has the opportunity to reject server keys if they differ from expect
 It can also save server keys when they are first observed.
 
 
-    
+
 
 
 
@@ -175,7 +175,7 @@ See :api:`twisted.conch.endpoints.SSHCommandClientEndpoint.newConnection <SSHCom
 For use of ``SSHCommandClientEndpoint`` that is intended to be completely autonomous, applications will probably want to specify a custom ``ui`` object which can make the necessary decisions without user-input.
 
 
-    
+
 
 
 
@@ -184,7 +184,7 @@ already-established connection.  This is done using the alternate
 constructor ``SSHCommandClientEndpoint.existingConnection`` .
 
 
-    
+
 
 
 
@@ -209,7 +209,7 @@ lower-level Conch client interface.  This is described below.
 
 
 Writing a client with Conch involves sub-classing 4 classes: :api:`twisted.conch.ssh.transport.SSHClientTransport <twisted.conch.ssh.transport.SSHClientTransport>` , :api:`twisted.conch.ssh.userauth.SSHUserAuthClient <twisted.conch.ssh.userauth.SSHUserAuthClient>` , :api:`twisted.conch.ssh.connection.SSHConnection <twisted.conch.ssh.connection.SSHConnection>` , and :api:`twisted.conch.ssh.channel.SSHChannel <twisted.conch.ssh.channel.SSHChannel>` . We'll start out
-with ``SSHClientTransport`` because it's the base 
+with ``SSHClientTransport`` because it's the base
 of the client.
 
 
@@ -224,26 +224,26 @@ The Transport
 
 .. code-block:: python
 
-    
+
     from twisted.conch import error
     from twisted.conch.ssh import transport
     from twisted.internet import defer
-    
+
     class ClientTransport(transport.SSHClientTransport):
-    
+
         def verifyHostKey(self, pubKey, fingerprint):
             if fingerprint != 'b1:94:6a:c9:24:92:d2:34:7c:62:35:b4:d2:61:11:84':
                 return defer.fail(error.ConchError('bad key'))
             else:
                 return defer.succeed(1)
-    
+
         def connectionSecure(self):
             self.requestService(ClientUserAuth('user', ClientConnection()))
 
 
 
 
-See how easy it is? ``SSHClientTransport`` 
+See how easy it is? ``SSHClientTransport``
 handles the negotiation of encryption and the verification of keys
 for you. The one security element that you as a client writer need to
 implement is ``verifyHostKey()`` . This method
@@ -276,15 +276,15 @@ The Authorization Client
 
 .. code-block:: python
 
-    
+
     from twisted.conch.ssh import keys, userauth
-    
+
     # these are the public/private keys from test_conch
-    
+
     publicKey = 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3\
     /c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHR\
     ivcJSkbh/C+BR3utDS555mV'
-    
+
     privateKey = """-----BEGIN RSA PRIVATE KEY-----
     MIIByAIBAAJhAK8ycfDmDpyZs3+LXwRLy4vA1T6yd/3PZNiPwM+uH8Yx3/YpskSW
     4sbUIZR/ZXzY1CMfuC5qyR+UDUbBaaK3Bwyjk8E02C4eSpkabJZGB0Yr3CUpG4fw
@@ -297,16 +297,16 @@ The Authorization Client
     pSTqy7c3a2AScC/YyOwkDaICHnnD3XyjMwIxALRzl0tQEKMXs6hH8ToUdlLROCrP
     EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
     -----END RSA PRIVATE KEY-----"""
-    
+
     class ClientUserAuth(userauth.SSHUserAuthClient):
-    
+
         def getPassword(self, prompt = None):
-            return 
+            return
             # this says we won't do password authentication
-    
+
         def getPublicKey(self):
             return keys.Key.fromString(data = publicKey).blob()
-    
+
         def getPrivateKey(self):
             return defer.succeed(keys.Key.fromString(data = privateKey).keyObject)
 
@@ -319,15 +319,15 @@ supplied. ``getPassword()`` asks for a
 password, ``getPublicKey()`` and ``getPrivateKey()`` get public and private keys,
 respectively. ``getPassword()`` returns
 a ``Deferred`` that is called back with
-the password to use. ``getPublicKey()`` 
+the password to use. ``getPublicKey()``
 returns the SSH key data for the public key to use. ``keys.Key.fromString()`` will take
 a key in OpenSSH or LSH format as a string, and convert it to the
 required format. Alternatively, ``keys.Key.fromFile()`` can be used instead, which
-will take the filename of a key in OpenSSH and LSH format, and 
-convert it to the required format. ``getPrivateKey()`` 
+will take the filename of a key in OpenSSH and LSH format, and
+convert it to the required format. ``getPrivateKey()``
 returns a ``Deferred`` which is
 called back with the key object (as used in PyCrypto) for
-the private key. ``getPassword()`` 
+the private key. ``getPassword()``
 and ``getPrivateKey()`` return ``Deferreds`` because they may need to ask the user
 for input.
 
@@ -335,7 +335,7 @@ for input.
 
 
 Once the authentication is complete, ``SSHUserAuthClient`` takes care of starting the code ``SSHConnection`` object given to it. Next, we'll
-look at how to use the ``SSHConnection`` 
+look at how to use the ``SSHConnection``
 
 
 
@@ -349,11 +349,11 @@ The Connection
 
 .. code-block:: python
 
-    
+
     from twisted.conch.ssh import connection
-    
+
     class ClientConnection(connection.SSHConnection):
-    
+
         def serviceStarted(self):
             self.openChannel(CatChannel(conn = self))
 
@@ -376,27 +376,27 @@ The Channel
 
 .. code-block:: python
 
-    
+
     from twisted.conch.ssh import channel, common
-    
+
     class CatChannel(channel.SSHChannel):
-    
+
         name = 'session'
-    
+
         def channelOpen(self, data):
             d = self.conn.sendRequest(self, 'exec', common.NS('cat'),
                                       wantReply = 1)
             d.addCallback(self._cbSendRequest)
             self.catData = ''
-    
+
         def _cbSendRequest(self, ignored):
             self.write('This data will be echoed back to us by "cat."\r\n')
             self.conn.sendEOF(self)
             self.loseConnection()
-    
+
         def dataReceived(self, data):
             self.catData += data
-    
+
         def closed(self):
             print 'We got this from "cat":', self.catData
 
@@ -428,7 +428,7 @@ been started. ``sendRequest()`` then returns a ``Deferred`` which we add a callb
 
 
 
-Once the callback fires, we send the data. ``SSHChannel`` supports the :api:`twisted.internet.interfaces.ITransport <twisted.internet.interfaces.ITransport>` 
+Once the callback fires, we send the data. ``SSHChannel`` supports the :api:`twisted.internet.interfaces.ITransport <twisted.internet.interfaces.ITransport>`
 interface, so
 it can be given to Protocols to run them over the secure
 connection. In our case, we just write the data directly. ``sendEOF()`` does not follow the interface,
@@ -455,15 +455,15 @@ The main() function
 
 .. code-block:: python
 
-    
+
     from twisted.internet import protocol, reactor
-    
+
     def main():
         factory = protocol.ClientFactory()
         factory.protocol = ClientTransport
         reactor.connectTCP('localhost', 22, factory)
         reactor.run()
-    
+
     if __name__ == "__main__":
         main()
 
@@ -473,8 +473,8 @@ The main() function
 We call ``connectTCP()`` to connect to
 localhost, port 22 (the standard port for ssh), and pass it an instance
 of :api:`twisted.internet.protocol.ClientFactory <twisted.internet.protocol.ClientFactory>` .
-This instance has the attribute ``protocol`` 
-set to our earlier ``ClientTransport`` 
+This instance has the attribute ``protocol``
+set to our earlier ``ClientTransport``
 class. Note that the protocol attribute is set to the class ``ClientTransport`` , not an instance of ``ClientTransport`` ! When the ``connectTCP`` call completes, the protocol will be
 called to create a ``ClientTransport()`` object
 - this then invokes all our previous work.
@@ -482,17 +482,14 @@ called to create a ``ClientTransport()`` object
 
 
 
-It's worth noting that in the example ``main()`` 
-routine, the ``reactor.run()`` call never returns. 
+It's worth noting that in the example ``main()``
+routine, the ``reactor.run()`` call never returns.
 If you want to make the program exit, call ``reactor.stop()`` in the earlier ``closed()`` method.
 
 
 
 
 If you wish to observe the interactions in more detail, adding a call
-to ``log.startLogging(sys.stdout, setStdout=0)`` 
+to ``log.startLogging(sys.stdout, setStdout=0)``
 before the ``reactor.run()`` call will send all
 logging to stdout.
-
-
-

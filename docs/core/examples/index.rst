@@ -26,8 +26,8 @@ Echo server & client variants
 - :download:`echoclient.py` - variant on a simple TCP client
 - :download:`echoserv_udp.py` - simplest possible UDP server
 - :download:`echoclient_udp.py` - simple UDP client
-- :download:`echoserv_ssl.py` - simple SSL server
-- :download:`echoclient_ssl.py` - simple SSL client
+- :download:`echoserv_tls.py` - simple TLS server
+- :download:`echoclient_tls.py` - simple TLS client
 
 
 AMP server & client variants

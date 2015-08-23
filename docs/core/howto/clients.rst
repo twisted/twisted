@@ -11,7 +11,7 @@ Overview
 Twisted is a framework designed to be very flexible, and let you write
 powerful clients. The cost of this flexibility is a few layers in the way
 to writing your client. This document covers creating clients that can be
-used for TCP, SSL and Unix sockets. UDP is covered :doc:`in a different document <udp>` .
+used for TCP, TLS and Unix sockets. UDP is covered :doc:`in a different document <udp>` .
 
 At the base, the place where you actually implement the protocol parsing
 and handling, is the ``Protocol`` class. This class will usually be
@@ -102,9 +102,9 @@ Regardless of the type of client endpoint, the way to set up a new
 connection is simply pass it to :api:`twisted.internet.endpoints.connectProtocol <connectProtocol>` along with a
 protocol instance.  This means it's easy to change the mechanism you're
 using to connect, without changing the rest of your program.  For example,
-to run the greeter example over SSL, the only change required is to
+to run the greeter example over TLS, the only change required is to
 instantiate an
-:api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` instead of a
+:api:`twisted.internet.endpoints.TLS4ClientEndpoint <TLS4ClientEndpoint>` instead of a
 ``TCP4ClientEndpoint`` .  To take advantage of this, functions and
 methods which initiates a new connection should generally accept an
 endpoint as an argument and let the caller construct it, rather than taking
