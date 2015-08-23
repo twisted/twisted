@@ -43,7 +43,7 @@ module, and the HTML templates all belong in separate files.
 
 
 
-We can use the ``templateFile`` and ``templateDirectory`` 
+We can use the ``templateFile`` and ``templateDirectory``
 attributes to indicate what HTML template file to use for each Page, and where
 to look for it.
 
@@ -98,11 +98,11 @@ And we can write simpler files now:
 
 .. code-block:: console
 
-    
+
     % twistd -ny simple-finger.tac
 
 
-Note: the finger *user* still has ultimate power: they can use ``makeService``, or they can use the lower-level interface if they have specific needs (maybe an IRC server on some other port? Maybe we want the non-SSL webserver to listen only locally? etc. etc.).
+Note: the finger *user* still has ultimate power: they can use ``makeService``, or they can use the lower-level interface if they have specific needs (maybe an IRC server on some other port? Maybe we want the non-TLS webserver to listen only locally? etc. etc.).
 This is an important design principle: never *force* a layer of abstraction; *allow* usage of layers of abstractions instead.
 
 The pasta theory of design:

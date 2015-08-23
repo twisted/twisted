@@ -9,7 +9,7 @@ Writing Servers
 Overview
 --------
 
-This document explains how you can use Twisted to implement network protocol parsing and handling for TCP servers (the same code can be reused for SSL and Unix socket servers).
+This document explains how you can use Twisted to implement network protocol parsing and handling for TCP servers (the same code can be reused for TLS and Unix socket servers).
 There is a :doc:`separate document <udp>` covering UDP.
 
 Your protocol handling class will usually subclass :api:`twisted.internet.protocol.Protocol`.
