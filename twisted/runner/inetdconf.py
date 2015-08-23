@@ -31,7 +31,7 @@ class UnknownService(Exception):
     """Unknown service name"""
 
 
-class SimpleConfFile:
+class SimpleConfFile(object):
     """Simple configuration file parser superclass.
 
     Filters out comments and empty lines (which includes lines that only 
@@ -82,7 +82,7 @@ class SimpleConfFile:
         """Override this."""
 
 
-class InetdService:
+class InetdService(object):
     """A simple description of an inetd service."""
     name = None
     port = None

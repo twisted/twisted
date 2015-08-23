@@ -10,7 +10,7 @@ from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
 from twisted.protocols import basic
 
-class DummyTransport:
+class DummyTransport(object):
 
     disconnecting = 0
 
