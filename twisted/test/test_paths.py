@@ -303,7 +303,7 @@ class ListingCompatibilityTests(BytesTestCase):
 
 
 
-class ExplodingFile:
+class ExplodingFile(object):
     """
     A C{file}-alike which raises exceptions from its I/O methods and keeps track
     of whether it has been closed.
@@ -1489,7 +1489,7 @@ class FilePathTests(AbstractFilePathTests):
         for file inode/device/nlinks/uid/gid (in a POSIX environment)
         """
         # specify fake statinfo information
-        class FakeStat:
+        class FakeStat(object):
             st_ino = 200
             st_dev = 300
             st_nlink = 400

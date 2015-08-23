@@ -21,7 +21,7 @@ from twisted.python.failure import Failure
 from twisted.internet import error
 from twisted.internet import interfaces
 
-class TLSNegotiation:
+class TLSNegotiation(object):
     def __init__(self, obj, connectState):
         self.obj = obj
         self.connectState = connectState
@@ -52,7 +52,7 @@ class FakeAddress(object):
 
 @implementer(interfaces.ITransport,
              interfaces.ITLSTransport)
-class FakeTransport:
+class FakeTransport(object):
     """
     A wrapper around a file-like object to make it behave as a Transport.
 
@@ -258,7 +258,7 @@ def makeFakeServer(serverProtocol):
 
 
 
-class IOPump:
+class IOPump(object):
     """Utility to pump data between clients and servers for protocol testing.
 
     Perhaps this is a utility worthy of being in protocol.py?

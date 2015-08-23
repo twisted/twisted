@@ -11,7 +11,7 @@ from twisted.trial import unittest
 from twisted.python.monkey import MonkeyPatcher
 
 
-class TestObj:
+class TestObj(object):
     def __init__(self):
         self.foo = 'foo value'
         self.bar = 'bar value'

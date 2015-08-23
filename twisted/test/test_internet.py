@@ -962,7 +962,7 @@ import %(reactor)s
 %(reactor)s.install()
 from twisted.internet import reactor
 
-class Foo:
+class Foo(object):
     def __init__(self):
         reactor.callWhenRunning(self.start)
         self.timer = reactor.callLater(3, self.failed)

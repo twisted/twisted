@@ -7,10 +7,10 @@ from twisted.trial import unittest
 from twisted.manhole import service
 from twisted.spread.util import LocalAsRemote
 
-class Dummy:
+class Dummy(object):
     pass
 
-class DummyTransport:
+class DummyTransport(object):
     def getHost(self):
         return 'INET', '127.0.0.1', 0
 

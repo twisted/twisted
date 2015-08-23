@@ -16,7 +16,7 @@ from twisted.test.test_plugin import ITestPlugin, ITestPlugin2
 
 
 @provider(ITestPlugin, IPlugin)
-class TestPlugin:
+class TestPlugin(object):
     """
     A plugin used solely for testing purposes.
     """
@@ -28,7 +28,7 @@ class TestPlugin:
 
 
 @provider(ITestPlugin2, IPlugin)
-class AnotherTestPlugin:
+class AnotherTestPlugin(object):
     """
     Another plugin used solely for testing purposes.
     """
@@ -40,7 +40,7 @@ class AnotherTestPlugin:
 
 
 @provider(ITestPlugin2, IPlugin)
-class ThirdTestPlugin:
+class ThirdTestPlugin(object):
     """
     Another plugin used solely for testing purposes.
     """

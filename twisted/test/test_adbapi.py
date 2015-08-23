@@ -24,7 +24,7 @@ CREATE TABLE simple (
 
 
 
-class ADBAPITestBase:
+class ADBAPITestBase(object):
     """Test the asynchronous DB-API code."""
 
     openfun_called = {}
@@ -245,7 +245,7 @@ class ADBAPITestBase:
             curs.close()
 
 
-class ReconnectTestBase:
+class ReconnectTestBase(object):
     """Test the asynchronous DB-API code with reconnect."""
 
     if interfaces.IReactorThreads(reactor, None) is None:
@@ -318,7 +318,7 @@ class ReconnectTestBase:
         return d
 
 
-class DBTestConnector:
+class DBTestConnector(object):
     """A class which knows how to test for the presence of
     and establish a connection to a relational database.
 

@@ -1113,7 +1113,7 @@ class HandleSavingProtocol(ConnectionLostNotifyingProtocol):
 
 
 
-class ProperlyCloseFilesMixin:
+class ProperlyCloseFilesMixin(object):
     """
     Tests for platform resources properly being cleaned up.
     """

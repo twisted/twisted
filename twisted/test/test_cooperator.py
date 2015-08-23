@@ -196,7 +196,7 @@ class CooperatorTests(unittest.TestCase):
                     _TPF.stopped = True
                 yield i
 
-        class _TPF:
+        class _TPF(object):
             stopped = False
             def __call__(self):
                 return self.stopped
@@ -221,7 +221,7 @@ class CooperatorTests(unittest.TestCase):
         """
         calls = []
 
-        class FakeCall:
+        class FakeCall(object):
             def __init__(self, func):
                 self.func = func
 

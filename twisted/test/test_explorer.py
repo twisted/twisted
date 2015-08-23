@@ -26,7 +26,7 @@ from twisted.manhole import explorer
  Sequences with circular references.  Does it blow up?
 """
 
-class SomeDohickey:
+class SomeDohickey(object):
     def __init__(self, *a):
         self.__dict__['args'] = a
 
@@ -50,7 +50,7 @@ class BrowserTests(unittest.TestCase):
         dxplorer = xplorer.get_elements()[1]
         self.assertEqual(dxplorer.id, id(self.testThing[1]))
 
-class Watcher:
+class Watcher(object):
     zero = 0
     def __init__(self):
         self.links = []
@@ -65,7 +65,7 @@ class Watcher:
         return len(self.links) - self.zero
 
 
-class SetattrDohickey:
+class SetattrDohickey(object):
     def __setattr__(self, k, v):
         v = list(str(v))
         v.reverse()
@@ -75,7 +75,7 @@ class MiddleMan(SomeDohickey, SetattrDohickey):
     pass
 
 # class TestWatch(unittest.TestCase):
-class FIXME_Watch:
+class FIXME_Watch(object):
     def setUp(self):
         self.globalNS = globals().copy()
         self.localNS = {}

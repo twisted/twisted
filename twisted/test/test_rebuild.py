@@ -11,12 +11,12 @@ from twisted.python import rebuild
 import crash_test_dummy
 f = crash_test_dummy.foo
 
-class Foo: pass
+class Foo(object): pass
 class Bar(Foo): pass
 class Baz(object): pass
 class Buz(Bar, Baz): pass
 
-class HashRaisesRuntimeError:
+class HashRaisesRuntimeError(object):
     """
     Things that don't hash (raise an Exception) should be ignored by the
     rebuilder.
@@ -130,7 +130,7 @@ class RebuildTests(unittest.TestCase):
 
         b = Buz()
 
-        class Foo:
+        class Foo(object):
             def foo(self):
                 pass
         class Buz(Bar, Baz):

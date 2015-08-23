@@ -21,7 +21,7 @@ from twisted.trial import unittest
 
 from twisted.python import threadable
 
-class TestObject:
+class TestObject(object):
     synchronized = ['aMethod']
 
     x = -1

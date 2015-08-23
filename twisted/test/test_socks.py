@@ -30,7 +30,7 @@ class StringTCPTransport(proto_helpers.StringTransport):
 
 
 
-class FakeResolverReactor:
+class FakeResolverReactor(object):
     """
     Bare-bones reactor with deterministic behavior for the resolve method.
     """

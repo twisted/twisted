@@ -16,7 +16,7 @@ from twisted.internet import protocol, reactor, error, defer, interfaces, udp
 from twisted.python import runtime
 
 
-class Mixin:
+class Mixin(object):
 
     started = 0
     stopped = 0
@@ -438,7 +438,7 @@ class UDPTests(unittest.TestCase):
         passing hostnames to L{twisted.internet.udp.Port.write} needs to be
         emitted by C{write()} in this case.
         """
-        class fakeSocket:
+        class fakeSocket(object):
             def sendto(self, foo, bar):
                 pass
 

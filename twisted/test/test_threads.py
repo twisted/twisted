@@ -193,7 +193,7 @@ class ReactorThreadsTests(unittest.TestCase):
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
 
 
-class Counter:
+class Counter(object):
     index = 0
     problem = 0
 

@@ -24,7 +24,7 @@ from twisted.trial import unittest
 
 
 
-class Dummy:
+class Dummy(object):
     processName=None
 
 class ServiceTests(unittest.TestCase):
@@ -301,7 +301,7 @@ class Foo(basic.LineReceiver):
         self.factory.d.callback(self.factory.line)
 
 
-class DummyApp:
+class DummyApp(object):
     processName = None
     def addService(self, service):
         self.services[service.name] = service
@@ -309,7 +309,7 @@ class DummyApp:
         del self.services[service.name]
 
 
-class TimerTarget:
+class TimerTarget(object):
     def __init__(self):
         self.l = []
     def append(self, what):

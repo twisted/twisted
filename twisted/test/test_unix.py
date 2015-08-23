@@ -220,7 +220,7 @@ class UnixSocketTests(unittest.TestCase):
         class being used and the filename on which the port is listening or
         indicates that the port is not listening.
         """
-        class ClassicFactory:
+        class ClassicFactory(object):
             def doStart(self):
                 pass
 
@@ -381,7 +381,7 @@ class DatagramUnixSocketTests(unittest.TestCase):
         classic protocol class being used and the filename on which the port is
         listening or indicates that the port is not listening.
         """
-        class ClassicProtocol:
+        class ClassicProtocol(object):
             def makeConnection(self, transport):
                 pass
 

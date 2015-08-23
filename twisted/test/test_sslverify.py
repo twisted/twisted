@@ -1710,13 +1710,13 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
 
 
-class _NotSSLTransport:
+class _NotSSLTransport(object):
     def getHandle(self):
         return self
 
 
 
-class _MaybeSSLTransport:
+class _MaybeSSLTransport(object):
     def getHandle(self):
         return self
 
@@ -1728,7 +1728,7 @@ class _MaybeSSLTransport:
 
 
 
-class _ActualSSLTransport:
+class _ActualSSLTransport(object):
     def getHandle(self):
         return self
 

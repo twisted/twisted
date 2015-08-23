@@ -789,7 +789,7 @@ class ObjectGrepTests(unittest.TestCase):
         """
         Test references search through an object attribute.
         """
-        class Dummy:
+        class Dummy(object):
             pass
         o = object()
         d = Dummy()
@@ -801,7 +801,7 @@ class ObjectGrepTests(unittest.TestCase):
         """
         Test references search through a weakref object.
         """
-        class Dummy:
+        class Dummy(object):
             pass
         o = Dummy()
         w1 = weakref.ref(o)
@@ -812,7 +812,7 @@ class ObjectGrepTests(unittest.TestCase):
         """
         Test references search through method special attributes.
         """
-        class Dummy:
+        class Dummy(object):
             def dummy(self):
                 pass
         o = Dummy()
@@ -829,7 +829,7 @@ class ObjectGrepTests(unittest.TestCase):
         """
         Test references search using complex set of objects.
         """
-        class Dummy:
+        class Dummy(object):
             def method(self):
                 pass
 
@@ -879,7 +879,7 @@ class GetClassTests(unittest.TestCase):
         oldClassNames = ['class', 'classobj']
 
     def test_old(self):
-        class OldClass:
+        class OldClass(object):
             pass
         old = OldClass()
         self.assertIn(reflect.getClass(OldClass).__name__, self.oldClassNames)

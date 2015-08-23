@@ -16,7 +16,7 @@ class StringIOWithNoClose(StringIO.StringIO):
     def close(self):
         pass
 
-class ResultHarvester:
+class ResultHarvester(object):
     def __init__(self):
         self.results = []
 

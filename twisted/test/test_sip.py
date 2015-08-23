@@ -102,7 +102,7 @@ Content-Type: application/sdp
 Content-Length: 0
 \n""".replace("\n", "\r\n")
 
-class TestRealm:
+class TestRealm(object):
     def requestAvatar(self, avatarId, mind, *interfaces):
         return sip.IContact, None, lambda: None
 
@@ -419,12 +419,12 @@ class ParseTests(unittest.TestCase):
             self.assertEqual(gparams, params)
 
 
-class DummyLocator:
+class DummyLocator(object):
     implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.succeed(sip.URL("server.com", port=5060))
 
-class FailingLocator:
+class FailingLocator(object):
     implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.fail(LookupError())

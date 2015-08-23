@@ -5,7 +5,7 @@ __version__ = '$Revision: 1.3 $'[11:-2]
 from twisted.trial import unittest
 from twisted.protocols import htb
 
-class DummyClock:
+class DummyClock(object):
     time = 0
     def set(self, when):
         self.time = when

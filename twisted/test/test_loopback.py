@@ -48,7 +48,7 @@ class DoomProtocol(SimpleProtocol):
             self.transport.loseConnection()
 
 
-class LoopbackTestCaseMixin:
+class LoopbackTestCaseMixin(object):
     def testRegularFunction(self):
         s = SimpleProtocol()
         c = SimpleProtocol()

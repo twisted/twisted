@@ -2816,7 +2816,7 @@ class AnonymousFTPShellTests(unittest.TestCase):
 
 
 
-class IFTPShellTestsMixin:
+class IFTPShellTestsMixin(object):
     """
     Generic tests for the C{IFTPShell} interface.
     """
@@ -3350,7 +3350,7 @@ class TestProducer(object):
 
 
 
-class IReadWriteTestsMixin:
+class IReadWriteTestsMixin(object):
     """
     Generic tests for the C{IReadFile} and C{IWriteFile} interfaces.
     """
@@ -3452,7 +3452,7 @@ class FTPReadWriteTests(unittest.TestCase, IReadWriteTestsMixin):
 
 
 
-class CloseTestWriter:
+class CloseTestWriter(object):
     implements(ftp.IWriteFile)
     closeStarted = False
     def receive(self):
@@ -3465,7 +3465,7 @@ class CloseTestWriter:
 
 
 
-class CloseTestShell:
+class CloseTestShell(object):
     def openForWriting(self, segs):
         return defer.succeed(self.writer)
 

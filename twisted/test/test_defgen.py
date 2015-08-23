@@ -36,7 +36,7 @@ def getOwie():
 class TerminalException(Exception):
     pass
 
-class BaseDefgenTests:
+class BaseDefgenTests(object):
     """
     This class sets up a bunch of test cases which will test both
     deferredGenerator and inlineCallbacks based generators. The subclasses

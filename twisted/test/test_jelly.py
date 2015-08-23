@@ -102,7 +102,7 @@ class E(object):
 
 
 
-class SimpleJellyTest:
+class SimpleJellyTest(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -444,7 +444,7 @@ class JellyTests(unittest.TestCase):
 
     def test_setState(self):
         global TupleState
-        class TupleState:
+        class TupleState(object):
             def __init__(self, other):
                 self.other = other
             def __getstate__(self):
@@ -641,7 +641,7 @@ class CircularReferenceTests(unittest.TestCase):
 
 
     def test_circleWithInvoker(self):
-        class DummyInvokerClass:
+        class DummyInvokerClass(object):
             pass
         dummyInvoker = DummyInvokerClass()
         dummyInvoker.serializingPerspective = None

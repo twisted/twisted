@@ -146,7 +146,7 @@ class WrapperTests(unittest.TestCase):
             pass
 
         @implementer(IStubTransport)
-        class StubTransport:
+        class StubTransport(object):
             pass
 
         # Looking up what ProtocolWrapper implements also mutates the class.

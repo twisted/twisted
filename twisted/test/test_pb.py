@@ -53,7 +53,7 @@ class DummyRealm(object):
                 return iface, DummyPerspective(avatarId), lambda: None
 
 
-class IOPump:
+class IOPump(object):
     """
     Utility to pump data between clients and servers for protocol testing.
 
@@ -1630,7 +1630,7 @@ class NewCredTests(unittest.TestCase):
 
 
 
-class NonSubclassingPerspective:
+class NonSubclassingPerspective(object):
     implements(pb.IPerspective)
 
     def __init__(self, avatarId):
@@ -1703,7 +1703,7 @@ class IForwarded(Interface):
         """
 
 
-class Forwarded:
+class Forwarded(object):
     """
     Test implementation of L{IForwarded}.
 

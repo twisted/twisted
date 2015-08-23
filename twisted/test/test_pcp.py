@@ -31,7 +31,7 @@ from twisted.protocols import pcp
 #    - honors stopProducing, and passes it along to upstream Producers
 
 
-class DummyTransport:
+class DummyTransport(object):
     """A dumb transport to wrap around."""
 
     def __init__(self):
@@ -43,7 +43,7 @@ class DummyTransport:
     def getvalue(self):
         return ''.join(self._writes)
 
-class DummyProducer:
+class DummyProducer(object):
     resumed = False
     stopped = False
     paused = False
@@ -86,7 +86,7 @@ class TransportInterfaceTests(unittest.TestCase):
     def testWrite(self):
         self.transport.write("some bytes")
 
-class ConsumerInterfaceTest:
+class ConsumerInterfaceTest(object):
     """Test ProducerConsumerProxy as a Consumer.
 
     Normally we have ProducingServer -> ConsumingTransport.
@@ -132,7 +132,7 @@ class ConsumerInterfaceTest:
         self.failIf(self.producer.resumed)
 
 
-class ProducerInterfaceTest:
+class ProducerInterfaceTest(object):
     """Test ProducerConsumerProxy as a Producer.
 
     Normally we have ProducingServer -> ConsumingTransport.
@@ -229,7 +229,7 @@ class ConsumerProxyTests(unittest.TestCase):
         self.failUnless(self.underlying.unregistered)
 
 
-class PullProducerTest:
+class PullProducerTest(object):
     def setUp(self):
         self.underlying = DummyConsumer()
         self.proxy = self.proxyClass(self.underlying)

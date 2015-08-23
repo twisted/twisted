@@ -777,7 +777,7 @@ class TwoProcessProtocol(protocol.ProcessProtocol):
         self.finished = 1
         self.deferred.callback(None)
 
-class TestTwoProcessesBase:
+class TestTwoProcessesBase(object):
     def setUp(self):
         self.processes = [None, None]
         self.pp = [None, None]

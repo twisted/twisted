@@ -219,7 +219,7 @@ def generateCertificateFiles(basename, organization, organizationalUnit):
 
 
 
-class ContextGeneratingMixin:
+class ContextGeneratingMixin(object):
     """
     Offer methods to create L{ssl.DefaultOpenSSLContextFactory} for both client
     and server.
@@ -622,7 +622,7 @@ class ConnectionLostTests(unittest.TestCase, ContextGeneratingMixin):
 
 
 
-class FakeContext:
+class FakeContext(object):
     """
     L{OpenSSL.SSL.Context} double which can more easily be inspected.
     """

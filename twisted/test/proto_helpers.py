@@ -95,7 +95,7 @@ class LineSendingProtocol(basic.LineReceiver):
         self.lostConn = True
 
 
-class FakeDatagramTransport:
+class FakeDatagramTransport(object):
     noAddr = object()
 
     def __init__(self):
@@ -107,7 +107,7 @@ class FakeDatagramTransport:
 
 
 @implementer(ITransport, IConsumer, IPushProducer)
-class StringTransport:
+class StringTransport(object):
     """
     A transport implementation which buffers data in memory and keeps track of
     its other state without providing any behavior.

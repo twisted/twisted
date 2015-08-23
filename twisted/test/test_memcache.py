@@ -18,7 +18,7 @@ from twisted.internet.defer import DeferredList
 
 
 
-class CommandMixin:
+class CommandMixin(object):
     """
     Setup and tests for basic invocation of L{MemCacheProtocol} commands.
     """

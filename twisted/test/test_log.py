@@ -309,13 +309,13 @@ IOBase.register(FakeFile)
 
 
 
-class EvilStr:
+class EvilStr(object):
     def __str__(self):
         1 // 0
 
 
 
-class EvilRepr:
+class EvilRepr(object):
     def __str__(self):
         return "Happy Evil Repr"
 
@@ -330,7 +330,7 @@ class EvilReprStr(EvilStr, EvilRepr):
 
 
 
-class LogPublisherTestCaseMixin:
+class LogPublisherTestCaseMixin(object):
     def setUp(self):
         """
         Add a log observer which records log events in C{self.out}.  Also,

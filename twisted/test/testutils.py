@@ -18,7 +18,7 @@ from xml.dom import minidom as dom
 
 from twisted.internet.protocol import FileWrapper
 
-class IOPump:
+class IOPump(object):
     """Utility to pump data between clients and servers for protocol testing.
 
     Perhaps this is a utility worthy of being in protocol.py?

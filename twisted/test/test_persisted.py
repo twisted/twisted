@@ -207,7 +207,7 @@ class EphemeralTests(unittest.TestCase):
         self.assert_(not hasattr(o, 'x'))
 
 
-class Pickleable:
+class Pickleable(object):
 
     def __init__(self, x):
         self.x = x
@@ -353,13 +353,13 @@ class StringIOTransitionTests(unittest.TestCase):
 
 
 
-class EvilSourceror:
+class EvilSourceror(object):
     def __init__(self, x):
         self.a = self
         self.a.b = self
         self.a.b.c = x
 
-class NonDictState:
+class NonDictState(object):
     def __getstate__(self):
         return self.state
     def __setstate__(self, state):
