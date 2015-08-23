@@ -329,7 +329,7 @@ class Port(abstract.FileHandle):
 
 
 
-class MulticastMixin:
+class MulticastMixin(object):
     """
     Implement multicast functionality.
     """

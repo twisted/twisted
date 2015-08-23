@@ -25,7 +25,7 @@ from twisted.python.runtime import platform
 
 
 
-class BaseSerialPort:
+class BaseSerialPort(object):
     """
     Base class for Windows and POSIX serial ports.
 

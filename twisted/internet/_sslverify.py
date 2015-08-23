@@ -349,7 +349,7 @@ DN = DistinguishedName
 
 
 
-class CertBase:
+class CertBase(object):
     """
     Base class for public (certificate only) and private (certificate + key
     pair) certificates.
@@ -690,7 +690,7 @@ class PrivateCertificate(Certificate):
                                                  digestAlgorithm)
 
 
-class PublicKey:
+class PublicKey(object):
     """
     A L{PublicKey} is a representation of the public part of a key pair.
 

@@ -3327,7 +3327,7 @@ class ConnectProtocolTests(unittest.TestCase):
         endpoint's C{connect()} method.
         """
         result = defer.Deferred()
-        class Endpoint:
+        class Endpoint(object):
             def connect(self, factory):
                 """
                 Return a marker object for use in our assertion.

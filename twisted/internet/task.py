@@ -24,7 +24,7 @@ from twisted.internet.interfaces import IReactorTime
 from twisted.internet.error import ReactorNotRunning
 
 
-class LoopingCall:
+class LoopingCall(object):
     """Call a function repeatedly.
 
     If C{f} returns a deferred, rescheduling will not take place until the
@@ -729,7 +729,7 @@ def cooperate(iterator):
 
 
 @implementer(IReactorTime)
-class Clock:
+class Clock(object):
     """
     Provide a deterministic, easily-controlled implementation of
     L{IReactorTime.callLater}.  This is commonly useful for writing

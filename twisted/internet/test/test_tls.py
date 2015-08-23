@@ -40,7 +40,7 @@ else:
     from twisted.internet.ssl import ClientContextFactory
 
 
-class TLSMixin:
+class TLSMixin(object):
     requiredInterfaces = [IReactorSSL]
 
     if platform.isWindows():

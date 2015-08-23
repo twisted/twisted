@@ -28,7 +28,7 @@ from twisted.internet import reactor
 
 
 
-class wxRunner:
+class wxRunner(object):
     """Make sure GUI events are handled."""
     
     def __init__(self, app):

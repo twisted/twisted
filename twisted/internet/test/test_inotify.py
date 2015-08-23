@@ -41,7 +41,7 @@ class INotifyTests(unittest.TestCase):
         We just try to raise an exception for every possible case in
         the for loop in L{inotify.INotify._inotify__init__}.
         """
-        class FakeINotify:
+        class FakeINotify(object):
             def init(self):
                 raise inotify.INotifyError()
         self.patch(inotify.INotify, '_inotify', FakeINotify())

@@ -90,7 +90,7 @@ class ConnectableProtocol(Protocol):
 
 
 
-class EndpointCreator:
+class EndpointCreator(object):
     """
     Create client and server endpoints that know how to connect to each other.
     """
@@ -558,7 +558,7 @@ class StreamClientTestsMixin(object):
                 "A pygobject/pygtk bug disables this functionality "
                 "on Windows.")
 
-        class Producer:
+        class Producer(object):
             def resumeProducing(self):
                 log.msg("Producer.resumeProducing")
 

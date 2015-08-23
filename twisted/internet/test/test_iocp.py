@@ -131,7 +131,7 @@ class IOCPReactorTests(unittest.TestCase):
         Verify that we don't lose an event when more than EVENTS_PER_LOOP
         events occur in the same reactor iteration
         """
-        class FakeFD:
+        class FakeFD(object):
             counter = 0
             def logPrefix(self):
                 return 'FakeFD'

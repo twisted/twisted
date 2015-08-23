@@ -65,7 +65,7 @@ from zope.interface import implementer, implementer_only, implementedBy
 from twisted.internet import tcp, interfaces
 
 
-class ContextFactory:
+class ContextFactory(object):
     """A factory for SSL context objects, for server SSL connections."""
 
     isClient = 0
@@ -132,7 +132,7 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         return self._context
 
 
-class ClientContextFactory:
+class ClientContextFactory(object):
     """A context factory for SSL clients."""
 
     isClient = 1

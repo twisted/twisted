@@ -421,7 +421,7 @@ class Port(base.BasePort):
 
 
 
-class MulticastMixin:
+class MulticastMixin(object):
     """
     Implement multicast functionality.
     """

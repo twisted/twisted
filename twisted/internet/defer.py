@@ -194,7 +194,7 @@ _CONTINUE = object()
 
 
 
-class Deferred:
+class Deferred(object):
     """
     This is a callback which will be put off until later.
 
@@ -663,7 +663,7 @@ class Deferred:
 
 
 
-class DebugInfo:
+class DebugInfo(object):
     """
     Deferred debug helper.
     """
@@ -936,7 +936,7 @@ FAILURE = False
 
 ## deferredGenerator
 
-class waitForDeferred:
+class waitForDeferred(object):
     """
     See L{deferredGenerator}.
     """

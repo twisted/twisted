@@ -17,13 +17,13 @@ class GtkReactorDeprecationTests(TestCase):
     deprecated.
     """
 
-    class StubGTK:
-        class GDK:
+    class StubGTK(object):
+        class GDK(object):
             INPUT_READ = None
         def input_add(self, *params):
             pass
 
-    class StubPyGTK:
+    class StubPyGTK(object):
         def require(self, something):
             pass
 

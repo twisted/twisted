@@ -25,7 +25,7 @@ class BaseProcessTests(TestCase):
         its C{proto} attribute and passes it a L{Failure} wrapping the given
         exception.
         """
-        class FakeProto:
+        class FakeProto(object):
             reason = None
 
             def processExited(self, reason):
@@ -44,7 +44,7 @@ class BaseProcessTests(TestCase):
         object referred to by its C{proto} attribute has no C{processExited}
         method.
         """
-        class FakeProto:
+        class FakeProto(object):
             pass
 
         reason = object()

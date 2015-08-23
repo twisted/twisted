@@ -101,7 +101,7 @@ def stopOnError(case, reactor, publisher=None):
 
 
 
-class ReactorBuilder:
+class ReactorBuilder(object):
     """
     L{SynchronousTestCase} mixin which provides a reactor-creation API.  This
     mixin defines C{setUp} and C{tearDown}, so mix it in before

@@ -17,7 +17,7 @@ MAX_TIMEOUT = 0.1
 
 
 
-class _PollableResource:
+class _PollableResource(object):
     active = True
 
     def activate(self):
@@ -29,7 +29,7 @@ class _PollableResource:
 
 
 
-class _PollingTimer:
+class _PollingTimer(object):
     # Everything is private here because it is really an implementation detail.
 
     def __init__(self, reactor):

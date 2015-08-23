@@ -32,7 +32,7 @@ from twisted.python import threadable
 
 
 @implementer(IDelayedCall)
-class DelayedCall:
+class DelayedCall(object):
 
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
@@ -279,7 +279,7 @@ class ThreadedResolver(object):
 
 
 @implementer(IResolverSimple)
-class BlockingResolver:
+class BlockingResolver(object):
 
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
         try:
@@ -1015,7 +1015,7 @@ if platform.supportsThreads():
 
 
 @implementer(IConnector)
-class BaseConnector:
+class BaseConnector(object):
     """Basic implementation of connector.
 
     State can be: "connecting", "connected", "disconnected"
