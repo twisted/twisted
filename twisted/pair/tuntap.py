@@ -251,7 +251,7 @@ class TuntapPort(abstract.FileDescriptor):
 
 
     def __repr__(self):
-        args = (self.protocol.__class__,)
+        args = (fullyQualifiedName(self.protocol.__class__),)
         if self.connected:
             args = args + ("",)
         else:
@@ -431,4 +431,3 @@ class TuntapPort(abstract.FileDescriptor):
 TuntapPort.loseConnection = deprecated(
     Version("Twisted", 14, 0, 0),
     TuntapPort.stopListening)(TuntapPort.loseConnection)
-
