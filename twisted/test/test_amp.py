@@ -500,7 +500,7 @@ class FakeLocator(object):
         return self.commands[commandName]
 
 
-class FakeSender(object):
+class FakeSender:
     """
     This is a fake implementation of the 'box sender' interface implied by
     L{AMP}.
@@ -924,7 +924,7 @@ class BinaryProtocolTests(unittest.TestCase):
         passed to it before C{startReceivingBoxes} returns and have that box
         sent.
         """
-        class SynchronouslySendingReceiver(object):
+        class SynchronouslySendingReceiver:
             def startReceivingBoxes(self, sender):
                 sender.sendBox(amp.Box({'foo': 'bar'}))
 
@@ -1096,7 +1096,7 @@ class BinaryProtocolTests(unittest.TestCase):
         """
         otherProto = TestProto(None, "outgoing data")
         test = self
-        class SwitchyReceiver(object):
+        class SwitchyReceiver:
             switched = False
             def startReceivingBoxes(self, sender):
                 pass
@@ -1182,7 +1182,7 @@ class BinaryProtocolTests(unittest.TestCase):
         When the protocol is switched, it should notify its nested client
         protocol factory of disconnection.
         """
-        class ClientLoser(object):
+        class ClientLoser:
             reason = None
             def clientConnectionLost(self, connector, reason):
                 self.reason = reason
@@ -1841,11 +1841,11 @@ class AMPTests(unittest.TestCase):
                     )))
         self.assertEqual(L[1], dict(Print=None, hello='aaa'))
 
-class PretendRemoteCertificateAuthority(object):
+class PretendRemoteCertificateAuthority:
     def checkIsPretendRemote(self):
         return True
 
-class IOSimCert(object):
+class IOSimCert:
     verifyCount = 0
 
     def options(self, *ign):
@@ -2204,7 +2204,7 @@ def _loseAndPass(err, proto):
     proto.connectionLost(err)
 
 
-class LiveFireBase(object):
+class LiveFireBase:
     """
     Utility for connected reactor-using tests.
     """
@@ -2627,7 +2627,7 @@ class CommandTests(unittest.TestCase):
             None)
 
 
-class ListOfTestsMixin(object):
+class ListOfTestsMixin:
     """
     Base class for testing L{ListOf}, a parameterized zero-or-more argument
     type.

@@ -703,7 +703,7 @@ class _SwitchBox(AmpBox):
 
 
 
-class BoxDispatcher(object):
+class BoxDispatcher:
     """
     A L{BoxDispatcher} dispatches '_ask', '_answer', and '_error' L{AmpBox}es,
     both incoming and outgoing, to their appropriate destinations.
@@ -1012,7 +1012,7 @@ class BoxDispatcher(object):
 
 
 
-class CommandLocator(object):
+class CommandLocator:
     """
     A L{CommandLocator} is a collection of responders to AMP L{Command}s, with
     the help of the L{Command.responder} decorator.
@@ -1200,7 +1200,7 @@ def _wireNameToPythonIdentifier(key):
 
 
 
-class Argument(object):
+class Argument:
     """
     Base-class of all objects that take values from Amp packets and convert
     them into objects for Python functions.
@@ -1606,7 +1606,7 @@ class Descriptor(Integer):
 
 
 
-class Command(object):
+class Command:
     """
     Subclass me to specify an AMP Command.
 
@@ -1850,7 +1850,7 @@ class Command(object):
 
 
 
-class _NoCertificate(object):
+class _NoCertificate:
     """
     This is for peers which don't want to use a local certificate.  Used by
     AMP because AMP's internal language is all about certificates and this
@@ -2494,7 +2494,7 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
 
 
 
-class _ParserHelper(object):
+class _ParserHelper:
     """
     A box receiver which records all boxes received.
     """
