@@ -708,7 +708,7 @@ class AsynchronousSuppressionTests(SuppressionMixin, unittest.TestCase):
 
 
 
-class GCMixin:
+class GCMixin(object):
     """
     I provide a few mock tests that log setUp, tearDown, test execution and
     garbage collection. I'm used to test whether gc.collect gets called.

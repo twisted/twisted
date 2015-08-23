@@ -31,7 +31,7 @@ class ClassWarning(Warning):
 class ModuleWarning(Warning):
     pass
 
-class EmitMixin:
+class EmitMixin(object):
     def _emit(self):
         warnings.warn(METHOD_WARNING_MSG, MethodWarning)
         warnings.warn(CLASS_WARNING_MSG, ClassWarning)

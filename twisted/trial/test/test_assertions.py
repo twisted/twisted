@@ -849,7 +849,7 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
         """
         Test assertWarns works when creating a class instance.
         """
-        class Warn:
+        class Warn(object):
             def __init__(self):
                 warnings.warn("Do not call me", category=RuntimeWarning)
         r = self.assertWarns(RuntimeWarning, "Do not call me", __file__,
@@ -864,7 +864,7 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
         """
         Test assertWarns works when used on an instance method.
         """
-        class Warn:
+        class Warn(object):
             def deprecated(self, a):
                 warnings.warn("Bar deprecated", category=DeprecationWarning)
                 return a
@@ -881,7 +881,7 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
         """
         Test assertWarns works on instance with C{__call__} method.
         """
-        class Warn:
+        class Warn(object):
             def __call__(self, a):
                 warnings.warn("Egg deprecated", category=DeprecationWarning)
                 return a
