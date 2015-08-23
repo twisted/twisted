@@ -52,7 +52,7 @@ ANONYMOUS = ()
 
 
 @implementer(ICredentialsChecker)
-class AllowAnonymousAccess:
+class AllowAnonymousAccess(object):
     credentialInterfaces = credentials.IAnonymous,
 
     def requestAvatarId(self, credentials):
@@ -102,7 +102,7 @@ class InMemoryUsernamePasswordDatabaseDontUse(object):
 
 
 @implementer(ICredentialsChecker)
-class FilePasswordDB:
+class FilePasswordDB(object):
     """
     A file-based, text-based username/password database.
 

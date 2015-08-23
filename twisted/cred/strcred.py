@@ -128,7 +128,7 @@ def makeChecker(description):
 
 
 
-class AuthOptionMixin:
+class AuthOptionMixin(object):
     """
     Defines helper methods that can be added on to any
     L{usage.Options} subclass that needs authentication.

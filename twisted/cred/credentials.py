@@ -445,7 +445,7 @@ class CramMD5Credentials(object):
 
 
 @implementer(IUsernameHashedPassword)
-class UsernameHashedPassword:
+class UsernameHashedPassword(object):
 
     def __init__(self, username, hashed):
         self.username = username
@@ -457,7 +457,7 @@ class UsernameHashedPassword:
 
 
 @implementer(IUsernamePassword)
-class UsernamePassword:
+class UsernamePassword(object):
 
     def __init__(self, username, password):
         self.username = username
@@ -469,7 +469,7 @@ class UsernamePassword:
 
 
 @implementer(IAnonymous)
-class Anonymous:
+class Anonymous(object):
     pass
 
 
@@ -499,7 +499,7 @@ class ISSHPrivateKey(ICredentials):
 
 
 @implementer(ISSHPrivateKey)
-class SSHPrivateKey:
+class SSHPrivateKey(object):
     def __init__(self, username, algName, blob, sigData, signature):
         self.username = username
         self.algName = algName
