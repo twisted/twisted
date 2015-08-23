@@ -38,9 +38,11 @@ from twisted.python import log
 from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.constants import NamedConstant, Names
+from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
+from twisted.python.versions import Version
 
 
 __all__ = ["clientFromString", "serverFromString",
@@ -48,6 +50,7 @@ __all__ = ["clientFromString", "serverFromString",
            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
+           "TLS4ServerEndpoint", "TLS4ClientEndpoint",
            "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
            "ProcessEndpoint", "HostnameEndpoint",
            "StandardErrorBehavior", "connectProtocol"]
@@ -773,9 +776,9 @@ class HostnameEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class SSL4ServerEndpoint(object):
+class TLS4ServerEndpoint(object):
     """
-    SSL secured TCP server endpoint with an IPv4 configuration.
+    TLS secured TCP server endpoint with an IPv4 configuration.
     """
 
     def __init__(self, reactor, port, sslContextFactory,
@@ -804,7 +807,7 @@ class SSL4ServerEndpoint(object):
 
     def listen(self, protocolFactory):
         """
-        Implement L{IStreamServerEndpoint.listen} to listen for SSL on a
+        Implement L{IStreamServerEndpoint.listen} to listen for TLS on a
         TCP socket.
         """
         return defer.execute(self._reactor.listenSSL, self._port,
@@ -816,9 +819,9 @@ class SSL4ServerEndpoint(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class SSL4ClientEndpoint(object):
+class TLS4ClientEndpoint(object):
     """
-    SSL secured TCP client endpoint with an IPv4 configuration
+    TLS secured TCP client endpoint with an IPv4 configuration
     """
 
     def __init__(self, reactor, host, port, sslContextFactory,
@@ -853,7 +856,7 @@ class SSL4ClientEndpoint(object):
 
     def connect(self, protocolFactory):
         """
-        Implement L{IStreamClientEndpoint.connect} to connect with SSL over
+        Implement L{IStreamClientEndpoint.connect} to connect with TLS over
         TCP.
         """
         try:
@@ -864,6 +867,24 @@ class SSL4ClientEndpoint(object):
             return wf._onConnection
         except:
             return defer.fail()
+
+
+
+# Backwards compat
+SSL4ClientEndpoint = TLS4ClientEndpoint
+SSL4ServerEndpoint = TLS4ServerEndpoint
+
+deprecatedModuleAttribute(
+    Version("Twisted", 15, 5, 0),
+    "Use TLS4ClientEndpoint instead.",
+    "twisted.internet.endpoints",
+    "SSL4ClientEndpoint")
+
+deprecatedModuleAttribute(
+    Version("Twisted", 15, 5, 0),
+    "Use TLS4ServerEndpoint instead.",
+    "twisted.internet.endpoints",
+    "SSL4ServerEndpoint")
 
 
 
@@ -1051,12 +1072,12 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
 
 
 
-def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
+def _parseTLS(factory, port, privateKey="server.pem", certKey=None,
               sslmethod=None, interface='', backlog=50, extraCertChain=None,
               dhParameters=None):
     """
     Internal parser function for L{_parseServer} to convert the string
-    arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
+    arguments for an TLS (over TCP/IPv4) stream endpoint into the structured
     arguments.
 
     @param factory: the protocol factory being parsed, or C{None}.  (This was a
@@ -1251,10 +1272,12 @@ class _TCP6ServerParser(object):
 
 
 
-_serverParsers = {"tcp": _parseTCP,
-                  "unix": _parseUNIX,
-                  "ssl": _parseSSL,
-                  }
+_serverParsers = {
+    "tcp": _parseTCP,
+    "unix": _parseUNIX,
+    "ssl": _parseTLS,
+    "tls": _parseTLS,
+}
 
 _OP, _STRING = range(2)
 
@@ -1329,14 +1352,16 @@ def _parse(description):
 _endpointServerFactories = {
     'TCP': TCP4ServerEndpoint,
     'SSL': SSL4ServerEndpoint,
+    'TLS': TLS4ServerEndpoint,
     'UNIX': UNIXServerEndpoint,
-    }
+}
 
 _endpointClientFactories = {
     'TCP': TCP4ClientEndpoint,
     'SSL': SSL4ClientEndpoint,
+    'TLS': TLS4ClientEndpoint,
     'UNIX': UNIXClientEndpoint,
-    }
+}
 
 
 _NO_DEFAULT = object()
@@ -1425,12 +1450,12 @@ def serverFromString(reactor, description):
 
         serverFromString(reactor, "tcp:80:interface=127.0.0.1")
 
-    SSL server endpoints may be specified with the 'ssl' prefix, and the
+    TLS server endpoints may be specified with the 'tls' prefix, and the
     private key and certificate files may be specified by the C{privateKey} and
     C{certKey} arguments::
 
         serverFromString(
-            reactor, "ssl:443:privateKey=key.pem:certKey=crt.pem")
+            reactor, "tls:443:privateKey=key.pem:certKey=crt.pem")
 
     If a private key file name (C{privateKey}) isn't provided, a "server.pem"
     file is assumed to exist which contains the private key. If the certificate
@@ -1441,7 +1466,7 @@ def serverFromString(reactor, description):
     use if you want to specify a full pathname argument on Windows::
 
         serverFromString(reactor,
-            "ssl:443:privateKey=C\\:/key.pem:certKey=C\\:/cert.pem")
+            "tls:443:privateKey=C\\:/key.pem:certKey=C\\:/cert.pem")
 
     finally, the 'unix' prefix may be used to specify a filesystem UNIX socket,
     optionally with a 'mode' argument to specify the mode of the socket file
@@ -1479,17 +1504,17 @@ def quoteStringArgument(argument):
     backslashes, some care is necessary if, for example, you have a pathname,
     you may be tempted to interpolate into a string like this::
 
-        serverFromString(reactor, "ssl:443:privateKey=%s" % (myPathName,))
+        serverFromString(reactor, "tls:443:privateKey=%s" % (myPathName,))
 
     This may appear to work, but will have portability issues (Windows
     pathnames, for example).  Usually you should just construct the appropriate
     endpoint type rather than interpolating strings, which in this case would
-    be L{SSL4ServerEndpoint}.  There are some use-cases where you may need to
+    be L{TLS4ServerEndpoint}.  There are some use-cases where you may need to
     generate such a string, though; for example, a tool to manipulate a
     configuration file which has strports descriptions in it.  To be correct in
     those cases, do this instead::
 
-        serverFromString(reactor, "ssl:443:privateKey=%s" %
+        serverFromString(reactor, "tls:443:privateKey=%s" %
                          (quoteStringArgument(myPathName),))
 
     @param argument: The part of the endpoint description string you want to
@@ -1576,9 +1601,9 @@ def _loadCAsFromDir(directoryPath):
 
 
 
-def _parseClientSSL(*args, **kwargs):
+def _parseClientTLS(*args, **kwargs):
     """
-    Perform any argument value coercion necessary for SSL client parameters.
+    Perform any argument value coercion necessary for TLS client parameters.
 
     Valid keyword arguments to this function are all L{IReactorSSL.connectSSL}
     arguments except for C{contextFactory}.  Instead, C{certKey} (the path name
@@ -1656,9 +1681,10 @@ def _parseClientUNIX(*args, **kwargs):
 
 _clientParsers = {
     'TCP': _parseClientTCP,
-    'SSL': _parseClientSSL,
+    'SSL': _parseClientTLS,
+    'TLS': _parseClientTLS,
     'UNIX': _parseClientUNIX,
-    }
+}
 
 
 
@@ -1684,28 +1710,28 @@ def clientFromString(reactor, description):
         clientFromString(reactor, "tcp:host=www.example.com:80")
         clientFromString(reactor, "tcp:www.example.com:port=80")
 
-    or an SSL client endpoint with those arguments, plus the arguments used by
-    the server SSL, for a client certificate::
+    or an TLS client endpoint with those arguments, plus the arguments used by
+    the server TLS, for a client certificate::
 
-        clientFromString(reactor, "ssl:web.example.com:443:"
+        clientFromString(reactor, "tls:web.example.com:443:"
                                   "privateKey=foo.pem:certKey=foo.pem")
 
     to specify your certificate trust roots, you can identify a directory with
     PEM files in it with the C{caCertsDir} argument::
 
-        clientFromString(reactor, "ssl:host=web.example.com:port=443:"
+        clientFromString(reactor, "tls:host=web.example.com:port=443:"
                                   "caCertsDir=/etc/ssl/certs")
 
-    Both TCP and SSL client endpoint description strings can include a
+    Both TCP and TLS client endpoint description strings can include a
     'bindAddress' keyword argument, whose value should be a local IPv4
     address. This fixes the client socket to that IP address::
 
         clientFromString(reactor, "tcp:www.example.com:80:"
                                   "bindAddress=192.0.2.100")
 
-    NB: Fixed client ports are not currently supported in TCP or SSL
+    NB: Fixed client ports are not currently supported in TCP or TLS
     client endpoints. The client socket will always use an ephemeral
-    port assigned by the operating system
+    port assigned by the operating system.
 
     You can create a UNIX client endpoint with the 'path' argument and optional
     'lockfile' and 'timeout' arguments::
