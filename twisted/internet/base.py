@@ -210,6 +210,96 @@ class DelayedCall:
 
 
 
+class _PendingDelayedCalls(object):
+
+    def __init__(self):
+        self._pendingTimedCalls = []
+        self._newTimedCalls = []
+        self._cancellations = 0
+
+
+    def __len__(self):
+        return len(self._pendingTimedCalls)
+
+
+    def __getitem__(self, key):
+        return self._pendingTimedCalls[key]
+
+
+    def add(self, tple):
+        self._newTimedCalls.append(tple)
+
+
+    def moveCallLaterSooner(self, tple):
+        # Linear time find: slow.
+        heap = self._pendingTimedCalls
+        try:
+            pos = heap.index(tple)
+
+            # Move elt up the heap until it rests at the right place.
+            elt = heap[pos]
+            while pos != 0:
+                parent = (pos-1) // 2
+                if heap[parent] <= elt:
+                    break
+                # move parent down
+                heap[pos] = heap[parent]
+                pos = parent
+            heap[pos] = elt
+        except ValueError:
+            # element was not found in heap - oh well...
+            pass
+
+
+    def cancelCallLater(self, tple):
+        self._cancellations += 1
+
+
+    def getDelayedCalls(self):
+        """Return all the outstanding delayed calls in the system.
+        They are returned in no particular order.
+        This method is not efficient -- it is really only meant for
+        test cases."""
+        return [x for x in (self._pendingTimedCalls + self._newTimedCalls)
+                if not x.cancelled]
+
+
+    def insertNewDelayedCalls(self):
+        for call in self._newTimedCalls:
+            if call.cancelled:
+                self._cancellations -= 1
+            else:
+                call.activate_delay()
+                heappush(self._pendingTimedCalls, call)
+        self._newTimedCalls = []
+
+
+    def popEarliestBefore(self, time):
+        while self and self[0].time <= time:
+            call = heappop(self._pendingTimedCalls)
+            if call.cancelled:
+                self._cancellations -= 1
+                continue
+
+            if call.delayed_time > 0:
+                call.activate_delay()
+                heappush(self._pendingTimedCalls, call)
+                continue
+
+            return call
+        return None
+
+
+    def updateCancellations(self):
+        if (self._cancellations > 50 and
+                self._cancellations > len(self._pendingTimedCalls) >> 1):
+            self._cancellations = 0
+            self._pendingTimedCalls = [x for x in self._pendingTimedCalls
+                                       if not x.cancelled]
+            heapify(self._pendingTimedCalls)
+
+
+
 @implementer(IResolverSimple)
 class ThreadedResolver(object):
     """
@@ -475,9 +565,7 @@ class ReactorBase(object):
     def __init__(self):
         self.threadCallQueue = []
         self._eventTriggers = {}
-        self._pendingTimedCalls = []
-        self._newTimedCalls = []
-        self._cancellations = 0
+        self._pendingDelayedCalls = _PendingDelayedCalls()
         self.running = False
         self._started = False
         self._justStopped = False
@@ -707,34 +795,11 @@ class ReactorBase(object):
         assert _seconds >= 0, \
                "%s is not greater than or equal to 0 seconds" % (_seconds,)
         tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
-                           self._cancelCallLater,
-                           self._moveCallLaterSooner,
+                           self._pendingDelayedCalls.cancelCallLater,
+                           self._pendingDelayedCalls.moveCallLaterSooner,
                            seconds=self.seconds)
-        self._newTimedCalls.append(tple)
+        self._pendingDelayedCalls.add(tple)
         return tple
-
-    def _moveCallLaterSooner(self, tple):
-        # Linear time find: slow.
-        heap = self._pendingTimedCalls
-        try:
-            pos = heap.index(tple)
-
-            # Move elt up the heap until it rests at the right place.
-            elt = heap[pos]
-            while pos != 0:
-                parent = (pos-1) // 2
-                if heap[parent] <= elt:
-                    break
-                # move parent down
-                heap[pos] = heap[parent]
-                pos = parent
-            heap[pos] = elt
-        except ValueError:
-            # element was not found in heap - oh well...
-            pass
-
-    def _cancelCallLater(self, tple):
-        self._cancellations+=1
 
 
     def getDelayedCalls(self):
@@ -742,16 +807,7 @@ class ReactorBase(object):
         They are returned in no particular order.
         This method is not efficient -- it is really only meant for
         test cases."""
-        return [x for x in (self._pendingTimedCalls + self._newTimedCalls) if not x.cancelled]
-
-    def _insertNewDelayedCalls(self):
-        for call in self._newTimedCalls:
-            if call.cancelled:
-                self._cancellations-=1
-            else:
-                call.activate_delay()
-                heappush(self._pendingTimedCalls, call)
-        self._newTimedCalls = []
+        return self._pendingDelayedCalls.getDelayedCalls()
 
 
     def timeout(self):
@@ -764,12 +820,12 @@ class ReactorBase(object):
         @rtype: L{float}
         """
         # insert new delayed calls to make sure to include them in timeout value
-        self._insertNewDelayedCalls()
+        self._pendingDelayedCalls.insertNewDelayedCalls()
 
-        if not self._pendingTimedCalls:
+        if not self._pendingDelayedCalls:
             return None
 
-        delay = self._pendingTimedCalls[0].time - self.seconds()
+        delay = self._pendingDelayedCalls[0].time - self.seconds()
 
         # Pick a somewhat arbitrary maximum possible value for the timeout.
         # This value is 2 ** 31 / 1000, which is the number of seconds which can
@@ -806,19 +862,13 @@ class ReactorBase(object):
                 self.wakeUp()
 
         # insert new delayed calls now
-        self._insertNewDelayedCalls()
+        self._pendingDelayedCalls.insertNewDelayedCalls()
 
         now = self.seconds()
-        while self._pendingTimedCalls and (self._pendingTimedCalls[0].time <= now):
-            call = heappop(self._pendingTimedCalls)
-            if call.cancelled:
-                self._cancellations-=1
-                continue
-
-            if call.delayed_time > 0:
-                call.activate_delay()
-                heappush(self._pendingTimedCalls, call)
-                continue
+        while self._pendingDelayedCalls:
+            call = self._pendingDelayedCalls.popEarliestBefore(now)
+            if call is None:
+                break
 
             try:
                 call.called = 1
@@ -835,12 +885,7 @@ class ReactorBase(object):
                     log.msg(e)
 
 
-        if (self._cancellations > 50 and
-             self._cancellations > len(self._pendingTimedCalls) >> 1):
-            self._cancellations = 0
-            self._pendingTimedCalls = [x for x in self._pendingTimedCalls
-                                       if not x.cancelled]
-            heapify(self._pendingTimedCalls)
+        self._pendingDelayedCalls.updateCancellations()
 
         if self._justStopped:
             self._justStopped = False

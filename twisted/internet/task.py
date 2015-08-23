@@ -739,7 +739,19 @@ class Clock:
     rightNow = 0.0
 
     def __init__(self):
-        self.calls = []
+        self._pendingDelayedCalls = base._PendingDelayedCalls()
+
+
+    @property
+    def calls(self):
+        # XXX: This used to be the actual list of pending DelayedCalls.
+        #      It's undocumented (and therefore an implicitly private API),
+        #      but there are tests that use it instead of getDelayedCalls().
+        #      It should probably be deprecated, and ideally made immutable
+        #      so that attempts to modify it fail instead of silently doing
+        #      nothing.
+        return sorted(self._pendingDelayedCalls.getDelayedCalls(),
+                      key=lambda x: x.getTime())
 
 
     def seconds(self):
@@ -754,24 +766,16 @@ class Clock:
         return self.rightNow
 
 
-    def _sortCalls(self):
-        """
-        Sort the pending calls according to the time they are scheduled.
-        """
-        self.calls.sort(key=lambda a: a.getTime())
-
-
     def callLater(self, when, what, *a, **kw):
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
         dc = base.DelayedCall(self.seconds() + when,
-                               what, a, kw,
-                               self.calls.remove,
-                               lambda c: None,
-                               self.seconds)
-        self.calls.append(dc)
-        self._sortCalls()
+                              what, a, kw,
+                              self._pendingDelayedCalls.cancelCallLater,
+                              self._pendingDelayedCalls.moveCallLaterSooner,
+                              self.seconds)
+        self._pendingDelayedCalls.add(dc)
         return dc
 
 
@@ -779,7 +783,7 @@ class Clock:
         """
         See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """
-        return self.calls
+        return self._pendingDelayedCalls.getDelayedCalls()
 
 
     def advance(self, amount):
@@ -792,12 +796,17 @@ class Clock:
         time.
         """
         self.rightNow += amount
-        self._sortCalls()
-        while self.calls and self.calls[0].getTime() <= self.seconds():
-            call = self.calls.pop(0)
+        self._pendingDelayedCalls.insertNewDelayedCalls()
+
+        now = self.seconds()
+        while self._pendingDelayedCalls:
+            call = self._pendingDelayedCalls.popEarliestBefore(now)
+            if call is None:
+                break
             call.called = 1
             call.func(*call.args, **call.kw)
-            self._sortCalls()
+            # We may have new or updated delayed calls which need scheduling.
+            self._pendingDelayedCalls.insertNewDelayedCalls()
 
 
     def pump(self, timings):
