@@ -37,7 +37,12 @@ from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
-
+from twisted.python.runtime import platform
+from twisted.python import log
+from twisted.protocols import basic, policies
+from twisted.internet.task import Clock
+from twisted.test.proto_helpers import (MemoryReactorClock as MemoryReactor)
+from twisted.test import __file__ as testInitPath
 
 pemPath = FilePath(testInitPath).sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
@@ -3336,3 +3341,415 @@ class ConnectProtocolTests(unittest.TestCase):
 
         endpoint = Endpoint()
         self.assertIs(result, endpoints.connectProtocol(endpoint, object()))
+
+
+
+class FakeEndpoint(object):
+    """
+    A fake endpoint which connects to a L{StringTransport}.
+
+    @ivar deferred: A L{Deferred} to be returned instead from C{connect} if
+        non-L{None}.
+    """
+
+    def __init__(self):
+        self.deferred = None
+
+
+    def connect(self, fac):
+        """
+        Connect a factory to a L{StringTransport}.
+
+        @param fac: A factory.
+        @type fac: An L{IProtocolFactory} provider.
+
+        @return: A L{Deferred} which fires with the L{IProtocol} returned from
+            C{fac.buildProtcol}.
+        """
+        if self.deferred is not None:
+            return self.deferred
+        self.factory = fac
+        self.proto = fac.buildProtocol(None)
+        transport = StringTransport()
+        self.proto.makeConnection(transport)
+        self.transport = transport
+        return defer.succeed(self.proto)
+
+
+
+class UppercaseWrapperProtocol(policies.ProtocolWrapper):
+    """
+    A wrapper protocol which uppercases all strings passed through it.
+    """
+
+    def dataReceived(self, data):
+        """
+        Uppercase a string passed in from the transport.
+
+        @param data: The string to uppercase.
+        @type data: L{bytes}
+        """
+        policies.ProtocolWrapper.dataReceived(self, data.upper())
+
+
+    def write(self, data):
+        """
+        Uppercase a string passed out to the transport.
+
+        @param data: The string to uppercase.
+        @type data: L{bytes}
+        """
+        policies.ProtocolWrapper.write(self, data.upper())
+
+
+    def writeSequence(self, seq):
+        """
+        Uppercase a series of strings passed out to the transport.
+
+        @param seq: An iterable of strings.
+        """
+        for data in seq:
+            self.write(data)
+
+
+
+class UppercaseWrapperFactory(policies.WrappingFactory):
+    """
+    A wrapper factory which uppercases all strings passed through it.
+
+    @param context: A context factory, to persist for tests.
+    @param isClient: A boolean indicating this is supposed to be a client
+        getting wrapped, to persist for tests.
+    @param factory: The factory to wrap.
+    @type factory: an L{IProtocolFactory} provider
+    """
+
+    protocol = UppercaseWrapperProtocol
+
+    def __init__(self, context, isClient, factory):
+        self.context = context
+        self.isClient = isClient
+        policies.WrappingFactory.__init__(self, factory)
+
+
+
+class NetstringTracker(basic.NetstringReceiver):
+    """
+    A netstring receiver which keeps track of the strings received.
+
+    @ivar strings: A L{list} of received strings, in order.
+    """
+
+    def __init__(self):
+        self.strings = []
+
+
+    def stringReceived(self, string):
+        """
+        Receive a string and append it to C{self.strings}.
+
+        @param string: The string to be appended to C{self.strings}.
+        """
+        self.strings.append(string)
+
+
+
+class NetstringFactory(protocol.ClientFactory):
+    """
+    A factory for L{NetstringTracker} protocols.
+    """
+
+    protocol = NetstringTracker
+
+
+
+class FakeError(Exception):
+    """
+    An error which isn't really an error.
+
+    This is raised in the L{TLSWrapperClientEndpoint} tests in place of a
+    'real' exception.
+    """
+
+
+
+class TLSWrapperClientEndpointTests(unittest.TestCase):
+    """
+    Tests for L{TLSWrapperClientEndpoint}.
+    """
+
+    def setUp(self):
+        self.endpoint = FakeEndpoint()
+        self.context = object()
+        self.wrapper = endpoints.TLSWrapperClientEndpoint(
+            self.context, self.endpoint, _wrapper=UppercaseWrapperFactory)
+        self.factory = NetstringFactory()
+
+
+    def test_wrappingBehavior(self):
+        """
+        Any modifications performed by the underlying L{ProtocolWrapper}
+        propagate through to the wrapped L{Protocol}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        self.endpoint.proto.dataReceived(b'5:hello,')
+        self.assertEqual(proto.strings, [b'HELLO'])
+
+
+    def test_methodsAvailable(self):
+        """
+        Methods defined on the wrapped L{Protocol} are accessible from the
+        L{Protocol} returned from C{connect}'s L{Deferred}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        proto.sendString(b'spam')
+        self.assertEqual(self.endpoint.transport.value(), b'4:SPAM,')
+
+
+    def test_connectionFailure(self):
+        """
+        Connection failures propagate upward to C{connect}'s L{Deferred}.
+        """
+        self.endpoint.deferred = defer.Deferred()
+        d = self.wrapper.connect(self.factory)
+        self.assertNoResult(d)
+        self.endpoint.deferred.errback(FakeError())
+        self.failureResultOf(d, FakeError)
+
+
+    def test_connectionCancellation(self):
+        """
+        Cancellation propagates upward to C{connect}'s L{Deferred}.
+        """
+        canceled = []
+        self.endpoint.deferred = defer.Deferred(canceled.append)
+        d = self.wrapper.connect(self.factory)
+        self.assertNoResult(d)
+        d.cancel()
+        self.assert_(canceled)
+        self.failureResultOf(d, defer.CancelledError)
+
+
+    def test_contextPassing(self):
+        """
+        The SSL context object is passed along to the wrapper.
+        """
+        self.successResultOf(self.wrapper.connect(self.factory))
+        self.assertIdentical(self.context, self.endpoint.factory.context)
+
+
+    def test_clientMode(self):
+        """
+        The wrapper is set in client mode.
+        """
+        self.successResultOf(self.wrapper.connect(self.factory))
+        self.assertTrue(self.endpoint.factory.isClient)
+
+
+    def test_transportOfTransportOfWrappedProtocol(self):
+        """
+        The transport of the wrapped L{Protocol}'s transport is the transport
+        passed to C{makeConnection}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        self.assertIdentical(
+            proto.transport.transport, self.endpoint.transport)
+
+
+    def test_noSSLSupport(self):
+        """
+        If SSL is not supported, L{TLSMemoryBIOFactory} will be L{None}, which
+        causes C{_wrapper} to also be L{None}. If C{_wrapper} is L{None}, then
+        an exception is raised.
+        """
+        self.assertRaises(
+            NotImplementedError,
+            endpoints.TLSWrapperClientEndpoint,
+            self.context, self.factory, _wrapper=None)
+
+
+
+class TLSClientEndpointParserTests(unittest.TestCase):
+    """
+    Tests for L{_TLSWrapperClientEndpointParser}.
+    """
+
+    if skipSSL:
+        skip = skipSSL
+
+    def test_hostnameEndpointConstruction(self):
+        """
+        A L{HostnameEndpoint} is constructed from parameters passed to
+        L{clientFromString}.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor, b'tls:example.com:443:timeout=10:bindAddress=127.0.0.1')
+        hostnameEndpoint = endpoint._wrappedEndpoint
+        self.assertIs(hostnameEndpoint._reactor, reactor)
+        self.assertEqual(hostnameEndpoint._host, 'example.com')
+        self.assertEqual(hostnameEndpoint._port, 443)
+        self.assertEqual(hostnameEndpoint._timeout, 10)
+        self.assertEqual(hostnameEndpoint._bindAddress, b'127.0.0.1')
+
+
+    def test_utf8Encoding(self):
+        """
+        The hostname is decoded as UTF-8 bytes and appropriately encoded with
+        punycode or passed along as unicode.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor, b'tls:\xe2\x98\x83.example.com:443')
+        self.assertEqual(
+            endpoint._wrappedEndpoint._host, b'xn--n3h.example.com')
+        self.assertEqual(
+            endpoint._contextFactory.hostname, u'\u2603.example.com')
+
+
+    def test_defaultSSLOptions(self):
+        """
+        When passed an endpoint description without extra arguments,
+        L{clientFromString} returns a L{TLSWrapperClientEndpoint} instance
+        whose context factory is initialized with default values.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(reactor, b'tls:example.com:443')
+        certOptions = endpoint._contextFactory
+        self.assertIsInstance(certOptions, CertificateOptions)
+        self.assertEqual(certOptions.verify, False)
+        ctx = certOptions.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+
+    def test_ssl(self):
+        """
+        When passed an SSL strports description, L{clientFromString} returns a
+        L{TLSWrapperClientEndpoint} instance initialized with the values from
+        the string.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor,
+            b'tls:example.net:4321:privateKey=%s:certKey=%s:caCertsDir=%s' % (
+                escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
+        certOptions = endpoint._contextFactory
+        self.assertEqual(certOptions.hostname, 'example.net')
+        self.assertIsInstance(certOptions, CertificateOptions)
+        ctx = certOptions.getContext()
+        self.assertIsInstance(ctx, ContextType)
+        self.assertEqual(Certificate(certOptions.certificate), testCertificate)
+        privateCert = PrivateCertificate(certOptions.certificate)
+        privateCert._setPrivateKey(KeyPair(certOptions.privateKey))
+        self.assertEqual(privateCert, testPrivateCertificate)
+        expectedCerts = [
+            Certificate.loadPEM(x.getContent()) for x in
+            [casPath.child('thing1.pem'), casPath.child('thing2.pem')]
+            if x.basename().lower().endswith('.pem')
+        ]
+        self.assertEqual(sorted((Certificate(x) for x in certOptions.caCerts),
+                                key=lambda cert: cert.digest()),
+                         sorted(expectedCerts,
+                                key=lambda cert: cert.digest()))
+
+
+    def test_sslWithDefaults(self):
+        """
+        When passed an SSL strports description without extra arguments,
+        L{clientFromString} returns a L{TLSWrapperClientEndpoint} instance
+        whose context factory is initialized with default values.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(reactor, b'tls:example.com:443')
+        certOptions = endpoint._contextFactory
+        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.certificate, None)
+        self.assertEqual(certOptions.privateKey, None)
+        self.assertEqual(certOptions.hostname, 'example.com')
+
+
+
+class TLSWrapperClientEndpointParserTests(unittest.TestCase):
+    """
+    Tests for L{_TLSWrapperClientEndpointParser}.
+    """
+
+    if skipSSL:
+        skip = skipSSL
+
+    def test_endpointConstruction(self):
+        """
+        L{clientFromString} is invoked again to make a new endpoint to wrap.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor, b'tlswrap:tcp\:example.com\:443')
+        wrappedEndpoint = endpoint._wrappedEndpoint
+        self.assertIsInstance(wrappedEndpoint, endpoints.TCP4ClientEndpoint)
+        self.assertIs(wrappedEndpoint._reactor, reactor)
+        self.assertEqual(wrappedEndpoint._host, b'example.com')
+        self.assertEqual(wrappedEndpoint._port, 443)
+
+
+    def test_defaultSSLOptions(self):
+        """
+        When passed an endpoint description without extra arguments,
+        L{clientFromString} returns a L{TLSWrapperClientEndpoint} instance
+        whose context factory is initialized with default values.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor, b'tlswrap:tcp\:example.com\:443')
+        certOptions = endpoint._contextFactory
+        self.assertIsInstance(certOptions, CertificateOptions)
+        self.assertEqual(certOptions.verify, False)
+        ctx = certOptions.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+
+    def test_ssl(self):
+        """
+        When passed an SSL strports description, L{clientFromString} returns a
+        L{TLSWrapperClientEndpoint} instance initialized with the values from
+        the string.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor,
+            b'tlswrap:tcp\:example.net\:4321:privateKey=%s:certKey=%s:'
+            b'caCertsDir=%s:hostname=example.net' % (
+                escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
+        certOptions = endpoint._contextFactory
+        self.assertEqual(certOptions.hostname, 'example.net')
+        self.assertIsInstance(certOptions, CertificateOptions)
+        ctx = certOptions.getContext()
+        self.assertIsInstance(ctx, ContextType)
+        self.assertEqual(Certificate(certOptions.certificate), testCertificate)
+        privateCert = PrivateCertificate(certOptions.certificate)
+        privateCert._setPrivateKey(KeyPair(certOptions.privateKey))
+        self.assertEqual(privateCert, testPrivateCertificate)
+        expectedCerts = [
+            Certificate.loadPEM(x.getContent()) for x in
+            [casPath.child('thing1.pem'), casPath.child('thing2.pem')]
+            if x.basename().lower().endswith('.pem')
+        ]
+        self.assertEqual(sorted((Certificate(x) for x in certOptions.caCerts),
+                                key=lambda cert: cert.digest()),
+                         sorted(expectedCerts,
+                                key=lambda cert: cert.digest()))
+
+
+    def test_sslWithDefaults(self):
+        """
+        When passed an SSL strports description without extra arguments,
+        L{clientFromString} returns a L{TLSWrapperClientEndpoint} instance
+        whose context factory is initialized with default values.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor, b'tlswrap:tcp\:example.com\:443')
+        certOptions = endpoint._contextFactory
+        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.certificate, None)
+        self.assertEqual(certOptions.privateKey, None)
+        self.assertEqual(certOptions.hostname, None)

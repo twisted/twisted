@@ -162,6 +162,41 @@ UNIX
 
    For example, ``unix:path=/var/run/web.sock``.
 
+TLS
+   Supported arguments: ``host``, ``port``, ``timeout``, ``bindAddress``, ``certKey``, ``privateKey``, ``caCertsDir``.
+   The latter three arguments have the same semantics as the SSL client.
+   ``host`` is a UTF-8 encoded hostname to connect to.
+   ``timeout`` is optional.
+   ``bindAddress`` is optional.
+   This client connects to the supplied hostname,
+   validates the server's hostname against the supplied hostname,
+   and then upgrades to TLS immediately after validation succeeds.
+
+   For example, ``tls:example.com:443`` .
+
+   Or, from python code::
+
+     wrapped = HostnameEndpoint('example.com', 443)
+     contextEndpoint = CertificateOptions(hostname=u'example.com')
+     endpoint = TLSWrapperClientEndpoint(contextFactory, wrapped)
+     conn = endpoint.connect(Factory.forProtocol(Protocol))
+
+TLS wrapper
+   Supported arguments: ``wrappedEndpoint``, ``hostname``, ``certKey``, ``privateKey``, ``caCertsDir``.
+   The latter three arguments have the same semantics as the SSL client.
+   ``hostname`` (optional) gives a hostname to use for SSL server validation.
+   This client connects to the wrapped endpoint and then upgrades to TLS as soon as the connection is established.
+
+   For example, ``tls:tcp\:example.com\:443:caCertsDir=/etc/ssl/certs`` .
+   This connects to the endpoint ``tcp:example.com:443`` before starting TLS.
+   The colons are escaped because the TLS endpoint string syntax itself calls ``clientFromString`` to create the wrapped endpoint, and expects a single string argument.
+
+   Or, from python code::
+
+     wrapped = TCP4ClientEndpoint('example.com', 443)
+     endpoint = TLSWrapperClientEndpoint(contextFactory, wrapped)
+     conn = endpoint.connect(Factory.forProtocol(Protocol))
+
 TCP (Hostname)
    Supported arguments: ``host``, ``port``, ``timeout``.
    ``host`` is a hostname to connect to.
