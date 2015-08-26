@@ -448,7 +448,9 @@ class Failure:
     _findFailure = classmethod(_findFailure)
 
     def __repr__(self):
-        return "<%s %s>" % (self.__class__, self.type)
+        return "<%s %s: %s>" % (reflect.qual(self.__class__),
+                                reflect.qual(self.type),
+                                self.getErrorMessage())
 
     def __str__(self):
         return "[Failure instance: %s]" % self.getBriefTraceback()
