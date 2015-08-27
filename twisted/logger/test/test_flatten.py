@@ -220,6 +220,16 @@ class FlatFormattingTests(unittest.TestCase):
         event = self._test_formatFlatEvent_fieldNamesSame()
         self._test_formatFlatEvent_fieldNamesSame(event)
 
+    def test_formatFlatEventTrailingText(self):
+        """
+        L{flatFormat} will handle tailing text after a field.
+        """
+        event = dict(
+            log_format="test {x} trailing",
+            x='x',
+        )
+        flattenEvent(event)
+        self.assertEqual(formatEvent(event), u"test x trailing")
 
     def test_extractField(self, flattenFirst=lambda x: x):
         """
