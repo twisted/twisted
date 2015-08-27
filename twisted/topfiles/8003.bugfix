@@ -1,0 +1,1 @@
+twisted.logger.SOME_MODULE.SOME_CLASS.SOME_METHOD now flatten an event if if CONDITION
