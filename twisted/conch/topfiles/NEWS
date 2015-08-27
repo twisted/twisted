@@ -1,6 +1,16 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 15.4.0pre1 (2015-08-27)
+=====================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #7977
+
+
 Twisted Conch 15.3.0 (2015-08-04)
 =================================
 

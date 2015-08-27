@@ -1,1 +1,0 @@
-twisted.internet.kqreactor on Python 3 now supports EINTR (Control-C) gracefully.

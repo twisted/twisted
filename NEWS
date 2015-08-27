@@ -1,6 +1,100 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 15.4.0pre1 (2015-08-27)
+====================================
+
+Features
+--------
+ - Trial has been ported to Python 3. (#5965)
+ - Twisted now requires setuptools for installation. (#7177)
+ - twisted.internet.endpoints.clientFromString is now ported to Python
+   3. (#7973)
+ - twisted.internet._sslverify now uses SHA256 instead of MD5 for
+   certificate request signing by default. (#7979)
+ - twisted.internet.endpoints.serverFromString is now ported to Python
+   3. (#7982)
+ - twisted.positioning is now ported to Python 3. (#7987)
+ - twisted.python.failure.Failure's __repr__ now includes the
+   exception message. (#8004)
+
+Bugfixes
+--------
+ - fixed a bug which could lead to a hang at shutdown in
+   twisted.python.threadpool. (#2673)
+ - twisted.internet.kqreactor on Python 3 now supports EINTR
+   (Control-C) gracefully. (#7887)
+ - Fix a bug introduced in 15.3.0; pickling a lambda function after
+   importing twisted.persisted.styles raises PicklingError rather than
+   AttributeError. (#7989)
+
+Other
+-----
+ - #7902, #7980, #7990, #7992
+
+
+Twisted Conch 15.4.0pre1 (2015-08-27)
+=====================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #7977
+
+
+Twisted Mail 15.4.0pre1 (2015-08-27)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 15.4.0pre1 (2015-08-27)
+=====================================
+
+No significant changes have been made for this release.
+
+
+Twisted News 15.4.0pre1 (2015-08-27)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 15.4.0pre1 (2015-08-27)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 15.4.0pre1 (2015-08-27)
+======================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 15.4.0pre1 (2015-08-27)
+===================================
+
+Features
+--------
+ - twisted.web.proxy is now ported to Python 3. (#7939)
+ - twisted.web.guard is now ported to Python 3. (#7974)
+
+Bugfixes
+--------
+ - twisted.web.http.Request.setResponseCode now only allows bytes
+   messages. (#7981)
+ - twisted.web.server.Request.processingFailed will now correctly
+   write out the traceback on Python 3. (#7996)
+
+
+Twisted Words 15.4.0pre1 (2015-08-27)
+=====================================
+
+No significant changes have been made for this release.
+
+
 Twisted Core 15.3.0 (2015-08-04)
 ================================
 

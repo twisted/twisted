@@ -1,1 +1,0 @@
-twisted.web.http.Request.setResponseCode now only allows bytes messages.
