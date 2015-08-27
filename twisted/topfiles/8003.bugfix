@@ -1,1 +1,1 @@
-twisted.logger.SOME_MODULE.SOME_CLASS.SOME_METHOD now flatten an event if if CONDITION
+twisted.logger.formatEvent now can format an event if it was flattened (twisted.logger.eventAsJSON does this) and has text after the last replacement field.

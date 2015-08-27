@@ -172,6 +172,7 @@ def flatFormat(event):
     for literalText, fieldName, formatSpec, conversion in formatFields:
         s.append(literalText)
         if fieldName is not None:
-            key = keyFlattener.flatKey(fieldName, formatSpec, conversion or "s")
+            key = keyFlattener.flatKey(
+                    fieldName, formatSpec, conversion or "s")
             s.append(unicode(fieldValues[key]))
     return u"".join(s)
