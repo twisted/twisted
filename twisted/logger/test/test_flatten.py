@@ -221,6 +221,22 @@ class FlatFormattingTests(unittest.TestCase):
         self._test_formatFlatEvent_fieldNamesSame(event)
 
 
+    def test_formatEventFlatTrailingText(self):
+        """
+        L{formatEvent} will handle a flattened event with tailing text after
+        a replacement field.
+        """
+        event = dict(
+            log_format="test {x} trailing",
+            x='value',
+        )
+        flattenEvent(event)
+
+        result = formatEvent(event)
+
+        self.assertEqual(result, u"test value trailing")
+
+
     def test_extractField(self, flattenFirst=lambda x: x):
         """
         L{extractField} will extract a field used in the format string.
