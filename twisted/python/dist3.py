@@ -207,6 +207,7 @@ modules = [
     "twisted.web._responses",
     "twisted.web._stan",
     "twisted.web._version",
+    "twisted.web.demo",
     "twisted.web.error",
     "twisted.web.guard",
     "twisted.web.http_headers",
