@@ -44,7 +44,7 @@ def main():
     args['data_files'] = getDataFiles('twisted') + _dataFiles
     args['zip_safe'] = False
     args['cmdclass'] = {'sdist': DisabledSdist}
-    args['scripts'] = ['bin/trial']
+    args['scripts'] = ['bin/trial', 'bin/twistd']
 
     setup(**args)
 
