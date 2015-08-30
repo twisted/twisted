@@ -98,7 +98,7 @@ def listen(description, factory, default=None):
     of the semantics of the arguments.
     """
     from twisted.internet import reactor
-    name, args, kw = endpoints._parseServer(description, factory, default)
+    name, args, kw = parse(description, factory, default)
     return getattr(reactor, 'listen'+name)(*args, **kw)
 
 
@@ -106,5 +106,9 @@ def listen(description, factory, default=None):
 __all__ = ['parse', 'service', 'listen']
 
 if _PY3:
-    del parse
-    __all__.remove('parse')
+    __all3__ = ['service']
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__
