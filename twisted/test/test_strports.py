@@ -5,12 +5,15 @@
 Tests for L{twisted.application.strports}.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.trial.unittest import TestCase
 from twisted.application import strports
 from twisted.application import internet
 from twisted.internet.test.test_endpoints import ParserTests
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ServerEndpoint, UNIXServerEndpoint
+from twisted.python.compat import _PY3
 
 
 
@@ -27,7 +30,8 @@ class DeprecatedParseTests(ParserTests):
         self.assertEqual(
             warnings[0]['message'],
             "twisted.application.strports.parse was deprecated "
-            "in Twisted 10.2.0: in favor of twisted.internet.endpoints.serverFromString")
+            "in Twisted 10.2.0: in favor of "
+            "twisted.internet.endpoints.serverFromString")
         return result
 
 
@@ -103,8 +107,8 @@ class ServiceTests(TestCase):
             "Use qualified endpoint descriptions; for example, 'tcp:8080'.")
         self.assertEqual(len(warnings), 1)
 
-        # Almost the same case, but slightly tricky - explicitly passing the old
-        # default value, None, also must trigger a deprecation warning.
+        # Almost the same case, but slightly tricky - explicitly passing the
+        # old default value, None, also must trigger a deprecation warning.
         svc = strports.service("tcp:8080", None, None)
         self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
         warnings = self.flushWarnings([self.test_serviceDeprecatedDefault])
@@ -131,3 +135,5 @@ class ServiceTests(TestCase):
         self.assertEqual(len(warnings), 1)
 
 
+if _PY3:
+    del DeprecatedParseTests
