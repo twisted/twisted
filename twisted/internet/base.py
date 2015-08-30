@@ -212,8 +212,11 @@ class DelayedCall:
 
 class _PendingDelayedCalls(object):
     """
-    Efficient manager for a collection of pending L{DelayedCall}s, used by
+    Schedule manager for a collection of pending L{DelayedCall}s, used by
     L{ReactorBase} and L{twisted.internet.task.Clock}.
+
+    This uses a heap datastructure under the hood and tries to avoid
+    unnecessary reordering.
     """
 
     def __init__(self):
@@ -230,13 +233,26 @@ class _PendingDelayedCalls(object):
         return self._pendingTimedCalls[key]
 
 
-    def add(self, tple):
+    def newDelayedCall(self, time, func, args, kw, seconds=runtimeSeconds):
         """
-        Add C{tple} to the 'new calls' list for later scheduling.
+        Create a new L{DelayedCall} and queue it for scheduling.
+        The cancel and reset callbacks are provided by L{_PendingDelayedCalls}.
 
-        @param tple: The L{DelayedCall} to add.
+        @param time: Seconds from the epoch at which to call C{func}.
+        @param func: The callable to call.
+        @param args: The positional arguments to pass to the callable.
+        @param kw: The keyword arguments to pass to the callable.
+        @param seconds: If provided, a no-argument callable which will be
+            used to determine the current time any time that information is
+            needed.
+
+        @return: The new L{DelayedCall}.
         """
+        tple = DelayedCall(time, func, args, kw,
+                           self.cancelCallLater, self.moveCallLaterSooner,
+                           seconds)
         self._newTimedCalls.append(tple)
+        return tple
 
 
     def moveCallLaterSooner(self, tple):
@@ -326,6 +342,10 @@ class _PendingDelayedCalls(object):
 
 
     def updateCancellations(self):
+        """
+        Remove cancelled L{DelayedCalls} from the schedule when there are
+        enough of them to justify the cost of reordering the heap.
+        """
         if (self._cancellations > 50 and
                 self._cancellations > len(self._pendingTimedCalls) >> 1):
             self._cancellations = 0
@@ -829,12 +849,8 @@ class ReactorBase(object):
         assert callable(_f), "%s is not callable" % _f
         assert _seconds >= 0, \
                "%s is not greater than or equal to 0 seconds" % (_seconds,)
-        tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
-                           self._pendingDelayedCalls.cancelCallLater,
-                           self._pendingDelayedCalls.moveCallLaterSooner,
-                           seconds=self.seconds)
-        self._pendingDelayedCalls.add(tple)
-        return tple
+        return self._pendingDelayedCalls.newDelayedCall(
+            self.seconds() + _seconds, _f, args, kw, seconds=self.seconds)
 
 
     def getDelayedCalls(self):

@@ -734,6 +734,11 @@ class Clock:
     Provide a deterministic, easily-controlled implementation of
     L{IReactorTime.callLater}.  This is commonly useful for writing
     deterministic unit tests for code which schedules events using this API.
+
+    @type rightNow: C{float}
+    @ivar rightNow: This L{Clock}'s idea of what the current time is in fake
+        seconds since its creation.  Instead of reading or modifying
+        C{rightNow} directly, use L{Clock.seconds} or L{Clock.advance}.
     """
 
     rightNow = 0.0
@@ -774,13 +779,8 @@ class Clock:
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
-        dc = base.DelayedCall(self.seconds() + when,
-                              what, a, kw,
-                              self._pendingDelayedCalls.cancelCallLater,
-                              self._pendingDelayedCalls.moveCallLaterSooner,
-                              self.seconds)
-        self._pendingDelayedCalls.add(dc)
-        return dc
+        return self._pendingDelayedCalls.newDelayedCall(
+            self.seconds() + when, what, a, kw, self.seconds)
 
 
     def getDelayedCalls(self):
