@@ -5,7 +5,10 @@
 Tests for L{twisted.web.tap}.
 """
 
-import os, stat
+from __future__ import absolute_import, division
+
+import os
+import stat
 
 from twisted.python.reflect import requireModule
 from twisted.python.usage import UsageError
@@ -15,17 +18,26 @@ from twisted.internet import reactor
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
 from twisted.application import strports
+from twisted.python.compat import _PY3
 
 from twisted.web.server import Site
 from twisted.web.static import Data, File
-from twisted.web.distrib import ResourcePublisher, UserDirectory
-from twisted.web.wsgi import WSGIResource
-from twisted.web.tap import Options, makePersonalServerFactory, makeService
-from twisted.web.twcgi import CGIScript
+from twisted.web.tap import Options, makeService
 from twisted.web.script import PythonScript
 
+if not _PY3:
+    # Will be ported in https://twistedmatrix.com/trac/ticket/8009
+    from twisted.web.twcgi import CGIScript
 
-from twisted.spread.pb import PBServerFactory
+    # Will be ported in https://twistedmatrix.com/trac/ticket/7993
+    from twisted.web.wsgi import WSGIResource
+
+    # Will be ported in https://twistedmatrix.com/trac/ticket/8010 and
+    # https://twistedmatrix.com/trac/ticket/7598
+    from twisted.web.distrib import ResourcePublisher, UserDirectory
+    from twisted.spread.pb import PBServerFactory
+    from twisted.web.tap import makePersonalServerFactory
+
 
 application = object()
 
@@ -67,8 +79,12 @@ class ServiceTests(TestCase):
         L{CGIScript} instance for any child with the C{".cgi"} extension.
         """
         path, root = self._pathOption()
-        path.child("foo.cgi").setContent("")
+        path.child("foo.cgi").setContent(b"")
         self.assertIsInstance(root.getChild("foo.cgi", None), CGIScript)
+
+    if _PY3:
+        test_cgiProcessor.skip = (
+            "Will be ported in https://twistedmatrix.com/trac/ticket/8009")
 
 
     def test_epyProcessor(self):
@@ -77,7 +93,7 @@ class ServiceTests(TestCase):
         L{PythonScript} instance for any child with the C{".epy"} extension.
         """
         path, root = self._pathOption()
-        path.child("foo.epy").setContent("")
+        path.child("foo.epy").setContent(b"")
         self.assertIsInstance(root.getChild("foo.epy", None), PythonScript)
 
 
@@ -89,8 +105,8 @@ class ServiceTests(TestCase):
         """
         path, root = self._pathOption()
         path.child("foo.rpy").setContent(
-            "from twisted.web.static import Data\n"
-            "resource = Data('content', 'major/minor')\n")
+            b"from twisted.web.static import Data\n"
+            b"resource = Data('content', 'major/minor')\n")
         child = root.getChild("foo.rpy", None)
         self.assertIsInstance(child, Data)
         self.assertEqual(child.data, 'content')
@@ -104,7 +120,7 @@ class ServiceTests(TestCase):
         """
         # The fact that this pile of objects can actually be used somehow is
         # verified by twisted.web.test.test_distrib.
-        site = Site(Data("foo bar", "text/plain"))
+        site = Site(Data(b"foo bar", "text/plain"))
         serverFactory = makePersonalServerFactory(site)
         self.assertIsInstance(serverFactory, PBServerFactory)
         self.assertIsInstance(serverFactory.root, ResourcePublisher)
@@ -149,6 +165,13 @@ class ServiceTests(TestCase):
         test_defaultPersonalPath.skip = (
             "The reactor does not support UNIX domain sockets")
 
+    if _PY3:
+        for i in [test_makePersonalServerFactory, test_personalServer,
+                  test_defaultPersonalPath]:
+            i.skip = (
+                "Will be ported in https://twistedmatrix.com/trac/ticket/8010")
+        del i
+
 
     def test_defaultPort(self):
         """
@@ -184,6 +207,10 @@ class ServiceTests(TestCase):
         reactor.fireSystemEvent('shutdown')
         self.assertTrue(root._threadpool.joined)
 
+    if _PY3:
+        test_wsgi.skip = (
+            "Will be ported in https://twistedmatrix.com/trac/ticket/7993")
+
 
     def test_invalidApplication(self):
         """
@@ -194,7 +221,8 @@ class ServiceTests(TestCase):
         for name in [__name__ + '.nosuchthing', 'foo.']:
             exc = self.assertRaises(
                 UsageError, options.parseOptions, ['--wsgi', name])
-            self.assertEqual(str(exc), "No such WSGI application: %r" % (name,))
+            self.assertEqual(str(exc),
+                             "No such WSGI application: %r" % (name,))
 
 
     def test_HTTPSFailureOnMissingSSL(self):
