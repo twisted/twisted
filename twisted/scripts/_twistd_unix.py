@@ -8,7 +8,7 @@ import errno
 import os
 import sys
 
-from twisted.python import log, usage
+from twisted.python import log, logfile, usage
 from twisted.python.compat import intToBytes
 from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
@@ -153,9 +153,6 @@ class UnixAppLogger(app.AppLogger):
         elif self._nodaemon and not self._logfilename:
             logFile = sys.stdout
         else:
-            # FIXME: Requires twisted.python.logfile to be ported to Py3
-            # https://twistedmatrix.com/trac/ticket/6749
-            from twisted.python import logfile
             if not self._logfilename:
                 self._logfilename = 'twistd.log'
             logFile = logfile.LogFile.fromFullPath(self._logfilename)

@@ -1132,10 +1132,6 @@ class AppLoggerTests(unittest.TestCase):
     @ivar observers: list of observers installed during the tests.
     @type observers: C{list}
     """
-    if _PY3:
-        skip = ("Requires twisted.python.logfile to be ported. "
-                "(https://twistedmatrix.com/trac/ticket/6749)")
-
 
     def setUp(self):
         """
@@ -1343,10 +1339,6 @@ class UnixAppLoggerTests(unittest.TestCase):
     """
     if _twistd_unix is None:
         skip = "twistd unix not available"
-    elif _PY3:
-        skip = ("Requires twisted.python.logfile to be ported. "
-                "(https://twistedmatrix.com/trac/ticket/6749)")
-
 
     def setUp(self):
         """
