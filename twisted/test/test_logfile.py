@@ -390,7 +390,6 @@ class LogFileTests(unittest.TestCase):
         """
         L{LogFile.listLogs} ignores log files which rotated suffix is 0.
         """
-
         log = logfile.LogFile(self.name, self.dir)
         self.addCleanup(log.close)
 
