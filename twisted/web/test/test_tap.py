@@ -14,7 +14,7 @@ from twisted.python.reflect import requireModule
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 from twisted.internet.interfaces import IReactorUNIX
-from twisted.internet import reactor
+from twisted.internet import reactor, endpoints
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
 from twisted.application import strports
@@ -71,6 +71,25 @@ class ServiceTests(TestCase):
         path, root = self._pathOption()
         self.assertIsInstance(root, File)
         self.assertEqual(root.path, path.path)
+
+
+    def test_pathServer(self):
+        """
+        The I{--path} option to L{makeService} causes it to return a service
+        which will listen on the server address given by the I{--port} option.
+        """
+        port = self.mktemp()
+        options = Options()
+        options.parseOptions(['--port', 'unix:' + port, '--path', '.'])
+        service = makeService(options)
+        service.startService()
+        self.addCleanup(service.stopService)
+        self.assertTrue(os.path.exists(port))
+        self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
+
+    if not IReactorUNIX.providedBy(reactor):
+        test_pathServer.skip = (
+            "The reactor does not support UNIX domain sockets")
 
 
     def test_cgiProcessor(self):
@@ -181,7 +200,7 @@ class ServiceTests(TestCase):
         options = Options()
         options.parseOptions([])
         self.assertEqual(
-            strports.parse(options['port'], None)[:2],
+            endpoints._parseServer(options['port'], None)[:2],
             ('TCP', (8080, None)))
 
 
