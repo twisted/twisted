@@ -533,6 +533,11 @@ class DailyLogFileTests(unittest.TestCase):
         log.rotate()
         self.assertEqual(previousFile, log._file)
 
+    if runtime.platform.isWindows():
+        test_rotatePermissionDirectoryNotOk.skip = (
+            "Making read-only directories on Windows is too complex for this "
+            "test to reasonably do.")
+
 
     def test_rotatePermissionFileNotOk(self):
         """
