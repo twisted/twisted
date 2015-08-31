@@ -271,7 +271,7 @@ class LogFileTests(unittest.TestCase):
         os.chmod(self.path, 0o707)
         currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         f.close()
-        logfile.LogFile(self.name, self.dir)
+        log1 = logfile.LogFile(self.name, self.dir)
         self.assertEqual(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]),
                           currentMode)
         self.addCleanup(log1.close)
