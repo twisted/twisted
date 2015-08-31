@@ -1340,6 +1340,7 @@ class UnixAppLoggerTests(unittest.TestCase):
     if _twistd_unix is None:
         skip = "twistd unix not available"
 
+
     def setUp(self):
         """
         Fake C{signal.signal} for not installing the handlers but saving them
