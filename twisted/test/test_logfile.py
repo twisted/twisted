@@ -3,7 +3,6 @@
 
 from __future__ import division, absolute_import
 
-import datetime
 import errno
 import os
 import pickle

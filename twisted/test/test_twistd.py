@@ -35,7 +35,7 @@ from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
 from twisted.python import log
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO
 from twisted.python.usage import UsageError
 from twisted.python.log import ILogObserver
 from twisted.python.components import Componentized
