@@ -418,6 +418,7 @@ class RiggedDailyLogFile(logfile.DailyLogFile):
         return time.gmtime(self._clock)[:3]
 
 
+
 class DailyLogFileTests(unittest.TestCase):
     """
     Test rotating log file.
