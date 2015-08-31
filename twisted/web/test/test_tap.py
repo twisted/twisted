@@ -78,12 +78,16 @@ class ServiceTests(TestCase):
         The I{--path} option to L{makeService} causes it to return a service
         which will listen on the server address given by the I{--port} option.
         """
+        path = FilePath(self.mktemp())
+        path.makedirs()
         port = self.mktemp()
         options = Options()
-        options.parseOptions(['--port', 'unix:' + port, '--path', '.'])
+        options.parseOptions(['--port', 'unix:' + port, '--path', path.path])
         service = makeService(options)
         service.startService()
         self.addCleanup(service.stopService)
+        self.assertIsInstance(service.services[0].factory.resource, File)
+        self.assertEqual(service.services[0].factory.resource.path, path.path)
         self.assertTrue(os.path.exists(port))
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
 
