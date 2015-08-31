@@ -7,6 +7,8 @@
 A rotating, browsable log file.
 """
 
+from __future__ import division, absolute_import
+
 # System Imports
 import os, glob, time, stat
 
@@ -58,21 +60,32 @@ class BaseLogFile:
     def _openFile(self):
         """
         Open the log file.
+
+        We don't open files in binary mode since:
+        * an encoding would have to be chosen and that would have to be
+          configurable
+        * Twisted doesn't actually support logging non-ASCII messages
+          (see U{https://twistedmatrix.com/trac/ticket/989})
+        * logging plain ASCII messages is fine with any non-binary mode.
+
+        See
+        U{https://twistedmatrix.com/pipermail/twisted-python/2013-October/027651.html}
+        for more information.
         """
         self.closed = False
         if os.path.exists(self.path):
-            self._file = file(self.path, "r+", 1)
+            self._file = open(self.path, "r+", 1)
             self._file.seek(0, 2)
         else:
             if self.defaultMode is not None:
                 # Set the lowest permissions
                 oldUmask = os.umask(0o777)
                 try:
-                    self._file = file(self.path, "w+", 1)
+                    self._file = open(self.path, "w+", 1)
                 finally:
                     os.umask(oldUmask)
             else:
-                self._file = file(self.path, "w+", 1)
+                self._file = open(self.path, "w+", 1)
         if self.defaultMode is not None:
             try:
                 os.chmod(self.path, self.defaultMode)
@@ -304,7 +317,13 @@ class LogReader:
     """Read from a log file."""
 
     def __init__(self, name):
-        self._file = file(name, "r")
+        """
+        Open the log file for reading.
+
+        The comments about binary-mode for L{BaseLogFile._openFile} also apply
+        here.
+        """
+        self._file = open(name, "r")
 
     def readLines(self, lines=10):
         """Read a list of lines from the log file.

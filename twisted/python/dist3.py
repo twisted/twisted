@@ -312,6 +312,7 @@ testModules = [
     "twisted.test.test_iutils",
     "twisted.test.test_lockfile",
     "twisted.test.test_log",
+    "twisted.test.test_logfile",
     "twisted.test.test_loopback",
     "twisted.test.test_modules",
     "twisted.test.test_monkey",

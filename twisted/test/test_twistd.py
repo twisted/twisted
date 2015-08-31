@@ -35,7 +35,7 @@ from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
 from twisted.python import log
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO
 from twisted.python.usage import UsageError
 from twisted.python.log import ILogObserver
 from twisted.python.components import Componentized
@@ -1132,10 +1132,6 @@ class AppLoggerTests(unittest.TestCase):
     @ivar observers: list of observers installed during the tests.
     @type observers: C{list}
     """
-    if _PY3:
-        skip = ("Requires twisted.python.logfile to be ported. "
-                "(https://twistedmatrix.com/trac/ticket/6749)")
-
 
     def setUp(self):
         """
@@ -1343,9 +1339,6 @@ class UnixAppLoggerTests(unittest.TestCase):
     """
     if _twistd_unix is None:
         skip = "twistd unix not available"
-    elif _PY3:
-        skip = ("Requires twisted.python.logfile to be ported. "
-                "(https://twistedmatrix.com/trac/ticket/6749)")
 
 
     def setUp(self):
