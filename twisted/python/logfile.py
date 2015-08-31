@@ -65,11 +65,11 @@ class BaseLogFile:
         * an encoding would have to be chosen and that would have to be
           configurable
         * Twisted doesn't actually support logging non-ASCII messages
-          (see #989)
+          (see U{https://twistedmatrix.com/trac/ticket/989})
         * logging plain ASCII messages is fine with any non-binary mode.
 
         See
-        https://twistedmatrix.com/pipermail/twisted-python/2013-October/027651.html
+        U{https://twistedmatrix.com/pipermail/twisted-python/2013-October/027651.html}
         for more information.
         """
         self.closed = False
