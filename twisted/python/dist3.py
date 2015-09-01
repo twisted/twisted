@@ -168,7 +168,9 @@ modules = [
     "twisted.python.util",
     "twisted.python.versions",
     "twisted.scripts",
+    "twisted.scripts._twistd_unix",
     "twisted.scripts.trial",
+    "twisted.scripts.twistd",
     "twisted.test",
     "twisted.test.iosim",
     "twisted.test.proto_helpers",
@@ -433,9 +435,6 @@ almostModules = [
     "twisted.names.root",
     # Echo is ported for twisted.application tests:
     "twisted.protocols.wire",
-    # Required by twisted.test.test_twistd, which tests twisted.application:
-    "twisted.scripts.twistd",
-    "twisted.scripts._twistd_unix",
     # Required by twisted.test.test_twistd
     # https://twistedmatrix.com/trac/ticket/7958
     "twisted.python.fakepwd",
