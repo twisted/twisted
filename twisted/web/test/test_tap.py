@@ -26,13 +26,13 @@ from twisted.web.tap import Options, makeService
 from twisted.web.script import PythonScript
 
 if not _PY3:
-    # Will be ported in https://twistedmatrix.com/trac/ticket/8009
+    # FIXME: Will be ported in https://twistedmatrix.com/trac/ticket/8009
     from twisted.web.twcgi import CGIScript
 
-    # Will be ported in https://twistedmatrix.com/trac/ticket/7993
+    # FIXME: Will be ported in https://twistedmatrix.com/trac/ticket/7993
     from twisted.web.wsgi import WSGIResource
 
-    # Will be ported in https://twistedmatrix.com/trac/ticket/8010 and
+    # FIXME: Will be ported in https://twistedmatrix.com/trac/ticket/8010 and
     # https://twistedmatrix.com/trac/ticket/7598
     from twisted.web.distrib import ResourcePublisher, UserDirectory
     from twisted.spread.pb import PBServerFactory

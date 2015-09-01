@@ -17,13 +17,13 @@ from twisted.python.compat import _PY3
 from twisted.application import internet, service, strports
 
 if not _PY3:
-    # Will be ported in https://twistedmatrix.com/trac/ticket/8009
+    # FIXME: Will be ported in https://twistedmatrix.com/trac/ticket/8009
     from twisted.web import twcgi
 
-    # Will be ported in https://twistedmatrix.com/trac/ticket/7993
+    # FIXME: Will be ported in https://twistedmatrix.com/trac/ticket/7993
     from twisted.web import wsgi
 
-    # Will be ported in https://twistedmatrix.com/trac/ticket/8010 and
+    # FIXME: Will be ported in https://twistedmatrix.com/trac/ticket/8010 and
     # https://twistedmatrix.com/trac/ticket/7598
     from twisted.web import distrib
     from twisted.spread import pb
