@@ -5,12 +5,13 @@
 An implementation of
 U{Web Resource Gateway Interface<http://www.python.org/dev/peps/pep-0333/>}.
 """
+from twisted.python.compat import iterbytes, reraise
 
 __metaclass__ = type
 
 from sys import exc_info
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python.log import msg, err
 from twisted.python.failure import Failure
@@ -183,7 +184,7 @@ class _WSGIResponse:
         else:
             pathInfo = ''
 
-        parts = request.uri.split('?', 1)
+        parts = request.uri.split(b'?', 1)
         if len(parts) == 1:
             queryString = ''
         else:
@@ -254,7 +255,7 @@ class _WSGIResponse:
         This will be called in a non-I/O thread.
         """
         if self.started and excInfo is not None:
-            raise excInfo[0], excInfo[1], excInfo[2]
+            reraise(excInfo[1], excInfo[2])
         self.status = status
         self.headers = headers
         return self.write
@@ -313,7 +314,7 @@ class _WSGIResponse:
         """
         try:
             appIterator = self.application(self.environ, self.startResponse)
-            for elem in appIterator:
+            for elem in iterbytes(appIterator):
                 if elem:
                     self.write(elem)
                 if self._requestFinished:
@@ -340,7 +341,7 @@ class _WSGIResponse:
         self.started = True
 
 
-
+@implementer(IResource)
 class WSGIResource:
     """
     An L{IResource} implementation which delegates responsibility for all
@@ -354,7 +355,6 @@ class WSGIResource:
 
     @ivar _application: The WSGI application object.
     """
-    implements(IResource)
 
     # Further resource segments are left up to the WSGI application object to
     # handle.

@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.web.wsgi}.
 """
+import traceback
 
 __metaclass__ = type
 
@@ -209,7 +210,8 @@ class EnvironTests(WSGITestsMixin, TestCase):
     object by L{twisted.web.wsgi.WSGIResource}.
     """
     def environKeyEqual(self, key, value):
-        def assertEnvironKeyEqual((environ, startResponse)):
+        def assertEnvironKeyEqual(wsgi_params):
+            environ, startResponse = wsgi_params
             self.assertEqual(environ[key], value)
         return assertEnvironKeyEqual
 
@@ -220,7 +222,8 @@ class EnvironTests(WSGITestsMixin, TestCase):
         parameter which is exactly of type C{dict}.
         """
         d = self.render('GET', '1.1', [], [''])
-        def cbRendered((environ, startResponse)):
+        def cbRendered(wsgi_params):
+            environ, startResponse = wsgi_params
             self.assertIdentical(type(environ), dict)
         d.addCallback(cbRendered)
         return d
@@ -444,7 +447,8 @@ class EnvironTests(WSGITestsMixin, TestCase):
         """
         singleValue = self.render(
             'GET', '1.1', [], [''], None, [('foo', 'bar'), ('baz', 'quux')])
-        def cbRendered((environ, startResponse)):
+        def cbRendered(wsgi_params):
+            environ, startResponse = wsgi_params
             self.assertEqual(environ['HTTP_FOO'], 'bar')
             self.assertEqual(environ['HTTP_BAZ'], 'quux')
         singleValue.addCallback(cbRendered)
@@ -541,7 +545,8 @@ class EnvironTests(WSGITestsMixin, TestCase):
         self.addCleanup(removeObserver, events.append)
 
         errors = self.render('GET', '1.1', [], [''])
-        def cbErrors((environ, startApplication)):
+        def cbErrors(wsgi_params):
+            environ, startResponse = wsgi_params
             errors = environ['wsgi.errors']
             errors.write('some message\n')
             errors.writelines(['another\nmessage\n'])
@@ -1187,7 +1192,15 @@ class StartResponseTests(WSGITestsMixin, TestCase):
                     'HTTP/1.1 200 OK\r\n'))
             self.assertEqual(reraised[0][0], excInfo[0])
             self.assertEqual(reraised[0][1], excInfo[1])
-            self.assertEqual(reraised[0][2].tb_next, excInfo[2])
+
+            # Show that the tracebacks end with the same stack frames.
+            tb1 = reraised[0][2].tb_next
+            tb2 = excInfo[2]
+            self.assertEqual(
+                traceback.extract_tb(tb1)[1],
+                traceback.extract_tb(tb2)[0]
+            )
+
 
         d.addCallback(cbRendered)
 
