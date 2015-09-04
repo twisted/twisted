@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 15.4.0pre1 (2015-08-27)
-====================================
+Twisted Core 15.4.0 (2015-09-04)
+================================
 
 Features
 --------
@@ -33,8 +33,8 @@ Other
  - #7902, #7980, #7990, #7992
 
 
-Twisted Conch 15.4.0pre1 (2015-08-27)
-=====================================
+Twisted Conch 15.4.0 (2015-09-04)
+=================================
 
 No significant changes have been made for this release.
 
@@ -43,38 +43,38 @@ Other
  - #7977
 
 
-Twisted Mail 15.4.0pre1 (2015-08-27)
-====================================
+Twisted Mail 15.4.0 (2015-09-04)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Names 15.4.0pre1 (2015-08-27)
-=====================================
+Twisted Names 15.4.0 (2015-09-04)
+=================================
 
 No significant changes have been made for this release.
 
 
-Twisted News 15.4.0pre1 (2015-08-27)
-====================================
+Twisted News 15.4.0 (2015-09-04)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 15.4.0pre1 (2015-08-27)
-====================================
+Twisted Pair 15.4.0 (2015-09-04)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 15.4.0pre1 (2015-08-27)
-======================================
+Twisted Runner 15.4.0 (2015-09-04)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 15.4.0pre1 (2015-08-27)
-===================================
+Twisted Web 15.4.0 (2015-09-04)
+===============================
 
 Features
 --------
@@ -89,8 +89,8 @@ Bugfixes
    write out the traceback on Python 3. (#7996)
 
 
-Twisted Words 15.4.0pre1 (2015-08-27)
-=====================================
+Twisted Words 15.4.0 (2015-09-04)
+=================================
 
 No significant changes have been made for this release.
 
