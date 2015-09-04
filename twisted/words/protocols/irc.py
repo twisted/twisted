@@ -2171,18 +2171,18 @@ class IRCClient(basic.LineReceiver):
         """
         A master index of what CTCP tags this client knows.
 
-        If no arguments are provided, respond with a list of known tags.
+        If no arguments are provided, respond with a list of known tags, sorted
+        in alphabetical order.
         If an argument is provided, provide human-readable help on
         the usage of that tag.
         """
-
         nick = user.split('!')[0]
         if not data:
             # XXX: prefixedMethodNames gets methods from my *class*,
             # but it's entirely possible that this *instance* has more
             # methods.
-            names = reflect.prefixedMethodNames(self.__class__,
-                                                'ctcpQuery_')
+            names = sorted(reflect.prefixedMethodNames(self.__class__,
+                                                       'ctcpQuery_'))
 
             self.ctcpMakeReply(nick, [('CLIENTINFO', ' '.join(names))])
         else:
