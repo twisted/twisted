@@ -1,6 +1,22 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 15.4.0 (2015-09-04)
+===============================
+
+Features
+--------
+ - twisted.web.proxy is now ported to Python 3. (#7939)
+ - twisted.web.guard is now ported to Python 3. (#7974)
+
+Bugfixes
+--------
+ - twisted.web.http.Request.setResponseCode now only allows bytes
+   messages. (#7981)
+ - twisted.web.server.Request.processingFailed will now correctly
+   write out the traceback on Python 3. (#7996)
+
+
 Twisted Web 15.3.0 (2015-08-04)
 ===============================
 

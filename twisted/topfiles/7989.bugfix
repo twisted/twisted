@@ -1,2 +1,0 @@
-Fix a bug introduced in 15.3.0; pickling a lambda function after importing
-twisted.persisted.styles raises PicklingError rather than AttributeError.
