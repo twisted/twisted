@@ -2560,8 +2560,8 @@ class CTCPQueryTests(TestCase):
         """
         self.client.ctcpQuery_CLIENTINFO(self.user, self.channel, '')
         self.client.ctcpQuery_CLIENTINFO(self.user, self.channel, 'PING PONG')
-        info = ('CLIENTINFO PING DCC SOURCE VERSION '
-                'USERINFO TIME ACTION ERRMSG FINGER')
+        info = ('ACTION CLIENTINFO DCC ERRMSG FINGER PING SOURCE TIME '
+                'USERINFO VERSION')
         self.assertEqual(self.client.methods,
                          [('ctcpMakeReply', ('Wolf', [('CLIENTINFO', info)])),
                           ('ctcpMakeReply', ('Wolf', [('CLIENTINFO', None)]))])
