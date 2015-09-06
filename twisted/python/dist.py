@@ -53,7 +53,6 @@ An extensible framework for Python programming, with special focus
 on event-based network programming and multiprotocol integration.
 """,
     classifiers=[
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.3",
@@ -290,12 +289,6 @@ def getExtensions():
             ["twisted/runner/portmap.c"],
             condition=lambda builder: builder._check_header("rpc/rpc.h")),
     ]
-
-    if sys.version_info[:2] <= (2, 6):
-        extensions.append(
-            ConditionalExtension(
-                "twisted.python._initgroups",
-                ["twisted/python/_initgroups.c"]))
 
     return extensions
 
