@@ -903,7 +903,6 @@ class InitGroupsTests(unittest.TestCase):
     """
     Tests for L{util.initgroups}.
     """
-
     def setUp(self):
         self.addCleanup(setattr, util, "_initgroups", util._initgroups)
         self.addCleanup(setattr, util, "setgroups", util.setgroups)
@@ -925,7 +924,8 @@ class InitGroupsTests(unittest.TestCase):
 
 
     if util._initgroups is None:
-        test_initgroupsInStdlib.skip = "C initgroups not available"
+        test_initgroupsInStdlib.skip = ("stdlib support for initgroups is not "
+                                        "available")
 
 
 
