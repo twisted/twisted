@@ -186,12 +186,22 @@ class RequirementsTests(TestCase):
         supported by Twisted.
     @type supportedPythonVersion: C{tuple}
 
-    @ivar supportedZopeInterfaceVersion: The oldest version of C{zope.interface}
+    @ivar Py3unsupportedPythonVersion: The newest version of Python 3.x which
+        is not supported by Twisted.
+    @type Py3unsupportedPythonVersion: C{tuple}
+
+    @ivar Py3supportedPythonVersion: The oldest version of Python 3.x which is
+        supported by Twisted.
+    @type supportedPythonVersion: C{tuple}
+
+    @ivar Py3supportedZopeInterfaceVersion: The oldest version of C{zope.interface}
         which is supported by Twisted.
     @type supportedZopeInterfaceVersion: C{tuple}
     """
-    unsupportedPythonVersion = (2, 5)
-    supportedPythonVersion = (2, 6)
+    unsupportedPythonVersion = (2, 6)
+    supportedPythonVersion = (2, 7)
+    Py3unsupportedPythonVersion = (3, 2)
+    Py3supportedPythonVersion = (3, 3)
 
     if _PY3:
         supportedZopeInterfaceVersion = (4, 0, 0)
@@ -264,6 +274,28 @@ class RequirementsTests(TestCase):
         that is sufficiently new.
         """
         sys.version_info = self.supportedPythonVersion
+        self.assertEqual(None, _checkRequirements())
+
+
+    def test_oldPythonPy3(self):
+        """
+        L{_checkRequirements} raises L{ImportError} when run on a version of
+        Python that is too old.
+        """
+        sys.version_info = self.Py3unsupportedPythonVersion
+        with self.assertRaises(ImportError) as raised:
+            _checkRequirements()
+        self.assertEqual(
+            "Twisted on Python 3 requires Python %d.%d or later." % self.Py3supportedPythonVersion,
+            str(raised.exception))
+
+
+    def test_newPythonPy3(self):
+        """
+        L{_checkRequirements} returns C{None} when run on a version of Python
+        that is sufficiently new.
+        """
+        sys.version_info = self.Py3supportedPythonVersion
         self.assertEqual(None, _checkRequirements())
 
 
