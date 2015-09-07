@@ -787,7 +787,7 @@ class BrokenHTMLTests(TestCase):
         The important thing is that it doesn't raise an exception.
         """
         input = '<body><h1><div al!\n ign="center">Foo</div></h1></body>'
-        expected = ('<body><h1><div ign="center" al="True">'
+        expected = ('<body><h1><div al="True" ign="center">'
                     'Foo</div></h1></body>')
         self.checkParsed(input, expected)
 

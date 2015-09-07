@@ -623,7 +623,7 @@ class Element(Node):
             bext(self.tagName)
 
         j = ''.join
-        for attr, val in self.attributes.iteritems():
+        for attr, val in sorted(self.attributes.items()):
             if isinstance(attr, tuple):
                 ns, key = attr
                 if nsprefixes.has_key(ns):
