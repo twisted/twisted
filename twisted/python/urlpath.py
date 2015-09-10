@@ -38,6 +38,12 @@ class URLPath(object):
     _uqpathlist = None
 
     def pathList(self, unquote=False, copy=True):
+        """
+        Split this URL's path into its components.
+
+        @return: The components of C{self.path}
+        @rtype: L{list} of L{bytes}
+        """
         if self._qpathlist is None:
             self._qpathlist = self.path.split(b'/')
             self._uqpathlist = map(urlunquote, self._qpathlist)
@@ -57,9 +63,11 @@ class URLPath(object):
         Make a L{URLPath} from a L{str}.
 
         @param url: A L{str} representation of a URL.
+
         @rtype: L{URLPath}
         """
-        assert isinstance(url, str), "'url' must be a str."
+        if not isinstance(url, str):
+            raise ValueError("'url' must be a str")
         url = url.encode('utf-8')
         parts = urlparse.urlsplit(url)
         return klass(*parts)
@@ -71,17 +79,27 @@ class URLPath(object):
         Make a L{URLPath} from a L{bytes}.
 
         @param url: A L{bytes} representation of a URL.
+
         @rtype: L{URLPath}
 
         @since: 15.4
         """
-        assert isinstance(url, bytes), "'url' must be bytes."
+        if not isinstance(url, bytes):
+            raise ValueError("'url' must be bytes")
         parts = urlparse.urlsplit(url)
         return klass(*parts)
 
 
     @classmethod
     def fromRequest(klass, request):
+        """
+        Make a L{URLPath} from a L{twisted.web.http.Request}.
+
+        @param request: A L{twisted.web.http.Request} to make the L{URLPath}
+            from.
+
+        @rtype: L{URLPath}
+        """
         return klass.fromBytes(request.prePathURL())
 
 
@@ -97,12 +115,23 @@ class URLPath(object):
 
 
     def sibling(self, path, keepQuery=False):
+        """
+        Get the sibling of the current L{URLPath}. A sibling is a file which is
+        in the same directory as the current file.
+
+        @rtype: L{URLPath}
+        """
         l = self.pathList()
         l[-1] = path
         return self._pathMod(l, keepQuery)
 
 
     def child(self, path, keepQuery=False):
+        """
+        Get the child of this L{URLPath}.
+
+        @rtype: L{URLPath}
+        """
         l = self.pathList()
         if l[-1] == b'':
             l[-1] = path
@@ -112,6 +141,11 @@ class URLPath(object):
 
 
     def parent(self, keepQuery=False):
+        """
+        Get the parent directory of this L{URLPath}.
+
+        @rtype: L{URLPath}
+        """
         l = self.pathList()
         if l[-1] == b'':
             del l[-2]
@@ -123,7 +157,12 @@ class URLPath(object):
         return self._pathMod(l, keepQuery)
 
 
-    def here(self, keepQuery=0):
+    def here(self, keepQuery=False):
+        """
+        Get the current directory of this L{URLPath}.
+
+        @rtype: L{URLPath}
+        """
         l = self.pathList()
         if l[-1] != b'':
             l[-1] = b''
@@ -134,6 +173,8 @@ class URLPath(object):
         """
         Return a path which is the URL where a browser would presumably take
         you if you clicked on a link with an HREF as given.
+
+        @rtype: L{URLPath}
         """
         scheme, netloc, path, query, fragment = urlparse.urlsplit(st)
         if not scheme:
