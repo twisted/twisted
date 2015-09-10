@@ -903,60 +903,30 @@ class InitGroupsTests(unittest.TestCase):
     """
     Tests for L{util.initgroups}.
     """
-
-    if pwd is None:
-        skip = "pwd not available"
-
-
     def setUp(self):
-        self.addCleanup(setattr, util, "_c_initgroups", util._c_initgroups)
+        self.addCleanup(setattr, util, "_initgroups", util._initgroups)
         self.addCleanup(setattr, util, "setgroups", util.setgroups)
 
 
-    def test_initgroupsForceC(self):
+    def test_initgroupsInStdlib(self):
         """
-        If we fake the presence of the C extension, it's called instead of the
-        Python implementation.
+        Calling L{util.initgroups} will call the underlying stdlib
+        implmentation.
         """
         calls = []
-        util._c_initgroups = lambda x, y: calls.append((x, y))
+        util._initgroups = lambda x, y: calls.append((x, y))
         setgroupsCalls = []
-        util.setgroups = calls.append
+        util.setgroups = setgroupsCalls.append
 
         util.initgroups(os.getuid(), 4)
         self.assertEqual(calls, [(pwd.getpwuid(os.getuid())[0], 4)])
         self.assertFalse(setgroupsCalls)
 
 
-    def test_initgroupsForcePython(self):
-        """
-        If we fake the absence of the C extension, the Python implementation is
-        called instead, calling C{os.setgroups}.
-        """
-        util._c_initgroups = None
-        calls = []
-        util.setgroups = calls.append
-        util.initgroups(os.getuid(), os.getgid())
-        # Something should be in the calls, we don't really care what
-        self.assertTrue(calls)
+    if util._initgroups is None:
+        test_initgroupsInStdlib.skip = ("stdlib support for initgroups is not "
+                                        "available")
 
-
-    def test_initgroupsInC(self):
-        """
-        If the C extension is present, it's called instead of the Python
-        version.  We check that by making sure C{os.setgroups} is not called.
-        """
-        calls = []
-        util.setgroups = calls.append
-        try:
-            util.initgroups(os.getuid(), os.getgid())
-        except OSError:
-            pass
-        self.assertFalse(calls)
-
-
-    if util._c_initgroups is None:
-        test_initgroupsInC.skip = "C initgroups not available"
 
 
 class DeprecationTests(unittest.TestCase):

@@ -290,12 +290,6 @@ def getExtensions():
             condition=lambda builder: builder._check_header("rpc/rpc.h")),
     ]
 
-    if sys.version_info[:2] <= (2, 6):
-        extensions.append(
-            ConditionalExtension(
-                "twisted.python._initgroups",
-                ["twisted/python/_initgroups.c"]))
-
     return extensions
 
 

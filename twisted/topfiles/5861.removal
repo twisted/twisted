@@ -1,0 +1,1 @@
+twisted.python._initgroups, a C extension, has been removed and stdlib support is now always used instead.

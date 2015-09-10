@@ -330,7 +330,6 @@ testModules = [
     "twisted.test.test_process",
     "twisted.test.test_randbytes",
     "twisted.test.test_reflect",
-    "twisted.test.test_setup",
     "twisted.test.test_sob",
     "twisted.test.test_ssl",
     "twisted.test.test_sslverify",

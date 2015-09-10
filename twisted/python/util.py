@@ -625,18 +625,14 @@ class FancyEqMixin:
 
 
 try:
-    # Python 2.7 / Python 3.3
-    from os import initgroups as _c_initgroups
+    # initgroups is available in Python 2.7+ on UNIX-likes
+    from os import initgroups as _initgroups
 except ImportError:
-    try:
-        # Python 2.6
-        from twisted.python._initgroups import initgroups as _c_initgroups
-    except ImportError:
-        _c_initgroups = None
+    _initgroups = None
 
 
 
-if pwd is None or grp is None or setgroups is None or getgroups is None:
+if _initgroups is None:
     def initgroups(uid, primaryGid):
         """
         Do nothing.
@@ -644,42 +640,11 @@ if pwd is None or grp is None or setgroups is None or getgroups is None:
         Underlying platform support require to manipulate groups is missing.
         """
 else:
-    # Fallback to the inefficient Python version
-    def _setgroups_until_success(l):
-        while(1):
-            # NASTY NASTY HACK (but glibc does it so it must be okay):
-            # In case sysconfig didn't give the right answer, find the limit
-            # on max groups by just looping, trying to set fewer and fewer
-            # groups each time until it succeeds.
-            try:
-                setgroups(l)
-            except ValueError:
-                # This exception comes from python itself restricting
-                # number of groups allowed.
-                if len(l) > 1:
-                    del l[-1]
-                else:
-                    raise
-            except OSError as e:
-                if e.errno == errno.EINVAL and len(l) > 1:
-                    # This comes from the OS saying too many groups
-                    del l[-1]
-                else:
-                    raise
-            else:
-                # Success, yay!
-                return
-
     def initgroups(uid, primaryGid):
         """
         Initializes the group access list.
 
-        If the C extension is present, we're calling it, which in turn calls
-        initgroups(3).
-
-        If not, this is done by reading the group database /etc/group and using
-        all groups of which C{uid} is a member.  The additional group
-        C{primaryGid} is also added to the list.
+        This uses the stdlib support which calls initgroups(3) under the hood.
 
         If the given user is a member of more than C{NGROUPS}, arbitrary
         groups will be silently discarded to bring the number below that
@@ -692,35 +657,7 @@ else:
         @param primaryGid: If provided, an additional GID to include when
             setting the groups.
         """
-        if _c_initgroups is not None:
-            return _c_initgroups(pwd.getpwuid(uid)[0], primaryGid)
-        try:
-            # Try to get the maximum number of groups
-            max_groups = os.sysconf("SC_NGROUPS_MAX")
-        except:
-            # No predefined limit
-            max_groups = 0
-
-        username = pwd.getpwuid(uid)[0]
-        l = []
-        if primaryGid is not None:
-            l.append(primaryGid)
-        for groupname, password, gid, userlist in grp.getgrall():
-            if username in userlist:
-                l.append(gid)
-                if len(l) == max_groups:
-                    break # No more groups, ignore any more
-        try:
-            _setgroups_until_success(l)
-        except OSError as e:
-            # We might be able to remove this code now that we
-            # don't try to setgid/setuid even when not asked to.
-            if e.errno == errno.EPERM:
-                for g in getgroups():
-                    if g not in l:
-                        raise
-            else:
-                raise
+        return _initgroups(pwd.getpwuid(uid)[0], primaryGid)
 
 
 
