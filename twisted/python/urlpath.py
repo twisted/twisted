@@ -63,6 +63,7 @@ class URLPath(object):
         Make a L{URLPath} from a L{str}.
 
         @param url: A L{str} representation of a URL.
+        @type url: L{str}
 
         @rtype: L{URLPath}
         """
@@ -79,6 +80,7 @@ class URLPath(object):
         Make a L{URLPath} from a L{bytes}.
 
         @param url: A L{bytes} representation of a URL.
+        @type url: L{bytes}
 
         @rtype: L{URLPath}
 
@@ -119,6 +121,13 @@ class URLPath(object):
         Get the sibling of the current L{URLPath}. A sibling is a file which is
         in the same directory as the current file.
 
+        @param path: The path of the sibling.
+        @type path: L{bytes}
+
+        @param keepQuery: Whether to keep the query parameters on the returned
+            L{URLPath}.
+        @type: keepQuery: L{bool}
+
         @rtype: L{URLPath}
         """
         l = self.pathList()
@@ -129,6 +138,13 @@ class URLPath(object):
     def child(self, path, keepQuery=False):
         """
         Get the child of this L{URLPath}.
+
+        @param path: The path of the child.
+        @type path: L{bytes}
+
+        @param keepQuery: Whether to keep the query parameters on the returned
+            L{URLPath}.
+        @type: keepQuery: L{bool}
 
         @rtype: L{URLPath}
         """
@@ -143,6 +159,10 @@ class URLPath(object):
     def parent(self, keepQuery=False):
         """
         Get the parent directory of this L{URLPath}.
+
+        @param keepQuery: Whether to keep the query parameters on the returned
+            L{URLPath}.
+        @type: keepQuery: L{bool}
 
         @rtype: L{URLPath}
         """
@@ -160,6 +180,10 @@ class URLPath(object):
     def here(self, keepQuery=False):
         """
         Get the current directory of this L{URLPath}.
+
+        @param keepQuery: Whether to keep the query parameters on the returned
+            L{URLPath}.
+        @type: keepQuery: L{bool}
 
         @rtype: L{URLPath}
         """
