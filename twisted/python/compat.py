@@ -637,4 +637,5 @@ __all__ = [
     "OrderedDict",
     "escape",
     "urlquote",
+    "urlunquote",
 ]
