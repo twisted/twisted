@@ -10,6 +10,9 @@ from twisted.python import urlpath
 
 
 class _BaseURLPathTests(object):
+    """
+    Tests for instantiated L{urlpath.URLPath}s.
+    """
     def test_strReturnsStr(self):
         """
         Calling C{str()} with a L{URLPath} will always return a L{str}.
@@ -93,7 +96,7 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
         C{URLPath.fromBytes} must take a L{bytes} argument.
         """
         with self.assertRaises(ValueError):
-            urlpath.URLPath.fromBytes("a str")
+            urlpath.URLPath.fromBytes(None)
 
 
 
@@ -111,4 +114,4 @@ class StringURLPathTests(_BaseURLPathTests, unittest.TestCase):
         C{URLPath.fromString} must take a L{string} argument.
         """
         with self.assertRaises(ValueError):
-            urlpath.URLPath.fromString(b"a bytes")
+            urlpath.URLPath.fromString(None)

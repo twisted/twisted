@@ -191,10 +191,10 @@ class URLPath(object):
                 path = b'/'.join(l)
 
         return URLPath(scheme,
-                        netloc,
-                        path,
-                        query,
-                        fragment)
+                       netloc,
+                       path,
+                       query,
+                       fragment)
 
 
     def __str__(self):
