@@ -62,8 +62,9 @@ class _BaseURLPathTests(object):
                          'http://example.com/foo/')
         self.assertEqual(str(self.path.child(b'baz').parent()),
                          'http://example.com/foo/')
-        self.assertEqual(str(self.path.parent().parent().parent().parent().parent()),
-                         'http://example.com/')
+        self.assertEqual(
+            str(self.path.parent().parent().parent().parent().parent()),
+            'http://example.com/')
 
     def test_hereString(self):
         """
