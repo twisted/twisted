@@ -32,7 +32,7 @@ except:
     ssl = None
 
 from twisted import test
-serverPEM = FilePath(test.__file__.encode("utf-8")).sibling('server.pem')
+serverPEM = FilePath(test.__file__).sibling('server.pem')
 serverPEMPath = serverPEM.asBytesMode().path
 
 
