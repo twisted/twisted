@@ -46,28 +46,29 @@ class Error(Exception):
     """
     A basic HTTP error.
 
-    @type status: C{bytes}
+    @type status: L{bytes}
     @ivar status: Refers to an HTTP status code, for example C{http.NOT_FOUND}.
 
-    @type message: C{bytes}
+    @type message: L{bytes}
     @param message: A short error message, for example "NOT FOUND".
 
-    @type response: C{bytes}
+    @type response: L{bytes}
     @ivar response: A complete HTML document for an error page.
     """
     def __init__(self, code, message=None, response=None):
         """
         Initializes a basic exception.
 
-        @type code: C{bytes}
-        @param code: Refers to an HTTP status code, for example
-            C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to
-            a descriptive bytestring that is used instead.
+        @type code: L{bytes} / L{int}
+        @param code: Refers to an HTTP status code (for example, 200) either as
+            an integer or a bytestring representing such. If no C{message} is
+            given, C{code} is mapped to a descriptive bytestring that is used
+            instead.
 
-        @type message: C{bytes}
+        @type message: L{bytes}
         @param message: A short error message, for example "NOT FOUND".
 
-        @type response: C{bytes}
+        @type response: L{bytes}
         @param response: A complete HTML document for an error page.
         """
         message = message or _codeToMessage(code)
@@ -75,6 +76,7 @@ class Error(Exception):
         Exception.__init__(self, code, message, response)
 
         if isinstance(code, int):
+            # If we're given an int, convert it to a bytestring
             code = intToBytes(code)
 
         self.status = code
@@ -91,25 +93,25 @@ class PageRedirect(Error):
     """
     A request resulted in an HTTP redirect.
 
-    @type location: C{bytes}
+    @type location: L{bytes}
     @ivar location: The location of the redirect which was not followed.
     """
     def __init__(self, code, message=None, response=None, location=None):
         """
         Initializes a page redirect exception.
 
-        @type code: C{bytes}
+        @type code: L{bytes}
         @param code: Refers to an HTTP status code, for example
             C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
             descriptive string that is used instead.
 
-        @type message: C{bytes}
+        @type message: L{bytes}
         @param message: A short error message, for example "NOT FOUND".
 
-        @type response: C{bytes}
+        @type response: L{bytes}
         @param response: A complete HTML document for an error page.
 
-        @type location: C{bytes}
+        @type location: L{bytes}
         @param location: The location response-header field value. It is an
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
@@ -125,7 +127,7 @@ class InfiniteRedirection(Error):
     """
     HTTP redirection is occurring endlessly.
 
-    @type location: C{bytes}
+    @type location: L{bytes}
     @ivar location: The first URL in the series of redirections which was
         not followed.
     """
@@ -133,18 +135,18 @@ class InfiniteRedirection(Error):
         """
         Initializes an infinite redirection exception.
 
-        @type code: C{bytes}
+        @type code: L{bytes}
         @param code: Refers to an HTTP status code, for example
             C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
             descriptive string that is used instead.
 
-        @type message: C{bytes}
+        @type message: L{bytes}
         @param message: A short error message, for example "NOT FOUND".
 
-        @type response: C{bytes}
+        @type response: L{bytes}
         @param response: A complete HTML document for an error page.
 
-        @type location: C{bytes}
+        @type location: L{bytes}
         @param location: The location response-header field value. It is an
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
@@ -161,7 +163,7 @@ class RedirectWithNoLocation(Error):
     Exception passed to L{ResponseFailed} if we got a redirect without a
     C{Location} header field.
 
-    @type uri: C{bytes}
+    @type uri: L{bytes}
     @ivar uri: The URI which failed to give a proper location header
         field.
 
@@ -172,15 +174,15 @@ class RedirectWithNoLocation(Error):
         """
         Initializes a page redirect exception when no location is given.
 
-        @type code: C{bytes}
+        @type code: L{bytes}
         @param code: Refers to an HTTP status code, for example
             C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to
             a descriptive string that is used instead.
 
-        @type message: C{bytes}
+        @type message: L{bytes}
         @param message: A short error message.
 
-        @type uri: C{bytes}
+        @type uri: L{bytes}
         @param uri: The URI which failed to give a proper location header
             field.
         """
