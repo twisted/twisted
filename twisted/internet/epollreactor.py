@@ -70,12 +70,10 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
         """
         if self._readers or self._writers:
             if self._loop is None:
-                from twisted.internet.task import LoopingCall, _EPSILON
+                from twisted.internet.task import LoopingCall
                 self._loop = LoopingCall(self.iterate)
                 self._loop.clock = self._reactor
-                # LoopingCall seems unhappy with timeout of 0, so use very
-                # small number:
-                self._loop.start(_EPSILON, now=False)
+                self._loop.start(0, now=False)
         elif self._loop:
             self._loop.stop()
             self._loop = None
