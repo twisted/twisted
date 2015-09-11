@@ -74,9 +74,6 @@ class Error(Exception):
 
         Exception.__init__(self, code, message, response)
 
-        if isinstance(code, int):
-            code = intToBytes(code)
-
         self.status = code
         self.message = message
         self.response = response

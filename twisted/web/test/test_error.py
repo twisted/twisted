@@ -69,12 +69,13 @@ class ErrorTests(unittest.TestCase):
         e = error.Error(b"200", b"My own message")
         self.assertEqual(e.message, b"My own message")
 
+
     def test_str(self):
         """
         C{str()} on an L{Error} returns the code and message it was
         instantiated with.
         """
-        e = error.Error(200, b"OK")
+        e = error.Error(b"200", b"OK")
         self.assertEqual(str(e), "200 OK")
 
 
