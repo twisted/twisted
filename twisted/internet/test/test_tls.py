@@ -348,7 +348,7 @@ class AbortSSLConnectionTests(ReactorBuilder, AbortConnectionMixin, ContextGener
         # Patch twisted.protocols.tls to use this reactor, until we get
         # around to fixing #5206, or the TLS code uses an explicit reactor:
         cooperator = Cooperator(
-            scheduler=lambda x: reactor.callLater(0.00001, x))
+            scheduler=lambda x: reactor.callLater(0, x))
         self.patch(tls, "cooperate", cooperator.cooperate)
         return reactor
 
