@@ -15,49 +15,9 @@ from setuptools.dist import Distribution
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
-from twisted.python.dist import (get_setup_args, ConditionalExtension,
-                                 build_scripts_twisted, _EXTRAS_REQUIRE)
+from twisted.python.dist import get_setup_args, build_scripts_twisted
+from twisted.python.dist import _EXTRAS_REQUIRE
 from twisted.python.filepath import FilePath
-
-
-
-class SetupTests(TestCase):
-    """
-    Tests for L{get_setup_args}.
-    """
-    def test_conditionalExtensions(self):
-        """
-        Passing C{conditionalExtensions} as a list of L{ConditionalExtension}
-        objects to get_setup_args inserts a custom build_ext into the result
-        which knows how to check whether they should be built.
-        """
-        good_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: True)
-        bad_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: False)
-        args = get_setup_args(conditionalExtensions=[good_ext, bad_ext])
-        # ext_modules should be set even though it's not used.  See comment
-        # in get_setup_args
-        self.assertEqual(args["ext_modules"], [good_ext, bad_ext])
-        cmdclass = args["cmdclass"]
-        build_ext = cmdclass["build_ext"]
-        builder = build_ext(Distribution())
-        builder.prepare_extensions()
-        self.assertEqual(builder.extensions, [good_ext])
-
-
-    def test_win32Definition(self):
-        """
-        When building on Windows NT, the WIN32 macro will be defined as 1.
-        """
-        ext = ConditionalExtension("whatever", ["whatever.c"],
-                                   define_macros=[("whatever", 2)])
-        args = get_setup_args(conditionalExtensions=[ext])
-        builder = args["cmdclass"]["build_ext"](Distribution())
-        self.patch(os, "name", "nt")
-        builder.prepare_extensions()
-        self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
-
 
 
 class OptionalDependenciesTests(TestCase):

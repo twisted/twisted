@@ -348,8 +348,7 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
     def test_changeAllProjectVersions(self):
         """
         L{changeAllProjectVersions} changes the version numbers in the
-        _version.py
-        and README file.
+        _version.py and README file.
         """
         root = FilePath(self.mktemp())
         structure = {
@@ -370,6 +369,48 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
                     "README": "Hi this is 10.0.0"},
                 "_version.py": genVersion("twisted", 10, 0, 0),
             }}
+        self.assertStructure(root, outStructure)
+
+
+    def test_changeAllProjectVersionsWithCexts(self):
+        """
+        L{changeAllProjectVersions} changes the version numbers in the
+        _version.py and README file, plus in the C extension package if
+        C{includeExtensions} is C{True}.
+        """
+        root = FilePath(self.mktemp())
+        structure = {
+            "README": "Hi this is 1.0.0.",
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 1.0.0"},
+                "_version.py": genVersion("twisted", 1, 0, 0)
+                },
+            "cexts": {
+                "README.rst": "This is 1.0.0.",
+                "_twistedextensions": {
+                    "__init__.py": "__version__ = '1.0.0'"
+                }
+            }
+        }
+        self.createStructure(root, structure)
+        releaseDate = date(2010, 1, 1)
+        changeAllProjectVersions(root, False, False, releaseDate,
+                                 includeExtensions=True)
+        outStructure = {
+            "README": "Hi this is 10.0.0.",
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 10.0.0"},
+                "_version.py": genVersion("twisted", 10, 0, 0),
+            },
+            "cexts": {
+                "README.rst": "This is 10.0.0.",
+                "_twistedextensions": {
+                    "__init__.py": "__version__ = '10.0.0'"
+                }
+            }
+        }
         self.assertStructure(root, outStructure)
 
 
