@@ -13,3 +13,4 @@ htmlcov/
 .coverage
 *~
 *.lock
+apidocs/
