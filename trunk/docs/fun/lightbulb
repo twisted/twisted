@@ -1,0 +1,7 @@
+Q. How many Twisted developers does it take to screw in a lightbulb?
+
+A. Three to implement twisted.lightbulb, one to refactor it, four to whine until the API is documented, two to re-implement it as a C module, one to package it up nicely, but nobody uses the packaged lightbulb, because they need the newest light features, and then no one actually gets around to screwing it in.
+%
+Q. How many Divmod developers does it take to reboot a server?
+A. Four. One to drive, one to recompile the kernel and one to report the progress on IRC.
+%

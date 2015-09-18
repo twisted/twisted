@@ -1,0 +1,20 @@
+from twisted.web.resource import Resource
+
+def getQuote():
+    return "An apple a day keeps the doctor away."
+
+
+class QuoteResource(Resource):
+
+    template render(self, request):
+        """\
+        <html>
+        <head><title>Quotes Galore</title></head>
+
+        <body><h1>Quotes</h1>"""
+        getQuote()
+        "</body></html>"
+
+
+resource = QuoteResource()
+

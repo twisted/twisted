@@ -1,0 +1,26 @@
+<PenguinOfDoom> I could be a pretty effective project manager if I had a time machine
+%
+<glyph> khorn: "I know what you're thinking.  'Did he add six callbacks or only five?'  Well, to tell you the truth, in all this excitement, I kind of lost track myself.  But being as this is a Deferred, the most powerful callback abstraction in the world, and would blow your head clean off, you've got to ask yourself one question: do you know how to add callbacks?  well, do ya, punk?"
+%
+<disappearedng> since twisted has wsgi handler I thought it might be possible that I attach engine to reactor and then in my django code call reactor.engine.foo ..
+<exarkun> Twisted's solution is to have functions that take arguments.  Because that's Python's solution.  And it sort of actually works most of the time.
+<exarkun> The problem you're having is that Django's functions _don't_ take arguments.
+<exarkun> Because Django apparently doesn't think that you'd ever need anything except your database connection, which you can get from your config file.
+<disappearedng> come again?
+<exarkun> Let's say you have an object `o`
+<exarkun> And you have a function `f`
+<exarkun> And `f` needs `o` in order to operate properly
+<exarkun> The correct solution is `f(o)`
+%
+<paulproteus> Yo z3p. Totally off-topic, your nick makes you look *super* l33t. (-:
+<dash> paulproteus: he is, that is how he was able to write an ssh implementation
+<z3p> paulproteus: that was the idea when I was 15
+<dash> z3p: now you know how The Edge feels
+%
+<exarkun> Crap where'd this stupid floating point error get introduced
+<spiv> exarkun: "I know I'll use floating point.  Now you have 2.0000000000000001 problems"?
+%
+<PenguinOfDoom> Software is done not when there is nothing to add, but when the developer is sick and tired of wrestling with windows
+%
+<exarkun> OpenSSL is the original failfest
+%

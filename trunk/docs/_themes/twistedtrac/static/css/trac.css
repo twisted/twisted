@@ -1,0 +1,609 @@
+/* Trac CSS */
+body {
+ background: #fff;
+ color: #000;
+ margin: 0px; /* Modified */
+ padding: 0;
+}
+body, th, td {
+ font: normal 13px trebuchet ms,verdana,arial,'Bitstream Vera Sans',helvetica,sans-serif; /* Modified */
+}
+h1, h2, h3, h4 {
+ font-family: trebuchet ms,arial,verdana,'Bitstream Vera Sans',helvetica,sans-serif; /* Modified */
+ font-weight: normal; /* Modified */
+ letter-spacing: -0.018em;
+ color: #83A501; /* Modified */
+ border-width: 0 0 1px 0; /* Modified */
+ border-style: dotted; /* Modified */
+ border-color: #dddddd; /* Modified */
+}
+h1 { font-size: 19px; margin: .15em 1em 0 0 }
+h2 { font-size: 16px }
+h3 { font-size: 14px }
+hr { border: none;  border-top: 1px solid #ccb; margin: 2em 0 }
+address { font-style: normal }
+img { border: none; }
+
+.underline { text-decoration: underline }
+ol.loweralpha { list-style-type: lower-alpha }
+ol.upperalpha { list-style-type: upper-alpha }
+ol.lowerroman { list-style-type: lower-roman }
+ol.upperroman { list-style-type: upper-roman }
+ol.arabic     { list-style-type: decimal }
+
+/* Link styles */
+:link, :visited {
+ text-decoration: none;
+ color: #517489; /* Modified */
+ border-bottom: 0px dotted #bbb;
+}
+:link:hover, :visited:hover {
+ background-color: transparent;
+ color: #555;
+}
+h1 :link, h1 :visited ,h2 :link, h2 :visited, h3 :link, h3 :visited,
+h4 :link, h4 :visited, h5 :link, h5 :visited, h6 :link, h6 :visited {
+ color: inherit;
+}
+
+/* Heading anchors */
+.anchor:link, .anchor:visited {
+ border: none;
+ color: #d7d7d7;
+ font-size: .8em;
+ vertical-align: text-top;
+}
+* > .anchor:link, * > .anchor:visited {
+ visibility: hidden;
+}
+h1:hover .anchor, h2:hover .anchor, h3:hover .anchor,
+h4:hover .anchor, h5:hover .anchor, h6:hover .anchor {
+ visibility: visible;
+}
+
+@media screen {
+ a.ext-link .icon {
+  background: url(../extlink.gif) left center no-repeat;
+  padding-left: 16px;
+ }
+ * html a.ext-link .icon { display: inline-block; }
+}
+
+/* Forms */
+input, textarea, select { margin: 0px }
+input, select { vertical-align: middle }
+input[type=button], input[type=submit], input[type=reset] {
+ background-color: #517489; /* Modified */
+ color: #ffffff; /* Modified */
+ border: 1px solid #334a57; /* Modified */
+ padding: .1em .5em;
+}
+input[type=button]:hover, input[type=submit]:hover, input[type=reset]:hover {
+ background: #303030; /* Modified */
+ border-color: #292929; /* Modified */
+ color: #ffffff; /* Modified */
+}
+input[type=button][disabled], input[type=submit][disabled],
+input[type=reset][disabled] {
+ background: #f6f6f6;
+ border-style: solid;
+ color: #999;
+}
+input[type=text], input.textwidget, textarea { border: 1px solid #8caabb; background-color: #d5e1e7; color: #000000; } /* Modified */
+input[type=text], input.textwidget { padding: .2em .5em }
+input[type=text]:focus, input.textwidget:focus, textarea:focus {
+ border-color: #517489; /* Modified */
+}
+option { border-bottom: 1px dotted #d7d7d7 }
+fieldset { border: 1px solid #d7d7d7; padding: .5em; margin: 0 }
+fieldset.iefix { background: transparent; border: none; padding: 0; margin: 0 }
+* html fieldset.iefix { width: 98% }
+fieldset.iefix p { margin: 0 }
+legend { color: #999; padding: 0 .25em; font-size: 90%; font-weight: bold }
+label.disabled { color: #d7d7d7 }
+.buttons { margin: .5em .5em .5em 0 }
+.buttons form, .buttons form div { display: inline }
+.buttons input { margin: 1em .5em .1em 0 }
+.inlinebuttons input { 
+ font-size: 70%;
+ border-width: 1px;
+ border-style: dotted;
+ margin: 0;
+ padding: 0.1em;
+ background: none;
+}
+
+input[type=submit] {
+    background-color: #517489;
+}
+
+/* Header */
+#header hr { display: none }
+#header h1 { margin: 1.5em 0 -1.5em; }
+#header img { border: none; margin: 0 0 -3em }
+#header :link, #header :visited, #header :link:hover, #header :visited:hover {
+ background: transparent;
+ color: #555;
+ margin-bottom: 2px;
+ border: none;
+}
+#header h1 :link:hover, #header h1 :visited:hover { color: #000 }
+
+/* Quick search */
+#search, #topsearch {
+ clear: both;
+ font-size: 10px;
+ height: 2.2em;
+ margin: 0 71px 1em 0; /* Modified */
+ text-align: right;
+}
+
+#topsearch input, #topsearch input[type=button], #topsearch input[type=submit], #topsearch input[type=reset], #topsearch input[type=text], #topsearch input.textwidget {
+ font-size: 10px;
+ background-color: #333; /* Modified */
+ color: #ffffff; /* Modified */
+ border: 1px solid #222; /* Modified */
+}
+
+#topsearch input[type=text] {
+ background-color: #222; /* Modified */
+}
+
+#search input, #search input[type=button], #search input[type=submit], #search input[type=reset], #search input[type=text], #search input.textwidget {
+ font-size: 10px;
+ background-color: #383838; /* Modified */
+ color: #ffffff; /* Modified */
+ border: 1px solid #333333; /* Modified */
+}
+#search, #topsearch label { display: none }
+
+/* Navigation */
+.nav h2, .nav hr { display: none }
+.nav ul { font-size: 10px; list-style: none; margin: 0; text-align: right }
+.nav li {
+ border-right: 0px solid #d7d7d7; /* Modified */
+ display: inline;
+ padding: 0 .75em;
+ white-space: nowrap;
+}
+.nav li.last { border-right: none }
+
+/* Main navigation bar */
+#mainnav {
+ background: #f7f7f7 url(../menu_grad.png) 0 0; /* Modified */
+ border: 0px solid #000; /* Modified */
+ font: normal 10px trebuchet ms,verdana,'Bitstream Vera Sans',helvetica,arial,sans-serif; /* Modified */
+ margin: 0; /* Modified */
+ padding: .3em 50px .3em 0; /* Modified */
+}
+#mainnav li { border-right: none; padding: .25em 0 }
+#mainnav :link, #mainnav :visited {
+ background: url(../dots.gif) 0 0 no-repeat;
+ border-right: 0px solid #fff; /* Modified */
+ border-bottom: none;
+ border-left: 0px solid #555; /* Modified */
+ color: #ffffff; /* Modified */
+ padding: .3em 20px; /* Modified */
+}
+* html #mainnav :link, * html #mainnav :visited { background-position: 1px 0 }
+#mainnav :link:hover, #mainnav :visited:hover {
+ background-color: #444444; /* Modified */
+ border-right: 0px solid #ddd; /* Modified */
+}
+#mainnav .active :link, #mainnav .active :visited {
+ background: #444444 0 0 repeat-x; /* Modified */
+ border-top: none;
+ border-right: 0px solid #000; /* Modified */
+ color: #eee;
+ font-weight: bold;
+}
+#mainnav .active :link:hover, #mainnav .active :visited:hover {
+ /*
+ border-right: 1px solid #000;
+ */
+}
+
+/* Context-dependent navigation links */
+#ctxtnav { background-image: url(../ctxt_grad.png); height: 30px; padding: 5px 61px 0 0; } /* Modified */
+#ctxtnav li ul {
+ background: #f7f7f7;
+ color: #ccc;
+ border: 1px solid;
+ padding: 0;
+ display: inline;
+ margin: 0;
+}
+#ctxtnav li li { padding: 0; }
+#ctxtnav li li :link, #ctxtnav li li :visited { padding: 0 1em }
+#ctxtnav li li :link:hover, #ctxtnav li li :visited:hover {
+ background: #bba;
+ color: #fff;
+}
+
+#ctxtnav :link, #ctxtnav :visited {
+	color: #555555;
+	
+}
+#ctxtnav :link:hover, #ctxtnav :visited:hover {
+	color: #999999;
+}
+
+/* Alternate links */
+#altlinks { clear: both; text-align: center }
+#altlinks h3 { font-size: 12px; letter-spacing: normal; margin: 0 }
+#altlinks ul { list-style: none; margin: 0; padding: 0 0 1em }
+#altlinks li {
+ border-right: 1px solid #d7d7d7;
+ display: inline;
+ font-size: 11px;
+ line-height: 16px;
+ padding: 0 1em;
+ white-space: nowrap;
+}
+#altlinks li.last { border-right: none }
+#altlinks li :link, #altlinks li :visited {
+ background-position: 0 -1px;
+ background-repeat: no-repeat;
+ border: none;
+}
+#altlinks li a.ics { background-image: url(../ics.png); padding-left: 22px }
+#altlinks li a.rss { background-image: url(../xml.png); padding-left: 42px }
+
+/* Footer */
+#footer {
+  clear: both;
+  color: #bbb;
+  font-size: 10px;
+  border-top: 0px solid; /* Modified */
+  height: 150px; /* Modified */
+  background-image: url(../footer_grad.png); /* Modified */
+  padding: 50px 50px 0 50px; /* Modified */
+}
+#footer :link, #footer :visited { color: #bbb; }
+#footer hr { display: none }
+#footer #tracpowered { border: 0; float: left }
+#footer #tracpowered:hover { background: transparent }
+#footer p { margin: 0 }
+#footer p.left, p.left2 {
+  float: left;
+  margin-left: 1em;
+  padding: 0 1em;
+}
+
+#footer p.left {
+  border-left: 1px solid #d7d7d7;
+  border-right: 1px solid #d7d7d7;
+}
+
+#footer p.left2 {
+  color: #666;
+}
+
+#footer p.right {
+  float: right;
+  text-align: right;
+}
+
+#content { padding:0 50px 0 50px; position: relative }
+
+#help {
+ clear: both;
+ color: #999;
+ font-size: 90%;
+ margin: 1em;
+ text-align: right;
+}
+#help :link, #help :visited { cursor: help }
+#help hr { display: none }
+
+/* Page preferences form */
+#prefs {
+ background: #edf9c0;
+ border: 1px solid #bce715;
+ float: right;
+ font-size: 9px;
+ padding: .8em;
+ position: relative;
+ margin: 0 1em 1em;
+}
+* html #prefs { width: 26em } /* Set width only for IE */
+#prefs input, #prefs select { font-size: 9px; vertical-align: middle }
+#prefs fieldset {
+ background: transparent;
+ border: none;
+ margin: .5em;
+ padding: 0;
+}
+#prefs fieldset legend {
+ background: transparent;
+ color: #000;
+ font-size: 9px;
+ font-weight: normal;
+ margin: 0 0 0 -1.5em;
+ padding: 0;
+}
+#prefs .buttons { text-align: right }
+
+/* Version information (browser, wiki, attachments) */
+#info {
+ margin: 1em 0 0 0;
+ background: #f7f7f0;
+ border: 1px solid #d7d7d7;
+ border-collapse: collapse;
+ border-spacing: 0;
+ clear: both;
+ width: 100%;
+}
+#info th, #info td { font-size: 85%; padding: 2px .5em; vertical-align: top }
+#info th { font-weight: bold; text-align: left; white-space: nowrap }
+#info td.message { width: 100% }
+#info .message ul { padding: 0; margin: 0 2em }
+#info .message p { margin: 0; padding: 0 }
+
+/* Wiki */
+.wikipage { padding-left: 18px; margin: 0; } /* Modified */
+.wikipage h1, .wikipage h2, .wikipage h3 { margin-left: -18px }
+
+a.missing:link, a.missing:visited, span.missing { color: #998 }
+a.missing:link, a.missing:visited { background: #fafaf0 }
+a.missing:hover { color: #000 }
+a.closed:link, a.closed:visited { text-decoration: line-through }
+
+dl.wiki dt { font-weight: bold }
+dl.compact dt { float: left; padding-right: .5em }
+dl.compact dd { margin: 0; padding: 0 }
+
+div.code, pre.wiki, pre.literal-block {
+ background: #edf9c0;
+ border-width: 1px 0 1px 0;
+ border-style: solid;
+ border-color: #bce715;
+ margin: 30px;
+ padding: 10px;
+ overflow: auto;
+}
+
+blockquote.citation { 
+ margin: -0.6em 0;
+ border-style: solid; 
+ border-width: 0 0 0 2px; 
+ padding-left: .5em;
+ border-color: #b44; 
+}
+.citation blockquote.citation { border-color: #4b4; }
+.citation .citation blockquote.citation { border-color: #44b; }
+.citation .citation .citation blockquote.citation { border-color: #c55; }
+
+table.wiki {
+ border: 2px solid #ccc;
+ border-collapse: collapse;
+ border-spacing: 0;
+}
+table.wiki td { border: 1px solid #ccc;  padding: .1em .25em; }
+
+.wikitoolbar {
+ border: solid #d7d7d7;
+ border-width: 1px 1px 1px 0;
+ height: 18px;
+ width: 208px;
+}
+.wikitoolbar :link, .wikitoolbar :visited {
+ background: transparent url(../edit_toolbar.png) no-repeat;
+ border: 1px solid #fff;
+ border-left-color: #d7d7d7;
+ cursor: default;
+ display: block;
+ float: left;
+ width: 24px;
+ height: 16px;
+}
+.wikitoolbar :link:hover, .wikitoolbar :visited:hover {
+ background-color: transparent;
+ border: 1px solid #fb2;
+}
+.wikitoolbar a#em { background-position: 0 0 }
+.wikitoolbar a#strong { background-position: 0 -16px }
+.wikitoolbar a#heading { background-position: 0 -32px }
+.wikitoolbar a#link { background-position: 0 -48px }
+.wikitoolbar a#code { background-position: 0 -64px }
+.wikitoolbar a#hr { background-position: 0 -80px }
+.wikitoolbar a#np { background-position: 0 -96px }
+.wikitoolbar a#br { background-position: 0 -112px }
+
+/* Styles for the form for adding attachments. */
+#attachment .field { margin-top: 1.3em }
+#attachment label { padding-left: .2em }
+#attachment fieldset { margin-top: 2em }
+#attachment fieldset .field { float: left; margin: 0 1em .5em 0 }
+#attachment .options { float: left; padding: 0 0 1em 1em }
+#attachment br { clear: left }
+.attachment #preview { margin-top: 1em }
+
+/* Styles for the list of attachments. */
+#attachments { border: 1px outset #996; padding: 1em }
+#attachments .attachments { margin-left: 2em; padding: 0 }
+#attachments dt { display: list-item; list-style: square; }
+#attachments dd { font-style: italic; margin-left: 0; padding-left: 0; }
+
+
+/* Styles for tabular listings such as those used for displaying directory
+   contents and report results. */
+table.listing {
+ clear: both;
+ border-bottom: 1px solid #d7d7d7;
+ border-collapse: collapse;
+ border-spacing: 0;
+ margin-top: 1em;
+ width: 100%;
+}
+table.listing th { text-align: left; padding: 0 1em .1em 0; font-size: 12px }
+table.listing thead { background: #f7f7f0 }
+table.listing thead th {
+ border: 1px solid #d7d7d7;
+ border-bottom-color: #999;
+ font-size: 11px;
+ font-weight: bold;
+ padding: 2px .5em;
+ vertical-align: bottom;
+}
+table.listing thead th :link:hover, table.listing thead th :visited:hover {
+ background-color: transparent;
+}
+table.listing thead th a { border: none; padding-right: 12px }
+table.listing th.asc a, table.listing th.desc a { font-weight: bold }
+table.listing th.asc a, table.listing th.desc a {
+ background-position: 100% 50%;
+ background-repeat: no-repeat;
+}
+table.listing th.asc a { background-image: url(../asc.png) }
+table.listing th.desc a { background-image: url(../desc.png) }
+table.listing tbody td, table.listing tbody th {
+ border: 1px dotted #ddd;
+ padding: .33em .5em;
+ vertical-align: top;
+}
+table.listing tbody td a:hover, table.listing tbody th a:hover {
+ background-color: transparent;
+}
+table.listing tbody tr { border-top: 1px solid #ddd }
+table.listing tbody tr.even { background-color: #fcfcfc }
+table.listing tbody tr.odd { background-color: #f7f7f7 }
+table.listing tbody tr:hover { background: #eed !important }
+
+/* Styles for the error page (and rst errors) */
+#content.error .message, div.system-message {
+ background: #fdc;
+ border: 2px solid #d00;
+ color: #500;
+ padding: .5em;
+ margin: 1em 0;
+}
+#content.error pre, div.system-message pre { margin-left: 1em; overflow: auto }
+div.system-message p { margin: 0; }
+div.system-message p.system-message-title { font-weight: bold; }
+
+/* Styles for search word highlighting */
+@media screen {
+ .searchword0 { background: #ff9 }
+ .searchword1 { background: #cfc }
+ .searchword2 { background: #cff }
+ .searchword3 { background: #ccf }
+ .searchword4 { background: #fcf }
+}
+
+@media print {
+ #header, #altlinks, #footer, #help { display: none }
+ .nav, form, .buttons form, form .buttons { display: none }
+ form.printableform { display: block }
+}
+
+
+/* Custom */
+#top_grad {
+	background-image: url(../top_grad.png);
+	height: 26px;
+}
+#tab {
+	height: 32px;
+	width: 282px;
+	color: #ffffff;
+	text-align: center;
+	margin: -2px 50px 0 0;
+	background-image: url(../tab.png);
+	background-repeat: no-repeat;
+	float: right;
+}
+
+#tab :link, #tab :visited {
+	background: transparent;
+	color: #ffffff;
+	font-size: 12px;
+	border: none;
+	padding: 4px;
+	
+}
+#tab :link:hover, #tab :visited:hover {
+	border-width: 0 0 1px 0;
+	border-style: solid;
+	border-color: #a4cd0d;
+}
+
+#banner {
+	background-image: url(../main_grad.png);
+	height: 135px;
+}
+
+#header {
+	margin: 20px 0 0 50px;
+}
+
+#metanav {
+	margin-right: 61px;
+}
+
+#metanav :link, #metanav :visited {
+	color: #ffffff;
+	
+}
+
+#metanav :link:hover, #metanav :visited:hover {
+	color: #bbbbbb;
+}
+
+#metanav ul li.first {
+        color: #ccc;
+}
+
+#side_bar {
+	float: right;
+//	width: 350px;
+	background-color: #ffffff;
+	padding: 0 0 0 15px;
+}
+
+#download_top {
+	height: 145px;
+	width: 273px;
+	background-image: url(../dld_top.png);
+}
+
+#download_bottom {
+        height: 91px;
+        width: 273px;
+        background-image: url(../dld_bottom.png);
+}
+
+#download {
+//        height: 145px;
+        width: 243px;
+        background-image: url(../dld_back.png);
+        background-repeat: repeat-y;
+	padding: 0 10px 0 20px;
+}
+
+
+#download_old {
+	height: 284px;
+	width: 269px;
+//	float: right;
+	margin: 0;
+	padding: 0 0 0 19px;
+	background-image: url(../download.png);
+	background-repeat: no-repeat;
+}
+
+#donate {
+	height: 284px;
+	width: 269px;
+//	float: right;
+	margin: 0;
+	padding: 0 0 0 19px;
+}
+
+#download :link, #download :visited, #download :link:hover, #download :visited:hover {
+	background: transparent;
+	color: #9ac300;
+	font-size: 12px;
+	border: none;
+	
+}

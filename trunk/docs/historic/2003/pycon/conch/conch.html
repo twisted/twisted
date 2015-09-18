@@ -1,0 +1,165 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>Twisted Conch: SSH in Python with Twisted</title>
+</head>
+
+<body>
+<h1>Twisted Conch: SSH in Python with Twisted</h1>
+
+<ul>
+<li>Paul Swartz
+    <a href="mailto:z3p@twistedmatrix.com">z3p@twistedmatrix.com</a></li>
+</ul>
+
+<h2>Introduction</h2>
+
+<p>Although it is a newcomer on the Secure Shell stage, Twisted Conch has quickly
+caught up with the two most popular free *nix implementations and the most 
+popular free Windows implementation in terms of functionality.  This rapid 
+development time, as well as the stability and other advantages, owes much to 
+Python and the Twisted networking framework.</p>
+
+<h2>Other implementations (servers)</h2>
+
+<p>Other than Conch, there are three popular server implementations.  OpenSSH 
+works with versions 1 and 2 of the protocol, and is the most popular on *nix 
+systems.  FSecure is more popular on Windows servers, and also works with both 
+versions.  LSH is newer, and implements version 2.  All three are written in C, 
+with LSH having some supporting Scheme code to generate C files.</p>
+
+<h2>Other implementations (clients)</h2>
+
+<p>On *nix, the SSH clients are provided by the server implementations (OpenSSH 
+and LSH).  On Windows, there are a couple of separate clients.  PuTTY is the 
+most popular and supports Telnet along with SSH1 and 2.  TeraTerm recently 
+incorporated SSH into the core: before it had been an extension module.  
+MindTerm is the only implementation in this list to be written in a language 
+other than C.  It runs as a Java applet, allowing SSH to run on any computer 
+with a JVM.</p>
+
+<h2>Why Twisted?</h2>
+
+<p>Why is Twisted ideal for this type of project?  Firstly, it is an asynchronous 
+library, meaning there are no worries about threading or concurrency issues.  
+This means more developer time can be devoted to making the code work well, 
+rather than just work.  Second, Python lends itself to this kind of 
+development: the code is easy to read and easy to write.  Third, the Twisted 
+library is high-level, so developers do not need to worry about select loops or 
+callbacks.  Twisted handles all of that and allows developers to concentrate on 
+the code.</p>
+
+<h2>No forking/threads</h2>
+
+<p>Unlike OpenSSH, the Conch server does not fork a process for each incoming
+connection.  Instead, it uses the Twisted reactor to multiplex the connections.
+The only fork done is to execute a process such as a shell, but running a shell
+is not necessary, in which case the entire protocol would be run in-process.
+One of the initial features of the server was an in-process Python interpreter
+which allowed a user to interact with the server as it was running.  (It is
+currently disabled for security reasons.)  Threads are only used to interface 
+with synchronous libraries, such as PyPAM (Pluggable Authentication Modules 
+support) or PyME (GPGME support).  By not using forks or threads, the time it
+takes for the Conch server to start an SSH session is roughly half of the time 
+it takes for OpenSSH.  However, this does require that code in Conch be
+non-blocking, which is an obstacle for programmers not used to that style.</p>
+
+<h2>Security - No Pointers</h2>
+
+<p>OpenSSH, LSH, and PuTTY are all written in C.  Many security holes are a result
+of problems with unsafe pointer usage, which is a large problem in C code.
+Many other security holes result from related issues, such as buffer overflows,
+off-by-one errors on arrays, and memory allocation/deallocation bugs.  Python
+is pointer-safe, and so is not vulnerable to this class of hole.  This also
+means that no arbitrary data from over-the-wire is ever run, meaning control
+always stays with the Conch server.</p>
+
+<h2>Security - High Level</h2>
+
+<p>Being written in Python provides more security than just pointer safety.  The
+strong builtin library that comes with Python (including powerful data types
+like the list and dictionary) means that fewer wheels need to be reinvented.
+This limits the potential to make mistakes in implementation.  Exceptions are
+another powerful tool.  They centralize error handling, rather than the mix of
+methods that the C libraries use.  All errors are caught and dealt with: this
+might mean that the server stops accepting connections, but it never
+compromises security.</p>
+
+<h2>Security - Not Root</h2>
+
+<p>Also, Conch does not need to run as root.  In the default server, root 
+privileges are used for two things: to bind to ports &lt; 1024, and to fork a 
+process as a different user.  If neither of these are needed, the server need 
+not run as root at all. Even if they are, the server is only running as root 
+for those small sections.  The rest of the time, it runs under the effective 
+user and group ID of the user who started the server.  This limits the amount 
+of damage that could be inflicted in the event of a compromise.</p>
+
+<h2>Interfacing with other software</h2>
+
+<p>OpenSSH can interact with subsystems such as SFTP only by executing a process
+to handle it.  Not only is forking a process expensive, it limits the
+interaction to a generic bitstream, which leaves developers to determine how
+to interact with their users.  Conch can run in the same process as other 
+Python software, and is easily integrated with other Twisted servers.  This 
+allows for things like secure remote administration of a Twisted web server, 
+encrypted communication to a Reality MUD, or secure remote object access using
+Perspective Broker.  This saves the hassle and expense of forking, and allows 
+Python developers to interact with Conch the way they know best: with Python.</p>
+
+<h2>Speed</h2>
+
+<p>No one can deny that compiled C is faster than Python.  Some part of Conch use
+C (PyCrypto, TGMP) to speed frequent operations, but the majority of the code
+is in Python.  The client suffers the most from this because of the time it
+takes to start the interpreter.  Work is being done to speed up the client by
+caching connections.  This does not eliminate the interpreter start-up cost,
+but it removes the cost of negotiating a new connection.  This effort is
+similar to FSH (also in Python) but interacts more nicely with the SSH 
+protocol.  Psyco helps as well, offering a speedup of roughly 2x - 5x.</p>
+
+<h2>Age</h2>
+
+<p>As I said in the introduction, Conch is still a newcomer on the Secure Shell
+stage (The first commit for Conch was July 15, 2002.)  Although Python solves 
+a large class of holes, it is probable that other security holes are in the 
+code.  Until a full audit is conducted of Twisted and of Conch, it should not 
+be used for security-critical systems.</p>
+
+<h2>Applications with Conch</h2>
+
+<p>One of the applications for Conch is with Reality, a MUD framework using
+Twisted.  Conch makes it easy to allow secure connections to the MUD in
+addition or even in place of a standard Telnet connection.  As problems
+such as character theft become more prevalent on the Internet, a secure
+interface becomes more important.</p>
+
+<p>More generally, work is being done on Insults, a replacement for libraries
+like Curses and S-Lang.  It allows developers to write GUI code that
+interacts well with Conch and other Twisted software.  Although it is in the
+initial stages of development, it shows much promise for the future.</p>
+
+<h2>Future Directions</h2>
+
+<p>There are several different directions for Conch to move in.  One of the most
+interesting is system for generalized authentication forwarding.  This would
+allow all authentication to be performed on a host that the user controls,
+which would help to stop vulnerabilities such as timing attacks.  Second is 
+more work with applications.  Insults is becoming more powerful, and it will
+be interesting to see what it can be used for.  Also important are auditing of
+the code and increasing the speed.  These will make the code more useful in
+general, as well as improving security.  Other ideas include direct support for
+SFTP/SCP, support for a key agent, and interfacing with Twisted Names to
+support DNSSEC.</p>
+
+<h2>Conclusion</h2>
+
+<p>Although it is new, Conch is a working implementation of the Secure Shell
+protocol.  It is robust enough to serve as both the client and server on
+systems I and others use daily.</p>
+
+</body></html>

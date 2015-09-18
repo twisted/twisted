@@ -1,0 +1,61 @@
+#!/usr/bin/env python3.3
+
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+This program is intended to run Twisted's test suite under Python 3. As such,
+it should go away once Twisted has been fully ported to Python 3. It is only
+intended to be used from a Twisted checkout, and implementation can and will
+change at any time.
+"""
+
+import os
+import sys
+
+
+testModules = []
+extraArguments = []
+installed = False
+twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
+
+
+for argument in sys.argv[1:]:
+    if argument.startswith('-'):
+        extraArguments.append(argument)
+    else:
+        testModules.append(argument)
+
+if "--installed" in extraArguments:
+    installed = True
+    extraArguments.pop(extraArguments.index("--installed"))
+
+
+# Add default arguments.
+if not extraArguments:
+    extraArguments = []
+
+
+# Add default modules.
+if not testModules:
+    if installed:
+        from twisted.python.dist3 import testModules
+    else:
+        modules = {}
+        path = os.path.join(twistedPath, "twisted", "python", "dist3.py")
+        with open(path) as dist3:
+            data = dist3.read()
+            code = compile(data, "dist3.py", "exec")
+            exec(code, modules)
+        testModules = modules["testModules"]
+
+
+if not installed:
+    # Make sure checkout's code is used:
+    sys.path.insert(0, twistedPath)
+
+from twisted.scripts import trial
+
+# Run the tests.
+sys.argv = ["run-python3-tests"] + extraArguments + testModules
+trial.run()

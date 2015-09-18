@@ -1,0 +1,89 @@
+.Dd October 8, 2005
+.Dt CFTP 1
+.Os
+.Sh NAME
+.Nm cftp
+.Nd Conch command-line SFTP client
+.Sh SYNOPSIS
+.Nm cftp
+.Op Fl B Ar buffer_size
+.Op Fl b Ar command_file
+.Op Fl R Ar num_requests
+.Op Fl s Ar subsystem
+.Os
+.Sh DESCRIPTION
+.Nm
+is a client for logging into a remote machine and executing commands to send and receive file information. It can wrap a number of file transfer subsystems
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl B
+Specifies the default size of the buffer to use for sending and receiving. (Default value: 32768 bytes.)
+.It Fl b
+File to read commands from, '-' for stdin. (Default value: interactive/stdin.)
+.It Fl R
+Number of requests to make before waiting for a reply.
+.It Fl s
+Subsystem/server program to connect to.
+.El
+.Pp
+The following commands are recognised by
+.Nm
+:
+.Bl -tag -width Ds
+.It Ic cd Ar path
+Change the remote directory to 'path'.
+.It Ic chgrp Ar gid Ar path
+Change the gid of 'path' to 'gid'.
+.It Ic chmod Ar mode Ar path
+Change mode of 'path' to 'mode'.
+.It Ic chown Ar uid Ar path
+Change uid of 'path' to 'uid'.
+.It Ic exit
+Disconnect from the server.
+.It Ic get Ar remote-path Op Ar local-path
+Get remote file and optionally store it at specified local path.
+.It Ic help
+Get a list of available commands.
+.It Ic lcd Ar path
+Change local directory to 'path'.
+.It Ic lls Op Ar ls-options Op Ar path
+Display local directory listing.
+.It Ic lmkdir Ar path
+Create local directory.
+.It Ic ln Ar linkpath Ar targetpath
+Symlink remote file.
+.It Ic lpwd
+Print the local working directory.
+.It Ic ls Op Ar -l Op Ar path
+Display remote directory listing.
+.It Ic mkdir Ar path
+Create remote directory.
+.It Ic progress
+Toggle progress bar.
+.It Ic put Ar local-path Op Ar remote-path
+Transfer local file to remote location
+.It Ic pwd
+Print the remote working directory.
+.It Ic quit
+Disconnect from the server.
+.It Ic rename Ar oldpath Ar newpath
+Rename remote file.
+.It Ic rmdir Ar path
+Remove remote directory.
+.It Ic rm Ar path
+Remove remote file.
+.It Ic version
+Print the SFTP version.
+.It Ic ?
+Synonym for 'help'.
+.El
+.Sh AUTHOR
+cftp by Paul Swartz <z3p@twistedmatrix.com>. Man page by Mary Gardiner <mary@twistedmatrix.com>.
+.Sh "REPORTING BUGS"
+Report bugs to \fIhttp://twistedmatrix.com/bugs/\fR
+.Sh COPYRIGHT
+Copyright \(co 2005-2008 Twisted Matrix Laboratories
+.br 
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
