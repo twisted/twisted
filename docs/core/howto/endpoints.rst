@@ -193,17 +193,24 @@ TCP (IPv6)
    For example, ``tcp6:port=80:interface=2001\:0DB8\:f00e\:eb00\:\:1``.
 
 SSL
-   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``extraCertChain``, ``sslmethod``, and ``dhParameters``.
-   ``certKey`` (optional, defaults to the value of privateKey) gives a filesystem path to a certificate (PEM format).
-   ``privateKey`` gives a filesystem path to a private key (PEM format).
-   ``extraCertChain`` gives a filesystem path to a file with one or more concatenated certificates in PEM format that establish the chain from a root CA to the one that signed your certificate.
-   ``sslmethod`` indicates which SSL/TLS version to use (a value like ``TLSv1_METHOD``).
-   ``dhParameters`` gives a filesystem path to a file in PEM format with parameters that are required for Diffie-Hellman key exchange.
-   Since the this is required for the ``DHE``-family of ciphers that offer perfect forward secrecy (PFS), it is recommended to specify one.
-   Such a file can be created using ``openssl dhparam -out dh_param_1024.pem -2 1024``.
-   Please refer to `OpenSSL's documentation on dhparam <http://www.openssl.org/docs/apps/dhparam.html>`_ for further details.
+   All TCP arguments are supported, plus the following:
 
-   For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.
+   - ``certKey`` (optional, defaults to the value of privateKey) gives a filesystem path to a certificate (PEM format).
+   - ``privateKey`` gives a filesystem path to a private key (PEM format).
+   - ``extraCertChain`` gives a filesystem path to a file with one or more concatenated certificates in PEM format that establish the chain from a root CA to the one that signed your certificate.
+   - ``sslmethod`` indicates which SSL/TLS version to use (a value like ``TLSv1_METHOD``).
+   - ``dhParameters`` gives a filesystem path to a file in PEM format with parameters that are required for Diffie-Hellman key exchange.
+     Since this argument is required for the ``DHE``-family of ciphers that offer perfect forward secrecy (PFS), it is recommended to specify one.
+     Such a file can be created using ``openssl dhparam -out dh_param_1024.pem -2 1024``.
+     Please refer to `OpenSSL's documentation on dhparam <http://www.openssl.org/docs/apps/dhparam.html>`_ for further details.
+   - ``caCertsDir`` will verify client certificates using CA certificates in the provided directory if specified. Certificates that pass verification will be accessible from the connection's transport (:api:`twisted.internet.interfaces.ISSLTransport.getPeerCertificate <ISSLTransport.getPeerCertificate>`)
+   - ``requireCert`` will, if set to ``yes``, require clients to have valid certificates and disconnect clients that do not.
+   - ``retrieveCerts`` functions when ``caCertsDir`` is not used. When set to ``yes``, certificates will be retrieved from the client without doing any verification with a certificate authority.
+     You may use this argument to gain access to certificates to identify users through :api:`twisted.internet.interfaces.ISSLTransport.getPeerCertificate <getPeerCertificate>`,
+     but you should not use it if you need to use certificates for anything important for security.
+
+   For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:``
+   ``dhParameters=dh_param_1024.pem:caCertsDir=/etc/ssl/certs:requireCert=yes``.
 
 UNIX
    Supported arguments: ``address``, ``mode``, ``backlog``, ``lockfile``.
