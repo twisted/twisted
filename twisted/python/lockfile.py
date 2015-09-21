@@ -7,9 +7,10 @@
 Filesystem-based interprocess mutex.
 """
 
-__metaclass__ = type
+from __future__ import absolute_import, division
 
-import errno, os
+import errno
+import os
 
 from time import time as _uniquefloat
 
@@ -20,6 +21,7 @@ def unique():
     return str(int(_uniquefloat() * 1000))
 
 from os import rename
+
 if not platform.isWindows():
     from os import kill
     from os import symlink
@@ -92,7 +94,7 @@ else:
 
 
 
-class FilesystemLock:
+class FilesystemLock(object):
     """
     A mutex.
 
