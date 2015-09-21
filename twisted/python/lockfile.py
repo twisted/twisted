@@ -50,12 +50,10 @@ else:
             else:
                 raise RuntimeError("OpenProcess is required to fail.")
 
-    _open = open
-
     # XXX Implement an atomic thingamajig for win32
     def symlink(value, filename):
         newlinkname = filename + "." + unique() + '.newlink'
-        newvalname = os.path.join(newlinkname,"symlink")
+        newvalname = os.path.join(newlinkname, "symlink")
         os.mkdir(newlinkname)
 
         # Python 3 does not support the 'commit' flag of fopen in the MSVCRT
@@ -65,10 +63,10 @@ else:
         else:
             mode = 'wc'
 
-        f = _open(newvalname, mode)
-        f.write(value)
-        f.flush()
-        f.close()
+        with open(newvalname, mode) as f:
+            f.write(value)
+            f.flush()
+
         try:
             rename(newlinkname, filename)
         except:
@@ -78,7 +76,7 @@ else:
 
     def readlink(filename):
         try:
-            fObj = _open(os.path.join(filename, 'symlink'), 'r')
+            fObj = open(os.path.join(filename, 'symlink'), 'r')
         except IOError as e:
             if e.errno == errno.ENOENT or e.errno == errno.EIO:
                 raise OSError(e.errno, None)
@@ -218,4 +216,3 @@ def isLocked(name):
 
 
 __all__ = ['FilesystemLock', 'isLocked']
-
