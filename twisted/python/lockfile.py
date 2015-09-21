@@ -52,6 +52,9 @@ else:
             else:
                 raise RuntimeError("OpenProcess is required to fail.")
 
+    # For monkeypatching in tests
+    _open = open
+
 
     def symlink(value, filename):
         # XXX Implement an atomic thingamajig for win32
@@ -66,7 +69,7 @@ else:
         else:
             mode = 'wc'
 
-        with open(newvalname, mode) as f:
+        with _open(newvalname, mode) as f:
             f.write(value)
             f.flush()
 
@@ -80,7 +83,7 @@ else:
 
     def readlink(filename):
         try:
-            fObj = open(os.path.join(filename, 'symlink'), 'r')
+            fObj = _open(os.path.join(filename, 'symlink'), 'r')
         except IOError as e:
             if e.errno == errno.ENOENT or e.errno == errno.EIO:
                 raise OSError(e.errno, None)
