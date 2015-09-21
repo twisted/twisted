@@ -52,14 +52,15 @@ else:
             else:
                 raise RuntimeError("OpenProcess is required to fail.")
 
-    # XXX Implement an atomic thingamajig for win32
+
     def symlink(value, filename):
+        # XXX Implement an atomic thingamajig for win32
         newlinkname = filename + "." + unique() + '.newlink'
         newvalname = os.path.join(newlinkname, "symlink")
         os.mkdir(newlinkname)
 
         # Python 3 does not support the 'commit' flag of fopen in the MSVCRT
-        # (see http://msdn.microsoft.com/en-us/library/yeby3zcb%28VS.71%29.aspx)
+        # (http://msdn.microsoft.com/en-us/library/yeby3zcb%28VS.71%29.aspx)
         if _PY3:
             mode = 'w'
         else:
@@ -76,6 +77,7 @@ else:
             os.rmdir(newlinkname)
             raise
 
+
     def readlink(filename):
         try:
             fObj = open(os.path.join(filename, 'symlink'), 'r')
@@ -87,6 +89,7 @@ else:
             result = fObj.read()
             fObj.close()
             return result
+
 
     def rmlink(filename):
         os.remove(os.path.join(filename, 'symlink'))
@@ -161,8 +164,8 @@ class FilesystemLock(object):
                             kill(int(pid), 0)
                     except OSError as e:
                         if e.errno == errno.ESRCH:
-                            # The owner has vanished, try to claim it in the next
-                            # iteration through the loop.
+                            # The owner has vanished, try to claim it in the
+                            # next iteration through the loop.
                             try:
                                 rmlink(self.name)
                             except OSError as e:
@@ -193,13 +196,16 @@ class FilesystemLock(object):
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():
-            raise ValueError("Lock %r not owned by this process" % (self.name,))
+            raise ValueError(
+                "Lock %r not owned by this process" % (self.name,))
         rmlink(self.name)
         self.locked = False
 
 
+
 def isLocked(name):
-    """Determine if the lock of the given name is held or not.
+    """
+    Determine if the lock of the given name is held or not.
 
     @type name: C{str}
     @param name: The filesystem path to the lock to test
@@ -215,6 +221,7 @@ def isLocked(name):
         if result:
             l.unlock()
     return not result
+
 
 
 __all__ = ['FilesystemLock', 'isLocked']
