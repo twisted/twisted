@@ -1,0 +1,1 @@
+Now the documentation for `twisted.defer.DeferredSemaphore` refers to the correct instance attributes.
