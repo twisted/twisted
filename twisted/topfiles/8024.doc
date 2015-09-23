@@ -1,1 +1,1 @@
-The documentation for `twisted.internet.defer.DeferredSemaphore` now describes the actual usage for `limit` and `tokens` instance attributes.
+The documentation for twisted.internet.defer.DeferredSemaphore now describes the actual usage for limit and tokens instance attributes.
