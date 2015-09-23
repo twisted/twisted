@@ -31,6 +31,16 @@ if not platform.isWindows():
 else:
     _windows = True
 
+    # On UNIX, a symlink can be made to a nonexistent location, and
+    # FilesystemLock uses this by making the target of the symlink an
+    # imaginary, non-existing file named that of the PID of the process with
+    # the lock. This has some benefits on UNIX -- making and removing this
+    # symlink is atomic. However, because Windows doesn't support symlinks (at
+    # least as how we know them), we have to fake this and actually write a
+    # file with the PID of the process holding the lock instead.
+    # These functions below perform that unenviable, probably-fraught-with-
+    # race-conditions duty. - hawkie
+
     try:
         from win32api import OpenProcess
         import pywintypes
@@ -57,6 +67,10 @@ else:
 
 
     def symlink(value, filename):
+        """
+        Write a file at C{filename} with the contents of C{value}. See the
+        above comment block as to why this is needed.
+        """
         # XXX Implement an atomic thingamajig for win32
         newlinkname = filename + "." + unique() + '.newlink'
         newvalname = os.path.join(newlinkname, "symlink")
@@ -82,6 +96,10 @@ else:
 
 
     def readlink(filename):
+        """
+        Read the contents of C{filename}. See the above comment block as to why
+        this is needed.
+        """
         try:
             fObj = _open(os.path.join(filename, 'symlink'), 'r')
         except IOError as e:
