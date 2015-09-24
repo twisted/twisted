@@ -346,7 +346,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         def f():
             try:
                 if platform.isWindows():
-                    from twisted.python import win32
                     exe = win32.cmdLineQuote(pyExe.decode('mbcs'))
                 else:
                     exe = pyExe.decode('ascii')
