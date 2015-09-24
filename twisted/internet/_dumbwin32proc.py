@@ -199,7 +199,15 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                     raise
                 newenv = {}
                 for key, value in items(env):
-                    newenv[unicode(key, 'mbcs')] = unicode(value, 'mbcs')
+
+                    if not isinstance(value, unicode):
+                        value = value.decode('mbcs')
+
+                    if not isinstance(key, unicode):
+                        key = key.decode('mbcs')
+
+                    newenv[key] = value
+
                 env = newenv
                 doCreate()
         except pywintypes.error as pwte:
