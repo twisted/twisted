@@ -4,28 +4,27 @@
 Windows-specific implementation of the L{twisted.internet.stdio} interface.
 """
 
+from __future__ import absolute_import, division
+
 import win32api
-import os, msvcrt
+import os
+import msvcrt
 
-from zope.interface import implements
+from zope.interface import implementer
 
-from twisted.internet.interfaces import IHalfCloseableProtocol, ITransport, IAddress
-from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.internet.interfaces import IHalfCloseableProtocol, ITransport
+from twisted.internet.interfaces import IConsumer, IPushProducer, IAddress
 
 from twisted.internet import _pollingfile, main
 from twisted.python.failure import Failure
 
-
+@implementer(IAddress)
 class Win32PipeAddress(object):
-    implements(IAddress)
+    pass
 
 
-
+@implementer(ITransport, IConsumer, IPushProducer)
 class StandardIO(_pollingfile._PollingTimer):
-
-    implements(ITransport,
-               IConsumer,
-               IPushProducer)
 
     disconnecting = False
     disconnected = False
@@ -122,4 +121,3 @@ class StandardIO(_pollingfile._PollingTimer):
 
     def resumeProducing(self):
         self.stdin.resumeProducing()
-

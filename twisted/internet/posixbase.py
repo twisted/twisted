@@ -85,11 +85,12 @@ class _SocketWaker(log.Logger):
         self.fileno = self.r.fileno
 
     def wakeUp(self):
-        """Send a byte to my connection.
+        """
+        Send a byte to my connection.
         """
         try:
             util.untilConcludes(self.w.send, b'x')
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] != errno.WSAEWOULDBLOCK:
                 raise
 

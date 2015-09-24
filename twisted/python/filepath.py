@@ -1519,7 +1519,7 @@ class FilePath(AbstractFilePath):
             store the bytes while they are being written.  This can be used to
             make sure that temporary files can be identified by their suffix,
             for cleanup in case of crashes.
-        @type ext: L{bytes}
+        @type ext: L{bytes} or L{unicode}
         """
         sib = self.temporarySibling(ext)
         f = sib.open('w')
@@ -1529,7 +1529,7 @@ class FilePath(AbstractFilePath):
             f.close()
         if platform.isWindows() and exists(self.path):
             os.unlink(self.path)
-        os.rename(sib.path, self.path)
+        os.rename(sib.path, self.asBytesMode().path)
 
 
     def __cmp__(self, other):

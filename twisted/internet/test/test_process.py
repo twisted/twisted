@@ -33,6 +33,7 @@ twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = None
 if platform.isWindows():
+    from twisted.python import win32
     resource = None
     process = None
     _uidgidSkip = "Cannot change UID/GID on Windows"
@@ -344,11 +345,17 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
+                if platform.isWindows():
+                    from twisted.python import win32
+                    exe = win32.cmdLineQuote(pyExe.decode('mbcs'))
+                else:
+                    exe = pyExe.decode('ascii')
+
                 os.popen(u'%s -c "import time; time.sleep(0.1)"' %
-                    (pyExe.decode('ascii'),))
+                    (exe,))
                 f2 = os.popen(u'%s -c "import time; time.sleep(0.5);'
                               'print(\'Foo\')"' %
-                              (pyExe.decode('ascii'),))
+                              (exe,))
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
