@@ -1,0 +1,1 @@
+twisted.cred.checkers.FilePasswordDB no longer raises an unhandled error if the credentials db file does not exist.

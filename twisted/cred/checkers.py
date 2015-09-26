@@ -9,9 +9,11 @@ import os
 from zope.interface import implementer, Interface, Attribute
 
 from twisted.internet import defer
-from twisted.python import failure, log
+from twisted.python import failure
 from twisted.cred import error, credentials
+from twisted.logger import Logger
 
+log = Logger()
 
 
 class ICredentialsChecker(Interface):
@@ -198,23 +200,20 @@ class FilePasswordDB:
 
     def _loadCredentials(self):
         try:
-            f = open(self.filename, "rb")
-        except:
-            log.err()
-            raise error.UnauthorizedLogin()
-        else:
-            for line in f:
-                line = line.rstrip()
-                parts = line.split(self.delim)
+            with open(self.filename, "rb") as f:
+                for line in f:
+                    line = line.rstrip()
+                    parts = line.split(self.delim)
 
-                if self.ufield >= len(parts) or self.pfield >= len(parts):
-                    continue
-                if self.caseSensitive:
-                    yield parts[self.ufield], parts[self.pfield]
-                else:
-                    yield parts[self.ufield].lower(), parts[self.pfield]
-        finally:
-            f.close()
+                    if self.ufield >= len(parts) or self.pfield >= len(parts):
+                        continue
+                    if self.caseSensitive:
+                        yield parts[self.ufield], parts[self.pfield]
+                    else:
+                        yield parts[self.ufield].lower(), parts[self.pfield]
+        except IOError as e:
+            log.error("Unable to load credentials db: {e!r}", e=e)
+            raise error.UnauthorizedLogin()
 
 
     def getUser(self, username):

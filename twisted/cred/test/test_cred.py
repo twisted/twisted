@@ -206,6 +206,11 @@ class OnDiskDatabaseTests(unittest.TestCase):
                 f.write(u + b":" + p + b"\n")
 
 
+    def testNonexistentDatabase(self):
+        self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
+        self.failUnlessRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
+
+
     def testUserLookup(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
         for (u, p) in self.users:
