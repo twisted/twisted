@@ -24,12 +24,11 @@ from Crypto import Util
 # twisted imports
 from twisted.internet import protocol, defer
 
-from twisted.conch import error
 from twisted.python import log, randbytes
 
 
 # sibling imports
-from twisted.conch.ssh import address, keys
+from twisted.conch.ssh import address, _kex, keys
 from twisted.conch.ssh.common import NS, getNS, MP, getMP, _MPpow, ffs
 
 
@@ -86,7 +85,6 @@ class _MACParams(tuple):
 
     @ivar key: The HMAC key which will be used.
     """
-
 
 
 class SSHTransportBase(protocol.Protocol):
@@ -218,8 +216,7 @@ class SSHTransportBase(protocol.Protocol):
     # both of the above support 'none', but for security are disabled by
     # default.  to enable them, subclass this class and add it, or do:
     #   SSHTransportBase.supportedCiphers.append('none')
-    supportedKeyExchanges = ['diffie-hellman-group-exchange-sha1',
-                             'diffie-hellman-group1-sha1']
+    supportedKeyExchanges = _kex.getSupportedKeyExchanges()
     supportedPublicKeys = ['ssh-rsa', 'ssh-dss']
     supportedCompressions = ['none', 'zlib']
     supportedLanguages = ()
@@ -904,24 +901,24 @@ class SSHServerTransport(SSHTransportBase):
 
     def _ssh_KEXDH_INIT(self, packet):
         """
-        Called to handle the beginning of a diffie-hellman-group1-sha1 key
-        exchange.
+        Called to handle the beginning of a non-group key exchange.
 
         Unlike other message types, this is not dispatched automatically.  It
         is called from C{ssh_KEX_DH_GEX_REQUEST_OLD} because an extra check is
         required to determine if this is really a KEXDH_INIT message or if it
         is a KEX_DH_GEX_REQUEST_OLD message.
 
-        The KEXDH_INIT (for diffie-hellman-group1-sha1 exchanges) payload::
+        The KEXDH_INIT payload::
 
                 integer e (the client's Diffie-Hellman public key)
 
-            We send the KEXDH_REPLY with our host key and signature.
+        We send the KEXDH_REPLY with our host key and signature.
         """
         clientDHpublicKey, foo = getMP(packet)
         y = _getRandomNumber(randbytes.secureRandom, 512)
-        serverDHpublicKey = _MPpow(DH_GENERATOR, y, DH_PRIME)
-        sharedSecret = _MPpow(clientDHpublicKey, y, DH_PRIME)
+        self.g, self.p = _kex.getDHPrime(self.kexAlg)
+        serverDHpublicKey = _MPpow(self.g, y, self.p)
+        sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
         h = sha1()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
@@ -942,11 +939,10 @@ class SSHServerTransport(SSHTransportBase):
 
     def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
         """
-        This represents two different key exchange methods that share the same
+        This represents different key exchange methods that share the same
         integer value.  If the message is determined to be a KEXDH_INIT,
         C{_ssh_KEXDH_INIT} is called to handle it.  Otherwise, for
-        KEX_DH_GEX_REQUEST_OLD (for diffie-hellman-group-exchange-sha1)
-        payload::
+        KEX_DH_GEX_REQUEST_OLD payload::
 
                 integer ideal (ideal size for the Diffie-Hellman prime)
 
@@ -962,15 +958,13 @@ class SSHServerTransport(SSHTransportBase):
 
         # KEXDH_INIT and KEX_DH_GEX_REQUEST_OLD have the same value, so use
         # another cue to decide what kind of message the peer sent us.
-        if self.kexAlg == 'diffie-hellman-group1-sha1':
+        if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_INIT(packet)
-        elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
+        else:
             self.dhGexRequest = packet
             ideal = struct.unpack('>L', packet)[0]
             self.g, self.p = self.factory.getDHPrime(ideal)
             self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
-        else:
-            raise error.ConchError('bad kexalg: %s' % self.kexAlg)
 
 
     def ssh_KEX_DH_GEX_REQUEST(self, packet):
@@ -1108,33 +1102,29 @@ class SSHClientTransport(SSHTransportBase):
         Called when we receive a MSG_KEXINIT message.  For a description
         of the packet, see SSHTransportBase.ssh_KEXINIT().  Additionally,
         this method sends the first key exchange packet.  If the agreed-upon
-        exchange is diffie-hellman-group1-sha1, generate a public key
-        and send it in a MSG_KEXDH_INIT message.  If the exchange is
-        diffie-hellman-group-exchange-sha1, ask for a 2048 bit group with a
-        MSG_KEX_DH_GEX_REQUEST_OLD message.
+        exchange has a fixed prime/generator group, generate a public key
+        and send it in a MSG_KEXDH_INIT message. Otherwise, ask for a 2048
+        bit group with a MSG_KEX_DH_GEX_REQUEST_OLD message.
         """
         if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
             return # we disconnected
-        if self.kexAlg == 'diffie-hellman-group1-sha1':
+        if _kex.isFixedGroup(self.kexAlg):
             self.x = _generateX(randbytes.secureRandom, 512)
-            self.e = _MPpow(DH_GENERATOR, self.x, DH_PRIME)
+            self.g, self.p = _kex.getDHPrime(self.kexAlg)
+            self.e = _MPpow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
-        elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
-            self.sendPacket(MSG_KEX_DH_GEX_REQUEST_OLD, '\x00\x00\x08\x00')
         else:
-            raise error.ConchError("somehow, the kexAlg has been set "
-                                   "to something we don't support")
+            self.sendPacket(MSG_KEX_DH_GEX_REQUEST_OLD, '\x00\x00\x08\x00')
 
 
     def _ssh_KEXDH_REPLY(self, packet):
         """
-        Called to handle a reply to a diffie-hellman-group1-sha1 key exchange
-        message (KEXDH_INIT).
+        Called to handle a reply to a non-group key exchange message
+        (KEXDH_INIT).
         
         Like the handler for I{KEXDH_INIT}, this message type has an
         overlapping value.  This method is called from C{ssh_KEX_DH_GEX_GROUP}
-        if that method detects a diffie-hellman-group1-sha1 key exchange is in
-        progress.
+        if that method detects a non-group key exchange is in progress.
 
         Payload::
 
@@ -1160,17 +1150,17 @@ class SSHClientTransport(SSHTransportBase):
 
     def ssh_KEX_DH_GEX_GROUP(self, packet):
         """
-        This handles two different message which share an integer value.
+        This handles different messages which share an integer value.
 
-        If the key exchange is diffie-hellman-group-exchange-sha1, this is
-        MSG_KEX_DH_GEX_GROUP.  Payload::
+        If the key exchange does not have a fixed prime/generator group,
+        we generate a Diffie-Hellman public key and send it in a
+        MSG_KEX_DH_GEX_INIT message.
+
+        Payload::
             string g (group generator)
             string p (group prime)
-
-        We generate a Diffie-Hellman public key and send it in a
-        MSG_KEX_DH_GEX_INIT message.
         """
-        if self.kexAlg == 'diffie-hellman-group1-sha1':
+        if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)
@@ -1193,7 +1183,7 @@ class SSHClientTransport(SSHTransportBase):
         @type signature: C{str}
         """
         serverKey = keys.Key.fromString(pubKey)
-        sharedSecret = _MPpow(f, self.x, DH_PRIME)
+        sharedSecret = _MPpow(f, self.x, self.p)
         h = sha1()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
@@ -1582,14 +1572,7 @@ class _Counter:
 
 
 
-# Diffie-Hellman primes from Oakley Group 2 [RFC 2409]
-DH_PRIME = long('17976931348623159077083915679378745319786029604875601170644'
-'442368419718021615851936894783379586492554150218056548598050364644054819923'
-'910005079287700335581663922955313623907650873575991482257486257500742530207'
-'744771258955095793777842444242661733472762929938766870920560605027081084290'
-'7692932019128194467627007L')
-DH_GENERATOR = 2L
-
+DH_GENERATOR, DH_PRIME = _kex.getDHPrime("diffie-hellman-group1-sha1")
 
 
 MSG_DISCONNECT = 1
