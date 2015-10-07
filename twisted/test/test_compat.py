@@ -750,3 +750,6 @@ class BytesEnvironTests(unittest.TestCase):
             types.add(type(val))
 
         self.assertEqual(list(types), [bytes])
+
+    if platform.isWindows():
+        test_alwaysBytes.skip = "Environment vars are always str on Windows."
