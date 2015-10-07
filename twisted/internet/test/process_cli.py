@@ -1,4 +1,8 @@
-import sys, os
+from __future__ import absolute_import, division
+
+import sys
+import os
+
 try:
     # On Windows, stdout is not opened in binary mode by default,
     # so newline characters are munged on writing, interfering with
@@ -16,8 +20,8 @@ for arg in sys.argv[1:]:
     if sys.version_info < (3, 0):
         stdout = sys.stdout
     else:
-        res = res.encode("utf8", "surrogateescape")
         stdout = sys.stdout.buffer
+        res = res.encode(sys.getfilesystemencoding())
 
     stdout.write(res)
     stdout.flush()

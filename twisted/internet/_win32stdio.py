@@ -86,7 +86,7 @@ class StandardIO(_pollingfile._PollingTimer):
         self.stdout.write(data)
 
     def writeSequence(self, seq):
-        self.stdout.write(''.join(seq))
+        self.stdout.write(b''.join(seq))
 
     def loseConnection(self):
         self.disconnecting = True

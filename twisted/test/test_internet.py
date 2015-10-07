@@ -962,7 +962,7 @@ import %(reactor)s
 %(reactor)s.install()
 from twisted.internet import reactor
 
-class Foo:
+class Foo(object):
     def __init__(self):
         reactor.callWhenRunning(self.start)
         self.timer = reactor.callLater(3, self.failed)
@@ -1025,7 +1025,7 @@ class ResolveTests(unittest.TestCase):
             # If the output is "done 127.0.0.1\n" we don't really care what
             # else happened.
             output = b''.join(output)
-            if output != b'done 127.0.0.1\n':
+            if output != b'done 127.0.0.1' + os.linesep.encode('ascii'):
                 self.fail((
                     "The child process failed to produce the desired results:\n"
                     "   Reason for termination was: %r\n"

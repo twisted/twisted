@@ -2235,8 +2235,8 @@ class Win32ProcessTests(unittest.TestCase):
         p.transport.closeStdin()
 
         def processEnded(ign):
-            self.assertEqual(p.errF.getvalue(), "err\nerr\n")
-            self.assertEqual(p.outF.getvalue(), "out\nhello, world\nout\n")
+            self.assertEqual(p.errF.getvalue(), b"err\nerr\n")
+            self.assertEqual(p.outF.getvalue(), b"out\nhello, world\nout\n")
         return d.addCallback(processEnded)
 
 
@@ -2376,11 +2376,11 @@ class Dumbwin32procPidTests(unittest.TestCase):
         from twisted.internet import _dumbwin32proc
         from twisted.test import mock_win32process
         self.patch(_dumbwin32proc, "win32process", mock_win32process)
-        scriptPath = util.sibpath(__file__, "process_cmdline.py")
+        scriptPath = FilePath(__file__).sibling(b"process_cmdline.py").path
 
         d = defer.Deferred()
         processProto = TrivialProcessProtocol(d)
-        comspec = bytes(os.environ["COMSPEC"])
+        comspec = bytes(os.environ["COMSPEC"], "mbcs")
         cmd = [comspec, b"/c", pyExe, scriptPath]
 
         p = _dumbwin32proc.Process(reactor,
@@ -2572,8 +2572,11 @@ class ClosingPipesTests(unittest.TestCase):
         """
         d = self.doit(1)
         def _check(errput):
-            if _PY3:
+            if _PY3 and runtime.platform.getType() != 'win32':
                 self.assertIn(b'BrokenPipeError', errput)
+            elif _PY3:
+                self.assertIn(b"OSError", errput)
+                self.assertIn(b"22", errput)
             else:
                 self.assertIn(b'OSError', errput)
             if runtime.platform.getType() != 'win32':

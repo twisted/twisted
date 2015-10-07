@@ -31,7 +31,7 @@ from zope.interface import Interface, Attribute, implementer
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp, unicode
+from twisted.python.compat import comparable, cmp, unicode, _PY3
 from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
 from twisted.python.versions import Version
@@ -1529,7 +1529,7 @@ class FilePath(AbstractFilePath):
             f.close()
         if platform.isWindows() and exists(self.path):
             os.unlink(self.path)
-        os.rename(sib.path, self.asBytesMode().path)
+        os.rename(sib.path, self._getPathAsSameTypeAs(sib.path))
 
 
     def __cmp__(self, other):
@@ -1704,7 +1704,8 @@ class FilePath(AbstractFilePath):
             filesystems)
         """
         try:
-            os.rename(self.path, destination.path)
+            os.rename(self._getPathAsSameTypeAs(destination.path),
+                      destination.path)
         except OSError as ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":
