@@ -885,6 +885,7 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
         """
         with self.assertRaises(ImportError):
             import twisted.internet.process
+            twisted.internet.process # shh pyflakes
 
     if not platform.isWindows():
         test_unimportableOnWindows.skip = "Only relevant on Windows."
