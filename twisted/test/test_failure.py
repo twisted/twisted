@@ -13,8 +13,6 @@ import traceback
 import pdb
 import linecache
 
-from collections import namedtuple
-
 from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python import reflect
 from twisted.python import failure
