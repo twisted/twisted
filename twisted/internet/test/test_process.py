@@ -33,6 +33,7 @@ twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = None
 if platform.isWindows():
+    from twisted.python import win32
     resource = None
     process = None
     _uidgidSkip = "Cannot change UID/GID on Windows"
