@@ -344,11 +344,16 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
+                if platform.isWindows():
+                    exe = win32.cmdLineQuote(pyExe.decode('mbcs'))
+                else:
+                    exe = pyExe.decode('ascii')
+
                 os.popen(u'%s -c "import time; time.sleep(0.1)"' %
-                    (pyExe.decode('ascii'),))
+                    (pyExe,))
                 f2 = os.popen(u'%s -c "import time; time.sleep(0.5);'
                               'print(\'Foo\')"' %
-                              (pyExe.decode('ascii'),))
+                              (pyExe,))
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
