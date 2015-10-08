@@ -345,7 +345,10 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         def f():
             try:
                 if platform.isWindows():
-                    exe = win32.cmdLineQuote(pyExe.decode('mbcs'))
+                    if _PY3:
+                        exe = win32.cmdLineQuote(pyExe.decode('mbcs'))
+                    else:
+                        exe = win32.cmdLineQuote(pyExe).decode('mbcs')
                 else:
                     exe = pyExe.decode('ascii')
 
