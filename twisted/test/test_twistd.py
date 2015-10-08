@@ -341,10 +341,17 @@ class ServerOptionsTests(unittest.TestCase):
         config = twistd.ServerOptions()
         e = self.assertRaises(UsageError, config.parseOptions,
                               ["--logger", "twisted.test.test_twistd.FOOBAR"])
-        self.assertTrue(
-            e.args[0].startswith(
-                "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                "imported: 'module' object has no attribute 'FOOBAR'"))
+        if sys.version_info <= (3, 4):
+            self.assertTrue(
+                e.args[0].startswith(
+                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
+                    "imported: 'module' object has no attribute 'FOOBAR'"))
+        else:
+            self.assertTrue(
+                e.args[0].startswith(
+                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
+                    "imported: module 'twisted.test.test_twistd' "
+                    "has no attribute 'FOOBAR'"))
         self.assertNotIn('\n', e.args[0])
 
 
