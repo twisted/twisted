@@ -871,3 +871,21 @@ class PotentialZombieWarningTests(TestCase):
             "Twisted 10.0.0: There is no longer any potential for zombie "
             "process.")
         self.assertEqual(len(warnings), 1)
+
+
+
+class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
+    """
+    Tests to ensure that L{twisted.internet.process} is unimportable on
+    platforms where it does not work (namely Windows).
+    """
+    def test_unimportableOnWindows(self):
+        """
+        L{twisted.internet.process} is unimportable on Windows.
+        """
+        with self.assertRaises(ImportError):
+            import twisted.internet.process
+            twisted.internet.process # shh pyflakes
+
+    if not platform.isWindows():
+        test_unimportableOnWindows.skip = "Only relevant on Windows."

@@ -12,6 +12,12 @@ Maintainer: Itamar Shtull-Trauring
 
 from __future__ import division, absolute_import, print_function
 
+from twisted.python.runtime import platform
+
+if platform.isWindows():
+    raise ImportError(("twisted.internet.process does not work on Windows. "
+                       "Use the reactor.spawnProcess() API instead."))
+
 import errno
 import gc
 import os
