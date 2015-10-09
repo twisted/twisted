@@ -352,8 +352,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
                 subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
                 f2 = subprocess.Popen([exe, "-c",
-                                       "import time; time.sleep(0.5);'
-                                       'print(\'Foo\')"],
+                                       ("import time; time.sleep(0.5);"
+                                        "print(\'Foo\')")],
                                       stdout=subprocess.PIPE)
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
