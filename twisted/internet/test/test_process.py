@@ -13,6 +13,7 @@ import signal
 import sys
 import threading
 import twisted
+import subprocess
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -344,21 +345,26 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                os.popen(u'%s -c "import time; time.sleep(0.1)"' %
-                    (pyExe.decode('ascii'),))
-                f2 = os.popen(u'%s -c "import time; time.sleep(0.5);'
-                              'print(\'Foo\')"' %
-                              (pyExe.decode('ascii'),))
+                if platform.isWindows():
+                    exe = pyExe.decode('mbcs')
+                else:
+                    exe = pyExe.decode('ascii')
+
+                subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
+                f2 = subprocess.Popen([exe, "-c",
+                                       ("import time; time.sleep(0.5);"
+                                        "print(\'Foo\')")],
+                                      stdout=subprocess.PIPE)
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
-                # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                result.append(f2.read())
+                # SIGCHLD handler without SA_RESTART
+                result.append(f2.stdout.read())
             finally:
                 reactor.stop()
 
         reactor.callWhenRunning(f)
         self.runReactor(reactor)
-        self.assertEqual(result, ["Foo\n"])
+        self.assertEqual(result, [b"Foo" + os.linesep.encode('ascii')])
 
 
     @onlyOnPOSIX
@@ -803,7 +809,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         if _PY3:
-            args.append("".join(map(chr, xrange(1,255))).encode("utf8"))
+            args.append("".join(map(chr, xrange(1,255))).encode('utf8'))
         else:
             args.append("".join(map(chr, xrange(1,255))))
 

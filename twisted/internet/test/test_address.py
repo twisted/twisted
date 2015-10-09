@@ -11,13 +11,19 @@ from twisted.trial import unittest
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.internet.address import HostnameAddress
 from twisted.python.compat import nativeString
+from twisted.python.runtime import platform
 
-try:
-    os.symlink
-except AttributeError:
-    symlinkSkip = "Platform does not support symlinks"
+if not platform.isWindows():
+    try:
+        os.symlink
+    except AttributeError:
+        symlinkSkip = "Platform does not support symlinks"
+    else:
+        symlinkSkip = None
 else:
-    symlinkSkip = None
+    # We do the isWindows() check as newer Pythons support the symlink support
+    # in Vista, causing this to not work right.
+    symlinkSkip = "Windows does not support symlinks"
 
 try:
     socket.AF_UNIX

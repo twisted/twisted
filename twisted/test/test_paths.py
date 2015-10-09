@@ -20,6 +20,18 @@ from twisted.trial.unittest import SkipTest, SynchronousTestCase as TestCase
 
 from zope.interface.verify import verifyObject
 
+if not platform.isWindows():
+    try:
+        os.symlink
+    except AttributeError:
+        symlinkSkip = "Platform does not support symlinks"
+    else:
+        symlinkSkip = None
+else:
+    # We do the isWindows() check as newer Pythons support the symlink support
+    # in Vista, causing this to not work right.
+    symlinkSkip = "Windows does not support symlinks"
+
 
 class BytesTestCase(TestCase):
     """
@@ -276,6 +288,9 @@ class ListingCompatibilityTests(BytesTestCase):
         fwp = FakeWindowsPath(self.mktemp())
         self.assertRaises(filepath.UnlistableError, fwp.children)
         self.assertRaises(WindowsError, fwp.children)
+
+    if _PY3:
+        test_windowsErrorExcept.skip = "This doesn't raise WindowsError anymore"
 
 
     def test_alwaysCatchOSError(self):
@@ -608,9 +623,8 @@ class FilePathTests(AbstractFilePathTests):
         @raise SkipTest: raised if symbolic links are not supported on the
             host platform.
         """
-        if getattr(os, 'symlink', None) is None:
-            raise SkipTest(
-                "Platform does not support symbolic links.")
+        if symlinkSkip:
+            raise SkipTest(symlinkSkip)
         os.symlink(target, name)
 
 
@@ -764,11 +778,10 @@ class FilePathTests(AbstractFilePathTests):
                           self.path.child(b'sub1').child(b'file2'))
 
 
-    if not getattr(os, "symlink", None):
-        skipMsg = "Your platform does not support symbolic links."
-        test_symbolicLink.skip = skipMsg
-        test_linkTo.skip = skipMsg
-        test_linkToErrors.skip = skipMsg
+    if symlinkSkip:
+        test_symbolicLink.skip = symlinkSkip
+        test_linkTo.skip = symlinkSkip
+        test_linkToErrors.skip = symlinkSkip
 
 
     def testMultiExt(self):
