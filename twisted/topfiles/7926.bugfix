@@ -1,0 +1,2 @@
+twisted.protocols.TLSMemoryBIOProtocol.loseConnection() now
+ closes the TLS connection even when remote peer does not respond to the tls close alert.

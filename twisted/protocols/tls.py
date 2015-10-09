@@ -40,6 +40,7 @@ from __future__ import division, absolute_import
 
 from OpenSSL.SSL import Error, ZeroReturnError, WantReadError
 from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
+from OpenSSL.SSL import RECEIVED_SHUTDOWN
 
 try:
     Connection(Context(TLSv1_METHOD), None)
@@ -425,8 +426,11 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     def _shutdownTLS(self):
         """
         Initiate, or reply to, the shutdown handshake of the TLS layer.
+        The method calls L{transport.loseConnection} without waiting
+        for a reply to the close alert of the remote peer.
         """
         try:
+            self._tlsConnection.set_shutdown(RECEIVED_SHUTDOWN)
             shutdownSuccess = self._tlsConnection.shutdown()
         except Error:
             # Mid-handshake, a call to shutdown() can result in a
@@ -436,11 +440,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             shutdownSuccess = False
         self._flushSendBIO()
         if shutdownSuccess:
-            # Both sides have shutdown, so we can start closing lower-level
-            # transport. This will also happen if we haven't started
-            # negotiation at all yet, in which case shutdown succeeds
-            # immediately.
-            self.transport.loseConnection()
+            self._tlsShutdownFinished(None)
 
 
     def _tlsShutdownFinished(self, reason):

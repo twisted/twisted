@@ -22,7 +22,7 @@ else:
     # imports will work.
     from OpenSSL.crypto import X509Type
     from OpenSSL.SSL import (TLSv1_METHOD, Error, Context, ConnectionType,
-                             WantReadError)
+                             WantReadError, ZeroReturnError)
     from twisted.internet.ssl import PrivateCertificate
     from twisted.test.ssl_helpers import (ClientTLSContext, ServerTLSContext,
                                           certPath)
@@ -37,6 +37,7 @@ from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
 from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
+from twisted.protocols.policies import ProtocolWrapper
 from twisted.trial.unittest import TestCase
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.test.proto_helpers import StringTransport
@@ -708,7 +709,7 @@ class TLSMemoryBIOTests(TestCase):
             # will be written out before the connection is closed, rather than
             # just small amounts that can be returned in a single bio_read:
             clientProtocol.transport.write(chunkOfBytes)
-            serverProtocol.transport.loseConnection()
+            clientProtocol.transport.loseConnection()
 
             # Now wait for the client and server to notice.
             return gatherResults([clientConnectionLost, serverConnectionLost])
@@ -852,6 +853,54 @@ class TLSMemoryBIOTests(TestCase):
         disconnectDeferred.addCallback(disconnected)
         return disconnectDeferred
 
+
+    def test_peerIgnoresCloseAlert(self):
+        """
+        L{TLSMemoryBIOProtocol.loseConnection} must
+        close the TLS connection even when remote peer does not
+        respond to the tls close alert.
+        """
+        clientFactory = ClientFactory()
+        clientFactory.protocol = Protocol
+
+        clientContextFactory, handshakeDeferred = (
+            HandshakeCallbackContextFactory.factoryAndDeferred())
+        wrapperFactory = TLSMemoryBIOFactory(
+            clientContextFactory, True, clientFactory)
+        sslClientProtocol = wrapperFactory.buildProtocol(None)
+
+        serverFactory = ServerFactory()
+        serverFactory.protocol = Protocol
+
+        serverContextFactory = ServerTLSContext()
+        wrapperFactory = TLSMemoryBIOFactory(
+            serverContextFactory, False, serverFactory)
+        sslServerProtocol = wrapperFactory.buildProtocol(None)
+
+        def patched__flush_receiveBIO(self):
+            # Patch receiveBIO, so that server ignores close alert.
+            while not self._lostTLSConnection:
+                try:
+                    bytes = self._tlsConnection.recv(2 ** 15)
+                except WantReadError:
+                    break
+                except ZeroReturnError:
+                    # Ignore close alert
+                    break
+                else:
+                    self._handshakeDone = True
+                    if not self._aborted:
+                        ProtocolWrapper.dataReceived(self, bytes)
+            self._flushSendBIO()
+
+        sslServerProtocol._flush_receiveBIO = patched__flush_receiveBIO
+        connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
+
+        def cbHandshake(ignored):
+            # Shutdown the client
+            sslClientProtocol.loseConnection()
+        handshakeDeferred.addCallback(cbHandshake)
+        return connectionDeferred
 
 
 class TLSProducerTests(TestCase):
@@ -1036,7 +1085,7 @@ class TLSProducerTests(TestCase):
         # Unregister producer; this should trigger TLS shutdown:
         clientProtocol.transport.unregisterProducer()
         self.assertNotEqual(tlsProtocol.transport.value(), b"")
-        self.assertEqual(tlsProtocol.transport.disconnecting, False)
+        self.assertEqual(tlsProtocol.transport.disconnecting, True)
 
         # Additional writes should not go through:
         clientProtocol.transport.write(b"won't")
@@ -1044,7 +1093,6 @@ class TLSProducerTests(TestCase):
 
         # Finish TLS close handshake:
         self.flushTwoTLSProtocols(tlsProtocol, serverTLSProtocol)
-        self.assertEqual(tlsProtocol.transport.disconnecting, True)
 
         # Bytes made it through, as long as they were written before producer
         # was unregistered:
