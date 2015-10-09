@@ -30,7 +30,7 @@ as follows:
 
 .. code-block:: python
 
-    user.sendMessage("COMMAND", param1, param2, prefix=server.name)
+    user.sendCommand("COMMAND", (param1, param2), server.name)
 
 The prefix keyword argument is optional, and it may be omitted to send a message without a prefix (for example, the ERROR command).
 The command is whatever command you plan to send, e.g. "PRIVMSG", "MODE", etc.
@@ -38,7 +38,7 @@ All arguments following the command are the parameters you want to send for the 
 If the last argument needs to be prefixed with a colon (because it has spaces in it, e.g. a PRIVMSG message), you must add the colon to the beginning of the parameter yourself. For example:
 .. code-block:: python
 
-    user.sendMessage("PRIVMSG", user.nickname, ":{}".format(message), prefix=sendingUser.hostmask)
+    user.sendCommand("PRIVMSG", (user.nickname, ":{}".format(message)), sendingUser.hostmask)
 
 
 Sending Messages with Tags
@@ -68,11 +68,11 @@ Tags are passed as a list of tuples. If you're sending a number of tags, you may
 
 This will generate the required time format and add it to the tag dictionary. The last three characters that we remove are the microseconds; removing the last three digits changes the precision to milliseconds.
 
-Once your tags are collected, you can send the message. The tag dictionary is passed using the ``tags`` keyword argument (in the same loop as above):
+Once your tags are collected, you can send the message. The tag dictionary is passed using the ``tags`` argument (in the same loop as above):
 
 .. code-block:: python
 
-    user.sendMessage("PRIVMSG", user.nickname, message[0], prefix=message[1], tags=sendingTags)
+    user.sendCommand("PRIVMSG", (user.nickname, message[0]), message[1], sendingTags)
 
 
 Receiving Messages
@@ -91,7 +91,7 @@ The default IRC handleCommand method calls the ``irc_COMMAND`` method when it re
     class IRCUser(irc.IRC):
         # possibly other definitions here
         def irc_unknown(self, prefix, command, params):
-            self.sendMessage(irc.ERR_UNKNOWNCOMMAND, command, ":Unknown command", prefix=server.name)
+            self.sendCommand(irc.ERR_UNKNOWNCOMMAND, (command, ":Unknown command"), server.name)
         
         def irc_PRIVMSG(self, prefix, params):
             # do some stuff to handle PRIVMSG for your server's setup

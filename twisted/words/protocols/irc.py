@@ -273,6 +273,10 @@ class IRC(protocol.Protocol):
         First argument is the command, all subsequent arguments are parameters
         to that command.  If a prefix is desired, it may be specified with the
         keyword argument 'prefix'.
+
+        The L{sendCommand} method is generally preferred over this one.
+        Notably, this method does not support sending message tags, while the
+        L{sendCommand} method does.
         """
         if not command:
             raise ValueError("IRC message requires a command.")
@@ -469,7 +473,7 @@ class IRC(protocol.Protocol):
         @type message: C{str} or C{unicode}
         @param message: The message being sent.
         """
-        self.sendLine(":%s PRIVMSG %s :%s" % (sender, recip, lowQuote(message)))
+        self.sendCommand("PRIVMSG", (recip, ":%s" % (lowQuote(message),)), sender)
 
 
     def notice(self, sender, recip, message):
@@ -491,7 +495,7 @@ class IRC(protocol.Protocol):
         @type message: C{str} or C{unicode}
         @param message: The message being sent.
         """
-        self.sendLine(":%s NOTICE %s :%s" % (sender, recip, message))
+        self.sendCommand("NOTICE", (recip, ":%s" % (message,)), sender)
 
 
     def action(self, sender, recip, message):
