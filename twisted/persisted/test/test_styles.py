@@ -36,6 +36,10 @@ def sampleFunction():
 
 
 
+lambdaExample = lambda x: x
+
+
+
 class UnpickleMethodTests(unittest.TestCase):
     """
     Tests for the unpickleMethod function.
@@ -91,10 +95,11 @@ class UnpickleMethodTests(unittest.TestCase):
         """
         Pickling a C{lambda} function ought to raise a L{pickle.PicklingError}.
         """
-        self.assertRaises(pickle.PicklingError, pickle.dumps, lambda x:x)
+        self.assertRaises(pickle.PicklingError, pickle.dumps, lambdaExample)
         try:
             import cPickle
         except:
             pass
         else:
-            self.assertRaises(cPickle.PicklingError, cPickle.dumps, lambda x:x)
+            self.assertRaises(cPickle.PicklingError, cPickle.dumps,
+                              lambdaExample)

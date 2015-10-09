@@ -754,6 +754,18 @@ class FindFailureTests(SynchronousTestCase):
 
 
 
+# On Python 3.5, extract_tb returns "FrameSummary" objects, which are almost
+# like the old tuples. This being different does not affect the actual tests
+# as we are testing that the input works, and that extract_tb returns something
+# reasonable.
+if sys.version_info < (3, 5):
+    _tb = lambda fn, lineno, name, text: (fn, lineno, name, text)
+else:
+    from traceback import FrameSummary
+    _tb = lambda fn, lineno, name, text: FrameSummary(fn, lineno, name)
+
+
+
 class FormattableTracebackTests(SynchronousTestCase):
     """
     Whitebox tests that show that L{failure._Traceback} constructs objects that
@@ -774,7 +786,7 @@ class FormattableTracebackTests(SynchronousTestCase):
         # the line's contents. In this case, since filename.py doesn't exist,
         # it will just use None.
         self.assertEqual(traceback.extract_tb(tb),
-                         [('filename.py', 123, 'method', None)])
+                         [_tb('filename.py', 123, 'method', None)])
 
 
     def test_manyFrames(self):
@@ -787,8 +799,8 @@ class FormattableTracebackTests(SynchronousTestCase):
             ['method1', 'filename.py', 123, {}, {}],
             ['method2', 'filename.py', 235, {}, {}]])
         self.assertEqual(traceback.extract_tb(tb),
-                         [('filename.py', 123, 'method1', None),
-                          ('filename.py', 235, 'method2', None)])
+                         [_tb('filename.py', 123, 'method1', None),
+                          _tb('filename.py', 235, 'method2', None)])
 
 
 

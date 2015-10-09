@@ -341,7 +341,8 @@ class ServerOptionsTests(unittest.TestCase):
         config = twistd.ServerOptions()
         e = self.assertRaises(UsageError, config.parseOptions,
                               ["--logger", "twisted.test.test_twistd.FOOBAR"])
-        if sys.version_info <= (3, 4):
+
+        if sys.version_info <= (3, 5):
             self.assertTrue(
                 e.args[0].startswith(
                     "Logger 'twisted.test.test_twistd.FOOBAR' could not be "

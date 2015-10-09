@@ -13,6 +13,7 @@ import signal
 import sys
 import threading
 import twisted
+import subprocess
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -33,7 +34,6 @@ twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = None
 if platform.isWindows():
-    from twisted.python import win32
     resource = None
     process = None
     _uidgidSkip = "Cannot change UID/GID on Windows"
@@ -346,25 +346,25 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         def f():
             try:
                 if platform.isWindows():
-                    exe = win32.cmdLineQuote(pyExe.decode('mbcs'))
+                    exe = pyExe.decode('mbcs')
                 else:
                     exe = pyExe.decode('ascii')
 
-                os.popen(u'%s -c "import time; time.sleep(0.1)"' %
-                    (exe,))
-                f2 = os.popen(u'%s -c "import time; time.sleep(0.5);'
-                              'print(\'Foo\')"' %
-                              (exe,))
+                subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
+                f2 = subprocess.Popen([exe, "-c",
+                                       ("import time; time.sleep(0.5);"
+                                        "print(\'Foo\')")],
+                                      stdout=subprocess.PIPE)
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
-                # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                result.append(f2.read())
+                # SIGCHLD handler without SA_RESTART
+                result.append(f2.stdout.read())
             finally:
                 reactor.stop()
 
         reactor.callWhenRunning(f)
         self.runReactor(reactor)
-        self.assertEqual(result, ["Foo\n"])
+        self.assertEqual(result, [b"Foo" + os.linesep.encode('ascii')])
 
 
     @onlyOnPOSIX
