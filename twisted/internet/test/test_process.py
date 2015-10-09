@@ -13,6 +13,7 @@ import signal
 import sys
 import threading
 import twisted
+import subprocess
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
