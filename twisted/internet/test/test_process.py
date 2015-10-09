@@ -346,22 +346,19 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         def f():
             try:
                 if platform.isWindows():
-                    if _PY3:
-                        exe = win32.cmdLineQuote(pyExe.decode('mbcs'))
-                    else:
-                        exe = win32.cmdLineQuote(pyExe).decode('mbcs')
+                    exe = pyExe.decode('mbcs')
                 else:
                     exe = pyExe.decode('ascii')
 
-                os.popen(u'%s -c "import time; time.sleep(0.1)"' %
-                    (pyExe,))
-                f2 = os.popen(u'%s -c "import time; time.sleep(0.5);'
-                              'print(\'Foo\')"' %
-                              (pyExe,))
+                subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
+                f2 = subprocess.Popen([exe, "-c",
+                                       "import time; time.sleep(0.5);'
+                                       'print(\'Foo\')"],
+                                      stdout=subprocess.PIPE)
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
-                # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                result.append(f2.read())
+                # SIGCHLD handler without SA_RESTART
+                result.append(f2.stdout.read())
             finally:
                 reactor.stop()
 
