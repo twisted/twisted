@@ -365,7 +365,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         reactor.callWhenRunning(f)
         self.runReactor(reactor)
-        self.assertEqual(result, ["Foo\n"])
+        self.assertEqual(result, ["Foo" + os.linesep])
 
 
     @onlyOnPOSIX
