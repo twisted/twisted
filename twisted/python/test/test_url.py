@@ -12,7 +12,7 @@ from twisted.trial.unittest import TestCase
 from twisted.python import url
 
 
-theurl = "http://www.foo.com:80/a/nice/path/?zot=23&zut"
+theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 
 # Examples from RFC 3986 section 5.4, Reference Resolution Examples
 rfc3986_relative_link_base = 'http://a/b/c/d;p?q'
@@ -213,7 +213,7 @@ class TestComponentCoding(TestCase):
         L{url.iriencodePath} should not percent-encode characters not reserved
         in path segments.
         """
-        self.assertMatches(url.iriencodePath(url.gen_delims+url.sub_delims),
+        self.assertMatches(url.iriencodePath(url._genDelims+url._subDelims),
                            ":%2F%3F%23%5B%5D@!$&'()*+,;=")
 
 
@@ -222,7 +222,7 @@ class TestComponentCoding(TestCase):
         L{url.iriencodeQuery} should not percent-encode characters not reserved
         in x-www-form-urlencoded queries.
         """
-        self.assertMatches(url.iriencodeQuery(url.gen_delims+url.sub_delims),
+        self.assertMatches(url.iriencodeQuery(url._genDelims+url._subDelims),
                            ":/?%23%5B%5D@!$%26'()*%2B,;%3D")
 
 
@@ -231,7 +231,7 @@ class TestComponentCoding(TestCase):
         L{url.iriencodeFragment} should not percent-encode characters not reserved
         in fragment components.
         """
-        self.assertMatches(url.iriencodeFragment(url.gen_delims+url.sub_delims),
+        self.assertMatches(url.iriencodeFragment(url._genDelims+url._subDelims),
                            ":/?%23%5B%5D@!$&'()*+,;=")
 
 
@@ -303,7 +303,7 @@ class TestComponentCoding(TestCase):
         ('http://foo/p#f', (u'http', u'foo', [u'', u'p'], [], u'f')),
         ('http://foo/p/p?q&q=q#f', (u'http', u'foo', [u'', u'p', u'p'],
                                     [(u'q', None), (u'q', u'q')], u'f')),
-        (theurl, (u'http', u'www.foo.com:80',
+        (theurl, (u'http', u'www.foo.com',
                   [u'', u'a', u'nice', u'path', u''],
                   [(u'zot', u'23'), (u'zut', None)], u'')),
         # nesting
@@ -377,28 +377,6 @@ class TestComponentCoding(TestCase):
 
 
 
-class _IncompatibleSignatureURL(URL):
-    """
-    A test fixture for verifying that subclasses which override C{cloneURL}
-    won't be copied by any other means (e.g. constructing C{self.__class___}
-    directly).  It accomplishes this by having a constructor signature which
-    is incompatible with L{URL}'s.
-    """
-    def __init__(
-        self, magicValue, scheme, netloc, pathsegs, querysegs, fragment):
-        URL.__init__(self, scheme, netloc, pathsegs, querysegs, fragment)
-        self.magicValue = magicValue
-
-
-    def cloneURL(self, scheme, netloc, pathsegs, querysegs, fragment):
-        """
-        Override the base implementation to pass along C{self.magicValue}.
-        """
-        return self.__class__(
-            self.magicValue, scheme, netloc, pathsegs, querysegs, fragment)
-
-
-
 class TestURL(TestCase):
     """
     Tests for L{URL}.
@@ -410,9 +388,9 @@ class TestURL(TestCase):
         """
         self.assertTrue(isinstance(u.scheme, unicode), repr(u))
         self.assertTrue(isinstance(u.netloc, unicode), repr(u))
-        for seg in u.pathList():
+        for seg in u.pathsegs:
             self.assertTrue(isinstance(seg, unicode), repr(u))
-        for (k, v) in u.queryList():
+        for (k, v) in u.querysegs:
             self.assertTrue(isinstance(k, unicode), repr(u))
             self.assertTrue(v is None or isinstance(v, unicode), repr(u))
         self.assertTrue(isinstance(u.fragment, unicode), repr(u))
@@ -423,7 +401,7 @@ class TestURL(TestCase):
         The given L{URL} should have the given components.
         """
         self.assertEqual(
-            (u.scheme, u.netloc, u.pathList(), u.queryList(), u.fragment),
+            (u.scheme, u.netloc, u.pathsegs, u.querysegs, u.fragment),
             (scheme, netloc, pathsegs, querysegs, fragment))
 
 
@@ -467,10 +445,13 @@ class TestURL(TestCase):
         L{URL.__repr__} should return something meaningful.
         """
         self.assertEquals(
-            repr(URL(scheme=u'http', netloc=u'foo', pathsegs=[u'bar'],
-                     querysegs=[(u'baz', None), (u'k', u'v')], fragment=u'frob')),
-            "URL(scheme=u'http', netloc=u'foo', pathsegs=[u'bar'], "
-                "querysegs=[(u'baz', None), (u'k', u'v')], fragment=u'frob')")
+            repr(URL(scheme=u'http', hostname=u'foo', pathsegs=[u'bar'],
+                     querysegs=[(u'baz', None), (u'k', u'v')],
+                     fragment=u'frob')),
+            "URL(scheme=u'http', hostname=u'foo', pathsegs=[u'bar'], "
+            "querysegs=[(u'baz', None), (u'k', u'v')], fragment=u'frob', "
+            "port=80)"
+        )
 
 
     def test_fromString(self):
@@ -538,122 +519,111 @@ class TestURL(TestCase):
         self.assertEqual(urlpath.path, "-_.!*'()")
 
 
-    def test_pathList(self):
-        """
-        L{URL.pathList} should return C{self.pathsegs}, copied or not.
-        """
-        u = URL(pathsegs=[u'foo'])
-        for segs in [u.pathList(), u.pathList(copy=True)]:
-            self.assertEquals(segs, u.pathsegs)
-            self.assertNotIdentical(segs, u.pathsegs)
-        self.assertIdentical(u.pathList(copy=False), u.pathsegs)
-
-
-    def test_parentdir(self):
+    def test_parent(self):
         """
         XXX add explicit encoding to str().
         """
         urlpath = URL.fromString(theurl)
-        self.assertEquals("http://www.foo.com:80/a/nice/?zot=23&zut",
-                          str(urlpath.parentdir()))
+        self.assertEquals("http://www.foo.com/a/nice/?zot=23&zut",
+                          str(urlpath.parent()))
         urlpath = URL.fromString('http://www.foo.com/a')
         self.assertEquals("http://www.foo.com/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
         urlpath = URL.fromString('http://www.foo.com/a/')
         self.assertEquals("http://www.foo.com/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
         urlpath = URL.fromString('http://www.foo.com/a/b')
         self.assertEquals("http://www.foo.com/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
         urlpath = URL.fromString('http://www.foo.com/a/b/')
         self.assertEquals("http://www.foo.com/a/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
         urlpath = URL.fromString('http://www.foo.com/a/b/c')
         self.assertEquals("http://www.foo.com/a/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
         urlpath = URL.fromString('http://www.foo.com/a/b/c/')
         self.assertEquals("http://www.foo.com/a/b/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
         urlpath = URL.fromString('http://www.foo.com/a/b/c/d')
         self.assertEquals("http://www.foo.com/a/b/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
         urlpath = URL.fromString('http://www.foo.com/a/b/c/d/')
         self.assertEquals("http://www.foo.com/a/b/c/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
 
     def test_parent_root(self):
         urlpath = URL.fromString('http://www.foo.com/')
         self.assertEquals("http://www.foo.com/",
-                          str(urlpath.parentdir()))
+                          str(urlpath.parent()))
         self.assertEquals("http://www.foo.com/",
-                          str(urlpath.parentdir().parentdir()))
+                          str(urlpath.parent().parent()))
 
     def test_child(self):
         urlpath = URL.fromString(theurl)
-        self.assertEquals("http://www.foo.com:80/a/nice/path/gong?zot=23&zut",
+        self.assertEquals("http://www.foo.com/a/nice/path/gong?zot=23&zut",
                           str(urlpath.child(u'gong')))
-        self.assertEquals("http://www.foo.com:80/a/nice/path/gong%2F?zot=23&zut",
+        self.assertEquals("http://www.foo.com/a/nice/path/gong%2F?zot=23&zut",
                           str(urlpath.child(u'gong/')))
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/gong%2Fdouble?zot=23&zut",
+            "http://www.foo.com/a/nice/path/gong%2Fdouble?zot=23&zut",
             str(urlpath.child(u'gong/double')))
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/gong%2Fdouble%2F?zot=23&zut",
+            "http://www.foo.com/a/nice/path/gong%2Fdouble%2F?zot=23&zut",
             str(urlpath.child(u'gong/double/')))
 
     def test_child_init_tuple(self):
         self.assertEquals(
             "http://www.foo.com/a/b/c",
-            str(URL(netloc=u"www.foo.com",
-                        pathsegs=[u'a', u'b']).child(u"c")))
+            str(URL(hostname=u"www.foo.com",
+                    pathsegs=[u'a', u'b']).child(u"c")))
 
     def test_child_init_root(self):
         self.assertEquals(
             "http://www.foo.com/c",
-            str(URL(netloc=u"www.foo.com").child(u"c")))
+            str(URL(hostname=u"www.foo.com").child(u"c")))
 
     def test_sibling(self):
         urlpath = URL.fromString(theurl)
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/sister?zot=23&zut",
+            "http://www.foo.com/a/nice/path/sister?zot=23&zut",
             str(urlpath.sibling(u'sister')))
         # use an url without trailing '/' to check child removal
-        theurl2 = "http://www.foo.com:80/a/nice/path?zot=23&zut"
+        theurl2 = "http://www.foo.com/a/nice/path?zot=23&zut"
         urlpath = URL.fromString(theurl2)
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/sister?zot=23&zut",
+            "http://www.foo.com/a/nice/sister?zot=23&zut",
             str(urlpath.sibling(u'sister')))
 
     def test_curdir(self):
         urlpath = URL.fromString(theurl)
         self.assertEquals(theurl, str(urlpath))
         # use an url without trailing '/' to check object removal
-        theurl2 = "http://www.foo.com:80/a/nice/path?zot=23&zut"
+        theurl2 = "http://www.foo.com/a/nice/path?zot=23&zut"
         urlpath = URL.fromString(theurl2)
-        self.assertEquals("http://www.foo.com:80/a/nice/?zot=23&zut",
+        self.assertEquals("http://www.foo.com/a/nice/?zot=23&zut",
                           str(urlpath.curdir()))
 
     def test_click(self):
         urlpath = URL.fromString(theurl)
         # a null uri should be valid (return here)
-        self.assertEquals("http://www.foo.com:80/a/nice/path/?zot=23&zut",
+        self.assertEquals("http://www.foo.com/a/nice/path/?zot=23&zut",
                           str(urlpath.click("")))
         # a simple relative path remove the query
-        self.assertEquals("http://www.foo.com:80/a/nice/path/click",
+        self.assertEquals("http://www.foo.com/a/nice/path/click",
                           str(urlpath.click("click")))
         # an absolute path replace path and query
-        self.assertEquals("http://www.foo.com:80/click",
+        self.assertEquals("http://www.foo.com/click",
                           str(urlpath.click("/click")))
         # replace just the query
-        self.assertEquals("http://www.foo.com:80/a/nice/path/?burp",
+        self.assertEquals("http://www.foo.com/a/nice/path/?burp",
                           str(urlpath.click("?burp")))
         # one full url to another should not generate '//' between netloc and pathsegs
-        self.failIfIn("//foobar", str(urlpath.click('http://www.foo.com:80/foobar')))
+        self.failIfIn("//foobar", str(urlpath.click('http://www.foo.com/foobar')))
 
         # from a url with no query clicking a url with a query,
         # the query should be handled properly
-        u = URL.fromString('http://www.foo.com:80/me/noquery')
-        self.failUnlessEqual('http://www.foo.com:80/me/17?spam=158',
+        u = URL.fromString('http://www.foo.com/me/noquery')
+        self.failUnlessEqual('http://www.foo.com/me/17?spam=158',
                              str(u.click('/me/17?spam=158')))
 
         # Check that everything from the path onward is removed when the click link
@@ -669,7 +639,7 @@ class TestURL(TestCase):
         """
         s = ''.join(map(chr, range(0x80)))
         u = URL.fromString('http://example.com/').click(url.iriencodePath(s))
-        self.assertEqual(u.pathList(), [s])
+        self.assertEqual(u.pathsegs, [s])
 
 
     def test_clickRFC3986(self):
@@ -692,93 +662,21 @@ class TestURL(TestCase):
 
     def test_cloneUnchanged(self):
         """
-        Verify that L{URL.cloneURL} doesn't change any of the arguments it
+        Verify that L{URL.replace} doesn't change any of the arguments it
         is passed.
         """
         urlpath = URL.fromString('https://x:1/y?z=1#A')
         self.assertEqual(
-            urlpath.cloneURL(urlpath.scheme,
-                             urlpath.netloc,
-                             urlpath.pathsegs,
-                             urlpath.querysegs,
-                             urlpath.fragment),
+            urlpath.replace(urlpath.scheme,
+                            urlpath.hostname,
+                            urlpath.pathsegs,
+                            urlpath.querysegs,
+                            urlpath.fragment,
+                            urlpath.port),
             urlpath)
-
-
-    def _makeIncompatibleSignatureURL(self, magicValue):
-        return _IncompatibleSignatureURL(magicValue, u'', u'', None, None, u'')
-
-
-    def test_clickCloning(self):
-        """
-        Verify that L{URL.click} uses L{URL.cloneURL} to construct its
-        return value.
-        """
-        urlpath = self._makeIncompatibleSignatureURL(8789)
-        self.assertEqual(urlpath.click('/').magicValue, 8789)
-
-
-    def test_clickCloningScheme(self):
-        """
-        Verify that L{URL.click} uses L{URL.cloneURL} to construct its
-        return value, when the clicked url has a scheme.
-        """
-        urlpath = self._makeIncompatibleSignatureURL(8031)
-        self.assertEqual(urlpath.click('https://foo').magicValue, 8031)
-
-
-    def test_addCloning(self):
-        """
-        Verify that L{URL.add} uses L{URL.cloneURL} to construct its
-        return value.
-        """
-        urlpath = self._makeIncompatibleSignatureURL(8789)
-        self.assertEqual(urlpath.add(u'x').magicValue, 8789)
-
-
-    def test_replaceCloning(self):
-        """
-        Verify that L{URL.replace} uses L{URL.cloneURL} to construct
-        its return value.
-        """
-        urlpath = self._makeIncompatibleSignatureURL(8789)
-        self.assertEqual(urlpath.replace(u'x').magicValue, 8789)
-
-
-    def test_removeCloning(self):
-        """
-        Verify that L{URL.remove} uses L{URL.cloneURL} to construct
-        its return value.
-        """
-        urlpath = self._makeIncompatibleSignatureURL(8789)
-        self.assertEqual(urlpath.remove(u'x').magicValue, 8789)
-
-
-    def test_clearCloning(self):
-        """
-        Verify that L{URL.clear} uses L{URL.cloneURL} to construct its
-        return value.
-        """
-        urlpath = self._makeIncompatibleSignatureURL(8789)
-        self.assertEqual(urlpath.clear().magicValue, 8789)
-
-
-    def test_anchorCloning(self):
-        """
-        Verify that L{URL.anchor} uses L{URL.cloneURL} to construct
-        its return value.
-        """
-        urlpath = self._makeIncompatibleSignatureURL(8789)
-        self.assertEqual(urlpath.anchor().magicValue, 8789)
-
-
-    def test_secureCloning(self):
-        """
-        Verify that L{URL.secure} uses L{URL.cloneURL} to construct its
-        return value.
-        """
-        urlpath = self._makeIncompatibleSignatureURL(8789)
-        self.assertEqual(urlpath.secure().magicValue, 8789)
+        self.assertEqual(
+            urlpath.replace(),
+            urlpath)
 
 
     def test_clickCollapse(self):
@@ -806,96 +704,71 @@ class TestURL(TestCase):
     def test_add(self):
         urlpath = URL.fromString(theurl)
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23&zut&burp",
+            "http://www.foo.com/a/nice/path/?zot=23&zut&burp",
             str(urlpath.add(u"burp")))
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23&zut&burp=xxx",
+            "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx",
             str(urlpath.add(u"burp", u"xxx")))
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23&zut&burp=xxx&zing",
+            "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zing",
             str(urlpath.add(u"burp", u"xxx").add(u"zing")))
         # note the inversion!
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23&zut&zing&burp=xxx",
+            "http://www.foo.com/a/nice/path/?zot=23&zut&zing&burp=xxx",
             str(urlpath.add(u"zing").add(u"burp", u"xxx")))
         # note the two values for the same name
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23&zut&burp=xxx&zot=32",
+            "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zot=32",
             str(urlpath.add(u"burp", u"xxx").add(u"zot", u'32')))
 
 
     def test_add_noquery(self):
         # fromString is a different code path, test them both
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?foo=bar",
-            str(URL.fromString("http://www.foo.com:80/a/nice/path/")
+            "http://www.foo.com/a/nice/path/?foo=bar",
+            str(URL.fromString("http://www.foo.com/a/nice/path/")
                 .add(u"foo", u"bar")))
         self.assertEquals(
             "http://www.foo.com/?foo=bar",
-            str(URL(netloc=u"www.foo.com").add(u"foo", u"bar")))
+            str(URL(hostname=u"www.foo.com").add(u"foo", u"bar")))
 
 
-    def test_replace(self):
+    def test_setQueryParam(self):
         urlpath = URL.fromString(theurl)
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=32&zut",
-            str(urlpath.replace(u"zot", u'32')))
+            "http://www.foo.com/a/nice/path/?zot=32&zut",
+            str(urlpath.setQueryParam(u"zot", u'32')))
         # replace name without value with name/value and vice-versa
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot&zut=itworked",
-            str(urlpath.replace(u"zot").replace(u"zut", u"itworked")))
+            "http://www.foo.com/a/nice/path/?zot&zut=itworked",
+            str(urlpath.setQueryParam(u"zot")
+                .setQueryParam(u"zut", u"itworked")))
         # Q: what happens when the query has two values and we replace?
         # A: we replace both values with a single one
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=32&zut",
-            str(urlpath.add(u"zot", u"xxx").replace(u"zot", u'32')))
-
-
-    def test_fragment(self):
-        urlpath = URL.fromString(theurl)
-        self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23&zut#hiboy",
-            str(urlpath.anchor(u"hiboy")))
-        self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23&zut",
-            str(urlpath.anchor()))
-        self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23&zut",
-            str(urlpath.anchor(u'')))
+            "http://www.foo.com/a/nice/path/?zot=32&zut",
+            str(urlpath.add(u"zot", u"xxx").setQueryParam(u"zot", u'32')))
 
 
     def test_clear(self):
         urlpath = URL.fromString(theurl)
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zut",
+            "http://www.foo.com/a/nice/path/?zut",
             str(urlpath.clear(u"zot")))
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zot=23",
+            "http://www.foo.com/a/nice/path/?zot=23",
             str(urlpath.clear(u"zut")))
         # something stranger, query with two values, both should get cleared
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/?zut",
+            "http://www.foo.com/a/nice/path/?zut",
             str(urlpath.add(u"zot", u"1971").clear(u"zot")))
         # two ways to clear the whole query
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/",
+            "http://www.foo.com/a/nice/path/",
             str(urlpath.clear(u"zut").clear(u"zot")))
         self.assertEquals(
-            "http://www.foo.com:80/a/nice/path/",
+            "http://www.foo.com/a/nice/path/",
             str(urlpath.clear()))
-
-
-    def test_secure(self):
-        self.assertEquals(str(URL.fromString('http://localhost/').secure()), 'https://localhost/')
-        self.assertEquals(str(URL.fromString('http://localhost/').secure(True)), 'https://localhost/')
-        self.assertEquals(str(URL.fromString('https://localhost/').secure()), 'https://localhost/')
-        self.assertEquals(str(URL.fromString('https://localhost/').secure(False)), 'http://localhost/')
-        self.assertEquals(str(URL.fromString('http://localhost/').secure(False)), 'http://localhost/')
-        self.assertEquals(str(URL.fromString('http://localhost/foo').secure()), 'https://localhost/foo')
-        self.assertEquals(str(URL.fromString('http://localhost/foo?bar=1').secure()), 'https://localhost/foo?bar=1')
-        self.assertEquals(str(URL.fromString('http://localhost/').secure(port=443)), 'https://localhost/')
-        self.assertEquals(str(URL.fromString('http://localhost:8080/').secure(port=8443)), 'https://localhost:8443/')
-        self.assertEquals(str(URL.fromString('https://localhost:8443/').secure(False, 8080)), 'http://localhost:8080/')
 
 
     def test_eq_same(self):
