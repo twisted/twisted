@@ -7,6 +7,7 @@ Tests for L{twisted.python.urlpath}.
 
 from twisted.trial import unittest
 from twisted.python import urlpath
+from twisted.python.compat import _PY3
 
 
 class _BaseURLPathTests(object):
@@ -98,11 +99,15 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
         with self.assertRaises(ValueError):
             urlpath.URLPath.fromBytes(None)
 
+        with self.assertRaises(ValueError):
+            urlpath.URLPath.fromBytes(u"someurl")
+
 
 
 class StringURLPathTests(_BaseURLPathTests, unittest.TestCase):
     """
-    Tests for interacting with a L{URLPath} created with C{fromString}.
+    Tests for interacting with a L{URLPath} created with C{fromString} and a
+    L{str} argument.
     """
     def setUp(self):
         self.path = urlpath.URLPath.fromString(
@@ -111,7 +116,22 @@ class StringURLPathTests(_BaseURLPathTests, unittest.TestCase):
 
     def test_mustBeStr(self):
         """
-        C{URLPath.fromString} must take a L{string} argument.
+        C{URLPath.fromString} must take a L{str} or L{unicode} argument.
         """
         with self.assertRaises(ValueError):
             urlpath.URLPath.fromString(None)
+
+        if _PY3:
+            with self.assertRaises(ValueError):
+                urlpath.URLPath.fromString(b"someurl")
+
+
+
+class UnicodeURLPathTests(_BaseURLPathTests, unittest.TestCase):
+    """
+    Tests for interacting with a L{URLPath} created with C{fromString} and a
+    L{unicode} argument.
+    """
+    def setUp(self):
+        self.path = urlpath.URLPath.fromString(
+            u"http://example.com/foo/bar?yes=no&no=yes#footer")

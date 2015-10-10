@@ -8,6 +8,7 @@ L{URLPath}, a representation of a URL.
 
 from __future__ import division, absolute_import
 
+from twisted.python.compat import unicode
 from twisted.python.compat import urllib_parse as urlparse, urlunquote
 
 
@@ -60,15 +61,15 @@ class URLPath(object):
     @classmethod
     def fromString(klass, url):
         """
-        Make a L{URLPath} from a L{str}.
+        Make a L{URLPath} from a L{str} or L{unicode}.
 
         @param url: A L{str} representation of a URL.
-        @type url: L{str}
+        @type url: L{str} or L{unicode}.
 
         @rtype: L{URLPath}
         """
-        if not isinstance(url, str):
-            raise ValueError("'url' must be a str")
+        if not isinstance(url, (str, unicode)):
+            raise ValueError("'url' must be a str or unicode")
         url = url.encode('utf-8')
         parts = urlparse.urlsplit(url)
         return klass(*parts)
