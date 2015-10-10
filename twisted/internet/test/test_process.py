@@ -13,7 +13,6 @@ import signal
 import sys
 import threading
 import twisted
-import subprocess
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -345,26 +344,21 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                if platform.isWindows():
-                    exe = pyExe.decode('mbcs')
-                else:
-                    exe = pyExe.decode('ascii')
-
-                subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
-                f2 = subprocess.Popen([exe, "-c",
-                                       ("import time; time.sleep(0.5);"
-                                        "print(\'Foo\')")],
-                                      stdout=subprocess.PIPE)
+                os.popen(u'%s -c "import time; time.sleep(0.1)"' %
+                    (pyExe.decode('ascii'),))
+                f2 = os.popen(u'%s -c "import time; time.sleep(0.5);'
+                              'print(\'Foo\')"' %
+                              (pyExe.decode('ascii'),))
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
-                # SIGCHLD handler without SA_RESTART
-                result.append(f2.stdout.read())
+                # SIGCHLD handler without SA_RESTART.  (which we used to do)
+                result.append(f2.read())
             finally:
                 reactor.stop()
 
         reactor.callWhenRunning(f)
         self.runReactor(reactor)
-        self.assertEqual(result, [b"Foo" + os.linesep.encode('ascii')])
+        self.assertEqual(result, ["Foo\n"])
 
 
     @onlyOnPOSIX
@@ -877,3 +871,21 @@ class PotentialZombieWarningTests(TestCase):
             "Twisted 10.0.0: There is no longer any potential for zombie "
             "process.")
         self.assertEqual(len(warnings), 1)
+
+
+
+class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
+    """
+    Tests to ensure that L{twisted.internet.process} is unimportable on
+    platforms where it does not work (namely Windows).
+    """
+    def test_unimportableOnWindows(self):
+        """
+        L{twisted.internet.process} is unimportable on Windows.
+        """
+        with self.assertRaises(ImportError):
+            import twisted.internet.process
+            twisted.internet.process # shh pyflakes
+
+    if not platform.isWindows():
+        test_unimportableOnWindows.skip = "Only relevant on Windows."
