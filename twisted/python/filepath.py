@@ -51,8 +51,11 @@ if _PY3 and platform.isWindows():
 else:
     from os.path import isabs, exists, normpath, abspath, splitext
     from os.path import basename, dirname, join as joinpath, realpath
-    from os import listdir, utime, stat, symlink, chmod, rmdir, remove, rename
+    from os import listdir, utime, stat, chmod, rmdir, remove, rename
     from os import mkdir, makedirs, open as _open, fdopen
+
+    if not platform.isWindows():
+        from os import symlink
 
 
 def _stub_islink(path):
