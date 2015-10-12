@@ -9,8 +9,6 @@ from __future__ import unicode_literals
 
 from twisted.python.url import URL
 from twisted.trial.unittest import TestCase
-from twisted.python import url
-
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 
