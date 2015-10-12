@@ -138,7 +138,8 @@ class TestURL(TestCase):
         """
         L{URL} should accept (and not interpret) percent characters.
         """
-        u = URL(u's', u'%68', [u'%70'], [(u'%6B', u'%76'), (u'%6B', None)], u'%66')
+        u = URL(u's', u'%68', [u'%70'], [(u'%6B', u'%76'), (u'%6B', None)],
+                u'%66')
         self.assertUnicoded(u)
         self.assertURL(u,
                        u's', u'%68', [u'%70'],
@@ -196,12 +197,17 @@ class TestURL(TestCase):
 
     def test_equality(self):
         """
-        Two URLs decoded using L{URL.fromText} will only be equal if they
-        decoded same URL string.
+        Two URLs decoded using L{URL.fromText} will be equal (C{==}) if they
+        decoded same URL string, and unequal (C{!=}) if they decoded different
+        strings.
         """
         urlpath = URL.fromText(theurl)
         self.assertEquals(urlpath, URL.fromText(theurl))
-        self.assertNotEquals(urlpath, URL.fromText('ftp://www.anotherinvaliddomain.com/foo/bar/baz/?zot=21&zut'))
+        self.assertNotEquals(
+            urlpath,
+            URL.fromText('ftp://www.anotherinvaliddomain.com/'
+                         'foo/bar/baz/?zot=21&zut')
+        )
 
 
     def test_fragmentEquality(self):
@@ -213,6 +219,10 @@ class TestURL(TestCase):
 
 
     def test_child(self):
+        """
+        L{URL.child} appends a new path segment, but does not affect the query
+        or fragment.
+        """
         urlpath = URL.fromText(theurl)
         self.assertEquals("http://www.foo.com/a/nice/path/gong?zot=23&zut",
                           urlpath.child(u'gong').asText())
@@ -228,18 +238,21 @@ class TestURL(TestCase):
         )
 
 
-    def test_child_init_tuple(self):
-        self.assertEquals(
-            "http://www.foo.com/a/b/c",
-            URL(host=u"www.foo.com",
-                pathSegments=[u'a', u'b']).child(u"c").asText())
+    def test_childInitRoot(self):
+        """
+        L{URL.child} of a L{URL} without a path produces a L{URL} with a single
+        path segment.
+        """
+        childURL = URL(host=u"www.foo.com").child(u"c")
+        self.assertEquals(childURL.rooted, True)
+        self.assertEquals("http://www.foo.com/c", childURL.asText())
 
-    def test_child_init_root(self):
-        self.assertEquals(
-            "http://www.foo.com/c",
-            URL(host=u"www.foo.com").child(u"c").asText())
 
     def test_sibling(self):
+        """
+        L{URL.sibling} of a L{URL} replaces the last path segment, but does not
+        affect the query or fragment.
+        """
         urlpath = URL.fromText(theurl)
         self.assertEquals(
             "http://www.foo.com/a/nice/path/sister?zot=23&zut",
@@ -253,7 +266,12 @@ class TestURL(TestCase):
             urlpath.sibling(u'sister').asText()
         )
 
+
     def test_click(self):
+        """
+        L{URL.click} interprets the given string as a relative URI-reference
+        and returns a new L{URL} interpreting C{self} as the base absolute URI.
+        """
         urlpath = URL.fromText(theurl)
         # a null uri should be valid (return here)
         self.assertEquals("http://www.foo.com/a/nice/path/?zot=23&zut",
@@ -323,6 +341,10 @@ class TestURL(TestCase):
 
 
     def test_clickCollapse(self):
+        """
+        L{URL.click} collapses C{.} and C{..} according to RFC 3986 section
+        5.2.4.
+        """
         tests = [
             ['http://localhost/', '.', 'http://localhost/'],
             ['http://localhost/', '..', 'http://localhost/'],
@@ -332,19 +354,32 @@ class TestURL(TestCase):
             ['http://localhost/a/b/c', '../d/e', 'http://localhost/a/d/e'],
             ['http://localhost/a/b/c', '/./d/e', 'http://localhost/d/e'],
             ['http://localhost/a/b/c', '/../d/e', 'http://localhost/d/e'],
-            ['http://localhost/a/b/c/', '../../d/e/', 'http://localhost/a/d/e/'],
+            ['http://localhost/a/b/c/', '../../d/e/',
+             'http://localhost/a/d/e/'],
             ['http://localhost/a/./c', '../d/e', 'http://localhost/d/e'],
             ['http://localhost/a/./c/', '../d/e', 'http://localhost/a/d/e'],
-            ['http://localhost/a/b/c/d', './e/../f/../g', 'http://localhost/a/b/c/g'],
+            ['http://localhost/a/b/c/d', './e/../f/../g',
+             'http://localhost/a/b/c/g'],
             ['http://localhost/a/b/c', 'd//e', 'http://localhost/a/b/d//e'],
-            ]
+        ]
         for start, click, result in tests:
             self.assertEquals(
                 URL.fromText(start).click(click).asText(),
                 result
             )
 
-    def test_add(self):
+    def test_queryAdd(self):
+        """
+        L{URL.query.add} adds query parameters.
+        """
+        self.assertEquals(
+            "http://www.foo.com/a/nice/path/?foo=bar",
+            URL.fromText("http://www.foo.com/a/nice/path/")
+            .query.add(u"foo", u"bar").asText())
+        self.assertEquals(
+            "http://www.foo.com/?foo=bar",
+            URL(host=u"www.foo.com").query.add(u"foo", u"bar")
+            .asText())
         urlpath = URL.fromText(theurl)
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp",
@@ -366,19 +401,10 @@ class TestURL(TestCase):
             .asText())
 
 
-    def test_add_noquery(self):
-        # fromText is a different code path, test them both
-        self.assertEquals(
-            "http://www.foo.com/a/nice/path/?foo=bar",
-            URL.fromText("http://www.foo.com/a/nice/path/")
-            .query.add(u"foo", u"bar").asText())
-        self.assertEquals(
-            "http://www.foo.com/?foo=bar",
-            URL(host=u"www.foo.com").query.add(u"foo", u"bar")
-            .asText())
-
-
-    def test_setQueryParam(self):
+    def test_querySet(self):
+        """
+        L{URL.query.set} replaces query parameters by name.
+        """
         urlpath = URL.fromText(theurl)
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=32&zut",
@@ -397,59 +423,20 @@ class TestURL(TestCase):
 
 
     def test_clear(self):
+        """
+        L{URL.query.clear} removes all query parameters.
+        """
         urlpath = URL.fromText(theurl)
         self.assertEquals(
             "http://www.foo.com/a/nice/path/",
             urlpath.query.clear().asText())
 
 
-    def test_eq_same(self):
-        u = URL.fromText('http://localhost/')
-        self.failUnless(u == u, "%r != itself" % u)
-
-
-    def test_eq_similar(self):
-        u1 = URL.fromText('http://localhost/')
-        u2 = URL.fromText('http://localhost/')
-        self.failUnless(u1 == u2, "%r != %r" % (u1, u2))
-
-
-    def test_eq_different(self):
-        u1 = URL.fromText('http://localhost/a')
-        u2 = URL.fromText('http://localhost/b')
-        self.failIf(u1 == u2, "%r != %r" % (u1, u2))
-
-
-    def test_eq_apples_vs_oranges(self):
-        u = URL.fromText('http://localhost/')
-        self.failIf(u == 42, "URL must not equal a number.")
-        self.failIf(u == object(), "URL must not equal an object.")
-
-
-    def test_ne_same(self):
-        u = URL.fromText('http://localhost/')
-        self.failIf(u != u, "%r == itself" % u)
-
-
-    def test_ne_similar(self):
-        u1 = URL.fromText('http://localhost/')
-        u2 = URL.fromText('http://localhost/')
-        self.failIf(u1 != u2, "%r == %r" % (u1, u2))
-
-
-    def test_ne_different(self):
-        u1 = URL.fromText('http://localhost/a')
-        u2 = URL.fromText('http://localhost/b')
-        self.failUnless(u1 != u2, "%r == %r" % (u1, u2))
-
-
-    def test_ne_apples_vs_oranges(self):
-        u = URL.fromText('http://localhost/')
-        self.failUnless(u != 42, "URL must differ from a number.")
-        self.failUnless(u != object(), "URL must be differ from an object.")
-
-
-    def test_parseEqualInParamValue(self):
+    def test_parseEqualSignInParamValue(self):
+        """
+        Every C{=}-sign after the first in a query parameter is simply included
+        in the value of the parameter.
+        """
         u = URL.fromText('http://localhost/?=x=x=x')
         self.assertEqual(u.query.get(u''), ['x=x=x'])
         self.assertEqual(u.asText(), 'http://localhost/?=x%3Dx%3Dx')
@@ -457,3 +444,77 @@ class TestURL(TestCase):
         self.assertEqual(u.queryParameters, [('foo', 'x=x=x'),
                                              ('bar', 'y')])
         self.assertEqual(u.asText(), 'http://localhost/?foo=x%3Dx%3Dx&bar=y')
+
+
+    def test_identicalEqual(self):
+        """
+        L{URL} compares equal to itself.
+        """
+        u = URL.fromText('http://localhost/')
+        self.assertEqual(u, u)
+
+
+    def test_similarEqual(self):
+        """
+        URLs with equivalent components should compare equal.
+        """
+        u1 = URL.fromText('http://localhost/')
+        u2 = URL.fromText('http://localhost/')
+        self.assertEqual(u1, u2)
+
+
+    def test_differentNotEqual(self):
+        """
+        L{URL}s that refer to different resources are both unequal (C{!=}) and
+        also not equal (not C{==}).
+        """
+        u1 = URL.fromText('http://localhost/a')
+        u2 = URL.fromText('http://localhost/b')
+        self.failIf(u1 == u2, "%r != %r" % (u1, u2))
+        self.assertNotEqual(u1, u2)
+
+
+    def test_otherTypesNotEqual(self):
+        """
+        L{URL} is not equal (C{==}) to other types.
+        """
+        u = URL.fromText('http://localhost/')
+        self.failIf(u == 42, "URL must not equal a number.")
+        self.failIf(u == object(), "URL must not equal an object.")
+        self.assertNotEqual(u, 42)
+        self.assertNotEqual(u, object())
+
+
+    def test_identicalNotUnequal(self):
+        """
+        Identical L{URL}s are not unequal (C{!=}) to each other.
+        """
+        u = URL.fromText('http://localhost/')
+        self.failIf(u != u, "%r == itself" % u)
+
+
+    def test_similarNotUnequal(self):
+        """
+        Structurally similar L{URL}s are not unequal (C{!=}) to each other.
+        """
+        u1 = URL.fromText('http://localhost/')
+        u2 = URL.fromText('http://localhost/')
+        self.failIf(u1 != u2, "%r == %r" % (u1, u2))
+
+
+    def test_differentUnequal(self):
+        """
+        Structurally different L{URL}s are unequal (C{!=}) to each other.
+        """
+        u1 = URL.fromText('http://localhost/a')
+        u2 = URL.fromText('http://localhost/b')
+        self.failUnless(u1 != u2, "%r == %r" % (u1, u2))
+
+
+    def test_otherTypesUnequal(self):
+        """
+        L{URL} is unequal (C{!=}) to other types.
+        """
+        u = URL.fromText('http://localhost/')
+        self.failUnless(u != 42, "URL must differ from a number.")
+        self.failUnless(u != object(), "URL must be differ from an object.")
