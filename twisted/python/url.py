@@ -34,7 +34,7 @@ encoding of ASCII.
 """
 
 from urlparse import urlsplit, urlunsplit
-from urllib import quote as urlquote
+from urllib import quote as urlquote, unquote as urlunquote
 from unicodedata import normalize
 
 # RFC 3986 section 2.2, Reserved Characters
@@ -85,6 +85,19 @@ def _maximalPercentEncode(text, safe):
     return urlquote(
         normalize("NFC", text).encode("utf-8"), safe.encode("ascii")
     ).decode("ascii")
+
+
+def _percentDecode(text):
+    """
+    Replace percent-encoded characters with their UTF-8 equivalents.
+
+    @param text: The text with percent-encoded UTF-8 in it.
+    @type text: L{unicode}
+
+    @return: the encoded version of C{text}
+    @rtype: L{unicode}
+    """
+    return urlunquote(text.encode("ascii")).decode("utf-8")
 
 
 
@@ -524,7 +537,18 @@ class URL(object):
         """
         Apply percent-decoding rules to convert this L{URL} into an IRI.
         """
-        return self.replace()
+        return self.replace(
+            host=self.host.decode("idna"),
+            pathSegments=[_percentDecode(segment)
+                          for segment in self.pathSegments],
+            queryParameters=[
+                tuple(_percentDecode(x)
+                      if x is not None else None
+                      for x in (k, v))
+                for k, v in self.queryParameters
+            ],
+            fragment=_percentDecode(self.fragment)
+        )
 
 
     def asText(self):

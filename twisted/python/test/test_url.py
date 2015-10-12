@@ -520,8 +520,8 @@ class TestURL(TestCase):
 
     def test_asURI(self):
         """
-        L{URL.asURI} produces another URI which converts any URI unicode
-        encoding into pure US-ASCII and returns a new L{URL}.
+        L{URL.asURI} produces an URI which converts any URI unicode encoding
+        into pure US-ASCII and returns a new L{URL}.
         """
         unicodey = ('http://\N{LATIN SMALL LETTER E WITH ACUTE}.com/'
                     '\N{LATIN SMALL LETTER E}\N{COMBINING ACUTE ACCENT}'
@@ -538,3 +538,24 @@ class TestURL(TestCase):
         actualURI = uri.asText()
         self.assertEqual(actualURI, expectedURI,
                          b'%r != %r' % (actualURI, expectedURI))
+
+
+    def test_asIRI(self):
+        """
+        L{URL.asIRI} decodes any percent-encoded text in the URI, making it
+        more suitable for reading by humans, and returns a new L{URL}.
+        """
+        asciiish = 'http://xn--9ca.com/%C3%A9?%C3%A1=%C3%AD#%C3%BA'
+        uri = URL.fromText(asciiish)
+        iri = uri.asIRI()
+        self.assertEqual(uri.host, 'xn--9ca.com')
+        self.assertEqual(uri.pathSegments[0], '%C3%A9')
+        self.assertEqual(uri.asText(), asciiish)
+        expectedIRI = ('http://\N{LATIN SMALL LETTER E WITH ACUTE}.com/'
+                       '\N{LATIN SMALL LETTER E WITH ACUTE}'
+                       '?\N{LATIN SMALL LETTER A WITH ACUTE}='
+                       '\N{LATIN SMALL LETTER I WITH ACUTE}'
+                       '#\N{LATIN SMALL LETTER U WITH ACUTE}')
+        actualIRI = iri.asText()
+        self.assertEqual(actualIRI, expectedIRI,
+                         b'%r != %r' % (actualIRI, expectedIRI))
