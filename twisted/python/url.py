@@ -34,6 +34,8 @@ encoding of ASCII.
 """
 
 from urlparse import urlsplit, urlunsplit
+from urllib import quote as urlquote
+from unicodedata import normalize
 
 # RFC 3986 section 2.2, Reserved Characters
 _genDelims = u':/?#[]@'
@@ -46,13 +48,44 @@ _validInQuery = (_validInFragment
                  .replace(u'&', u'').replace(u'=', u'').replace(u'+', u''))
 
 
-def _minimalQuote(text, safe):
+def _minimalPercentEncode(text, safe):
     """
-    Quote only the characters that are syntactically necessary.
+    Percent-encode only the characters that are syntactically necessary for
+    serialization, preserving any IRI-style textual data.
+
+    @param text: the text to escaped
+    @type text: L{unicode}
+
+    @param safe: characters safe to include in the return value
+    @type safe: L{unicode}
+
+    @return: the encoded version of C{text}
+    @rtype: L{unicode}
     """
     unsafe = set(_genDelims + _subDelims) - set(safe)
     return u''.join((c if c not in unsafe else "%{:02X}".format(ord(c)))
                     for c in text)
+
+
+
+def _maximalPercentEncode(text, safe):
+    """
+    Percent-encode everything required to convert a portion of an IRI to a
+    portion of a URI.
+
+    @param text: the text to encode.
+    @type text: L{unicode}
+
+    @param safe: a string of safe characters.
+    @type safe: L{unicode}
+
+    @return: the encoded version of C{text}
+    @rtype: L{unicode}
+    """
+    return urlquote(
+        normalize("NFC", text).encode("utf-8"), safe.encode("ascii")
+    ).decode("ascii")
+
 
 
 def _resolveDotSegments(pathSegments):
@@ -473,7 +506,18 @@ class URL(object):
         """
         Apply percent-encoding rules to convert this L{URL} into a URI.
         """
-        return self.replace()
+        return self.replace(
+            host=self.host.encode("idna").decode("ascii"),
+            pathSegments=[_maximalPercentEncode(segment, _validInPath)
+                          for segment in self.pathSegments],
+            queryParameters=[
+                tuple(_maximalPercentEncode(x, _validInQuery)
+                      if x is not None else None
+                      for x in (k, v))
+                for k, v in self.queryParameters
+            ],
+            fragment=_maximalPercentEncode(self.fragment, _validInFragment)
+        )
 
 
     def asIRI(self):
@@ -487,11 +531,11 @@ class URL(object):
         """
         Convert this URL to its textual representation.
         """
-        path = '/'.join([u''] + [_minimalQuote(segment, _validInPath)
-                                 for segment in self.pathSegments])
+        path = u'/'.join([u''] + [_minimalPercentEncode(segment, _validInPath)
+                                  for segment in self.pathSegments])
         query = '&'.join(
-            '='.join(
-                (_minimalQuote(x, _validInQuery)
+            u'='.join(
+                (_minimalPercentEncode(x, _validInQuery)
              for x in ([k] if v is None
                        else [k, v]))
             )

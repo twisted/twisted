@@ -516,3 +516,25 @@ class TestURL(TestCase):
         u = URL.fromText('http://localhost/')
         self.failUnless(u != 42, "URL must differ from a number.")
         self.failUnless(u != object(), "URL must be differ from an object.")
+
+
+    def test_asURI(self):
+        """
+        L{URL.asURI} produces another URI which converts any URI unicode
+        encoding into pure US-ASCII and returns a new L{URL}.
+        """
+        unicodey = ('http://\N{LATIN SMALL LETTER E WITH ACUTE}.com/'
+                    '\N{LATIN SMALL LETTER E}\N{COMBINING ACUTE ACCENT}'
+                    '?\N{LATIN SMALL LETTER A}\N{COMBINING ACUTE ACCENT}='
+                    '\N{LATIN SMALL LETTER I}\N{COMBINING ACUTE ACCENT}'
+                    '#\N{LATIN SMALL LETTER U}\N{COMBINING ACUTE ACCENT}')
+        iri = URL.fromText(unicodey)
+        uri = iri.asURI()
+        self.assertEqual(iri.host, '\N{LATIN SMALL LETTER E WITH ACUTE}.com')
+        self.assertEqual(iri.pathSegments[0],
+                         '\N{LATIN SMALL LETTER E}\N{COMBINING ACUTE ACCENT}')
+        self.assertEqual(iri.asText(), unicodey)
+        expectedURI = 'http://xn--9ca.com/%C3%A9?%C3%A1=%C3%AD#%C3%BA'
+        actualURI = uri.asText()
+        self.assertEqual(actualURI, expectedURI,
+                         b'%r != %r' % (actualURI, expectedURI))
