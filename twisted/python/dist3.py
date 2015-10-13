@@ -468,30 +468,4 @@ almostModules = [
     "twisted.web.server",
 ]
 
-
-def _processDataFileList(dataFiles):
-    """
-    Turn a list of file names into a format that distutils likes.
-
-    For example:
-
-        ["foo/bar.py", "baz/spam.py"]
-
-    ...is transformed into...
-
-        [("foo", ["foo/bar.py"]), ("baz", "baz/spam.py")]
-    """
-    files = {}
-
-    for file in dataFiles:
-        pathFragments = file.split(".")
-        targetDir = path.sep.join(pathFragments[:-1])
-
-        if not files.get(targetDir):
-            files[targetDir] = []
-        files[targetDir].append(path.sep.join(pathFragments) + ".py")
-
-    return list(files.items())
-
-
 modulesToInstall = modules + testModules + almostModules
