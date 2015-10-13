@@ -100,8 +100,8 @@ class TestURL(TestCase):
         """
         actual = (u.scheme, u.host, u.pathSegments, u.queryParameters,
                   u.fragment, u.port)
-        expected = (scheme, host, pathSegments, queryParameters, fragment,
-                    port)
+        expected = (scheme, host, tuple(pathSegments), tuple(queryParameters),
+                    fragment, port)
         self.assertEqual(actual, expected)
 
 
@@ -153,9 +153,9 @@ class TestURL(TestCase):
             repr(URL(scheme=u'http', host=u'foo', pathSegments=[u'bar'],
                      queryParameters=[(u'baz', None), (u'k', u'v')],
                      fragment=u'frob')),
-            "URL(scheme=u'http', host=u'foo', pathSegments=[u'bar'], "
-            "queryParameters=[(u'baz', None), (u'k', u'v')], fragment=u'frob', "
-            "port=80)"
+            "URL(scheme=u'http', host=u'foo', pathSegments=(u'bar',), "
+            "queryParameters=((u'baz', None), (u'k', u'v')), fragment=u'frob',"
+            " port=80)"
         )
 
 
@@ -360,10 +360,17 @@ class TestURL(TestCase):
              'http://localhost/a/b/c/g'],
             ['http://localhost/a/b/c', 'd//e', 'http://localhost/a/b/d//e'],
         ]
-        for start, click, result in tests:
+        for start, click, expected in tests:
+            actual = URL.fromText(start).click(click).asText()
             self.assertEquals(
-                URL.fromText(start).click(click).asText(),
-                result
+                actual,
+                expected,
+                "{start}.click({click}) => {actual} not {expected}".format(
+                    start=start,
+                    click=repr(click),
+                    actual=actual,
+                    expected=expected,
+                )
             )
 
     def test_queryAdd(self):
@@ -439,8 +446,8 @@ class TestURL(TestCase):
         self.assertEqual(u.query.get(u''), ['x=x=x'])
         self.assertEqual(u.asText(), 'http://localhost/?=x%3Dx%3Dx')
         u = URL.fromText('http://localhost/?foo=x=x=x&bar=y')
-        self.assertEqual(u.queryParameters, [('foo', 'x=x=x'),
-                                             ('bar', 'y')])
+        self.assertEqual(u.queryParameters, (('foo', 'x=x=x'),
+                                             ('bar', 'y')))
         self.assertEqual(u.asText(), 'http://localhost/?foo=x%3Dx%3Dx&bar=y')
 
 
