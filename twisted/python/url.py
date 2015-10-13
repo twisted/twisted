@@ -252,7 +252,8 @@ class Query(object):
 
 class URL(object):
     """
-    Represents a URL and provides a convenient API for modifying its parts.
+    A L{URL} represents a URL and provides a convenient API for modifying its
+    parts.
 
     A URL is split into a number of distinct parts: scheme, netloc (domain
     name), path segments, query parameters and fragment identifier.
