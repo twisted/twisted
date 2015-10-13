@@ -87,6 +87,7 @@ def _maximalPercentEncode(text, safe):
     ).decode("ascii")
 
 
+
 def _percentDecode(text):
     """
     Replace percent-encoded characters with their UTF-8 equivalents.
@@ -108,6 +109,9 @@ def _resolveDotSegments(pathSegments):
     @param pathSegments: list of path segments
 
     @see: RFC 3986 section 5.2.4, Remove Dot Segments
+
+    @return: a new L{list} of path segments with the '.' and '..' elements
+        removed and resolved.
     """
     segs = []
 
@@ -129,7 +133,13 @@ def _resolveDotSegments(pathSegments):
 
 def _checkUnicodeOrNone(s):
     """
-    Raise C{TypeError} if C{s} is C{None} or an instance of L{unicode}.
+    Check if the given parameter is unicode, allowing None as well.
+
+    @param s: The parameter to check.
+
+    @raise TypeError: if C{s} is C{None} or an instance of L{unicode}.
+
+    @return: C{s}
     """
     if not isinstance(s, (unicode, None.__class__)):
         raise TypeError("%r is not unicode" % (s,))
@@ -158,6 +168,12 @@ def _optional(argument, default):
     """
     If the given value is C{_unspecified}, return C{default}; otherwise return
     C{argument}.
+
+    @param argument: The argument passed.
+
+    @param default: The default to use if C{argument} is C{_unspecified}.
+
+    @return: C{argument} or C{default}
     """
     if argument is _unspecified:
         return default
@@ -187,6 +203,14 @@ class Query(object):
         """
         Add a query argument with the given value None indicates that the
         argument has no value.
+
+        @param name: The name (the part before the C{=}) of the query parameter
+            to add.
+
+        @param value: The value (the part after the C{=}) of the query
+            parameter to add.
+
+        @return: a new L{URL} with the parameter added.
         """
         _checkUnicodeOrNone(name)
         _checkUnicodeOrNone(value)
@@ -202,6 +226,14 @@ class Query(object):
         exists*, then add the argument with the given value.
 
         C{None} indicates that the argument has no value.
+
+        @param name: The name (the part before the C{=}) of the query parameter
+            to add.
+
+        @param value: The value (the part after the C{=}) of the query
+            parameter to add.
+
+        @return: a new L{URL} with the parameter added or changed.
         """
         if (not isinstance(name, unicode) or
             not isinstance(value, (unicode, None.__class__))):
@@ -221,6 +253,8 @@ class Query(object):
         """
         Retrieve a list of values for the given named query parameter.
 
+        @param name: The name of the query parameter to retrieve.
+
         @return: all the values associated with the key; for example, for the
             query string x=1&x=2, C{[u'1', u'2']}
         @rtype: L{list} of L{unicode}
@@ -232,6 +266,10 @@ class Query(object):
     def remove(self, name):
         """
         Remove all query arguments with the given name.
+
+        @param name: The name of the query parameter to remove.
+
+        @return: a new L{URL} with the parameter removed.
         """
         if not isinstance(name, (unicode, None.__class__)):
             raise TypeError("name  must be unicode.")
@@ -242,6 +280,8 @@ class Query(object):
     def clear(self):
         """
         Remove all existing query arguments.
+
+        @return: a new L{URL} with the entire query string removed.
         """
         return self._url.replace(queryParameters=[])
 
@@ -324,7 +364,6 @@ class URL(object):
         self._port = port
         self._rooted = rooted
 
-
     scheme = property(lambda self: self._scheme)
     host = property(lambda self: self._host)
     port = property(lambda self: self._port)
@@ -397,6 +436,12 @@ class URL(object):
 
         @param port: the port of the new URL; if unspecified, the port of this
             URL.
+
+        @param rooted: C{True} if the given C{pathSegments} are meant to start
+            at the root of the host; C{False} otherwise.  Only meaningful for
+            relative URIs.
+
+        @return: a new L{URL}.
         """
         return self.__class__(
             scheme=_optional(scheme, self.scheme),
@@ -518,9 +563,9 @@ class URL(object):
         if clicked.absolute:
             return clicked
         elif clicked.scheme and not clicked.rooted:
-            # schemes with relative paths are not well-defined.  RFC 3986
-            # calls them a "loophole in prior specifications" that should
-            # be avoided, or supported only for backwards compatibility.
+            # Schemes with relative paths are not well-defined.  RFC 3986 calls
+            # them a "loophole in prior specifications" that should be avoided,
+            # or supported only for backwards compatibility.
             raise NotImplementedError(
                 'absolute URI with rootless path: %r' % (href,)
             )

@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2007 Divmod.
+# -*- test-case-name: twisted.python.test.test_url -*-
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -13,8 +14,8 @@ from twisted.trial.unittest import TestCase
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 
 # Examples from RFC 3986 section 5.4, Reference Resolution Examples
-rfc3986_relative_link_base = 'http://a/b/c/d;p?q'
-rfc3986_relative_link_tests = [
+relativeLinkBaseForRFC3986 = 'http://a/b/c/d;p?q'
+relativeLinkTestsForRFC3986 = [
     # "Normal"
     #('g:h', 'g:h'),     # Not supported:  scheme with relative path
     ('g', 'http://a/b/c/g'),
@@ -41,24 +42,26 @@ rfc3986_relative_link_tests = [
     ('../../g', 'http://a/g'),
 
     # Abnormal examples
-    # ".." cannot be used to change the authority component of a URI
+    # ".." cannot be used to change the authority component of a URI.
     ('../../../g', 'http://a/g'),
     ('../../../../g', 'http://a/g'),
-    # "." and ".." when they are only part of a segment
+
+    # Only include "." and ".." when they are only part of a larger segment,
+    # not by themselves.
     ('/./g', 'http://a/g'),
     ('/../g', 'http://a/g'),
     ('g.', 'http://a/b/c/g.'),
     ('.g', 'http://a/b/c/.g'),
     ('g..', 'http://a/b/c/g..'),
     ('..g', 'http://a/b/c/..g'),
-    # unnecessary or nonsensical forms of "." and ".."
+    # Unnecessary or nonsensical forms of "." and "..".
     ('./../g', 'http://a/b/g'),
     ('./g/.', 'http://a/b/c/g/'),
     ('g/./h', 'http://a/b/c/g/h'),
     ('g/../h', 'http://a/b/c/h'),
     ('g;x=1/./y', 'http://a/b/c/g;x=1/y'),
     ('g;x=1/../y', 'http://a/b/c/y'),
-    # separating the reference's query and/or fragment components from the path
+    # Separating the reference's query and fragment components from the path.
     ('g?y/./x', 'http://a/b/c/g?y/./x'),
     ('g?y/../x', 'http://a/b/c/g?y/../x'),
     ('g#s/./x', 'http://a/b/c/g#s/./x'),
@@ -80,6 +83,8 @@ class TestURL(TestCase):
     def assertUnicoded(self, u):
         """
         The given L{URL}'s components should be L{unicode}.
+
+        @param u: The L{URL} to test.
         """
         self.assertTrue(isinstance(u.scheme, unicode)
                         or u.scheme is None, repr(u))
@@ -97,6 +102,20 @@ class TestURL(TestCase):
                   fragment, port):
         """
         The given L{URL} should have the given components.
+
+        @param u: The actual L{URL} to examine.
+
+        @param scheme: The expected scheme.
+
+        @param host: The expected host.
+
+        @param pathSegments: The expected pathSegments.
+
+        @param queryParameters: The expected queryParameters.
+
+        @param fragment: The expected fragment.
+
+        @param port: The expected port.
         """
         actual = (u.scheme, u.host, u.pathSegments, u.queryParameters,
                   u.fragment, u.port)
@@ -112,7 +131,6 @@ class TestURL(TestCase):
         for u in [URL(u'http', u''),
                   URL(u'http', u'', None, None, None),
                   URL(u'http', u'', [u''], [], u'')]:
-                  #URL('http', '', [''], [], '')]:
             self.assertUnicoded(u)
             self.assertURL(u, u'http', u'', [u''], [], u'', 80)
 
@@ -256,7 +274,7 @@ class TestURL(TestCase):
             "http://www.foo.com/a/nice/path/sister?zot=23&zut",
             urlpath.sibling(u'sister').asText()
         )
-        # use an url without trailing '/' to check child removal
+        # Use an url without trailing '/' to check child removal.
         theurl2 = "http://www.foo.com/a/nice/path?zot=23&zut"
         urlpath = URL.fromText(theurl2)
         self.assertEquals(
@@ -271,25 +289,25 @@ class TestURL(TestCase):
         and returns a new L{URL} interpreting C{self} as the base absolute URI.
         """
         urlpath = URL.fromText(theurl)
-        # a null uri should be valid (return here)
+        # A null uri should be valid (return here).
         self.assertEquals("http://www.foo.com/a/nice/path/?zot=23&zut",
                           urlpath.click("").asText())
-        # a simple relative path remove the query
+        # A simple relative path remove the query.
         self.assertEquals("http://www.foo.com/a/nice/path/click",
                           urlpath.click("click").asText())
-        # an absolute path replace path and query
+        # An absolute path replace path and query.
         self.assertEquals("http://www.foo.com/click",
                           urlpath.click("/click").asText())
-        # replace just the query
+        # Replace just the query.
         self.assertEquals("http://www.foo.com/a/nice/path/?burp",
                           urlpath.click("?burp").asText())
-        # one full url to another should not generate '//' between authority
+        # One full url to another should not generate '//' between authority.
         # and pathSegments
         self.failIfIn("//foobar",
                       urlpath.click('http://www.foo.com/foobar').asText())
 
-        # from a url with no query clicking a url with a query,
-        # the query should be handled properly
+        # From a url with no query clicking a url with a query, the query
+        # should be handled properly.
         u = URL.fromText('http://www.foo.com/me/noquery')
         self.failUnlessEqual('http://www.foo.com/me/17?spam=158',
                              u.click('/me/17?spam=158').asText())
@@ -305,8 +323,8 @@ class TestURL(TestCase):
         """
         L{URL.click} should correctly resolve the examples in RFC 3986.
         """
-        base = URL.fromText(rfc3986_relative_link_base)
-        for (ref, expected) in rfc3986_relative_link_tests:
+        base = URL.fromText(relativeLinkBaseForRFC3986)
+        for (ref, expected) in relativeLinkTestsForRFC3986:
             self.failUnlessEqual(base.click(ref).asText(), expected)
 
 
@@ -314,7 +332,7 @@ class TestURL(TestCase):
         """
         L{URL.click} should not accept schemes with relative paths.
         """
-        base = URL.fromText(rfc3986_relative_link_base)
+        base = URL.fromText(relativeLinkBaseForRFC3986)
         self.assertRaises(NotImplementedError, base.click, 'g:h')
         self.assertRaises(NotImplementedError, base.click, 'http:h')
 
@@ -373,6 +391,7 @@ class TestURL(TestCase):
                 )
             )
 
+
     def test_queryAdd(self):
         """
         L{URL.query.add} adds query parameters.
@@ -395,11 +414,11 @@ class TestURL(TestCase):
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zing",
             urlpath.query.add(u"burp", u"xxx").query.add(u"zing").asText())
-        # note the inversion!
+        # Note the inversion!
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&zing&burp=xxx",
             urlpath.query.add(u"zing").query.add(u"burp", u"xxx").asText())
-        # note the two values for the same name
+        # Note the two values for the same name.
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zot=32",
             urlpath.query.add(u"burp", u"xxx").query.add(u"zot", u'32')
@@ -414,7 +433,7 @@ class TestURL(TestCase):
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=32&zut",
             urlpath.query.set(u"zot", u'32').asText())
-        # replace name without value with name/value and vice-versa
+        # Replace name without value with name/value and vice-versa.
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot&zut=itworked",
             urlpath.query.set(u"zot").query.set(u"zut", u"itworked").asText()
