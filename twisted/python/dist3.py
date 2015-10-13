@@ -33,8 +33,6 @@ Only necessary while parts of Twisted are unported.
 
 from __future__ import division
 
-from os import path
-
 
 modules = [
     "twisted",

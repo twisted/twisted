@@ -15,7 +15,6 @@ import sys
 import textwrap
 import tempfile
 import shutil
-import tarfile
 
 from datetime import date
 from io import BytesIO as StringIO
@@ -28,13 +27,12 @@ from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 
-from twisted.web.microdom import parseXMLString
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
     changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
     APIBuilder, BuildAPIDocsScript,
-    runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
+    runCommand, NotWorkingDirectory,
     ChangeVersionsScript, NewsBuilder, SphinxBuilder,
     GitCommand, SVNCommand, getRepositoryCommand, IVCSCommand)
 

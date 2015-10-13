@@ -15,13 +15,11 @@ which must run on multiple platforms (eg the setup.py script).
 import os
 import re
 import sys
-import tarfile
 import textwrap
 
 from zope.interface import Interface, implementer
 
 from datetime import date
-from tempfile import mkdtemp
 from subprocess import PIPE, STDOUT, Popen
 
 from twisted.python.versions import Version
@@ -1019,13 +1017,6 @@ def filePathDelta(origin, destination):
             break
     path = [".."] * (len(path1) - commonItems)
     return path + path2[commonItems:]
-
-
-
-class UncleanWorkingDirectory(Exception):
-    """
-    Raised when the working directory of a repository is unclean.
-    """
 
 
 
