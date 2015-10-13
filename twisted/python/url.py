@@ -247,9 +247,6 @@ class Query(object):
 
 
 
-
-
-
 class URL(object):
     """
     A L{URL} represents a URL and provides a convenient API for modifying its
@@ -299,9 +296,6 @@ class URL(object):
         that is somewhat awkward to work with.
     @type rooted: L{bool}
     """
-
-    compareAttributes = ['scheme', 'host', 'pathSegments',
-                         'queryParameters', 'fragment', 'port']
 
     def __init__(self, scheme=None, host=None, pathSegments=None,
                  queryParameters=None, fragment=None, port=None,
@@ -467,14 +461,21 @@ class URL(object):
         return self.replace(pathSegments=l)
 
 
-    def sibling(self, path):
+    def sibling(self, segment):
         """
         Construct a url where the given path segment is a sibling of this url.
+
+        @param segment: A path segment.
+        @type segment: L{unicode}
+
+        @return: a new L{URL} with its final path segment replaced with
+            C{segment}.
+        @rtype: L{URL}
         """
-        if not isinstance(path, unicode):
+        if not isinstance(segment, unicode):
             raise TypeError("Given path must be unicode.")
         l = self.pathSegments[:]
-        l[-1] = path
+        l[-1] = segment
         return self.replace(pathSegments=l)
 
 
@@ -529,6 +530,11 @@ class URL(object):
     def asURI(self):
         """
         Apply percent-encoding rules to convert this L{URL} into a URI.
+
+        @return: a new L{URL} with its path-segments, query-parameters, and
+            hostname appropriately decoded, so that they are all in the
+            US-ASCII range.
+        @rtype: L{URL}
         """
         return self.replace(
             host=self.host.encode("idna").decode("ascii"),
@@ -547,6 +553,10 @@ class URL(object):
     def asIRI(self):
         """
         Apply percent-decoding rules to convert this L{URL} into an IRI.
+
+        @return: a new L{URL} with its path-segments, query-parameters, and
+            hostname appropriately decoded.
+        @rtype: L{URL}
         """
         return self.replace(
             host=self.host.decode("idna"),
@@ -564,7 +574,11 @@ class URL(object):
 
     def asText(self):
         """
-        Convert this URL to its textual representation.
+        Convert this URL to its canonical textual representation.
+
+        @return: The serialized textual representation of this L{URL}, such as
+            C{u"http://example.com/some/path?some=query"}.
+        @rtype: L{unicode}
         """
         path = u'/'.join([u''] + [_minimalPercentEncode(segment, _validInPath)
                                   for segment in self.pathSegments])
@@ -585,13 +599,14 @@ class URL(object):
 
 
     def __repr__(self):
+        """
+        Convert this URL to an C{eval}-able representation that shows all of
+        its constituent parts.
+        """
         return (
             '%s(scheme=%r, host=%r, pathSegments=%r, queryParameters=%r, '
-            'fragment=%r, port=%r)'
-            % (type(self).__name__,
-               self.scheme,
-               self.host,
-               self.pathSegments,
-               self.queryParameters,
-               self.fragment,
-               self.port))
+            'fragment=%r, port=%r)' % (type(self).__name__,
+                                       self.scheme, self.host,
+                                       self.pathSegments, self.queryParameters,
+                                       self.fragment, self.port)
+        )
