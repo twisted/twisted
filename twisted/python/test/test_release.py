@@ -33,7 +33,7 @@ from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
     changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
-    DistributionBuilder, APIBuilder, BuildAPIDocsScript,
+    APIBuilder, BuildAPIDocsScript,
     runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
     ChangeVersionsScript, NewsBuilder, SphinxBuilder,
     GitCommand, SVNCommand, getRepositoryCommand, IVCSCommand)
@@ -185,24 +185,6 @@ class StructureAssertingMixin(object):
         if children:
             self.fail("There were extra children in %s: %s"
                       % (root.path, children))
-
-
-    def assertExtractedStructure(self, outputFile, dirDict):
-        """
-        Assert that a tarfile content is equivalent to one described by a dict.
-
-        @param outputFile: The tar file built by L{DistributionBuilder}.
-        @type outputFile: L{FilePath}.
-        @param dirDict: The dict that should describe the contents of the
-            directory. It should be the same structure as the C{dirDict}
-            parameter to L{createStructure}.
-        @type dirDict: C{dict}
-        """
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        extracted = FilePath(self.mktemp())
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.children()[0], dirDict)
 
 
 
@@ -1498,19 +1480,6 @@ class SphinxBuilderTests(TestCase):
         self.assertRaises(CommandFailed,
                           self.builder.build,
                           self.sphinxDir)
-
-
-
-class DistributionBuilderTestBase(StructureAssertingMixin,
-                                  ExternalTempdirTestCase):
-    """
-    Base for tests of L{DistributionBuilder}.
-    """
-
-    def setUp(self):
-        self.rootDir = FilePath(self.mktemp())
-        self.outputDir = FilePath(self.mktemp())
-        self.builder = DistributionBuilder(self.rootDir, self.outputDir)
 
 
 
