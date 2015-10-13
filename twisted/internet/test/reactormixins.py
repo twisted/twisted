@@ -337,6 +337,8 @@ class ReactorBuilder:
                 except:
                     skip = Failure().getErrorMessage()
             testcase.__name__ = name
+            if hasattr(cls, "__qualname__"):
+                testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] + [name])
             classes[testcase.__name__] = testcase
         return classes
     makeTestCaseClasses = classmethod(makeTestCaseClasses)

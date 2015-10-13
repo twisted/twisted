@@ -1371,12 +1371,12 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
         testCase.run(result)
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(len(result.errors), 1)
-        self.assertEqual(
-            result.errors[0][1].value.args[0],
-            '<bound method GeneratorTestCase.test_generator of <twisted.trial.'
-            'test.test_tests.GeneratorTestCase testMethod=test_generator>> is '
-            'a generator function and therefore will never run')
-
+        self.assertIn("GeneratorTestCase.test_generator",
+                      result.errors[0][1].value.args[0])
+        self.assertIn("GeneratorTestCase testMethod=test_generator",
+                      result.errors[0][1].value.args[0])
+        self.assertIn("is a generator function and therefore will never run",
+                      result.errors[0][1].value.args[0])
 
     def test_synchronousTestCaseErrorOnGeneratorFunction(self):
         """
@@ -1402,9 +1402,9 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
         testCase.run(result)
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(len(result.errors), 1)
-        self.assertEqual(
-            result.errors[0][1].value.args[0],
-            '<bound method GeneratorSynchronousTestCase.test_generator of '
-            '<twisted.trial.test.test_tests.GeneratorSynchronousTestCase '
-            'testMethod=test_generator>> is a generator function and '
-            'therefore will never run')
+        self.assertIn("GeneratorSynchronousTestCase.test_generator",
+                      result.errors[0][1].value.args[0])
+        self.assertIn("GeneratorSynchronousTestCase testMethod=test_generator",
+                      result.errors[0][1].value.args[0])
+        self.assertIn("is a generator function and therefore will never run",
+                      result.errors[0][1].value.args[0])
