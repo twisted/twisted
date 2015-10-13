@@ -440,7 +440,31 @@ class URL(object):
         return cls(scheme, host, pathSegments, queryParameters, fragment, port,
                    rooted)
 
-    # Path manipulations:
+
+    def child(self, segment):
+        """
+        Construct a L{URL} where the given path segment is a child of this url,
+        presering the query and fragment.
+
+        For example::
+
+            >>> URL.fromText(u"http://localhost/a/b?x=y").child(u"c").asText()
+            u'http://localhost/a/b/c?x=y'
+
+        @param segment: A path segment.
+        @type segment: L{unicode}
+
+        @return: a new L{URL} with the additional path segment.
+        @rtype: L{URL}
+        """
+        if not isinstance(segment, unicode):
+            raise TypeError("Given path must be unicode.")
+        l = self.pathSegments[:]
+        if l[-1] == u'':
+            l[-1] = segment
+        else:
+            l.append(segment)
+        return self.replace(pathSegments=l)
 
 
     def sibling(self, path):
@@ -451,20 +475,6 @@ class URL(object):
             raise TypeError("Given path must be unicode.")
         l = self.pathSegments[:]
         l[-1] = path
-        return self.replace(pathSegments=l)
-
-
-    def child(self, path):
-        """
-        Construct a url where the given path segment is a child of this url.
-        """
-        if not isinstance(path, unicode):
-            raise TypeError("Given path must be unicode.")
-        l = self.pathSegments[:]
-        if l[-1] == u'':
-            l[-1] = path
-        else:
-            l.append(path)
         return self.replace(pathSegments=l)
 
 
