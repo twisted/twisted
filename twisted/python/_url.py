@@ -271,7 +271,41 @@ class URL(object):
         http://example.com:8080/a/b/c?d=e#f
         ^ scheme           ^ port     ^ query parameters
                ^ host           ^ path segments
-                                         ^ fragment
+                                          ^ fragment
+
+    You can construct L{URL} objects by passing in these components directly,
+    like so::
+
+        >>> from twisted.python.url import URL
+        >>> URL(scheme=u'https', host=u'example.com',
+        ...     pathSegments=[u'hello', u'world'])
+        URL.fromText(u'https://example.com/hello/world')
+
+    Or you can use the L{fromText} method you can see in the output there::
+
+        >>> URL.fromText(u'https://example.com/hello/world')
+        URL.fromText(u'https://example.com/hello/world')
+
+    There are two major advantages of using L{URL} over representing URLs as
+    strings.  The first is that it's really easy to evaluate a relative
+    hyperlink, for example, when crawling documents, to figure out what is
+    linked::
+
+        >>> URL.fromText(u'https://example.com/base/uri/').click("/absolute")
+        URL.fromText(u'https://example.com/absolute')
+        >>> (URL.fromText(u'https://example.com/base/uri/')
+        ...  .click("relative/path"))
+        URL.fromText(u'https://example.com/base/uri/relative/path')
+
+    The other is that URLs have two normalizations.  One representation is
+    suitable for humans to read, because it can represent data from many
+    character sets - this is the Internationalized, or IRI, normalization.  The
+    other is the older, US-ASCII-only representation, which is necessary for
+    most contexts where you would need to put a URI.  You can convert *between*
+    these representations according to certain rules.  L{URL} exposes these
+    conversions as methods::
+
+        
 
     @see: U{RFC 3986, Uniform Resource Identifier (URI): Generic Syntax
         <https://tools.ietf.org/html/rfc3986>}
