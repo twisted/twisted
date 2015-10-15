@@ -1,0 +1,15 @@
+This directory contains various simple programs intended to exercise various
+features of Twisted Conch as a way to learn about and track their
+performance characteristics.  As there is currently no record of past
+benchmark results, the tracking aspect of this is currently somewhat
+fantastic.  However, the intent is for this to change at some future point.
+
+All (one) of the programs in this directory are currently intended to be
+invoked directly and to report some timing information on standard out.
+
+The following benchmarks are currently available:
+
+buffering_mixin.py:
+
+    This deals with twisted.conch.mixin.BufferingMixin which provides
+    Nagle-like write coalescing for Protocol classes.

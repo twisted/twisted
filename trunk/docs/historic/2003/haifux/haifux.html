@@ -1,0 +1,2235 @@
+<html><head><title>Evolution of Finger</title></head><body>
+<h1>Evolution of Finger</h1>
+
+<h2>Refuse Connections</h2>
+
+<pre>
+from twisted.internet import reactor
+reactor.run()
+</pre>
+
+<p>Here, we just run the reactor. Nothing at all will happen,
+until we interrupt the program. It will not consume (almost)
+no CPU resources. Not very useful, perhaps -- but this
+is the skeleton inside which the Twisted program
+will grow.</p>
+
+<h2>Do Nothing</h2>
+
+<pre>
+from twisted.internet import protocol, reactor
+class FingerProtocol(protocol.Protocol):
+    pass
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+reactor.listenTCP(1079, FingerFactory())
+reactor.run()
+</pre>
+
+<p>Here, we start listening on port 1079 [which is supposed to be
+a reminder that eventually, we want to run on port 79, the port
+the finger server is supposed to run on. We define a protocol which
+does not respond to any events. Thus, connections to 1079 will
+be accepted, but the input ignored.</p>
+
+<h2>Drop Connections</h2>
+
+<pre>
+from twisted.internet import protocol, reactor
+class FingerProtocol(protocol.Protocol):
+    def connectionMade(self):
+        self.transport.loseConnection()
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+reactor.listenTCP(1079, FingerFactory())
+reactor.run()
+</pre>
+
+<p>Here we add to the protocol the ability to respond to the
+event of beginning a connection -- by terminating it.
+Perhaps not an interesting behaviour, but it is already
+not that far from behaving according to the letter of the
+protocol. After all, there is no requirement to send any
+data to the remote connection in the standard, is there.
+The only technical problem is that we terminate the connection
+too soon. A client which is slow enough will see his send()
+of the username result in an error.</p>
+
+<h2>Read Username, Drop Connections</h2>
+
+<pre>
+from twisted.internet import protocol, reactor
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.transport.loseConnection()
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+reactor.listenTCP(1079, FingerFactory())
+reactor.run()
+</pre>
+
+<p>Here we make <code>FingerProtocol</code> inherit from
+<code>LineReceiver</code>, so that we get data-based events
+on a line-by-line basis. We respond to the event of receiving
+the line with shutting down the connection. Congratulations,
+this is the first standard-compliant version of the code.
+However, usually people actually expect some data about
+users to be transmitted.</p>
+
+
+<h2>Read Username, Output Error, Drop Connections</h2>
+
+<pre>
+from twisted.internet import protocol, reactor
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.transport.write("No such user\r\n")
+        self.transport.loseConnection()
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+reactor.listenTCP(1079, FingerFactory())
+reactor.run()
+</pre>
+
+<p>Finally, a useful version. Granted, the usefulness is somewhat
+limited by the fact that this version only prints out a no such
+user message. It could be used for devestating effect in honeypots,
+of course :)</p>
+
+<h2>Output From Empty Factory</h2>
+
+<pre>
+# Read username, output from empty factory, drop connections
+from twisted.internet import protocol, reactor
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.transport.write(self.factory.getUser(user)+"\r\n")
+        self.transport.loseConnection()
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def getUser(self, user): return "No such user"
+reactor.listenTCP(1079, FingerFactory())
+reactor.run()
+</pre>
+
+<p>The same behaviour, but finally we see what usefuleness the
+factory has: as something that does not get constructed for
+every connection, it can be in charge of the user database.
+In particular, we won't have to change the protocol if
+the user database backend changes.</p>
+
+<h2>Output from Non-empty Factory</h2>
+
+<pre>
+# Read username, output from non-empty factory, drop connections
+from twisted.internet import protocol, reactor
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.transport.write(self.factory.getUser(user)+"\r\n")
+        self.transport.loseConnection()
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def __init__(self, **kwargs): self.users = kwargs
+    def getUser(self, user):
+        return self.users.get(user, "No such user")
+reactor.listenTCP(1079, FingerFactory(moshez='Happy and well'))
+reactor.run()
+</pre>
+
+<p>Finally, a really useful finger database. While it does not
+supply information about logged in users, it could be used to
+distribute things like office locations and internal office
+numbers. As hinted above, the factory is in charge of keeping
+the user database: note that the protocol instance has not
+changed. This is starting to look good: we really won't have
+to keep tweaking our protocol.</p>
+
+<h2>Use Deferreds</h2>
+
+<pre>
+# Read username, output from non-empty factory, drop connections
+# Use deferreds, to minimize synchronicity assumptions
+from twisted.internet import protocol, reactor, defer
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def __init__(self, **kwargs): self.users = kwargs
+    def getUser(self, user):
+        return defer.succeed(self.users.get(user, "No such user"))
+reactor.listenTCP(1079, FingerFactory(moshez='Happy and well'))
+reactor.run()
+</pre>
+
+<p>But, here we tweak it just for the hell of it. Yes, while the
+previous version worked, it did assume the result of getUser is
+always immediately available. But what if instead of an in memory
+database, we would have to fetch result from a remote Oracle?
+Or from the web? Or, or...</p>
+
+<h2>Run 'finger' Locally</h2>
+
+<pre>
+# Read username, output from factory interfacing to OS, drop connections
+from twisted.internet import protocol, reactor, defer, utils
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def getUser(self, user):
+        return utils.getProcessOutput("finger", [user])
+reactor.listenTCP(1079, FingerFactory())
+reactor.run()
+</pre>
+
+<p>...from running a local command? Yes, this version (safely!) runs
+finger locally with whatever arguments it is given, and returns the
+standard output. This will do exactly what the standard version
+of the finger server does -- without the need for any remote buffer
+overflows, as the networking is done safely.</p>
+
+<h2>Read Status from the Web</h2>
+
+<pre>
+# Read username, output from factory interfacing to web, drop connections
+from twisted.internet import protocol, reactor, defer, utils
+from twisted.protocols import basic
+from twisted.web import client
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def __init__(self, prefix): self.prefix=prefix
+    def getUser(self, user):
+        return client.getPage(self.prefix+user)
+reactor.listenTCP(1079, FingerFactory(prefix='http://livejournal.com/~'))
+reactor.run()
+</pre>
+
+<p>The web. That invention which has infiltrated homes around the
+world finally gets through to our invention. Here we use the built-in
+Twisted web client, which also returns a deferred. Finally, we manage
+to have examples of three different database backends, which do
+not change the protocol class. In fact, we will not have to change
+the protocol again until the end of this talk: we have achieved,
+here, one truly usable class.</p>
+
+
+<h2>Use Application</h2>
+
+<pre>
+# Read username, output from non-empty factory, drop connections
+# Use deferreds, to minimize synchronicity assumptions
+# Write application. Save in 'finger.tpy'
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def __init__(self, **kwargs): self.users = kwargs
+    def getUser(self, user):
+        return defer.succeed(self.users.get(user, "No such user"))
+application = app.Application('finger', uid=1, gid=1)
+application.listenTCP(79, FingerFactory(moshez='Happy and well'))
+</pre>
+
+<p>Up until now, we faked. We kept using port 1079, because really,
+who wants to run a finger server with root privileges? Well, the
+common solution is "privilege shedding": after binding to the network,
+become a different, less privileged user. We could have done it ourselves,
+but Twisted has a builtin way to do it. Create a snippet as above,
+defining an application object. That object will have uid and gid
+attributes. When running it (later we will see how) it will bind
+to ports, shed privileges and then run.</p>
+
+<h2>twistd</h2>
+
+<pre>
+root% twistd -ny finger.tpy # just like before
+root% twistd -y finger.tpy # daemonize, keep pid in twistd.pid
+root% twistd -y finger.tpy --pidfile=finger.pid
+root% twistd -y finger.tpy --rundir=/
+root% twistd -y finger.tpy --chroot=/var
+root% twistd -y finger.tpy -l /var/log/finger.log
+root% twistd -y finger.tpy --syslog # just log to syslog
+root% twistd -y finger.tpy --syslog --prefix=twistedfinger # use given prefix
+</pre>
+
+<p>This is how to run "Twisted Applications" -- files which define an
+'application'. twistd (TWISTed Daemonizer) does everything a daemon
+can be expected to -- shuts down stdin/stdout/stderr, disconnects
+from the terminal and can even change runtime directory, or even
+the root filesystems. In short, it does everything so the Twisted
+application developer can concentrate on writing his networking code.</p>
+
+<h2>Setting Message By Local Users</h2>
+
+<pre>
+# But let's try and fix setting away messages, shall we?
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def __init__(self, **kwargs): self.users = kwargs
+    def getUser(self, user):
+        return defer.succeed(self.users.get(user, "No such user"))
+class FingerSetterProtocol(basic.LineReceiver):
+      def connectionMade(self): self.lines = []
+      def lineReceived(self, line): self.lines.append(line)
+      def connectionLost(self): self.factory.setUser(*self.lines)
+class FingerSetterFactory(protocol.ServerFactory):
+      def __init__(self, ff): self.setUser = self.ff.users.__setitem__
+ff = FingerFactory(moshez='Happy and well')
+fsf = FingerSetterFactory(ff)
+application = app.Application('finger', uid=1, gid=1)
+application.listenTCP(79, ff)
+application.listenTCP(1079, fsf, interface='127.0.0.1')
+</pre>
+
+<p>Now that port 1079 is free, maybe we can run on it a different
+server, one which will let people set their messages. It does
+no access control, so anyone who can login to the machine can
+set any message. We assume this is the desired behaviour in
+our case. Testing it can be done by simply:
+</p>
+
+<pre>
+% nc localhost 1079
+moshez
+Giving a talk now, sorry!
+^D
+</pre>
+
+<h2>Use Services to Make Dependencies Sane</h2>
+
+<pre>
+# Fix asymmetry
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerSetterProtocol(basic.LineReceiver):
+      def connectionMade(self): self.lines = []
+      def lineReceived(self, line): self.lines.append(line)
+      def connectionLost(self): self.factory.setUser(*self.lines)
+class FingerService(app.ApplicationService):
+      def __init__(self, *args, **kwargs):
+          app.ApplicationService.__init__(self, *args)
+          self.users = kwargs
+      def getUser(self, user):
+          return defer.succeed(self.users.get(u, "No such user"))
+      def getFingerFactory(self):
+          f = protocol.ServerFactory()
+          f.protocol, f.getUser = FingerProtocol, self.getUser
+          return f
+      def getFingerSetterFactory(self):
+          f = protocol.ServerFactory()
+          f.protocol, f.setUser = FingerSetterProtocol, self.users.__setitem__
+          return f
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService(application, 'finger', moshez='Happy and well')
+application.listenTCP(79, f.getFingerFactory())
+application.listenTCP(1079, f.getFingerSetterFactory(), interface='127.0.0.1')
+</pre>
+
+<p>The previous version had the setter poke at the innards of the
+finger factory. It's usually not a good idea: this version makes
+both factories symmetric by making them both look at a single
+object. Services are useful for when an object is needed which is
+not related to a specific network server. Here, we moved all responsibility
+for manufacturing factories into the service. Note that we stopped
+subclassing: the service simply puts useful methods and attributes
+inside the factories. We are getting better at protocol design:
+none of our protocol classes had to be changed, and neither will
+have to change until the end of the talk.</p>
+
+<h2>Read Status File</h2>
+
+<pre>
+# Read from file
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerSetterProtocol(basic.LineReceiver):
+      def connectionMade(self): self.lines = []
+      def lineReceived(self, line): self.lines.append(line)
+      def connectionLost(self): self.factory.setUser(*self.lines)
+class FingerService(app.ApplicationService):
+      def __init__(self, file, *args, **kwargs):
+          app.ApplicationService.__init__(self, *args, **kwargs)
+          self.file = file
+      def startService(self):
+          app.ApplicationService.startService(self)
+          self._read()
+      def _read(self):
+          self.users = {}
+          for line in file(self.file):
+              user, status = line.split(':', 1)
+              self.users[user] = status
+          self.call = reactor.callLater(30, self._read)
+      def stopService(self):
+          app.ApplicationService.stopService(self)
+          self.call.cancel()
+      def getUser(self, user):
+          return defer.succeed(self.users.get(u, "No such user"))
+      def getFingerFactory(self):
+          f = protocol.ServerFactory()
+          f.protocol, f.getUser = FingerProtocol, self.getUser
+          return f
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, f.getFingerFactory())
+</pre>
+
+<p>This version shows how, instead of just letting users set their
+messages, we can read those from a centrally managed file. We cache
+results, and every 30 seconds we refresh it. Services are useful
+for such scheduled tasks.</p>
+
+<h2>Announce on Web, Too</h2>
+
+<pre>
+# Read from file, announce on the web!
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic
+from twisted.web import resource, server, static
+import cgi
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerSetterProtocol(basic.LineReceiver):
+      def connectionMade(self): self.lines = []
+      def lineReceived(self, line): self.lines.append(line)
+      def connectionLost(self): self.factory.setUser(*self.lines)
+class FingerService(app.ApplicationService):
+      def __init__(self, file, *args, **kwargs):
+          app.ApplicationService.__init__(self, *args, **kwargs)
+          self.file = file
+      def startService(self):
+          app.ApplicationService.startService(self)
+          self._read()
+      def _read(self):
+          self.users = {}
+          for line in file(self.file):
+              user, status = line.split(':', 1)
+              self.users[user] = status
+          self.call = reactor.callLater(30, self._read)
+      def stopService(self):
+          app.ApplicationService.stopService(self)
+          self.call.cancel()
+      def getUser(self, user):
+          return defer.succeed(self.users.get(u, "No such user"))
+      def getFingerFactory(self):
+          f = protocol.ServerFactory()
+          f.protocol, f.getUser = FingerProtocol, self.getUser
+          return f
+      def getResource(self):
+          r = resource.Resource()
+          r.getChild = (lambda path, request:
+           static.Data('text/html',
+            '&lt;h1>%s&lt;/h1>&lt;p>%s&lt;/p>' %
+              tuple(map(cgi.escape,
+                        [path,self.users.get(path, "No such user")]))))
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, f.getFingerFactory())
+application.listenTCP(80, server.Site(f.getResource()))
+</pre>
+
+<p>The same kind of service can also produce things useful for
+other protocols. For example, in twisted.web, the factory
+itself (the site) is almost never subclassed -- instead,
+it is given a resource, which represents the tree of resources
+available via URLs. That hierarchy is navigated by site,
+and overriding it dynamically is possible with getChild.</p>
+
+<h2>Announce on IRC, Too</h2>
+
+<pre>
+# Read from file, announce on the web, irc
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic, irc
+from twisted.web import resource, server, static
+import cgi
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerSetterProtocol(basic.LineReceiver):
+      def connectionMade(self): self.lines = []
+      def lineReceived(self, line): self.lines.append(line)
+      def connectionLost(self): self.factory.setUser(*self.lines)
+class IRCReplyBot(irc.IRCClient):
+    def connectionMade(self):
+        self.nickname = self.factory.nickname
+        irc.IRCClient.connectionMade(self)
+    def privmsg(self, user, channel, msg):
+        if user.lower() == channel.lower():
+            self.factory.getUser(msg
+            ).addErrback(lambda _: "Internal error in server"
+            ).addCallback(lambda m: self.msg(user, m))
+class FingerService(app.ApplicationService):
+      def __init__(self, file, *args, **kwargs):
+          app.ApplicationService.__init__(self, *args, **kwargs)
+          self.file = file
+      def startService(self):
+          app.ApplicationService.startService(self)
+          self._read()
+      def _read(self):
+          self.users = {}
+          for line in file(self.file):
+              user, status = line.split(':', 1)
+              self.users[user] = status
+          self.call = reactor.callLater(30, self._read)
+      def stopService(self):
+          app.ApplicationService.stopService(self)
+          self.call.cancel()
+      def getUser(self, user):
+          return defer.succeed(self.users.get(u, "No such user"))
+      def getFingerFactory(self):
+          f = protocol.ServerFactory()
+          f.protocol, f.getUser = FingerProtocol, self.getUser
+          return f
+      def getResource(self):
+          r = resource.Resource()
+          r.getChild = (lambda path, request:
+           static.Data('text/html',
+            '&lt;h1>%s&lt;/h1>&lt;p>%s&lt;/p>' %
+              tuple(map(cgi.escape,
+                        [path,self.users.get(path, "No such user")]))))
+      def getIRCBot(self, nickname):
+          f = protocol.ReconnectingClientFactory()
+          f.protocol,f.nickname,f.getUser = IRCReplyBot,nickname,self.getUser
+          return f
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, f.getFingerFactory())
+application.listenTCP(80, server.Site(f.getResource()))
+application.connectTCP('irc.freenode.org', 6667, f.getIRCBot('finger-bot'))
+</pre>
+
+<p>This is the first time there is client code. IRC clients often
+act a lot like servers: responding to events form the network.
+The reconnecting client factory will make sure that severed links
+will get re-established, with intelligent tweaked exponential
+backoff algorithms. The irc client itself is simple: the only
+real hack is getting the nickname from the factory in connectionMade.</p>
+
+
+
+<h2>Add XML-RPC Support</h2>
+
+<pre>
+# Read from file, announce on the web, irc, xml-rpc
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic, irc
+from twisted.web import resource, server, static, xmlrpc
+import cgi
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.factory.getUser(user
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m:
+            (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
+class FingerSetterProtocol(basic.LineReceiver):
+      def connectionMade(self): self.lines = []
+      def lineReceived(self, line): self.lines.append(line)
+      def connectionLost(self): self.factory.setUser(*self.lines)
+class IRCReplyBot(irc.IRCClient):
+    def connectionMade(self):
+        self.nickname = self.factory.nickname
+        irc.IRCClient.connectionMade(self)
+    def privmsg(self, user, channel, msg):
+        if user.lower() == channel.lower():
+            self.factory.getUser(msg
+        ).addErrback(lambda _: "Internal error in server"
+        ).addCallback(lambda m: self.msg(user, m))
+class FingerService(app.ApplicationService):
+      def __init__(self, file, *args, **kwargs):
+          app.ApplicationService.__init__(self, *args, **kwargs)
+          self.file = file
+      def startService(self):
+          app.ApplicationService.startService(self)
+          self._read()
+      def _read(self):
+          self.users = {}
+          for line in file(self.file):
+              user, status = line.split(':', 1)
+              self.users[user] = status
+          self.call = reactor.callLater(30, self._read)
+      def stopService(self):
+          app.ApplicationService.stopService(self)
+          self.call.cancel()
+      def getUser(self, user):
+          return defer.succeed(self.users.get(u, "No such user"))
+      def getFingerFactory(self):
+          f = protocol.ServerFactory()
+          f.protocol, f.getUser = FingerProtocol, self.getUser
+          return f
+      def getResource(self):
+          r = resource.Resource()
+          r.getChild = (lambda path, request:
+           static.Data('text/html',
+            '&lt;h1>%s&lt;/h1>&lt;p>%s&lt;/p>' %
+              tuple(map(cgi.escape,
+                        [path,self.users.get(path, "No such user")]))))
+          x = xmlrpc.XMLRPRC()
+          x.xmlrpc_getUser = self.getUser
+          r.putChild('RPC2.0', x)
+          return r
+      def getIRCBot(self, nickname):
+          f = protocol.ReconnectingClientFactory()
+          f.protocol,f.nickname,f.getUser = IRCReplyBot,nickname,self.getUser
+          return f
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, f.getFingerFactory())
+application.listenTCP(80, server.Site(f.getResource()))
+application.connectTCP('irc.freenode.org', 6667, f.getIRCBot('finger-bot'))
+</pre>
+
+<p>In Twisted, XML-RPC support is handled just as though it was
+another resource. That resource will still support GET calls normally
+through render(), but that is usually left unimplemented. Note
+that it is possible to return deferreds from XML-RPC methods.
+The client, of course, will not get the answer until the deferred
+is triggered.</p>
+
+
+<h2>Write Readable Code</h2>
+
+<pre>
+# Do everything properly
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic, irc
+from twisted.web import resource, server, static, xmlrpc
+import cgi
+
+def catchError(err):
+    return "Internal error in server"
+
+class FingerProtocol(basic.LineReceiver):
+
+    def lineReceived(self, user):
+        d = self.factory.getUser(user)
+        d.addErrback(catchError)
+        def writeValue(value):
+            self.transport.write(value)
+            self.transport.loseConnection()
+        d.addCallback(writeValue)
+
+
+class FingerSetterProtocol(basic.LineReceiver):
+
+      def connectionMade(self):
+          self.lines = []
+
+      def lineReceived(self, line):
+          self.lines.append(line)
+
+      def connectionLost(self):
+          if len(self.lines) == 2:
+              self.factory.setUser(*self.lines)
+
+
+class IRCReplyBot(irc.IRCClient):
+
+    def connectionMade(self):
+        self.nickname = self.factory.nickname
+        irc.IRCClient.connectionMade(self)
+
+    def privmsg(self, user, channel, msg):
+        if user.lower() == channel.lower():
+            d = self.factory.getUser(msg)
+            d.addErrback(catchError)
+            d.addCallback(lambda m: "Status of %s: %s" % (user, m))
+            d.addCallback(lambda m: self.msg(user, m))
+
+
+class UserStatusTree(resource.Resource):
+
+    def __init__(self, service):
+        resource.Resource.__init__(self):
+        self.service = service
+
+    def render(self, request):
+        d = self.service.getUsers()
+        def formatUsers(users):
+            l = ["&lt;li>&lt;a href="%s">%s&lt;/a>&lt;/li> % (user, user)
+                for user in users]
+            return '&lt;ul>'+''.join(l)+'&lt;/ul>'
+        d.addCallback(formatUsers)
+        d.addCallback(request.write)
+        d.addCallback(lambda _: request.finish())
+        return server.NOT_DONE_YET
+
+    def getChild(self, path, request):
+        return UserStatus(path, self.service)
+
+
+class UserStatus(resource.Resource):
+
+    def __init__(self, user, service):
+        resource.Resource.__init__(self):
+        self.user = user
+        self.service = service
+
+    def render(self, request):
+        d = self.service.getUser(self.user)
+        d.addCallback(cgi.escape)
+        d.addCallback(lambda m:
+                     '&lt;h1>%s&lt;/h1>'%self.user+'&lt;p>%s&lt;/p>'%m)
+        d.addCallback(request.write)
+        d.addCallback(lambda _: request.finish())
+        return server.NOT_DONE_YET
+
+
+class UserStatusXR(xmlrpc.XMLPRC):
+
+    def __init__(self, service):
+        xmlrpc.XMLRPC.__init__(self)
+        self.service = service
+
+    def xmlrpc_getUser(self, user):
+        return self.service.getUser(user)
+
+
+class FingerService(app.ApplicationService):
+
+      def __init__(self, file, *args, **kwargs):
+          app.ApplicationService.__init__(self, *args, **kwargs)
+          self.file = file
+
+      def startService(self):
+          app.ApplicationService.startService(self)
+          self._read()
+
+      def _read(self):
+          self.users = {}
+          for line in file(self.file):
+              user, status = line.split(':', 1)
+              self.users[user] = status
+          self.call = reactor.callLater(30, self._read)
+
+      def stopService(self):
+          app.ApplicationService.stopService(self)
+          self.call.cancel()
+
+      def getUser(self, user):
+          return defer.succeed(self.users.get(u, "No such user"))
+
+      def getUsers(self):
+          return defer.succeed(self.users.keys())
+
+      def getFingerFactory(self):
+          f = protocol.ServerFactory()
+          f.protocol = FingerProtocol
+          f.getUser = self.getUser
+          return f
+
+      def getResource(self):
+          r = UserStatusTree(self)
+          x = UserStatusXR(self)
+          r.putChild('RPC2.0', x)
+          return r
+
+      def getIRCBot(self, nickname):
+          f = protocol.ReconnectingClientFactory()
+          f.protocol = IRCReplyBot
+          f.nickname = nickname
+          f.getUser = self.getUser
+          return f
+
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, f.getFingerFactory())
+application.listenTCP(80, server.Site(f.getResource()))
+application.connectTCP('irc.freenode.org', 6667, f.getIRCBot('finger-bot'))
+</pre>
+
+<p>The last version of the application had a lot of hacks. We avoided
+subclassing, did not support things like user listings in the web
+support, and removed all blank lines -- all in the interest of code
+which is shorter. Here we take a step back, subclass what is more
+naturally a subclass, make things which should take multiple lines
+take them, etc. This shows a much better style of developing Twisted
+applications, though the hacks in the previous stages are sometimes
+used in throw-away prototypes.</p>
+
+<h2>Write Maintainable Code</h2>
+
+<pre>
+# Do everything properly, and componentize
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic, irc
+from twisted.python import components
+from twisted.web import resource, server, static, xmlrpc
+import cgi
+
+class IFingerService(components.Interface):
+
+    def getUser(self, user):
+        '''Return a deferred returning a string'''
+
+    def getUsers(self):
+        '''Return a deferred returning a list of strings'''
+
+class IFingerSettingService(components.Interface):
+
+    def setUser(self, user, status):
+        '''Set the user's status to something'''
+    
+def catchError(err):
+    return "Internal error in server"
+
+
+class FingerProtocol(basic.LineReceiver):
+
+    def lineReceived(self, user):
+        d = self.factory.getUser(user)
+        d.addErrback(catchError)
+        def writeValue(value):
+            self.transport.write(value)
+            self.transport.loseConnection()
+        d.addCallback(writeValue)
+
+
+class IFingerFactory(components.Interface):
+
+    def getUser(self, user):
+        """Return a deferred returning a string""""
+
+    def buildProtocol(self, addr):
+        """Return a protocol returning a string""""
+
+
+class FingerFactoryFromService(protocol.ServerFactory):
+
+    __implements__ = IFingerFactory,
+
+    protocol = FingerProtocol
+
+    def __init__(self, service):
+        self.service = service
+
+    def getUser(self, user):
+        return self.service.getUser(user)
+
+components.registerAdapter(FingerFactoryFromService, IFingerService)
+
+
+class FingerSetterProtocol(basic.LineReceiver):
+
+      def connectionMade(self):
+          self.lines = []
+
+      def lineReceived(self, line):
+          self.lines.append(line)
+
+      def connectionLost(self):
+          if len(self.lines) == 2:
+              self.factory.setUser(*self.lines)
+
+
+class IFingerSetterFactory(components.Interface):
+
+    def setUser(self, user, status):
+        """Return a deferred returning a string"""
+
+    def buildProtocol(self, addr):
+        """Return a protocol returning a string"""
+
+
+class FingerSetterFactoryFromService(protocol.ServerFactory):
+
+    __implements__ = IFingerSetterFactory,
+
+    protocol = FingerSetterProtocol
+
+    def __init__(self, service):
+        self.service = service
+
+    def setUser(self, user, status):
+        self.service.setUser(user, status)
+
+
+components.registerAdapter(FingerSetterFactoryFromService,
+                           IFingerSettingService)
+    
+class IRCReplyBot(irc.IRCClient):
+
+    def connectionMade(self):
+        self.nickname = self.factory.nickname
+        irc.IRCClient.connectionMade(self)
+
+    def privmsg(self, user, channel, msg):
+        if user.lower() == channel.lower():
+            d = self.factory.getUser(msg)
+            d.addErrback(catchError)
+            d.addCallback(lambda m: "Status of %s: %s" % (user, m))
+            d.addCallback(lambda m: self.msg(user, m))
+
+
+class IIRCClientFactory(components.Interface):
+
+    '''
+    @ivar nickname
+    '''
+
+    def getUser(self, user):
+        """Return a deferred returning a string"""
+
+    def buildProtocol(self, addr):
+        """Return a protocol"""
+
+
+class IRCClientFactoryFromService(protocol.ClientFactory):
+
+   __implements__ = IIRCClientFactory,
+
+   protocol = IRCReplyBot
+   nickname = None
+
+   def __init__(self, service):
+       self.service = service
+
+    def getUser(self, user):
+        return self.service.getUser()
+
+components.registerAdapter(IRCClientFactoryFromService, IFingerService)
+
+class UserStatusTree(resource.Resource):
+
+    def __init__(self, service):
+        resource.Resource.__init__(self):
+        self.putChild('RPC2.0', UserStatusXR(self.service))
+        self.service = service
+
+    def render(self, request):
+        d = self.service.getUsers()
+        def formatUsers(users):
+            l = ["&lt;li>&lt;a href="%s">%s&lt;/a>&lt;/li> % (user, user)
+                for user in users]
+            return '&lt;ul>'+''.join(l)+'&lt;/ul>'
+        d.addCallback(formatUsers)
+        d.addCallback(request.write)
+        d.addCallback(lambda _: request.finish())
+        return server.NOT_DONE_YET
+
+    def getChild(self, path, request):
+        return UserStatus(path, self.service)
+
+components.registerAdapter(UserStatusTree, IFingerService)
+
+class UserStatus(resource.Resource):
+
+    def __init__(self, user, service):
+        resource.Resource.__init__(self):
+        self.user = user
+        self.service = service
+
+    def render(self, request):
+        d = self.service.getUser(self.user)
+        d.addCallback(cgi.escape)
+        d.addCallback(lambda m:
+                      '&lt;h1>%s&lt;/h1>'%self.user+'&lt;p>%s&lt;/p>'%m)
+        d.addCallback(request.write)
+        d.addCallback(lambda _: request.finish())
+        return server.NOT_DONE_YET
+
+
+class UserStatusXR(xmlrpc.XMLPRC):
+
+    def __init__(self, service):
+        xmlrpc.XMLRPC.__init__(self)
+        self.service = service
+
+    def xmlrpc_getUser(self, user):
+        return self.service.getUser(user)
+
+
+class FingerService(app.ApplicationService):
+
+    __implements__ = IFingerService,
+
+    def __init__(self, file, *args, **kwargs):
+        app.ApplicationService.__init__(self, *args, **kwargs)
+        self.file = file
+
+    def startService(self):
+        app.ApplicationService.startService(self)
+        self._read()
+
+    def _read(self):
+        self.users = {}
+        for line in file(self.file):
+            user, status = line.split(':', 1)
+            self.users[user] = status
+        self.call = reactor.callLater(30, self._read)
+
+    def stopService(self):
+        app.ApplicationService.stopService(self)
+        self.call.cancel()
+
+    def getUser(self, user):
+        return defer.succeed(self.users.get(u, "No such user"))
+
+    def getUsers(self):
+        return defer.succeed(self.users.keys())
+
+
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, IFingerFactory(f))
+application.listenTCP(80, server.Site(resource.IResource(f)))
+i = IIRCClientFactory(f)
+i.nickname = 'fingerbot'
+application.connectTCP('irc.freenode.org', 6667, i)
+</pre>
+
+<p>In the last version, the service class was three times longer than
+any other class, and was hard to understand. This was because it turned
+out to have multiple responsibilities. It had to know how to access
+user information, by scheduling a reread of the file ever half minute,
+but also how to display itself in a myriad of protocols. Here, we
+used the component-based architecture that Twisted provides to achieve
+a separation of concerns. All the service is responsible for, now,
+is supporting getUser/getUsers. It declares its support via the
+__implements__ keyword. Then, adapters are used to make this service
+look like an appropriate class for various things: for supplying
+a finger factory to listenTCP, for supplying a resource to site's
+constructor, and to provide an IRC client factory for connectTCP.
+All the adapters use are the methods in FingerService they are
+declared to use: getUser/getUsers. We could, of course,
+skipped the interfaces and let the configuration code use
+things like FingerFactoryFromService(f) directly. However, using
+interfaces provides the same flexibility inheritance gives: future
+subclasses can override the adapters.</p>
+
+
+
+<h2>Advantages of Latest Version</h2>
+
+<ul>
+<li>Readable -- each class is short</li>
+<li>Maintainable -- each class knows only about interfaces</li>
+<li>Dependencies between code parts are minimized</li>
+<li>Example: writing a new IFingerService is easy</li>
+</ul>
+
+<pre>
+class MemoryFingerService(app.ApplicationService):
+      __implements__ = IFingerService, IFingerSetterService
+
+      def __init__(self, *args, **kwargs):
+          app.ApplicationService.__init__(self, *args)
+          self.users = kwargs
+
+      def getUser(self, user):
+          return defer.succeed(self.users.get(u, "No such user"))
+
+      def getUsers(self):
+          return defer.succeed(self.users.keys())
+
+      def setUser(self, user, status):
+          self.users[user] = status
+
+application = app.Application('finger', uid=1, gid=1)
+# New constructor call
+f = MemoryFingerService(application, 'finger', moshez='Happy and well')
+application.listenTCP(79, IFingerFactory(f))
+application.listenTCP(80, server.Site(resource.IResource(f)))
+i = IIRCClientFactory(f)
+i.nickname = 'fingerbot'
+application.connectTCP('irc.freenode.org', 6667, i)
+# New: run setter too
+application.listenTCP(1079, IFingerSetterFactory(f), interface='127.0.0.1')
+</pre>
+
+<p>Here we show just how convenient it is to implement new backends
+when we move to a component based architecture. Note that here
+we also use an interface we previously wrote, FingerSetterFactory,
+by supporting one single method. We manage to preserve the service's
+ignorance of the network.</p>
+
+<h2>Another Backend</h2>
+
+<pre>
+class LocalFingerService(app.ApplicationService):
+      __implements__ = IFingerService
+
+      def getUser(self, user):
+          return utils.getProcessOutput("finger", [user])
+
+      def getUsers(self):
+          return defer.succeed([])
+
+application = app.Application('finger', uid=1, gid=1)
+f = LocalFingerService(application, 'finger')
+application.listenTCP(79, IFingerFactory(f))
+application.listenTCP(80, server.Site(resource.IResource(f)))
+i = IIRCClientFactory(f)
+i.nickname = 'fingerbot'
+application.connectTCP('irc.freenode.org', 6667, i)
+</pre>
+
+<p>We have already wrote this, but now we get more for less work:
+the network code is completely separate from the backend.</p>
+
+<h2>Yet Another Backend: Doing the Standard Thing</h2>
+
+<pre>
+import pwd
+
+class LocalFingerService(app.ApplicationService):
+      __implements__ = IFingerService
+
+      def getUser(self, user):
+          try:
+              entry = pwd.getpwnam(user)
+          except KeyError:
+              return "No such user"
+          try:
+              f=file(os.path.join(entry[5],'.plan'))
+          except (IOError, OSError):
+              return "No such user"
+          data = f.read()
+          f.close()
+          return data
+
+      def getUsers(self):
+          return defer.succeed([])
+
+application = app.Application('finger', uid=1, gid=1)
+f = LocalFingerService(application, 'finger')
+application.listenTCP(79, IFingerFactory(f))
+application.listenTCP(80, server.Site(resource.IResource(f)))
+i = IIRCClientFactory(f)
+i.nickname = 'fingerbot'
+application.connectTCP('irc.freenode.org', 6667, i)
+</pre>
+
+<p>Not much to say about that, except to indicate that by now we
+can be churning out backends like crazy. Feel like doing a backend
+for advogato, for example? Dig out the XML-RPC client support Twisted
+has, and get to work!</p>
+
+
+<h2>Aspect Oriented Programming</h2>
+
+<ul>
+<li>This is an example...</li>
+<li>...with something actually useful...</li>
+<li>...not logging and timing.</li>
+<li>Write less code, have less dependencies!</li>
+</ul>
+
+<h2>Use Woven</h2>
+
+<pre>
+# Do everything properly, and componentize
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic, irc
+from twisted.python import components
+from twisted.web import resource, server, static, xmlrpc, microdom
+from twisted.web.woven import page, widget
+import cgi
+
+class IFingerService(components.Interface):
+
+    def getUser(self, user):
+        '''Return a deferred returning a string'''
+
+    def getUsers(self):
+        '''Return a deferred returning a list of strings'''
+
+class IFingerSettingService(components.Interface):
+
+    def setUser(self, user, status):
+        '''Set the user's status to something'''
+    
+def catchError(err):
+    return "Internal error in server"
+
+
+class FingerProtocol(basic.LineReceiver):
+
+    def lineReceived(self, user):
+        d = self.factory.getUser(user)
+        d.addErrback(catchError)
+        def writeValue(value):
+            self.transport.write(value)
+            self.transport.loseConnection()
+        d.addCallback(writeValue)
+
+
+class IFingerFactory(components.Interface):
+
+    def getUser(self, user):
+        """Return a deferred returning a string""""
+
+    def buildProtocol(self, addr):
+        """Return a protocol returning a string""""
+
+
+class FingerFactoryFromService(protocol.ServerFactory):
+
+    __implements__ = IFingerFactory,
+
+    protocol = FingerProtocol
+
+    def __init__(self, service):
+        self.service = service
+
+    def getUser(self, user):
+        return self.service.getUser(user)
+
+components.registerAdapter(FingerFactoryFromService, IFingerService)
+
+
+class FingerSetterProtocol(basic.LineReceiver):
+
+      def connectionMade(self):
+          self.lines = []
+
+      def lineReceived(self, line):
+          self.lines.append(line)
+
+      def connectionLost(self):
+          if len(self.lines) == 2:
+              self.factory.setUser(*self.lines)
+
+
+class IFingerSetterFactory(components.Interface):
+
+    def setUser(self, user, status):
+        """Return a deferred returning a string"""
+
+    def buildProtocol(self, addr):
+        """Return a protocol returning a string"""
+
+
+class FingerSetterFactoryFromService(protocol.ServerFactory):
+
+    __implements__ = IFingerSetterFactory,
+
+    protocol = FingerSetterProtocol
+
+    def __init__(self, service):
+        self.service = service
+
+    def setUser(self, user, status):
+        self.service.setUser(user, status)
+
+
+components.registerAdapter(FingerSetterFactoryFromService,
+                           IFingerSettingService)
+    
+class IRCReplyBot(irc.IRCClient):
+
+    def connectionMade(self):
+        self.nickname = self.factory.nickname
+        irc.IRCClient.connectionMade(self)
+
+    def privmsg(self, user, channel, msg):
+        if user.lower() == channel.lower():
+            d = self.factory.getUser(msg)
+            d.addErrback(catchError)
+            d.addCallback(lambda m: "Status of %s: %s" % (user, m))
+            d.addCallback(lambda m: self.msg(user, m))
+
+
+class IIRCClientFactory(components.Interface):
+
+    '''
+    @ivar nickname
+    '''
+
+    def getUser(self, user):
+        """Return a deferred returning a string"""
+
+    def buildProtocol(self, addr):
+        """Return a protocol"""
+
+
+class IRCClientFactoryFromService(protocol.ClientFactory):
+
+   __implements__ = IIRCClientFactory,
+
+   protocol = IRCReplyBot
+   nickname = None
+
+   def __init__(self, service):
+       self.service = service
+
+    def getUser(self, user):
+        return self.service.getUser()
+
+components.registerAdapter(IRCClientFactoryFromService, IFingerService)
+
+
+class UsersModel(model.MethodModel):
+
+    def __init__(self, service):
+        self.service = service
+
+    def wmfactory_users(self):
+        return self.service.getUsers()
+
+components.registerAdapter(UsersModel, IFingerService)
+
+class UserStatusTree(page.Page):
+
+    template = """&lt;html>&lt;head>&lt;title>Users&lt;/title>&lt;head>&lt;body>
+                  &lt;h1>Users&lt;/h1>
+                  &lt;ul model="users" view="List">
+                  &lt;li pattern="listItem" />&lt;a view="Link" model="."
+                  href="dummy">&lt;span model="." view="Text" />&lt;/a>
+                  &lt;/ul>&lt;/body>&lt;/html>"""
+
+    def initialize(self, **kwargs):
+        self.putChild('RPC2.0', UserStatusXR(self.model.service))
+
+    def getDynamicChild(self, path, request):
+        return UserStatus(user=path, service=self.model.service)
+
+components.registerAdapter(UserStatusTree, IFingerService)
+
+
+class UserStatus(page.Page):
+
+    template='''&lt;html>&lt;head>&lt;title view="Text" model="user"/>&lt;/heaD>
+    &lt;body>&lt;h1 view="Text" model="user"/>
+    &lt;p mode="status" view="Text" />
+    &lt;/body>&lt;/html>'''
+
+    def initialize(self, **kwargs):
+        self.user = kwargs['user']
+        self.service = kwargs['service']
+
+    def wmfactory_user(self):
+        return self.user
+
+    def wmfactory_status(self):
+        return self.service.getUser(self.user)
+
+class UserStatusXR(xmlrpc.XMLPRC):
+
+    def __init__(self, service):
+        xmlrpc.XMLRPC.__init__(self)
+        self.service = service
+
+    def xmlrpc_getUser(self, user):
+        return self.service.getUser(user)
+
+
+class FingerService(app.ApplicationService):
+
+    __implements__ = IFingerService,
+
+    def __init__(self, file, *args, **kwargs):
+        app.ApplicationService.__init__(self, *args, **kwargs)
+        self.file = file
+
+    def startService(self):
+        app.ApplicationService.startService(self)
+        self._read()
+
+    def _read(self):
+        self.users = {}
+        for line in file(self.file):
+            user, status = line.split(':', 1)
+            self.users[user] = status
+        self.call = reactor.callLater(30, self._read)
+
+    def stopService(self):
+        app.ApplicationService.stopService(self)
+        self.call.cancel()
+
+    def getUser(self, user):
+        return defer.succeed(self.users.get(u, "No such user"))
+
+    def getUsers(self):
+        return defer.succeed(self.users.keys())
+
+
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, IFingerFactory(f))
+application.listenTCP(80, server.Site(resource.IResource(f)))
+i = IIRCClientFactory(f)
+i.nickname = 'fingerbot'
+application.connectTCP('irc.freenode.org', 6667, i)
+</pre>
+
+<p>Here we convert to using Woven, instead of manually
+constructing HTML snippets. Woven is a sophisticated web templating
+system. Its main features are to disallow any code inside the HTML,
+and transparent integration with deferred results.</p>
+
+<h2>Use Perspective Broker</h2>
+
+<pre>
+# Do everything properly, and componentize
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic, irc
+from twisted.python import components
+from twisted.web import resource, server, static, xmlrpc, microdom
+from twisted.web.woven import page, widget
+from twisted.spread import pb
+import cgi
+
+class IFingerService(components.Interface):
+
+    def getUser(self, user):
+        '''Return a deferred returning a string'''
+
+    def getUsers(self):
+        '''Return a deferred returning a list of strings'''
+
+class IFingerSettingService(components.Interface):
+
+    def setUser(self, user, status):
+        '''Set the user's status to something'''
+    
+def catchError(err):
+    return "Internal error in server"
+
+
+class FingerProtocol(basic.LineReceiver):
+
+    def lineReceived(self, user):
+        d = self.factory.getUser(user)
+        d.addErrback(catchError)
+        def writeValue(value):
+            self.transport.write(value)
+            self.transport.loseConnection()
+        d.addCallback(writeValue)
+
+
+class IFingerFactory(components.Interface):
+
+    def getUser(self, user):
+        """Return a deferred returning a string""""
+
+    def buildProtocol(self, addr):
+        """Return a protocol returning a string""""
+
+
+class FingerFactoryFromService(protocol.ServerFactory):
+
+    __implements__ = IFingerFactory,
+
+    protocol = FingerProtocol
+
+    def __init__(self, service):
+        self.service = service
+
+    def getUser(self, user):
+        return self.service.getUser(user)
+
+components.registerAdapter(FingerFactoryFromService, IFingerService)
+
+
+class FingerSetterProtocol(basic.LineReceiver):
+
+      def connectionMade(self):
+          self.lines = []
+
+      def lineReceived(self, line):
+          self.lines.append(line)
+
+      def connectionLost(self):
+          if len(self.lines) == 2:
+              self.factory.setUser(*self.lines)
+
+
+class IFingerSetterFactory(components.Interface):
+
+    def setUser(self, user, status):
+        """Return a deferred returning a string"""
+
+    def buildProtocol(self, addr):
+        """Return a protocol returning a string"""
+
+
+class FingerSetterFactoryFromService(protocol.ServerFactory):
+
+    __implements__ = IFingerSetterFactory,
+
+    protocol = FingerSetterProtocol
+
+    def __init__(self, service):
+        self.service = service
+
+    def setUser(self, user, status):
+        self.service.setUser(user, status)
+
+
+components.registerAdapter(FingerSetterFactoryFromService,
+                           IFingerSettingService)
+    
+class IRCReplyBot(irc.IRCClient):
+
+    def connectionMade(self):
+        self.nickname = self.factory.nickname
+        irc.IRCClient.connectionMade(self)
+
+    def privmsg(self, user, channel, msg):
+        if user.lower() == channel.lower():
+            d = self.factory.getUser(msg)
+            d.addErrback(catchError)
+            d.addCallback(lambda m: "Status of %s: %s" % (user, m))
+            d.addCallback(lambda m: self.msg(user, m))
+
+
+class IIRCClientFactory(components.Interface):
+
+    '''
+    @ivar nickname
+    '''
+
+    def getUser(self, user):
+        """Return a deferred returning a string"""
+
+    def buildProtocol(self, addr):
+        """Return a protocol"""
+
+
+class IRCClientFactoryFromService(protocol.ClientFactory):
+
+   __implements__ = IIRCClientFactory,
+
+   protocol = IRCReplyBot
+   nickname = None
+
+   def __init__(self, service):
+       self.service = service
+
+    def getUser(self, user):
+        return self.service.getUser()
+
+components.registerAdapter(IRCClientFactoryFromService, IFingerService)
+
+
+class UsersModel(model.MethodModel):
+
+    def __init__(self, service):
+        self.service = service
+
+    def wmfactory_users(self):
+        return self.service.getUsers()
+
+components.registerAdapter(UsersModel, IFingerService)
+
+class UserStatusTree(page.Page):
+
+    template = """&lt;html>&lt;head>&lt;title>Users&lt;/title>&lt;head>&lt;body>
+                  &lt;h1>Users&lt;/h1>
+                  &lt;ul model="users" view="List">
+                  &lt;li pattern="listItem" />&lt;a view="Link" model="."
+                  href="dummy">&lt;span model="." view="Text" />&lt;/a>
+                  &lt;/ul>&lt;/body>&lt;/html>"""
+
+    def initialize(self, **kwargs):
+        self.putChild('RPC2.0', UserStatusXR(self.model.service))
+
+    def getDynamicChild(self, path, request):
+        return UserStatus(user=path, service=self.model.service)
+
+components.registerAdapter(UserStatusTree, IFingerService)
+    
+
+class UserStatus(page.Page):
+
+    template='''&lt;html>&lt;head>&lt&lt;title view="Text" model="user"/>&lt;/heaD>
+    &lt;body>&lt;h1 view="Text" model="user"/>
+    &lt;p mode="status" view="Text" />
+    &lt;/body>&lt;/html>'''
+
+    def initialize(self, **kwargs):
+        self.user = kwargs['user']
+        self.service = kwargs['service']
+
+    def wmfactory_user(self):
+        return self.user
+
+    def wmfactory_status(self):
+        return self.service.getUser(self.user)
+
+class UserStatusXR(xmlrpc.XMLPRC):
+
+    def __init__(self, service):
+        xmlrpc.XMLRPC.__init__(self)
+        self.service = service
+
+    def xmlrpc_getUser(self, user):
+        return self.service.getUser(user)
+
+
+class IPerspectiveFinger(components.Interface):
+
+    def remote_getUser(self, username):
+        """return a user's status"""
+
+    def remote_getUsers(self):
+        """return a user's status"""
+
+
+class PerspectiveFingerFromService(pb.Root):
+
+    __implements__ = IPerspectiveFinger,
+
+    def __init__(self, service):
+        self.service = service
+
+    def remote_getUser(self, username):
+        return self.service.getUser(username)
+
+    def remote_getUsers(self):
+        return self.service.getUsers()
+
+components.registerAdapter(PerspectiveFingerFromService, IFingerService)
+
+
+class FingerService(app.ApplicationService):
+
+    __implements__ = IFingerService,
+
+    def __init__(self, file, *args, **kwargs):
+        app.ApplicationService.__init__(self, *args, **kwargs)
+        self.file = file
+
+    def startService(self):
+        app.ApplicationService.startService(self)
+        self._read()
+
+    def _read(self):
+        self.users = {}
+        for line in file(self.file):
+            user, status = line.split(':', 1)
+            self.users[user] = status
+        self.call = reactor.callLater(30, self._read)
+
+    def stopService(self):
+        app.ApplicationService.stopService(self)
+        self.call.cancel()
+
+    def getUser(self, user):
+        return defer.succeed(self.users.get(u, "No such user"))
+
+    def getUsers(self):
+        return defer.succeed(self.users.keys())
+
+
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, IFingerFactory(f))
+application.listenTCP(80, server.Site(resource.IResource(f)))
+i = IIRCClientFactory(f)
+i.nickname = 'fingerbot'
+application.connectTCP('irc.freenode.org', 6667, i)
+application.listenTCP(8889, pb.BrokerFactory(IPerspectiveFinger(f))
+</pre>
+
+<p>We add support for perspective broker, Twisted's native remote
+object protocol. Now, Twisted clients will not have to go through
+XML-RPCish contortions to get information about users.</p>
+
+<h2>Support HTTPS</h2>
+
+<pre>
+# Do everything properly, and componentize
+from twisted.internet import protocol, reactor, defer, app
+from twisted.protocols import basic, irc
+from twisted.python import components
+from twisted.web import resource, server, static, xmlrpc, microdom
+from twisted.web.woven import page, widget
+from twisted.spread import pb
+from OpenSSL import SSL
+import cgi
+
+class IFingerService(components.Interface):
+
+    def getUser(self, user):
+        '''Return a deferred returning a string'''
+
+    def getUsers(self):
+        '''Return a deferred returning a list of strings'''
+
+class IFingerSettingService(components.Interface):
+
+    def setUser(self, user, status):
+        '''Set the user's status to something'''
+    
+def catchError(err):
+    return "Internal error in server"
+
+
+class FingerProtocol(basic.LineReceiver):
+
+    def lineReceived(self, user):
+        d = self.factory.getUser(user)
+        d.addErrback(catchError)
+        def writeValue(value):
+            self.transport.write(value)
+            self.transport.loseConnection()
+        d.addCallback(writeValue)
+
+
+class IFingerFactory(components.Interface):
+
+    def getUser(self, user):
+        """Return a deferred returning a string""""
+
+    def buildProtocol(self, addr):
+        """Return a protocol returning a string""""
+
+
+class FingerFactoryFromService(protocol.ServerFactory):
+
+    __implements__ = IFingerFactory,
+
+    protocol = FingerProtocol
+
+    def __init__(self, service):
+        self.service = service
+
+    def getUser(self, user):
+        return self.service.getUser(user)
+
+components.registerAdapter(FingerFactoryFromService, IFingerService)
+
+
+class FingerSetterProtocol(basic.LineReceiver):
+
+      def connectionMade(self):
+          self.lines = []
+
+      def lineReceived(self, line):
+          self.lines.append(line)
+
+      def connectionLost(self):
+          if len(self.lines) == 2:
+              self.factory.setUser(*self.lines)
+
+
+class IFingerSetterFactory(components.Interface):
+
+    def setUser(self, user, status):
+        """Return a deferred returning a string"""
+
+    def buildProtocol(self, addr):
+        """Return a protocol returning a string"""
+
+
+class FingerSetterFactoryFromService(protocol.ServerFactory):
+
+    __implements__ = IFingerSetterFactory,
+
+    protocol = FingerSetterProtocol
+
+    def __init__(self, service):
+        self.service = service
+
+    def setUser(self, user, status):
+        self.service.setUser(user, status)
+
+
+components.registerAdapter(FingerSetterFactoryFromService,
+                           IFingerSettingService)
+    
+class IRCReplyBot(irc.IRCClient):
+
+    def connectionMade(self):
+        self.nickname = self.factory.nickname
+        irc.IRCClient.connectionMade(self)
+
+    def privmsg(self, user, channel, msg):
+        if user.lower() == channel.lower():
+            d = self.factory.getUser(msg)
+            d.addErrback(catchError)
+            d.addCallback(lambda m: "Status of %s: %s" % (user, m))
+            d.addCallback(lambda m: self.msg(user, m))
+
+
+class IIRCClientFactory(components.Interface):
+
+    '''
+    @ivar nickname
+    '''
+
+    def getUser(self, user):
+        """Return a deferred returning a string"""
+
+    def buildProtocol(self, addr):
+        """Return a protocol"""
+
+
+class IRCClientFactoryFromService(protocol.ClientFactory):
+
+   __implements__ = IIRCClientFactory,
+
+   protocol = IRCReplyBot
+   nickname = None
+
+   def __init__(self, service):
+       self.service = service
+
+    def getUser(self, user):
+        return self.service.getUser()
+
+components.registerAdapter(IRCClientFactoryFromService, IFingerService)
+
+
+class UsersModel(model.MethodModel):
+
+    def __init__(self, service):
+        self.service = service
+
+    def wmfactory_users(self):
+        return self.service.getUsers()
+
+components.registerAdapter(UsersModel, IFingerService)
+
+class UserStatusTree(page.Page):
+
+    template = """&lt;html>&lt;head>&lt;title>Users&lt;/title>&lt;head>&lt;body>
+                  &lt;h1>Users&lt;/h1>
+                  &lt;ul model="users" view="List">
+                  &lt;li pattern="listItem" />&lt;a view="Link" model="."
+                  href="dummy">&lt;span model="." view="Text" />&lt;/a>
+                  &lt;/ul>&lt;/body>&lt;/html>"""
+
+    def initialize(self, **kwargs):
+        self.putChild('RPC2.0', UserStatusXR(self.model.service))
+
+    def getDynamicChild(self, path, request):
+        return UserStatus(user=path, service=self.model.service)
+
+components.registerAdapter(UserStatusTree, IFingerService)
+
+class UserStatus(page.Page):
+
+    template='''&lt;html>&lt;head>&lt;title view="Text" model="user"/>&lt;/heaD>
+    &lt;body>&lt;h1 view="Text" model="user"/>
+    &lt;p mode="status" view="Text" />
+    &lt;/body>&lt;/html>'''
+
+    def initialize(self, **kwargs):
+        self.user = kwargs['user']
+        self.service = kwargs['service']
+
+    def wmfactory_user(self):
+        return self.user
+
+    def wmfactory_status(self):
+        return self.service.getUser(self.user)
+
+class UserStatusXR(xmlrpc.XMLPRC):
+
+    def __init__(self, service):
+        xmlrpc.XMLRPC.__init__(self)
+        self.service = service
+
+    def xmlrpc_getUser(self, user):
+        return self.service.getUser(user)
+
+
+class IPerspectiveFinger(components.Interface):
+
+    def remote_getUser(self, username):
+        """return a user's status"""
+
+    def remote_getUsers(self):
+        """return a user's status"""
+
+
+class PerspectiveFingerFromService(pb.Root):
+
+    __implements__ = IPerspectiveFinger,
+
+    def __init__(self, service):
+        self.service = service
+
+    def remote_getUser(self, username):
+        return self.service.getUser(username)
+
+    def remote_getUsers(self):
+        return self.service.getUsers()
+
+components.registerAdapter(PerspectiveFingerFromService, IFingerService)
+
+
+class FingerService(app.ApplicationService):
+
+    __implements__ = IFingerService,
+
+    def __init__(self, file, *args, **kwargs):
+        app.ApplicationService.__init__(self, *args, **kwargs)
+        self.file = file
+
+    def startService(self):
+        app.ApplicationService.startService(self)
+        self._read()
+
+    def _read(self):
+        self.users = {}
+        for line in file(self.file):
+            user, status = line.split(':', 1)
+            self.users[user] = status
+        self.call = reactor.callLater(30, self._read)
+
+    def stopService(self):
+        app.ApplicationService.stopService(self)
+        self.call.cancel()
+
+    def getUser(self, user):
+        return defer.succeed(self.users.get(u, "No such user"))
+
+    def getUsers(self):
+        return defer.succeed(self.users.keys())
+
+
+class ServerContextFactory:
+
+    def getContext(self):
+        """Create an SSL context.
+
+        This is a sample implementation that loads a certificate from a file
+        called 'server.pem'."""
+        ctx = SSL.Context(SSL.SSLv23_METHOD)
+        ctx.use_certificate_file('server.pem')
+        ctx.use_privatekey_file('server.pem')
+        return ctx
+
+
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, IFingerFactory(f))
+site = server.Site(resource.IResource(f))
+application.listenTCP(80, site)
+application.listenSSL(443, site, ServerContextFactory())
+i = IIRCClientFactory(f)
+i.nickname = 'fingerbot'
+application.connectTCP('irc.freenode.org', 6667, i)
+application.listenTCP(8889, pb.BrokerFactory(IPerspectiveFinger(f))
+</pre>
+
+<p>All we need to do to code an HTTPS site is just write a context
+factory (in this case, which loads the certificate from a certain file)
+and then use the listenSSL method. Note that one factory (in this
+case, a site) can listen on multiple ports with multiple protocols.</p>
+
+<h2>Finger Proxy</h2>
+
+<pre>
+class FingerClient(protocol.Protocol):
+
+    def connectionMade(self):
+        self.transport.write(self.factory.user+"\r\n")
+        self.buf = []
+
+    def dataReceived(self, data):
+        self.buf.append(data)
+
+    def connectionLost(self):
+        self.factory.gotData(''.join(self.buf))
+
+
+class FingerClientFactory(protocol.ClientFactory):
+
+    protocol = FingerClient
+
+    def __init__(self, user):
+        self.user = user
+        self.d = defer.Deferred()
+
+    def clientConnectionFailed(self, _, reason):
+        self.d.errback(reason)
+
+    def gotData(self, data):
+        self.d.callback(data)
+
+
+def finger(user, host, port=79):
+    f = FingerClientFactory(user)
+    reactor.connectTCP(host, port, f)
+    return f.d
+  
+class ProxyFingerService(app.ApplicationService):
+    __implements__ = IFingerService
+
+    def getUser(self, user):
+        user, host = user.split('@', 1)
+        ret = finger(user, host)
+        ret.addErrback(lambda _: "Could not connect to remote host")
+        return ret
+
+    def getUsers(self):
+        return defer.succeed([])
+
+application = app.Application('finger', uid=1, gid=1)
+f = ProxyFingerService(application, 'finger')
+application.listenTCP(79, IFingerFactory(f))
+</pre>
+
+<p>Writing new clients with Twisted is much like writing new servers.
+We implement the protocol, which just gathers up all the data, and
+give it to the factory. The factory keeps a deferred which is triggered
+if the connection either fails or succeeds. When we use the client,
+we first make sure the deferred will never fail, by producing a message
+in that case. Implementing a wrapper around client which just returns
+the deferred is a common pattern. While being less flexible than
+using the factory directly, it is also more convenient.</p>
+
+<h2>Organization</h2>
+
+<ul>
+<li>Code belongs in modules: everything above the <code>application=</code>
+    line.</li>
+<li>Templates belong in separate files. The templateFile attribute can be
+    used to indicate the file.</li>
+<li>The templateDirectory attribute will be used to indicate where to look
+    for the files.</li>
+</ul>
+
+<pre>
+from twisted.internet import app
+from finger import FingerService, IIRCclient, ServerContextFactory, \
+                   IFingerFactory, IPerspectiveFinger
+from twisted.web import resource, server
+from twisted.spread import pb
+
+application = app.Application('finger', uid=1, gid=1)
+f = FingerService('/etc/users', application, 'finger')
+application.listenTCP(79, IFingerFactory(f))
+r = resource.IResource(f)
+r.templateDirectory = '/usr/share/finger/templates/'
+site = server.Site(r)
+application.listenTCP(80, site)
+application.listenSSL(443, site, ServerContextFactory())
+i = IIRCClientFactory(f)
+i.nickname = 'fingerbot'
+application.connectTCP('irc.freenode.org', 6667, i)
+application.listenTCP(8889, pb.BrokerFactory(IPerspectiveFinger(f))
+</pre>
+
+<ul>
+<li>Seperaration between: code (module), configuration (file above),
+    presentation (templates), contents (/etc/users), deployment (twistd)</li>
+<li>Examples, early prototypes don't need that.</li>
+<li>But when writing correctly, easy to do!</li>
+</ul>
+
+<h2>Easy Configuration</h2>
+
+<p>We can also supply easy configuration for common cases</p>
+
+<pre>
+# in finger.py moudle
+def updateApplication(app, **kwargs):
+     f = FingerService(kwargs['users'], application, 'finger')
+     application.listenTCP(79, IFingerFactory(f))
+     r = resource.IResource(f)
+     r.templateDirectory = kwargs['templates']
+     site = server.Site(r)
+     app.listenTCP(80, site)
+     if kwargs.get('ssl'):
+         app.listenSSL(443, site, ServerContextFactory())
+     if kwargs.has_key('ircnick'):
+         i = IIRCClientFactory(f)
+         i.nickname = kwargs['ircnick']
+         ircServer = kwargs['ircserver']
+         application.connectTCP(ircserver, 6667, i)
+     if kwargs.has_key('pbport'):
+         application.listenTCP(int(kwargs['pbport']),
+                               pb.BrokerFactory(IPerspectiveFinger(f))
+</pre>
+
+<p>And we can write simpler files now:</p>
+
+<pre>
+# simple-finger.tpy
+from twisted.internet import app
+import finger 
+
+application = app.Application('finger', uid=1, gid=1)
+finger.updateApplication(application,
+   users='/etc/users',
+   templatesDirectory='/usr/share/finger/templates',
+   ssl=1,
+   ircnick='fingerbot',
+   ircserver='irc.freenode.net',
+   pbport=8889
+)
+</pre>
+
+<p>Note: the finger <em>user</em> still has ultimate power: he can use
+updateApplication, or he can use the lower-level interface if he has
+specific needs (maybe an ircserver on some other port? maybe we
+want the non-ssl webserver to listen only locally? etc. etc.)
+This is an important design principle: never force a layer of abstraction:
+allow usage of layers of abstractions.</p>
+
+<p>The pasta theory of design:</p>
+
+<ul>
+<li>Spaghetti: each piece of code interacts with every other piece of
+    code [can be implemented with GOTO, functions, objects]</li>
+<li>Lasagna: code has carefully designed layers. Each layer is, in
+    theory independent. However low-level layers usually cannot be
+    used easily, and high-level layers depend on low-level layers.</li>
+<li>Raviolli: each part of the code is useful by itself. There is a thin
+    layer of interfaces between various parts [the sauce]. Each part
+    can be usefully be used elsewhere.</li>
+<li>...but sometimes, the user just wants to order "Raviolli", so one
+    coarse-grain easily definable layer of abstraction on top of it all
+    can be useful.</li>
+</ul>
+
+<h2>Plugins</h2>
+
+<p>So far, the user had to be somewhat of a programmer to use this.
+Maybe we can eliminate even that? Move old code to
+"finger/service.py", put empty "__init__.py" and...</p>
+
+<pre>
+# finger/tap.py
+from twisted.python import usage
+from finger import service
+
+class Options(usage.Options):
+
+    optParams = [
+      ['users', 'u', '/etc/users'],
+      ['templatesDirectory', 't', '/usr/share/finger/templates'],
+      ['ircnick', 'n', 'fingerbot'],
+      ['ircserver', None, 'irc.freenode.net'],
+      ['pbport', 'p', 8889],
+    ]
+
+    optFlags = [['ssl', 's']]
+
+def updateApplication(app, config):
+    service.updateApplication(app, **config)
+</pre>
+
+<p>And register it all:</p>
+
+<pre>
+#finger/plugins.tml
+register('Finger', 'finger.tap', type='tap', tapname='finger')
+</pre>
+
+<p>And now, the following works</p>
+
+<pre>
+% mktap finger --users=/usr/local/etc/users --ircnick=moshez-finger
+% sudo twistd -f finger.tap
+</pre>
+
+<h2>OS Integration</h2>
+
+<p>If we already have the "finger" package installed, we can achieve
+easy integration:</p>
+
+<p>on Debian--</p>
+
+<pre>
+% tap2deb --unsigned -m "Foo <foo@example.com>" --type=python finger.tpy
+% sudo dpkg -i .build/*.deb
+</pre>
+
+<p>On Red Hat [or Mandrake]</p>
+
+<pre>
+% tap2rpm --type=python finger.tpy #[maybe other options needed]
+% sudo rpm -i .build/*.rpm
+</pre>
+
+<p>Will properly register configuration files, init.d sripts, etc. etc.</p>
+
+<p>If it doesn't work on your favourite OS: patches accepted!</p>
+
+<h2>Summary</h2>
+
+<ul>
+<li>Twisted is asynchronous</li>
+<li>Twisted has implementations of every useful protocol</li>
+<li>In Twisted, implementing new protocols is easy [we just did three]</li>
+<li>In Twisted, achieving tight integration of servers and clients
+    is easy.</li>
+<li>In Twisted, achieving high code usability is easy.</li>
+<li>Ease of use of Twisted follows, in a big part, from that of Python.</li>
+<li>Bonus: No buffer overflows. Ever. No matter what.</li>
+</ul>
+
+<h2>Motto</h2>
+
+<ul>
+<li>"Twisted is not about forcing. It's about mocking you when you use
+    the technology in suboptimal ways."</li>
+<li>You're not forced to use anything except the reactor...</li>
+<li>...not the protocol implementations...</li>
+<li>...not application...</li>
+<li>...not services...</li>
+<li>...not components...</li>
+<li>...not woven...</li>
+<li>...not perspective broker...</li>
+<li>...etc.</li>
+<li>But you should!</li>
+<li>Reinventing the wheel is not a good idea, especially if you form
+    some vaguely squarish lump of glue and poison and try and attach
+    it to your car.</li>
+<li>The Twisted team solved many of the problems you are likely to come
+    across...</li>
+<li>...several times...</li>
+<li>...getting it right the nth time.</li>
+</ul>
+
+
+</body></html>

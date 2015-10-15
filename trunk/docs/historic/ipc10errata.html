@@ -1,0 +1,256 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>The World of Software is a World of Constant
+    Change</title>
+  </head>
+
+  <body>
+    <p><em><strong>Note:</strong> This document is relevant for the
+    version of Twisted that was current at <a
+    href="http://www.python10.com">IPC10</a>. It has since been
+    superseded by many changes to the Python API. It is remaining
+    unchanged for historical reasons, but please refer to
+    documentation for the specific system you are looking for and
+    not these papers for current information.</em></p>
+
+    <h1>The World of Software is a World of Constant Change</h1>
+
+    <p>Twisted has undergone several major revisions since Moshe
+    Zadka and I wrote the <a href="ipc10paper.html">"The Twisted
+    Network Framework"</a>. Most of these changes have not deviated
+    from the central vision of the framework, but almost all of the
+    code listings have been re-visited and enhanced in some
+    way.</p>
+
+    <p>So, while the paper was correct at the time that it was
+    originally written, a few things have changed which have
+    invalidated portions of it.</p>
+
+    <p>Most significant is the fact that almost all methods which
+    pass callbacks of some kind have been changed to take no
+    callback or error-callback arguments, and instead return an
+    instance of a <code
+    class="API">twisted.python.defer.Deferred</code>. This means
+    that an asynchronous function can be easily identified visually
+    because it will be of the form: <code
+    class="python">async_obj.asyncMethod("foo")<b>.addCallbacks(succeded,
+    failed)</b></code>. There is also a utility method <code
+    class="python">addCallback</code> which makes it more
+    convenient to pass additional arguments to a callback function
+    and omit special-case error handling.</p>
+
+    <p>While it is still backwards compatible, <code
+    class="API">twisted.internet.passport</code> has been re-named
+    to <code class="API">twisted.cred</code>, and the various
+    classes in it have been split out into submodules of that
+    package, and the various remote-object superclasses have been
+    moved out of twisted.spread.pb and put into
+    twisted.spread.flavors.</p>
+
+    <p><code class="python">Application.listenOn</code> has been
+    replaced with the more descripively named <code
+    class="python">Application.listenTCP</code>, <code
+    class="python">Application.listenUDP</code>, and <code
+    class="python">Application.listenSSL</code>.</p>
+
+    <p><code class="API">twisted.web.widgets</code> has progressed
+    quite far since the paper was written! One description
+    specifically given in the paper is no longer correct:</p>
+
+    <blockquote>
+      The namespace for evaluating the template expressions is
+      obtained by scanning the class hierarchy for attributes, and
+      getting each of those attributes from the current instance.
+      This means that all methods will be bound methods, so
+      indicating "self" explicitly is not required. While it is
+      possible to override the method for creating namespaces,
+      using this default has the effect of associating all
+      presentation code for a particular widget in one class, along
+      with its template. If one is working with a non-programmer
+      designer, and the template is in an external file, it is
+      always very clear to the designer what functionality is
+      available to them in any given scope, because there is a list
+      of available methods for any given class.
+    </blockquote>
+<p>This is still possible to avoid breakages in old code, but
+after some experimentation, it became clear that simply passing
+    <code class="python">self</code> was an easier method for
+    creating the namespace, both for designers and programmers.</p>
+    <p>In addition, since the advent of Zope3, interoperability
+    with Zope has become increasingly interesting possibility for
+    the Twisted development team, since it would be desirable if
+    Twisted could use their excellent strategy for
+    content-management, while still maintaining Twisted's
+    advantages in the arena of multi-protocol servers. Of
+    particular interest has been Zope Presentation Templates, since
+    they seem to be a truly robust solution for keeping design
+    discrete from code, compatible with the event-based method in
+    which twisted.web.widgets processes web requests. <code
+    class="API">twisted.web.widgets.ZopePresentationTemplate</code>
+    may be opening soon in a theatre near you!</p>
+
+    <p>The following code examples are corrected or modernized
+    versions of the ones that appear in the paper.</p>
+
+    <blockquote>
+      Listing 9: A remotely accessible object and accompanying call
+      
+<pre class="python">
+# Server Side
+class MyObject(pb.Referenceable):
+    def remote_doIt(self):
+        return "did it"
+
+# Client Side
+    ...
+    def myCallback(result):
+        print result # result will be 'did it'
+    def myErrback(stacktrace):
+        print 'oh no, mr. bill!'
+        print stacktrace
+    myRemoteReference.doIt().addCallbacks(myCallback,
+                                          myErrback)
+</pre>
+    </blockquote>
+
+    <blockquote>
+      Listing 10: An object responding to its calling perspective 
+<pre class="python">
+# Server Side
+class Greeter(pb.Viewable):
+    def view_greet(self, actor):
+        return "Hello %s!\n" % actor.perspectiveName
+
+# Client Side
+    ...
+    remoteGreeter.greet().addCallback(sys.stdout.write)
+    ...
+</pre>
+    </blockquote>
+     
+
+    <blockquote>
+      Listing 12: A client for Echoer objects. 
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import main
+def gotObject(object):
+    print "got object:",object
+    object.echo("hello network".addCallback(gotEcho)
+def gotEcho(echo):
+    print 'server echoed:',echo
+    main.shutDown()
+def gotNoObject(reason):
+    print "no object:",reason
+    main.shutDown()
+pb.getObjectAt("localhost", 8789, gotObject, gotNoObject, 30)
+main.run()
+</pre>
+    </blockquote>
+
+    <blockquote>
+      Listing 13: A PB server using twisted's "passport"
+      authentication. 
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import main
+class SimplePerspective(pb.Perspective):
+    def perspective_echo(self, text):
+        print 'echoing',text
+        return text
+class SimpleService(pb.Service):
+    def getPerspectiveNamed(self, name):
+        return SimplePerspective(name, self)
+if __name__ == '__main__':
+    import pbecho
+    app = main.Application("pbecho")
+    pbecho.SimpleService("pbecho",app).getPerspectiveNamed("guest").makeIdentity("guest")
+    app.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(app)))
+    app.save("start")
+</pre>
+    </blockquote>
+
+    <blockquote>
+      Listing 14: Connecting to an Authorized Service 
+<pre class="python">
+from twisted.spread import pb
+from twisted.internet import main
+def success(message):
+    print "Message received:",message
+    main.shutDown()
+def failure(error):
+    print "Failure...",error
+    main.shutDown()
+def connected(perspective):
+    perspective.echo("hello world").addCallbacks(success, failure)
+    print "connected."
+
+pb.connect("localhost", pb.portno, "guest", "guest",
+           "pbecho", "guest", 30).addCallbacks(connected,
+                                               failure)
+main.run()
+</pre>
+    </blockquote>
+
+    <blockquote>
+      Listing 15: A Twisted GUI application 
+<pre class="python">
+from twisted.internet import main, ingtkernet
+from twisted.spread.ui import gtkutil
+import gtk
+ingtkernet.install()
+class EchoClient:
+    def __init__(self, echoer):
+        l.hide()
+        self.echoer = echoer
+        w = gtk.GtkWindow(gtk.WINDOW_TOPLEVEL)
+        vb = gtk.GtkVBox(); b = gtk.GtkButton("Echo:")
+        self.entry = gtk.GtkEntry(); self.outry = gtk.GtkEntry()
+        w.add(vb)
+        map(vb.add, [b, self.entry, self.outry])
+        b.connect('clicked', self.clicked)
+        w.connect('destroy', gtk.mainquit)
+        w.show_all()
+    def clicked(self, b):
+        txt = self.entry.get_text()
+        self.entry.set_text("")
+        self.echoer.echo(txt).addCallback(self.outry.set_text)
+l = gtkutil.Login(EchoClient, None, initialService="pbecho")
+l.show_all()
+gtk.mainloop()
+</pre>
+    </blockquote>
+
+    <blockquote>
+      Listing 16: an event-based web widget. 
+<pre class="python">
+from twisted.spread import pb
+from twisted.python import defer
+from twisted.web import widgets
+class EchoDisplay(widgets.Gadget, widgets.Presentation):
+    template = """&lt;H1&gt;Welcome to my widget, displaying %%%%echotext%%%%.&lt;/h1&gt;
+    &lt;p&gt;Here it is: %%%%getEchoPerspective()%%%%&lt;/p&gt;"""
+    echotext = 'hello web!'
+    def getEchoPerspective(self):
+        return ['&lt;b&gt;',
+            pb.connect("localhost", pb.portno,
+                   "guest", "guest", "pbecho", "guest", 1).
+                addCallbacks(self.makeListOf, self.formatTraceback)
+            ,'&lt;/b&gt;']
+    def makeListOf(self, echoer):
+        return [echoer.echo(self.echotext).addCallback(lambda x: [x])]
+if __name__ == "__main__":
+    from twisted.web import server
+    from twisted.internet import main
+    a = main.Application("pbweb")
+    a.listenTCP(8080, server.Site(EchoDisplay()))
+    a.run()
+</pre>
+    </blockquote>
+  </body>
+</html>
+

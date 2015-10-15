@@ -1,0 +1,508 @@
+<html><head><title>Idioms and Anti-Idioms in Python</title></head><body>
+
+<h1>Idioms and Anti-Idioms in Python</h1>
+
+<h2>Idioms and Anti-Idioms, AKA Do and Don't</h2><ul>
+<li>Welcome</li>
+
+<li>Gimmick -- Charmed quotes</li>
+
+</ul>
+<hr />
+<em>Prue (Something Wicca This Way Comes, season 1) -- No, we are not supposed to use our powers</em>
+<h2>Python</h2><ul>
+<li>Few gotchas...</li>
+
+<li>...but not zero</li>
+
+<li>Most are easy to avoid...</li>
+
+<li>...if you know about them.</li>
+
+</ul>
+<hr />
+<em>Prue (Something Wicca This Way Comes, season 1) -- Uh, it doesn't work out there either.</em>
+<h2>Exceptions</h2><ul>
+<li>Primary method of dealing with errors</li>
+
+<li>Flexible</li>
+
+<li>Good opportunity to shoot yourself in foot...</li>
+
+<li>...without knowing about it (bug only shows up rarely.)</li>
+
+</ul>
+<hr />
+<em>Leo (Paige From the Past, season 4) -- You have to [...] Paige. No exceptions.</em>
+<h2>Exceptions -- Catching Too Much</h2><ul>
+<li>Classical case: 'except:'</li>
+
+<li>Will catch anything</li>
+
+<li>Including most bugs...<ul><li>NameError, AttributeError...</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Piper (Charmed Again, season 4) -- Okay, well this is way too much for me to handle. </em>
+<h2>Exceptions -- Catching Too Much -- Example</h2>
+<pre class="python">
+try:
+   f = opne("file")
+except:
+   sys.exit("no such file")
+</pre>
+
+<hr />
+<em>Piper (Charmed Again, season 4) -- Way too much.</em>
+<h2>Exceptions -- Catching Too Soon</h2><ul>
+<li>The slogan:<ul><li>Don't catch errors you can do nothing about</li>
+</ul></li>
+
+<li>Catching exceptions should by the 'user'</li>
+
+<li>The point where the value is *used*<ul><li>Rather than passed on</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Phoebe (Knight to Remember, season 4) -- Maybe it's just too soon.</em>
+<h2>Exceptions -- Catching Too Soon -- Example</h2>
+<pre class="python">
+def readlinesfromfile(file):
+    try:
+        return open(file).readlines()
+    except IOError:
+        pass # do what?
+</pre>
+<ul><li>What can we do?<ul><li>Return empty list? bad</li>
+
+<li>Print warning? what if it's one of several possibilities</li>
+
+<li>Exit? NO!</li>
+
+<li>Raise our own exception? Losing information</li>
+</ul></li>
+
+</ul>
+<hr />
+<em>Paige (Knight to Remember, season 4) -- I'm already a little late.</em>
+<h2>Catching multiple exceptions</h2><ul>
+<li>Spot bug here:</li></ul>
+
+<pre class="python">
+try:
+   fp = open("file")
+except IOError, OSError:
+   print "could not open file"
+</pre>
+<hr />
+<em>Paige (Knight to Remember, season 4) -- Because I've got too many responsibilities</em>
+<h2>Catching multiple exceptions (cont'd)</h2><ul>
+<li>Bug:</li>
+
+<li>Only IOError gets caught...</li>
+
+<li>and exception value is put in OSError</li>
+
+<li>But most exceptions are IOError :(</li>
+
+<li>Likely to not discover this bug</li>
+
+</ul>
+<hr />
+<em>Piper (Knight to Remember, season 4) -- Alright! Calm down!</em>
+<h2>Catching multiple exceptions (cont'd 2)</h2><ul>
+<li>Correct way</li></ul>
+
+<pre class="python">
+try:
+   fp = open("file")
+except (IOError, OSError):
+   print "could not open file"
+</pre>
+<hr />
+<em>Phoebe (Knight to Remember, season 4) -- Besides that, maybe we can help</em>
+<h2>Catching NameError</h2>
+
+<pre class="python">
+try:
+   import foo
+except ImportError:
+   pass
+
+try:
+   foo.Function()
+except NameError:
+   pass # some replacement
+</pre>
+<ul><li>Bad idea!</li>
+
+</ul>
+<hr />
+<em>Piper (Morality Bites, season 4) -- That's OK, I forgot your name too.</em>
+<h2>Catching NameError (cont'd)</h2>
+
+<pre class="python">
+try:
+   import foo
+except ImportError:
+   foo = None
+
+if foo is not None:
+   foo.Function()
+else:
+   pass # some replacement
+</pre>
+<ul><li>If foo.Function() sometimes has a NameError, we won't mask it...</li>
+
+<li>...or if we misspell 'foo'</li>
+
+</ul>
+<hr />
+<em>Anne (Morality Bites, season 4) -- Oh, right, sorry.</em>
+<h2>Importing Modules -- A Review</h2><ul>
+<li>'import module'</li>
+
+<li>'from module import name1, name2'</li>
+
+<li>Only imports once (or does it?)</li>
+
+</ul>
+<hr />
+<em>Phoebe (Animal Pragmatism, season 2) -- Rome was not built in a day,</em>
+<h2>Importing __main__</h2><ul>
+<li>__main__ is where the 'script' is executed</li>
+
+<li>Avoid the temptation to import __main__</li>
+
+<li>Put common function in a named module</li>
+
+<li>Then your code will be more useful</li>
+
+</ul>
+<hr />
+<em>Piper (Animal Pragmatism, season 2) -- And why mess with a good thing?</em>
+<h2>Importing a File Twice</h2><ul>
+<li>But it can't be, can it?</li>
+
+<li>Importing a script into itself</li></ul>
+
+<pre class="python">
+# file: hello.py
+import hello
+class Foo: pass
+</pre>
+<ul><li>Two 'Foo's, same definition, different class!</li>
+
+<li>If your sys.path includes packages...</li>
+
+<li>...you can import a module once from a package and once plain</li>
+
+</ul>
+<hr />
+<em>Phoebe (Which Prue Is It, Anyway?, season 1) -- Okay, which one of you is the real Prue?</em>
+<h2>Importing *</h2><ul>
+<li>Don't do it<ul><li>Don't do it</li>
+</ul></li>
+
+<li>Classic mistake:</li></ul>
+
+<pre class="python">
+from os import *
+
+fp = open("file") # works
+fp.readline() # fails with a weird error...?
+</pre>
+<ul><li>os.open returns a file descriptor (number)</li>
+
+</ul>
+<hr />
+<em>Pink Prue (Which Prue Is It, Anyway?, season 1) -- So, um, what did I do now?</em>
+<h2>Importing * Inside Functions</h2><ul>
+<li>Just invalid Python...</li>
+
+<li>...but happens to work in 1.5.2...</li>
+
+<li>...and sometimes in 2.1...</li>
+
+<li>...never in 2.2.</li>
+
+<li>Just Say No</li>
+
+</ul>
+<hr />
+<em>Pink Prue (Which Prue Is It, Anyway?, season 1) -- What ever it is, I have an alibi.</em>
+<h2>Importing Names</h2><ul>
+<li>from foo import name1, name2</li>
+
+<li>Not a bad idea always</li>
+
+<li>But be careful of repercussions:</li>
+
+<li>modules sometimes change things inside</li>
+
+<li>You won't see those changes</li>
+
+<li>Opportunity for inconsistency!</li>
+
+</ul>
+<hr />
+<em>Real Prue (Which Prue Is It, Anyway?, season 1) -- Because I still have to work here when all of this is over.</em>
+<h2>Reloading</h2><ul>
+<li>reload(module) -- reread module from file</li>
+
+<li>Useful in long running processes?</li>
+
+<li>Doesn't play nice with 'from import name'</li>
+
+<li>Beware of exceptions: the new classes are different from old classes</li>
+
+</ul>
+<hr />
+<em>Real Prue (Which Prue Is It, Anyway?, season 1) -- Don't worry I'm never casting that spell again.</em>
+<h2>exec, execfile and eval</h2><ul>
+<li>Execute arbitrary Python code</li>
+
+<li>No-cost scripting language for applications</li>
+
+<li>But easy to shoot one's self in the foot</li>
+
+</ul>
+<hr />
+<em>Reporter (Morality Bites, season 2) -- More news on the execution of Phoebe Halliwell coming up.</em>
+<h2>exec, execfile and eval -- Modify namespaces</h2><ul>
+<li>They modify the namespace they're in<ul><li>...but not always.</li>
+</ul></li>
+
+<li>Depends on global vs. inside functions</li>
+
+<li>Use with care -- or with explicit dictionaries</li>
+
+</ul>
+<hr />
+<em>Nathaniel (Morality Bites, season 2) -- Executions are a bitch to plan.</em>
+<h2>exec, execfile and eval -- Inside functions</h2><ul>
+<li>Unadorned exec is invalid inside functions</li>
+
+<li>execfile and eval play badly with local var. optimisation</li>
+
+<li>Always use with explicit dictionary</li>
+
+</ul>
+<hr />
+<em>Nathaniel (Morality Bites, season 2) -- Phoebe, what is this? An attempt to stay your execution?</em>
+<h2>Conclusion: recommended usage</h2><ul>
+<li>d={};exec "code" in d</li>
+
+<li>d={};execfile("file", d)</li>
+
+<li>d={};eval("expression", d)</li>
+
+<li>Sometimes useful to pre-populate dictionary</li>
+
+</ul>
+<hr />
+<em>Phoebe (Morality Bites, season 2) -- Just because you don't understand something, doesn't make it evil.</em>
+<h2>exec, execfile and eval -- Restricted Execution (Don't)</h2><ul>
+<li>rexec never was audited</li>
+
+<li>History of holes</li>
+
+<li>Dangerous to allow arbitrary code</li>
+
+<li>DoS attacks not defended against at all</li>
+
+<li>Recursion</li>
+
+</ul>
+<hr />
+<em>Leo (Morality Bites, season 2) -- Nobody's gonna rescue you.</em>
+<h2>Syntax</h2><ul>
+<li>Python syntax regular and nice...</li>
+
+<li>...but not perfect.</li>
+
+<li>Some care needed.</li>
+
+</ul>
+<hr />
+<em>Prue (Morality Bites, season 2) -- You know, we can still make the good things happen.</em>
+<h2>Syntax -- Tabs and Spaces</h2><ul>
+<li>Use Tabs</li>
+
+<li>Or use spaces</li>
+
+<li>But don't mix them...</li>
+
+<li>...ever!</li>
+
+<li>Invites bugs</li>
+
+</ul>
+<hr />
+<em>Prue (The Painted World, season 2) -- We've seen so many bizarre things.</em>
+<h2>Syntax -- Backslash Continuations</h2>
+
+<pre class="python">
+# Extra newline
+r = 1 \
+
++2
+
+# Missing backslash in long series
+r = 1 \
++2 \
++3 \
++4 
++5 \
++6
+</pre>
+<ul><li>Both *silently* do the wrong things</li></ul>
+
+<h2>Syntax -- Backslash Continuations (cont'd)</h2>
+
+<ul><li>Better</li></ul>
+
+<pre class="python">
+# Extra newline
+r = (1
+
++2)
+
+# Long series
+r = (1
++2
++3
++4
++5
++6)
+</pre>
+
+<hr />
+<em>Prue (The Painted World, season 2) -- Uh, what just happened here?</em>
+<h2>Hand Hacking Batteries</h2><ul>
+<li>Don't write os.path functions yourself<ul><li>os.path.join especially</li>
+</ul></li>
+
+<li>min, max</li>
+
+<li>urlparse</li>
+
+<li>Skim through modules list. A lot.</li>
+
+</ul>
+<hr />
+<em>Prue (Animal Pragmatism, season 2) -- Well, we didn't find anything in the Book Of Shadows.</em>
+<h2>Further Reading</h2><ul>
+<li><a href="http://aspn.activestate.com/ASPN/Python/Reference/Products/ActivePython/howtos/doanddont/doanddont.html">http://aspn.activestate.com/ASPN/Python/Reference/Products/ActivePython/howtos/doanddont/doanddont.html</a></li>
+
+<li><a href="http://www.amk.ca/python/writing/warts.html">http://www.amk.ca/python/writing/warts.html</a></li>
+
+<li><a href="http://www.python.org/doc/essays/styleguide.html">http://www.python.org/doc/essays/styleguide.html</a></li>
+
+</ul>
+<hr />
+<em>Phoebe (The Painted World, season 2) -- I think you'll find me pretty knowledgeable about all areas</em>
+<h2>Questions?</h2>
+<em>Piper (The Painted World, season 2) -- You're like ask rainman.com</em>
+
+<h2>Bonus Slides</h2>
+<em>Phoebe (The Painted World, season 2) -- Oh, and P.S. there will be no personal gain.</em>
+
+<h2>Packages and __init__.py</h2><ul>
+<li>Packages are determined by __init__.py files</li>
+
+<li>Temptation to put code in __init__.py</li>
+
+<li>But two namespaces mix: __init__'s and filesystem's</li>
+
+<li>Put comments, docstring and __all__</li>
+
+</ul>
+<hr />
+<em>Piper (Animal Pragmatism, season 2) -- It's a package. One I would like to share with you.</em>
+<h2>Type Checking</h2><ul>
+<li>Python's typing is highly dynamic</li>
+
+<li>Capability-based, not class-based</li>
+
+<li>Explicit type checks hurt code usefulness</li>
+
+<li>(common use -- proxies, for testing)</li>
+
+</ul>
+<hr />
+<em>Phoebe (Black as Cole, season 2) -- I never thought of myself as the marrying type</em>
+<h2>Type Checking -- Example</h2><ul>
+<li>Here's what not to do:</li></ul>
+
+<pre class="python">
+class Foo:
+    def __init__(self, i):
+        if type(i) is types.StringType:
+            self.content = open(i).readlines()
+        elif type(i) is types.ListType:
+            self.content = i
+</pre>
+<ul><li>(inspired from a question on #python)</li>
+
+<li>More badness than you can shake a stick at.</li>
+
+</ul>
+<hr />
+<em>Phoebe (Muse to My Ears, season 4) -- You're an artistic, creative type.</em>
+<h2>Type Checking -- Example -- Fixed</h2>
+<pre class="python">
+
+class Foo:
+    pass
+
+class FooFromFile(Foo):
+
+    def __init__(self, filename):
+         self.content = open(filename).readlines()
+
+class FooFromList(Foo):
+
+    def __init__(self, list):
+         self.content = list
+</pre>
+
+<hr />
+<em>Phoebe (Muse to My Ears, season 4) -- You see how well this worked out?</em>
+<h2>Private __Attributes</h2><ul>
+<li>Useful in deep hierarchies to keep attributes separate</li>
+
+<li>Mangle only class name -- *not* module name</li>
+
+<li>Makes it harder to test</li>
+
+<li>Makes it harder to hand-hack for debugging</li>
+
+</ul>
+<hr />
+<em>Tessa (Animal Pragmatism, season 2) -- Maybe it's our fault because we tried to make them into something they're not.</em>
+
+<h2>Using Mutable Default Arguments</h2>
+
+<pre class="python">
+def foo(l=[]):
+    l.append(5);return l
+</pre>
+
+<ul>
+<li>Will modify the same list.</li>
+<li>If you want that -- use object, class, not that hack.</li>
+</ul>
+
+<pre class="python">
+def foo(l=None):
+    if l is None: l=[]
+    l.append(5);return l
+</pre>
+<hr />
+<em>Snake guy (Animal Pragmatism, season 2) --
+You two are acting like nothing's changed.</em>
+
+</body></html>

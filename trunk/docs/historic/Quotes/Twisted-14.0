@@ -1,0 +1,21 @@
++ @ivar controller: has emit_replicate method and forest object
+<itamar> Open a story for turning this into an explicit interface.
++ if slave == controller.ip:
+<itamar> Requirement for ip attribute was not mentioned in @ivar controller.
++ self.sitejuggler = controller.controller.controller
+<itamar> OMGOMGOMG.
+%
+<exarkun> things that people type are text
+<exarkun> unless they are typing them into a terminal
+<exarkun> hahahahaha
+<exarkun> hth
+%
+<exarkun> no food is sustainable.  once you eat it it is gone.
+%
+<dash> -!- opsec <~opsec@unaffiliated/opsec> has joined #python
+<dash> dreid? is that you?
+<dreid> No.
+<dash> good answer, good answer
+%
+<radix> so markdown can't be used for poetry
+<radix> oh wait &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; yes it can

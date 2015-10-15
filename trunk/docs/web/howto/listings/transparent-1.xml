@@ -1,0 +1,6 @@
+<div xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">
+<!-- layout decision - these things need to be *siblings* -->
+<t:transparent t:render="renderer1" />
+<t:transparent t:render="renderer2" />
+</div>
+
