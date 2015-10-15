@@ -4,6 +4,8 @@
 
 """
 URL parsing, construction and rendering.
+
+@see: L{URL}
 """
 
 from ._url import URL
