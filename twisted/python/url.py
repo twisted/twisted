@@ -4,33 +4,6 @@
 
 """
 URL parsing, construction and rendering.
-
-Valid parsable URLs may show up looking like
-C{b'http://example.com/foo%2Fbar/baz'}.  Or they might show up as the
-ASCII-decoded equivalent: C{u'http://example.com/foo%2Fbar/baz'}.  The fully
-decoded human-readable version, however, is not something the URL code should
-be parsing; it should only ever be displayed, not used a reference or key.  For
-example, in this case it would be the problematic
-C{u'http://example.com/foo/bar/baz'}, assuming a UTF-8 encoding for '%2F'.  As
-this example shows, the only reasonable thing to parse is still-encoded URLs.
-L{unicode} URLs with non-ASCII bytes can also be ignored as invalid.
-
-The Unicode encoding of the %-encoded characters (e.g. the '%2F' above) is
-another issue.  Domains will always use IDNA.  Paths will usually (but probably
-not always) be UTF-8, query strings can be whatever the hell the browser feels
-like, either UTF-8 or the encoding of the page.  The path and query string may
-well have different encodings, and the encodings for path and query string may
-not be known!  This module will therefore allow the original bytes in paths and
-queries to be preserved, so they can be passed through to someone who hopefully
-does know how to decode them.
-
-Of course, if there's no % in the path or query, you can just assume an
-encoding of ASCII.
-
-@see: U{RFC 3986, Uniform Resource Identifier (URI): Generic Syntax
-    <https://tools.ietf.org/html/rfc3986>}
-@see: U{RFC 3987, Internationalized Resource Identifiers
-    <https://tools.ietf.org/html/rfc3986>}
 """
 
 from urlparse import urlsplit, urlunsplit
@@ -299,6 +272,11 @@ class URL(object):
         ^ scheme           ^ port     ^ query parameters
                ^ host           ^ path segments
                                          ^ fragment
+
+    @see: U{RFC 3986, Uniform Resource Identifier (URI): Generic Syntax
+        <https://tools.ietf.org/html/rfc3986>}
+    @see: U{RFC 3987, Internationalized Resource Identifiers
+        <https://tools.ietf.org/html/rfc3986>}
 
     @ivar scheme: The URI scheme.
     @type scheme: L{unicode}
