@@ -292,24 +292,15 @@ class URL(object):
     A L{URL} represents a URL and provides a convenient API for modifying its
     parts.
 
-    A URL is split into a number of distinct parts: scheme, netloc (domain
-    name), path segments, query parameters and fragment identifier.
+    A URL is split into a number of distinct parts: scheme, host, port, path
+    segments, query parameters and fragment identifier::
 
-    Methods are provided to modify many of the parts of the URL, especially the
-    path and query parameters.  Values can be passed to methods as-is; encoding
-    and escaping is handled automatically.
+        http://example.com:8080/a/b/c?d=e#f
+        ^ scheme           ^ port     ^ query parameters
+               ^ host           ^ path segments
+                                         ^ fragment
 
-    There preferred way of creating a URL is to call L{URL.fromText}, a class
-    method that parses the text format of URLs.
 
-    URL subclasses with different constructor signatures should override
-    L{replace} to ensure that the numerous instance methods which return copies
-    do so correctly.  Additionally, the L{fromText} method will need to be
-    overridden.
-
-    The following attributes are always stored and passed to C{__init__} in
-    decoded form (that is, as L{unicode}, without any percent-encoding).
-    C{str} objects should never be passed to C{__init__}!
 
     @ivar scheme: the URI scheme
     @type scheme: L{unicode}
