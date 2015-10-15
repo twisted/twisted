@@ -444,25 +444,32 @@ class URL(object):
 
         @param scheme: the scheme of the new URL; if unspecified, the scheme of
             this URL.
+        @type scheme: L{unicode}
 
         @param host: the host of the new URL; if unspecified, the host of this
             URL.
+        @type host: L{unicode}
 
         @param pathSegments: the path segments of the new URL; if unspecified,
             the path segments of this URL.
+        @type pathSegments: iterable of L{unicode}
 
         @param queryParameters: the query elements of the new URL; if
             unspecified, the query segments of this URL.
+        @type queryParameters: iterable of 2-L{tuple}s of key, value.
 
         @param fragment: the fragment of the new URL; if unspecified, the query
             segments of this URL.
+        @type fragment: L{unicode}
 
         @param port: the port of the new URL; if unspecified, the port of this
             URL.
+        @type port: L{int}
 
         @param rooted: C{True} if the given C{pathSegments} are meant to start
             at the root of the host; C{False} otherwise.  Only meaningful for
             relative URIs.
+        @type rooted: L{bool}
 
         @return: a new L{URL}.
         """
