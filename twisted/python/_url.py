@@ -672,10 +672,4 @@ class URL(object):
         Convert this URL to an C{eval}-able representation that shows all of
         its constituent parts.
         """
-        return (
-            '%s(scheme=%r, host=%r, pathSegments=%r, queryParameters=%r, '
-            'fragment=%r, port=%r)' % (type(self).__name__,
-                                       self.scheme, self.host,
-                                       self.pathSegments, self.queryParameters,
-                                       self.fragment, self.port)
-        )
+        return ('URL.fromText({})').format(repr(self.asText()))

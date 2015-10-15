@@ -165,15 +165,15 @@ class TestURL(TestCase):
 
     def test_repr(self):
         """
-        L{URL.__repr__} should return something meaningful.
+        L{URL.__repr__} will display the canoncial form of the URL, wrapped in
+        a L{URL.fromText} invocation, so that it is C{eval}-able but still easy
+        to read.
         """
         self.assertEquals(
             repr(URL(scheme=u'http', host=u'foo', pathSegments=[u'bar'],
                      queryParameters=[(u'baz', None), (u'k', u'v')],
                      fragment=u'frob')),
-            "URL(scheme=u'http', host=u'foo', pathSegments=(u'bar',), "
-            "queryParameters=((u'baz', None), (u'k', u'v')), fragment=u'frob',"
-            " port=80)"
+            "URL.fromText(%s)" % (repr(u"http://foo/bar?baz&k=v#frob"),)
         )
 
 
