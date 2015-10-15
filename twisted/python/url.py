@@ -300,25 +300,24 @@ class URL(object):
                ^ host           ^ path segments
                                          ^ fragment
 
-
-
-    @ivar scheme: the URI scheme
+    @ivar scheme: The URI scheme.
     @type scheme: L{unicode}
 
-    @ivar host: the host portion of the netloc.
+    @ivar host: The host name.
     @type host: L{unicode}
 
-    @ivar port: The port number portion of the netloc.
+    @ivar port: The port number.
     @type port: L{int}
 
-    @ivar pathSegments: the path segments
-    @type pathSegments: tuple of L{unicode}
+    @ivar pathSegments: The path segments.
+    @type pathSegments: L{tuple} of L{unicode}.
 
-    @ivar queryParameters: the query parameters, as name-value pairs
-    @type queryParameters: tuple of 2-tuples of L{unicode} (or C{None}, for
-        values)
+    @ivar queryParameters: The query parameters, as (name, value) pairs.
+    @type queryParameters: L{tuple} of 2-L{tuple}s of (name: L{unicode}, value:
+        (L{unicode} for values or C{None} for stand-alone query parameters with
+        no C{=} in them)).
 
-    @ivar fragment: the fragment identifier
+    @ivar fragment: The fragment identifier.
     @type fragment: L{unicode}
 
     @ivar rooted: Does the path start with a C{/}?  This is taken from the
@@ -332,6 +331,35 @@ class URL(object):
     def __init__(self, scheme=None, host=None, pathSegments=None,
                  queryParameters=None, fragment=None, port=None,
                  rooted=True):
+        """
+        Create a new L{URL} from structured information about itself.
+
+        @ivar scheme: The URI scheme.
+        @type scheme: L{unicode}
+
+        @ivar host: The host portion of the netloc.
+        @type host: L{unicode}
+
+        @ivar port: The port number portion of the netloc.
+        @type port: L{int}
+
+        @ivar pathSegments: The path segments.
+        @type pathSegments: Iterable of L{unicode}.
+
+        @ivar queryParameters: The query parameters, as name-value pairs
+        @type queryParameters: Iterable of pairs of L{unicode} (or C{None}, for
+            values).
+
+        @ivar fragment: The fragment identifier.
+        @type fragment: L{unicode}
+
+        @ivar rooted: Does the path start with a C{/}?  This is taken from the
+            terminology in the BNF grammar, specifically the C{path-rootless},
+            rule, since "absolute path" and "absolute URI" are somewhat
+            ambiguous.  C{pathSegments} does not contain the implicit prefixed
+            C{"/"} since that is somewhat awkward to work with.
+        @type rooted: L{bool}
+        """
         # Fall back to defaults.
         if pathSegments is None:
             pathSegments = [u'']
