@@ -77,6 +77,8 @@ class Error(Exception):
 
         if isinstance(code, int):
             # If we're given an int, convert it to a bytestring
+            # downloadPage gives a bytes, Agent gives an int, and it worked by
+            # accident previously, so just make it keep working.
             code = intToBytes(code)
 
         self.status = code
