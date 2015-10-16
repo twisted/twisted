@@ -42,8 +42,8 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
 
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     """
-    An L{_IGroupExchangeAlgorithm} describes a key exchange algorithm that
-    uses group exchange between the client and server.
+    An L{_IGroupExchangeKexAlgorithm} describes a key exchange algorithm
+    that uses group exchange between the client and server.
 
     A prime / generator group should be chosen at run time based on the
     requested size.  See RFC 4419.
@@ -111,52 +111,53 @@ _kexAlgorithms = {
 
 
 
-def _getKex(kexAlgo):
+def getKex(kexAlgorithm):
     """
     Get a description of a named key exchange algorithm.
 
-    @type kexAlgo: C{str}
-    @param kexAlgo: The key exchange algorithm name.
+    @type kexAlgorithm: C{str}
+    @param kexAlgorithm: The key exchange algorithm name.
 
     @rtype: L{_IKexAlgorithm}
-    @return: A description of the key exchange algorithm named by C{kexAlgo}.
+    @return: A description of the key exchange algorithm named by
+        C{kexAlgorithm}.
 
     @raises ConchError: if the key exchange algorithm is not found.
     """
-    if kexAlgo not in _kexAlgorithms:
+    if kexAlgorithm not in _kexAlgorithms:
         raise error.ConchError(
-            "Unsupported key exchange algorithm: %s" % (kexAlgo,))
-    return _kexAlgorithms[kexAlgo]
+            "Unsupported key exchange algorithm: %s" % (kexAlgorithm,))
+    return _kexAlgorithms[kexAlgorithm]
 
 
 
-def isFixedGroup(kexAlgo):
+def isFixedGroup(kexAlgorithm):
     """
-    Returns C{True} if C{kexAlgo} has a fixed prime / generator group.  Used
-    to determine the correct key exchange logic to perform.
+    Returns C{True} if C{kexAlgorithm} has a fixed prime / generator group.
+    Used to determine the correct key exchange logic to perform.
 
-    @type kexAlgo: C{str}
-    @param kexAlgo: The key exchange algorithm name.
+    @type kexAlgorithm: C{str}
+    @param kexAlgorithm: The key exchange algorithm name.
 
     @rtype: C{bool}
-    @return: C{True} if C{kexAlgo} has a fixed prime / generator group,
+    @return: C{True} if C{kexAlgorithm} has a fixed prime / generator group,
         otherwise C{False}.
     """
-    return _IFixedGroupKexAlgorithm.providedBy(_getKex(kexAlgo))
+    return _IFixedGroupKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
 
-def getDHPrime(kexAlgo):
+def getDHPrime(kexAlgorithm):
     """
     Get the prime and generator to use in key exchange.
 
-    @type kexAlgo: C{str}
-    @param kexAlgo: The key exchange algorithm name.
+    @type kexAlgorithm: C{str}
+    @param kexAlgorithm: The key exchange algorithm name.
 
     @rtype: C{tuple}
     @return: A C{tuple} containing C{long} generator and C{long} prime.
     """
-    kex = _getKex(kexAlgo)
+    kex = getKex(kexAlgorithm)
     return kex.generator, kex.prime
 
 
@@ -171,4 +172,4 @@ def getSupportedKeyExchanges():
     """
     return sorted(
         _kexAlgorithms,
-        key = lambda kexAlgo: _kexAlgorithms[kexAlgo].preference)
+        key = lambda kexAlgorithm: _kexAlgorithms[kexAlgorithm].preference)

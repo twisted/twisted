@@ -614,11 +614,12 @@ class BaseSSHTransportTests(TransportTestCase):
         packet = self.proto.getPacket()
         self.assertEqual(packet[0], chr(transport.MSG_KEXINIT))
         self.assertEqual(packet[1:17], '\x99' * 16)
-        (kexes, pubkeys, ciphers1, ciphers2, macs1, macs2, compressions1,
-         compressions2, languages1, languages2,
+        (keyExchanges, pubkeys, ciphers1, ciphers2, macs1, macs2,
+         compressions1, compressions2, languages1, languages2,
          buf) = common.getNS(packet[17:], 10)
 
-        self.assertEqual(kexes, ','.join(self.proto.supportedKeyExchanges))
+        self.assertEqual(
+            keyExchanges, ','.join(self.proto.supportedKeyExchanges))
         self.assertEqual(pubkeys, ','.join(self.proto.supportedPublicKeys))
         self.assertEqual(ciphers1, ','.join(self.proto.supportedCiphers))
         self.assertEqual(ciphers2, ','.join(self.proto.supportedCiphers))
@@ -1367,13 +1368,13 @@ class ServerSSHTransportTests(ServerAndClientSSHTransportBaseCase,
         self.proto.supportedPublicKeys = ['ssh-rsa']
         self.proto.dataReceived(self.transport.value())
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD('\x00\x00\x04\x00')
-        dh_generator, dh_prime = self.proto.factory.getPrimes().get(1024)[0]
+        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(1024)[0]
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(dh_prime) + '\x00\x00\x00\x01\x02')])
+              common.MP(dhPrime) + '\x00\x00\x00\x01\x02')])
         self.assertEqual(self.proto.g, 2)
-        self.assertEqual(self.proto.p, dh_prime)
+        self.assertEqual(self.proto.p, dhPrime)
 
 
     def test_KEX_DH_GEX_REQUEST_OLD_badKexAlg(self):
@@ -1398,13 +1399,13 @@ class ServerSSHTransportTests(ServerAndClientSSHTransportBaseCase,
         self.proto.dataReceived(self.transport.value())
         self.proto.ssh_KEX_DH_GEX_REQUEST('\x00\x00\x04\x00\x00\x00\x08\x00' +
                                           '\x00\x00\x0c\x00')
-        dh_generator, dh_prime = self.proto.factory.getPrimes().get(1024)[0]
+        dhGenerator, dhPrime = self.proto.factory.getPrimes().get(1024)[0]
         self.assertEqual(
             self.packets,
             [(transport.MSG_KEX_DH_GEX_GROUP,
-              common.MP(dh_prime) + '\x00\x00\x00\x01\x03')])
+              common.MP(dhPrime) + '\x00\x00\x00\x01\x03')])
         self.assertEqual(self.proto.g, 3)
-        self.assertEqual(self.proto.p, dh_prime)
+        self.assertEqual(self.proto.p, dhPrime)
 
 
     def test_KEX_DH_GEX_INIT_after_REQUEST(self):
@@ -2162,9 +2163,9 @@ class TransportLoopbackTests(unittest.TestCase):
         Like test_ciphers, but for the various key exchanges.
         """
         deferreds = []
-        for kexAlgo in transport.SSHTransportBase.supportedKeyExchanges:
+        for kexAlgorithm in transport.SSHTransportBase.supportedKeyExchanges:
             def setKeyExchange(proto):
-                proto.supportedKeyExchanges = [kexAlgo]
+                proto.supportedKeyExchanges = [kexAlgorithm]
                 return proto
             deferreds.append(self._runClientServer(setKeyExchange))
         return defer.DeferredList(deferreds, fireOnOneErrback=True)

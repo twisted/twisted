@@ -506,6 +506,26 @@ class SSHTransportBase(protocol.Protocol):
         return address.SSHTransportAddress(self.transport.getHost())
 
 
+    @property
+    def kexAlg(self):
+        """
+        The key exchange algorithm name agreed between client and server.
+        """
+        return self._kexAlg
+
+
+    @kexAlg.setter
+    def kexAlg(self, value):
+        """
+        Set the key exchange algorithm name.
+
+        @raises ConchError: if the key exchange algorithm is not found.
+        """
+        # Check for supportedness.
+        _kex.getKex(value)
+        self._kexAlg = value
+
+
     # Client-initiated rekeying looks like this:
     #
     #  C> MSG_KEXINIT
