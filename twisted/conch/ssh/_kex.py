@@ -146,9 +146,9 @@ def isFixedGroup(kexAlgorithm):
 
 
 
-def getDHPrime(kexAlgorithm):
+def getDHGeneratorAndPrime(kexAlgorithm):
     """
-    Get the prime and generator to use in key exchange.
+    Get the generator and the prime to use in key exchange.
 
     @param kexAlgorithm: The key exchange algorithm name.
     @type kexAlgorithm: C{str}

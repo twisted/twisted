@@ -285,8 +285,10 @@ class MockFactory(factory.SSHFactory):
         # a moduli file when running tests.
         # See OpenSSHFactory.getPrimes.
         return {
-            1024: ((2, _kex.getDHPrime('diffie-hellman-group1-sha1')[1]),),
-            2048: ((3, _kex.getDHPrime('diffie-hellman-group1-sha1')[1]),),
+            1024: ((2, _kex.getDHGeneratorAndPrime(
+                'diffie-hellman-group1-sha1')[1]),),
+            2048: ((3, _kex.getDHGeneratorAndPrime(
+                'diffie-hellman-group1-sha1')[1]),),
             4096: ((5, 7),)}
 
 
@@ -1319,7 +1321,7 @@ class ServerSSHTransportTests(ServerAndClientSSHTransportBaseCase,
         self.proto.supportedPublicKeys = ['ssh-rsa']
         self.proto.dataReceived(self.transport.value())
 
-        g, p = _kex.getDHPrime(kexAlgorithm)
+        g, p = _kex.getDHGeneratorAndPrime(kexAlgorithm)
         e = pow(g, 5000, p)
 
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.MP(e))

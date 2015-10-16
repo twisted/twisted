@@ -936,7 +936,7 @@ class SSHServerTransport(SSHTransportBase):
         """
         clientDHpublicKey, foo = getMP(packet)
         y = _getRandomNumber(randbytes.secureRandom, 512)
-        self.g, self.p = _kex.getDHPrime(self.kexAlg)
+        self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
         serverDHpublicKey = _MPpow(self.g, y, self.p)
         sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
         h = sha1()
@@ -1130,7 +1130,7 @@ class SSHClientTransport(SSHTransportBase):
             return # we disconnected
         if _kex.isFixedGroup(self.kexAlg):
             self.x = _generateX(randbytes.secureRandom, 512)
-            self.g, self.p = _kex.getDHPrime(self.kexAlg)
+            self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
             self.e = _MPpow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
         else:
@@ -1592,7 +1592,8 @@ class _Counter:
 
 
 
-DH_GENERATOR, DH_PRIME = _kex.getDHPrime("diffie-hellman-group1-sha1")
+DH_GENERATOR, DH_PRIME = _kex.getDHGeneratorAndPrime(
+    'diffie-hellman-group1-sha1')
 
 
 MSG_DISCONNECT = 1

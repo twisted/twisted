@@ -378,7 +378,8 @@ if Crypto is not None and pyasn1 is not None:
             # requiring a moduli file when running tests.
             # See OpenSSHFactory.getPrimes.
             return {
-                2048: [_kex.getDHPrime('diffie-hellman-group1-sha1')]
+                2048: [
+                    _kex.getDHGeneratorAndPrime('diffie-hellman-group1-sha1')]
             }
 
         def getService(self, trans, name):
