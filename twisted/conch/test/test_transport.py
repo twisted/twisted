@@ -273,12 +273,17 @@ class MockFactory(factory.SSHFactory):
 
     def getPrimes(self):
         """
-        Return the Diffie-Hellman primes that can be used for the
-        diffie-hellman-group-exchange-sha1 key exchange. In these tests, we
-        hardwire the prime values to those defined by the
-        diffie-hellman-group1-sha1 key exchange algorithm, to avoid requiring a
-        moduli file when running tests. See OpenSSHFactory.getPrimes.
+        Diffie-Hellman primes that can be used for the
+        diffie-hellman-group-exchange-sha1 key exchange.
+
+        @return: The primes and generators.
+        @rtype: C{dict} mapping the key size to a C{list} of
+            C{(generator, prime)} tupple.
         """
+        # In these tests, we hardwire the prime values to those defined by the
+        # diffie-hellman-group1-sha1 key exchange algorithm, to avoid requiring
+        # a moduli file when running tests.
+        # See OpenSSHFactory.getPrimes.
         return {
             1024: ((2, _kex.getDHPrime('diffie-hellman-group1-sha1')[1]),),
             2048: ((3, _kex.getDHPrime('diffie-hellman-group1-sha1')[1]),),
@@ -1301,13 +1306,14 @@ class ServerSSHTransportTests(ServerAndClientSSHTransportBaseCase,
         self.assertFalse(self.proto.ignoreNextPacket)
         self.assertEqual(self.packets, [])
 
+
     def assertKexDHInitResponse(self, kexAlgorithm):
         """
         Test that the KEXDH_INIT packet causes the server to send a
         KEXDH_REPLY with the server's public key and a signature.
 
+        @param kexAlgorithm: The key exchange algorithm to use.
         @type kexAlgorithm: C{str}
-        @param kexAlgorithm: The key exchange algorithm to use
         """
         self.proto.supportedKeyExchanges = [kexAlgorithm]
         self.proto.supportedPublicKeys = ['ssh-rsa']
@@ -1633,8 +1639,8 @@ class ClientSSHTransportTests(ServerAndClientSSHTransportBaseCase,
         Test that a KEXINIT packet with a group1 or group14 key exchange
         results in a correct KEXDH_INIT response.
 
-        @type kexAlgorithm: C{str}
         @param kexAlgorithm: The key exchange algorithm to use
+        @type kexAlgorithm: C{str}
         """
         self.proto.supportedKeyExchanges = [kexAlgorithm]
 
@@ -1645,9 +1651,9 @@ class ClientSSHTransportTests(ServerAndClientSSHTransportBaseCase,
         self.assertEqual(common.MP(self.proto.x)[5:], '\x99' * 64)
 
         # Data sent to server should be a transport.MSG_KEXDH_INIT
-        # message containing our public key
-        self.assertEqual(self.packets,
-                          [(transport.MSG_KEXDH_INIT, self.proto.e)])
+        # message containing our public key.
+        self.assertEqual(
+            self.packets, [(transport.MSG_KEXDH_INIT, self.proto.e)])
 
 
     def test_KEXINIT_group14(self):

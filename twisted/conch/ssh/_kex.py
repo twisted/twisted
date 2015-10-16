@@ -18,7 +18,7 @@ class _IKexAlgorithm(Interface):
 
     preference = Attribute(
         "An C{int} giving the preference of the algorithm when negotiating "
-        "key exchange.  Algorithms with lower precedence values are more "
+        "key exchange. Algorithms with lower precedence values are more "
         "preferred.")
 
 
@@ -35,7 +35,7 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
 
     generator = Attribute(
         "A C{long} giving the generator number used in Diffie-Hellman key "
-        "exchange, or C{None} if not applicable.  (This is not related to "
+        "exchange, or C{None} if not applicable. (This is not related to "
         "Python generator functions.)")
 
 
@@ -46,7 +46,7 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     that uses group exchange between the client and server.
 
     A prime / generator group should be chosen at run time based on the
-    requested size.  See RFC 4419.
+    requested size. See RFC 4419.
     """
 
 
@@ -54,7 +54,7 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
 @implementer(_IGroupExchangeKexAlgorithm)
 class _DHGroupExchangeSHA1(object):
     """
-    Diffie-Hellman Group and Key Exchange with SHA-1 as HASH.  Defined in
+    Diffie-Hellman Group and Key Exchange with SHA-1 as HASH. Defined in
     RFC 4419, 4.1.
     """
 
@@ -66,7 +66,7 @@ class _DHGroupExchangeSHA1(object):
 class _DHGroup1SHA1(object):
     """
     Diffie-Hellman key exchange with SHA-1 as HASH, and Oakley Group 2
-    (1024-bit MODP Group).  Defined in RFC 4253, 8.1.
+    (1024-bit MODP Group). Defined in RFC 4253, 8.1.
     """
 
     preference = 2
@@ -84,7 +84,7 @@ class _DHGroup1SHA1(object):
 class _DHGroup14SHA1(object):
     """
     Diffie-Hellman key exchange with SHA-1 as HASH and Oakley Group 14
-    (2048-bit MODP Group).  Defined in RFC 4253, 8.2.
+    (2048-bit MODP Group). Defined in RFC 4253, 8.2.
     """
 
     preference = 3
@@ -115,12 +115,12 @@ def getKex(kexAlgorithm):
     """
     Get a description of a named key exchange algorithm.
 
-    @type kexAlgorithm: C{str}
     @param kexAlgorithm: The key exchange algorithm name.
+    @type kexAlgorithm: C{str}
 
-    @rtype: L{_IKexAlgorithm}
     @return: A description of the key exchange algorithm named by
         C{kexAlgorithm}.
+    @rtype: L{_IKexAlgorithm}
 
     @raises ConchError: if the key exchange algorithm is not found.
     """
@@ -134,14 +134,13 @@ def getKex(kexAlgorithm):
 def isFixedGroup(kexAlgorithm):
     """
     Returns C{True} if C{kexAlgorithm} has a fixed prime / generator group.
-    Used to determine the correct key exchange logic to perform.
 
-    @type kexAlgorithm: C{str}
     @param kexAlgorithm: The key exchange algorithm name.
+    @type kexAlgorithm: C{str}
 
-    @rtype: C{bool}
     @return: C{True} if C{kexAlgorithm} has a fixed prime / generator group,
         otherwise C{False}.
+    @rtype: C{bool}
     """
     return _IFixedGroupKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
@@ -151,11 +150,11 @@ def getDHPrime(kexAlgorithm):
     """
     Get the prime and generator to use in key exchange.
 
-    @type kexAlgorithm: C{str}
     @param kexAlgorithm: The key exchange algorithm name.
+    @type kexAlgorithm: C{str}
 
-    @rtype: C{tuple}
     @return: A C{tuple} containing C{long} generator and C{long} prime.
+    @rtype: C{tuple}
     """
     kex = getKex(kexAlgorithm)
     return kex.generator, kex.prime
@@ -167,8 +166,8 @@ def getSupportedKeyExchanges():
     Get a list of supported key exchange algorithm names in order of
     preference.
 
-    @rtype: C{list} of L{str}
     @return: A C{list} of supported key exchange algorithm names.
+    @rtype: C{list} of C{str}
     """
     return sorted(
         _kexAlgorithms,

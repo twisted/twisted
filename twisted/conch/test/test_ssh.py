@@ -366,15 +366,19 @@ if Crypto is not None and pyasn1 is not None:
 
         def getPrimes(self):
             """
-            Return the Diffie-Hellman primes that can be used for the
-            diffie-hellman-group-exchange-sha1 key exchange. In these tests,
-            we hardwire the prime values to those defined by the
-            diffie-hellman-group1-sha1 key exchange algorithm, to avoid
-            requiring a moduli file when running tests. See
-            OpenSSHFactory.getPrimes.
+            Diffie-Hellman primes that can be used for the
+            diffie-hellman-group-exchange-sha1 key exchange.
+
+            @return: The primes and generators.
+            @rtype: C{dict} mapping the key size to a C{list} of
+                C{(generator, prime)} tupple.
             """
+            # In these tests, we hardwire the prime values to those defined by
+            # the diffie-hellman-group1-sha1 key exchange algorithm, to avoid
+            # requiring a moduli file when running tests.
+            # See OpenSSHFactory.getPrimes.
             return {
-                2048:[_kex.getDHPrime('diffie-hellman-group1-sha1')]
+                2048: [_kex.getDHPrime('diffie-hellman-group1-sha1')]
             }
 
         def getService(self, trans, name):
