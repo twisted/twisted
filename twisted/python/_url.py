@@ -509,9 +509,9 @@ class URL(object):
         @return: the parsed representation of C{s}
         @rtype: L{URL}
         """
-        (scheme, netloc, path, query, fragment) = [
+        (scheme, netloc, path, query, fragment) = (
             (u'' if x == b'' else x) for x in urlsplit(s)
-        ]
+        )
         split = netloc.split(u":")
         if len(split) == 2:
             host, port = split
@@ -526,14 +526,14 @@ class URL(object):
             else:
                 rooted = False
         else:
-            pathSegments = []
+            pathSegments = ()
             rooted = bool(netloc)
         if query:
-            queryParameters = [(qe.split(u"=", 1)
+            queryParameters = ((qe.split(u"=", 1)
                                 if u'=' in qe else (qe, None))
-                               for qe in query.split(u"&")]
+                               for qe in query.split(u"&"))
         else:
-            queryParameters = []
+            queryParameters = ()
         return cls(scheme, host, pathSegments, queryParameters, fragment, port,
                    rooted)
 
@@ -556,12 +556,11 @@ class URL(object):
         """
         if not isinstance(segment, unicode):
             raise TypeError("Given path must be unicode.")
-        l = list(self.pathSegments)
-        if l[-1] == u'':
-            l[-1] = segment
-        else:
-            l.append(segment)
-        return self.replace(pathSegments=l)
+        return self.replace(
+            pathSegments=self.pathSegments[
+                :-1 if self.pathSegments[-1] == u'' else None
+            ] + (segment,)
+        )
 
 
     def sibling(self, segment):
@@ -577,9 +576,7 @@ class URL(object):
         """
         if not isinstance(segment, unicode):
             raise TypeError("Given path must be unicode.")
-        l = list(self.pathSegments)
-        l[-1] = segment
-        return self.replace(pathSegments=l)
+        return self.replace(pathSegments=self.pathSegments[:-1] + (segment,))
 
 
     def click(self, href):
