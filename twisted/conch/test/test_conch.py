@@ -520,6 +520,57 @@ class OpenSSHClientMixin:
 
 
 
+class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
+                                 unittest.TestCase):
+    """
+    Tests L{SSHTransportBase}'s key exchange algorithm compatibility with
+    OpenSSH.
+    """
+
+    def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo):
+        """
+        Call execute() method of L{OpenSSHClientMixin} with an ssh option that
+        forces the exclusive use of the key exchange algorithm specified by
+        keyExchangeAlgo
+
+        @type keyExchangeAlgo: C{str}
+        @param keyExchangeAlgo: The key exchange algorithm to use
+
+        @return: L{defer.Deferred}
+        """
+        d = self.execute('echo hello', ConchTestOpenSSHProcess(),
+                         '-oKexAlgorithms=' + keyExchangeAlgo)
+        return d.addCallback(self.assertEqual, 'hello\n')
+
+
+    def test_DH_GROUP1(self):
+        """
+        The diffie-hellman-group1-sha1 key exchange algorithm is compatible
+        with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'diffie-hellman-group1-sha1')
+
+
+    def test_DH_GROUP14(self):
+        """
+        The diffie-hellman-group14-sha1 key exchange algorithm is compatible
+        with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'diffie-hellman-group14-sha1')
+
+
+    def test_DH_GROUP_EXCHANGE_SHA1(self):
+        """
+        The diffie-hellman-group-exchange-sha1 key exchange algorithm is
+        compatible with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'diffie-hellman-group-exchange-sha1')
+
+
+
 class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
                                       unittest.TestCase):
     """
