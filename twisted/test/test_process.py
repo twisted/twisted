@@ -40,7 +40,7 @@ from io import BytesIO
 from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
-from twisted.python import util, runtime, procutils
+from twisted.python import runtime, procutils
 from twisted.python.compat import _PY3, networkString, xrange
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 
@@ -2380,7 +2380,10 @@ class Dumbwin32procPidTests(unittest.TestCase):
 
         d = defer.Deferred()
         processProto = TrivialProcessProtocol(d)
-        comspec = bytes(os.environ["COMSPEC"], "mbcs")
+        if _PY3:
+            comspec = os.environ["COMSPEC"].encode("mbcs")
+        else:
+            comspec = str(os.environ["COMSPEC"])
         cmd = [comspec, b"/c", pyExe, scriptPath]
 
         p = _dumbwin32proc.Process(reactor,

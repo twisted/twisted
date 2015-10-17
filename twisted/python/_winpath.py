@@ -51,7 +51,7 @@ def dirname(path):
 
 def join(path, *paths):
     res = os.path.join(_ensureText(path),
-                       *[_ensureText(path) for path in paths])
+                       *[_ensureText(pathFragment) for pathFragment in paths])
     return _ensureOriginal(path, res)
 
 def listdir(path):
