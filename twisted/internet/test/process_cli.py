@@ -21,7 +21,7 @@ for arg in sys.argv[1:]:
         stdout = sys.stdout
     else:
         stdout = sys.stdout.buffer
-        res = res.encode(sys.getfilesystemencoding())
+        res = res.encode(sys.getfilesystemencoding(), "surrogateescape")
 
     stdout.write(res)
     stdout.flush()
