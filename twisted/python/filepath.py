@@ -47,12 +47,14 @@ if _PY3 and platform.isWindows():
     from ._winpath import isabs, exists, normpath, abspath, splitext
     from ._winpath import basename, dirname, join as joinpath, realpath
     from ._winpath import listdir, utime, stat, symlink, chmod, rmdir, remove
-    from ._winpath import rename, mkdir, makedirs, open as _open, fdopen
+    from ._winpath import mkdir, makedirs, open as _open, fdopen
+    import twisted.python._winpath as renameModule
 else:
     from os.path import isabs, exists, normpath, abspath, splitext
     from os.path import basename, dirname, join as joinpath, realpath
-    from os import listdir, utime, stat, chmod, rmdir, remove, rename
+    from os import listdir, utime, stat, chmod, rmdir, remove
     from os import mkdir, makedirs, open as _open, fdopen
+    import os as _renameModule
 
     if not platform.isWindows():
         from os import symlink
@@ -1538,7 +1540,7 @@ class FilePath(AbstractFilePath):
             f.close()
         if platform.isWindows() and exists(self.path):
             remove(self.path)
-        rename(sib.path, self.path)
+        _renameModule.rename(sib.path, self.path)
 
 
     def __cmp__(self, other):
@@ -1713,7 +1715,7 @@ class FilePath(AbstractFilePath):
             filesystems)
         """
         try:
-            rename(self.path, destination.path)
+            _renameModule.rename(self.path, destination.path)
         except OSError as ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":

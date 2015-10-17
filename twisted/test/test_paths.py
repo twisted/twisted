@@ -1140,8 +1140,11 @@ class FilePathTests(AbstractFilePathTests):
                                            'cross-device rename failure')
             return originalRename(src, dest)
 
-        originalRename = os.rename
-        self.patch(os, "rename", faultyRename)
+
+        from twisted.python.filepath import _renameModule
+
+        originalRename = _renameModule.rename
+        self.patch(_renameModule, "rename", faultyRename)
         return invokedWith
 
 
