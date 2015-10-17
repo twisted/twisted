@@ -206,6 +206,16 @@ class OnDiskDatabaseTests(unittest.TestCase):
                 f.write(u + b":" + p + b"\n")
 
 
+    def test_getUserNonexistentDatabase(self):
+        """
+        A missing db file will cause a permanent rejection of authorization
+        attempts.
+        """
+        self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
+
+        self.failUnlessRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
+
+
     def testUserLookup(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
         for (u, p) in self.users:
