@@ -208,10 +208,11 @@ class OnDiskDatabaseTests(unittest.TestCase):
 
     def test_getUserNonexistentDatabase(self):
         """
-        A missing db file should cause a permanent rejection of authorization
+        A missing db file will cause a permanent rejection of authorization
         attempts.
         """
         self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
+
         self.failUnlessRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
 
 
