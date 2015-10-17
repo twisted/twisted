@@ -44,13 +44,15 @@ Or:
 The 2nd solution is probably what will get implemented.
 """
 
+from __future__ import absolute_import, division
+
 # System imports
 import time
 import sys
 from threading import Thread
 from weakref import WeakKeyDictionary
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Win32 imports
 from win32file import FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT, WSAEventSelect
@@ -78,6 +80,7 @@ from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.threads import blockingCallFromThread
 
 
+@implementer(IReactorFDSet, IReactorWin32Events)
 class Win32Reactor(posixbase.PosixReactorBase):
     """
     Reactor that uses Win32 event APIs.
@@ -118,8 +121,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
         will also forget about it.
     @type _closedAndNotReading: C{WeakKeyDictionary}
     """
-    implements(IReactorFDSet, IReactorWin32Events)
-
     dummyEvent = CreateEvent(None, 0, 0, None)
 
     def __init__(self):
@@ -206,11 +207,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def getReaders(self):
-        return self._reads.keys()
+        return list(self._reads.keys())
 
 
     def getWriters(self):
-        return self._writes.keys()
+        return list(self._writes.keys())
 
 
     def doWaitForMultipleEvents(self, timeout):
@@ -226,11 +227,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         # If any descriptors are trying to close, try to get them out of the way
         # first.
-        for reader in self._closedAndReading.keys():
+        for reader in list(self._closedAndReading.keys()):
             ranUserCode = True
             self._runAction('doRead', reader)
 
-        for fd in self._writes.keys():
+        for fd in list(self._writes.keys()):
             ranUserCode = True
             log.callWithLogger(fd, self._runWrite, fd)
 
@@ -246,7 +247,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             time.sleep(timeout)
             return
 
-        handles = self._events.keys() or [self.dummyEvent]
+        handles = list(self._events.keys()) or [self.dummyEvent]
         timeout = int(timeout * 1000)
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:
@@ -359,6 +360,7 @@ class _ThreadFDWrapper(object):
 
 
 
+@implementer(IReactorWin32Events)
 class _ThreadedWin32EventsMixin(object):
     """
     This mixin implements L{IReactorWin32Events} for another reactor by running
@@ -370,8 +372,7 @@ class _ThreadedWin32EventsMixin(object):
     @ivar _reactorThread: The L{threading.Thread} which is running the
         L{Win32Reactor}.  This is C{None} until it is actually needed.
     """
-    implements(IReactorWin32Events)
-
+    
     _reactor = None
     _reactorThread = None
 

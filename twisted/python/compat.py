@@ -570,7 +570,8 @@ Return a list of the items of C{d}.
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
-    L{bytes}.
+    L{bytes}. This only works on UNIX platforms; environment variables are
+    always L{str} on Windows.
     """
     if not _PY3:
         # On py2, nothing to do.
