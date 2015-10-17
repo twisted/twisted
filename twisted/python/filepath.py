@@ -48,7 +48,7 @@ if _PY3 and platform.isWindows():
     from ._winpath import basename, dirname, join as joinpath, realpath
     from ._winpath import listdir, utime, stat, symlink, chmod, rmdir, remove
     from ._winpath import mkdir, makedirs, open as _open, fdopen
-    import twisted.python._winpath as renameModule
+    import twisted.python._winpath as _renameModule
 else:
     from os.path import isabs, exists, normpath, abspath, splitext
     from os.path import basename, dirname, join as joinpath, realpath
