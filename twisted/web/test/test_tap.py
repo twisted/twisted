@@ -258,7 +258,7 @@ class ServiceTests(TestCase):
         exception = self.assertRaises(
             UsageError, options.parseOptions, ['--https=443'])
 
-        self.assertEqual('SSL support not installed', exception.message)
+        self.assertEqual('SSL support not installed', exception.args[0])
 
     if requireModule('OpenSSL.SSL') is not None:
         test_HTTPSFailureOnMissingSSL.skip = 'SSL module is available.'
