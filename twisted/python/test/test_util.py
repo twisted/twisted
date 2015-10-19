@@ -333,7 +333,7 @@ class OrderedDictTests(unittest.TestCase):
         L{util.OrderedDict} is deprecated.
         """
         from twisted.python.util import OrderedDict
-        OrderedDict # shh pyflakes
+        OrderedDict # Shh pyflakes
 
         currentWarnings = self.flushWarnings(offendingFunctions=[
             self.test_deprecated])

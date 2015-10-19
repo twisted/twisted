@@ -762,7 +762,7 @@ class OrderedDictTests(unittest.TestCase):
         L{twisted.python.compat.OrderedDict} is deprecated.
         """
         from twisted.python.compat import OrderedDict
-        OrderedDict # shh pyflakes
+        OrderedDict # Shh pyflakes
 
         currentWarnings = self.flushWarnings(offendingFunctions=[
             self.test_deprecated])
