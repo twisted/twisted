@@ -327,61 +327,22 @@ class MergeFunctionMetadataTests(unittest.TestCase):
 
 class OrderedDictTests(unittest.TestCase):
     """
-    Tests for L{util.OrderedDict}. On Python 3, this is not the version in
-    L{util}, but L{collections.OrderedDict}.
+    Tests for L{util.OrderedDict}.
     """
-    def test_maintainedOrder(self):
+    def test_deprecated(self):
         """
         L{util.OrderedDict} is deprecated.
         """
-        d = util.OrderedDict()
-        d['a'] = 'b'
-        d['b'] = 'a'
-        d[3] = 12
-        d[1234] = 4321
+        from twisted.python.util import OrderedDict
 
-        self.assertEqual(list(d.values()), ['b', 'a', 12, 4321])
-        del d[3]
-        self.assertEqual(d, {'a': 'b', 'b': 'a', 1234:4321})
-        self.assertEqual(list(d.keys()), ['a', 'b', 1234])
-        self.assertEqual(list(d.items()),
-                         [('a', 'b'), ('b','a'), (1234, 4321)])
-        item = d.popitem()
-        self.assertEqual(item, (1234, 4321))
-
-
-
-class Py2OrderedDictTests(unittest.TestCase):
-    """
-    Tests for L{util.OrderedDict} on Python 2.
-    """
-    if _PY3:
-        skip = "These tests are only applicable on Python 2."
-
-    def test_orderedDict(self):
-        d = util.OrderedDict()
-        d['a'] = 'b'
-        d['b'] = 'a'
-        d[3] = 12
-        d[1234] = 4321
-        self.assertEqual(repr(d), "{'a': 'b', 'b': 'a', 3: 12, 1234: 4321}")
-        self.assertEqual(d.values(), ['b', 'a', 12, 4321])
-        del d[3]
-        self.assertEqual(repr(d), "{'a': 'b', 'b': 'a', 1234: 4321}")
-        self.assertEqual(d, {'a': 'b', 'b': 'a', 1234:4321})
-        self.assertEqual(d.keys(), ['a', 'b', 1234])
-        self.assertEqual(list(d.iteritems()),
-                          [('a', 'b'), ('b','a'), (1234, 4321)])
-        item = d.popitem()
-        self.assertEqual(item, (1234, 4321))
-
-    def test_initialization(self):
-        d = util.OrderedDict({'monkey': 'ook',
-                              'apple': 'red'})
-        self.failUnless(d._order)
-
-        d = util.OrderedDict(((1,1),(3,3),(2,2),(0,0)))
-        self.assertEqual(repr(d), "{1: 1, 3: 3, 2: 2, 0: 0}")
+        currentWarnings = self.flushWarnings(offendingFunctions=[
+            self.test_deprecated])
+        self.assertEqual(
+            currentWarnings[0]['message'],
+            "twisted.python.util.OrderedDict was deprecated in Twisted "
+            "15.5.0: Use collections.OrderedDict instead.")
+        self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(currentWarnings), 1)
 
 
 
