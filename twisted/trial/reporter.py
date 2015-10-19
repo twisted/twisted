@@ -16,6 +16,8 @@ import time
 import warnings
 import unittest as pyunit
 
+from collections import OrderedDict
+
 from zope.interface import implementer
 
 from twisted.python import reflect, log
@@ -23,10 +25,6 @@ from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
 from twisted.python.compat import _PY3, items
-try:
-    from collections import OrderedDict
-except ImportError:
-    from twisted.python.util import OrderedDict
 from twisted.trial import itrial, util
 
 try:

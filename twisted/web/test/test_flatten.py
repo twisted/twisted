@@ -11,12 +11,12 @@ import traceback
 
 from xml.etree.cElementTree import XML
 
+from collections import OrderedDict
+
 from zope.interface import implementer
 
 from twisted.trial.unittest import TestCase
 from twisted.test.testutils import XMLAssertionMixin
-
-from twisted.python.compat import OrderedDict
 
 from twisted.internet.defer import passthru, succeed, gatherResults
 

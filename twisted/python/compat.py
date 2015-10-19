@@ -607,13 +607,6 @@ def _constructMethod(cls, name, self):
 
 
 
-if _PY3:
-    from collections import OrderedDict
-else:
-    from twisted.python.util import OrderedDict
-
-
-
 __all__ = [
     "reraise",
     "execfile",
@@ -637,7 +630,6 @@ __all__ = [
     "xrange",
     "urllib_parse",
     "bytesEnviron",
-    "OrderedDict",
     "escape",
     "urlquote",
     "urlunquote",

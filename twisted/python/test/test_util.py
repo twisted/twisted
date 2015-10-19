@@ -332,7 +332,7 @@ class OrderedDictTests(unittest.TestCase):
     """
     def test_maintainedOrder(self):
         """
-        Entries added to the dict have a maintained order.
+        L{util.OrderedDict} is deprecated.
         """
         d = util.OrderedDict()
         d['a'] = 'b'
