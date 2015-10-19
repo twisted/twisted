@@ -67,6 +67,7 @@ class UnittestResultTests(SynchronousTestCase):
         C{PyUnitResultAdapter} is deprecated.
         """
         from twisted.trial.unittest import PyUnitResultAdapter
+        PyUnitResultAdapter # shh pyflakes
 
         currentWarnings = self.flushWarnings(offendingFunctions=[
             self.test_oldNameIsDeprecated])
