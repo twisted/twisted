@@ -8,7 +8,6 @@ the code in C{twisted/__init__.py}.
 
 from __future__ import division, absolute_import
 
-import re
 import sys
 from types import ModuleType, FunctionType
 
