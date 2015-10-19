@@ -607,6 +607,19 @@ def _constructMethod(cls, name, self):
 
 
 
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute
+
+from collections import OrderedDict
+
+deprecatedModuleAttribute(
+    Version("Twisted", 15, 5, 0),
+    "Use collections.OrderedDict instead.",
+    "twisted.python.compat",
+    "OrderedDict")
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -615,6 +628,7 @@ __all__ = [
     "set",
     "cmp",
     "comparable",
+    "OrderedDict",
     "nativeString",
     "NativeStringIO",
     "networkString",
