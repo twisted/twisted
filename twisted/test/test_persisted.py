@@ -7,7 +7,7 @@ from __future__ import division, absolute_import
 # System Imports
 import sys
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 
 try:
     import cPickle as pickle
@@ -78,7 +78,7 @@ class VersionTests(unittest.TestCase):
         styles.doUpgrade()
         assert obj.v3 == 1, "upgraded unnecessarily"
         assert obj.v4 == 1, "upgraded unnecessarily"
-    
+
     def test_nonIdentityHash(self):
         global ClassWithCustomHash
         class ClassWithCustomHash(styles.Versioned):
@@ -87,7 +87,7 @@ class VersionTests(unittest.TestCase):
                 self.hash = hash
             def __hash__(self):
                 return self.hash
-        
+
         v1 = ClassWithCustomHash('v1', 0)
         v2 = ClassWithCustomHash('v2', 0)
 
@@ -101,7 +101,7 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(v2.unique, 'v2')
         self.failUnless(v1.upgraded)
         self.failUnless(v2.upgraded)
-    
+
     def test_upgradeDeserializesObjectsRequiringUpgrade(self):
         global ToyClassA, ToyClassB
         class ToyClassA(styles.Versioned):
@@ -199,10 +199,10 @@ class EphemeralTests(unittest.TestCase):
         o = MyEphemeral(3)
         self.assertEqual(o.__class__, MyEphemeral)
         self.assertEqual(o.x, 3)
-        
+
         pickl = pickle.dumps(o)
         o = pickle.loads(pickl)
-        
+
         self.assertEqual(o.__class__, styles.Ephemeral)
         self.assert_(not hasattr(o, 'x'))
 
@@ -211,7 +211,7 @@ class Pickleable:
 
     def __init__(self, x):
         self.x = x
-    
+
     def getX(self):
         return self.x
 
@@ -285,7 +285,7 @@ def funktion():
 
 class PicklingTests(unittest.TestCase):
     """Test pickling of extra object types."""
-    
+
     def test_module(self):
         pickl = pickle.dumps(styles)
         o = pickle.loads(pickl)
@@ -314,7 +314,7 @@ class PicklingTests(unittest.TestCase):
         o = pickle.loads(pickl)
         self.assertEqual(o(), 4)
         self.assertEqual(type(o), type(obj.getX))
-    
+
     def test_stringIO(self):
         f = _oldStyleCStringIO()
         f.write("abc")
@@ -423,7 +423,7 @@ class AOTTests(unittest.TestCase):
         l = [1, 2, 3,
              "he\tllo\n\n\"x world!",
              u"goodbye \n\t\u1010 world!",
-             1, 1.0, 100 ** 100, unittest, aot.AOTJellier, d,
+             1, 1.0, 100 ** 100, util, aot.AOTJellier, d,
              funktion
              ]
         t = tuple(l)
@@ -532,4 +532,3 @@ class CrefUtilTests(unittest.TestCase):
 
 
 testCases = [VersionTests, EphemeralTests, PicklingTests]
-

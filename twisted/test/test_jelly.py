@@ -9,7 +9,7 @@ import datetime
 import decimal
 
 from twisted.spread import jelly, pb
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.test.proto_helpers import StringTransport
 
 
@@ -437,7 +437,7 @@ class JellyTests(unittest.TestCase):
         jelly.unjelly(jelly.jelly(a))
         jelly.unjelly(jelly.jelly(a.amethod))
         items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3,
-                 (1, 2, 3), None, A, unittest, {'a': 1}, A.amethod]
+                 (1, 2, 3), None, A, util, {'a': 1}, A.amethod]
         for i in items:
             self.assertEqual(i, jelly.unjelly(jelly.jelly(i)))
 
