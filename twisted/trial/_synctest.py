@@ -11,24 +11,32 @@ Maintainer: Jonathan Lange
 from __future__ import division, absolute_import
 
 import inspect
-import os, warnings, sys, tempfile, types
+import os
+import sys
+import tempfile
+import types
+import warnings
+
 from dis import findlinestarts as _findlinestarts
 
 from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
-from twisted.python.deprecate import (
-    getDeprecationWarningString, warnAboutFunction)
+from twisted.python.deprecate import getDeprecationWarningString
+from twisted.python.deprecate import warnAboutFunction
 
 from twisted.trial import itrial, util
 
-import unittest as pyunit
-from unittest import SkipTest
+import unittest
+
+SkipTest = unittest.SkipTest
 
 
 
 class FailTest(AssertionError):
-    """Raised to indicate the current test has failed to pass."""
+    """
+    Raised to indicate the current test has failed to pass.
+    """
 
 
 
@@ -53,8 +61,10 @@ class Todo(object):
         self.reason = reason
         self.errors = errors
 
+
     def __repr__(self):
         return "<Todo reason=%r errors=%r>" % (self.reason, self.errors)
+
 
     def expected(self, failure):
         """
@@ -68,6 +78,7 @@ class Todo(object):
             if failure.check(error):
                 return True
         return False
+
 
 
 def makeTodo(value):
@@ -126,6 +137,7 @@ class _Warning(object):
         self.lineno = lineno
 
 
+
 def _setWarningRegistryToNone(modules):
     """
     Disable the per-module cache for every module found in C{modules}, typically
@@ -142,6 +154,7 @@ def _setWarningRegistryToNone(modules):
                 # some wacky object raises some wacky exception in response to
                 # the setattr attempt.
                 pass
+
 
 
 def _collectWarnings(observeWarning, f, *args, **kwargs):
@@ -178,13 +191,15 @@ def _collectWarnings(observeWarning, f, *args, **kwargs):
 
 
 class UnsupportedTrialFeature(Exception):
-    """A feature of twisted.trial was used that pyunit cannot support."""
-
-
-
-class PyUnitResultAdapter(object):
     """
-    Wrap a C{TestResult} from the standard library's C{unittest} so that it
+    A feature of twisted.trial was used that unittest cannot support.
+    """
+
+
+
+class UnittestResultAdapter(object):
+    """
+    Wrap a C{TestResult} from the standard library's L{unittest} so that it
     supports the extended result types from Trial, and also supports
     L{twisted.python.failure.Failure}s being passed to L{addError} and
     L{addFailure}.
@@ -339,7 +354,7 @@ class _AssertRaisesContext(object):
 
 
 
-class _Assertions(pyunit.TestCase, object):
+class _Assertions(unittest.TestCase, object):
     """
     Replaces many of the built-in TestCase assertions. In general, these
     assertions provide better error messages and are easier to use in
@@ -502,7 +517,7 @@ class _Assertions(pyunit.TestCase, object):
                as significant digits (measured from the most
                significant digit).
 
-        @note: included for compatibility with PyUnit test cases
+        @note: included for compatibility with unittest test cases
         """
         if round(second-first, places) == 0:
             raise self.failureException(msg or '%r == %r within %r places'
@@ -522,7 +537,7 @@ class _Assertions(pyunit.TestCase, object):
                as significant digits (measured from the most
                significant digit).
 
-        @note: included for compatibility with PyUnit test cases
+        @note: included for compatibility with unittest test cases
         """
         if round(second-first, places) != 0:
             raise self.failureException(msg or '%r != %r within %r places'
@@ -682,7 +697,6 @@ class _Assertions(pyunit.TestCase, object):
             return result[0]
 
 
-
     def failureResultOf(self, deferred, *expectedExceptionTypes):
         """
         Return the current failure result of C{deferred} or raise
@@ -731,7 +745,6 @@ class _Assertions(pyunit.TestCase, object):
                     result[0].getTraceback()))
         else:
             return result[0]
-
 
 
     def assertNoResult(self, deferred):
@@ -911,7 +924,6 @@ class SynchronousTestCase(_Assertions):
         self._parents = [
             testMethod, self, sys.modules.get(self.__class__.__module__)]
 
-
     # Override the comparison defined by the base TestCase which considers
     # instances of the same class with the same _testMethodName to be
     # equal.  Since trial puts TestCase instances into a set, that
@@ -921,8 +933,10 @@ class SynchronousTestCase(_Assertions):
     def __eq__(self, other):
         return self is other
 
+
     def __ne__(self, other):
         return self is not other
+
 
     def __hash__(self):
         return hash((self.__class__, self._testMethodName))
@@ -982,7 +996,7 @@ class SynchronousTestCase(_Assertions):
         log.msg("--> %s <--" % (self.id()))
         new_result = itrial.IReporter(result, None)
         if new_result is None:
-            result = PyUnitResultAdapter(result)
+            result = UnittestResultAdapter(result)
         else:
             result = new_result
         result.startTest(self)
@@ -1272,7 +1286,7 @@ class SynchronousTestCase(_Assertions):
             return True
         try:
             runWithWarningsSuppressed(suppress, method)
-        except SkipTest as e:
+        except unittest.SkipTest as e:
             result.addSkip(self, self._getSkipReason(method, e))
         except:
             reason = failure.Failure()
