@@ -566,6 +566,13 @@ Return an iterable of the items of C{d}.
 @rtype: iterable
 """
 
+itervalues.__doc__ = """
+Return an iterable of the values of C{d}.
+
+@type d: L{dict}
+@rtype: iterable
+"""
+
 items.__doc__ = """
 Return a list of the items of C{d}.
 
