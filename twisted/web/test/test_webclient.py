@@ -1078,10 +1078,34 @@ if not interfaces.IReactorSSL(reactor, None):
 
 
 
-class URITests(unittest.TestCase):
+class URITests:
     """
-    Tests for L{twisted.web.client.URI}.
+    Abstract tests for L{twisted.web.client.URI}.
+
+    Subclass this and L{unittest.TestCase}, and provide a value for C{host}.
+
+    @ivar host: A host specification for use in tests, must be L{bytes}.
     """
+
+    def makeURIString(self, template):
+        """
+        Replace the string "HOST" in C{template} with this test's host.
+
+        Byte strings Python between (and including) versions 3.0 and 3.4
+        cannot be formatted using C{%} or C{format} so this does a simple
+        replace.
+
+        @type template: L{bytes}
+        @param template: A string containing "HOST".
+
+        @rtype: L{bytes}
+        @return: A string where "HOST" has been replaced by C{self.host}.
+        """
+        self.assertIsInstance(self.host, bytes)
+        self.assertIsInstance(template, bytes)
+        self.assertIn(b"HOST", template)
+        return template.replace(b"HOST", self.host)
+
     def assertURIEquals(self, uri, scheme, netloc, host, port, path,
                         params=b'', query=b'', fragment=b''):
         """
@@ -1126,12 +1150,12 @@ class URITests(unittest.TestCase):
         L{client.URI.fromBytes} by default assumes port 80 for the I{http}
         scheme and 443 for the I{https} scheme.
         """
-        uri = client.URI.fromBytes(b'http://example.com')
+        uri = client.URI.fromBytes(self.makeURIString(b'http://HOST'))
         self.assertEqual(80, uri.port)
         # Weird (but commonly accepted) structure uses default port.
-        uri = client.URI.fromBytes(b'http://example.com:')
+        uri = client.URI.fromBytes(self.makeURIString(b'http://HOST:'))
         self.assertEqual(80, uri.port)
-        uri = client.URI.fromBytes(b'https://example.com')
+        uri = client.URI.fromBytes(self.makeURIString(b'https://HOST'))
         self.assertEqual(443, uri.port)
 
 
@@ -1140,9 +1164,11 @@ class URITests(unittest.TestCase):
         L{client.URI.fromBytes} accepts a C{defaultPort} parameter that
         overrides the normal default port logic.
         """
-        uri = client.URI.fromBytes(b'http://example.com', defaultPort=5144)
+        uri = client.URI.fromBytes(
+            self.makeURIString(b'http://HOST'), defaultPort=5144)
         self.assertEqual(5144, uri.port)
-        uri = client.URI.fromBytes(b'https://example.com', defaultPort=5144)
+        uri = client.URI.fromBytes(
+            self.makeURIString(b'https://HOST'), defaultPort=5144)
         self.assertEqual(5144, uri.port)
 
 
@@ -1151,27 +1177,28 @@ class URITests(unittest.TestCase):
         Parsing a I{URI} splits the network location component into I{host} and
         I{port}.
         """
-        uri = client.URI.fromBytes(b'http://example.com:5144')
+        uri = client.URI.fromBytes(
+            self.makeURIString(b'http://HOST:5144'))
         self.assertEqual(5144, uri.port)
-        self.assertEqual(b'example.com', uri.host)
-        self.assertEqual(b'example.com:5144', uri.netloc)
+        self.assertEqual(self.host, uri.host)
+        self.assertEqual(self.host + b':5144', uri.netloc)
 
         # Spaces in the hostname are trimmed, the default path is /.
-        uri = client.URI.fromBytes(b'http://example.com ')
-        self.assertEqual(b'example.com', uri.netloc)
+        uri = client.URI.fromBytes(self.makeURIString(b'http://HOST '))
+        self.assertEqual(self.host, uri.netloc)
 
 
     def test_path(self):
         """
         Parse the path from a I{URI}.
         """
-        uri = b'http://example.com/foo/bar'
+        uri = self.makeURIString(b'http://HOST/foo/bar')
         parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=b'example.com',
-            host=b'example.com',
+            netloc=self.host,
+            host=self.host,
             port=80,
             path=b'/foo/bar')
         self.assertEqual(uri, parsed.toBytes())
@@ -1181,13 +1208,13 @@ class URITests(unittest.TestCase):
         """
         The path of a I{URI} that has no path is the empty string.
         """
-        uri = b'http://example.com'
+        uri = self.makeURIString(b'http://HOST')
         parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=b'example.com',
-            host=b'example.com',
+            netloc=self.host,
+            host=self.host,
             port=80,
             path=b'')
         self.assertEqual(uri, parsed.toBytes())
@@ -1197,12 +1224,12 @@ class URITests(unittest.TestCase):
         """
         The path of a I{URI} with an empty path is C{b'/'}.
         """
-        uri = b'http://example.com/'
+        uri = self.makeURIString(b'http://HOST/')
         self.assertURIEquals(
             client.URI.fromBytes(uri),
             scheme=b'http',
-            netloc=b'example.com',
-            host=b'example.com',
+            netloc=self.host,
+            host=self.host,
             port=80,
             path=b'/')
 
@@ -1211,13 +1238,13 @@ class URITests(unittest.TestCase):
         """
         Parse I{URI} parameters from a I{URI}.
         """
-        uri = b'http://example.com/foo/bar;param'
+        uri = self.makeURIString(b'http://HOST/foo/bar;param')
         parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=b'example.com',
-            host=b'example.com',
+            netloc=self.host,
+            host=self.host,
             port=80,
             path=b'/foo/bar',
             params=b'param')
@@ -1228,13 +1255,13 @@ class URITests(unittest.TestCase):
         """
         Parse the query string from a I{URI}.
         """
-        uri = b'http://example.com/foo/bar;param?a=1&b=2'
+        uri = self.makeURIString(b'http://HOST/foo/bar;param?a=1&b=2')
         parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=b'example.com',
-            host=b'example.com',
+            netloc=self.host,
+            host=self.host,
             port=80,
             path=b'/foo/bar',
             params=b'param',
@@ -1246,13 +1273,13 @@ class URITests(unittest.TestCase):
         """
         Parse the fragment identifier from a I{URI}.
         """
-        uri = b'http://example.com/foo/bar;param?a=1&b=2#frag'
+        uri = self.makeURIString(b'http://HOST/foo/bar;param?a=1&b=2#frag')
         parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=b'example.com',
-            host=b'example.com',
+            netloc=self.host,
+            host=self.host,
             port=80,
             path=b'/foo/bar',
             params=b'param',
@@ -1266,7 +1293,8 @@ class URITests(unittest.TestCase):
         L{client.URI.originForm} produces an absolute I{URI} path including
         the I{URI} path.
         """
-        uri = client.URI.fromBytes(b'http://example.com/foo')
+        uri = client.URI.fromBytes(
+            self.makeURIString(b'http://HOST/foo'))
         self.assertEqual(b'/foo', uri.originForm)
 
 
@@ -1276,7 +1304,8 @@ class URITests(unittest.TestCase):
         the I{URI} path, parameters and query string but excludes the fragment
         identifier.
         """
-        uri = client.URI.fromBytes(b'http://example.com/foo;param?a=1#frag')
+        uri = client.URI.fromBytes(
+            self.makeURIString(b'http://HOST/foo;param?a=1#frag'))
         self.assertEqual(b'/foo;param?a=1', uri.originForm)
 
 
@@ -1285,7 +1314,7 @@ class URITests(unittest.TestCase):
         L{client.URI.originForm} produces a path of C{b'/'} when the I{URI}
         specifies no path.
         """
-        uri = client.URI.fromBytes(b'http://example.com')
+        uri = client.URI.fromBytes(self.makeURIString(b'http://HOST'))
         self.assertEqual(b'/', uri.originForm)
 
 
@@ -1294,7 +1323,8 @@ class URITests(unittest.TestCase):
         L{client.URI.originForm} produces a path of C{b'/'} when the I{URI}
         specifies an empty path.
         """
-        uri = client.URI.fromBytes(b'http://example.com/')
+        uri = client.URI.fromBytes(
+            self.makeURIString(b'http://HOST/'))
         self.assertEqual(b'/', uri.originForm)
 
 
@@ -1304,10 +1334,40 @@ class URITests(unittest.TestCase):
         into L{bytes}, even when passed an URL which has previously been passed
         to L{urlparse} as a L{unicode} string.
         """
-        goodInput = b'http://example.com/path'
+        goodInput = self.makeURIString(b'http://HOST/path')
         badInput = goodInput.decode('ascii')
         urlparse(badInput)
         uri = client.URI.fromBytes(goodInput)
         self.assertIsInstance(uri.scheme, bytes)
         self.assertIsInstance(uri.host, bytes)
         self.assertIsInstance(uri.path, bytes)
+
+
+
+class URITestsForHostname(URITests, unittest.TestCase):
+    """
+    Tests for L{twisted.web.client.URI} with host names.
+    """
+
+    host = b"example.com"
+
+
+
+class URITestsForIPv4(URITests, unittest.TestCase):
+    """
+    Tests for L{twisted.web.client.URI} with IPv4 host addresses.
+    """
+
+    host = b"192.168.1.67"
+
+
+
+class URITestsForIPv6(URITests, unittest.TestCase):
+    """
+    Tests for L{twisted.web.client.URI} with IPv6 host addresses.
+
+    IPv6 addresses must always be surrounded by square braces in URIs. No
+    attempt is made to test without.
+    """
+
+    host = b"[fe80::20c:29ff:fea4:c60]"
