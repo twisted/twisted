@@ -23,17 +23,7 @@ from twisted.python.deprecate import (
 from twisted.trial import itrial, util
 
 import unittest as pyunit
-
-# Python > 2.6 has skip support built-in:
-if getattr(pyunit, "SkipTest", None):
-    SkipTest = pyunit.SkipTest
-else:
-    class SkipTest(Exception):
-        """
-        Raise this (with a reason) to skip the current test. You may also set
-        method.skip to a reason string to skip it, or set class.skip to skip the
-        entire TestCase.
-        """
+from unittest import SkipTest
 
 
 
@@ -239,11 +229,7 @@ class PyUnitResultAdapter(object):
         """
         Report the skip as a failure.
         """
-        # pyunit in Python 2.6 doesn't support skipping information:
-        if sys.version_info[:2] > (2, 6):
-            self.original.addSkip(test, reason)
-        else:
-            self._unsupported(test, 'skip', reason)
+        self.original.addSkip(test, reason)
 
 
     def addUnexpectedSuccess(self, test, todo):
@@ -335,16 +321,6 @@ class _AssertRaisesContext(object):
                 "{0} not raised ({1} returned)".format(
                     self._expectedName, self._returnValue)
                 )
-
-        if not isinstance(exceptionValue, exceptionType):
-            # Support some Python 2.6 ridiculousness.  Exceptions raised using
-            # the C API appear here as the arguments you might pass to the
-            # exception class to create an exception instance.  So... do that
-            # to turn them into the instances.
-            if isinstance(exceptionValue, tuple):
-                exceptionValue = exceptionType(*exceptionValue)
-            else:
-                exceptionValue = exceptionType(exceptionValue)
 
         # Store exception so that it can be access from context.
         self.exception = exceptionValue
