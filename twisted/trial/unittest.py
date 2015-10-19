@@ -28,7 +28,7 @@ FailTest.__module__ = SkipTest.__module__ = __name__
 PyUnitResultAdapter = UnittestResultAdapter
 
 deprecatedModuleAttribute(
-    Version(15, 5, 0),
+    Version("Twisted", 15, 5, 0),
     "Use twisted.trial.unittest.UnittestResultAdapter instead.",
     "twisted.trial.unittest",
     "PyUnitResultAdapter")

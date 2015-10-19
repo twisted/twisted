@@ -9,22 +9,22 @@ import traceback
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
-from twisted.trial.unittest import SynchronousTestCase, PyUnitResultAdapter
+from twisted.trial.unittest import SynchronousTestCase, UnittestResultAdapter
 from twisted.trial.itrial import IReporter, ITestCase
 
-import unittest as pyunit
+import unittest
 
 
-class PyUnitTestTests(SynchronousTestCase):
+class UnittestTestTests(SynchronousTestCase):
 
-    class PyUnitTest(pyunit.TestCase):
+    class UnittestTest(unittest.TestCase):
 
         def test_pass(self):
             pass
 
 
     def setUp(self):
-        self.original = self.PyUnitTest('test_pass')
+        self.original = self.UnittestTest('test_pass')
         self.test = ITestCase(self.original)
 
 
@@ -37,11 +37,11 @@ class PyUnitTestTests(SynchronousTestCase):
 
 
 
-class PyUnitResultTests(SynchronousTestCase):
+class UnittestResultTests(SynchronousTestCase):
     """
-    Tests to show that PyUnitResultAdapter wraps TestResult objects from the
-    standard library 'unittest' module in such a way as to make them usable and
-    useful from Trial.
+    Tests to show that L{UnittestResultAdapter} wraps TestResult objects from
+    the standard library 'unittest' module in such a way as to make them usable
+    and useful from Trial.
     """
 
     # Once erroneous is ported to Python 3 this can be replaced with
@@ -62,9 +62,26 @@ class PyUnitResultTests(SynchronousTestCase):
             1/0
 
 
+    def test_oldNameIsDeprecated(self):
+        """
+        C{PyUnitResultAdapter} is deprecated.
+        """
+        from twisted.trial.unittest import PyUnitResultAdapter
+
+        currentWarnings = self.flushWarnings(offendingFunctions=[
+            self.test_oldNameIsDeprecated])
+        self.assertEqual(
+            currentWarnings[0]['message'],
+            "twisted.trial.unittest.PyUnitResultAdapter was deprecated in "
+            "Twisted 15.5.0: Use twisted.trial.unittest.UnittestResultAdapter "
+            "instead.")
+        self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(currentWarnings), 1)
+
+
     def test_dontUseAdapterWhenReporterProvidesIReporter(self):
         """
-        The L{PyUnitResultAdapter} is only used when the result passed to
+        The L{UnittestResultAdapter} is only used when the result passed to
         C{run} does *not* provide L{IReporter}.
         """
         @implementer(IReporter)
@@ -108,7 +125,7 @@ class PyUnitResultTests(SynchronousTestCase):
             def test_foo(s):
                 s.ran = True
         test = SuccessTest('test_foo')
-        result = pyunit.TestResult()
+        result = unittest.TestResult()
         test.run(result)
 
         self.failUnless(test.ran)
@@ -122,7 +139,7 @@ class PyUnitResultTests(SynchronousTestCase):
                 s.ran = True
                 s.fail('boom!')
         test = FailureTest('test_foo')
-        result = pyunit.TestResult()
+        result = unittest.TestResult()
         test.run(result)
 
         self.failUnless(test.ran)
@@ -132,7 +149,7 @@ class PyUnitResultTests(SynchronousTestCase):
 
     def test_error(self):
         test = self.ErrorTest('test_foo')
-        result = pyunit.TestResult()
+        result = unittest.TestResult()
         test.run(result)
 
         self.failUnless(test.ran)
@@ -148,7 +165,7 @@ class PyUnitResultTests(SynchronousTestCase):
             def test_foo(s):
                 s.ran = True
         test = ErrorTest('test_foo')
-        result = pyunit.TestResult()
+        result = unittest.TestResult()
         test.run(result)
 
         self.failIf(test.ran)
@@ -158,7 +175,7 @@ class PyUnitResultTests(SynchronousTestCase):
 
     def test_tracebackFromFailure(self):
         """
-        Errors added through the L{PyUnitResultAdapter} have the same traceback
+        Errors added through the L{UnittestResultAdapter} have the same traceback
         information as if there were no adapter at all.
         """
         try:
@@ -166,8 +183,8 @@ class PyUnitResultTests(SynchronousTestCase):
         except ZeroDivisionError:
             exc_info = sys.exc_info()
             f = Failure()
-        pyresult = pyunit.TestResult()
-        result = PyUnitResultAdapter(pyresult)
+        pyresult = unittest.TestResult()
+        result = UnittestResultAdapter(pyresult)
         result.addError(self, f)
         self.assertEqual(pyresult.errors[0][1],
                          ''.join(traceback.format_exception(*exc_info)))
@@ -186,7 +203,7 @@ class PyUnitResultTests(SynchronousTestCase):
                     self.exc_info = sys.exc_info()
                     raise
         test = ErrorTest('test_foo')
-        result = pyunit.TestResult()
+        result = unittest.TestResult()
         test.run(result)
 
         # We can't test that the tracebacks are equal, because Trial's
@@ -205,7 +222,7 @@ class PyUnitResultTests(SynchronousTestCase):
 
     def test_tracebackFromCleanFailure(self):
         """
-        Errors added through the L{PyUnitResultAdapter} have the same
+        Errors added through the L{UnittestResultAdapter} have the same
         traceback information as if there were no adapter at all, even
         if the Failure that held the information has been cleaned.
         """
@@ -215,8 +232,8 @@ class PyUnitResultTests(SynchronousTestCase):
             exc_info = sys.exc_info()
             f = Failure()
         f.cleanFailure()
-        pyresult = pyunit.TestResult()
-        result = PyUnitResultAdapter(pyresult)
+        pyresult = unittest.TestResult()
+        result = UnittestResultAdapter(pyresult)
         result.addError(self, f)
         self.assertEqual(pyresult.errors[0][1],
                          ''.join(traceback.format_exception(*exc_info)))
@@ -225,7 +242,7 @@ class PyUnitResultTests(SynchronousTestCase):
     def test_trialSkip(self):
         """
         Skips using trial's skipping functionality are reported as skips in
-        the L{pyunit.TestResult}.
+        the L{unittest.TestResult}.
         """
         class SkipTest(SynchronousTestCase):
             def test_skip(self):
@@ -233,22 +250,22 @@ class PyUnitResultTests(SynchronousTestCase):
             test_skip.skip = "Let's skip!"
 
         test = SkipTest('test_skip')
-        result = pyunit.TestResult()
+        result = unittest.TestResult()
         test.run(result)
         self.assertEqual(result.skipped, [(test, "Let's skip!")])
 
 
-    def test_pyunitSkip(self):
+    def test_unittestSkip(self):
         """
-        Skips using pyunit's skipping functionality are reported as skips in
-        the L{pyunit.TestResult}.
+        Skips using unittest's skipping functionality are reported as skips in
+        the L{unittest.TestResult}.
         """
         class SkipTest(SynchronousTestCase):
-            @pyunit.skip("skippy")
+            @unittest.skip("skippy")
             def test_skip(self):
                 1/0
 
         test = SkipTest('test_skip')
-        result = pyunit.TestResult()
+        result = unittest.TestResult()
         test.run(result)
         self.assertEqual(result.skipped, [(test, "skippy")])
