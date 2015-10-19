@@ -1143,65 +1143,6 @@ class SubunitReporterTests(ReporterInterfaceTests):
         self.assertEqual(subunitOutput, self.stream.getvalue())
 
 
-    def removeMethod(self, klass, methodName):
-        """
-        Remove 'methodName' from 'klass'.
-
-        If 'klass' does not have a method named 'methodName', then
-        'removeMethod' succeeds silently.
-
-        If 'klass' does have a method named 'methodName', then it is removed
-        using delattr. Also, methods of the same name are removed from all
-        base classes of 'klass', thus removing the method entirely.
-
-        @param klass: The class to remove the method from.
-        @param methodName: The name of the method to remove.
-        """
-        method = getattr(klass, methodName, None)
-        if method is None:
-            return
-        for base in getmro(klass):
-            try:
-                delattr(base, methodName)
-            except (AttributeError, TypeError):
-                break
-            else:
-                self.addCleanup(setattr, base, methodName, method)
-
-
-    def test_subunitWithoutAddExpectedFailureInstalled(self):
-        """
-        Some versions of subunit don't have "addExpectedFailure". For these
-        versions, we report expected failures as successes.
-        """
-        self.removeMethod(reporter.TestProtocolClient, 'addExpectedFailure')
-        try:
-            1 / 0
-        except ZeroDivisionError:
-            self.result.addExpectedFailure(self.test, sys.exc_info(), "todo")
-        expectedFailureOutput = self.stream.getvalue()
-        self.stream.truncate(0)
-        self.stream.seek(0)
-        self.result.addSuccess(self.test)
-        successOutput = self.stream.getvalue()
-        self.assertEqual(successOutput, expectedFailureOutput)
-
-
-    def test_subunitWithoutAddSkipInstalled(self):
-        """
-        Some versions of subunit don't have "addSkip". For these versions, we
-        report skips as successes.
-        """
-        self.removeMethod(reporter.TestProtocolClient, 'addSkip')
-        self.result.addSkip(self.test, "reason")
-        skipOutput = self.stream.getvalue()
-        self.stream.truncate(0)
-        self.stream.seek(0)
-        self.result.addSuccess(self.test)
-        successOutput = self.stream.getvalue()
-        self.assertEqual(successOutput, skipOutput)
-
-
     def test_addExpectedFailurePassedThrough(self):
         """
         Some versions of subunit have "addExpectedFailure". For these

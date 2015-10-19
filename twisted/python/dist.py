@@ -66,7 +66,7 @@ _EXTRA_OPTIONS = dict(
     dev=['twistedchecker >= 0.4.0',
          'pyflakes >= 0.9.2',
          'twisted-dev-tools >= 0.0.2',
-         'python-subunit',
+         'python-subunit >= 1.0',
          'sphinx >= 1.3.1',
          'pydoctor >= 15.0.0'],
     tls=['pyopenssl >= 0.13',

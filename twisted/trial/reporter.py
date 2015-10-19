@@ -30,7 +30,15 @@ except ImportError:
 from twisted.trial import itrial, util
 
 try:
-    from subunit import TestProtocolClient
+    import subunit
+
+    if subunit.__version__ < (1, 0):
+        warnings.warn(("The installed version of subunit is not supported by "
+                       "Twisted. Please upgrade it to 1.0+ to get subunit "
+                       "support."))
+        TestProtocolClient = None
+    else:
+        from subunit import TestProtocolClient
 except ImportError:
     TestProtocolClient = None
 
@@ -1044,18 +1052,11 @@ class SubunitReporter(object):
         """
         Record that C{test} was skipped for C{reason}.
 
-        Some versions of subunit don't have support for addSkip. In those
-        cases, the skip is reported as a success.
-
         @param test: A unittest-compatible C{TestCase}.
         @param reason: The reason for it being skipped. The C{str()} of this
             object will be included in the subunit output stream.
         """
-        addSkip = getattr(self._subunit, 'addSkip', None)
-        if addSkip is None:
-            self.addSuccess(test)
-        else:
-            self._subunit.addSkip(test, reason)
+        self._subunit.addSkip(test, reason)
 
 
     def addError(self, test, err):
@@ -1085,16 +1086,9 @@ class SubunitReporter(object):
     def addExpectedFailure(self, test, failure, todo):
         """
         Record an expected failure from a test.
-
-        Some versions of subunit do not implement this. For those versions, we
-        record a success.
         """
         failure = util.excInfoOrFailureToExcInfo(failure)
-        addExpectedFailure = getattr(self._subunit, 'addExpectedFailure', None)
-        if addExpectedFailure is None:
-            self.addSuccess(test)
-        else:
-            addExpectedFailure(test, failure)
+        self._subunit.addExpectedFailure(test, failure)
 
 
     def addUnexpectedSuccess(self, test, todo):
