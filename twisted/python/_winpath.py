@@ -5,6 +5,9 @@
 """
 Python 3 and Windows-specific wrappers for L{os.path}/L{os} that use Unicode
 only.
+
+This is a massive ugly hack to make sure Twisted doesn't spew thousands of
+C{DeprecationWarning}s, and shouldn't be directly used by anyone.
 """
 
 import os

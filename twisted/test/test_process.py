@@ -2575,7 +2575,7 @@ class ClosingPipesTests(unittest.TestCase):
         """
         d = self.doit(1)
         def _check(errput):
-            if _PY3 and runtime.platform.isWindows():
+            if _PY3 and not runtime.platform.isWindows():
                 self.assertIn(b'BrokenPipeError', errput)
             elif _PY3:
                 self.assertIn(b"OSError", errput)
