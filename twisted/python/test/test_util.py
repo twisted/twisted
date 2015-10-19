@@ -22,7 +22,6 @@ except ImportError:
 from twisted.trial import unittest
 from twisted.trial.util import suppress as SUPPRESS
 
-from twisted.python.compat import _PY3
 from twisted.python import util
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.filepath import FilePath

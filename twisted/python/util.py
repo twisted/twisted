@@ -18,11 +18,6 @@ from twisted.python.compat import _PY3, unicode
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
-if _PY3:
-    UserDict = object
-else:
-    from UserDict import UserDict
-
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
 
