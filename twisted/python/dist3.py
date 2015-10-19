@@ -359,7 +359,7 @@ testModules = [
     "twisted.trial.test.test_log",
     "twisted.trial.test.test_output",
     "twisted.trial.test.test_plugins",
-    "twisted.trial.test.test_pyunitcompat",
+    "twisted.trial.test.test_unittestcompat",
     "twisted.trial.test.test_reporter",
     "twisted.trial.test.test_runner",
     "twisted.trial.test.test_script",
