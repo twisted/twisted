@@ -3,7 +3,8 @@
 # See LICENSE for details.
 
 """
-Python 3 and Windows-specific wrappers for L{os.path}/L{os} that use Unicode only.
+Python 3 and Windows-specific wrappers for L{os.path}/L{os} that use Unicode
+only.
 """
 
 import os
@@ -11,16 +12,23 @@ import os.path
 
 
 def _ensureText(path):
-
+    """
+    Return a C{path} in L{str} format, decoding if required.
+    """
     if isinstance(path, bytes):
-        return path.decode("mbcs")
+        return path.decode("utf8")
     return path
 
 
+
 def _ensureOriginal(oldPath, newPath):
+    """
+    Return C{newpath} in the type of C{oldPath}.
+    """
     if isinstance(oldPath, bytes) and isinstance(newPath, str):
-        return newPath.encode('mbcs')
+        return newPath.encode("utf8")
     return newPath
+
 
 
 def isabs(path):

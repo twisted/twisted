@@ -1155,7 +1155,8 @@ class ProperlyCloseFilesMixin:
         """
         if _PY3 and platform.isWindows():
             # These platforms have been seen to give WinError 10038
-            # Windows 10 on Python 3
+            #
+            #  Windows 10 on Python 3.4/3.5
             return 10038
         else:
             # These platforms have been seen to give EBADF:

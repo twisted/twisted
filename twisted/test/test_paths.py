@@ -33,6 +33,7 @@ else:
     symlinkSkip = "Windows does not support symlinks"
 
 
+
 class BytesTestCase(TestCase):
     """
     Override default method implementations to support byte paths.
@@ -1139,7 +1140,6 @@ class FilePathTests(AbstractFilePathTests):
                 raise OSError(errno.EXDEV, 'Test-induced failure simulating '
                                            'cross-device rename failure')
             return originalRename(src, dest)
-
 
         from twisted.python.filepath import _renameModule
 
