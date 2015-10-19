@@ -103,7 +103,8 @@ def _invalidWin32App(pywinerr):
 
 @implementer(IProcessTransport, IConsumer, IProducer)
 class Process(_pollingfile._PollingTimer, BaseProcess):
-    """A process that integrates with the Twisted event loop.
+    """
+    A process that integrates with the Twisted event loop.
 
     If your subprocess is a python program, you need to:
 
@@ -177,12 +178,13 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         if _PY3:
             # Make sure all the arguments are str
-            args = [x.decode('mbcs') if isinstance(x, bytes) else x for x in args]
+            args = [x.decode('utf8') if isinstance(x, bytes) else x
+                    for x in args]
 
         cmdline = quoteArguments(args)
 
         if _PY3 and isinstance(command, bytes):
-            command = command.decode('mbcs')
+            command = command.decode('utf8')
 
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
@@ -201,10 +203,10 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                 for key, value in items(env):
 
                     if not isinstance(value, unicode):
-                        value = value.decode('mbcs')
+                        value = value.decode('utf8')
 
                     if not isinstance(key, unicode):
-                        key = key.decode('mbcs')
+                        key = key.decode('utf8')
 
                     newenv[key] = value
 
