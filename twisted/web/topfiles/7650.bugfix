@@ -1,0 +1,3 @@
+twisted.web.client.URI now supports IPv6 addresses. Previously this
+would mistake the colons used as IPv6 address group separators as the
+start of a port specification.

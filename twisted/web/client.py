@@ -611,13 +611,14 @@ class URI(object):
             else:
                 defaultPort = 80
 
-        host, port = netloc, defaultPort
-        if b':' in host:
-            host, port = host.split(b':')
+        if b':' in netloc:
+            host, port = netloc.rsplit(b':', 1)
             try:
                 port = int(port)
             except ValueError:
-                port = defaultPort
+                host, port = netloc, defaultPort
+        else:
+            host, port = netloc, defaultPort
 
         return cls(scheme, netloc, host, port, path, params, query, fragment)
 
