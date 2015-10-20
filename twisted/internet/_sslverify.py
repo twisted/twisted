@@ -146,7 +146,7 @@ def _usablePyOpenSSL(version):
 
     @rtype: L{bool}
     """
-    major, minor = list(int(part) for part in version.split(".")[:2])
+    major, minor = (int(part) for part in version.split(".")[:2])
     return (major, minor) >= (0, 12)
 
 
