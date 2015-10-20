@@ -1,7 +1,11 @@
 Twisted 15.4.0
 ==============
 
-.. image:: https://img.shields.io/pypi/v/twisted.svg   :target: https://pypi.python.org/pypi/Twisted
+.. image:: https://img.shields.io/pypi/v/twisted.svg   :target:
+
+.. image:: https://img.shields.io/pypi/dm/twisted.svg   :target:
+
+.. image:: https://img.shields.io/codecov/c/github/twisted/twisted/master.svg   :target:
 
 Release Codename:
 
