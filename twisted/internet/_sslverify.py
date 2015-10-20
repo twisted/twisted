@@ -137,6 +137,20 @@ def simpleVerifyHostname(connection, hostname):
 
 
 
+def _usablePyOpenSSL(version):
+    """
+    Check pyOpenSSL version string whether we can use it for host verification.
+
+    @param version: A pyOpenSSL version string.
+    @type version: L{str}
+
+    @rtype: L{bool}
+    """
+    major, minor = list(int(part) for part in version.split(".")[:2])
+    return (major, minor) >= (0, 12)
+
+
+
 def _selectVerifyImplementation(lib):
     """
     U{service_identity <https://pypi.python.org/pypi/service_identity>}
@@ -160,9 +174,7 @@ def _selectVerifyImplementation(lib):
         "rejected."
     )
 
-    major, minor = list(int(part) for part in lib.__version__.split("."))[:2]
-
-    if (major, minor) >= (0, 12):
+    if _usablePyOpenSSL(lib.__version__):
         try:
             from service_identity import VerificationError
             from service_identity.pyopenssl import verify_hostname
