@@ -1,15 +1,14 @@
 Twisted 15.4.0
+==============
 
 Release Codename:
 
     "Trial By Fire"
 
-
-For information on what's new in Twisted 15.4.0, see the NEWS file that comes
-with the distribution.
+For information on what's new in Twisted 15.4.0, see the NEWS file that comes with the distribution.
 
 What is this?
-=============
+-------------
 
   Twisted is an event-based framework for internet applications.  It includes
   modules for many different purposes, including the following:
@@ -53,12 +52,13 @@ What is this?
 
 
 Installing
-==========
+----------
 
   Instructions for installing this software are in INSTALL.
 
+
 Unit Tests
-==========
+----------
 
   See our unit tests run proving that the software is BugFree(TM):
 
@@ -72,7 +72,7 @@ Unit Tests
 
 
 Documentation and Support
-=========================
+-------------------------
 
   Twisted's documentation is available from the Twisted Matrix website:
 
@@ -89,7 +89,7 @@ Documentation and Support
 
 
 Copyright
-=========
+---------
 
   All of the code in this distribution is Copyright (c) 2001-2015
   Twisted Matrix Laboratories.
@@ -99,7 +99,7 @@ Copyright
 
 
 Warranty
-========
+--------
 
   THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
   EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
