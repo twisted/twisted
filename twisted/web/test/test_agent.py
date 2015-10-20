@@ -2840,7 +2840,7 @@ class ReadBodyTests(TestCase):
                 "message": failure.value.message,
                 "body": failure.value.response,
                 }, {
-                "status": 200,
+                "status": "200",
                 "message": "OK",
                 "body": "firstsecond",
                 })
