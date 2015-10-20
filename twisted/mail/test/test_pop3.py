@@ -10,6 +10,8 @@ import hmac
 import base64
 import itertools
 
+from collections import OrderedDict
+
 from zope.interface import implements
 
 from twisted.internet import defer
@@ -23,7 +25,6 @@ from twisted import internet
 from twisted.mail import pop3
 from twisted.protocols import loopback
 from twisted.python import failure
-from twisted.python.util import OrderedDict
 
 from twisted import cred
 import twisted.cred.portal

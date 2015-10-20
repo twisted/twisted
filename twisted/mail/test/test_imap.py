@@ -17,6 +17,8 @@ import locale
 import os
 import types
 
+from collections import OrderedDict
+
 from zope.interface import implements
 
 from twisted.python.filepath import FilePath
@@ -31,6 +33,7 @@ from twisted.internet.task import Clock
 from twisted.trial import unittest
 from twisted.python import util, log
 from twisted.python import failure
+
 
 from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -161,7 +164,7 @@ class BufferingConsumer:
 class MessageProducerTests(unittest.TestCase):
     def testSinglePart(self):
         body = 'This is body text.  Rar.'
-        headers = util.OrderedDict()
+        headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
         headers['subject'] = 'booga booga boo'
@@ -191,13 +194,13 @@ class MessageProducerTests(unittest.TestCase):
     def testSingleMultiPart(self):
         outerBody = ''
         innerBody = 'Contained body message text.  Squarge.'
-        headers = util.OrderedDict()
+        headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
         headers['subject'] = 'booga booga boo'
         headers['content-type'] = 'multipart/alternative; boundary="xyz"'
 
-        innerHeaders = util.OrderedDict()
+        innerHeaders = OrderedDict()
         innerHeaders['subject'] = 'this is subject text'
         innerHeaders['content-type'] = 'text/plain'
         msg = FakeyMessage(headers, (), None, outerBody, 123,
@@ -236,15 +239,15 @@ class MessageProducerTests(unittest.TestCase):
         outerBody = ''
         innerBody1 = 'Contained body message text.  Squarge.'
         innerBody2 = 'Secondary <i>message</i> text of squarge body.'
-        headers = util.OrderedDict()
+        headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
         headers['subject'] = 'booga booga boo'
         headers['content-type'] = 'multipart/alternative; boundary="xyz"'
-        innerHeaders = util.OrderedDict()
+        innerHeaders = OrderedDict()
         innerHeaders['subject'] = 'this is subject text'
         innerHeaders['content-type'] = 'text/plain'
-        innerHeaders2 = util.OrderedDict()
+        innerHeaders2 = OrderedDict()
         innerHeaders2['subject'] = '<b>this is subject</b>'
         innerHeaders2['content-type'] = 'text/html'
         msg = FakeyMessage(headers, (), None, outerBody, 123, [
@@ -4076,15 +4079,15 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         outerBody = ''
         innerBody1 = 'Contained body message text.  Squarge.'
         innerBody2 = 'Secondary <i>message</i> text of squarge body.'
-        headers = util.OrderedDict()
+        headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
         headers['subject'] = 'booga booga boo'
         headers['content-type'] = 'multipart/alternative; boundary="xyz"'
-        innerHeaders = util.OrderedDict()
+        innerHeaders = OrderedDict()
         innerHeaders['subject'] = 'this is subject text'
         innerHeaders['content-type'] = 'text/plain'
-        innerHeaders2 = util.OrderedDict()
+        innerHeaders2 = OrderedDict()
         innerHeaders2['subject'] = '<b>this is subject</b>'
         innerHeaders2['content-type'] = 'text/html'
         self.msgObjs = [FakeyMessage(
@@ -4119,7 +4122,7 @@ class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
         self.messages = '1'
         parts = [1]
         outerBody = 'DA body'
-        headers = util.OrderedDict()
+        headers = OrderedDict()
         headers['from'] = 'sender@host'
         headers['to'] = 'recipient@domain'
         headers['subject'] = 'booga booga boo'

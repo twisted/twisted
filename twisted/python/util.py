@@ -15,10 +15,17 @@ except ImportError:
     setgroups = getgroups = None
 
 from twisted.python.compat import _PY3, unicode
-if _PY3:
-    UserDict = object
-else:
-    from UserDict import UserDict
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute
+
+# For backwards compatibility, some things import this, so just link it
+from collections import OrderedDict
+
+deprecatedModuleAttribute(
+    Version("Twisted", 15, 5, 0),
+    "Use collections.OrderedDict instead.",
+    "twisted.python.util",
+    "OrderedDict")
 
 
 
@@ -146,79 +153,6 @@ class InsensitiveDict:
             if not (k in other) or not (other[k]==v):
                 return 0
         return len(self)==len(other)
-
-
-
-class OrderedDict(UserDict):
-    """A UserDict that preserves insert order whenever possible."""
-    def __init__(self, dict=None, **kwargs):
-        self._order = []
-        self.data = {}
-        if dict is not None:
-            if hasattr(dict,'keys'):
-                self.update(dict)
-            else:
-                for k,v in dict: # sequence
-                    self[k] = v
-        if len(kwargs):
-            self.update(kwargs)
-
-    def __repr__(self):
-        return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
-
-    def __setitem__(self, key, value):
-        if not self.has_key(key):
-            self._order.append(key)
-        UserDict.__setitem__(self, key, value)
-
-    def copy(self):
-        return self.__class__(self)
-
-    def __delitem__(self, key):
-        UserDict.__delitem__(self, key)
-        self._order.remove(key)
-
-    def iteritems(self):
-        for item in self._order:
-            yield (item, self[item])
-
-    def items(self):
-        return list(self.iteritems())
-
-    def itervalues(self):
-        for item in self._order:
-            yield self[item]
-
-    def values(self):
-        return list(self.itervalues())
-
-    def iterkeys(self):
-        return iter(self._order)
-
-    def keys(self):
-        return list(self._order)
-
-    def popitem(self):
-        key = self._order[-1]
-        value = self[key]
-        del self[key]
-        return (key, value)
-
-    def setdefault(self, item, default):
-        if self.has_key(item):
-            return self[item]
-        self[item] = default
-        return default
-
-    def update(self, d):
-        for k, v in d.items():
-            self[k] = v
-
-
-if _PY3:
-    # Python 3 has its own OrderedDict that we should use instead.
-    del OrderedDict
-    from collections import OrderedDict
 
 
 

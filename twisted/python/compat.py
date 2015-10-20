@@ -607,10 +607,16 @@ def _constructMethod(cls, name, self):
 
 
 
-if _PY3:
-    from collections import OrderedDict
-else:
-    from twisted.python.util import OrderedDict
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute
+
+from collections import OrderedDict
+
+deprecatedModuleAttribute(
+    Version("Twisted", 15, 5, 0),
+    "Use collections.OrderedDict instead.",
+    "twisted.python.compat",
+    "OrderedDict")
 
 
 
@@ -622,6 +628,7 @@ __all__ = [
     "set",
     "cmp",
     "comparable",
+    "OrderedDict",
     "nativeString",
     "NativeStringIO",
     "networkString",
@@ -637,7 +644,6 @@ __all__ = [
     "xrange",
     "urllib_parse",
     "bytesEnviron",
-    "OrderedDict",
     "escape",
     "urlquote",
     "urlunquote",
