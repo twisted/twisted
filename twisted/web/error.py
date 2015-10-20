@@ -59,7 +59,7 @@ class Error(Exception):
         """
         Initializes a basic exception.
 
-        @type code: L{bytes} / L{int}
+        @type code: L{bytes} or L{int}
         @param code: Refers to an HTTP status code (for example, 200) either as
             an integer or a bytestring representing such. If no C{message} is
             given, C{code} is mapped to a descriptive bytestring that is used
