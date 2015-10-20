@@ -13,9 +13,8 @@ import warnings
 
 try:
     from urlparse import urlunparse, urljoin, urldefrag
-    from urllib import splithost, splittype
 except ImportError:
-    from urllib.parse import splithost, splittype, urljoin, urldefrag
+    from urllib.parse import urljoin, urldefrag
     from urllib.parse import urlunparse as _urlunparse
 
     def urlunparse(parts):
@@ -27,10 +26,11 @@ from functools import wraps
 
 from zope.interface import implementer
 
-from twisted.python.compat import nativeString, intToBytes, unicode
 from twisted.python import log
-from twisted.python.failure import Failure
+from twisted.python.compat import _PY3, networkString
+from twisted.python.compat import nativeString, intToBytes, unicode, itervalues
 from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.failure import Failure
 from twisted.python.versions import Version
 
 from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
@@ -1135,9 +1135,10 @@ class _RetryingHTTP11ClientProtocol(object):
         requirement may be relaxed in the future, and PUT added to approved
         method list.
         """
-        if method not in ("GET", "HEAD", "OPTIONS", "DELETE", "TRACE"):
+        if method not in (b"GET", b"HEAD", b"OPTIONS", b"DELETE", b"TRACE"):
             return False
-        if not isinstance(exception, (RequestNotSent, RequestTransmissionFailed,
+        if not isinstance(exception, (RequestNotSent,
+                                      RequestTransmissionFailed,
                                       ResponseNeverReceived)):
             return False
         if isinstance(exception, _WrapperException):
@@ -1315,11 +1316,11 @@ class HTTPConnectionPool(object):
             closed.
         """
         results = []
-        for protocols in self._connections.itervalues():
+        for protocols in itervalues(self._connections):
             for p in protocols:
                 results.append(p.abort())
         self._connections = {}
-        for dc in self._timeouts.values():
+        for dc in itervalues(self._timeouts):
             dc.cancel()
         self._timeouts = {}
         return defer.gatherResults(results).addCallback(lambda ign: None)
@@ -1348,9 +1349,9 @@ class _AgentBase(object):
         Compute the string to use for the value of the I{Host} header, based on
         the given scheme, host name, and port number.
         """
-        if (scheme, port) in (('http', 80), ('https', 443)):
+        if (scheme, port) in ((b'http', 80), (b'https', 443)):
             return host
-        return '%s:%d' % (host, port)
+        return host + b":" + intToBytes(port)
 
 
     def _requestWithEndpoint(self, key, endpoint, method, parsedURI,
@@ -1362,11 +1363,12 @@ class _AgentBase(object):
         # Create minimal headers, if necessary:
         if headers is None:
             headers = Headers()
-        if not headers.hasHeader('host'):
+        if not headers.hasHeader(b'host'):
             headers = headers.copy()
             headers.addRawHeader(
-                'host', self._computeHostValue(parsedURI.scheme, parsedURI.host,
-                                               parsedURI.port))
+                b'host', self._computeHostValue(parsedURI.scheme,
+                                                parsedURI.host,
+                                                parsedURI.port))
 
         d = self._pool.getConnection(key, endpoint)
         def cbConnected(proto):
@@ -1436,10 +1438,11 @@ class _StandardEndpointFactory(object):
         kwargs['bindAddress'] = self._bindAddress
         if uri.scheme == b'http':
             return TCP4ClientEndpoint(
-                self._reactor, uri.host, uri.port, **kwargs)
+                self._reactor, nativeString(uri.host), uri.port, **kwargs)
         elif uri.scheme == b'https':
             tlsPolicy = self._policyForHTTPS.creatorForNetloc(uri.host, uri.port)
-            return SSL4ClientEndpoint(self._reactor, uri.host, uri.port,
+            return SSL4ClientEndpoint(self._reactor, nativeString(uri.host),
+                                      uri.port,
                                       tlsPolicy, **kwargs)
         else:
             raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
@@ -1643,18 +1646,28 @@ class _FakeUrllib2Request(object):
     @since: 11.1
     """
     def __init__(self, uri):
-        self.uri = uri
+        self.uri = nativeString(uri)
         self.headers = Headers()
-        self.type, rest = splittype(self.uri)
-        self.host, rest = splithost(rest)
+
+        _uri = URI.fromBytes(uri)
+        self.type = nativeString(_uri.scheme)
+        self.host = nativeString(_uri.host)
+
+        if (_uri.scheme, _uri.port) not in ((b'http', 80), (b'https', 443)):
+            # If it's not a schema on the regular port, add the port.
+            self.host += ":" + str(_uri.port)
+
+        if _PY3:
+            self.origin_req_host = nativeString(_uri.host)
+            self.unverifiable = lambda _: False
 
 
     def has_header(self, header):
-        return self.headers.hasHeader(header)
+        return self.headers.hasHeader(networkString(header))
 
 
     def add_unredirected_header(self, name, value):
-        self.headers.addRawHeader(name, value)
+        self.headers.addRawHeader(networkString(name), networkString(value))
 
 
     def get_full_url(self):
@@ -1662,8 +1675,9 @@ class _FakeUrllib2Request(object):
 
 
     def get_header(self, name, default=None):
-        headers = self.headers.getRawHeaders(name, default)
+        headers = self.headers.getRawHeaders(networkString(name), default)
         if headers is not None:
+            headers = [nativeString(x) for x in headers]
             return headers[0]
         return None
 
@@ -1698,7 +1712,15 @@ class _FakeUrllib2Response(object):
     def info(self):
         class _Meta(object):
             def getheaders(zelf, name):
-                return self.response.headers.getRawHeaders(name, [])
+                # PY2
+                headers = self.response.headers.getRawHeaders(name, [])
+                return headers
+            def get_all(zelf, name, default):
+                # PY3
+                headers = self.response.headers.getRawHeaders(
+                    networkString(name), default)
+                h = [nativeString(x) for x in headers]
+                return h
         return _Meta()
 
 
@@ -1745,12 +1767,12 @@ class CookieAgent(object):
         lastRequest = _FakeUrllib2Request(uri)
         # Setting a cookie header explicitly will disable automatic request
         # cookies.
-        if not headers.hasHeader('cookie'):
+        if not headers.hasHeader(b'cookie'):
             self.cookieJar.add_cookie_header(lastRequest)
             cookieHeader = lastRequest.get_header('Cookie', None)
             if cookieHeader is not None:
                 headers = headers.copy()
-                headers.addRawHeader('cookie', cookieHeader)
+                headers.addRawHeader(b'cookie', networkString(cookieHeader))
 
         d = self._agent.request(method, uri, headers, bodyProducer)
         d.addCallback(self._extractCookies, lastRequest)
@@ -1863,7 +1885,7 @@ class ContentDecoderAgent(object):
     def __init__(self, agent, decoders):
         self._agent = agent
         self._decoders = dict(decoders)
-        self._supported = ','.join([decoder[0] for decoder in decoders])
+        self._supported = b','.join([decoder[0] for decoder in decoders])
 
 
     def request(self, method, uri, headers=None, bodyProducer=None):
@@ -1876,7 +1898,7 @@ class ContentDecoderAgent(object):
             headers = Headers()
         else:
             headers = headers.copy()
-        headers.addRawHeader('accept-encoding', self._supported)
+        headers.addRawHeader(b'accept-encoding', self._supported)
         deferred = self._agent.request(method, uri, headers, bodyProducer)
         return deferred.addCallback(self._handleResponse)
 
@@ -1886,8 +1908,8 @@ class ContentDecoderAgent(object):
         Check if the response is encoded, and wrap it to handle decompression.
         """
         contentEncodingHeaders = response.headers.getRawHeaders(
-            'content-encoding', [])
-        contentEncodingHeaders = ','.join(contentEncodingHeaders).split(',')
+            b'content-encoding', [])
+        contentEncodingHeaders = b','.join(contentEncodingHeaders).split(b',')
         while contentEncodingHeaders:
             name = contentEncodingHeaders.pop().strip()
             decoder = self._decoders.get(name)
@@ -1899,9 +1921,9 @@ class ContentDecoderAgent(object):
                 break
         if contentEncodingHeaders:
             response.headers.setRawHeaders(
-                'content-encoding', [','.join(contentEncodingHeaders)])
+                b'content-encoding', [b','.join(contentEncodingHeaders)])
         else:
-            response.headers.removeHeader('content-encoding')
+            response.headers.removeHeader(b'content-encoding')
         return response
 
 
@@ -1974,13 +1996,13 @@ class RedirectAgent(object):
         if redirectCount >= self._redirectLimit:
             err = error.InfiniteRedirection(
                 response.code,
-                'Infinite redirection detected',
+                b'Infinite redirection detected',
                 location=uri)
             raise ResponseFailed([Failure(err)], response)
-        locationHeaders = response.headers.getRawHeaders('location', [])
+        locationHeaders = response.headers.getRawHeaders(b'location', [])
         if not locationHeaders:
             err = error.RedirectWithNoLocation(
-                response.code, 'No location header field', uri)
+                response.code, b'No location header field', uri)
             raise ResponseFailed([Failure(err)], response)
         location = self._resolveLocation(uri, locationHeaders[0])
         deferred = self._agent.request(method, location, headers)
@@ -1997,13 +2019,13 @@ class RedirectAgent(object):
         Handle the response, making another request if it indicates a redirect.
         """
         if response.code in self._redirectResponses:
-            if method not in ('GET', 'HEAD'):
+            if method not in (b'GET', b'HEAD'):
                 err = error.PageRedirect(response.code, location=uri)
                 raise ResponseFailed([Failure(err)], response)
             return self._handleRedirect(response, method, uri, headers,
                                         redirectCount)
         elif response.code in self._seeOtherResponses:
-            return self._handleRedirect(response, 'GET', uri, headers,
+            return self._handleRedirect(response, b'GET', uri, headers,
                                         redirectCount)
         return response
 

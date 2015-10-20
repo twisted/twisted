@@ -75,7 +75,12 @@ class ErrorTests(unittest.TestCase):
         C{str()} on an L{Error} returns the code and message it was
         instantiated with.
         """
+        # Bytestring status
         e = error.Error(b"200", b"OK")
+        self.assertEqual(str(e), "200 OK")
+
+        # int status
+        e = error.Error(200, b"OK")
         self.assertEqual(str(e), "200 OK")
 
 
