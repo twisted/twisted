@@ -1,11 +1,8 @@
 Twisted 15.4.0
 ==============
 
-.. image:: https://img.shields.io/pypi/v/twisted.svg   :target:
-
-.. image:: https://img.shields.io/pypi/dm/twisted.svg   :target:
-
-.. image:: https://img.shields.io/codecov/c/github/twisted/twisted/master.svg   :target:
+|pypi|_
+|coverage|_
 
 Release Codename:
 
@@ -96,3 +93,10 @@ Warranty
   DAMAGES.
 
 Again, see the included ``LICENSE`` file for specific legal details.
+
+
+.. |coverage| image:: https://codecov.io/github/twisted/twisted/coverage.svg?branch=master
+.. _coverage: https://codecov.io/github/twisted/twisted
+
+.. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
+.. _pypi: https://pypi.python.org/pypi/twisted
