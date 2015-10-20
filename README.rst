@@ -1,6 +1,8 @@
 Twisted 15.4.0
 ==============
 
+.. image:: https://img.shields.io/pypi/v/twisted.svg   :target: https://pypi.python.org/pypi/Twisted
+
 Release Codename:
 
     "Trial By Fire"
