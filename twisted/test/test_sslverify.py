@@ -2334,6 +2334,9 @@ class UsablePyOpenSSLTests(unittest.SynchronousTestCase):
     """
     Tests for L{UsablePyOpenSSLTests}.
     """
+    if skipSSL is not None:
+        skip = skipSSL
+
     def test_ok(self):
         """
         Return C{True} for usable versions including possible changes in
