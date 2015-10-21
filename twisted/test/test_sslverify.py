@@ -2278,15 +2278,6 @@ class OpenSSLVersionTestsMixin(object):
         self.assertIsInstance(self.OpenSSL.__version__, str)
 
 
-    def test_oneOrTwoOrThreeDots(self):
-        """
-        C{OpenSSL.__version__} has 1-3 version components.
-
-        E.g.: 0.12, 0.15.1, 15.2.0.dev0
-        """
-        self.assertIn(self.OpenSSL.__version__.count("."), range(1, 4))
-
-
     def test_majorDotMinor(self):
         """
         C{OpenSSL.__version__} declares the major and minor versions as
