@@ -2330,6 +2330,37 @@ class PostTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
 
 
 
+class UsablePyOpenSSLTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{UsablePyOpenSSLTests}.
+    """
+    if skipSSL is not None:
+        skip = skipSSL
+
+    def test_ok(self):
+        """
+        Return C{True} for usable versions including possible changes in
+        versioning.
+        """
+        for version in ["0.15.1", "1.0.0", "16.0.0"]:
+            self.assertTrue(sslverify._usablePyOpenSSL(version))
+
+    def test_tooOld(self):
+        """
+        Return C{False} for unusable versions.
+        """
+        self.assertFalse(sslverify._usablePyOpenSSL("0.11.1"))
+
+    def test_inDev(self):
+        """
+        A .dev0 suffix does not trip us up.  Since it has been introduced after
+        0.15.1, it's always C{True}.
+        """
+        for version in ["0.16.0", "1.0.0", "16.0.0"]:
+            self.assertTrue(sslverify._usablePyOpenSSL(version + ".dev0"))
+
+
+
 class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
     """
     Tests for L{_selectVerifyImplementation}.
