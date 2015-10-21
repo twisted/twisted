@@ -1463,6 +1463,34 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(req.responseHeaders.getRawHeaders(b"test"), [b"lemur"])
 
 
+    def test_addCookie(self):
+        """
+        L{http.Request.addCookie} adds a Set-Cookie header to the response.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.addCookie("foo", "bar")
+        self.assertEqual("foo=bar", req.cookies[0])
+
+
+    def test_addCookieWithAttibutes(self):
+        """
+        L{http.Request.addCookie} adds a Set-Cookie header with cookie
+        attributes to the response.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.addCookie(
+            "foo", "bar", expires="Fri, 31 Dec 9999 23:59:59 GMT",
+            domain=".example.com", path="/", max_age="31536000",
+            comment="test", secure=True, httpOnly=True)
+        self.assertIn("Expires=Fri, 31 Dec 9999 23:59:59 GMT", req.cookies[0])
+        self.assertIn("Domain=.example.com", req.cookies[0])
+        self.assertIn("Path=/", req.cookies[0])
+        self.assertIn("Max-Age=31536000", req.cookies[0])
+        self.assertIn("Comment=test", req.cookies[0])
+        self.assertIn("Secure", req.cookies[0])
+        self.assertIn("HttpOnly", req.cookies[0])
+
+
     def test_firstWrite(self):
         """
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0

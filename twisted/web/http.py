@@ -1022,27 +1022,53 @@ class Request:
             else:
                 self.transport.write(data)
 
-    def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
+    def addCookie(self, k, v, expires=None, domain=None, path=None,
+                  max_age=None, comment=None, secure=None, httpOnly=False):
         """
         Set an outgoing HTTP cookie.
 
         In general, you should consider using sessions instead of cookies, see
         L{twisted.web.server.Request.getSession} and the
         L{twisted.web.server.Session} class for details.
+
+        @param k: cookie name
+
+        @param v: cookie value
+
+        @param expires: cookie expire attribute value in
+        "Wdy, DD Mon YYYY HH:MM:SS GMT" format
+
+        @param domain: cookie domain
+
+        @param path: cookie path
+
+        @param max_age: cookie expiration in seconds from reception
+
+        @param comment: cookie comment
+
+        @param secure: direct browser to send the cookie on encrypted
+        connections only
+
+        @param httpOnly: direct browser not to expose cookies through channels
+        other than HTTP (and HTTPS) requests
+
+
         """
         cookie = '%s=%s' % (k, v)
         if expires is not None:
-            cookie = cookie +"; Expires=%s" % expires
+            cookie = cookie + "; Expires=%s" % (expires, )
         if domain is not None:
-            cookie = cookie +"; Domain=%s" % domain
+            cookie = cookie + "; Domain=%s" % (domain, )
         if path is not None:
-            cookie = cookie +"; Path=%s" % path
+            cookie = cookie + "; Path=%s" % (path, )
         if max_age is not None:
-            cookie = cookie +"; Max-Age=%s" % max_age
+            cookie = cookie + "; Max-Age=%s" % (max_age, )
         if comment is not None:
-            cookie = cookie +"; Comment=%s" % comment
+            cookie = cookie + "; Comment=%s" % (comment, )
         if secure:
-            cookie = cookie +"; Secure"
+            cookie = cookie + "; Secure"
+        if httpOnly:
+            cookie = cookie + "; HttpOnly"
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
