@@ -1083,6 +1083,7 @@ abasdfg
         class MyRequest(http.Request):
             def process(self):
                 processed.append(self)
+                self.write(b"done")
                 self.finish()
         req = b'''\
 POST / HTTP/1.0
@@ -1098,6 +1099,8 @@ abasdfg
 --AaB03x--
 '''
         channel = self.runRequest(req, MyRequest, success=False)
+        self.assertEqual(channel.transport.value(),
+                         b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
 
