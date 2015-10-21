@@ -5,6 +5,8 @@
 Test HTTP support.
 """
 
+from __future__ import absolute_import, division
+
 import random, cgi, base64
 
 try:
@@ -1019,7 +1021,11 @@ Content-Type: application/x-www-form-urlencoded
         self.assertEqual(content, [networkString(query)])
 
 
-    def testMissingContentDisposition(self):
+    def test_missingContentDisposition(self):
+        """
+        If the C{Content-Disposition} header is missing, the request is denied
+        as a bad request.
+        """
         req = b'''\
 POST / HTTP/1.0
 Content-Type: multipart/form-data; boundary=AaB03x
@@ -1032,11 +1038,68 @@ Content-Transfer-Encoding: quoted-printable
 abasdfg
 --AaB03x--
 '''
-        self.runRequest(req, http.Request, success=False)
+        channel = self.runRequest(req, http.Request, success=False)
+        self.assertEqual(
+            channel.transport.value(),
+            b"HTTP/1.1 400 Bad Request\r\n\r\n")
+
     if _PY3:
-        testMissingContentDisposition.skip = (
-            "Cannot parse multipart/form-data on Python 3.  "
-            "See http://bugs.python.org/issue12411 and #5511.")
+        test_missingContentDisposition.skip = (
+            "cgi.parse_multipart is much more error-tolerant on Python 3.")
+
+
+    def test_multipartProcessingFailure(self):
+        """
+        When the multipart processing fails the client gets a 400 Bad Request.
+        """
+        # The parsing failure is simulated by having a Content-Length that
+        # doesn't fit in a ssize_t.
+        req = b'''\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=AaB03x
+Content-Length: 103
+
+--AaB03x
+Content-Type: text/plain
+Content-Length: 999999999999999999999999999999999999999999999999999999999999999
+Content-Transfer-Encoding: quoted-printable
+
+abasdfg
+--AaB03x--
+'''
+        channel = self.runRequest(req, http.Request, success=False)
+        self.assertEqual(
+            channel.transport.value(),
+            b"HTTP/1.1 400 Bad Request\r\n\r\n")
+
+
+    def test_contentDisposition(self):
+        """
+        If the C{Content-Disposition} header is present, and the form data is
+        otherwise well-formed, the form arguments will be added to the
+        request's args.
+        """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+        req = b'''\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=AaB03x
+Content-Length: 149
+
+--AaB03x
+Content-Type: text/plain
+Content-Disposition: form-data; name="text"
+Content-Transfer-Encoding: quoted-printable
+
+abasdfg
+--AaB03x--
+'''
+        channel = self.runRequest(req, MyRequest, success=False)
+        self.assertEqual(len(processed), 1)
+        self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
 
 
     def test_chunkedEncoding(self):
