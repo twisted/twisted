@@ -2278,11 +2278,11 @@ class OpenSSLVersionTestsMixin(object):
         self.assertIsInstance(self.OpenSSL.__version__, str)
 
 
-    def test_oneOrTwoDots(self):
+    def test_oneOrTwoOrThreeDots(self):
         """
-        C{OpenSSL.__version__} has either two or three version components.
+        C{OpenSSL.__version__} has 1-3 version components.
         """
-        self.assertIn(self.OpenSSL.__version__.count("."), (1, 2))
+        self.assertIn(self.OpenSSL.__version__.count("."), range(1, 4))
 
 
     def test_majorDotMinor(self):
