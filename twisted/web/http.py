@@ -76,8 +76,14 @@ except ImportError:
         ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
 
     def _parseHeader(line):
+        # cgi.parse_header requires a str
         key, pdict = cgi.parse_header(line.decode('charmap'))
-        return (key.encode('charmap'), pdict)
+
+        # We want the key as bytes, and cgi.parse_multipart (which consumes
+        # pdict) expects a dict of str keys but bytes values
+        key = key.encode('charmap')
+        pdict = {x:y.encode('charmap') for x, y in pdict.items()}
+        return (key, pdict)
 
 
 from zope.interface import implementer, provider
@@ -807,17 +813,20 @@ class Request:
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    args.update(cgi.parse_multipart(self.content, pdict))
-                except KeyError as e:
-                    if e.args[0] == b'content-disposition':
-                        # Parse_multipart can't cope with missing
-                        # content-disposition headers in multipart/form-data
-                        # parts, so we catch the exception and tell the client
-                        # it was a bad request.
-                        _respondToBadRequestAndDisconnect(
-                            self.channel.transport)
-                        return
-                    raise
+                    cgiArgs = cgi.parse_multipart(self.content, pdict)
+
+                    if _PY3:
+                        # parse_multipart on Python 3 decodes the header bytes
+                        # as iso-8859-1 and returns a str key -- we want bytes
+                        # so encode it back
+                        self.args.update({x.encode('iso-8859-1'): y
+                                          for x, y in cgiArgs.items()})
+                    else:
+                        self.args.update(cgiArgs)
+                except:
+                    # It was a bad request.
+                    _respondToBadRequestAndDisconnect(self.channel.transport)
+                    return
             self.content.seek(0, 0)
 
         self.process()
