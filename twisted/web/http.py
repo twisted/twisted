@@ -76,9 +76,14 @@ except ImportError:
         ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
 
     def _parseHeader(line):
+        # cgi.parse_header requires a str
         key, pdict = cgi.parse_header(line.decode('charmap'))
+
+        # We want the key as bytes, and cgi.parse_multipart (which consumes
+        # pdict) expects a dict of str keys but bytes values
+        key = key.encode('charmap')
         pdict = {x:y.encode('charmap') for x, y in pdict.items()}
-        return (key.encode('charmap'), pdict)
+        return (key, pdict)
 
 
 from zope.interface import implementer, provider

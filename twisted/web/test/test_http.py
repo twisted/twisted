@@ -1073,10 +1073,10 @@ abasdfg
             b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
 
-    def test_contentDisposition(self):
+    def test_multipartFormData(self):
         """
-        If the C{Content-Disposition} header is present, and the form data is
-        otherwise well-formed, the form arguments will be added to the
+        If the request has a Content-Type of C{multipart/form-data}, and the
+        form data is parseable, the form arguments will be added to the
         request's args.
         """
         processed = []
