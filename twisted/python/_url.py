@@ -6,9 +6,20 @@
 URL parsing, construction and rendering.
 """
 
-from urlparse import urlsplit, urlunsplit
-from urllib import quote as urlquote, unquote as urlunquote
+try:
+    from urlparse import urlsplit, urlunsplit
+    from urllib import quote as urlquote, unquote as urlunquote
+except ImportError:
+    from urllib.parse import (urlsplit, urlunsplit,
+                              quote as urlquote,
+                              unquote_to_bytes as urlunquote)
+
 from unicodedata import normalize
+
+# Zero dependencies within Twisted: this module should probably be spun out
+# into its own library fairly soon.
+
+unicode = type(u'')
 
 # RFC 3986 section 2.2, Reserved Characters
 _genDelims = u':/?#[]@'
@@ -55,9 +66,12 @@ def _maximalPercentEncode(text, safe):
     @return: the encoded version of C{text}
     @rtype: L{unicode}
     """
-    return urlquote(
+    quoted = urlquote(
         normalize("NFC", text).encode("utf-8"), safe.encode("ascii")
-    ).decode("ascii")
+    )
+    if not isinstance(quoted, unicode):
+        quoted = quoted.decode("ascii")
+    return quoted
 
 
 
@@ -659,7 +673,7 @@ class URL(object):
         @rtype: L{URL}
         """
         return self.replace(
-            host=self.host.decode("idna"),
+            host=self.host.encode("ascii").decode("idna"),
             pathSegments=[_percentDecode(segment)
                           for segment in self.pathSegments],
             queryParameters=[

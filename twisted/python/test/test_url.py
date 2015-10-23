@@ -8,7 +8,8 @@ Tests for L{twisted.python.url}.
 
 from __future__ import unicode_literals
 
-from twisted.python.url import URL
+from ..url import URL
+unicode = type(u'')
 from twisted.trial.unittest import TestCase
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
@@ -563,7 +564,7 @@ class TestURL(TestCase):
         expectedURI = 'http://xn--9ca.com/%C3%A9?%C3%A1=%C3%AD#%C3%BA'
         actualURI = uri.asText()
         self.assertEqual(actualURI, expectedURI,
-                         b'%r != %r' % (actualURI, expectedURI))
+                         '%r != %r' % (actualURI, expectedURI))
 
 
     def test_asIRI(self):
@@ -584,4 +585,4 @@ class TestURL(TestCase):
                        '#\N{LATIN SMALL LETTER U WITH ACUTE}')
         actualIRI = iri.asText()
         self.assertEqual(actualIRI, expectedIRI,
-                         b'%r != %r' % (actualIRI, expectedIRI))
+                         '%r != %r' % (actualIRI, expectedIRI))
