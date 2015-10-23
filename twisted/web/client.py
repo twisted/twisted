@@ -1134,6 +1134,9 @@ class _RetryingHTTP11ClientProtocol(object):
         user-requested cancellation, and no body was sent. The latter
         requirement may be relaxed in the future, and PUT added to approved
         method list.
+
+        @param method: The method of the request.
+        @type method: L{bytes}
         """
         if method not in (b"GET", b"HEAD", b"OPTIONS", b"DELETE", b"TRACE"):
             return False
@@ -1631,21 +1634,27 @@ class _FakeUrllib2Request(object):
 
     @see: U{http://docs.python.org/library/urllib2.html#request-objects}
 
-    @type uri: C{str}
+    @type uri: native L{str}
     @ivar uri: Request URI.
 
     @type headers: L{twisted.web.http_headers.Headers}
     @ivar headers: Request headers.
 
-    @type type: C{str}
+    @type type: native L{str}
     @ivar type: The scheme of the URI.
 
-    @type host: C{str}
+    @type host: native L{str}
     @ivar host: The host[:port] of the URI.
 
     @since: 11.1
     """
     def __init__(self, uri):
+        """
+        Create a fake Urllib2 request.
+
+        @param uri: Request URI.
+        @type uri: L{bytes}
+        """
         self.uri = nativeString(uri)
         self.headers = Headers()
 
