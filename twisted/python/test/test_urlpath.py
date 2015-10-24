@@ -89,9 +89,8 @@ class _BaseURLPathTests(object):
         result in a URL with a single slash at the start of the path portion.
         """
         self.assertEqual(
-            str(urlpath.URLPath.fromBytes(b"http://localhost/")
-                .click(b"/hello/world")).encode("ascii"),
-            b"http://localhost/hello/world"
+            str(self.path.click(b"/hello/world")).encode("ascii"),
+            b"http://example.com/hello/world"
         )
 
 
