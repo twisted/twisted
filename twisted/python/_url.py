@@ -1,4 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_url -*-
+# -*- coding: utf-8 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
