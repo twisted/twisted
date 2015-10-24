@@ -329,7 +329,7 @@ class URL(object):
     @see: U{RFC 3986, Uniform Resource Identifier (URI): Generic Syntax
         <https://tools.ietf.org/html/rfc3986>}
     @see: U{RFC 3987, Internationalized Resource Identifiers
-        <https://tools.ietf.org/html/rfc3986>}
+        <https://tools.ietf.org/html/rfc3987>}
 
     @ivar scheme: The URI scheme.
     @type scheme: L{unicode}
