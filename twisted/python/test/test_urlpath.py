@@ -109,6 +109,15 @@ class _BaseURLPathTests(object):
             self.path.child(b"%00%01%02").pathList(),
             [b"", b"foo", b"bar", b"%00%01%02"]
         )
+
+        # Just testing that the 'copy' argument exists for compatibility; it
+        # was originally provided for performance reasons, and its behavioral
+        # contract is kind of nonsense (where is the state shared? who with?)
+        # so it doesn't actually *do* anything any more.
+        self.assertEqual(
+            self.path.child(b"%00%01%02").pathList(copy=False),
+            [b"", b"foo", b"bar", b"%00%01%02"]
+        )
         self.assertEqual(
             self.path.child(b"%00%01%02").pathList(unquote=True),
             [b"", b"foo", b"bar", b"\x00\x01\x02"]
