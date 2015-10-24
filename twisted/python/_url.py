@@ -356,7 +356,7 @@ class URL(object):
 
     def __init__(self, scheme=None, host=None, pathSegments=None,
                  queryParameters=None, fragment=None, port=None,
-                 rooted=True):
+                 rooted=None):
         """
         Create a new L{URL} from structured information about itself.
 
@@ -388,7 +388,7 @@ class URL(object):
         """
         # Fall back to defaults.
         if pathSegments is None:
-            pathSegments = [u'']
+            pathSegments = []
         if queryParameters is None:
             queryParameters = []
         if fragment is None:
@@ -397,16 +397,20 @@ class URL(object):
             scheme = u'http'
         if port is None:
             port = _schemeDefaultPorts.get(scheme)
+        if host and queryParameters and not pathSegments:
+            pathSegments = [u'']
 
         # Set attributes.
-        self._scheme = _checkUnicodeOrNone(scheme)
-        self._host = _checkUnicodeOrNone(host)
+        self._scheme = _checkUnicodeOrNone(scheme) or u''
+        self._host = _checkUnicodeOrNone(host) or u''
         self._pathSegments = tuple(map(_checkUnicodeOrNone, pathSegments))
         self._queryParameters = tuple((_checkUnicodeOrNone(k),
                                        _checkUnicodeOrNone(v)) for (k, v) in
                                       queryParameters)
         self._fragment = _checkUnicodeOrNone(fragment)
         self._port = port
+        if rooted is None:
+            rooted = bool(host)
         self._rooted = rooted
 
     scheme = property(lambda self: self._scheme)
@@ -457,7 +461,7 @@ class URL(object):
         Is this URL complete enough to resolve a resource without resolution
         relative to a base-URI?
         """
-        return bool(self.scheme and self.host and self.rooted)
+        return bool(self.scheme and self.host)
 
 
     def replace(self, scheme=_unspecified, host=_unspecified,
@@ -572,7 +576,8 @@ class URL(object):
             raise TypeError("Given path must be unicode.")
         return self.replace(
             pathSegments=self.pathSegments[
-                :-1 if self.pathSegments[-1] == u'' else None
+                :-1 if (self.pathSegments and self.pathSegments[-1] == u'')
+                else None
             ] + (segment,)
         )
 
