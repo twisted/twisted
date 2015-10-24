@@ -885,8 +885,12 @@ class SSHFactoryTests(unittest.TestCase):
         p2 = f2.buildProtocol(None)
         self.assertNotIn(
             'diffie-hellman-group-exchange-sha1', p1.supportedKeyExchanges)
+        self.assertNotIn(
+            'diffie-hellman-group-exchange-sha256', p1.supportedKeyExchanges)
         self.assertIn(
             'diffie-hellman-group-exchange-sha1', p2.supportedKeyExchanges)
+        self.assertIn(
+            'diffie-hellman-group-exchange-sha256', p2.supportedKeyExchanges)
 
 
 

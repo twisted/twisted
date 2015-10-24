@@ -58,6 +58,7 @@ class SSHFactory(protocol.Factory):
                     'cannot find moduli file')
             ske = t.supportedKeyExchanges[:]
             ske.remove('diffie-hellman-group-exchange-sha1')
+            ske.remove('diffie-hellman-group-exchange-sha256')
             t.supportedKeyExchanges = ske
         return t
 
