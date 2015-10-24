@@ -421,6 +421,17 @@ class URL(object):
     fragment = property(lambda self: self._fragment)
     rooted = property(lambda self: self._rooted)
 
+    @property
+    def authority(self):
+        """
+        The authority (network location) portion of the URL.
+        """
+        if self.port == _schemeDefaultPorts.get(self.scheme):
+            return self.host
+        else:
+            return u"{host}:{port}".format(host=self.host,
+                                           port=self.port)
+
 
     def __eq__(self, other):
         """
@@ -709,12 +720,8 @@ class URL(object):
             )
             for (k, v) in self.queryParameters
         )
-        if self.port == _schemeDefaultPorts.get(self.scheme):
-            authority = self.host
-        else:
-            authority = u"{host}:{port}".format(host=self.host,
-                                                port=self.port)
-        return urlunsplit((self.scheme, authority, path, query, self.fragment))
+        return urlunsplit((self.scheme, self.authority, path, query,
+                           self.fragment))
 
 
     def __repr__(self):
