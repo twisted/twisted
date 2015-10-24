@@ -471,6 +471,21 @@ class TestURL(TestCase):
         self.assertEqual(u.asText(), 'http://localhost/?foo=x%3Dx%3Dx&bar=y')
 
 
+    def test_empty(self):
+        """
+        An empty L{URL} should serialize as the empty string.
+        """
+        self.assertEqual(URL().asText(), u'')
+
+
+    def test_justQueryText(self):
+        """
+        An L{URL} with query text should serialize as just query text.
+        """
+        u = URL(queryParameters=[(u"hello", u"world")])
+        self.assertEqual(u.asText(), u'?hello=world')
+
+
     def test_identicalEqual(self):
         """
         L{URL} compares equal to itself.
