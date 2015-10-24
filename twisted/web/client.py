@@ -1439,14 +1439,21 @@ class _StandardEndpointFactory(object):
         if self._connectTimeout is not None:
             kwargs['timeout'] = self._connectTimeout
         kwargs['bindAddress'] = self._bindAddress
+
+        try:
+            host = nativeString(uri.host)
+        except UnicodeDecodeError:
+            raise ValueError(("The host of the provided URI ({uri.host!r}) "
+                              "contains non-ASCII octets, it should be ASCII "
+                              "decodable.").format(uri=uri))
+
         if uri.scheme == b'http':
-            return TCP4ClientEndpoint(
-                self._reactor, nativeString(uri.host), uri.port, **kwargs)
+            return TCP4ClientEndpoint(self._reactor, host, uri.port, **kwargs)
         elif uri.scheme == b'https':
-            tlsPolicy = self._policyForHTTPS.creatorForNetloc(uri.host, uri.port)
-            return SSL4ClientEndpoint(self._reactor, nativeString(uri.host),
-                                      uri.port,
-                                      tlsPolicy, **kwargs)
+            tlsPolicy = self._policyForHTTPS.creatorForNetloc(uri.host,
+                                                              uri.port)
+            return SSL4ClientEndpoint(self._reactor, host, uri.port, tlsPolicy,
+                                      **kwargs)
         else:
             raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
 
