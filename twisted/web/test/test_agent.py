@@ -862,6 +862,23 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertIsInstance(endpoint, TCP4ClientEndpoint)
 
 
+    def test_nonDecodableURI(self):
+        """
+        L{Agent._getEndpoint} when given a non-ASCII decodable URI will raise a
+        L{ValueError} saying such.
+        """
+        uri = URI.fromBytes(b"http://example.com:80")
+        uri.host = u'\u2603.com'.encode('utf8')
+
+        with self.assertRaises(ValueError) as e:
+            self.agent._getEndpoint(uri)
+
+        self.assertEqual(e.exception.args[0],
+                         ("The host of the provided URI ({reprout}) contains "
+                          "non-ASCII octets, it should be ASCII "
+                          "decodable.").format(reprout=repr(uri.host)))
+
+
     def test_connectHTTPSCustomContextFactory(self):
         """
         If a context factory is passed to L{Agent.__init__} it will be used to
