@@ -522,17 +522,22 @@ if _PY3:
     from html import escape
     from urllib.parse import quote as urlquote
     from urllib.parse import unquote as urlunquote
+    from http import cookiejar as cookielib
 else:
     import urlparse as urllib_parse
     from cgi import escape
     from urllib import quote as urlquote
     from urllib import unquote as urlunquote
+    import cookielib
 
 
 # Dealing with the differences in items/iteritems
 if _PY3:
     def iteritems(d):
         return d.items()
+
+    def itervalues(d):
+        return d.values()
 
     def items(d):
         return list(d.items())
@@ -542,6 +547,9 @@ if _PY3:
 else:
     def iteritems(d):
         return d.iteritems()
+
+    def itervalues(d):
+        return d.itervalues()
 
     def items(d):
         return d.items()
@@ -553,6 +561,13 @@ else:
 
 iteritems.__doc__ = """
 Return an iterable of the items of C{d}.
+
+@type d: L{dict}
+@rtype: iterable
+"""
+
+itervalues.__doc__ = """
+Return an iterable of the values of C{d}.
 
 @type d: L{dict}
 @rtype: iterable
@@ -641,10 +656,12 @@ __all__ = [
     "FileType",
     "items",
     "iteritems",
+    "itervalues",
     "xrange",
     "urllib_parse",
     "bytesEnviron",
     "escape",
     "urlquote",
     "urlunquote",
+    "cookielib",
 ]
