@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.python.test.test_urlpath -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -14,11 +15,13 @@ class _BaseURLPathTests(object):
     """
     Tests for instantiated L{urlpath.URLPath}s.
     """
+
     def test_strReturnsStr(self):
         """
         Calling C{str()} with a L{URLPath} will always return a L{str}.
         """
         self.assertEqual(type(self.path.__str__()), str)
+
 
     def test_stringConversion(self):
         """
@@ -27,6 +30,7 @@ class _BaseURLPathTests(object):
         """
         self.assertEqual(str(self.path),
                          "http://example.com/foo/bar?yes=no&no=yes#footer")
+
 
     def test_childString(self):
         """
@@ -37,6 +41,7 @@ class _BaseURLPathTests(object):
                          "http://example.com/foo/bar/hello")
         self.assertEqual(str(self.path.child(b'hello').child(b'')),
                          "http://example.com/foo/bar/hello/")
+
 
     def test_siblingString(self):
         """
@@ -53,12 +58,13 @@ class _BaseURLPathTests(object):
         self.assertEqual(str(self.path.child(b'').sibling(b'baz')),
                          'http://example.com/foo/bar/baz')
 
+
     def test_parentString(self):
         """
         Calling C{str()} with a C{URLPath.parent()} will return a URL which is
         the parent of the URL it was instantiated with.
         """
-        # parent should be equivalent to '..'
+        # .parent() should be equivalent to '..'
         # 'foo' is the current directory, '/' is the parent directory
         self.assertEqual(str(self.path.parent()),
                          'http://example.com/')
@@ -70,13 +76,14 @@ class _BaseURLPathTests(object):
             str(self.path.parent().parent().parent().parent().parent()),
             'http://example.com/')
 
+
     def test_hereString(self):
         """
         Calling C{str()} with a C{URLPath.here()} will return a URL which is
         the URL that it was instantiated with, without any file, query, or
         fragment.
         """
-        # here should be equivalent to '.'
+        # .here() should be equivalent to '.'
         self.assertEqual(str(self.path.here()), 'http://example.com/foo/')
         self.assertEqual(str(self.path.child(b'').here()),
                          'http://example.com/foo/bar/')
@@ -92,6 +99,7 @@ class _BaseURLPathTests(object):
             str(self.path.click(b"/hello/world")).encode("ascii"),
             b"http://example.com/hello/world"
         )
+
 
 
 class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
