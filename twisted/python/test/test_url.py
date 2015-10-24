@@ -129,11 +129,13 @@ class TestURL(TestCase):
         """
         L{URL} should have appropriate default values.
         """
-        for u in [URL(u'http', u''),
-                  URL(u'http', u'', None, None, None),
-                  URL(u'http', u'', [u''], [], u'')]:
+        def check(u):
             self.assertUnicoded(u)
-            self.assertURL(u, u'http', u'', [u''], [], u'', 80)
+            self.assertURL(u, u'http', u'', [], [], u'', 80)
+
+        check(URL(u'http', u''))
+        check(URL(u'http', u'', None, None, None))
+        check(URL(u'http', u'', [], [], u''))
 
 
     def test_init(self):
