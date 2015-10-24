@@ -41,6 +41,8 @@ class _BaseURLPathTests(object):
                          "http://example.com/foo/bar/hello")
         self.assertEqual(str(self.path.child(b'hello').child(b'')),
                          "http://example.com/foo/bar/hello/")
+        self.assertEqual(str(self.path.child(b'hello', keepQuery=True)),
+                         "http://example.com/foo/bar/hello?yes=no&no=yes")
 
 
     def test_siblingString(self):
@@ -50,6 +52,8 @@ class _BaseURLPathTests(object):
         """
         self.assertEqual(str(self.path.sibling(b'baz')),
                          'http://example.com/foo/baz')
+        self.assertEqual(str(self.path.sibling(b'baz', keepQuery=True)),
+                         "http://example.com/foo/baz?yes=no&no=yes")
 
         # The sibling of http://example.com/foo/bar/
         #     is http://example.comf/foo/bar/baz
@@ -68,6 +72,8 @@ class _BaseURLPathTests(object):
         # 'foo' is the current directory, '/' is the parent directory
         self.assertEqual(str(self.path.parent()),
                          'http://example.com/')
+        self.assertEqual(str(self.path.parent(keepQuery=True)),
+                         'http://example.com/?yes=no&no=yes')
         self.assertEqual(str(self.path.child(b'').parent()),
                          'http://example.com/foo/')
         self.assertEqual(str(self.path.child(b'baz').parent()),
@@ -85,6 +91,8 @@ class _BaseURLPathTests(object):
         """
         # .here() should be equivalent to '.'
         self.assertEqual(str(self.path.here()), 'http://example.com/foo/')
+        self.assertEqual(str(self.path.here(keepQuery=True)),
+                         'http://example.com/foo/?yes=no&no=yes')
         self.assertEqual(str(self.path.child(b'').here()),
                          'http://example.com/foo/bar/')
 
