@@ -319,7 +319,11 @@ class URL(object):
     these representations according to certain rules.  L{URL} exposes these
     conversions as methods::
 
-        
+        >>> URL.fromText(u"https://→example.com/foo⇧bar/").asURI()
+        URL.fromText(u'https://xn--example-dk9c.com/foo%E2%87%A7bar/')
+        >>> (URL.fromText(u'https://xn--example-dk9c.com/foo%E2%87%A7bar/')
+             .asIRI())
+        URL.fromText(u'https://\u2192example.com/foo\u21e7bar/')
 
     @see: U{RFC 3986, Uniform Resource Identifier (URI): Generic Syntax
         <https://tools.ietf.org/html/rfc3986>}
