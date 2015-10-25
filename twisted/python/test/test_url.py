@@ -667,3 +667,14 @@ class TestURL(TestCase):
             url.replace(userinfo=u"someuser").asText(),
             'http://someuser@example.com/some-segment@ignore'
         )
+
+
+    def test_mailto(self):
+        """
+        Although L{URL} instances are mainly for dealing with HTTP, other
+        schemes (such as C{mailto:}) should work as well.  For example,
+        L{URL.fromText}/L{URL.asText} should round-trip cleanly for an email
+        address.
+        """
+        self.assertEqual(URL.fromText(u"mailto:user@example.com").asText(),
+                         u"mailto:user@example.com")
