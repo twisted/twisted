@@ -85,8 +85,15 @@ def _percentDecode(text):
     @return: the encoded version of C{text}
     @rtype: L{unicode}
     """
-    return urlunquote(text.encode("ascii")).decode("utf-8")
-
+    try:
+        quotedBytes = text.encode("ascii")
+    except UnicodeEncodeError:
+        return text
+    unquotedBytes = urlunquote(quotedBytes)
+    try:
+        return unquotedBytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return text
 
 
 def _resolveDotSegments(pathSegments):
@@ -704,8 +711,14 @@ class URL(object):
             hostname appropriately decoded.
         @rtype: L{URL}
         """
+        try:
+            asciiHost = self.host.encode("ascii")
+        except UnicodeEncodeError:
+            textHost = self.host
+        else:
+            textHost = asciiHost.decode("idna")
         return self.replace(
-            host=self.host.encode("ascii").decode("idna"),
+            host=textHost,
             pathSegments=[_percentDecode(segment)
                           for segment in self.pathSegments],
             queryParameters=[
