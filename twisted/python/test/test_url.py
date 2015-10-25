@@ -399,66 +399,66 @@ class TestURL(TestCase):
 
     def test_queryAdd(self):
         """
-        L{URL.query.add} adds query parameters.
+        L{URL.add} adds query parameters.
         """
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?foo=bar",
             URL.fromText("http://www.foo.com/a/nice/path/")
-            .query.add(u"foo", u"bar").asText())
+            .add(u"foo", u"bar").asText())
         self.assertEquals(
             "http://www.foo.com/?foo=bar",
-            URL(host=u"www.foo.com").query.add(u"foo", u"bar")
+            URL(host=u"www.foo.com").add(u"foo", u"bar")
             .asText())
         urlpath = URL.fromText(theurl)
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp",
-            urlpath.query.add(u"burp").asText())
+            urlpath.add(u"burp").asText())
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx",
-            urlpath.query.add(u"burp", u"xxx").asText())
+            urlpath.add(u"burp", u"xxx").asText())
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zing",
-            urlpath.query.add(u"burp", u"xxx").query.add(u"zing").asText())
+            urlpath.add(u"burp", u"xxx").add(u"zing").asText())
         # Note the inversion!
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&zing&burp=xxx",
-            urlpath.query.add(u"zing").query.add(u"burp", u"xxx").asText())
+            urlpath.add(u"zing").add(u"burp", u"xxx").asText())
         # Note the two values for the same name.
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zot=32",
-            urlpath.query.add(u"burp", u"xxx").query.add(u"zot", u'32')
+            urlpath.add(u"burp", u"xxx").add(u"zot", u'32')
             .asText())
 
 
     def test_querySet(self):
         """
-        L{URL.query.set} replaces query parameters by name.
+        L{URL.set} replaces query parameters by name.
         """
         urlpath = URL.fromText(theurl)
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=32&zut",
-            urlpath.query.set(u"zot", u'32').asText())
+            urlpath.set(u"zot", u'32').asText())
         # Replace name without value with name/value and vice-versa.
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot&zut=itworked",
-            urlpath.query.set(u"zot").query.set(u"zut", u"itworked").asText()
+            urlpath.set(u"zot").set(u"zut", u"itworked").asText()
         )
         # Q: what happens when the query has two values and we replace?
         # A: we replace both values with a single one
         self.assertEquals(
             "http://www.foo.com/a/nice/path/?zot=32&zut",
-            urlpath.query.add(u"zot", u"xxx").query.set(u"zot", u'32').asText()
+            urlpath.add(u"zot", u"xxx").set(u"zot", u'32').asText()
         )
 
 
     def test_clear(self):
         """
-        L{URL.query.clear} removes all query parameters.
+        L{URL.clear} removes all query parameters.
         """
         urlpath = URL.fromText(theurl)
         self.assertEquals(
             "http://www.foo.com/a/nice/path/",
-            urlpath.query.clear().asText())
+            urlpath.clear().asText())
 
 
     def test_parseEqualSignInParamValue(self):
@@ -467,7 +467,7 @@ class TestURL(TestCase):
         in the value of the parameter.
         """
         u = URL.fromText('http://localhost/?=x=x=x')
-        self.assertEqual(u.query.get(u''), ['x=x=x'])
+        self.assertEqual(u.get(u''), ['x=x=x'])
         self.assertEqual(u.asText(), 'http://localhost/?=x%3Dx%3Dx')
         u = URL.fromText('http://localhost/?foo=x=x=x&bar=y')
         self.assertEqual(u.queryParameters, (('foo', 'x=x=x'),

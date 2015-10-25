@@ -181,106 +181,6 @@ _schemeDefaultPorts = {
 }
 
 
-class Query(object):
-    """
-    A L{Query} represents the query portion of a L{URL}; the part after the
-    C{?}.
-    """
-
-    def __init__(self, url):
-        """
-        Construct a L{Query} from a L{URL}.
-        """
-        self._url = url
-
-
-    def add(self, name, value=None):
-        """
-        Add a query argument with the given value None indicates that the
-        argument has no value.
-
-        @param name: The name (the part before the C{=}) of the query parameter
-            to add.
-
-        @param value: The value (the part after the C{=}) of the query
-            parameter to add.
-
-        @return: a new L{URL} with the parameter added.
-        """
-        _checkUnicodeOrNone(name)
-        _checkUnicodeOrNone(value)
-
-        return self._url.replace(
-            queryParameters=self._url.queryParameters + ((name, value),)
-        )
-
-
-    def set(self, name, value=None):
-        """
-        Remove all existing occurrences of the query argument 'name', *if it
-        exists*, then add the argument with the given value.
-
-        C{None} indicates that the argument has no value.
-
-        @param name: The name (the part before the C{=}) of the query parameter
-            to add.
-
-        @param value: The value (the part after the C{=}) of the query
-            parameter to add.
-
-        @return: a new L{URL} with the parameter added or changed.
-        """
-        if (not isinstance(name, unicode) or
-            not isinstance(value, (unicode, None.__class__))):
-            raise TypeError("name and value must be unicode.")
-        # Preserve the original position of the query key in the list
-        for (i, (k, v)) in enumerate(self._url.queryParameters):
-            if k == name:
-                break
-        q = list(filter(lambda x: x[0] != name, self._url.queryParameters))
-        q.insert(i, (name, value))
-        return self._url.replace(queryParameters=q)
-
-
-    def get(self, name):
-        """
-        Retrieve a list of values for the given named query parameter.
-
-        @param name: The name of the query parameter to retrieve.
-
-        @return: all the values associated with the key; for example, for the
-            query string C{u"x=1&x=2"}, C{url.query.get(u"x")} would return
-            C{[u'1', u'2']}; C{url.query.get(u"y")} (since there is no C{"y"}
-            parameter) would return the empty list, C{[]}.
-        @rtype: L{list} of L{unicode}
-        """
-        return [value for (key, value) in self._url.queryParameters
-                if name == key]
-
-
-    def remove(self, name):
-        """
-        Remove all query arguments with the given name.
-
-        @param name: The name of the query parameter to remove.
-
-        @return: a new L{URL} with the parameter removed.
-        """
-        if not isinstance(name, (unicode, None.__class__)):
-            raise TypeError("name  must be unicode.")
-        return self._url.replace(filter(lambda x: x[0] != name,
-                                   self._url.queryParameters))
-
-
-    def clear(self):
-        """
-        Remove all existing query arguments.
-
-        @return: a new L{URL} with the entire query string removed.
-        """
-        return self._url.replace(queryParameters=())
-
-
 
 class URL(object):
     """
@@ -760,3 +660,93 @@ class URL(object):
         its constituent parts.
         """
         return ('URL.fromText({})').format(repr(self.asText()))
+
+
+    def add(self, name, value=None):
+        """
+        Add a query argument with the given value None indicates that the
+        argument has no value.
+
+        @param name: The name (the part before the C{=}) of the query parameter
+            to add.
+
+        @param value: The value (the part after the C{=}) of the query
+            parameter to add.
+
+        @return: a new L{URL} with the parameter added.
+        """
+        _checkUnicodeOrNone(name)
+        _checkUnicodeOrNone(value)
+
+        return self.replace(
+            queryParameters=self.queryParameters + ((name, value),)
+        )
+
+
+    def set(self, name, value=None):
+        """
+        Remove all existing occurrences of the query argument 'name', *if it
+        exists*, then add the argument with the given value.
+
+        C{None} indicates that the argument has no value.
+
+        @param name: The name (the part before the C{=}) of the query parameter
+            to add.
+
+        @param value: The value (the part after the C{=}) of the query
+            parameter to add.
+
+        @return: a new L{URL} with the parameter added or changed.
+        """
+        if (not isinstance(name, unicode) or
+            not isinstance(value, (unicode, None.__class__))):
+            raise TypeError("name and value must be unicode.")
+        # Preserve the original position of the query key in the list
+        for (i, (k, v)) in enumerate(self.queryParameters):
+            if k == name:
+                break
+        q = list(filter(lambda x: x[0] != name, self.queryParameters))
+        q.insert(i, (name, value))
+        return self.replace(queryParameters=q)
+
+
+    def get(self, name):
+        """
+        Retrieve a list of values for the given named query parameter.
+
+        @param name: The name of the query parameter to retrieve.
+
+        @return: all the values associated with the key; for example, for the
+            query string C{u"x=1&x=2"}, C{url.query.get(u"x")} would return
+            C{[u'1', u'2']}; C{url.query.get(u"y")} (since there is no C{"y"}
+            parameter) would return the empty list, C{[]}.
+        @rtype: L{list} of L{unicode}
+        """
+        return [value for (key, value) in self.queryParameters
+                if name == key]
+
+
+    def remove(self, name):
+        """
+        Remove all query arguments with the given name.
+
+        @param name: The name of the query parameter to remove.
+
+        @return: a new L{URL} with the parameter removed.
+        """
+        if not isinstance(name, (unicode, None.__class__)):
+            raise TypeError("name  must be unicode.")
+        return self.replace(filter(lambda x: x[0] != name,
+                                   self.queryParameters))
+
+
+    def clear(self):
+        """
+        Remove all existing query arguments.
+
+        @return: a new L{URL} with the entire query string removed.
+        """
+        return self.replace(queryParameters=())
+
+
+
