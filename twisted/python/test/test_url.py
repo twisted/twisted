@@ -191,7 +191,7 @@ class TestURL(TestCase):
 
     def test_roundtrip(self):
         """
-        L{URL.__str__} should invert L{URL.fromText}.
+        L{URL.asText} should invert L{URL.fromText}.
         """
         tests = (
             "http://localhost",
