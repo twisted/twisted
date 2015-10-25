@@ -442,8 +442,7 @@ class URL(object):
 
     def __eq__(self, other):
         """
-        L{URL}s are equal to L{URL} objects that are structurally similar to
-        themselves.
+        L{URL}s are equal to L{URL} objects whose attributes are equal.
         """
         if not isinstance(other, self.__class__):
             return NotImplemented
@@ -456,8 +455,7 @@ class URL(object):
 
     def __ne__(self, other):
         """
-        L{URL}s are unequal (i.e. C{!=} is True) to L{URL} objects that are
-        structurally similar to themselves.
+        L{URL}s are unequal to L{URL} objects whose attributes are unequal.
         """
         if not isinstance(other, self.__class__):
             return NotImplemented
