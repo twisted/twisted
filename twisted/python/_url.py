@@ -662,7 +662,13 @@ class URL(object):
 
     def asURI(self):
         """
-        Apply percent-encoding rules to convert this L{URL} into a URI.
+        Convert a L{URL} object that potentially contains non-ASCII characters
+        into a L{URL} object where all non-ASCII text has been encoded
+        appropriately.  This is useful to do in preparation for sending a
+        L{URL}, or portions of it, over a wire protocol.  For example::
+
+            >>> URL.fromText(u"https://→example.com/foo⇧bar/").asURI()
+            URL.fromText(u'https://xn--example-dk9c.com/foo%E2%87%A7bar/')
 
         @return: a new L{URL} with its path-segments, query-parameters, and
             hostname appropriately decoded, so that they are all in the
@@ -685,7 +691,15 @@ class URL(object):
 
     def asIRI(self):
         """
-        Apply percent-decoding rules to convert this L{URL} into an IRI.
+        Convert a L{URL} object that potentially contains text that has been
+        percent-encoded or IDNA encoded into a L{URL} object containing the
+        text as it should be presented to a human for reading.
+
+        For example::
+
+            >>> (URL.fromText(u'https://xn--example-dk9c.com/foo%E2%87%A7bar/')
+                 .asIRI())
+            URL.fromText(u'https://\u2192example.com/foo\u21e7bar/')
 
         @return: a new L{URL} with its path-segments, query-parameters, and
             hostname appropriately decoded.
