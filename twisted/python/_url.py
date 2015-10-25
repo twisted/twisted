@@ -687,8 +687,9 @@ class URL(object):
             C{u"http://example.com/some/path?some=query"}.
         @rtype: L{unicode}
         """
-        path = u'/'.join([u''] + [_minimalPercentEncode(segment, _validInPath)
-                                  for segment in self.path])
+        path = u'/'.join(([u''] if self.rooted else [])
+                         + [_minimalPercentEncode(segment, _validInPath)
+                            for segment in self.path])
         query = '&'.join(
             u'='.join((_minimalPercentEncode(x, _validInQuery)
                        for x in ([k] if v is None else [k, v])))
