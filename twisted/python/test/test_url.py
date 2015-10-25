@@ -10,7 +10,7 @@ from __future__ import unicode_literals
 
 from ..url import URL
 unicode = type(u'')
-from twisted.trial.unittest import TestCase
+from unittest import TestCase
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 
@@ -308,8 +308,8 @@ class TestURL(TestCase):
                           urlpath.click("?burp").asText())
         # One full url to another should not generate '//' between authority.
         # and pathSegments
-        self.failIfIn("//foobar",
-                      urlpath.click('http://www.foo.com/foobar').asText())
+        self.assertNotIn("//foobar",
+                         urlpath.click('http://www.foo.com/foobar').asText())
 
         # From a url with no query clicking a url with a query, the query
         # should be handled properly.
