@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 from ..url import URL
 unicode = type(u'')
 from unittest import TestCase
-from collections import OrderedDict
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 
