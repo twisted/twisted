@@ -759,8 +759,7 @@ class URL(object):
             parameter) would return the empty list, C{[]}.
         @rtype: L{list} of L{unicode}
         """
-        return [value for (key, value) in self.query
-                if name == key]
+        return [value for (key, value) in self.query if name == key]
 
 
     def remove(self, name):
