@@ -235,6 +235,8 @@ class TestURL(TestCase):
         to an URL created with C{None} for a fragment.
         """
         self.assertEqual(URL(fragment=u''), URL(fragment=None))
+        self.assertEqual(URL.fromText(u"http://localhost/#"),
+                         URL.fromText(u"http://localhost/"))
 
 
     def test_child(self):
