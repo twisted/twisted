@@ -143,21 +143,6 @@ def _checkUnicodeOrNone(s):
 
 
 
-def _maybe(f, x):
-    """
-    Call C{f} on C{x} if C{x} is not None.
-
-    @param f: a 1-argument callable taking C{x} and returning something
-
-    @param x: a value (or C{None})
-
-    @return: C{f(x)} or C{None}.
-    """
-    if x is not None:
-        return f(x)
-
-
-
 _unspecified = object()
 
 def _optional(argument, default):
