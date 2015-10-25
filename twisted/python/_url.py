@@ -96,6 +96,7 @@ def _percentDecode(text):
         return text
 
 
+
 def _resolveDotSegments(pathSegments):
     """
     Normalise the URL path by resolving segments of '.' and '..'.
