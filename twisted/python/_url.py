@@ -15,6 +15,7 @@ except ImportError:
                               quote as urlquote,
                               unquote_to_bytes as urlunquote)
 
+from collections import Sequence
 from unicodedata import normalize
 
 # Zero dependencies within Twisted: this module should probably be spun out
@@ -30,6 +31,7 @@ _validInPath = _subDelims + u':@'
 _validInFragment = _validInPath + u'/?'
 _validInQuery = (_validInFragment
                  .replace(u'&', u'').replace(u'=', u'').replace(u'+', u''))
+
 
 
 def _minimalPercentEncode(text, safe):
@@ -49,6 +51,53 @@ def _minimalPercentEncode(text, safe):
     unsafe = set(_genDelims + _subDelims) - set(safe)
     return u''.join((c if c not in unsafe else "%{:02X}".format(ord(c)))
                     for c in text)
+
+
+
+def _querify(args, kw):
+    """
+    Convert the given args and kwargs into a query fragment.  For an
+    explanation of the rules this uses to convert between argument signatures
+    and query parameters, see L{URL.add}.
+
+    @param args: a tuple of positional arguments
+
+    @param kw: a dictionary of keyword arguments
+
+    @return: an n-tuple of 2-tuples of unicode (key, value) query parameters
+        represented by the given args and kwargs.
+    """
+    def _primitive(p):
+        if isinstance(p, unicode):
+            return p
+        elif isinstance(p, (float, int)):
+            return unicode(p)
+    def _subnormalize(q):
+        for k, v in q:
+            if v is None or isinstance(v, unicode):
+                yield unicode(k), v
+            elif isinstance(v, Sequence):
+                for vv in v:
+                    yield unicode(k), _primitive(vv)
+            else:
+                yield unicode(k), _primitive(v)
+
+    def _normalize(q):
+        return tuple(_subnormalize(q))
+    def _querifyDict(d):
+        return _normalize(sorted(d.items()))
+    if len(args) == 2:
+        name, value = args
+        return _normalize([(name, value)])
+    elif len(args) == 1:
+        if isinstance(args[0], unicode):
+            return _normalize([(args[0], None)])
+        elif isinstance(args[0], dict):
+            return _querifyDict(args[0])
+    elif len(args) == 0:
+        return _querifyDict(kw)
+    # else:
+    #     raise TypeError()
 
 
 
@@ -655,24 +704,13 @@ class URL(object):
         return ('URL.fromText({})').format(repr(self.asText()))
 
 
-    def add(self, name, value=None):
+    def add(self, *args, **kw):
         """
         Add a query argument with the given value None indicates that the
         argument has no value.
-
-        @param name: The name (the part before the C{=}) of the query parameter
-            to add.
-
-        @param value: The value (the part after the C{=}) of the query
-            parameter to add.
-
-        @return: a new L{URL} with the parameter added.
         """
-        _checkUnicodeOrNone(name)
-        _checkUnicodeOrNone(value)
-
         return self.replace(
-            queryParameters=self.queryParameters + ((name, value),)
+            queryParameters=self.queryParameters + _querify(args, kw)
         )
 
 
