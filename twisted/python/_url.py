@@ -315,9 +315,8 @@ class URL(object):
     @type rooted: L{bool}
     """
 
-    def __init__(self, scheme=None, host=None, path=None,
-                 query=None, fragment=None, port=None,
-                 rooted=None):
+    def __init__(self, scheme=None, host=None, path=None, query=None,
+                 fragment=None, port=None, rooted=None):
         """
         Create a new L{URL} from structured information about itself.
 
