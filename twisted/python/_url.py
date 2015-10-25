@@ -661,7 +661,7 @@ class URL(object):
 
         @return: a new L{URL} with the parameter added or changed.
         """
-        return self.replace(query=self.query + (name, value))
+        return self.replace(query=self.query + ((name, value),))
 
 
     def set(self, name, value=None):
@@ -679,9 +679,6 @@ class URL(object):
 
         @return: a new L{URL} with the parameter added or changed.
         """
-        if (not isinstance(name, unicode) or
-            not isinstance(value, (unicode, None.__class__))):
-            raise TypeError("name and value must be unicode.")
         # Preserve the original position of the query key in the list
         q = [(k, v) for (k, v) in self.query if k != name]
         idx = next((i for (i, (k, v)) in enumerate(self.query)

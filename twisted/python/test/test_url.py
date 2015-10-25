@@ -417,10 +417,6 @@ class TestURL(TestCase):
             URL.fromText("http://www.foo.com/a/nice/path/")
             .add(u"foo", u"bar").asText())
         self.assertEquals(
-            "http://www.foo.com/a/nice/path/?foo=bar",
-            URL.fromText("http://www.foo.com/a/nice/path/")
-            .add(foo=u"bar").asText())
-        self.assertEquals(
             "http://www.foo.com/?foo=bar",
             URL(host=u"www.foo.com").add(u"foo", u"bar")
             .asText())
