@@ -244,7 +244,9 @@ class Query(object):
         @param name: The name of the query parameter to retrieve.
 
         @return: all the values associated with the key; for example, for the
-            query string x=1&x=2, C{[u'1', u'2']}
+            query string C{u"x=1&x=2"}, C{url.query.get(u"x")} would return
+            C{[u'1', u'2']}; C{url.query.get(u"y")} (since there is no C{"y"}
+            parameter) would return the empty list, C{[]}.
         @rtype: L{list} of L{unicode}
         """
         return [value for (key, value) in self._url.queryParameters
