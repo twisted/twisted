@@ -242,6 +242,14 @@ class URL(object):
     @ivar scheme: The URI scheme.
     @type scheme: L{unicode}
 
+    @ivar user: The username portion of the URL, if specified; otherwise the
+        empty string.
+    @type user: L{unicode}
+
+    @ivar userinfo: The username and password portions of the URL, if
+        specified, separated with colons.  If not specified, the empty string.
+    @type userinfo: L{unicode}
+
     @ivar host: The host name.
     @type host: L{unicode}
 
@@ -296,6 +304,10 @@ class URL(object):
             ambiguous.  C{path} does not contain the implicit prefixed C{"/"}
             since that is somewhat awkward to work with.
         @type rooted: L{bool}
+
+        @ivar userinfo: The username and password portions of the URL, if
+            specified, separated with colons.
+        @type userinfo: L{unicode}
         """
         # Fall back to defaults.
         if path is None:
