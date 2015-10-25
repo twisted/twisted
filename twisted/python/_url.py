@@ -477,29 +477,31 @@ class URL(object):
                    rooted)
 
 
-    def child(self, segment):
+    def child(self, *segments):
         """
-        Construct a L{URL} where the given path segment is a child of this url,
-        presering the query and fragment.
+        Construct a L{URL} where the given path segments are a child of this
+        url, presering the query and fragment.
 
         For example::
 
-            >>> URL.fromText(u"http://localhost/a/b?x=y").child(u"c").asText()
+            >>> (URL.fromText(u"http://localhost/a/b?x=y")
+                 .child(u"c", u"d").asText())
             u'http://localhost/a/b/c?x=y'
 
-        @param segment: A path segment.
-        @type segment: L{unicode}
+        @param segments: A path segment.
+        @type segments: L{tuple} of L{unicode}
 
-        @return: a new L{URL} with the additional path segment.
+        @return: a new L{URL} with the additional path segments.
         @rtype: L{URL}
         """
-        if not isinstance(segment, unicode):
-            raise TypeError("Given path must be unicode.")
+        for segment in segments:
+            if not isinstance(segment, unicode):
+                raise TypeError("Given path must be unicode.")
         return self.replace(
             pathSegments=self.pathSegments[
                 :-1 if (self.pathSegments and self.pathSegments[-1] == u'')
                 else None
-            ] + (segment,)
+            ] + segments
         )
 
 

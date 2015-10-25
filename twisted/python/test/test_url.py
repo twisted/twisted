@@ -259,6 +259,16 @@ class TestURL(TestCase):
         )
 
 
+    def test_multiChild(self):
+        """
+        L{URL.child} receives multiple segments as C{*args} and appends each in
+        turn.
+        """
+        self.assertEqual(URL.fromText('http://example.com/a/b')
+                         .child('c', 'd', 'e').asText(),
+                         'http://example.com/a/b/c/d/e')
+
+
     def test_childInitRoot(self):
         """
         L{URL.child} of a L{URL} without a path produces a L{URL} with a single
