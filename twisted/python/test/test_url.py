@@ -443,25 +443,6 @@ class TestURL(TestCase):
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zot=32",
             urlpath.add(u"burp", u"xxx").add(u"zot", u'32')
             .asText())
-        # Use an OrderedDict to ensure the .items() iteration order comes out
-        # backwards, because dictionaries (including kwargs dictionaries)
-        # should be sorted and we should have a deterministic test of that.
-        od = OrderedDict()
-        od[u'c'] = u'3'
-        od[u'b'] = u'2'
-        od[u'a'] = u'1'
-        self.assertEqual(
-            "http://example.com/?a=1&b=2&c=3",
-            URL(host=u'example.com').add(od).asText()
-        )
-        self.assertEqual(
-            "http://example.com/?a=1&b=2&c=3",
-            URL(host=u'example.com').add(c=3, b=2, a=1).asText()
-        )
-        self.assertEqual(
-            "http://example.com/?a=1&a=2&a=3",
-            URL(host=u'example.com').add(a=[1, 2, 3]).asText()
-        )
 
 
     def test_querySet(self):
