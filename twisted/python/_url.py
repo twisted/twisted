@@ -26,7 +26,6 @@ unicode = type(u'')
 _genDelims = u':/?#[]@'
 _subDelims = u"!$&'()*+,;="
 
-_validEverywhere = u'-._~'
 _validInPath = _subDelims + u':@'
 _validInFragment = _validInPath + u'/?'
 _validInQuery = (_validInFragment
