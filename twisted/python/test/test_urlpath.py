@@ -144,13 +144,21 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
 
     def test_mustBeBytes(self):
         """
-        C{URLPath.fromBytes} must take a L{bytes} argument.
+        L{URLPath.fromBytes} must take a L{bytes} argument.
         """
         with self.assertRaises(ValueError):
             urlpath.URLPath.fromBytes(None)
 
         with self.assertRaises(ValueError):
             urlpath.URLPath.fromBytes(u"someurl")
+
+
+    def test_nonASCIIBytes(self):
+        """
+        L{URLPath.fromBytes} can interpret non-ASCII bytes as percent-encoded
+        """
+        url = urlpath.URLPath.fromBytes(b"http://example.com/\xff\x00")
+        self.assertEqual(str(url), "http://example.com/%FF%00")
 
 
 
@@ -185,3 +193,11 @@ class UnicodeURLPathTests(_BaseURLPathTests, unittest.TestCase):
     def setUp(self):
         self.path = urlpath.URLPath.fromString(
             u"http://example.com/foo/bar?yes=no&no=yes#footer")
+
+
+    def test_nonASCIICharacters(self):
+        """
+        L{URLPath.fromString} can load non-ASCII characters.
+        """
+        url = urlpath.URLPath.fromString(u"http://example.com/\xff\x00")
+        self.assertEqual(str(url), "http://example.com/%C3%BF%00")

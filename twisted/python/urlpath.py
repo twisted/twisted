@@ -9,11 +9,12 @@ L{URLPath}, a representation of a URL.
 from __future__ import division, absolute_import
 
 from twisted.python.compat import (
-    nativeString, unicode, urllib_parse as urlparse, urlunquote
+    nativeString, unicode, urllib_parse as urlparse, urlunquote, urlquote
 )
 
 from twisted.python.url import URL as _URL
 
+_allascii = b"".join([chr(x).encode('ascii') for x in range(1, 128)])
 
 class URLPath(object):
     """
@@ -41,11 +42,12 @@ class URLPath(object):
         self.path = path or b'/'
         self.query = query
         self.fragment = fragment
-        self._url = _URL.fromText(
-            urlparse.urlunsplit((self.scheme, self.netloc, self.path,
-                                 self.query, self.fragment))
-            .decode("ascii")
+        urltext = urlquote(
+            urlparse.urlunsplit((self.scheme, self.netloc,
+                                 self.path, self.query, self.fragment)),
+            safe=_allascii
         )
+        self._url = _URL.fromText(urltext.encode("ascii").decode("ascii"))
 
 
     @classmethod
@@ -62,10 +64,10 @@ class URLPath(object):
         self = cls.__new__(cls)
         self._url = urlInstance
         self.scheme = self._url.scheme.encode("ascii")
-        self.netloc = self._url.authority.encode("ascii")
-        self.path = (_URL(path=self._url.path).asText()
+        self.netloc = self._url.authority().encode("ascii")
+        self.path = (_URL(path=self._url.path).asURI().asText()
                      .encode("ascii"))
-        self.query = (_URL(queryParameters=self._url.queryParameters).asText()
+        self.query = (_URL(query=self._url.query).asURI().asText()
                       .encode("ascii"))[1:]
         self.fragment = self._url.fragment.encode("ascii")
         return self
@@ -102,9 +104,9 @@ class URLPath(object):
         """
         if not isinstance(url, (str, unicode)):
             raise ValueError("'url' must be a str or unicode")
-        url = url.encode('ascii')
-        parts = urlparse.urlsplit(url)
-        return klass(*parts)
+        if isinstance(url, bytes):
+            return klass.fromBytes(url)
+        return klass._fromURL(_URL.fromText(url))
 
 
     @classmethod
@@ -122,7 +124,7 @@ class URLPath(object):
         """
         if not isinstance(url, bytes):
             raise ValueError("'url' must be bytes")
-        parts = urlparse.urlsplit(url)
+        parts = urlparse.urlsplit(urlquote(url, safe=_allascii))
         return klass(*parts)
 
 
@@ -155,11 +157,9 @@ class URLPath(object):
 
         @return: a new L{URLPath}
         """
-        return self._fromURL(
-            newURL.replace(fragment=u'',
-                           queryParameters=self._url.queryParameters
-                           if keepQuery else ())
-        )
+        return self._fromURL(newURL.replace(
+            fragment=u'', query=self._url.query if keepQuery else ()
+        ))
 
 
     def sibling(self, path, keepQuery=False):
@@ -239,7 +239,7 @@ class URLPath(object):
         """
         The L{str} of a L{URLPath} is its URL text.
         """
-        return nativeString(self._url.asText())
+        return nativeString(self._url.asURI().asText())
 
 
     def __repr__(self):
