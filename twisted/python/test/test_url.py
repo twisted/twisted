@@ -92,15 +92,15 @@ class TestURL(TestCase):
                         or u.scheme is None, repr(u))
         self.assertTrue(isinstance(u.host, unicode)
                         or u.host is None, repr(u))
-        for seg in u.pathSegments:
+        for seg in u.path:
             self.assertTrue(isinstance(seg, unicode), repr(u))
-        for (k, v) in u.queryParameters:
+        for (k, v) in u.query:
             self.assertTrue(isinstance(k, unicode), repr(u))
             self.assertTrue(v is None or isinstance(v, unicode), repr(u))
         self.assertTrue(isinstance(u.fragment, unicode), repr(u))
 
 
-    def assertURL(self, u, scheme, host, pathSegments, queryParameters,
+    def assertURL(self, u, scheme, host, path, query,
                   fragment, port):
         """
         The given L{URL} should have the given components.
@@ -111,17 +111,17 @@ class TestURL(TestCase):
 
         @param host: The expected host.
 
-        @param pathSegments: The expected pathSegments.
+        @param path: The expected path.
 
-        @param queryParameters: The expected queryParameters.
+        @param query: The expected query.
 
         @param fragment: The expected fragment.
 
         @param port: The expected port.
         """
-        actual = (u.scheme, u.host, u.pathSegments, u.queryParameters,
+        actual = (u.scheme, u.host, u.path, u.query,
                   u.fragment, u.port)
-        expected = (scheme, host, tuple(pathSegments), tuple(queryParameters),
+        expected = (scheme, host, tuple(path), tuple(query),
                     fragment, port)
         self.assertEqual(actual, expected)
 
@@ -174,8 +174,8 @@ class TestURL(TestCase):
         to read.
         """
         self.assertEquals(
-            repr(URL(scheme=u'http', host=u'foo', pathSegments=[u'bar'],
-                     queryParameters=[(u'baz', None), (u'k', u'v')],
+            repr(URL(scheme=u'http', host=u'foo', path=[u'bar'],
+                     query=[(u'baz', None), (u'k', u'v')],
                      fragment=u'frob')),
             "URL.fromText(%s)" % (repr(u"http://foo/bar?baz&k=v#frob"),)
         )
@@ -318,7 +318,7 @@ class TestURL(TestCase):
         self.assertEquals("http://www.foo.com/a/nice/path/?burp",
                           urlpath.click("?burp").asText())
         # One full url to another should not generate '//' between authority.
-        # and pathSegments
+        # and path
         self.assertNotIn("//foobar",
                          urlpath.click('http://www.foo.com/foobar').asText())
 
@@ -362,8 +362,8 @@ class TestURL(TestCase):
         self.assertEqual(
             urlpath.replace(urlpath.scheme,
                             urlpath.host,
-                            urlpath.pathSegments,
-                            urlpath.queryParameters,
+                            urlpath.path,
+                            urlpath.query,
                             urlpath.fragment,
                             urlpath.port),
             urlpath)
@@ -485,16 +485,6 @@ class TestURL(TestCase):
         )
 
 
-    def test_clear(self):
-        """
-        L{URL.clear} removes all query parameters.
-        """
-        urlpath = URL.fromText(theurl)
-        self.assertEquals(
-            "http://www.foo.com/a/nice/path/",
-            urlpath.clear().asText())
-
-
     def test_parseEqualSignInParamValue(self):
         """
         Every C{=}-sign after the first in a query parameter is simply included
@@ -504,7 +494,7 @@ class TestURL(TestCase):
         self.assertEqual(u.get(u''), ['x=x=x'])
         self.assertEqual(u.asText(), 'http://localhost/?=x%3Dx%3Dx')
         u = URL.fromText('http://localhost/?foo=x=x=x&bar=y')
-        self.assertEqual(u.queryParameters, (('foo', 'x=x=x'),
+        self.assertEqual(u.query, (('foo', 'x=x=x'),
                                              ('bar', 'y')))
         self.assertEqual(u.asText(), 'http://localhost/?foo=x%3Dx%3Dx&bar=y')
 
@@ -520,7 +510,7 @@ class TestURL(TestCase):
         """
         An L{URL} with query text should serialize as just query text.
         """
-        u = URL(queryParameters=[(u"hello", u"world")])
+        u = URL(query=[(u"hello", u"world")])
         self.assertEqual(u.asText(), u'?hello=world')
 
 
@@ -611,7 +601,7 @@ class TestURL(TestCase):
         iri = URL.fromText(unicodey)
         uri = iri.asURI()
         self.assertEqual(iri.host, '\N{LATIN SMALL LETTER E WITH ACUTE}.com')
-        self.assertEqual(iri.pathSegments[0],
+        self.assertEqual(iri.path[0],
                          '\N{LATIN SMALL LETTER E}\N{COMBINING ACUTE ACCENT}')
         self.assertEqual(iri.asText(), unicodey)
         expectedURI = 'http://xn--9ca.com/%C3%A9?%C3%A1=%C3%AD#%C3%BA'
@@ -629,7 +619,7 @@ class TestURL(TestCase):
         uri = URL.fromText(asciiish)
         iri = uri.asIRI()
         self.assertEqual(uri.host, 'xn--9ca.com')
-        self.assertEqual(uri.pathSegments[0], '%C3%A9')
+        self.assertEqual(uri.path[0], '%C3%A9')
         self.assertEqual(uri.asText(), asciiish)
         expectedIRI = ('http://\N{LATIN SMALL LETTER E WITH ACUTE}.com/'
                        '\N{LATIN SMALL LETTER E WITH ACUTE}'

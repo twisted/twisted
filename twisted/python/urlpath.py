@@ -63,7 +63,7 @@ class URLPath(object):
         self._url = urlInstance
         self.scheme = self._url.scheme.encode("ascii")
         self.netloc = self._url.authority.encode("ascii")
-        self.path = (_URL(pathSegments=self._url.pathSegments).asText()
+        self.path = (_URL(path=self._url.path).asText()
                      .encode("ascii"))
         self.query = (_URL(queryParameters=self._url.queryParameters).asText()
                       .encode("ascii"))[1:]
@@ -82,7 +82,7 @@ class URLPath(object):
         @return: The components of C{self.path}
         @rtype: L{list} of L{bytes}
         """
-        segments = self._url.pathSegments
+        segments = self._url.path
         mapper = lambda x: x.encode("ascii")
         if unquote:
             mapper = lambda x, m=mapper: m(urlunquote(x))

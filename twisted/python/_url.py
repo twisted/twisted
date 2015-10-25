@@ -146,11 +146,11 @@ def _percentDecode(text):
 
 
 
-def _resolveDotSegments(pathSegments):
+def _resolveDotSegments(path):
     """
     Normalise the URL path by resolving segments of '.' and '..'.
 
-    @param pathSegments: list of path segments
+    @param path: list of path segments
 
     @see: RFC 3986 section 5.2.4, Remove Dot Segments
 
@@ -159,7 +159,7 @@ def _resolveDotSegments(pathSegments):
     """
     segs = []
 
-    for seg in pathSegments:
+    for seg in path:
         if seg == u'.':
             pass
         elif seg == u'..':
@@ -168,7 +168,7 @@ def _resolveDotSegments(pathSegments):
         else:
             segs.append(seg)
 
-    if list(pathSegments[-1:]) in ([u'.'], [u'..']):
+    if list(path[-1:]) in ([u'.'], [u'..']):
         segs.append(u'')
 
     return segs
@@ -249,7 +249,7 @@ class URL(object):
 
         >>> from twisted.python.url import URL
         >>> URL(scheme=u'https', host=u'example.com',
-        ...     pathSegments=[u'hello', u'world'])
+        ...     path=[u'hello', u'world'])
         URL.fromText(u'https://example.com/hello/world')
 
     Or you can use the L{fromText} method you can see in the output there::
@@ -296,11 +296,11 @@ class URL(object):
     @ivar port: The port number.
     @type port: L{int}
 
-    @ivar pathSegments: The path segments.
-    @type pathSegments: L{tuple} of L{unicode}.
+    @ivar path: The path segments.
+    @type path: L{tuple} of L{unicode}.
 
-    @ivar queryParameters: The query parameters, as (name, value) pairs.
-    @type queryParameters: L{tuple} of 2-L{tuple}s of (name: L{unicode}, value:
+    @ivar query: The query parameters, as (name, value) pairs.
+    @type query: L{tuple} of 2-L{tuple}s of (name: L{unicode}, value:
         (L{unicode} for values or C{None} for stand-alone query parameters with
         no C{=} in them)).
 
@@ -310,13 +310,13 @@ class URL(object):
     @ivar rooted: Does the path start with a C{/}?  This is taken from the
         terminology in the BNF grammar, specifically the C{path-rootless},
         rule, since "absolute path" and "absolute URI" are somewhat ambiguous.
-        C{pathSegments} does not contain the implicit prefixed C{"/"} since
-        that is somewhat awkward to work with.
+        C{path} does not contain the implicit prefixed C{"/"} since that is
+        somewhat awkward to work with.
     @type rooted: L{bool}
     """
 
-    def __init__(self, scheme=None, host=None, pathSegments=None,
-                 queryParameters=None, fragment=None, port=None,
+    def __init__(self, scheme=None, host=None, path=None,
+                 query=None, fragment=None, port=None,
                  rooted=None):
         """
         Create a new L{URL} from structured information about itself.
@@ -330,12 +330,11 @@ class URL(object):
         @ivar port: The port number portion of the netloc.
         @type port: L{int}
 
-        @ivar pathSegments: The path segments.
-        @type pathSegments: Iterable of L{unicode}.
+        @ivar path: The path segments.
+        @type path: Iterable of L{unicode}.
 
-        @ivar queryParameters: The query parameters, as name-value pairs
-        @type queryParameters: Iterable of pairs of L{unicode} (or C{None}, for
-            values).
+        @ivar query: The query parameters, as name-value pairs
+        @type query: Iterable of pairs of L{unicode} (or C{None}, for values).
 
         @ivar fragment: The fragment identifier.
         @type fragment: L{unicode}
@@ -343,31 +342,31 @@ class URL(object):
         @ivar rooted: Does the path start with a C{/}?  This is taken from the
             terminology in the BNF grammar, specifically the C{path-rootless},
             rule, since "absolute path" and "absolute URI" are somewhat
-            ambiguous.  C{pathSegments} does not contain the implicit prefixed
-            C{"/"} since that is somewhat awkward to work with.
+            ambiguous.  C{path} does not contain the implicit prefixed C{"/"}
+            since that is somewhat awkward to work with.
         @type rooted: L{bool}
         """
         # Fall back to defaults.
-        if pathSegments is None:
-            pathSegments = []
-        if queryParameters is None:
-            queryParameters = []
+        if path is None:
+            path = []
+        if query is None:
+            query = []
         if fragment is None:
             fragment = u''
         if host is not None and scheme is None:
             scheme = u'http'
         if port is None:
             port = _schemeDefaultPorts.get(scheme)
-        if host and queryParameters and not pathSegments:
-            pathSegments = [u'']
+        if host and query and not path:
+            path = [u'']
 
         # Set attributes.
         self._scheme = _checkUnicodeOrNone(scheme) or u''
         self._host = _checkUnicodeOrNone(host) or u''
-        self._pathSegments = tuple(map(_checkUnicodeOrNone, pathSegments))
-        self._queryParameters = tuple((_checkUnicodeOrNone(k),
-                                       _checkUnicodeOrNone(v)) for (k, v) in
-                                      queryParameters)
+        self._path = tuple(map(_checkUnicodeOrNone, path))
+        self._query = tuple((_checkUnicodeOrNone(k),
+                             _checkUnicodeOrNone(v)) for (k, v) in
+                            query)
         self._fragment = _checkUnicodeOrNone(fragment)
         self._port = port
         if rooted is None:
@@ -377,8 +376,8 @@ class URL(object):
     scheme = property(lambda self: self._scheme)
     host = property(lambda self: self._host)
     port = property(lambda self: self._port)
-    pathSegments = property(lambda self: self._pathSegments)
-    queryParameters = property(lambda self: self._queryParameters)
+    path = property(lambda self: self._path)
+    query = property(lambda self: self._query)
     fragment = property(lambda self: self._fragment)
     rooted = property(lambda self: self._rooted)
 
@@ -400,7 +399,7 @@ class URL(object):
         """
         if not isinstance(other, self.__class__):
             return NotImplemented
-        for attr in ['scheme', 'host', 'pathSegments', 'queryParameters',
+        for attr in ['scheme', 'host', 'path', 'query',
                      'fragment', 'port', 'rooted']:
             if getattr(self, attr) != getattr(other, attr):
                 return False
@@ -426,7 +425,7 @@ class URL(object):
 
 
     def replace(self, scheme=_unspecified, host=_unspecified,
-                pathSegments=_unspecified, queryParameters=_unspecified,
+                path=_unspecified, query=_unspecified,
                 fragment=_unspecified, port=_unspecified,
                 rooted=_unspecified):
         """
@@ -441,13 +440,13 @@ class URL(object):
             URL.
         @type host: L{unicode}
 
-        @param pathSegments: the path segments of the new URL; if unspecified,
+        @param path: the path segments of the new URL; if unspecified,
             the path segments of this URL.
-        @type pathSegments: iterable of L{unicode}
+        @type path: iterable of L{unicode}
 
-        @param queryParameters: the query elements of the new URL; if
+        @param query: the query elements of the new URL; if
             unspecified, the query segments of this URL.
-        @type queryParameters: iterable of 2-L{tuple}s of key, value.
+        @type query: iterable of 2-L{tuple}s of key, value.
 
         @param fragment: the fragment of the new URL; if unspecified, the query
             segments of this URL.
@@ -457,7 +456,7 @@ class URL(object):
             URL.
         @type port: L{int}
 
-        @param rooted: C{True} if the given C{pathSegments} are meant to start
+        @param rooted: C{True} if the given C{path} are meant to start
             at the root of the host; C{False} otherwise.  Only meaningful for
             relative URIs.
         @type rooted: L{bool}
@@ -467,8 +466,8 @@ class URL(object):
         return self.__class__(
             scheme=_optional(scheme, self.scheme),
             host=_optional(host, self.host),
-            pathSegments=_optional(pathSegments, self.pathSegments),
-            queryParameters=_optional(queryParameters, self.queryParameters),
+            path=_optional(path, self.path),
+            query=_optional(query, self.query),
             fragment=_optional(fragment, self.fragment),
             port=_optional(port, self.port),
             rooted=_optional(rooted, self.rooted)
@@ -498,23 +497,21 @@ class URL(object):
         else:
             host, port = split[0], None
         if path:
-            pathSegments = path.split(u"/")
-            if not pathSegments[0]:
-                pathSegments.pop(0)
+            path = path.split(u"/")
+            if not path[0]:
+                path.pop(0)
                 rooted = True
             else:
                 rooted = False
         else:
-            pathSegments = ()
+            path = ()
             rooted = bool(netloc)
         if query:
-            queryParameters = ((qe.split(u"=", 1)
-                                if u'=' in qe else (qe, None))
-                               for qe in query.split(u"&"))
+            query = ((qe.split(u"=", 1) if u'=' in qe else (qe, None))
+                     for qe in query.split(u"&"))
         else:
-            queryParameters = ()
-        return cls(scheme, host, pathSegments, queryParameters, fragment, port,
-                   rooted)
+            query = ()
+        return cls(scheme, host, path, query, fragment, port, rooted)
 
 
     def child(self, *segments):
@@ -538,10 +535,8 @@ class URL(object):
             if not isinstance(segment, unicode):
                 raise TypeError("Given path must be unicode.")
         return self.replace(
-            pathSegments=self.pathSegments[
-                :-1 if (self.pathSegments and self.pathSegments[-1] == u'')
-                else None
-            ] + segments
+            path=self.path[:-1 if (self.path and self.path[-1] == u'')
+                           else None] + segments
         )
 
 
@@ -558,7 +553,7 @@ class URL(object):
         """
         if not isinstance(segment, unicode):
             raise TypeError("Given path must be unicode.")
-        return self.replace(pathSegments=self.pathSegments[:-1] + (segment,))
+        return self.replace(path=self.path[:-1] + (segment,))
 
 
     def click(self, href):
@@ -580,7 +575,7 @@ class URL(object):
 
         clicked = URL.fromText(href)
 
-        queryParameters = clicked.queryParameters
+        query = clicked.query
         if clicked.absolute:
             return clicked
         elif clicked.scheme and not clicked.rooted:
@@ -592,19 +587,19 @@ class URL(object):
             )
         else:
             if clicked.rooted:
-                pathSegments = clicked.pathSegments
-            elif clicked.pathSegments:
-                pathSegments = self.pathSegments[:-1] + clicked.pathSegments
+                path = clicked.path
+            elif clicked.path:
+                path = self.path[:-1] + clicked.path
             else:
-                pathSegments = self.pathSegments
-                if not queryParameters:
-                    queryParameters = self.queryParameters
+                path = self.path
+                if not query:
+                    query = self.query
         return self.replace(
             scheme=clicked.scheme or self.scheme,
             host=clicked.host or self.host,
             port=clicked.port or self.port,
-            pathSegments=_resolveDotSegments(pathSegments),
-            queryParameters=queryParameters,
+            path=_resolveDotSegments(path),
+            query=query,
             fragment=clicked.fragment
         )
 
@@ -626,13 +621,13 @@ class URL(object):
         """
         return self.replace(
             host=self.host.encode("idna").decode("ascii"),
-            pathSegments=(_maximalPercentEncode(segment, _validInPath)
-                          for segment in self.pathSegments),
-            queryParameters=(
+            path=(_maximalPercentEncode(segment, _validInPath)
+                  for segment in self.path),
+            query=(
                 tuple(_maximalPercentEncode(x, _validInQuery)
                       if x is not None else None
                       for x in (k, v))
-                for k, v in self.queryParameters
+                for k, v in self.query
             ),
             fragment=_maximalPercentEncode(self.fragment, _validInFragment)
         )
@@ -662,13 +657,12 @@ class URL(object):
             textHost = asciiHost.decode("idna")
         return self.replace(
             host=textHost,
-            pathSegments=[_percentDecode(segment)
-                          for segment in self.pathSegments],
-            queryParameters=[
+            path=[_percentDecode(segment) for segment in self.path],
+            query=[
                 tuple(_percentDecode(x)
                       if x is not None else None
                       for x in (k, v))
-                for k, v in self.queryParameters
+                for k, v in self.query
             ],
             fragment=_percentDecode(self.fragment)
         )
@@ -683,14 +677,11 @@ class URL(object):
         @rtype: L{unicode}
         """
         path = u'/'.join([u''] + [_minimalPercentEncode(segment, _validInPath)
-                                  for segment in self.pathSegments])
+                                  for segment in self.path])
         query = '&'.join(
-            u'='.join(
-                (_minimalPercentEncode(x, _validInQuery)
-             for x in ([k] if v is None
-                       else [k, v]))
-            )
-            for (k, v) in self.queryParameters
+            u'='.join((_minimalPercentEncode(x, _validInQuery)
+                       for x in ([k] if v is None else [k, v])))
+            for (k, v) in self.query
         )
         return urlunsplit((self.scheme, self.authority, path, query,
                            self.fragment))
@@ -710,7 +701,7 @@ class URL(object):
         argument has no value.
         """
         return self.replace(
-            queryParameters=self.queryParameters + _querify(args, kw)
+            query=self.query + _querify(args, kw)
         )
 
 
@@ -733,11 +724,11 @@ class URL(object):
             not isinstance(value, (unicode, None.__class__))):
             raise TypeError("name and value must be unicode.")
         # Preserve the original position of the query key in the list
-        q = [(k, v) for (k, v) in self.queryParameters if k != name]
-        idx = next((i for (i, (k, v)) in enumerate(self.queryParameters)
+        q = [(k, v) for (k, v) in self.query if k != name]
+        idx = next((i for (i, (k, v)) in enumerate(self.query)
                     if k == name), -1)
         q[idx:idx] = [(name, value)]
-        return self.replace(queryParameters=q)
+        return self.replace(query=q)
 
 
     def get(self, name):
@@ -752,7 +743,7 @@ class URL(object):
             parameter) would return the empty list, C{[]}.
         @rtype: L{list} of L{unicode}
         """
-        return [value for (key, value) in self.queryParameters
+        return [value for (key, value) in self.query
                 if name == key]
 
 
@@ -767,16 +758,4 @@ class URL(object):
         if not isinstance(name, (unicode, None.__class__)):
             raise TypeError("name  must be unicode.")
         return self.replace(filter(lambda x: x[0] != name,
-                                   self.queryParameters))
-
-
-    def clear(self):
-        """
-        Remove all existing query arguments.
-
-        @return: a new L{URL} with the entire query string removed.
-        """
-        return self.replace(queryParameters=())
-
-
-
+                                   self.query))
