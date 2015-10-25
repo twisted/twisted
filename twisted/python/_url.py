@@ -268,7 +268,7 @@ class URL(object):
     """
 
     def __init__(self, scheme=None, host=None, path=None, query=None,
-                 fragment=None, port=None, rooted=None):
+                 fragment=None, port=None, rooted=None, userinfo=None):
         """
         Create a new L{URL} from structured information about itself.
 
@@ -310,6 +310,8 @@ class URL(object):
             port = _schemeDefaultPorts.get(scheme)
         if host and query and not path:
             path = [u'']
+        if userinfo is None:
+            userinfo = u''
 
         # Set attributes.
         self._scheme = _checkUnicodeOrNone(scheme) or u''
@@ -323,6 +325,7 @@ class URL(object):
         if rooted is None:
             rooted = bool(host)
         self._rooted = rooted
+        self._userinfo = userinfo
 
     scheme = property(lambda self: self._scheme)
     host = property(lambda self: self._host)
@@ -331,17 +334,40 @@ class URL(object):
     query = property(lambda self: self._query)
     fragment = property(lambda self: self._fragment)
     rooted = property(lambda self: self._rooted)
+    userinfo = property(lambda self: self._userinfo)
+
 
     @property
-    def authority(self):
+    def user(self):
         """
-        The authority (network location) portion of the URL.
+        The user portion of C{userinfo}; everything up to the first C{":"}.
         """
-        if self.port == _schemeDefaultPorts.get(self.scheme):
-            return self.host
-        else:
-            return u"{host}:{port}".format(host=self.host,
-                                           port=self.port)
+        return self.userinfo.split(u':')[0]
+
+
+    def authority(self, includeSecrets=False):
+        """
+        Compute and return the appropriate host/port/userinfo combination.
+
+        @param includeSecrets: should the return value of this method include
+            secret information?  C{True} if so, C{False} if not
+        @type includeSecrets: L{bool}
+
+        @return: The authority (network location and user information) portion
+            of the URL.
+        @rtype: L{unicode}
+        """
+        hostport = [self.host]
+        if self.port != _schemeDefaultPorts.get(self.scheme):
+            return hostport.append(unicode(self.port))
+        authority = []
+        if self.userinfo:
+            userinfo = self.userinfo
+            if not includeSecrets and u":" in userinfo:
+                userinfo = userinfo[:userinfo.index(u":")+1]
+            authority.append(userinfo)
+        authority.append(u":".join(hostport))
+        return u"@".join(authority)
 
 
     def __eq__(self, other):
@@ -378,7 +404,7 @@ class URL(object):
     def replace(self, scheme=_unspecified, host=_unspecified,
                 path=_unspecified, query=_unspecified,
                 fragment=_unspecified, port=_unspecified,
-                rooted=_unspecified):
+                rooted=_unspecified, userinfo=_unspecified):
         """
         Make a new instance of C{self.__class__}, passing along the given
         arguments to its constructor.
@@ -391,12 +417,12 @@ class URL(object):
             URL.
         @type host: L{unicode}
 
-        @param path: the path segments of the new URL; if unspecified,
-            the path segments of this URL.
+        @param path: the path segments of the new URL; if unspecified, the path
+            segments of this URL.
         @type path: iterable of L{unicode}
 
-        @param query: the query elements of the new URL; if
-            unspecified, the query segments of this URL.
+        @param query: the query elements of the new URL; if unspecified, the
+            query segments of this URL.
         @type query: iterable of 2-L{tuple}s of key, value.
 
         @param fragment: the fragment of the new URL; if unspecified, the query
@@ -407,10 +433,14 @@ class URL(object):
             URL.
         @type port: L{int}
 
-        @param rooted: C{True} if the given C{path} are meant to start
-            at the root of the host; C{False} otherwise.  Only meaningful for
-            relative URIs.
+        @param rooted: C{True} if the given C{path} are meant to start at the
+            root of the host; C{False} otherwise.  Only meaningful for relative
+            URIs.
         @type rooted: L{bool}
+
+        @param userinfo: A string indicating information about an authenticated
+            user.
+        @type userinfo: L{unicode}
 
         @return: a new L{URL}.
         """
@@ -421,7 +451,8 @@ class URL(object):
             query=_optional(query, self.query),
             fragment=_optional(fragment, self.fragment),
             port=_optional(port, self.port),
-            rooted=_optional(rooted, self.rooted)
+            rooted=_optional(rooted, self.rooted),
+            userinfo=_optional(userinfo, self.userinfo),
         )
 
 
@@ -438,9 +469,15 @@ class URL(object):
         @return: the parsed representation of C{s}
         @rtype: L{URL}
         """
-        (scheme, netloc, path, query, fragment) = (
+        (scheme, authority, path, query, fragment) = (
             (u'' if x == b'' else x) for x in urlsplit(s)
         )
+        authority = authority.split("@", 1)
+        if len(authority) == 1:
+            [netloc] = authority
+            userinfo = u''
+        else:
+            [userinfo, netloc] = authority
         split = netloc.split(u":")
         if len(split) == 2:
             host, port = split
@@ -462,7 +499,7 @@ class URL(object):
                      for qe in query.split(u"&"))
         else:
             query = ()
-        return cls(scheme, host, path, query, fragment, port, rooted)
+        return cls(scheme, host, path, query, fragment, port, rooted, userinfo)
 
 
     def child(self, *segments):
@@ -619,9 +656,20 @@ class URL(object):
         )
 
 
-    def asText(self):
+    def asText(self, includeSecrets=False):
         """
         Convert this URL to its canonical textual representation.
+
+        @param includeSecrets: Should the returned textual representation
+            include potentially sensitive information?  The default, C{False},
+            if not; C{True} if so.  Quoting from RFC3986, section 3.2.1:
+
+            "Applications should not render as clear text any data after the
+            first colon (":") character found within a userinfo subcomponent
+            unless the data after the colon is the empty string (indicating no
+            password)."
+
+        @type includeSecrets: L{bool}
 
         @return: The serialized textual representation of this L{URL}, such as
             C{u"http://example.com/some/path?some=query"}.
@@ -634,8 +682,8 @@ class URL(object):
                        for x in ([k] if v is None else [k, v])))
             for (k, v) in self.query
         )
-        return urlunsplit((self.scheme, self.authority, path, query,
-                           self.fragment))
+        return urlunsplit((self.scheme, self.authority(includeSecrets), path,
+                           query, self.fragment))
 
 
     def __repr__(self):

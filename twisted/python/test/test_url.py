@@ -646,3 +646,24 @@ class TestURL(TestCase):
         uri = URL.fromText(expectedURI)
         actualURI = uri.asURI().asText()
         self.assertEqual(actualURI, expectedURI)
+
+
+    def test_userinfo(self):
+        """
+        L{URL.fromText} will parse the C{userinfo} portion of the URI
+        separately from the host and port.
+        """
+        url = URL.fromText(
+            'http://someuser:somepassword@example.com/some-segment@ignore'
+        )
+        self.assertEqual(url.authority(True),
+                         'someuser:somepassword@example.com')
+        self.assertEqual(url.authority(False), 'someuser:@example.com')
+        self.assertEqual(url.userinfo, 'someuser:somepassword')
+        self.assertEqual(url.user, 'someuser')
+        self.assertEqual(url.asText(),
+                         'http://someuser:@example.com/some-segment@ignore')
+        self.assertEqual(
+            url.replace(userinfo=u"someuser").asText(),
+            'http://someuser@example.com/some-segment@ignore'
+        )
