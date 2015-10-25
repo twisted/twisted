@@ -368,15 +368,6 @@ class URL(object):
 
 
     @property
-    def query(self):
-        """
-        Return an attribute with a structural API for manipulating query
-        segments on this URL.
-        """
-        return Query(self)
-
-
-    @property
     def absolute(self):
         """
         Is this URL complete enough to resolve a resource without resolution
