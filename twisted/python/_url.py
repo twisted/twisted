@@ -704,11 +704,10 @@ class URL(object):
             not isinstance(value, (unicode, None.__class__))):
             raise TypeError("name and value must be unicode.")
         # Preserve the original position of the query key in the list
-        for (i, (k, v)) in enumerate(self.queryParameters):
-            if k == name:
-                break
-        q = list(filter(lambda x: x[0] != name, self.queryParameters))
-        q.insert(i, (name, value))
+        q = [(k, v) for (k, v) in self.queryParameters if k != name]
+        idx = next((i for (i, (k, v)) in enumerate(self.queryParameters)
+                    if k == name), -1)
+        q[idx:idx] = [(name, value)]
         return self.replace(queryParameters=q)
 
 
