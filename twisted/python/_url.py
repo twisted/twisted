@@ -67,7 +67,7 @@ def _maximalPercentEncode(text, safe):
     @rtype: L{unicode}
     """
     quoted = urlquote(
-        normalize("NFC", text).encode("utf-8"), safe.encode("ascii")
+        normalize("NFC", text).encode("utf-8"), (safe + u'%').encode("ascii")
     )
     if not isinstance(quoted, unicode):
         quoted = quoted.decode("ascii")
