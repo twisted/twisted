@@ -227,11 +227,9 @@ class Query(object):
             not isinstance(value, (unicode, None.__class__))):
             raise TypeError("name and value must be unicode.")
         # Preserve the original position of the query key in the list
-        i = 0
-        for (k, v) in self._url.queryParameters:
+        for (i, (k, v)) in enumerate(self._url.queryParameters):
             if k == name:
                 break
-            i += 1
         q = list(filter(lambda x: x[0] != name, self._url.queryParameters))
         q.insert(i, (name, value))
         return self._url.replace(queryParameters=q)
@@ -273,7 +271,7 @@ class Query(object):
 
         @return: a new L{URL} with the entire query string removed.
         """
-        return self._url.replace(queryParameters=[])
+        return self._url.replace(queryParameters=())
 
 
 
