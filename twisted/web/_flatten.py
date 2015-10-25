@@ -189,8 +189,8 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         L{IRenderable.render}.
 
     @param root: An object to be made flatter.  This may be of type C{unicode},
-        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{URL}, L{tuple},
-        L{list}, L{GeneratorType}, L{Deferred}, or an object that implements
+        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple}, L{list},
+        L{GeneratorType}, L{Deferred}, or an object that implements
         L{IRenderable}.
 
     @param slotData: A C{list} of C{dict} mapping C{str} slot names to data
