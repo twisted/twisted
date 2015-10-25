@@ -673,8 +673,8 @@ class TestURL(TestCase):
         """
         Although L{URL} instances are mainly for dealing with HTTP, other
         schemes (such as C{mailto:}) should work as well.  For example,
-        L{URL.fromText}/L{URL.asText} should round-trip cleanly for an email
-        address.
+        L{URL.fromText}/L{URL.asText} round-trips cleanly for a C{mailto:} URL
+        representing an email address.
         """
         self.assertEqual(URL.fromText(u"mailto:user@example.com").asText(),
                          u"mailto:user@example.com")
