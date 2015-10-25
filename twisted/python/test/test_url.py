@@ -605,3 +605,43 @@ class TestURL(TestCase):
         actualIRI = iri.asText()
         self.assertEqual(actualIRI, expectedIRI,
                          '%r != %r' % (actualIRI, expectedIRI))
+
+
+    def test_badUTF8AsIRI(self):
+        """
+        Bad UTF-8 in a path segment, query parameter, or fragment results in
+        that portion of the URI remaining percent-encoded in the IRI.
+        """
+        urlWithBinary = 'http://xn--9ca.com/%00%FF/%C3%A9'
+        uri = URL.fromText(urlWithBinary)
+        iri = uri.asIRI()
+        expectedIRI = ('http://\N{LATIN SMALL LETTER E WITH ACUTE}.com/'
+                       '%00%FF/'
+                       '\N{LATIN SMALL LETTER E WITH ACUTE}')
+        actualIRI = iri.asText()
+        self.assertEqual(actualIRI, expectedIRI,
+                         '%r != %r' % (actualIRI, expectedIRI))
+
+
+    def test_alreadyIRIAsIRI(self):
+        """
+        A L{URL} composed of non-ASCII text will result in non-ASCII text.
+        """
+        unicodey = ('http://\N{LATIN SMALL LETTER E WITH ACUTE}.com/'
+                    '\N{LATIN SMALL LETTER E}\N{COMBINING ACUTE ACCENT}'
+                    '?\N{LATIN SMALL LETTER A}\N{COMBINING ACUTE ACCENT}='
+                    '\N{LATIN SMALL LETTER I}\N{COMBINING ACUTE ACCENT}'
+                    '#\N{LATIN SMALL LETTER U}\N{COMBINING ACUTE ACCENT}')
+        iri = URL.fromText(unicodey)
+        alsoIRI = iri.asIRI()
+        self.assertEqual(alsoIRI.asText(), unicodey)
+
+
+    def test_alreadyURIAsURI(self):
+        """
+        A L{URL} composed of encoded text will remain encoded.
+        """
+        expectedURI = 'http://xn--9ca.com/%C3%A9?%C3%A1=%C3%AD#%C3%BA'
+        uri = URL.fromText(expectedURI)
+        actualURI = uri.asURI().asText()
+        self.assertEqual(actualURI, expectedURI)
