@@ -83,11 +83,10 @@ class URLPath(object):
         @rtype: L{list} of L{bytes}
         """
         segments = self._url.pathSegments
+        mapper = lambda x: x.encode("ascii")
         if unquote:
-            segments = [urlunquote(segment) for segment in segments]
-        else:
-            segments = list(segments)
-        return [b''] + segments
+            mapper = lambda x, m=mapper: m(urlunquote(x))
+        return [b''] + [mapper(segment) for segment in segments]
 
 
     @classmethod
