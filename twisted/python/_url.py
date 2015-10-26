@@ -538,9 +538,6 @@ class URL(object):
         @return: a new L{URL} with the additional path segments.
         @rtype: L{URL}
         """
-        for segment in segments:
-            if not isinstance(segment, unicode):
-                raise TypeError("Given path must be unicode.")
         return self.replace(
             path=self.path[:-1 if (self.path and self.path[-1] == u'')
                            else None] + segments
@@ -558,8 +555,6 @@ class URL(object):
             C{segment}.
         @rtype: L{URL}
         """
-        if not isinstance(segment, unicode):
-            raise TypeError("Given path must be unicode.")
         return self.replace(path=self.path[:-1] + (segment,))
 
 
