@@ -461,6 +461,17 @@ class TestURL(TestCase):
         )
 
 
+    def test_queryRemove(self):
+        """
+        L{URL.remove} removes all instances of a query parameter.
+        """
+        url = URL.fromText(u"https://example.com/a/b/?foo=1&bar=2&foo=3")
+        self.assertEqual(
+            url.remove(u"foo"),
+            URL.fromText(u"https://example.com/a/b/?bar=2")
+        )
+
+
     def test_parseEqualSignInParamValue(self):
         """
         Every C{=}-sign after the first in a query parameter is simply included
