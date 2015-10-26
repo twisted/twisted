@@ -165,6 +165,7 @@ modules = [
     "twisted.python.test.modules_helpers",
     "twisted.python.threadable",
     "twisted.python.threadpool",
+    "twisted.python.url",
     "twisted.python.urlpath",
     "twisted.python.usage",
     "twisted.python.util",
