@@ -577,6 +577,7 @@ class URL(object):
 
         @see: RFC 3986 section 5, Reference Resolution
         """
+        _typecheck("relative URL", href)
         if not len(href):
             return self
 
