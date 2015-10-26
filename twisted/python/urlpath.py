@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_urlpath -*-
+# -*- test-case-name: twisted.python.test.test_urlpath -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -8,9 +8,13 @@ L{URLPath}, a representation of a URL.
 
 from __future__ import division, absolute_import
 
-from twisted.python.compat import unicode
-from twisted.python.compat import urllib_parse as urlparse, urlunquote
+from twisted.python.compat import (
+    nativeString, unicode, urllib_parse as urlparse, urlunquote, urlquote
+)
 
+from twisted.python.url import URL as _URL
+
+_allascii = b"".join([chr(x).encode('ascii') for x in range(1, 128)])
 
 class URLPath(object):
     """
@@ -18,12 +22,16 @@ class URLPath(object):
 
     @ivar scheme: The scheme of the URL (e.g. 'http').
     @type scheme: L{bytes}
+
     @ivar netloc: The network location ("host").
     @type netloc: L{bytes}
+
     @ivar path: The path on the network location.
     @type path: L{bytes}
-    @ivar query: The query argument (the portion after ? in the URL).
+
+    @ivar query: The query argument (the portion after ?  in the URL).
     @type query: L{bytes}
+
     @ivar fragment: The page fragment (the portion after # in the URL).
     @type fragment: L{bytes}
     """
@@ -34,28 +42,53 @@ class URLPath(object):
         self.path = path or b'/'
         self.query = query
         self.fragment = fragment
+        urltext = urlquote(
+            urlparse.urlunsplit((self.scheme, self.netloc,
+                                 self.path, self.query, self.fragment)),
+            safe=_allascii
+        )
+        self._url = _URL.fromText(urltext.encode("ascii").decode("ascii"))
 
-    _qpathlist = None
-    _uqpathlist = None
+
+    @classmethod
+    def _fromURL(cls, urlInstance):
+        """
+        Reconstruct all the public instance variables of this L{URLPath} from
+        its underlying L{_URL}.
+
+        @param urlInstance: the object to base this L{URLPath} on.
+        @type urlInstance: L{_URL}
+
+        @return: a new L{URLPath}
+        """
+        self = cls.__new__(cls)
+        self._url = urlInstance
+        self.scheme = self._url.scheme.encode("ascii")
+        self.netloc = self._url.authority().encode("ascii")
+        self.path = (_URL(path=self._url.path).asURI().asText()
+                     .encode("ascii"))
+        self.query = (_URL(query=self._url.query).asURI().asText()
+                      .encode("ascii"))[1:]
+        self.fragment = self._url.fragment.encode("ascii")
+        return self
+
 
     def pathList(self, unquote=False, copy=True):
         """
         Split this URL's path into its components.
 
+        @param unquote: whether to remove %-encoding from the returned strings.
+
+        @param copy: (ignored, do not use)
+
         @return: The components of C{self.path}
         @rtype: L{list} of L{bytes}
         """
-        if self._qpathlist is None:
-            self._qpathlist = self.path.split(b'/')
-            self._uqpathlist = map(urlunquote, self._qpathlist)
+        segments = self._url.path
+        mapper = lambda x: x.encode("ascii")
         if unquote:
-            result = self._uqpathlist
-        else:
-            result = self._qpathlist
-        if copy:
-            return result[:]
-        else:
-            return result
+            mapper = lambda x, m=mapper: m(urlunquote(x))
+        return [b''] + [mapper(segment) for segment in segments]
 
 
     @classmethod
@@ -66,13 +99,17 @@ class URLPath(object):
         @param url: A L{str} representation of a URL.
         @type url: L{str} or L{unicode}.
 
+        @return: a new L{URLPath} derived from the given string.
         @rtype: L{URLPath}
         """
         if not isinstance(url, (str, unicode)):
             raise ValueError("'url' must be a str or unicode")
-        url = url.encode('utf-8')
-        parts = urlparse.urlsplit(url)
-        return klass(*parts)
+        if isinstance(url, bytes):
+            # On Python 2, accepting 'str' (for compatibility) means we might
+            # get 'bytes'.  On py3, this will not work with bytes due to the
+            # check above.
+            return klass.fromBytes(url)
+        return klass._fromURL(_URL.fromText(url))
 
 
     @classmethod
@@ -83,13 +120,14 @@ class URLPath(object):
         @param url: A L{bytes} representation of a URL.
         @type url: L{bytes}
 
+        @return: a new L{URLPath} derived from the given L{bytes}.
         @rtype: L{URLPath}
 
         @since: 15.4
         """
         if not isinstance(url, bytes):
             raise ValueError("'url' must be bytes")
-        parts = urlparse.urlsplit(url)
+        parts = urlparse.urlsplit(urlquote(url, safe=_allascii))
         return klass(*parts)
 
 
@@ -101,26 +139,36 @@ class URLPath(object):
         @param request: A L{twisted.web.http.Request} to make the L{URLPath}
             from.
 
+        @return: a new L{URLPath} derived from the given request.
         @rtype: L{URLPath}
         """
         return klass.fromBytes(request.prePathURL())
 
 
-    def _pathMod(self, newpathsegs, keepQuery):
-        if keepQuery:
-            query = self.query
-        else:
-            query = b''
-        return URLPath(self.scheme,
-                       self.netloc,
-                       b'/'.join(newpathsegs),
-                       query)
+    def _mod(self, newURL, keepQuery):
+        """
+        Return a modified copy of C{self} using C{newURL}, keeping the query
+        string if C{keepQuery} is C{True}.
+
+        @param newURL: a L{URL} to derive a new L{URLPath} from
+        @type newURL: L{URL}
+
+        @param keepQuery: if C{True}, preserve the query parameters from
+            C{self} on the new L{URLPath}; if C{False}, give the new L{URLPath}
+            no query parameters.
+        @type keepQuery: L{bool}
+
+        @return: a new L{URLPath}
+        """
+        return self._fromURL(newURL.replace(
+            fragment=u'', query=self._url.query if keepQuery else ()
+        ))
 
 
     def sibling(self, path, keepQuery=False):
         """
-        Get the sibling of the current L{URLPath}. A sibling is a file which is
-        in the same directory as the current file.
+        Get the sibling of the current L{URLPath}.  A sibling is a file which
+        is in the same directory as the current file.
 
         @param path: The path of the sibling.
         @type path: L{bytes}
@@ -129,11 +177,9 @@ class URLPath(object):
             L{URLPath}.
         @type: keepQuery: L{bool}
 
-        @rtype: L{URLPath}
+        @return: a new L{URLPath}
         """
-        l = self.pathList()
-        l[-1] = path
-        return self._pathMod(l, keepQuery)
+        return self._mod(self._url.sibling(path.decode("ascii")), keepQuery)
 
 
     def child(self, path, keepQuery=False):
@@ -147,14 +193,9 @@ class URLPath(object):
             L{URLPath}.
         @type: keepQuery: L{bool}
 
-        @rtype: L{URLPath}
+        @return: a new L{URLPath}
         """
-        l = self.pathList()
-        if l[-1] == b'':
-            l[-1] = path
-        else:
-            l.append(path)
-        return self._pathMod(l, keepQuery)
+        return self._mod(self._url.child(path.decode("ascii")), keepQuery)
 
 
     def parent(self, keepQuery=False):
@@ -165,17 +206,9 @@ class URLPath(object):
             L{URLPath}.
         @type: keepQuery: L{bool}
 
-        @rtype: L{URLPath}
+        @return: a new L{URLPath}
         """
-        l = self.pathList()
-        if l[-1] == b'':
-            del l[-2]
-        else:
-            # We are a file, such as http://example.com/foo/bar
-            # our parent directory is http://example.com/
-            l.pop()
-            l[-1] = b''
-        return self._pathMod(l, keepQuery)
+        return self._mod(self._url.click(u".."), keepQuery)
 
 
     def here(self, keepQuery=False):
@@ -186,12 +219,9 @@ class URLPath(object):
             L{URLPath}.
         @type: keepQuery: L{bool}
 
-        @rtype: L{URLPath}
+        @return: a new L{URLPath}
         """
-        l = self.pathList()
-        if l[-1] != b'':
-            l[-1] = b''
-        return self._pathMod(l, keepQuery)
+        return self._mod(self._url.click(u"."), keepQuery)
 
 
     def click(self, st):
@@ -199,40 +229,27 @@ class URLPath(object):
         Return a path which is the URL where a browser would presumably take
         you if you clicked on a link with an HREF as given.
 
-        @rtype: L{URLPath}
-        """
-        scheme, netloc, path, query, fragment = urlparse.urlsplit(st)
-        if not scheme:
-            scheme = self.scheme
-        if not netloc:
-            netloc = self.netloc
-            if not path:
-                path = self.path
-                if not query:
-                    query = self.query
-            elif path[0] != b'/':
-                l = self.pathList()
-                l[-1] = path
-                path = b'/'.join(l)
+        @param st: A relative URL, to be interpreted relative to C{self} as the
+            base URL.
+        @type st: L{bytes}
 
-        return URLPath(scheme,
-                       netloc,
-                       path,
-                       query,
-                       fragment)
+        @return: a new L{URLPath}
+        """
+        return self._fromURL(self._url.click(st.decode("ascii")))
 
 
     def __str__(self):
-        x = urlparse.urlunsplit((
-            self.scheme, self.netloc, self.path, self.query, self.fragment))
-
-        if not isinstance(x, str):
-            x = x.decode('utf8')
-
-        return x
+        """
+        The L{str} of a L{URLPath} is its URL text.
+        """
+        return nativeString(self._url.asURI().asText())
 
 
     def __repr__(self):
+        """
+        The L{repr} of a L{URLPath} is an eval-able expression which will
+        construct a similar L{URLPath}.
+        """
         return ('URLPath(scheme=%r, netloc=%r, path=%r, query=%r, fragment=%r)'
                 % (self.scheme, self.netloc, self.path, self.query,
                    self.fragment))
