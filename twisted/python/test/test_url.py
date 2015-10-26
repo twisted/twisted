@@ -722,6 +722,11 @@ class TestURL(TestCase):
         """
         Passing an argument of the wrong type to any of the constructor
         arguments of L{URL} will raise a descriptive L{TypeError}.
+
+        L{URL} typechecks very aggressively to ensure that its constitutent
+        parts are all properly immutable and to prevent confusing errors when
+        bad data crops up in a method call long after the code that called the
+        constructor is off the stack.
         """
         class unexpected(object):
             def __str__(self):
