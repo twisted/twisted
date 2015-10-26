@@ -127,22 +127,6 @@ def _resolveDotSegments(path):
 
 
 
-def _checkUnicodeOrNone(s):
-    """
-    Check if the given parameter is unicode, allowing None as well.
-
-    @param s: The parameter to check.
-
-    @raise TypeError: if C{s} is C{None} or an instance of L{unicode}.
-
-    @return: C{s}
-    """
-    if not isinstance(s, (unicode, None.__class__)):
-        raise TypeError("%r is not unicode" % (s,))
-    return s
-
-
-
 _unspecified = object()
 
 def _optional(argument, default):
@@ -311,13 +295,11 @@ class URL(object):
             userinfo = u''
 
         # Set attributes.
-        self._scheme = _checkUnicodeOrNone(scheme) or u''
-        self._host = _checkUnicodeOrNone(host) or u''
-        self._path = tuple(map(_checkUnicodeOrNone, path))
-        self._query = tuple((_checkUnicodeOrNone(k),
-                             _checkUnicodeOrNone(v)) for (k, v) in
-                            query)
-        self._fragment = _checkUnicodeOrNone(fragment)
+        self._scheme = scheme or u''
+        self._host = host or u''
+        self._path = tuple(path)
+        self._query = tuple(query)
+        self._fragment = fragment
         self._port = port
         if rooted is None:
             rooted = bool(host)
