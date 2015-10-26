@@ -704,9 +704,11 @@ class URL(object):
 
         @param name: The name (the part before the C{=}) of the query parameter
             to add.
+        @type name: L{unicode}
 
         @param value: The value (the part after the C{=}) of the query
             parameter to add.
+        @type value: L{unicode}
 
         @return: a new L{URL} with the parameter added.
         """
@@ -726,9 +728,11 @@ class URL(object):
 
         @param name: The name (the part before the C{=}) of the query parameter
             to add.
+        @type name: L{unicode}
 
         @param value: The value (the part after the C{=}) of the query
             parameter to add.
+        @type value: L{unicode}
 
         @return: a new L{URL} with the parameter added or changed.
         """
@@ -745,6 +749,7 @@ class URL(object):
         Retrieve a list of values for the given named query parameter.
 
         @param name: The name of the query parameter to retrieve.
+        @type name: L{unicode}
 
         @return: all the values associated with the key; for example, for the
             query string C{u"x=1&x=2"}, C{url.query.get(u"x")} would return
@@ -757,9 +762,11 @@ class URL(object):
 
     def remove(self, name):
         """
-        Remove all query arguments with the given name.
+        Create a new L{URL} with all query arguments with the given name
+        removed.
 
         @param name: The name of the query parameter to remove.
+        @type name: L{unicode}
 
         @return: a new L{URL} with the parameter removed.
         """
