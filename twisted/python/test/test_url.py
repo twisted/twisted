@@ -733,15 +733,39 @@ class TestURL(TestCase):
                 return "wrong"
             def __repr__(self):
                 return "<unexpected>"
-        def check(param, expectation="unicode" if bytes is str else "str"):
-            with self.assertRaises(TypeError) as raised:
-                URL(**{param: unexpected()})
+        defaultExpectation = "unicode" if bytes is str else "str"
+        def assertRaised(raised, expectation, name):
             self.assertEqual(str(raised.exception),
                              "expected {} for {}, got {}".format(
                                  expectation,
-                                 param, "<unexpected>"))
+                                 name, "<unexpected>"))
+
+        def check(param, expectation=defaultExpectation):
+            with self.assertRaises(TypeError) as raised:
+                URL(**{param: unexpected()})
+            assertRaised(raised, expectation, param)
         check("scheme")
         check("host")
         check("fragment")
-        check("userinfo")
         check("rooted", "bool")
+        check("userinfo")
+        check("port", "int or NoneType")
+
+        with self.assertRaises(TypeError) as raised:
+            URL(path=[unexpected(),])
+        assertRaised(raised, defaultExpectation, "path segment")
+        with self.assertRaises(TypeError) as raised:
+            URL(query=[(u"name", unexpected()),])
+        assertRaised(raised, defaultExpectation + " or NoneType",
+                     "query parameter value")
+        with self.assertRaises(TypeError) as raised:
+            URL(query=[(unexpected(), u"value"),])
+        assertRaised(raised, defaultExpectation, "query parameter name")
+        # no custom error message for this one, just want to make sure
+        # non-2-tuples don't get through
+        with self.assertRaises(TypeError):
+            URL(query=[unexpected()])
+        with self.assertRaises(ValueError):
+            URL(query=[(u'k', u'v', u'vv')])
+        with self.assertRaises(ValueError):
+            URL(query=[(u'k',)])
