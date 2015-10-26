@@ -771,6 +771,17 @@ class TestURL(TestCase):
         with self.assertRaises(ValueError):
             URL(query=[(u'k',)])
 
+        url = URL.fromText("https://valid.example.com/")
+        with self.assertRaises(TypeError) as raised:
+            url.child(Unexpected())
+        assertRaised(raised, defaultExpectation, "path segment")
+        with self.assertRaises(TypeError) as raised:
+            url.sibling(Unexpected())
+        assertRaised(raised, defaultExpectation, "path segment")
+        with self.assertRaises(TypeError) as raised:
+            url.click(Unexpected())
+        assertRaised(raised, defaultExpectation, "relative URL")
+
 
     def test_technicallyTextIsIterableBut(self):
         """
