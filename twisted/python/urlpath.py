@@ -105,6 +105,9 @@ class URLPath(object):
         if not isinstance(url, (str, unicode)):
             raise ValueError("'url' must be a str or unicode")
         if isinstance(url, bytes):
+            # On Python 2, accepting 'str' (for compatibility) means we might
+            # get 'bytes'.  On py3, this will not work with bytes due to the
+            # check above.
             return klass.fromBytes(url)
         return klass._fromURL(_URL.fromText(url))
 
