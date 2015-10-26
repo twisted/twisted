@@ -770,7 +770,5 @@ class URL(object):
 
         @return: a new L{URL} with the parameter removed.
         """
-        if not isinstance(name, (unicode, None.__class__)):
-            raise TypeError("name  must be unicode.")
-        return self.replace(filter(lambda x: x[0] != name,
-                                   self.query))
+        return self.replace(query=((k, v) for (k, v) in self.query
+                                   if k != name))
