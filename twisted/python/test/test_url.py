@@ -681,6 +681,14 @@ class TestURL(TestCase):
         )
 
 
+    def test_portText(self):
+        """
+        L{URL.fromText} parses custom port numbers as integers.
+        """
+        self.assertEqual(URL.fromText(u"http://www.example.com:8080/").port,
+                         8080)
+
+
     def test_mailto(self):
         """
         Although L{URL} instances are mainly for dealing with HTTP, other
