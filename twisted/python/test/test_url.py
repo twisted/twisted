@@ -769,3 +769,18 @@ class TestURL(TestCase):
             URL(query=[(u'k', u'v', u'vv')])
         with self.assertRaises(ValueError):
             URL(query=[(u'k',)])
+
+
+    def test_technicallyTextIsIterableBut(self):
+        """
+        Technically, L{str} (or L{unicode}, as appropriate) is iterable, but
+        C{URL(path="foo")} resulting in C{URL.fromText("f/o/o")} is never what
+        you want.
+        """
+        with self.assertRaises(TypeError) as raised:
+            URL(path=u'foo')
+        self.assertEqual(
+            str(raised.exception),
+            "expected iterable of text for path, got text itself: {}"
+            .format(repr(u'foo'))
+        )

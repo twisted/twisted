@@ -329,6 +329,11 @@ class URL(object):
         # Set attributes.
         self._scheme = _typecheck("scheme", scheme)
         self._host = _typecheck("host", host)
+        if isinstance(path, unicode):
+            raise TypeError(
+                "expected iterable of text for path, got text itself: "
+                + repr(path)
+            )
         self._path = tuple((_typecheck("path segment", segment)
                             for segment in path))
         self._query = tuple(
