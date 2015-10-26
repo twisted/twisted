@@ -152,13 +152,10 @@ _schemeDefaultPorts = {
 
 
 
-def _typecheck(type, name, value):
+def _typecheck(name, value, *types):
     """
     Check that the given C{value} is of the given C{type}, or raise an
     exception describing the problem using C{name}.
-
-    @param type: the expected type of C{value}
-    @type type: L{type}
 
     @param name: a name to use to describe the type mismatch in the error if
         one occurs
@@ -167,13 +164,18 @@ def _typecheck(type, name, value):
     @param value: the value to check
     @type value: L{object}
 
+    @param types: the expected types of C{value}
+    @type types: L{tuple} of L{type}
+
     @raise TypeError: if there is a type mismatch between C{value} and C{type}
 
     @return: C{value} if the type check succeeds
     """
-    if not isinstance(value, type):
+    if not types:
+        types = (unicode,)
+    if not isinstance(value, types):
         raise TypeError("expected {} for {}, got {}".format(
-            type.__name__, name, repr(value),
+            " or ".join([t.__name__ for t in types]), name, repr(value),
         ))
     return value
 
@@ -325,14 +327,19 @@ class URL(object):
             rooted = bool(host)
 
         # Set attributes.
-        self._scheme = _typecheck(unicode, "scheme", scheme)
-        self._host = _typecheck(unicode, "host", host)
-        self._path = tuple(path)
-        self._query = tuple(tuple(kv) for kv in query)
-        self._fragment = _typecheck(unicode, "fragment", fragment)
-        self._port = port
-        self._rooted = _typecheck(bool, "rooted", rooted)
-        self._userinfo = _typecheck(unicode, "userinfo", userinfo)
+        self._scheme = _typecheck("scheme", scheme)
+        self._host = _typecheck("host", host)
+        self._path = tuple((_typecheck("path segment", segment)
+                            for segment in path))
+        self._query = tuple(
+            (_typecheck("query parameter name", k),
+             _typecheck("query parameter value", v, unicode, type(None)))
+            for (k, v) in query
+        )
+        self._fragment = _typecheck("fragment", fragment)
+        self._port = _typecheck("port", port, int, type(None))
+        self._rooted = _typecheck("rooted", rooted, bool)
+        self._userinfo = _typecheck("userinfo", userinfo)
 
     scheme = property(lambda self: self._scheme)
     host = property(lambda self: self._host)
