@@ -694,10 +694,13 @@ class URL(object):
 
     def add(self, name, value=None):
         """
-        Remove all existing occurrences of the query argument 'name', *if it
-        exists*, then add the argument with the given value.
+        Create a new L{URL} with a given query argument, C{name}, added to it
+        with the value C{value}, like so::
 
-        C{None} indicates that the argument has no value.
+            >>> URL.fromText(u'https://example.com/?x=y').add(u'x')
+            URL.fromText(u'https://example.com/?x=y&x')
+            >>> URL.fromText(u'https://example.com/?x=y').add(u'x', u'z')
+            URL.fromText(u'https://example.com/?x=y&x=z')
 
         @param name: The name (the part before the C{=}) of the query parameter
             to add.
@@ -705,17 +708,21 @@ class URL(object):
         @param value: The value (the part after the C{=}) of the query
             parameter to add.
 
-        @return: a new L{URL} with the parameter added or changed.
+        @return: a new L{URL} with the parameter added.
         """
         return self.replace(query=self.query + ((name, value),))
 
 
     def set(self, name, value=None):
         """
-        Remove all existing occurrences of the query argument 'name', *if it
-        exists*, then add the argument with the given value.
+        Create a new L{URL} with all existing occurrences of the query argument
+        C{name}, if any, removed, then add the argument with the given value,
+        like so::
 
-        C{None} indicates that the argument has no value.
+            >>> URL.fromText(u'https://example.com/?x=y').set(u'x')
+            URL.fromText(u'https://example.com/?x')
+            >>> URL.fromText(u'https://example.com/?x=y').set(u'x', u'z')
+            URL.fromText(u'https://example.com/?x=z')
 
         @param name: The name (the part before the C{=}) of the query parameter
             to add.
