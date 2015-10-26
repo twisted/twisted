@@ -212,10 +212,10 @@ class URL(object):
     hyperlink, for example, when crawling documents, to figure out what is
     linked::
 
-        >>> URL.fromText(u'https://example.com/base/uri/').click("/absolute")
+        >>> URL.fromText(u'https://example.com/base/uri/').click(u"/absolute")
         URL.fromText(u'https://example.com/absolute')
         >>> (URL.fromText(u'https://example.com/base/uri/')
-        ...  .click("relative/path"))
+        ...  .click(u"relative/path"))
         URL.fromText(u'https://example.com/base/uri/relative/path')
 
     The other is that URLs have two normalizations.  One representation is
