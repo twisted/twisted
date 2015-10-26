@@ -378,7 +378,7 @@ class URL(object):
         """
         hostport = [self.host]
         if self.port != _schemeDefaultPorts.get(self.scheme):
-            return hostport.append(unicode(self.port))
+            hostport.append(unicode(self.port))
         authority = []
         if self.userinfo:
             userinfo = self.userinfo
