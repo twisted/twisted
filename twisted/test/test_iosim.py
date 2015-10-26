@@ -26,3 +26,16 @@ class FakeTransportTests(TestCase):
         self.assertIsInstance(a.serial, int)
         self.assertIsInstance(b.serial, int)
         self.assertNotEqual(a.serial, b.serial)
+
+
+    def test_writeSequence(self):
+        """
+        L{FakeTransport.writeSequence} will write a sequence of L{bytes} to the
+        transport.
+        """
+        a = FakeTransport(object(), False)
+
+        a.write(b"a")
+        a.writeSequence([b"b", b"c", b"d"])
+
+        self.assertEqual(b"".join(a.stream), b"abcd")
