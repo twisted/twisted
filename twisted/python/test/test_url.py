@@ -685,8 +685,9 @@ class TestURL(TestCase):
         """
         L{URL.fromText} parses custom port numbers as integers.
         """
-        self.assertEqual(URL.fromText(u"http://www.example.com:8080/").port,
-                         8080)
+        portURL = URL.fromText(u"http://www.example.com:8080/")
+        self.assertEqual(portURL.port, 8080)
+        self.assertEqual(portURL.asText(), u"http://www.example.com:8080/")
 
 
     def test_mailto(self):
