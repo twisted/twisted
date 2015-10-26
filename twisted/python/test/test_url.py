@@ -728,7 +728,7 @@ class TestURL(TestCase):
         bad data crops up in a method call long after the code that called the
         constructor is off the stack.
         """
-        class unexpected(object):
+        class Unexpected(object):
             def __str__(self):
                 return "wrong"
             def __repr__(self):
@@ -742,7 +742,7 @@ class TestURL(TestCase):
 
         def check(param, expectation=defaultExpectation):
             with self.assertRaises(TypeError) as raised:
-                URL(**{param: unexpected()})
+                URL(**{param: Unexpected()})
             assertRaised(raised, expectation, param)
         check("scheme")
         check("host")
@@ -752,19 +752,19 @@ class TestURL(TestCase):
         check("port", "int or NoneType")
 
         with self.assertRaises(TypeError) as raised:
-            URL(path=[unexpected(),])
+            URL(path=[Unexpected(),])
         assertRaised(raised, defaultExpectation, "path segment")
         with self.assertRaises(TypeError) as raised:
-            URL(query=[(u"name", unexpected()),])
+            URL(query=[(u"name", Unexpected()),])
         assertRaised(raised, defaultExpectation + " or NoneType",
                      "query parameter value")
         with self.assertRaises(TypeError) as raised:
-            URL(query=[(unexpected(), u"value"),])
+            URL(query=[(Unexpected(), u"value"),])
         assertRaised(raised, defaultExpectation, "query parameter name")
-        # no custom error message for this one, just want to make sure
-        # non-2-tuples don't get through
+        # No custom error message for this one, just want to make sure
+        # non-2-tuples don't get through.
         with self.assertRaises(TypeError):
-            URL(query=[unexpected()])
+            URL(query=[Unexpected()])
         with self.assertRaises(ValueError):
             URL(query=[(u'k', u'v', u'vv')])
         with self.assertRaises(ValueError):
