@@ -100,7 +100,7 @@ class TestURL(TestCase):
 
 
     def assertURL(self, u, scheme, host, path, query,
-                  fragment, port):
+                  fragment, port, userinfo=u''):
         """
         The given L{URL} should have the given components.
 
@@ -117,11 +117,13 @@ class TestURL(TestCase):
         @param fragment: The expected fragment.
 
         @param port: The expected port.
+
+        @param userinfo: The expected userinfo.
         """
         actual = (u.scheme, u.host, u.path, u.query,
-                  u.fragment, u.port)
+                  u.fragment, u.port, u.userinfo)
         expected = (scheme, host, tuple(path), tuple(query),
-                    fragment, port)
+                    fragment, port, u.userinfo)
         self.assertEqual(actual, expected)
 
 
@@ -131,10 +133,10 @@ class TestURL(TestCase):
         """
         def check(u):
             self.assertUnicoded(u)
-            self.assertURL(u, u'http', u'', [], [], u'', 80)
+            self.assertURL(u, u'http', u'', [], [], u'', 80, u'')
 
         check(URL(u'http', u''))
-        check(URL(u'http', u'', None, None, None))
+        check(URL(u'http', u'', [], []))
         check(URL(u'http', u'', [], [], u''))
 
 
@@ -688,3 +690,45 @@ class TestURL(TestCase):
         """
         self.assertEqual(URL.fromText(u"mailto:user@example.com").asText(),
                          u"mailto:user@example.com")
+
+
+    def test_queryIterable(self):
+        """
+        When a L{URL} is created with a C{query} argument, the C{query}
+        argument is converted into an N-tuple of 2-tuples.
+        """
+        url = URL(query=[[u'alpha', u'beta']])
+        self.assertEqual(url.query, ((u'alpha', u'beta'),))
+
+
+    def test_pathIterable(self):
+        """
+        When a L{URL} is created with a C{path} argument, the C{path} is
+        converted into a tuple.
+        """
+        url = URL(path=[u'hello', u'world'])
+        self.assertEqual(url.path, (u'hello', u'world'))
+
+
+    def test_invalidArguments(self):
+        """
+        Passing an argument of the wrong type to any of the constructor
+        arguments of L{URL} will raise a descriptive L{TypeError}.
+        """
+        class unexpected(object):
+            def __str__(self):
+                return "wrong"
+            def __repr__(self):
+                return "<unexpected>"
+        def check(param, expectation="unicode" if bytes is str else "str"):
+            with self.assertRaises(TypeError) as raised:
+                URL(**{param: unexpected()})
+            self.assertEqual(str(raised.exception),
+                             "expected {} for {}, got {}".format(
+                                 expectation,
+                                 param, "<unexpected>"))
+        check("scheme")
+        check("host")
+        check("fragment")
+        check("userinfo")
+        check("rooted", "bool")

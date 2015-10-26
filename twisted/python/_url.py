@@ -152,6 +152,33 @@ _schemeDefaultPorts = {
 
 
 
+def _typecheck(type, name, value):
+    """
+    Check that the given C{value} is of the given C{type}, or raise an
+    exception describing the problem using C{name}.
+
+    @param type: the expected type of C{value}
+    @type type: L{type}
+
+    @param name: a name to use to describe the type mismatch in the error if
+        one occurs
+    @type name: native L{str}
+
+    @param value: the value to check
+    @type value: L{object}
+
+    @raise TypeError: if there is a type mismatch between C{value} and C{type}
+
+    @return: C{value} if the type check succeeds
+    """
+    if not isinstance(value, type):
+        raise TypeError("expected {} for {}, got {}".format(
+            type.__name__, name, repr(value),
+        ))
+    return value
+
+
+
 class URL(object):
     """
     A L{URL} represents a URL and provides a convenient API for modifying its
@@ -244,8 +271,8 @@ class URL(object):
     @type rooted: L{bool}
     """
 
-    def __init__(self, scheme=None, host=None, path=None, query=None,
-                 fragment=None, port=None, rooted=None, userinfo=None):
+    def __init__(self, scheme=None, host=None, path=(), query=(), fragment=u'',
+                 port=None, rooted=None, userinfo=u''):
         """
         Create a new L{URL} from structured information about itself.
 
@@ -255,8 +282,11 @@ class URL(object):
         @ivar host: The host portion of the netloc.
         @type host: L{unicode}
 
-        @ivar port: The port number portion of the netloc.
-        @type port: L{int}
+        @ivar port: The port number indicated by this URL, or C{None} if none
+            is indicated.  (This is only C{None} if the default port for the
+            scheme is unknown; if the port number is unspecified in the text of
+            a URL, this will still be set to the default port for that scheme.)
+        @type port: L{int} or L{None}
 
         @ivar path: The path segments.
         @type path: Iterable of L{unicode}.
@@ -278,33 +308,31 @@ class URL(object):
             specified, separated with colons.
         @type userinfo: L{unicode}
         """
-        # Fall back to defaults.
-        if path is None:
-            path = []
-        if query is None:
-            query = []
-        if fragment is None:
-            fragment = u''
         if host is not None and scheme is None:
             scheme = u'http'
         if port is None:
             port = _schemeDefaultPorts.get(scheme)
         if host and query and not path:
-            path = [u'']
-        if userinfo is None:
-            userinfo = u''
+            path = (u'',)
 
-        # Set attributes.
-        self._scheme = scheme or u''
-        self._host = host or u''
-        self._path = tuple(path)
-        self._query = tuple(query)
-        self._fragment = fragment
-        self._port = port
+        # Now that we're done detecting whether they were passed, we can set
+        # them to their defaults:
+        if scheme is None:
+            scheme = u''
+        if host is None:
+            host = u''
         if rooted is None:
             rooted = bool(host)
-        self._rooted = rooted
-        self._userinfo = userinfo
+
+        # Set attributes.
+        self._scheme = _typecheck(unicode, "scheme", scheme)
+        self._host = _typecheck(unicode, "host", host)
+        self._path = tuple(path)
+        self._query = tuple(tuple(kv) for kv in query)
+        self._fragment = _typecheck(unicode, "fragment", fragment)
+        self._port = port
+        self._rooted = _typecheck(bool, "rooted", rooted)
+        self._userinfo = _typecheck(unicode, "userinfo", userinfo)
 
     scheme = property(lambda self: self._scheme)
     host = property(lambda self: self._host)
