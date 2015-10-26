@@ -6,7 +6,7 @@
 Utilities and helpers for simulating a network
 """
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import itertools
 
@@ -21,6 +21,7 @@ from twisted.python.failure import Failure
 from twisted.internet import error
 from twisted.internet import interfaces
 
+
 class TLSNegotiation:
     def __init__(self, obj, connectState):
         self.obj = obj
@@ -28,8 +29,10 @@ class TLSNegotiation:
         self.sent = False
         self.readyToSend = connectState
 
+
     def __repr__(self):
         return 'TLSNegotiation(%r)' % (self.obj,)
+
 
     def pretendToVerify(self, other, tpt):
         # Set the transport problems list here?  disconnections?
@@ -41,7 +44,7 @@ class TLSNegotiation:
 
 
 
-implementer(interfaces.IAddress)
+@implementer(interfaces.IAddress)
 class FakeAddress(object):
     """
     The default address type for the host and peer of L{FakeTransport}
@@ -110,29 +113,36 @@ class FakeTransport:
         else:
             self.stream.append(data)
 
+
     def _checkProducer(self):
         # Cheating; this is called at "idle" times to allow producers to be
         # found and dealt with
         if self.producer:
             self.producer.resumeProducing()
 
+
     def registerProducer(self, producer, streaming):
-        """From abstract.FileDescriptor
+        """
+        From abstract.FileDescriptor
         """
         self.producer = producer
         self.streamingProducer = streaming
         if not streaming:
             producer.resumeProducing()
 
+
     def unregisterProducer(self):
         self.producer = None
+
 
     def stopConsuming(self):
         self.unregisterProducer()
         self.loseConnection()
 
+
     def writeSequence(self, iovec):
-        self.write("".join(iovec))
+        self.write(b"".join(iovec))
+
 
     def loseConnection(self):
         self.disconnecting = True
@@ -148,11 +158,13 @@ class FakeTransport:
 
     def reportDisconnect(self):
         if self.tls is not None:
-            # We were in the middle of negotiating!  Must have been a TLS problem.
+            # We were in the middle of negotiating!  Must have been a TLS
+            # problem.
             err = NativeOpenSSLError()
         else:
             err = self.disconnectReason
         self.protocol.connectionLost(Failure(err))
+
 
     def logPrefix(self):
         """
@@ -160,22 +172,28 @@ class FakeTransport:
         """
         return "iosim"
 
+
     def getPeer(self):
         return self.peerAddress
 
+
     def getHost(self):
         return self.hostAddress
+
 
     def resumeProducing(self):
         # Never sends data anyways
         pass
 
+
     def pauseProducing(self):
         # Never sends data anyways
         pass
 
+
     def stopProducing(self):
         self.loseConnection()
+
 
     def startTLS(self, contextFactory, beNormal=True):
         # Nothing's using this feature yet, but startTLS has an undocumented
@@ -216,7 +234,7 @@ class FakeTransport:
                                         # startTLS already.
             if self.tls.sent:
                 self.tls.pretendToVerify(buf, self)
-                self.tls = None # we're done with the handshake if we've gotten
+                self.tls = None # We're done with the handshake if we've gotten
                                 # this far... although maybe it failed...?
                 # TLS started!  Unbuffer...
                 b, self.tlsbuf = self.tlsbuf, None
@@ -259,7 +277,8 @@ def makeFakeServer(serverProtocol):
 
 
 class IOPump:
-    """Utility to pump data between clients and servers for protocol testing.
+    """
+    Utility to pump data between clients and servers for protocol testing.
 
     Perhaps this is a utility worthy of being in protocol.py?
     """
@@ -270,8 +289,10 @@ class IOPump:
         self.serverIO = serverIO
         self.debug = debug
 
+
     def flush(self, debug=False):
-        """Pump until there is no more input or output.
+        """
+        Pump until there is no more input or output.
 
         Returns whether any data was moved.
         """
@@ -287,7 +308,8 @@ class IOPump:
 
 
     def pump(self, debug=False):
-        """Move data back and forth.
+        """
+        Move data back and forth.
 
         Returns whether any data was moved.
         """
@@ -361,7 +383,7 @@ def connect(serverProtocol, serverTransport,
     pump = IOPump(
         clientProtocol, serverProtocol, clientTransport, serverTransport, debug
     )
-    # kick off server greeting, etc
+    # Kick off server greeting, etc
     pump.flush()
     return pump
 
