@@ -23,6 +23,17 @@ class _BaseURLPathTests(object):
         self.assertEqual(type(self.path.__str__()), str)
 
 
+    def test_allAttributesAreBytes(self):
+        """
+        A created L{URLPath} has bytes attributes.
+        """
+        self.assertIsInstance(self.path.scheme, bytes)
+        self.assertIsInstance(self.path.netloc, bytes)
+        self.assertIsInstance(self.path.path, bytes)
+        self.assertIsInstance(self.path.query, bytes)
+        self.assertIsInstance(self.path.fragment, bytes)
+
+
     def test_stringConversion(self):
         """
         Calling C{str()} with a L{URLPath} will return the same URL that it was
@@ -151,6 +162,20 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
 
         with self.assertRaises(ValueError):
             urlpath.URLPath.fromBytes(u"someurl")
+
+
+    def test_partialArguments(self):
+        """
+        Leaving optional arguments unfilled makes a L{URLPath} with those
+        optional arguments filled with defaults.
+        """
+        # Direct constructor
+        url = urlpath.URLPath()
+        self.assertEqual(str(url), "http://localhost/")
+
+        # Not a "full" URL given to fromBytes
+        url = urlpath.URLPath.fromBytes(b"http://google.com")
+        self.assertEqual(str(url), "http://google.com/")
 
 
     def test_nonASCIIBytes(self):
