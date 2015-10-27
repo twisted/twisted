@@ -23,6 +23,17 @@ class _BaseURLPathTests(object):
         self.assertEqual(type(self.path.__str__()), str)
 
 
+    def test_allAttributesAreBytes(self):
+        """
+        A created L{URLPath} has bytes attributes.
+        """
+        self.assertIsInstance(self.path.scheme, bytes)
+        self.assertIsInstance(self.path.netloc, bytes)
+        self.assertIsInstance(self.path.path, bytes)
+        self.assertIsInstance(self.path.query, bytes)
+        self.assertIsInstance(self.path.fragment, bytes)
+
+
     def test_stringConversion(self):
         """
         Calling C{str()} with a L{URLPath} will return the same URL that it was
