@@ -127,7 +127,8 @@ class URLPath(object):
         """
         if not isinstance(url, bytes):
             raise ValueError("'url' must be bytes")
-        parts = urlparse.urlsplit(urlquote(url, safe=_allascii))
+        parts = [x.encode('ascii')
+                 for x in urlparse.urlsplit(urlquote(url, safe=_allascii))]
         return klass(*parts)
 
 
