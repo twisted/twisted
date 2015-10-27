@@ -164,6 +164,20 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
             urlpath.URLPath.fromBytes(u"someurl")
 
 
+    def test_partialArguments(self):
+        """
+        Leaving optional arguments unfilled makes a L{URLPath} with those
+        optional arguments filled with defaults.
+        """
+        # Direct constructor
+        url = urlpath.URLPath()
+        self.assertEqual(str(url), "http://localhost/")
+
+        # Not a "full" URL given to fromBytes
+        url = urlpath.URLPath.fromBytes(b"http://google.com")
+        self.assertEqual(str(url), "http://google.com/")
+
+
     def test_nonASCIIBytes(self):
         """
         L{URLPath.fromBytes} can interpret non-ASCII bytes as percent-encoded
