@@ -87,6 +87,12 @@ else:
             f.write(value)
             f.flush()
 
+        if _PY3:
+            import time
+            # Python 3 has no 'commit' flag for fopen, so let Windows catch
+            # up... sigh -hawkie
+            time.sleep(0.1)
+
         try:
             rename(newlinkname, filename)
         except:

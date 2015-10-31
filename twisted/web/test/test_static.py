@@ -1570,7 +1570,7 @@ class DirectoryListerTests(TestCase):
         self.assertEqual(dirs, [])
         self.assertEqual(files, [])
 
-    if getattr(os, "symlink", None) is None:
+    if getattr(os, "symlink", None) is None or platform.isWindows():
         test_brokenSymlink.skip = "No symlink support"
 
 
