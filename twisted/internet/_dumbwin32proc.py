@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-http://isometric.sixsided.org/_/gates_in_the_head/
+http://isometri.cc/strips/gates_in_the_head/
 """
 
 from __future__ import absolute_import, division, print_function

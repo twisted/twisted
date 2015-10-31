@@ -22,7 +22,9 @@ from zope.interface.verify import verifyObject
 
 if platform.isWindows():
     # We do the isWindows() check as newer Pythons support the symlink support
-    # in Vista, causing this to not work right.
+    # in Vista+, but only if you have some obscure permission. This uncommon
+    # requirement makes the test fail in 99.99% of cases as general users don't
+    # have permission to do it, even if there is "symlink support".
     symlinkSkip = "Windows does not support symlinks"
 else:
     try:
