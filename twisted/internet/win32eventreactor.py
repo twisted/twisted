@@ -156,7 +156,8 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def removeReader(self, reader):
-        """Remove a Selectable for notification of data available to read.
+        """
+        Remove a Selectable for notification of data available to read.
         """
         if reader in self._reads:
             del self._events[self._reads[reader]]
@@ -170,7 +171,8 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def removeWriter(self, writer):
-        """Remove a Selectable for notification of data available to write.
+        """
+        Remove a Selectable for notification of data available to write.
         """
         if writer in self._writes:
             del self._writes[writer]
@@ -184,11 +186,17 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def getReaders(self):
-        return list(self._reads.keys())
+        """
+        Return a L{list} of all readers.
+        """
+        return self._reads.keys()
 
 
     def getWriters(self):
-        return list(self._writes.keys())
+        """
+        Return a L{list} of all writers.
+        """
+        return self._writes.keys()
 
 
     def doWaitForMultipleEvents(self, timeout):
@@ -204,11 +212,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         # If any descriptors are trying to close, try to get them out of the way
         # first.
-        for reader in list(self._closedAndReading.keys()):
+        for reader in self._closedAndReading.keys():
             ranUserCode = True
             self._runAction('doRead', reader)
 
-        for fd in list(self._writes.keys()):
+        for fd in self.getWriters():
             ranUserCode = True
             log.callWithLogger(fd, self._runWrite, fd)
 
@@ -224,7 +232,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             time.sleep(timeout)
             return
 
-        handles = list(self._events.keys()) or [self.dummyEvent]
+        handles = self._events.keys() or [self.dummyEvent]
         timeout = int(timeout * 1000)
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:
