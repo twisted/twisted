@@ -23,9 +23,9 @@ L{twisted.internet.IOCPReactor}.
 
 from __future__ import absolute_import, division
 
-# System imports
 import time
 import sys
+
 from threading import Thread
 from weakref import WeakKeyDictionary
 
@@ -49,9 +49,9 @@ from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT
 
 import win32gui
 
-# Twisted imports
 from twisted.internet import posixbase
 from twisted.python import log, threadable, failure
+from twisted.python.compat import keys
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.threads import blockingCallFromThread
@@ -189,14 +189,14 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """
         Return a L{list} of all readers.
         """
-        return self._reads.keys()
+        return keys(self._reads)
 
 
     def getWriters(self):
         """
         Return a L{list} of all writers.
         """
-        return self._writes.keys()
+        return keys(self._writes)
 
 
     def doWaitForMultipleEvents(self, timeout):
@@ -212,7 +212,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         # If any descriptors are trying to close, try to get them out of the way
         # first.
-        for reader in self._closedAndReading.keys():
+        for reader in keys(self._closedAndReading):
             ranUserCode = True
             self._runAction('doRead', reader)
 
@@ -232,7 +232,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             time.sleep(timeout)
             return
 
-        handles = self._events.keys() or [self.dummyEvent]
+        handles = keys(self._events) or [self.dummyEvent]
         timeout = int(timeout * 1000)
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:
