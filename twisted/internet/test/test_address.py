@@ -13,17 +13,17 @@ from twisted.internet.address import HostnameAddress
 from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
 
-if not platform.isWindows():
+if platform.isWindows():
+    # We do the isWindows() check as newer Pythons support the symlink support
+    # in Vista, causing this to not work right.
+    symlinkSkip = "Windows does not support symlinks"
+else:
     try:
         os.symlink
     except AttributeError:
         symlinkSkip = "Platform does not support symlinks"
     else:
         symlinkSkip = None
-else:
-    # We do the isWindows() check as newer Pythons support the symlink support
-    # in Vista, causing this to not work right.
-    symlinkSkip = "Windows does not support symlinks"
 
 try:
     socket.AF_UNIX
