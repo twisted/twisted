@@ -937,6 +937,24 @@ class AddCleanupMixin(object):
         self.assertEqual(error1.getErrorMessage(), 'bar')
         self.assertEqual(error2.getErrorMessage(), 'foo')
 
+    def test_reentrant(self):
+        """
+        A test with cleanups can be run more than once.
+        """
+        log = []
+
+        class SomeTest(self.AddCleanup):
+            def test_withCleanups(self):
+                log.append('test_withCleanups')
+                self.addCleanup(log.append, 'cleanup')
+
+        test = SomeTest('test_withCleanups')
+        test.run(self.result)
+        test.run(self.result)
+        self.assertEqual(
+            ([], ['test_withCleanups', 'cleanup'] * 2),
+            (self.result.errors, log))
+
 
 
 class SynchronousAddCleanupTests(AddCleanupMixin, unittest.SynchronousTestCase):
