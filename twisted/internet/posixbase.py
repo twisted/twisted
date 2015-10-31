@@ -90,7 +90,7 @@ class _SocketWaker(log.Logger):
         """
         try:
             util.untilConcludes(self.w.send, b'x')
-        except (OSError, socket.error) as e:
+        except socket.error as e:
             if e.args[0] != errno.WSAEWOULDBLOCK:
                 raise
 
