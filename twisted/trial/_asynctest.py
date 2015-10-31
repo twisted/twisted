@@ -54,6 +54,7 @@ class TestCase(SynchronousTestCase):
         mostly useful for testing Trial.
         """
         super(TestCase, self).__init__(methodName)
+        self._asyncFixture = AsyncFixture()
 
 
     def assertFailure(self, deferred, *expectedFailures):
@@ -190,7 +191,7 @@ class TestCase(SynchronousTestCase):
         Run any scheduled cleanups and report errors (if any to the result
         object.
         """
-        d = self._runCleanups()
+        d = self._asyncFixture.cleanUp()
         d.addCallback(self._cbDeferRunCleanups, result)
         return d
 
@@ -269,21 +270,6 @@ class TestCase(SynchronousTestCase):
         self._reactorMethods = {}
 
 
-    def _runCleanups(self):
-        """
-        Run the cleanups added with L{addCleanup} in order.
-
-        @return: A C{Deferred} that fires when all cleanups are run.
-        """
-        def _makeFunction(f, args, kwargs):
-            return lambda: f(*args, **kwargs)
-        callables = []
-        while len(self._cleanups) > 0:
-            f, args, kwargs = self._cleanups.pop()
-            callables.append(_makeFunction(f, args, kwargs))
-        return util._runSequentially(callables)
-
-
     def _runFixturesAndTest(self, result):
         """
         Really run C{setUp}, the test method, and C{tearDown}.  Any of these may
@@ -313,7 +299,7 @@ class TestCase(SynchronousTestCase):
         If the function C{f} returns a Deferred, C{TestCase} will wait until the
         Deferred has fired before proceeding to the next function.
         """
-        return super(TestCase, self).addCleanup(f, *args, **kwargs)
+        return self._asyncFixture.addCleanup(f, *args, **kwargs)
 
 
     def getSuppress(self):
@@ -403,3 +389,38 @@ class TestCase(SynchronousTestCase):
         finally:
             results = None
             running.pop()
+
+
+class AsyncFixture(object):
+    """
+    A thing that can be cleaned up.
+
+    XXX: This is the absolute bare minimum needed to extract cleanup logic out
+    of TestCase. Future commits would add `setUp`, `reset` and `useFixture`
+    methods to make it a parallel of fixtures.Fixture.
+
+    See
+    https://github.com/testing-cabal/fixtures/blob/master/fixtures/fixture.py#L61
+    """
+
+    def __init__(self):
+        self._cleanups = []
+
+    def addCleanup(self, f, *args, **kwargs):
+        """
+        Extend the base cleanup feature with support for cleanup functions which
+        return Deferreds.
+
+        If the function C{f} returns a Deferred, C{TestCase} will wait until the
+        Deferred has fired before proceeding to the next function.
+        """
+        self._cleanups.append((f, args, kwargs))
+
+    def cleanUp(self):
+        def _makeFunction(f, args, kwargs):
+            return lambda: f(*args, **kwargs)
+        callables = []
+        while len(self._cleanups) > 0:
+            f, args, kwargs = self._cleanups.pop()
+            callables.append(_makeFunction(f, args, kwargs))
+        return util._runSequentially(callables)

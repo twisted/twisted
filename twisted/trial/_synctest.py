@@ -14,6 +14,8 @@ import inspect
 import os, warnings, sys, tempfile, types
 from dis import findlinestarts as _findlinestarts
 
+from fixtures import Fixture, MultipleExceptions
+
 from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
@@ -929,7 +931,8 @@ class SynchronousTestCase(_Assertions):
     def __init__(self, methodName='runTest'):
         super(SynchronousTestCase, self).__init__(methodName)
         self._passed = False
-        self._cleanups = []
+        self._fixture = Fixture()
+        self._fixture.setUp()
         self._testMethodName = methodName
         testMethod = getattr(self, methodName)
         self._parents = [
@@ -1045,7 +1048,7 @@ class SynchronousTestCase(_Assertions):
         As with all aspects of L{SynchronousTestCase}, Deferreds are not
         supported in cleanup functions.
         """
-        self._cleanups.append((f, args, kwargs))
+        self._fixture.addCleanup(f, *args, **kwargs)
 
 
     def patch(self, obj, attribute, value):
@@ -1352,13 +1355,17 @@ class SynchronousTestCase(_Assertions):
         """
         Synchronously run any cleanups which have been added.
         """
-        while len(self._cleanups) > 0:
-            f, args, kwargs = self._cleanups.pop()
-            try:
-                f(*args, **kwargs)
-            except:
-                f = failure.Failure()
+        try:
+            return self._fixture.cleanUp()
+        except MultipleExceptions as e:
+            for (exc_type, exc_value, exc_tb) in e.args:
+                f = failure.Failure(exc_value, exc_type, exc_tb)
                 result.addError(self, f)
+        except:
+            f = failure.Failure()
+            result.addError(self, f)
+        finally:
+            self._fixture.setUp()
 
 
     def _installObserver(self):
