@@ -281,7 +281,8 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
                              UNIXAddress(linkName))
             self.assertEqual(UNIXAddress(linkName),
                              UNIXAddress(self._socketAddress))
-    test_comparisonOfLinkedFiles.skip = symlinkSkip
+    if symlinkSkip:
+        test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
     def test_hashOfLinkedFiles(self):
@@ -293,7 +294,8 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         os.symlink(os.path.abspath(self._socketAddress), linkName)
         self.assertEqual(hash(UNIXAddress(self._socketAddress)),
                          hash(UNIXAddress(linkName)))
-    test_hashOfLinkedFiles.skip = symlinkSkip
+    if symlinkSkip:
+        test_hashOfLinkedFiles.skip = symlinkSkip
 
 
 
