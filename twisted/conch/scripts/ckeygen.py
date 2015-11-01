@@ -96,9 +96,12 @@ def generateRSAkey(options):
 
 
 def generateDSAkey(options):
-    from Crypto.PublicKey import DSA
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import dsa
+
     print 'Generating public/private dsa key pair.'
-    key = DSA.generate(int(options['bits']), randbytes.secureRandom)
+    params = dsa.DSAParameters.generate(int(options['bits']), default_backend())
+    key = dsa.DSAPrivateKey.generate(params, default_backend())
     _saveKey(key, options)
 
 

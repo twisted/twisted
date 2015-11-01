@@ -46,7 +46,7 @@ class AgentTestBase(unittest.TestCase):
     if iosim is None:
         skip = "iosim requires SSL, but SSL is not available"
     elif agent is None or keys is None:
-        skip = "Cannot run without PyCrypto or PyASN1"
+        skip = "Cannot run without cryptography or PyASN1"
 
     def setUp(self):
         # wire up our client <-> server
