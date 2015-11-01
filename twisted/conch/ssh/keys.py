@@ -15,9 +15,9 @@ from hashlib import md5, sha1
 
 # external library imports
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import dsa, rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
 
 from pyasn1.error import PyAsn1Error
@@ -122,10 +122,10 @@ class Key(object):
         keyType, rest = common.getNS(blob)
         if keyType == 'ssh-rsa':
             e, n, rest = common.getMP(rest, 2)
-            return Class(RSA.construct((n, e)))
+            return Class(rsa.RSAPublicKey(e, n))
         elif keyType == 'ssh-dss':
             p, q, g, y, rest = common.getMP(rest, 4)
-            return Class(DSA.construct((y, g, p, q)))
+            return Class(dsa.DSAPublicKey(p, q, g, y)
         else:
             raise BadKeyError('unknown blob type: %s' % keyType)
     _fromString_BLOB = classmethod(_fromString_BLOB)
