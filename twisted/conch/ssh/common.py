@@ -9,14 +9,13 @@ Common functions for the SSH classes.
 Maintainer: Paul Swartz
 """
 
-import struct, warnings, __builtin__
+import __builtin__
+import binascii
+import struct
 
-try:
-    from Crypto import Util
-except ImportError:
-    warnings.warn("PyCrypto not installed, but continuing anyways!",
-            RuntimeWarning)
 
+def bytes_to_int(b):
+    return int(binascii.hexlify(b), 16)
 
 
 def NS(t):

@@ -523,7 +523,7 @@ class Key(object):
         If this is a public key, this may or may not be the same object
         as self.
         """
-        return Key(self.keyObject.publickey())
+        return Key(self.keyObject.public_key())
 
 
     def fingerprint(self):

@@ -13,7 +13,6 @@ Maintainer: Paul Swartz
 # base library imports
 import struct
 import zlib
-import array
 from hashlib import md5, sha1
 import string
 import hmac
@@ -22,17 +21,16 @@ import hmac
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 
-from Crypto import Util
-
 # twisted imports
 from twisted.internet import protocol, defer
-
 from twisted.python import log, randbytes
 
 
 # sibling imports
-from twisted.conch.ssh import address, _kex, keys
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, _MPpow, ffs
+from twisted.conch.ssh import address, keys, _kex
+from twisted.conch.ssh.common import (
+    NS, getNS, MP, getMP, _MPpow, ffs, bytes_to_int
+)
 
 
 def _getRandomNumber(random, bits):
@@ -50,7 +48,7 @@ def _getRandomNumber(random, bits):
     if bits % 8:
         raise ValueError("bits (%d) must be a multiple of 8" % (bits,))
     bytes = random(bits / 8)
-    result = Util.number.bytes_to_long(bytes)
+    result = bytes_to_int(bytes)
     return result
 
 
@@ -1029,7 +1027,7 @@ class SSHServerTransport(SSHTransportBase):
         # TODO: This could be computed when self.p is set up
         #  or do as openssh does and scan f for a single '1' bit instead
 
-        pSize = Util.number.size(self.p)
+        pSize = int.bit_length(self.p)
         y = _getRandomNumber(randbytes.secureRandom, pSize)
 
         serverDHpublicKey = _MPpow(self.g, y, self.p)
