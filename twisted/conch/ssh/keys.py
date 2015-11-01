@@ -14,11 +14,14 @@ import itertools
 from hashlib import md5, sha1
 
 # external library imports
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import dsa, rsa
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.interfaces import (
+    DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey
+)
+from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
-from Crypto import Util
 
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
@@ -100,7 +103,8 @@ class Key(object):
     fromString = classmethod(fromString)
 
 
-    def _fromString_BLOB(Class, blob):
+    @classmethod
+    def _fromString_BLOB(cls, blob):
         """
         Return a public key object corresponding to this public key blob.
         The format of a RSA public key blob is::
@@ -122,13 +126,21 @@ class Key(object):
         keyType, rest = common.getNS(blob)
         if keyType == 'ssh-rsa':
             e, n, rest = common.getMP(rest, 2)
-            return Class(rsa.RSAPublicKey(e, n))
+            return cls(rsa.RSAPublicNumbers(e, n).public_key(default_backend()))
         elif keyType == 'ssh-dss':
             p, q, g, y, rest = common.getMP(rest, 4)
-            return Class(dsa.DSAPublicKey(p, q, g, y)
+            return cls(
+                dsa.DSAPublicNumbers(
+                    y=y,
+                    parameter_numbers=dsa.DSAParameterNumbers(
+                        p=p,
+                        q=q,
+                        g=g
+                    )
+                ).public_key(default_backend())
+            )
         else:
             raise BadKeyError('unknown blob type: %s' % keyType)
-    _fromString_BLOB = classmethod(_fromString_BLOB)
 
 
     def _fromString_PRIVATE_BLOB(Class, blob):
@@ -187,7 +199,8 @@ class Key(object):
     _fromString_PUBLIC_OPENSSH = classmethod(_fromString_PUBLIC_OPENSSH)
 
 
-    def _fromString_PRIVATE_OPENSSH(Class, data, passphrase):
+    @classmethod
+    def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
         """
         Return a private key object corresponding to this OpenSSH private key
         string.  If the key is encrypted, passphrase MUST be provided.
@@ -274,16 +287,39 @@ class Key(object):
             if len(decodedKey) < 6:
                 raise BadKeyError('RSA key failed to decode properly')
 
-            n, e, d, p, q = [long(value) for value in decodedKey[1:6]]
+            n, e, d, p, q, dmp1, dmq1, iqmp = [
+                long(value) for value in decodedKey[1:9]
+            ]
             if p > q:  # make p smaller than q
                 p, q = q, p
-            return Class(RSA.construct((n, e, d, p, q)))
+            return cls(
+                rsa.RSAPrivateNumbers(
+                    p=p,
+                    q=q,
+                    d=d,
+                    dmp1=dmp1,
+                    dmq1=dmq1,
+                    iqmp=iqmp,
+                    public_numbers=rsa.RSAPublicNumbers(e=e, n=n),
+                ).private_key(default_backend())
+            )
         elif kind == 'DSA':
             p, q, g, y, x = [long(value) for value in decodedKey[1: 6]]
             if len(decodedKey) < 6:
                 raise BadKeyError('DSA key failed to decode properly')
-            return Class(DSA.construct((y, g, p, q, x)))
-    _fromString_PRIVATE_OPENSSH = classmethod(_fromString_PRIVATE_OPENSSH)
+            return cls(
+                dsa.DSAPrivateNumbers(
+                    x=x,
+                    public_numbers=dsa.DSAPublicNumbers(
+                        y=y,
+                        parameter_numbers=dsa.DSAParameterNumbers(
+                            p=p,
+                            q=q,
+                            g=g
+                        )
+                    )
+                ).private_key(backend=default_backend())
+            )
 
 
     def _fromString_PUBLIC_LSH(Class, data):
@@ -518,16 +554,12 @@ class Key(object):
         Return the type of the object we wrap.  Currently this can only be
         'RSA' or 'DSA'.
         """
-        # the class is Crypto.PublicKey.<type>.<stuff we don't care about>
-        mod = self.keyObject.__class__.__module__
-        if mod.startswith('Crypto.PublicKey'):
-            type = mod.split('.')[2]
+        if isinstance(self.keyObject, (RSAPublicKey, RSAPrivateKey)):
+            return 'RSA'
+        elif isinstance(self.keyObject, (DSAPublicKey, DSAPrivateKey)):
+            return 'DSA'
         else:
             raise RuntimeError('unknown type of object: %r' % self.keyObject)
-        if type in ('RSA', 'DSA'):
-            return type
-        else:
-            raise RuntimeError('unknown type of key: %s' % type)
 
 
     def sshType(self):
@@ -544,12 +576,14 @@ class Key(object):
 
         @rtype: C{dict}
         """
-        keyData = {}
-        for name in self.keyObject.keydata:
-            value = getattr(self.keyObject, name, None)
-            if value is not None:
-                keyData[name] = value
-        return keyData
+        if isinstance(self.keyObject, RSAPublicKey):
+            numbers = self.keyObject.public_numbers()
+            return {
+                "n": numbers.n,
+                "e": numbers.e,
+            }
+        else:
+            raise RuntimeError("Unexpected key type: %s" % self.keyObject)
 
 
     def blob(self):
@@ -773,9 +807,12 @@ class Key(object):
         @rtype: C{str}
         """
         if self.type() == 'RSA':
-            digest = pkcs1Digest(data, self.keyObject.size() / 8)
-            signature = self.keyObject.sign(digest, '')[0]
-            ret = common.NS(Util.number.long_to_bytes(signature))
+            signer = self.keyObject.signer(
+                padding.PKCS1v15(),
+                hashes.SHA1(),
+            )
+            signer.update(data)
+            ret = common.NS(signer.finalize())
         elif self.type() == 'DSA':
             digest = sha1(data).digest()
             randomBytes = randbytes.secureRandom(19)
@@ -805,8 +842,11 @@ class Key(object):
         if signatureType != self.sshType():
             return False
         if self.type() == 'RSA':
-            numbers = common.getMP(signature)
-            digest = pkcs1Digest(data, self.keyObject.size() / 8)
+            verifier = self.keyObject.verifier(
+                common.getNS(signature)[0],
+                padding.PKCS1v15(),
+                hashes.SHA1(),
+            )
         elif self.type() == 'DSA':
             signature = common.getNS(signature)[0]
             numbers = [
@@ -814,7 +854,14 @@ class Key(object):
                     (signature[:20], signature[20:])
                 ]
             digest = sha1(data).digest()
-        return self.keyObject.verify(digest, numbers)
+
+        verifier.update(data)
+        try:
+            verifier.verify()
+        except InvalidSignature:
+            return False
+        else:
+            return True
 
 
 
@@ -835,40 +882,3 @@ def objectType(obj):
         return keyDataMapping[tuple(obj.keydata)]
     except (KeyError, AttributeError):
         raise BadKeyError("invalid key object", obj)
-
-
-
-def pkcs1Pad(data, messageLength):
-    """
-    Pad out data to messageLength according to the PKCS#1 standard.
-    @type data: C{str}
-    @type messageLength: C{int}
-    """
-    lenPad = messageLength - 2 - len(data)
-    return '\x01' + ('\xff' * lenPad) + '\x00' + data
-
-
-
-def pkcs1Digest(data, messageLength):
-    """
-    Create a message digest using the SHA1 hash algorithm according to the
-    PKCS#1 standard.
-    @type data: C{str}
-    @type messageLength: C{str}
-    """
-    digest = sha1(data).digest()
-    return pkcs1Pad(ID_SHA1 + digest, messageLength)
-
-
-
-def lenSig(obj):
-    """
-    Return the length of the signature in bytes for a key object.
-
-    @type obj: C{Crypto.PublicKey.pubkey.pubkey}
-    @rtype: C{long}
-    """
-    return obj.size() / 8
-
-
-ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'
