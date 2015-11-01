@@ -11,16 +11,16 @@ from twisted.trial import unittest
 from twisted.test import iosim
 
 try:
-    import Crypto.Cipher.DES3
+    import cryptography
 except ImportError:
-    Crypto = None
+    cryptography = None
 
 try:
     import pyasn1
 except ImportError:
     pyasn1 = None
 
-if Crypto and pyasn1:
+if cryptography and pyasn1:
     from twisted.conch.ssh import keys, agent
 else:
     keys = agent = None

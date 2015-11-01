@@ -21,7 +21,7 @@ from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-if requireModule('Crypto.Cipher.DES3') and requireModule('pyasn1'):
+if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.common import NS
     from twisted.conch.checkers import SSHProtocolChecker
     from twisted.conch.ssh import keys, userauth, transport
@@ -86,7 +86,7 @@ class ClientUserAuth(userauth.SSHUserAuthClient):
 
 class OldClientAuth(userauth.SSHUserAuthClient):
     """
-    The old SSHUserAuthClient returned a PyCrypto key object from
+    The old SSHUserAuthClient returned a cryptography key object from
     getPrivateKey() and a string from getPublicKey
     """
 
@@ -255,7 +255,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
 
     if keys is None:
-        skip = "cannot run w/o PyCrypto"
+        skip = "cannot run without cryptography"
 
 
     def setUp(self):
@@ -583,7 +583,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
 
 
     if keys is None:
-        skip = "cannot run w/o PyCrypto"
+        skip = "cannot run without cryptography"
 
 
     def setUp(self):
@@ -799,7 +799,7 @@ class LoopbackTests(unittest.TestCase):
 
 
     if keys is None:
-        skip = "cannot run w/o PyCrypto or PyASN1"
+        skip = "cannot run without cryptography or PyASN1"
 
 
     class Factory:
@@ -865,7 +865,7 @@ class LoopbackTests(unittest.TestCase):
 
 class ModuleInitializationTests(unittest.TestCase):
     if keys is None:
-        skip = "cannot run w/o PyCrypto or PyASN1"
+        skip = "cannot run without cryptography or PyASN1"
 
 
     def test_messages(self):

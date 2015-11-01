@@ -30,12 +30,20 @@ from twisted.python.procutils import which
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 
-from twisted.conch.test.test_ssh import Crypto, pyasn1
 try:
     from twisted.conch.test.test_ssh import ConchTestServerFactory, \
         conchTestPublicKeyChecker
 except ImportError:
     pass
+
+try:
+    import cryptography
+except ImportError:
+    cryptography = None
+try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
 
 
 
@@ -274,8 +282,8 @@ run()""" % mod]
 
 
 class ConchServerSetupMixin:
-    if not Crypto:
-        skip = "can't run w/o PyCrypto"
+    if not cryptography:
+        skip = "can't run without cryptography"
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"

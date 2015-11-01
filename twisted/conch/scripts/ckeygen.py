@@ -82,9 +82,15 @@ def handleError():
 
 
 def generateRSAkey(options):
-    from Crypto.PublicKey import RSA
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
     print 'Generating public/private rsa key pair.'
-    key = RSA.generate(int(options['bits']), randbytes.secureRandom)
+    key = rsa.RSAPrivateKey.generate(
+        key_size=int(options['bits']),
+        public_exponent=65537,
+        backend=default_backend()
+    )
     _saveKey(key, options)
 
 

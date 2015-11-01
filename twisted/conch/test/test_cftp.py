@@ -10,10 +10,17 @@ import locale
 import time, sys, os, operator, getpass, struct
 from StringIO import StringIO
 
-from twisted.conch.test.test_ssh import Crypto, pyasn1
+try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
+try:
+    import cryptography
+except ImportError:
+    cryptography = None
 
 _reason = None
-if Crypto and pyasn1:
+if cryptography and pyasn1:
     try:
         from twisted.conch import unix
         from twisted.conch.scripts import cftp
@@ -952,7 +959,8 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         L{filetransfer.FILEXFER_ATTR_EXTENDED} has the correct value.
         """
         fn = self.mktemp()
-        open(fn, 'w').write("ls .\nexit")
+        with open(fn, 'w') as f:
+            f.write("ls .\nexit")
         port = self.server.getHost().port
 
         oldGetAttr = FileTransferForTestAvatar._getAttrs
@@ -978,9 +986,9 @@ class OurServerSftpClientTests(CFTPClientTestBase):
 
 
 
-if unix is None or Crypto is None or pyasn1 is None or interfaces.IReactorProcess(reactor, None) is None:
+if unix is None or cryptography is None or pyasn1 is None or interfaces.IReactorProcess(reactor, None) is None:
     if _reason is None:
-        _reason = "don't run w/o spawnProcess or PyCrypto or pyasn1"
+        _reason = "don't run w/o spawnProcess or cryptography or pyasn1"
     OurServerCmdLineClientTests.skip = _reason
     OurServerBatchFileTests.skip = _reason
     OurServerSftpClientTests.skip = _reason

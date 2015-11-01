@@ -14,9 +14,12 @@ import itertools
 from hashlib import md5, sha1
 
 # external library imports
-from Crypto.Cipher import DES3, AES
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
 from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
+
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
 from pyasn1.codec.ber import decoder as berDecoder
@@ -227,12 +230,12 @@ class Key(object):
                 raise BadKeyError('invalid DEK-info %r' % lines[2])
 
             if cipher == 'AES-128-CBC':
-                CipherClass = AES
+                AlgorithmClass = algorithms.AES
                 keySize = 16
                 if len(ivdata) != 32:
                     raise BadKeyError('AES encrypted key with a bad IV')
             elif cipher == 'DES-EDE3-CBC':
-                CipherClass = DES3
+                AlgorithmClass = algorithms.TripleDES
                 keySize = 24
                 if len(ivdata) != 16:
                     raise BadKeyError('DES encrypted key with a bad IV')
@@ -246,9 +249,14 @@ class Key(object):
             bb = md5(ba + passphrase + iv[:8]).digest()
             decKey = (ba + bb)[:keySize]
             b64Data = base64.decodestring(''.join(lines[3:-1]))
-            keyData = CipherClass.new(decKey,
-                                      CipherClass.MODE_CBC,
-                                      iv).decrypt(b64Data)
+
+            decryptor = Cipher(
+                AlgorithmClass(decKey),
+                modes.CBC(iv),
+                backend=default_backend()
+            ).decryptor()
+            keyData = decryptor.update(b64Data) + decryptor.finalize()
+
             removeLen = ord(keyData[-1])
             keyData = keyData[:-removeLen]
         else:
@@ -679,8 +687,15 @@ class Key(object):
                 encKey = (ba + bb)[:24]
                 padLen = 8 - (len(asn1Data) % 8)
                 asn1Data += (chr(padLen) * padLen)
-                asn1Data = DES3.new(encKey, DES3.MODE_CBC,
-                                    iv).encrypt(asn1Data)
+
+                encryptor = Cipher(
+                    algorithms.TripleDES(encKey),
+                    modes.CBC(iv),
+                    backend=default_backend()
+                ).encryptor()
+
+                asn1Data = encryptor.update(asn1Data) + encryptor.finalize()
+
             b64Data = base64.encodestring(asn1Data).replace('\n', '')
             lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
             lines.append('-----END %s PRIVATE KEY-----' % self.type())
