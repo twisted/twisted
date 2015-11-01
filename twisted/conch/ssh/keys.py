@@ -514,7 +514,7 @@ class Key(object):
         """
         Returns True if this Key is a public key.
         """
-        return not self.keyObject.has_private()
+        return isinstance(self.keyObject, (RSAPublicKey, DSAPublicKey))
 
 
     def public(self):
@@ -581,6 +581,16 @@ class Key(object):
             return {
                 "n": numbers.n,
                 "e": numbers.e,
+            }
+        elif isinstance(self.keyObject, RSAPrivateKey):
+            numbers = self.keyObject.private_numbers()
+            return {
+                "n": numbers.public_numbers.n,
+                "e": numbers.public_numbers.e,
+                "d": numbers.d,
+                "p": numbers.p,
+                "q": numbers.q,
+                "u": numbers.iqmp,
             }
         else:
             raise RuntimeError("Unexpected key type: %s" % self.keyObject)
