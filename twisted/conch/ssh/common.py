@@ -56,7 +56,7 @@ def getMP(data, count=1):
     c = 0
     for i in range(count):
         length, = struct.unpack('>L',data[c:c+4])
-        mp.append(Util.number.bytes_to_long(data[c+4:c+4+length]))
+        mp.append(bytes_to_int(data[c+4:c+4+length]))
         c += 4 + length
     return tuple(mp) + (data[c:],)
 

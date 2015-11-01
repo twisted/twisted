@@ -883,12 +883,9 @@ def objectType(obj):
     @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
     @rtype:     C{str}
     """
-    keyDataMapping = {
-        ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa',
-        ('n', 'e', 'd', 'p', 'q', 'u'): 'ssh-rsa',
-        ('y', 'g', 'p', 'q', 'x'): 'ssh-dss'
-    }
-    try:
-        return keyDataMapping[tuple(obj.keydata)]
-    except (KeyError, AttributeError):
+    if isinstance(obj, (RSAPublicKey, RSAPrivateKey)):
+        return 'ssh-rsa'
+    elif isinstance(obj, (DSAPublicKey, DSAPrivateKey)):
+        return 'ssh-dss'
+    else:
         raise BadKeyError("invalid key object", obj)

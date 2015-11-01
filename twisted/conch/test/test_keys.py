@@ -41,19 +41,6 @@ class HelpersTests(unittest.TestCase):
         randbytes.secureRandom = self._secureRandom
         self._secureRandom = None
 
-    def test_pkcs1(self):
-        """
-        Test Public Key Cryptographic Standard #1 functions.
-        """
-        data = 'ABC'
-        messageSize = 6
-        self.assertEqual(keys.pkcs1Pad(data, messageSize),
-                '\x01\xff\x00ABC')
-        hash = sha1().digest()
-        messageSize = 40
-        self.assertEqual(keys.pkcs1Digest('', messageSize),
-                '\x01\xff\xff\xff\x00' + keys.ID_SHA1 + hash)
-
     def _signRSA(self, data):
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         sig = key.sign(data)
@@ -125,7 +112,8 @@ class KeyTests(unittest.TestCase):
         self.oldSecureRandom = randbytes.secureRandom
         randbytes.secureRandom = lambda x: '\xff' * x
         self.keyFile = self.mktemp()
-        file(self.keyFile, 'wb').write(keydata.privateRSA_lsh)
+        with open(self.keyFile, 'wb') as f:
+            f.write(keydata.privateRSA_lsh)
 
     def tearDown(self):
         randbytes.secureRandom = self.oldSecureRandom
