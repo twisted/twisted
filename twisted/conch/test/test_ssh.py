@@ -307,14 +307,6 @@ if cryptography is not None and pyasn1 is not None:
     from twisted.conch.ssh import channel, connection, factory, keys
     from twisted.conch.ssh import transport, userauth
 
-    class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
-        def checkKey(self, credentials):
-            blob = keys.Key.fromString(publicDSA_openssh).blob()
-            if credentials.username == 'testuser' and credentials.blob == blob:
-                return True
-            return False
-
-
     class ConchTestPasswordChecker:
         credentialInterfaces = checkers.IUsernamePassword,
 
