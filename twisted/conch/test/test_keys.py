@@ -89,15 +89,89 @@ class HelpersTests(unittest.TestCase):
         return key, sig
 
 
-    def test_objectType(self):
+
+class ObjectTypeTests(unittest.TestCase):
+    """
+    Unit tests for the objectType method.
+    """
+
+    def getRSAKey(self):
         """
-        Test that objectType, returns the correct type for objects.
+        Return a PyCrypto RSA key to support the tests.
+
+        @return: The same RSA key to support the tests.
+        @rtype: C{Crypto.PublicKey.RSA}
         """
-        self.assertEqual(keys.objectType(keys.Key.fromString(
-            keydata.privateRSA_openssh).keyObject), 'ssh-rsa')
-        self.assertEqual(keys.objectType(keys.Key.fromString(
-            keydata.privateDSA_openssh).keyObject), 'ssh-dss')
+        # Use lazy import as PyCrypto will be deprecated.
+        from Crypto.PublicKey import RSA
+
+        return RSA.construct((
+            keydata.RSAData['n'],
+            keydata.RSAData['e'],
+            keydata.RSAData['d'],
+            ))
+
+
+    def getDSAKey(self):
+        """
+        Return a PyCrypto DSA key to support the tests.
+
+        @return: The same DSA key to support the tests.
+        @rtype: C{Crypto.PublicKey.DSA}
+        """
+        # Use lazy import as PyCrypto will be deprecated.
+        from Crypto.PublicKey import DSA
+
+        return DSA.construct((
+            keydata.DSAData['y'],
+            keydata.DSAData['g'],
+            keydata.DSAData['p'],
+            keydata.DSAData['q'],
+            keydata.DSAData['x'],
+            ))
+
+
+    def test_objectType_rsa(self):
+        """
+        C{ssh-rsa} is the type of RSA keys.
+        """
+        key = self.getRSAKey()
+
+        self.assertEqual(keys.objectType(key), 'ssh-rsa')
+
+
+    def test_objectType_dsa(self):
+        """
+        C{ssh-dss} is the type of DSA keys.
+        """
+        key = self.getDSAKey()
+
+        self.assertEqual(keys.objectType(key), 'ssh-dss')
+
+
+    def test_objectKey_none(self):
+        """
+        A BadKeyError is raised when getting the type of C{None}
+        """
         self.assertRaises(keys.BadKeyError, keys.objectType, None)
+
+
+    def test_deprecation(self):
+        """
+        It is deprecated.
+        """
+        key = self.getRSAKey()
+
+        keys.objectType(key)
+
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertIs(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            'twisted.conch.ssh.keys.objectType was deprecated in '
+            'Twisted 15.6.0',
+            warnings[0]['message'])
+
 
 
 class KeyTests(unittest.TestCase):

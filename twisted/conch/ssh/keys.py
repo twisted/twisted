@@ -22,11 +22,10 @@ from pyasn1.type import univ
 from pyasn1.codec.ber import decoder as berDecoder
 from pyasn1.codec.ber import encoder as berEncoder
 
-# twisted
-from twisted.python import randbytes
-
-# sibling imports
 from twisted.conch.ssh import common, sexpy
+from twisted.python import randbytes
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 
 
 
@@ -803,13 +802,17 @@ class Key(object):
 
 
 
+@deprecated(Version("Twisted", 15, 6, 0))
 def objectType(obj):
     """
     Return the SSH key type corresponding to a
     C{Crypto.PublicKey.pubkey.pubkey} object.
 
-    @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
-    @rtype:     C{str}
+    @param obj: Key for which the type is returned.
+    @type obj: C{Crypto.PublicKey.pubkey.pubkey}
+
+    @return: Return the SSH key type corresponding to a PyCrypto object.
+    @rtype: C{str}
     """
     keyDataMapping = {
         ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa',
