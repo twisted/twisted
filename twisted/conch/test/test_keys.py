@@ -95,6 +95,10 @@ class ObjectTypeTests(unittest.TestCase):
     Unit tests for the objectType method.
     """
 
+    if Crypto is None:
+        skip = "Cannot run without PyCrypto."
+
+
     def getRSAKey(self):
         """
         Return a PyCrypto RSA key to support the tests.
