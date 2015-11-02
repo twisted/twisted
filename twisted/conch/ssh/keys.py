@@ -4,16 +4,12 @@
 
 """
 Handling of RSA and DSA keys.
-
-Maintainer: U{Paul Swartz}
 """
 
-# base library imports
 import base64
 import itertools
 from hashlib import md5, sha1
 
-# external library imports
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -28,11 +24,8 @@ from pyasn1.type import univ
 from pyasn1.codec.ber import decoder as berDecoder
 from pyasn1.codec.ber import encoder as berEncoder
 
-# twisted
-from twisted.python import randbytes
-
-# sibling imports
 from twisted.conch.ssh import common, sexpy
+from twisted.python import randbytes
 
 
 
@@ -61,8 +54,8 @@ class Key(object):
     on disk, use the toString method.  If you have a private key, but want
     the string representation of the public key, use Key.public().toString().
 
-    @ivar keyObject: The C{Crypto.PublicKey.pubkey.pubkey} object that
-                  operations are performed with.
+    @ivar keyObject: DEPRECATED. The C{Crypto.PublicKey.pubkey.pubkey} object
+        that operations are performed with.
     """
 
     def fromFile(Class, filename, type=None, passphrase=None):
@@ -462,7 +455,7 @@ class Key(object):
 
         @type keyObject: C{Crypto.PublicKey.pubkey.pubkey}
         """
-        self.keyObject = keyObject
+        self._keyObject = keyObject
 
 
     def __eq__(self, other):
@@ -493,7 +486,7 @@ class Key(object):
             '<%s %s (%s bits)' % (
                 self.type(),
                 self.isPublic() and 'Public Key' or 'Private Key',
-                self.keyObject.size())]
+                self._keyObject.size())]
         for k, v in sorted(self.data().items()):
             lines.append('attr %s:' % k)
             by = common.MP(v)[4:]
@@ -510,11 +503,119 @@ class Key(object):
         return '\n'.join(lines)
 
 
+    @property
+    def keyObject(self):
+        """
+        An C{Crypto.PublicKey} object similar to this key.
+
+        This instance member is deprecated.
+
+        It provides the compatibility layer for PyCryto during the transition.
+        """
+        # Lazy import to have PyCrypto as a soft dependency.
+        from Crypto.PublicKey import DSA, RSA
+
+        keyObject = None
+        keyType = self.type()
+        keyData = self.data()
+        isPublic = self.isPublic()
+
+        if keyType == 'RSA':
+            if isPublic:
+                keyObject = RSA.construct((
+                    keyData['n'],
+                    long(keyData['e']),
+                    ))
+            else:
+                keyObject = RSA.construct((
+                    keyData['n'],
+                    long(keyData['e']),
+                    keyData['d'],
+                    keyData['p'],
+                    keyData['q'],
+                    keyData['u'],
+                    ))
+        elif keyType == 'DSA':
+            if isPublic:
+                keyObject = DSA.construct((
+                    keyData['y'],
+                    keyData['g'],
+                    keyData['p'],
+                    keyData['q'],
+                    ))
+            else:
+                keyObject = DSA.construct((
+                    keyData['y'],
+                    keyData['g'],
+                    keyData['p'],
+                    keyData['q'],
+                    keyData['x'],
+                    ))
+        else:
+            # Don't know how to handle this type.
+            pass
+
+        if keyObject is None:
+            raise BadKeyError('Unsupported key type.')
+
+        return keyObject
+
+    @keyObject.setter
+    def keyObject(self, value):
+        # Lazy import to have PyCrypto as a soft dependency.
+        from Crypto.PublicKey import DSA, RSA
+
+        if isinstance(value, RSA._RSAobj):
+            rawKey = value.key
+            publicNumbers = rsa.RSAPublicNumbers(
+                e=rawKey.e,
+                n=rawKey.n,
+                )
+            if rawKey.has_private():
+                privateNumbers = rsa.RSAPrivateNumbers(
+                    p=rawKey.p,
+                    q=rawKey.q,
+                    d=rawKey.d,
+                    dmp1=rsa.rsa_crt_dmp1(rawKey.d ,rawKey.p),
+                    dmq1=rsa.rsa_crt_dmq1(rawKey.d, rawKey.q),
+                    iqmp=rawKey.u,
+                    public_numbers=publicNumbers,
+                    )
+                newKey = privateNumbers.private_key(default_backend())
+            else:
+                newKey = publicNumbers.public_key(default_backend())
+
+        elif isinstance(value, DSA._DSAobj):
+            rawKey = value.key
+            publicNumbers = dsa.DSAPublicNumbers(
+                    y=rawKey.y,
+                    parameter_numbers=dsa.DSAParameterNumbers(
+                        p=rawKey.p,
+                        q=rawKey.q,
+                        g=rawKey.g
+                    )
+                )
+            if rawKey.has_private():
+                privateNumbers = dsa.DSAPrivateNumbers(
+                    x=rawKey.x, public_numbers=publicNumbers)
+                newKey = privateNumbers.private_key(default_backend())
+            else:
+                newKey = publicNumbers.public_key(default_backend())
+
+        else:
+            # Don't know how to handle this key type.
+            pass
+
+        if newKey is None:
+            raise BadKeyError('PyCrytpo key type not supported.')
+
+        self._keyObject = newKey
+
     def isPublic(self):
         """
         Returns True if this Key is a public key.
         """
-        return isinstance(self.keyObject, (RSAPublicKey, DSAPublicKey))
+        return isinstance(self._keyObject, (RSAPublicKey, DSAPublicKey))
 
 
     def public(self):
@@ -523,7 +624,7 @@ class Key(object):
         If this is a public key, this may or may not be the same object
         as self.
         """
-        return Key(self.keyObject.public_key())
+        return Key(self._keyObject.public_key())
 
 
     def fingerprint(self):
@@ -554,12 +655,12 @@ class Key(object):
         Return the type of the object we wrap.  Currently this can only be
         'RSA' or 'DSA'.
         """
-        if isinstance(self.keyObject, (RSAPublicKey, RSAPrivateKey)):
+        if isinstance(self._keyObject, (RSAPublicKey, RSAPrivateKey)):
             return 'RSA'
-        elif isinstance(self.keyObject, (DSAPublicKey, DSAPrivateKey)):
+        elif isinstance(self._keyObject, (DSAPublicKey, DSAPrivateKey)):
             return 'DSA'
         else:
-            raise RuntimeError('unknown type of object: %r' % self.keyObject)
+            raise RuntimeError('unknown type of object: %r' % self._keyObject)
 
 
     def sshType(self):
@@ -576,14 +677,14 @@ class Key(object):
 
         @rtype: C{dict}
         """
-        if isinstance(self.keyObject, RSAPublicKey):
-            numbers = self.keyObject.public_numbers()
+        if isinstance(self._keyObject, RSAPublicKey):
+            numbers = self._keyObject.public_numbers()
             return {
                 "n": numbers.n,
                 "e": numbers.e,
             }
-        elif isinstance(self.keyObject, RSAPrivateKey):
-            numbers = self.keyObject.private_numbers()
+        elif isinstance(self._keyObject, RSAPrivateKey):
+            numbers = self._keyObject.private_numbers()
             return {
                 "n": numbers.public_numbers.n,
                 "e": numbers.public_numbers.e,
@@ -592,8 +693,25 @@ class Key(object):
                 "q": numbers.q,
                 "u": numbers.iqmp,
             }
+        elif isinstance(self._keyObject, DSAPublicKey):
+            numbers = self._keyObject.public_numbers()
+            return {
+                "y": numbers.y,
+                "g": numbers.parameter_numbers.g,
+                "p": numbers.parameter_numbers.p,
+                "q": numbers.parameter_numbers.q,
+            }
+        elif isinstance(self._keyObject, DSAPrivateKey):
+            numbers = self._keyObject.private_numbers()
+            return {
+                "x": numbers.x,
+                "y": numbers.public_numbers.y,
+                "g": numbers.public_numbers.parameter_numbers.g,
+                "p": numbers.public_numbers.parameter_numbers.p,
+                "q": numbers.public_numbers.parameter_numbers.q,
+            }
         else:
-            raise RuntimeError("Unexpected key type: %s" % self.keyObject)
+            raise RuntimeError("Unexpected key type: %s" % self._keyObject)
 
 
     def blob(self):
@@ -817,7 +935,7 @@ class Key(object):
         @rtype: C{str}
         """
         if self.type() == 'RSA':
-            signer = self.keyObject.signer(
+            signer = self._keyObject.signer(
                 padding.PKCS1v15(),
                 hashes.SHA1(),
             )
@@ -826,7 +944,7 @@ class Key(object):
         elif self.type() == 'DSA':
             digest = sha1(data).digest()
             randomBytes = randbytes.secureRandom(19)
-            sig = self.keyObject.sign(digest, randomBytes)
+            sig = self._keyObject.sign(digest, randomBytes)
             # SSH insists that the DSS signature blob be two 160-bit integers
             # concatenated together. The sig[0], [1] numbers from obj.sign
             # are just numbers, and could be any length from 0 to 160 bits.
@@ -852,7 +970,7 @@ class Key(object):
         if signatureType != self.sshType():
             return False
         if self.type() == 'RSA':
-            verifier = self.keyObject.verifier(
+            verifier = self._keyObject.verifier(
                 common.getNS(signature)[0],
                 padding.PKCS1v15(),
                 hashes.SHA1(),

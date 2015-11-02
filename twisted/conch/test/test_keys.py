@@ -631,3 +631,178 @@ attr q:
 \t05
 attr u:
 \t04>""")
+
+
+
+class KeyKeyObjectTests(unittest.TestCase):
+    """
+    Unit test for the Key.keyObject deprecated ivar which provide the
+    compatibility layer to PyCryto during the transition.
+    """
+
+    if Crypto is None:
+        skip = "Cannot run without PyCrypto."
+
+    maxDiff = None
+
+    def test_keyObjectGetRSAPublic(self):
+        """
+        It will return the PyCypto RSA instance with the same components as
+        a public RSA key.
+        """
+        key = keys.Key.fromString(keydata.publicRSA_openssh)
+
+        result = key.keyObject
+
+        self.assertIsInstance(result, Crypto.PublicKey.RSA._RSAobj)
+        self.assertEqual(keydata.RSAData['e'], result.key.e)
+        self.assertEqual(keydata.RSAData['n'], result.key.n)
+
+    def test_keyObjectGetRSAPrivate(self):
+        """
+        It will return the PyCypto RSA instance with the same components as
+        a private RSA key.
+        """
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+
+        result = key.keyObject
+
+        self.assertIsInstance(result, Crypto.PublicKey.RSA._RSAobj)
+        self.assertEqual(keydata.RSAData['e'], result.key.e)
+        self.assertEqual(keydata.RSAData['n'], result.key.n)
+        self.assertEqual(keydata.RSAData['d'], result.key.d)
+        self.assertEqual(keydata.RSAData['p'], result.key.p)
+        self.assertEqual(keydata.RSAData['q'], result.key.q)
+        self.assertEqual(keydata.RSAData['u'], result.key.u)
+
+
+    def test_keyObjectGetDSAPublic(self):
+        """
+        It will return the PyCypto DSA instance with the same components as
+        a public DSA key.
+        """
+        key = keys.Key.fromString(keydata.publicDSA_openssh)
+
+        result = key.keyObject
+
+        self.assertIsInstance(result, Crypto.PublicKey.DSA._DSAobj)
+        self.assertEqual(keydata.DSAData['y'], result.key.y)
+        self.assertEqual(keydata.DSAData['g'], result.key.g)
+        self.assertEqual(keydata.DSAData['p'], result.key.p)
+        self.assertEqual(keydata.DSAData['q'], result.key.q)
+
+
+    def test_keyObjectGetDSAPrivate(self):
+        """
+        It will return the PyCypto DSA instance with the same components as
+        a private DSA key.
+        """
+        key = keys.Key.fromString(keydata.privateDSA_openssh)
+
+        result = key.keyObject
+
+        self.assertIsInstance(result, Crypto.PublicKey.DSA._DSAobj)
+        self.assertEqual(keydata.DSAData['y'], result.key.y)
+        self.assertEqual(keydata.DSAData['g'], result.key.g)
+        self.assertEqual(keydata.DSAData['p'], result.key.p)
+        self.assertEqual(keydata.DSAData['q'], result.key.q)
+        self.assertEqual(keydata.DSAData['x'], result.key.x)
+
+
+    def test_keyObjectSetRSAPublic(self):
+        """
+        It will update the key based on a public PyCrpto RSA key.
+        """
+        key = keys.Key.fromString(keydata.publicDSA_openssh)
+        newPyCryptoKey =  Crypto.PublicKey.RSA.construct((
+            keydata.RSAData['n'],
+            keydata.RSAData['e'],
+            ))
+        self.assertEqual('DSA', key.type())
+
+        key.keyObject = newPyCryptoKey
+
+        self.assertEqual('RSA', key.type())
+        self.assertEqual({
+            'n': keydata.RSAData['n'],
+            'e': keydata.RSAData['e'],
+            },
+            key.data())
+
+    def test_keyObjectSetRSAPrivate(self):
+        """
+        It will update the key based on a private PyCrpto RSA key.
+        """
+        key = keys.Key.fromString(keydata.publicDSA_openssh)
+        newPyCryptoKey =  Crypto.PublicKey.RSA.construct((
+            keydata.RSAData['n'],
+            keydata.RSAData['e'],
+            keydata.RSAData['d'],
+            keydata.RSAData['p'],
+            keydata.RSAData['q'],
+            keydata.RSAData['u'],
+            ))
+        self.assertEqual('DSA', key.type())
+
+        key.keyObject = newPyCryptoKey
+
+        self.assertEqual('RSA', key.type())
+        self.assertEqual({
+            'n': keydata.RSAData['n'],
+            'e': keydata.RSAData['e'],
+            'd': keydata.RSAData['d'],
+            'p': keydata.RSAData['p'],
+            'q': keydata.RSAData['q'],
+            'u': keydata.RSAData['u'],
+            },
+            key.data())
+
+    def test_keyObjectSetDSAPublic(self):
+        """
+        It will update the key based on a public PyCrpto DSA key.
+        """
+        key = keys.Key.fromString(keydata.publicRSA_openssh)
+        newPyCryptoKey =  Crypto.PublicKey.DSA.construct((
+            keydata.DSAData['y'],
+            keydata.DSAData['g'],
+            keydata.DSAData['p'],
+            keydata.DSAData['q'],
+            ))
+        self.assertEqual('RSA', key.type())
+
+        key.keyObject = newPyCryptoKey
+
+        self.assertEqual('DSA', key.type())
+        self.assertEqual({
+            'y': keydata.DSAData['y'],
+            'g': keydata.DSAData['g'],
+            'p': keydata.DSAData['p'],
+            'q': keydata.DSAData['q'],
+            },
+            key.data())
+
+    def test_keyObjectSetDSAPrivate(self):
+        """
+        It will update the key based on a private PyCrpto DSA key.
+        """
+        key = keys.Key.fromString(keydata.publicRSA_openssh)
+        newPyCryptoKey =  Crypto.PublicKey.DSA.construct((
+            keydata.DSAData['y'],
+            keydata.DSAData['g'],
+            keydata.DSAData['p'],
+            keydata.DSAData['q'],
+            keydata.DSAData['x'],
+            ))
+        self.assertEqual('RSA', key.type())
+
+        key.keyObject = newPyCryptoKey
+
+        self.assertEqual('DSA', key.type())
+        self.assertEqual({
+            'y': keydata.DSAData['y'],
+            'g': keydata.DSAData['g'],
+            'p': keydata.DSAData['p'],
+            'q': keydata.DSAData['q'],
+            'x': keydata.DSAData['x'],
+            },
+            key.data())
