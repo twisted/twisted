@@ -125,7 +125,8 @@ class KeyGenTests(TestCase):
 
     def test_saveKeyNoFilename(self):
         """
-        When no path is specified, it will ask for the path.
+        When no path is specified, it will ask for the path used to store the
+        key.
         """
         base = FilePath(self.mktemp())
         base.makedirs()
@@ -139,10 +140,9 @@ class KeyGenTests(TestCase):
             'rsa',
             )
 
-        self.assertEqual(
-            key.fromString(
-                base.child('custom_key').getContent(), None, b''),
-            key)
+        persistedKeyContent = base.child('custom_key').getContent()
+        persistedKey = key.fromString(persistedKeyContent, None, b'')
+        self.assertEqual(key, persistedKey)
 
 
     def test_displayPublicKey(self):

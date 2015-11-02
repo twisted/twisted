@@ -802,7 +802,7 @@ class Key(object):
 
 
 
-@deprecated(Version("Twisted", 15, 6, 0))
+@deprecated(Version("Twisted", 15, 5, 0))
 def objectType(obj):
     """
     Return the SSH key type corresponding to a

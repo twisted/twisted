@@ -182,6 +182,7 @@ def displayPublicKey(options):
 
 def _saveKey(key, options, keyTypeName):
     """
+    Persist a PyCrypto key on local filesystem.
 
     @param key: Key which is persisted on local filesystem.
     @type key: C{Crypto.PublicKey} implementation.

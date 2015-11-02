@@ -103,7 +103,7 @@ class ObjectTypeTests(unittest.TestCase):
         """
         Return a PyCrypto RSA key to support the tests.
 
-        @return: The same RSA key to support the tests.
+        @return: The RSA key to support the tests.
         @rtype: C{Crypto.PublicKey.RSA}
         """
         # Use lazy import as PyCrypto will be deprecated.
@@ -120,7 +120,7 @@ class ObjectTypeTests(unittest.TestCase):
         """
         Return a PyCrypto DSA key to support the tests.
 
-        @return: The same DSA key to support the tests.
+        @return: The DSA key to support the tests.
         @rtype: C{Crypto.PublicKey.DSA}
         """
         # Use lazy import as PyCrypto will be deprecated.
@@ -137,7 +137,7 @@ class ObjectTypeTests(unittest.TestCase):
 
     def test_objectType_rsa(self):
         """
-        C{ssh-rsa} is the type of RSA keys.
+        C{ssh-rsa} is the type of the RSA keys.
         """
         key = self.getRSAKey()
 
@@ -146,7 +146,7 @@ class ObjectTypeTests(unittest.TestCase):
 
     def test_objectType_dsa(self):
         """
-        C{ssh-dss} is the type of DSA keys.
+        C{ssh-dss} is the type of the DSA keys.
         """
         key = self.getDSAKey()
 
@@ -155,7 +155,7 @@ class ObjectTypeTests(unittest.TestCase):
 
     def test_objectKey_none(self):
         """
-        A BadKeyError is raised when getting the type of C{None}
+        A BadKeyError is raised when getting the type of C{None}.
         """
         self.assertRaises(keys.BadKeyError, keys.objectType, None)
 
@@ -173,7 +173,7 @@ class ObjectTypeTests(unittest.TestCase):
         self.assertIs(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(
             'twisted.conch.ssh.keys.objectType was deprecated in '
-            'Twisted 15.6.0',
+            'Twisted 15.5.0',
             warnings[0]['message'])
 
 
