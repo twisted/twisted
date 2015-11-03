@@ -11,9 +11,24 @@ import echoserv
 
 def main(reactor):
     log.startLogging(sys.stdout)
+    # Set up a factory to create connection handlers for our server
     factory = protocol.Factory.forProtocol(echoserv.Echo)
-    descriptor = "ssl:8000:verifyCACerts=public.pem:requireCert=yes"
+    # Set the descriptor we'll pass to serverFromString.
+    #   ssl: Use SSL for the socket (as opposed to TCP (unsecured) or another
+    #     kind of connection
+    #   8000: The port number on which to listen
+    #   caCertsDir=.: Look to the current directory ('.') for the CA
+    #     certificates against which to verify client certificates.
+    #     You'll probably specify a different directory for your application;
+    #     '.' works for the example scripts directory here.
+    #   requireCert=yes: This makes the socket reject client connections that
+    #     do not provide a certificate that passes validation using the CA
+    #     certs in caCertsDir.
+    descriptor = "ssl:8000:caCertsDir=.:requireCert=yes"
+    # Pass the reactor and descriptor to serverFromString so we can have an
+    # endpoint
     endpoint = endpoints.serverFromString(reactor, descriptor)
+    # Listen on the endpoint using the factory
     endpoint.listen(factory)
     return defer.Deferred()
 
