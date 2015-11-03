@@ -3,18 +3,21 @@
 
 from __future__ import division, absolute_import
 
-import sys, os
+import os
+import sys
 
 try:
     import Crypto.Cipher.AES
 except ImportError:
     Crypto = None
+    skipCrypto = 'PyCrypto is required.'
 
 from textwrap import dedent
 
 from twisted.trial import unittest
 from twisted.persisted import sob
 from twisted.python import components
+from twisted.python.filepath import FilePath
 from twisted.persisted.styles import Ephemeral
 
 class Dummy(components.Componentized):
@@ -66,17 +69,6 @@ class PersistTests(unittest.TestCase):
                 o1 = sob.load('object-'+tag+'.ta'+style[0], style)
                 self.assertEqual(o, o1)
 
-    def testEncryptedStyles(self):
-        for o in objects:
-            phrase = b'once I was the king of spain'
-            p = sob.Persistent(o, '')
-            for style in 'source pickle'.split():
-                p.setStyle(style)
-                p.save(filename='epersisttest.'+style, passphrase=phrase)
-                o1 = sob.load('epersisttest.'+style, style, phrase)
-                self.assertEqual(o, o1)
-    if Crypto is None:
-        testEncryptedStyles.skip = "PyCrypto required for encrypted config"
 
     def testPython(self):
         with open("persisttest.python", 'w') as f:
@@ -84,14 +76,6 @@ class PersistTests(unittest.TestCase):
         o = sob.loadValueFromFile('persisttest.python', 'foo')
         self.assertEqual(o, [1,2,3])
 
-    def testEncryptedPython(self):
-        phrase = b'once I was the king of spain'
-        with open("epersisttest.python", 'wb') as f:
-            f.write(sob._encrypt(phrase, b'foo=[1,2,3]'))
-        o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
-        self.assertEqual(o, [1,2,3])
-    if Crypto is None:
-        testEncryptedPython.skip = "PyCrypto required for encrypted config"
 
     def testTypeGuesser(self):
         self.assertRaises(KeyError, sob.guessType, "file.blah")
@@ -189,3 +173,115 @@ class PersistTests(unittest.TestCase):
         """
         sys.modules['__main__'] = self.realMain
 
+
+
+class PersistentEncryptionTests(unittest.TestCase):
+    """
+    Unit tests for Small OBjects persistence using encryption.
+    """
+
+    if Crypto is None:
+        skip = skipCrypto
+
+
+    def test_encryptedStyles(self):
+        """
+        Data can be persisted with encryption for all the supported styles.
+        """
+        for o in objects:
+            phrase = b'once I was the king of spain'
+            p = sob.Persistent(o, '')
+            for style in 'source pickle'.split():
+                p.setStyle(style)
+                p.save(filename='epersisttest.'+style, passphrase=phrase)
+                o1 = sob.load('epersisttest.'+style, style, phrase)
+                self.assertEqual(o, o1)
+
+
+    def test_loadValueFromFileEncryptedPython(self):
+        """
+        Encrypted Python data can be loaded from a file.
+        """
+        phrase = b'once I was the king of spain'
+        with open("epersisttest.python", 'wb') as f:
+            f.write(sob._encrypt(phrase, b'foo=[1,2,3]'))
+
+        o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
+
+        self.assertEqual(o, [1,2,3])
+
+
+    def test_saveEncryptedDeprecation(self):
+        """
+        Persisting data with encryption is deprecated.
+        """
+        tempDir = FilePath(self.mktemp())
+        tempDir.makedirs()
+        persistedPath = tempDir.child('epersisttest.python')
+        data = b'once I was the king of spain'
+        persistance = sob.Persistent(data, 'test-data')
+
+        persistance.save(filename=persistedPath.path, passphrase='some-pass')
+
+        # Check deprecation message.
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertIs(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            'Saving encrypted persisted data is deprecated since '
+            'Twisted 15.5.0',
+            warnings[0]['message'])
+        # Check that data is still valid, even if we are deprecating this
+        # functionality.
+        loadedData = sob.load(
+            persistedPath.path, persistance.style, 'some-pass')
+        self.assertEqual(data, loadedData)
+
+
+    def test_loadEncryptedDeprecation(self):
+        """
+        Loading encrypted persisted data is deprecated.
+        """
+        tempDir = FilePath(self.mktemp())
+        tempDir.makedirs()
+        persistedPath = tempDir.child('epersisttest.python')
+        data = b'once I was the king of spain'
+        persistance = sob.Persistent(data, 'test-data')
+        persistance.save(filename=persistedPath.path, passphrase='some-pass')
+        # Clean all previous warnings as save will also raise a warning.
+        self.flushWarnings()
+
+        loadedData = sob.load(
+            persistedPath.path, persistance.style, 'some-pass')
+
+        self.assertEqual(data, loadedData)
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertIs(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            'Loading encrypted persisted data is deprecated since '
+            'Twisted 15.5.0',
+            warnings[0]['message'])
+
+    def test_loadValueFromFileEncryptedDeprecation(self):
+        """
+        Loading encrypted persisted data is deprecated.
+        """
+        tempDir = FilePath(self.mktemp())
+        tempDir.makedirs()
+        persistedPath = tempDir.child('epersisttest.python')
+        persistedPath.setContent(sob._encrypt('some-pass', b'foo=[1,2,3]'))
+        # Clean all previous warnings as _encpryt will also raise a warning.
+        self.flushWarnings()
+
+        loadedData = sob.loadValueFromFile(
+            persistedPath.path, 'foo', 'some-pass')
+
+        self.assertEqual([1, 2, 3], loadedData)
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertIs(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            'Loading encrypted persisted data is deprecated since '
+            'Twisted 15.5.0',
+            warnings[0]['message'])
