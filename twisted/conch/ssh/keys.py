@@ -136,7 +136,8 @@ class Key(object):
             raise BadKeyError('unknown blob type: %s' % keyType)
 
 
-    def _fromString_PRIVATE_BLOB(Class, blob):
+    @classmethod
+    def _fromString_PRIVATE_BLOB(cls, blob):
         """
         Return a private key object corresponding to this private key blob.
         The blob formats are as follows:
@@ -166,18 +167,16 @@ class Key(object):
 
         if keyType == 'ssh-rsa':
             n, e, d, u, p, q, rest = common.getMP(rest, 6)
-            rsakey = Class(RSA.construct((n, e, d, p, q, u)))
-            return rsakey
+            return cls._fromRSAComponents(n=n, e=e, d=d, p=p, q=q, u=u)
         elif keyType == 'ssh-dss':
             p, q, g, y, x, rest = common.getMP(rest, 5)
-            dsakey = Class(DSA.construct((y, g, p, q, x)))
-            return dsakey
+            return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
         else:
             raise BadKeyError('unknown blob type: %s' % keyType)
-    _fromString_PRIVATE_BLOB = classmethod(_fromString_PRIVATE_BLOB)
 
 
-    def _fromString_PUBLIC_OPENSSH(Class, data):
+    @classmethod
+    def _fromString_PUBLIC_OPENSSH(cls, data):
         """
         Return a public key object corresponding to this OpenSSH public key
         string.  The format of an OpenSSH public key string is::
@@ -188,8 +187,7 @@ class Key(object):
         @raises BadKeyError: if the blob type is unknown.
         """
         blob = base64.decodestring(data.split()[1])
-        return Class._fromString_BLOB(blob)
-    _fromString_PUBLIC_OPENSSH = classmethod(_fromString_PUBLIC_OPENSSH)
+        return cls._fromString_BLOB(blob)
 
 
     @classmethod
@@ -315,7 +313,8 @@ class Key(object):
             )
 
 
-    def _fromString_PUBLIC_LSH(Class, data):
+    @classmethod
+    def _fromString_PUBLIC_LSH(cls, data):
         """
         Return a public key corresponding to this LSH public key string.
         The LSH public key string format is::
@@ -334,15 +333,16 @@ class Key(object):
         for name, data in sexp[1][1:]:
             kd[name] = common.getMP(common.NS(data))[0]
         if sexp[1][0] == 'dsa':
-            return Class(DSA.construct((kd['y'], kd['g'], kd['p'], kd['q'])))
+            return cls._fromDSAComponents(
+                y=kd['y'], g=kd['g'], p=kd['p'], q=kd['q'])
         elif sexp[1][0] == 'rsa-pkcs1-sha1':
-            return Class(RSA.construct((kd['n'], kd['e'])))
+            return cls._fromRSAComponents(n=kd['n'], e=kd['e'])
         else:
             raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
-    _fromString_PUBLIC_LSH = classmethod(_fromString_PUBLIC_LSH)
 
 
-    def _fromString_PRIVATE_LSH(Class, data):
+    @classmethod
+    def _fromString_PRIVATE_LSH(cls, data):
         """
         Return a private key corresponding to this LSH private key string.
         The LSH private key string format is::
@@ -362,20 +362,20 @@ class Key(object):
             kd[name] = common.getMP(common.NS(data))[0]
         if sexp[1][0] == 'dsa':
             assert len(kd) == 5, len(kd)
-            return Class(DSA.construct((kd['y'], kd['g'], kd['p'],
-                                        kd['q'], kd['x'])))
+            return cls._fromDSAComponents(
+                y=kd['y'], g=kd['g'], p=kd['p'], q=kd['q'], x=kd['x'])
         elif sexp[1][0] == 'rsa-pkcs1':
             assert len(kd) == 8, len(kd)
             if kd['p'] > kd['q']:  # make p smaller than q
                 kd['p'], kd['q'] = kd['q'], kd['p']
-            return Class(RSA.construct((kd['n'], kd['e'], kd['d'],
-                                        kd['p'], kd['q'])))
+            return cls._fromRSAComponents(
+                n=kd['n'], e=kd['e'], d=kd['d'], p=kd['p'], q=kd['q'])
         else:
             raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
-    _fromString_PRIVATE_LSH = classmethod(_fromString_PRIVATE_LSH)
 
 
-    def _fromString_AGENTV3(Class, data):
+    @classmethod
+    def _fromString_AGENTV3(cls, data):
         """
         Return a private key object corresponsing to the Secure Shell Key
         Agent v3 format.
@@ -408,7 +408,7 @@ class Key(object):
             g, data = common.getMP(data)
             y, data = common.getMP(data)
             x, data = common.getMP(data)
-            return Class(DSA.construct((y, g, p, q, x)))
+            return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
         elif keyType == 'ssh-rsa':
             e, data = common.getMP(data)
             d, data = common.getMP(data)
@@ -416,10 +416,9 @@ class Key(object):
             u, data = common.getMP(data)
             p, data = common.getMP(data)
             q, data = common.getMP(data)
-            return Class(RSA.construct((n, e, d, p, q, u)))
+            return cls._fromRSAComponents(n=n, e=e, d=d, p=p, q=q, u=u)
         else:
             raise BadKeyError("unknown key type %s" % keyType)
-    _fromString_AGENTV3 = classmethod(_fromString_AGENTV3)
 
 
     def _guessStringType(Class, data):
@@ -446,6 +445,48 @@ class Key(object):
             else:
                 return 'blob'
     _guessStringType = classmethod(_guessStringType)
+
+
+    @classmethod
+    def _fromRSAComponents(cls, n, e, d=None, p=None, q=None, u=None):
+        """
+        """
+        publicNumbers = rsa.RSAPublicNumbers(e=e, n=n)
+        if d is None:
+            # We have public components.
+            keyObject = publicNumbers.public_key(default_backend())
+        else:
+            if u is None:
+                u = rsa.rsa_crt_iqmp(p, q)
+            privateNumbers = rsa.RSAPrivateNumbers(
+                p=p,
+                q=q,
+                d=d,
+                dmp1=rsa.rsa_crt_dmp1(d, p),
+                dmq1=rsa.rsa_crt_dmq1(d, q),
+                iqmp=u,
+                public_numbers=publicNumbers,
+                )
+            keyObject = privateNumbers.private_key(default_backend())
+
+        return cls(keyObject)
+
+
+    @classmethod
+    def _fromDSAComponents(cls, y, p, q, g, x=None):
+        """
+        """
+        publicNumbers = dsa.DSAPublicNumbers(
+            y=y, parameter_numbers=dsa.DSAParameterNumbers(p=p, q=q, g=g))
+        if x is None:
+            # We have public components.
+            keyObject = publicNumbers.public_key(default_backend())
+        else:
+            privateNumbers = dsa.DSAPrivateNumbers(
+                x=x, public_numbers=publicNumbers)
+            keyObject = privateNumbers.private_key(default_backend())
+
+        return cls(keyObject)
 
 
     def __init__(self, keyObject):
@@ -486,7 +527,7 @@ class Key(object):
             '<%s %s (%s bits)' % (
                 self.type(),
                 self.isPublic() and 'Public Key' or 'Private Key',
-                self._keyObject.size())]
+                self._keyObject.key_size)]
         for k, v in sorted(self.data().items()):
             lines.append('attr %s:' % k)
             by = common.MP(v)[4:]
@@ -552,13 +593,10 @@ class Key(object):
                     keyData['x'],
                     ))
         else:
-            # Don't know how to handle this type.
-            pass
-
-        if keyObject is None:
-            raise BadKeyError('Unsupported key type.')
+           raise BadKeyError('Unsupported key type.')
 
         return keyObject
+
 
     @keyObject.setter
     def keyObject(self, value):
@@ -567,49 +605,42 @@ class Key(object):
 
         if isinstance(value, RSA._RSAobj):
             rawKey = value.key
-            publicNumbers = rsa.RSAPublicNumbers(
-                e=rawKey.e,
-                n=rawKey.n,
-                )
             if rawKey.has_private():
-                privateNumbers = rsa.RSAPrivateNumbers(
+                newKey = self._fromRSAComponents(
+                    e=rawKey.e,
+                    n=rawKey.n,
                     p=rawKey.p,
                     q=rawKey.q,
                     d=rawKey.d,
-                    dmp1=rsa.rsa_crt_dmp1(rawKey.d ,rawKey.p),
-                    dmq1=rsa.rsa_crt_dmq1(rawKey.d, rawKey.q),
-                    iqmp=rawKey.u,
-                    public_numbers=publicNumbers,
+                    u=rawKey.u,
                     )
-                newKey = privateNumbers.private_key(default_backend())
             else:
-                newKey = publicNumbers.public_key(default_backend())
+                newKey = self._fromRSAComponents(e=rawKey.e, n=rawKey.n)
 
         elif isinstance(value, DSA._DSAobj):
             rawKey = value.key
-            publicNumbers = dsa.DSAPublicNumbers(
-                    y=rawKey.y,
-                    parameter_numbers=dsa.DSAParameterNumbers(
-                        p=rawKey.p,
-                        q=rawKey.q,
-                        g=rawKey.g
-                    )
-                )
             if rawKey.has_private():
-                privateNumbers = dsa.DSAPrivateNumbers(
-                    x=rawKey.x, public_numbers=publicNumbers)
-                newKey = privateNumbers.private_key(default_backend())
+                newKey = self._fromDSAComponents(
+                    y=rawKey.y,
+                    p=rawKey.p,
+                    q=rawKey.q,
+                    g=rawKey.g,
+                    x=rawKey.x,
+                    )
             else:
-                newKey = publicNumbers.public_key(default_backend())
+                newKey = self._fromDSAComponents(
+                    y=rawKey.y,
+                    p=rawKey.p,
+                    q=rawKey.q,
+                    g=rawKey.g,
+                    )
 
         else:
-            # Don't know how to handle this key type.
-            pass
-
-        if newKey is None:
             raise BadKeyError('PyCrytpo key type not supported.')
 
-        self._keyObject = newKey
+
+        self._keyObject = newKey._keyObject
+
 
     def isPublic(self):
         """
@@ -936,21 +967,16 @@ class Key(object):
         """
         if self.type() == 'RSA':
             signer = self._keyObject.signer(
-                padding.PKCS1v15(),
-                hashes.SHA1(),
-            )
-            signer.update(data)
-            ret = common.NS(signer.finalize())
+                padding.PKCS1v15(), hashes.SHA1())
+
         elif self.type() == 'DSA':
-            digest = sha1(data).digest()
+            # FIXME: see how to insert the random part into PyCA code.
             randomBytes = randbytes.secureRandom(19)
-            sig = self._keyObject.sign(digest, randomBytes)
-            # SSH insists that the DSS signature blob be two 160-bit integers
-            # concatenated together. The sig[0], [1] numbers from obj.sign
-            # are just numbers, and could be any length from 0 to 160 bits.
-            # Make sure they are padded out to 160 bits (20 bytes each)
-            ret = common.NS(Util.number.long_to_bytes(sig[0], 20) +
-                            Util.number.long_to_bytes(sig[1], 20))
+            signer = self._keyObject.signer(hashes.SHA1())
+
+        signer.update(data)
+        ret = common.NS(signer.finalize())
+
         return common.NS(self.sshType()) + ret
 
 
@@ -976,12 +1002,10 @@ class Key(object):
                 hashes.SHA1(),
             )
         elif self.type() == 'DSA':
-            signature = common.getNS(signature)[0]
-            numbers = [
-                Util.number.bytes_to_long(n) for n in
-                    (signature[:20], signature[20:])
-                ]
-            digest = sha1(data).digest()
+            verifier = self._keyObject.verifier(
+                common.getNS(signature)[0],
+                hashes.SHA1(),
+                )
 
         verifier.update(data)
         try:

@@ -18,6 +18,45 @@ def bytes_to_int(b):
     return int(binascii.hexlify(b), 16)
 
 
+
+def int_to_bytes (val, endianness='big'):
+    """
+    From: http://stackoverflow.com/a/14527004/539264
+
+    Use :ref:`string formatting` and :func:`~binascii.unhexlify` to
+    convert ``val``, a :func:`long`, to a byte :func:`str`.
+
+    :param long val: The value to pack
+
+    :param str endianness: The endianness of the result. ``'big'`` for
+      big-endian, ``'little'`` for little-endian.
+
+    If you want byte- and word-ordering to differ, you're on your own.
+
+    Using :ref:`string formatting` lets us use Python's C innards.
+    """
+
+    # one (1) hex digit per four (4) bits
+    width = val.bit_length()
+
+    # unhexlify wants an even multiple of eight (8) bits, but we don't
+    # want more digits than we need (hence the ternary-ish 'or')
+    width += 8 - ((width % 8) or 8)
+
+    # format width specifier: four (4) bits per hex digit
+    fmt = '%%0%dx' % (width // 4)
+
+    # prepend zero (0) to the width, to zero-pad the output
+    s = binascii.unhexlify(fmt % val)
+
+    if endianness == 'little':
+        # see http://stackoverflow.com/a/931095/309233
+        s = s[::-1]
+
+    return s
+
+
+
 def NS(t):
     """
     net string
@@ -39,7 +78,7 @@ def getNS(s, count=1):
 def MP(number):
     if number==0: return '\000'*4
     assert number>0
-    bn = Util.number.long_to_bytes(number)
+    bn = int_to_bytes(number)
     if ord(bn[0])&128:
         bn = '\000' + bn
     return struct.pack('>L',len(bn)) + bn
