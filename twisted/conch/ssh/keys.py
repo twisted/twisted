@@ -709,6 +709,17 @@ class Key(object):
         """
         return {'RSA': 'ssh-rsa', 'DSA': 'ssh-dss'}[self.type()]
 
+    def size(self):
+        """
+        Return the size of the object we wrap.
+
+        @return: The size of the key.
+        @rtype: C{int}
+        """
+        if self._keyObject is None:
+            return 0
+        return self._keyObject.key_size
+
 
     def data(self):
         """

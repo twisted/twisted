@@ -114,9 +114,8 @@ def printFingerprint(options):
         options['filename'] += '.pub'
     try:
         key = keys.Key.fromFile(options['filename'])
-        obj = key.keyObject
         print '%s %s %s' % (
-            obj.size() + 1,
+            key.size() + 1,
             key.fingerprint(),
             os.path.basename(options['filename']))
     except:
