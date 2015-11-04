@@ -940,20 +940,22 @@ class SphinxBuilder(object):
     which the Sphinx output will be created.
     """
 
-    def main(self, args):
+    def main(self, args, logPath=None):
         """
         Build the main documentation.
 
         @type args: list of str
         @param args: The command line arguments to process.  This must contain
-            one string argument: the path to the root of a Twisted checkout.
+            at leaset one string argument: the path to the root of a Twisted
+            checkout.
             Additional arguments will be ignored for compatibility with legacy
             build infrastructure.
         """
-        self.build(FilePath(args[0]).child("docs"))
+        sourceDir = FilePath(args[0]).child("docs")
+        self.build(docDir=sourceDir, logPath=logPath)
 
 
-    def build(self, docDir, buildDir=None, version=''):
+    def build(self, docDir, buildDir=None, logPath=None):
         """
         Build the documentation in C{docDir} with Sphinx.
 
@@ -965,18 +967,27 @@ class SphinxBuilder(object):
         @param buildDir: The directory to build the documentation in.  By
             default this will be a child directory of {docDir} named "build".
         @type buildDir: L{twisted.python.filepath.FilePath}
-
-        @param version: The version of Twisted to set in the docs.
-        @type version: C{str}
         """
         if buildDir is None:
             buildDir = docDir.parent().child('doc')
 
         doctreeDir = buildDir.child('doctrees')
 
-        runCommand(['sphinx-build', '-b', 'html',
-                    '-d', doctreeDir.path, docDir.path,
-                    buildDir.path])
+        command = [
+            'sphinx-build', '-b', 'html',
+            '-E',  # Always check all files.
+            '-N',  # No colors.
+            '-q',  # Don't be verbose.
+            '-d', doctreeDir.path,
+            ]
+        if logPath is not None:
+            # Use a log file if requested.
+            command.extend(['-w', logPath.path])
+
+        # Add source path and destination path.
+        command.extend([docDir.path, buildDir.path])
+
+        runCommand(command)
 
         # Delete the doctrees, as we don't want them after the docs are built
         doctreeDir.remove()

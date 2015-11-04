@@ -1403,7 +1403,7 @@ class SphinxBuilderTests(TestCase):
         self.sourceDir = self.sphinxDir
 
 
-    def createFakeSphinxProject(self):
+    def createFakeSphinxProject(self, indexContent=None):
         """
         Create a fake Sphinx project for test purposes.
 
@@ -1412,7 +1412,10 @@ class SphinxBuilderTests(TestCase):
         smallest 'conf.py' file possible in order to find that source file.
         """
         self.sourceDir.child("conf.py").setContent(self.confContent)
-        self.sourceDir.child("index.rst").setContent(self.indexContent)
+
+        if indexContent is None:
+            indexContent = self.indexContent
+        self.sourceDir.child("index.rst").setContent(indexContent)
 
 
     def verifyFileExists(self, fileDir, fileName):
@@ -1473,6 +1476,26 @@ class SphinxBuilderTests(TestCase):
         self.verifyBuilt()
 
 
+    def test_mainWithLog(self):
+        """
+        When it is executed with a log path, all warnings are stored into
+        that path.
+        """
+        indexContent = '.. _core-howto-logger-main'
+        self.createFakeSphinxProject(indexContent)
+        logPath = self.twistedRootDir.child('sphinx.log')
+
+        self.builder.main([self.sphinxDir.parent().path], logPath=logPath)
+
+        logContent = logPath.getContent()
+        self.assertEqual(
+            '%s:1: WARNING: malformed hyperlink target.\n' % (
+                self.sourceDir.child("index.rst").path,) ,
+            logContent)
+        # The files are still generated.
+        self.verifyBuilt()
+
+
     def verifyBuilt(self):
         """
         Verify that a sphinx project has been built.
@@ -1498,6 +1521,7 @@ class SphinxBuilderTests(TestCase):
         self.assertRaises(CommandFailed,
                           self.builder.build,
                           self.sphinxDir)
+
 
 
 

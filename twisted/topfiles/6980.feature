@@ -1,0 +1,1 @@
+bin/admin/build-docs now accepts an optional log file as the second argument.

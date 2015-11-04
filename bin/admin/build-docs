@@ -6,6 +6,15 @@
 # This script is not meant to be distributed to users of Twisted.
 # It is only for use in making upstream Twisted releases.
 
+#
+# You can call it as:
+# ./bin/admin/build-docs . [path-to-log-file]
+#
+# Results are inside the new 'doc' directory.
+#
+# More info at:
+# https://twistedmatrix.com/trac/wiki/ReleaseProcess
+
 import sys, os
 extra = os.path.dirname(os.path.dirname(sys.argv[0]))
 sys.path.insert(0, extra)
@@ -16,5 +25,12 @@ except ImportError:
 sys.path.remove(extra)
 
 from twisted.python._release import SphinxBuilder
+from twisted.python.filepath import FilePath
 
-SphinxBuilder().main(sys.argv[1:])
+logPath = None
+try:
+    logPath = FilePath(sys.argv[2])
+except IndexError:
+    pass
+
+SphinxBuilder().main(args=sys.argv[1:], logPath=logPath)
