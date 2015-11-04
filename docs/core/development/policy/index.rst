@@ -21,4 +21,5 @@ Twisted codebase.
 - :doc:`Coding standard <coding-standard>`
 - :doc:`Documentation writing standard <writing-standard>`
 - :doc:`Testing standard <test-standard>`
+- :doc:`Compatibility policy <compatibility-policy>`
 - :doc:`Working from Twisted's Subversion repository <svn-dev>`

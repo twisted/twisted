@@ -6,6 +6,7 @@
 Twisted Compatibility Policy
 ============================
 
+
 Motivation
 ----------
 
@@ -15,9 +16,9 @@ Therefore we need to provide the most trouble-free upgrade process possible, so 
 
 Twisted is used by a wide variety of applications, many of which are proprietary or otherwise inaccessible to the Twisted development team.
 Each of these applications is developed against a particular version of Twisted.
-Python does not provide us with a strict way to partition "public" and "private" objects (methods, classes, modules), so it is unfortunately quite likely that many of those applications are using arbitrary parts of Twisted.
+Python does not provide us with a strict way to partition **public** and **private** objects (methods, classes, modules), so it is unfortunately quite likely that many of those applications are using arbitrary parts of Twisted.
 Our compatibility strategy needs to take this into account, and be comprehensive across our entire codebase.
-Exceptions can be made for modules aggressively marked "unstable" or "experimental", but even experimental modules will start being used in production code if they have been around for long enough.
+Exceptions can be made for modules aggressively marked **unstable** or **experimental**, but even experimental modules will start being used in production code if they have been around for long enough.
 
 The purpose of this document is to to lay out rules for Twisted application developers who wish to weather the changes when Twisted upgrades, and procedures for Twisted engine developers - both contributors and core team members - to follow when who want to make changes which may be incompatible to Twisted itself.
 
@@ -28,17 +29,17 @@ Defining Compatibility
 The word "compatibility" is itself difficult to define.
 While comprehensive compatibility is good, total compatibility is neither feasible nor desirable.
 Total compatibility requires that nothing ever change, since any change to Python code is detectable by a sufficiently determined program.
-There is some folk knowledge around which kind of changes "obviously" won't break other programs, but this knowledge is spotty and inconsistent.
+There is some folk knowledge around which kind of changes **obviously** won't break other programs, but this knowledge is spotty and inconsistent.
 Rather than attempt to disallow specific kinds of changes, here we will lay out a list of changes which are considered compatible.
 
-Throughout this document, "compatible" changes are those which meet these specific criteria.
-Although a change may be broadly considered backward compatible, as long as it does not meet this official standard, it will be officially deemed "incompatible" and put through the process for incompatible changes.
+Throughout this document, **compatible** changes are those which meet these specific criteria.
+Although a change may be broadly considered backward compatible, as long as it does not meet this official standard, it will be officially deemed **incompatible** and put through the process for incompatible changes.
 
 
 Procedure for Incompatible Changes
 ----------------------------------
 
-Any change specifically described below as **compatible** may be made at any time, in any release.
+Any change specifically described in the next section as **compatible** may be made at any time, in any release.
 
 
 The First One's Always Free
@@ -53,13 +54,13 @@ In other words, any application which runs its tests without triggering any warn
 
 Incompatible Changes
 ^^^^^^^^^^^^^^^^^^^^
-Any change which is not specifically described as **compatible** must be made in 3 phases.
+
+Any change which is not specifically described as **compatible** must be made in 2 phases.
 If a change is made in release R, the timeline is:
 
 1. Release R: New functionality is added and old functionality is deprecated with a DeprecationWarning.
 
-2. At the earliest, release R+2 and one year after release R, but often much later:
-Old functionality is completely removed.
+2. At the earliest, release R+2 and one year after release R, but often much later: Old functionality is completely removed.
 
 Removal should happen once the deprecated API becomes an additional maintenance burden.
 
@@ -125,7 +126,7 @@ If Twisted documents an object as complying with a published specification, and 
 If application code must support multiple versions of Twisted, and work around violations of such specifications, then it must test for the presence of such a bug before compensating for it.
 
 For example, Twisted supplies a DOM implementation in twisted.web.microdom.
-If an issue were discovered where parsing the string ``<xml>Hello</xml>`` and then serializing it again resulted in ``>xml<Hello>/xml<``, that would grossly violate the XML specification for well-formedness.
+If an issue were discovered where parsing the string `<xml>Hello</xml>` and then serializing it again resulted in `>xml<Hello>/xml<`, that would grossly violate the XML specification for well-formedness.
 Such code could be fixed with no warning other than release notes detailing that this error is now fixed.
 
 
@@ -167,10 +168,11 @@ Interface Changes
 
 Although methods may be added to implementations, adding those methods to interfaces may introduce an unexpected requirement in user code.
 
-[XXX TODO]: There is currently no way to express, in zope.interface, that an interface may optionally provide certain features which need to be tested for. Although we can add new code, we can't add new requirements on user code to implement new methods.
+..  note::
+    There is currently no way to express, in zope.interface, that an interface may optionally provide certain features which need to be tested for. Although we can add new code, we can't add new requirements on user code to implement new methods.
 
-This is easier to deal with in a system which uses abstract base classes because new requirements can provide default implementations which provide warnings.
-Something could also be put in place to do the same with interfaces, since they already install a metaclass, but this is tricky territory. The only example I'm aware of here is the Microsoft tradition of ISomeInterfaceN where N is a monotonically ascending number for each release.
+    This is easier to deal with in a system which uses abstract base classes because new requirements can provide default implementations which provide warnings.
+    Something could also be put in place to do the same with interfaces, since they already install a metaclass, but this is tricky territory. The only example I'm aware of here is the Microsoft tradition of ISomeInterfaceN where N is a monotonically ascending number for each release.
 
 
 Private Objects Available via Public Entry Points
@@ -267,13 +269,14 @@ Twisted does not have a formal policy around supporting new versions of Python o
 We strive to support Twisted on any version of Python that is the default Python for a vendor-supported release from a major platform, namely Debian, Ubuntu, the latest release of Windows, or the latest release of OS X.
 The versions of Python currently supported are listed in the ​INSTALL file for each release.
 
-A distribution release + Python version is only considered supported when a ​`buildbot builder <http://buildbot.twistedmatrix.com/>`_ exists for it.
+A distribution release + Python version is only considered supported when a `buidlbot builder <http://buildbot.twistedmatrix.com>`_ exists for it.
 
 Removing support for a Python version will be announced at least 1 release prior to the removal.
 
 
 How to deprecate APIs
 ---------------------
+
 
 Functions and methods
 ^^^^^^^^^^^^^^^^^^^^^
@@ -283,9 +286,10 @@ To deprecate a function or a method, add a call to warnings.warn to the beginnin
 The warning should be of type DeprecationWarning and the stack level should be set so that the warning refers to the code which is invoking the deprecated function or method.
 
 The deprecation message must include the name of the function which is deprecated, the version of Twisted in which it was first deprecated, and a suggestion for a replacement.
- If the API provides functionality which it is determined is beyond the scope of Twisted or it has no replacement, then it may be deprecated without a replacement.
 
-There is also a :api:`@deprecated <twisted.python.deprecate.deprecated`
+If the API provides functionality which it is determined is beyond the scope of Twisted or it has no replacement, then it may be deprecated without a replacement.
+
+There is also a :api:`twisted.python.deprecate.deprecated <@deprecated>`
 decorator.
 
 For example:
@@ -374,7 +378,7 @@ You can also use the helper decorator.
 Module attributes
 ^^^^^^^^^^^^^^^^^
 
-Modules cannot have properties, so module attributes should be deprecated using the :api:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` helper.
+Modules cannot have properties, so module attributes should be deprecated using the :api:`twisted.python.deprecate.deprecatedModuleAttribute <deprecatedModuleAttribute>` helper.
 
 .. code-block:: python
 
@@ -394,7 +398,7 @@ Modules cannot have properties, so module attributes should be deprecated using 
 Modules
 ^^^^^^^
 
-To deprecate an entire module, :api:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` can be used on the parent package's ``__init__.py``.
+To deprecate an entire module, :api:`twisted.python.deprecate.deprecatedModuleAttribute <deprecatedModuleAttribute>` can be used on the parent package's ``__init__.py``.
 
 There are two other options:
 
@@ -411,9 +415,9 @@ it raises a `DeprecationWarning`.
 
 In order of decreasing preference:
 
-* :api:`flushWarnings <twisted.trial.unittest.TestCase.flushWarnings>`
-* :api:`assertWarns <twisted.trial.unittest.TestCase.assertWarns>`
-* :api:`callDeprecated <twisted.trial.unittest.TestCase.callDeprecated>`
+* :api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <flushWarnings>`
+* :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>`
+* :api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`
 
 
 .. code-block:: python
@@ -469,7 +473,7 @@ When a code is deprecated all previous test in which the code is called and
 tested will not raise ``DeprecationWarnings``.
 
 Make the calls to the deprecated calls using the
-:api:`callDeprecated <twisted.trial.unittest.TestCase.callDeprecated>`
+:api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>`
 helper.
 
 .. code-block:: python
@@ -479,7 +483,7 @@ helper.
 
     class IdentityTests(unittest.TestCase):
         """
-        Tests for our i.
+        Tests for our Identity behavior.
         """
 
         def test_getUserHomePath(self):
@@ -492,6 +496,7 @@ helper.
                 Version("Twisted", 1, 2, 0), db.getUser, 'some-user')
 
             self.assertEqual('some-value', user.homePath)
+
 
 Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_),
 unhandled deprecation warnings are not show by trail.
