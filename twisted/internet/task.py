@@ -53,6 +53,15 @@ class LoopingCall:
     @type _runAtStart: C{bool}
     @ivar _runAtStart: A flag indicating whether the 'now' argument was passed
         to L{LoopingCall.start}.
+
+    @ivar deferred: A deferred which is created once the loop was started.
+        It is fired with the loop when it stops.
+        It errback when executing the loop fails.
+    @type deferred: C{Deferred}
+
+    @ivar _ongoingDeferred: The deferred on which the current loop execution
+        is wating.
+    @type _ongoingDeferred: C{Deferred}
     """
 
     call = None
@@ -61,6 +70,7 @@ class LoopingCall:
     interval = None
     _runAtStart = False
     starttime = None
+    _ongoingDeferred = None
 
     def __init__(self, f, *a, **kw):
         self.f = f
@@ -210,9 +220,9 @@ class LoopingCall:
             d.errback(failure)
 
         self.call = None
-        d = defer.maybeDeferred(self.f, *self.a, **self.kw)
-        d.addCallback(cb)
-        d.addErrback(eb)
+        self._ongoingDeferred = defer.maybeDeferred(self.f, *self.a, **self.kw)
+        self._ongoingDeferred.addCallback(cb)
+        self._ongoingDeferred.addErrback(eb)
 
 
     def _scheduleFrom(self, when):
