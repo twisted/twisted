@@ -805,7 +805,7 @@ class Key(object):
 @deprecated(Version("Twisted", 15, 5, 0))
 def objectType(obj):
     """
-    Return the SSH key type corresponding to a
+    DEPRECATED. Return the SSH key type corresponding to a
     C{Crypto.PublicKey.pubkey.pubkey} object.
 
     @param obj: Key for which the type is returned.

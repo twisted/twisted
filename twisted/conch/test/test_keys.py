@@ -135,6 +135,19 @@ class ObjectTypeTests(unittest.TestCase):
             ))
 
 
+    def checkDeprecation(self):
+        """
+        Check that we have a deprecation warning for C{objectType}.
+        """
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertIs(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(
+            'twisted.conch.ssh.keys.objectType was deprecated in '
+            'Twisted 15.5.0',
+            warnings[0]['message'])
+
+
     def test_objectType_rsa(self):
         """
         C{ssh-rsa} is the type of the RSA keys.
@@ -142,6 +155,7 @@ class ObjectTypeTests(unittest.TestCase):
         key = self.getRSAKey()
 
         self.assertEqual(keys.objectType(key), 'ssh-rsa')
+        self.checkDeprecation()
 
 
     def test_objectType_dsa(self):
@@ -151,6 +165,7 @@ class ObjectTypeTests(unittest.TestCase):
         key = self.getDSAKey()
 
         self.assertEqual(keys.objectType(key), 'ssh-dss')
+        self.checkDeprecation()
 
 
     def test_objectKey_none(self):
@@ -158,6 +173,7 @@ class ObjectTypeTests(unittest.TestCase):
         A BadKeyError is raised when getting the type of C{None}.
         """
         self.assertRaises(keys.BadKeyError, keys.objectType, None)
+        self.checkDeprecation()
 
 
     def test_deprecation(self):
@@ -168,13 +184,7 @@ class ObjectTypeTests(unittest.TestCase):
 
         keys.objectType(key)
 
-        warnings = self.flushWarnings()
-        self.assertEqual(1, len(warnings))
-        self.assertIs(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(
-            'twisted.conch.ssh.keys.objectType was deprecated in '
-            'Twisted 15.5.0',
-            warnings[0]['message'])
+        self.checkDeprecation()
 
 
 
