@@ -19,9 +19,11 @@ def bytes_to_int(b):
 
 
 
-def int_to_bytes (val, endianness='big'):
+def int_to_bytes(val, endianness='big'):
     """
     From: http://stackoverflow.com/a/14527004/539264
+
+    FIXME add padding
 
     Use :ref:`string formatting` and :func:`~binascii.unhexlify` to
     convert ``val``, a :func:`long`, to a byte :func:`str`.

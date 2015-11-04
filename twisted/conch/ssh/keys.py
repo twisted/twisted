@@ -13,10 +13,7 @@ from hashlib import md5, sha1
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.interfaces import (
-    DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey
-)
-from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding
+from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, utils
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from pyasn1.error import PyAsn1Error
@@ -654,7 +651,7 @@ class Key(object):
         """
         Returns True if this Key is a public key.
         """
-        return isinstance(self._keyObject, (RSAPublicKey, DSAPublicKey))
+        return isinstance(self._keyObject, (rsa.RSAPublicKey, dsa.DSAPublicKey))
 
 
     def public(self):
@@ -694,9 +691,9 @@ class Key(object):
         Return the type of the object we wrap.  Currently this can only be
         'RSA' or 'DSA'.
         """
-        if isinstance(self._keyObject, (RSAPublicKey, RSAPrivateKey)):
+        if isinstance(self._keyObject, (rsa.RSAPublicKey, rsa.RSAPrivateKey)):
             return 'RSA'
-        elif isinstance(self._keyObject, (DSAPublicKey, DSAPrivateKey)):
+        elif isinstance(self._keyObject, (dsa.DSAPublicKey, dsa.DSAPrivateKey)):
             return 'DSA'
         else:
             raise RuntimeError('unknown type of object: %r' % self._keyObject)
@@ -727,13 +724,13 @@ class Key(object):
 
         @rtype: C{dict}
         """
-        if isinstance(self._keyObject, RSAPublicKey):
+        if isinstance(self._keyObject, rsa.RSAPublicKey):
             numbers = self._keyObject.public_numbers()
             return {
                 "n": numbers.n,
                 "e": numbers.e,
             }
-        elif isinstance(self._keyObject, RSAPrivateKey):
+        elif isinstance(self._keyObject, rsa.RSAPrivateKey):
             numbers = self._keyObject.private_numbers()
             return {
                 "n": numbers.public_numbers.n,
@@ -743,7 +740,7 @@ class Key(object):
                 "q": numbers.q,
                 "u": numbers.iqmp,
             }
-        elif isinstance(self._keyObject, DSAPublicKey):
+        elif isinstance(self._keyObject, dsa.DSAPublicKey):
             numbers = self._keyObject.public_numbers()
             return {
                 "y": numbers.y,
@@ -751,7 +748,7 @@ class Key(object):
                 "p": numbers.parameter_numbers.p,
                 "q": numbers.parameter_numbers.q,
             }
-        elif isinstance(self._keyObject, DSAPrivateKey):
+        elif isinstance(self._keyObject, dsa.DSAPrivateKey):
             numbers = self._keyObject.private_numbers()
             return {
                 "x": numbers.x,
@@ -766,16 +763,18 @@ class Key(object):
 
     def blob(self):
         """
-        Return the public key blob for this key.  The blob is the
-        over-the-wire format for public keys:
+        Return the public key blob for this key. The blob is the
+        over-the-wire format for public keys.
+
+        SECSH-TRANS RFC 4253 Section 6.6.
 
         RSA keys::
-            string  'ssh-rsa'
+            string 'ssh-rsa'
             integer e
             integer n
 
         DSA keys::
-            string  'ssh-dss'
+            string 'ssh-dss'
             integer p
             integer q
             integer g
@@ -796,8 +795,10 @@ class Key(object):
 
     def privateBlob(self):
         """
-        Return the private key blob for this key.  The blob is the
+        Return the private key blob for this key. The blob is the
         over-the-wire format for private keys:
+
+        Specification in OpenSSH PROTOCOL.agent
 
         RSA keys::
             string 'ssh-rsa'
@@ -981,20 +982,26 @@ class Key(object):
         """
         Returns a signature with this Key.
 
+        SECSH-TRANS RFC 4253 Section 6.6.
+
         @type data: C{str}
         @rtype: C{str}
         """
         if self.type() == 'RSA':
             signer = self._keyObject.signer(
                 padding.PKCS1v15(), hashes.SHA1())
+            ret = common.NS(signer.finalize())
 
         elif self.type() == 'DSA':
-            # FIXME: see how to insert the random part into PyCA code.
-            randomBytes = randbytes.secureRandom(19)
             signer = self._keyObject.signer(hashes.SHA1())
-
-        signer.update(data)
-        ret = common.NS(signer.finalize())
+            signer.update(data)
+            signature = signer.finalize()
+            (r, s) = utils.decode_dss_signature(signature)
+            # SSH insists that the DSS signature blob be two 160-bit integers
+            # concatenated together. The sig[0], [1] numbers from obj.sign
+            # are just numbers, and could be any length from 0 to 160 bits.
+            # Make sure they are padded out to 160 bits (20 bytes each)
+            ret = common.NS(common.int_to_bytes(r) + common.int_to_bytes(s))
 
         return common.NS(self.sshType()) + ret
 
@@ -1021,10 +1028,12 @@ class Key(object):
                 hashes.SHA1(),
             )
         elif self.type() == 'DSA':
+            concatenatedSignature = common.getNS(signature)[0]
+            r = common.bytes_to_int(concatenatedSignature[:20])
+            s = common.bytes_to_int(concatenatedSignature[20:])
+            signature = utils.encode_dss_signature(r, s)
             verifier = self._keyObject.verifier(
-                common.getNS(signature)[0],
-                hashes.SHA1(),
-                )
+                signature, hashes.SHA1())
 
         verifier.update(data)
         try:
@@ -1044,9 +1053,9 @@ def objectType(obj):
     @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
     @rtype:     C{str}
     """
-    if isinstance(obj, (RSAPublicKey, RSAPrivateKey)):
+    if isinstance(obj, (rsa.RSAPublicKey, rsa.RSAPrivateKey)):
         return 'ssh-rsa'
-    elif isinstance(obj, (DSAPublicKey, DSAPrivateKey)):
+    elif isinstance(obj, (dsa.DSAPublicKey, dsa.DSAPrivateKey)):
         return 'ssh-dss'
     else:
         raise BadKeyError("invalid key object", obj)
