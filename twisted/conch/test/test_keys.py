@@ -6,17 +6,23 @@ Tests for L{twisted.conch.ssh.keys}.
 """
 
 try:
+    import cryptography
+except ImportError:
+    cryptography = None
+    skipCryptography = 'Cannot run without cryptography.'
+
+try:
     import Crypto.Cipher.DES3
 except ImportError:
-    # we'll have to skip these tests without PyCypto and pyasn1
+    # we'll have to skip some tests without PyCypto
     Crypto = None
-
+    skipPyCrypto = 'Cannot run without PyCrypto.'
 try:
     import pyasn1
 except ImportError:
     pyasn1 = None
 
-if Crypto and pyasn1:
+if cryptography and pyasn1:
     from twisted.conch.ssh import keys, common, sexpy
 
 import os, base64
@@ -28,8 +34,8 @@ from twisted.trial import unittest
 
 class HelpersTests(unittest.TestCase):
 
-    if Crypto is None:
-        skip = "cannot run w/o PyCrypto"
+    if cryptography is None:
+        skip = skipCryptography
     if pyasn1 is None:
         skip = "Cannot run without PyASN1"
 
@@ -88,8 +94,8 @@ class HelpersTests(unittest.TestCase):
 
 class KeyTests(unittest.TestCase):
 
-    if Crypto is None:
-        skip = "cannot run w/o PyCrypto"
+    if cryptography is None:
+        skip = skipCryptography
     if pyasn1 is None:
         skip = "Cannot run without PyASN1"
 
@@ -625,22 +631,33 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertRaises(RuntimeError, badKey.blob)
 
 
-    def test_privateBlob(self):
+    def test_privateBlobRSA(self):
         """
-        L{Key.privateBlob} returns the SSH protocol-level format of the private
-        key and raises L{RuntimeError} if the underlying key object is invalid.
+        Returns the SSH protocol-level format of the RSA private key.
         """
         self.assertEqual(keys.Key(self.rsaObj).privateBlob(),
                 '\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x01\x01'
                 '\x00\x00\x00\x01\x02\x00\x00\x00\x01\x03\x00'
                 '\x00\x00\x01\x04\x00\x00\x00\x01\x04\x00\x00'
                 '\x00\x01\x05')
+
+
+    def test_privateBlobDSA(self):
+        """
+        Returns the SSH protocol-level format of the DSA private key.
+        """
         self.assertEqual(keys.Key(self.dsaObj).privateBlob(),
                 '\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x03'
                 '\x00\x00\x00\x01\x04\x00\x00\x00\x01\x02\x00'
                 '\x00\x00\x01\x01\x00\x00\x00\x01\x05')
 
+
+    def test_privateBlobNoKeyObject(self):
+        """
+        Raises L{RuntimeError} if the underlying key object does not exists.
+        """
         badKey = keys.Key(None)
+
         self.assertRaises(RuntimeError, badKey.privateBlob)
 
 
@@ -752,10 +769,11 @@ class KeyKeyObjectTests(unittest.TestCase):
     compatibility layer to PyCryto during the transition.
     """
 
-    if Crypto is None:
-        skip = "Cannot run without PyCrypto."
+    if cryptography is None:
+        skip = skipCryptography
 
-    maxDiff = None
+    if Crypto is None:
+        skip = skipPyCrypto
 
     def test_keyObjectGetRSAPublic(self):
         """
