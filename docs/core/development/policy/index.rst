@@ -12,6 +12,7 @@ Twisted Development Policy
    coding-standard
    writing-standard
    test-standard
+   compatibility-policy
    svn-dev
 
 This series of documents is designed for people who wish to contribute to the
