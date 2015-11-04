@@ -182,7 +182,7 @@ class ListingTests(TestCase):
             self._lsInTimezone('Pacific/Auckland', stat),
             '!---------    0 0        0               0 Aug 29 09:33 foo')
 
-    # if alternate locale is not available, the previous test will be
+    # If alternate locale is not available, the previous test will be
     # skipped, please install this locale for it to run
     currentLocale = locale.getlocale()
     try:
@@ -213,29 +213,91 @@ class ListingTests(TestCase):
             '!---------    0 0        0               0 Sep 02 09:33 foo')
 
 
+
+class InMemorySSHChannel(StringTransport, object):
+    """
+    Minimal implementation of a L{SSHChannel} like class which only reads and
+    writes data from memory.
+    """
+
+    def __init__(self, conn):
+        """
+        @param conn: The SSH connection associated with this channel.
+        @type conn: L{SSHConnection}
+        """
+        self.conn = conn
+        self.localClosed = 0
+        super(InMemorySSHChannel, self).__init__()
+
+
+
+class FilesystemAccessExpectations(object):
+    """
+    A test helper used to support expected filesytem access.
+    """
+
+    def __init__(self):
+        self._cache = {}
+
+
+    def put(self, path, flags, stream):
+        """
+
+        @param path: Path at which the stream is requested.
+        @type path: C{str}
+
+        @param path: Flags with which the stream is requested.
+        @type path: C{str}
+
+        @param stream: A stream.
+        @type stream: C{File}
+        """
+        self._cache[(path, flags)] = stream
+
+
+    def pop(self, path, flags):
+        """
+        Remove a stream from the memory.
+
+        @param path: Path at which the stream is requested.
+        @type path: C{str}
+
+        @param path: Flags with which the stream is requested.
+        @type path: C{str}
+
+        @return: A stream.
+        @rtype: C{File}
+        """
+        return self._cache.pop((path, flags))
+
+
+
 class InMemorySFTPClient(object):
     """
     A L{filetransfer.FileTransferClient} which does filesystem operations in
     memory, without touching the local disc or the network interface.
+
+    @ivar _availableFiles: File like objects which are available to the SFTP
+        client.
+    @type _availableFiles: L{FilesystemRegister}
     """
 
-    def __init__(self):
-        self.transport = StringTransport()
-        self.transport.localClosed = False
-        self.transport.conn = self
-        self.openFileSideEffects = {}
+    def __init__(self, availableFiles):
+        self.transport = InMemorySSHChannel(self)
         self.options = {
             'requests': 1,
             'buffersize': 10,
             }
+        self._availableFiles = availableFiles
+
 
     def openFile(self, filename, flags, attrs):
         """
-        See: L{filetransfer.FileTransferClient.openFile}.
+        @see: L{filetransfer.FileTransferClient.openFile}.
 
-        Return cached file based on path and flags and remove it from cache.
+        Retrieve and remove cached file based on flags.
         """
-        return self.openFileSideEffects.pop((filename, flags))
+        return self._availableFiles.pop(filename, flags)
 
 
 
@@ -253,22 +315,25 @@ class InMemoryRemoteFile(StringIO):
         self.name = name
         StringIO.__init__(self)
 
+
     def writeChunk(self, start, data):
         """
-        See: L{ISFTPFile.writeChunk}
+        @see: L{ISFTPFile.writeChunk}
         """
         self.seek(start)
         self.write(data)
         return defer.succeed(self)
 
+
     def close(self):
         """
-        See: L{ISFTPFile.writeChunk}
+        @see: L{ISFTPFile.writeChunk}
 
         Keeps data after file was closed to help with testing.
         """
         if not self.closed:
             self.closed = True
+
 
     def getvalue(self):
         """
@@ -282,6 +347,7 @@ class InMemoryRemoteFile(StringIO):
         return self.buf
 
 
+
 class StdioClientTests(TestCase):
     """
     Tests for L{cftp.StdioClient}.
@@ -291,7 +357,8 @@ class StdioClientTests(TestCase):
         Create a L{cftp.StdioClient} hooked up to dummy transport and a fake
         user database.
         """
-        sftpClient = InMemorySFTPClient()
+        self.fakeFilesystem = FilesystemAccessExpectations()
+        sftpClient = InMemorySFTPClient(self.fakeFilesystem )
         self.client = cftp.StdioClient(sftpClient)
         self.client.currentDirectory = '/'
         self.database = self.client._pwd = UserDatabase()
@@ -355,7 +422,8 @@ class StdioClientTests(TestCase):
         @param height: the height in characters
         @type height: C{int}
         """
-        import tty # local import to avoid win32 issues
+        # Local import to avoid win32 issues.
+        import tty
         class FakeFcntl(object):
             def ioctl(self, fd, opt, mutate):
                 if opt != tty.TIOCGWINSZ:
@@ -486,7 +554,7 @@ class StdioClientTests(TestCase):
         return path
 
 
-    def checkPutMessage(self, transfers,  randomOrder=False):
+    def checkPutMessage(self, transfers, randomOrder=False):
         """
         Check output of cftp client for a put request.
 
@@ -544,6 +612,7 @@ class StdioClientTests(TestCase):
             'There are still put responses which were not checked.',
             )
 
+
     def test_cmd_PUTSingleNoRemotePath(self):
         """
         A name based on local path is used when remote path is not
@@ -560,8 +629,7 @@ class StdioClientTests(TestCase):
             )
         remoteName = os.path.join('/', os.path.basename(localPath))
         remoteFile = InMemoryRemoteFile(remoteName)
-        self.client.client.openFileSideEffects[(remoteName, flags)] = (
-            defer.succeed(remoteFile))
+        self.fakeFilesystem.put(remoteName, flags, defer.succeed(remoteFile))
         self.client.client.options['buffersize'] = 10
 
         deferred = self.client.cmd_PUT(localPath)
@@ -588,8 +656,7 @@ class StdioClientTests(TestCase):
             )
         remoteName = '/remote-path'
         remoteFile = InMemoryRemoteFile(remoteName)
-        self.client.client.openFileSideEffects[(remoteName, flags)] = (
-            defer.succeed(remoteFile))
+        self.fakeFilesystem.put(remoteName, flags, defer.succeed(remoteFile))
 
         deferred = self.client.cmd_PUT(
             '%s %s ignored' % (localPath, remoteName))
@@ -619,10 +686,10 @@ class StdioClientTests(TestCase):
         secondRemotePath = '/%s' % (secondName,)
         firstRemoteFile = InMemoryRemoteFile(firstRemotePath)
         secondRemoteFile = InMemoryRemoteFile(secondRemotePath)
-        self.client.client.openFileSideEffects[(firstRemotePath, flags)] = (
-            defer.succeed(firstRemoteFile))
-        self.client.client.openFileSideEffects[(secondRemotePath, flags)] = (
-            defer.succeed(secondRemoteFile))
+        self.fakeFilesystem.put(
+            firstRemotePath, flags, defer.succeed(firstRemoteFile))
+        self.fakeFilesystem.put(
+            secondRemotePath, flags, defer.succeed(secondRemoteFile))
 
         deferred = self.client.cmd_PUT(os.path.join(parent, '*'))
         self.successResultOf(deferred)
@@ -660,10 +727,10 @@ class StdioClientTests(TestCase):
         secondRemoteFile = InMemoryRemoteFile(secondName)
         firstRemotePath = '/remote/%s' % (firstName,)
         secondRemotePath = '/remote/%s' % (secondName,)
-        self.client.client.openFileSideEffects[(firstRemotePath, flags)] = (
-            defer.succeed(firstRemoteFile))
-        self.client.client.openFileSideEffects[(secondRemotePath, flags)] = (
-            defer.succeed(secondRemoteFile))
+        self.fakeFilesystem.put(
+            firstRemotePath, flags, defer.succeed(firstRemoteFile))
+        self.fakeFilesystem.put(
+            secondRemotePath, flags, defer.succeed(secondRemoteFile))
 
         deferred = self.client.cmd_PUT(
             '%s remote' % (os.path.join(parent, '*'),))
@@ -679,6 +746,7 @@ class StdioClientTests(TestCase):
             ],
             randomOrder=True,
             )
+
 
 
 class FileTransferTestRealm:

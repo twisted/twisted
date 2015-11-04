@@ -408,11 +408,12 @@ class StdioClient(basic.LineReceiver):
         @param rest: Requested command line for the PUT command.
         @type rest: C{str}
 
-        @return: A deferred which fires when transfer is done.
+        @return: A deferred which fires with C{None} when transfer is done.
+        @rtype: L{defer.Deferred}
         """
         local, rest = self._getFilename(rest)
 
-        # FIXME:https://twistedmatrix.com/trac/ticket/7241
+        # FIXME: https://twistedmatrix.com/trac/ticket/7241
         # Use a better check for globbing expression.
         if '*' in local or '?' in local:
             if rest:
