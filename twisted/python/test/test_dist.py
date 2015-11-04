@@ -130,7 +130,7 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['conch']
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
+        self.assertIn('cryptography', deps)
 
 
     def test_extrasRequiresSoapDeps(self):
@@ -167,7 +167,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
+        self.assertIn('cryptography', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
 
@@ -184,7 +184,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
+        self.assertIn('cryptography', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('pyobjc', deps)
@@ -202,7 +202,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
+        self.assertIn('cryptography', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('pypiwin32', deps)

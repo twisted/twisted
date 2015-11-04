@@ -54,7 +54,7 @@ class Key(object):
     on disk, use the toString method.  If you have a private key, but want
     the string representation of the public key, use Key.public().toString().
 
-    @ivar keyObject: DEPRECATED. The C{Crypto.PublicKey.pubkey.pubkey} object
+    @ivar keyObject: DEPRECATED. The C{Crypto.PublicKey} object
         that operations are performed with.
     """
 
@@ -113,7 +113,8 @@ class Key(object):
             integer y
 
         @type blob: C{str}
-        @return: a C{Crypto.PublicKey.pubkey.pubkey} object
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the key type (the first string) is unknown.
         """
         keyType, rest = common.getNS(blob)
@@ -160,7 +161,8 @@ class Key(object):
             integer x
 
         @type blob: C{str}
-        @return: a C{Crypto.PublicKey.pubkey.pubkey} object
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the key type (the first string) is unknown.
         """
         keyType, rest = common.getNS(blob)
@@ -183,7 +185,8 @@ class Key(object):
             <key type> <base64-encoded public key blob>
 
         @type data: C{str}
-        @return: A {Crypto.PublicKey.pubkey.pubkey} object
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the blob type is unknown.
         """
         blob = base64.decodestring(data.split()[1])
@@ -212,7 +215,8 @@ class Key(object):
 
         @type data: C{str}
         @type passphrase: C{str}
-        @return: a C{Crypto.PublicKey.pubkey.pubkey} object
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if
             * a passphrase is provided for an unencrypted key
             * the ASN.1 encoding is incorrect
@@ -324,7 +328,8 @@ class Key(object):
         The names for a DSA (key type 'dsa') key are: y, g, p, q.
 
         @type data: C{str}
-        @return: a C{Crypto.PublicKey.pubkey.pubkey} object
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the key type is unknown
         """
         sexp = sexpy.parse(base64.decodestring(data[1:-1]))
@@ -352,7 +357,8 @@ class Key(object):
         The names for a DSA (key type 'dsa') key are: y, g, p, q, x.
 
         @type data: C{str}
-        @return: a {Crypto.PublicKey.pubkey.pubkey} object
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the key type is unknown
         """
         sexp = sexpy.parse(data)
@@ -398,7 +404,8 @@ class Key(object):
             integer x
 
         @type data: C{str}
-        @return: a C{Crypto.PublicKey.pubkey.pubkey} object
+        @return: A new key.
+        @rtype: L{twisted.conch.ssh.keys.Key}
         @raises BadKeyError: if the key type (the first string) is unknown
         """
         keyType, data = common.getNS(data)
@@ -491,10 +498,11 @@ class Key(object):
 
     def __init__(self, keyObject):
         """
-        Initialize a PublicKey with a C{Crypto.PublicKey.pubkey.pubkey}
-        object.
+        Initialize with a private or public
+        C{cryptography.hazmat.primitives.asymmetric} key.
 
-        @type keyObject: C{Crypto.PublicKey.pubkey.pubkey}
+        @param keyObject: Low level key.
+        @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
         self._keyObject = keyObject
 

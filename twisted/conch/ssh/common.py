@@ -139,7 +139,7 @@ def install():
     getMP = _fastgetMP
     MP = _fastMP
     _MPpow = _fastMPpow
-    # XXX: We override builtin pow so that PyCrypto can benefit from gmpy too.
+    # XXX: We override builtin pow so that other code can benefit too.
     def _fastpow(x, y, z=None, mpz=gmpy.mpz):
         if type(x) in (long, int):
             x = mpz(x)
