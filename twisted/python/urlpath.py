@@ -37,11 +37,11 @@ class URLPath(object):
     """
     def __init__(self, scheme=b'', netloc=b'localhost', path=b'',
                  query=b'', fragment=b''):
-        self.scheme = scheme or b'http'
-        self.netloc = netloc
-        self.path = path or b'/'
-        self.query = query
-        self.fragment = fragment
+        self._scheme = scheme or b'http'
+        self._netloc = netloc
+        self._path = path or b'/'
+        self._query = query
+        self._fragment = fragment
         urltext = urlquote(
             urlparse.urlunsplit((self.scheme, self.netloc,
                                  self.path, self.query, self.fragment)),
