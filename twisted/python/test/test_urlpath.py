@@ -23,6 +23,16 @@ class _BaseURLPathTests(object):
         self.assertEqual(type(self.path.__str__()), str)
 
 
+    def test_mutability(self):
+        """
+        Setting attributes on L{urlpath.URLPath} should change the value
+        returned by L{str}.
+        """
+        self.path.scheme = u"https"
+        self.assertEqual(str(self.path),
+                         "https://example.com/foo/bar?yes=no&no=yes#footer")
+
+
     def test_stringConversion(self):
         """
         Calling C{str()} with a L{URLPath} will return the same URL that it was
