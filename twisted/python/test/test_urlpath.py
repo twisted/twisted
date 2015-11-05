@@ -15,6 +15,16 @@ class _BaseURLPathTests(object):
     """
     Tests for instantiated L{urlpath.URLPath}s.
     """
+    def test_partsAreBytes(self):
+        """
+        All of the attributes of L{urlpath.URLPath} should be L{bytes}.
+        """
+        self.assertIsInstance(self.path.scheme, bytes)
+        self.assertIsInstance(self.path.netloc, bytes)
+        self.assertIsInstance(self.path.path, bytes)
+        self.assertIsInstance(self.path.query, bytes)
+        self.assertIsInstance(self.path.fragment, bytes)
+
 
     def test_strReturnsStr(self):
         """
