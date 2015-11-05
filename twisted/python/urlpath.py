@@ -27,16 +27,9 @@ def _rereconstituter(name):
         on get and calls rerealize on set.
     """
     privateName = nativeString("_") + name
-    @property
-    def getter(self):
-        return getattr(self, privateName)
-
-
-    @getter.setter
-    def setter(self, value):
-        setattr(self, privateName, value)
-        self._reconstitute()
-    return setter
+    return property(lambda self: getattr(self, privateName),
+                    lambda self, value: (setattr(self, privateName, value) and
+                                         self._reconstitute()))
 
 
 
