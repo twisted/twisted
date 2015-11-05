@@ -24,31 +24,33 @@ server works. You should not use this code in production.
 
 Re-using a private key is dangerous, generate one.
 
+For this example you can use:
+
+$ ssh-keygen -t rsa -f ssh-keys/ssh_host_rsa_key
+$ ssh-keygen -t rsa -f ssh-keys/client_rsa
+
 Re-using DH primes and having such a short primes list is dangerous, generate
 your own primes.
 
 In this example the implemented SSH server identifies itself using an RSA host
 key and authenticates clients using username "user" and password "password" or
 using a SSH RSA key.
+
+# Clean the previous server key as we should now have a new one
+$ ssh-keygen -f ~/.ssh/known_hosts -R [localhost]:5022
+# Connect with password
+$ ssh -p 5022 -i ssh-keys/client_rsa user@localhost
+# Connect with the SSH client key.
+$ ssh -p 5022 -i ssh-keys/client_rsa user@localhost
 """
 
-# Used as server host key as well as the key allowed for `user` account.
-# In real life you should NOT reuse keys.
-publicKey = 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHRivcJSkbh/C+BR3utDS555mV'
-# Private part of the private key used as server's host key and as account's
-# SSH key.
-privateKey = """-----BEGIN RSA PRIVATE KEY-----
-MIIByAIBAAJhAK8ycfDmDpyZs3+LXwRLy4vA1T6yd/3PZNiPwM+uH8Yx3/YpskSW
-4sbUIZR/ZXzY1CMfuC5qyR+UDUbBaaK3Bwyjk8E02C4eSpkabJZGB0Yr3CUpG4fw
-vgUd7rQ0ueeZlQIBIwJgbh+1VZfr7WftK5lu7MHtqE1S1vPWZQYE3+VUn8yJADyb
-Z4fsZaCrzW9lkIqXkE3GIY+ojdhZhkO1gbG0118sIgphwSWKRxK0mvh6ERxKqIt1
-xJEJO74EykXZV4oNJ8sjAjEA3J9r2ZghVhGN6V8DnQrTk24Td0E8hU8AcP0FVP+8
-PQm/g/aXf2QQkQT+omdHVEJrAjEAy0pL0EBH6EVS98evDCBtQw22OZT52qXlAwZ2
-gyTriKFVoqjeEjt3SZKKqXHSApP/AjBLpF99zcJJZRq2abgYlf9lv1chkrWqDHUu
-DZttmYJeEfiFBBavVYIF1dOlZT0G8jMCMBc7sOSZodFnAiryP+Qg9otSBjJ3bQML
-pSTqy7c3a2AScC/YyOwkDaICHnnD3XyjMwIxALRzl0tQEKMXs6hH8ToUdlLROCrP
-EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
------END RSA PRIVATE KEY-----"""
+# Path to RSA SSH keys used by the server.
+SERVER_RSA_PRIVATE = 'ssh-keys/ssh_host_rsa_key'
+SERVER_RSA_PUBLIC = 'ssh-keys/ssh_host_rsa_key.pub'
+
+# Path to RSA SSH keys accepted by the server.
+CLIENT_RSA_PUBLIC = 'ssh-keys/client_rsa.pub'
+
 
 # Pre-computed big prime numbers used in Diffie-Hellman Group Exchange as
 # described in RFC4419.
@@ -202,10 +204,10 @@ class ExampleFactory(factory.SSHFactory):
     # To simplify the example this server is defined only with a host key of
     # type RSA.
     publicKeys = {
-        'ssh-rsa': keys.Key.fromString(data=publicKey)
+        'ssh-rsa': keys.Key.fromFile(SERVER_RSA_PUBLIC)
     }
     privateKeys = {
-        'ssh-rsa': keys.Key.fromString(data=privateKey)
+        'ssh-rsa': keys.Key.fromFile(SERVER_RSA_PRIVATE)
     }
     # Service handlers.
     services = {
@@ -224,7 +226,7 @@ portal = portal.Portal(ExampleRealm())
 passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
 passwdDB.addUser('user', 'password')
 sshDB = SSHPublicKeyChecker(InMemorySSHKeyDB(
-    {'user': [keys.Key.fromString(data=publicKey)]}))
+    {'user': [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]}))
 portal.registerChecker(passwdDB)
 portal.registerChecker(sshDB)
 ExampleFactory.portal = portal
