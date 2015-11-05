@@ -1264,8 +1264,6 @@ class OpenSSLCertificateOptions(object):
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
         ['trustRoot', 'caCerts'],
-        ['trustRoot', 'retrieveCertOnly'],
-        ['verify', 'retrieveCertOnly'],
     ])
     def __init__(self,
                  privateKey=None,
@@ -1283,8 +1281,7 @@ class OpenSSLCertificateOptions(object):
                  extraCertChain=None,
                  acceptableCiphers=None,
                  dhParameters=None,
-                 trustRoot=None,
-                 retrieveCertOnly=False):
+                 trustRoot=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -1374,10 +1371,6 @@ class OpenSSLCertificateOptions(object):
             L{TypeError}.
 
         @type trustRoot: L{IOpenSSLTrustRoot}
-
-        @param retrieveCertOnly: If L{True}, sets the certificate options such
-        that peer certificates are retrieved. This parameter is L{False} by
-        default.
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1474,11 +1467,6 @@ class OpenSSLCertificateOptions(object):
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
 
-        if retrieveCertOnly and not self.verify:
-            self._retrieveCertOnly = True
-        else:
-            self._retrieveCertOnly = False
-
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -1522,7 +1510,7 @@ class OpenSSLCertificateOptions(object):
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             self.trustRoot._addCACertsToContext(ctx)
-        elif self._retrieveCertOnly:
+        else:
             verifyFlags = SSL.VERIFY_PEER
 
         # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
@@ -1538,10 +1526,10 @@ class OpenSSLCertificateOptions(object):
             returning True here.
             """
             return True
-        if self._retrieveCertOnly:
-            ctx.set_verify(verifyFlags, _retrieveCallback)
-        else:
+        if self.verify:
             ctx.set_verify(verifyFlags, _verifyCallback)
+        else:
+            ctx.set_verify(verifyFlags, _retrieveCallback)
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 

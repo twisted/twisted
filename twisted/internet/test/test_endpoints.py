@@ -2583,43 +2583,12 @@ class ServerStringTests(unittest.TestCase):
         """
         endpoint = endpoints.serverFromString(
             object(),
-            "ssl:4321:privateKey={0}:certKey={1}:caCertsDir={2}"
+            "ssl:4321:privateKey={0}:certKey={1}:clientCACertsPath={2}"
             .format(escapedPEMPathName, escapedPEMPathName, escapedCAsPathName)
         )
         cf = endpoint._sslContextFactory
         self.assertTrue(cf.verify)
         self.assertTrue(cf.caCerts is not None)
-
-
-    def test_sslRetrieveCerts(self):
-        """
-        If C{retrieveCerts} is specified, we'll retrieve peer certificates
-        but won't enable full verification.
-        """
-        endpoint = endpoints.serverFromString(
-            object(),
-            "ssl:4321:privateKey={0}:certKey={1}:retrieveCerts=yes"
-            .format(escapedPEMPathName, escapedPEMPathName)
-        )
-        cf = endpoint._sslContextFactory
-        self.assertTrue(cf._retrieveCertOnly)
-
-
-    def test_sslRetrieveAndVerifyCerts(self):
-        """
-        If both C{retrieveCerts} and C{verifyCACerts} are specified,
-        C{retrieveCerts} will be ignored since we can do verification,
-        which also retrieves the certificate.
-        """
-        endpoint = endpoints.serverFromString(
-            object(),
-            "ssl:4321:privateKey={0}:certKey={1}:caCertsDir={2}"
-            ":retrieveCerts=yes"
-            .format(escapedPEMPathName, escapedPEMPathName, escapedCAsPathName)
-        )
-        cf = endpoint._sslContextFactory
-        self.assertTrue(cf.verify)
-        self.assertFalse(cf._retrieveCertOnly)
 
 
     def test_sslVerifyAndRequireCerts(self):
@@ -2629,7 +2598,7 @@ class ServerStringTests(unittest.TestCase):
         """
         endpoint = endpoints.serverFromString(
             object(),
-            "ssl:4321:privateKey={0}:certKey={1}:caCertsDir={2}"
+            "ssl:4321:privateKey={0}:certKey={1}:clientCACertsPath={2}"
             ":requireCert=yes"
             .format(escapedPEMPathName, escapedPEMPathName, escapedCAsPathName)
         )
@@ -2644,8 +2613,6 @@ class ServerStringTests(unittest.TestCase):
         test_sslChainFileMustContainCert.skip = skipSSL
         test_sslDHparameters.skip = skipSSL
         test_sslVerifyCerts.skip = skipSSL
-        test_sslRetrieveCerts.skip = skipSSL
-        test_sslRetrieveAndVerifyCerts.skip = skipSSL
         test_sslVerifyAndRequireCerts.skip = skipSSL
 
 

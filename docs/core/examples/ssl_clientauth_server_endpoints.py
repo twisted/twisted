@@ -6,6 +6,7 @@ import sys
 
 from twisted.internet import defer, endpoints, protocol, task
 from twisted.python import log
+from twisted.python.filepath import FilePath
 
 import echoserv
 
@@ -13,6 +14,11 @@ def main(reactor):
     log.startLogging(sys.stdout)
     # Set up a factory to create connection handlers for our server
     factory = protocol.Factory.forProtocol(echoserv.Echo)
+    # Set up a FilePath for this directory so that this example can be run
+    # from wherever
+    thisDirectory = FilePath(__file__).parent()
+    # Set up a second one for just the cert/key file
+    keyFile = thisDirectory.child("server.pem")
     # Set the descriptor we'll pass to serverFromString.
     #   ssl: Use SSL for the socket (as opposed to TCP (unsecured) or another
     #     kind of connection
@@ -24,7 +30,8 @@ def main(reactor):
     #   requireCert=yes: This makes the socket reject client connections that
     #     do not provide a certificate that passes validation using the CA
     #     certs in caCertsDir.
-    descriptor = "ssl:8000:caCertsDir=.:requireCert=yes"
+    descriptor = ("ssl:8000:privateKey={}:clientCACertsPath={}:requireCert=yes"
+                  .format(keyFile.path, thisDirectory.path))
     # Pass the reactor and descriptor to serverFromString so we can have an
     # endpoint
     endpoint = endpoints.serverFromString(reactor, descriptor)

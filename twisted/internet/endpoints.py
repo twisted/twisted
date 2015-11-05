@@ -1053,8 +1053,7 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
 
 def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
               sslmethod=None, interface='', backlog=50, extraCertChain=None,
-              dhParameters=None, caCertsDir=None, requireCert=None,
-              retrieveCerts=None):
+              dhParameters=None, clientCACertsPath=None, requireCert=None):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
@@ -1093,9 +1092,9 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         the forward secret C{DHE} ciphers aren't available for servers.
     @type dhParameters: L{str}
 
-    @param caCertsDir: The path to a directory containing CA certs against
-        which to verify peer certificates.
-    @type caCertsDir: L{str}
+    @param clientCACertsPath: The path to a directory containing CA certs
+        against which to verify peer certificates.
+    @type clientCACertsPath: L{str}
 
     @param requireCert: If this parameter is enabled with certificate
         verification, clients will be required to present a certificate in
@@ -1103,13 +1102,6 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         This parameter is a boolean parameter and should take one of a "yes"
         or a "no" value.
     @type requireCert: L{str}
-
-    @param retrieveCerts: If this parameter is enabled, sets the certificate
-        options to allow simply retrieving remote certificates without
-        performing CA verification.
-        This parameter is a boolean parameter and should take one of a "yes"
-        or a "no" value.
-    @type retrieveCerts: L{str}
 
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
         L{IReactorSSL.listenSSL} (or, modulo argument 2, the factory, arguments
@@ -1129,12 +1121,12 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
                             "valid certificates in PEM format."
                             % (extraCertChain,)
                         )
-    if caCertsDir is not None:
-        caCertsDirPath = FilePath(caCertsDir)
-        verifyCertificates = _loadCAsFromDir(caCertsDirPath)
+    if clientCACertsPath is not None:
+        clientCACertsFilePath = FilePath(clientCACertsPath)
+        verifyCertificates = _loadCAsFromDir(clientCACertsFilePath)
         if not verifyCertificates:
             raise ValueError("Specified CA cert directory '%s' doesn't contain "
-                "any files with certificates in PEM format." % (caCertsDir,))
+                "any files with certificates in PEM format." % (clientCACertsPath,))
     else:
         verifyCertificates = None
     requireCertificate = False
@@ -1144,16 +1136,8 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         if requireCertificate is None:
             raise ValueError("The value of requireCert must be a yes/no "
                              "value.")
-        retrieveCertOnly = False
     else:
         verify = False
-        requireCertificate = False
-        retrieveCertOnly = _valueToBool(retrieveCerts, False)
-        if retrieveCertOnly is None:
-            raise ValueError("The value of retrieveCerts must be a yes/no "
-                             "value.")
-    if retrieveCertOnly and verify:
-        retrieveCertOnly = False
     if dhParameters is not None:
         dhParameters = ssl.DiffieHellmanParameters.fromFile(
             FilePath(dhParameters),
@@ -1171,8 +1155,6 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
             "requireCertificate": requireCertificate,
             "caCerts": verifyCertificates
         })
-    else:
-        kw["retrieveCertOnly"] = retrieveCertOnly
     cf = ssl.CertificateOptions(**kw)
     return ((int(port), factory, cf),
             {'interface': interface, 'backlog': int(backlog)})
