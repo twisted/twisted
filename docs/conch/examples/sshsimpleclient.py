@@ -8,13 +8,38 @@ from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 import struct, sys, getpass, os
 
-USER = 'z3p'  # replace this with a valid username
-HOST = 'localhost' # and a valid host
+"""
+Example of using a simple SSH client.
+
+It will try to authenticate with a SSH key or ask for a password.
+
+Re-using a private key is dangerous, generate one.
+For this example you can use:
+
+$ ssh-keygen -t rsa -f ssh-keys/client_rsa
+"""
+
+# Replace this with your username. Default will match the sshsimpleserver.py
+USER = 'user'
+HOST = 'localhost'
+PORT = 5022
+SERVER_FINGERPRINT = '94:9f:68:ac:0c:16:74:bc:87:3a:34:51:9a:5a:5e:8d'
+
+# Path to RSA SSH keys accepted by the server.
+CLIENT_RSA_PUBLIC = 'ssh-keys/client_rsa.pub'
+# Set CLIENT_RSA_PUBLIC to empty to not use SSH key auth.
+# CLIENT_RSA_PUBLIC = ''
+CLIENT_RSA_PRIVATE = 'ssh-keys/client_rsa'
+
 
 class SimpleTransport(transport.SSHClientTransport):
     def verifyHostKey(self, hostKey, fingerprint):
-        print 'host key fingerprint: %s' % fingerprint
-        return defer.succeed(1) 
+        print 'Server host key fingerprint: %s' % fingerprint
+        if SERVER_FINGERPRINT == fingerprint:
+            return defer.succeed(True)
+        else:
+            print 'Bad host key. Expecting: %s' % SERVER_FINGERPRINT
+            return defer.fail(Exception('Bad server key'))
 
     def connectionSecure(self):
         self.requestService(
@@ -22,6 +47,7 @@ class SimpleTransport(transport.SSHClientTransport):
                 SimpleConnection()))
 
 class SimpleUserAuth(userauth.SSHUserAuthClient):
+
     def getPassword(self):
         return defer.succeed(getpass.getpass("%s@%s's password: " % (USER, HOST)))
 
@@ -36,19 +62,25 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
                 answer = getpass.getpass(prompt)
             answers.append(answer)
         return defer.succeed(answers)
-            
+
+
     def getPublicKey(self):
-        path = os.path.expanduser('~/.ssh/id_dsa') 
         # this works with rsa too
         # just change the name here and in getPrivateKey
-        if not os.path.exists(path) or self.lastPublicKey:
+        if (
+            not CLIENT_RSA_PUBLIC or
+            not os.path.exists(CLIENT_RSA_PUBLIC) or
+            self.lastPublicKey
+                ):
             # the file doesn't exist, or we've tried a public key
             return
-        return keys.Key.fromFile(filename=path+'.pub').blob()
+        return keys.Key.fromFile(filename=CLIENT_RSA_PUBLIC)
+
 
     def getPrivateKey(self):
-        path = os.path.expanduser('~/.ssh/id_dsa')
-        return defer.succeed(keys.Key.fromFile(path).keyObject)
+        return defer.succeed(keys.Key.fromFile(CLIENT_RSA_PRIVATE))
+
+
 
 class SimpleConnection(connection.SSHConnection):
     def serviceStarted(self):
@@ -56,12 +88,14 @@ class SimpleConnection(connection.SSHConnection):
         self.openChannel(FalseChannel(2**16, 2**15, self))
         self.openChannel(CatChannel(2**16, 2**15, self))
 
+
+
 class TrueChannel(channel.SSHChannel):
     name = 'session' # needed for commands
 
     def openFailed(self, reason):
         print 'true failed', reason
-    
+
     def channelOpen(self, ignoredData):
         self.conn.sendRequest(self, 'exec', common.NS('true'))
 
@@ -107,5 +141,5 @@ class CatChannel(channel.SSHChannel):
         self.loseConnection()
         reactor.stop()
 
-protocol.ClientCreator(reactor, SimpleTransport).connectTCP(HOST, 22)
+protocol.ClientCreator(reactor, SimpleTransport).connectTCP(HOST, PORT)
 reactor.run()
