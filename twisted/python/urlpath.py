@@ -18,7 +18,10 @@ _allascii = b"".join([chr(x).encode('ascii') for x in range(1, 128)])
 
 def _rereconstituter(name):
     """
-    @param name: a native L{str}, a public attribute name
+    Attriute declaration to preserve mutability on L{URLPath}.
+
+    @param name: a public attribute name
+    @type name: native L{str}
 
     @return: a descriptor which retrieves the private version of the attribute
         on get and calls rerealize on set.
@@ -27,6 +30,8 @@ def _rereconstituter(name):
     @property
     def getter(self):
         return getattr(self, privateName)
+
+
     @getter.setter
     def setter(self, value):
         setattr(self, privateName, value)
@@ -75,7 +80,6 @@ class URLPath(object):
         )
         self._url = _URL.fromText(urltext.encode("ascii").decode("ascii"))
 
-
     scheme   = _rereconstituter("scheme")
     netloc   = _rereconstituter("netloc")
     path     = _rereconstituter("path")
@@ -120,7 +124,7 @@ class URLPath(object):
         segments = self._url.path
         mapper = lambda x: x.encode("ascii")
         if unquote:
-            mapper = lambda x, m=mapper: m(urlunquote(x))
+            mapper = (lambda x, m=mapper: m(urlunquote(x)))
         return [b''] + [mapper(segment) for segment in segments]
 
 
