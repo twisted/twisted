@@ -37,6 +37,11 @@ class _BaseURLPathTests(object):
         """
         Setting attributes on L{urlpath.URLPath} should change the value
         returned by L{str}.
+
+        @param stringType: a callable to parameterize this test for different
+            text types.
+        @type stringType: 1-argument callable taking L{unicode} and returning
+            L{str} or L{bytes}.
         """
         self.path.scheme = stringType(u"https")
         self.assertEqual(
