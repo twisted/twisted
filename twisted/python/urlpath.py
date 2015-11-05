@@ -28,7 +28,7 @@ def _rereconstituter(name):
     """
     privateName = nativeString("_") + name
     return property(lambda self: getattr(self, privateName),
-                    lambda self, value: (setattr(self, privateName, value) and
+                    lambda self, value: (setattr(self, privateName, value) or
                                          self._reconstitute()))
 
 
