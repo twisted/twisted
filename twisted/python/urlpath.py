@@ -27,9 +27,13 @@ def _rereconstituter(name):
         on get and calls rerealize on set.
     """
     privateName = nativeString("_") + name
-    return property(lambda self: getattr(self, privateName),
-                    lambda self, value: (setattr(self, privateName, value) or
-                                         self._reconstitute()))
+    return property(
+        lambda self: getattr(self, privateName),
+        lambda self, value: (setattr(self, privateName,
+                                     value if isinstance(value, bytes)
+                                     else value.encode("charmap")) or
+                             self._reconstitute())
+    )
 
 
 
