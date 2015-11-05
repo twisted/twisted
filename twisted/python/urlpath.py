@@ -157,8 +157,10 @@ class URLPath(object):
         """
         if not isinstance(url, bytes):
             raise ValueError("'url' must be bytes")
-        parts = urlparse.urlsplit(urlquote(url, safe=_allascii))
-        return klass(*parts)
+        quoted = urlquote(url, safe=_allascii)
+        if isinstance(quoted, bytes):
+            quoted = quoted.decode("ascii")
+        return klass.fromString(quoted)
 
 
     @classmethod
