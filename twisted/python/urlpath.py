@@ -163,6 +163,8 @@ class URLPath(object):
             raise ValueError("'url' must be bytes")
         quoted = urlquote(url, safe=_allascii)
         if isinstance(quoted, bytes):
+            # This will only be bytes on python 2, where we can transform it
+            # into unicode.  On python 3, urlquote always returns str.
             quoted = quoted.decode("ascii")
         return klass.fromString(quoted)
 
