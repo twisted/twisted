@@ -1686,7 +1686,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         """
         error = self.assertRaises(ValueError, self.p.sendCommand, None,
             (u"param1", u"param2"))
-        self.assertEqual(error.message, "IRC message requires a command.")
+        self.assertEqual(error.args[0], "IRC message requires a command.")
 
 
     def test_sendMessageInvalidCommand(self):
@@ -1708,7 +1708,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         """
         error = self.assertRaises(ValueError, self.p.sendCommand, u" ",
             (u"param1", u"param2"))
-        self.assertEqual(error.message, 'Invalid command: " "')
+        self.assertEqual(error.args[0], 'Invalid command: " "')
 
 
     def test_sendCommandWithPrefix(self):
@@ -1763,7 +1763,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         }
         error = self.assertRaises(ValueError, self.p.sendCommand, u"CMD",
             (u"param1", u"param2"), u"irc.example.com", sendTags)
-        self.assertEqual(error.message, "A tag name is required.")
+        self.assertEqual(error.args[0], "A tag name is required.")
 
 
     def test_sendCommandValidateNoneTags(self):
@@ -1778,7 +1778,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         }
         error = self.assertRaises(ValueError, self.p.sendCommand, u"CMD",
             (u"param1", u"param2"), u"irc.example.com", sendTags)
-        self.assertEqual(error.message, "A tag name is required.")
+        self.assertEqual(error.args[0], "A tag name is required.")
 
 
     def test_sendCommandValidateTagsWithSpaces(self):
@@ -1791,7 +1791,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         }
         error = self.assertRaises(ValueError, self.p.sendCommand, u"CMD",
             (u"param1", u"param2"), u"irc.example.com", sendTags)
-        self.assertEqual(error.message, "Tag contains invalid characters.")
+        self.assertEqual(error.args[0], "Tag contains invalid characters.")
 
 
     def test_sendCommandValidateTagsWithInvalidChars(self):
@@ -1804,7 +1804,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         }
         error = self.assertRaises(ValueError, self.p.sendCommand, u"CMD",
             (u"param1", u"param2"), u"irc.example.com", sendTags)
-        self.assertEqual(error.message, "Tag contains invalid characters.")
+        self.assertEqual(error.args[0], "Tag contains invalid characters.")
 
 
     def test_sendCommandValidateTagValueEscaping(self):
@@ -2916,4 +2916,3 @@ class DccFileReceiveTests(unittest.TestCase):
         fp = FilePath(self.mktemp()).child(u'child-with-no-existing-parent')
 
         self.assertRaises(IOError, self.makeConnectedDccFileReceive, fp.path)
-
