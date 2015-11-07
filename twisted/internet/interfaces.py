@@ -2569,14 +2569,17 @@ class IStreamServerEndpoint(Interface):
 class IStreamServerEndpointStringParser(Interface):
     """
     An L{IStreamServerEndpointStringParser} is like an
-    L{IStreamClientEndpointStringParser}, except for L{IStreamServerEndpoint}s
-    instead of clients.  It integrates with L{endpoints.serverFromString} in
-    much the same way.
+    L{IStreamClientEndpointStringParserWithReactor}, except for
+    L{IStreamServerEndpoint}s instead of clients.  It integrates with
+    L{endpoints.serverFromString} in much the same way.
     """
 
     prefix = Attribute(
         """
-        @see: L{IStreamClientEndpointStringParser.prefix}
+        A C{str}, the description prefix to respond to.  For example, an
+        L{IStreamServerEndpointStringParser} plugin which had C{"foo"} for its
+        C{prefix} attribute would be called for endpoint descriptions like
+        C{"foo:bar:baz"} or C{"foo:"}.
         """
     )
 
@@ -2586,85 +2589,18 @@ class IStreamServerEndpointStringParser(Interface):
         Parse a stream server endpoint from a reactor and string-only arguments
         and keyword arguments.
 
-        @see: L{IStreamClientEndpointStringParser.parseStreamClient}
+        @see: L{IStreamClientEndpointStringParserWithReactor.parseStreamClient}
 
         @return: a stream server endpoint
         @rtype: L{IStreamServerEndpoint}
         """
 
 
-
-class IStreamClientEndpointStringParser(Interface):
-    """
-    This interface is deprecated since Twisted 14.0; please use the
-    L{IStreamClientEndpointStringParserWithReactor} interface instead.
-
-    An L{IStreamClientEndpointStringParser} is a parser which can convert
-    a set of string C{*args} and C{**kwargs} into an L{IStreamClientEndpoint}
-    provider.
-
-    This interface is really only useful in the context of the plugin system
-    for L{endpoints.clientFromString}.  See the document entitled "I{The
-    Twisted Plugin System}" for more details on how to write a plugin.
-
-    If you place an L{IStreamClientEndpointStringParser} plugin in the
-    C{twisted.plugins} package, that plugin's C{parseStreamClient} method will
-    be used to produce endpoints for any description string that begins with
-    the result of that L{IStreamClientEndpointStringParser}'s prefix attribute.
-
-    If a L{IStreamClientEndpointStringParserWithReactor} plugin and
-    L{IStreamClientEndpointStringParser} plugin share the same prefix, the
-    L{IStreamClientEndpointStringParserWithReactor} plugin will be preferred.
-
-    """
-
-    prefix = Attribute(
-        """
-        A C{str}, the description prefix to respond to.  For example, an
-        L{IStreamClientEndpointStringParser} plugin which had C{"foo"} for its
-        C{prefix} attribute would be called for endpoint descriptions like
-        C{"foo:bar:baz"} or C{"foo:"}.
-        """
-    )
-
-
-    def parseStreamClient(*args, **kwargs):
-        """
-        This method is invoked by L{endpoints.clientFromString}, if the type of
-        endpoint matches the return value from this
-        L{IStreamClientEndpointStringParser}'s C{prefix} method.
-
-        @param args: The string arguments, minus the endpoint type, in the
-            endpoint description string, parsed according to the rules
-            described in L{endpoints.quoteStringArgument}.  For example, if the
-            description were C{"my-type:foo:bar:baz=qux"}, C{args} would be
-            C{('foo','bar')}
-
-        @param kwargs: The string arguments from the endpoint description
-            passed as keyword arguments.  For example, if the description were
-            C{"my-type:foo:bar:baz=qux"}, C{kwargs} would be
-            C{dict(baz='qux')}.
-
-        @return: a client endpoint
-        @rtype: L{IStreamClientEndpoint}
-        """
-
-deprecate.deprecatedModuleAttribute(
-    Version("Twisted", 14, 0, 0),
-    "This interface has been superseded by "
-    "IStreamClientEndpointStringParserWithReactor.",
-    __name__,
-    "IStreamClientEndpointStringParser")
-
-
-
 class IStreamClientEndpointStringParserWithReactor(Interface):
     """
     An L{IStreamClientEndpointStringParserWithReactor} is a parser which can
     convert a set of string C{*args} and C{**kwargs} into an
-    L{IStreamClientEndpoint} provider. It's much like
-    L{IStreamClientEndpointStringParser}, except that the reactor is passed
-    along to L{parseStreamClient} too.
+    L{IStreamClientEndpoint} provider.
 
     This interface is really only useful in the context of the plugin system
     for L{endpoints.clientFromString}.  See the document entitled "I{The
@@ -2675,10 +2611,6 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
     will be used to produce endpoints for any description string that begins
     with the result of that L{IStreamClientEndpointStringParserWithReactor}'s
     prefix attribute.
-
-    If a L{IStreamClientEndpointStringParserWithReactor} plugin and
-    L{IStreamClientEndpointStringParser} plugin share the same prefix, the
-    L{IStreamClientEndpointStringParserWithReactor} plugin will be preferred.
     """
 
     prefix = Attribute(

@@ -10,7 +10,7 @@ from zope.interface.declarations import implementer
 from twisted.plugin import IPlugin
 from twisted.internet.interfaces import (
     IStreamClientEndpoint, IStreamServerEndpoint,
-    IStreamClientEndpointStringParser, IStreamServerEndpointStringParser,
+    IStreamServerEndpointStringParser,
     IStreamClientEndpointStringParserWithReactor)
 
 
@@ -19,14 +19,6 @@ class PluginBase(object):
 
     def __init__(self, pfx):
         self.prefix = pfx
-
-
-
-@implementer(IStreamClientEndpointStringParser)
-class FakeClientParser(PluginBase):
-
-    def parseStreamClient(self, *a, **kw):
-        return StreamClient(self, a, kw)
 
 
 
@@ -69,7 +61,5 @@ class StreamServer(EndpointBase):
 
 # Instantiate plugin interface providers to register them.
 fake = FakeParser('fake')
-fakeClient = FakeClientParser('cfake')
 fakeClientWithReactor = FakeClientParserWithReactor('crfake')
-fakeClientWithoutPreference = FakeClientParser('cpfake')
 fakeClientWithReactorAndPreference = FakeClientParserWithReactor('cpfake')
