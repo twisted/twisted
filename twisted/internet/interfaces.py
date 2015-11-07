@@ -11,9 +11,6 @@ from __future__ import division, absolute_import
 
 from zope.interface import Interface, Attribute
 
-from twisted.python import deprecate
-from twisted.python.versions import Version
-
 
 class IAddress(Interface):
     """
