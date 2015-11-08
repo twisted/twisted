@@ -53,7 +53,8 @@ class EchoProtocol(protocol.Protocol):
 
     def connectionMade(self):
         print('{} Connection made'.format(self.transport.getPeer()))
-
+        print('Peer cert (might be None): {}'.format(
+            self.transport.getPeerCertificate()))
 
     def connectionLost(self, reason):
         print('{} Connection lost: {}'.format(
@@ -64,7 +65,8 @@ class EchoProtocol(protocol.Protocol):
         """
         As soon as any data is received, write it back.
         """
-        print(data)
+        print('Received: {}'.format(data))
+        print('Peer cert: {}'.format(self.transport.getPeerCertificate()))
         self.transport.write(data)
 
 
@@ -74,11 +76,9 @@ def main(reactor):
     # Set up a factory to create connection handlers for our server
     factory = protocol.Factory.forProtocol(EchoProtocol)
 
-    # Set up a FilePath for this directory so that this example can be run
-    # from wherever
-    thisDirectory = FilePath(__file__).parent()
-    # Set up a second one for just the cert/key file
-    keyFile = thisDirectory.child("server.pem")
+    # Client CA certificates are read from the `ca-certs` directory.
+    caCerts = FilePath('ca-certs')
+
     # Set the descriptor we'll pass to serverFromString.
     #   ssl: Use SSL for the socket (as opposed to TCP (unsecured) or another
     #     kind of connection
@@ -92,8 +92,8 @@ def main(reactor):
         'ssl:8000:'
         'privateKey=server-key.pem:'
         'certKey=server-cert.pem:'
-        'clientCACertsPath=ca-certs:'
-        'requireCert=no'
+        'clientCACertsPath=%s:'
+        'requireCert=no' % (caCerts.path,)
         )
 
     # Pass the reactor and descriptor to serverFromString so we can have an
@@ -104,6 +104,7 @@ def main(reactor):
     endpoint.listen(factory)
 
     print('Server started as {}'.format(descriptor))
+    print('clientCACerts dir content: {}'.format(', '.join(caCerts.listdir())))
     print('Connect to it from another terminal.')
 
     return defer.Deferred()

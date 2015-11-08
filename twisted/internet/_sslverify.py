@@ -1513,23 +1513,18 @@ class OpenSSLCertificateOptions(object):
         else:
             verifyFlags = SSL.VERIFY_PEER
 
-        # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
-        # the underlying OpenSSL API call allows NULL to be passed).  It
-        # doesn't, so we'll supply a function which does the same thing.
         def _verifyCallback(conn, cert, errno, depth, preverify_ok):
-            return preverify_ok
-        def _retrieveCallback(conn, cert, errno, depth, preverify_ok):
-            """
-            For retrieving certificates, we still need to pass a no-op
-            function to allow us to retrieve certificates. Since retrieving in
-            this way precludes doing any CA-based verification, we're just
-            returning True here.
-            """
-            return True
-        if self.verify:
-            ctx.set_verify(verifyFlags, _verifyCallback)
-        else:
-            ctx.set_verify(verifyFlags, _retrieveCallback)
+            if self.verify:
+                return preverify_ok
+            else:
+                # For retrieving certificates, we still need to pass a no-op
+                # function to allow us to retrieve certificates.
+                # Since retrieving in this way precludes doing any CA-based
+                # verification, we're just returning True here.
+                return True
+
+        ctx.set_verify(verifyFlags, _verifyCallback)
+
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 
