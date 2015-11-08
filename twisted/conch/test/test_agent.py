@@ -286,11 +286,11 @@ class AgentIdentityRequestsTests(AgentTestBase):
         """
         d = self.client.signData(self.rsaPublic.blob(), "John Hancock")
         self.pump.flush()
-        def _check(sig):
-            expected = self.rsaPrivate.sign("John Hancock")
-            self.assertEqual(expected, sig)
-            self.assertTrue(self.rsaPublic.verify(sig, "John Hancock"))
-        return d.addCallback(_check)
+        signature = self.successResultOf(d)
+
+        expected = self.rsaPrivate.sign("John Hancock")
+        self.assertEqual(expected, signature)
+        self.assertTrue(self.rsaPublic.verify(signature, "John Hancock"))
 
 
     def test_signDataDSA(self):
