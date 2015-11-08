@@ -19,7 +19,7 @@ import win32file, win32event
 from twisted.internet import abstract
 
 # sibling imports
-from .serialport import BaseSerialPort
+from twisted.internet.serialport import BaseSerialPort
 
 
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):

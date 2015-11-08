@@ -14,7 +14,7 @@ from serial import PARITY_NONE
 from serial import STOPBITS_ONE
 from serial import EIGHTBITS
 
-from .serialport import BaseSerialPort
+from twisted.internet.serialport import BaseSerialPort
 
 from twisted.internet import abstract, fdesc
 

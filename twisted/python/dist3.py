@@ -61,6 +61,7 @@ modules = [
     "twisted.internet._posixstdio",
     "twisted.internet._posixserialport",
     "twisted.internet._signals",
+    "twisted.internet._win32serialport",
     "twisted.internet.abstract",
     "twisted.internet.address",
     "twisted.internet.base",
