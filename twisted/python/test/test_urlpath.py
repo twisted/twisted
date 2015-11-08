@@ -15,12 +15,63 @@ class _BaseURLPathTests(object):
     """
     Tests for instantiated L{urlpath.URLPath}s.
     """
+    def test_partsAreBytes(self):
+        """
+        All of the attributes of L{urlpath.URLPath} should be L{bytes}.
+        """
+        self.assertIsInstance(self.path.scheme, bytes)
+        self.assertIsInstance(self.path.netloc, bytes)
+        self.assertIsInstance(self.path.path, bytes)
+        self.assertIsInstance(self.path.query, bytes)
+        self.assertIsInstance(self.path.fragment, bytes)
+
 
     def test_strReturnsStr(self):
         """
         Calling C{str()} with a L{URLPath} will always return a L{str}.
         """
         self.assertEqual(type(self.path.__str__()), str)
+
+
+    def test_mutabilityWithText(self, stringType=type(u"")):
+        """
+        Setting attributes on L{urlpath.URLPath} should change the value
+        returned by L{str}.
+
+        @param stringType: a callable to parameterize this test for different
+            text types.
+        @type stringType: 1-argument callable taking L{unicode} and returning
+            L{str} or L{bytes}.
+        """
+        self.path.scheme = stringType(u"https")
+        self.assertEqual(
+            str(self.path),
+            "https://example.com/foo/bar?yes=no&no=yes#footer")
+        self.path.netloc = stringType(u"another.example.invalid")
+        self.assertEqual(
+            str(self.path),
+            "https://another.example.invalid/foo/bar?yes=no&no=yes#footer")
+        self.path.path = stringType(u"/hello")
+        self.assertEqual(
+            str(self.path),
+            "https://another.example.invalid/hello?yes=no&no=yes#footer")
+        self.path.query = stringType(u"alpha=omega&opposites=same")
+        self.assertEqual(
+            str(self.path),
+            "https://another.example.invalid/hello?alpha=omega&opposites=same"
+            "#footer")
+        self.path.fragment = stringType(u"header")
+        self.assertEqual(
+            str(self.path),
+            "https://another.example.invalid/hello?alpha=omega&opposites=same"
+            "#header")
+
+
+    def test_mutabilityWithBytes(self):
+        """
+        Same as L{test_mutabilityWithText} but for bytes.
+        """
+        self.test_mutabilityWithText(lambda x: x.encode("ascii"))
 
 
     def test_stringConversion(self):

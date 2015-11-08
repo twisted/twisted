@@ -23,6 +23,8 @@ from pyasn1.codec.ber import encoder as berEncoder
 
 from twisted.conch.ssh import common, sexpy
 from twisted.python import randbytes
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 
 
 
@@ -1045,17 +1047,25 @@ class Key(object):
 
 
 
+@deprecated(Version("Twisted", 15, 5, 0))
 def objectType(obj):
     """
-    Return the SSH key type corresponding to a
+    DEPRECATED. Return the SSH key type corresponding to a
     C{Crypto.PublicKey.pubkey.pubkey} object.
 
-    @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
-    @rtype:     C{str}
+    @param obj: Key for which the type is returned.
+    @type obj: C{Crypto.PublicKey.pubkey.pubkey}
+
+    @return: Return the SSH key type corresponding to a PyCrypto object.
+    @rtype: C{str}
     """
-    if isinstance(obj, (rsa.RSAPublicKey, rsa.RSAPrivateKey)):
-        return 'ssh-rsa'
-    elif isinstance(obj, (dsa.DSAPublicKey, dsa.DSAPrivateKey)):
-        return 'ssh-dss'
-    else:
+    keyDataMapping = {
+        ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa',
+        ('n', 'e', 'd', 'p', 'q', 'u'): 'ssh-rsa',
+        ('y', 'g', 'p', 'q', 'x'): 'ssh-dss'
+    }
+    try:
+        return keyDataMapping[tuple(obj.keydata)]
+    except (KeyError, AttributeError):
         raise BadKeyError("invalid key object", obj)
+

@@ -16,6 +16,27 @@ from twisted.python.url import URL as _URL
 
 _allascii = b"".join([chr(x).encode('ascii') for x in range(1, 128)])
 
+def _rereconstituter(name):
+    """
+    Attriute declaration to preserve mutability on L{URLPath}.
+
+    @param name: a public attribute name
+    @type name: native L{str}
+
+    @return: a descriptor which retrieves the private version of the attribute
+        on get and calls rerealize on set.
+    """
+    privateName = nativeString("_") + name
+    return property(
+        lambda self: getattr(self, privateName),
+        lambda self, value: (setattr(self, privateName,
+                                     value if isinstance(value, bytes)
+                                     else value.encode("charmap")) or
+                             self._reconstitute())
+    )
+
+
+
 class URLPath(object):
     """
     A representation of a URL.
@@ -37,17 +58,30 @@ class URLPath(object):
     """
     def __init__(self, scheme=b'', netloc=b'localhost', path=b'',
                  query=b'', fragment=b''):
-        self.scheme = scheme or b'http'
-        self.netloc = netloc
-        self.path = path or b'/'
-        self.query = query
-        self.fragment = fragment
+        self._scheme = scheme or b'http'
+        self._netloc = netloc
+        self._path = path or b'/'
+        self._query = query
+        self._fragment = fragment
+        self._reconstitute()
+
+
+    def _reconstitute(self):
+        """
+        Reconstitute this L{URLPath} from all its given attributes.
+        """
         urltext = urlquote(
-            urlparse.urlunsplit((self.scheme, self.netloc,
-                                 self.path, self.query, self.fragment)),
+            urlparse.urlunsplit((self._scheme, self._netloc,
+                                 self._path, self._query, self._fragment)),
             safe=_allascii
         )
         self._url = _URL.fromText(urltext.encode("ascii").decode("ascii"))
+
+    scheme   = _rereconstituter("scheme")
+    netloc   = _rereconstituter("netloc")
+    path     = _rereconstituter("path")
+    query    = _rereconstituter("query")
+    fragment = _rereconstituter("fragment")
 
 
     @classmethod
@@ -63,13 +97,13 @@ class URLPath(object):
         """
         self = cls.__new__(cls)
         self._url = urlInstance
-        self.scheme = self._url.scheme.encode("ascii")
-        self.netloc = self._url.authority().encode("ascii")
-        self.path = (_URL(path=self._url.path).asURI().asText()
+        self._scheme = self._url.scheme.encode("ascii")
+        self._netloc = self._url.authority().encode("ascii")
+        self._path = (_URL(path=self._url.path).asURI().asText()
                      .encode("ascii"))
-        self.query = (_URL(query=self._url.query).asURI().asText()
+        self._query = (_URL(query=self._url.query).asURI().asText()
                       .encode("ascii"))[1:]
-        self.fragment = self._url.fragment.encode("ascii")
+        self._fragment = self._url.fragment.encode("ascii")
         return self
 
 
@@ -87,7 +121,7 @@ class URLPath(object):
         segments = self._url.path
         mapper = lambda x: x.encode("ascii")
         if unquote:
-            mapper = lambda x, m=mapper: m(urlunquote(x))
+            mapper = (lambda x, m=mapper: m(urlunquote(x)))
         return [b''] + [mapper(segment) for segment in segments]
 
 
@@ -127,8 +161,12 @@ class URLPath(object):
         """
         if not isinstance(url, bytes):
             raise ValueError("'url' must be bytes")
-        parts = urlparse.urlsplit(urlquote(url, safe=_allascii))
-        return klass(*parts)
+        quoted = urlquote(url, safe=_allascii)
+        if isinstance(quoted, bytes):
+            # This will only be bytes on python 2, where we can transform it
+            # into unicode.  On python 3, urlquote always returns str.
+            quoted = quoted.decode("ascii")
+        return klass.fromString(quoted)
 
 
     @classmethod

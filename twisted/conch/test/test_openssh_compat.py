@@ -29,6 +29,7 @@ class OpenSSHFactoryTests(TestCase):
     elif OpenSSHFactory is None:
         skip = "Cannot run without cryptography or PyASN1"
 
+
     def setUp(self):
         self.factory = OpenSSHFactory()
         self.keysDir = FilePath(self.mktemp())
@@ -65,8 +66,8 @@ class OpenSSHFactoryTests(TestCase):
 
     def test_getPrivateKeys(self):
         """
-        L{OpenSSHFactory.getPrivateKeys} should return the available private
-        keys in the data directory.
+        Will return the available private keys in the data directory, ignoring
+        key files which failed to be loaded.
         """
         keys = self.factory.getPrivateKeys()
         self.assertEqual(len(keys), 2)
