@@ -203,11 +203,11 @@ SSL
      Since this argument is required for the ``DHE``-family of ciphers that offer perfect forward secrecy (PFS), it is recommended to specify one.
      Such a file can be created using ``openssl dhparam -out dh_param_1024.pem -2 1024``.
      Please refer to `OpenSSL's documentation on dhparam <http://www.openssl.org/docs/apps/dhparam.html>`_ for further details.
-   - ``caCertsDir`` will verify client certificates using CA certificates in the provided directory if specified. Certificates that pass verification will be accessible from the connection's transport (:api:`twisted.internet.interfaces.ISSLTransport.getPeerCertificate <ISSLTransport.getPeerCertificate>`)
+   - ``clientCACertsPath`` will verify client certificates using CA certificates in the provided directory if specified. Certificates that pass verification will be accessible from the connection's transport (:api:`twisted.internet.interfaces.ISSLTransport.getPeerCertificate <ISSLTransport.getPeerCertificate>`)
    - ``requireCert`` will, if set to ``yes``, require clients to have valid certificates and disconnect clients that do not. Certificates must pass verification with a CA cert in ``caCertsDir``. This parameter does nothing when ``caCertsDir`` is not used.
 
    For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:``
-   ``dhParameters=dh_param_1024.pem:caCertsDir=/etc/ssl/certs:requireCert=yes``.
+   ``dhParameters=dh_param_1024.pem:clientCACertsPath=/etc/ssl/certs:requireCert=yes``.
 
 UNIX
    Supported arguments: ``address``, ``mode``, ``backlog``, ``lockfile``.

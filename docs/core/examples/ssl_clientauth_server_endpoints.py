@@ -42,6 +42,7 @@ import sys
 
 from twisted.internet import defer, endpoints, protocol, task
 from twisted.python import log
+from twisted.python.filepath import FilePath
 
 
 class EchoProtocol(protocol.Protocol):
@@ -73,6 +74,11 @@ def main(reactor):
     # Set up a factory to create connection handlers for our server
     factory = protocol.Factory.forProtocol(EchoProtocol)
 
+    # Set up a FilePath for this directory so that this example can be run
+    # from wherever
+    thisDirectory = FilePath(__file__).parent()
+    # Set up a second one for just the cert/key file
+    keyFile = thisDirectory.child("server.pem")
     # Set the descriptor we'll pass to serverFromString.
     #   ssl: Use SSL for the socket (as opposed to TCP (unsecured) or another
     #     kind of connection
