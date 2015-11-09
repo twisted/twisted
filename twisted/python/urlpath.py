@@ -102,7 +102,7 @@ class URLPath(object):
         self._path = (_URL(path=self._url.path).asURI().asText()
                      .encode("ascii"))
         self._query = (_URL(query=self._url.query).asURI().asText()
-                      .encode("ascii"))[1:]
+                      .encode("ascii"))[2:]
         self._fragment = self._url.fragment.encode("ascii")
         return self
 

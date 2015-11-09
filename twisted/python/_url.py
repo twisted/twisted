@@ -692,8 +692,8 @@ class URL(object):
         """
         path = u'/'.join(([u''] if self.rooted else [])
                          + [_minimalPercentEncode(segment, _validInPath)
-                            for segment in self.path])
-        query = '&'.join(
+                            for segment in self.path]) or u"/"
+        query = u'&'.join(
             u'='.join((_minimalPercentEncode(x, _validInQuery)
                        for x in ([k] if v is None else [k, v])))
             for (k, v) in self.query
