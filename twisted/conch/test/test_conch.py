@@ -570,6 +570,15 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
             'diffie-hellman-group-exchange-sha1')
 
 
+    def test_DH_GROUP_EXCHANGE_SHA256(self):
+        """
+        The diffie-hellman-group-exchange-sha256 key exchange algorithm is
+        compatible with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'diffie-hellman-group-exchange-sha256')
+
+
 
 class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
                                       unittest.TestCase):
