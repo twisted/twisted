@@ -99,7 +99,8 @@ class URLPath(object):
         self._url = urlInstance.replace(path=urlInstance.path or [u""])
         self._scheme = self._url.scheme.encode("ascii")
         self._netloc = self._url.authority().encode("ascii")
-        self._path = (_URL(path=self._url.path).asURI().asText()
+        self._path = (_URL(path=self._url.path,
+                           rooted=True).asURI().asText()
                       .encode("ascii"))
         self._query = (_URL(query=self._url.query).asURI().asText()
                       .encode("ascii"))[1:]
