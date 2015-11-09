@@ -9,13 +9,17 @@ Assorted functionality which is commonly useful when writing unit tests.
 from __future__ import division, absolute_import
 
 from socket import AF_INET, AF_INET6
-from io import BytesIO
+from io import BytesIO, StringIO
 
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
 from twisted.python.compat import unicode
+from twisted.logger import (
+    FilteringLogObserver, ILogFilterPredicate, LogLevel, PredicateResult,
+    globalLogPublisher, textFileLogObserver
+)
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector, IReactorTCP, IReactorSSL,
     IReactorUNIX, IReactorSocket, IListeningPort, IReactorFDSet
@@ -688,3 +692,84 @@ class RaisingMemoryReactor(object):
         Fake L{reactor.connectUNIX}, that raises L{self._connectException}.
         """
         raise self._connectException
+
+
+
+@implementer(ILogFilterPredicate)
+class NamespaceFilterPredicate(object):
+    """
+    L{ILogFilterPredicate} that filters out events not matching configured
+    namespace.
+    """
+
+    def __init__(self, namespace):
+        self.namespace = namespace
+
+    def __call__(self, event):
+        namespace = event.get("log_namespace", None)
+
+        if namespace != self.namespace:
+            return PredicateResult.no
+
+        return PredicateResult.maybe
+
+
+
+class LogCapture(object):
+    """
+    A context manager that captures log events and makes them available in
+    plain text format or as raw events list.
+
+    Can be used like this:
+
+    with LogCapture() as lc:
+        [... code that logs events ...]
+
+        self.assertIn('logline text', lc.asText)
+        self.assertNotIn('Unable to format event', lc.asText)
+        selc.assertEqual(lc.asEvents[0]['log_level'], Loglevel.debug)
+
+    """
+
+    def __init__(self, namespace=None):
+        self.events = []
+        self.eventsObserver = lambda e: self.events.append(e)
+        self.handle = StringIO()
+        self.textObserver = textFileLogObserver(self.handle)
+
+        if namespace is not None:
+            predicate = NamespaceFilterPredicate(namespace)
+            self.eventsObserver = FilteringLogObserver(
+                self.eventsObserver, [predicate])
+            self.textObserver = FilteringLogObserver(
+                self.textObserver, [predicate])
+
+    def __enter__(self):
+        globalLogPublisher.addObserver(self.eventsObserver)
+        globalLogPublisher.addObserver(self.textObserver)
+        return self
+
+    def __exit__(self, type_, value_, tb_):
+        globalLogPublisher.removeObserver(self.eventsObserver)
+        globalLogPublisher.removeObserver(self.textObserver)
+
+    @property
+    def asText(self):
+        """
+        Get captured events as a string, the same a textFileLogObserver would
+        write to the output file
+
+        @return: the full log textual output
+        @rtype: L{str}
+        """
+        return self.handle.getvalue()
+
+    @property
+    def asEvents(self):
+        """
+        Get captured events as a list of event dicts.
+
+        @return: the list of captured events
+        @rtype: L{list}
+        """
+        return self.events[:]

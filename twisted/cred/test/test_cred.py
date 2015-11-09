@@ -16,6 +16,7 @@ from twisted.python.compat import nativeString, networkString
 from twisted.python import components
 from twisted.internet import defer
 from twisted.cred import checkers, credentials, portal, error
+from twisted.test.proto_helpers import LogCapture
 
 try:
     from crypt import crypt
@@ -213,7 +214,10 @@ class OnDiskDatabaseTests(unittest.TestCase):
         """
         self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
 
-        self.failUnlessRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
+        with LogCapture() as lc:
+            self.failUnlessRaises(error.UnauthorizedLogin, self.db.getUser, '')
+            self.assertIn('Unable to load credentials db: IOError', lc.asText)
+
 
 
     def testUserLookup(self):
