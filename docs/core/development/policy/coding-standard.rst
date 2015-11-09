@@ -17,7 +17,7 @@ Naming
 
     
 Try to choose names which are both easy to remember and
-meaningful. Some silliness is OK at the module naming level
+meaningful. Some sillin ess is OK at the module naming level
 (see :api:`twisted.spread <twisted.spread>` ...) but when
 choosing class names, be as precise as possible.
 
@@ -1083,8 +1083,108 @@ coding conventions surrounding that circumstance.
 
 All SQL keywords should be in upper case.
 
-    
 
+Emitting logs
+-------------
+
+All new code emitting log messages should use the new logging system.
+
+This section is dedicated to using the new logging system in Twisted core code.
+For general information about using the logging system please check the dedicated
+documentation about :doc:`how to log with twisted.logger </core/howto/logger>` and the
+:api:`twisted.logger.Logger <Logger>` API docs.
+
+General usage rules:
+
+* Don't use explicit namespaces.
+  The logger will automatically fill the namespace.
+* Use the global log publisher.
+  Twisted code may call into non-Twisted code which makes stdlib/legacy log messages,
+  which then get redirected to the global logger.
+* When possible instantiate the Logger as ``self._log`` instance member.
+* Emitted logs are not part of the API/contract so you don't have to document it as part of the API.
+* For security features you might documented the emitted logs and then they will became part of the contract.
+
+Example of usage::
+
+
+.. code-block:: python
+    from twisted.logger import Logger
+
+    class SomeStuff(object):
+        """
+        Class using the new logging system as an instance member
+        """
+
+        _log = Logger()
+
+        def getUser(self, name):
+            try:
+                return self._otherStuff()
+            except Exception as error:
+                if self.noisy:
+                    self._log.info(
+                      "Unable to check {user!s}", user=name, error=error)
+
+                raise UnauthorizedLogin()
+
+
+General testing rules:
+
+* New code calling the new logging system will test that the log is emitted.
+* You don't need to explicitly check all members of the structured log.
+* Emitted logs which are documented should have detailed tests which check all the conditions described in the documentation.
+
+
+Example of testing the code::
+
+.. code-block:: python
+
+    def test_getUserNonexistentDatabase(self):
+        """
+        A missing db file will cause a permanent rejection of authorization
+        attempts.
+        """
+        self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
+
+        with self.captureLogs() as logs:
+            self.failUnlessRaises(
+            error.UnauthorizedLogin, self.db.getUser, 'some-user')
+
+        self.assertIn('Unable to check some-user', logs.asText)
+        events = logs.asEvents
+        self.assertEqual(1, len(events))
+        self.assertEqual(events[0]['user'], 'some-user')
+        self.assertIsInstance(events[0]['error'] , error.UnauthorizedLogin)
+        self.assertEqual(events['log_level'], logs.LogLevel.info)
+
+
+Working around `self._log` conflicts.
+For older code you might now be able to use `self._log` as it can be already
+used for other purpose.
+The :api:`twisted.logger._logFor` helper is provided to work around these cases.
+
+
+.. code-block:: python
+
+    from twisted.logger import _logFor
+
+    class SomeStuff(object):
+        """
+        Class using the new logging system using the C{_logFor} helper as
+        C{_log} ivar was already used.
+        """
+
+        def __init__(self):
+            self._log = SomeOtherStuff()
+
+
+        def doSomething(self):
+            if self.noisy:
+                _logFor(self).info(
+                    "Starting factory {factory!r}", factory=self)
+
+            self.otherStuff()
 
 
 C Code
