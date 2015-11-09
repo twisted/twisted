@@ -1262,10 +1262,11 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
     Tests for SSHServerTransport.
     """
 
-    def test_KEXINITAllAlgorithms(self):
+    def test_KEXINITMultipleAlgorithms(self):
         """
-        Test that receiving a KEXINIT packet listing all Twisted's supported
-        algorithms sets up the correct values on the server.
+        Receiving a KEXINIT packet listing multiple supported algorithms will
+        set up the first common algorithm found in the client's preference
+        list.
         """
         self.proto.dataReceived( 'SSH-2.0-Twisted\r\n\x00\x00\x01\xf4\x04\x14'
                 '\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99'
@@ -1280,6 +1281,8 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
                 '\x00\x00\x12hmac-md5,hmac-sha1\x00\x00\x00\tnone,zlib\x00\x00'
                 '\x00\tnone,zlib\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
                 '\x00\x00\x99\x99\x99\x99')
+        # Even if as server we prefer diffie-hellman-group1-sha256 the client
+        # preference is used.
         self.assertEqual(self.proto.kexAlg,
                           'diffie-hellman-group1-sha1')
         self.assertEqual(self.proto.keyAlg,
@@ -1446,7 +1449,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         Test that NEWKEYS transitions the keys in nextEncryptions to
         currentEncryptions.
         """
-        self.test_KEXINITAllAlgorithms()
+        self.test_KEXINITMultipleAlgorithms()
 
         self.proto.nextEncryptions = transport.SSHCiphers('none', 'none',
                                                           'none', 'none')
@@ -1663,12 +1666,11 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
     Tests for SSHClientTransport.
     """
 
-    def test_KEXINITAllAlgorithms(self):
+    def test_KEXINITMultipleAlgorithms(self):
         """
-        Test that receiving a KEXINIT packet listing all Twisted's supported
-        algorithms sets up the correct values on the client.  The way
-        algorithms are picked is that the first item in the client's list
-        that is also in the server's list is chosen.
+        Receiving a KEXINIT packet listing multiple supported
+        algorithms will set up the first common algorithm, ordered after our
+        preference.
         """
         self.proto.dataReceived( 'SSH-2.0-Twisted\r\n\x00\x00\x01\xf4\x04\x14'
                 '\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99'
@@ -1683,6 +1685,9 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
                 '\x00\x00\x12hmac-md5,hmac-sha1\x00\x00\x00\tzlib,none\x00\x00'
                 '\x00\tzlib,none\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
                 '\x00\x00\x99\x99\x99\x99')
+        # Even if client prefer diffie-hellman-group1-sha1, we will go for
+        # diffie-hellman-group-exchange-sha256 as this what we prefer and is
+        # also supported by the server.
         self.assertEqual(self.proto.kexAlg,
                           'diffie-hellman-group-exchange-sha256')
         self.assertEqual(self.proto.keyAlg,
@@ -1814,7 +1819,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         Test that NEWKEYS transitions the keys from nextEncryptions to
         currentEncryptions.
         """
-        self.test_KEXINITAllAlgorithms()
+        self.test_KEXINITMultipleAlgorithms()
         secure = [False]
         def stubConnectionSecure():
             secure[0] = True
