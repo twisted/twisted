@@ -103,7 +103,7 @@ class URLPath(object):
                            rooted=True).asURI().asText()
                       .encode("ascii"))
         self._query = (_URL(query=self._url.query).asURI().asText()
-                      .encode("ascii"))[1:]
+                       .encode("ascii"))[1:]
         self._fragment = self._url.fragment.encode("ascii")
         return self
 
@@ -281,9 +281,7 @@ class URLPath(object):
         """
         The L{str} of a L{URLPath} is its URL text.
         """
-        uri = self._url.asURI()
-        uri = uri.replace(rooted=True)
-        return nativeString(uri.asText())
+        return nativeString(self._url.asURI().asText())
 
 
     def __repr__(self):
