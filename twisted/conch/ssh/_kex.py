@@ -23,7 +23,7 @@ class _IKexAlgorithm(Interface):
         "key exchange. Algorithms with lower precedence values are more "
         "preferred.")
 
-    hashAlgorithm = Attribute(
+    hashProcessor = Attribute(
         "A callable hash algorithm constructor (e.g. C{hashlib.sha256}) "
         "suitable for use with this key exchange algorithm.")
 
@@ -65,7 +65,7 @@ class _DHGroupExchangeSHA256(object):
     """
 
     preference = 1
-    hashAlgorithm = sha256
+    hashProcessor = sha256
 
 
 
@@ -77,7 +77,7 @@ class _DHGroupExchangeSHA1(object):
     """
 
     preference = 2
-    hashAlgorithm = sha1
+    hashProcessor = sha1
 
 
 
@@ -89,7 +89,7 @@ class _DHGroup1SHA1(object):
     """
 
     preference = 3
-    hashAlgorithm = sha1
+    hashProcessor = sha1
     # Diffie-Hellman primes from Oakley Group 2 (RFC 2409, 6.2).
     prime = long('17976931348623159077083915679378745319786029604875601170644'
         '44236841971802161585193689478337958649255415021805654859805036464405'
@@ -108,7 +108,7 @@ class _DHGroup14SHA1(object):
     """
 
     preference = 4
-    hashAlgorithm = sha1
+    hashProcessor = sha1
     # Diffie-Hellman primes from Oakley Group 14 (RFC 3526, 3).
     prime = long('32317006071311007300338913926423828248817941241140239112842'
         '00975140074170663435422261968941736356934711790173790970419175460587'
@@ -168,9 +168,9 @@ def isFixedGroup(kexAlgorithm):
 
 
 
-def getHashAlgorithm(kexAlgorithm):
+def getHashProcessor(kexAlgorithm):
     """
-    Get the hash algorithm to use in key exchange.
+    Get the hash algorithm callable to use in key exchange.
 
     @param kexAlgorithm: The key exchange algorithm name.
     @type kexAlgorithm: C{str}
@@ -179,7 +179,7 @@ def getHashAlgorithm(kexAlgorithm):
     @rtype: C{callable}
     """
     kex = getKex(kexAlgorithm)
-    return kex.hashAlgorithm
+    return kex.hashProcessor
 
 
 

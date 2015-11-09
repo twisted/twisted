@@ -738,10 +738,10 @@ class SSHTransportBase(protocol.Protocol):
         @type sharedSecret: C{str}
         @type exchangeHash: C{str}
         """
-        hashAlgorithm = _kex.getHashAlgorithm(self.kexAlg)
-        k1 = hashAlgorithm(sharedSecret + exchangeHash + c + self.sessionID)
+        hashProcessor = _kex.getHashProcessor(self.kexAlg)
+        k1 = hashProcessor(sharedSecret + exchangeHash + c + self.sessionID)
         k1 = k1.digest()
-        k2 = hashAlgorithm(sharedSecret + exchangeHash + k1).digest()
+        k2 = hashProcessor(sharedSecret + exchangeHash + k1).digest()
         return k1 + k2
 
 
@@ -1032,7 +1032,7 @@ class SSHServerTransport(SSHTransportBase):
 
         serverDHpublicKey = _MPpow(self.g, y, self.p)
         sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
-        h = _kex.getHashAlgorithm(self.kexAlg)()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
@@ -1258,7 +1258,7 @@ class SSHClientTransport(SSHTransportBase):
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = _MPpow(f, self.x, self.p)
-        h = _kex.getHashAlgorithm(self.kexAlg)()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
