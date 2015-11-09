@@ -215,16 +215,22 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
             urlpath.URLPath.fromBytes(u"someurl")
 
 
-    def test_partialArguments(self):
+    def test_withoutArguments(self):
         """
-        Leaving optional arguments unfilled makes a L{URLPath} with those
-        optional arguments filled with defaults.
+        An instantiation with no arguments creates a usable L{URLPath} with
+        default arguments.
         """
-        # Direct constructor
         url = urlpath.URLPath()
         self.assertEqual(str(url), "http://localhost/")
 
-        # Not a "full" URL given to fromBytes
+
+    def test_partialArguments(self):
+        """
+        Leaving some optional arguments unfilled makes a L{URLPath} with those
+        optional arguments filled with defaults.
+        """
+        # Not a "full" URL given to fromBytes, no /
+        # / is filled in
         url = urlpath.URLPath.fromBytes(b"http://google.com")
         self.assertEqual(str(url), "http://google.com/")
 
