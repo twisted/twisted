@@ -1281,8 +1281,9 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
                 '\x00\x00\x12hmac-md5,hmac-sha1\x00\x00\x00\tnone,zlib\x00\x00'
                 '\x00\tnone,zlib\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
                 '\x00\x00\x99\x99\x99\x99')
-        # Even if as server we prefer diffie-hellman-group1-sha256 the client
-        # preference is used.
+
+        # Even if as server we prefer diffie-hellman-group-exchange-sha256 the
+        # client preference is used.
         self.assertEqual(self.proto.kexAlg,
                           'diffie-hellman-group1-sha1')
         self.assertEqual(self.proto.keyAlg,
