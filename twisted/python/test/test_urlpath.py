@@ -232,6 +232,11 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
         # Not a "full" URL given to fromBytes, no /
         # / is filled in
         url = urlpath.URLPath.fromBytes(b"http://google.com")
+        self.assertEqual(url.scheme, b"http")
+        self.assertEqual(url.netloc, b"google.com")
+        self.assertEqual(url.path, b"/")
+        self.assertEqual(url.fragment, b"")
+        self.assertEqual(url.query, b"")
         self.assertEqual(str(url), "http://google.com/")
 
 
