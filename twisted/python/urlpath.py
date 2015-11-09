@@ -96,11 +96,11 @@ class URLPath(object):
         @return: a new L{URLPath}
         """
         self = cls.__new__(cls)
-        self._url = urlInstance
+        self._url = urlInstance.replace(path=urlInstance.path or [u""])
         self._scheme = self._url.scheme.encode("ascii")
         self._netloc = self._url.authority().encode("ascii")
         self._path = (_URL(path=self._url.path).asURI().asText()
-                     .encode("ascii")) or b"/"
+                      .encode("ascii"))
         self._query = (_URL(query=self._url.query).asURI().asText()
                       .encode("ascii"))[1:]
         self._fragment = self._url.fragment.encode("ascii")
