@@ -1106,8 +1106,25 @@ class SSHClientTransport(SSHTransportBase):
     @ivar p: the Diffie-Hellman group prime
 
     @ivar instance: the SSHService object we are requesting.
+
+    @ival _dhMinimalGroupSize: Minimal acceptable group size advertised by the
+        client in MSG_KEX_DH_GEX_REQUEST.
+    @type _dhMinimalGroupSize: int
+
+    @ival _dhMaximalGroupSize: Maximal acceptable group size advertised by the
+        client in MSG_KEX_DH_GEX_REQUEST.
+    @type _dhMaximalGroupSize: int
+
+    @ival _dhPreferredGroupSize: Preferred group size advertised by the client
+        in MSG_KEX_DH_GEX_REQUEST.
+    @type _dhPreferredGroupSize: int
     """
     isClient = True
+
+    # They will be updated once we send the MSG_KEX_DH_GEX_REQUEST.
+    _dhMinimalGroupSize = 0
+    _dhMaximalGroupSize = 0
+    _dhPreferredGroupSize = 0
 
     def connectionMade(self):
         """
@@ -1128,31 +1145,36 @@ class SSHClientTransport(SSHTransportBase):
         bit group with a MSG_KEX_DH_GEX_REQUEST message.
         """
         if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
-            return # we disconnected
+            # Connection was disconnected while doing base processing.
+            # Maybe no commons protocols were agreed.
+            return
+
         if _kex.isFixedGroup(self.kexAlg):
+            # We agreed on a fixed group key exchange algoright.
             self.x = _generateX(randbytes.secureRandom, 512)
             self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
             self.e = _MPpow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
         else:
-            # Recommended values from RFC 4419, 3.
-            self.dhGroupMin = 1024
-            self.dhGroupMax = 8192
-            # XXX This may need to be more dynamic; compare kexgex_client in
-            # OpenSSH.
-            self.dhGroupPref = 2048
+            # We agreed on a dynamic group.
+            self._dhMinimalGroupSize, self._dhMaximalGroupSize = (
+                self._getGroupSizeLimits())
+            self._dhPreferredGroupSize = self.factory.getPreferredGroupSize()
             self.sendPacket(
                 MSG_KEX_DH_GEX_REQUEST,
                 struct.pack(
                     '!LLL',
-                    self.dhGroupMin, self.dhGroupPref, self.dhGroupMax))
+                    self._dhMinimalGroupSize,
+                    self._dhPreferredGroupSize,
+                    self._dhMaximalGroupSize,
+                    ))
 
 
     def _ssh_KEXDH_REPLY(self, packet):
         """
         Called to handle a reply to a non-group key exchange message
         (KEXDH_INIT).
-        
+
         Like the handler for I{KEXDH_INIT}, this message type has an
         overlapping value.  This method is called from C{ssh_KEX_DH_GEX_GROUP}
         if that method detects a non-group key exchange is in progress.
@@ -1275,7 +1297,11 @@ class SSHClientTransport(SSHTransportBase):
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(pubKey))
         h.update(struct.pack(
-            '!LLL', self.dhGroupMin, self.dhGroupPref, self.dhGroupMax))
+            '!LLL',
+            self._dhMinimalGroupSize,
+            self._dhPreferredGroupSize,
+            self._dhMaximalGroupSize,
+            ))
         h.update(MP(self.p))
         h.update(MP(self.g))
         h.update(self.e)
