@@ -1125,7 +1125,7 @@ class SSHClientTransport(SSHTransportBase):
         this method sends the first key exchange packet.  If the agreed-upon
         exchange has a fixed prime/generator group, generate a public key
         and send it in a MSG_KEXDH_INIT message. Otherwise, ask for a 2048
-        bit group with a MSG_KEX_DH_GEX_REQUEST_OLD message.
+        bit group with a MSG_KEX_DH_GEX_REQUEST message.
         """
         if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
             return # we disconnected
@@ -1135,7 +1135,17 @@ class SSHClientTransport(SSHTransportBase):
             self.e = _MPpow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
         else:
-            self.sendPacket(MSG_KEX_DH_GEX_REQUEST_OLD, '\x00\x00\x08\x00')
+            # Recommended values from RFC 4419, 3.
+            self.dhGroupMin = 1024
+            self.dhGroupMax = 8192
+            # XXX This may need to be more dynamic; compare kexgex_client in
+            # OpenSSH.
+            self.dhGroupPref = 2048
+            self.sendPacket(
+                MSG_KEX_DH_GEX_REQUEST,
+                struct.pack(
+                    '!LLL',
+                    self.dhGroupMin, self.dhGroupPref, self.dhGroupMax))
 
 
     def _ssh_KEXDH_REPLY(self, packet):
@@ -1264,7 +1274,8 @@ class SSHClientTransport(SSHTransportBase):
         h.update(NS(self.ourKexInitPayload))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(pubKey))
-        h.update('\x00\x00\x08\x00')
+        h.update(struct.pack(
+            '!LLL', self.dhGroupMin, self.dhGroupPref, self.dhGroupMax))
         h.update(MP(self.p))
         h.update(MP(self.g))
         h.update(self.e)
