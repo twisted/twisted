@@ -16,6 +16,7 @@ Therefore we need to provide the most trouble-free upgrade process possible, so 
 
 Twisted is used by a wide variety of applications, many of which are proprietary or otherwise inaccessible to the Twisted development team.
 Each of these applications is developed against a particular version of Twisted.
+The most important compatibility to preserve is at the Python API level.
 Python does not provide us with a strict way to partition **public** and **private** objects (methods, classes, modules), so it is unfortunately quite likely that many of those applications are using arbitrary parts of Twisted.
 Our compatibility strategy needs to take this into account, and be comprehensive across our entire codebase.
 Exceptions can be made for modules aggressively marked **unstable** or **experimental**, but even experimental modules will start being used in production code if they have been around for long enough.
@@ -34,6 +35,12 @@ Rather than attempt to disallow specific kinds of changes, here we will lay out 
 
 Throughout this document, **compatible** changes are those which meet these specific criteria.
 Although a change may be broadly considered backward compatible, as long as it does not meet this official standard, it will be officially deemed **incompatible** and put through the process for incompatible changes.
+
+The compatibility policy described here is 99% about changes to **interface**,
+not changes to functionality.
+
+..  note::
+    Ultimately we want to make the user happy but we cannot put every possible thing that will make every possible user happy into this policy.
 
 
 Procedure for Incompatible Changes
