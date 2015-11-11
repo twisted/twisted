@@ -1157,9 +1157,11 @@ class SSHClientTransport(SSHTransportBase):
             self.sendPacket(MSG_KEXDH_INIT, self.e)
         else:
             # We agreed on a dynamic group.
-            self._dhMinimalGroupSize, self._dhMaximalGroupSize = (
-                self._getGroupSizeLimits())
-            self._dhPreferredGroupSize = self.factory.getPreferredGroupSize()
+            (
+                self._dhMinimalGroupSize,
+                self._dhPreferredGroupSize,
+                self._dhMaximalGroupSize
+                ) = self._getAdvertisedGroupSizes()
             self.sendPacket(
                 MSG_KEX_DH_GEX_REQUEST,
                 struct.pack(
