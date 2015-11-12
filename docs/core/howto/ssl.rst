@@ -220,6 +220,56 @@ Additionally, it is possible to limit the acceptable ciphers for your connection
 Since Twisted uses a secure cipher configuration by default, it is discouraged to do so unless absolutely necessary.
 
 
+Application Layer Protocol Negotiation (ALPN) and Next Protocol Negotiation (NPN)
+---------------------------------------------------------------------------------
+
+ALPN and NPN are TLS extensions that can be used by clients and servers to negotiate what application-layer protocol will be spoken once the encrypted connection is established.
+This avoids the need for extra custom round trips once the encrypted connection is established. It is implemented as a standard part of the TLS handshake.
+
+NPN is supported from OpenSSL version 1.0.1.
+ALPN is the newer of the two protocols, supported in OpenSSL versions 1.0.2 onward.
+These functions require pyOpenSSL version 0.15 or higher.
+To query the methods supported by your system,  use :api:`twisted.internet.ssl.protocolNegotiationMechanisms`.
+It will return a collection of flags indicating support for NPN and/or ALPN.
+
+:api:`twisted.internet.ssl.CertificateOptions` and :api:`twisted.internet.ssl.optionsForClientTLS` allow for selecting the protocols your program is willing to speak after the connection is established.
+
+On the server=side you will have:
+
+.. code-block:: python
+
+    from twisted.internet.ssl import CertificateOptions
+    options = CertificateOptions(..., acceptableProtocols=[b'h2', b'http/1.1'])
+
+and for clients:
+
+.. code-block:: python
+
+    from twisted.internet.ssl import optionsForClientTLS
+    options = optionsForClientTLS(hostname=hostname, acceptableProtocols=[b'h2', b'http/1.1'])
+
+Twisted will attempt to use both ALPN and NPN, if they're available, to maximise compatibility with peers.
+If both ALPN and NPN are supported by the peer, the result from ALPN is preferred.
+
+For NPN, the client selects the protocol to use;
+For ALPN, the server does.
+If Twisted is acting as the peer who is supposed to select the protocol, it will prefer the earliest protocol in the list that is supported by both peers.
+
+To determine what protocol was negotiated, after the connection is done,  use :api:`twisted.protocols.tls.TLSMemoryBIOProtocol.negotiatedProtocol <TLSMemoryBIOProtocol.negotiatedProtocol>`.
+It will return one of the protocol names passed to the ``acceptableProtocols`` parameter.
+It will return ``None`` if the peer did not offer ALPN or NPN.
+
+It can also return ``None`` if no overlap could be found and the connection was established regardless (some peers will do this: Twisted will not).
+In this case, the protocol that should be used is whatever protocol would have been used if negotiation had not been attempted at all.
+
+.. warning::
+    If ALPN or NPN are used and no overlap can be found, then the remote peer may choose to terminate the connection.
+    This may cause the TLS handshake to fail, or may result in the connection being torn down immediately after being made.
+    If Twisted is the selecting peer (that is, Twisted is the server and ALPN is being used, or Twisted is the client and NPN is being used), and no overlap can be found, Twisted will always choose to fail the handshake rather than allow an ambiguous connection to set up.
+
+An example of using this functionality can be found in :download:`this example script for clients </core/examples/tls_alpn_npn_client.py>` and :download:`this example script for servers </core/examples/tls_alpn_npn_server.py>`.
+
+
 Related facilities
 ------------------
 

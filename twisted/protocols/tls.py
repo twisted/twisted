@@ -55,7 +55,7 @@ from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
-    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext,
+    ISystemHandle, INegotiated, IPushProducer, ILoggingContext,
     IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
 )
 from twisted.internet.main import CONNECTION_LOST
@@ -210,7 +210,7 @@ class _ProducerMembrane(object):
 
 
 
-@implementer(ISystemHandle, ISSLTransport)
+@implementer(ISystemHandle, INegotiated)
 class TLSMemoryBIOProtocol(ProtocolWrapper):
     """
     L{TLSMemoryBIOProtocol} is a protocol wrapper which uses OpenSSL via a
@@ -584,6 +584,34 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     def getPeerCertificate(self):
         return self._tlsConnection.get_peer_certificate()
+
+
+    @property
+    def negotiatedProtocol(self):
+        """
+        @see: L{INegotiated.negotiatedProtocol}
+        """
+        protocolName = None
+
+        try:
+            # If ALPN is not implemented that's ok, NPN might be.
+            protocolName = self._tlsConnection.get_alpn_proto_negotiated()
+        except (NotImplementedError, AttributeError):
+            pass
+
+        if protocolName not in (b'', None):
+            # A protocol was selected using ALPN.
+            return protocolName
+
+        try:
+            protocolName = self._tlsConnection.get_next_proto_negotiated()
+        except (NotImplementedError, AttributeError):
+            pass
+
+        if protocolName != b'':
+            return protocolName
+
+        return None
 
 
     def registerProducer(self, producer, streaming):

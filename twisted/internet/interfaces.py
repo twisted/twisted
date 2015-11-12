@@ -2248,6 +2248,26 @@ class ISSLTransport(ITCPTransport):
 
 
 
+class INegotiated(ISSLTransport):
+    """
+    A TLS based transport that supports using ALPN/NPN to negotiate the
+    protocol to be used inside the encrypted tunnel.
+    """
+    negotiatedProtocol = Attribute(
+        """
+        The protocol selected to be spoken using ALPN/NPN. The result from ALPN
+        is preferred to the result from NPN if both were used. If the remote
+        peer does not support ALPN or NPN, or neither NPN or ALPN are available
+        on this machine, will be C{None}. Otherwise, will be the name of the
+        selected protocol as C{bytes}. Note that until the handshake has
+        completed this property may incorrectly return C{None}: wait until data
+        has been received before trusting it (see
+        https://twistedmatrix.com/trac/ticket/6024).
+        """
+    )
+
+
+
 class ICipher(Interface):
     """
     A TLS cipher.

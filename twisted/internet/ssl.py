@@ -227,7 +227,8 @@ from twisted.internet._sslverify import (
     OpenSSLCertificateOptions as CertificateOptions,
     OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
     platformTrust, OpenSSLDefaultPaths, VerificationError,
-    optionsForClientTLS,
+    optionsForClientTLS, ProtocolNegotiationSupport,
+    protocolNegotiationMechanisms,
 )
 
 __all__ = [
@@ -240,4 +241,5 @@ __all__ = [
     'platformTrust', 'OpenSSLDefaultPaths',
 
     'VerificationError', 'optionsForClientTLS',
+    'ProtocolNegotiationSupport', 'protocolNegotiationMechanisms',
 ]

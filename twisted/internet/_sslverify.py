@@ -204,7 +204,6 @@ def _selectVerifyImplementation(lib):
 verifyHostname, VerificationError = _selectVerifyImplementation(OpenSSL)
 
 
-
 from zope.interface import Interface, implementer
 
 from twisted.internet.defer import Deferred
@@ -216,6 +215,7 @@ from twisted.internet.interfaces import (
 from twisted.python import reflect, util
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 from twisted.python.compat import nativeString, networkString, unicode
+from twisted.python.constants import Flags, FlagConstant
 from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 
@@ -229,6 +229,60 @@ def _sessionCounter(counter=itertools.count()):
     provide a unique session id for each context.
     """
     return next(counter)
+
+
+
+class ProtocolNegotiationSupport(Flags):
+    """
+    L{ProtocolNegotiationSupport} defines flags which are used to indicate the
+    level of NPN/ALPN support provided by the TLS backend.
+
+    @cvar NOSUPPORT: There is no support for NPN or ALPN. This is exclusive
+        with both L{NPN} and L{ALPN}.
+    @cvar NPN: The implementation supports Next Protocol Negotiation.
+    @cvar ALPN: The implementation supports Application Layer Protocol
+        Negotiation.
+    """
+    NPN = FlagConstant(0x0001)
+    ALPN = FlagConstant(0x0002)
+
+# FIXME: https://twistedmatrix.com/trac/ticket/8074
+# Currently flags with literal zero values behave incorrectly. However,
+# creating a flag by NOTing a flag with itself appears to work totally fine, so
+# do that instead.
+ProtocolNegotiationSupport.NOSUPPORT = (
+    ProtocolNegotiationSupport.NPN ^ ProtocolNegotiationSupport.NPN
+)
+
+
+def protocolNegotiationMechanisms():
+    """
+    Checks whether your versions of PyOpenSSL and OpenSSL are recent enough to
+    support protocol negotiation, and if they are, what kind of protocol
+    negotiation is supported.
+
+    @return: A combination of flags from L{ProtocolNegotiationSupport} that
+        indicate which mechanisms for protocol negotiation are supported.
+    @rtype: L{FlagConstant}
+    """
+    support = ProtocolNegotiationSupport.NOSUPPORT
+    ctx = SSL.Context(SSL.SSLv23_METHOD)
+
+    try:
+        ctx.set_npn_advertise_callback(lambda c: None)
+    except (AttributeError, NotImplementedError):
+        pass
+    else:
+        support |= ProtocolNegotiationSupport.NPN
+
+    try:
+        ctx.set_alpn_select_callback(lambda c: None)
+    except (AttributeError, NotImplementedError):
+        pass
+    else:
+        support |= ProtocolNegotiationSupport.ALPN
+
+    return support
 
 
 
@@ -1172,7 +1226,7 @@ class ClientTLSOptions(object):
 
 
 def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
-                         **kw):
+                        acceptableProtocols=None, **kw):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
     use with APIs such as L{SSL4ClientEndpoint
@@ -1203,6 +1257,15 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         will use to authenticate to the server.  If unspecified, the client
         will not authenticate.
     @type clientCertificate: L{PrivateCertificate}
+
+    @param acceptableProtocols: The protocols this peer is willing to speak
+        after the TLS negotation has completed, advertised over both ALPN and
+        NPN. If this argument is specified, and no overlap can be found with
+        the other peer, the connection will fail to be established. If the
+        remote peer does not offer NPN or ALPN, the connection will be
+        established, but no protocol wil be negotiated. Protocols earlier in
+        the list are preferred over those later in the list.
+    @type acceptableProtocols: C{list} of C{bytes}
 
     @param extraCertificateOptions: keyword-only argument; this is a dictionary
         of additional keyword arguments to be presented to
@@ -1240,6 +1303,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         )
     certificateOptions = OpenSSLCertificateOptions(
         trustRoot=trustRoot,
+        acceptableProtocols=acceptableProtocols,
         **extraCertificateOptions
     )
     return ClientTLSOptions(hostname, certificateOptions.getContext())
@@ -1293,7 +1357,9 @@ class OpenSSLCertificateOptions(object):
                  extraCertChain=None,
                  acceptableCiphers=None,
                  dhParameters=None,
-                 trustRoot=None):
+                 trustRoot=None,
+                 acceptableProtocols=None,
+                 ):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -1384,6 +1450,15 @@ class OpenSSLCertificateOptions(object):
 
         @type trustRoot: L{IOpenSSLTrustRoot}
 
+        @param acceptableProtocols: The protocols this peer is willing to speak
+            after the TLS negotation has completed, advertised over both ALPN
+            and NPN. If this argument is specified, and no overlap can be found
+            with the other peer, the connection will fail to be established.
+            If the remote peer does not offer NPN or ALPN, the connection will
+            be established, but no protocol wil be negotiated. Protocols
+            earlier in the list are preferred over those later in the list.
+        @type acceptableProtocols: C{list} of C{bytes}
+
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
         @raise ValueError: when C{verify} is L{True} but C{caCerts} doesn't
@@ -1396,6 +1471,8 @@ class OpenSSLCertificateOptions(object):
         @raise TypeError: if C{trustRoot} is passed in combination with
             C{caCert}, C{verify}, or C{requireCertificate}.  Please prefer
             C{trustRoot} in new code, as its semantics are less tricky.
+        @raises NotImplementedError: If acceptableProtocols were provided but
+            no negotiation mechanism is available.
         """
 
         if (privateKey is None) != (certificate is None):
@@ -1479,6 +1556,13 @@ class OpenSSLCertificateOptions(object):
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
 
+        if acceptableProtocols is not None and not protocolNegotiationMechanisms():
+            raise NotImplementedError(
+                "No support for protocol negotiation on this platform."
+            )
+
+        self._acceptableProtocols = acceptableProtocols
+
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -1548,9 +1632,54 @@ class OpenSSLCertificateOptions(object):
             except BaseException:
                 pass  # ECDHE support is best effort only.
 
+        if self._acceptableProtocols:
+            # Try to set NPN and ALPN. _acceptableProtocols cannot be set by
+            # the constructor unless at least one mechanism is supported.
+            self._setUpNextProtocolMechanisms(ctx)
+
         return ctx
 
 
+    def _setUpNextProtocolMechanisms(self, ctx):
+        """
+        Called to set up the C{ctx} for doing NPN and/or ALPN negotiation.
+
+        @param ctx: The context which is set up.
+        @type ctx: L{OpenSSL.SSL.Context}
+        """
+        supported = protocolNegotiationMechanisms()
+
+        if supported & ProtocolNegotiationSupport.NPN:
+            def npnAdvertiseCallback(conn):
+                return self._acceptableProtocols
+
+            ctx.set_npn_advertise_callback(npnAdvertiseCallback)
+            ctx.set_npn_select_callback(self._protoSelectCallback)
+
+        if supported & ProtocolNegotiationSupport.ALPN:
+            ctx.set_alpn_select_callback(self._protoSelectCallback)
+            ctx.set_alpn_protos(self._acceptableProtocols)
+
+
+    def _protoSelectCallback(self, conn, protocols):
+        """
+        NPN client-side and ALPN server-side callback used to select
+        the next protocol. Prefers protocols found earlier in
+        C{_acceptableProtocols}.
+
+        @param conn: The context which is set up.
+        @type conn: L{OpenSSL.SSL.Connection}
+
+        @param conn: Protocols advertised by the other side.
+        @type conn: C{list} of C{bytes}
+        """
+        overlap = set(protocols) & set(self._acceptableProtocols)
+
+        for p in self._acceptableProtocols:
+            if p in overlap:
+                return p
+        else:
+            return b''
 
 OpenSSLCertificateOptions.__getstate__ = deprecated(
         Version("Twisted", 15, 0, 0),
