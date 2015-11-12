@@ -639,8 +639,16 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
                             createWorker=respectLimit,
                             logException=self.fail)
                 return team
-        self.threadpool = MemoryPool()
+        self.threadpool = MemoryPool(0, 10)
         self.performCoordination = performCoordination
+
+
+    def performAllCoordination(self):
+        """
+        Do all currently pending coordination work.
+        """
+        while self.performCoordination():
+            pass
 
 
     def test_workBeforeStarting(self):
@@ -653,9 +661,9 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         n = 5
         for x in range(n):
             self.threadpool.callInThread(lambda x=x: values.append(x))
-        self.performCoordination()
+        self.performAllCoordination()
         self.assertEqual(values, [])
         self.assertEqual(self.workers, [])
         self.threadpool.start()
-        self.performCoordination()
+        self.performAllCoordination()
         self.assertEqual(len(self.workers), n)
