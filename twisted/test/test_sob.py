@@ -6,19 +6,21 @@ from __future__ import division, absolute_import
 import os
 import sys
 
-try:
-    import Crypto.Cipher.AES
-except ImportError:
-    Crypto = None
-    skipCrypto = 'PyCrypto is required.'
-
 from textwrap import dedent
 
 from twisted.trial import unittest
 from twisted.persisted import sob
 from twisted.python import components
 from twisted.python.filepath import FilePath
+from twisted.python.reflect import namedAny
 from twisted.persisted.styles import Ephemeral
+
+try:
+    namedAny('Crypto.Cipher.AES')
+    skipCrypto = None
+except ImportError:
+    skipCrypto = 'PyCrypto is required.'
+
 
 class Dummy(components.Componentized):
     pass
@@ -180,7 +182,7 @@ class PersistentEncryptionTests(unittest.TestCase):
     Unit tests for Small OBjects persistence using encryption.
     """
 
-    if Crypto is None:
+    if skipCrypto is not None:
         skip = skipCrypto
 
 
@@ -196,6 +198,7 @@ class PersistentEncryptionTests(unittest.TestCase):
                 p.save(filename='epersisttest.'+style, passphrase=phrase)
                 o1 = sob.load('epersisttest.'+style, style, phrase)
                 self.assertEqual(o, o1)
+                self.flushWarnings([p._saveTemp, sob.load])
 
 
     def test_loadValueFromFileEncryptedPython(self):
@@ -209,6 +212,8 @@ class PersistentEncryptionTests(unittest.TestCase):
         o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
 
         self.assertEqual(o, [1,2,3])
+        self.flushWarnings([
+            sob.loadValueFromFile, self.test_loadValueFromFileEncryptedPython])
 
 
     def test_saveEncryptedDeprecation(self):
@@ -224,7 +229,7 @@ class PersistentEncryptionTests(unittest.TestCase):
         persistance.save(filename=persistedPath.path, passphrase='some-pass')
 
         # Check deprecation message.
-        warnings = self.flushWarnings()
+        warnings = self.flushWarnings([persistance._saveTemp])
         self.assertEqual(1, len(warnings))
         self.assertIs(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(
@@ -236,6 +241,7 @@ class PersistentEncryptionTests(unittest.TestCase):
         loadedData = sob.load(
             persistedPath.path, persistance.style, 'some-pass')
         self.assertEqual(data, loadedData)
+        self.flushWarnings([sob.load])
 
 
     def test_loadEncryptedDeprecation(self):
@@ -249,13 +255,13 @@ class PersistentEncryptionTests(unittest.TestCase):
         persistance = sob.Persistent(data, 'test-data')
         persistance.save(filename=persistedPath.path, passphrase='some-pass')
         # Clean all previous warnings as save will also raise a warning.
-        self.flushWarnings()
+        self.flushWarnings([persistance._saveTemp])
 
         loadedData = sob.load(
             persistedPath.path, persistance.style, 'some-pass')
 
         self.assertEqual(data, loadedData)
-        warnings = self.flushWarnings()
+        warnings = self.flushWarnings([sob.load])
         self.assertEqual(1, len(warnings))
         self.assertIs(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(
@@ -272,13 +278,14 @@ class PersistentEncryptionTests(unittest.TestCase):
         persistedPath = tempDir.child('epersisttest.python')
         persistedPath.setContent(sob._encrypt('some-pass', b'foo=[1,2,3]'))
         # Clean all previous warnings as _encpryt will also raise a warning.
-        self.flushWarnings()
+        self.flushWarnings([
+            self.test_loadValueFromFileEncryptedDeprecation])
 
         loadedData = sob.loadValueFromFile(
             persistedPath.path, 'foo', 'some-pass')
 
         self.assertEqual([1, 2, 3], loadedData)
-        warnings = self.flushWarnings()
+        warnings = self.flushWarnings([sob.loadValueFromFile])
         self.assertEqual(1, len(warnings))
         self.assertIs(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(
