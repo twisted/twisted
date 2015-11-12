@@ -178,7 +178,8 @@ def load(filename, style, passphrase=None):
     else:
         _load, mode = pickle.load, 'rb'
     if passphrase:
-        fp = BytesIO(_decrypt(passphrase, open(filename, 'rb').read()))
+        with open(filename, 'rb') as loadedFile:
+            fp = BytesIO(_decrypt(passphrase, loadedFile.read()))
     else:
         fp = open(filename, mode)
     ee = _EverythingEphemeral(sys.modules['__main__'])
