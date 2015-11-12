@@ -657,12 +657,10 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         up, it will start enough workers to handle all of the enqueued work
         that it's been given.
         """
-        values = []
         n = 5
         for x in range(n):
-            self.threadpool.callInThread(lambda x=x: values.append(x))
+            self.threadpool.callInThread(lambda: None)
         self.performAllCoordination()
-        self.assertEqual(values, [])
         self.assertEqual(self.workers, [])
         self.threadpool.start()
         self.performAllCoordination()
@@ -675,12 +673,10 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         threads allowed to the threadpool, only the maximum count will be
         started.
         """
-        values = []
         n = 50
         for x in range(n):
-            self.threadpool.callInThread(lambda x=x: values.append(x))
+            self.threadpool.callInThread(lambda: None)
         self.performAllCoordination()
-        self.assertEqual(values, [])
         self.assertEqual(self.workers, [])
         self.threadpool.start()
         self.performAllCoordination()
