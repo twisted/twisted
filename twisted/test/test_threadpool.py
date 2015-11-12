@@ -625,11 +625,9 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         class MemoryPool(threadpool.ThreadPool):
             def _pool(pool, currentLimit, threadFactory):
                 def respectLimit():
-                    """
-                    The expression in this method copied and pasted from
-                    twisted.threads._pool, which is unfortunately bound up with
-                    lots of actual-threading stuff.
-                    """
+                    # The expression in this method copied and pasted from
+                    # twisted.threads._pool, which is unfortunately bound up
+                    # with lots of actual-threading stuff.
                     stats = team.statistics()
                     if (stats.busyWorkerCount + stats.idleWorkerCount
                         >= currentLimit()):
