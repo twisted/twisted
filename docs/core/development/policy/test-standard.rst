@@ -234,13 +234,10 @@ Here is an example:
 Real I/O
 ~~~~~~~~
 
-Most unit tests should avoid performing real, platform-implemented I/O
-operations.
+Most unit tests should avoid performing real, platform-implemented I/O operations.
 Real I/O is slow, unreliable, and unwieldy.
 
-When implementing
-a protocol, :api:`twisted.test.proto_helpers.StringTransport` can be
-used instead of a real TCP transport.
+When implementing a protocol, :api:`twisted.test.proto_helpers.StringTransport` can be used instead of a real TCP transport.
 ``StringTransport`` is fast, deterministic, and can easily be used to exercise all possible network behaviors.
 
 If you need pair a client to a server and have them talk to each other, use :api:`twisted.test.iosim.connect` with :api:`twisted.test.iosim.FakeTransport` transports.
@@ -266,12 +263,12 @@ When designing your code allow for the reactor to be injected during tests.
         yourThing = SomeThing()
         yourThing._reactor = clock
 
-        state = yourThink.getState()
+        state = yourThing.getState()
 
         clock.advance(10)
 
         # Get state after 10 seconds.
-        state = yourThink.getState()
+        state = yourThing.getState()
 
 
 Test Data
@@ -280,7 +277,6 @@ Test Data
 Keeping test data in the source tree should be avoided where possible.
 
 In some cases it can not be avoided, but where it's obvious how to do so, do it.
-
 Test data can be generated at run time or stored inside the test modules as constants.
 
 When file system access is required, dumping data into a temporary path during the test run opens up more testing opportunities.
@@ -288,7 +284,7 @@ Inside the temporary path you can control various path properties or permissions
 
 You should design your code so that data can be read from arbitrary input streams.
 
-Test should be able to run even if they are run inside an installed copy of Twisted.
+Tests should be able to run even if they are run inside an installed copy of Twisted.
 
 .. code-block:: python
 
@@ -298,7 +294,7 @@ Test should be able to run even if they are run inside an installed copy of Twis
 
     def test_loadOpenSSHRSAPublic(self):
         """
-        It can load RSA keys serialized in OpenSSH format.
+        L{keys.Key.fromStrea} can load RSA keys serialized in OpenSSH format.
         """
         keys.Key.fromStream(StringIO(publicRSA_openssh))
 
