@@ -1156,7 +1156,9 @@ class SSHClientTransport(SSHTransportBase):
             self.e = _MPpow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
         else:
-            # We agreed on a dynamic group.
+            # We agreed on a dynamic group. Tell the server what range of
+            # group sizes we accept, and what size we prefer; the server
+            # will then select a group.
             # Recommended minimal and maximal values from RFC 4419, 3.
             self._dhMinimalGroupSize = 1024
             self._dhMaximalGroupSize = 8192
