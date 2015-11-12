@@ -151,8 +151,9 @@ class ThreadPool:
         self.started = True
         # Start some threads.
         self.adjustPoolsize()
-        if self._team.statistics().backloggedWorkCount:
-            self._team.grow(1)
+        backlog = self._team.statistics().backloggedWorkCount
+        if backlog:
+            self._team.grow(backlog)
 
 
     def startAWorker(self):
