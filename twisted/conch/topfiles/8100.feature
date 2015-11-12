@@ -1,1 +1,1 @@
-twisted.conch.ssh.transport.SSHClientTransport now support Diffie-Hellman key exchange using MSG_KEX_DH_GEX_REQUEST as described in RFC 4419.
+twisted.conch.ssh.transport.SSHClientTransport now supports Diffie-Hellman key exchange using MSG_KEX_DH_GEX_REQUEST as described in RFC 4419.
