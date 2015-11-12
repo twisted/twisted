@@ -667,3 +667,22 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         self.threadpool.start()
         self.performAllCoordination()
         self.assertEqual(len(self.workers), n)
+
+
+    def test_tooMuchWorkBeforeStarting(self):
+        """
+        If the amount of work before starting exceeds the maximum number of
+        threads allowed to the threadpool, only the maximum count will be
+        started.
+        """
+        values = []
+        n = 50
+        for x in range(n):
+            self.threadpool.callInThread(lambda x=x: values.append(x))
+        self.performAllCoordination()
+        self.assertEqual(values, [])
+        self.assertEqual(self.workers, [])
+        self.threadpool.start()
+        self.performAllCoordination()
+        self.assertEqual(len(self.workers), self.threadpool.max)
+
