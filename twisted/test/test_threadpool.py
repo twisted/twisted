@@ -604,3 +604,58 @@ class RaceConditionTests(unittest.SynchronousTestCase):
         self.assertEqual(self.threadpool.workers, 1)
 
 
+
+class MemoryBackedTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{threadpool.ThreadPool} which don't actually use any threads, by
+    using the internal interfaces in L{twisted._threads}.
+    """
+
+    def setUp(self):
+        """
+        Construct an in-memory threadpool and attendant objects to manipulate
+        it.
+        """
+        from twisted._threads import Team, createMemoryWorker
+        coordinator, performCoordination = createMemoryWorker()
+        self.workers = []
+        def newWorker():
+            self.workers.append(createMemoryWorker())
+            return self.workers[-1][0]
+        class MemoryPool(threadpool.ThreadPool):
+            def _pool(pool, currentLimit, threadFactory):
+                def respectLimit():
+                    """
+                    The expression in this method copied and pasted from
+                    twisted.threads._pool, which is unfortunately bound up with
+                    lots of actual-threading stuff.
+                    """
+                    stats = team.statistics()
+                    if (stats.busyWorkerCount + stats.idleWorkerCount
+                        >= currentLimit()):
+                        return None
+                    return newWorker()
+                team = Team(coordinator=coordinator,
+                            createWorker=respectLimit,
+                            logException=self.fail)
+                return team
+        self.threadpool = MemoryPool()
+        self.performCoordination = performCoordination
+
+
+    def test_workBeforeStarting(self):
+        """
+        If a threadpool is told to do work before starting, then upon starting
+        up, it will start enough workers to handle all of the enqueued work
+        that it's been given.
+        """
+        values = []
+        n = 5
+        for x in range(n):
+            self.threadpool.callInThread(lambda x=x: values.append(x))
+        self.performCoordination()
+        self.assertEqual(values, [])
+        self.assertEqual(self.workers, [])
+        self.threadpool.start()
+        self.performCoordination()
+        self.assertEqual(len(self.workers), n)
