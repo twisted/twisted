@@ -234,45 +234,79 @@ Here is an example:
 Real I/O
 ~~~~~~~~
 
+Most unit tests should avoid performing real, platform-implemented I/O operations.
+Real I/O is slow, unreliable, and unwieldy.
 
-    
-Most unit tests should avoid performing real, platform-implemented I/O
-operations.  Real I/O is slow, unreliable, and unwieldy.  When implementing
-a protocol, ``twisted.test.proto_helpers.StringTransport`` can be
-used instead of a real TCP transport.  ``StringTransport`` is fast,
-deterministic, and can easily be used to exercise all possible network
-behaviors.
+When implementing a protocol, :api:`twisted.test.proto_helpers.StringTransport` can be used instead of a real TCP transport.
+``StringTransport`` is fast, deterministic, and can easily be used to exercise all possible network behaviors.
 
-    
-
+If you need pair a client to a server and have them talk to each other, use :api:`twisted.test.iosim.connect` with :api:`twisted.test.iosim.FakeTransport` transports.
 
 
 Real Time
 ~~~~~~~~~
 
+Most unit tests should also avoid waiting for real time to pass.
+Unit tests which construct and advance a :api:`twisted.internet.task.Clock <twisted.internet.task.Clock>` are fast and deterministic.
 
-    
-Most unit tests should also avoid waiting for real time to pass.  Unit
-tests which construct and advance
-a :api:`twisted.internet.task.Clock <twisted.internet.task.Clock>` are fast and
-deterministic.
+When designing your code allow for the reactor to be injected during tests.
 
-    
+.. code-block:: python
 
+    from twisted.internet.task import Clock
+
+    def test_timeBasedFeature(self):
+        """
+        In this test a Clock scheduler is used.
+        """
+        clock = Clock()
+        yourThing = SomeThing()
+        yourThing._reactor = clock
+
+        state = yourThing.getState()
+
+        clock.advance(10)
+
+        # Get state after 10 seconds.
+        state = yourThing.getState()
+
+
+Test Data
+~~~~~~~~~
+
+Keeping test data in the source tree should be avoided where possible.
+
+In some cases it can not be avoided, but where it's obvious how to do so, do it.
+Test data can be generated at run time or stored inside the test modules as constants.
+
+When file system access is required, dumping data into a temporary path during the test run opens up more testing opportunities.
+Inside the temporary path you can control various path properties or permissions.
+
+You should design your code so that data can be read from arbitrary input streams.
+
+Tests should be able to run even if they are run inside an installed copy of Twisted.
+
+.. code-block:: python
+
+    publicRSA_openssh = ("ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tf"
+    "vLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTT"
+    "h5KmRpslkYHRivcJSkbh/C+BR3utDS555mV comment")
+
+    def test_loadOpenSSHRSAPublic(self):
+        """
+        L{keys.Key.fromStrea} can load RSA keys serialized in OpenSSH format.
+        """
+        keys.Key.fromStream(StringIO(publicRSA_openssh))
 
 
 The Global Reactor
 ~~~~~~~~~~~~~~~~~~
 
-
-    
-Since unit tests are avoiding real I/O and real time, they can usually
-avoid using a real reactor.  The only exceptions to this are unit tests for
-a real reactor implementation.  Unit tests for protocol implementations or
-other application code should not use a reactor.  Unit tests for real
-reactor implementations should not use the global reactor, but should
-instead use ``twisted.internet.test.reactormixins.ReactorBuilder`` 
-so they can be applied to all of the reactor implementations automatically.
+Since unit tests are avoiding real I/O and real time, they can usually avoid using a real reactor.
+The only exceptions to this are unit tests for a real reactor implementation.
+Unit tests for protocol implementations or other application code should not use a reactor.
+Unit tests for real reactor implementations should not use the global reactor, but should
+instead use :api:`twisted.internet.test.reactormixins.ReactorBuilder` so they can be applied to all of the reactor implementations automatically.
 In no case should new unit tests use the global reactor.
 
 
