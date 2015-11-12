@@ -11,7 +11,10 @@ Maintainer: Moshe Zadka
 
 from __future__ import division, absolute_import
 
-import os, sys
+import os
+import sys
+import warnings
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -28,14 +31,27 @@ from zope.interface import implementer, Interface
 # All data formats which persist saves hold that condition.
 def _encrypt(passphrase, data):
     from Crypto.Cipher import AES as cipher
+
+    warnings.warn(
+        'Saving encrypted persisted data is deprecated since Twisted 15.5.0',
+        DeprecationWarning, stacklevel=2)
+
     leftover = len(data) % cipher.block_size
     if leftover:
         data += b' ' * (cipher.block_size - leftover)
     return cipher.new(md5(passphrase).digest()[:16]).encrypt(data)
 
+
+
 def _decrypt(passphrase, data):
     from Crypto.Cipher import AES
+
+    warnings.warn(
+        'Loading encrypted persisted data is deprecated since Twisted 15.5.0',
+        DeprecationWarning, stacklevel=2)
+
     return AES.new(md5(passphrase).digest()[:16]).decrypt(data)
+
 
 
 class IPersistable(Interface):
@@ -162,7 +178,8 @@ def load(filename, style, passphrase=None):
     else:
         _load, mode = pickle.load, 'rb'
     if passphrase:
-        fp = BytesIO(_decrypt(passphrase, open(filename, 'rb').read()))
+        with open(filename, 'rb') as loadedFile:
+            fp = BytesIO(_decrypt(passphrase, loadedFile.read()))
     else:
         fp = open(filename, mode)
     ee = _EverythingEphemeral(sys.modules['__main__'])

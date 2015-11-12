@@ -1,0 +1,1 @@
+twisted.persisted.sob.load, twisted.persisted.sob.loadValueFromFile and twisted.persisted.sob.Persistent.save() are now deprecated when used with a passphrase. The encyption used by these methods are weak.
