@@ -1107,22 +1107,21 @@ class SSHClientTransport(SSHTransportBase):
 
     @ivar instance: the SSHService object we are requesting.
 
-    @ival _dhMinimalGroupSize: Minimal acceptable group size advertised by the
+    @ivar _dhMinimalGroupSize: Minimal acceptable group size advertised by the
         client in MSG_KEX_DH_GEX_REQUEST.
     @type _dhMinimalGroupSize: int
 
-    @ival _dhMaximalGroupSize: Maximal acceptable group size advertised by the
+    @ivar _dhMaximalGroupSize: Maximal acceptable group size advertised by the
         client in MSG_KEX_DH_GEX_REQUEST.
     @type _dhMaximalGroupSize: int
 
-    @ival _dhPreferredGroupSize: Preferred group size advertised by the client
+    @ivar _dhPreferredGroupSize: Preferred group size advertised by the client
         in MSG_KEX_DH_GEX_REQUEST.
     @type _dhPreferredGroupSize: int
     """
     isClient = True
 
     # Recommended minimal and maximal values from RFC 4419, 3.
-    # Defined as cvar but used as ivar.
     _dhMinimalGroupSize = 1024
     _dhMaximalGroupSize = 8192
     # FIXME: https://twistedmatrix.com/trac/ticket/8103
