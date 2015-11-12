@@ -1914,11 +1914,12 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
 
     def test_KEXINIT_groupexchange(self):
         """
-        Test that a KEXINIT packet with a group-exchange key exchange results
+        KEXINIT packet with a group-exchange key exchange results
         in a KEX_DH_GEX_REQUEST message.
         """
         self.proto.supportedKeyExchanges = [self.kexAlgorithm]
         self.proto.dataReceived(self.transport.value())
+        # The response will include our advertised group sizes.
         self.assertEqual(self.packets, [(
             transport.MSG_KEX_DH_GEX_REQUEST,
             '\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x20\x00')])
@@ -1952,6 +1953,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.blob))
+        # Here is the wire format for advertised min, pref and max DH sizes.
         h.update('\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x20\x00')
         h.update('\x00\x00\x00\x01\x0f\x00\x00\x00\x01\x02')
         h.update(self.proto.e)

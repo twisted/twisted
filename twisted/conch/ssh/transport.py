@@ -1121,10 +1121,14 @@ class SSHClientTransport(SSHTransportBase):
     """
     isClient = True
 
-    # They will be updated once we send the MSG_KEX_DH_GEX_REQUEST.
-    _dhMinimalGroupSize = 0
-    _dhMaximalGroupSize = 0
-    _dhPreferredGroupSize = 0
+    # Recommended minimal and maximal values from RFC 4419, 3.
+    # Defined as cvar but used as ivar.
+    _dhMinimalGroupSize = 1024
+    _dhMaximalGroupSize = 8192
+    # FIXME: https://twistedmatrix.com/trac/ticket/8103
+    # This may need to be more dynamic; compare kexgex_client in
+    # OpenSSH.
+    _dhPreferredGroupSize = 2048
 
     def connectionMade(self):
         """
@@ -1159,13 +1163,6 @@ class SSHClientTransport(SSHTransportBase):
             # We agreed on a dynamic group. Tell the server what range of
             # group sizes we accept, and what size we prefer; the server
             # will then select a group.
-            # Recommended minimal and maximal values from RFC 4419, 3.
-            self._dhMinimalGroupSize = 1024
-            self._dhMaximalGroupSize = 8192
-            # FIXME: https://twistedmatrix.com/trac/ticket/8103
-            # This may need to be more dynamic; compare kexgex_client in
-            # OpenSSH.
-            self._dhPreferredGroupSize = 2048
             self.sendPacket(
                 MSG_KEX_DH_GEX_REQUEST,
                 struct.pack(
