@@ -1,0 +1,1 @@
+twisted.conch.ssh.transport.SSHClientTransport now support Diffie-Hellman key exchange as described in RFC 4419.

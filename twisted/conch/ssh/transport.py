@@ -1162,7 +1162,8 @@ class SSHClientTransport(SSHTransportBase):
             # Recommended minimal and maximal values from RFC 4419, 3.
             self._dhMinimalGroupSize = 1024
             self._dhMaximalGroupSize = 8192
-            # XXX This may need to be more dynamic; compare kexgex_client in
+            # FIXME: https://twistedmatrix.com/trac/ticket/8103
+            # This may need to be more dynamic; compare kexgex_client in
             # OpenSSH.
             self._dhPreferredGroupSize = 2048
             self.sendPacket(

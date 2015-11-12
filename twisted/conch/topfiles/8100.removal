@@ -1,0 +1,1 @@
+twisted.conch.ssh.transport.SSHClientTransport no longer support Diffie-Hellman key exchange using MSG_KEX_DH_GEX_REQUEST_OLD for pre RFC 4419 servers.
