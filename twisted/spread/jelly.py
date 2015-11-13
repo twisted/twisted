@@ -85,14 +85,9 @@ import copy
 import datetime
 from types import BooleanType
 
-try:
-    # Filter out deprecation warning for Python >= 2.6
-    warnings.filterwarnings("ignore", category=DeprecationWarning,
-        message="the sets module is deprecated", append=True)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
     import sets as _sets
-finally:
-    warnings.filters.pop()
-
 
 from zope.interface import implementer
 
