@@ -1473,6 +1473,25 @@ class SphinxBuilderTests(TestCase):
         self.verifyBuilt()
 
 
+    def test_warningsAreErrors(self):
+        """
+        Creates and builds a fake Sphinx project as if via the command line,
+        failing if there are any warnings.
+        """
+        output = StringIO()
+        self.patch(sys, "stdout", output)
+        self.createFakeSphinxProject()
+        with self.sphinxDir.child("index.rst").open("a") as f:
+            f.write("\n.. _malformed-link-target\n")
+        exception = self.assertRaises(
+            SystemExit,
+            self.builder.main, [self.sphinxDir.parent().path]
+        )
+        self.assertEqual(exception.code, 1)
+        self.assertIn("malformed hyperlink target", output.getvalue())
+        self.verifyBuilt()
+
+
     def verifyBuilt(self):
         """
         Verify that a sphinx project has been built.
