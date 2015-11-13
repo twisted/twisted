@@ -5,12 +5,16 @@
 Tests for L{twisted.scripts.tap2deb}.
 """
 
-from twisted.scripts import tap2deb
+import warnings
+
 from twisted.python import usage, procutils
 from twisted.python.filepath import FilePath
 
 from twisted.trial.unittest import TestCase, SkipTest
 
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
+    from twisted.scripts import tap2deb
 
 
 class TestTap2DEB(TestCase):
@@ -97,4 +101,3 @@ class TestTap2DEB(TestCase):
         self.assertTrue(buildDir.child('twisted-lemon_1.0.dsc').exists())
         self.assertEqual(
             len(buildDir.globChildren('twisted-lemon_1.0_*.changes')), 1)
-

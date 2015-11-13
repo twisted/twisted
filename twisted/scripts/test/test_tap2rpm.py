@@ -4,7 +4,9 @@
 """
 Tests for L{twisted.scripts.tap2rpm}.
 """
+
 import os
+import warnings
 
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.python import procutils
@@ -12,7 +14,6 @@ from twisted.python import versions
 from twisted.python import deprecate
 from twisted.python.failure import Failure
 from twisted.internet import utils
-from twisted.scripts import tap2rpm
 
 # When we query the RPM metadata, we get back a string we'll have to parse, so
 # we'll use suitably rare delimiter characters to split on. Luckily, ASCII
@@ -20,6 +21,9 @@ from twisted.scripts import tap2rpm
 RECORD_SEPARATOR = "\x1E"
 UNIT_SEPARATOR = "\x1F"
 
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
+    from twisted.scripts import tap2rpm
 
 
 def _makeRPMs(tapfile=None, maintainer=None, protocol=None, description=None,
