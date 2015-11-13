@@ -27,7 +27,7 @@ from twisted.internet import interfaces, defer, error, fdesc, threads
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.internet.interfaces import (
-    IStreamServerEndpointStringParser, IStreamClientEndpointStringParser,
+    IStreamServerEndpointStringParser,
     IStreamClientEndpointStringParserWithReactor)
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
@@ -1143,7 +1143,7 @@ class _StandardIOParser(object):
     """
     Stream server endpoint string parser for the Standard I/O type.
 
-    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
     """
     prefix = "stdio"
 
@@ -1169,7 +1169,7 @@ class _SystemdParser(object):
     """
     Stream server endpoint string parser for the I{systemd} endpoint type.
 
-    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
 
     @ivar _sddaemon: A L{ListenFDs} instance used to translate an index into an
         actual file descriptor.
@@ -1219,7 +1219,7 @@ class _TCP6ServerParser(object):
     """
     Stream server endpoint string parser for the TCP6ServerEndpoint type.
 
-    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
     """
     prefix = "tcp6"     # Used in _parseServer to identify the plugin with the endpoint type
 
@@ -1740,9 +1740,6 @@ def clientFromString(reactor, description):
     for plugin in getPlugins(IStreamClientEndpointStringParserWithReactor):
         if plugin.prefix.upper() == name:
             return plugin.parseStreamClient(reactor, *args, **kwargs)
-    for plugin in getPlugins(IStreamClientEndpointStringParser):
-        if plugin.prefix.upper() == name:
-            return plugin.parseStreamClient(*args, **kwargs)
     if name not in _clientParsers:
         raise ValueError("Unknown endpoint type: %r" % (aname,))
     kwargs = _clientParsers[name](*args, **kwargs)

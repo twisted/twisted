@@ -2810,10 +2810,10 @@ class ClientStringTests(unittest.TestCase):
         addFakePlugin(self)
         notAReactor = object()
         clientEndpoint = endpoints.clientFromString(
-            notAReactor, "cfake:alpha:beta:cee=dee:num=1")
-        from twisted.plugins.fakeendpoint import fakeClient
-        self.assertIs(clientEndpoint.parser, fakeClient)
-        self.assertEqual(clientEndpoint.args, ('alpha', 'beta'))
+            notAReactor, "crfake:alpha:beta:cee=dee:num=1")
+        from twisted.plugins.fakeendpoint import fakeClientWithReactor
+        self.assertIs(clientEndpoint.parser, fakeClientWithReactor)
+        self.assertEqual(clientEndpoint.args, (notAReactor, 'alpha', 'beta'))
         self.assertEqual(clientEndpoint.kwargs, dict(cee='dee', num='1'))
 
 
@@ -2847,28 +2847,6 @@ class ClientStringTests(unittest.TestCase):
              clientEndpoint.args,
              clientEndpoint.kwargs),
             (fakeClientWithReactor,
-             (reactor, 'alpha', 'beta'),
-             dict(cee='dee', num='1')))
-
-
-    def test_stringParserWithReactorHasPreference(self):
-        """
-        L{endpoints.clientFromString} will prefer to use a plugin implementing
-        the L{IStreamClientEndpointStringParserWithReactor} interface over one
-        implementing the L{IStreamClientEndpointStringParser} interface, if
-        both have the same prefix.
-        """
-        addFakePlugin(self)
-        reactor = object()
-        clientEndpoint = endpoints.clientFromString(
-            reactor, 'cpfake:alpha:beta:cee=dee:num=1')
-        from twisted.plugins.fakeendpoint import (
-            fakeClientWithReactorAndPreference)
-        self.assertEqual(
-            (clientEndpoint.parser,
-             clientEndpoint.args,
-             clientEndpoint.kwargs),
-            (fakeClientWithReactorAndPreference,
              (reactor, 'alpha', 'beta'),
              dict(cee='dee', num='1')))
 
