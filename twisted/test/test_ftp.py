@@ -939,7 +939,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         def checkError(failure):
             failure.trap(ftp.CommandFailed)
             self.assertEqual(
-                ['550 foo: is a directory'], failure.value.message)
+                ['550 foo: is a directory'], failure.value.args[0])
             current_errors = self.flushLoggedErrors()
             self.assertEqual(
                 0, len(current_errors),
@@ -3532,4 +3532,3 @@ class FTPResponseCodeTests(unittest.TestCase):
                     value, seenValues,
                     "Duplicate code %r with value %r" % (key, value))
                 seenValues.add(value)
-
