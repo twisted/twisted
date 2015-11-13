@@ -74,6 +74,17 @@ class _BaseURLPathTests(object):
         self.test_mutabilityWithText(lambda x: x.encode("ascii"))
 
 
+    def test_allAttributesAreBytes(self):
+        """
+        A created L{URLPath} has bytes attributes.
+        """
+        self.assertIsInstance(self.path.scheme, bytes)
+        self.assertIsInstance(self.path.netloc, bytes)
+        self.assertIsInstance(self.path.path, bytes)
+        self.assertIsInstance(self.path.query, bytes)
+        self.assertIsInstance(self.path.fragment, bytes)
+
+
     def test_stringConversion(self):
         """
         Calling C{str()} with a L{URLPath} will return the same URL that it was
@@ -202,6 +213,31 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
 
         with self.assertRaises(ValueError):
             urlpath.URLPath.fromBytes(u"someurl")
+
+
+    def test_withoutArguments(self):
+        """
+        An instantiation with no arguments creates a usable L{URLPath} with
+        default arguments.
+        """
+        url = urlpath.URLPath()
+        self.assertEqual(str(url), "http://localhost/")
+
+
+    def test_partialArguments(self):
+        """
+        Leaving some optional arguments unfilled makes a L{URLPath} with those
+        optional arguments filled with defaults.
+        """
+        # Not a "full" URL given to fromBytes, no /
+        # / is filled in
+        url = urlpath.URLPath.fromBytes(b"http://google.com")
+        self.assertEqual(url.scheme, b"http")
+        self.assertEqual(url.netloc, b"google.com")
+        self.assertEqual(url.path, b"/")
+        self.assertEqual(url.fragment, b"")
+        self.assertEqual(url.query, b"")
+        self.assertEqual(str(url), "http://google.com/")
 
 
     def test_nonASCIIBytes(self):
