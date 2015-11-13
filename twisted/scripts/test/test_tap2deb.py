@@ -13,7 +13,7 @@ from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase, SkipTest
 
 with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
+    warnings.simplefilter("ignore", category=DeprecationWarning)
     from twisted.scripts import tap2deb
 
 
