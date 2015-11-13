@@ -950,7 +950,10 @@ class SphinxBuilder(object):
             Additional arguments will be ignored for compatibility with legacy
             build infrastructure.
         """
-        self.build(FilePath(args[0]).child("docs"))
+        output = self.build(FilePath(args[0]).child("docs"))
+        if output:
+            sys.stdout.write("Unclean build: {}\n".format(output))
+            raise sys.exit(1)
 
 
     def build(self, docDir, buildDir=None, version=''):
@@ -968,15 +971,18 @@ class SphinxBuilder(object):
 
         @param version: The version of Twisted to set in the docs.
         @type version: C{str}
+
+        @return: the output produced by running the command
+        @rtype: L{str}
         """
         if buildDir is None:
             buildDir = docDir.parent().child('doc')
 
         doctreeDir = buildDir.child('doctrees')
 
-        runCommand(['sphinx-build', '-b', 'html',
-                    '-d', doctreeDir.path, docDir.path,
-                    buildDir.path])
+        output = runCommand(['sphinx-build', '-q', '-b', 'html',
+                             '-d', doctreeDir.path, docDir.path,
+                             buildDir.path])
 
         # Delete the doctrees, as we don't want them after the docs are built
         doctreeDir.remove()
@@ -990,6 +996,7 @@ class SphinxBuilder(object):
                 if not dest.parent().isdir():
                     dest.parent().makedirs()
                 path.copyTo(dest)
+        return output
 
 
 
