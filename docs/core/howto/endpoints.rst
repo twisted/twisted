@@ -193,21 +193,16 @@ TCP (IPv6)
    For example, ``tcp6:port=80:interface=2001\:0DB8\:f00e\:eb00\:\:1``.
 
 SSL
-   All TCP arguments are supported, plus the following:
+   All TCP arguments are supported. Additional SSL-only arguments are also supported; these can be found in our :api:`twisted.internet.endpoints._parseSSL <endpoints._parseSSL>` API docs.
 
-   - ``certKey`` (optional, defaults to the value of privateKey) gives a filesystem path to a certificate (PEM format).
-   - ``privateKey`` gives a filesystem path to a private key (PEM format).
-   - ``extraCertChain`` gives a filesystem path to a file with one or more concatenated certificates in PEM format that establish the chain from a root CA to the one that signed your server's certificate.
-   - ``sslmethod`` indicates which SSL/TLS version to use (a value like ``TLSv1_METHOD``).
-   - ``dhParameters`` gives a filesystem path to a file in PEM format with parameters that are required for Diffie-Hellman key exchange.
-     Since this argument is required for the ``DHE``-family of ciphers that offer perfect forward secrecy (PFS), it is recommended to specify one.
-     Such a file can be created using ``openssl dhparam -out dh_param_1024.pem -2 1024``.
-     Please refer to `OpenSSL's documentation on dhparam <http://www.openssl.org/docs/apps/dhparam.html>`_ for further details.
-   - ``clientCACertsPath`` will verify client certificates using CA certificates in the provided directory if specified. Certificates that pass verification will be accessible from the connection's transport (:api:`twisted.internet.interfaces.ISSLTransport.getPeerCertificate <ISSLTransport.getPeerCertificate>`)
-   - ``requireCert`` will, if set to ``yes``, require clients to have valid certificates and disconnect clients that do not. Certificates must pass verification with a CA cert in ``caCertsDir``. This parameter does nothing when ``caCertsDir`` is not used.
-
-   For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:``
+   For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:``
    ``dhParameters=dh_param_1024.pem:clientCACertsPath=/etc/ssl/certs:requireCert=yes``.
+   - ``port=443`` will bind to port 443.
+   - ``privateKey=/etc/ssl/server.pem`` will set your server's key to the one in ``/etc/ssl/server.pem``. Since the public key isn't set separately, we'll also look for a public key in that file.
+   - ``extraCertChain=/etc/ssl/chain.pem`` will look for extra certificate chain information for your certificate in ``/etc/ssl/chain.pem`` and send it along with your certificate.
+   - ``dhParameters=dh_param_1024.pem`` will use the Diffie-Hellman parameters in the file ``dh_param_1024.pem``.
+   - ``clientCACertsPath=/etc/ssl/certs`` will make us validate client certificates using the CA certificates in the ``/etc/ssl/certs`` directory. Clients who present a certificate must have the certificate validate against one of the CA certs.
+   - ``requireCert=yes`` sets the connection so that clients cannot connect unless they present a certificate that validates with one of the CA certs in ``clientCACertsPath``. This can be useful for applications that must validate who all users are. For applications where not all of the users must be validated, the default of ``no`` will allow the users who don't need to be validated to connect.
 
 UNIX
    Supported arguments: ``address``, ``mode``, ``backlog``, ``lockfile``.
