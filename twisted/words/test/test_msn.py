@@ -5,6 +5,7 @@
 Test cases for L{twisted.words.protocols.msn}.
 """
 
+import warnings
 import StringIO
 from hashlib import md5
 
@@ -14,19 +15,9 @@ from twisted.python.reflect import requireModule
 from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
 from twisted.trial import unittest
 
-# t.w.p.msn requires an HTTP client
-try:
-    # So try to get one - do it directly instead of catching an ImportError
-    # from t.w.p.msn so that other problems which cause that module to fail
-    # to import don't cause the tests to be skipped.
-    requireModule('twisted.web.client')
-except ImportError:
-    # If there isn't one, we're going to skip all the tests.
-    msn = None
-else:
-    # Otherwise importing it should work, so do it.
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
     from twisted.words.protocols import msn
-
 
 
 def printError(f):
@@ -532,13 +523,3 @@ class DeprecationTests(unittest.TestCase):
             warningsShown[0]['message'],
             'twisted.words.protocols.msn was deprecated in Twisted 15.1.0: ' +
             'MSN has shutdown.')
-
-
-
-if msn is None:
-    for testClass in [DispatchTests, PassportTests, NotificationTests,
-                      MessageHandlingTests, FileTransferTests,
-                      DeprecationTests]:
-        testClass.skip = (
-            "MSN requires an HTTP client but none is available, "
-            "skipping tests.")
