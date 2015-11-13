@@ -86,7 +86,7 @@ import datetime
 from types import BooleanType
 
 with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
+    warnings.simplefilter("ignore", category=DeprecationWarning)
     import sets as _sets
 
 from zope.interface import implementer
