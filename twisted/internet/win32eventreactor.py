@@ -18,7 +18,7 @@ LIMITATIONS:
  2. Process running has some problems (see L{Process} docstring).
 
 For a high-performance main loop on Windows, use
-L{twisted.internet.IOCPReactor}.
+L{twisted.internet.iocpreactor.IOCPReactor}.
 """
 
 from __future__ import absolute_import, division

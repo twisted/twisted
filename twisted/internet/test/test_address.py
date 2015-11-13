@@ -11,7 +11,6 @@ from twisted.trial import unittest
 from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.internet.address import HostnameAddress
 from twisted.python.compat import nativeString
-from twisted.python.runtime import platform
 
 try:
     os.symlink
