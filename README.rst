@@ -60,7 +60,7 @@ Unit Tests
 
 Twisted has a comprehensive test suite, which can be run by ``tox``::
 
-  $ tox -l # to view all test environments
+  $ tox -l            # to view all test environments
   $ tox -e py27-tests # to run the tests for Python 2.7
   $ tox -e py34-tests # to run the tests for Python 3.4
 
