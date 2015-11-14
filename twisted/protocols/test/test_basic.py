@@ -847,30 +847,79 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         self.assertEqual(r.received, [])
 
 
-    def test_noDoubleParseAfterLengthLimitExceeded(self):
+    def test_dataReceivedPackWithBigString(self):
         """
         If multiple strings are delivered to C{dataReceived} at once, one of
         which is longer than C{MAX_LENGTH}, strings which appear before the
-        first one with a length exceeding C{MAX_LENGTH} will not be processed
-        again upon the next call to C{dataReceived}.
+        first one with a length exceeding C{MAX_LENGTH} are processed.
         """
         r = self.getProtocol()
-        r.MAX_LENGTH = 10
+        r.MAX_LENGTH = 5
 
-        # Send 4 strings to the protocol, the forth of which is too long to
+        # Multiple strings are received at once, the last one being longer
+        # than the allowed size.
         # be processed.
         r.dataReceived(''.join([
-            struct.pack(r.structFormat, 3) + b'w' * 3,
-            struct.pack(r.structFormat, 6) + b'x' * 6,
-            struct.pack(r.structFormat, 9) + b'y' * 9,
-            struct.pack(r.structFormat, 12) + b'z' * 12,
+            struct.pack(r.structFormat, 1) + b'a',
+            struct.pack(r.structFormat, 5) + b'bbbbb',
+            struct.pack(r.structFormat, 6) + b'xxxxxx' ,
         ]))
-        self.assertEqual(r.received, [b'w' * 3, b'x' * 6, b'y' * 9])
+        self.assertEqual(r.received, [b'a', b'bbbbb',])
 
-        # Send an empty string to the protocol. The previously sent blob should
-        # not be processed again.
+        # Trigger the processing of received data.
+        # The previously sent blob should not be processed again.
         r.dataReceived(b'')
-        self.assertEqual(r.received, [b'w' * 3, b'x' * 6, b'y' * 9])
+        self.assertEqual(r.received, [b'a', b'bbbbb'])
+
+
+    def test_dataReceivedAfterMaxLenghtReached(self):
+        """
+        Strings received in a new batch after a string which is longer than
+        C{MAX_LENGTH}, are processed as normal data.
+        """
+        r = self.getProtocol()
+        r.MAX_LENGTH = 5
+
+        # Multiple strings are received at once, the last one being longer
+        # than the allowed size.
+        # be processed.
+        r.dataReceived(''.join([
+            struct.pack(r.structFormat, 1) + b'a',
+            struct.pack(r.structFormat, 5) + b'bbbbb',
+            struct.pack(r.structFormat, 6) + b'xxxxxx' ,
+        ]))
+        self.assertEqual(r.received, [b'a', b'bbbbb',])
+
+        # More data is received later. The previously sent blob should
+        # not be processed again and the new data is processed
+        r.dataReceived(struct.pack(r.structFormat, 2) + b'cc',)
+        self.assertEqual(r.received, [b'a', b'bbbbb', b'cc'])
+
+
+    def test_dataReceivedAfterMaxLenghtReachedSameBatch(self):
+        """
+        Strings received in the same batch after a string which is longer than
+        C{MAX_LENGTH}, are processed as normal data.
+        """
+        r = self.getProtocol()
+        r.MAX_LENGTH = 5
+
+        # Multiple strings are received at once, the third and forth are over
+        # the size, while last one is below the limit.
+        r.dataReceived(''.join([
+            struct.pack(r.structFormat, 1) + b'a',
+            struct.pack(r.structFormat, 5) + b'bbbbb',
+            struct.pack(r.structFormat, 6) + b'xxxxxx',
+            struct.pack(r.structFormat, 7) + b'yyyyyyy' ,
+            struct.pack(r.structFormat, 2) + b'cc' ,
+        ]))
+        self.assertEqual(r.received, [b'a', b'bbbbb',])
+
+        # More data is received later. The previously sent blob should
+        # not be processed again and the remaining unprocessed data is
+        # processed together with the new data.
+        r.dataReceived(struct.pack(r.structFormat, 3) + b'ddd',)
+        self.assertEqual(r.received, [b'a', b'bbbbb', b'cc', b'ddd'])
 
 
     def test_stringReceivedNotImplemented(self):
