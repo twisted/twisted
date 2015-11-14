@@ -96,7 +96,7 @@ Warranty
 Again, see the included ``LICENSE`` file for specific legal details.
 
 
-.. |coverage| image:: https://codecov.io/github/twisted/twisted/coverage.svg?branch=master
+.. |coverage| image:: https://codecov.io/github/twisted/twisted/coverage.svg?branch=trunk
 .. _coverage: https://codecov.io/github/twisted/twisted
 
 .. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
