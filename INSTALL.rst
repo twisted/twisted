@@ -8,17 +8,17 @@ To install Twisted, you need:
 
 - Python 2.7 (full functionality) or 3.3/3.4/3.5 (subset of functionality).
 
-- `setuptools <https://pypi.python.org/pypi/setuptools>`_.
-  (Installed automatically if you use pip.)
+- `setuptools <https://pypi.python.org/pypi/setuptools>`_
+  (installed automatically if you use pip).
 
 - `Zope Interface <https://pypi.python.org/pypi/zope.interface>`_  3.6.0 or newer.
   Zope Interface 4.0 or newer is required for Python 3.
-  (Installed automatically if you use pip.)
+  Installing via pip will automatically download a suitable Zope Interface.
 
 - On Windows `pywin32 <https://pypi.python.org/pypi/pypiwin32>`_ is required.
-  Build 215 or later is highly recommended for reliable operation (this is already included in ActivePython).
+  Build 219 or later is highly recommended for reliable operation (this is already included in ActivePython).
 
-If you are using pip, you can install optional dependencies for specific functionality in Twisted (such as TLS or serial support) by using our `setuptools extras <http://twistedmatrix.com/documents/current/installation/howto/optional.html>`_
+We also have `setuptools extras <http://twistedmatrix.com/documents/current/installation/howto/optional.html>`_ for automatically installing optional packages used by Twisted.
 
 
 Installing Twisted
