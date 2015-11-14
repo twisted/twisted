@@ -173,8 +173,10 @@ class STDLibLogObserverTests(unittest.TestCase):
 
         self.assertEqual(len(records), 1)
         if _PY3 and platform.isWindows():
+            # Windows on Python 3 uses "\r\n"
             linesep = os.linesep
         else:
+            # Windows on Python 2 and UNIX use "\n"
             linesep = u"\n"
         self.assertTrue(output.endswith(u":Hello, dude!" + linesep),
                         repr(output))
