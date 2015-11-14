@@ -1579,7 +1579,7 @@ class FilePath(AbstractFilePath):
 
         @return: A file-like object opened from this path.
         """
-        fdint = _os_fs._open(self.path, _CREATE_FLAGS)
+        fdint = _os_fs.open(self.path, _CREATE_FLAGS)
 
         # XXX TODO: 'name' attribute of returned files is not mutable or
         # settable via fdopen, so this file is slighly less functional than the
