@@ -94,8 +94,9 @@ else:
             while True:
                 with _open(newvalname, "r") as f:
                     size = len(f.read())
-                if size == len(value):
-                    break
+                if not size == len(value):
+                    continue
+                break
 
         try:
             rename(newlinkname, filename)
