@@ -41,7 +41,7 @@ To install Twisted with TLS dependencies, use::
 
   $ pip install twisted[tls]
 
-Additional instructions for installing this software are in `INSTALL <INSTALL>`_.
+Additional instructions for installing this software are in `the installation instructions <INSTALL.rst>`_.
 
 
 Documentation and Support
