@@ -8,7 +8,7 @@ Release Codename:
 
     "Trial By Fire"
 
-For information on what's new in Twisted 15.4.0, see the NEWS file that comes with the distribution.
+For information on what's new in Twisted 15.4.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -36,23 +36,23 @@ To install the latest version of Twisted using pip::
 
   $ pip install twisted
 
-You can install optional dependencies for specific functionality in Twisted (such as TLS or serial support) by using our `setuptools extras <http://twistedmatrix.com/documents/current/installation/howto/optional.html>`.
+You can install optional dependencies for specific functionality in Twisted (such as TLS or serial support) by using our `setuptools extras <http://twistedmatrix.com/documents/current/installation/howto/optional.html>`_.
 To install Twisted with TLS dependencies, use::
 
   $ pip install twisted[tls]
 
-Additional instructions for installing this software are in ``INSTALL``.
+Additional instructions for installing this software are in `INSTALL <INSTALL>`_.
 
 
 Documentation and Support
 -------------------------
 
-Twisted's documentation is available from the `Twisted Matrix website <http://twistedmatrix.com/documents/current/>`.
+Twisted's documentation is available from the `Twisted Matrix website <http://twistedmatrix.com/documents/current/>`_.
 This documentation contains how-tos, code examples, and an API reference.
 
-Help is also available on the `Twisted mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`
+Help is also available on the `Twisted mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
-There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web), on chat.freenode.net.
+There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web), on ``chat.freenode.net``.
 
 
 Unit Tests
@@ -77,7 +77,7 @@ Copyright
 All of the code in this distribution is Copyright (c) 2001-2015 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
-The included ``LICENSE`` file describes this in detail.
+The included `LICENSE <LICENSE>`_ file describes this in detail.
 
 
 Warranty
