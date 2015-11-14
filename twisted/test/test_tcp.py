@@ -24,6 +24,8 @@ from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.protocols import policies
 from twisted.test.proto_helpers import AccumulatingProtocol
 
+WSAENOTSOCK = 10038
+
 
 def loopUntil(predicate, interval=0):
     """
@@ -1157,7 +1159,7 @@ class ProperlyCloseFilesMixin:
             # These platforms have been seen to give WinError 10038
             #
             #  Windows 10 on Python 3.4/3.5
-            return 10038
+            return WSAENOTSOCK
         else:
             # These platforms have been seen to give EBADF:
             #

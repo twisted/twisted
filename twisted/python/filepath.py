@@ -47,14 +47,14 @@ if _PY3 and platform.isWindows():
     from ._winpath import isabs, exists, normpath, abspath, splitext
     from ._winpath import basename, dirname, join as joinpath, realpath
     from ._winpath import listdir, utime, stat, symlink, chmod, rmdir, remove
-    from ._winpath import mkdir, makedirs, open as _open, fdopen
-    import twisted.python._winpath as _renameModule
+    from ._winpath import mkdir, makedirs, fdopen
+    import twisted.python._winpath as _os_fs
 else:
     from os.path import isabs, exists, normpath, abspath, splitext
     from os.path import basename, dirname, join as joinpath, realpath
     from os import listdir, utime, stat, chmod, rmdir, remove
-    from os import mkdir, makedirs, open as _open, fdopen
-    import os as _renameModule
+    from os import mkdir, makedirs, fdopen
+    import os as _os_fs
 
     if not platform.isWindows():
         from os import symlink
@@ -1540,7 +1540,7 @@ class FilePath(AbstractFilePath):
             f.close()
         if platform.isWindows() and exists(self.path):
             remove(self.path)
-        _renameModule.rename(sib.path, self.path)
+        _os_fs.rename(sib.path, self.path)
 
 
     def __cmp__(self, other):
@@ -1579,7 +1579,7 @@ class FilePath(AbstractFilePath):
 
         @return: A file-like object opened from this path.
         """
-        fdint = _open(self.path, _CREATE_FLAGS)
+        fdint = _os_fs._open(self.path, _CREATE_FLAGS)
 
         # XXX TODO: 'name' attribute of returned files is not mutable or
         # settable via fdopen, so this file is slighly less functional than the
@@ -1715,7 +1715,7 @@ class FilePath(AbstractFilePath):
             filesystems)
         """
         try:
-            _renameModule.rename(self.path, destination.path)
+            _os_fs.rename(self.path, destination.path)
         except OSError as ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":

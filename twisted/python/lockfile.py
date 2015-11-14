@@ -91,7 +91,11 @@ else:
             import time
             # Python 3 has no 'commit' flag for fopen, so let Windows catch
             # up... sigh -hawkie
-            time.sleep(0.1)
+            while True:
+                with _open(newvalname, "r") as f:
+                    size = len(f.read())
+                if size == len(value):
+                    break
 
         try:
             rename(newlinkname, filename)
