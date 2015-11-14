@@ -847,6 +847,32 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         self.assertEqual(r.received, [])
 
 
+    def test_noDoubleParseAfterLengthLimitExceeded(self):
+        """
+        If multiple strings are delivered to C{dataReceived} at once, one of
+        which is longer than C{MAX_LENGTH}, strings which appear before the
+        first one with a length exceeding C{MAX_LENGTH} will not be processed
+        again upon the next call to C{dataReceived}.
+        """
+        r = self.getProtocol()
+        r.MAX_LENGTH = 10
+
+        # Send 4 strings to the protocol, the forth of which is too long to
+        # be processed.
+        r.dataReceived(''.join([
+            struct.pack(r.structFormat, 3) + b'w' * 3,
+            struct.pack(r.structFormat, 6) + b'x' * 6,
+            struct.pack(r.structFormat, 9) + b'y' * 9,
+            struct.pack(r.structFormat, 12) + b'z' * 12,
+        ]))
+        self.assertEqual(r.received, [b'w' * 3, b'x' * 6, b'y' * 9])
+
+        # Send an empty string to the protocol. The previously sent blob should
+        # not be processed again.
+        r.dataReceived(b'')
+        self.assertEqual(r.received, [b'w' * 3, b'x' * 6, b'y' * 9])
+
+
     def test_stringReceivedNotImplemented(self):
         """
         When L{IntNStringReceiver.stringReceived} is not overridden in a

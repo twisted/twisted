@@ -1,0 +1,1 @@
+twisted.protocols.basic.IntNReceiver no longer processes messages twice when dataReceived is called after lengthLimitExceeded was called.

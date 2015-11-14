@@ -749,8 +749,8 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
             messageStart = currentOffset + prefixLength
             length, = unpack(fmt, alldata[currentOffset:messageStart])
             if length > self.MAX_LENGTH:
-                self._unprocessed = alldata
-                self._compatibilityOffset = currentOffset
+                self._unprocessed = alldata[currentOffset:]
+                self._compatibilityOffset = 0
                 self.lengthLimitExceeded(length)
                 return
             messageEnd = messageStart + length
