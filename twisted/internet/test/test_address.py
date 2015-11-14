@@ -327,8 +327,6 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
                                 UNIXAddress(None))
             self.assertNotEqual(UNIXAddress(None),
                                 UNIXAddress(self._socketAddress))
-    if symlinkSkip:
-        test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
     def test_emptyHash(self):
