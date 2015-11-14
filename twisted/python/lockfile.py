@@ -88,7 +88,7 @@ else:
             f.flush()
 
         if _PY3:
-            import time
+            size = 0
             # Python 3 has no 'commit' flag for fopen, so let Windows catch
             # up... sigh -hawkie
             while size != len(value):
