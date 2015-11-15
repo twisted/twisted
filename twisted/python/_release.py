@@ -389,7 +389,7 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
 
     # Then change the global version.
     twistedProject.updateVersion(newVersion)
-    _changeVersionInFile(oldVersion, newVersion, root.child('README').path)
+    _changeVersionInFile(oldVersion, newVersion, root.child('README.rst').path)
 
 
 
@@ -431,7 +431,7 @@ class Project(object):
 
     def updateVersion(self, version):
         """
-        Replace the existing version numbers in _version.py and README files
+        Replace the existing version numbers in _version.py and README.rst files
         with the specified version.
 
         @param version: The version to update to.

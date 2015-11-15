@@ -353,7 +353,7 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         """
         root = FilePath(self.mktemp())
         structure = {
-            "README": "Hi this is 1.0.0.",
+            "README.rst": "Hi this is 1.0.0.",
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 1.0.0"},
@@ -364,7 +364,7 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         releaseDate = date(2010, 1, 1)
         changeAllProjectVersions(root, False, False, releaseDate)
         outStructure = {
-            "README": "Hi this is 10.0.0.",
+            "README.rst": "Hi this is 10.0.0.",
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 10.0.0"},
@@ -389,7 +389,7 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
                    "==================================\n"
                    "\n")
         structure = {
-            "README": "Hi this is 1.0.0pre1.",
+            "README.rst": "Hi this is 1.0.0pre1.",
             "NEWS": coreNews + webNews,
             "twisted": {
                 "topfiles": {
@@ -411,7 +411,7 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
                    "==============================\n"
                    "\n")
         outStructure = {
-            "README": "Hi this is 1.0.0.",
+            "README.rst": "Hi this is 1.0.0.",
             "NEWS": coreNews + webNews,
             "twisted": {
                 "topfiles": {
@@ -1523,7 +1523,7 @@ class DistributionBuilderTests(DistributionBuilderTestBase):
         """
         manInput1 = "pretend there's some troff in here or something"
         structure = {
-            "README": "Twisted",
+            "README.rst": "Twisted",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -1553,7 +1553,7 @@ class DistributionBuilderTests(DistributionBuilderTestBase):
             return True
 
         outStructure = {
-            "README": "Twisted",
+            "README.rst": "Twisted",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -1647,7 +1647,7 @@ class BuildAllTarballsTestBase(object):
         self._init(checkout)
 
         structure = {
-            "README": "Twisted",
+            "README.rst": "Twisted",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -1677,7 +1677,7 @@ class BuildAllTarballsTestBase(object):
             return True
 
         twistedStructure = {
-            "README": "Twisted",
+            "README.rst": "Twisted",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -2006,7 +2006,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         repository as identical in a specified directory.
         """
         structure = {
-            "README": "Hi this is 1.0.0.",
+            "README.rst": "Hi this is 1.0.0.",
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 1.0.0"},
