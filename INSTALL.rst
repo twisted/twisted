@@ -39,3 +39,4 @@ Additionally, there are packages available in the repositories of:
 - Debian and Ubuntu as ``python-twisted`` for Python 2.
 - FreeBSD as ``py-twisted`` for Python 2.
 - Arch as ``python-twisted`` for Python 2.
+- Fedora and RHEL as ``python-twisted`` for Python 2.

@@ -36,11 +36,6 @@ To install the latest version of Twisted using pip::
 
   $ pip install twisted
 
-You can install optional dependencies for specific functionality in Twisted (such as TLS or serial support) by using our `setuptools extras <http://twistedmatrix.com/documents/current/installation/howto/optional.html>`_.
-To install Twisted with TLS dependencies, use::
-
-  $ pip install twisted[tls]
-
 Additional instructions for installing this software are in `the installation instructions <INSTALL.rst>`_.
 
 
@@ -93,7 +88,7 @@ Warranty
   SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
   DAMAGES.
 
-Again, see the included ``LICENSE`` file for specific legal details.
+Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 
 .. |coverage| image:: https://codecov.io/github/twisted/twisted/coverage.svg?branch=trunk
