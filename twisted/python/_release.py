@@ -389,7 +389,7 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
 
     # Then change the global version.
     twistedProject.updateVersion(newVersion)
-    _changeVersionInFile(oldVersion, newVersion, root.child('README').path)
+    _changeVersionInFile(oldVersion, newVersion, root.child('README.rst').path)
 
 
 
