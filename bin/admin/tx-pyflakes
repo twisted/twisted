@@ -1,0 +1,119 @@
+##!/usr/bin/env python
+
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+# This script is not meant to be distributed to users of Twisted.
+# It is only for use in checking Twisted source code using pyflakes.
+
+# Name of the main branch.
+MAIN_BRANCH = 'trunk'
+
+# List of files which should be ignored.
+IGNORED_FILES=[
+    # Auto-generated.
+    'twisted/words/xish/xpathparser.py',
+    # Deprecated.
+    'twisted/scripts/tap2deb.py',
+    ]
+
+import sys, os
+extra = os.path.dirname(os.path.dirname(sys.argv[0]))
+sys.path.insert(0, extra)
+try:
+    import _preamble
+except ImportError:
+    sys.exc_clear()
+sys.path.remove(extra)
+
+import argparse
+
+from pyflakes import __version__, reporter
+from pyflakes.api import checkPath, iterSourceCode, _exitOnSignal
+
+from twisted.python._release import runCommand
+
+
+def diffFileNames(self, ref='master'):
+    """
+    Return a list of (action, filename) that have changed in
+    comparison with `ref`.
+    """
+    result = []
+    command = ['git', 'diff', '--name-status', ref]
+    output = runCommand(command)
+
+    for line in output.splitlines():
+        action, name = line.split('\t')
+        action = action.lower()
+        result.append((action, name))
+
+    return result
+
+
+def checkRecursive(paths, reporter):
+    """
+    Recursively check all source files in C{paths}.
+
+    @param paths: A list of paths to Python source files and directories
+        containing Python source files.
+    @param reporter: A L{Reporter} where all of the warnings and errors
+        will be reported to.
+    @return: The number of warnings found.
+    """
+    warnings = 0
+    for sourcePath in iterSourceCode(paths):
+        if sourcePath in IGNORED_FILES:
+            continue
+        warnings += checkPath(sourcePath, reporter)
+    return warnings
+
+
+def main():
+    """
+    Entry point for the script "pyflakes".
+    """
+    # Handle "Keyboard Interrupt" and "Broken pipe" gracefully
+    _exitOnSignal('SIGINT', '... stopped')
+    _exitOnSignal('SIGPIPE', 1)
+
+    parser = argparse.ArgumentParser(
+        prog='tx-pyflakes',
+        description=(
+            'Twisted custom pyflakes runner.\n'
+            'By default it only checks files changes since `%s`' % (
+                MAIN_BRANCH,)
+            ),
+        )
+
+    parser.add_argument('--all', action='store_true', help='Check all files.')
+    parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument('path', nargs='*', metavar='PATH', type=str)
+
+    options = parser.parse_args()
+    if options.path:
+        # Explicit path checking was requested.
+        paths = options.path
+    elif options.all:
+        # No explicit path but explicit all checks.
+        paths = ['twisted']
+    else:
+        paths = []
+        # Only check files changed since trunk.
+        for change, path in diffFileNames(MAIN_BRANCH):
+            if change == 'd':
+                # Files was removed so we don't need to check it.
+                continue
+
+            if not path.endswith('.py'):
+                # Not a python source file.
+                continue
+
+            paths.append(path)
+
+    warnings = checkRecursive(paths, reporter._makeDefaultReporter())
+
+    raise SystemExit(warnings > 0)
+
+if __name__ == '__main__':
+    main()
