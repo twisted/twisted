@@ -431,7 +431,7 @@ class Project(object):
 
     def updateVersion(self, version):
         """
-        Replace the existing version numbers in _version.py and README.rst files
+        Replace the existing version numbers in _version.py and README files
         with the specified version.
 
         @param version: The version to update to.
