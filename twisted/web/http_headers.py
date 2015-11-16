@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 
 from collections import MutableMapping
 
-from twisted.python.compat import comparable, cmp
+from twisted.python.compat import comparable, cmp, StringType
 
 
 def _dashCapitalize(name):
@@ -54,6 +54,8 @@ class _DictHeaders(MutableMapping):
         """
         Set the given header.
         """
+        if isinstance(key, StringType):
+            key = key.encode('ascii')
         self._headers.setRawHeaders(key, [value])
 
 
