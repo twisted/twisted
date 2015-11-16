@@ -20,7 +20,12 @@ import inspect, string, sys, types
 # Twisted Imports
 from twisted.spread import pb
 from twisted.python import reflect
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 
+
+True=(1==1)
+False=not True
 
 class Pool(dict):
     def getExplorer(self, object, identifier):
@@ -35,6 +40,24 @@ class Pool(dict):
             self[oid] = e
             klass.__init__(e, object, identifier)
             return e
+
+
+    @deprecated(Version("Twisted", 15, 4, 0))
+    @property
+    def data(self):
+        """
+        DEPRECATED. Provide compatibility with the deprecated usage as
+        UserDict.
+        """
+        return self
+
+
+    @deprecated(Version("Twisted", 15, 4, 0))
+    @data.setter
+    def data(self, value):
+        self.clear()
+        self.update(value)
+
 
 explorerPool = Pool()
 
