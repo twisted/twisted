@@ -773,13 +773,26 @@ class ParsingTests(unittest.TestCase):
             b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
 
-    def test_invalidHeaders(self):
+    def test_invalidContentLengthHeader(self):
         """
         If a Content-Length header with a non-integer value is received, a 400
         (Bad Request) response is sent to the client and the connection is
         closed.
         """
         requestLines = [b"GET / HTTP/1.0", b"Content-Length: x", b"", b""]
+        channel = self.runRequest(b"\n".join(requestLines), http.Request, 0)
+        self.assertEqual(
+            channel.transport.value(),
+            b"HTTP/1.1 400 Bad Request\r\n\r\n")
+        self.assertTrue(channel.transport.disconnecting)
+
+
+    def test_invalidHeaderNoColon(self):
+        """
+        If a header without colon is received a 400 (Bad Request) response
+        is sent to the client and the connection is closed.
+        """
+        requestLines = [b"GET / HTTP/1.0", b"HeaderName ", b"", b""]
         channel = self.runRequest(b"\n".join(requestLines), http.Request, 0)
         self.assertEqual(
             channel.transport.value(),
