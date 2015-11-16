@@ -208,15 +208,23 @@ class SSHTransportBase(protocol.Protocol):
     comment = ''
     ourVersionString = ('SSH-' + protocolVersion + '-' + version + ' '
             + comment).strip()
+
+    # C{none} is supported as cipher and hmac. For security they are disabled
+    # by default. To enable them, subclass this class and add it, or do:
+    # SSHTransportBase.supportedCiphers.append('none')
+    # List ordered by preference.
     supportedCiphers = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc',
                         'aes128-ctr', 'aes128-cbc', 'cast128-ctr',
                         'cast128-cbc', 'blowfish-ctr', 'blowfish-cbc',
                         '3des-ctr', '3des-cbc'] # ,'none']
-    supportedMACs = ['hmac-sha2-512', 'hmac-sha2-256',
-                     'hmac-sha1', 'hmac-md5'] # , 'none']
-    # both of the above support 'none', but for security are disabled by
-    # default.  to enable them, subclass this class and add it, or do:
-    #   SSHTransportBase.supportedCiphers.append('none')
+    supportedMACs = [
+        'hmac-sha2-512',
+        'hmac-sha2-256',
+        'hmac-sha1',
+        'hmac-md5',
+        # `none`,
+        ]
+
     supportedKeyExchanges = _kex.getSupportedKeyExchanges()
     supportedPublicKeys = ['ssh-rsa', 'ssh-dss']
     supportedCompressions = ['none', 'zlib']
@@ -1525,8 +1533,11 @@ class SSHCiphers:
         mod = self.macMap[mac]
         if not mod:
             return (None, '', '', 0)
-        digestSize = mod().digest_size
-        blockSize = mod().block_size
+
+        # With stdlib we can only get attributes fron an instantiated object.
+        hashObject = mod()
+        digestSize = hashObject.digest_size
+        blockSize = hashObject.block_size
 
         # Truncation here appears to contravene RFC 2104, section 2.  However,
         # implementing the hashing behavior prescribed by the RFC breaks
