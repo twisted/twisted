@@ -928,6 +928,16 @@ class AllowedMethodsTests(unittest.TestCase):
         )
 
 
+    def test_notAllowedNonAscii(self):
+        """
+        When client requests invalid method containining unicode characters
+        HTTP 501 'Not Implemented' status will be returned.
+        """
+        req = self._getReq()
+        req.requestReceived(b'G\xc2\xa9ET', b'/gettableresource', b'HTTP/1.0')
+        self.assertEqual(req.code, 501)
+
+
     def test_notAllowedQuoting(self):
         """
         When an unsupported method response is generated, an HTML message will

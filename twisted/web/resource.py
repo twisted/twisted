@@ -240,12 +240,15 @@ class Resource:
 
         @see: L{IResource.render}
         """
-        m = getattr(self, 'render_' + nativeString(request.method), None)
+        default_methods = _computeAllowedMethods(self)
+        allowedMethods = getattr(self, "allowedMethods", default_methods)
+        try:
+            method_string = nativeString(request.method)
+        except UnicodeDecodeError:
+            raise UnsupportedMethod(allowedMethods)
+
+        m = getattr(self, 'render_' + method_string, None)
         if not m:
-            try:
-                allowedMethods = self.allowedMethods
-            except AttributeError:
-                allowedMethods = _computeAllowedMethods(self)
             raise UnsupportedMethod(allowedMethods)
         return m(request)
 
