@@ -35,7 +35,7 @@ else:
         class SSHFactory:
             pass
 
-from hashlib import md5, sha1, sha256
+from hashlib import md5, sha1, sha256, sha512
 
 from twisted.trial import unittest
 from twisted.internet import defer
@@ -2026,6 +2026,32 @@ class GetMACTests(unittest.TestCase):
         self.opad = b''.join(chr(ord(b) ^ 0x5c) for b in self.key)
 
 
+    def test_hmacsha2512(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-512"} MAC
+        algorithm name it returns a tuple of (sha512 digest object, inner pad,
+        outer pad, sha512 digest size) with a C{key} attribute set to the
+        value of the key supplied.
+        """
+        params = self.ciphers._getMAC(b"hmac-sha2-512", self.key)
+        self.assertEqual(
+            (sha512, self.ipad, self.opad, sha512().digest_size, self.key),
+            params + (params.key,))
+
+
+    def test_hmacsha2256(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha2-256"} MAC
+        algorithm name it returns a tuple of (sha256 digest object, inner pad,
+        outer pad, sha256 digest size) with a C{key} attribute set to the
+        value of the key supplied.
+        """
+        params = self.ciphers._getMAC(b"hmac-sha2-256", self.key)
+        self.assertEqual(
+            (sha256, self.ipad, self.opad, sha256().digest_size, self.key),
+            params + (params.key,))
+
+
     def test_hmacsha1(self):
         """
         When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha1"} MAC
@@ -2039,7 +2065,7 @@ class GetMACTests(unittest.TestCase):
             params + (params.key,))
 
 
-    def test_md5sha1(self):
+    def test_hmacmd5(self):
         """
         When L{SSHCiphers._getMAC} is called with the C{b"hmac-md5"} MAC
         algorithm name it returns a tuple of (md5 digest object, inner pad,

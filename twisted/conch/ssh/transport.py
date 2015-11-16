@@ -14,7 +14,7 @@ Maintainer: Paul Swartz
 import struct
 import zlib
 import array
-from hashlib import md5, sha1
+from hashlib import md5, sha1, sha256, sha512
 import string
 import hmac
 
@@ -212,7 +212,8 @@ class SSHTransportBase(protocol.Protocol):
                         'aes128-ctr', 'aes128-cbc', 'cast128-ctr',
                         'cast128-cbc', 'blowfish-ctr', 'blowfish-cbc',
                         '3des-ctr', '3des-cbc'] # ,'none']
-    supportedMACs = ['hmac-sha1', 'hmac-md5'] # , 'none']
+    supportedMACs = ['hmac-sha2-512', 'hmac-sha2-256',
+                     'hmac-sha1', 'hmac-md5'] # , 'none']
     # both of the above support 'none', but for security are disabled by
     # default.  to enable them, subclass this class and add it, or do:
     #   SSHTransportBase.supportedCiphers.append('none')
@@ -1448,6 +1449,8 @@ class SSHCiphers:
         'none': (None, 0, False),
     }
     macMap = {
+        'hmac-sha2-512': sha512,
+        'hmac-sha2-256': sha256,
         'hmac-sha1': sha1,
         'hmac-md5': md5,
         'none': None
@@ -1522,15 +1525,16 @@ class SSHCiphers:
         mod = self.macMap[mac]
         if not mod:
             return (None, '', '', 0)
-        ds = mod().digest_size
+        digestSize = mod().digest_size
+        blockSize = mod().block_size
 
         # Truncation here appears to contravene RFC 2104, section 2.  However,
         # implementing the hashing behavior prescribed by the RFC breaks
         # interoperability with OpenSSH (at least version 5.5p1).
-        key = key[:ds] + ('\x00' * (64 - ds))
+        key = key[:digestSize] + ('\x00' * (blockSize - digestSize))
         i = string.translate(key, hmac.trans_36)
         o = string.translate(key, hmac.trans_5C)
-        result = _MACParams((mod,  i, o, ds))
+        result = _MACParams((mod, i, o, digestSize))
         result.key = key
         return result
 
