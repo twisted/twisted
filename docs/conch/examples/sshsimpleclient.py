@@ -107,5 +107,7 @@ class CatChannel(channel.SSHChannel):
         self.loseConnection()
         reactor.stop()
 
+
+log.startLogging(sys.stdout)
 protocol.ClientCreator(reactor, SimpleTransport).connectTCP(HOST, 22)
 reactor.run()
