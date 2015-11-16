@@ -16,27 +16,23 @@ L{inspect} module available in Python 2.1.
 
 # System Imports
 import inspect, string, sys, types
-import UserDict
 
 # Twisted Imports
 from twisted.spread import pb
 from twisted.python import reflect
 
 
-True=(1==1)
-False=not True
-
-class Pool(UserDict.UserDict):
+class Pool(dict):
     def getExplorer(self, object, identifier):
         oid = id(object)
-        if oid in self.data:
+        if oid in self:
             # XXX: This potentially returns something with
             # 'identifier' set to a different value.
-            return self.data[oid]
+            return self[oid]
         else:
             klass = typeTable.get(type(object), ExplorerGeneric)
             e = types.InstanceType(klass, {})
-            self.data[oid] = e
+            self[oid] = e
             klass.__init__(e, object, identifier)
             return e
 

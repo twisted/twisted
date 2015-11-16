@@ -7,7 +7,6 @@ Postfix mail transport agent related protocols.
 """
 
 import sys
-import UserDict
 import urllib
 
 from twisted.protocols import basic
@@ -92,8 +91,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
                 self.sendCode(500, 'put is not implemented yet.')
 
 
-class PostfixTCPMapDictServerFactory(protocol.ServerFactory,
-                                     UserDict.UserDict):
+class PostfixTCPMapDictServerFactory(protocol.ServerFactory, dict):
     """An in-memory dictionary factory for PostfixTCPMapServer."""
 
     protocol = PostfixTCPMapServer
