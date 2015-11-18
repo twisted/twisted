@@ -624,6 +624,11 @@ class MemoryPool(threadpool.ThreadPool):
             a test-failure exception.
         @type failTest: 1-argument callable taking (L{Failure}) and raising
             L{unittest.FailTest}.
+
+        @param newWorker: a 0-argument callable that produces a new
+            L{twisted._threads.IWorker} provider on each invocation.
+        @type newWorker: 0-argument callable returning
+            L{twisted._threads.IWorker}.
         """
         self._coordinator = coordinator
         self._failTest = failTest
@@ -640,6 +645,9 @@ class MemoryPool(threadpool.ThreadPool):
 
         @param threadFactory: ignored in this invocation; a 0-argument callable
             that would produce a thread.
+
+        @return: a L{Team} backed by the coordinator and worker passed to
+            L{MemoryPool.__init__}.
         """
         def respectLimit():
             # The expression in this method copied and pasted from
@@ -670,6 +678,9 @@ class PoolHelper(object):
         the workers other than the coordinator.
     @type workers: L{list} of 2-tuple of (L{IWorker}, C{workPerformer}) where
         C{workPerformer} is a 0-argument callable like C{performCoordination}.
+
+    @ivar threadpool: a modified L{threadpool.ThreadPool} to test.
+    @type threadpool: L{MemoryPool}
     """
 
     def __init__(self, testCase, *args, **kwargs):
