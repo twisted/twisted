@@ -1,8 +1,5 @@
 [run]
-include =
-    twisted/*
-    bin/*
-    admin/*
+source = twisted
 branch = True
 
 [report]
