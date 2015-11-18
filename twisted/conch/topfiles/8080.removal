@@ -1,1 +1,0 @@
-twisted.conch.ssh.keys.objectType is now deprecated. Use twisted.conch.ssh.keys.Key.sshType.

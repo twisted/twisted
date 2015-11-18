@@ -1,1 +1,0 @@
-twisted.web.http.Request.addCookie now supports the httpOnly attribute which when set on cookies prevents the browser exposing it through channels other than HTTP and HTTPS requests (i.e. they will not be accessible through JavaScript).

@@ -1,6 +1,75 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 15.5.0pre1 (2015-11-18)
+====================================
+
+Features
+--------
+ - twisted.python.url is a new abstraction for URLs, supporting RFC
+   3987 IRIs. (#5388)
+ - twisted.python.logfile is now ported to Python 3. (#6749)
+ - twisted.python.zippath has been ported to Python 3. (#6917)
+ - twisted.internet.ssl.CertificateOptions and
+   twisted.internet.ssl.optionsForClientTLS now take a
+   acceptableProtocols parameter that enables negotiation of the next
+   protocol to speak after the TLS handshake has completed. This field
+   advertises protocols over both NPN and ALPN. Also added new
+   INegotiated interface for TLS interfaces that support protocol
+   negotiation. This interface adds a negotiatedProtocol property that
+   reports what protocol, if any, was negotiated in the TLS handshake.
+   (#7860)
+ - twisted.python.urlpath.URLPath now operates correctly on Python 3,
+   using bytes instead of strings, and introduces the fromBytes
+   constructor to assist with creating them cross-version. (#7994)
+ - twisted.application.strports is now ported to Python 3. (#8011)
+ - twistd (the Twisted Daemon) is now ported to Python 3. (#8012)
+ - Python 3.5 is now supported on POSIX platforms. (#8042)
+ - twisted.internet.serialport is now ported on Python 3. (#8099)
+
+Bugfixes
+--------
+ - twisted.logger.formatEvent now can format an event if it was
+   flattened (twisted.logger.eventAsJSON does this) and has text after
+   the last replacement field. (#8003)
+ - twisted.cred.checkers.FilePasswordDB now logs an error if the
+   credentials db file does not exist, no longer raises an unhandled
+   error. (#8028)
+ - twisted.python.threadpool.ThreadPool now properly starts enough
+   threads to do any work scheduled before ThreadPool.start() is
+   called, such as when work is scheduled in the reactor via
+   reactor.callInThread() before reactor.run(). (#8090)
+
+Improved Documentation
+----------------------
+ - Twisted Development test standard documentation now contain
+   information about avoiding test data files. (#6535)
+ - The documentation for twisted.internet.defer.DeferredSemaphore now
+   describes the actual usage for limit and tokens instance
+   attributes. (#8024)
+
+Deprecations and Removals
+-------------------------
+ - twisted.python._initgroups, a C extension, has been removed and
+   stdlib support is now always used instead. (#5861)
+ - Python 2.6 is no longer supported. (#8017)
+ - twisted.python.util.OrderedDict is now deprecated, and uses of it
+   in Twisted are replaced with collections.OrderedDict. (#8051)
+ - twisted.persisted.sob.load, twisted.persisted.sob.loadValueFromFile
+   and twisted.persisted.sob.Persistent.save() are now deprecated when
+   used with a passphrase. The encyption used by these methods are
+   weak. (#8081)
+ - twisted.internet.interfaces.IStreamClientEndpointStringParser has
+   been removed and Twisted will no longer use parsers implementing
+   this interface. (#8094)
+
+Other
+-----
+ - #5976, #6628, #6894, #6980, #7228, #7693, #7731, #7997, #8046,
+   #8054, #8056, #8060, #8063, #8064, #8068, #8072, #8091, #8095,
+   #8096, #8098, #8106
+
+
 Twisted Core 15.4.0 (2015-09-04)
 ================================
 

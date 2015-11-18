@@ -1,6 +1,19 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 15.5.0pre1 (2015-11-18)
+=====================================
+
+Features
+--------
+ - twisted.words.protocol.irc.IRC now has a sendCommand() method which
+   can send messages with tags. (#6667)
+
+Other
+-----
+ - #8015, #8097
+
+
 Twisted Words 15.4.0 (2015-09-04)
 =================================
 
