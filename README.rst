@@ -1,4 +1,4 @@
-Twisted 15.4.0
+Twisted 15.5.0pre1
 ==============
 
 |pypi|_
@@ -8,7 +8,7 @@ Release Codename:
 
     "Trial By Fire"
 
-For information on what's new in Twisted 15.4.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 15.5.0pre1, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
