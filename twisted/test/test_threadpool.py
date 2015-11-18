@@ -13,6 +13,7 @@ from twisted.python.compat import _PY3
 
 from twisted.trial import unittest
 from twisted.python import threadpool, threadable, failure, context
+from twisted._threads import Team, createMemoryWorker
 
 #
 # See the end of this module for the remainder of the imports.
@@ -605,49 +606,106 @@ class RaceConditionTests(unittest.SynchronousTestCase):
 
 
 
-class MemoryBackedTests(unittest.SynchronousTestCase):
+class MemoryPool(threadpool.ThreadPool):
     """
-    Tests for L{threadpool.ThreadPool} which don't actually use any threads, by
-    using the internal interfaces in L{twisted._threads}.
+    A deterministic threadpool that uses in-memory data structures to queue
+    work rather than threads to execute work.
     """
 
-    def setUp(self):
+    def __init__(self, coordinator, failTest, newWorker, *args, **kwargs):
         """
-        Construct an in-memory threadpool and attendant objects to manipulate
-        it.
+        Initialize this L{MemoryPool} with a test case.
+
+        @param coordinator: a worker used to coordinate work in the L{Team}
+            underlying this threadpool.
+        @type coordinator: L{twisted._threads.IExclusiveWorker}
+
+        @param failTest: A 1-argument callable taking an exception and raising
+            a test-failure exception.
+        @type failTest: 1-argument callable taking (L{Failure}) and raising
+            L{unittest.FailTest}.
         """
-        from twisted._threads import Team, createMemoryWorker
-        coordinator, performCoordination = createMemoryWorker()
+        self._coordinator = coordinator
+        self._failTest = failTest
+        self._newWorker = newWorker
+        threadpool.ThreadPool.__init__(self, *args, **kwargs)
+
+
+    def _pool(self, currentLimit, threadFactory):
+        """
+        Override testing hook to create a deterministic threadpool.
+
+        @param currentLimit: A 1-argument callable which returns the current
+            threadpool size limit.
+
+        @param threadFactory: ignored in this invocation; a 0-argument callable
+            that would produce a thread.
+        """
+        def respectLimit():
+            # The expression in this method copied and pasted from
+            # twisted.threads._pool, which is unfortunately bound up
+            # with lots of actual-threading stuff.
+            stats = team.statistics()
+            if (stats.busyWorkerCount + stats.idleWorkerCount
+                >= currentLimit()):
+                return None
+            return self._newWorker()
+        team = Team(coordinator=self._coordinator,
+                    createWorker=respectLimit,
+                    logException=self._failTest)
+        return team
+
+
+
+class PoolHelper(object):
+    """
+    A L{PoolHelper} constructs a L{threadpool.ThreadPool} that doesn't actually
+    use threads, by using the internal interfaces in L{twisted._threads}.
+
+    @ivar performCoordination: a 0-argument callable that will perform one unit
+        of "coordination" - work involved in delegating work to other threads -
+        and return L{True} if it did any work, L{False} otherwise.
+
+    @ivar workers: the workers which represent the threads within the pool -
+        the workers other than the coordinator.
+    @type workers: L{list} of 2-tuple of (L{IWorker}, C{workPerformer}) where
+        C{workPerformer} is a 0-argument callable like C{performCoordination}.
+    """
+
+    def __init__(self, testCase, *args, **kwargs):
+        """
+        Create a L{PoolHelper}.
+
+        @param testCase: a test case attached to this helper.
+
+        @type args: The arguments passed to a L{threadpool.ThreadPool}.
+
+        @type kwargs: The arguments passed to a L{threadpool.ThreadPool}
+        """
+        coordinator, self.performCoordination = createMemoryWorker()
         self.workers = []
         def newWorker():
             self.workers.append(createMemoryWorker())
             return self.workers[-1][0]
-        class MemoryPool(threadpool.ThreadPool):
-            def _pool(pool, currentLimit, threadFactory):
-                def respectLimit():
-                    # The expression in this method copied and pasted from
-                    # twisted.threads._pool, which is unfortunately bound up
-                    # with lots of actual-threading stuff.
-                    stats = team.statistics()
-                    if (stats.busyWorkerCount + stats.idleWorkerCount
-                        >= currentLimit()):
-                        return None
-                    return newWorker()
-                team = Team(coordinator=coordinator,
-                            createWorker=respectLimit,
-                            logException=self.fail)
-                return team
-        self.threadpool = MemoryPool(0, 10)
-        self.performCoordination = performCoordination
+        self.threadpool = MemoryPool(coordinator, testCase.fail, newWorker,
+                                     *args, **kwargs)
 
 
     def performAllCoordination(self):
         """
-        Do all currently pending coordination work.
+        Perform all currently scheduled "coordination", which is the work
+        involved in delegating work to other threads.
         """
         while self.performCoordination():
             pass
 
+
+
+class MemoryBackedTests(unittest.SynchronousTestCase):
+    """
+    Tests using L{PoolHelper} to deterministically test properties of the
+    threadpool implementation.
+    """
 
     def test_workBeforeStarting(self):
         """
@@ -655,14 +713,15 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         up, it will start enough workers to handle all of the enqueued work
         that it's been given.
         """
+        helper = PoolHelper(self, 0, 10)
         n = 5
         for x in range(n):
-            self.threadpool.callInThread(lambda: None)
-        self.performAllCoordination()
-        self.assertEqual(self.workers, [])
-        self.threadpool.start()
-        self.performAllCoordination()
-        self.assertEqual(len(self.workers), n)
+            helper.threadpool.callInThread(lambda: None)
+        helper.performAllCoordination()
+        self.assertEqual(helper.workers, [])
+        helper.threadpool.start()
+        helper.performAllCoordination()
+        self.assertEqual(len(helper.workers), n)
 
 
     def test_tooMuchWorkBeforeStarting(self):
@@ -671,12 +730,13 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         threads allowed to the threadpool, only the maximum count will be
         started.
         """
+        helper = PoolHelper(self, 0, 10)
         n = 50
         for x in range(n):
-            self.threadpool.callInThread(lambda: None)
-        self.performAllCoordination()
-        self.assertEqual(self.workers, [])
-        self.threadpool.start()
-        self.performAllCoordination()
-        self.assertEqual(len(self.workers), self.threadpool.max)
+            helper.threadpool.callInThread(lambda: None)
+        helper.performAllCoordination()
+        self.assertEqual(helper.workers, [])
+        helper.threadpool.start()
+        helper.performAllCoordination()
+        self.assertEqual(len(helper.workers), helper.threadpool.max)
 
