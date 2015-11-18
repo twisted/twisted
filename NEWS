@@ -1,6 +1,169 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 15.5.0pre1 (2015-11-18)
+====================================
+
+Features
+--------
+ - twisted.python.url is a new abstraction for URLs, supporting RFC
+   3987 IRIs. (#5388)
+ - twisted.python.logfile is now ported to Python 3. (#6749)
+ - twisted.python.zippath has been ported to Python 3. (#6917)
+ - twisted.internet.ssl.CertificateOptions and
+   twisted.internet.ssl.optionsForClientTLS now take a
+   acceptableProtocols parameter that enables negotiation of the next
+   protocol to speak after the TLS handshake has completed. This field
+   advertises protocols over both NPN and ALPN. Also added new
+   INegotiated interface for TLS interfaces that support protocol
+   negotiation. This interface adds a negotiatedProtocol property that
+   reports what protocol, if any, was negotiated in the TLS handshake.
+   (#7860)
+ - twisted.python.urlpath.URLPath now operates correctly on Python 3,
+   using bytes instead of strings, and introduces the fromBytes
+   constructor to assist with creating them cross-version. (#7994)
+ - twisted.application.strports is now ported to Python 3. (#8011)
+ - twistd (the Twisted Daemon) is now ported to Python 3. (#8012)
+ - Python 3.5 is now supported on POSIX platforms. (#8042)
+ - twisted.internet.serialport is now ported on Python 3. (#8099)
+
+Bugfixes
+--------
+ - twisted.logger.formatEvent now can format an event if it was
+   flattened (twisted.logger.eventAsJSON does this) and has text after
+   the last replacement field. (#8003)
+ - twisted.cred.checkers.FilePasswordDB now logs an error if the
+   credentials db file does not exist, no longer raises an unhandled
+   error. (#8028)
+
+Improved Documentation
+----------------------
+ - Twisted Development test standard documentation now contain
+   information about avoiding test data files. (#6535)
+ - The documentation for twisted.internet.defer.DeferredSemaphore now
+   describes the actual usage for limit and tokens instance
+   attributes. (#8024)
+
+Deprecations and Removals
+-------------------------
+ - twisted.python._initgroups, a C extension, has been removed and
+   stdlib support is now always used instead. (#5861)
+ - Python 2.6 is no longer supported. (#8017)
+ - twisted.python.util.OrderedDict is now deprecated, and uses of it
+   in Twisted are replaced with collections.OrderedDict. (#8051)
+ - twisted.persisted.sob.load, twisted.persisted.sob.loadValueFromFile
+   and twisted.persisted.sob.Persistent.save() are now deprecated when
+   used with a passphrase. The encyption used by these methods are
+   weak. (#8081)
+ - twisted.internet.interfaces.IStreamClientEndpointStringParser has
+   been removed and Twisted will no longer use parsers implementing
+   this interface. (#8094)
+
+Other
+-----
+ - #5976, #6628, #6894, #6980, #7228, #7693, #7731, #7997, #8046,
+   #8054, #8056, #8060, #8063, #8064, #8068, #8072, #8091, #8095,
+   #8096, #8098, #8106
+
+
+Twisted Conch 15.5.0pre1 (2015-11-18)
+=====================================
+
+Features
+--------
+ - twisted.conch.ssh now supports the diffie-hellman-group-exchange-
+   sha256 key exchange algorithm. (#7672)
+ - twisted.conch.ssh now supports the diffie-hellman-group14-sha1 key
+   exchange algorithm. (#7717)
+ - twisted.conch.ssh.transport.SSHClientTransport now supports Diffie-
+   Hellman key exchange using MSG_KEX_DH_GEX_REQUEST as described in
+   RFC 4419. (#8100)
+ - twisted.conch.ssh now supports the hmac-sha2-256 and hmac-sha2-512
+   MAC algorithms. (#8108)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.ssh.keys.objectType is now deprecated. Use
+   twisted.conch.ssh.keys.Key.sshType. (#8080)
+ - twisted.conch.ssh.transport.SSHClientTransport no longer supports
+   Diffie-Hellman key exchange using MSG_KEX_DH_GEX_REQUEST_OLD for
+   pre RFC 4419 servers. (#8100)
+
+
+Twisted Mail 15.5.0pre1 (2015-11-18)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 15.5.0pre1 (2015-11-18)
+=====================================
+
+No significant changes have been made for this release.
+
+
+Twisted News 15.5.0pre1 (2015-11-18)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 15.5.0pre1 (2015-11-18)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 15.5.0pre1 (2015-11-18)
+======================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 15.5.0pre1 (2015-11-18)
+===================================
+
+Features
+--------
+ - twisted.web.http.Request.addCookie now supports the httpOnly
+   attribute which when set on cookies prevents the browser exposing
+   it through channels other than HTTP and HTTPS requests (i.e. they
+   will not be accessible through JavaScript). (#5911)
+ - twisted.web.client.downloadPage is now ported to Python 3. (#6197)
+ - twisted.web.client.Agent is now ported to Python 3. (#7407)
+ - twisted.web.tap (ran when calling `twistd web`) has now been ported
+   to Python 3. Not all features are enabled -- CGI, WSGI, and
+   distributed web serving will be enabled in their respective tickets
+   as they are ported. (#8008)
+
+Bugfixes
+--------
+ - twisted.web.client.URI now supports IPv6 addresses. Previously this
+   would mistake the colons used as IPv6 address group separators as
+   the start of a port specification. (#7650)
+ - twisted.web.util's failure template has been moved inline to work
+   around Python 3 distribution issues. (#8047)
+ - twisted.web.http.Request on Python 3 now handles multipart/form-
+   data requests correctly. (#8052)
+
+Other
+-----
+ - #8016
+
+
+Twisted Words 15.5.0pre1 (2015-11-18)
+=====================================
+
+Features
+--------
+ - twisted.words.protocol.irc.IRC now has a sendCommand() method which
+   can send messages with tags. (#6667)
+
+Other
+-----
+ - #8015, #8097
+
+
 Twisted Core 15.4.0 (2015-09-04)
 ================================
 

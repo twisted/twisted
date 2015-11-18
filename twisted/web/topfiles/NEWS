@@ -1,6 +1,37 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 15.5.0pre1 (2015-11-18)
+===================================
+
+Features
+--------
+ - twisted.web.http.Request.addCookie now supports the httpOnly
+   attribute which when set on cookies prevents the browser exposing
+   it through channels other than HTTP and HTTPS requests (i.e. they
+   will not be accessible through JavaScript). (#5911)
+ - twisted.web.client.downloadPage is now ported to Python 3. (#6197)
+ - twisted.web.client.Agent is now ported to Python 3. (#7407)
+ - twisted.web.tap (ran when calling `twistd web`) has now been ported
+   to Python 3. Not all features are enabled -- CGI, WSGI, and
+   distributed web serving will be enabled in their respective tickets
+   as they are ported. (#8008)
+
+Bugfixes
+--------
+ - twisted.web.client.URI now supports IPv6 addresses. Previously this
+   would mistake the colons used as IPv6 address group separators as
+   the start of a port specification. (#7650)
+ - twisted.web.util's failure template has been moved inline to work
+   around Python 3 distribution issues. (#8047)
+ - twisted.web.http.Request on Python 3 now handles multipart/form-
+   data requests correctly. (#8052)
+
+Other
+-----
+ - #8016
+
+
 Twisted Web 15.4.0 (2015-09-04)
 ===============================
 

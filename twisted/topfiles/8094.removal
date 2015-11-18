@@ -1,1 +1,0 @@
-twisted.internet.interfaces.IStreamClientEndpointStringParser has been removed and Twisted will no longer use parsers implementing this interface.
