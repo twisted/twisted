@@ -1,0 +1,3 @@
+twisted.python.threadpool.ThreadPool now properly starts enough threads to do
+any work scheduled before ThreadPool.start() is called, such as when work is
+scheduled in the reactor via reactor.callInThread() before reactor.run().
