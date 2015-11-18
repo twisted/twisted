@@ -32,6 +32,9 @@ class ThreadPool:
 
     @ivar threads: List of workers currently running in this thread pool.
     @type threads: L{list}
+
+    @ivar _pool: A hook for testing.
+    @type _pool: callable compatible with L{_pool}
     """
     min = 5
     max = 20
@@ -42,6 +45,7 @@ class ThreadPool:
 
     threadFactory = threading.Thread
     currentThread = staticmethod(threading.currentThread)
+    _pool = staticmethod(_pool)
 
     def __init__(self, minthreads=5, maxthreads=20, name=None):
         """
@@ -73,7 +77,7 @@ class ThreadPool:
                 return 0
             return self.max
 
-        self._team = _pool(currentLimit, trackingThreadFactory)
+        self._team = self._pool(currentLimit, trackingThreadFactory)
 
 
     @property
@@ -147,8 +151,9 @@ class ThreadPool:
         self.started = True
         # Start some threads.
         self.adjustPoolsize()
-        if self._team.statistics().backloggedWorkCount:
-            self._team.grow(1)
+        backlog = self._team.statistics().backloggedWorkCount
+        if backlog:
+            self._team.grow(backlog)
 
 
     def startAWorker(self):
