@@ -326,14 +326,14 @@ class TestURL(TestCase):
         # From a url with no query clicking a url with a query, the query
         # should be handled properly.
         u = URL.fromText('http://www.foo.com/me/noquery')
-        self.failUnlessEqual('http://www.foo.com/me/17?spam=158',
-                             u.click('/me/17?spam=158').asText())
+        self.assertEqual('http://www.foo.com/me/17?spam=158',
+                         u.click('/me/17?spam=158').asText())
 
         # Check that everything from the path onward is removed when the click
         # link has no path.
         u = URL.fromText('http://localhost/foo?abc=def')
-        self.failUnlessEqual(u.click('http://www.python.org').asText(),
-                             'http://www.python.org')
+        self.assertEqual(u.click('http://www.python.org').asText(),
+                         'http://www.python.org')
 
 
     def test_clickRFC3986(self):
@@ -342,7 +342,7 @@ class TestURL(TestCase):
         """
         base = URL.fromText(relativeLinkBaseForRFC3986)
         for (ref, expected) in relativeLinkTestsForRFC3986:
-            self.failUnlessEqual(base.click(ref).asText(), expected)
+            self.assertEqual(base.click(ref).asText(), expected)
 
 
     def test_clickSchemeRelPath(self):
