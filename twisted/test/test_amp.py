@@ -9,7 +9,7 @@ Tests for L{twisted.protocols.amp}.
 import datetime
 import decimal
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.python import filepath
@@ -1682,8 +1682,8 @@ class AMPTests(unittest.TestCase):
         if spuriousTraffic:
             self.assertRaises(amp.ProtocolSwitched, c.sendHello, 'world')
 
-        def cbConnsLost(((serverSuccess, serverData),
-                         (clientSuccess, clientData))):
+        def cbConnsLost(data):
+            ((serverSuccess, serverData), (clientSuccess, clientData)) = data
             self.failUnless(serverSuccess)
             self.failUnless(clientSuccess)
             self.assertEqual(''.join(serverData), SWITCH_CLIENT_DATA)
@@ -2938,7 +2938,7 @@ class ListOfOptionalTests(unittest.TestCase):
         self.assertEqual(objects, {'omitted': None})
 
 
-
+@implementer(interfaces.IUNIXTransport)
 class UNIXStringTransport(object):
     """
     An in-memory implementation of L{interfaces.IUNIXTransport} which collects
@@ -2948,7 +2948,6 @@ class UNIXStringTransport(object):
         eg via C{write} or C{sendFileDescriptor}.  Elements are two-tuples of a
         string (identifying the destination of the data) and the data itself.
     """
-    implements(interfaces.IUNIXTransport)
 
     def __init__(self, descriptorFuzz):
         """

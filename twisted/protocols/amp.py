@@ -175,12 +175,11 @@ __metaclass__ = type
 
 import types, warnings
 
-from cStringIO import StringIO
 from struct import pack
 import decimal, datetime
 from itertools import count
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from twisted.python.reflect import accumulateClassDict
 from twisted.python.failure import Failure
@@ -191,6 +190,7 @@ from twisted.python._tzhelper import (
 from twisted.python import log, filepath
 
 from twisted.internet.interfaces import IFileDescriptorReceiver
+from twisted.python.compat import NativeStringIO as StringIO
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
@@ -703,6 +703,7 @@ class _SwitchBox(AmpBox):
 
 
 
+@implementer(IBoxReceiver)
 class BoxDispatcher:
     """
     A L{BoxDispatcher} dispatches '_ask', '_answer', and '_error' L{AmpBox}es,
@@ -728,11 +729,9 @@ class BoxDispatcher:
     @type boxSender: L{IBoxSender}
     """
 
-    implements(IBoxReceiver)
-
     _failAllReason = None
     _outstandingRequests = None
-    _counter = 0L
+    _counter = 0
     boxSender = None
 
     def __init__(self, locator):
@@ -1012,6 +1011,7 @@ class BoxDispatcher:
 
 
 
+@implementer(IResponderLocator)
 class CommandLocator:
     """
     A L{CommandLocator} is a collection of responders to AMP L{Command}s, with
@@ -1057,9 +1057,6 @@ class CommandLocator:
                     return self.lookupFunction(name)
                 subcls.locateResponder = locateResponder
             return subcls
-
-
-    implements(IResponderLocator)
 
 
     def _wrapWithSerialization(self, aCallable, command):
@@ -1137,13 +1134,12 @@ class CommandLocator:
 
 
 
+@implementer(IResponderLocator)
 class SimpleStringLocator(object):
     """
     Implement the L{locateResponder} method to do simple, string-based
     dispatch.
     """
-
-    implements(IResponderLocator)
 
     baseDispatchPrefix = 'amp_'
 
@@ -1200,6 +1196,7 @@ def _wireNameToPythonIdentifier(key):
 
 
 
+@implementer(IArgumentType)
 class Argument:
     """
     Base-class of all objects that take values from Amp packets and convert
@@ -1210,7 +1207,6 @@ class Argument:
     which will be used to define the behavior of L{IArgumentType.toBox} and
     L{IArgumentType.fromBox}, respectively.
     """
-    implements(IArgumentType)
 
     optional = False
 
@@ -2062,6 +2058,7 @@ class ProtocolSwitchCommand(Command):
 
 
 
+@implementer(IFileDescriptorReceiver)
 class _DescriptorExchanger(object):
     """
     L{_DescriptorExchanger} is a mixin for L{BinaryBoxProtocol} which adds
@@ -2084,7 +2081,6 @@ class _DescriptorExchanger(object):
         ordinals, starting from 0.  This is used to construct values for
         C{fileDescriptorReceived}.
     """
-    implements(IFileDescriptorReceiver)
 
     def __init__(self):
         self._descriptors = {}
@@ -2113,6 +2109,7 @@ class _DescriptorExchanger(object):
 
 
 
+@implementer(IBoxSender)
 class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
                         _DescriptorExchanger):
     """
@@ -2145,8 +2142,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
     @ivar boxReceiver: an L{IBoxReceiver} provider, whose L{ampBoxReceived}
     method will be invoked for each L{AmpBox} that is received.
     """
-
-    implements(IBoxSender)
 
     _justStartedTLS = False
     _startingTLSBuffer = None
