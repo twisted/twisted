@@ -94,7 +94,7 @@ blocking or delayed operations.
         returns a Deferred which will fire with that result. Don't try too
         hard to understand this.
         """
-        print('getDummyData caleed')
+        print('getDummyData called')
         deferred = defer.Deferred()
         # simulate a delayed result by asking the reactor to fire the
         # Deferred in 2 seconds time with the result inputData * 3
