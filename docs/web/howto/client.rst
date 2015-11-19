@@ -355,7 +355,7 @@ accepts the address from the URL being requested.  This allows it to
 return a context object which verifies that the server's certificate
 matches the URL being requested.
 
-Here's an example which shows how to use ``Agent`` to request an *HTTPS* URL with default certificate verification.
+Here's an example which shows how to use ``Agent`` to request an *HTTPS* URL with no certificate verification.
 
 .. code-block:: python
 
