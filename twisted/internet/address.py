@@ -63,14 +63,6 @@ class IPv4Address(_IPAddress):
     @type host: C{str}
     """
 
-    def __init__(self, type, host, port, _bwHack=None):
-        _IPAddress.__init__(self, type, host, port)
-        if _bwHack is not None:
-            warnings.warn("twisted.internet.address.IPv4Address._bwHack "
-                          "is deprecated since Twisted 11.0",
-                          DeprecationWarning, stacklevel=2)
-
-
 
 class IPv6Address(_IPAddress):
     """
@@ -130,11 +122,8 @@ class UNIXAddress(FancyEqMixin, object):
 
     compareAttributes = ('name', )
 
-    def __init__(self, name, _bwHack = None):
+    def __init__(self, name):
         self.name = name
-        if _bwHack is not None:
-            warnings.warn("twisted.internet.address.UNIXAddress._bwHack is deprecated since Twisted 11.0",
-                    DeprecationWarning, stacklevel=2)
 
 
     @property
