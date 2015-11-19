@@ -267,6 +267,7 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
     test_hashOfLinkedFiles.skip = symlinkSkip
 
 
+
 class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
                             AddressTestCaseMixin):
     """
@@ -318,17 +319,3 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
         addr = self.buildAddress()
         d = {addr: True}
         self.assertTrue(d[self.buildAddress()])
-
-
-    def test_bwHackDeprecation(self):
-        """
-        If a value is passed for the C{_bwHack} parameter to L{UNIXAddress},
-        a deprecation warning is emitted.
-        """
-        # Construct this for warning side-effects, disregard the actual object.
-        UNIXAddress(None, _bwHack='UNIX')
-
-        message = (
-            "twisted.internet.address.UNIXAddress._bwHack is deprecated "
-            "since Twisted 11.0")
-        return self.assertDeprecations(self.test_bwHackDeprecation, message)
