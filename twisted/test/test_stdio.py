@@ -295,7 +295,9 @@ class StandardInputOutputTests(unittest.TestCase):
 
         def processEnded(reason):
             self.assertEqual(p.data[1], b''.join(written))
-            self.assertFalse(toWrite, "Connection lost with %d writes left to go." % (len(toWrite),))
+            self.assertFalse(
+                toWrite,
+                "Connection lost with %d writes left to go." % (len(toWrite),))
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 

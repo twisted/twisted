@@ -1309,13 +1309,14 @@ class FTPFileListingTests(unittest.TestCase):
         # This example line taken from the docstring for FTPFileListProtocol
         line = '-rw-r--r--   1 root     other        531 Jan 29 03:26 README'
         def check(((file,), other)):
-            self.assertFalse(other, 'unexpect unparsable lines: %s' % repr(other))
+            self.assertFalse(other,
+                             'unexpect unparsable lines: %s' % (repr(other),))
             self.assertTrue(file['filetype'] == '-', 'misparsed fileitem')
             self.assertTrue(file['perms'] == 'rw-r--r--', 'misparsed perms')
             self.assertTrue(file['owner'] == 'root', 'misparsed fileitem')
             self.assertTrue(file['group'] == 'other', 'misparsed fileitem')
             self.assertTrue(file['size'] == 531, 'misparsed fileitem')
-            self.assertTrue(file['date'] == 'Jan 29 03:26', 'misparsed fileitem')
+            self.assertTrue(file['date'] == 'Jan 29 03:26','misparsed fileitem')
             self.assertTrue(file['filename'] == 'README', 'misparsed fileitem')
             self.assertTrue(file['nlinks'] == 1, 'misparsed nlinks')
             self.assertFalse(file['linktarget'], 'misparsed linktarget')

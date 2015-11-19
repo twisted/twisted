@@ -895,7 +895,8 @@ class DelayedTests(unittest.TestCase):
                 missing.append(dc)
         if missing:
             self.finished = 1
-        self.assertFalse(missing, "Should have been missing no calls, instead was missing " + repr(missing))
+        self.assertFalse(missing, "Should have been missing no calls, instead "
+                         + "was missing " + repr(missing))
 
     def callback(self, tag):
         del self.timers[tag]
