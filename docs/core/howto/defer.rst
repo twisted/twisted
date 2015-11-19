@@ -133,10 +133,6 @@ pass the Deferred onwards, where the callback will be used by twisted to
 return the result to the HTTP client. The callback chain will be bypassed in
 case of errors or exceptions.
 
-
-
-
-
 .. code-block:: python
 
     
@@ -147,7 +143,7 @@ case of errors or exceptions.
             """
             The Deferred mechanism provides a mechanism to signal error
             conditions.  In this case, odd numbers are bad.
-    
+
             This function demonstrates a more complex way of starting
             the callback chain by checking for expected results and
             choosing whether to fire the callback or errback chain
@@ -155,30 +151,30 @@ case of errors or exceptions.
             if self.d is None:
                 print("Nowhere to put results")
                 return
-    
+
             d = self.d
             self.d = None
             if x % 2 == 0:
                 d.callback(x*3)
             else:
                 d.errback(ValueError("You used an odd number!"))
-    
+
         def _toHTML(self, r):
             """
             This function converts r to HTML.
-    
+
             It is added to the callback chain by getDummyData in
             order to demonstrate how a callback passes its own result
             to the next callback
             """
             return "Result: %s" % r
-    
+
         def getDummyData(self, x):
             """
             The Deferred mechanism allows for chained callbacks.
             In this example, the output of gotResults is first
             passed through _toHTML on its way to printData.
-    
+
             Again this function is a dummy, simulating a delayed result
             using callLater, rather than using a real asynchronous
             setup.
@@ -189,32 +185,28 @@ case of errors or exceptions.
             reactor.callLater(2, self.gotResults, x)
             self.d.addCallback(self._toHTML)
             return self.d
-    
-    def printData(d):
-        print(d)
-    
-    def printError(failure):
+
+    def cbPrintData(result):
+        print(result)
+
+    def ebPrintError(failure):
         import sys
         sys.stderr.write(str(failure))
-    
+
     # this series of callbacks and errbacks will print an error message
     g = Getter()
     d = g.getDummyData(3)
-    d.addCallback(printData)
-    d.addErrback(printError)
-    
+    d.addCallback(cbPrintData)
+    d.addErrback(ebPrintError)
+
     # this series of callbacks and errbacks will print "Result: 12"
     g = Getter()
     d = g.getDummyData(4)
-    d.addCallback(printData)
-    d.addErrback(printError)
-    
+    d.addCallback(cbPrintData)
+    d.addErrback(ebPrintError)
+
     reactor.callLater(4, reactor.stop)
     reactor.run()
-
-
-
-
 
 .. note::
    Pay particular attention to the handling of
@@ -229,41 +221,19 @@ case of errors or exceptions.
      ``Getter.getDummyData``  (which sets a new value for the
      ``d``  attribute) without causing problems.  Third, it makes the
      Python garbage collector's job easier by eliminating a reference cycle.
-     
-
-
-
-
-
 
 
 Visual Explanation
 ~~~~~~~~~~~~~~~~~~
 
-
-
-
-
 .. image:: ../img/deferred-attach.png
-
-
-
-
-
 
 #. Requesting method (data sink) requests data, gets
    Deferred object.
 #. Requesting method attaches callbacks to Deferred
    object.
 
-
-
-
 .. image:: ../img/deferred-process.png 
-
-
-
-
 
 #. When the result is ready, give it to the Deferred
    object. ``.callback(result)`` if the operation succeeded,
@@ -473,29 +443,15 @@ when that data arrives. However, a function that wants to check if a user is
 authenticated will then need to accept both immediate results *and* 
 Deferreds.
 
-
-
-
-
-In this example, the library function ``authenticateUser`` uses the
-application function ``isValidUser`` to authenticate a user:
-
-
-
-
+In this example, the library function ``authenticateUser`` uses the application function ``isValidUser`` to authenticate a user:
 
 .. code-block:: python
 
-    
     def authenticateUser(isValidUser, user):
         if isValidUser(user):
             print("User is authenticated")
         else:
             print("User is not authenticated")
-
-
-
-
 
 However, it assumes that ``isValidUser`` returns immediately,
 whereas ``isValidUser`` may actually authenticate the user
@@ -558,13 +514,8 @@ use :api:`twisted.internet.defer.maybeDeferred <maybeDeferred>` to
 call ``isValidUser`` , ensuring that the result of ``isValidUser`` is a Deferred,
 even if ``isValidUser`` is a synchronous function:
 
-
-
-
-
 .. code-block:: python
 
-    
     from twisted.internet import defer
     
     def printResult(result):
@@ -572,26 +523,14 @@ even if ``isValidUser`` is a synchronous function:
             print("User is authenticated")
         else:
             print("User is not authenticated")
-    
+
     def authenticateUser(isValidUser, user):
         d = defer.maybeDeferred(isValidUser, user)
         d.addCallback(printResult)
 
+Now ``isValidUser`` could be either ``synchronousIsValidUser`` or ``asynchronousIsValidUser`` .
 
-
-
-
-Now ``isValidUser`` could be either ``synchronousIsValidUser`` or  ``asynchronousIsValidUser`` .
-
-
-
-
-It is also possible to modify ``synchronousIsValidUser`` to return
-a Deferred, see :doc:`Generating Deferreds <gendefer>` for more
-information.
-
-
-
+It is also possible to modify ``synchronousIsValidUser`` to return a Deferred, see :doc:`Generating Deferreds <gendefer>` for more information.
 
 
 Cancellation
@@ -861,13 +800,8 @@ You can now treat the DeferredList like an ordinary Deferred; you can call  ``ad
 when all the deferreds have completed.  The callback will be called with a list
 of the results of the Deferreds it contains, like so:
 
-
-
-
-
 .. code-block:: python
 
-    
     # A callback that unpacks and prints the results of a DeferredList
     def printResult(result):
         for (success, value) in result:
@@ -875,7 +809,7 @@ of the results of the Deferreds it contains, like so:
                 print('Success:', value)
             else:
                 print('Failure:', value.getErrorMessage())
-    
+
     # Create three deferreds.
     deferred1 = defer.Deferred()
     deferred2 = defer.Deferred()
@@ -897,9 +831,6 @@ of the results of the Deferreds it contains, like so:
     #    Failure: bang!
     #    Success: three
     # (note that defer.SUCCESS == True, and defer.FAILURE == False)
-
-
-
 
 A standard DeferredList will never call errback, but failures in Deferreds
 passed to a DeferredList will still errback unless ``consumeErrors`` 
@@ -930,22 +861,15 @@ flags which modify the behavior of DeferredList.
    Deferred to the DeferredList, the value returned by that callback will not
    be given to the DeferredList's callback.  To avoid confusion, we recommend not
    adding callbacks to a Deferred once it has been used in a DeferredList.
-   
-   
-
-
-
-
 
 .. code-block:: python
 
-    
     def printResult(result):
         print(result)
 
     def addTen(result):
         return result + " ten"
-    
+
     # Deferred gets callback before DeferredList is created
     deferred1 = defer.Deferred()
     deferred2 = defer.Deferred()
@@ -956,7 +880,7 @@ flags which modify the behavior of DeferredList.
     deferred2.callback("two")
     # At this point, dl will fire its callback, printing:
     #     [(1, 'one ten'), (1, 'two')]
-    
+
     # Deferred gets callback after DeferredList is created
     deferred1 = defer.Deferred()
     deferred2 = defer.Deferred()
@@ -967,9 +891,6 @@ flags which modify the behavior of DeferredList.
     deferred2.callback("two")
     # At this point, dl will fire its callback, printing:
     #     [(1, 'one), (1, 'two')]
-
-
-
 
 
 Other behaviours
@@ -1017,27 +938,22 @@ operations, finishing successfully if all of the operations were successful, or
 failing if any one of the operations fails.  In this case, :api:`twisted.internet.defer.gatherResults <twisted.internet.defer.gatherResults>` is a useful
 shortcut:
 
-
-
-
-
 .. code-block:: python
 
-    
     from twisted.internet import defer
     d1 = defer.Deferred()
     d2 = defer.Deferred()
     d = defer.gatherResults([d1, d2], consumeErrors=True)
-    def printResult(result):
+
+    def cbPrintResult(result):
         print(result)
-    d.addCallback(printResult)
+
+    d.addCallback(cbPrintResult)
+
     d1.callback("one")
     # nothing is printed yet; d is still awaiting completion of d2
     d2.callback("two")
     # printResult prints ["one", "two"]
-
-
-
 
 The ``consumeErrors`` argument has the same meaning as it does
 for :ref:`NEEDS A TITLE <core-howto-defer-deferredlist>` : if true, it causes ``gatherResults`` to consume any errors in the passed-in Deferreds.
