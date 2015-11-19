@@ -355,12 +355,12 @@ accepts the address from the URL being requested.  This allows it to
 return a context object which verifies that the server's certificate
 matches the URL being requested.
 
-Here's an example which shows how to use ``Agent`` to request an *HTTPS* URL with no certificate verification.
+Here's an example which shows how to use ``Agent`` to request an *HTTPS* URL with certificate verification.
 
 .. code-block:: python
 
     from twisted.python.log import err
-    from twisted.web.client import Agent
+    from twisted.web.client import Agent, readBody
     from twisted.internet import reactor
     from twisted.internet.ssl import ClientContextFactory
 
@@ -370,7 +370,15 @@ Here's an example which shows how to use ``Agent`` to request an *HTTPS* URL wit
 
     def display(response):
         print "Received response"
-        print response
+        print response.code
+        print response.headers
+        d = readBody(response)
+        d.addCallback(cbBody)
+        return d
+
+    def cbBody(body):
+        print 'Response body:'
+        print body
 
     def main():
         contextFactory = WebClientContextFactory()
