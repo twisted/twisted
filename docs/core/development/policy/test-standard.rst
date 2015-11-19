@@ -580,8 +580,8 @@ Links
 
 
 
-- A chapter on `Unit Testing <http://diveintopython.org/unit_testing/index.html>`_ 
-  in Mark Pilgrim's `Dive Into      Python <http://diveintopython.org>`_ .
+- A chapter on `Unit Testing <http://www.diveintopython3.net/unit-testing.html>`_ 
+  in Mark Pilgrim's `Dive Into      Python <http://www.diveintopython3.net/>`_ .
 - `unittest <http://docs.python.org/library/unittest.html>`_ module documentation, in the `Python Library      Reference <http://docs.python.org/library>`_ .
 - `UnitTest <http://c2.com/cgi/wiki?UnitTest>`__ on
   the `PortlandPatternRepository      Wiki <http://c2.com/cgi/wiki>`_ , where all the cool `ExtremeProgramming <http://c2.com/cgi/wiki?ExtremeProgramming>`_ kids hang out.
