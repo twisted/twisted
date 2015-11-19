@@ -704,6 +704,19 @@ class ParsingTests(unittest.TestCase):
         return channel
 
 
+    def test_invalidNonAsciiMethod(self):
+        """
+        When client sends invalid HTTP method containing
+        non-ascii characters HTTP 400 'Bad Request' status will be returned.
+        """
+        badRequestLine = b"GE\xc2\xa9 / HTTP/1.1\r\n\r\n"
+        channel = self.runRequest(badRequestLine, http.Request, 0)
+        self.assertEqual(
+            channel.transport.value(),
+            b"HTTP/1.1 400 Bad Request\r\n\r\n")
+        self.assertTrue(channel.transport.disconnecting)
+
+
     def test_basicAuth(self):
         """
         L{HTTPChannel} provides username and password information supplied in
