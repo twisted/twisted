@@ -790,7 +790,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         self.assertEqual(pd.__get__(fakeProxy), testObject.hello)
         fakeClassMethod = pd.__get__(None)
         fakeClassMethod(fakeProxy)
-        self.failUnless(testObject.called)
+        self.assertTrue(testObject.called)
 
 
     def test_proxyInheritance(self):
@@ -830,8 +830,8 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         proxy = proxyClass(booable)
         proxy.yay()
         proxy.boo()
-        self.failUnless(booable.yayed)
-        self.failUnless(booable.booed)
+        self.assertTrue(booable.yayed)
+        self.assertTrue(booable.booed)
 
 
     def test_attributeCustomization(self):

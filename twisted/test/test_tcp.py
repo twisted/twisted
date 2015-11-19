@@ -180,7 +180,7 @@ class ListeningTests(unittest.TestCase):
         f = MyServerFactory()
         p1 = reactor.listenTCP(0, f, interface="127.0.0.1")
         self.addCleanup(p1.stopListening)
-        self.failUnless(interfaces.IListeningPort.providedBy(p1))
+        self.assertTrue(interfaces.IListeningPort.providedBy(p1))
 
 
     def testStopListening(self):
@@ -214,9 +214,9 @@ class ListeningTests(unittest.TestCase):
         f = MyServerFactory()
         p = reactor.listenTCP(0, f)
         portNo = str(p.getHost().port)
-        self.failIf(repr(p).find(portNo) == -1)
+        self.assertFalse(repr(p).find(portNo) == -1)
         def stoppedListening(ign):
-            self.failIf(repr(p).find(portNo) != -1)
+            self.assertFalse(repr(p).find(portNo) != -1)
         d = defer.maybeDeferred(p.stopListening)
         return d.addCallback(stoppedListening)
 
@@ -899,13 +899,13 @@ class WriteDataTests(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", n, wrappedClientF)
 
         def check(ignored):
-            self.failUnless(f.done, "writer didn't finish, it probably died")
-            self.failUnless(f.problem == 0, "writer indicated an error")
-            self.failUnless(clientF.done,
+            self.assertTrue(f.done, "writer didn't finish, it probably died")
+            self.assertTrue(f.problem == 0, "writer indicated an error")
+            self.assertTrue(clientF.done,
                             "client didn't see connection dropped")
             expected = b"".join([b"Hello Cleveland!\n",
                                 b"Goodbye", b" cruel", b" world", b"\n"])
-            self.failUnless(clientF.data == expected,
+            self.assertTrue(clientF.data == expected,
                             "client didn't receive all the data it expected")
         d = defer.gatherResults([wrappedF.onDisconnect,
                                  wrappedClientF.onDisconnect])
@@ -1430,11 +1430,11 @@ class LargeBufferTests(unittest.TestCase):
 
         d = defer.gatherResults([wrappedF.deferred, wrappedClientF.deferred])
         def check(ignored):
-            self.failUnless(f.done, "writer didn't finish, it probably died")
-            self.failUnless(clientF.len == self.datalen,
+            self.assertTrue(f.done, "writer didn't finish, it probably died")
+            self.assertTrue(clientF.len == self.datalen,
                             "client didn't receive all the data it expected "
                             "(%d != %d)" % (clientF.len, self.datalen))
-            self.failUnless(clientF.done,
+            self.assertTrue(clientF.done,
                             "client didn't see connection dropped")
         return d.addCallback(check)
 

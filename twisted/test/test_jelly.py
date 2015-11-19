@@ -365,12 +365,12 @@ class JellyTests(unittest.TestCase):
         """
         Simplest test case.
         """
-        self.failUnless(SimpleJellyTest('a', 'b').isTheSameAs(
+        self.assertTrue(SimpleJellyTest('a', 'b').isTheSameAs(
                         SimpleJellyTest('a', 'b')))
         a = SimpleJellyTest(1, 2)
         cereal = jelly.jelly(a)
         b = jelly.unjelly(cereal)
-        self.failUnless(a.isTheSameAs(b))
+        self.assertTrue(a.isTheSameAs(b))
 
 
     def test_identity(self):
@@ -529,7 +529,7 @@ class JellyTests(unittest.TestCase):
         x = jelly.unjelly(jel, persistentLoad = persistentLoad)
 
         self.assertIdentical(x.b, x.c.b)
-        self.failUnless(perst[0], "persistentStore was not called.")
+        self.assertTrue(perst[0], "persistentStore was not called.")
         self.assertIdentical(x.b, a.b, "Persistent storage identity failure.")
 
 

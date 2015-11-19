@@ -129,7 +129,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
 
         def connected(transport):
             host = getattr(transport, get)()
-            self.failUnless(IAddress.providedBy(host))
+            self.assertTrue(IAddress.providedBy(host))
 
         return d.addCallback(connected)
 

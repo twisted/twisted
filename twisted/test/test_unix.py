@@ -124,7 +124,7 @@ class UnixSocketTests(unittest.TestCase):
         d.addCallback(_portStuff)
 
         def _check(ignored):
-            self.failIf(lockfile.isLocked(filename + ".lock"), 'locked')
+            self.assertFalse(lockfile.isLocked(filename + ".lock"), 'locked')
         d.addCallback(_check)
         return d
 

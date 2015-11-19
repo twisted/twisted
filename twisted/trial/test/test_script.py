@@ -315,11 +315,11 @@ class TestModuleTests(unittest.SynchronousTestCase):
 
     def test_looksLikeTestModule(self):
         for filename in ['test_script.py', 'twisted/trial/test/test_script.py']:
-            self.failUnless(trial.isTestFile(filename),
+            self.assertTrue(trial.isTestFile(filename),
                             "%r should be a test file" % (filename,))
         for filename in ['twisted/trial/test/moduletest.py',
                          sibpath('scripttest.py'), sibpath('test_foo.bat')]:
-            self.failIf(trial.isTestFile(filename),
+            self.assertFalse(trial.isTestFile(filename),
                         "%r should *not* be a test file" % (filename,))
 
 

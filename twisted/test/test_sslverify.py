@@ -1125,8 +1125,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
 
         def afterLost(result):
             ((cSuccess, cResult), (sSuccess, sResult)) = result
-            self.failIf(cSuccess)
-            self.failIf(sSuccess)
+            self.assertFalse(cSuccess)
+            self.assertFalse(sSuccess)
             # Win32 fails to report the SSL Error, and report a connection lost
             # instead: there is a race condition so that's not totally
             # surprising (see ticket #2877 in the tracker)
@@ -1154,8 +1154,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
                                consumeErrors=True)
         def afterLost(result):
             ((cSuccess, cResult), (sSuccess, sResult)) = result
-            self.failIf(cSuccess)
-            self.failIf(sSuccess)
+            self.assertFalse(cSuccess)
+            self.assertFalse(sSuccess)
 
         return d.addCallback(afterLost)
 
@@ -2097,7 +2097,7 @@ class ConstructorsTests(unittest.TestCase):
         x = self.assertRaises(CertificateError,
                               sslverify.Certificate.peerFromTransport,
                               _NotSSLTransport())
-        self.failUnless(str(x).startswith("non-TLS"))
+        self.assertTrue(str(x).startswith("non-TLS"))
 
 
     def test_peerFromBlankSSLTransport(self):
@@ -2108,7 +2108,7 @@ class ConstructorsTests(unittest.TestCase):
         x = self.assertRaises(CertificateError,
                               sslverify.Certificate.peerFromTransport,
                               _MaybeSSLTransport())
-        self.failUnless(str(x).startswith("TLS"))
+        self.assertTrue(str(x).startswith("TLS"))
 
 
     def test_hostFromNonSSLTransport(self):
@@ -2119,7 +2119,7 @@ class ConstructorsTests(unittest.TestCase):
         x = self.assertRaises(CertificateError,
                               sslverify.Certificate.hostFromTransport,
                               _NotSSLTransport())
-        self.failUnless(str(x).startswith("non-TLS"))
+        self.assertTrue(str(x).startswith("non-TLS"))
 
 
     def test_hostFromBlankSSLTransport(self):
@@ -2130,7 +2130,7 @@ class ConstructorsTests(unittest.TestCase):
         x = self.assertRaises(CertificateError,
                               sslverify.Certificate.hostFromTransport,
                               _MaybeSSLTransport())
-        self.failUnless(str(x).startswith("TLS"))
+        self.assertTrue(str(x).startswith("TLS"))
 
 
     def test_hostFromSSLTransport(self):

@@ -47,6 +47,6 @@ class FileSenderTests(unittest.TestCase):
         self.assertEqual(consumer.producer, None)
 
         # Which means the Deferred from FileSender should have been called
-        self.failUnless(d.called, 
+        self.assertTrue(d.called, 
                         'producer unregistered with deferred being called')
 

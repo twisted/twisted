@@ -238,7 +238,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         aFailure = result[0]
 
         # the type of the failure is a FirstError
-        self.failUnless(issubclass(aFailure.type, defer.FirstError),
+        self.assertTrue(issubclass(aFailure.type, defer.FirstError),
             'issubclass(aFailure.type, defer.FirstError) failed: '
             "failure's type is %r" % (aFailure.type,)
         )
@@ -1543,7 +1543,7 @@ class AlreadyCalledTests(unittest.SynchronousTestCase):
             if (line.startswith(' %s:' % linetype) and
                 line.endswith(' %s' % func)):
                 count += 1
-        self.failUnless(count == expected)
+        self.assertTrue(count == expected)
 
     def _check(self, e, caller, invoker1, invoker2):
         # make sure the debugging information is vaguely correct
@@ -1611,7 +1611,7 @@ class AlreadyCalledTests(unittest.SynchronousTestCase):
         try:
             self._call_2(d)
         except defer.AlreadyCalledError as e:
-            self.failIf(e.args)
+            self.assertFalse(e.args)
         else:
             self.fail("second callback failed to raise AlreadyCalledError")
 
@@ -2070,7 +2070,7 @@ class DeferredListEmptyTests(unittest.SynchronousTestCase):
         self.assertEqual([], res)
 
     def tearDown(self):
-        self.failUnless(self.callbackRan, "Callback was never run.")
+        self.assertTrue(self.callbackRan, "Callback was never run.")
 
 
 
@@ -2084,19 +2084,19 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def testLock(self):
         lock = defer.DeferredLock()
         lock.acquire().addCallback(self._incr)
-        self.failUnless(lock.locked)
+        self.assertTrue(lock.locked)
         self.assertEqual(self.counter, 1)
 
         lock.acquire().addCallback(self._incr)
-        self.failUnless(lock.locked)
+        self.assertTrue(lock.locked)
         self.assertEqual(self.counter, 1)
 
         lock.release()
-        self.failUnless(lock.locked)
+        self.assertTrue(lock.locked)
         self.assertEqual(self.counter, 2)
 
         lock.release()
-        self.failIf(lock.locked)
+        self.assertFalse(lock.locked)
         self.assertEqual(self.counter, 2)
 
         self.assertRaises(TypeError, lock.run)
@@ -2110,18 +2110,18 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             return controlDeferred
 
         resultDeferred = lock.run(helper, self=self, b=firstUnique)
-        self.failUnless(lock.locked)
+        self.assertTrue(lock.locked)
         self.assertEqual(self.b, firstUnique)
 
         resultDeferred.addCallback(lambda x: setattr(self, 'result', x))
 
         lock.acquire().addCallback(self._incr)
-        self.failUnless(lock.locked)
+        self.assertTrue(lock.locked)
         self.assertEqual(self.counter, 2)
 
         controlDeferred.callback(secondUnique)
         self.assertEqual(self.result, secondUnique)
-        self.failUnless(lock.locked)
+        self.assertTrue(lock.locked)
         self.assertEqual(self.counter, 3)
 
         d = lock.acquire().addBoth(lambda x: setattr(self, 'result', x))
@@ -2129,7 +2129,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.result.type, defer.CancelledError)
 
         lock.release()
-        self.failIf(lock.locked)
+        self.assertFalse(lock.locked)
 
 
     def test_cancelLockAfterAcquired(self):
@@ -2341,7 +2341,7 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         Test that the lock can not be acquired when the lock is held
         for longer than the timeout.
         """
-        self.failUnless(self.lock.lock())
+        self.assertTrue(self.lock.lock())
 
         d = self.lock.deferUntilLocked(timeout=5.5)
         self.assertFailure(d, defer.TimeoutError)
@@ -2360,7 +2360,7 @@ class DeferredFilesystemLockTests(unittest.TestCase):
             f.trap(defer.TimeoutError)
             self.fail("Should not have timed out")
 
-        self.failUnless(self.lock.lock())
+        self.assertTrue(self.lock.lock())
 
         self.clock.callLater(1, self.lock.unlock)
         d = self.lock.deferUntilLocked(timeout=10)

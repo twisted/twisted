@@ -58,7 +58,7 @@ class ResultsTestMixin(object):
         """
         test the setup
         """
-        self.failUnless(self.reporter.wasSuccessful())
+        self.assertTrue(self.reporter.wasSuccessful())
         self.assertEqual(self.reporter.errors, [])
         self.assertEqual(self.reporter.failures, [])
         self.assertEqual(self.reporter.skips, [])
@@ -606,13 +606,13 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         suite = self.loader.loadByName(
             "twisted.trial.test.erroneous.SocketOpenTest.test_socketsLeftOpen")
         suite.run(self.result)
-        self.failIf(self.result.wasSuccessful())
+        self.assertFalse(self.result.wasSuccessful())
         # socket cleanup happens at end of class's tests.
         # all the tests in the class are successful, even if the suite
         # fails
         self.assertEqual(self.result.successes, 1)
         failure = self.result.errors[0][1]
-        self.failUnless(failure.check(util.DirtyReactorAggregateError))
+        self.assertTrue(failure.check(util.DirtyReactorAggregateError))
 
 
     def test_leftoverPendingCalls(self):
@@ -622,10 +622,10 @@ class ReactorCleanupTests(unittest.SynchronousTestCase):
         """
         suite = erroneous.ReactorCleanupTests('test_leftoverPendingCalls')
         suite.run(self.result)
-        self.failIf(self.result.wasSuccessful())
+        self.assertFalse(self.result.wasSuccessful())
         failure = self.result.errors[0][1]
         self.assertEqual(self.result.successes, 0)
-        self.failUnless(failure.check(util.DirtyReactorAggregateError))
+        self.assertTrue(failure.check(util.DirtyReactorAggregateError))
 
 
 
@@ -899,7 +899,7 @@ class AddCleanupMixin(object):
         """
         self.test.addCleanup(self.test.fail, 'foo')
         self.test.run(self.result)
-        self.failIf(self.result.wasSuccessful())
+        self.assertFalse(self.result.wasSuccessful())
         self.assertEqual(1, len(self.result.errors))
         [(test, error)] = self.result.errors
         self.assertEqual(test, self.test)

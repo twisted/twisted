@@ -431,14 +431,14 @@ class LoaderTests(packages.SysPathManglingTest):
     def test_loadAnythingOnPackage(self):
         import goodpackage
         suite = self.loader.loadAnything(goodpackage)
-        self.failUnless(isinstance(suite, self.loader.suiteFactory))
+        self.assertTrue(isinstance(suite, self.loader.suiteFactory))
         self.assertEqual(7, suite.countTestCases())
 
 
     def test_loadAnythingOnPackageRecursive(self):
         import goodpackage
         suite = self.loader.loadAnything(goodpackage, recurse=True)
-        self.failUnless(isinstance(suite, self.loader.suiteFactory))
+        self.assertTrue(isinstance(suite, self.loader.suiteFactory))
         self.assertEqual(14, suite.countTestCases())
 
 

@@ -527,7 +527,7 @@ class TestURL(TestCase):
         """
         u1 = URL.fromText('http://localhost/a')
         u2 = URL.fromText('http://localhost/b')
-        self.failIf(u1 == u2, "%r != %r" % (u1, u2))
+        self.assertFalse(u1 == u2, "%r != %r" % (u1, u2))
         self.assertNotEqual(u1, u2)
 
 
@@ -536,8 +536,8 @@ class TestURL(TestCase):
         L{URL} is not equal (C{==}) to other types.
         """
         u = URL.fromText('http://localhost/')
-        self.failIf(u == 42, "URL must not equal a number.")
-        self.failIf(u == object(), "URL must not equal an object.")
+        self.assertFalse(u == 42, "URL must not equal a number.")
+        self.assertFalse(u == object(), "URL must not equal an object.")
         self.assertNotEqual(u, 42)
         self.assertNotEqual(u, object())
 
@@ -547,7 +547,7 @@ class TestURL(TestCase):
         Identical L{URL}s are not unequal (C{!=}) to each other.
         """
         u = URL.fromText('http://localhost/')
-        self.failIf(u != u, "%r == itself" % u)
+        self.assertFalse(u != u, "%r == itself" % u)
 
 
     def test_similarNotUnequal(self):
@@ -556,7 +556,7 @@ class TestURL(TestCase):
         """
         u1 = URL.fromText('http://localhost/')
         u2 = URL.fromText('http://localhost/')
-        self.failIf(u1 != u2, "%r == %r" % (u1, u2))
+        self.assertFalse(u1 != u2, "%r == %r" % (u1, u2))
 
 
     def test_differentUnequal(self):
@@ -565,7 +565,7 @@ class TestURL(TestCase):
         """
         u1 = URL.fromText('http://localhost/a')
         u2 = URL.fromText('http://localhost/b')
-        self.failUnless(u1 != u2, "%r == %r" % (u1, u2))
+        self.assertTrue(u1 != u2, "%r == %r" % (u1, u2))
 
 
     def test_otherTypesUnequal(self):
@@ -573,8 +573,8 @@ class TestURL(TestCase):
         L{URL} is unequal (C{!=}) to other types.
         """
         u = URL.fromText('http://localhost/')
-        self.failUnless(u != 42, "URL must differ from a number.")
-        self.failUnless(u != object(), "URL must be differ from an object.")
+        self.assertTrue(u != 42, "URL must differ from a number.")
+        self.assertTrue(u != object(), "URL must be differ from an object.")
 
 
     def test_asURI(self):

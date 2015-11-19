@@ -267,7 +267,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['--europian-swallow', 'inquisition'])
         self.assertEqual(o['europian-swallow'], True)
         self.assertEqual(o.subCommand, 'inquisition')
-        self.failUnless(isinstance(o.subOptions, InquisitionOptions))
+        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
         self.assertEqual(o.subOptions['expect'], False)
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
@@ -279,7 +279,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['inquisition', '--expect', '--torture-device=feather'])
         self.assertEqual(o['europian-swallow'], False)
         self.assertEqual(o.subCommand, 'inquisition')
-        self.failUnless(isinstance(o.subOptions, InquisitionOptions))
+        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
         self.assertEqual(o.subOptions['expect'], True)
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
@@ -291,7 +291,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['inquest', '--expect', '--torture-device=feather'])
         self.assertEqual(o['europian-swallow'], False)
         self.assertEqual(o.subCommand, 'inquisition')
-        self.failUnless(isinstance(o.subOptions, InquisitionOptions))
+        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
         self.assertEqual(o.subOptions['expect'], True)
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
@@ -303,7 +303,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['holyquest', '--for-grail'])
         self.assertEqual(o['europian-swallow'], False)
         self.assertEqual(o.subCommand, 'holyquest')
-        self.failUnless(isinstance(o.subOptions, HolyQuestOptions))
+        self.assertTrue(isinstance(o.subOptions, HolyQuestOptions))
         self.assertEqual(o.subOptions['horseback'], False)
         self.assertEqual(o.subOptions['for-grail'], True)
 
@@ -316,7 +316,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['--europian-swallow'])
         self.assertEqual(o['europian-swallow'], True)
         self.assertEqual(o.subCommand, None)
-        self.failIf(hasattr(o, 'subOptions'))
+        self.assertFalse(hasattr(o, 'subOptions'))
 
     def test_defaultSubcommand(self):
         """
@@ -327,7 +327,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['--europian-swallow'])
         self.assertEqual(o['europian-swallow'], True)
         self.assertEqual(o.subCommand, 'inquisition')
-        self.failUnless(isinstance(o.subOptions, InquisitionOptions))
+        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
         self.assertEqual(o.subOptions['expect'], False)
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
@@ -346,7 +346,7 @@ class SubCommandTests(unittest.TestCase):
                 ]
         o = Opt()
         o.parseOptions(['foo'])
-        self.failUnless(hasattr(o.subOptions, 'sawParent'))
+        self.assertTrue(hasattr(o.subOptions, 'sawParent'))
         self.assertEqual(o.subOptions.sawParent , o)
 
     def test_subCommandInTwoPlaces(self):
@@ -368,8 +368,8 @@ class SubCommandTests(unittest.TestCase):
         oFoo.parseOptions(['foo'])
         oBar=OptBar()
         oBar.parseOptions(['bar'])
-        self.failUnless(hasattr(oFoo.subOptions, 'parent'))
-        self.failUnless(hasattr(oBar.subOptions, 'parent'))
+        self.assertTrue(hasattr(oFoo.subOptions, 'parent'))
+        self.assertTrue(hasattr(oBar.subOptions, 'parent'))
         self.failUnlessIdentical(oFoo.subOptions.parent, oFoo)
         self.failUnlessIdentical(oBar.subOptions.parent, oBar)
 
@@ -405,8 +405,8 @@ class HelpStringTests(unittest.TestCase):
         # We test this by making sure aflag and it's help string are on the
         # same line.
         lines = [s for s in str(self.nice).splitlines() if s.find("aflag")>=0]
-        self.failUnless(len(lines) > 0)
-        self.failUnless(lines[0].find("flagallicious") >= 0)
+        self.assertTrue(len(lines) > 0)
+        self.assertTrue(lines[0].find("flagallicious") >= 0)
 
 
 class PortCoerceTests(unittest.TestCase):

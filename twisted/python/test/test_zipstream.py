@@ -319,7 +319,7 @@ class ZipstreamTests(unittest.TestCase):
         # this could theoretically be any number but statistically it
         # should always be in this range
         approx = lower < r < upper
-        self.failUnless(approx)
+        self.assertTrue(approx)
         for r in uziter:
             pass
         self.assertEqual(r, 0)

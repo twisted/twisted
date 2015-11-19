@@ -382,7 +382,7 @@ class AnotherPOP3Tests(unittest.TestCase):
         return d.addCallback(self._cbTestAuthListing, client)
 
     def _cbTestAuthListing(self, ignored, client):
-        self.failUnless(client.response[1].startswith('+OK'))
+        self.assertTrue(client.response[1].startswith('+OK'))
         self.assertEqual(sorted(client.response[2:5]),
                          ["AUTH1", "AUTHLAST", "SECONDAUTH"])
         self.assertEqual(client.response[5], ".")
@@ -555,7 +555,7 @@ class SASLTests(unittest.TestCase):
         p.connectionMade()
 
         p.lineReceived("CAPA")
-        self.failUnless(s.getvalue().find("SASL CRAM-MD5") >= 0)
+        self.assertTrue(s.getvalue().find("SASL CRAM-MD5") >= 0)
 
         p.lineReceived("AUTH CRAM-MD5")
         chal = s.getvalue().splitlines()[-1][2:]
@@ -563,8 +563,8 @@ class SASLTests(unittest.TestCase):
         response = hmac.HMAC('testpassword', chal).hexdigest()
 
         p.lineReceived(base64.encodestring('testuser ' + response).rstrip('\n'))
-        self.failUnless(p.mbox)
-        self.failUnless(s.getvalue().splitlines()[-1].find("+OK") >= 0)
+        self.assertTrue(p.mbox)
+        self.assertTrue(s.getvalue().splitlines()[-1].find("+OK") >= 0)
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
 
@@ -1068,4 +1068,4 @@ class POP3MiscTests(unittest.TestCase):
         """
         mod = twisted.mail.pop3
         for attr in mod.__all__:
-            self.failUnless(hasattr(mod, attr))
+            self.assertTrue(hasattr(mod, attr))

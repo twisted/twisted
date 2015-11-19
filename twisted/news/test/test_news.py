@@ -46,7 +46,7 @@ class NewsTests(unittest.TestCase):
         d = self.backend.articleRequest(None, None, MESSAGE_ID)
 
         def cbArticle(result):
-            self.failUnless(isinstance(result, tuple),
+            self.assertTrue(isinstance(result, tuple),
                             'callback result is wrong type: ' + str(result))
             self.assertEqual(len(result), 3,
                               'callback result list should have three entries: ' +

@@ -69,7 +69,7 @@ class PassportTests(unittest.TestCase):
                                     "ru=http://messenger.msn.com"
         }
         self._doLoginTest('HTTP/1.1 200 OK\r\n', headers)
-        self.failUnless(self.result[0] == (msn.LOGIN_SUCCESS, 'somekey'))
+        self.assertTrue(self.result[0] == (msn.LOGIN_SUCCESS, 'somekey'))
 
     def testPassportLoginFailure(self):
         headers = {
@@ -79,7 +79,7 @@ class PassportTests(unittest.TestCase):
                                  'cbtxt=the%20error%20message'
         }
         self._doLoginTest('HTTP/1.1 401 Unauthorized\r\n', headers)
-        self.failUnless(self.result[0] == (msn.LOGIN_FAILURE, 'the error message'))
+        self.assertTrue(self.result[0] == (msn.LOGIN_FAILURE, 'the error message'))
 
     def testPassportLoginRedirect(self):
         headers = {
@@ -88,7 +88,7 @@ class PassportTests(unittest.TestCase):
             'Location'            : 'https://newlogin.host.com/'
         }
         self._doLoginTest('HTTP/1.1 302 Found\r\n', headers)
-        self.failUnless(self.result[0] == (msn.LOGIN_REDIRECT, 'https://newlogin.host.com/', 'a'))
+        self.assertTrue(self.result[0] == (msn.LOGIN_REDIRECT, 'https://newlogin.host.com/', 'a'))
 
 
 if msn is not None:
@@ -274,7 +274,7 @@ class NotificationTests(unittest.TestCase):
 
     def testLogin(self):
         self.client.lineReceived('USR 1 OK foo@bar.com Test%20Screen%20Name 1 0')
-        self.failUnless((self.client.state == 'LOGIN'), msg='Failed to detect successful login')
+        self.assertTrue((self.client.state == 'LOGIN'), msg='Failed to detect successful login')
 
 
     def test_loginWithoutSSLFailure(self):
@@ -303,7 +303,7 @@ class NotificationTests(unittest.TestCase):
         m += 'preferredEmail: foo@bar.com\r\ncountry: AU\r\nPostalCode: 90210\r\nGender: M\r\nKid: 0\r\nAge:\r\nsid: 400\r\n'
         m += 'kv: 2\r\nMSPAuth: 2CACCBCCADMoV8ORoz64BVwmjtksIg!kmR!Rj5tBBqEaW9hc4YnPHSOQ$$\r\n\r\n'
         map(self.client.lineReceived, m.split('\r\n')[:-1])
-        self.failUnless((self.client.state == 'PROFILE'), msg='Failed to detect initial profile')
+        self.assertTrue((self.client.state == 'PROFILE'), msg='Failed to detect initial profile')
 
     def testStatus(self):
         t = [('ILN 1 AWY foo@bar.com Test%20Screen%20Name 0', 'INITSTATUS', 'Failed to detect initial status report'),
@@ -312,7 +312,7 @@ class NotificationTests(unittest.TestCase):
              ('CHG 1 HDN 0', 'MYSTATUS', 'Failed to detect my status changing')]
         for i in t:
             self.client.lineReceived(i[0])
-            self.failUnless((self.client.state == i[1]), msg=i[2])
+            self.assertTrue((self.client.state == i[1]), msg=i[2])
 
     def testListSync(self):
         # currently this test does not take into account the fact
@@ -331,11 +331,11 @@ class NotificationTests(unittest.TestCase):
         map(self.client.lineReceived, lines)
         contacts = self.client.factory.contacts
         contact = contacts.getContact('userHandle@email.com')
-        self.failUnless(contacts.version == 100, "Invalid contact list version")
-        self.failUnless(contact.screenName == 'Some Name', "Invalid screen-name for user")
-        self.failUnless(contacts.groups == {0 : 'Other Contacts'}, "Did not get proper group list")
-        self.failUnless(contact.groups == [0] and contact.lists == 11, "Invalid contact list/group info")
-        self.failUnless(self.client.state == 'GOTLIST', "Failed to call list sync handler")
+        self.assertTrue(contacts.version == 100, "Invalid contact list version")
+        self.assertTrue(contact.screenName == 'Some Name', "Invalid screen-name for user")
+        self.assertTrue(contacts.groups == {0 : 'Other Contacts'}, "Did not get proper group list")
+        self.assertTrue(contact.groups == [0] and contact.lists == 11, "Invalid contact list/group info")
+        self.assertTrue(self.client.state == 'GOTLIST', "Failed to call list sync handler")
 
     def testAsyncPhoneChange(self):
         c = msn.MSNContact(userHandle='userHandle@email.com')
@@ -344,9 +344,9 @@ class NotificationTests(unittest.TestCase):
         self.client.makeConnection(StringTransport())
         self.client.lineReceived("BPR 101 userHandle@email.com PHH 123%20456")
         c = self.client.factory.contacts.getContact('userHandle@email.com')
-        self.failUnless(self.client.state == 'GOTPHONE', "Did not fire phone change callback")
-        self.failUnless(c.homePhone == '123 456', "Did not update the contact's phone number")
-        self.failUnless(self.client.factory.contacts.version == 101, "Did not update list version")
+        self.assertTrue(self.client.state == 'GOTPHONE', "Did not fire phone change callback")
+        self.assertTrue(c.homePhone == '123 456', "Did not update the contact's phone number")
+        self.assertTrue(self.client.factory.contacts.version == 101, "Did not update list version")
 
     def testLateBPR(self):
         """
@@ -366,7 +366,7 @@ class NotificationTests(unittest.TestCase):
         ]
         map(self.client.lineReceived, lines)
         contact = self.client.factory.contacts.getContact('userHandle@email.com')
-        self.failUnless(contact.homePhone == '123 456', "Did not update contact's phone number")
+        self.assertTrue(contact.homePhone == '123 456', "Did not update contact's phone number")
 
     def testUserRemovedMe(self):
         self.client.factory.contacts = msn.MSNContactList()
@@ -374,16 +374,16 @@ class NotificationTests(unittest.TestCase):
         contact.addToList(msn.REVERSE_LIST)
         self.client.factory.contacts.addContact(contact)
         self.client.lineReceived("REM 0 RL 100 foo@foo.com")
-        self.failUnless(self.client.state == 'USERREMOVEDME', "Failed to remove user from reverse list")
+        self.assertTrue(self.client.state == 'USERREMOVEDME', "Failed to remove user from reverse list")
 
     def testUserAddedMe(self):
         self.client.factory.contacts = msn.MSNContactList()
         self.client.lineReceived("ADD 0 RL 100 foo@foo.com Screen%20Name")
-        self.failUnless(self.client.state == 'USERADDEDME', "Failed to add user to reverse lise")
+        self.assertTrue(self.client.state == 'USERADDEDME', "Failed to add user to reverse lise")
 
     def testAsyncSwitchboardInvitation(self):
         self.client.lineReceived("RNG 1234 192.168.1.1:1863 CKI 123.456 foo@foo.com Screen%20Name")
-        self.failUnless(self.client.state == "SBINVITED")
+        self.assertTrue(self.client.state == "SBINVITED")
 
     def testCommandFailed(self):
         """
@@ -418,7 +418,7 @@ class MessageHandlingTests(unittest.TestCase):
         m.setHeader('Content-Type', 'text/x-msmsgscontrol')
         m.setHeader('TypingUser', 'foo@bar')
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'TYPING'), msg='Failed to detect typing notification')
+        self.assertTrue((self.client.state == 'TYPING'), msg='Failed to detect typing notification')
 
     def testFileInvitation(self, lazyClient=False):
         m = msn.MSNMessage()
@@ -431,7 +431,7 @@ class MessageHandlingTests(unittest.TestCase):
         m.message += 'Application-File: foobar.ext\r\n'
         m.message += 'Application-FileSize: 31337\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'INVITATION'), msg='Failed to detect file transfer invitation')
+        self.assertTrue((self.client.state == 'INVITATION'), msg='Failed to detect file transfer invitation')
 
     def testFileInvitationMissingGUID(self):
         return self.testFileInvitation(True)
@@ -445,7 +445,7 @@ class MessageHandlingTests(unittest.TestCase):
         m.message += 'Invitation-Command: ACCEPT\r\n'
         m.message += 'Invitation-Cookie: 1234\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'RESPONSE'), msg='Failed to detect file transfer response')
+        self.assertTrue((self.client.state == 'RESPONSE'), msg='Failed to detect file transfer response')
 
     def testFileInfo(self):
         d = Deferred()
@@ -459,7 +459,7 @@ class MessageHandlingTests(unittest.TestCase):
         m.message += 'Port: 6891\r\n'
         m.message += 'AuthCookie: 4321\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'INFO'), msg='Failed to detect file transfer info')
+        self.assertTrue((self.client.state == 'INFO'), msg='Failed to detect file transfer info')
 
     def fileResponse(self, (accept, cookie, info)):
         if accept and cookie == 1234: self.client.state = 'RESPONSE'

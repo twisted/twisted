@@ -136,13 +136,13 @@ class AbstractFilePathTests(BytesTestCase):
         file, not as a symlink, and be listable.
         """
         sub1 = self.path.child(b'sub1')
-        self.failUnless(sub1.exists(),
+        self.assertTrue(sub1.exists(),
                         "This directory does exist.")
-        self.failUnless(sub1.isdir(),
+        self.assertTrue(sub1.isdir(),
                         "It's a directory.")
-        self.failUnless(not sub1.isfile(),
+        self.assertTrue(not sub1.isfile(),
                         "It's a directory.")
-        self.failUnless(not sub1.islink(),
+        self.assertTrue(not sub1.islink(),
                         "It's a directory.")
         self.assertEqual(sub1.listdir(),
                              [b'file2'])
@@ -153,7 +153,7 @@ class AbstractFilePathTests(BytesTestCase):
         Verify that a subdirectory that doesn't exist is reported as such.
         """
         sub2 = self.path.child(b'sub2')
-        self.failIf(sub2.exists(),
+        self.assertFalse(sub2.exists(),
                     "This directory does not exist.")
 
     def test_validFiles(self):
@@ -774,13 +774,13 @@ class FilePathTests(AbstractFilePathTests):
     def testMultiExt(self):
         f3 = self.path.child(b'sub3').child(b'file3')
         exts = b'.foo', b'.bar', b'ext1', b'ext2', b'ext3'
-        self.failIf(f3.siblingExtensionSearch(*exts))
+        self.assertFalse(f3.siblingExtensionSearch(*exts))
         f3e = f3.siblingExtension(b".foo")
         f3e.touch()
-        self.failIf(not f3.siblingExtensionSearch(*exts).exists())
-        self.failIf(not f3.siblingExtensionSearch(b'*').exists())
+        self.assertFalse(not f3.siblingExtensionSearch(*exts).exists())
+        self.assertFalse(not f3.siblingExtensionSearch(b'*').exists())
         f3e.remove()
-        self.failIf(f3.siblingExtensionSearch(*exts))
+        self.assertFalse(f3.siblingExtensionSearch(*exts))
 
     def testPreauthChild(self):
         fp = filepath.FilePath(b'.')
@@ -842,24 +842,24 @@ class FilePathTests(AbstractFilePathTests):
     def testComparison(self):
         self.assertEqual(filepath.FilePath(b'a'),
                           filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'z') >
+        self.assertTrue(filepath.FilePath(b'z') >
                         filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'z') >=
+        self.assertTrue(filepath.FilePath(b'z') >=
                         filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'a') >=
+        self.assertTrue(filepath.FilePath(b'a') >=
                         filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'a') <=
+        self.assertTrue(filepath.FilePath(b'a') <=
                         filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'a') <
+        self.assertTrue(filepath.FilePath(b'a') <
                         filepath.FilePath(b'z'))
-        self.failUnless(filepath.FilePath(b'a') <=
+        self.assertTrue(filepath.FilePath(b'a') <=
                         filepath.FilePath(b'z'))
-        self.failUnless(filepath.FilePath(b'a') !=
+        self.assertTrue(filepath.FilePath(b'a') !=
                         filepath.FilePath(b'z'))
-        self.failUnless(filepath.FilePath(b'z') !=
+        self.assertTrue(filepath.FilePath(b'z') !=
                         filepath.FilePath(b'a'))
 
-        self.failIf(filepath.FilePath(b'z') !=
+        self.assertFalse(filepath.FilePath(b'z') !=
                     filepath.FilePath(b'z'))
 
 
@@ -907,7 +907,7 @@ class FilePathTests(AbstractFilePathTests):
         recursively delete its contents.
         """
         self.path.remove()
-        self.failIf(self.path.exists())
+        self.assertFalse(self.path.exists())
 
 
     def test_removeWithSymlink(self):
@@ -1189,7 +1189,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         path = filepath.FilePath(self.mktemp())
         f = path.create()
-        self.failUnless("b" in f.mode)
+        self.assertTrue("b" in f.mode)
         f.write(b"\n")
         f.close()
         read = open(path.path, "rb").read()
