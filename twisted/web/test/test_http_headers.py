@@ -560,9 +560,6 @@ class HeaderDictTests(TestCase):
         self.assertEqual(headers.getRawHeaders(b"foo"), [b"panda"])
         self.assertEqual(headers.getRawHeaders(b"bar"), [b"marmot"])
 
-    if _PY3:
-        test_updateWithKeywords.skip = "Not yet supported on Python 3; see #6082."
-
 
     def test_setdefaultMissing(self):
         """
