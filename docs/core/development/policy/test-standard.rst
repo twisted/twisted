@@ -527,7 +527,7 @@ or
 This format is understood by emacs to mark "File Variables" . The
 intention is to accept ``test-case-name`` anywhere emacs would on
 the first or second line of the file (but not in the ``File Variables:`` block that emacs accepts at the end of the file). If you
-need to define other emacs file variables, you can either put them in the``File Variables:`` block or use a semicolon-separated list of
+need to define other emacs file variables, you can either put them in the ``File Variables:`` block or use a semicolon-separated list of
 variable definitions:
 
 

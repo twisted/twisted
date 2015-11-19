@@ -821,7 +821,7 @@ with the Deferred that is being cancelled):
 
 Now if someone calls ``cancel()`` on the ``Deferred`` 
 returned from ``HTTPClient.request()`` , the HTTP request will be
-cancelled (assuming it's not too late to do so). Care should be taken not to``callback()`` a Deferred that has already been cancelled.
+cancelled (assuming it's not too late to do so). Care should be taken not to ``callback()`` a Deferred that has already been cancelled.
 
 
 
