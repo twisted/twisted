@@ -92,24 +92,24 @@ blocking or delayed operations.
     
     from twisted.internet import reactor, defer
     
-    def getDummyData(x):
+    def getDummyData(inputData):
         """
         This function is a dummy which simulates a delayed result and
         returns a Deferred which will fire with that result. Don't try too
         hard to understand this.
         """
-        d = defer.Deferred()
+        r = defer.Deferred()
         # simulate a delayed result by asking the reactor to fire the
-        # Deferred in 2 seconds time with the result x * 3
-        reactor.callLater(2, d.callback, x * 3)
-        return d
+        # Deferred in 2 seconds time with the result inputData * 3
+        reactor.callLater(2, r.callback, inputData * 3)
+        return r
     
-    def printData(d):
+    def printData(result):
         """
         Data handling function to be added as a callback: handles the
         data by printing the result
         """
-        print d
+        print(result)
     
     d = getDummyData(3)
     d.addCallback(printData)
@@ -158,7 +158,7 @@ case of errors or exceptions.
             choosing whether to fire the callback or errback chain
             """
             if self.d is None:
-                print "Nowhere to put results"
+                print("Nowhere to put results")
                 return
     
             d = self.d
@@ -196,7 +196,7 @@ case of errors or exceptions.
             return self.d
     
     def printData(d):
-        print d
+        print(d)
     
     def printError(failure):
         import sys
@@ -494,9 +494,9 @@ application function ``isValidUser`` to authenticate a user:
     
     def authenticateUser(isValidUser, user):
         if isValidUser(user):
-            print "User is authenticated"
+            print("User is authenticated")
         else:
-            print "User is not authenticated"
+            print("User is not authenticated")
 
 
 
@@ -574,9 +574,9 @@ even if ``isValidUser`` is a synchronous function:
     
     def printResult(result):
         if result:
-            print "User is authenticated"
+            print("User is authenticated")
         else:
-            print "User is not authenticated"
+            print("User is not authenticated")
     
     def authenticateUser(isValidUser, user):
         d = defer.maybeDeferred(isValidUser, user)
@@ -679,7 +679,7 @@ You may notice that that set of consequences is very heavily qualified.
 Although cancellation indicates the calling API's *desire* for the
 underlying operation to be stopped, the underlying operation cannot necessarily
 react immediately.  Even in this very simple example, there is already one thing
-that might not be interruptable: platform-native name resolution blocks, and
+that might not be interruptible: platform-native name resolution blocks, and
 therefore needs to be executed in a thread; the connection operation can't be
 cancelled if it's stuck waiting for a name to be resolved in this manner.  So,
 the Deferred that you are cancelling may not callback or errback right away.
@@ -877,9 +877,9 @@ of the results of the Deferreds it contains, like so:
     def printResult(result):
         for (success, value) in result:
             if success:
-                print 'Success:', value
+                print('Success:', value)
             else:
-                print 'Failure:', value.getErrorMessage()
+                print('Failure:', value.getErrorMessage())
     
     # Create three deferreds.
     deferred1 = defer.Deferred()
@@ -946,7 +946,8 @@ flags which modify the behavior of DeferredList.
 
     
     def printResult(result):
-        print result
+        print(result)
+
     def addTen(result):
         return result + " ten"
     
@@ -1033,7 +1034,7 @@ shortcut:
     d2 = defer.Deferred()
     d = defer.gatherResults([d1, d2], consumeErrors=True)
     def printResult(result):
-        print result
+        print(result)
     d.addCallback(printResult)
     d1.callback("one")
     # nothing is printed yet; d is still awaiting completion of d2
