@@ -1702,11 +1702,18 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.requests.append(request)
 
             self.__first_line = 0
+
             parts = line.split()
             if len(parts) != 3:
                 _respondToBadRequestAndDisconnect(self.transport)
                 return
             command, request, version = parts
+            try:
+                command.decode("ascii")
+            except UnicodeDecodeError:
+                _respondToBadRequestAndDisconnect(self.transport)
+                return
+
             self._command = command
             self._path = request
             self._version = version
