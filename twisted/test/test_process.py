@@ -2111,7 +2111,7 @@ class MockProcessTests(unittest.TestCase):
         self.mockos.raiseKill = OSError(errno.EINVAL, "Invalid signal")
         err = self.assertRaises(OSError,
                                 proc.signalProcess, "KILL")
-        self.assertEquals(err.errno, errno.EINVAL)
+        self.assertEqual(err.errno, errno.EINVAL)
 
 
 

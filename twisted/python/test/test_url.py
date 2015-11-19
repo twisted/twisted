@@ -174,7 +174,7 @@ class TestURL(TestCase):
         a L{URL.fromText} invocation, so that it is C{eval}-able but still easy
         to read.
         """
-        self.assertEquals(
+        self.assertEqual(
             repr(URL(scheme=u'http', host=u'foo', path=[u'bar'],
                      query=[(u'baz', None), (u'k', u'v')],
                      fragment=u'frob')),
@@ -188,7 +188,7 @@ class TestURL(TestCase):
         URL.
         """
         urlpath = URL.fromText(theurl)
-        self.assertEquals(theurl, urlpath.asText())
+        self.assertEqual(theurl, urlpath.asText())
 
 
     def test_roundtrip(self):
@@ -213,7 +213,7 @@ class TestURL(TestCase):
             )
         for test in tests:
             result = URL.fromText(test).asText()
-            self.assertEquals(test, result)
+            self.assertEqual(test, result)
 
 
     def test_equality(self):
@@ -223,7 +223,7 @@ class TestURL(TestCase):
         strings.
         """
         urlpath = URL.fromText(theurl)
-        self.assertEquals(urlpath, URL.fromText(theurl))
+        self.assertEqual(urlpath, URL.fromText(theurl))
         self.assertNotEquals(
             urlpath,
             URL.fromText('ftp://www.anotherinvaliddomain.com/'
@@ -247,15 +247,15 @@ class TestURL(TestCase):
         or fragment.
         """
         urlpath = URL.fromText(theurl)
-        self.assertEquals("http://www.foo.com/a/nice/path/gong?zot=23&zut",
+        self.assertEqual("http://www.foo.com/a/nice/path/gong?zot=23&zut",
                           urlpath.child(u'gong').asText())
-        self.assertEquals("http://www.foo.com/a/nice/path/gong%2F?zot=23&zut",
+        self.assertEqual("http://www.foo.com/a/nice/path/gong%2F?zot=23&zut",
                           urlpath.child(u'gong/').asText())
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/gong%2Fdouble?zot=23&zut",
             urlpath.child(u'gong/double').asText()
         )
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/gong%2Fdouble%2F?zot=23&zut",
             urlpath.child(u'gong/double/').asText()
         )
@@ -277,8 +277,8 @@ class TestURL(TestCase):
         path segment.
         """
         childURL = URL(host=u"www.foo.com").child(u"c")
-        self.assertEquals(childURL.rooted, True)
-        self.assertEquals("http://www.foo.com/c", childURL.asText())
+        self.assertEqual(childURL.rooted, True)
+        self.assertEqual("http://www.foo.com/c", childURL.asText())
 
 
     def test_sibling(self):
@@ -287,14 +287,14 @@ class TestURL(TestCase):
         affect the query or fragment.
         """
         urlpath = URL.fromText(theurl)
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/sister?zot=23&zut",
             urlpath.sibling(u'sister').asText()
         )
         # Use an url without trailing '/' to check child removal.
         theurl2 = "http://www.foo.com/a/nice/path?zot=23&zut"
         urlpath = URL.fromText(theurl2)
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/sister?zot=23&zut",
             urlpath.sibling(u'sister').asText()
         )
@@ -307,16 +307,16 @@ class TestURL(TestCase):
         """
         urlpath = URL.fromText(theurl)
         # A null uri should be valid (return here).
-        self.assertEquals("http://www.foo.com/a/nice/path/?zot=23&zut",
+        self.assertEqual("http://www.foo.com/a/nice/path/?zot=23&zut",
                           urlpath.click("").asText())
         # A simple relative path remove the query.
-        self.assertEquals("http://www.foo.com/a/nice/path/click",
+        self.assertEqual("http://www.foo.com/a/nice/path/click",
                           urlpath.click("click").asText())
         # An absolute path replace path and query.
-        self.assertEquals("http://www.foo.com/click",
+        self.assertEqual("http://www.foo.com/click",
                           urlpath.click("/click").asText())
         # Replace just the query.
-        self.assertEquals("http://www.foo.com/a/nice/path/?burp",
+        self.assertEqual("http://www.foo.com/a/nice/path/?burp",
                           urlpath.click("?burp").asText())
         # One full url to another should not generate '//' between authority.
         # and path
@@ -397,7 +397,7 @@ class TestURL(TestCase):
         ]
         for start, click, expected in tests:
             actual = URL.fromText(start).click(click).asText()
-            self.assertEquals(
+            self.assertEqual(
                 actual,
                 expected,
                 "{start}.click({click}) => {actual} not {expected}".format(
@@ -413,30 +413,30 @@ class TestURL(TestCase):
         """
         L{URL.add} adds query parameters.
         """
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?foo=bar",
             URL.fromText("http://www.foo.com/a/nice/path/")
             .add(u"foo", u"bar").asText())
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/?foo=bar",
             URL(host=u"www.foo.com").add(u"foo", u"bar")
             .asText())
         urlpath = URL.fromText(theurl)
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp",
             urlpath.add(u"burp").asText())
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx",
             urlpath.add(u"burp", u"xxx").asText())
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zing",
             urlpath.add(u"burp", u"xxx").add(u"zing").asText())
         # Note the inversion!
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?zot=23&zut&zing&burp=xxx",
             urlpath.add(u"zing").add(u"burp", u"xxx").asText())
         # Note the two values for the same name.
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?zot=23&zut&burp=xxx&zot=32",
             urlpath.add(u"burp", u"xxx").add(u"zot", u'32')
             .asText())
@@ -447,17 +447,17 @@ class TestURL(TestCase):
         L{URL.set} replaces query parameters by name.
         """
         urlpath = URL.fromText(theurl)
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?zot=32&zut",
             urlpath.set(u"zot", u'32').asText())
         # Replace name without value with name/value and vice-versa.
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?zot&zut=itworked",
             urlpath.set(u"zot").set(u"zut", u"itworked").asText()
         )
         # Q: what happens when the query has two values and we replace?
         # A: we replace both values with a single one
-        self.assertEquals(
+        self.assertEqual(
             "http://www.foo.com/a/nice/path/?zot=32&zut",
             urlpath.add(u"zot", u"xxx").set(u"zot", u'32').asText()
         )

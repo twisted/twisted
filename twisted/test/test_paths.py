@@ -1378,9 +1378,9 @@ class FilePathTests(AbstractFilePathTests):
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo
         warningInfo = self.flushWarnings([self.test_deprecateStatinfoGetter])
-        self.assertEquals(len(warningInfo), 1)
-        self.assertEquals(warningInfo[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warningInfo[0]['message'],
             "twisted.python.filepath.FilePath.statinfo was deprecated in "
             "Twisted 15.0.0; please use other FilePath methods such as "
@@ -1394,9 +1394,9 @@ class FilePathTests(AbstractFilePathTests):
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo = None
         warningInfo = self.flushWarnings([self.test_deprecateStatinfoSetter])
-        self.assertEquals(len(warningInfo), 1)
-        self.assertEquals(warningInfo[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warningInfo[0]['message'],
             "twisted.python.filepath.FilePath.statinfo was deprecated in "
             "Twisted 15.0.0; please use other FilePath methods such as "
@@ -1410,7 +1410,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo = None
-        self.assertEquals(fp.statinfo, None)
+        self.assertEqual(fp.statinfo, None)
 
 
     def test_filePathNotDeprecated(self):
@@ -1420,7 +1420,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         filepath.FilePath(self.mktemp())
         warningInfo = self.flushWarnings([self.test_filePathNotDeprecated])
-        self.assertEquals(warningInfo, [])
+        self.assertEqual(warningInfo, [])
 
 
     def test_getPermissions_Windows(self):

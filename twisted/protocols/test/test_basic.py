@@ -886,7 +886,7 @@ class RecvdAttributeMixin(object):
         incompleteMessage = (struct.pack(r.structFormat, 5) + (b'b' * 4))
         # Receive a complete message, followed by an incomplete one
         r.dataReceived(completeMessage + incompleteMessage)
-        self.assertEquals(result, [incompleteMessage])
+        self.assertEqual(result, [incompleteMessage])
 
 
     def test_recvdChanged(self):
@@ -908,7 +908,7 @@ class RecvdAttributeMixin(object):
         messageA = self.makeMessage(r, payloadA)
         messageB = self.makeMessage(r, payloadB)
         r.dataReceived(messageA + messageB)
-        self.assertEquals(result, [payloadA, payloadC])
+        self.assertEqual(result, [payloadA, payloadC])
 
 
     def test_switching(self):

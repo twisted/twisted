@@ -2161,7 +2161,7 @@ class ClientMsgTests(unittest.TestCase):
         then sends the message to the server for delivery to that channel.
         """
         self.client.say("thechannel", "the message")
-        self.assertEquals(
+        self.assertEqual(
             self.client.lines, ["PRIVMSG #thechannel :the message"])
 
 

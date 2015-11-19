@@ -1000,7 +1000,7 @@ class OrderedConstantsTests(TestCase):
         L{twisted.python.constants._Constant.__lt__} returns C{NotImplemented}
         when comparing constants of different types.
         """
-        self.assertEquals(
+        self.assertEqual(
             NotImplemented,
             NamedLetters.alpha.__lt__(ValuedLetters.alpha)
         )
@@ -1011,7 +1011,7 @@ class OrderedConstantsTests(TestCase):
         L{twisted.python.constants._Constant.__le__} returns C{NotImplemented}
         when comparing constants of different types.
         """
-        self.assertEquals(
+        self.assertEqual(
             NotImplemented,
             NamedLetters.alpha.__le__(ValuedLetters.alpha)
         )
@@ -1022,7 +1022,7 @@ class OrderedConstantsTests(TestCase):
         L{twisted.python.constants._Constant.__gt__} returns C{NotImplemented}
         when comparing constants of different types.
         """
-        self.assertEquals(
+        self.assertEqual(
             NotImplemented,
             NamedLetters.alpha.__gt__(ValuedLetters.alpha)
         )
@@ -1033,7 +1033,7 @@ class OrderedConstantsTests(TestCase):
         L{twisted.python.constants._Constant.__ge__} returns C{NotImplemented}
         when comparing constants of different types.
         """
-        self.assertEquals(
+        self.assertEqual(
             NotImplemented,
             NamedLetters.alpha.__ge__(ValuedLetters.alpha)
         )
@@ -1044,7 +1044,7 @@ class OrderedConstantsTests(TestCase):
         L{twisted.python.constants._Constant.__lt__} returns C{NotImplemented}
         when comparing constants belonging to different containers.
         """
-        self.assertEquals(
+        self.assertEqual(
             NotImplemented,
             NamedLetters.alpha.__lt__(MoreNamedLetters.digamma)
         )
@@ -1055,7 +1055,7 @@ class OrderedConstantsTests(TestCase):
         L{twisted.python.constants._Constant.__le__} returns C{NotImplemented}
         when comparing constants belonging to different containers.
         """
-        self.assertEquals(
+        self.assertEqual(
             NotImplemented,
             NamedLetters.alpha.__le__(MoreNamedLetters.digamma)
         )
@@ -1066,7 +1066,7 @@ class OrderedConstantsTests(TestCase):
         L{twisted.python.constants._Constant.__gt__} returns C{NotImplemented}
         when comparing constants belonging to different containers.
         """
-        self.assertEquals(
+        self.assertEqual(
             NotImplemented,
             NamedLetters.alpha.__gt__(MoreNamedLetters.digamma)
         )
@@ -1077,7 +1077,7 @@ class OrderedConstantsTests(TestCase):
         L{twisted.python.constants._Constant.__ge__} returns C{NotImplemented}
         when comparing constants belonging to different containers.
         """
-        self.assertEquals(
+        self.assertEqual(
             NotImplemented,
             NamedLetters.alpha.__ge__(MoreNamedLetters.digamma)
         )

@@ -94,7 +94,7 @@ class UtilTests(unittest.TestCase):
         defer.logError(error)
         errors = self.flushLoggedErrors(RuntimeError)
 
-        self.assertEquals(errors, [error])
+        self.assertEqual(errors, [error])
 
 
     def test_logErrorLogsErrorNoRepr(self):

@@ -1116,7 +1116,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertEqual(len(self.protocol.requests), 1)
         req, res = self.protocol.requests.pop()
         self.assertIsInstance(req, Request)
-        self.assertEquals(req.absoluteURI, uri)
+        self.assertEqual(req.absoluteURI, uri)
 
 
     def test_requestMissingAbsoluteURI(self):
