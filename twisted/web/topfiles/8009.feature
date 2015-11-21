@@ -1,1 +1,1 @@
-twisted.web.twcgi is now Ported to Python 3 (but t.w.twcgi.CGIProcessProtocol won't work with twisted.web.distrib yet)
+twisted.web.twcgi is now Ported to Python 3, with the exception of twisted.web.twcgi.CGIProcessProtocol which doen't yet work with twisted.web.distrib.

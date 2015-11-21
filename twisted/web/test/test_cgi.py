@@ -100,9 +100,10 @@ class CGITests(unittest.TestCase):
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = open(cgiFilename, 'wt')
-        cgiFile.write(source)
-        cgiFile.close()
+
+        with open(cgiFilename, 'wt') as fh:
+            fh.write(source)
+
         return cgiFilename
 
 
@@ -110,8 +111,8 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(DUMMY_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage(("http://localhost:%d/cgi" % portnum)
-                           .encode("ascii"))
+        url = "http://localhost:%d/cgi" % (portnum,)
+        d = client.getPage(url.encode("ascii"))
         d.addCallback(self._testCGI_1)
         return d
 
@@ -128,8 +129,8 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(SPECIAL_HEADER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = ("http://localhost:%d/cgi" % portnum).encode("ascii")
-        factory = client.HTTPClientFactory(url)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url.encode("ascii"))
         reactor.connectTCP('localhost', portnum, factory)
         def checkResponse(ignored):
             self.assertNotIn('monkeys', factory.response_headers[b'server'])
@@ -146,8 +147,8 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(NO_DUPLICATE_CONTENT_TYPE_HEADER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = ("http://localhost:%d/cgi" % portnum).encode("ascii")
-        factory = client.HTTPClientFactory(url)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url.encode("ascii"))
         reactor.connectTCP('localhost', portnum, factory)
         def checkResponse(ignored):
             self.assertEqual(
@@ -164,8 +165,8 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(DUAL_HEADER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = ("http://localhost:%d/cgi" % portnum).encode("ascii")
-        factory = client.HTTPClientFactory(url)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url.encode("ascii"))
         reactor.connectTCP('localhost', portnum, factory)
         def checkResponse(ignored):
             self.assertEqual(
@@ -181,8 +182,8 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(BROKEN_HEADER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = ("http://localhost:%d/cgi" % portnum).encode("ascii")
-        factory = client.HTTPClientFactory(url)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url.encode("ascii"))
         reactor.connectTCP('localhost', portnum, factory)
         loggedMessages = []
 
@@ -206,51 +207,54 @@ class CGITests(unittest.TestCase):
 
     def testReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = open(cgiFilename, 'wt')
-        cgiFile.write(READINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as fh:
+            fh.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage(("http://localhost:%d/cgi" % portnum)
-                           .encode("ascii"))
+        url = "http://localhost:%d/cgi" % (portnum,)
+        d = client.getPage(url.encode("ascii"))
         d.addCallback(self._testReadEmptyInput_1)
         return d
     testReadEmptyInput.timeout = 5
+
+
     def _testReadEmptyInput_1(self, res):
         self.assertEqual(res, ("readinput ok%s" % os.linesep).encode("ascii"))
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = open(cgiFilename, 'wt')
-        cgiFile.write(READINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as fh:
+            fh.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage(("http://localhost:%d/cgi" % portnum)
-                           .encode("ascii"),
+        url = "http://localhost:%d/cgi" % (portnum,)
+        d = client.getPage(url.encode("ascii"),
                            method=b"POST",
                            postdata=b"Here is your stdin")
         d.addCallback(self._testReadInput_1)
         return d
     testReadInput.timeout = 5
+
+
     def _testReadInput_1(self, res):
         self.assertEqual(res, ("readinput ok%s" % os.linesep).encode("ascii"))
 
 
     def testReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = open(cgiFilename, 'wt')
-        cgiFile.write(READALLINPUT_CGI)
-        cgiFile.close()
+        with open(cgiFilename, 'wt') as fh:
+            fh.write(READALLINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage(("http://localhost:%d/cgi" % portnum)
-                           .encode("ascii"),
+        url = "http://localhost:%d/cgi" % (portnum,)
+        d = client.getPage(url.encode("ascii"),
                            method=b"POST",
                            postdata=b"Here is your stdin")
         d.addCallback(self._testReadAllInput_1)
         return d
     testReadAllInput.timeout = 5
+
+
     def _testReadAllInput_1(self, res):
         self.assertEqual(res,
                          ("readallinput ok%s" % os.linesep).encode("ascii"))

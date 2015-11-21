@@ -15,9 +15,12 @@ import urllib
 from twisted.web import http
 from twisted.internet import protocol
 from twisted.python import log, filepath
+from twisted.spread import pb
 from twisted.web import resource, server, static
 
 try:
+    # FIXME: trac_url
+    # Explain why we need this.
     from twisted.spread.pb import Viewable
 except SyntaxError:
     Viewable = object
