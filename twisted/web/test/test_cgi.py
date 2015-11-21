@@ -10,35 +10,36 @@ import sys, os
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces, error
 from twisted.python import util, failure, log
+from twisted.python.compat import _PY3
 from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
 from twisted.web import client, twcgi, server, resource
 from twisted.web.test._util import _render
 from twisted.web.test.test_web import DummyRequest
 
 DUMMY_CGI = '''\
-print "Header: OK"
-print
-print "cgi output"
+print("Header: OK")
+print("")
+print("cgi output")
 '''
 
 DUAL_HEADER_CGI = '''\
-print "Header: spam"
-print "Header: eggs"
-print
-print "cgi output"
+print("Header: spam")
+print("Header: eggs")
+print("")
+print("cgi output")
 '''
 
 BROKEN_HEADER_CGI = '''\
-print "XYZ"
-print
-print "cgi output"
+print("XYZ")
+print("")
+print("cgi output")
 '''
 
 SPECIAL_HEADER_CGI = '''\
-print "Server: monkeys"
-print "Date: last year"
-print
-print "cgi output"
+print("Server: monkeys")
+print("Date: last year")
+print("")
+print("cgi output")
 '''
 
 READINPUT_CGI = '''\
@@ -49,9 +50,9 @@ import os, sys
 
 body_length = int(os.environ.get('CONTENT_LENGTH',0))
 indata = sys.stdin.read(body_length)
-print "Header: OK"
-print
-print "readinput ok"
+print("Header: OK")
+print("")
+print("readinput ok")
 '''
 
 READALLINPUT_CGI = '''\
@@ -62,15 +63,15 @@ READALLINPUT_CGI = '''\
 import sys
 
 indata = sys.stdin.read()
-print "Header: OK"
-print
-print "readallinput ok"
+print("Header: OK")
+print("")
+print("readallinput ok")
 '''
 
 NO_DUPLICATE_CONTENT_TYPE_HEADER_CGI = '''\
-print "content-type: text/cgi-duplicate-test"
-print
-print "cgi output"
+print("content-type: text/cgi-duplicate-test")
+print("")
+print("cgi output")
 '''
 
 class PythonScript(twcgi.FilteredScript):
@@ -87,7 +88,7 @@ class CGITests(unittest.TestCase):
     def startServer(self, cgi):
         root = resource.Resource()
         cgipath = util.sibpath(__file__, cgi)
-        root.putChild("cgi", PythonScript(cgipath))
+        root.putChild(b"cgi", PythonScript(cgipath))
         site = server.Site(root)
         self.p = reactor.listenTCP(0, site)
         return self.p.getHost().port
@@ -99,7 +100,7 @@ class CGITests(unittest.TestCase):
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
+        cgiFile = open(cgiFilename, 'wt')
         cgiFile.write(source)
         cgiFile.close()
         return cgiFilename
@@ -109,13 +110,14 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(DUMMY_CGI)
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum)
+        d = client.getPage(("http://localhost:%d/cgi" % portnum)
+                           .encode("ascii"))
         d.addCallback(self._testCGI_1)
         return d
 
 
     def _testCGI_1(self, res):
-        self.assertEqual(res, "cgi output" + os.linesep)
+        self.assertEqual(res, ("cgi output" + os.linesep).encode("ascii"))
 
 
     def test_protectedServerAndDate(self):
@@ -126,12 +128,12 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(SPECIAL_HEADER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi" % (portnum,)
+        url = ("http://localhost:%d/cgi" % portnum).encode("ascii")
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP('localhost', portnum, factory)
         def checkResponse(ignored):
-            self.assertNotIn('monkeys', factory.response_headers['server'])
-            self.assertNotIn('last year', factory.response_headers['date'])
+            self.assertNotIn('monkeys', factory.response_headers[b'server'])
+            self.assertNotIn('last year', factory.response_headers[b'date'])
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
 
@@ -144,12 +146,12 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(NO_DUPLICATE_CONTENT_TYPE_HEADER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi" % (portnum,)
+        url = ("http://localhost:%d/cgi" % portnum).encode("ascii")
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP('localhost', portnum, factory)
         def checkResponse(ignored):
             self.assertEqual(
-                factory.response_headers['content-type'], ['text/cgi-duplicate-test'])
+                factory.response_headers[b'content-type'], [b'text/cgi-duplicate-test'])
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
 
@@ -162,12 +164,12 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(DUAL_HEADER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi" % (portnum,)
+        url = ("http://localhost:%d/cgi" % portnum).encode("ascii")
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP('localhost', portnum, factory)
         def checkResponse(ignored):
             self.assertEqual(
-                factory.response_headers['header'], ['spam', 'eggs'])
+                factory.response_headers[b'header'], [b'spam', b'eggs'])
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
 
@@ -179,7 +181,7 @@ class CGITests(unittest.TestCase):
         cgiFilename = self.writeCGI(BROKEN_HEADER_CGI)
 
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi" % (portnum,)
+        url = ("http://localhost:%d/cgi" % portnum).encode("ascii")
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP('localhost', portnum, factory)
         loggedMessages = []
@@ -191,8 +193,12 @@ class CGITests(unittest.TestCase):
         self.addCleanup(log.removeObserver, addMessage)
 
         def checkResponse(ignored):
-            self.assertEqual(loggedMessages[0],
-                             "ignoring malformed CGI header: 'XYZ'")
+            if _PY3:
+                self.assertEqual(loggedMessages[0],
+                                "ignoring malformed CGI header: b'XYZ'")
+            else:
+                self.assertEqual(loggedMessages[0],
+                                "ignoring malformed CGI header: 'XYZ'")
 
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
@@ -200,50 +206,54 @@ class CGITests(unittest.TestCase):
 
     def testReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
+        cgiFile = open(cgiFilename, 'wt')
         cgiFile.write(READINPUT_CGI)
         cgiFile.close()
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum)
+        d = client.getPage(("http://localhost:%d/cgi" % portnum)
+                           .encode("ascii"))
         d.addCallback(self._testReadEmptyInput_1)
         return d
     testReadEmptyInput.timeout = 5
     def _testReadEmptyInput_1(self, res):
-        self.assertEqual(res, "readinput ok%s" % os.linesep)
+        self.assertEqual(res, ("readinput ok%s" % os.linesep).encode("ascii"))
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
+        cgiFile = open(cgiFilename, 'wt')
         cgiFile.write(READINPUT_CGI)
         cgiFile.close()
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum,
-                           method="POST",
-                           postdata="Here is your stdin")
+        d = client.getPage(("http://localhost:%d/cgi" % portnum)
+                           .encode("ascii"),
+                           method=b"POST",
+                           postdata=b"Here is your stdin")
         d.addCallback(self._testReadInput_1)
         return d
     testReadInput.timeout = 5
     def _testReadInput_1(self, res):
-        self.assertEqual(res, "readinput ok%s" % os.linesep)
+        self.assertEqual(res, ("readinput ok%s" % os.linesep).encode("ascii"))
 
 
     def testReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
+        cgiFile = open(cgiFilename, 'wt')
         cgiFile.write(READALLINPUT_CGI)
         cgiFile.close()
 
         portnum = self.startServer(cgiFilename)
-        d = client.getPage("http://localhost:%d/cgi" % portnum,
-                           method="POST",
-                           postdata="Here is your stdin")
+        d = client.getPage(("http://localhost:%d/cgi" % portnum)
+                           .encode("ascii"),
+                           method=b"POST",
+                           postdata=b"Here is your stdin")
         d.addCallback(self._testReadAllInput_1)
         return d
     testReadAllInput.timeout = 5
     def _testReadAllInput_1(self, res):
-        self.assertEqual(res, "readallinput ok%s" % os.linesep)
+        self.assertEqual(res,
+                         ("readallinput ok%s" % os.linesep).encode("ascii"))
 
 
     def test_useReactorArgument(self):
