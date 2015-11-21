@@ -417,8 +417,7 @@ Testing Deprecation Code
 ------------------------
 
 Like all changes in Twisted, deprecations must come with associated automated tested.
-There are several options for checking that a code is deprecated and that using
-it raises a `DeprecationWarning`.
+There are several options for checking that a code is deprecated and that using it raises a `DeprecationWarning`.
 
 In order of decreasing preference:
 
@@ -438,9 +437,11 @@ In order of decreasing preference:
         """
 
 
-        def test_deprecationUsingFlushWarningsself):
+        def test_deprecationUsingFlushWarnings(self):
             """
-            flushWarnings() is the recommended way of checking for deprecations
+            flushWarnings() is the recommended way of checking for deprecations.
+            Make sure you only flushWarning from the targeted code, and not all
+            warnings.
             """
             db.getUser('some-user')
 
@@ -448,7 +449,7 @@ In order of decreasing preference:
                 'twisted.Identity.getUser was deprecated in Twisted 15.0.0: '
                 'Use twisted.get_user instead.'
                 )
-            warnings = self.flushWarnings()
+            warnings = self.flushWarnings([test_deprecationUsingFlushWarnings])
             self.assertEqual(1, len(warnings))
             self.assertEqual(DeprecationWarning, warnings[0]['category'])
             self.assertEqual(message, warnings[0]['message'])
@@ -476,12 +477,9 @@ In order of decreasing preference:
                 Version("Twisted", 1, 2, 0), db.getUser, 'some-user')
 
 
-When a code is deprecated all previous test in which the code is called and
-tested will not raise ``DeprecationWarnings``.
+When a code is deprecated all previous test in which the code is called and tested will not raise ``DeprecationWarnings``.
 
-Make the calls to the deprecated calls using the
-:api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>`
-helper.
+Make the calls to the deprecated calls using the :api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>` helper.
 
 .. code-block:: python
 
@@ -505,9 +503,8 @@ helper.
             self.assertEqual('some-value', user.homePath)
 
 
-Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_),
-unhandled deprecation warnings are not show by trail.
-Test will not fail even if the have unhandled deprecations warnings.
+Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_), unhandled deprecation warnings are not show by Trial.
+Test will not fail, even if the have unhandled deprecations warnings.
 
 While the Trial bug is not fixed, to trigger test failures on unhandled deprecation warnings use:
 

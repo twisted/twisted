@@ -18,8 +18,8 @@ Twisted Development Policy
 This series of documents is designed for people who wish to contribute to the
 Twisted codebase.
 
-- :doc:`Coding standard <coding-standard>`
-- :doc:`Documentation writing standard <writing-standard>`
-- :doc:`Testing standard <test-standard>`
-- :doc:`Compatibility policy <compatibility-policy>`
-- :doc:`Working from Twisted's Subversion repository <svn-dev>`
+- :doc:`Coding Standard <coding-standard>`
+- :doc:`Documentation Writing Standard <writing-standard>`
+- :doc:`Testing Standard <test-standard>`
+- :doc:`Compatibility Policy <compatibility-policy>`
+- :doc:`Working From Twisted's Subversion Repository <svn-dev>`
