@@ -17,7 +17,9 @@ from zope.interface import implementer
 
 from twisted.python import log
 from twisted.python import reflect
+from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
+from twisted.python.versions import Version
 
 from twisted.internet import base, defer
 from twisted.internet.interfaces import IReactorTime
@@ -57,7 +59,7 @@ class LoopingCall:
 
     call = None
     running = False
-    deferred = None
+    _deferred = None
     interval = None
     _runAtStart = False
     starttime = None
@@ -69,6 +71,16 @@ class LoopingCall:
         from twisted.internet import reactor
         self.clock = reactor
 
+    @property
+    @deprecated(
+        Version("Twisted", 16, 0, 0), 'the deferred returned by start()')
+    def deferred(self):
+        """
+        DEPRECATED. Deferred fired when loop stops or fails.
+
+        Use the
+        """
+        return self._deferred
 
     def withCount(cls, countCallable):
         """
@@ -160,7 +172,9 @@ class LoopingCall:
         if interval < 0:
             raise ValueError("interval must be >= 0")
         self.running = True
-        d = self.deferred = defer.Deferred()
+        # Loop might fail to start and then self._deferred will be cleared.
+        # This why the local C{deferred} variable is used.
+        deferred = self._deferred = defer.Deferred()
         self.starttime = self.clock.seconds()
         self.interval = interval
         self._runAtStart = now
@@ -168,7 +182,7 @@ class LoopingCall:
             self()
         else:
             self._scheduleFrom(self.starttime)
-        return d
+        return deferred
 
     def stop(self):
         """Stop running function.
@@ -179,7 +193,7 @@ class LoopingCall:
         if self.call is not None:
             self.call.cancel()
             self.call = None
-            d, self.deferred = self.deferred, None
+            d, self._deferred = self._deferred, None
             d.callback(self)
 
     def reset(self):
@@ -201,12 +215,12 @@ class LoopingCall:
             if self.running:
                 self._scheduleFrom(self.clock.seconds())
             else:
-                d, self.deferred = self.deferred, None
+                d, self._deferred = self._deferred, None
                 d.callback(self)
 
         def eb(failure):
             self.running = False
-            d, self.deferred = self.deferred, None
+            d, self._deferred = self._deferred, None
             d.errback(failure)
 
         self.call = None
