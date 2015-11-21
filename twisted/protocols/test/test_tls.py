@@ -33,7 +33,7 @@ from twisted.python import log
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
 from twisted.internet.interfaces import IPushProducer
 from twisted.internet.error import ConnectionDone, ConnectionLost
-from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.defer import inlineCallbacks, Deferred, gatherResults
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
 from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
@@ -411,6 +411,7 @@ class TLSMemoryBIOTests(TestCase):
         return handshakeDeferred
 
 
+    @inlineCallbacks
     def test_writeAfterHandshake(self):
         """
         Bytes written to L{TLSMemoryBIOProtocol} after the handshake is
@@ -441,20 +442,14 @@ class TLSMemoryBIOTests(TestCase):
         connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
 
         # Wait for the handshake to finish before writing anything.
-        def cbHandshook(ignored):
-            clientProtocol.transport.write(bytes)
+        yield handshakeDeferred
+        clientProtocol.transport.write(bytes)
 
-            # The server will drop the connection once it gets the bytes.
-            return connectionDeferred
-        handshakeDeferred.addCallback(cbHandshook)
-
+        # The server will drop the connection once it gets the bytes.
         # Once the connection is lost, make sure the server received the
         # expected bytes.
-        def cbDisconnected(ignored):
-            self.assertEqual(b"".join(serverProtocol.received), bytes)
-        handshakeDeferred.addCallback(cbDisconnected)
-
-        return handshakeDeferred
+        yield connectionDeferred
+        self.assertEqual(b"".join(serverProtocol.received), bytes)
 
 
     def writeBeforeHandshakeTest(self, sendingProtocol, bytes):
@@ -777,6 +772,8 @@ class TLSMemoryBIOTests(TestCase):
         return disconnectDeferred
 
 
+
+    @inlineCallbacks
     def test_peerIgnoresCloseAlert(self):
         """
         L{TLSMemoryBIOProtocol.loseConnection} must
@@ -819,11 +816,12 @@ class TLSMemoryBIOTests(TestCase):
         sslServerProtocol._flush_receiveBIO = patched__flush_receiveBIO
         connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
 
-        def cbHandshake(ignored):
-            # Shutdown the client
-            sslClientProtocol.loseConnection()
-        handshakeDeferred.addCallback(cbHandshake)
-        return connectionDeferred
+        # As soon as TLS handshake id done, the client shuts down the connnection.
+        yield handshakeDeferred
+        sslClientProtocol.loseConnection()
+
+        # Connection will be closed.
+        yield connectionDeferred
 
 
 class TLSProducerTests(TestCase):
