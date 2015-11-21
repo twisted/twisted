@@ -40,6 +40,7 @@ from __future__ import division, absolute_import
 
 from OpenSSL.SSL import Error, ZeroReturnError, WantReadError
 from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
+from OpenSSL.SSL import SENT_SHUTDOWN
 
 try:
     Connection(Context(TLSv1_METHOD), None)
@@ -429,18 +430,24 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         try:
             shutdownSuccess = self._tlsConnection.shutdown()
         except Error:
-            # Mid-handshake, a call to shutdown() can result in a
-            # WantWantReadError, or rather an SSL_ERR_WANT_READ; but pyOpenSSL
-            # doesn't allow us to get at the error.  See:
-            # https://github.com/pyca/pyopenssl/issues/91
             shutdownSuccess = False
+
+        # Do also shutdown if we have sent the close alert. We are not
+        # waiting for the answer, because some peers are not responding
+        # to the close alert.
+        oneDirectSuccess = (SENT_SHUTDOWN & self._tlsConnection.get_shutdown()
+                            == SENT_SHUTDOWN)
+
         self._flushSendBIO()
-        if shutdownSuccess:
-            # Both sides have shutdown, so we can start closing lower-level
-            # transport. This will also happen if we haven't started
-            # negotiation at all yet, in which case shutdown succeeds
-            # immediately.
-            self.transport.loseConnection()
+
+        # If the initial ssl handshake is not complete,
+        # than oneDirectSuccess is False, because no close alert
+        # has been sent. So we have to test both booleans.
+        if shutdownSuccess or oneDirectSuccess:
+            # Start closing lower-level transport.
+            # Passing in None means the user protocol's connnectionLost
+            # will get called with reason from underlying transport.
+            self._tlsShutdownFinished(None)
 
 
     def _tlsShutdownFinished(self, reason):

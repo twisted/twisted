@@ -1822,7 +1822,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         sErr = sProto.wrappedProtocol.lostReason.value
 
         self.assertIsInstance(cErr, ZeroDivisionError)
-        self.assertIsInstance(sErr, ConnectionClosed)
+        self.assertIsInstance(sErr, SSL.Error)
+        self.assertEqual(sErr[0], [('SSL routines', 'SSL3_READ_BYTES', 'ssl handshake failure')])
         errors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertTrue(errors)
 
