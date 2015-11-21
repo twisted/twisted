@@ -15,12 +15,13 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
     HOWTO<http://lartc.org/howto/lartc.qdisc.classless.html#AEN682>}
 """
 
+from __future__ import division, print_function
 
 # TODO: Investigate whether we should be using os.times()[-1] instead of
 # time.time.  time.time, it has been pointed out, can go backwards.  Is
 # the same true of os.times?
 from time import time
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.protocols import pcp
 
@@ -117,6 +118,8 @@ class IBucketFilter(Interface):
         @returntype: L{Bucket}
         """
 
+
+@implementer(IBucketFilter)
 class HierarchicalBucketFilter:
     """
     Filter things into buckets that can be nested.
@@ -126,8 +129,6 @@ class HierarchicalBucketFilter:
     @cvar sweepInterval: Seconds between sweeping out the bucket cache.
     @type sweepInterval: C{int}
     """
-
-    implements(IBucketFilter)
 
     bucketFactory = Bucket
     sweepInterval = None

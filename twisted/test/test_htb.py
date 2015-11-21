@@ -1,9 +1,15 @@
-# -*- Python -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-__version__ = '$Revision: 1.3 $'[11:-2]
+"""
+Tests for C{twisted.protocols.htb}.
+"""
+
+from __future__ import division, print_function
 
 from twisted.trial import unittest
 from twisted.protocols import htb
+
 
 class DummyClock:
     time = 0
@@ -13,9 +19,11 @@ class DummyClock:
     def __call__(self):
         return self.time
 
+
 class SomeBucket(htb.Bucket):
     maxburst = 100
     rate = 2
+
 
 class TestBucketBase(unittest.TestCase):
     def setUp(self):
@@ -25,6 +33,7 @@ class TestBucketBase(unittest.TestCase):
 
     def tearDown(self):
         htb.time = self._realTimeFunc
+
 
 class BucketTests(TestBucketBase):
     def testBucketSize(self):
@@ -53,6 +62,7 @@ class BucketTests(TestBucketBase):
         self.clock.set(10)
         empty = b.drip()
         self.assertTrue(empty)
+
 
 class BucketNestingTests(TestBucketBase):
     def setUp(self):
@@ -83,7 +93,8 @@ class BucketNestingTests(TestBucketBase):
 
 # TODO: Test the Transport stuff?
 
-from test_pcp import DummyConsumer
+from twisted.test.test_pcp import DummyConsumer
+
 
 class ConsumerShaperTests(TestBucketBase):
     def setUp(self):
