@@ -67,6 +67,27 @@ class MockConnection(SSHService):
 
 
 
+def connectSSHTransport(service, hostAddress=None, peerAddress=None):
+    """
+    Connect a SSHTransport which is already connected to a remote peer to
+    the channel under test.
+
+    @param service: Service used over the connected transport.
+    @type service: L{SSHService}
+
+    @param hostAddress: Local address of the connected transport.
+    @type hostAddress: L{interfaces.IAddress}
+
+    @param peerAddress: Remote address of the connected transport.
+    @type peerAddress: L{interfaces.IAddress}
+    """
+    transport = SSHServerTransport()
+    transport.makeConnection(StringTransport(
+        hostAddress=hostAddress, peerAddress=peerAddress))
+    transport.setService(service)
+
+
+
 class ChannelTests(unittest.TestCase):
     """
     Tests for L{SSHChannel}.
@@ -280,30 +301,13 @@ class ChannelTests(unittest.TestCase):
         self.assertTrue(self.conn.closes.get(self.channel))
 
 
-    def connectTransport(self, hostAddress=None, peerAddress=None):
-        """
-        Connect a SSHTransport which is already connected to a remote peer to
-        the channel under test.
-
-        @param hostAddress: Local address of the connected transport.
-        @type hostAddress: L{interfaces.IAddress}
-
-        @param peerAddress: Remote address of the connected transport.
-        @type peerAddress: L{interfaces.IAddress}
-        """
-        transport = SSHServerTransport()
-        transport.makeConnection(StringTransport(
-            hostAddress=hostAddress, peerAddress=peerAddress))
-        transport.setService(self.channel.conn)
-
-
     def test_getPeer(self):
         """
         L{SSHChannel.getPeer} returns the same object as the underlying
         transport's C{getPeer} method returns.
         """
         peer = IPv4Address('TCP', '192.168.0.1', 54321)
-        self.connectTransport(peerAddress=peer)
+        connectSSHTransport(service=self.channel.conn, peerAddress=peer)
 
         self.assertEqual(SSHTransportAddress(peer), self.channel.getPeer())
 
@@ -314,6 +318,6 @@ class ChannelTests(unittest.TestCase):
         transport's C{getHost} method returns.
         """
         host = IPv4Address('TCP', '127.0.0.1', 12345)
-        self.connectTransport(hostAddress=host)
+        connectSSHTransport(service=self.channel.conn, hostAddress=host)
 
         self.assertEqual(SSHTransportAddress(host), self.channel.getHost())
