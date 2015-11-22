@@ -5,7 +5,7 @@
 """
 Implementation module for the I{cftp} command.
 """
-
+from __future__ import division
 import os, sys, getpass, struct, tty, fcntl, stat
 import fnmatch, pwd, glob
 
@@ -400,64 +400,147 @@ class StdioClient(basic.LineReceiver):
             self.transport.write('\n')
         return "Transferred %s to %s" % (rf.name, lf.name)
 
+
     def cmd_PUT(self, rest):
+        """
+        Do an upload request for a single local file or a globing expression.
+
+        @param rest: Requested command line for the PUT command.
+        @type rest: C{str}
+
+        @return: A deferred which fires with C{None} when transfer is done.
+        @rtype: L{defer.Deferred}
+        """
         local, rest = self._getFilename(rest)
-        if '*' in local or '?' in local: # wildcard
+
+        # FIXME: https://twistedmatrix.com/trac/ticket/7241
+        # Use a better check for globbing expression.
+        if '*' in local or '?' in local:
             if rest:
                 remote, rest = self._getFilename(rest)
-                path = os.path.join(self.currentDirectory, remote)
-                d = self.client.getAttrs(path)
-                d.addCallback(self._cbPutTargetAttrs, remote, local)
-                return d
+                remote = os.path.join(self.currentDirectory, remote)
             else:
                 remote = ''
-                files = glob.glob(local)
-                return self._cbPutMultipleNext(None, files, remote)
-        if rest:
-            remote, rest = self._getFilename(rest)
+
+            files = glob.glob(local)
+            return self._putMultipleFiles(files, remote)
+
         else:
-            remote = os.path.split(local)[1]
-        lf = file(local, 'r')
-        path = os.path.join(self.currentDirectory, remote)
-        flags = filetransfer.FXF_WRITE|filetransfer.FXF_CREAT|filetransfer.FXF_TRUNC
-        d = self.client.openFile(path, flags, {})
-        d.addCallback(self._cbPutOpenFile, lf)
-        d.addErrback(self._ebCloseLf, lf)
-        return d
+            if rest:
+                remote, rest = self._getFilename(rest)
+            else:
+                remote = os.path.split(local)[1]
+            return self._putSingleFile(local, remote)
 
-    def _cbPutTargetAttrs(self, attrs, path, local):
-        if not stat.S_ISDIR(attrs['permissions']):
-            return "Wildcard put with non-directory target."
-        # FIXME:7037:
-        # Check what `files` variable should do here.
-        return self._cbPutMultipleNext(None, files, path)
 
-    def _cbPutMultipleNext(self, res, files, path):
-        if isinstance(res, failure.Failure):
-            self._printFailure(res)
-        elif res:
-            self.transport.write(res)
-            if not res.endswith('\n'):
+    def _putSingleFile(self, local, remote):
+        """
+        Perform an upload for a single file.
+
+        @param local: Path to local file.
+        @type local: C{str}.
+
+        @param remote: Remote path for the request relative to current working
+            directory.
+        @type remote: C{str}
+
+        @return: A deferred which fires when transfer is done.
+        """
+        return self._cbPutMultipleNext(None, [local], remote, single=True)
+
+
+    def _putMultipleFiles(self, files, remote):
+        """
+        Perform an upload for a list of local files.
+
+        @param files: List of local files.
+        @type files: C{list} of C{str}.
+
+        @param remote: Remote path for the request relative to current working
+            directory.
+        @type remote: C{str}
+
+        @return: A deferred which fires when transfer is done.
+        """
+        return self._cbPutMultipleNext(None, files, remote)
+
+
+    def _cbPutMultipleNext(
+            self, previousResult, files, remotePath, single=False):
+        """
+        Perform an upload for the next file in the list of local files.
+
+        @param previousResult: Result form previous file form the list.
+        @type previousResult: C{str}
+
+        @param files: List of local files.
+        @type files: C{list} of C{str}
+
+        @param remotePath: Remote path for the request relative to current
+            working directory.
+        @type remotePath: C{str}
+
+        @param single: A flag which signals if this is a transfer for a single
+            file in which case we use the exact remote path
+        @type single: C{bool}
+
+        @return: A deferred which fires when transfer is done.
+        """
+        if isinstance(previousResult, failure.Failure):
+            self._printFailure(previousResult)
+        elif previousResult:
+            self.transport.write(previousResult)
+            if not previousResult.endswith('\n'):
                 self.transport.write('\n')
-        f = None
-        while files and not f:
+
+        currentFile = None
+        while files and not currentFile:
             try:
-                f = files.pop(0)
-                lf = file(f, 'r')
+                currentFile = files.pop(0)
+                localStream = open(currentFile, 'r')
             except:
                 self._printFailure(failure.Failure())
-                f = None
-        if not f:
-            return
-        name = os.path.split(f)[1]
-        remote = os.path.join(self.currentDirectory, path, name)
-        log.msg((name, remote, path))
-        flags = filetransfer.FXF_WRITE|filetransfer.FXF_CREAT|filetransfer.FXF_TRUNC
-        d = self.client.openFile(remote, flags, {})
-        d.addCallback(self._cbPutOpenFile, lf)
-        d.addErrback(self._ebCloseLf, lf)
-        d.addBoth(self._cbPutMultipleNext, files, path)
+                currentFile = None
+
+        # No more files to transfer.
+        if not currentFile:
+            return None
+
+        if single:
+            remote = remotePath
+        else:
+            name = os.path.split(currentFile)[1]
+            remote = os.path.join(remotePath, name)
+            log.msg((name, remote, remotePath))
+
+        d = self._putRemoteFile(localStream, remote)
+        d.addBoth(self._cbPutMultipleNext, files, remotePath)
         return d
+
+
+    def _putRemoteFile(self, localStream, remotePath):
+        """
+        Do an upload request.
+
+        @param localStream: Local stream from where data is read.
+        @type localStream: File like object.
+
+        @param remotePath: Remote path for the request relative to current working directory.
+        @type remotePath: C{str}
+
+        @return: A deferred which fires when transfer is done.
+        """
+        remote = os.path.join(self.currentDirectory, remotePath)
+        flags = (
+            filetransfer.FXF_WRITE |
+            filetransfer.FXF_CREAT |
+            filetransfer.FXF_TRUNC
+            )
+        d = self.client.openFile(remote, flags, {})
+        d.addCallback(self._cbPutOpenFile, localStream)
+        d.addErrback(self._ebCloseLf, localStream)
+        return d
+
 
     def _cbPutOpenFile(self, rf, lf):
         numRequests = self.client.transport.conn.options['requests']
@@ -736,7 +819,11 @@ version                         Print the SFTP version.
         else:
             timeLeft = 0
         front = f.name
-        back = '%3i%% %s %sps %s ' % ((total / f.size) * 100,
+        if f.size:
+            percentage = (total / f.size) * 100
+        else:
+            percentage = 100
+        back = '%3i%% %s %sps %s ' % (percentage,
                                       self._abbrevSize(total),
                                       self._abbrevSize(speed),
                                       self._abbrevTime(timeLeft))
@@ -745,9 +832,19 @@ version                         Print the SFTP version.
 
 
     def _getFilename(self, line):
-        line.lstrip()
+        """
+        Parse line received as command line input and return first filename
+        together with the remaining line.
+
+        @param line: Arguments received from command line input.
+        @type line: C{str}
+
+        @return: Tupple with filename and rest. Return empty values when no path was not found.
+        @rtype: C{tupple}
+        """
+        line = line.strip()
         if not line:
-            return None, ''
+            return '', ''
         if line[0] in '\'"':
             ret = []
             line = list(line)
@@ -769,7 +866,7 @@ version                         Print the SFTP version.
         if len(ret) == 1:
             return ret[0], ''
         else:
-            return ret
+            return ret[0], ret[1]
 
 StdioClient.__dict__['cmd_?'] = StdioClient.cmd_HELP
 
