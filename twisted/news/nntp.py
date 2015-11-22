@@ -701,7 +701,7 @@ class NNTPServer(basic.LineReceiver):
     def _doingPost(self, line):
         if line == '.':
             self.inputHandler = None
-            group, article = self.currentGroup, self.message
+            article = self.message
             self.message = ''
 
             defer = self.factory.backend.postRequest(article)

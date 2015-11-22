@@ -28,7 +28,6 @@ from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 
-from twisted.web.microdom import parseXMLString
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
@@ -1417,9 +1416,8 @@ class SphinxBuilderTests(TestCase):
 
     def verifyFileExists(self, fileDir, fileName):
         """
-        Helper which verifies that C{fileName} exists in C{fileDir}, has some
-        content, and that the content is parseable by L{parseXMLString} if the
-        file extension indicates that it should be html.
+        Helper which verifies that C{fileName} exists in C{fileDir} and it has
+        some content.
 
         @param fileDir: A path to a directory.
         @type fileDir: L{FilePath}
