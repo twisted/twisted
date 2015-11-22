@@ -233,7 +233,7 @@ The **private**  is still protected against direct instantiation.
 
 .. code-block:: python
 
-    class _Base:
+    class _Base(object):
         """
         A class which should not be directly instantiated.
         """
@@ -289,15 +289,11 @@ Functions and methods
 ^^^^^^^^^^^^^^^^^^^^^
 
 To deprecate a function or a method, add a call to warnings.warn to the beginning of the implementation of that method.
-
-The warning should be of type DeprecationWarning and the stack level should be set so that the warning refers to the code which is invoking the deprecated function or method.
-
+The warning should be of type ``DeprecationWarning`` and the stack level should be set so that the warning refers to the code which is invoking the deprecated function or method.
 The deprecation message must include the name of the function which is deprecated, the version of Twisted in which it was first deprecated, and a suggestion for a replacement.
-
 If the API provides functionality which it is determined is beyond the scope of Twisted or it has no replacement, then it may be deprecated without a replacement.
 
-There is also a :api:`twisted.python.deprecate.deprecated <@deprecated>`
-decorator.
+There is also a :api:`twisted.python.deprecate.deprecated <@deprecated>` decorator.
 
 For example:
 
@@ -417,7 +413,7 @@ Testing Deprecation Code
 ------------------------
 
 Like all changes in Twisted, deprecations must come with associated automated tested.
-There are several options for checking that a code is deprecated and that using it raises a `DeprecationWarning`.
+There are several options for checking that a code is deprecated and that using it raises a ``DeprecationWarning``.
 
 In order of decreasing preference:
 
@@ -449,7 +445,8 @@ In order of decreasing preference:
                 'twisted.Identity.getUser was deprecated in Twisted 15.0.0: '
                 'Use twisted.get_user instead.'
                 )
-            warnings = self.flushWarnings([test_deprecationUsingFlushWarnings])
+            warnings = self.flushWarnings(
+                [self.test_deprecationUsingFlushWarnings])
             self.assertEqual(1, len(warnings))
             self.assertEqual(DeprecationWarning, warnings[0]['category'])
             self.assertEqual(message, warnings[0]['message'])
@@ -477,9 +474,8 @@ In order of decreasing preference:
                 Version("Twisted", 1, 2, 0), db.getUser, 'some-user')
 
 
-When a code is deprecated all previous test in which the code is called and tested will not raise ``DeprecationWarnings``.
-
-Make the calls to the deprecated calls using the :api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>` helper.
+When code is deprecated, all previous tests in which the code is called and tested will now raise ``DeprecationWarning``\ s.
+Making calls to the deprecated code without raising these warnings can be done using the :api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>` helper.
 
 .. code-block:: python
 
@@ -503,8 +499,7 @@ Make the calls to the deprecated calls using the :api:`twisted.trial.unittest.Te
             self.assertEqual('some-value', user.homePath)
 
 
-Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_), unhandled deprecation warnings are not show by Trial.
-Test will not fail, even if the have unhandled deprecations warnings.
+Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_), unhandled deprecation warnings will not cause test failures or show in test results.
 
 While the Trial bug is not fixed, to trigger test failures on unhandled deprecation warnings use:
 
