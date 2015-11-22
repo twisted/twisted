@@ -1,11 +1,5 @@
-
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
-
 Twisted Compatibility Policy
 ============================
-
 
 Motivation
 ----------
