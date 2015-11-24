@@ -1,0 +1,1 @@
+twisted.web.client.URI handle brackets in IPv6 URI's according to RFC 3986

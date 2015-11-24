@@ -582,7 +582,8 @@ class URI(object):
         @param netloc: Network location component.
 
         @type host: L{bytes}
-        @param host: Host name.
+        @param host: Host name. When the host name is an IPv6 address
+            in enclosing brackets. The brackets will be stripped.
 
         @type port: L{int}
         @param port: Port number.
@@ -601,7 +602,7 @@ class URI(object):
         """
         self.scheme = scheme
         self.netloc = netloc
-        self.host = host
+        self.host = host.strip(b'[]')
         self.port = port
         self.path = path
         self.params = params
@@ -641,7 +642,6 @@ class URI(object):
                 host, port = netloc, defaultPort
         else:
             host, port = netloc, defaultPort
-
         return cls(scheme, netloc, host, port, path, params, query, fragment)
 
 
