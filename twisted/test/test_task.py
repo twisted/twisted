@@ -494,6 +494,26 @@ class LoopTests(unittest.TestCase):
         self.assertNotIn(0, accumulator)
 
 
+    def test_withCountIntervalZero(self):
+        """
+        Check L{task.LoopingCall.withCount} when interval is set to 0.
+        For every tick countCallable should be invoked with 1.
+        """
+        accumulator = []
+
+        def foo(cnt):
+            accumulator.append(cnt)
+            if len(accumulator) > 11:
+                lc.stop()
+        lc = task.LoopingCall.withCount(foo)
+        d = lc.start(0, now=False)
+
+        def stopped(ign):
+            # make sure we get counts equal to number of executions
+            self.assertEqual(sum(accumulator), len(accumulator))
+        return d.addCallback(stopped)
+
+
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
         # called a few times.
