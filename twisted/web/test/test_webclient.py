@@ -1365,6 +1365,8 @@ class URITestsForIPv6(URITests, unittest.TestCase):
         field is then exported with brackets in the output of
         L{client.URI.toBytes}.
         """
-        uri = client.URI.fromBytes(b"http://[::1]")
+        uri = client.URI.fromBytes(b"http://[::1]:80/index.html")
+
         self.assertEqual(uri.host, b"::1")
-        self.assertEqual(uri.toBytes(), b'http://[::1]')
+        self.assertEqual(uri.netloc, b"[::1]:80")
+        self.assertEqual(uri.toBytes(), b'http://[::1]:80/index.html')
