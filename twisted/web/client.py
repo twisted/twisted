@@ -582,8 +582,8 @@ class URI(object):
         @param netloc: Network location component.
 
         @type host: L{bytes}
-        @param host: Host name. When the host name is an IPv6 address
-            in enclosing brackets. The brackets will be stripped.
+        @param host: Host name. For IPv6 address literals the brackets are
+            stripped.
 
         @type port: L{int}
         @param port: Port number.

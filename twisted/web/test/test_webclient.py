@@ -1062,16 +1062,16 @@ class URITests:
     Abstract tests for L{twisted.web.client.URI}.
 
     Subclass this and L{unittest.TestCase}. Then provide a value for
-    C{host}, and C{uriHost}.
+    C{host} and C{uriHost}.
 
     @ivar host: A host specification for use in tests, must be L{bytes}.
 
-    @ivar uriHost: The host specification in URI form, must be a
-        L{bytes}. In most cases this is identical with C{host}. But
-        according to RFC 3986 section 3.2.2, IPv6 addresses in URI
-        need to be enclosed in brackets, and in that case this
-        variable need to be different.
+    @ivar uriHost: The host specification in URI form, must be a L{bytes}. In
+        most cases this is identical with C{host}. IPv6 address literals are an
+        exception, according to RFC 3986 section 3.2.2, as they need to be
+        enclosed in brackets. In this case this variable is different.
     """
+
     def makeURIString(self, template):
         """
         Replace the string "HOST" in C{template} with this test's host.
@@ -1359,11 +1359,11 @@ class URITestsForIPv6(URITests, unittest.TestCase):
     uriHost = b"[fe80::20c:29ff:fea4:c60]"
 
 
-    def test_bracketHandlingIPv6(self):
+    def test_hostBracketIPv6AddressLiteral(self):
         """
-        Check that the brackets around IPv6 addresses are stripped in
-        the host field, and that there are brackets in the output from
-        L{client.URI.toBytes}
+        Brackets around IPv6 addresses are stripped in the host field. The host
+        field is then exported with brackets in the output of
+        L{client.URI.toBytes}.
         """
         uri = client.URI.fromBytes(b"http://[::1]")
         self.assertEqual(uri.host, b"::1")
