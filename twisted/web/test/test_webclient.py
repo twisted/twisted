@@ -1087,6 +1087,7 @@ class URITests:
         @return: A string where "HOST" has been replaced by C{self.host}.
         """
         self.assertIsInstance(self.host, bytes)
+        self.assertIsInstance(self.uriHost, bytes)
         self.assertIsInstance(template, bytes)
         self.assertIn(b"HOST", template)
         return template.replace(b"HOST", self.uriHost)
