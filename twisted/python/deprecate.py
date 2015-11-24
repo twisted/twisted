@@ -259,11 +259,11 @@ def deprecated(version, replacement=None):
         """
         Decorator that marks C{function} as deprecated.
         """
-        warningString = getDeprecationWarningString(
-            function, version, None, replacement)
-
         @wraps(function)
         def deprecatedFunction(*args, **kwargs):
+            import pdb; import sys; sys.stdout = sys.__stdout__; pdb.set_trace()
+            warningString = getDeprecationWarningString(
+                function, version, None, replacement)
             warn(
                 warningString,
                 DeprecationWarning,
