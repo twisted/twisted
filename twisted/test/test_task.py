@@ -496,22 +496,57 @@ class LoopTests(unittest.TestCase):
 
     def test_withCountIntervalZero(self):
         """
-        Check L{task.LoopingCall.withCount} when interval is set to 0.
-        For every tick countCallable should be invoked with 1.
+        L{task.LoopingCall.withCount} with interval set to 0 and bi delayed
+        call during the loop run will call the countCallable 1.
         """
+        clock = task.Clock()
         accumulator = []
 
         def foo(cnt):
             accumulator.append(cnt)
-            if len(accumulator) > 11:
-                lc.stop()
-        lc = task.LoopingCall.withCount(foo)
-        d = lc.start(0, now=False)
+            if len(accumulator) > 4:
+                loop.stop()
 
-        def stopped(ign):
-            # make sure we get counts equal to number of executions
-            self.assertEqual(sum(accumulator), len(accumulator))
-        return d.addCallback(stopped)
+        loop = task.LoopingCall.withCount(foo)
+        loop.clock = clock
+        deferred = loop.start(0, now=False)
+
+        clock.advance(0)
+        self.successResultOf(deferred)
+
+        self.assertEqual([1, 1, 1, 1, 1], accumulator)
+
+
+    def test_withCountIntervalZeroDelay(self):
+        """
+        L{task.LoopingCall.withCount} with interval set to 0 and bi delayed
+        call during the loop run will call the countCallable 1.
+        """
+        clock = task.Clock()
+        deferred = defer.Deferred()
+        accumulator = []
+
+        def foo(cnt):
+            accumulator.append(cnt)
+
+            if len(accumulator) == 2:
+                return deferred
+
+            if len(accumulator) > 4:
+                loop.stop()
+
+        loop = task.LoopingCall.withCount(foo)
+        loop.clock = clock
+        deferred = loop.start(0, now=False)
+
+        clock.advance(0)
+        self.assertEqual([1, 1], accumulator)
+
+        clock.advance(2)
+        deferred.callback(None)
+
+        clock.advance(0)
+        self.assertEqual([1, 1, 3, 1, 1], accumulator)
 
 
     def testBasicFunction(self):
