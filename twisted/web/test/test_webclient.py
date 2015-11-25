@@ -1061,9 +1061,15 @@ class URITests:
     """
     Abstract tests for L{twisted.web.client.URI}.
 
-    Subclass this and L{unittest.TestCase}, and provide a value for C{host}.
+    Subclass this and L{unittest.TestCase}. Then provide a value for
+    C{host} and C{uriHost}.
 
     @ivar host: A host specification for use in tests, must be L{bytes}.
+
+    @ivar uriHost: The host specification in URI form, must be a L{bytes}. In
+        most cases this is identical with C{host}. IPv6 address literals are an
+        exception, according to RFC 3986 section 3.2.2, as they need to be
+        enclosed in brackets. In this case this variable is different.
     """
 
     def makeURIString(self, template):
@@ -1081,9 +1087,10 @@ class URITests:
         @return: A string where "HOST" has been replaced by C{self.host}.
         """
         self.assertIsInstance(self.host, bytes)
+        self.assertIsInstance(self.uriHost, bytes)
         self.assertIsInstance(template, bytes)
         self.assertIn(b"HOST", template)
-        return template.replace(b"HOST", self.host)
+        return template.replace(b"HOST", self.uriHost)
 
     def assertURIEquals(self, uri, scheme, netloc, host, port, path,
                         params=b'', query=b'', fragment=b''):
@@ -1160,11 +1167,11 @@ class URITests:
             self.makeURIString(b'http://HOST:5144'))
         self.assertEqual(5144, uri.port)
         self.assertEqual(self.host, uri.host)
-        self.assertEqual(self.host + b':5144', uri.netloc)
+        self.assertEqual(self.uriHost + b':5144', uri.netloc)
 
         # Spaces in the hostname are trimmed, the default path is /.
         uri = client.URI.fromBytes(self.makeURIString(b'http://HOST '))
-        self.assertEqual(self.host, uri.netloc)
+        self.assertEqual(self.uriHost, uri.netloc)
 
 
     def test_path(self):
@@ -1176,7 +1183,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/foo/bar')
@@ -1192,7 +1199,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'')
@@ -1207,7 +1214,7 @@ class URITests:
         self.assertURIEquals(
             client.URI.fromBytes(uri),
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/')
@@ -1222,7 +1229,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/foo/bar',
@@ -1239,7 +1246,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/foo/bar',
@@ -1257,7 +1264,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/foo/bar',
@@ -1328,7 +1335,7 @@ class URITestsForHostname(URITests, unittest.TestCase):
     Tests for L{twisted.web.client.URI} with host names.
     """
 
-    host = b"example.com"
+    uriHost = host = b"example.com"
 
 
 
@@ -1337,7 +1344,7 @@ class URITestsForIPv4(URITests, unittest.TestCase):
     Tests for L{twisted.web.client.URI} with IPv4 host addresses.
     """
 
-    host = b"192.168.1.67"
+    uriHost = host = b"192.168.1.67"
 
 
 
@@ -1349,4 +1356,18 @@ class URITestsForIPv6(URITests, unittest.TestCase):
     attempt is made to test without.
     """
 
-    host = b"[fe80::20c:29ff:fea4:c60]"
+    host = b"fe80::20c:29ff:fea4:c60"
+    uriHost = b"[fe80::20c:29ff:fea4:c60]"
+
+
+    def test_hostBracketIPv6AddressLiteral(self):
+        """
+        Brackets around IPv6 addresses are stripped in the host field. The host
+        field is then exported with brackets in the output of
+        L{client.URI.toBytes}.
+        """
+        uri = client.URI.fromBytes(b"http://[::1]:80/index.html")
+
+        self.assertEqual(uri.host, b"::1")
+        self.assertEqual(uri.netloc, b"[::1]:80")
+        self.assertEqual(uri.toBytes(), b'http://[::1]:80/index.html')
