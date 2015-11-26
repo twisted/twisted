@@ -455,7 +455,7 @@ class User:
     including information on where the message came from
     """
 
-    def __init__(self, destination, helo, protocol, orig):
+    def __init__(self, destination, helo, protocol, orig, opts=None):
         host = getattr(protocol, 'host', None)
         self.dest = Address(destination, host)
         self.helo = helo
@@ -464,6 +464,9 @@ class User:
             self.orig = orig
         else:
             self.orig = Address(orig, host)
+        if opts is None:
+            opts = {}
+        self.options = opts
 
     def __getstate__(self):
         """Helper for pickle.
@@ -474,7 +477,8 @@ class User:
         return { 'dest' : self.dest,
                  'helo' : self.helo,
                  'protocol' : None,
-                 'orig' : self.orig }
+                 'orig' : self.orig,
+                 'options': self.options }
 
     def __str__(self):
         return str(self.dest)
@@ -498,7 +502,9 @@ class IMessage(Interface):
         semantics should be to discard the message
         """
 
-class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
+# This used to derive from LineOnlyReceiver, but doing that means that it's
+# impossible to implement CHUNKED or BINARYMIME in an ESMTP subclass.
+class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     """
     SMTP server-side protocol.
     """
@@ -629,6 +635,29 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                          )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
                          $''',re.I|re.X)
 
+    opt_re = re.compile(r'''^(?P<keyword>[A-Z0-9][-A-Z0-9]*)
+                             (?:=(?P<value>[^=\ \0-\037]+))?$''',
+                        re.I|re.X)
+    space_re = re.compile(r'\s+')
+
+    def _processOptions(self, opts):
+        """Parse the ESMTP options into a dictionary."""
+        options = {}
+
+        for optstr in self.space_re.split(opts):
+            m = self.opt_re.match(optstr)
+            if not m:
+                return None
+            value = m.group('value')
+            if value:
+                value = value.upper()
+            else:
+                value = None
+            options[m.group('keyword').upper()] = value
+            
+        return options
+
+    
     def do_MAIL(self, rest):
         if self._from:
             self.sendCode(503,"Only one sender per message, please")
@@ -640,6 +669,14 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.sendCode(501, "Syntax error")
             return
 
+        opts = m.group('opts')
+        if opts:
+            options = self._processOptions(opts)
+            if options is None:
+                self.sendCode(501, 'Syntax error')
+                return
+            self._options = options
+        
         try:
             addr = Address(m.group('path'), self.host)
         except AddressError, e:
@@ -673,13 +710,23 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if not self._from:
             self.sendCode(503, "Must have sender before recipient")
             return
+
+        options = {}
+
         m = self.rcpt_re.match(rest)
         if not m:
             self.sendCode(501, "Syntax error")
             return
 
+        opts = m.group('opts')
+        if opts:
+            options = self._processOptions(opts)
+            if options is None:
+                self.sendCode(501, 'Syntax error')
+                return
+
         try:
-            user = User(m.group('path'), self._helo, self, self._from)
+            user = User(m.group('path'), self._helo, self, self._from, options)
         except AddressError, e:
             self.sendCode(553, str(e))
             return

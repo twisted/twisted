@@ -1112,7 +1112,104 @@ class SMTPServerTests(unittest.TestCase):
         s.connectionLost(error.ConnectionDone())
         self.assertIn("ESMTP", t.value())
 
+        
+    def testESMTPOptions(self):
+        """
+        It must be possible to obtain the options passed by the client.
+        """
+        testcase = self
+        s = smtp.ESMTP()
 
+        class TestDelivery(NotImplementedDelivery):
+            """
+            Delivery object which checks the options.
+            """
+            def validateFrom(self, helo, origin):
+                testcase.assertEqual(s.options,
+                                     { 'OPTION': 'Value',
+                                       'OPTION2': 'Value2',
+                                       'OPTION-3': 'Value3' })
+                return origin
+
+            def validateTo(self, user):
+                if str(user) == 'bar@example.com':
+                    testcase.assertEqual(user.options,
+                                         { 'BAR-OPTION': 'Baz' })
+                elif str(user) == 'blam@example.com':
+                    testcase.assertEqual(user.options,
+                                         { 'BLAM-OPTION': 'Blat' })
+                return lambda: DummyMessage()
+        
+        t = StringTransport()
+        s.makeConnection(t)
+        s.dataReceived('EHLO example.com\r\n'
+                       'MAIL FROM: foo@example.com OPTION=Value '
+                       'OPTION2=Value2 OPTION-3=Value3\r\n'
+                       'RCPT TO: bar@example.com BAR-OPTION=Baz\r\n'
+                       'RCPT TO: blam@example.com BLAM-OPTION=Blat\r\n')
+        s.connectionLost(error.ConnectionDone())
+
+
+    def testESMTPBinaryMode(self):
+        """
+        It must be possible for an L{smtp.ESMTP} subclass to put the
+        class into binary mode.
+        """
+
+        testcase = self
+        
+        class ESMTPBinaryModeTest(smtp.ESMTP):
+            """
+            ESMTP subclass with a simple BINARY command extension.  This
+            isn't a real ESMTP command from any known extension; it just
+            puts the LineReceiver into binary mode and reads that many
+            bytes before continuing.
+            """
+            bin_re = re.compile(r'^(\d+)$')
+            def do_BINARY(self, rest):
+                m = self.bin_re.match(rest)
+                if not m:
+                    self.sendCode(500, 'Error: bad syntax')
+                    return
+                self.binary_count = int(m.group(1))
+                self.binary_left = self.binary_count
+                self.mode = 'BINARY'
+                
+                self.setRawMode()
+
+            def state_BINARY(self, line):
+                testcase.fail('Line received while in binary mode')
+
+            def rawDataReceived(self, data):
+                to_do = len(data)
+                if to_do > self.binary_left:
+                    to_do = self.binary_left
+
+                # In a real extension we'd do something with the data here
+                
+                self.binary_left -= to_do
+                if not self.binary_left:
+                    self.setLineMode(data[to_do:])
+                    self.mode = smtp.COMMAND
+                    self.sendCode(250, 'Received %d bytes' % self.binary_count)
+
+        s = ESMTPBinaryModeTest()
+        t = StringTransport()
+        s.delivery = SimpleDelivery(None)
+        s.makeConnection(t)
+        s.dataReceived('EHLO example.com\r\n'
+                       'BINARY 128\r\n')
+        t.clear()
+        s.dataReceived(b'*'*128)
+        s.dataReceived('MAIL FROM: foo@example.com\r\n')
+        s.connectionLost(error.ConnectionDone())
+
+        self.assertEqual(
+            t.value(),
+            '250 Received 128 bytes\r\n'
+            '250 Sender address accepted\r\n')
+
+        
     def test_acceptSenderAddress(self):
         """
         Test that a C{MAIL FROM} command with an acceptable address is
