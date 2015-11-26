@@ -1,0 +1,1 @@
+twisted.mail.smtp.ESMTP subclasses can now obtain the ESMTP options from MAIL FROM and RCPT TO commands, and are also able to switch to raw mode so they can implement extensions that need to read bytes rather than lines.

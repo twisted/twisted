@@ -455,7 +455,24 @@ class User:
     including information on where the message came from
     """
 
-    def __init__(self, destination, helo, protocol, orig, opts=None):
+    def __init__(self, destination, helo, protocol, orig, options=None):
+        """
+        @type destination: L{Address}
+        @param destination: The destination address.
+
+        @type helo: C{(str, str)}
+        @param helo: The argument to the HELO command and the client's IP
+        address.
+
+        @type protocol: L{SMTP}
+        @param protocol: The SMTP object.
+
+        @type orig: L{Address}
+        @param orig: The sending address.
+
+        @type options: C{dict}
+        @param options: (optional) ESMTP options from the ``RCPT TO:`` command.
+        """
         host = getattr(protocol, 'host', None)
         self.dest = Address(destination, host)
         self.helo = helo
@@ -464,12 +481,13 @@ class User:
             self.orig = orig
         else:
             self.orig = Address(orig, host)
-        if opts is None:
-            opts = {}
-        self.options = opts
+        if options is None:
+            options = {}
+        self.options = options
 
     def __getstate__(self):
-        """Helper for pickle.
+        """
+        Helper for pickle.
 
         protocol isn't picklabe, but we want User to be, so skip it in
         the pickle.
@@ -480,6 +498,21 @@ class User:
                  'orig' : self.orig,
                  'options': self.options }
 
+    
+    def __setstate__(self, state):
+        """
+        Helper for pickle.
+
+        We want to handle the case where we pickle an older User object,
+        which won't have had options, then unpickle it into a newer one.
+        """
+        self.dest = state['dest']
+        self.helo = state['helo']
+        self.protocol = state['protocol']
+        self.orig = state['orig']
+        self.options = state.get('options', {})
+
+        
     def __str__(self):
         return str(self.dest)
 
@@ -541,6 +574,9 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self.delivery = delivery
         self.deliveryFactory = deliveryFactory
 
+        # Holds ESMTP options found on the MAIL FROM: command
+        self.options = {}
+        
     def timeoutConnection(self):
         msg = '%s Timeout. Try talking faster next time!' % (self.host,)
         self.sendCode(421, msg)
@@ -635,24 +671,29 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                          )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
                          $''',re.I|re.X)
 
-    opt_re = re.compile(r'''^(?P<keyword>[A-Z0-9][-A-Z0-9]*)
-                             (?:=(?P<value>[^=\ \0-\037]+))?$''',
-                        re.I|re.X)
-    space_re = re.compile(r'\s+')
+    # RFC 5321 4.1.2 mail-parameters/rcpt-parameters
+    _optionRE = re.compile(r'''^(?P<keyword>[A-Z0-9][-A-Z0-9]*)
+                               (?:=(?P<value>[^=\ \0-\037]+))?$''',
+                           re.I|re.X)
+    _spaceRE = re.compile(r'\s+')
 
     def _processOptions(self, opts):
-        """Parse the ESMTP options into a dictionary."""
+        """
+        Parse the ESMTP options into a dictionary.
+
+        @type opts: C{str}
+        @param opts: The mail-parameters or rcpt-parameters in string form.
+
+        @rtype: c{dict}
+        @return: A dictionary containing the options.
+        """
         options = {}
 
-        for optstr in self.space_re.split(opts):
-            m = self.opt_re.match(optstr)
+        for optstr in self._spaceRE.split(opts):
+            m = self._optionRE.match(optstr)
             if not m:
                 return None
             value = m.group('value')
-            if value:
-                value = value.upper()
-            else:
-                value = None
             options[m.group('keyword').upper()] = value
             
         return options
@@ -669,13 +710,14 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             self.sendCode(501, "Syntax error")
             return
 
+        self.options = {}
         opts = m.group('opts')
         if opts:
             options = self._processOptions(opts)
             if options is None:
                 self.sendCode(501, 'Syntax error')
                 return
-            self._options = options
+            self.options = options
         
         try:
             addr = Address(m.group('path'), self.host)
@@ -711,13 +753,12 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             self.sendCode(503, "Must have sender before recipient")
             return
 
-        options = {}
-
         m = self.rcpt_re.match(rest)
         if not m:
             self.sendCode(501, "Syntax error")
             return
 
+        options = {}
         opts = m.group('opts')
         if opts:
             options = self._processOptions(opts)

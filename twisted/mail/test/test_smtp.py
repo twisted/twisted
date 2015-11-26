@@ -5,6 +5,7 @@
 Test cases for twisted.mail.smtp module.
 """
 import inspect
+import pickle
 
 from zope.interface import implements, directlyProvides
 
@@ -672,9 +673,63 @@ class SMTPHelperTests(unittest.TestCase):
             self.assertEqual(smtp.quoteaddr(c), e)
 
     def testUser(self):
+        """
+        User should be constructable without options, and should convert
+        to the destination e-mail address.
+        """
         u = smtp.User('user@host', 'helo.host.name', None, None)
         self.assertEqual(str(u), 'user@host')
+        self.assertEqual(u.options, {})
+        
 
+    def testUserWithOptions(self):
+        """
+        User should remember options.
+        """
+        u = smtp.User('user@host', 'helo.host.name', None, None,
+                      { 'OPTION-1': 'foobar', 'OPTION-2': 'example.com' })
+        self.assertEqual(u.options,
+                         { 'OPTION-1': 'foobar', 'OPTION-2': 'example.com' })
+
+        
+    def testUserPickling(self):
+        """
+        User should be pickleable and when unpickled should be the same.
+        """
+        u = smtp.User('user@host', 'helo.host.name',
+                      'PROTOCOL', 'foo@example.com',
+                      { 'OPTION-1': 'foobar' })
+        pickled_u = pickle.dumps(u)
+        
+        u_dash = pickle.loads(pickled_u)
+
+        self.assertEqual(str(u.dest), str(u_dash.dest))
+        self.assertEqual(u.helo, u_dash.helo)
+        self.assertEqual(u_dash.protocol, None)
+        self.assertEqual(str(u.orig), str(u_dash.orig))
+        self.assertEqual(u.options, u_dash.options)
+
+        
+    def testUserUnpickleFromOldUserPickle(self):
+        """
+        User should be unpickleable from older pickles without options.
+        """
+        old_pickle="(itwisted.mail.smtp\nUser\np0\n(dp2\nS'dest'\np3\n"\
+          "(itwisted.mail.smtp\nAddress\np4\n(dp5\nS'addrstr'\np6\n"\
+          "S'user@host'\np7\nsS'domain'\np8\nS'host'\np9\nsS'local'\n"\
+          "p10\nS'user'\np11\nsbsS'helo'\np12\nS'helo.host.name'\np13\n"\
+          "sS'protocol'\np14\nNsS'orig'\np15\n(itwisted.mail.smtp\n"\
+          "Address\np16\n(dp17\ng6\nS'foo@example.com'\np18\nsg8\n"\
+          "S'example.com'\np19\nsg10\nS'foo'\np20\nsbsb."
+        u_dash = pickle.loads(old_pickle)
+
+        self.assertEqual(str(u_dash.dest), 'user@host')
+        self.assertEqual(u_dash.helo, 'helo.host.name')
+        self.assertEqual(u_dash.protocol, None)
+        self.assertEqual(str(u_dash.orig), 'foo@example.com')
+        self.assertEqual(u_dash.options, {})
+
+        
     def testXtextEncoding(self):
         cases = [
             ('Hello world', 'Hello+20world'),
@@ -1115,7 +1170,8 @@ class SMTPServerTests(unittest.TestCase):
         
     def testESMTPOptions(self):
         """
-        It must be possible to obtain the options passed by the client.
+        It must be possible to obtain the options passed by the client
+        in the MAIL FROM: command.
         """
         testcase = self
         s = smtp.ESMTP()
@@ -1132,6 +1188,35 @@ class SMTPServerTests(unittest.TestCase):
                 return origin
 
             def validateTo(self, user):
+                return lambda: DummyMessage()
+
+        s.delivery = TestDelivery()
+        t = StringTransport()
+        s.makeConnection(t)
+        s.dataReceived('EHLO example.com\r\n'
+                       'MAIL FROM: foo@example.com OPTION=Value '
+                       'OPTION2=Value2 OPTION-3=Value3\r\n'
+                       'RCPT TO: bar@example.com BAR-OPTION=Baz\r\n'
+                       'RCPT TO: blam@example.com BLAM-OPTION=Blat\r\n')
+        s.connectionLost(error.ConnectionDone())
+
+
+    def testESMTPRecipientOptions(self):
+        """
+        It must be possible to obtain the options passed by the client
+        in the RCPT TO: command.
+        """
+        testcase = self
+        s = smtp.ESMTP()
+
+        class TestDelivery(NotImplementedDelivery):
+            """
+            Delivery object which checks the options.
+            """
+            def validateFrom(self, helo, origin):
+                return origin
+
+            def validateTo(self, user):
                 if str(user) == 'bar@example.com':
                     testcase.assertEqual(user.options,
                                          { 'BAR-OPTION': 'Baz' })
@@ -1139,7 +1224,8 @@ class SMTPServerTests(unittest.TestCase):
                     testcase.assertEqual(user.options,
                                          { 'BLAM-OPTION': 'Blat' })
                 return lambda: DummyMessage()
-        
+
+        s.delivery = TestDelivery()
         t = StringTransport()
         s.makeConnection(t)
         s.dataReceived('EHLO example.com\r\n'
@@ -1181,17 +1267,17 @@ class SMTPServerTests(unittest.TestCase):
                 testcase.fail('Line received while in binary mode')
 
             def rawDataReceived(self, data):
-                to_do = len(data)
-                if to_do > self.binary_left:
-                    to_do = self.binary_left
+                todo = len(data)
+                if todo > self.binary_left:
+                    todo = self.binary_left
 
                 # In a real extension we'd do something with the data here
                 
-                self.binary_left -= to_do
+                self.binary_left -= todo
                 if not self.binary_left:
-                    self.setLineMode(data[to_do:])
+                    self.setLineMode(data[todo:])
                     self.mode = smtp.COMMAND
-                    self.sendCode(250, 'Received %d bytes' % self.binary_count)
+                    self.sendCode(250, 'Received %d bytes' % (self.binary_count,))
 
         s = ESMTPBinaryModeTest()
         t = StringTransport()
