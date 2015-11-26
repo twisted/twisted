@@ -249,10 +249,27 @@ def makeService(config):
         personal.setServiceParent(s)
     else:
         if config['https']:
-            from twisted.internet.ssl import DefaultOpenSSLContextFactory
-            i = internet.SSLServer(int(config['https']), site,
-                          DefaultOpenSSLContextFactory(config['privkey'],
-                                                       config['certificate']))
+            from twisted.internet.ssl import CertificateOptions
+            from OpenSSL import crypto
+
+            with open(config['privkey'], 'rb') as f:
+                privateKey = crypto.load_privatekey(
+                    crypto.FILETYPE_PEM, f.read()
+                )
+
+            with open(config['certificate'], 'rb') as f:
+                certificate = crypto.load_certificate(
+                    crypto.FILETYPE_PEM, f.read()
+                )
+
+            i = internet.SSLServer(
+                int(config['https']),
+                site,
+                CertificateOptions(privateKey,
+                                   certificate,
+                                   acceptableProtocols=[b'h2', b'http/1.1']),
+                backlog=128
+            )
             i.setServiceParent(s)
         strports.service(config['port'], site).setServiceParent(s)
 
