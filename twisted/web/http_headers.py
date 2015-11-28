@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_http_headers
+# -*- test-case-name: twisted.web.test.test_http_headers -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 
 from collections import MutableMapping
 
-from twisted.python.compat import comparable, cmp, StringType
+from twisted.python.compat import comparable, cmp, unicode
 
 
 def _dashCapitalize(name):
@@ -54,8 +54,6 @@ class _DictHeaders(MutableMapping):
         """
         Set the given header.
         """
-        if isinstance(key, StringType):
-            key = key.encode('ascii')
         self._headers.setRawHeaders(key, [value])
 
 
@@ -106,9 +104,16 @@ class _DictHeaders(MutableMapping):
 @comparable
 class Headers(object):
     """
-    This class stores the HTTP headers as both a parsed representation
-    and the raw string representation. It converts between the two on
-    demand.
+    Stores HTTP headers in a key and multiple value format.
+
+    Most methods accept L{bytes} and L{unicode}, with an internal L{bytes}
+    representation. When passed L{unicode}, header names (e.g. 'Content-Type')
+    are encoded using ISO-8859-1 and header values (e.g.
+    'text/html;charset=utf-8') are encoded using UTF-8. Some methods that return
+    values will return them in the same type as the name given. If bytes that
+    cannot be interpreted using either of these encodings are required, using
+    only L{bytes} when interfacing with this class will not do any encoding or
+    decoding, and pass the raw bytes through.
 
     @cvar _caseMappings: A C{dict} that maps lowercase header names
         to their canonicalized representation.
@@ -129,7 +134,9 @@ class Headers(object):
         self._rawHeaders = {}
         if rawHeaders is not None:
             for name, values in rawHeaders.items():
-                self.setRawHeaders(name, values[:])
+
+                self.setRawHeaders(self._encodeName(name),
+                                   self._encodeValues(values))
 
 
     def __repr__(self):
@@ -151,6 +158,74 @@ class Headers(object):
         return NotImplemented
 
 
+    def _decodeName(self, name):
+        """
+        Decode a iso-8859-1-encoded L{bytes} header name into a L{unicode}
+        string.
+
+        @return: C{name}, decoded
+        @rtype: L{unicode}
+        """
+        return name.decode('iso-8859-1')
+
+
+    def _encodeName(self, name):
+        """
+        Encode the name of a header (eg 'Content-Type') to a iso-8859-1 encoded
+        bytestring if required.
+
+        @return: C{name}, encoded
+        @rtype: L{bytes}
+        """
+        if isinstance(name, unicode):
+            return name.encode('iso-8859-1')
+        return name
+
+
+    def _encodeValue(self, value):
+        """
+        Encode a single header value to a UTF-8 encoded bytestring if required.
+
+        @return: C{value}, encoded
+        @rtype: L{bytes}
+        """
+        if isinstance(value, unicode):
+            return value.encode('utf8')
+        return value
+
+
+    def _encodeValues(self, values):
+        """
+        Encode a L{list} of header values to a L{list} of UTF-8 encoded
+        bytestrings if required.
+
+        @return: C{values}, with each item encoded
+        @rtype: L{list} of L{bytes}
+        """
+        newValues = []
+
+        for value in values:
+            newValues.append(self._encodeValue(value))
+        return newValues
+
+
+    def _decodeValues(self, values):
+        """
+        Decode a L{list} of header values into a L{list} of Unicode strings.
+
+        @return: C{values}, with each item decoded
+        @rtype: L{list} of L{unicode}
+        """
+        if type(values) is not list:
+            return values
+
+        newValues = []
+
+        for value in values:
+            newValues.append(value.decode('utf8'))
+        return newValues
+
+
     def copy(self):
         """
         Return a copy of itself with the same headers set.
@@ -162,35 +237,35 @@ class Headers(object):
         """
         Check for the existence of a given header.
 
-        @type name: C{bytes}
+        @type name: C{bytes} or L{unicode}
         @param name: The name of the HTTP header to check for.
 
         @rtype: C{bool}
         @return: C{True} if the header exists, otherwise C{False}.
         """
-        return name.lower() in self._rawHeaders
+        return self._encodeName(name.lower()) in self._rawHeaders
 
 
     def removeHeader(self, name):
         """
         Remove the named header from this header object.
 
-        @type name: C{bytes}
+        @type name: C{bytes} or L{unicode}
         @param name: The name of the HTTP header to remove.
 
         @return: C{None}
         """
-        self._rawHeaders.pop(name.lower(), None)
+        self._rawHeaders.pop(self._encodeName(name.lower()), None)
 
 
     def setRawHeaders(self, name, values):
         """
         Sets the raw representation of the given header.
 
-        @type name: C{bytes}
+        @type name: L{bytes} or L{unicode}
         @param name: The name of the HTTP header to set the values for.
 
-        @type values: C{list}
+        @type values: L{list} of L{bytes} or L{unicode} strings
         @param values: A list of strings each one being a header value of
             the given name.
 
@@ -199,24 +274,30 @@ class Headers(object):
         if not isinstance(values, list):
             raise TypeError("Header entry %r should be list but found "
                             "instance of %r instead" % (name, type(values)))
-        self._rawHeaders[name.lower()] = values
+
+        name = self._encodeName(name.lower())
+        self._rawHeaders[name] = self._encodeValues(values)
 
 
     def addRawHeader(self, name, value):
         """
         Add a new raw value for the given header.
 
-        @type name: C{bytes}
+        @type name: L{bytes} or L{unicode}
         @param name: The name of the header for which to set the value.
 
-        @type value: C{bytes}
+        @type value: L{bytes} or L{unicode}
         @param value: The value to set for the named header.
         """
+        name = self._encodeName(name)
+        value = self._encodeValue(value)
         values = self.getRawHeaders(name)
-        if values is None:
-            self.setRawHeaders(name, [value])
-        else:
+
+        if values is not None:
             values.append(value)
+        else:
+            values = [value]
+        self.setRawHeaders(name, values)
 
 
     def getRawHeaders(self, name, default=None):
@@ -224,22 +305,28 @@ class Headers(object):
         Returns a list of headers matching the given name as the raw string
         given.
 
-        @type name: C{bytes}
+        @type name: L{bytes} or L{unicode}
         @param name: The name of the HTTP header to get the values of.
 
         @param default: The value to return if no header with the given C{name}
             exists.
 
-        @rtype: C{list}
-        @return: A C{list} of values for the given header.
+        @rtype: L{list} of strings, same type as C{name}
+        @return: A L{list} of values for the given header.
         """
-        return self._rawHeaders.get(name.lower(), default)
+        name = name.lower()
+        encodedName = self._encodeName(name)
+        values = self._rawHeaders.get(encodedName, default)
+
+        if isinstance(name, unicode):
+            return self._decodeValues(values)
+        return values
 
 
     def getAllRawHeaders(self):
         """
         Return an iterator of key, value pairs of all headers contained in this
-        object, as strings.  The keys are capitalized in canonical
+        object, as L{bytes}.  The keys are capitalized in canonical
         capitalization.
         """
         for k, v in self._rawHeaders.items():
@@ -250,14 +337,21 @@ class Headers(object):
         """
         Return the canonical name for the given header.
 
-        @type name: C{bytes}
+        @type name: L{bytes} or L{unicode}
         @param name: The all-lowercase header name to capitalize in its
             canonical form.
 
-        @rtype: C{bytes}
+        @rtype: same type as C{name}
         @return: The canonical name of the header.
         """
-        return self._caseMappings.get(name, _dashCapitalize(name))
+        encodedName = self._encodeName(name)
+        canonicalName = self._caseMappings.get(encodedName,
+                                               _dashCapitalize(encodedName))
+
+        if isinstance(name, unicode):
+            return self._decodeName(canonicalName)
+        return canonicalName
+
 
 
 __all__ = ['Headers']
