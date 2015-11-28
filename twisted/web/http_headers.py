@@ -18,10 +18,10 @@ def _dashCapitalize(name):
     Return a byte string which is capitalized using '-' as a word separator.
 
     @param name: The name of the header to capitalize.
-    @type name: C{bytes}
+    @type name: L{bytes}
 
     @return: The given header capitalized using '-' as a word separator.
-    @rtype: C{bytes}
+    @rtype: L{bytes}
     """
     return b'-'.join([word.capitalize() for word in name.split(b'-')])
 
@@ -115,11 +115,11 @@ class Headers(object):
     only L{bytes} when interfacing with this class will not do any encoding or
     decoding, and pass the raw bytes through.
 
-    @cvar _caseMappings: A C{dict} that maps lowercase header names
+    @cvar _caseMappings: A L{dict} that maps lowercase header names
         to their canonicalized representation.
 
-    @ivar _rawHeaders: A C{dict} mapping header names as C{bytes} to C{lists} of
-        header values as C{bytes}.
+    @ivar _rawHeaders: A L{dict} mapping header names as L{bytes} to L{list}s of
+        header values as L{bytes}.
     """
     _caseMappings = {
         b'content-md5': b'Content-MD5',
@@ -237,10 +237,10 @@ class Headers(object):
         """
         Check for the existence of a given header.
 
-        @type name: C{bytes} or L{unicode}
+        @type name: L{bytes} or L{unicode}
         @param name: The name of the HTTP header to check for.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         @return: C{True} if the header exists, otherwise C{False}.
         """
         return self._encodeName(name.lower()) in self._rawHeaders
@@ -250,10 +250,10 @@ class Headers(object):
         """
         Remove the named header from this header object.
 
-        @type name: C{bytes} or L{unicode}
+        @type name: L{bytes} or L{unicode}
         @param name: The name of the HTTP header to remove.
 
-        @return: C{None}
+        @return: L{NoneType}
         """
         self._rawHeaders.pop(self._encodeName(name.lower()), None)
 
@@ -269,7 +269,7 @@ class Headers(object):
         @param values: A list of strings each one being a header value of
             the given name.
 
-        @return: C{None}
+        @return: L{NoneType}
         """
         if not isinstance(values, list):
             raise TypeError("Header entry %r should be list but found "
