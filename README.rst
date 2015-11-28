@@ -1,12 +1,10 @@
 Twisted 15.5.0
 ==============
 
-|pypi|_
-|coverage|_
+|pypi|
+|coverage|
 
-Release Codename:
-
-    "Trial By Fire"
+    <reaperhulk> I continue to believe that networks are totally reliable despite ample evidence from my CI that I am wrong
 
 For information on what's new in Twisted 15.5.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
