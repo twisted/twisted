@@ -1,66 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 15.5.0pre2 (2015-11-25)
-====================================
-
-No significant changes have been made for this release.
-
-
-Twisted Conch 15.5.0pre2 (2015-11-25)
-=====================================
-
-No significant changes have been made for this release.
-
-
-Twisted Mail 15.5.0pre2 (2015-11-25)
-====================================
-
-No significant changes have been made for this release.
-
-
-Twisted Names 15.5.0pre2 (2015-11-25)
-=====================================
-
-No significant changes have been made for this release.
-
-
-Twisted News 15.5.0pre2 (2015-11-25)
-====================================
-
-No significant changes have been made for this release.
-
-
-Twisted Pair 15.5.0pre2 (2015-11-25)
-====================================
-
-No significant changes have been made for this release.
-
-
-Twisted Runner 15.5.0pre2 (2015-11-25)
-======================================
-
-No significant changes have been made for this release.
-
-
-Twisted Web 15.5.0pre2 (2015-11-25)
-===================================
-
-No significant changes have been made for this release.
-
-Other
------
- - #8070
-
-
-Twisted Words 15.5.0pre2 (2015-11-25)
-=====================================
-
-No significant changes have been made for this release.
-
-
-Twisted Core 15.5.0pre1 (2015-11-25)
-====================================
+Twisted Core 15.5.0 (2015-11-28)
+================================
 
 Features
 --------
@@ -128,8 +70,8 @@ Other
    #8096, #8098, #8106
 
 
-Twisted Conch 15.5.0pre1 (2015-11-18)
-=====================================
+Twisted Conch 15.5.0 (2015-11-18)
+=================================
 
 Features
 --------
@@ -152,38 +94,38 @@ Deprecations and Removals
    pre RFC 4419 servers. (#8100)
 
 
-Twisted Mail 15.5.0pre1 (2015-11-18)
-====================================
+Twisted Mail 15.5.0 (2015-11-18)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Names 15.5.0pre1 (2015-11-18)
-=====================================
+Twisted Names 15.5.0 (2015-11-18)
+=================================
 
 No significant changes have been made for this release.
 
 
-Twisted News 15.5.0pre1 (2015-11-18)
-====================================
+Twisted News 15.5.0 (2015-11-18)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 15.5.0pre1 (2015-11-18)
-====================================
+Twisted Pair 15.5.0 (2015-11-18)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 15.5.0pre1 (2015-11-18)
-======================================
+Twisted Runner 15.5.0 (2015-11-18)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 15.5.0pre1 (2015-11-18)
-===================================
+Twisted Web 15.5.0 (2015-11-18)
+================================
 
 Features
 --------
@@ -210,11 +152,11 @@ Bugfixes
 
 Other
 -----
- - #8016
+ - #8016, #8070
 
 
-Twisted Words 15.5.0pre1 (2015-11-18)
-=====================================
+Twisted Words 15.5.0 (2015-11-18)
+=================================
 
 Features
 --------
