@@ -182,12 +182,12 @@ class Headers(object):
         @param name: A HTTP header name
         @type name: L{unicode} or L{bytes}
 
-        @return: C{name}, encoded if required
+        @return: C{name}, encoded if required, lowercased
         @rtype: L{bytes}
         """
         if isinstance(name, unicode):
-            return name.encode('iso-8859-1')
-        return name
+            return name.lower().encode('iso-8859-1')
+        return name.lower()
 
 
     def _encodeValue(self, value):
@@ -262,7 +262,7 @@ class Headers(object):
         @rtype: L{bool}
         @return: C{True} if the header exists, otherwise C{False}.
         """
-        return self._encodeName(name.lower()) in self._rawHeaders
+        return self._encodeName(name) in self._rawHeaders
 
 
     def removeHeader(self, name):
@@ -274,7 +274,7 @@ class Headers(object):
 
         @return: C{None}
         """
-        self._rawHeaders.pop(self._encodeName(name.lower()), None)
+        self._rawHeaders.pop(self._encodeName(name), None)
 
 
     def setRawHeaders(self, name, values):
@@ -294,7 +294,7 @@ class Headers(object):
             raise TypeError("Header entry %r should be list but found "
                             "instance of %r instead" % (name, type(values)))
 
-        name = self._encodeName(name.lower())
+        name = self._encodeName(name)
         self._rawHeaders[name] = self._encodeValues(values)
 
 
@@ -332,7 +332,6 @@ class Headers(object):
         @rtype: L{list} of strings, same type as C{name}
         @return: A L{list} of values for the given header.
         """
-        name = name.lower()
         encodedName = self._encodeName(name)
         values = self._rawHeaders.get(encodedName, default)
 
