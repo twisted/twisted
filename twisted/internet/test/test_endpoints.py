@@ -2575,12 +2575,27 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(cf.dhParameters, DiffieHellmanParameters)
         self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
+    def test_sslServerGetsClientCerts(self):
+        """
+        If C{getClientCertificate} is specified, client certificates
+        will be retrieved.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:4321:privateKey={0}:certKey={1}:getClientCertificate=yes"
+            .format(escapedPEMPathName, escapedPEMPathName)
+        )
+        cf = server._sslContextFactory
+        self.assertTrue(cf._retrieveCertificate)
+
 
     if skipSSL:
         test_ssl.skip = test_sslWithDefaults.skip = skipSSL
         test_sslChainLoads.skip = skipSSL
         test_sslChainFileMustContainCert.skip = skipSSL
         test_sslDHparameters.skip = skipSSL
+        test_sslServerGetsClientCerts.skip = skipSSL
 
 
     def test_unix(self):

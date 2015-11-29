@@ -1340,6 +1340,9 @@ class OpenSSLCertificateOptions(object):
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
         ['trustRoot', 'caCerts'],
+        ['trustRoot', 'retrieveCertificate'],
+        ['retrieveCertificate', 'verify'],
+        ['retrieveCertificate', 'caCerts'],
     ])
     def __init__(self,
                  privateKey=None,
@@ -1359,6 +1362,7 @@ class OpenSSLCertificateOptions(object):
                  dhParameters=None,
                  trustRoot=None,
                  acceptableProtocols=None,
+                 retrieveCertificate=False
                  ):
         """
         Create an OpenSSL context SSL connection context factory.
@@ -1458,6 +1462,12 @@ class OpenSSLCertificateOptions(object):
             be established, but no protocol wil be negotiated. Protocols
             earlier in the list are preferred over those later in the list.
         @type acceptableProtocols: C{list} of C{bytes}
+
+        @param retrieveCertificate: If L{True}, allows retrieval of peer
+            certificates even without CA verification. Defaults to L{False}.
+            Since this conflicts with C{caCerts}, C{verify}, and C{trustRoot},
+            specifying any of those options with this one will raise a
+            L{TypeError}.
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1563,6 +1573,11 @@ class OpenSSLCertificateOptions(object):
 
         self._acceptableProtocols = acceptableProtocols
 
+        if retrieveCertificate and not self.verify:
+            self._retrieveCertificate = True
+        else:
+            self._retrieveCertificate = False
+
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -1606,13 +1621,27 @@ class OpenSSLCertificateOptions(object):
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             self.trustRoot._addCACertsToContext(ctx)
+        elif self._retrieveCertificate:
+            verifyFlags = SSL.VERIFY_PEER
 
         # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
         # the underlying OpenSSL API call allows NULL to be passed).  It
         # doesn't, so we'll supply a function which does the same thing.
         def _verifyCallback(conn, cert, errno, depth, preverify_ok):
             return preverify_ok
-        ctx.set_verify(verifyFlags, _verifyCallback)
+        def _retrieveCallback(conn, cert, errno, depth, preverify_ok):
+            """
+            For retrieving certificates, we still need to pass a no-op
+            function to allow us to retrieve certificates. Since retrieving
+            without verification precludes doing any CA-based verification,
+            we're just returning True here.
+            """
+            return True
+        if self._retrieveCertificate:
+            ctx.set_verify(verifyFlags, _retrieveCallback)
+        else:
+            ctx.set_verify(verifyFlags, _verifyCallback)
+
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 

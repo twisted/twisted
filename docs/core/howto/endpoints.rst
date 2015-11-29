@@ -199,6 +199,7 @@ SSL
    ``extraCertChain`` gives a filesystem path to a file with one or more concatenated certificates in PEM format that establish the chain from a root CA to the one that signed your certificate.
    ``sslmethod`` indicates which SSL/TLS version to use (a value like ``TLSv1_METHOD``).
    ``dhParameters`` gives a filesystem path to a file in PEM format with parameters that are required for Diffie-Hellman key exchange.
+   ``getClientCertificate`` allows you to retrieve client certificates from connected clients. Accepts a ``yes`` or ``no`` value.
    Since the this is required for the ``DHE``-family of ciphers that offer perfect forward secrecy (PFS), it is recommended to specify one.
    Such a file can be created using ``openssl dhparam -out dh_param_1024.pem -2 1024``.
    Please refer to `OpenSSL's documentation on dhparam <http://www.openssl.org/docs/apps/dhparam.html>`_ for further details.

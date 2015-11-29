@@ -1053,7 +1053,7 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
 
 def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
               sslmethod=None, interface='', backlog=50, extraCertChain=None,
-              dhParameters=None):
+              dhParameters=None, getClientCertificate=None):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
@@ -1092,6 +1092,12 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         the forward secret C{DHE} ciphers aren't available for servers.
     @type dhParameters: L{str}
 
+    @param getClientCertificate: If this parameter is enabled, the endpoint
+        will retrieve certificates from the client.
+        This parameter is a boolean parameter and should take one of a "yes"
+        or a "no" value.
+    @type requireCert: L{str}
+
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
         L{IReactorSSL.listenSSL} (or, modulo argument 2, the factory, arguments
         to L{SSL4ServerEndpoint}.
@@ -1126,6 +1132,14 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
             FilePath(dhParameters),
         )
 
+    if getClientCertificate:
+        retrieveCertificate = _valueToBool(getClientCertificate, False)
+        if retrieveCertificate is None:
+            raise ValueError("The value of getClientCertificate must be a "
+                "yes/no value.")
+        if retrieveCertificate:
+            kw["retrieveCertificate"] = True
+
     cf = ssl.CertificateOptions(
         privateKey=privateCertificate.privateKey.original,
         certificate=privateCertificate.original,
@@ -1136,6 +1150,21 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     return ((int(port), factory, cf),
             {'interface': interface, 'backlog': int(backlog)})
 
+
+def _valueToBool(value, default):
+    """
+    Verifies that values are reasonable strings that we can parse into some
+    boolean value, and returns that boolean value.
+    Returns None if we can't make a boolean value out of the given string.
+    """
+    if value is None:
+        return default
+    lowerValue = value.lower()
+    if lowerValue in ("yes", "true", "y", "t"):
+        return True
+    if lowerValue in ("no", "false", "n", "f"):
+        return False
+    return None
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
