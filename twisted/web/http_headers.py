@@ -162,8 +162,11 @@ class Headers(object):
 
     def _decodeName(self, name):
         """
-        Decode a iso-8859-1-encoded L{bytes} header name into a L{unicode}
+        Decode a ISO-8859-1-encoded L{bytes} header name into a L{unicode}
         string.
+
+        @param name: A HTTP header name
+        @type name: ISO-8859-1 encoded L{bytes}
 
         @return: C{name}, decoded
         @rtype: L{unicode}
@@ -173,8 +176,11 @@ class Headers(object):
 
     def _encodeName(self, name):
         """
-        Encode the name of a header (eg 'Content-Type') to a iso-8859-1 encoded
+        Encode the name of a header (eg 'Content-Type') to a ISO-8859-1 encoded
         bytestring if required.
+
+        @param name: A HTTP header name
+        @type name: L{unicode} or L{bytes}
 
         @return: C{name}, encoded if required
         @rtype: L{bytes}
@@ -187,6 +193,9 @@ class Headers(object):
     def _encodeValue(self, value):
         """
         Encode a single header value to a UTF-8 encoded bytestring if required.
+
+        @param value: A single HTTP header value.
+        @type value: L{bytes} or L{unicode}
 
         @return: C{value}, encoded if required
         @rtype: L{bytes}
@@ -201,6 +210,9 @@ class Headers(object):
         Encode a L{list} of header values to a L{list} of UTF-8 encoded
         bytestrings if required.
 
+        @param values: A list of HTTP header values.
+        @type values: L{list} of L{bytes} or L{unicode} (mixed types allowed)
+
         @return: C{values}, with each item encoded if required
         @rtype: L{list} of L{bytes}
         """
@@ -214,6 +226,9 @@ class Headers(object):
     def _decodeValues(self, values):
         """
         Decode a L{list} of header values into a L{list} of Unicode strings.
+
+        @param values: A list of HTTP header values.
+        @type values: L{list} of UTF-8 encoded L{bytes}
 
         @return: C{values}, with each item decoded
         @rtype: L{list} of L{unicode}
@@ -231,6 +246,8 @@ class Headers(object):
     def copy(self):
         """
         Return a copy of itself with the same headers set.
+
+        @return: A new L{Headers}
         """
         return self.__class__(self._rawHeaders)
 
