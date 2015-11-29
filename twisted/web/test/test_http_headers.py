@@ -385,25 +385,6 @@ class UnicodeHeadersTests(TestCase):
         self.assertEqual(list(h.getAllRawHeaders()), [])
 
 
-    def test_canonicalNameCaps(self):
-        """
-        L{Headers._canonicalNameCaps} returns the canonical capitalization for
-        the given header.
-        """
-        h = Headers()
-        self.assertEqual(h._canonicalNameCaps(u"test"), u"Test")
-        self.assertEqual(h._canonicalNameCaps(u"test-stuff"), u"Test-Stuff")
-        self.assertEqual(h._canonicalNameCaps(u"content-md5"), u"Content-MD5")
-        self.assertEqual(h._canonicalNameCaps(u"dnt"), u"DNT")
-        self.assertEqual(h._canonicalNameCaps(u"etag"), u"ETag")
-        self.assertEqual(h._canonicalNameCaps(u"p3p"), u"P3P")
-        self.assertEqual(h._canonicalNameCaps(u"te"), u"TE")
-        self.assertEqual(h._canonicalNameCaps(u"www-authenticate"),
-                          u"WWW-Authenticate")
-        self.assertEqual(h._canonicalNameCaps(u"x-xss-protection"),
-                          u"X-XSS-Protection")
-
-
     def test_getAllRawHeaders(self):
         """
         L{Headers.getAllRawHeaders} returns an iterable of (k, v) pairs, where
@@ -504,7 +485,6 @@ class UnicodeHeadersTests(TestCase):
         self.assertEqual(i.getRawHeaders(u'test'), [u'foo'])
         i.addRawHeader(u'test', b'baz')
         self.assertEqual(h.getRawHeaders(u'test'), [u'foo', u'bar'])
-
 
 
 

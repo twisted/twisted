@@ -110,10 +110,12 @@ class Headers(object):
     representation. When passed L{unicode}, header names (e.g. 'Content-Type')
     are encoded using ISO-8859-1 and header values (e.g.
     'text/html;charset=utf-8') are encoded using UTF-8. Some methods that return
-    values will return them in the same type as the name given. If bytes that
-    cannot be interpreted using either of these encodings are required, using
-    only L{bytes} when interfacing with this class will not do any encoding or
-    decoding, and pass the raw bytes through.
+    values will return them in the same type as the name given.
+
+    If the header keys or values cannot be encoded or decoded using the rules
+    above, using just L{bytes} arguments to the methods of this class will
+    ensure no decoding or encoding is done, and L{Headers} will treat the keys
+    and values as opaque byte strings.
 
     @cvar _caseMappings: A L{dict} that maps lowercase header names
         to their canonicalized representation.
@@ -174,7 +176,7 @@ class Headers(object):
         Encode the name of a header (eg 'Content-Type') to a iso-8859-1 encoded
         bytestring if required.
 
-        @return: C{name}, encoded
+        @return: C{name}, encoded if required
         @rtype: L{bytes}
         """
         if isinstance(name, unicode):
@@ -186,7 +188,7 @@ class Headers(object):
         """
         Encode a single header value to a UTF-8 encoded bytestring if required.
 
-        @return: C{value}, encoded
+        @return: C{value}, encoded if required
         @rtype: L{bytes}
         """
         if isinstance(value, unicode):
@@ -199,7 +201,7 @@ class Headers(object):
         Encode a L{list} of header values to a L{list} of UTF-8 encoded
         bytestrings if required.
 
-        @return: C{values}, with each item encoded
+        @return: C{values}, with each item encoded if required
         @rtype: L{list} of L{bytes}
         """
         newValues = []
@@ -337,20 +339,14 @@ class Headers(object):
         """
         Return the canonical name for the given header.
 
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes}
         @param name: The all-lowercase header name to capitalize in its
             canonical form.
 
-        @rtype: same type as C{name}
+        @rtype: L{bytes}
         @return: The canonical name of the header.
         """
-        encodedName = self._encodeName(name)
-        canonicalName = self._caseMappings.get(encodedName,
-                                               _dashCapitalize(encodedName))
-
-        if isinstance(name, unicode):
-            return self._decodeName(canonicalName)
-        return canonicalName
+        return self._caseMappings.get(name, _dashCapitalize(name))
 
 
 
