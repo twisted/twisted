@@ -272,13 +272,26 @@ class UnicodeHeadersTests(TestCase):
 
     def test_nameEncoding(self):
         """
-        Passing L{unicode} to L{Headers.setRawHeaders} will encode the name as
-        ISO-8859-1 and values as UTF-8.
+        Passing L{unicode} to any function that takes a header name will encode
+        said header name as ISO-8859-1.
         """
         h = Headers()
         with self.assertRaises(UnicodeEncodeError):
             h.setRawHeaders(u"\u2603", [u"val"])
+        with self.assertRaises(UnicodeEncodeError):
+            h.hasHeader(u"\u2603")
 
+        h.setRawHeaders(u"\u00E1", [u"\u2603", b"foo"])
+        self.assertTrue(h.hasHeader(b"\xe1"))
+        self.assertEqual(h.getRawHeaders(b"\xe1"), [b'\xe2\x98\x83', b'foo'])
+
+
+    def test_valueEncoding(self):
+        """
+        Passing L{unicode} to L{Headers.setRawHeaders} will encode the name as
+        ISO-8859-1 and values as UTF-8.
+        """
+        h = Headers()
         h.setRawHeaders(u"\u00E1", [u"\u2603", b"foo"])
         self.assertTrue(h.hasHeader(b"\xe1"))
         self.assertEqual(h.getRawHeaders(b"\xe1"), [b'\xe2\x98\x83', b'foo'])
