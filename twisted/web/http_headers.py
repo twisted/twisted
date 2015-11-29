@@ -308,14 +308,13 @@ class Headers(object):
         @type value: L{bytes} or L{unicode}
         @param value: The value to set for the named header.
         """
-        name = self._encodeName(name)
-        value = self._encodeValue(value)
         values = self.getRawHeaders(name)
 
         if values is not None:
             values.append(value)
         else:
             values = [value]
+
         self.setRawHeaders(name, values)
 
 
