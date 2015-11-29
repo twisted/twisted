@@ -1,6 +1,30 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 15.5.0 (2015-11-28)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh now supports the diffie-hellman-group-exchange-
+   sha256 key exchange algorithm. (#7672)
+ - twisted.conch.ssh now supports the diffie-hellman-group14-sha1 key
+   exchange algorithm. (#7717)
+ - twisted.conch.ssh.transport.SSHClientTransport now supports Diffie-
+   Hellman key exchange using MSG_KEX_DH_GEX_REQUEST as described in
+   RFC 4419. (#8100)
+ - twisted.conch.ssh now supports the hmac-sha2-256 and hmac-sha2-512
+   MAC algorithms. (#8108)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.ssh.keys.objectType is now deprecated. Use
+   twisted.conch.ssh.keys.Key.sshType. (#8080)
+ - twisted.conch.ssh.transport.SSHClientTransport no longer supports
+   Diffie-Hellman key exchange using MSG_KEX_DH_GEX_REQUEST_OLD for
+   pre RFC 4419 servers. (#8100)
+
+
 Twisted Conch 15.4.0 (2015-09-04)
 =================================
 

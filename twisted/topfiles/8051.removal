@@ -1,1 +1,0 @@
-twisted.python.util.OrderedDict is now deprecated, and uses of it in Twisted are replaced with collections.OrderedDict.

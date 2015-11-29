@@ -1,1 +1,0 @@
-twisted.web.util's failure template has been moved inline to work around Python 3 distribution issues.
