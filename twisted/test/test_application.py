@@ -357,7 +357,7 @@ class InternetTests(unittest.TestCase):
         t = internet.UDPServer(0, p)
         t.startService()
         num = t._port.getHost().port
-        self.assertNotEquals(num, 0)
+        self.assertNotEqual(num, 0)
         def onStop(ignored):
             t = internet.UDPServer(num, p)
             t.startService()

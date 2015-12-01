@@ -89,7 +89,7 @@ class VersionsTests(TestCase):
         vb = Version("whatever", 1, 0, 0)
         self.assertTrue(va < vb)
         self.assertFalse(va > vb)
-        self.assertNotEquals(vb, va)
+        self.assertNotEqual(vb, va)
 
 
     def test_comparingPrereleases(self):

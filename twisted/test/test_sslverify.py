@@ -925,7 +925,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
                 sslverify.DN(CN=b'a', OU=b'hello'),
                 sslverify.DistinguishedName(commonName=b'a',
                                             organizationalUnitName=b'hello'))
-        self.assertNotEquals(
+        self.assertNotEqual(
                 sslverify.DN(CN=b'a', OU=b'hello'),
                 sslverify.DN(CN=b'a', OU=b'hello', emailAddress=b'xxx'))
         dn = sslverify.DN(CN=b'abcdefg')

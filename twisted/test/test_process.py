@@ -2560,7 +2560,7 @@ class ClosingPipesTests(unittest.TestCase):
         custom exit code.
         """
         # child must not get past that write without raising
-        self.assertNotEquals(
+        self.assertNotEqual(
             reason.exitCode, 42, 'process reason was %r' % reason)
         self.assertEqual(p.output, b'')
         return p.errput

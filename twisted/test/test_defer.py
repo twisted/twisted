@@ -1346,8 +1346,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         fail = l[0]
         self.assertEqual(fail.value, exc)
         localz, globalz = fail.frames[0][-2:]
-        self.assertNotEquals([], localz)
-        self.assertNotEquals([], globalz)
+        self.assertNotEqual([], localz)
+        self.assertNotEqual([], globalz)
 
 
     def test_errorInCallbackDoesNotCaptureVars(self):
@@ -1384,8 +1384,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.addErrback(l.append)
         fail = l[0]
         localz, globalz = fail.frames[0][-2:]
-        self.assertNotEquals([], localz)
-        self.assertNotEquals([], globalz)
+        self.assertNotEqual([], localz)
+        self.assertNotEqual([], globalz)
 
 
     def test_inlineCallbacksTracebacks(self):

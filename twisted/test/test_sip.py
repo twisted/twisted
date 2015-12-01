@@ -364,7 +364,7 @@ class ViaTests(unittest.TestCase):
         self.assertEqual(v.received, "22.13.1.5")
         self.assertEqual(v.rport, 12345)
 
-        self.assertNotEquals(v.toString().find("rport=12345"), -1)
+        self.assertNotEqual(v.toString().find("rport=12345"), -1)
 
 
     def test_unknownParams(self):

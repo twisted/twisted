@@ -22,6 +22,6 @@ class DefaultFormattingStateTests(unittest.TestCase):
         self.assertEqual(
             DefaultFormattingState(),
             DefaultFormattingState())
-        self.assertNotEquals(
+        self.assertNotEqual(
             DefaultFormattingState(),
             'hello')

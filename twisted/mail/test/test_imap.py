@@ -4837,7 +4837,7 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
         def fetch():
             return self.client.fetchUID('1:*')
         def stillConnected():
-            self.assertNotEquals(self.server.state, 'timeout')
+            self.assertNotEqual(self.server.state, 'timeout')
 
         def cbAdvance(ignored):
             for i in xrange(4):

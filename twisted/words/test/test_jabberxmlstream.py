@@ -634,7 +634,7 @@ class ListenAuthenticatorTests(unittest.TestCase):
                          "version='1.0'>")
         self.assertEqual((1, 0), xs.version)
         self.assertNotIdentical(None, xs.sid)
-        self.assertNotEquals('12345', xs.sid)
+        self.assertNotEqual('12345', xs.sid)
         self.assertEqual('jabber:client', xs.namespace)
         self.assertIdentical(None, xs.otherEntity)
         self.assertEqual('example.com', xs.thisEntity.host)

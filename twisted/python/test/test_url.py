@@ -224,7 +224,7 @@ class TestURL(TestCase):
         """
         urlpath = URL.fromText(theurl)
         self.assertEqual(urlpath, URL.fromText(theurl))
-        self.assertNotEquals(
+        self.assertNotEqual(
             urlpath,
             URL.fromText('ftp://www.anotherinvaliddomain.com/'
                          'foo/bar/baz/?zot=21&zut')

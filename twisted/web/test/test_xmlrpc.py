@@ -393,7 +393,7 @@ class XMLRPCTests(unittest.TestCase):
             factory.f = TestQueryFactoryCancel(*args, **kw)
             return factory.f
         d = self.proxy(factory).callRemote('add', 2, 3)
-        self.assertNotEquals(factory.f.connector.state, "disconnected")
+        self.assertNotEqual(factory.f.connector.state, "disconnected")
         d.cancel()
         self.assertEqual(factory.f.connector.state, "disconnected")
         d = self.assertFailure(d, defer.CancelledError)

@@ -130,7 +130,7 @@ class MicroDOMTests(TestCase):
             """
         d = microdom.parseString(s, beExtremelyLenient=1)
         n = domhelpers.gatherTextNodes(d)
-        self.assertNotEquals(n.find('>'), -1)
+        self.assertNotEqual(n.find('>'), -1)
 
     def testEmptyError(self):
         self.assertRaises(sux.ParseError, microdom.parseString, "")

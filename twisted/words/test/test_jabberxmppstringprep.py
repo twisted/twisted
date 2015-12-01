@@ -46,7 +46,7 @@ class XMPPStringPrepTests(unittest.TestCase):
 
     def testResourcePrep(self):
         self.assertEqual(resourceprep.prepare(u'resource'), u'resource')
-        self.assertNotEquals(resourceprep.prepare(u'Resource'), u'resource')
+        self.assertNotEqual(resourceprep.prepare(u'Resource'), u'resource')
         self.assertEqual(resourceprep.prepare(u' '), u' ')
 
         self.assertEqual(resourceprep.prepare(u'Henry \u2163'), u'Henry IV')

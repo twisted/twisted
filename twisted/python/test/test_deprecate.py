@@ -118,7 +118,7 @@ class ModuleProxyTests(SynchronousTestCase):
         """
         proxy = self._makeProxy()
         proxy._module = 1
-        self.assertNotEquals(object.__getattribute__(proxy, '_module'), 1)
+        self.assertNotEqual(object.__getattribute__(proxy, '_module'), 1)
         self.assertEqual(proxy._module, 1)
 
 

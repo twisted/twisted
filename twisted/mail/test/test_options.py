@@ -124,11 +124,11 @@ class OptionsTests(TestCase):
         options = Options()
         options.parseOptions(['--no-pop3'])
         self.assertEqual(options._getEndpoints(None, 'pop3'), [])
-        self.assertNotEquals(options._getEndpoints(None, 'smtp'), [])
+        self.assertNotEqual(options._getEndpoints(None, 'smtp'), [])
 
         options = Options()
         options.parseOptions(['--no-smtp'])
-        self.assertNotEquals(options._getEndpoints(None, 'pop3'), [])
+        self.assertNotEqual(options._getEndpoints(None, 'pop3'), [])
         self.assertEqual(options._getEndpoints(None, 'smtp'), [])
 
 
