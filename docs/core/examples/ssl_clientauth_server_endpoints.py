@@ -27,7 +27,7 @@
 #
 # To connect without a certificate:
 #
-# $ openssl s_client -connect localhost:8000 -key client-key.pem
+# $ openssl s_client -connect localhost:8000
 #
 # With a certificate:
 #
@@ -62,7 +62,7 @@ class EchoProtocol(protocol.Protocol):
         """
         As soon as any data is received, write it back.
         """
-        print('Received: {}'.format(data))
+        print('\n----------\nNew data received: {0!r}'.format(data))
         print('Peer cert: {}'.format(self.transport.getPeerCertificate()))
         self.transport.write(data)
 
