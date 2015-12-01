@@ -3,7 +3,6 @@
 
 from twisted.trial import unittest
 from twisted.python import roots
-import types
 
 class RootsTests(unittest.TestCase):
 
@@ -55,7 +54,7 @@ class RootsTests(unittest.TestCase):
 
     def testHomogenous(self):
         h = roots.Homogenous()
-        h.entityType = types.IntType
+        h.entityType = int
         h.putEntity('a', 1)
         self.assertEqual(h.getStaticEntity('a'),1 )
         self.failUnlessRaises(roots.ConstraintViolation,

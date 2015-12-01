@@ -9,7 +9,6 @@ Maintainer: Glyph Lefkowitz
 """
 
 # System imports
-import types
 from twisted.python import reflect
 
 class NotSupportedError(NotImplementedError):
@@ -232,7 +231,7 @@ class Homogenous(Constrained):
     specified by my 'entityType' attribute.
     """
 
-    entityType = types.InstanceType
+    entityType = object
 
     def entityConstraint(self, entity):
         if isinstance(entity, self.entityType):
