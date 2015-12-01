@@ -2446,7 +2446,8 @@ class ParserTests(unittest.TestCase):
 
 class ServerStringTests(unittest.TestCase):
     """
-    Tests for L{twisted.internet.endpoints.serverFromString}.
+    Tests for L{twisted.internet.endpoints.serverFromString} without the SSL
+    description.
     """
 
     def test_tcp(self):
@@ -2464,6 +2465,83 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
 
+
+    def test_unix(self):
+        """
+        When passed a UNIX strports description, L{endpoint.serverFromString}
+        returns a L{UNIXServerEndpoint} instance initialized with the values
+        from the string.
+        """
+        reactor = object()
+        endpoint = endpoints.serverFromString(
+            reactor,
+            "unix:/var/foo/bar:backlog=7:mode=0123:lockfile=1")
+        self.assertIsInstance(endpoint, endpoints.UNIXServerEndpoint)
+        self.assertIs(endpoint._reactor, reactor)
+        self.assertEqual(endpoint._address, "/var/foo/bar")
+        self.assertEqual(endpoint._backlog, 7)
+        self.assertEqual(endpoint._mode, 0o123)
+        self.assertEqual(endpoint._wantPID, True)
+
+
+    def test_implicitDefaultNotAllowed(self):
+        """
+        The older service-based API (L{twisted.internet.strports.service})
+        allowed an implicit default of 'tcp' so that TCP ports could be
+        specified as a simple integer, but we've since decided that's a bad
+        idea, and the new API does not accept an implicit default argument; you
+        have to say 'tcp:' now.  If you try passing an old implicit port number
+        to the new API, you'll get a C{ValueError}.
+        """
+        value = self.assertRaises(
+            ValueError, endpoints.serverFromString, None, "4321")
+        self.assertEqual(
+            str(value),
+            "Unqualified strport description passed to 'service'."
+            "Use qualified endpoint descriptions; for example, 'tcp:4321'.")
+
+
+    def test_unknownType(self):
+        """
+        L{endpoints.serverFromString} raises C{ValueError} when given an
+        unknown endpoint type.
+        """
+        value = self.assertRaises(
+            # faster-than-light communication not supported
+            ValueError, endpoints.serverFromString, None,
+            "ftl:andromeda/carcosa/hali/2387")
+        self.assertEqual(
+            str(value),
+            "Unknown endpoint type: 'ftl'")
+
+
+    def test_typeFromPlugin(self):
+        """
+        L{endpoints.serverFromString} looks up plugins of type
+        L{IStreamServerEndpoint} and constructs endpoints from them.
+        """
+        # Set up a plugin which will only be accessible for the duration of
+        # this test.
+        addFakePlugin(self)
+        # Plugin is set up: now actually test.
+        notAReactor = object()
+        fakeEndpoint = endpoints.serverFromString(
+            notAReactor, "fake:hello:world:yes=no:up=down")
+        from twisted.plugins.fakeendpoint import fake
+        self.assertIs(fakeEndpoint.parser, fake)
+        self.assertEqual(fakeEndpoint.args, (notAReactor, 'hello', 'world'))
+        self.assertEqual(fakeEndpoint.kwargs, dict(yes='no', up='down'))
+
+
+
+class ServerStringSSLTests(unittest.TestCase):
+    """
+    Tests for L{twisted.internet.endpoints.serverFromString} using the
+    SSL description.
+    """
+
+    if skipSSL:
+        skip = skipSSL
 
     def test_ssl(self):
         """
@@ -2575,9 +2653,9 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(cf.dhParameters, DiffieHellmanParameters)
         self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
-    def test_sslServerGetsClientCerts(self):
+    def test_getClientCertificateYes(self):
         """
-        If C{getClientCertificate} is specified, client certificates
+        If C{getClientCertificate} is set to C{yes}, client certificates
         will be retrieved.
         """
         reactor = object()
@@ -2587,11 +2665,11 @@ class ServerStringTests(unittest.TestCase):
             .format(escapedPEMPathName, escapedPEMPathName)
         )
         cf = server._sslContextFactory
-        self.assertTrue(cf._retrieveCertificate)
+        self.assertTrue(cf._getClientCertificate)
 
-    def test_sslServerDoesNotGetClientCerts(self):
+    def test_getClientCertificateNo(self):
         """
-        If C{getClientCertificate} is set to 'no', client certificates
+        If C{getClientCertificate} is set to C{no}, client certificates
         aren't retrieved.
         """
         reactor = object()
@@ -2601,11 +2679,11 @@ class ServerStringTests(unittest.TestCase):
             .format(escapedPEMPathName, escapedPEMPathName)
         )
         cf = server._sslContextFactory
-        self.assertFalse(cf._retrieveCertificate)
+        self.assertFalse(cf._getClientCertificate)
 
-    def test_sslServerGetsClientCertsTrue(self):
+    def test_getClientCertificateTrue(self):
         """
-        If C{getClientCertificate} is set to 'true', client certificates
+        If C{getClientCertificate} is set to C{true}, client certificates
         will be retrieved.
         """
         reactor = object()
@@ -2615,11 +2693,11 @@ class ServerStringTests(unittest.TestCase):
             .format(escapedPEMPathName, escapedPEMPathName)
         )
         cf = server._sslContextFactory
-        self.assertTrue(cf._retrieveCertificate)
+        self.assertTrue(cf._getClientCertificate)
 
-    def test_sslServerDoesNotGetClientCertsFalse(self):
+    def test_getClientCertificateFalse(self):
         """
-        If C{getClientCertificate} is set to 'false', client certificates
+        If C{getClientCertificate} is set to C{false}, client certificates
         aren't retrieved.
         """
         reactor = object()
@@ -2629,15 +2707,15 @@ class ServerStringTests(unittest.TestCase):
             .format(escapedPEMPathName, escapedPEMPathName)
         )
         cf = server._sslContextFactory
-        self.assertFalse(cf._retrieveCertificate)
+        self.assertFalse(cf._getClientCertificate)
 
-    def test_sslServerClientCertsJunk(self):
+    def test_getClientCertificateJunk(self):
         """
-        If C{getClientCertificate} is not set to 'yes', 'no', 'true', or
-        'false', an error is raised.
+        If C{getClientCertificate} is an unknown value, an error is raised.
         """
         reactor = object()
-        self.assertRaises(
+
+        exception = self.assertRaises(
             ValueError,
             endpoints.serverFromString,
             reactor,
@@ -2645,84 +2723,9 @@ class ServerStringTests(unittest.TestCase):
                 .format(escapedPEMPathName, escapedPEMPathName)
         )
 
-
-    if skipSSL:
-        test_ssl.skip = test_sslWithDefaults.skip = skipSSL
-        test_sslChainLoads.skip = skipSSL
-        test_sslChainFileMustContainCert.skip = skipSSL
-        test_sslDHparameters.skip = skipSSL
-        test_sslServerGetsClientCerts.skip = skipSSL
-        test_sslServerDoesNotGetClientCerts.skip = skipSSL
-        test_sslServerGetsClientCertsTrue.skip = skipSSL
-        test_sslServerDoesNotGetClientCertsFalse.skip = skipSSL
-        test_sslServerClientCertsJunk.skip = skipSSL
-
-
-    def test_unix(self):
-        """
-        When passed a UNIX strports description, L{endpoint.serverFromString}
-        returns a L{UNIXServerEndpoint} instance initialized with the values
-        from the string.
-        """
-        reactor = object()
-        endpoint = endpoints.serverFromString(
-            reactor,
-            "unix:/var/foo/bar:backlog=7:mode=0123:lockfile=1")
-        self.assertIsInstance(endpoint, endpoints.UNIXServerEndpoint)
-        self.assertIs(endpoint._reactor, reactor)
-        self.assertEqual(endpoint._address, "/var/foo/bar")
-        self.assertEqual(endpoint._backlog, 7)
-        self.assertEqual(endpoint._mode, 0o123)
-        self.assertEqual(endpoint._wantPID, True)
-
-
-    def test_implicitDefaultNotAllowed(self):
-        """
-        The older service-based API (L{twisted.internet.strports.service})
-        allowed an implicit default of 'tcp' so that TCP ports could be
-        specified as a simple integer, but we've since decided that's a bad
-        idea, and the new API does not accept an implicit default argument; you
-        have to say 'tcp:' now.  If you try passing an old implicit port number
-        to the new API, you'll get a C{ValueError}.
-        """
-        value = self.assertRaises(
-            ValueError, endpoints.serverFromString, None, "4321")
         self.assertEqual(
-            str(value),
-            "Unqualified strport description passed to 'service'."
-            "Use qualified endpoint descriptions; for example, 'tcp:4321'.")
-
-
-    def test_unknownType(self):
-        """
-        L{endpoints.serverFromString} raises C{ValueError} when given an
-        unknown endpoint type.
-        """
-        value = self.assertRaises(
-            # faster-than-light communication not supported
-            ValueError, endpoints.serverFromString, None,
-            "ftl:andromeda/carcosa/hali/2387")
-        self.assertEqual(
-            str(value),
-            "Unknown endpoint type: 'ftl'")
-
-
-    def test_typeFromPlugin(self):
-        """
-        L{endpoints.serverFromString} looks up plugins of type
-        L{IStreamServerEndpoint} and constructs endpoints from them.
-        """
-        # Set up a plugin which will only be accessible for the duration of
-        # this test.
-        addFakePlugin(self)
-        # Plugin is set up: now actually test.
-        notAReactor = object()
-        fakeEndpoint = endpoints.serverFromString(
-            notAReactor, "fake:hello:world:yes=no:up=down")
-        from twisted.plugins.fakeendpoint import fake
-        self.assertIs(fakeEndpoint.parser, fake)
-        self.assertEqual(fakeEndpoint.args, (notAReactor, 'hello', 'world'))
-        self.assertEqual(fakeEndpoint.kwargs, dict(yes='no', up='down'))
+            'The value of getClientCertificate must be a yes/no value.',
+            exception.args[0])
 
 
 

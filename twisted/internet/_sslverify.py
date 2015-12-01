@@ -1340,9 +1340,9 @@ class OpenSSLCertificateOptions(object):
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
         ['trustRoot', 'caCerts'],
-        ['trustRoot', 'retrieveCertificate'],
-        ['retrieveCertificate', 'verify'],
-        ['retrieveCertificate', 'caCerts'],
+        ['trustRoot', 'getClientCertificate'],
+        ['getClientCertificate', 'verify'],
+        ['getClientCertificate', 'caCerts'],
     ])
     def __init__(self,
                  privateKey=None,
@@ -1362,7 +1362,7 @@ class OpenSSLCertificateOptions(object):
                  dhParameters=None,
                  trustRoot=None,
                  acceptableProtocols=None,
-                 retrieveCertificate=False
+                 getClientCertificate=False,
                  ):
         """
         Create an OpenSSL context SSL connection context factory.
@@ -1463,11 +1463,11 @@ class OpenSSLCertificateOptions(object):
             earlier in the list are preferred over those later in the list.
         @type acceptableProtocols: C{list} of C{bytes}
 
-        @param retrieveCertificate: If L{True}, allows retrieval of peer
+        @param getClientCertificate: If L{True}, allows retrieval of peer
             certificates even without CA verification. Defaults to L{False}.
-            Since this conflicts with C{caCerts}, C{verify}, and C{trustRoot},
-            specifying any of those options with this one will raise a
-            L{TypeError}.
+            It is mutually exclusive with C{caCerts}, C{verify}, and
+            C{trustRoot}.
+        @type getClientCertificate: C{bool}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1481,6 +1481,8 @@ class OpenSSLCertificateOptions(object):
         @raise TypeError: if C{trustRoot} is passed in combination with
             C{caCert}, C{verify}, or C{requireCertificate}.  Please prefer
             C{trustRoot} in new code, as its semantics are less tricky.
+        @raise TypeError: if C{getClientCertificate} is passed in combination
+            with one of its mutually exclusive arguments.
         @raises NotImplementedError: If acceptableProtocols were provided but
             no negotiation mechanism is available.
         """
@@ -1572,11 +1574,7 @@ class OpenSSLCertificateOptions(object):
             )
 
         self._acceptableProtocols = acceptableProtocols
-
-        if retrieveCertificate and not self.verify:
-            self._retrieveCertificate = True
-        else:
-            self._retrieveCertificate = False
+        self._getClientCertificate = getClientCertificate
 
 
     def __getstate__(self):
@@ -1621,26 +1619,18 @@ class OpenSSLCertificateOptions(object):
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             self.trustRoot._addCACertsToContext(ctx)
-        elif self._retrieveCertificate:
+        elif self._getClientCertificate:
             verifyFlags = SSL.VERIFY_PEER
 
-        # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
-        # the underlying OpenSSL API call allows NULL to be passed).  It
-        # doesn't, so we'll supply a function which does the same thing.
         def _verifyCallback(conn, cert, errno, depth, preverify_ok):
+            if self._getClientCertificate:
+                # Accept any certificate as we don't do validation at this
+                # stage.
+                return True
+
+            # Accept the default validation.
             return preverify_ok
-        def _retrieveCallback(conn, cert, errno, depth, preverify_ok):
-            """
-            For retrieving certificates, we still need to pass a no-op
-            function to allow us to retrieve certificates. Since retrieving
-            without verification precludes doing any CA-based verification,
-            we're just returning True here.
-            """
-            return True
-        if self._retrieveCertificate:
-            ctx.set_verify(verifyFlags, _retrieveCallback)
-        else:
-            ctx.set_verify(verifyFlags, _verifyCallback)
+        ctx.set_verify(verifyFlags, _verifyCallback)
 
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)

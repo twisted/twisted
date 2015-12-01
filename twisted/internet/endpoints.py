@@ -1092,11 +1092,10 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         the forward secret C{DHE} ciphers aren't available for servers.
     @type dhParameters: L{str}
 
-    @param getClientCertificate: If this parameter is enabled, the endpoint
+    @param getClientCertificate: If this flag is enabled, the endpoint
         will retrieve certificates from the client.
-        This parameter is a boolean parameter and should take one of a "yes"
-        or a "no" value.
-    @type requireCert: L{str}
+        It mimics a boolean and should take one of a C{yes} or C{no}.
+    @type getClientCertificate: C{str}
 
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
         L{IReactorSSL.listenSSL} (or, modulo argument 2, the factory, arguments
@@ -1132,13 +1131,8 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
             FilePath(dhParameters),
         )
 
-    if getClientCertificate:
-        retrieveCertificate = _valueToBool(getClientCertificate, False)
-        if retrieveCertificate is None:
-            raise ValueError("The value of getClientCertificate must be a "
-                "yes/no value.")
-        if retrieveCertificate:
-            kw["retrieveCertificate"] = True
+    if getClientCertificate is not None:
+        kw["getClientCertificate"] = _valueToBool(getClientCertificate)
 
     cf = ssl.CertificateOptions(
         privateKey=privateCertificate.privateKey.original,
@@ -1151,20 +1145,27 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
             {'interface': interface, 'backlog': int(backlog)})
 
 
-def _valueToBool(value, default):
+
+def _valueToBool(value):
     """
-    Verifies that values are reasonable strings that we can parse into some
-    boolean value, and returns that boolean value.
-    Returns None if we can't make a boolean value out of the given string.
+    Helper for C{bool} parsing.
+
+    @param value: The value which needs to be converted.
+    @type value: C{str}
+
+    @return: Boolean representation of C{value}
+    @rtype: C{bool}
+    @raise C{ValueError}: if it can't make a C{bool} out of the given c{str}.
     """
-    if value is None:
-        return default
     lowerValue = value.lower()
     if lowerValue in ("yes", "true"):
         return True
     if lowerValue in ("no", "false"):
         return False
-    return None
+
+    raise ValueError(
+        'The value of getClientCertificate must be a yes/no value.')
+
 
 
 @implementer(IPlugin, IStreamServerEndpointStringParser)
