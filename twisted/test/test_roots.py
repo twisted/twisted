@@ -1,6 +1,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import, division
+
 from twisted.trial import unittest
 from twisted.python import roots
 
@@ -9,7 +11,7 @@ class RootsTests(unittest.TestCase):
     def testExceptions(self):
         request = roots.Request()
         try:
-            request.write("blah")
+            request.write(b"blah")
         except NotImplementedError:
             pass
         else:
@@ -59,4 +61,3 @@ class RootsTests(unittest.TestCase):
         self.assertEqual(h.getStaticEntity('a'),1 )
         self.failUnlessRaises(roots.ConstraintViolation,
                               h.putEntity, 'x', 'y')
-
