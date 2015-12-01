@@ -2589,6 +2589,62 @@ class ServerStringTests(unittest.TestCase):
         cf = server._sslContextFactory
         self.assertTrue(cf._retrieveCertificate)
 
+    def test_sslServerDoesNotGetClientCerts(self):
+        """
+        If C{getClientCertificate} is set to 'no', client certificates
+        aren't retrieved.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:4321:privateKey={0}:certKey={1}:getClientCertificate=no"
+            .format(escapedPEMPathName, escapedPEMPathName)
+        )
+        cf = server._sslContextFactory
+        self.assertFalse(cf._retrieveCertificate)
+
+    def test_sslServerGetsClientCertsTrue(self):
+        """
+        If C{getClientCertificate} is set to 'true', client certificates
+        will be retrieved.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:4321:privateKey={0}:certKey={1}:getClientCertificate=true"
+            .format(escapedPEMPathName, escapedPEMPathName)
+        )
+        cf = server._sslContextFactory
+        self.assertTrue(cf._retrieveCertificate)
+
+    def test_sslServerDoesNotGetClientCertsFalse(self):
+        """
+        If C{getClientCertificate} is set to 'false', client certificates
+        aren't retrieved.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:4321:privateKey={0}:certKey={1}:getClientCertificate=false"
+            .format(escapedPEMPathName, escapedPEMPathName)
+        )
+        cf = server._sslContextFactory
+        self.assertFalse(cf._retrieveCertificate)
+
+    def test_sslServerClientCertsJunk(self):
+        """
+        If C{getClientCertificate} is not set to 'yes', 'no', 'true', or
+        'false', an error is raised.
+        """
+        reactor = object()
+        self.assertRaises(
+            ValueError,
+            endpoints.serverFromString,
+            reactor,
+            "ssl:4321:privateKey={0}:certKey={1}:getClientCertificate=blah"
+                .format(escapedPEMPathName, escapedPEMPathName)
+        )
+
 
     if skipSSL:
         test_ssl.skip = test_sslWithDefaults.skip = skipSSL
@@ -2596,6 +2652,10 @@ class ServerStringTests(unittest.TestCase):
         test_sslChainFileMustContainCert.skip = skipSSL
         test_sslDHparameters.skip = skipSSL
         test_sslServerGetsClientCerts.skip = skipSSL
+        test_sslServerDoesNotGetClientCerts.skip = skipSSL
+        test_sslServerGetsClientCertsTrue.skip = skipSSL
+        test_sslServerDoesNotGetClientCertsFalse.skip = skipSSL
+        test_sslServerClientCertsJunk.skip = skipSSL
 
 
     def test_unix(self):

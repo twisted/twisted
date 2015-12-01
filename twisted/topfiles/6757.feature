@@ -1,0 +1,1 @@
+twisted.internet.endpoints.serverFromString now allows servers to retrieve client certificates from endpoints.

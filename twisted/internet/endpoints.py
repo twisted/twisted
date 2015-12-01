@@ -1160,9 +1160,9 @@ def _valueToBool(value, default):
     if value is None:
         return default
     lowerValue = value.lower()
-    if lowerValue in ("yes", "true", "y", "t"):
+    if lowerValue in ("yes", "true"):
         return True
-    if lowerValue in ("no", "false", "n", "f"):
+    if lowerValue in ("no", "false"):
         return False
     return None
 
