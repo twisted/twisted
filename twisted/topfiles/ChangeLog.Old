@@ -1748,7 +1748,7 @@
 	Parameterize the jelly module used by the tests, make test_jelly a
 	subclass of test_newjelly using a different jelly module: tests
 	should now be unified. Also change tests to use proper trial
-	self.assertTrue() methods instead of bare assert().
+	self.failUnless() methods instead of bare assert().
 
 2003-04-09  Bob Ippolito  <bob@redivi.com>
 
