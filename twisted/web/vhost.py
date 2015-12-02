@@ -1,10 +1,12 @@
-# -*- test-case-name: twisted.web.
+# -*- test-case-name: twisted.web.test.test_vhost -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 I am a virtual hosts implementation.
 """
+
+from __future__ import absolute_import, division
 
 # Twisted Imports
 from twisted.python import roots
@@ -61,10 +63,10 @@ class NameVirtualHost(resource.Resource):
         This will take a host named `name', and map it to a resource
         `resrc'.  For example, a setup for our virtual hosts would be::
 
-            nvh.addHost('divunal.com', divunalDirectory)
-            nvh.addHost('www.divunal.com', divunalDirectory)
-            nvh.addHost('twistedmatrix.com', twistedMatrixDirectory)
-            nvh.addHost('www.twistedmatrix.com', twistedMatrixDirectory)
+            nvh.addHost(b'divunal.com', divunalDirectory)
+            nvh.addHost(b'www.divunal.com', divunalDirectory)
+            nvh.addHost(b'twistedmatrix.com', twistedMatrixDirectory)
+            nvh.addHost(b'www.twistedmatrix.com', twistedMatrixDirectory)
         """
         self.hosts[name] = resrc
 
@@ -108,8 +110,9 @@ class _HostResource(resource.Resource):
         else:
             host, port = path, 80
         request.setHost(host, port)
-        prefixLen = 3+request.isSecure()+4+len(path)+len(request.prepath[-3])
-        request.path = b'/'+b'/'.join(request.postpath)
+        prefixLen = (3 + int(request.isSecure()) + 4 + len(path) +
+                     len(request.prepath[-3]))
+        request.path = b'/' + b'/'.join(request.postpath)
         request.uri = request.uri[prefixLen:]
         del request.prepath[:3]
         return request.site.getResourceFor(request)
@@ -129,7 +132,7 @@ class VHostMonsterResource(resource.Resource):
     """
     def getChild(self, path, request):
         if path == b'http':
-            request.isSecure = lambda: 0
+            request.isSecure = lambda: False
         elif path == b'https':
-            request.isSecure = lambda: 1
+            request.isSecure = lambda: True
         return _HostResource()

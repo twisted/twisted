@@ -5,12 +5,14 @@
 Tests for L{twisted.web.vhost}.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.internet.defer import gatherResults
 from twisted.trial.unittest import TestCase
 from twisted.web.http import NOT_FOUND
 from twisted.web.static import Data
 from twisted.web.vhost import NameVirtualHost
-from twisted.web.test.test_web import DummyRequest
+from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.test._util import _render
 
 class NameVirtualHostTests(TestCase):
@@ -25,7 +27,7 @@ class NameVirtualHostTests(TestCase):
         """
         virtualHostResource = NameVirtualHost()
         virtualHostResource.default = Data(b"correct result", "")
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         self.assertEqual(
             virtualHostResource.render(request), b"correct result")
 
@@ -37,7 +39,7 @@ class NameVirtualHostTests(TestCase):
         header in the request.
         """
         virtualHostResource = NameVirtualHost()
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         d = _render(virtualHostResource, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, NOT_FOUND)
@@ -54,7 +56,7 @@ class NameVirtualHostTests(TestCase):
         virtualHostResource = NameVirtualHost()
         virtualHostResource.addHost(b'example.org', Data(b"winner", ""))
 
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         request.headers[b'host'] = b'example.org'
         d = _render(virtualHostResource, request)
         def cbRendered(ignored, request):
@@ -62,7 +64,7 @@ class NameVirtualHostTests(TestCase):
         d.addCallback(cbRendered, request)
 
         # The port portion of the Host header should not be considered.
-        requestWithPort = DummyRequest([''])
+        requestWithPort = DummyRequest([b''])
         requestWithPort.headers[b'host'] = b'example.org:8000'
         dWithPort = _render(virtualHostResource, requestWithPort)
         def cbRendered(ignored, requestWithPort):
@@ -80,7 +82,7 @@ class NameVirtualHostTests(TestCase):
         """
         virtualHostResource = NameVirtualHost()
         virtualHostResource.default = Data(b"correct data", "")
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         request.headers[b'host'] = b'example.com'
         d = _render(virtualHostResource, request)
         def cbRendered(ignored):
@@ -96,7 +98,7 @@ class NameVirtualHostTests(TestCase):
         matching the value of the I{Host} header in the request.
         """
         virtualHostResource = NameVirtualHost()
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         request.headers[b'host'] = b'example.com'
         d = _render(virtualHostResource, request)
         def cbRendered(ignored):
