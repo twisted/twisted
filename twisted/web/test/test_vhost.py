@@ -24,10 +24,10 @@ class NameVirtualHostTests(TestCase):
         header in the request.
         """
         virtualHostResource = NameVirtualHost()
-        virtualHostResource.default = Data("correct result", "")
+        virtualHostResource.default = Data(b"correct result", "")
         request = DummyRequest([''])
         self.assertEqual(
-            virtualHostResource.render(request), "correct result")
+            virtualHostResource.render(request), b"correct result")
 
 
     def test_renderWithoutHostNoDefault(self):
@@ -52,21 +52,21 @@ class NameVirtualHostTests(TestCase):
         to the key indicated by the value of the I{Host} header in the request.
         """
         virtualHostResource = NameVirtualHost()
-        virtualHostResource.addHost('example.org', Data("winner", ""))
+        virtualHostResource.addHost(b'example.org', Data(b"winner", ""))
 
         request = DummyRequest([''])
-        request.headers['host'] = 'example.org'
+        request.headers[b'host'] = b'example.org'
         d = _render(virtualHostResource, request)
         def cbRendered(ignored, request):
-            self.assertEqual(''.join(request.written), "winner")
+            self.assertEqual(b''.join(request.written), b"winner")
         d.addCallback(cbRendered, request)
 
         # The port portion of the Host header should not be considered.
         requestWithPort = DummyRequest([''])
-        requestWithPort.headers['host'] = 'example.org:8000'
+        requestWithPort.headers[b'host'] = b'example.org:8000'
         dWithPort = _render(virtualHostResource, requestWithPort)
         def cbRendered(ignored, requestWithPort):
-            self.assertEqual(''.join(requestWithPort.written), "winner")
+            self.assertEqual(b''.join(requestWithPort.written), b"winner")
         dWithPort.addCallback(cbRendered, requestWithPort)
 
         return gatherResults([d, dWithPort])
@@ -79,12 +79,12 @@ class NameVirtualHostTests(TestCase):
         matching the value of the I{Host} header in the request.
         """
         virtualHostResource = NameVirtualHost()
-        virtualHostResource.default = Data("correct data", "")
+        virtualHostResource.default = Data(b"correct data", "")
         request = DummyRequest([''])
-        request.headers['host'] = 'example.com'
+        request.headers[b'host'] = b'example.com'
         d = _render(virtualHostResource, request)
         def cbRendered(ignored):
-            self.assertEqual(''.join(request.written), "correct data")
+            self.assertEqual(b''.join(request.written), b"correct data")
         d.addCallback(cbRendered)
         return d
 
@@ -97,7 +97,7 @@ class NameVirtualHostTests(TestCase):
         """
         virtualHostResource = NameVirtualHost()
         request = DummyRequest([''])
-        request.headers['host'] = 'example.com'
+        request.headers[b'host'] = b'example.com'
         d = _render(virtualHostResource, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, NOT_FOUND)
