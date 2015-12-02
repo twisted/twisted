@@ -102,7 +102,7 @@ class OptionalDependenciesTests(TestCase):
         """
         deps = _EXTRAS_REQUIRE['dev']
         self.assertIn('twistedchecker >= 0.4.0', deps)
-        self.assertIn('pyflakes >= 0.9.2', deps)
+        self.assertIn('pyflakes >= 1.0.0', deps)
         self.assertIn('twisted-dev-tools >= 0.0.2', deps)
         self.assertIn('python-subunit', deps)
         self.assertIn('sphinx >= 1.3.1', deps)
