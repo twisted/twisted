@@ -406,9 +406,9 @@ class NewStyleTests(unittest.TestCase):
         orig = NewStyleCopy("value")
         d = self.ref.callRemote("echo", orig)
         def cb(res):
-            self.failUnless(isinstance(res, NewStyleCopy))
+            self.assertTrue(isinstance(res, NewStyleCopy))
             self.assertEqual(res.s, "value")
-            self.failIf(res is orig) # no cheating :)
+            self.assertFalse(res is orig) # no cheating :)
         d.addCallback(cb)
         return d
 
@@ -422,11 +422,11 @@ class NewStyleTests(unittest.TestCase):
         d = self.ref.callRemote("echo", orig)
         def cb(res):
             # receiving the response creates a third one on the way back
-            self.failUnless(isinstance(res, NewStyleCopy2))
+            self.assertTrue(isinstance(res, NewStyleCopy2))
             self.assertEqual(res.value, 2)
             self.assertEqual(NewStyleCopy2.allocated, 3)
             self.assertEqual(NewStyleCopy2.initialized, 1)
-            self.failIf(res is orig) # no cheating :)
+            self.assertFalse(res is orig) # no cheating :)
         # sending the object creates a second one on the far side
         d.addCallback(cb)
         return d

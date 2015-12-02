@@ -484,7 +484,7 @@ class FormattingStateAttributeTests(unittest.TestCase):
                 bold=True, underline=True, off=False, reverseVideo=True,
                 foreground=irc._IRC_COLORS['blue']))
 
-        self.assertNotEquals(
+        self.assertNotEqual(
             irc._FormattingState(bold=True),
             irc._FormattingState(bold=False))
 
@@ -2161,7 +2161,7 @@ class ClientMsgTests(unittest.TestCase):
         then sends the message to the server for delivery to that channel.
         """
         self.client.say("thechannel", "the message")
-        self.assertEquals(
+        self.assertEqual(
             self.client.lines, ["PRIVMSG #thechannel :the message"])
 
 
@@ -2295,7 +2295,7 @@ class ClientTests(TestCase):
         self.protocol.register(username, hostname, servername)
         self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])
         lastLine = self.getLastLine(self.transport)
-        self.assertNotEquals(lastLine, 'NICK %s' % (username,))
+        self.assertNotEqual(lastLine, 'NICK %s' % (username,))
 
         # Keep chaining underscores for each collision
         self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])

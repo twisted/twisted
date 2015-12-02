@@ -138,14 +138,14 @@ class CredTests(unittest.TestCase):
 
         # whitebox
         self.assertEqual(iface, ITestable)
-        self.failUnless(iface.providedBy(impl),
+        self.assertTrue(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
 
         # greybox
-        self.failUnless(impl.original.loggedIn)
-        self.failUnless(not impl.original.loggedOut)
+        self.assertTrue(impl.original.loggedIn)
+        self.assertTrue(not impl.original.loggedOut)
         logout()
-        self.failUnless(impl.original.loggedOut)
+        self.assertTrue(impl.original.loggedOut)
 
 
     def test_derivedInterface(self):
@@ -159,14 +159,14 @@ class CredTests(unittest.TestCase):
 
         # whitebox
         self.assertEqual(iface, ITestable)
-        self.failUnless(iface.providedBy(impl),
+        self.assertTrue(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
 
         # greybox
-        self.failUnless(impl.original.loggedIn)
-        self.failUnless(not impl.original.loggedOut)
+        self.assertTrue(impl.original.loggedIn)
+        self.assertTrue(not impl.original.loggedOut)
         logout()
-        self.failUnless(impl.original.loggedOut)
+        self.assertTrue(impl.original.loggedOut)
 
 
     def test_failedLoginPassword(self):
@@ -176,7 +176,7 @@ class CredTests(unittest.TestCase):
         """
         login = self.failureResultOf(self.portal.login(
             credentials.UsernamePassword(b"bob", b"h3llo"), self, ITestable))
-        self.failUnless(login)
+        self.assertTrue(login)
         self.assertEqual(error.UnauthorizedLogin, login.type)
 
 
@@ -187,7 +187,7 @@ class CredTests(unittest.TestCase):
         """
         login = self.failureResultOf(self.portal.login(
             credentials.UsernamePassword(b"jay", b"hello"), self, ITestable))
-        self.failUnless(login)
+        self.assertTrue(login)
         self.assertEqual(error.UnauthorizedLogin, login.type)
 
 

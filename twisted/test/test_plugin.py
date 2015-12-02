@@ -207,7 +207,7 @@ class PluginTests(unittest.TestCase):
         try:
             # Check that the current situation is clean
             self.failIfIn('mypackage.pluginextra', sys.modules)
-            self.failIf(hasattr(sys.modules['mypackage'], 'pluginextra'),
+            self.assertFalse(hasattr(sys.modules['mypackage'], 'pluginextra'),
                         "mypackage still has pluginextra module")
 
             plgs = list(plugin.getPlugins(ITestPlugin, self.module))
@@ -290,7 +290,7 @@ class PluginTests(unittest.TestCase):
         C{__path__} which do not exist.
         """
         path = self.mktemp()
-        self.failIf(os.path.exists(path))
+        self.assertFalse(os.path.exists(path))
         # Add the test directory to the plugins path
         self.module.__path__.append(path)
         try:
@@ -308,7 +308,7 @@ class PluginTests(unittest.TestCase):
         C{__path__} which refer to children of paths which are not directories.
         """
         path = FilePath(self.mktemp())
-        self.failIf(path.exists())
+        self.assertFalse(path.exists())
         path.touch()
         child = path.child("test_package").path
         self.module.__path__.append(child)

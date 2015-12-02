@@ -43,8 +43,8 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(util.uniquify(l), ["a", 1, "ab", 3, 4, 2, 6])
 
     def testRaises(self):
-        self.failUnless(util.raises(ZeroDivisionError, divmod, 1, 0))
-        self.failIf(util.raises(ZeroDivisionError, divmod, 0, 1))
+        self.assertTrue(util.raises(ZeroDivisionError, divmod, 1, 0))
+        self.assertFalse(util.raises(ZeroDivisionError, divmod, 0, 1))
 
         try:
             util.raises(TypeError, divmod, 1, 0)

@@ -56,7 +56,7 @@ class WrapTests(unittest.TestCase):
 
         # Using assertEqual here prints out some
         # rather too long lists.
-        self.failUnless(self.sampleSplitText == words)
+        self.assertTrue(self.sampleSplitText == words)
 
 
     def test_lineLength(self):

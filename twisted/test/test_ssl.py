@@ -418,7 +418,7 @@ class TLSTests(unittest.TestCase):
                 self.serverFactory.lines,
                 UnintelligentProtocol.pretext
             )
-            self.failUnless(self.serverFactory.rawdata,
+            self.assertTrue(self.serverFactory.rawdata,
                             "No encrypted bytes received")
         d = self._runTest(UnintelligentProtocol(),
                           LineCollector(False, self.fillBuffer))
@@ -598,8 +598,8 @@ class ConnectionLostTests(unittest.TestCase, ContextGeneratingMixin):
     def _cbLostConns(self, results):
         (sSuccess, sResult), (cSuccess, cResult) = results
 
-        self.failIf(sSuccess)
-        self.failIf(cSuccess)
+        self.assertFalse(sSuccess)
+        self.assertFalse(cSuccess)
 
         acceptableErrors = [SSL.Error]
 

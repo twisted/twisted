@@ -529,7 +529,7 @@ class ProcessTests(unittest.TestCase):
         scriptPath = FilePath(__file__).sibling(b"process_echoer.py").path
         procTrans = reactor.spawnProcess(p, pyExe,
                                     [pyExe, scriptPath], env=None)
-        self.failUnless(procTrans.pid)
+        self.assertTrue(procTrans.pid)
 
         def afterProcessEnd(ignored):
             self.assertEqual(procTrans.pid, None)
@@ -605,8 +605,8 @@ class ProcessTests(unittest.TestCase):
         reactor.spawnProcess(p, pyExe, [pyExe, scriptPath], env=None)
 
         def asserts(ignored):
-            self.failIf(p.failure, p.failure)
-            self.failUnless(hasattr(p, 'buffer'))
+            self.assertFalse(p.failure, p.failure)
+            self.assertTrue(hasattr(p, 'buffer'))
             self.assertEqual(len(p.buffer), len(p.s * p.n))
 
         def takedownProcess(err):
@@ -798,7 +798,7 @@ class TestTwoProcessesBase:
         if self.verbose: print("closing stdin [%d]" % num)
         p = self.processes[num]
         pp = self.pp[num]
-        self.failIf(pp.finished, "Process finished too early")
+        self.assertFalse(pp.finished, "Process finished too early")
         p.loseConnection()
         if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
 
@@ -831,7 +831,7 @@ class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
         if self.verbose: print("kill [%d] with SIGTERM" % num)
         p = self.processes[num]
         pp = self.pp[num]
-        self.failIf(pp.finished, "Process finished too early")
+        self.assertFalse(pp.finished, "Process finished too early")
         os.kill(p.pid, signal.SIGTERM)
         if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
 
@@ -947,7 +947,7 @@ class FDTests(unittest.TestCase):
                              path=None,
                              childFDs={0:"w", 1:"r", 2:2,
                                        3:"w", 4:"r", 5:"w"})
-        d.addCallback(lambda x : self.failIf(p.failed, p.failed))
+        d.addCallback(lambda x : self.assertFalse(p.failed, p.failed))
         return d
 
     def testLinger(self):
@@ -2111,7 +2111,7 @@ class MockProcessTests(unittest.TestCase):
         self.mockos.raiseKill = OSError(errno.EINVAL, "Invalid signal")
         err = self.assertRaises(OSError,
                                 proc.signalProcess, "KILL")
-        self.assertEquals(err.errno, errno.EINVAL)
+        self.assertEqual(err.errno, errno.EINVAL)
 
 
 
@@ -2560,7 +2560,7 @@ class ClosingPipesTests(unittest.TestCase):
         custom exit code.
         """
         # child must not get past that write without raising
-        self.assertNotEquals(
+        self.assertNotEqual(
             reason.exitCode, 42, 'process reason was %r' % reason)
         self.assertEqual(p.output, b'')
         return p.errput

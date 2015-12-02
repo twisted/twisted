@@ -274,7 +274,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         self._waitForLock(waiting)
 
-        self.failIf(actor.failures, "run() re-entered %d times" %
+        self.assertFalse(actor.failures, "run() re-entered %d times" %
                                     (actor.failures,))
 
 

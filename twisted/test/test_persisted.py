@@ -99,8 +99,8 @@ class VersionTests(unittest.TestCase):
         styles.doUpgrade()
         self.assertEqual(v1.unique, 'v1')
         self.assertEqual(v2.unique, 'v2')
-        self.failUnless(v1.upgraded)
-        self.failUnless(v2.upgraded)
+        self.assertTrue(v1.upgraded)
+        self.assertTrue(v2.upgraded)
     
     def test_upgradeDeserializesObjectsRequiringUpgrade(self):
         global ToyClassA, ToyClassB
@@ -122,7 +122,7 @@ class VersionTests(unittest.TestCase):
 
         x = pickle.loads(pklA)
         styles.doUpgrade()
-        self.failUnless(x.y.upgraded)
+        self.assertTrue(x.y.upgraded)
 
 
 

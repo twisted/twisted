@@ -111,9 +111,9 @@ class PyUnitResultTests(SynchronousTestCase):
         result = pyunit.TestResult()
         test.run(result)
 
-        self.failUnless(test.ran)
+        self.assertTrue(test.ran)
         self.assertEqual(1, result.testsRun)
-        self.failUnless(result.wasSuccessful())
+        self.assertTrue(result.wasSuccessful())
 
     def test_failure(self):
         class FailureTest(SynchronousTestCase):
@@ -125,20 +125,20 @@ class PyUnitResultTests(SynchronousTestCase):
         result = pyunit.TestResult()
         test.run(result)
 
-        self.failUnless(test.ran)
+        self.assertTrue(test.ran)
         self.assertEqual(1, result.testsRun)
         self.assertEqual(1, len(result.failures))
-        self.failIf(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
 
     def test_error(self):
         test = self.ErrorTest('test_foo')
         result = pyunit.TestResult()
         test.run(result)
 
-        self.failUnless(test.ran)
+        self.assertTrue(test.ran)
         self.assertEqual(1, result.testsRun)
         self.assertEqual(1, len(result.errors))
-        self.failIf(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
 
     def test_setUpError(self):
         class ErrorTest(SynchronousTestCase):
@@ -151,10 +151,10 @@ class PyUnitResultTests(SynchronousTestCase):
         result = pyunit.TestResult()
         test.run(result)
 
-        self.failIf(test.ran)
+        self.assertFalse(test.ran)
         self.assertEqual(1, result.testsRun)
         self.assertEqual(1, len(result.errors))
-        self.failIf(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
 
     def test_tracebackFromFailure(self):
         """

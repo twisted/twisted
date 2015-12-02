@@ -85,7 +85,7 @@ class JIDParsingTests(unittest.TestCase):
         """
         self.assertEqual(jid.prep("user", "hoST", "resource"),
                           ("user", "host", "resource"))
-        self.assertNotEquals(jid.prep("user", "host", "Resource"),
+        self.assertNotEqual(jid.prep("user", "host", "Resource"),
                              ("user", "host", "resource"))
 
 class JIDTests(unittest.TestCase):

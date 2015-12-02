@@ -786,7 +786,7 @@ class TimeTests(unittest.TestCase):
     def testCallLaterTime(self):
         d = reactor.callLater(10, lambda: None)
         try:
-            self.failUnless(d.getTime() - (time.time() + 10) < 1)
+            self.assertTrue(d.getTime() - (time.time() + 10) < 1)
         finally:
             d.cancel()
 
@@ -895,7 +895,8 @@ class DelayedTests(unittest.TestCase):
                 missing.append(dc)
         if missing:
             self.finished = 1
-        self.failIf(missing, "Should have been missing no calls, instead was missing " + repr(missing))
+        self.assertFalse(missing, "Should have been missing no calls, instead "
+                         + "was missing " + repr(missing))
 
     def callback(self, tag):
         del self.timers[tag]

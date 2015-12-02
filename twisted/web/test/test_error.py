@@ -317,7 +317,7 @@ class FlattenerErrorTests(unittest.TestCase):
         """
         e = self.makeFlattenerError(['a', 'b'])
         e._formatRoot = self.fakeFormatRoot
-        self.failUnless(
+        self.assertTrue(
             re.match('Exception while flattening:\n'
                      '  R\(a\)\n'
                      '  R\(b\)\n'
@@ -334,7 +334,7 @@ class FlattenerErrorTests(unittest.TestCase):
         with a traceback contains a formatted traceback but no roots.
         """
         e = self.makeFlattenerError([])
-        self.failUnless(
+        self.assertTrue(
             re.match('Exception while flattening:\n'
                      '  File "[^"]*", line [0-9]*, in makeFlattenerError\n'
                      '    raise RuntimeError\("oh noes"\)\n'
@@ -349,7 +349,7 @@ class FlattenerErrorTests(unittest.TestCase):
         with a traceback contains a formatted traceback but no roots.
         """
         e = error.FlattenerError(RuntimeError("oh noes"), [], None)
-        self.failUnless(
+        self.assertTrue(
             re.match('Exception while flattening:\n'
                      'RuntimeError: oh noes\n$',
                      repr(e), re.M | re.S),

@@ -52,9 +52,9 @@ class ADBAPITestBase:
 
     def checkOpenfunCalled(self, conn=None):
         if not conn:
-            self.failUnless(self.openfun_called)
+            self.assertTrue(self.openfun_called)
         else:
-            self.failUnless(self.openfun_called.has_key(conn))
+            self.assertTrue(self.openfun_called.has_key(conn))
 
     def testPool(self):
         d = self.dbpool.runOperation(simple_table_schema)
@@ -106,7 +106,7 @@ class ADBAPITestBase:
         sql = "select count(1) from simple"
         d = self.dbpool.runQuery(sql)
         def _check(row):
-            self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
+            self.assertTrue(int(row[0][0]) == 0, "Interaction not rolled back")
             self.checkOpenfunCalled()
         d.addCallback(_check)
         return d
@@ -128,11 +128,11 @@ class ADBAPITestBase:
         d.addCallback(_select)
 
         def _check(rows):
-            self.failUnless(len(rows) == self.num_iterations,
+            self.assertTrue(len(rows) == self.num_iterations,
                             "Wrong number of rows")
             for i in range(self.num_iterations):
-                self.failUnless(len(rows[i]) == 1, "Wrong size row")
-                self.failUnless(rows[i][0] == i, "Values not returned.")
+                self.assertTrue(len(rows[i]) == 1, "Wrong size row")
+                self.assertTrue(rows[i][0] == i, "Values not returned.")
         d.addCallback(_check)
 
         return d
@@ -163,7 +163,7 @@ class ADBAPITestBase:
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
         def _check(result):
             for i in range(self.num_iterations):
-                self.failUnless(result[i][1][0][0] == i, "Value not returned")
+                self.assertTrue(result[i][1][0][0] == i, "Value not returned")
         dlist.addCallback(_check)
         return dlist
 
@@ -181,7 +181,7 @@ class ADBAPITestBase:
         sql = "select count(1) from simple"
         d = self.dbpool.runQuery(sql)
         def _check(row):
-            self.failUnless(int(row[0][0]) == 0,
+            self.assertTrue(int(row[0][0]) == 0,
                             "Didn't successfully delete table contents")
             self.checkConnect()
         d.addCallback(_check)
@@ -208,10 +208,10 @@ class ADBAPITestBase:
         transaction.execute("select x from simple order by x")
         for i in range(self.num_iterations):
             row = transaction.fetchone()
-            self.failUnless(len(row) == 1, "Wrong size row")
-            self.failUnless(row[0] == i, "Value not returned.")
+            self.assertTrue(len(row) == 1, "Wrong size row")
+            self.assertTrue(row[0] == i, "Value not returned.")
         # should test this, but gadfly throws an exception instead
-        #self.failUnless(transaction.fetchone() is None, "Too many rows")
+        #self.assertTrue(transaction.fetchone() is None, "Too many rows")
         return "done"
 
     def bad_interaction(self, transaction):
@@ -226,10 +226,10 @@ class ADBAPITestBase:
             curs.execute("select x from simple order by x")
             for i in range(self.num_iterations):
                 row = curs.fetchone()
-                self.failUnless(len(row) == 1, "Wrong size row")
-                self.failUnless(row[0] == i, "Value not returned.")
+                self.assertTrue(len(row) == 1, "Wrong size row")
+                self.assertTrue(row[0] == i, "Value not returned.")
             # should test this, but gadfly throws an exception instead
-            #self.failUnless(transaction.fetchone() is None, "Too many rows")
+            #self.assertTrue(transaction.fetchone() is None, "Too many rows")
         finally:
             curs.close()
         return "done"
@@ -286,7 +286,7 @@ class ReconnectTestBase:
         sql = "select count(1) from simple"
         d = self.dbpool.runQuery(sql)
         def _check(row):
-            self.failUnless(int(row[0][0]) == 0, "Table not empty")
+            self.assertTrue(int(row[0][0]) == 0, "Table not empty")
         d.addCallback(_check)
         return d
 
@@ -305,7 +305,7 @@ class ReconnectTestBase:
         sql = "select count(1) from simple"
         d = self.dbpool.runQuery(sql)
         def _check(row):
-            self.failUnless(int(row[0][0]) == 0, "Table not empty")
+            self.assertTrue(int(row[0][0]) == 0, "Table not empty")
         d.addCallback(_check)
         return d
 
@@ -314,7 +314,7 @@ class ReconnectTestBase:
         sql = "select * from NOTABLE" # bad sql
         d = defer.maybeDeferred(self.dbpool.runQuery, sql)
         d.addCallbacks(lambda res: self.fail('no exception'),
-                       lambda f: self.failIf(f.check(ConnectionLost)))
+                       lambda f: self.assertFalse(f.check(ConnectionLost)))
         return d
 
 

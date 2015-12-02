@@ -149,7 +149,7 @@ class POP3ClientLoginTests(unittest.TestCase):
         p, t = setUp(greet=False)
         p.dataReceived("+OK Howdy\r\n")
         d = p.login("username", "password")
-        self.failIf(t.value())
+        self.assertFalse(t.value())
         return self.assertFailure(
             d, InsecureAuthenticationDisallowed)
 
@@ -614,7 +614,7 @@ class POP3ClientModuleStructureTests(unittest.TestCase):
 
         for pc in publicClasses:
             if not pc == 'POP3Client':
-                self.failUnless(hasattr(twisted.mail.pop3, pc))
+                self.assertTrue(hasattr(twisted.mail.pop3, pc))
             else:
-                self.failUnless(hasattr(twisted.mail.pop3,
+                self.assertTrue(hasattr(twisted.mail.pop3,
                     'AdvancedPOP3Client'))

@@ -1212,7 +1212,7 @@ class AMPTests(unittest.TestCase):
                                           (amp.IBoxSender, amp.AMP),
                                           (amp.IBoxReceiver, amp.AMP),
                                           (amp.IResponderLocator, amp.AMP)]:
-            self.failUnless(interface.implementedBy(implementation),
+            self.assertTrue(interface.implementedBy(implementation),
                             "%s does not implements(%s)" % (implementation, interface))
 
 
@@ -1353,7 +1353,7 @@ class AMPTests(unittest.TestCase):
         self.assertEqual(type(repr(amp._SwitchBox('a'))), str)
         self.assertEqual(type(repr(amp.QuitBox())), str)
         self.assertEqual(type(repr(amp.AmpBox())), str)
-        self.failUnless("AmpBox" in repr(amp.AmpBox()))
+        self.assertTrue("AmpBox" in repr(amp.AmpBox()))
 
 
     def test_innerProtocolInRepr(self):
@@ -1414,13 +1414,13 @@ class AMPTests(unittest.TestCase):
         x = "H" * (0xffff+1)
         tl = self.assertRaises(amp.TooLong, c.sendHello, x)
         p.flush()
-        self.failIf(tl.isKey)
-        self.failUnless(tl.isLocal)
+        self.assertFalse(tl.isKey)
+        self.assertTrue(tl.isLocal)
         self.assertEqual(tl.keyName, 'hello')
         self.failUnlessIdentical(tl.value, x)
-        self.failUnless(str(len(x)) in repr(tl))
-        self.failUnless("value" in repr(tl))
-        self.failUnless('hello' in repr(tl))
+        self.assertTrue(str(len(x)) in repr(tl))
+        self.assertTrue("value" in repr(tl))
+        self.assertTrue('hello' in repr(tl))
 
 
     def test_helloWorldCommand(self):
@@ -1495,7 +1495,7 @@ class AMPTests(unittest.TestCase):
         cl = L.pop()
         cl.trap(error.ConnectionDone)
         # The exception should have been logged.
-        self.failUnless(self.flushLoggedErrors(ThingIDontUnderstandError))
+        self.assertTrue(self.flushLoggedErrors(ThingIDontUnderstandError))
 
 
 
@@ -1529,7 +1529,7 @@ class AMPTests(unittest.TestCase):
         HELLO = 'world'
         c.callRemote(NoAnswerHello, hello=HELLO)
         p.flush()
-        self.failUnless(s.greeted)
+        self.assertTrue(s.greeted)
 
 
     def test_requiresNoAnswerFail(self):
@@ -1544,12 +1544,12 @@ class AMPTests(unittest.TestCase):
         c.callRemote(NoAnswerHello, hello=HELLO)
         p.flush()
         # This should be logged locally.
-        self.failUnless(self.flushLoggedErrors(amp.RemoteAmpError))
+        self.assertTrue(self.flushLoggedErrors(amp.RemoteAmpError))
         HELLO = 'world'
         c.callRemote(Hello, hello=HELLO).addErrback(L.append)
         p.flush()
         L.pop().trap(error.ConnectionDone)
-        self.failIf(s.greeted)
+        self.assertFalse(s.greeted)
 
 
     def test_noAnswerResponderBadAnswer(self):
@@ -1656,7 +1656,7 @@ class AMPTests(unittest.TestCase):
             self.testSucceeded = True
         c.switchToTestProtocol().addCallback(switched)
         p.flush()
-        self.failUnless(self.testSucceeded)
+        self.assertTrue(self.testSucceeded)
 
 
     def test_protocolSwitch(self, switcher=SimpleSymmetricCommandProtocol,
@@ -1684,8 +1684,8 @@ class AMPTests(unittest.TestCase):
 
         def cbConnsLost(((serverSuccess, serverData),
                          (clientSuccess, clientData))):
-            self.failUnless(serverSuccess)
-            self.failUnless(clientSuccess)
+            self.assertTrue(serverSuccess)
+            self.assertTrue(clientSuccess)
             self.assertEqual(''.join(serverData), SWITCH_CLIENT_DATA)
             self.assertEqual(''.join(clientData), SWITCH_SERVER_DATA)
             self.testSucceeded = True
@@ -1711,7 +1711,7 @@ class AMPTests(unittest.TestCase):
             p.flush()
         c.transport.loseConnection() # close it
         p.flush()
-        self.failUnless(self.testSucceeded)
+        self.assertTrue(self.testSucceeded)
 
 
     def test_protocolSwitchDeferred(self):
@@ -1739,7 +1739,7 @@ class AMPTests(unittest.TestCase):
         c.switchToTestProtocol(fail=True).addErrback(L.append)
         p.flush()
         L.pop().trap(UnknownProtocol)
-        self.failIf(self.testSucceeded)
+        self.assertFalse(self.testSucceeded)
         # It's a known error, so let's send a "hello" on the same connection;
         # it should work.
         c.sendHello('world').addCallback(L.append)

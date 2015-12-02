@@ -50,9 +50,9 @@ class ClockTests(unittest.TestCase):
         """
         c = task.Clock()
         call = c.callLater(1, lambda a, b: None, 1, b=2)
-        self.failUnless(interfaces.IDelayedCall.providedBy(call))
+        self.assertTrue(interfaces.IDelayedCall.providedBy(call))
         self.assertEqual(call.getTime(), 1)
-        self.failUnless(call.active())
+        self.assertTrue(call.active())
 
 
     def testCallLaterCancelled(self):
@@ -62,7 +62,7 @@ class ClockTests(unittest.TestCase):
         c = task.Clock()
         call = c.callLater(1, lambda a, b: None, 1, b=2)
         call.cancel()
-        self.failIf(call.active())
+        self.assertFalse(call.active())
 
 
     def test_callLaterOrdering(self):
@@ -73,7 +73,7 @@ class ClockTests(unittest.TestCase):
         c = task.Clock()
         call1 = c.callLater(10, lambda a, b: None, 1, b=2)
         call2 = c.callLater(1, lambda a, b: None, 3, b=4)
-        self.failIf(call1 is call2)
+        self.assertFalse(call1 is call2)
 
 
     def testAdvance(self):
@@ -87,7 +87,7 @@ class ClockTests(unittest.TestCase):
         self.assertEqual(events, [])
         c.advance(1)
         self.assertEqual(events, [None])
-        self.failIf(call.active())
+        self.assertFalse(call.active())
 
 
     def testAdvanceCancel(self):
@@ -173,7 +173,7 @@ class ClockTests(unittest.TestCase):
 
     def test_providesIReactorTime(self):
         c = task.Clock()
-        self.failUnless(interfaces.IReactorTime.providedBy(c),
+        self.assertTrue(interfaces.IReactorTime.providedBy(c),
                         "Clock does not provide IReactorTime")
 
 
@@ -530,7 +530,7 @@ class LoopTests(unittest.TestCase):
         self.assertIdentical(theResult[0], lc)
 
         # Make sure it isn't planning to do anything further.
-        self.failIf(clock.calls)
+        self.assertFalse(clock.calls)
 
 
     def testDelayedStart(self):
@@ -554,7 +554,7 @@ class LoopTests(unittest.TestCase):
         lc.stop()
         self.assertIdentical(theResult[0], lc)
 
-        self.failIf(clock.calls)
+        self.assertFalse(clock.calls)
 
 
     def testBadDelay(self):
@@ -572,8 +572,8 @@ class LoopTests(unittest.TestCase):
         lc = TestableLoopingCall(clock, foo)
         lc.start(delay, now=False)
         lc.stop()
-        self.failIf(ran)
-        self.failIf(clock.calls)
+        self.assertFalse(ran)
+        self.assertFalse(clock.calls)
 
 
     def testStopAtOnce(self):
@@ -688,7 +688,7 @@ class ReactorLoopTests(unittest.TestCase):
         lc = TestableLoopingCall(clock, foo)
         lc.start(0.2)
         clock.pump(timings)
-        self.failIf(clock.calls)
+        self.assertFalse(clock.calls)
 
     def testFailurePropagation(self):
         # Tests if the failure of the errback of the deferred returned by the
@@ -710,7 +710,7 @@ class ReactorLoopTests(unittest.TestCase):
         self.assertFailure(d, TestException)
 
         clock.pump(timings)
-        self.failIf(clock.calls)
+        self.assertFalse(clock.calls)
         return d
 
 

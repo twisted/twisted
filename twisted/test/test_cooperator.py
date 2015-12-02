@@ -208,7 +208,7 @@ class CooperatorTests(unittest.TestCase):
         # about this, so we have to carefully clean up after ourselves.
         c._tick()
         c.stop()
-        self.failUnless(_TPF.stopped)
+        self.assertTrue(_TPF.stopped)
         self.assertEqual(output, list(range(10)))
 
 
@@ -229,7 +229,7 @@ class CooperatorTests(unittest.TestCase):
                 return '<FakeCall %r>' % (self.func,)
 
         def sched(f):
-            self.failIf(calls, repr(calls))
+            self.assertFalse(calls, repr(calls))
             calls.append(FakeCall(f))
             return calls[-1]
 
@@ -509,7 +509,7 @@ class RunStateTests(unittest.TestCase):
         self.deferNext()
         self.scheduler.pump()
         self.assertEqual(len(self.work), 1)
-        self.failUnless(isinstance(self.work[0], defer.Deferred))
+        self.assertTrue(isinstance(self.work[0], defer.Deferred))
         self.scheduler.pump()
         self.assertEqual(len(self.work), 1)
         self.task.pause()

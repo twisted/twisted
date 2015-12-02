@@ -98,7 +98,7 @@ class HeadingTests(TestCase):
         """
         Headings with different values compare unequal.
         """
-        self.assertNotEquals(base.Heading(1.), base.Heading(2.))
+        self.assertNotEqual(base.Heading(1.), base.Heading(2.))
 
 
     def test_zeroHeadingEdgeCase(self):
@@ -532,7 +532,7 @@ class AltitudeTests(TestCase):
         """
         firstAltitude = base.Altitude(1.)
         secondAltitude = base.Altitude(-1.)
-        self.assertNotEquals(firstAltitude, secondAltitude)
+        self.assertNotEqual(firstAltitude, secondAltitude)
 
 
 

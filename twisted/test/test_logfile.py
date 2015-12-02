@@ -231,20 +231,20 @@ class LogFileTests(unittest.TestCase):
         self.addCleanup(log.close)
         log.write("1" * 11)
         log.write("2" * 11)
-        self.failUnless(os.path.exists("{0}.1".format(self.path)))
+        self.assertTrue(os.path.exists("{0}.1".format(self.path)))
 
         log.write("3" * 11)
-        self.failUnless(os.path.exists("{0}.2".format(self.path)))
+        self.assertTrue(os.path.exists("{0}.2".format(self.path)))
 
         log.write("4" * 11)
-        self.failUnless(os.path.exists("{0}.3".format(self.path)))
+        self.assertTrue(os.path.exists("{0}.3".format(self.path)))
         with open("{0}.3".format(self.path)) as fp:
             self.assertEqual(fp.read(), "1" * 11)
 
         log.write("5" * 11)
         with open("{0}.3".format(self.path)) as fp:
             self.assertEqual(fp.read(), "2" * 11)
-        self.failUnless(not os.path.exists("{0}.4".format(self.path)))
+        self.assertTrue(not os.path.exists("{0}.4".format(self.path)))
 
 
     def test_fromFullPath(self):

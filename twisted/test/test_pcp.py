@@ -103,14 +103,14 @@ class ConsumerInterfaceTest:
     def testRegisterPush(self):
         self.consumer.registerProducer(self.producer, True)
         ## Consumer should NOT have called PushProducer.resumeProducing
-        self.failIf(self.producer.resumed)
+        self.assertFalse(self.producer.resumed)
 
     ## I'm I'm just a proxy, should I only do resumeProducing when
     ## I get poked myself?
     #def testRegisterPull(self):
     #    self.consumer.registerProducer(self.producer, False)
     #    ## Consumer SHOULD have called PushProducer.resumeProducing
-    #    self.failUnless(self.producer.resumed)
+    #    self.assertTrue(self.producer.resumed)
 
     def testUnregister(self):
         self.consumer.registerProducer(self.producer, False)
@@ -121,7 +121,7 @@ class ConsumerInterfaceTest:
         # a PullProducer and have someone ask me for data.
         self.producer.resumed = False
         self.consumer.resumeProducing()
-        self.failIf(self.producer.resumed)
+        self.assertFalse(self.producer.resumed)
 
     def testFinish(self):
         self.consumer.registerProducer(self.producer, False)
@@ -129,7 +129,7 @@ class ConsumerInterfaceTest:
         # I guess finish should behave like unregister?
         self.producer.resumed = False
         self.consumer.resumeProducing()
-        self.failIf(self.producer.resumed)
+        self.assertFalse(self.producer.resumed)
 
 
 class ProducerInterfaceTest:
@@ -151,7 +151,7 @@ class ProducerInterfaceTest:
     def testPause(self):
         self.producer.pauseProducing()
         self.producer.write("yakkity yak")
-        self.failIf(self.consumer.getvalue(),
+        self.assertFalse(self.consumer.getvalue(),
                     "Paused producer should not have sent data.")
 
     def testResume(self):
@@ -175,7 +175,7 @@ class ProducerInterfaceTest:
     def testStop(self):
         self.producer.stopProducing()
         self.producer.write("yakkity yak")
-        self.failIf(self.consumer.getvalue(),
+        self.assertFalse(self.consumer.getvalue(),
                     "Stopped producer should not have sent data.")
 
 
@@ -203,7 +203,7 @@ class ProducerProxyTests(unittest.TestCase):
 
     def testStop(self):
         self.proxy.stopProducing()
-        self.failUnless(self.parentProducer.stopped)
+        self.assertTrue(self.parentProducer.stopped)
 
 
 class ConsumerProxyTests(unittest.TestCase):
@@ -222,11 +222,11 @@ class ConsumerProxyTests(unittest.TestCase):
 
     def testFinish(self):
         self.consumer.finish()
-        self.failUnless(self.underlying.finished)
+        self.assertTrue(self.underlying.finished)
 
     def testUnregister(self):
         self.consumer.unregisterProducer()
-        self.failUnless(self.underlying.unregistered)
+        self.assertTrue(self.underlying.unregistered)
 
 
 class PullProducerTest:
@@ -239,7 +239,7 @@ class PullProducerTest:
     def testHoldWrites(self):
         self.proxy.write("hello")
         # Consumer should get no data before it says resumeProducing.
-        self.failIf(self.underlying.getvalue(),
+        self.assertFalse(self.underlying.getvalue(),
                     "Pulling Consumer got data before it pulled.")
 
     def testPull(self):
@@ -290,11 +290,11 @@ class BufferedConsumerTests(unittest.TestCase):
     def testRegisterPull(self):
         self.proxy.registerProducer(self.parentProducer, False)
         ## Consumer SHOULD have called PushProducer.resumeProducing
-        self.failUnless(self.parentProducer.resumed)
+        self.assertTrue(self.parentProducer.resumed)
 
     def testPauseIntercept(self):
         self.proxy.pauseProducing()
-        self.failIf(self.parentProducer.paused)
+        self.assertFalse(self.parentProducer.paused)
 
     def testResumeIntercept(self):
         self.proxy.pauseProducing()
@@ -302,30 +302,30 @@ class BufferedConsumerTests(unittest.TestCase):
         # With a streaming producer, just because the proxy was resumed is
         # not necessarily a reason to resume the parent producer.  The state
         # of the buffer should decide that.
-        self.failIf(self.parentProducer.resumed)
+        self.assertFalse(self.parentProducer.resumed)
 
     def testTriggerPause(self):
         """Make sure I say \"when.\""""
 
         # Pause the proxy so data sent to it builds up in its buffer.
         self.proxy.pauseProducing()
-        self.failIf(self.parentProducer.paused, "don't pause yet")
+        self.assertFalse(self.parentProducer.paused, "don't pause yet")
         self.proxy.write("x" * 51)
-        self.failIf(self.parentProducer.paused, "don't pause yet")
+        self.assertFalse(self.parentProducer.paused, "don't pause yet")
         self.proxy.write("x" * 51)
-        self.failUnless(self.parentProducer.paused)
+        self.assertTrue(self.parentProducer.paused)
 
     def testTriggerResume(self):
         """Make sure I resumeProducing when my buffer empties."""
         self.proxy.pauseProducing()
         self.proxy.write("x" * 102)
-        self.failUnless(self.parentProducer.paused, "should be paused")
+        self.assertTrue(self.parentProducer.paused, "should be paused")
         self.proxy.resumeProducing()
         # Resuming should have emptied my buffer, so I should tell my
         # parent to resume too.
-        self.failIf(self.parentProducer.paused,
+        self.assertFalse(self.parentProducer.paused,
                     "Producer should have resumed.")
-        self.failIf(self.proxy.producerPaused)
+        self.assertFalse(self.proxy.producerPaused)
 
 class BufferedPullTests(unittest.TestCase):
     class proxyClass(pcp.ProducerConsumerProxy):
@@ -348,7 +348,7 @@ class BufferedPullTests(unittest.TestCase):
         # some from its PullProducer.
         self.parentProducer.resumed = False
         self.proxy.resumeProducing()
-        self.failUnless(self.parentProducer.resumed)
+        self.assertTrue(self.parentProducer.resumed)
 
     def testLateWriteBuffering(self):
         # consumer sends its initial pull before we have data

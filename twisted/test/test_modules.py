@@ -165,7 +165,7 @@ class BasicTests(TwistedModulesTestCase):
         existentPath = self.pathEntryWithOnePackage()
 
         nonexistentPath = FilePath(self.mktemp())
-        self.failIf(nonexistentPath.exists())
+        self.assertFalse(nonexistentPath.exists())
 
         self.replaceSysPath([existentPath.path])
 
@@ -187,7 +187,7 @@ class BasicTests(TwistedModulesTestCase):
         existentPath = self.pathEntryWithOnePackage()
 
         nonDirectoryPath = FilePath(self.mktemp())
-        self.failIf(nonDirectoryPath.exists())
+        self.assertFalse(nonDirectoryPath.exists())
         nonDirectoryPath.setContent(b"zip file or whatever\n")
 
         self.replaceSysPath([existentPath.path])
@@ -226,7 +226,7 @@ class BasicTests(TwistedModulesTestCase):
         packages, not submodules or subpackages.
         """
         for module in modules.iterModules():
-            self.failIf(
+            self.assertFalse(
                 '.' in module.name,
                 "no nested modules should be returned from iterModules: %r"
                 % (module.filePath))

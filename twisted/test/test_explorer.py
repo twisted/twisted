@@ -93,7 +93,7 @@ class FIXME_Watch:
         testThing.someAttr = 'someValue'
 
         self.assertEqual(testThing.someAttr, 'someValue')
-        self.failUnless(self.watcher.len())
+        self.assertTrue(self.watcher.len())
         olink = self.watcher.links[-1]
         self.assertEqual(olink.id, id(testThing))
 
@@ -108,7 +108,7 @@ class FIXME_Watch:
         testThing.someAttr = 'ZORT'
 
         self.assertEqual(testThing.someAttr, 'TROZ')
-        self.failUnless(self.watcher.len())
+        self.assertTrue(self.watcher.len())
         olink = self.watcher.links[-1]
         self.assertEqual(olink.id, id(testThing))
 
@@ -124,7 +124,7 @@ class FIXME_Watch:
             rval = testThing.bip()
             self.assertEqual(rval, ('pencil',))
 
-            self.failUnless(self.watcher.len())
+            self.assertTrue(self.watcher.len())
             olink = self.watcher.links[-1]
             self.assertEqual(olink.id, id(testThing))
 
@@ -164,7 +164,7 @@ class BrowseFunctionTests(unittest.TestCase):
 
             self.assertEqual(xplorer.id, id(f))
 
-            self.failUnless(isinstance(xplorer, explorer.ExplorerFunction))
+            self.assertTrue(isinstance(xplorer, explorer.ExplorerFunction))
 
             self.assertEqual(xplorer.name, f_name)
 
@@ -197,8 +197,8 @@ class BrowseFunctionTests(unittest.TestCase):
         signature = xplorer.signature
 
         self.assertEqual(signature.name, expected_names)
-        self.failUnless(signature.is_varlist(0))
-        self.failUnless(signature.is_keyword(1))
+        self.assertTrue(signature.is_varlist(0))
+        self.assertTrue(signature.is_keyword(1))
 
     def test_signature_crazy(self):
         """Testing function with crazy signature.
@@ -209,8 +209,8 @@ class BrowseFunctionTests(unittest.TestCase):
 
         # The name of the first argument seems to be indecipherable,
         # but make sure it has one (and no default).
-        self.failUnless(signature.get_name(0))
-        self.failUnless(not signature.get_default(0)[0])
+        self.assertTrue(signature.get_name(0))
+        self.assertTrue(not signature.get_default(0)[0])
 
         self.assertEqual(signature.get_name(1), 'c')
 
@@ -222,7 +222,7 @@ class BrowseFunctionTests(unittest.TestCase):
         self.assertEqual(arg_2_default, range(4))
 
         self.assertEqual(signature.get_name(3), 'kw')
-        self.failUnless(signature.is_keyword(3))
+        self.assertTrue(signature.is_keyword(3))
 
 if __name__ == '__main__':
     unittest.main()

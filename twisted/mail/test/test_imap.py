@@ -325,9 +325,9 @@ class IMAP4HelperTests(unittest.TestCase):
         for (wildcard, fail, succeed) in cases:
             wildcard = imap4.wildcardToRegexp(wildcard, '/')
             for x in fail:
-                self.failIf(wildcard.match(x))
+                self.assertFalse(wildcard.match(x))
             for x in succeed:
-                self.failUnless(wildcard.match(x))
+                self.assertTrue(wildcard.match(x))
 
 
     def test_wildcardNoDelim(self):
@@ -347,9 +347,9 @@ class IMAP4HelperTests(unittest.TestCase):
         for (wildcard, fail, succeed) in cases:
             wildcard = imap4.wildcardToRegexp(wildcard, None)
             for x in fail:
-                self.failIf(wildcard.match(x), x)
+                self.assertFalse(wildcard.match(x), x)
             for x in succeed:
-                self.failUnless(wildcard.match(x), x)
+                self.assertTrue(wildcard.match(x), x)
 
 
     def test_headerFormatter(self):
@@ -603,7 +603,7 @@ class IMAP4HelperTests(unittest.TestCase):
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), 1)
-            self.failUnless(isinstance(p.result[0], getattr(p, outp)))
+            self.assertTrue(isinstance(p.result[0], getattr(p, outp)))
 
 
     def test_fetchParserMacros(self):
@@ -629,7 +629,7 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
         self.assertEqual(p.result[0].header, None)
         self.assertEqual(str(p.result[0]), 'BODY')
@@ -637,23 +637,23 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY.PEEK')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
         self.assertEqual(str(p.result[0]), 'BODY')
 
         p = P()
         p.parseString('BODY[]')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].empty, True)
         self.assertEqual(str(p.result[0]), 'BODY[]')
 
         p = P()
         p.parseString('BODY[HEADER]')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
-        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, True)
         self.assertEqual(p.result[0].header.fields, ())
         self.assertEqual(p.result[0].empty, False)
@@ -662,9 +662,9 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY.PEEK[HEADER]')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
-        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, True)
         self.assertEqual(p.result[0].header.fields, ())
         self.assertEqual(p.result[0].empty, False)
@@ -673,9 +673,9 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
-        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, False)
         self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
@@ -684,9 +684,9 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
-        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, False)
         self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
@@ -695,9 +695,9 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
-        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].header.negate, True)
         self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
         self.assertEqual(p.result[0].empty, False)
@@ -706,9 +706,9 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY[1.MIME]<10.50>')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, False)
-        self.failUnless(isinstance(p.result[0].mime, p.MIME))
+        self.assertTrue(isinstance(p.result[0].mime, p.MIME))
         self.assertEqual(p.result[0].part, (0,))
         self.assertEqual(p.result[0].partialBegin, 10)
         self.assertEqual(p.result[0].partialLength, 50)
@@ -718,9 +718,9 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
         self.assertEqual(len(p.result), 1)
-        self.failUnless(isinstance(p.result[0], p.Body))
+        self.assertTrue(isinstance(p.result[0], p.Body))
         self.assertEqual(p.result[0].peek, True)
-        self.failUnless(isinstance(p.result[0].header, p.Header))
+        self.assertTrue(isinstance(p.result[0].header, p.Header))
         self.assertEqual(p.result[0].part, (0, 2, 8, 10))
         self.assertEqual(p.result[0].header.fields, ['MESSAGE-ID', 'DATE'])
         self.assertEqual(p.result[0].partialBegin, 103)
@@ -1390,7 +1390,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
-        d.addCallback(lambda _: self.failUnless(isinstance(self.stashed,
+        d.addCallback(lambda _: self.assertTrue(isinstance(self.stashed,
                                                            failure.Failure)))
         return d
 
@@ -1471,7 +1471,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
         d.addCallback(lambda _:
-                      self.failUnless(isinstance(self.stashed, failure.Failure)))
+                      self.assertTrue(isinstance(self.stashed, failure.Failure)))
         return d
 
     def testHierarchicalRename(self):
@@ -1721,7 +1721,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
     def _cbTestClose(self, ignored, m):
         self.assertEqual(len(m.messages), 1)
         self.assertEqual(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
-        self.failUnless(m.closed)
+        self.assertTrue(m.closed)
 
     def testExpunge(self):
         m = SimpleMailbox()
@@ -1738,7 +1738,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def expunge():
             return self.client.expunge()
         def expunged(results):
-            self.failIf(self.server.mbox is None)
+            self.assertFalse(self.server.mbox is None)
             self.results = results
 
         self.results = None
@@ -4462,7 +4462,7 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
 
         def check(ignored):
             # Ensure no short-circuiting weirdness is going on
-            self.failIf(self.result is self.expected)
+            self.assertFalse(self.result is self.expected)
 
             self.assertEqual(self.result, self.expected)
             self.assertEqual(self.uid, self.server_received_uid)
@@ -4516,7 +4516,7 @@ class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
 
         def check(ignored):
             # Ensure no short-circuiting weirdness is going on
-            self.failIf(self.result is self.expected)
+            self.assertFalse(self.result is self.expected)
 
             self.parts and self.parts.sort()
             self.server_received_parts and self.server_received_parts.sort()
@@ -4627,7 +4627,7 @@ class CopyWorkerTests(unittest.TestCase):
                 self.assertEqual(a[2], "internaldate")
 
             for (status, result) in results:
-                self.failUnless(status)
+                self.assertTrue(status)
                 self.assertEqual(result, None)
 
         return d.addCallback(cbCopy)
@@ -4656,7 +4656,7 @@ class CopyWorkerTests(unittest.TestCase):
             self.assertEqual(seen, exp)
 
             for (status, result) in results:
-                self.failUnless(status)
+                self.assertTrue(status)
                 self.assertEqual(result, None)
 
         return d.addCallback(cbCopy)
@@ -4752,7 +4752,7 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addErrback(self._ebGeneral)
 
         d = self.loopback()
-        d.addCallback(lambda x : self.failUnless(success))
+        d.addCallback(lambda x : self.assertTrue(success))
         return defer.gatherResults([d, self.connected])
 
 
@@ -4769,7 +4769,7 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addErrback(self._ebGeneral)
 
         def check(ignored):
-            self.failUnless(failures)
+            self.assertTrue(failures)
             self.assertIdentical(failures[0], imap4.IMAP4Exception)
         return self.loopback().addCallback(check)
 
@@ -4837,7 +4837,7 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
         def fetch():
             return self.client.fetchUID('1:*')
         def stillConnected():
-            self.assertNotEquals(self.server.state, 'timeout')
+            self.assertNotEqual(self.server.state, 'timeout')
 
         def cbAdvance(ignored):
             for i in xrange(4):
@@ -4874,11 +4874,11 @@ class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
 
         # 2/3rds of the idle timeout elapses...
         c.pump([0.0] + [self.server.timeOut / 3.0] * 2)
-        self.failIf(lost, lost)
+        self.assertFalse(lost, lost)
 
         # Now some more
         c.pump([0.0, self.server.timeOut / 2.0])
-        self.failUnless(lost)
+        self.assertTrue(lost)
 
 
 

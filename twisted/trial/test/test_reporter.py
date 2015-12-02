@@ -61,7 +61,7 @@ class BrokenStream(object):
 class StringTest(unittest.SynchronousTestCase):
     def stringComparison(self, expect, output):
         output = list(filter(None, output))
-        self.failUnless(len(expect) <= len(output),
+        self.assertTrue(len(expect) <= len(output),
                         "Must have more observed than expected"
                         "lines %d < %d" % (len(output), len(expect)))
         REGEX_PATTERN_TYPE = type(re.compile(''))
@@ -72,7 +72,7 @@ class StringTest(unittest.SynchronousTestCase):
                 self.assertSubstring(exp, out, "Line %d: %r not in %r"
                                      % (line_number, exp, out))
             elif isinstance(exp, REGEX_PATTERN_TYPE):
-                self.failUnless(exp.match(out),
+                self.assertTrue(exp.match(out),
                                 "Line %d: %r did not match string %r"
                                 % (line_number, exp.pattern, out))
             else:
@@ -187,7 +187,7 @@ class ErrorReportingTests(StringTest):
         for substring in ['1/0', 'ZeroDivisionError',
                           'Exception raised:', path]:
             self.assertSubstring(substring, output)
-        self.failUnless(re.search('Fail(ed|ure in) example:', output),
+        self.assertTrue(re.search('Fail(ed|ure in) example:', output),
                         "Couldn't match 'Failure in example: ' "
                         "or 'Failed example: '")
         expect = [self.doubleSeparator,
@@ -569,7 +569,7 @@ class SkipTests(unittest.SynchronousTestCase):
         self.result.done()
         output = self.stream.getvalue().splitlines()[-1]
         prefix = 'PASSED '
-        self.failUnless(output.startswith(prefix))
+        self.assertTrue(output.startswith(prefix))
         self.assertEqual(output[len(prefix):].strip(), '(skips=1)')
 
 
@@ -694,7 +694,7 @@ class TodoTests(unittest.SynchronousTestCase):
         self.result.done()
         output = self.stream.getvalue().splitlines()[-1]
         prefix = 'PASSED '
-        self.failUnless(output.startswith(prefix))
+        self.assertTrue(output.startswith(prefix))
         self.assertEqual(output[len(prefix):].strip(),
                          '(expectedFailures=1)')
 

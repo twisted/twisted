@@ -357,7 +357,7 @@ class InternetTests(unittest.TestCase):
         t = internet.UDPServer(0, p)
         t.startService()
         num = t._port.getHost().port
-        self.assertNotEquals(num, 0)
+        self.assertNotEqual(num, 0)
         def onStop(ignored):
             t = internet.UDPServer(num, p)
             t.startService()
@@ -441,7 +441,7 @@ class InternetTests(unittest.TestCase):
         self.assertIdentical(t1._port, None)
         t.stopService()
         self.assertIdentical(t._port, None)
-        self.failIf(t.running)
+        self.assertFalse(t.running)
 
         factory = protocol.ClientFactory()
         factory.protocol = wire.Echo
@@ -452,7 +452,7 @@ class InternetTests(unittest.TestCase):
         self.assertIdentical(t1._connection, None)
         t.stopService()
         self.assertIdentical(t._connection, None)
-        self.failIf(t.running)
+        self.assertFalse(t.running)
 
     def testStoppingServer(self):
         factory = protocol.ServerFactory()
@@ -460,7 +460,7 @@ class InternetTests(unittest.TestCase):
         t = internet.UNIXServer('echo.skt', factory)
         t.startService()
         t.stopService()
-        self.failIf(t.running)
+        self.assertFalse(t.running)
         factory = protocol.ClientFactory()
         d = defer.Deferred()
         factory.clientConnectionFailed = lambda *args: d.callback(None)
@@ -482,7 +482,7 @@ class InternetTests(unittest.TestCase):
         t0.stopService()
 
         t = pickle.loads(s)
-        self.failIf(t.running)
+        self.assertFalse(t.running)
 
     def testBrokenTimer(self):
         d = defer.Deferred()
@@ -609,7 +609,7 @@ class TimerBasicTests(unittest.TestCase):
         self.t.startService()
         d.addCallback(self.assertEqual, 'hello')
         d.addCallback(lambda x : self.t.stopService())
-        d.addCallback(lambda x : self.failIf(self.t.running))
+        d.addCallback(lambda x : self.assertFalse(self.t.running))
         return d
 
     def tearDown(self):
@@ -629,7 +629,7 @@ class TimerBasicTests(unittest.TestCase):
             self.assertEqual(result, 'foo')
             return self.t.stopService()
         def onFirstStop(ignored):
-            self.failIf(self.t.running)
+            self.assertFalse(self.t.running)
             self.t.startService()
             return d2
         def onSecondResult(result):

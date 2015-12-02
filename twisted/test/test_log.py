@@ -48,7 +48,7 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
         """
         eventDict = dict(message=("a", "b", "c"))
         text = log.textFromEventDict(eventDict)
-        self.assertEquals(text, "a b c")
+        self.assertEqual(text, "a b c")
 
 
 
@@ -60,7 +60,7 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
             message=(), isError=0, format="Hello, %(foo)s!", foo="dude"
         )
         text = log.textFromEventDict(eventDict)
-        self.assertEquals(text, "Hello, dude!")
+        self.assertEqual(text, "Hello, dude!")
 
 
 
@@ -364,7 +364,7 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.failUnless(isinstance(chunk, str),
+            self.assertTrue(isinstance(chunk, str),
                             "%r was not a string" % (chunk,))
 
         if self._origEncoding is not None:
@@ -748,7 +748,7 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         newPublisher.addObserver(preStartObserver)
         log.startLogging(fakeFile, setStdout=False)
         self.addCleanup(tempLogPublisher._stopLogging)
-        self.assertEquals(received, [])
+        self.assertEqual(received, [])
         warnings.warn("hello!")
         output = fakeFile.getvalue()
         self.assertIn("UserWarning: hello!", output)

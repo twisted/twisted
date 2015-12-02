@@ -105,17 +105,17 @@ class FixedOffsetTimeZoneTests(TestCase):
             tzDST = FixedOffsetTimeZone.fromLocalTimeStamp(localDST)
             tzSTD = FixedOffsetTimeZone.fromLocalTimeStamp(localSTD)
 
-            self.assertEquals(
+            self.assertEqual(
                 tzDST.tzname(localDST),
                 "UTC{0}".format(expectedOffsetDST)
             )
-            self.assertEquals(
+            self.assertEqual(
                 tzSTD.tzname(localSTD),
                 "UTC{0}".format(expectedOffsetSTD)
             )
 
-            self.assertEquals(tzDST.dst(localDST), timedelta(0))
-            self.assertEquals(tzSTD.dst(localSTD), timedelta(0))
+            self.assertEqual(tzDST.dst(localDST), timedelta(0))
+            self.assertEqual(tzSTD.dst(localSTD), timedelta(0))
 
             def timeDeltaFromOffset(offset):
                 assert len(offset) == 5
@@ -132,11 +132,11 @@ class FixedOffsetTimeZoneTests(TestCase):
 
                 return timedelta(hours=hours, minutes=minutes)
 
-            self.assertEquals(
+            self.assertEqual(
                 tzDST.utcoffset(localDST),
                 timeDeltaFromOffset(expectedOffsetDST)
             )
-            self.assertEquals(
+            self.assertEqual(
                 tzSTD.utcoffset(localSTD),
                 timeDeltaFromOffset(expectedOffsetSTD)
             )

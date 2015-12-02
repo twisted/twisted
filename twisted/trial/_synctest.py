@@ -616,7 +616,7 @@ class _Assertions(pyunit.TestCase, object):
         self.assertIdentical(first.category, category)
 
         # Use starts with because of .pyc/.pyo issues.
-        self.failUnless(
+        self.assertTrue(
             filename.startswith(first.filename),
             'Warning in %r, expected %r' % (first.filename, filename))
 

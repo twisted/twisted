@@ -51,7 +51,7 @@ class DocCoverageTests(unittest.TestCase):
                 pass
             else:
                 docless.extend(self.modulesInPackage(packageName, package))
-        self.failIf(docless, "No docstrings in module files:\n"
+        self.assertFalse(docless, "No docstrings in module files:\n"
                     "%s" % ('\n'.join(map(errorInFile, docless)),))
 
 
@@ -96,7 +96,7 @@ class DocCoverageTests(unittest.TestCase):
             else:
                 if not inspect.getdoc(package):
                     docless.append(package.__file__.replace('.pyc','.py'))
-        self.failIf(docless, "No docstrings for package files\n"
+        self.assertFalse(docless, "No docstrings for package files\n"
                     "%s" % ('\n'.join(map(errorInFile, docless),)))
 
 
