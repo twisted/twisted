@@ -1330,6 +1330,69 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(fp.exists(), True)
 
 
+    def test_makedirs_makesDirectoriesRecursively(self):
+        """
+        Check that C{filepath.FilePath.makedirs} recursively creates all
+        parent directories leading up to a location.
+        """
+        fp = filepath.FilePath(os.path.join(
+            self.mktemp(), b"foo", b"bar", b"baz"))
+        self.assertFalse(fp.exists())
+
+        fp.makedirs()
+        self.assertTrue(fp.exists())
+        self.assertTrue(fp.isdir())
+
+
+    def test_makedirs_makesDirectoriesWithExistsOk(self):
+        """
+        Check that C{filepath.FilePath.makedirs} existOk has no effect if
+        directory does not exist yet.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        self.assertFalse(fp.exists())
+
+        fp.makedirs(existOk=True)
+        self.assertTrue(fp.exists())
+        self.assertTrue(fp.isdir())
+
+
+    def test_makedirs_throwsWithExistentDirectory(self):
+        """
+        Check that C{filepath.FilePath.makedirs} throws a proper exception
+        when makedirs is called on a directory that already exists.
+        """
+        fp = filepath.FilePath(os.path.join(self.mktemp()))
+        fp.makedirs()
+
+        with self.assertRaises(OSError) as e:
+            fp.makedirs()
+            self.assertEqual(e.errno, errno.EEXIST)
+
+
+    def test_makedirs_acceptsExistOk(self):
+        """
+        Check that C{filepath.FilePath.makedirs} succeeds when makedirs is
+        called on a directory that already exists and the existOk argument is
+        set to True.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.makedirs()
+        self.assertTrue(fp.exists())
+        fp.makedirs(existOk=True)
+        self.assertTrue(fp.exists())
+
+
+    def test_makedirs_acceptsMode(self):
+        """
+        Check that C{filepath.FilePath.makedirs} can set an arbitrary mode on
+        a newly created directory.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.makedirs(mode=0o700)
+        self.assertEqual("rwx------", fp.getPermissions().shorthand())
+
+
     def test_changed(self):
         """
         L{FilePath.changed} indicates that the L{FilePath} has changed, but does
