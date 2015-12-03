@@ -80,7 +80,8 @@ class LoopingCall:
         using a looping call to display an animation with discrete frames, this
         number would be the number of frames to advance.
 
-        The count is normally 1, but can be higher. For example, if the reactor
+        The count is normally 1, but can be higher (for interval 0
+        count will be always 1). For example, if the reactor
         is blocked and takes too long to invoke the L{LoopingCall}, a Deferred
         returned from a previous call is not fired before an interval has
         elapsed, or if the callable itself blocks for longer than an interval,
@@ -101,10 +102,9 @@ class LoopingCall:
         """
 
         def counter():
-            now = self.clock.seconds()
             if self.interval == 0:
-                self._realLastTime = now
                 return countCallable(1)
+            now = self.clock.seconds()
             lastTime = self._realLastTime
             if lastTime is None:
                 lastTime = self.starttime
