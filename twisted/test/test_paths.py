@@ -1366,9 +1366,9 @@ class FilePathTests(AbstractFilePathTests):
         fp = filepath.FilePath(os.path.join(self.mktemp()))
         fp.makedirs()
 
-        with self.assertRaises(OSError) as e:
-            fp.makedirs()
-            self.assertEqual(e.errno, errno.EEXIST)
+        exception = self.assertRaises(OSError, fp.makedirs)
+
+        self.assertEqual(exception.errno, errno.EEXIST)
 
 
     def test_makedirsAcceptsIgnoreAlreadyExist(self):
@@ -1394,8 +1394,10 @@ class FilePathTests(AbstractFilePathTests):
         fp.create()
         self.assertTrue(fp.isfile())
 
-        with self.assertRaises(OSError):
-            fp.makedirs(ignoreAlreadyExist=True)
+        exception = self.assertRaises(
+            OSError, fp.makedirs, ignoreAlreadyExist=True)
+
+        self.assertEqual(exception.errno, errno.EEXIST)
 
 
     def test_changed(self):
