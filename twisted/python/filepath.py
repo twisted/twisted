@@ -1416,7 +1416,7 @@ class FilePath(AbstractFilePath):
         Create all directories not yet existing in C{path} segments, using
         L{os.makedirs}.
 
-        @param ignoreAlreadyExist: Ignore L{OSError} if directory already
+        @param ignoreAlreadyExist: Don't raise L{OSError} if directory already
             exists.
         @type ignoreAlreadyExist: L{bool}
 

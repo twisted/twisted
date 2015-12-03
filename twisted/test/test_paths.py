@@ -1330,10 +1330,10 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(fp.exists(), True)
 
 
-    def test_makedirs_makesDirectoriesRecursively(self):
+    def test_makedirsMakesDirectoriesRecursively(self):
         """
-        Check that C{filepath.FilePath.makedirs} recursively creates all
-        parent directories leading up to a location.
+        C{FilePath.makedirs} creates a directory at C{path}}, including
+        recursively creating all parent directories leading up to the path.
         """
         fp = filepath.FilePath(os.path.join(
             self.mktemp(), b"foo", b"bar", b"baz"))
@@ -1344,23 +1344,24 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(fp.isdir())
 
 
-    def test_makedirs_makesDirectoriesWithignoreAlreadyExist(self):
+    def test_makedirsMakesDirectoriesWithignoreAlreadyExist(self):
         """
-        Check that C{filepath.FilePath.makedirs} ignoreAlreadyExist has no
-        effect if directory does not exist yet.
+        Calling C{FilePath.makedirs} with ignoreAlreadyExist set to C{True} has
+        no effect if directory does not exist.
         """
         fp = filepath.FilePath(self.mktemp())
         self.assertFalse(fp.exists())
 
         fp.makedirs(ignoreAlreadyExist=True)
+
         self.assertTrue(fp.exists())
         self.assertTrue(fp.isdir())
 
 
-    def test_makedirs_throwsWithExistentDirectory(self):
+    def test_makedirsThrowsWithExistentDirectory(self):
         """
-        Check that C{filepath.FilePath.makedirs} throws a proper exception
-        when makedirs is called on a directory that already exists.
+        C{FilePath.makedirs} throws an C{OSError} exception
+        when called on a directory that already exists.
         """
         fp = filepath.FilePath(os.path.join(self.mktemp()))
         fp.makedirs()
@@ -1370,17 +1371,30 @@ class FilePathTests(AbstractFilePathTests):
             self.assertEqual(e.errno, errno.EEXIST)
 
 
-    def test_makedirs_acceptsignoreAlreadyExist(self):
+    def test_makedirsAcceptsIgnoreAlreadyExist(self):
         """
-        Check that C{filepath.FilePath.makedirs} succeeds when makedirs is
-        called on a directory that already exists and the ignoreAlreadyExist
-        argument is set to True.
+        C{FilePath.makedirs} succeeds when called on a directory that already
+        exists and the ignoreAlreadyExist argument is set to C{True}.
         """
         fp = filepath.FilePath(self.mktemp())
         fp.makedirs()
         self.assertTrue(fp.exists())
+
         fp.makedirs(ignoreAlreadyExist=True)
+
         self.assertTrue(fp.exists())
+
+
+    def test_makedirsIgnoreAlreadyExistAlreadyAFile(self):
+        """
+        When C{FilePath.makedirs called with ignoreAlreadyExist set to C{True}
+        throws an C{OSError} exceptions if path is a file.
+        """
+        fp = filepath.FilePath(os.path.join(self.mktemp()))
+        fp.create()
+
+        with self.assertRaises(OSError):
+            fp.makedirs(ignoreAlreadyExist=True)
 
 
     def test_changed(self):
