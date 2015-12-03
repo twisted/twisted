@@ -171,16 +171,19 @@ has several features:
       which always issue NUL as the first byte.
 """
 
+from __future__ import unicode_literals
+
 __metaclass__ = type
 
 import types, warnings
 
-from cStringIO import StringIO
+from io import BytesIO
 from struct import pack
 import decimal, datetime
+from functools import partial
 from itertools import count
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from twisted.python.reflect import accumulateClassDict
 from twisted.python.failure import Failure
@@ -196,6 +199,9 @@ from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
+from twisted.python.compat import (
+    iteritems, unicode, nativeString, intToBytes, _PY3, long,
+)
 
 try:
     from twisted.internet import ssl
@@ -269,17 +275,41 @@ __all__ = [
 
 
 
-ASK = '_ask'
-ANSWER = '_answer'
-COMMAND = '_command'
-ERROR = '_error'
-ERROR_CODE = '_error_code'
-ERROR_DESCRIPTION = '_error_description'
-UNKNOWN_ERROR_CODE = 'UNKNOWN'
-UNHANDLED_ERROR_CODE = 'UNHANDLED'
+ASK = b'_ask'
+ANSWER = b'_answer'
+COMMAND = b'_command'
+ERROR = b'_error'
+ERROR_CODE = b'_error_code'
+ERROR_DESCRIPTION = b'_error_description'
+UNKNOWN_ERROR_CODE = b'UNKNOWN'
+UNHANDLED_ERROR_CODE = b'UNHANDLED'
 
 MAX_KEY_LENGTH = 0xff
 MAX_VALUE_LENGTH = 0xffff
+
+
+
+def byteString(string, encoding="ascii"):
+    """Coerce C{string} to a byte string.
+
+    If C{string} is already a byte string, it is returned unchanged. If it's a
+    Unicode string, it is encoded with C{encoding}, ASCII by default.
+
+    @raise TypeError: If C{string} is neither a Unicode nor a byte string.
+    @raise LookupError: If C{encoding} is not a recognised encoding.
+    @raise UnicodeEncodeError: If encoding C{string} fails.
+
+    @rtype: C{bytes}
+    """
+    if isinstance(string, bytes):
+        return string
+    elif isinstance(string, unicode):
+        return string.encode(encoding)
+    else:
+        raise TypeError(
+            "Expected Unicode string or byte string, got: %r (%r)"
+            % (string, type(string)))
+
 
 
 class IArgumentType(Interface):
@@ -588,6 +618,15 @@ class AmpBox(dict):
                                 # acquire a __dict__...
 
 
+    def __init__(self, *args, **kw):
+        super(AmpBox, self).__init__(*args, **kw)
+        if _PY3:
+            non_byte_names = [n for n in self if not isinstance(n, bytes)]
+            for non_byte_name in non_byte_names:
+                byte_name = byteString(non_byte_name)
+                self[byte_name] = self.pop(non_byte_name)
+
+
     def copy(self):
         """
         Return another AmpBox just like me.
@@ -604,8 +643,7 @@ class AmpBox(dict):
         @return: a str encoded according to the rules described in the module
         docstring.
         """
-        i = self.items()
-        i.sort()
+        i = sorted(iteritems(self))
         L = []
         w = L.append
         for k, v in i:
@@ -622,7 +660,7 @@ class AmpBox(dict):
                 w(pack("!H", len(kv)))
                 w(kv)
         w(pack("!H", 0))
-        return ''.join(L)
+        return b''.join(L)
 
 
     def _sendTo(self, proto):
@@ -703,6 +741,7 @@ class _SwitchBox(AmpBox):
 
 
 
+@implementer(IBoxReceiver)
 class BoxDispatcher:
     """
     A L{BoxDispatcher} dispatches '_ask', '_answer', and '_error' L{AmpBox}es,
@@ -728,11 +767,9 @@ class BoxDispatcher:
     @type boxSender: L{IBoxSender}
     """
 
-    implements(IBoxReceiver)
-
     _failAllReason = None
     _outstandingRequests = None
-    _counter = 0L
+    _counter = long(0)
     boxSender = None
 
     def __init__(self, locator):
@@ -778,7 +815,12 @@ class BoxDispatcher:
         @return: a string that has not yet been used on this connection.
         """
         self._counter += 1
-        return '%x' % (self._counter,)
+        if _PY3:
+            # Python 3.4 cannot do % interpolation on byte strings so we must
+            # work with a Unicode string and then encode.
+            return (u'%x' % self._counter).encode("ascii")
+        else:
+            return (b'%x' % self._counter)
 
 
     def _sendBoxCommand(self, command, box, requiresAnswer=True):
@@ -918,6 +960,8 @@ class BoxDispatcher:
         question.addErrback(self.unhandledError)
         errorCode = box[ERROR_CODE]
         description = box[ERROR_DESCRIPTION]
+        if _PY3 and isinstance(description, bytes):
+            description = description.decode("utf-8", "replace")
         if errorCode in PROTOCOL_ERRORS:
             exc = PROTOCOL_ERRORS[errorCode](errorCode, description)
         else:
@@ -937,6 +981,8 @@ class BoxDispatcher:
             if error.check(RemoteAmpError):
                 code = error.value.errorCode
                 desc = error.value.description
+                if _PY3 and isinstance(desc, unicode):
+                    desc = desc.encode("utf-8", "replace")
                 if error.value.fatal:
                     errorBox = QuitBox()
                 else:
@@ -946,7 +992,7 @@ class BoxDispatcher:
                 log.err(error) # here is where server-side logging happens
                                # if the error isn't handled
                 code = UNKNOWN_ERROR_CODE
-                desc = "Unknown Error"
+                desc = b"Unknown Error"
             errorBox[ERROR] = box[ASK]
             errorBox[ERROR_DESCRIPTION] = desc
             errorBox[ERROR_CODE] = code
@@ -1005,13 +1051,14 @@ class BoxDispatcher:
         if responder is None:
             return fail(RemoteAmpError(
                     UNHANDLED_ERROR_CODE,
-                    "Unhandled Command: %r" % (cmd,),
+                    byteString("Unhandled Command: %r" % (cmd,)),
                     False,
                     local=Failure(UnhandledCommand())))
         return maybeDeferred(responder, box)
 
 
 
+@implementer(IResponderLocator)
 class CommandLocator:
     """
     A L{CommandLocator} is a collection of responders to AMP L{Command}s, with
@@ -1057,9 +1104,6 @@ class CommandLocator:
                     return self.lookupFunction(name)
                 subcls.locateResponder = locateResponder
             return subcls
-
-
-    implements(IResponderLocator)
 
 
     def _wrapWithSerialization(self, aCallable, command):
@@ -1131,21 +1175,31 @@ class CommandLocator:
         cd = self._commandDispatch
         if name in cd:
             commandClass, responderFunc = cd[name]
-            responderMethod = types.MethodType(
-                responderFunc, self, self.__class__)
+            if _PY3:
+                responderMethod = types.MethodType(
+                    responderFunc, self)
+            else:
+                responderMethod = types.MethodType(
+                    responderFunc, self, self.__class__)
             return self._wrapWithSerialization(responderMethod, commandClass)
 
 
 
+if _PY3:
+    # Apply __metaclass__ to CommandLocator.
+    CommandLocator = CommandLocator.__metaclass__(
+        "CommandLocator", (CommandLocator, ), {})
+
+
+
+@implementer(IResponderLocator)
 class SimpleStringLocator(object):
     """
     Implement the L{locateResponder} method to do simple, string-based
     dispatch.
     """
 
-    implements(IResponderLocator)
-
-    baseDispatchPrefix = 'amp_'
+    baseDispatchPrefix = b'amp_'
 
     def locateResponder(self, name):
         """
@@ -1157,7 +1211,7 @@ class SimpleStringLocator(object):
 
         @param name: the normalized name (from the wire) of the command.
         """
-        fName = self.baseDispatchPrefix + (name.upper())
+        fName = nativeString(self.baseDispatchPrefix + name.upper())
         return getattr(self, fName, None)
 
 
@@ -1193,13 +1247,15 @@ def _wireNameToPythonIdentifier(key):
     @return: a str which is a valid python identifier, looking something like
     'foo_bar_baz' or 'From'.
     """
-    lkey = key.replace("-", "_")
+    assert isinstance(key, bytes), repr(key)
+    lkey = nativeString(key.replace(b"-", b"_"))
     if lkey in PYTHON_KEYWORDS:
         return lkey.title()
     return lkey
 
 
 
+@implementer(IArgumentType)
 class Argument:
     """
     Base-class of all objects that take values from Amp packets and convert
@@ -1210,7 +1266,6 @@ class Argument:
     which will be used to define the behavior of L{IArgumentType.toBox} and
     L{IArgumentType.fromBox}, respectively.
     """
-    implements(IArgumentType)
 
     optional = False
 
@@ -1271,6 +1326,9 @@ class Argument:
         if self.optional and st is None:
             objects[nk] = None
         else:
+            assert isinstance(st, bytes), (
+                "%s.fromStringProto(...) should only receive byte strings, "
+                "got: %r" % (self.__class__.__name__, st))
             objects[nk] = self.fromStringProto(st, proto)
 
 
@@ -1299,7 +1357,11 @@ class Argument:
             # strings[name] = None
             pass
         else:
-            strings[name] = self.toStringProto(obj, proto)
+            value = self.toStringProto(obj, proto)
+            assert not isinstance(value, unicode), (
+                "%s.toStringProto(...) should not return Unicode strings, "
+                "got: %r" % (self.__class__.__name__, value))
+            strings[name] = value
 
 
     def fromStringProto(self, inString, proto):
@@ -1361,7 +1423,7 @@ class Integer(Argument):
     """
     fromString = int
     def toString(self, inObject):
-        return str(int(inObject))
+        return intToBytes(inObject)
 
 
 
@@ -1372,8 +1434,8 @@ class String(Argument):
     def toString(self, inObject):
         return inObject
 
-
     def fromString(self, inString):
+        assert isinstance(inString, bytes), repr(inString)
         return inString
 
 
@@ -1392,9 +1454,9 @@ class Boolean(Argument):
     Encode True or False as "True" or "False" on the wire.
     """
     def fromString(self, inString):
-        if inString == 'True':
+        if inString == b'True':
             return True
-        elif inString == 'False':
+        elif inString == b'False':
             return False
         else:
             raise TypeError("Bad boolean value: %r" % (inString,))
@@ -1402,9 +1464,9 @@ class Boolean(Argument):
 
     def toString(self, inObject):
         if inObject:
-            return 'True'
+            return b'True'
         else:
-            return 'False'
+            return b'False'
 
 
 
@@ -1414,12 +1476,12 @@ class Unicode(String):
     """
 
     def toString(self, inObject):
-        # assert isinstance(inObject, unicode)
+        assert isinstance(inObject, unicode), repr(inObject)
         return String.toString(self, inObject.encode('utf-8'))
 
 
     def fromString(self, inString):
-        # assert isinstance(inString, str)
+        assert isinstance(inString, bytes), repr(inString)
         return String.fromString(self, inString).decode('utf-8')
 
 
@@ -1438,7 +1500,7 @@ class Path(Unicode):
 
 
     def toString(self, inObject):
-        return Unicode.toString(self, inObject.path)
+        return Unicode.toString(self, inObject.asTextMode().path)
 
 
 
@@ -1483,7 +1545,8 @@ class ListOf(Argument):
         parser = Int16StringReceiver()
         parser.stringReceived = strings.append
         parser.dataReceived(inString)
-        return map(self.elementType.fromString, strings)
+        elementFromString = self.elementType.fromString
+        return [elementFromString(string) for string in strings]
 
 
     def toString(self, inObject):
@@ -1495,7 +1558,7 @@ class ListOf(Argument):
             serialized = self.elementType.toString(obj)
             strings.append(pack('!H', len(serialized)))
             strings.append(serialized)
-        return ''.join(strings)
+        return b''.join(strings)
 
 
 
@@ -1522,6 +1585,7 @@ class AmpList(Argument):
         @param optional: a boolean indicating whether this argument can be
         omitted in the protocol.
         """
+        assert all(isinstance(name, bytes) for name, _ in subargs), repr(subargs)
         self.subargs = subargs
         Argument.__init__(self, optional)
 
@@ -1534,7 +1598,7 @@ class AmpList(Argument):
 
 
     def toStringProto(self, inObject, proto):
-        return ''.join([_objectsToStrings(
+        return b''.join([_objectsToStrings(
                     objects, self.subargs, Box(), proto
                     ).serialize() for objects in inObject])
 
@@ -1656,18 +1720,55 @@ class Command:
             reverseErrors = attrs['reverseErrors'] = {}
             er = attrs['allErrors'] = {}
             if 'commandName' not in attrs:
-                attrs['commandName'] = name
+                if _PY3:
+                    attrs['commandName'] = name.encode("ascii")
+                else:
+                    attrs['commandName'] = name
             newtype = type.__new__(cls, name, bases, attrs)
+
+            if not isinstance(newtype.commandName, bytes):
+                raise TypeError(
+                    "Command names must be byte strings, got: %r"
+                    % (newtype.commandName, ))
+            for name, _ in newtype.arguments:
+                if not isinstance(name, bytes):
+                    raise TypeError(
+                        "Argument names must be byte strings, got: %r"
+                        % (name, ))
+            for name, _ in newtype.response:
+                if not isinstance(name, bytes):
+                    raise TypeError(
+                        "Response names must be byte strings, got: %r"
+                        % (name, ))
+
             errors = {}
             fatalErrors = {}
             accumulateClassDict(newtype, 'errors', errors)
             accumulateClassDict(newtype, 'fatalErrors', fatalErrors)
-            for v, k in errors.iteritems():
+
+            if not isinstance(newtype.errors, dict):
+                newtype.errors = dict(newtype.errors)
+            if not isinstance(newtype.fatalErrors, dict):
+                newtype.fatalErrors = dict(newtype.fatalErrors)
+
+            for v, k in iteritems(errors):
                 reverseErrors[k] = v
                 er[v] = k
-            for v, k in fatalErrors.iteritems():
+            for v, k in iteritems(fatalErrors):
                 reverseErrors[k] = v
                 er[v] = k
+
+            for _, name in iteritems(newtype.errors):
+                if not isinstance(name, bytes):
+                    raise TypeError(
+                        "Error names must be byte strings, got: %r"
+                        % (name, ))
+            for _, name in iteritems(newtype.fatalErrors):
+                if not isinstance(name, bytes):
+                    raise TypeError(
+                        "Fatal error names must be byte strings, got: %r"
+                        % (name, ))
+
             return newtype
 
     arguments = []
@@ -1693,15 +1794,14 @@ class Command:
         @raise InvalidSignature: if you forgot any required arguments.
         """
         self.structured = kw
-        givenArgs = kw.keys()
         forgotten = []
         for name, arg in self.arguments:
             pythonName = _wireNameToPythonIdentifier(name)
-            if pythonName not in givenArgs and not arg.optional:
+            if pythonName not in self.structured and not arg.optional:
                 forgotten.append(pythonName)
         if forgotten:
             raise InvalidSignature("forgot %s for %s" % (
-                    ', '.join(forgotten), self.commandName))
+                ', '.join(forgotten), self.commandName))
         forgotten = []
 
 
@@ -1850,6 +1950,12 @@ class Command:
 
 
 
+if _PY3:
+    # Apply __metaclass__ to Command.
+    Command = Command.__metaclass__("Command", (Command, ), {})
+
+
+
 class _NoCertificate:
     """
     This is for peers which don't want to use a local certificate.  Used by
@@ -1912,7 +2018,7 @@ class _TLSBox(AmpBox):
 
     def __init__(self):
         if ssl is None:
-            raise RemoteAmpError("TLS_ERROR", "TLS not available")
+            raise RemoteAmpError(b"TLS_ERROR", "TLS not available")
         AmpBox.__init__(self)
 
 
@@ -1921,16 +2027,16 @@ class _TLSBox(AmpBox):
 
 
     # These properties are described in startTLS
-    certificate = _keyprop('tls_localCertificate', _NoCertificate(False))
-    verify = _keyprop('tls_verifyAuthorities', None)
+    certificate = _keyprop(b'tls_localCertificate', _NoCertificate(False))
+    verify = _keyprop(b'tls_verifyAuthorities', None)
 
     def _sendTo(self, proto):
         """
         Send my encoded value to the protocol, then initiate TLS.
         """
         ab = AmpBox(self)
-        for k in ['tls_localCertificate',
-                  'tls_verifyAuthorities']:
+        for k in [b'tls_localCertificate',
+                  b'tls_verifyAuthorities']:
             ab.pop(k, None)
         ab._sendTo(proto)
         proto._startTLS(self.certificate, self.verify)
@@ -1968,11 +2074,11 @@ class StartTLS(Command):
     response dictionary.
     """
 
-    arguments = [("tls_localCertificate", _LocalArgument(optional=True)),
-                 ("tls_verifyAuthorities", _LocalArgument(optional=True))]
+    arguments = [(b"tls_localCertificate", _LocalArgument(optional=True)),
+                 (b"tls_verifyAuthorities", _LocalArgument(optional=True))]
 
-    response = [("tls_localCertificate", _LocalArgument(optional=True)),
-                ("tls_verifyAuthorities", _LocalArgument(optional=True))]
+    response = [(b"tls_localCertificate", _LocalArgument(optional=True)),
+                (b"tls_verifyAuthorities", _LocalArgument(optional=True))]
 
     responseType = _TLSBox
 
@@ -2062,6 +2168,7 @@ class ProtocolSwitchCommand(Command):
 
 
 
+@implementer(IFileDescriptorReceiver)
 class _DescriptorExchanger(object):
     """
     L{_DescriptorExchanger} is a mixin for L{BinaryBoxProtocol} which adds
@@ -2084,13 +2191,12 @@ class _DescriptorExchanger(object):
         ordinals, starting from 0.  This is used to construct values for
         C{fileDescriptorReceived}.
     """
-    implements(IFileDescriptorReceiver)
 
     def __init__(self):
         self._descriptors = {}
         self._getDescriptor = self._descriptors.pop
-        self._sendingDescriptorCounter = count().next
-        self._receivingDescriptorCounter = count().next
+        self._sendingDescriptorCounter = partial(next, count())
+        self._receivingDescriptorCounter = partial(next, count())
 
 
     def _sendFileDescriptor(self, descriptor):
@@ -2113,6 +2219,7 @@ class _DescriptorExchanger(object):
 
 
 
+@implementer(IBoxSender)
 class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
                         _DescriptorExchanger):
     """
@@ -2145,8 +2252,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
     @ivar boxReceiver: an L{IBoxReceiver} provider, whose L{ampBoxReceived}
     method will be invoked for each L{AmpBox} that is received.
     """
-
-    implements(IBoxSender)
 
     _justStartedTLS = False
     _startingTLSBuffer = None
@@ -2547,7 +2652,7 @@ class _ParserHelper:
 
         @return: a list of AmpBoxes encoded in the given string.
         """
-        return cls.parse(StringIO(data))
+        return cls.parse(BytesIO(data))
     parseString = classmethod(parseString)
 
 
@@ -2630,7 +2735,10 @@ class Decimal(Argument):
     U{http://speleotrove.com/decimal/} should be considered the authoritative
     specification for the format.
     """
-    fromString = decimal.Decimal
+
+    def fromString(self, inString):
+        inString = nativeString(inString)
+        return decimal.Decimal(inString)
 
     def toString(self, inObject):
         """
@@ -2638,7 +2746,7 @@ class Decimal(Argument):
         """
         if isinstance(inObject, decimal.Decimal):
             # Hopefully decimal.Decimal.__str__ actually does what we want.
-            return str(inObject)
+            return str(inObject).encode("ascii")
         raise ValueError(
             "amp.Decimal can only encode instances of decimal.Decimal")
 
@@ -2676,6 +2784,8 @@ class DateTime(Argument):
         Parse a string containing a date and time in the wire format into a
         C{datetime.datetime} instance.
         """
+        s = nativeString(s)
+
         if len(s) != 32:
             raise ValueError('invalid date format %r' % (s,))
 
@@ -2707,7 +2817,9 @@ class DateTime(Argument):
         # strftime has no way to format the microseconds, or put a ':' in the
         # timezone. Surprise!
 
-        return '%04i-%02i-%02iT%02i:%02i:%02i.%06i%s%02i:%02i' % (
+        # Python 3.4 cannot do % interpolation on byte strings so we pack into
+        # an explicitly Unicode string then encode as ASCII.
+        packed = u'%04i-%02i-%02iT%02i:%02i:%02i.%06i%s%02i:%02i' % (
             i.year,
             i.month,
             i.day,
@@ -2718,3 +2830,5 @@ class DateTime(Argument):
             sign,
             abs(minutesOffset) // 60,
             abs(minutesOffset) % 60)
+
+        return packed.encode("ascii")
