@@ -1387,11 +1387,12 @@ class FilePathTests(AbstractFilePathTests):
 
     def test_makedirsIgnoreAlreadyExistAlreadyAFile(self):
         """
-        When C{FilePath.makedirs called with ignoreAlreadyExist set to C{True}
-        throws an C{OSError} exceptions if path is a file.
+        When C{FilePath.makedirs} is called with ignoreAlreadyExist set to
+        C{True} it throws an C{OSError} exceptions if path is a file.
         """
-        fp = filepath.FilePath(os.path.join(self.mktemp()))
+        fp = filepath.FilePath(self.mktemp())
         fp.create()
+        self.assertTrue(fp.isfile())
 
         with self.assertRaises(OSError):
             fp.makedirs(ignoreAlreadyExist=True)
