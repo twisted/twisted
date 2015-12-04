@@ -8,18 +8,6 @@ Twisted inetd TAP support
 The purpose of inetdtap is to provide an inetd-like server, to allow Twisted to
 invoke other programs to handle incoming sockets.
 This is a useful thing as a "networking swiss army knife" tool, like netcat.
-
-To use it, create a file named `sampleinetd.conf` with:
-
-8123       stream  tcp  wait glyph  /bin/cat -
-
-and a `rpc.conf` file with a blanc line in it.
-
-You can then run it as and port 8123 properly became an echo server.
-
-twistd -n inetd -f sampleinetd.conf -r rpc.conf
-
-
 """
 
 import os, pwd, grp, socket
@@ -36,6 +24,16 @@ protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
 
 
 class Options(usage.Options):
+    """
+    To use it, create a file named `sample-inetd.conf` with:
+
+    8123 stream tcp wait some_user /bin/cat -
+
+    You can then run it as in the following example and port 8123 became an
+    echo server.
+
+    twistd -n inetd -f sample-inetd.conf
+    """
 
     optParameters = [
         ['rpc', 'r', '/etc/rpc', 'DEPRECATED. RPC procedure table file'],
