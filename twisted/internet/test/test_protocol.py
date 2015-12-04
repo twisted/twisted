@@ -403,11 +403,14 @@ class FactoryTests(TestCase):
         f = Factory()
         with LogCapture() as lc:
             f.doStart()
-            self.assertIs(lc.asEvents[0]['factory'], f)
-            self.assertEqual(lc.asEvents[0]['log_level'], LogLevel.info)
+            events = lc.events
+            messages = lc.messages()
+            self.assertIs(events[0]['factory'], f)
+            self.assertEqual(events[0]['log_level'], LogLevel.info)
             self.assertIn(
                 'Starting factory <twisted.internet.protocol.Factory instance',
-                lc.asText)
+                messages[0]
+            )
 
 
     def test_doStopLoggingStatement(self):
@@ -423,12 +426,15 @@ class FactoryTests(TestCase):
 
         with LogCapture() as lc:
             f.doStop()
-            self.assertIs(lc.asEvents[0]['factory'], f)
-            self.assertEqual(lc.asEvents[0]['log_level'], LogLevel.info)
+            events = lc.events
+            messages = lc.messages()
+            self.assertIs(events[0]['factory'], f)
+            self.assertEqual(events[0]['log_level'], LogLevel.info)
             self.assertIn(
                 'Stopping factory '
                 '<twisted.internet.test.test_protocol.MyFactory instance',
-                lc.asText)
+                messages[0]
+            )
 
 
 

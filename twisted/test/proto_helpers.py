@@ -18,7 +18,7 @@ from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.logger import (
     FilteringLogObserver, ILogFilterPredicate, LogLevel, PredicateResult,
-    globalLogPublisher, textFileLogObserver
+    globalLogPublisher, textFileLogObserver, formatEvent
 )
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector, IReactorTCP, IReactorSSL,
@@ -705,6 +705,7 @@ class NamespaceFilterPredicate(object):
     def __init__(self, namespace):
         self.namespace = namespace
 
+
     def __call__(self, event):
         namespace = event.get("log_namespace", None)
 
@@ -725,51 +726,52 @@ class LogCapture(object):
     with LogCapture() as lc:
         [... code that logs events ...]
 
-        self.assertIn('logline text', lc.asText)
-        self.assertNotIn('Unable to format event', lc.asText)
-        selc.assertEqual(lc.asEvents[0]['log_level'], Loglevel.debug)
+        events = lc.events
+        messages = lc.messages()
+        self.assertIn('logline text', messages[0])
+        self.assertNotIn('Unable to format event', messages[0])
+        selc.assertEqual(events['log_level'], Loglevel.debug)
 
     """
 
     def __init__(self, namespace=None):
-        self.events = []
-        self.eventsObserver = lambda e: self.events.append(e)
-        self.handle = StringIO()
-        self.textObserver = textFileLogObserver(self.handle)
+        self.namespace = namespace
+        self._events = []
+
+        self._observer = lambda e: self._events.append(e)
 
         if namespace is not None:
-            predicate = NamespaceFilterPredicate(namespace)
-            self.eventsObserver = FilteringLogObserver(
-                self.eventsObserver, [predicate])
-            self.textObserver = FilteringLogObserver(
-                self.textObserver, [predicate])
+            self._observer = FilteringLogObserver(
+                self._observer, [NamespaceFilterPredicate(namespace)]
+            )
+
 
     def __enter__(self):
-        globalLogPublisher.addObserver(self.eventsObserver)
-        globalLogPublisher.addObserver(self.textObserver)
+        globalLogPublisher.addObserver(self._observer)
         return self
 
+
     def __exit__(self, type_, value_, tb_):
-        globalLogPublisher.removeObserver(self.eventsObserver)
-        globalLogPublisher.removeObserver(self.textObserver)
+        globalLogPublisher.removeObserver(self._observer)
+
+
 
     @property
-    def asText(self):
-        """
-        Get captured events as a string, the same a textFileLogObserver would
-        write to the output file
-
-        @return: the full log textual output
-        @rtype: L{str}
-        """
-        return self.handle.getvalue()
-
-    @property
-    def asEvents(self):
+    def events(self):
         """
         Get captured events as a list of event dicts.
 
-        @return: the list of captured events
-        @rtype: L{list}
+        @return: The list of captured events.
+        @rtype: L{list} of L{dict}
         """
-        return self.events[:]
+        return self._events[:]
+
+
+    def messages(self):
+        """
+        Get captured events as a list of rendered strings.
+
+        @return: A list of rendered events.
+        @rtype: L{list} of L{unicode}
+        """
+        return [formatEvent(e) for e in self._events]
