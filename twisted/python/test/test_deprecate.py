@@ -915,3 +915,79 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
             return a + b
 
         self.assertRaises(TypeError, func, a=3, b=4)
+
+
+
+class DeprecatedClass(object):
+    """
+    Class which is entirely deprecated without having a replacement.
+    """
+
+    @deprecated(Version('Twisted', 1, 2, 3))
+    def __init__(self):
+        """Some docstring."""
+
+
+
+class ClassWithDeprecatedProperty(object):
+    """
+    Class which is entirely deprecated without having a replacement.
+    """
+
+    @property
+    @deprecated(Version('Twisted', 1, 2, 3))
+    def someProperty(self):
+        """Getter docstring."""
+
+
+
+class DeprecatedDecoratorTests(SynchronousTestCase):
+    """
+    L{twisted.python.deprecate.deprecated}
+    """
+
+
+    def test_propertyGetter(self):
+        """
+        When used together with the C{property} decorator the warning will
+        include the full name to the decorated property.
+        """
+        obj = ClassWithDeprecatedProperty()
+
+        obj.someProperty
+
+        self.assertEqual(
+            'Getter docstring.\n\nDeprecated in Twisted 1.2.3.\n',
+            ClassWithDeprecatedProperty.someProperty.__doc__)
+
+        message = (
+            'twisted.python.test.test_deprecate.ClassWithDeprecatedProperty.'
+            'someProperty was deprecated in Twisted 1.2.3'
+            )
+
+        warnings = self.flushWarnings([self.test_propertyGetter])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
+
+
+    def test_initMethod(self):
+        """
+        When used for the C{__init__} method of a class the message will
+        only include the class name and exclude the C{__init__} method.
+        """
+        DeprecatedClass()
+
+        self.assertEqual(
+            'Some docstring.\n\nDeprecated in Twisted 1.2.3.\n',
+            DeprecatedClass.__init__.__doc__)
+
+        message = (
+            'twisted.python.test.test_deprecate.DeprecatedClass '
+            'was deprecated in Twisted 1.2.3'
+            )
+
+        warnings = self.flushWarnings([self.test_initMethod])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])

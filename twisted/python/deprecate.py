@@ -261,7 +261,6 @@ def deprecated(version, replacement=None):
         """
         @wraps(function)
         def deprecatedFunction(*args, **kwargs):
-            import pdb; import sys; sys.stdout = sys.__stdout__; pdb.set_trace()
             warningString = getDeprecationWarningString(
                 function, version, None, replacement)
             warn(
