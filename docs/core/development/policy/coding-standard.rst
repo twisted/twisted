@@ -17,7 +17,7 @@ Naming
 
     
 Try to choose names which are both easy to remember and
-meaningful. Some sillin ess is OK at the module naming level
+meaningful. Some silliness is OK at the module naming level
 (see :api:`twisted.spread <twisted.spread>` ...) but when
 choosing class names, be as precise as possible.
 
@@ -1122,9 +1122,8 @@ Example of usage::
             try:
                 return self._otherStuff()
             except Exception as error:
-                if self.noisy:
-                    self._log.info(
-                      "Unable to check {user!s}", user=name, error=error)
+                self._log.info(
+                    "Unable to check {user!s}", user=name, error=error)
 
                 raise UnauthorizedLogin()
 
@@ -1180,11 +1179,31 @@ The :api:`twisted.logger._logFor` helper is provided to work around these cases.
 
 
         def doSomething(self):
-            if self.noisy:
-                _logFor(self).info(
-                    "Starting factory {factory!r}", factory=self)
+            """
+            The C{_logFor} helper is used to work around the existing C{_log}
+            member.
+            """
+            _logFor(self).info(
+                "Starting factory {factory!r}", factory=self)
 
             self.otherStuff()
+
+
+To control the log output level, use the dedicated log level and filter the
+logs at runtime.
+You can also delay calling an expensive call.
+
+.. code-block:: python
+
+    # Bad usage.
+    if self.noisy:
+        self._log.info("This happened: {thing}", thing=expensiveCall())
+    if self.debug:
+        self._log.info("More details: {dataDump}", dataDump=data)
+
+    # Good usage.
+    self._log.info("This happened: {thing()}", thing=expensiveCall}
+    self._log.debug("More details: {dataDump}", dataDump=data)
 
 
 C Code

@@ -755,7 +755,6 @@ class LogCapture(object):
         globalLogPublisher.removeObserver(self._observer)
 
 
-
     @property
     def events(self):
         """
@@ -767,6 +766,7 @@ class LogCapture(object):
         return self._events[:]
 
 
+    @property
     def messages(self):
         """
         Get captured events as a list of rendered strings.

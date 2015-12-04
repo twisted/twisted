@@ -404,7 +404,7 @@ class FactoryTests(TestCase):
         with LogCapture() as lc:
             f.doStart()
             events = lc.events
-            messages = lc.messages()
+            messages = lc.messages
             self.assertIs(events[0]['factory'], f)
             self.assertEqual(events[0]['log_level'], LogLevel.info)
             self.assertIn(
@@ -427,7 +427,7 @@ class FactoryTests(TestCase):
         with LogCapture() as lc:
             f.doStop()
             events = lc.events
-            messages = lc.messages()
+            messages = lc.messages
             self.assertIs(events[0]['factory'], f)
             self.assertEqual(events[0]['log_level'], LogLevel.info)
             self.assertIn(
