@@ -487,9 +487,13 @@ class UnicodeHeadersTests(TestCase):
         foo = u"foo\u00E1"
         bar = u"bar"
         baz = u"baz"
+        if _PY3:
+            foo_encoded = "b'foo\\xe1'"
+        else:
+            foo_encoded = "'foo\\xe1'"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({%s: [%r, %r]})" % ("b'foo\\xe1'",
+            "Headers({%s: [%r, %r]})" % (foo_encoded,
                                          bar.encode('iso-8859-1'),
                                          baz.encode('iso-8859-1')))
 
