@@ -523,55 +523,30 @@ class LoopTests(unittest.TestCase):
         call during the loop run will call the countCallable 1.
         """
         clock = task.Clock()
+        deferred = defer.Deferred()
         accumulator = []
 
-        class Loop(object):
-            missed_count = 0
-            interval = 0.1
-            def foo(self, cnt):
-                # Example loop which will adjust interval
-                # to fire missing calls
-                accumulator.append(cnt)
-                if cnt > 1:
-                    # we are missing some calls
-                    self.missed_count += cnt
-                    loop.interval = 0
+        def foo(cnt):
+            accumulator.append(cnt)
 
-                if self.missed_count:
-                    self.missed_count -= 1
-                    if self.missed_count == 0:
-                        # all calls fired so set interval
-                        # to original value
-                        loop.interval = self.interval
+            if len(accumulator) == 2:
+                return deferred
 
-                # simulate execution time of this call
-                clock.advance(0.04)
+            if len(accumulator) > 4:
+                loop.stop()
 
-        loop = task.LoopingCall.withCount(Loop().foo)
+        loop = task.LoopingCall.withCount(foo)
         loop.clock = clock
-        loop.start(Loop.interval, now=False)
+        loop.start(0, now=False)
 
-        # normal situation
-        clock.advance(Loop.interval)
-        self.assertEqual([1], accumulator)
+        clock.advance(0)
+        self.assertEqual([1, 1], accumulator)
 
-        # simulate missing calls
-        clock.advance(Loop.interval * 3)
-        self.assertEqual([1, 3, 1, 1], accumulator)
+        clock.advance(2)
+        deferred.callback(None)
 
-        clock.advance(Loop.interval / 2)
-        # now we are after 0.6 second
-        # so during processing missed call there is another miss
-        self.assertEqual([1, 3, 1, 1, 2, 1], accumulator)
-
-        # back to normal
-        clock.advance(Loop.interval / 2)
-        self.assertEqual([1, 3, 1, 1, 2, 1, 1], accumulator)
-
-        loop.stop()
-        # number of calls should match expected
-        self.assertEqual(int(clock.seconds() / Loop.interval),
-                         len(accumulator))
+        clock.advance(0)
+        self.assertEqual([1, 1, 1, 1, 1], accumulator)
 
 
     def testBasicFunction(self):
