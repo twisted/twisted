@@ -519,8 +519,9 @@ class LoopTests(unittest.TestCase):
 
     def test_withCountIntervalZeroDelay(self):
         """
-        L{task.LoopingCall.withCount} with interval set to 0 and bi delayed
-        call during the loop run will call the countCallable 1.
+        L{task.LoopingCall.withCount} with interval set to 0 and a delayed
+        call during the loop run will still call the countCallable 1 as if
+        no delay occurred.
         """
         clock = task.Clock()
         deferred = defer.Deferred()
@@ -540,11 +541,17 @@ class LoopTests(unittest.TestCase):
         loop.start(0, now=False)
 
         clock.advance(0)
+        # Loop will block at the third call.
         self.assertEqual([1, 1], accumulator)
 
+        # Even if more time pass, the loops is not
+        # advanced.
         clock.advance(2)
-        deferred.callback(None)
+        self.assertEqual([1, 1], accumulator)
 
+        # Once the waiting call got a result the loop continues without
+        # observing any delay in countCallable.
+        deferred.callback(None)
         clock.advance(0)
         self.assertEqual([1, 1, 1, 1, 1], accumulator)
 
