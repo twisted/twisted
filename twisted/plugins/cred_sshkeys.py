@@ -7,7 +7,7 @@
 Cred plugin for ssh key login
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted import plugin
 from twisted.cred.strcred import ICheckerFactory
@@ -23,11 +23,11 @@ try:
     from twisted.conch.checkers import (
         SSHPublicKeyChecker, UNIXAuthorizedKeysFiles)
 
+    @implementer(ICheckerFactory, plugin.IPlugin)
     class SSHKeyCheckerFactory(object):
         """
         Generates checkers that will authenticate a SSH public key
         """
-        implements(ICheckerFactory, plugin.IPlugin)
         authType = 'sshkey'
         authHelp = sshKeyCheckerFactoryHelp
         argStringFormat = 'No argstring required.'

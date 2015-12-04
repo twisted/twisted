@@ -1,20 +1,23 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+from __future__ import absolute_import, division
+
+from twisted.python.compat import intToBytes
+
 
 def parse(s):
     s = s.strip()
     expr = []
     while s:
-        if s[0] == '(':
+        if s[0:1] == b'(':
             newSexp = []
             if expr:
                 expr[-1].append(newSexp)
             expr.append(newSexp)
             s = s[1:]
             continue
-        if s[0] == ')':
+        if s[0:1] == b')':
             aList = expr.pop()
             s=s[1:]
             if not expr:
@@ -22,7 +25,7 @@ def parse(s):
                 return aList
             continue
         i = 0
-        while s[i].isdigit(): i+=1
+        while s[i:i+1].isdigit(): i+=1
         assert i
         length = int(s[:i])
         data = s[i+1:i+1+length]
@@ -31,12 +34,12 @@ def parse(s):
     assert 0, "this should not happen"
 
 def pack(sexp):
-    s = ""
+    s = b""
     for o in sexp:
         if type(o) in (type(()), type([])):
-            s+='('
+            s+=b'('
             s+=pack(o)
-            s+=')'
+            s+=b')'
         else:
-            s+='%i:%s' % (len(o), o)
+            s+=intToBytes(len(o)) + b":" + o
     return s
