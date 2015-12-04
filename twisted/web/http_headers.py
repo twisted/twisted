@@ -136,9 +136,7 @@ class Headers(object):
         self._rawHeaders = {}
         if rawHeaders is not None:
             for name, values in rawHeaders.items():
-
-                self.setRawHeaders(self._encodeName(name),
-                                   self._encodeValues(values))
+                self.setRawHeaders(name, values)
 
 
     def __repr__(self):
@@ -158,20 +156,6 @@ class Headers(object):
                 sorted(self._rawHeaders.items()),
                 sorted(other._rawHeaders.items()))
         return NotImplemented
-
-
-    def _decodeName(self, name):
-        """
-        Decode a ISO-8859-1-encoded L{bytes} header name into a L{unicode}
-        string.
-
-        @param name: A HTTP header name
-        @type name: ISO-8859-1 encoded L{bytes}
-
-        @return: C{name}, decoded
-        @rtype: L{unicode}
-        """
-        return name.decode('iso-8859-1')
 
 
     def _encodeName(self, name):
