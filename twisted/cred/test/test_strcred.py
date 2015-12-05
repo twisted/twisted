@@ -5,16 +5,14 @@
 Tests for L{twisted.cred.strcred}.
 """
 
-from __future__ import absolute_import, division
-
 import os
-from io import BytesIO
+import StringIO
 
 from twisted import plugin
 from twisted.trial import unittest
 from twisted.cred import credentials, checkers, error, strcred
 from twisted.plugins import cred_file, cred_anonymous
-from twisted.python import usage, compat
+from twisted.python import usage
 from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.reflect import requireModule
@@ -334,7 +332,7 @@ class FileDBCheckerTests(unittest.TestCase):
         should produce a warning.
         """
         oldOutput = cred_file.theFileCheckerFactory.errorOutput
-        newOutput = BytesIO()
+        newOutput = StringIO.StringIO()
         cred_file.theFileCheckerFactory.errorOutput = newOutput
         strcred.makeChecker('file:' + self._fakeFilename())
         cred_file.theFileCheckerFactory.errorOutput = oldOutput
@@ -458,7 +456,7 @@ class CheckerOptionsTests(unittest.TestCase):
         Test that the --help-auth argument correctly displays all
         available authentication plugins, then exits.
         """
-        newStdout = BytesIO()
+        newStdout = StringIO.StringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions, ['--help-auth'])
@@ -471,7 +469,7 @@ class CheckerOptionsTests(unittest.TestCase):
         Test that the --help-auth-for argument will correctly display
         the help file for a particular authentication plugin.
         """
-        newStdout = BytesIO()
+        newStdout = StringIO.StringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(
@@ -655,23 +653,8 @@ class LimitingInterfacesTests(unittest.TestCase):
                 break
         self.assertNotIdentical(invalidFactory, None)
         # Capture output and make sure the warning is there
-        newStdout = BytesIO()
+        newStdout = StringIO.StringIO()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions,
                           ['--help-auth-type', 'anonymous'])
         self.assertIn(strcred.notSupportedWarning, newStdout.getvalue())
-
-
-__all__ = [
-    "CheckerOptionsTests", "FileDBCheckerTests", "LimitingInterfacesTests",
-    "SSHCheckerTests", "UnixCheckerTests", "AnonymousCheckerTests",
-    "MemoryCheckerTests", "StrcredFunctionsTests", "PublicAPITests"
-]
-
-
-if compat._PY3:
-    __all3__ = ["SSHCheckerTests", "PublicAPITests", "StrcredFunctionsTests"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            globals()[name].skip = "Not yet ported to Python 3."
-    del name, __all3__
