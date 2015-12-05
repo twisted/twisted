@@ -419,6 +419,9 @@ class DBTestConnector(object):
 
 
 class SQLite3Connector(DBTestConnector):
+    """
+    Connector that uses the stdlib SQLite3 database support.
+    """
     TEST_PREFIX = 'SQLite3'
     escape_slashes = False
     num_iterations = 1 # slow
@@ -446,6 +449,9 @@ class SQLite3Connector(DBTestConnector):
 
 
 class PySQLite2Connector(DBTestConnector):
+    """
+    Connector that uses pysqlite's SQLite database support.
+    """
     TEST_PREFIX = 'pysqlite2'
     escape_slashes = False
     num_iterations = 1 # slow
