@@ -364,6 +364,8 @@ class _CommandTransport(SSHClientTransport):
 
     _hostKeyFailure = None
 
+    _userauth = None
+
 
     def __init__(self, creator):
         """
@@ -426,29 +428,25 @@ class _CommandTransport(SSHClientTransport):
 
         command = _ConnectionReady(self.connectionReady)
 
-        userauth = _UserAuth(self.creator.username, command)
-        userauth.password = self.creator.password
+        self._userauth = _UserAuth(self.creator.username, command)
+        self._userauth.password = self.creator.password
         if self.creator.keys:
-            userauth.keys = list(self.creator.keys)
+            self._userauth.keys = list(self.creator.keys)
 
         if self.creator.agentEndpoint is not None:
-            d = self._connectToAgent(userauth, self.creator.agentEndpoint)
+            d = self._connectToAgent(self.creator.agentEndpoint)
         else:
             d = succeed(None)
 
         def maybeGotAgent(ignored):
-            self.requestService(userauth)
+            self.requestService(self._userauth)
         d.addBoth(maybeGotAgent)
 
 
-    def _connectToAgent(self, userauth, endpoint):
+    def _connectToAgent(self, endpoint):
         """
         Set up a connection to the authentication agent and trigger its
         initialization.
-
-        @param userauth: The L{_UserAuth} instance which is in charge of the
-            overall authentication process.
-        @type userauth: L{_UserAuth}
 
         @param endpoint: An endpoint which can be used to connect to the
             authentication agent.
@@ -461,7 +459,7 @@ class _CommandTransport(SSHClientTransport):
         factory.protocol = SSHAgentClient
         d = endpoint.connect(factory)
         def connected(agent):
-            userauth.agent = agent
+            self._userauth.agent = agent
             return agent.getPublicKeys()
         d.addCallback(connected)
         return d
@@ -470,8 +468,13 @@ class _CommandTransport(SSHClientTransport):
     def connectionLost(self, reason):
         """
         When the underlying connection to the SSH server is lost, if there were
-        any connection setup errors, propagate them.
+        any connection setup errors, propagate them. Also, clean up the
+        connection to the ssh agent if one was created.
         """
+        if self._userauth:
+            if self._userauth.agent:
+                self._userauth.agent.transport.loseConnection()
+
         if self._state == b'RUNNING' or self.connectionReady is None:
             return
         if self._state == b'SECURING' and self._hostKeyFailure is not None:
