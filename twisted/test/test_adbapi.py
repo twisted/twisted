@@ -9,7 +9,6 @@ from twisted.trial import unittest
 
 import os
 import stat
-import types
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.enterprise.adbapi import Connection, Transaction
