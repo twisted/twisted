@@ -7,7 +7,8 @@ Tests for twisted.enterprise.adbapi.
 
 from twisted.trial import unittest
 
-import os, stat
+import os
+import stat
 import types
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
@@ -24,9 +25,10 @@ CREATE TABLE simple (
 
 
 
-class ADBAPITestBase:
-    """Test the asynchronous DB-API code."""
-
+class ADBAPITestBase(object):
+    """
+    Test the asynchronous DB-API code.
+    """
     openfun_called = {}
 
     if interfaces.IReactorThreads(reactor, None) is None:
@@ -315,15 +317,15 @@ class ReconnectTestBase:
         return d
 
 
-class DBTestConnector:
-    """A class which knows how to test for the presence of
+class DBTestConnector(object):
+    """
+    A class which knows how to test for the presence of
     and establish a connection to a relational database.
 
     To enable test cases  which use a central, system database,
     you must create a database named DB_NAME with a user DB_USER
     and password DB_PASS with full access rights to database DB_NAME.
     """
-
     TEST_PREFIX = None # used for creating new test cases
 
     DB_NAME = "twisted_test"
@@ -378,15 +380,14 @@ class DBTestConnector:
         raise NotImplementedError()
 
 
-class SQLiteConnector(DBTestConnector):
-    TEST_PREFIX = 'SQLite'
 
+class SQLite3Connector(DBTestConnector):
+    TEST_PREFIX = 'SQLite3'
     escape_slashes = False
-
     num_iterations = 1 # slow
 
     def can_connect(self):
-        if requireModule('sqlite') is None:
+        if requireModule('sqlite3') is None:
             return False
         else:
             return True
@@ -397,9 +398,36 @@ class SQLiteConnector(DBTestConnector):
             os.unlink(self.database)
 
     def getPoolArgs(self):
-        args = ('sqlite',)
-        kw = {'database': self.database, 'cp_max': 1}
+        args = ('sqlite3',)
+        kw = {'database': self.database,
+              'cp_max': 1,
+              'check_same_thread': False}
         return args, kw
+
+
+class PySQLite2Connector(DBTestConnector):
+    TEST_PREFIX = 'pysqlite2'
+    escape_slashes = False
+    num_iterations = 1 # slow
+
+    def can_connect(self):
+        if requireModule('pysqlite2.dbapi2') is None:
+            return False
+        else:
+            return True
+
+    def startDB(self):
+        self.database = os.path.join(self.DB_DIR, self.DB_NAME)
+        if os.path.exists(self.database):
+            os.unlink(self.database)
+
+    def getPoolArgs(self):
+        args = ('pysqlite2.dbapi2',)
+        kw = {'database': self.database,
+              'cp_max': 1,}
+        return args, kw
+
+
 
 class PyPgSQLConnector(DBTestConnector):
     TEST_PREFIX = "PyPgSQL"
@@ -509,6 +537,8 @@ class FirebirdConnector(DBTestConnector):
                                    password=self.DB_PASS)
         conn.drop_database()
 
+
+
 def makeSQLTests(base, suffix, globals):
     """
     Make a test case for every db connector which can connect.
@@ -518,7 +548,7 @@ def makeSQLTests(base, suffix, globals):
     @param suffix: A suffix used to create test case names. Prefixes
                    are defined in the DBConnector subclasses.
     """
-    connectors = [SQLiteConnector, PyPgSQLConnector,
+    connectors = [PySQLite2Connector, SQLite3Connector, PyPgSQLConnector,
                   PsycopgConnector, MySQLConnector, FirebirdConnector]
     for connclass in connectors:
         name = connclass.TEST_PREFIX + suffix
@@ -526,11 +556,13 @@ def makeSQLTests(base, suffix, globals):
                                 base.__dict__)
         globals[name] = klass
 
-# SQLiteADBAPITests PyPgSQLADBAPITests
+
+
+# PySQLite2Connector SQLite3ADBAPITests PyPgSQLADBAPITests
 # PsycopgADBAPITests MySQLADBAPITests FirebirdADBAPITests
 makeSQLTests(ADBAPITestBase, 'ADBAPITests', globals())
 
-# SQLiteReconnectTests PyPgSQLReconnectTests
+# PySQLite2Connector SQLite3ReconnectTests PyPgSQLReconnectTests
 # PsycopgReconnectTests MySQLReconnectTests FirebirdReconnectTests
 makeSQLTests(ReconnectTestBase, 'ReconnectTests', globals())
 
