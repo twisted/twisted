@@ -467,7 +467,8 @@ class PySQLite2Connector(DBTestConnector):
     def getPoolArgs(self):
         args = ('pysqlite2.dbapi2',)
         kw = {'database': self.database,
-              'cp_max': 1}
+              'cp_max': 1,
+              'check_same_thread': False}
         return args, kw
 
 
