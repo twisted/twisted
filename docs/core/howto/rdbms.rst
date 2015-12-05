@@ -123,9 +123,6 @@ Notice that the first argument is the module name you would usually import and g
 
     from twisted.enterprise import adbapi
 
-    # Gadfly
-    cp = adbapi.ConnectionPool("gadfly", "test", "/tmp/gadflyDB")
-
     # PostgreSQL PyPgSQL
     cp = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="test")
 
