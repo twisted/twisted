@@ -350,6 +350,15 @@ class _UserAuth(SSHUserAuthClient):
         return SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
 
 
+    def loseAgentConnection(self):
+        """
+        Disconnect the agent.
+        """
+        if self.agent is None:
+            return
+        self.agent.transport.loseConnection()
+
+
 
 class _CommandTransport(SSHClientTransport):
     """
@@ -472,8 +481,9 @@ class _CommandTransport(SSHClientTransport):
         connection to the ssh agent if one was created.
         """
         if self._userauth:
-            if self._userauth.agent:
-                self._userauth.agent.transport.loseConnection()
+            # We have a connected SSH transport which might have an user-auth
+            # service connected to an agent.
+            self._userauth.loseAgentConnection()
 
         if self._state == b'RUNNING' or self.connectionReady is None:
             return

@@ -232,10 +232,6 @@ class SingleUseMemoryEndpoint(object):
     @ivar pump: L{None} until a connection is attempted, then a L{IOPump}
         instance associated with the protocol which is connected.
     @type pump: L{IOPump}
-
-    @ivar client_transport: L{None} until a connection is attempted, then the
-        L{AbortableFakeTransport} that was created for the client.
-    @type client_transport: L{AbortableFakeTransport}
     """
     def __init__(self, server):
         """
@@ -244,7 +240,6 @@ class SingleUseMemoryEndpoint(object):
         @type server: L{IProtocol} provider
         """
         self.pump = None
-        self.client_transport = None
         self._server = server
 
 
@@ -257,12 +252,10 @@ class SingleUseMemoryEndpoint(object):
         except:
             return fail()
         else:
-            self.client_transport = AbortableFakeTransport(
-                protocol, isServer=False)
             self.pump = connect(
                 self._server, AbortableFakeTransport(
                     self._server, isServer=True),
-                protocol, self.client_transport)
+                protocol, AbortableFakeTransport(protocol, isServer=False))
             return succeed(protocol)
 
 
@@ -1155,7 +1148,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         pump.pump()
 
         # Verify that the transport connected to the agent is disconnected.
-        self.assertTrue(agentEndpoint.client_transport.disconnecting)
+        self.assertTrue(agentEndpoint.pump.clientIO.disconnecting)
 
 
     def test_loseConnection(self):
