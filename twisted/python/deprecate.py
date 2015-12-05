@@ -5,7 +5,7 @@
 """
 Deprecation framework for Twisted.
 
-To mark a method or function as being deprecated do this::
+To mark a method, function, or class as being deprecated do this::
 
     from twisted.python.versions import Version
     from twisted.python.deprecate import deprecated
@@ -17,8 +17,31 @@ To mark a method or function as being deprecated do this::
         '''
         ...
 
-The newly-decorated badAPI will issue a warning when called. It will also have
-a deprecation notice appended to its docstring.
+    @deprecated(Version("Twisted", 16, 0, 0))
+    class BadClass(object):
+        '''
+        Docstring for BadClass.
+        '''
+
+The newly-decorated badAPI will issue a warning when called, and BadClass will
+issue a warning when instantiated. Both will also have  a deprecation notice
+appended to their docstring.
+
+To deprecate properties you can use::
+
+    from twisted.python.versions import Version
+    from twisted.python.deprecate import deprecatedProperty
+
+    class OtherwiseUndeprecatedClass(object):
+
+        @property
+        @deprecatedProperty(Version('Twisted', 16, 0, 0))
+        def badProperty(self):
+            '''
+            Docstring for badProperty.
+            '''
+            ...
+
 
 To mark module-level attributes as being deprecated you can use::
 
@@ -48,6 +71,7 @@ from __future__ import division, absolute_import
 
 __all__ = [
     'deprecated',
+    'deprecatedProperty',
     'getDeprecationWarningString',
     'getWarningMethod',
     'setWarningMethod',
@@ -61,6 +85,7 @@ from dis import findlinestarts
 from functools import wraps
 
 from twisted.python.versions import getVersionString
+from twisted.python.compat import _PY3
 
 DEPRECATION_WARNING_FORMAT = '%(fqpn)s was deprecated in %(version)s'
 
@@ -239,7 +264,8 @@ def _appendToDocstring(thingWithDoc, textToAppend):
 
 def deprecated(version, replacement=None):
     """
-    Return a decorator that marks callables as deprecated.
+    Return a decorator that marks callables as deprecated. To deprecate a
+    property, see L{deprecatedProperty}.
 
     @type version: L{twisted.python.versions.Version}
     @param version: The version in which the callable will be marked as
@@ -259,10 +285,67 @@ def deprecated(version, replacement=None):
         """
         Decorator that marks C{function} as deprecated.
         """
+        warningString = getDeprecationWarningString(
+                function, version, None, replacement)
+
         @wraps(function)
         def deprecatedFunction(*args, **kwargs):
+            warn(
+                warningString,
+                DeprecationWarning,
+                stacklevel=2)
+            return function(*args, **kwargs)
+
+        _appendToDocstring(deprecatedFunction,
+                           _getDeprecationDocstring(version, replacement))
+        deprecatedFunction.deprecatedVersion = version
+        return deprecatedFunction
+
+    return deprecationDecorator
+
+
+
+def deprecatedProperty(version, replacement=None):
+    """
+    Return a decorator that marks a property as deprecated. To deprecate a
+    regular callable or class, see L{deprecated}.
+
+    @type version: L{twisted.python.versions.Version}
+    @param version: The version in which the callable will be marked as
+        having been deprecated.  The decorated function will be annotated
+        with this version, having it set as its C{deprecatedVersion}
+        attribute.
+
+    @param version: the version that the callable was deprecated in.
+    @type version: L{twisted.python.versions.Version}
+
+    @param replacement: what should be used in place of the callable.
+        Either pass in a string, which will be inserted into the warning
+        message, or a callable, which will be expanded to its full import
+        path.
+    @type replacement: C{str} or callable
+
+    @since: 16.0.0
+    """
+    def deprecationDecorator(function):
+        if _PY3:
             warningString = getDeprecationWarningString(
                 function, version, None, replacement)
+        else:
+            # Because Python 2 sucks, we need to implement our own here -- lack
+            # of __qualname__ means that we kinda have to stack walk. It maybe
+            # probably works. Probably. -Amber
+            functionName = function.__name__
+            className = inspect.stack()[1][3]  # wow hax
+            moduleName = function.__module__
+
+            fqdn = "%s.%s.%s" % (moduleName, className, functionName)
+
+            warningString = _getDeprecationWarningString(
+                fqdn, version, None, replacement)
+
+        @wraps(function)
+        def deprecatedFunction(*args, **kwargs):
             warn(
                 warningString,
                 DeprecationWarning,

@@ -22,7 +22,8 @@ from twisted.python.deprecate import (
     getDeprecationWarningString,
     deprecated, _appendToDocstring, _getDeprecationDocstring,
     _fullyQualifiedName as fullyQualifiedName,
-    _passed, _mutuallyExclusiveArguments
+    _passed, _mutuallyExclusiveArguments,
+    deprecatedProperty,
 )
 
 from twisted.python.versions import Version
@@ -918,15 +919,9 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
 
 
 
+@deprecated(Version('Twisted', 1, 2, 3))
 class DeprecatedClass(object):
-    """
-    Class which is entirely deprecated without having a replacement.
-    """
-
-    @deprecated(Version('Twisted', 1, 2, 3))
-    def __init__(self):
-        """Some docstring."""
-
+    """Class which is entirely deprecated without having a replacement."""
 
 
 class ClassWithDeprecatedProperty(object):
@@ -935,7 +930,7 @@ class ClassWithDeprecatedProperty(object):
     """
 
     @property
-    @deprecated(Version('Twisted', 1, 2, 3))
+    @deprecatedProperty(Version('Twisted', 1, 2, 3))
     def someProperty(self):
         """Getter docstring."""
 
@@ -979,8 +974,9 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         DeprecatedClass()
 
         self.assertEqual(
-            'Some docstring.\n\nDeprecated in Twisted 1.2.3.\n',
-            DeprecatedClass.__init__.__doc__)
+            ('Class which is entirely deprecated without having a replacement.'
+            '\n\nDeprecated in Twisted 1.2.3.\n'),
+            DeprecatedClass.__doc__)
 
         message = (
             'twisted.python.test.test_deprecate.DeprecatedClass '
