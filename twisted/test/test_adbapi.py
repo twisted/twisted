@@ -34,6 +34,7 @@ class ADBAPITestBase(object):
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
 
+
     def extraSetUp(self):
         """
         Set up the database and create a connection pool pointing at it.
@@ -49,14 +50,17 @@ class ADBAPITestBase(object):
         d.addCallback(lambda res: self.stopDB())
         return d
 
+
     def openfun(self, conn):
         self.openfun_called[conn] = True
+
 
     def checkOpenfunCalled(self, conn=None):
         if not conn:
             self.assertTrue(self.openfun_called)
         else:
             self.assertIn(conn, self.openfun_called)
+
 
     def test_pool(self):
         d = self.dbpool.runOperation(simple_table_schema)
@@ -76,11 +80,13 @@ class ADBAPITestBase(object):
         d.addCallback(self._testPool_9)
         return d
 
+
     def _testPool_1_1(self, res):
         d = defer.maybeDeferred(self.dbpool.runQuery, "select * from NOTABLE")
         d.addCallbacks(lambda res: self.fail('no exception'),
                        lambda f: None)
         return d
+
 
     def _testPool_1_2(self, res):
         d = defer.maybeDeferred(self.dbpool.runOperation,
@@ -89,6 +95,7 @@ class ADBAPITestBase(object):
                        lambda f: None)
         return d
 
+
     def _testPool_1_3(self, res):
         d = defer.maybeDeferred(self.dbpool.runInteraction,
                                 self.bad_interaction)
@@ -96,12 +103,14 @@ class ADBAPITestBase(object):
                        lambda f: None)
         return d
 
+
     def _testPool_1_4(self, res):
         d = defer.maybeDeferred(self.dbpool.runWithConnection,
                                 self.bad_withConnection)
         d.addCallbacks(lambda res: self.fail('no exception'),
                        lambda f: None)
         return d
+
 
     def _testPool_2(self, res):
         # verify simple table is empty
@@ -112,6 +121,7 @@ class ADBAPITestBase(object):
             self.checkOpenfunCalled()
         d.addCallback(_check)
         return d
+
 
     def _testPool_3(self, res):
         sql = "select count(1) from simple"
@@ -139,11 +149,13 @@ class ADBAPITestBase(object):
 
         return d
 
+
     def _testPool_4(self, res):
         # runInteraction
         d = self.dbpool.runInteraction(self.interaction)
         d.addCallback(lambda res: self.assertEqual(res, "done"))
         return d
+
 
     def _testPool_5(self, res):
         # withConnection
@@ -151,10 +163,12 @@ class ADBAPITestBase(object):
         d.addCallback(lambda res: self.assertEqual(res, "done"))
         return d
 
+
     def _testPool_6(self, res):
         # Test a withConnection cannot be closed
         d = self.dbpool.runWithConnection(self.close_withConnection)
         return d
+
 
     def _testPool_7(self, res):
         # give the pool a workout
@@ -169,6 +183,7 @@ class ADBAPITestBase(object):
         dlist.addCallback(_check)
         return dlist
 
+
     def _testPool_8(self, res):
         # now delete everything
         ds = []
@@ -177,6 +192,7 @@ class ADBAPITestBase(object):
             ds.append(self.dbpool.runOperation(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
         return dlist
+
 
     def _testPool_9(self, res):
         # verify simple table is empty
@@ -188,6 +204,7 @@ class ADBAPITestBase(object):
             self.checkConnect()
         d.addCallback(_check)
         return d
+
 
     def checkConnect(self):
         """Check the connect/disconnect synchronous calls."""
@@ -206,6 +223,7 @@ class ADBAPITestBase(object):
         curs.close()
         self.dbpool.disconnect(conn)
 
+
     def interaction(self, transaction):
         transaction.execute("select x from simple order by x")
         for i in range(self.num_iterations):
@@ -215,11 +233,13 @@ class ADBAPITestBase(object):
         self.assertTrue(transaction.fetchone() is None, "Too many rows")
         return "done"
 
+
     def bad_interaction(self, transaction):
         if self.can_rollback:
             transaction.execute("insert into simple(x) values(0)")
 
         transaction.execute("select * from NOTABLE")
+
 
     def withConnection(self, conn):
         curs = conn.cursor()
@@ -233,8 +253,10 @@ class ADBAPITestBase(object):
             curs.close()
         return "done"
 
+
     def close_withConnection(self, conn):
         conn.close()
+
 
     def bad_withConnection(self, conn):
         curs = conn.cursor()
@@ -244,11 +266,15 @@ class ADBAPITestBase(object):
             curs.close()
 
 
+
 class ReconnectTestBase(object):
-    """Test the asynchronous DB-API code with reconnect."""
+    """
+    Test the asynchronous DB-API code with reconnect.
+    """
 
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
+
 
     def extraSetUp(self):
         """
@@ -271,6 +297,7 @@ class ReconnectTestBase(object):
         d.addCallback(lambda res: self.stopDB())
         return d
 
+
     def test_pool(self):
         d = defer.succeed(None)
         d.addCallback(self._testPool_1)
@@ -281,6 +308,7 @@ class ReconnectTestBase(object):
         d.addCallback(self._testPool_5)
         return d
 
+
     def _testPool_1(self, res):
         sql = "select count(1) from simple"
         d = self.dbpool.runQuery(sql)
@@ -289,9 +317,11 @@ class ReconnectTestBase(object):
         d.addCallback(_check)
         return d
 
+
     def _testPool_2(self, res):
         # reach in and close the connection manually
         list(self.dbpool.connections.values())[0].close()
+
 
     def _testPool_3(self, res):
         sql = "select count(1) from simple"
@@ -299,6 +329,7 @@ class ReconnectTestBase(object):
         d.addCallbacks(lambda res: self.fail('no exception'),
                        lambda f: None)
         return d
+
 
     def _testPool_4(self, res):
         sql = "select count(1) from simple"
@@ -308,6 +339,7 @@ class ReconnectTestBase(object):
         d.addCallback(_check)
         return d
 
+
     def _testPool_5(self, res):
         self.flushLoggedErrors()
         sql = "select * from NOTABLE" # bad sql
@@ -315,6 +347,7 @@ class ReconnectTestBase(object):
         d.addCallbacks(lambda res: self.fail('no exception'),
                        lambda f: self.assertFalse(f.check(ConnectionLost)))
         return d
+
 
 
 class DBTestConnector(object):
@@ -353,18 +386,22 @@ class DBTestConnector(object):
             raise unittest.SkipTest('%s: Cannot access db' % self.TEST_PREFIX)
         return self.extraSetUp()
 
+
     def can_connect(self):
         """Return true if this database is present on the system
         and can be used in a test."""
         raise NotImplementedError()
 
+
     def startDB(self):
         """Take any steps needed to bring database up."""
         pass
 
+
     def stopDB(self):
         """Bring database down, if needed."""
         pass
+
 
     def makePool(self, **newkw):
         """Create a connection pool with additional keyword arguments."""
@@ -372,6 +409,7 @@ class DBTestConnector(object):
         kw = kw.copy()
         kw.update(newkw)
         return ConnectionPool(*args, **kw)
+
 
     def getPoolArgs(self):
         """Return a tuple (args, kw) of list and keyword arguments
@@ -392,10 +430,12 @@ class SQLite3Connector(DBTestConnector):
         else:
             return True
 
+
     def startDB(self):
         self.database = os.path.join(self.DB_DIR, self.DB_NAME)
         if os.path.exists(self.database):
             os.unlink(self.database)
+
 
     def getPoolArgs(self):
         args = ('sqlite3',)
@@ -417,10 +457,12 @@ class PySQLite2Connector(DBTestConnector):
         else:
             return True
 
+
     def startDB(self):
         self.database = os.path.join(self.DB_DIR, self.DB_NAME)
         if os.path.exists(self.database):
             os.unlink(self.database)
+
 
     def getPoolArgs(self):
         args = ('pysqlite2.dbapi2',)
@@ -444,6 +486,7 @@ class PyPgSQLConnector(DBTestConnector):
         except:
             return False
 
+
     def getPoolArgs(self):
         args = ('pyPgSQL.PgSQL',)
         kw = {'database': self.DB_NAME, 'user': self.DB_USER,
@@ -465,6 +508,7 @@ class PsycopgConnector(DBTestConnector):
             return True
         except:
             return False
+
 
     def getPoolArgs(self):
         args = ('psycopg',)
@@ -491,6 +535,7 @@ class MySQLConnector(DBTestConnector):
             return True
         except:
             return False
+
 
     def getPoolArgs(self):
         args = ('MySQLdb',)
@@ -537,6 +582,7 @@ class FirebirdConnector(DBTestConnector):
               'user': self.DB_USER, 'password': self.DB_PASS}
         return args, kw
 
+
     def stopDB(self):
         import kinterbasdb
         conn = kinterbasdb.connect(database=self.DB_NAME,
@@ -566,7 +612,8 @@ def makeSQLTests(base, suffix, globals):
 
         testcase.__name__ = name
         if hasattr(connclass, "__qualname__"):
-            testcase.__qualname__ = ".".join(connclass.__qualname__.split()[0:-1] + [name])
+            testcase.__qualname__ = ".".join(
+                connclass.__qualname__.split()[0:-1] + [name])
         tests[name] = testcase
 
     globals.update(tests)
@@ -827,7 +874,8 @@ class ConnectionPoolTests(unittest.TestCase):
         reactor = EventReactor(True)
         pool = ConnectionPool('twisted.test.test_adbapi', cp_reactor=reactor)
         # There should be a shutdown trigger waiting.
-        self.assertEqual(reactor.triggers, [('during', 'shutdown', pool.finalClose)])
+        self.assertEqual(reactor.triggers,
+                         [('during', 'shutdown', pool.finalClose)])
         pool.close()
         # But not anymore.
         self.assertFalse(reactor.triggers)
