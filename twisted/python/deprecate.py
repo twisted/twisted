@@ -286,7 +286,7 @@ def deprecated(version, replacement=None):
         Decorator that marks C{function} as deprecated.
         """
         warningString = getDeprecationWarningString(
-                function, version, None, replacement)
+            function, version, None, replacement)
 
         @wraps(function)
         def deprecatedFunction(*args, **kwargs):
