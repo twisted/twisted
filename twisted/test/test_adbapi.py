@@ -56,9 +56,9 @@ class ADBAPITestBase(object):
         if not conn:
             self.assertTrue(self.openfun_called)
         else:
-            self.assertTrue(self.openfun_called.has_key(conn))
+            self.assertIn(conn, self.openfun_called)
 
-    def testPool(self):
+    def test_pool(self):
         d = self.dbpool.runOperation(simple_table_schema)
         if self.test_failures:
             d.addCallback(self._testPool_1_1)
@@ -244,7 +244,7 @@ class ADBAPITestBase(object):
             curs.close()
 
 
-class ReconnectTestBase:
+class ReconnectTestBase(object):
     """Test the asynchronous DB-API code with reconnect."""
 
     if interfaces.IReactorThreads(reactor, None) is None:
@@ -271,7 +271,7 @@ class ReconnectTestBase:
         d.addCallback(lambda res: self.stopDB())
         return d
 
-    def testPool(self):
+    def test_pool(self):
         d = defer.succeed(None)
         d.addCallback(self._testPool_1)
         d.addCallback(self._testPool_2)
@@ -291,7 +291,7 @@ class ReconnectTestBase:
 
     def _testPool_2(self, res):
         # reach in and close the connection manually
-        self.dbpool.connections.values()[0].close()
+        list(self.dbpool.connections.values())[0].close()
 
     def _testPool_3(self, res):
         sql = "select count(1) from simple"
@@ -405,6 +405,7 @@ class SQLite3Connector(DBTestConnector):
         return args, kw
 
 
+
 class PySQLite2Connector(DBTestConnector):
     TEST_PREFIX = 'pysqlite2'
     escape_slashes = False
@@ -424,7 +425,7 @@ class PySQLite2Connector(DBTestConnector):
     def getPoolArgs(self):
         args = ('pysqlite2.dbapi2',)
         kw = {'database': self.database,
-              'cp_max': 1,}
+              'cp_max': 1}
         return args, kw
 
 
@@ -449,6 +450,8 @@ class PyPgSQLConnector(DBTestConnector):
               'password': self.DB_PASS, 'cp_min': 0}
         return args, kw
 
+
+
 class PsycopgConnector(DBTestConnector):
     TEST_PREFIX = 'Psycopg'
 
@@ -468,6 +471,8 @@ class PsycopgConnector(DBTestConnector):
         kw = {'database': self.DB_NAME, 'user': self.DB_USER,
               'password': self.DB_PASS, 'cp_min': 0}
         return args, kw
+
+
 
 class MySQLConnector(DBTestConnector):
     TEST_PREFIX = 'MySQL'
@@ -491,6 +496,8 @@ class MySQLConnector(DBTestConnector):
         args = ('MySQLdb',)
         kw = {'db': self.DB_NAME, 'user': self.DB_USER, 'passwd': self.DB_PASS}
         return args, kw
+
+
 
 class FirebirdConnector(DBTestConnector):
     TEST_PREFIX = 'Firebird'
@@ -550,11 +557,19 @@ def makeSQLTests(base, suffix, globals):
     """
     connectors = [PySQLite2Connector, SQLite3Connector, PyPgSQLConnector,
                   PsycopgConnector, MySQLConnector, FirebirdConnector]
+    tests = {}
     for connclass in connectors:
         name = connclass.TEST_PREFIX + suffix
-        klass = types.ClassType(name, (connclass, base, unittest.TestCase),
-                                base.__dict__)
-        globals[name] = klass
+
+        class testcase(connclass, base, unittest.TestCase):
+            __module__ = connclass.__module__
+
+        testcase.__name__ = name
+        if hasattr(connclass, "__qualname__"):
+            testcase.__qualname__ = ".".join(connclass.__qualname__.split()[0:-1] + [name])
+        tests[name] = testcase
+
+    globals.update(tests)
 
 
 

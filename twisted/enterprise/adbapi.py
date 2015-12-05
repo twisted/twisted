@@ -226,7 +226,10 @@ class ConnectionPool:
 
         # these are optional so import them here
         from twisted.python import threadpool
-        import thread
+        try:
+            import thread
+        except ImportError:
+            import threading as thread
 
         self.threadID = thread.get_ident
         self.threadpool = threadpool.ThreadPool(self.min, self.max)
@@ -291,7 +294,7 @@ class ConnectionPool:
                 conn.rollback()
             except:
                 log.err(None, "Rollback failed")
-            raise excType, excValue, excTraceback
+            raise excType(excValue, excTraceback)
 
 
     def runInteraction(self, interaction, *args, **kw):
@@ -452,7 +455,7 @@ class ConnectionPool:
                 conn.rollback()
             except:
                 log.err(None, "Rollback failed")
-            raise excType, excValue, excTraceback
+            raise excType(excValue, excTraceback)
 
 
     def _runQuery(self, trans, *args, **kw):
