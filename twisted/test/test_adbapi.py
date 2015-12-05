@@ -210,8 +210,7 @@ class ADBAPITestBase:
             row = transaction.fetchone()
             self.assertTrue(len(row) == 1, "Wrong size row")
             self.assertTrue(row[0] == i, "Value not returned.")
-        # should test this, but gadfly throws an exception instead
-        #self.assertTrue(transaction.fetchone() is None, "Too many rows")
+        self.assertTrue(transaction.fetchone() is None, "Too many rows")
         return "done"
 
     def bad_interaction(self, transaction):
@@ -228,8 +227,6 @@ class ADBAPITestBase:
                 row = curs.fetchone()
                 self.assertTrue(len(row) == 1, "Wrong size row")
                 self.assertTrue(row[0] == i, "Value not returned.")
-            # should test this, but gadfly throws an exception instead
-            #self.assertTrue(transaction.fetchone() is None, "Too many rows")
         finally:
             curs.close()
         return "done"
@@ -380,38 +377,6 @@ class DBTestConnector:
         to this database."""
         raise NotImplementedError()
 
-class GadflyConnector(DBTestConnector):
-    TEST_PREFIX = 'Gadfly'
-
-    nulls_ok = False
-    can_rollback = False
-    escape_slashes = False
-    good_sql = 'select * from simple where 1=0'
-
-    num_iterations = 1 # slow
-
-    def can_connect(self):
-        try: import gadfly
-        except: return False
-        if not getattr(gadfly, 'connect', None):
-            gadfly.connect = gadfly.gadfly
-        return True
-
-    def startDB(self):
-        import gadfly
-        conn = gadfly.gadfly()
-        conn.startup(self.DB_NAME, self.DB_DIR)
-
-        # gadfly seems to want us to create something to get the db going
-        cursor = conn.cursor()
-        cursor.execute("create table x (x integer)")
-        conn.commit()
-        conn.close()
-
-    def getPoolArgs(self):
-        args = ('gadfly', self.DB_NAME, self.DB_DIR)
-        kw = {'cp_max': 1}
-        return args, kw
 
 class SQLiteConnector(DBTestConnector):
     TEST_PREFIX = 'SQLite'
@@ -553,7 +518,7 @@ def makeSQLTests(base, suffix, globals):
     @param suffix: A suffix used to create test case names. Prefixes
                    are defined in the DBConnector subclasses.
     """
-    connectors = [GadflyConnector, SQLiteConnector, PyPgSQLConnector,
+    connectors = [SQLiteConnector, PyPgSQLConnector,
                   PsycopgConnector, MySQLConnector, FirebirdConnector]
     for connclass in connectors:
         name = connclass.TEST_PREFIX + suffix
@@ -561,11 +526,11 @@ def makeSQLTests(base, suffix, globals):
                                 base.__dict__)
         globals[name] = klass
 
-# GadflyADBAPITests SQLiteADBAPITests PyPgSQLADBAPITests
+# SQLiteADBAPITests PyPgSQLADBAPITests
 # PsycopgADBAPITests MySQLADBAPITests FirebirdADBAPITests
 makeSQLTests(ADBAPITestBase, 'ADBAPITests', globals())
 
-# GadflyReconnectTests SQLiteReconnectTests PyPgSQLReconnectTests
+# SQLiteReconnectTests PyPgSQLReconnectTests
 # PsycopgReconnectTests MySQLReconnectTests FirebirdReconnectTests
 makeSQLTests(ReconnectTestBase, 'ReconnectTests', globals())
 
