@@ -207,6 +207,23 @@ class BytesHeadersTests(TestCase):
             "Headers({%r: [%r, %r]})" % (foo, bar, baz))
 
 
+    def test_reprWithRawBytes(self):
+        """
+        The L{repr} of a L{Headers} instance shows the names and values of all
+        the headers it contains, not attempting to decode any raw bytes.
+        """
+        # There's no such thing as undecodable latin-1, you'll just get
+        # some mojibake
+        foo = b"foo"
+        # But this is invalid UTF-8! So, any accidental decoding/encoding will
+        # throw an exception.
+        bar = b"bar\xe1"
+        baz = b"baz\xe1"
+        self.assertEqual(
+            repr(Headers({foo: [bar, baz]})),
+            "Headers({%r: [%r, %r]})" % (foo, bar, baz))
+
+
     def test_subclassRepr(self):
         """
         The L{repr} of an instance of a subclass of L{Headers} uses the name
@@ -297,11 +314,11 @@ class UnicodeHeadersTests(TestCase):
         h = Headers()
 
         # We set it using a Unicode string.
-        h.setRawHeaders(u"\u00E1", [u"\u2603", b"foo"])
+        h.setRawHeaders(u"\u00E1", [b"foo"])
 
         # It's encoded to the ISO-8859-1 value, which we can use to access it
         self.assertTrue(h.hasHeader(b"\xe1"))
-        self.assertEqual(h.getRawHeaders(b"\xe1"), [b'\xe2\x98\x83', b'foo'])
+        self.assertEqual(h.getRawHeaders(b"\xe1"), [b'foo'])
 
         # We can still access it using the Unicode string..
         self.assertTrue(h.hasHeader(u"\u00E1"))
@@ -530,9 +547,23 @@ class UnicodeHeadersTests(TestCase):
         h = Headers()
         h.setRawHeaders(u'test\u00E1', [u'foo\u2603'])
         i = h.copy()
+
+        # The copy contains the same value as the original
         self.assertEqual(i.getRawHeaders(u'test\u00E1'), [u'foo\u2603'])
+        self.assertEqual(i.getRawHeaders(b'test\xe1'), [b'foo\xe2\x98\x83'])
+
+        # Add a header to the original
         h.addRawHeader(u'test\u00E1', u'bar')
+
+        # Verify that the copy has not changed
         self.assertEqual(i.getRawHeaders(u'test\u00E1'), [u'foo\u2603'])
+        self.assertEqual(i.getRawHeaders(b'test\xe1'), [b'foo\xe2\x98\x83'])
+
+        # Add a header to the copy
         i.addRawHeader(u'test\u00E1', b'baz')
-        self.assertEqual(h.getRawHeaders(u'test\u00E1'),
-                         [u'foo\u2603', u'bar'])
+
+        # Verify that the orignal does not have it
+        self.assertEqual(
+            h.getRawHeaders(u'test\u00E1'), [u'foo\u2603', u'bar'])
+        self.assertEqual(
+            h.getRawHeaders(b'test\xe1'), [b'foo\xe2\x98\x83', b'bar'])
