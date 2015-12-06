@@ -305,6 +305,27 @@ def deprecated(version, replacement=None):
 
 
 
+class _DeprecatedProperty(property):
+    """
+    Extension of the build-in property to allow deprecated setters.
+    """
+
+    def _deprecatedWrapper(self, function):
+        @wraps(function)
+        def deprecatedFunction(*args, **kwargs):
+            warn(
+                self.warningString,
+                DeprecationWarning,
+                stacklevel=2)
+            return function(*args, **kwargs)
+        return deprecatedFunction
+
+
+    def setter(self, function):
+        return property.setter(self, self._deprecatedWrapper(function))
+
+
+
 def deprecatedProperty(version, replacement=None):
     """
     Return a decorator that marks a property as deprecated. To deprecate a
@@ -355,7 +376,10 @@ def deprecatedProperty(version, replacement=None):
         _appendToDocstring(deprecatedFunction,
                            _getDeprecationDocstring(version, replacement))
         deprecatedFunction.deprecatedVersion = version
-        return deprecatedFunction
+
+        result = _DeprecatedProperty(deprecatedFunction)
+        result.warningString = warningString
+        return result
 
     return deprecationDecorator
 

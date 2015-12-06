@@ -704,7 +704,6 @@ class ClassWithDeprecatedProperty(object):
 
     _someProtectedValue = None
 
-    @property
     @deprecatedProperty(Version('Twisted', 1, 2, 3))
     def someProperty(self):
         """
@@ -714,7 +713,6 @@ class ClassWithDeprecatedProperty(object):
 
 
     @someProperty.setter
-    @deprecatedProperty(Version('Twisted', 1, 2, 3))
     def someProperty(self, value):
         """
         Setter docstring.
