@@ -756,6 +756,8 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
             ClassWithDeprecatedProperty.someProperty,
             ['Getter docstring.', 'Deprecated in Twisted 1.2.3.'],
             )
+        ClassWithDeprecatedProperty.someProperty.deprecatedVersion = Version(
+            'Twisted', 1, 2, 3)
 
         message = (
             'twisted.python.test.test_deprecate.ClassWithDeprecatedProperty.'
@@ -802,6 +804,7 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
               'replacement.'),
             'Deprecated in Twisted 1.2.3.'],
             )
+        DeprecatedClass.deprecatedVersion = Version('Twisted', 1, 2, 3)
 
         message = (
             'twisted.python.test.test_deprecate.DeprecatedClass '
