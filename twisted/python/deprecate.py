@@ -305,27 +305,6 @@ def deprecated(version, replacement=None):
 
 
 
-class _DeprecatedProperty(property):
-    """
-    Extension of the build-in property to allow deprecated setters.
-    """
-
-    def _deprecatedWrapper(self, function):
-        @wraps(function)
-        def deprecatedFunction(*args, **kwargs):
-            warn(
-                self.warningString,
-                DeprecationWarning,
-                stacklevel=2)
-            return function(*args, **kwargs)
-        return deprecatedFunction
-
-
-    def setter(self, function):
-        return property.setter(self, self._deprecatedWrapper(function))
-
-
-
 def deprecatedProperty(version, replacement=None):
     """
     Return a decorator that marks a property as deprecated. To deprecate a
@@ -348,6 +327,27 @@ def deprecatedProperty(version, replacement=None):
 
     @since: 16.0.0
     """
+
+    class _DeprecatedProperty(property):
+        """
+        Extension of the build-in property to allow deprecated setters.
+        """
+
+        def _deprecatedWrapper(self, function):
+            @wraps(function)
+            def deprecatedFunction(*args, **kwargs):
+                warn(
+                    self.warningString,
+                    DeprecationWarning,
+                    stacklevel=2)
+                return function(*args, **kwargs)
+            return deprecatedFunction
+
+
+        def setter(self, function):
+            return property.setter(self, self._deprecatedWrapper(function))
+
+
     def deprecationDecorator(function):
         if _PY3:
             warningString = getDeprecationWarningString(
