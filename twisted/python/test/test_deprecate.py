@@ -689,8 +689,6 @@ class DeprecationWarningsTests(SynchronousTestCase):
 
 
 
-
-
 @deprecated(Version('Twisted', 1, 2, 3))
 class DeprecatedClass(object):
     """
@@ -704,43 +702,89 @@ class ClassWithDeprecatedProperty(object):
     Class with a single deprecated property.
     """
 
+    _someProtectedValue = None
+
     @property
     @deprecatedProperty(Version('Twisted', 1, 2, 3))
     def someProperty(self):
         """
         Getter docstring.
         """
+        return self._someProtectedValue
 
+
+    @someProperty.setter
+    @deprecatedProperty(Version('Twisted', 1, 2, 3))
+    def someProperty(self, value):
+        """
+        Setter docstring.
+        """
+        self._someProtectedValue = value
 
 
 class DeprecatedDecoratorTests(SynchronousTestCase):
     """
-    Tests for L{twisted.python.deprecate.deprecated} and
-    L{twisted.python.deprecate.deprecatedProperty} decorators.
+    Tests for deprecated decorators.
     """
+
+    def assertDocstring(self, target, expected):
+        """
+        Check that C{target} object has the C{expected} docstring lines.
+
+        @param target: Object which is checked.
+        @type target: C{anything}
+
+        @param expected: List of lines, ignoring empty lines or leading or
+            trailing spaces.
+        @type expected: L{list} or L{str}
+        """
+        self.assertEqual(
+            expected,
+            [x.strip() for x in target.__doc__.splitlines() if x.strip()]
+            )
+
 
     def test_propertyGetter(self):
         """
         When L{deprecatedProperty} is used on a C{property}, accesses raise a
-        L{DeprecationWarning}.
+        L{DeprecationWarning} and getter docstring is updated to inform the
+        version in which it was deprecated.
         """
         obj = ClassWithDeprecatedProperty()
 
         obj.someProperty
 
-        self.assertEqual(
+        self.assertDocstring(
+            ClassWithDeprecatedProperty.someProperty,
             ['Getter docstring.', 'Deprecated in Twisted 1.2.3.'],
-            [x.strip() for x in
-             ClassWithDeprecatedProperty.someProperty.__doc__.splitlines()
-             if x.strip()]
             )
 
         message = (
             'twisted.python.test.test_deprecate.ClassWithDeprecatedProperty.'
             'someProperty was deprecated in Twisted 1.2.3'
-        )
-
+            )
         warnings = self.flushWarnings([self.test_propertyGetter])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
+
+
+    def test_propertySetter(self):
+        """
+        When L{deprecatedProperty} is used on a C{property}, setter accesses
+        raise a L{DeprecationWarning}.
+        """
+        newValue = object()
+        obj = ClassWithDeprecatedProperty()
+
+        obj.someProperty = newValue
+
+        self.assertIs(newValue, obj._someProtectedValue)
+        message = (
+            'twisted.python.test.test_deprecate.ClassWithDeprecatedProperty.'
+            'someProperty was deprecated in Twisted 1.2.3'
+        )
+        warnings = self.flushWarnings([self.test_propertySetter])
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(message, warnings[0]['message'])
@@ -749,22 +793,22 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
     def test_classMethod(self):
         """
         When L{deprecated} is used on a class, instantiations raise a
-        L{DeprecationWarning}.
+        L{DeprecationWarning} and class's docstring is updated to inform the
+        version in which it was deprecated.
         """
         DeprecatedClass()
 
-        self.assertEqual(
+        self.assertDocstring(
+            DeprecatedClass,
             [('Class which is entirely deprecated without having a '
               'replacement.'),
             'Deprecated in Twisted 1.2.3.'],
-            [x.strip() for x in DeprecatedClass.__doc__.splitlines()
-             if x.strip()]
-        )
+            )
+
         message = (
             'twisted.python.test.test_deprecate.DeprecatedClass '
             'was deprecated in Twisted 1.2.3'
-        )
-
+            )
         warnings = self.flushWarnings([self.test_classMethod])
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
