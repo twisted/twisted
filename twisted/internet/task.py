@@ -103,9 +103,12 @@ class LoopingCall:
         """
 
         def counter():
-            if self.interval == 0:
-                return countCallable(1)
             now = self.clock.seconds()
+
+            if self.interval == 0:
+                self._realLastTime = now
+                return countCallable(1)
+
             lastTime = self._realLastTime
             if lastTime is None:
                 lastTime = self.starttime

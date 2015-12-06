@@ -555,6 +555,43 @@ class LoopTests(unittest.TestCase):
         clock.advance(0)
         self.assertEqual([1, 1, 1, 1, 1], accumulator)
 
+    def test_withCountIntervalZeroDelayThenNonZeroInterval(self):
+        """
+        L{task.LoopingCall.withCount} with interval set to 0 will still keep
+        the time when last called so when the interval is reset.
+        """
+        clock = task.Clock()
+        deferred = defer.Deferred()
+        accumulator = []
+
+        def foo(cnt):
+            accumulator.append(cnt)
+            if len(accumulator) == 2:
+                return deferred
+
+        loop = task.LoopingCall.withCount(foo)
+        loop.clock = clock
+        loop.start(0, now=False)
+
+        # Even if a lot of time pass, loop will block at the third call.
+        clock.advance(10)
+        self.assertEqual([1, 1], accumulator)
+
+        # When a new interval is set, once the waiting call got a result the
+        # loop continues with the new interval.
+        loop.interval = 2
+        deferred.callback(None)
+
+        # It will count skipped steps since the last loop call.
+        clock.advance(7)
+        self.assertEqual([1, 1, 3], accumulator)
+
+        clock.advance(2)
+        self.assertEqual([1, 1, 3, 1], accumulator)
+
+        clock.advance(4)
+        self.assertEqual([1, 1, 3, 1, 2], accumulator)
+
 
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
