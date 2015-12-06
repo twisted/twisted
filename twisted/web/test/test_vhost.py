@@ -20,23 +20,6 @@ from twisted.web.vhost import (_HostResource,
 from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.test._util import _render
 
-# class VirtualHostCollectionTests(TestCase):
-#     """
-#     Tests for L{VirtualHostCollection}
-#     """
-#
-#     def test_init(self):
-#         """
-#         L{VirtualHostCollection.__init__} returns a
-#         """
-#         nvh = Name
-#
-#     def testHomogenous(self):
-#         vhc = VirtualHostCollection()
-#         h.putEntity('a', 1)
-#         self.assertEqual(h.getStaticEntity('a'),1 )
-#         self.failUnlessRaises(roots.ConstraintViolation,
-#                               h.putEntity, 'x', 'y')
 
 class HostResourceTests(TestCase):
     """
@@ -65,12 +48,14 @@ class HostResourceTests(TestCase):
         request.isSecure = lambda: False
         request.host = b''
 
-        step = hr.getChild(b'baz.com', request) #Consumes rest of path
+        step = hr.getChild(b'baz.com', request) # Consumes rest of path
         self.assertIsInstance(step, Data)
 
         request = DummyRequest([b'uri', b'test'])
         step = root.getChild(b'uri', request)
         self.assertIsInstance(step, NoResource)
+
+
 
 class NameVirtualHostTests(TestCase):
     """
@@ -192,6 +177,7 @@ class NameVirtualHostTests(TestCase):
                               Data)
         self.assertEqual(request.prepath,  [])
         self.assertEqual(request.postpath, [b''])
+
 
 
 class VHostMonsterResourceTests(TestCase):
