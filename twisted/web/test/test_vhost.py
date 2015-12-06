@@ -10,10 +10,67 @@ from __future__ import absolute_import, division
 from twisted.internet.defer import gatherResults
 from twisted.trial.unittest import TestCase
 from twisted.web.http import NOT_FOUND
+from twisted.web.resource import NoResource, Resource
 from twisted.web.static import Data
-from twisted.web.vhost import NameVirtualHost
+from twisted.web.server import Site
+from twisted.web.vhost import (_HostResource,
+                               NameVirtualHost,
+                               VirtualHostCollection,
+                               VHostMonsterResource)
 from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.test._util import _render
+
+# class VirtualHostCollectionTests(TestCase):
+#     """
+#     Tests for L{VirtualHostCollection}
+#     """
+#
+#     def test_init(self):
+#         """
+#         L{VirtualHostCollection.__init__} returns a
+#         """
+#         nvh = Name
+#
+#     def testHomogenous(self):
+#         vhc = VirtualHostCollection()
+#         h.putEntity('a', 1)
+#         self.assertEqual(h.getStaticEntity('a'),1 )
+#         self.failUnlessRaises(roots.ConstraintViolation,
+#                               h.putEntity, 'x', 'y')
+
+class HostResourceTests(TestCase):
+    """
+    Tests for L{_HostResource}.
+    """
+    def test_getChild(self):
+        """
+        L{_HostResource.getChild} returns the proper I{Resource} for the vhost
+        embedded in the URL.  Verify that returning the proper I{Resource}
+        required changing the I{Host} in the header.
+        """
+        bazroot = Data(b'root data', "")
+        bazuri  = Data(b'uri data', "")
+        baztest = Data(b'test data', "")
+        bazuri.putChild(b'test', baztest)
+        bazroot.putChild(b'uri', bazuri)
+        hr = _HostResource()
+
+        root = NameVirtualHost()
+        root.default = Data(b'default data', "")
+        root.addHost(b'baz.com', bazroot)
+
+        request = DummyRequest([b'uri', b'test'])
+        request.prepath = [b'bar', b'http', b'baz.com']
+        request.site = Site(root)
+        request.isSecure = lambda: False
+        request.host = b''
+
+        step = hr.getChild(b'baz.com', request) #Consumes rest of path
+        self.assertIsInstance(step, Data)
+
+        request = DummyRequest([b'uri', b'test'])
+        step = root.getChild(b'uri', request)
+        self.assertIsInstance(step, NoResource)
 
 class NameVirtualHostTests(TestCase):
     """
@@ -105,3 +162,52 @@ class NameVirtualHostTests(TestCase):
             self.assertEqual(request.responseCode, NOT_FOUND)
         d.addCallback(cbRendered)
         return d
+
+
+    def test_getChild(self):
+        """
+        L{NameVirtualHost.getChild} returns correct I{Resource} based off
+        the header and modifies I{Request} to ensure proper prepath and
+        pospath are set.
+        """
+        virtualHostResource = NameVirtualHost()
+        leafResource = Data(b"leaf data", "")
+        leafResource.isLeaf = True
+        normResource = Data(b"norm data", "")
+        virtualHostResource.addHost(b'leaf.example.org', leafResource)
+        virtualHostResource.addHost(b'norm.example.org', normResource)
+
+        request = DummyRequest([])
+        request.headers[b'host'] = b'norm.example.org'
+        request.prepath = [b'']
+
+        self.assertIsInstance(virtualHostResource.getChild(b'', request),
+                              NoResource)
+        self.assertEqual(request.prepath, [b''])
+        self.assertEqual(request.postpath, [])
+
+        request.headers[b'host'] = b'leaf.example.org'
+
+        self.assertIsInstance(virtualHostResource.getChild(b'', request),
+                              Data)
+        self.assertEqual(request.prepath,  [])
+        self.assertEqual(request.postpath, [b''])
+
+
+class VHostMonsterResourceTests(TestCase):
+    """
+    Tests for L{VHostMonsterResource}.
+    """
+    def test_getChild(self):
+        """
+        L{VHostMonsterResource.getChild} returns I{_HostResource} and modifies
+        I{Request} with correct L{Request.isSecure}.
+        """
+        vhm = VHostMonsterResource()
+        request = DummyRequest([])
+        self.assertIsInstance(vhm.getChild(b'http', request), _HostResource)
+        self.assertFalse(request.isSecure())
+
+        request = DummyRequest([])
+        self.assertIsInstance(vhm.getChild(b'https', request), _HostResource)
+        self.assertTrue(request.isSecure())
