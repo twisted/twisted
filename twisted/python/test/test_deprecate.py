@@ -746,7 +746,8 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         """
         When L{deprecatedProperty} is used on a C{property}, accesses raise a
         L{DeprecationWarning} and getter docstring is updated to inform the
-        version in which it was deprecated.
+        version in which it was deprecated. C{deprecatedVersion} attribute is
+        also set to inform the deprecation version.
         """
         obj = ClassWithDeprecatedProperty()
 
@@ -794,7 +795,8 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         """
         When L{deprecated} is used on a class, instantiations raise a
         L{DeprecationWarning} and class's docstring is updated to inform the
-        version in which it was deprecated.
+        version in which it was deprecated. C{deprecatedVersion} attribute is
+        also set to inform the deprecation version.
         """
         DeprecatedClass()
 
