@@ -1556,8 +1556,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
         Response-Line and whatever response headers are set.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
         req.transport = trans
 
@@ -1578,8 +1580,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} casts non-bytes header value to bytes
         transparently.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
         req.transport = trans
 
@@ -1610,8 +1614,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         Response-Line, whatever response headers are set, and uses chunked
         encoding for the response body.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
         req.transport = trans
 
@@ -1635,8 +1641,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} sends an HTTP Response-Line, whatever response
         headers are set, and a last-modified header with that time.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
         req.transport = trans
 

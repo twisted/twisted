@@ -817,7 +817,7 @@ class NewRenderTests(unittest.TestCase):
         resource = HeadlessResource()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
-        headers, body = req.transport.getvalue().split(b'\r\n\r\n')
+        body = req.transport.getvalue()
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b'')
 
@@ -838,7 +838,7 @@ class NewRenderTests(unittest.TestCase):
 
         request.requestReceived(b"GET", b"/newrender", b"HTTP/1.0")
 
-        headers, body = request.transport.getvalue().split(b'\r\n\r\n')
+        body = request.transport.getvalue()
         self.assertEqual(request.code, 500)
         expected = [
             '',

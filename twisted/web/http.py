@@ -101,6 +101,7 @@ from twisted.protocols import policies, basic
 
 from twisted.web.iweb import IRequest, IAccessLogFormatter
 from twisted.web.http_headers import Headers
+from twisted.web.http2 import H2Connection
 
 from twisted.web._responses import (
     SWITCHING,
@@ -580,6 +581,7 @@ class Request:
     content = None
     _forceSSL = 0
     _disconnected = False
+    _queuedHeaders = None
 
     def __init__(self, channel, queued):
         """
@@ -598,7 +600,7 @@ class Request:
         if queued:
             self.transport = StringTransport()
         else:
-            self.transport = self.channel.transport
+            self.transport = self.channel
 
 
     def _cleanup(self):
@@ -637,7 +639,10 @@ class Request:
 
         # set transport to real one and send any buffer data
         data = self.transport.getvalue()
-        self.transport = self.channel.transport
+        self.transport = self.channel
+        if self._queuedHeaders:
+            self.transport.writeHeaders(*self._queuedHeaders)
+            self.queuedHeaders = None
         if data:
             self.transport.write(data)
 
@@ -727,8 +732,8 @@ class Request:
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
-        self.client = self.channel.transport.getPeer()
-        self.host = self.channel.transport.getHost()
+        self.client = self.channel.getPeer()
+        self.host = self.channel.getHost()
 
         # Argument processing
         args = self.args
@@ -755,7 +760,7 @@ class Request:
                         self.args.update(cgiArgs)
                 except:
                     # It was a bad request.
-                    _respondToBadRequestAndDisconnect(self.channel.transport)
+                    _respondToBadRequestAndDisconnect(self.channel)
                     return
             self.content.seek(0, 0)
 
@@ -805,14 +810,14 @@ class Request:
             if streaming:
                 producer.pauseProducing()
         else:
-            self.transport.registerProducer(producer, streaming)
+            self.channel.registerProducer(producer, streaming)
 
     def unregisterProducer(self):
         """
         Unregister the producer.
         """
         if not self.queued:
-            self.transport.unregisterProducer()
+            self.channel.unregisterProducer()
         self.producer = None
 
 
@@ -870,11 +875,15 @@ class Request:
 
         if not self.startedWriting:
             # write headers
-            self.write('')
+            self.write(b'')
 
         if self.chunked:
             # write last chunk and closing CRLF
             self.transport.write(b"0\r\n\r\n")
+
+
+        if not self.queued:
+            self.channel.endRequest()
 
         # log request
         if hasattr(self.channel, "factory"):
@@ -899,11 +908,10 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            l = []
-            l.append(
-                version + b" " +
-                intToBytes(self.code) + b" " +
-                self.code_message + b"\r\n")
+            code = intToBytes(self.code)
+            reason = self.code_message
+
+            headers = []
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
@@ -911,7 +919,7 @@ class Request:
             if ((version == b"HTTP/1.1") and
                 (self.responseHeaders.getRawHeaders(b'content-length') is None) and
                 self.method != b"HEAD" and self.code not in NO_BODY_CODES):
-                l.append(b'Transfer-Encoding: chunked\r\n')
+                headers.append((b'Transfer-Encoding', 'chunked'))
                 self.chunked = 1
 
             if self.lastModified is not None:
@@ -935,14 +943,15 @@ class Request:
                             category=DeprecationWarning, stacklevel=2)
                         # Backward compatible cast for non-bytes values
                         value = networkString('%s' % (value,))
-                    l.extend([name, b": ", value, b"\r\n"])
+                    headers.append((name, value))
 
             for cookie in self.cookies:
-                l.append(networkString('Set-Cookie: %s\r\n' % (cookie,)))
+                headers.append((b'Set-Cookie', networkString(cookie)))
 
-            l.append(b"\r\n")
-
-            self.transport.writeSequence(l)
+            if self.queued:
+                self._queuedHeaders = (version, code, reason, headers)
+            else:
+                self.channel.writeHeaders(version, code, reason, headers)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -1828,6 +1837,85 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             request.connectionLost(reason)
 
 
+    def writeHeaders(self, version, code, reason, headers):
+        """
+        Called by C{Request} objects to write a complete set of HTTP headers to
+        a transport.
+
+        @param version: The HTTP version in use.
+        @type version: C{bytes}
+
+        @param code: The HTTP status code to write.
+        @type code: C{bytes}
+
+        @param reason: The HTTP reason phrase to write.
+        @type reason: C{bytes}
+
+        @param headers: The headers to write to the transport.
+        @type headers: L{twisted.web.http_headers.Headers}
+        """
+        response_line = version + b" " + code + b" " + reason + b"\r\n"
+        headerSequence = [response_line]
+        headerSequence.extend(
+            name + b': ' + value + b"\r\n" for name, value in headers
+        )
+        headerSequence.append("\r\n")
+        self.transport.writeSequence(headerSequence)
+
+
+    def registerProducer(self, producer, streaming):
+        """
+        @see L{IConsumer.registerProducer}
+        """
+        return self.transport.registerProducer(producer, streaming)
+
+
+    def unregisterProducer(self):
+        """
+        @see L{IConsumer.unregisterProducer}
+        """
+        return self.transport.unregisterProducer()
+
+
+    def write(self, data):
+        """
+        Called by C{Request} objects to write response data.
+
+        @param data: The data chunk to write to the stream.
+        @type data: C{bytes}
+        """
+        self.transport.write(data)
+
+
+    def writeSequence(self, iovec):
+        self.transport.writeSequence(iovec)
+
+
+    def getPeer(self):
+        return self.transport.getPeer()
+
+
+    def getHost(self):
+        return self.transport.getHost()
+
+    def loseConnection(self):
+        # TODO: Does this need to be smarter?
+        return self.transport.loseConnection()
+
+
+    def endRequest(self):
+        """
+        Called by C{Request} objects to signal completion of a response.
+
+        This is a no-op in HTTP/1.1.
+
+        @param stream_id: The ID of the stream to write the headers to. Unused
+            in HTTP/1.
+        @type stream_id: C{int}
+        """
+        pass
+
+
 
 def _respondToBadRequestAndDisconnect(transport):
     """
@@ -1950,6 +2038,71 @@ def proxiedLogFormatter(timestamp, request):
 
 
 
+class GenericHTTPChannel(object):
+    """
+    A proxy object that wraps one of the HTTP protocol objects, and switches
+    between them depending on TLS negotiated protocol.
+    """
+    def __init__(self):
+        object.__setattr__(self, '_negotiatedProtocol', None)
+        object.__setattr__(self, '_obj', HTTPChannel())
+        object.__setattr__(self, '_queued_actions', [])
+
+        self._obj.requestFactory = Request
+
+
+    def dataReceived(self, data):
+        """
+        A override of dataReceived that checks what protocol we're using.
+        """
+        if self._negotiatedProtocol is None:
+            try:
+                negotiatedProtocol = self.transport.negotiatedProtocol
+            except AttributeError:
+                # Plaintext HTTP, always HTTP/1.1
+                negotiatedProtocol = b'http/1.1'
+
+            if negotiatedProtocol is None:
+                negotiatedProtocol = b'http/1.1'
+
+            if negotiatedProtocol == b'h2':
+                transport = self._obj.transport
+                object.__setattr__(self, '_obj', H2Connection())
+                self._apply_queued_actions()
+                self._obj.makeConnection(transport)
+
+            object.__setattr__(
+                self, '_negotiatedProtocol', negotiatedProtocol
+            )
+            object.__setattr__(self, '_queued_actions', None)
+
+        return self._obj.dataReceived(data)
+
+
+    def _apply_queued_actions(self):
+        for action in self._queued_actions:
+            action[0](self._obj, *action[1:])
+
+
+    def __getattr__(self, attr):
+        return getattr(self._obj, attr)
+
+
+    def __setattr__(self, attr, value):
+        if self._negotiatedProtocol is None:
+            self._queued_actions.append((setattr, attr, value))
+
+        return setattr(self._obj, attr, value)
+
+
+    def __delattr__(self, attr):
+        if self._negotiatedProtocol is None:
+            self._queued_actions.append((delattr, attr))
+
+        return delattr(self._obj, attr)
+
+
+
 class HTTPFactory(protocol.ServerFactory):
     """
     Factory for HTTP server.
@@ -1973,7 +2126,7 @@ class HTTPFactory(protocol.ServerFactory):
         timestamps.
     """
 
-    protocol = HTTPChannel
+    protocol = GenericHTTPChannel
 
     logPath = None
 
