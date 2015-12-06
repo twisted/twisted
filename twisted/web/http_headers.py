@@ -8,9 +8,7 @@ An API for storing HTTP header names and values.
 
 from __future__ import division, absolute_import
 
-from collections import MutableMapping
-
-from twisted.python.compat import comparable, cmp, StringType
+from twisted.python.compat import comparable, cmp
 
 
 def _dashCapitalize(name):
@@ -24,82 +22,6 @@ def _dashCapitalize(name):
     @rtype: C{bytes}
     """
     return b'-'.join([word.capitalize() for word in name.split(b'-')])
-
-
-
-class _DictHeaders(MutableMapping):
-    """
-    A C{dict}-like wrapper around L{Headers} to provide backwards compatibility
-    for L{twisted.web.http.Request.received_headers} and
-    L{twisted.web.http.Request.headers} which used to be plain C{dict}
-    instances.
-
-    @type _headers: L{Headers}
-    @ivar _headers: The real header storage object.
-    """
-    def __init__(self, headers):
-        self._headers = headers
-
-
-    def __getitem__(self, key):
-        """
-        Return the last value for header of C{key}.
-        """
-        if self._headers.hasHeader(key):
-            return self._headers.getRawHeaders(key)[-1]
-        raise KeyError(key)
-
-
-    def __setitem__(self, key, value):
-        """
-        Set the given header.
-        """
-        if isinstance(key, StringType):
-            key = key.encode('ascii')
-        self._headers.setRawHeaders(key, [value])
-
-
-    def __delitem__(self, key):
-        """
-        Delete the given header.
-        """
-        if self._headers.hasHeader(key):
-            self._headers.removeHeader(key)
-        else:
-            raise KeyError(key)
-
-
-    def __iter__(self):
-        """
-        Return an iterator of the lowercase name of each header present.
-        """
-        for k, v in self._headers.getAllRawHeaders():
-            yield k.lower()
-
-
-    def __len__(self):
-        """
-        Return the number of distinct headers present.
-        """
-        # XXX Too many _
-        return len(self._headers._rawHeaders)
-
-
-    # Extra methods that MutableMapping doesn't care about but that we do.
-    def copy(self):
-        """
-        Return a C{dict} mapping each header name to the last corresponding
-        header value.
-        """
-        return dict(self.items())
-
-
-    def has_key(self, key):
-        """
-        Return C{True} if C{key} is a header in this collection, C{False}
-        otherwise.
-        """
-        return key in self
 
 
 

@@ -100,7 +100,7 @@ from twisted.internet.defer import Deferred
 from twisted.protocols import policies, basic
 
 from twisted.web.iweb import IRequest, IAccessLogFormatter
-from twisted.web.http_headers import _DictHeaders, Headers
+from twisted.web.http_headers import Headers
 
 from twisted.web._responses import (
     SWITCHING,
@@ -550,18 +550,8 @@ class Request:
     @type requestHeaders: L{http_headers.Headers}
     @ivar requestHeaders: All received HTTP request headers.
 
-    @ivar received_headers: Backwards-compatibility access to
-        C{requestHeaders}.  Use C{requestHeaders} instead.  C{received_headers}
-        behaves mostly like a C{dict} and does not provide access to all header
-        values.
-
     @type responseHeaders: L{http_headers.Headers}
     @ivar responseHeaders: All HTTP response headers to be sent.
-
-    @ivar headers: Backwards-compatibility access to C{responseHeaders}.  Use
-        C{responseHeaders} instead.  C{headers} behaves mostly like a C{dict}
-        and does not provide access to all header values nor does it allow
-        multiple values for one header to be set.
 
     @ivar notifications: A C{list} of L{Deferred}s which are waiting for
         notification that the response to this request has been finished
@@ -609,66 +599,6 @@ class Request:
             self.transport = StringTransport()
         else:
             self.transport = self.channel.transport
-
-
-    def _warnHeaders(self, old, new):
-        """
-        Emit a warning related to use of one of the deprecated C{headers} or
-        C{received_headers} attributes.
-
-        @param old: The name of the deprecated attribute to which the warning
-            pertains.
-
-        @param new: The name of the preferred attribute which replaces the old
-            attribute.
-        """
-        warnings.warn(
-            category=DeprecationWarning,
-            message=(
-                "twisted.web.http.Request.%(old)s was deprecated in "
-                "Twisted 13.2.0: Please use twisted.web.http.Request."
-                "%(new)s instead." % dict(old=old, new=new)),
-            stacklevel=3)
-
-
-    @property
-    def headers(self):
-        """
-        Transform the L{Headers}-style C{responseHeaders} attribute into a
-        deprecated C{dict}-style C{headers} attribute.
-        """
-        self._warnHeaders("headers", "responseHeaders")
-        return _DictHeaders(self.responseHeaders)
-
-
-    @property
-    def received_headers(self):
-        """
-        Transform the L{Headers}-style C{requestHeaders} attribute into a
-        deprecated C{dict}-style C{received_headers} attribute.
-        """
-        self._warnHeaders("received_headers", "requestHeaders")
-        return _DictHeaders(self.requestHeaders)
-
-
-    def __setattr__(self, name, value):
-        """
-        Support assignment of C{dict} instances to C{received_headers} for
-        backwards-compatibility.
-        """
-        if name == 'received_headers':
-            # A property would be nice, but Request is classic.
-            self.requestHeaders = headers = Headers()
-            for k, v in value.items():
-                headers.setRawHeaders(k, [v])
-            self._warnHeaders("received_headers", "requestHeaders")
-        elif name == 'headers':
-            self.responseHeaders = headers = Headers()
-            for k, v in value.items():
-                headers.setRawHeaders(k, [v])
-            self._warnHeaders("headers", "responseHeaders")
-        else:
-            self.__dict__[name] = value
 
 
     def _cleanup(self):
