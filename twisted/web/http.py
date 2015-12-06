@@ -728,7 +728,16 @@ class Request:
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
         self.client = self.channel.transport.getPeer()
-        self.host = self.channel.transport.getHost()
+        # The expectation for a IP address is sprinkled throughout the
+        # implementation of twisted.web, klein and no doubt other
+        # libraries. Therefore if the address isn't IP-based then just use
+        # a fake address; a e.g. UNIXAddress is not particularly
+        # meaningful to HTTP, whose specifications presume TCP, so there's
+        # no headers or whatnot that will benefit from real information.
+        host = self.channel.transport.getHost()
+        if not isinstance(host, (address.IPv4Address, address.IPv6Address)):
+            host = address.IPv4Address("TCP", "127.0.0.1", 0)
+        self.host = host
 
         # Argument processing
         args = self.args

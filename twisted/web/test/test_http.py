@@ -21,6 +21,7 @@ from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers
 from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
+from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost
 from twisted.protocols import loopback
@@ -1515,6 +1516,57 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.setHost(b"example.com", 81)
         self.assertEqual(
             req.requestHeaders.getRawHeaders(b"host"), [b"example.com:81"])
+
+
+    def getRequestHost(self, transport):
+        """
+        @param transport: A transport for a L{http.Request}.
+
+        @return: The result of L{http.Request.getHost} for a request with
+            the given transport.
+        """
+        channel = DummyChannel()
+        channel.transport = transport
+        req = http.Request(channel, False)
+        req.gotLength(123)
+        req.requestReceived(b"GET", b"/", b"HTTP/1.1")
+        return req.getHost()
+
+    def test_getHostNotIPAddress(self):
+        """
+        L{http.Request.getHost} returns a fake L{IPv4Address} if a non-IP
+        address was used, to pacify various internal and external code
+        that assumes IP addresses only.
+        """
+        class Unix(DummyChannel.TCP):
+            """
+            Fake UNIX transport.
+            """
+            def getHost(self):
+                return UNIXAddress(b"/path/to/sock")
+
+        host = self.getRequestHost(Unix())
+        self.assertEqual(host, IPv4Address("TCP", "127.0.0.1", 0))
+
+
+    def test_getHostIPAddress(self):
+        """
+        L{http.Request.getHost} returns the transport address for
+        L{IPv4Address} and L{IPv6Address} addresses.
+        """
+        class TCP6(DummyChannel.TCP):
+            """
+            Fake IPv6 transport.
+            """
+            def getHost(self):
+                return IPv6Address("TCP", "::1", 1234)
+
+        tcp4 = DummyChannel.TCP()
+        tcp6 = TCP6()
+        self.assertEqual(dict(address4=tcp4.getHost(),
+                              address6=tcp6.getHost()),
+                         dict(address4=self.getRequestHost(tcp4),
+                              address6=self.getRequestHost(tcp6)))
 
 
     def test_setHeader(self):
