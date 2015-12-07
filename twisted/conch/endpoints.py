@@ -391,7 +391,9 @@ class _CommandTransport(SSHClientTransport):
     authentication agent if it is told where it can connect to one.
 
     @ivar _userauth: The L{_UserAuth} instance which is in charge of the
-        overall authentication process.
+        overall authentication process or C{None} if the SSH connection has not
+        reach yet the C{user-auth} service.
+    @type userauth: L{_UserAuth}
     """
     # STARTING -> SECURING -> AUTHENTICATING -> CHANNELLING -> RUNNING
     _state = b'STARTING'
@@ -484,8 +486,6 @@ class _CommandTransport(SSHClientTransport):
         connection to the ssh agent if one was created.
         """
         if self._userauth:
-            # We have a connected SSH transport which might have an user-auth
-            # service connected to an agent.
             self._userauth.loseAgentConnection()
 
         if self._state == b'RUNNING' or self.connectionReady is None:
