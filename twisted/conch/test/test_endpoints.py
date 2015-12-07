@@ -740,10 +740,6 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         # the overall SSH connection.
         pump.pump()
 
-        # Nothing useful can be done with the connection at this point, so the
-        # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
-
         # Given that the client transport is disconnecting, report the
         # disconnect from up to the ssh protocol.
         client.transport.reportDisconnect()
@@ -1181,6 +1177,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         # Ensure the connection with the agent is cleaned up after the
         # connection with the server is lost.
         self.loseConnectionToServer(server, client, protocol, pump)
+        self.assertTrue(client.transport.disconnecting)
         self.assertTrue(agentEndpoint.pump.clientIO.disconnecting)
 
 
@@ -1201,6 +1198,10 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
 
         protocol = self.successResultOf(connected)
         self.loseConnectionToServer(server, client, protocol, pump)
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
 
 
 
