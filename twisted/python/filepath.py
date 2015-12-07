@@ -1425,7 +1425,8 @@ class FilePath(AbstractFilePath):
         try:
             return os.makedirs(self.path)
         except OSError as e:
-            if not (e.errno == errno.EEXIST and ignoreAlreadyExist):
+            if not (e.errno == errno.EEXIST and self.isdir() and
+                    ignoreAlreadyExist):
                 raise
 
 

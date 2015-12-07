@@ -1400,6 +1400,24 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(exception.errno, errno.EEXIST)
 
 
+    def test_makedirsRaisesNonEexistErrorsIgnoreAlreadyExist(self):
+        """
+        When C{FilePath.makedirs} is called with ignoreAlreadyExist set to
+        C{True} it raises an C{OSError} exception if exception errno is not
+        EEXIST.
+        """
+        def faultyMakedirs(path):
+            raise OSError(errno.EACCES, b'Permission Denied')
+
+        self.patch(os, 'makedirs', faultyMakedirs)
+        fp = filepath.FilePath(self.mktemp())
+
+        exception = self.assertRaises(
+            OSError, fp.makedirs, ignoreAlreadyExist=True)
+
+        self.assertEqual(exception.errno, errno.EACCES)
+
+
     def test_changed(self):
         """
         L{FilePath.changed} indicates that the L{FilePath} has changed, but does
