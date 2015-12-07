@@ -350,6 +350,28 @@ class _UserAuth(SSHUserAuthClient):
         return SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
 
 
+    def connectToAgent(self, endpoint):
+        """
+        Set up a connection to the authentication agent and trigger its
+        initialization.
+
+        @param endpoint: An endpoint which can be used to connect to the
+            authentication agent.
+        @type endpoint: L{IStreamClientEndpoint} provider
+
+        @return: A L{Deferred} which fires when the agent connection is ready
+            for use.
+        """
+        factory = Factory()
+        factory.protocol = SSHAgentClient
+        d = endpoint.connect(factory)
+        def connected(agent):
+            self.agent = agent
+            return agent.getPublicKeys()
+        d.addCallback(connected)
+        return d
+
+
     def loseAgentConnection(self):
         """
         Disconnect the agent.
@@ -443,35 +465,13 @@ class _CommandTransport(SSHClientTransport):
             self._userauth.keys = list(self.creator.keys)
 
         if self.creator.agentEndpoint is not None:
-            d = self._connectToAgent(self.creator.agentEndpoint)
+            d = self._userauth.connectToAgent(self.creator.agentEndpoint)
         else:
             d = succeed(None)
 
         def maybeGotAgent(ignored):
             self.requestService(self._userauth)
         d.addBoth(maybeGotAgent)
-
-
-    def _connectToAgent(self, endpoint):
-        """
-        Set up a connection to the authentication agent and trigger its
-        initialization.
-
-        @param endpoint: An endpoint which can be used to connect to the
-            authentication agent.
-        @type endpoint: L{IStreamClientEndpoint} provider
-
-        @return: A L{Deferred} which fires when the agent connection is ready
-            for use.
-        """
-        factory = Factory()
-        factory.protocol = SSHAgentClient
-        d = endpoint.connect(factory)
-        def connected(agent):
-            self._userauth.agent = agent
-            return agent.getPublicKeys()
-        d.addCallback(connected)
-        return d
 
 
     def connectionLost(self, reason):
