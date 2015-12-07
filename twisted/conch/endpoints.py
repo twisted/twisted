@@ -389,6 +389,9 @@ class _CommandTransport(SSHClientTransport):
 
     L{_CommandTransport} also knows how to set up a connection to an
     authentication agent if it is told where it can connect to one.
+
+    @ivar _userauth: The L{_UserAuth} instance which is in charge of the
+        overall authentication process.
     """
     # STARTING -> SECURING -> AUTHENTICATING -> CHANNELLING -> RUNNING
     _state = b'STARTING'
