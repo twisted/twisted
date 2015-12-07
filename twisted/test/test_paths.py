@@ -1340,6 +1340,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertFalse(fp.exists())
 
         fp.makedirs()
+
         self.assertTrue(fp.exists())
         self.assertTrue(fp.isdir())
 
