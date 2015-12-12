@@ -171,7 +171,7 @@ has several features:
       which always issue NUL as the first byte.
 """
 
-from __future__ import unicode_literals
+from __future__ import absolute_import, division
 
 __metaclass__ = type
 

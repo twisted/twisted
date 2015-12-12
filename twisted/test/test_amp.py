@@ -6,6 +6,8 @@
 Tests for L{twisted.protocols.amp}.
 """
 
+from __future__ import absolute_import, division
+
 import datetime
 import decimal
 
