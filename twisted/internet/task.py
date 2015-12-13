@@ -86,6 +86,8 @@ class LoopingCall:
         elapsed, or if the callable itself blocks for longer than an interval,
         preventing I{itself} from being called.
 
+        When running with an interval if 0, count will be always 1.
+
         @param countCallable: A callable that will be invoked each time the
             resulting LoopingCall is run, with an integer specifying the number
             of calls that should have been invoked.
@@ -102,6 +104,11 @@ class LoopingCall:
 
         def counter():
             now = self.clock.seconds()
+
+            if self.interval == 0:
+                self._realLastTime = now
+                return countCallable(1)
+
             lastTime = self._realLastTime
             if lastTime is None:
                 lastTime = self.starttime
