@@ -664,6 +664,21 @@ class TodoTests(unittest.SynchronousTestCase):
         self.assertEqual(len(self._getTodos(self.result)), 1)
 
 
+    def test_no_todo_provided(self):
+        """
+        If no C{Todo} is provided to C{addExpectedFailure}, then
+        L{reporter.Reporter} makes up a sensible default.
+
+        This allows standard Python unittests to use Twisted reporters.
+        """
+        failure = Failure(Exception())
+        self.result.addExpectedFailure(self.test, failure)
+        [(test, error, todo)] = self._getTodos(self.result)
+        self.assertEqual(test, self.test)
+        self.assertEqual(error, failure)
+        self.assertEqual(repr(todo), repr(makeTodo('Test expected to fail')))
+
+
     def test_success(self):
         """
         A test run is still successful even if there are expected failures.
@@ -682,6 +697,21 @@ class TodoTests(unittest.SynchronousTestCase):
         self.result.addUnexpectedSuccess(self.test, makeTodo("Heya!"))
         self.assertEqual(True, self.result.wasSuccessful())
         self.assertEqual(len(self._getUnexpectedSuccesses(self.result)), 1)
+
+
+    def test_unexpectedSuccess_no_todo(self):
+        """
+        A test which is marked as todo but succeeds will have an unexpected
+        success reported to its result. A test run is still successful even
+        when this happens.
+
+        If no C{Todo} is provided, then we make up a sensible default. This
+        allows standard Python unittests to use Twisted reporters.
+        """
+        self.result.addUnexpectedSuccess(self.test)
+        [(test, todo)] = self._getUnexpectedSuccesses(self.result)
+        self.assertEqual(test, self.test)
+        self.assertEqual(repr(todo), repr(makeTodo('Test expected to fail')))
 
 
     def test_summary(self):
@@ -716,8 +746,7 @@ class TodoTests(unittest.SynchronousTestCase):
         Booleans CAN'T be used as the value of a todo. Maybe this sucks. This
         is a test for current behavior, not a requirement.
         """
-        self.result.addExpectedFailure(self.test, Failure(Exception()),
-                                       makeTodo(True))
+        self.result.addExpectedFailure(self.test, Failure(Exception()), True)
         self.assertRaises(Exception, self.result.done)
 
 

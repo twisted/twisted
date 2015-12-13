@@ -66,6 +66,9 @@ class TestResult(pyunit.TestResult, object):
     @type successes: C{int}
     """
 
+    # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
+    _DEFAULT_TODO = 'Test expected to fail'
+
     def __init__(self):
         super(TestResult, self).__init__()
         self.skips = []
@@ -150,7 +153,7 @@ class TestResult(pyunit.TestResult, object):
         self.skips.append((test, reason))
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         Report that the given test succeeded against expectations.
 
@@ -159,13 +162,15 @@ class TestResult(pyunit.TestResult, object):
         call this method to report the unexpected success.
 
         @type test: L{pyunit.TestCase}
-        @type todo: L{unittest.Todo}
+        @type todo: L{unittest.Todo}, or C{None}, in which case a default todo
+            message is provided.
         """
-        # XXX - 'todo' should just be a string
+        if todo is None:
+            todo = makeTodo(self._DEFAULT_TODO)
         self.unexpectedSuccesses.append((test, todo))
 
 
-    def addExpectedFailure(self, test, error, todo):
+    def addExpectedFailure(self, test, error, todo=None):
         """
         Report that the given test failed, and was expected to do so.
 
@@ -174,9 +179,11 @@ class TestResult(pyunit.TestResult, object):
 
         @type test: L{pyunit.TestCase}
         @type error: L{Failure}
-        @type todo: L{unittest.Todo}
+        @type todo: L{unittest.Todo}, or C{None}, in which case a default todo
+            message is provided.
         """
-        # XXX - 'todo' should just be a string
+        if todo is None:
+            todo = makeTodo(self._DEFAULT_TODO)
         self.expectedFailures.append((test, error, todo))
 
 
