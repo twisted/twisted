@@ -246,7 +246,7 @@ class PyUnitResultAdapter(object):
             self._unsupported(test, 'skip', reason)
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         Report the unexpected success as a failure.
         """

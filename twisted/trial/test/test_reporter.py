@@ -1330,7 +1330,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
         subunitClient = reporter.TestProtocolClient(stream)
         subunitClient.addSuccess(self.test)
         subunitOutput = stream.getvalue()
-        self.result.addUnexpectedSuccess(self.test, 'todo')
+        self.result.addUnexpectedSuccess(self.test)
         self.assertEqual(subunitOutput, self.stream.getvalue())
 
 
@@ -1381,7 +1381,7 @@ class LoggingReporter(reporter.Reporter):
     def addError(self, test, error):
         self.test = test
 
-    def addExpectedFailure(self, test, failure, todo):
+    def addExpectedFailure(self, test, failure, todo=None):
         self.test = test
 
     def addFailure(self, test, failure):
@@ -1390,7 +1390,7 @@ class LoggingReporter(reporter.Reporter):
     def addSkip(self, test, skip):
         self.test = test
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         self.test = test
 
     def startTest(self, test):

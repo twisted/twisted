@@ -1120,7 +1120,7 @@ class SubunitReporter(object):
             addExpectedFailure(test, failure)
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         Record an unexpected success.
 
