@@ -744,34 +744,6 @@ class TodoTests(unittest.SynchronousTestCase):
         self.assertTrue(str(error) in output)
 
 
-    def test_expectedFailureWithoutTodo(self):
-        """
-        Handles failures when called without a L{unittest.Todo}
-        """
-        def test_adapt(test):
-            return test
-        reporter_instance = reporter._AdaptedReporter(self.result, test_adapt)
-
-        reporter_instance.addExpectedFailure(self.test, AssertionError)
-
-        self.assertEqual(True, reporter_instance.wasSuccessful())
-        self.assertEqual(self._getExpectedFailures(self.result), 1)
-
-
-    def test_unexpectedSuccessWithoutTodo(self):
-        """
-        Handles failures when called without a L{unittest.Todo}
-        """
-        def test_adapt(test):
-            return test
-        reporter_instance = reporter._AdaptedReporter(self.result, test_adapt)
-
-        reporter_instance.addUnexpectedSuccess(self.test)
-
-        self.assertEqual(True, reporter_instance.wasSuccessful())
-        self.assertEqual(self._getUnexpectedSuccesses(self.result), 1)
-
-
 
 class UncleanWarningTodoTests(TodoTests):
     """
@@ -797,14 +769,6 @@ class UncleanWarningTodoTests(TodoTests):
         inside of an unclean warnings reporter wrapper.
         """
         return len(result._originalReporter.unexpectedSuccesses)
-
-
-    def _getExpectedFailures(self, result):
-        """
-        Get the number of expected failures that happened to a reporter
-        inside of an unclean warnings reporter wrapper.
-        """
-        return len(result._originalReporter.expectedFailures)
 
 
 
@@ -1502,11 +1466,28 @@ class AdaptedReporterTests(unittest.SynchronousTestCase):
         self.assertWrapped(self.wrappedResult, self)
 
 
+    def test_expectedFailureWithoutTodo(self):
+        """
+        C{addExpectedFailure} works without a C{Todo}.
+        """
+        self.wrappedResult.addExpectedFailure(
+            self, self.getFailure(RuntimeError()))
+        self.assertWrapped(self.wrappedResult, self)
+
+
     def test_addUnexpectedSuccess(self):
         """
         C{addUnexpectedSuccess} wraps its test with the provided adapter.
         """
         self.wrappedResult.addUnexpectedSuccess(self, Todo("no reason"))
+        self.assertWrapped(self.wrappedResult, self)
+
+
+    def test_unexpectedSuccessWithoutTodo(self):
+        """
+        C{addUnexpectedSuccess} works without a C{Todo}.
+        """
+        self.wrappedResult.addUnexpectedSuccess(self)
         self.assertWrapped(self.wrappedResult, self)
 
 
