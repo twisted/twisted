@@ -644,14 +644,14 @@ class TodoTests(unittest.SynchronousTestCase):
         """
         Get the number of todos that happened to a reporter.
         """
-        return len(result.expectedFailures)
+        return result.expectedFailures
 
 
     def _getUnexpectedSuccesses(self, result):
         """
         Get the number of unexpected successes that happened to a reporter.
         """
-        return len(result.unexpectedSuccesses)
+        return result.unexpectedSuccesses
 
 
     def test_accumulation(self):
@@ -661,7 +661,7 @@ class TodoTests(unittest.SynchronousTestCase):
         """
         self.result.addExpectedFailure(self.test, Failure(Exception()),
                                        makeTodo('todo!'))
-        self.assertEqual(self._getTodos(self.result), 1)
+        self.assertEqual(len(self._getTodos(self.result)), 1)
 
 
     def test_success(self):
@@ -681,7 +681,7 @@ class TodoTests(unittest.SynchronousTestCase):
         """
         self.result.addUnexpectedSuccess(self.test, makeTodo("Heya!"))
         self.assertEqual(True, self.result.wasSuccessful())
-        self.assertEqual(self._getUnexpectedSuccesses(self.result), 1)
+        self.assertEqual(len(self._getUnexpectedSuccesses(self.result)), 1)
 
 
     def test_summary(self):
@@ -753,7 +753,7 @@ class UncleanWarningTodoTests(TodoTests):
         Get the number of todos that happened to a reporter inside of an
         unclean warnings reporter wrapper.
         """
-        return len(result._originalReporter.expectedFailures)
+        return result._originalReporter.expectedFailures
 
 
     def _getUnexpectedSuccesses(self, result):
@@ -761,7 +761,7 @@ class UncleanWarningTodoTests(TodoTests):
         Get the number of unexpected successes that happened to a reporter
         inside of an unclean warnings reporter wrapper.
         """
-        return len(result._originalReporter.unexpectedSuccesses)
+        return result._originalReporter.unexpectedSuccesses
 
 
 
