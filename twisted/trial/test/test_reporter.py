@@ -14,6 +14,8 @@ import re
 import sys
 
 from inspect import getmro
+from unittest import expectedFailure
+from unittest import TestCase as StdlibTestCase
 
 from twisted.python import log
 from twisted.python.failure import Failure
@@ -664,7 +666,7 @@ class TodoTests(unittest.SynchronousTestCase):
         self.assertEqual(len(self._getTodos(self.result)), 1)
 
 
-    def test_no_todo_provided(self):
+    def test_noTodoProvided(self):
         """
         If no C{Todo} is provided to C{addExpectedFailure}, then
         L{reporter.Reporter} makes up a sensible default.
@@ -699,7 +701,7 @@ class TodoTests(unittest.SynchronousTestCase):
         self.assertEqual(len(self._getUnexpectedSuccesses(self.result)), 1)
 
 
-    def test_unexpectedSuccess_no_todo(self):
+    def test_unexpectedSuccessNoTodo(self):
         """
         A test which is marked as todo but succeeds will have an unexpected
         success reported to its result. A test run is still successful even
@@ -764,6 +766,36 @@ class TodoTests(unittest.SynchronousTestCase):
         self.result.done()
         output = '\n'.join(self.stream.getvalue().splitlines()[3:]).strip()
         self.assertTrue(str(error) in output)
+
+
+    def test_standardLibraryCompatibilityFailure(self):
+        """
+        Tests that use the standard library C{expectedFailure} feature worth
+        with Trial reporters.
+        """
+        class Test(StdlibTestCase):
+            @expectedFailure
+            def test_fail(self):
+                self.fail('failure')
+
+        test = Test('test_fail')
+        test.run(self.result)
+        self.assertEqual(len(self._getTodos(self.result)), 1)
+
+
+    def test_standardLibraryCompatibilitySuccess(self):
+        """
+        Tests that use the standard library C{expectedFailure} feature worth
+        with Trial reporters.
+        """
+        class Test(StdlibTestCase):
+            @expectedFailure
+            def test_success(self):
+                pass
+
+        test = Test('test_success')
+        test.run(self.result)
+        self.assertEqual(len(self._getUnexpectedSuccesses(self.result)), 1)
 
 
 
