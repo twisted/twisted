@@ -652,6 +652,13 @@ class TodoTests(unittest.SynchronousTestCase):
         Get the number of unexpected successes that happened to a reporter.
         """
         return len(result.unexpectedSuccesses)
+    
+
+    def _getExpectedFailures(self, result):
+        """
+        Get the number of expected failures that happened to a reporter.
+        """
+        return len(result.expectedFailures)
 
 
     def test_accumulation(self):
@@ -737,6 +744,33 @@ class TodoTests(unittest.SynchronousTestCase):
         self.assertTrue(str(error) in output)
 
 
+    def test_expectedFailureWithoutTodo(self):
+        """
+        Handles failures when called without a L{unittest.Todo}
+        """
+        def test_adapt(test): return test
+        reporter_instance = reporter._AdaptedReporter(self.result, test_adapt)
+
+        reporter_instance.addExpectedFailure(self.test, AssertionError)
+
+        self.assertEqual(True, reporter_instance.wasSuccessful())
+        self.assertEqual(self._getExpectedFailures(self.result), 1)
+
+    def test_unexpectedSuccessWithoutTodo(self):
+        """
+        Handles failures when called without a L{unittest.Todo}
+        """
+        def test_adapt(test): return test
+        reporter_instance = reporter._AdaptedReporter(self.result, test_adapt)
+
+        reporter_instance.addUnexpectedSuccess(self.test)
+
+        self.assertEqual(True, reporter_instance.wasSuccessful())
+        self.assertEqual(self._getUnexpectedSuccesses(self.result), 1)
+
+
+
+
 
 class UncleanWarningTodoTests(TodoTests):
     """
@@ -762,7 +796,13 @@ class UncleanWarningTodoTests(TodoTests):
         inside of an unclean warnings reporter wrapper.
         """
         return len(result._originalReporter.unexpectedSuccesses)
-
+    
+    def _getExpectedFailures(self, result):
+        """
+        Get the number of expected failures that happened to a reporter
+        inside of an unclean warnings reporter wrapper.
+        """
+        return len(result._originalReporter.expectedFailures)
 
 
 class MockColorizer:

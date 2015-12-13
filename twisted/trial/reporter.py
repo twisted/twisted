@@ -26,6 +26,7 @@ from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
 from twisted.python.compat import _PY3, items
 from twisted.trial import itrial, util
+from twisted.trial.unittest import makeTodo
 
 try:
     from subunit import TestProtocolClient
@@ -286,10 +287,24 @@ class _AdaptedReporter(TestResultDecorator):
         return self._originalReporter.addError(test, error)
 
 
-    def addExpectedFailure(self, test, failure, todo):
+    def addExpectedFailure(self, test, failure, todo=None):
         """
         See L{itrial.IReporter}.
+
+        @type test: A L{pyunit.TestCase}.
+        @type failure: A L{failure.Failure} or L{exceptions.AssertionError}
+        @type todo: A L{unittest.Todo} or None
+
+        When C{todo} is C{None} a generic C{unittest.Todo} is built.
+
+        L{pyunit.TestCase}'s C{run()} calls this with 3 positional arguments
+        (without C{todo}).
         """
+        
+        if todo is None:
+            todo = makeTodo((failure, 'Test is expected to fail'))
+            failure = Failure(exc_value=failure)
+
         return self._originalReporter.addExpectedFailure(
             self.testAdapter(test), failure, todo)
 
@@ -310,11 +325,22 @@ class _AdaptedReporter(TestResultDecorator):
         return self._originalReporter.addSkip(test, skip)
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         See L{itrial.IReporter}.
+
+        @type test: A L{pyunit.TestCase}.
+        @type todo: A L{unittest.Todo} or None
+
+        When C{todo} is C{None} a generic C{unittest.Todo} is built.
+
+        L{pyunit.TestCase}'s C{run()} calls this with 2 positional arguments
+        (without C{todo}).
         """
+
         test = self.testAdapter(test)
+        if todo is None:
+            todo = makeTodo('Test unexpectedly passed')
         return self._originalReporter.addUnexpectedSuccess(test, todo)
 
 
