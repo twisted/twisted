@@ -300,7 +300,7 @@ class _AdaptedReporter(TestResultDecorator):
         L{pyunit.TestCase}'s C{run()} calls this with 3 positional arguments
         (without C{todo}).
         """
-        
+
         if todo is None:
             todo = makeTodo((failure, 'Test is expected to fail'))
             failure = Failure(exc_value=failure)
