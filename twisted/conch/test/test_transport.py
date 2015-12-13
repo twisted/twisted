@@ -13,19 +13,19 @@ except ImportError:
     pyasn1 = None
 
 try:
-    import Crypto.Cipher.DES3
+    import cryptography
 except ImportError:
-    Crypto = None
+    cryptography = None
 
-if pyasn1 is not None and Crypto is not None:
+if pyasn1 is not None and cryptography is not None:
     dependencySkip = None
     from twisted.conch.ssh import transport, keys, factory
     from twisted.conch.test import keydata
 else:
     if pyasn1 is None:
         dependencySkip = "Cannot run without PyASN1"
-    elif Crypto is None:
-        dependencySkip = "can't run w/o PyCrypto"
+    elif cryptography is None:
+        dependencySkip = "can't run without cryptography"
 
     class transport: # fictional modules to make classes work
         class SSHTransportBase: pass
@@ -314,14 +314,14 @@ class MockOldFactoryPublicKeys(MockFactory):
 
 class MockOldFactoryPrivateKeys(MockFactory):
     """
-    The old SSHFactory returned mappings from key names to PyCrypto key
+    The old SSHFactory returned mappings from key names to cryptography key
     objects from getPrivateKeys().  We return those here for testing.
     """
 
 
     def getPrivateKeys(self):
         """
-        We used to map key types to PyCrypto key objects.
+        We used to map key types to cryptography key objects.
         """
         keys = MockFactory.getPrivateKeys(self)
         for name, key  in keys.items()[:]:
@@ -2137,12 +2137,12 @@ class SSHCiphersTests(unittest.TestCase):
         """
         ciphers = transport.SSHCiphers('A', 'B', 'C', 'D')
         iv = key = '\x00' * 16
-        for cipName, (modName, keySize, counter) in ciphers.cipherMap.items():
+        for cipName, (algorithmClass, keySize, counter) in ciphers.cipherMap.items():
             cip = ciphers._getCipher(cipName, iv, key)
             if cipName == 'none':
                 self.assertIsInstance(cip, transport._DummyCipher)
             else:
-                self.assertTrue(getClass(cip).__name__.startswith(modName))
+                self.assertIsInstance(cip.algorithm, algorithmClass)
 
 
     def test_setKeysCiphers(self):
@@ -2155,15 +2155,14 @@ class SSHCiphersTests(unittest.TestCase):
             encCipher = transport.SSHCiphers(cipName, 'none', 'none', 'none')
             decCipher = transport.SSHCiphers('none', cipName, 'none', 'none')
             cip = encCipher._getCipher(cipName, key, key)
-            bs = cip.block_size
+            bs = cip.algorithm.block_size // 8
             encCipher.setKeys(key, key, '', '', '', '')
             decCipher.setKeys('', '', key, key, '', '')
             self.assertEqual(encCipher.encBlockSize, bs)
             self.assertEqual(decCipher.decBlockSize, bs)
-            enc = cip.encrypt(key[:bs])
-            enc2 = cip.encrypt(key[:bs])
-            if counter:
-                self.assertNotEqual(enc, enc2)
+            encryptor = cip.encryptor()
+            enc = encryptor.update(key[:bs])
+            enc2 = encryptor.update(key[:bs])
             self.assertEqual(encCipher.encrypt(key[:bs]), enc)
             self.assertEqual(encCipher.encrypt(key[:bs]), enc2)
             self.assertEqual(decCipher.decrypt(enc), key[:bs])
@@ -2221,35 +2220,6 @@ class SSHCiphersTests(unittest.TestCase):
             self.assertEqual(
                 mac, outMAC.makeMAC(seqid, shortened).encode("hex"),
                 "Failed HMAC test vector; key=%r data=%r" % (key, data))
-
-
-
-class CounterTests(unittest.TestCase):
-    """
-    Tests for the _Counter helper class.
-    """
-    if dependencySkip:
-        skip = dependencySkip
-
-    def test_init(self):
-        """
-        Test that the counter is initialized correctly.
-        """
-        counter = transport._Counter('\x00' * 8 + '\xff' * 8, 8)
-        self.assertEqual(counter.blockSize, 8)
-        self.assertEqual(counter.count.tostring(), '\x00' * 8)
-
-
-    def test_count(self):
-        """
-        Test that the counter counts incrementally and wraps at the top.
-        """
-        counter = transport._Counter('\x00', 1)
-        self.assertEqual(counter(), '\x01')
-        self.assertEqual(counter(), '\x02')
-        [counter() for i in range(252)]
-        self.assertEqual(counter(), '\xff')
-        self.assertEqual(counter(), '\x00')
 
 
 

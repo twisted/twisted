@@ -8,9 +8,9 @@ Tests for L{twisted.conch.ssh}.
 import struct
 
 try:
-    import Crypto.Cipher.DES3
+    import cryptography
 except ImportError:
-    Crypto = None
+    cryptography = None
 
 try:
     import pyasn1
@@ -302,20 +302,10 @@ class SuperEchoTransport:
         self.proto.processEnded(failure.Failure(ProcessTerminated(0, None, None)))
 
 
-if Crypto is not None and pyasn1 is not None:
+if cryptography is not None and pyasn1 is not None:
     from twisted.conch import checkers
     from twisted.conch.ssh import channel, connection, factory, keys
     from twisted.conch.ssh import transport, userauth
-
-    class UtilityTests(unittest.TestCase):
-        def testCounter(self):
-            c = transport._Counter('\x00\x00', 2)
-            for i in xrange(256 * 256):
-                self.assertEqual(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
-            # It should wrap around, too.
-            for i in xrange(256 * 256):
-                self.assertEqual(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
-
 
     class ConchTestPasswordChecker:
         credentialInterfaces = checkers.IUsernamePassword,
@@ -549,8 +539,8 @@ class SSHProtocolTests(unittest.TestCase):
     L{SSHClientTransport}.
     """
 
-    if not Crypto:
-        skip = "can't run w/o PyCrypto"
+    if not cryptography:
+        skip = "can't run without cryptography"
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"
@@ -838,8 +828,8 @@ class SSHProtocolTests(unittest.TestCase):
 
 class SSHFactoryTests(unittest.TestCase):
 
-    if not Crypto:
-        skip = "can't run w/o PyCrypto"
+    if not cryptography:
+        skip = "can't run without cryptography"
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"
@@ -917,8 +907,8 @@ class MPTests(unittest.TestCase):
     """
     getMP = staticmethod(common.getMP)
 
-    if not Crypto:
-        skip = "can't run w/o PyCrypto"
+    if not cryptography:
+        skip = "can't run without cryptography"
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"

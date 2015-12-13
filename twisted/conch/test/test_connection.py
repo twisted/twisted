@@ -186,7 +186,7 @@ class TestConnection(connection.SSHConnection):
 class ConnectionTests(unittest.TestCase):
 
     if test_userauth.transport is None:
-        skip = "Cannot run without both PyCrypto and pyasn1"
+        skip = "Cannot run without both cryptography and pyasn1"
 
     def setUp(self):
         self.transport = test_userauth.FakeTransport(None)
@@ -705,7 +705,7 @@ class CleanConnectionShutdownTests(unittest.TestCase):
     Check whether correct cleanup is performed on connection shutdown.
     """
     if test_userauth.transport is None:
-        skip = "Cannot run without both PyCrypto and pyasn1"
+        skip = "Cannot run without both cryptography and pyasn1"
 
     def setUp(self):
         self.transport = test_userauth.FakeTransport(None)

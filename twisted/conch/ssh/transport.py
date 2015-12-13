@@ -13,23 +13,24 @@ Maintainer: Paul Swartz
 # base library imports
 import struct
 import zlib
-import array
 from hashlib import md5, sha1, sha256, sha512
 import string
 import hmac
 
 # external library imports
-from Crypto import Util
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 
 # twisted imports
 from twisted.internet import protocol, defer
-
 from twisted.python import log, randbytes
 
 
 # sibling imports
-from twisted.conch.ssh import address, _kex, keys
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, _MPpow, ffs
+from twisted.conch.ssh import address, keys, _kex
+from twisted.conch.ssh.common import (
+    NS, getNS, MP, getMP, _MPpow, ffs, bytes_to_int
+)
 
 
 def _getRandomNumber(random, bits):
@@ -47,7 +48,7 @@ def _getRandomNumber(random, bits):
     if bits % 8:
         raise ValueError("bits (%d) must be a multiple of 8" % (bits,))
     bytes = random(bits / 8)
-    result = Util.number.bytes_to_long(bytes)
+    result = bytes_to_int(bytes)
     return result
 
 
@@ -1036,7 +1037,7 @@ class SSHServerTransport(SSHTransportBase):
         # TODO: This could be computed when self.p is set up
         #  or do as openssh does and scan f for a single '1' bit instead
 
-        pSize = Util.number.size(self.p)
+        pSize = int.bit_length(self.p)
         y = _getRandomNumber(randbytes.secureRandom, pSize)
 
         serverDHpublicKey = _MPpow(self.g, y, self.p)
@@ -1403,21 +1404,32 @@ class SSHClientTransport(SSHTransportBase):
 
 
 
-class _DummyCipher:
+class _NullEncryptionContext(object):
+    def update(self, data):
+        return data
+
+
+class _DummyAlgorithm(object):
+    block_size = 64
+
+
+class _DummyCipher(object):
     """
     A cipher for the none encryption method.
 
     @ivar block_size: the block size of the encryption.  In the case of the
     none cipher, this is 8 bytes.
     """
-    block_size = 8
+    algorithm = _DummyAlgorithm()
 
 
-    def encrypt(self, x):
-        return x
+    def encryptor(self):
+        return _NullEncryptionContext()
 
 
-    decrypt = encrypt
+    def decryptor(self):
+        return _NullEncryptionContext()
+
 
 
 class SSHCiphers:
@@ -1426,7 +1438,8 @@ class SSHCiphers:
     to encrypt and authenticate the SSH connection.
 
     @cvar cipherMap: A dictionary mapping SSH encryption names to 3-tuples of
-                     (<Crypto.Cipher.* name>, <block size>, <is counter mode>)
+                     (<cryptography.hazmat.primitives.interfaces.CipherAlgorithm>,
+                      <block size>, <cryptography.hazmat.primitives.interfaces.Mode>)
     @cvar macMap: A dictionary mapping SSH MAC names to hash modules.
 
     @ivar outCipType: the string type of the outgoing cipher.
@@ -1442,19 +1455,19 @@ class SSHCiphers:
     """
 
     cipherMap = {
-        '3des-cbc': ('DES3', 24, False),
-        'blowfish-cbc': ('Blowfish', 16, False),
-        'aes256-cbc': ('AES', 32, False),
-        'aes192-cbc': ('AES', 24, False),
-        'aes128-cbc': ('AES', 16, False),
-        'cast128-cbc': ('CAST', 16, False),
-        'aes128-ctr': ('AES', 16, True),
-        'aes192-ctr': ('AES', 24, True),
-        'aes256-ctr': ('AES', 32, True),
-        '3des-ctr': ('DES3', 24, True),
-        'blowfish-ctr': ('Blowfish', 16, True),
-        'cast128-ctr': ('CAST', 16, True),
-        'none': (None, 0, False),
+        '3des-cbc': (algorithms.TripleDES, 24, modes.CBC),
+        'blowfish-cbc': (algorithms.Blowfish, 16, modes.CBC),
+        'aes256-cbc': (algorithms.AES, 32, modes.CBC),
+        'aes192-cbc': (algorithms.AES, 24, modes.CBC),
+        'aes128-cbc': (algorithms.AES, 16, modes.CBC),
+        'cast128-cbc': (algorithms.CAST5, 16, modes.CBC),
+        'aes128-ctr': (algorithms.AES, 16, modes.CTR),
+        'aes192-ctr': (algorithms.AES, 24, modes.CTR),
+        'aes256-ctr': (algorithms.AES, 32, modes.CTR),
+        '3des-ctr': (algorithms.TripleDES, 24, modes.CTR),
+        'blowfish-ctr': (algorithms.Blowfish, 16, modes.CTR),
+        'cast128-ctr': (algorithms.CAST5, 16, modes.CTR),
+        'none': (None, 0, modes.CBC),
     }
     macMap = {
         'hmac-sha2-512': sha512,
@@ -1489,11 +1502,11 @@ class SSHCiphers:
         @param inInteg: the incoming integrity key.
         """
         o = self._getCipher(self.outCipType, outIV, outKey)
-        self.encrypt = o.encrypt
-        self.encBlockSize = o.block_size
+        self.encryptor = o.encryptor()
+        self.encBlockSize = o.algorithm.block_size // 8
         o = self._getCipher(self.inCipType, inIV, inKey)
-        self.decrypt = o.decrypt
-        self.decBlockSize = o.block_size
+        self.decryptor = o.decryptor()
+        self.decBlockSize = o.algorithm.block_size // 8
         self.outMAC = self._getMAC(self.outMACType, outInteg)
         self.inMAC = self._getMAC(self.inMACType, inInteg)
         if self.inMAC:
@@ -1504,19 +1517,20 @@ class SSHCiphers:
         """
         Creates an initialized cipher object.
 
-        @param cip: the name of the cipher: maps into Crypto.Cipher.*
+        @param cip: the name of the cipher, maps into cipherMap
         @param iv: the initialzation vector
         @param key: the encryption key
         """
-        modName, keySize, counterMode = self.cipherMap[cip]
-        if not modName: # no cipher
+        algorithmClass, keySize, modeClass = self.cipherMap[cip]
+        # no cipher
+        if algorithmClass is None:
             return _DummyCipher()
-        mod = __import__('Crypto.Cipher.%s'%modName, {}, {}, 'x')
-        if counterMode:
-            return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size],
-                           counter=_Counter(iv, mod.block_size))
-        else:
-            return mod.new(key[:keySize], mod.MODE_CBC, iv[:mod.block_size])
+
+        return Cipher(
+            algorithmClass(key[:keySize]),
+            modeClass(iv[:algorithmClass.block_size // 8]),
+            backend=default_backend(),
+        )
 
 
     def _getMAC(self, mac, key):
@@ -1552,21 +1566,20 @@ class SSHCiphers:
 
     def encrypt(self, blocks):
         """
-        Encrypt blocks.  Overridden by the encrypt method of a
-        Crypto.Cipher.* object in setKeys().
+        Encrypt blocks.
 
-        @type blocks: C{str}
+        @type blocks: C{bytes}
         """
-        raise NotImplementedError()
+        return self.encryptor.update(blocks)
 
 
     def decrypt(self, blocks):
         """
-        Decrypt blocks.  See encrypt().
+        Decrypt blocks.
 
-        @type blocks: C{str}
+        @type blocks: C{bytes}
         """
-        raise NotImplementedError()
+        return self.decryptor.update(blocks)
 
 
     def makeMAC(self, seqid, data):
@@ -1604,46 +1617,6 @@ class SSHCiphers:
         data = struct.pack('>L', seqid) + data
         outer = hmac.HMAC(self.inMAC.key, data, self.inMAC[0]).digest()
         return mac == outer
-
-
-class _Counter:
-    """
-    Stateful counter which returns results packed in a byte string
-    """
-
-
-    def __init__(self, initialVector, blockSize):
-        """
-        @type initialVector: C{str}
-        @param initialVector: A byte string representing the initial counter
-                              value.
-        @type blockSize: C{int}
-        @param blockSize: The length of the output buffer, as well as the
-        number of bytes at the beginning of C{initialVector} to consider.
-        """
-        initialVector = initialVector[:blockSize]
-        self.count = getMP('\xff\xff\xff\xff' + initialVector)[0]
-        self.blockSize = blockSize
-        self.count = Util.number.long_to_bytes(self.count - 1)
-        self.count = '\x00' * (self.blockSize - len(self.count)) + self.count
-        self.count = array.array('c', self.count)
-        self.len = len(self.count) - 1
-
-
-    def __call__(self):
-        """
-        Increment the counter and return the new value.
-        """
-        i = self.len
-        while i > -1:
-            self.count[i] = n = chr((ord(self.count[i]) + 1) % 256)
-            if n == '\x00':
-                i -= 1
-            else:
-                return self.count.tostring()
-
-        self.count = array.array('c', '\x00' * self.blockSize)
-        return self.count.tostring()
 
 
 

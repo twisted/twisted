@@ -31,7 +31,7 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
 
-if requireModule('Crypto.Cipher.AES') and requireModule('pyasn1.type'):
+if requireModule('cryptography') and requireModule('pyasn1.type'):
     from twisted.conch.ssh.factory import SSHFactory
     from twisted.conch.ssh.userauth import SSHUserAuthServer
     from twisted.conch.ssh.connection import SSHConnection
@@ -52,7 +52,7 @@ if requireModule('Crypto.Cipher.AES') and requireModule('pyasn1.type'):
 
     from twisted.conch.ssh.transport import SSHClientTransport
 else:
-    skip = "can't run w/o PyCrypto and pyasn1"
+    skip = "can't run w/o cryptography and pyasn1"
     SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
         SSHAgentServer = KnownHostsFile = SSHPublicKeyChecker = ConchUser = \
         object

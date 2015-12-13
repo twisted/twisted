@@ -73,7 +73,7 @@ def test_genZshFunction(self, cmdName, optionsFQPN):
     self.patch(usage.Options, '_shellCompFile', outputFile)
 
     # some scripts won't import or instantiate because of missing
-    # dependencies (PyCrypto, etc) so we have to skip them.
+    # dependencies (pyOpenSSL, etc) so we have to skip them.
     try:
         o = reflect.namedAny(optionsFQPN)()
     except Exception, e:

@@ -30,14 +30,14 @@ from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
 from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 from twisted.test.test_process import MockOS
 
-if requireModule('Crypto.Cipher.DES3') and requireModule('pyasn1'):
+if requireModule('cryptography') and requireModule('pyasn1'):
     dependencySkip = None
     from twisted.conch.ssh import keys
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.test import keydata
 else:
-    dependencySkip = "can't run without Crypto and PyASN1"
+    dependencySkip = "can't run without cryptography and PyASN1"
 
 if getattr(os, 'geteuid', None) is None:
     euidSkip = "Cannot run without effective UIDs (questionable)"

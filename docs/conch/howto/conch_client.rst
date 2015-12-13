@@ -319,23 +319,19 @@ supplied. ``getPassword()`` asks for a
 password, ``getPublicKey()`` and ``getPrivateKey()`` get public and private keys,
 respectively. ``getPassword()`` returns
 a ``Deferred`` that is called back with
-the password to use. ``getPublicKey()`` 
-returns the SSH key data for the public key to use. ``keys.Key.fromString()`` will take
-a key in OpenSSH or LSH format as a string, and convert it to the
-required format. Alternatively, ``keys.Key.fromFile()`` can be used instead, which
-will take the filename of a key in OpenSSH and LSH format, and 
-convert it to the required format. ``getPrivateKey()`` 
-returns a ``Deferred`` which is
-called back with the key object (as used in PyCrypto) for
-the private key. ``getPassword()`` 
-and ``getPrivateKey()`` return ``Deferreds`` because they may need to ask the user
-for input.
+the password to use.
 
+``getPublicKey()`` returns the SSH key data for the public key to use.
+:api:`Key <twisted.conch.ssh.keys.Key.fromString()>` will take a key in OpenSSH, LSH or any supported format, as a string, and generate a new :api:`Key <twisted.conch.ssh.keys.Key>`.
+Alternatively, ``keys.Key.fromFile()`` can be used instead, which
+will take the filename of a key in the supported format, and  and generate a new  :api:`Key <twisted.conch.ssh.keys.Key>`.
 
+``getPrivateKey()`` returns a ``Deferred`` which is called back with the private :api:`Key <twisted.conch.ssh.keys.Key>`.
 
+``getPassword()`` and ``getPrivateKey()`` return ``Deferreds`` because they may need to ask the user for input.
 
 Once the authentication is complete, ``SSHUserAuthClient`` takes care of starting the code ``SSHConnection`` object given to it. Next, we'll
-look at how to use the ``SSHConnection`` 
+look at how to use the ``SSHConnection``
 
 
 

@@ -32,7 +32,7 @@ The following optional dependencies are supported:
 * **conch** - packages for working with conch/SSH.
     * `gmpy`_
     * `pyasn1`_
-    * `pycrypto`_
+    * `cryptography`_
 
 * **soap** - the `SOAPpy`_ package to work with SOAP.
 
@@ -55,7 +55,7 @@ The following optional dependencies are supported:
 .. _service_identity: https://pypi.python.org/pypi/service_identity
 .. _gmpy: https://pypi.python.org/pypi/gmpy/1.17
 .. _pyasn1: https://pypi.python.org/pypi/pyasn1
-.. _pycrypto: https://pypi.python.org/pypi/pycrypto
+.. _cryptography: https://pypi.python.org/pypi/cryptography
 .. _SOAPpy: https://pypi.python.org/pypi/SOAPpy
 .. _pyserial: https://pypi.python.org/pypi/pyserial
 .. _pyobjc: https://pypi.python.org/pypi/pyobjc
