@@ -307,11 +307,6 @@ class _AdaptedReporter(TestResultDecorator):
         L{pyunit.TestCase}'s C{run()} calls this with 3 positional arguments
         (without C{todo}).
         """
-
-        if todo is None:
-            todo = makeTodo((failure, 'Test is expected to fail'))
-            failure = Failure(exc_value=failure)
-
         return self._originalReporter.addExpectedFailure(
             self.testAdapter(test), failure, todo)
 
@@ -344,10 +339,7 @@ class _AdaptedReporter(TestResultDecorator):
         L{pyunit.TestCase}'s C{run()} calls this with 2 positional arguments
         (without C{todo}).
         """
-
         test = self.testAdapter(test)
-        if todo is None:
-            todo = makeTodo('Test unexpectedly passed')
         return self._originalReporter.addUnexpectedSuccess(test, todo)
 
 
