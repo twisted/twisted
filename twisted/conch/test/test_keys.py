@@ -96,6 +96,8 @@ class ObjectTypeTests(unittest.TestCase):
     Unit tests for the objectType method.
     """
 
+    if cryptography is None:
+        skip = skipCryptography
     if Crypto is None:
         skip = "Cannot run without PyCrypto."
     if _PY3:
