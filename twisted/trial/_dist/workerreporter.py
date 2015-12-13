@@ -22,6 +22,8 @@ class WorkerReporter(TestResult):
     stream, but through an C{AMP} protocol's C{callRemote} method.
     """
 
+    _DEFAULT_TODO = 'Test expected to fail'
+
     def __init__(self, ampProtocol):
         """
         @param ampProtocol: The communication channel with the trial
@@ -97,7 +99,19 @@ class WorkerReporter(TestResult):
                                     testName=test.id(), reason=str(reason))
 
 
-    def addExpectedFailure(self, test, error, todo):
+    def _getTodoReason(self, todo):
+        """
+        Get the reason for a C{Todo}.
+
+        If C[todo} is C{None}, return a sensible default.
+        """
+        if todo is None:
+            return self._DEFAULT_TODO
+        else:
+            return todo.reason
+
+
+    def addExpectedFailure(self, test, error, todo=None):
         """
         Send an expected failure over.
         """
@@ -105,16 +119,17 @@ class WorkerReporter(TestResult):
         self.ampProtocol.callRemote(managercommands.AddExpectedFailure,
                                     testName=test.id(),
                                     error=error.getErrorMessage(),
-                                    todo=todo.reason)
+                                    todo=self._getTodoReason(todo))
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         Send an unexpected success over.
         """
         super(WorkerReporter, self).addUnexpectedSuccess(test, todo)
         self.ampProtocol.callRemote(managercommands.AddUnexpectedSuccess,
-                                    testName=test.id(), todo=todo.reason)
+                                    testName=test.id(),
+                                    todo=self._getTodoReason(todo))
 
 
     def printSummary(self):
