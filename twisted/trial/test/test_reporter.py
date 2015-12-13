@@ -654,13 +654,6 @@ class TodoTests(unittest.SynchronousTestCase):
         return len(result.unexpectedSuccesses)
 
 
-    def _getExpectedFailures(self, result):
-        """
-        Get the number of expected failures that happened to a reporter.
-        """
-        return len(result.expectedFailures)
-
-
     def test_accumulation(self):
         """
         L{reporter.Reporter} accumulates the expected failures that it
