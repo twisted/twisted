@@ -7,11 +7,17 @@ Unit tests for L{twisted.python.constants}.
 
 from __future__ import division, absolute_import
 
+import imp
+import warnings
+
+from twisted.python import reflect
 from twisted.trial.unittest import TestCase
 
-from twisted.python.constants import (
-    NamedConstant, Names, ValueConstant, Values, FlagConstant, Flags
-)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
+    from twisted.python.constants import (
+        NamedConstant, Names, ValueConstant, Values, FlagConstant, Flags
+    )
 
 
 
@@ -1126,3 +1132,22 @@ class PizzaToppings(Flags):
     mozzarella = FlagConstant(1 << 1)
     pesto      = FlagConstant(1 << 4)
     pepperoni  = FlagConstant(1 << 2)
+
+
+
+class ConstantsDeprecationTests(TestCase):
+    """
+    L{twisted.python.constants} is deprecated.
+    """
+    def test_constantsDeprecation(self):
+        """
+        L{twisted.python.constants} is deprecated since Twisted 16.0.
+        """
+        imp.reload(reflect.namedAny("twisted.python.constants"))
+
+        warningsShown = self.flushWarnings([self.test_constantsDeprecation])
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            ("twisted.python.constants is deprecated since Twisted 16.0. "
+             "Please use constantly from PyPI instead."),
+            warningsShown[0]['message'])
