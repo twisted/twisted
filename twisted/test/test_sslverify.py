@@ -731,6 +731,44 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
 
 
+    def test_constructorDoesNotAllowGetPeerCertificateWithVerify(self):
+        """
+        C{getPeerCertificate} with verify is redundant and should be rejected.
+        """
+        self.assertRaises(
+            TypeError,
+            sslverify.OpenSSLCertificateOptions,
+            verify=True,
+            getPeerCertificate=True
+        )
+
+
+    def test_constructorDoesNotAllowGetPeerCertificateWithCACerts(self):
+        """
+        C{getPeerCertificate} with C{caCerts} is incorrect and should be
+        rejected.
+        """
+        self.assertRaises(
+            TypeError,
+            sslverify.OpenSSLCertificateOptions,
+            caCerts=self.caCerts,
+            getPeerCertificate=True
+        )
+
+
+    def test_constructorDoesNotAllowGetPeerCertificateWithTrustRoot(self):
+        """
+        C{getPeerCertificate} with C{trustRoot} doesn't make sense and should
+        be rejected.
+        """
+        self.assertRaises(
+            TypeError,
+            sslverify.OpenSSLCertificateOptions,
+            trustRoot=None,
+            getPeerCertificate=True
+        )
+
+
     def test_extraChainFilesAreAddedIfSupplied(self):
         """
         If C{extraCertChain} is set and all prerequisites are met, the

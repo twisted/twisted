@@ -2665,7 +2665,7 @@ class ServerStringSSLTests(unittest.TestCase):
             .format(escapedPEMPathName, escapedPEMPathName)
         )
         cf = server._sslContextFactory
-        self.assertTrue(cf._getClientCertificate)
+        self.assertTrue(cf._getPeerCertificate)
 
     def test_getClientCertificateNo(self):
         """
@@ -2679,7 +2679,7 @@ class ServerStringSSLTests(unittest.TestCase):
             .format(escapedPEMPathName, escapedPEMPathName)
         )
         cf = server._sslContextFactory
-        self.assertFalse(cf._getClientCertificate)
+        self.assertFalse(cf._getPeerCertificate)
 
     def test_getClientCertificateTrue(self):
         """
@@ -2693,7 +2693,7 @@ class ServerStringSSLTests(unittest.TestCase):
             .format(escapedPEMPathName, escapedPEMPathName)
         )
         cf = server._sslContextFactory
-        self.assertTrue(cf._getClientCertificate)
+        self.assertTrue(cf._getPeerCertificate)
 
     def test_getClientCertificateFalse(self):
         """
@@ -2707,7 +2707,7 @@ class ServerStringSSLTests(unittest.TestCase):
             .format(escapedPEMPathName, escapedPEMPathName)
         )
         cf = server._sslContextFactory
-        self.assertFalse(cf._getClientCertificate)
+        self.assertFalse(cf._getPeerCertificate)
 
     def test_getClientCertificateJunk(self):
         """
