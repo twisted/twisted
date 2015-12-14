@@ -169,27 +169,33 @@ class IReporter(zi.Interface):
         """
 
 
-    def addExpectedFailure(test, failure, todo):
+    def addExpectedFailure(test, failure, todo=None):
         """
         Record that the given test failed, and was expected to do so.
+
+        In Twisted 15.5 and prior, C{todo} was a mandatory parameter.
 
         @type test: L{pyunit.TestCase}
         @param test: The test which this is about.
         @type error: L{failure.Failure}
         @param error: The error which this test failed with.
         @type todo: L{unittest.Todo}
-        @param todo: The reason for the test's TODO status.
+        @param todo: The reason for the test's TODO status. If C{None}, a
+            generic reason is used.
         """
 
 
-    def addUnexpectedSuccess(test, todo):
+    def addUnexpectedSuccess(test, todo=None):
         """
         Record that the given test failed, and was expected to do so.
+
+        In Twisted 15.5 and prior, C{todo} was a mandatory parameter.
 
         @type test: L{pyunit.TestCase}
         @param test: The test which this is about.
         @type todo: L{unittest.Todo}
-        @param todo: The reason for the test's TODO status.
+        @param todo: The reason for the test's TODO status. If C{None}, a
+            generic reason is used.
         """
 
 
