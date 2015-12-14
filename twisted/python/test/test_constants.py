@@ -1143,11 +1143,11 @@ class ConstantsDeprecationTests(TestCase):
         """
         L{twisted.python.constants} is deprecated since Twisted 16.0.
         """
-        imp.reload(reflect.namedAny("twisted.python.constants"))
+        from twisted.python import constants
 
         warningsShown = self.flushWarnings([self.test_constantsDeprecation])
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
-            ("twisted.python.constants is deprecated since Twisted 16.0. "
+            ("twisted.python.constants was deprecated in Twisted 16.0.0: "
              "Please use constantly from PyPI instead."),
             warningsShown[0]['message'])
