@@ -644,14 +644,14 @@ class TodoTests(unittest.SynchronousTestCase):
 
     def _getTodos(self, result):
         """
-        Get the number of todos that happened to a reporter.
+        Get the expected failures that happened to a reporter.
         """
         return result.expectedFailures
 
 
     def _getUnexpectedSuccesses(self, result):
         """
-        Get the number of unexpected successes that happened to a reporter.
+        Get the unexpected successes that happened to a reporter.
         """
         return result.unexpectedSuccesses
 
@@ -811,8 +811,8 @@ class UncleanWarningTodoTests(TodoTests):
 
     def _getTodos(self, result):
         """
-        Get the number of todos that happened to a reporter inside of an
-        unclean warnings reporter wrapper.
+        Get the  todos that happened to a reporter inside of an unclean
+        warnings reporter wrapper.
         """
         return result._originalReporter.expectedFailures
 
