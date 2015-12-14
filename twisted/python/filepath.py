@@ -1411,14 +1411,14 @@ class FilePath(AbstractFilePath):
         self.changed()
 
 
-    def makedirs(self, ignoreExistingDirectories=False):
+    def makedirs(self, ignoreExistingDirectory=False):
         """
         Create all directories not yet existing in C{path} segments, using
         L{os.makedirs}.
 
-        @param ignoreExistingDirectories: Don't raise L{OSError} if directory
+        @param ignoreExistingDirectory: Don't raise L{OSError} if directory
             already exists.
-        @type ignoreExistingDirectories: L{bool}
+        @type ignoreExistingDirectory: L{bool}
 
         @return: C{None}
         """
@@ -1427,7 +1427,7 @@ class FilePath(AbstractFilePath):
         except OSError as e:
             if not (
                 e.errno == errno.EEXIST and
-                ignoreExistingDirectories and
+                ignoreExistingDirectory and
                     self.isdir()):
                 raise
 
