@@ -733,7 +733,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
 
     def test_constructorDoesNotAllowGetPeerCertificateWithVerify(self):
         """
-        C{getPeerCertificate} with verify is redundant and should be rejected.
+        C{getPeerCertificate} with C{verify} is redundant and is rejected.
         """
         self.assertRaises(
             TypeError,
@@ -745,8 +745,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
 
     def test_constructorDoesNotAllowGetPeerCertificateWithCACerts(self):
         """
-        C{getPeerCertificate} with C{caCerts} is incorrect and should be
-        rejected.
+        C{getPeerCertificate} with C{caCerts} is incorrect and is rejected.
         """
         self.assertRaises(
             TypeError,

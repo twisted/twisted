@@ -1623,7 +1623,7 @@ class OpenSSLCertificateOptions(object):
             verifyFlags = SSL.VERIFY_PEER
 
         def verifyCallback(conn, cert, errno, depth, preverify_ok):
-            if certOpts._getPeerCertificate:
+            if self._getPeerCertificate:
                 # Accept any certificate as we don't do validation at this
                 # stage.
                 return True
