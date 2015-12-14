@@ -35,28 +35,25 @@ def main(args):
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
-    setup_args = {}
-    requirements = ["zope.interface >= 3.6.0"]
-
-    setup_args['install_requires'] = requirements
-    setup_args['include_package_data'] = True
-    setup_args['zip_safe'] = False
-
     from twisted.python.dist import (
         STATIC_PACKAGE_METADATA, getDataFiles, getExtensions, getScripts,
         getPackages, setup, _EXTRAS_REQUIRE)
 
-    scripts = getScripts()
+    args = STATIC_PACKAGE_METADATA.copy()
+    args['install_requires'] = ["zope.interface >= 3.6.0",
+                                "constantly >= 15.1.0"]
+    args['include_package_data'] = True
+    args['zip_safe'] = False
 
-    setup_args.update(dict(
+    args.update(dict(
         packages=getPackages('twisted'),
         conditionalExtensions=getExtensions(),
-        scripts=scripts,
+        scripts=getScripts(),
         extras_require=_EXTRAS_REQUIRE,
-        data_files=getDataFiles('twisted'),
-        **STATIC_PACKAGE_METADATA))
+        data_files=getDataFiles('twisted')
+    ))
 
-    setup(**setup_args)
+    setup(**args)
 
 
 if __name__ == "__main__":

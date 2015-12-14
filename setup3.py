@@ -39,7 +39,8 @@ def main():
 
     _dataFiles = _processDataFileList(testDataFiles)
     args = STATIC_PACKAGE_METADATA.copy()
-    args['install_requires'] = ["zope.interface >= 4.0.2"]
+    args['install_requires'] = ["zope.interface >= 4.0.2",
+                                "constantly >= 15.1.0"]
     args['py_modules'] = modulesToInstall
     args['data_files'] = getDataFiles('twisted') + _dataFiles
     args['zip_safe'] = False
