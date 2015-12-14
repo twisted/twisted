@@ -1132,8 +1132,9 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         )
 
     if getClientCertificate is not None:
-        kw["getPeerCertificate"] = _valueToBool("getClientCertificate",
-                                                  getClientCertificate)
+        kw["getPeerCertificate"] = _valueToBool(
+            optionName="getClientCertificate",
+            value=getClientCertificate)
 
     cf = ssl.CertificateOptions(
         privateKey=privateCertificate.privateKey.original,
@@ -1147,9 +1148,13 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
 
 
 
-def _valueToBool(keyName, value):
+def _valueToBool(optionName, value):
     """
     Helper for C{bool} parsing.
+
+
+    @param optionName: The name of the option which is parsed.
+    @type optionName: C{str}
 
     @param value: The value which needs to be converted.
     @type value: C{str}
@@ -1165,7 +1170,7 @@ def _valueToBool(keyName, value):
         return False
 
     raise ValueError(
-        "The value of {} must be a yes/no value.".format(keyName))
+        "The value of {} must be a yes/no value.".format(optionName))
 
 
 

@@ -1622,17 +1622,14 @@ class OpenSSLCertificateOptions(object):
         elif self._getPeerCertificate:
             verifyFlags = SSL.VERIFY_PEER
 
-        def _verifyCallbackWrapper(certOpts):
-            def _verifyCallback(conn, cert, errno, depth, preverify_ok):
-                if certOpts._getPeerCertificate:
-                    # Accept any certificate as we don't do validation at this
-                    # stage.
-                    return True
-
-                # Accept the default validation.
-                return preverify_ok
-            return _verifyCallback
-        ctx.set_verify(verifyFlags, _verifyCallbackWrapper(self))
+        def verifyCallback(conn, cert, errno, depth, preverify_ok):
+            if certOpts._getPeerCertificate:
+                # Accept any certificate as we don't do validation at this
+                # stage.
+                return True
+            # Accept the default validation.
+            return preverify_ok
+        ctx.set_verify(verifyFlags, verifyCallback)
 
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
