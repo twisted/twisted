@@ -393,7 +393,7 @@ class _CommandTransport(SSHClientTransport):
     @ivar _userauth: The L{_UserAuth} instance which is in charge of the
         overall authentication process or C{None} if the SSH connection has not
         reach yet the C{user-auth} service.
-    @type userauth: L{_UserAuth}
+    @type _userauth: L{_UserAuth}
     """
     # STARTING -> SECURING -> AUTHENTICATING -> CHANNELLING -> RUNNING
     _state = b'STARTING'
