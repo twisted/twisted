@@ -20,6 +20,9 @@ class WorkerReporter(TestResult):
     """
     Reporter for trial's distributed workers. We send things not through a
     stream, but through an C{AMP} protocol's C{callRemote} method.
+
+    :ivar str _DEFAULT_TODO: Default message for expected failures and
+        unexpected successes, used only if a C{Todo} is not provided.
     """
 
     _DEFAULT_TODO = 'Test expected to fail'
