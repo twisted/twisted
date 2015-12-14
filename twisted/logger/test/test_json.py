@@ -200,7 +200,7 @@ class SaveLoadTests(TestCase):
     def test_saveLoadLevel(self):
         """
         It's important that the C{log_level} key remain a
-        L{twisted.python.constants.NamedConstant} object.
+        L{constantly.NamedConstant} object.
         """
         inputEvent = dict(log_level=LogLevel.warn)
         loadedEvent = eventFromJSON(self.savedEventJSON(inputEvent))

@@ -6,7 +6,7 @@
 Log levels.
 """
 
-from twisted.python.constants import NamedConstant, Names
+from constantly import NamedConstant, Names
 
 
 
