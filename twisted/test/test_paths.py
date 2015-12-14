@@ -1330,6 +1330,95 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(fp.exists(), True)
 
 
+    def test_makedirsMakesDirectoriesRecursively(self):
+        """
+        C{FilePath.makedirs} creates a directory at C{path}}, including
+        recursively creating all parent directories leading up to the path.
+        """
+        fp = filepath.FilePath(os.path.join(
+            self.mktemp(), b"foo", b"bar", b"baz"))
+        self.assertFalse(fp.exists())
+
+        fp.makedirs()
+
+        self.assertTrue(fp.exists())
+        self.assertTrue(fp.isdir())
+
+
+    def test_makedirsMakesDirectoriesWithIgnoreExistingDirectory(self):
+        """
+        Calling C{FilePath.makedirs} with C{ignoreExistingDirectory} set to
+        C{True} has no effect if directory does not exist.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        self.assertFalse(fp.exists())
+
+        fp.makedirs(ignoreExistingDirectory=True)
+
+        self.assertTrue(fp.exists())
+        self.assertTrue(fp.isdir())
+
+
+    def test_makedirsThrowsWithExistentDirectory(self):
+        """
+        C{FilePath.makedirs} throws an C{OSError} exception
+        when called on a directory that already exists.
+        """
+        fp = filepath.FilePath(os.path.join(self.mktemp()))
+        fp.makedirs()
+
+        exception = self.assertRaises(OSError, fp.makedirs)
+
+        self.assertEqual(exception.errno, errno.EEXIST)
+
+
+    def test_makedirsAcceptsIgnoreExistingDirectory(self):
+        """
+        C{FilePath.makedirs} succeeds when called on a directory that already
+        exists and the c{ignoreExistingDirectory} argument is set to C{True}.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.makedirs()
+        self.assertTrue(fp.exists())
+
+        fp.makedirs(ignoreExistingDirectory=True)
+
+        self.assertTrue(fp.exists())
+
+
+    def test_makedirsIgnoreExistingDirectoryExistAlreadyAFile(self):
+        """
+        When C{FilePath.makedirs} is called with C{ignoreExistingDirectory} set
+        to C{True} it throws an C{OSError} exceptions if path is a file.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.create()
+        self.assertTrue(fp.isfile())
+
+        exception = self.assertRaises(
+            OSError, fp.makedirs, ignoreExistingDirectory=True)
+
+        self.assertEqual(exception.errno, errno.EEXIST)
+
+
+    def test_makedirsRaisesNonEexistErrorsIgnoreExistingDirectory(self):
+        """
+        When C{FilePath.makedirs} is called with C{ignoreExistingDirectory} set
+        to C{True} it raises an C{OSError} exception if exception errno is not
+        EEXIST.
+        """
+        def faultyMakedirs(path):
+            raise OSError(errno.EACCES, 'Permission Denied')
+
+        self.patch(os, 'makedirs', faultyMakedirs)
+        fp = filepath.FilePath(self.mktemp())
+
+        exception = self.assertRaises(
+            OSError, fp.makedirs, ignoreExistingDirectory=True)
+
+        self.assertEqual(exception.errno, errno.EACCES)
+
+
     def test_changed(self):
         """
         L{FilePath.changed} indicates that the L{FilePath} has changed, but does
