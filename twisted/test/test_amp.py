@@ -3265,16 +3265,28 @@ class RemoteAmpErrorTests(unittest.TestCase):
     """
 
     def test_stringMessage(self):
+        """
+        L{amp.RemoteAmpError} renders the given C{errorCode} (C{bytes}) and
+        C{description} into a native string.
+        """
         error = amp.RemoteAmpError(b"BROKEN", "Something has broken")
         self.assertEqual("Code<BROKEN>: Something has broken", str(error))
 
 
     def test_stringMessageReplacesNonAsciiText(self):
+        """
+        When C{errorCode} contains non-ASCII characters, L{amp.RemoteAmpError}
+        renders then as backslash-escape sequences.
+        """
         error = amp.RemoteAmpError(b"BROKEN-\xff", "Something has broken")
         self.assertEqual("Code<BROKEN-\\xff>: Something has broken", str(error))
 
 
     def test_stringMessageWithLocalFailure(self):
+        """
+        L{amp.RemoteAmpError} renders local errors with a "(local)" marker and
+        a brief traceback.
+        """
         failure = Failure(Exception("Something came loose"))
         error = amp.RemoteAmpError(
             b"BROKEN", "Something has broken", local=failure)
