@@ -7,10 +7,8 @@ Unit tests for L{twisted.python.constants}.
 
 from __future__ import division, absolute_import
 
-import imp
 import warnings
 
-from twisted.python import reflect
 from twisted.trial.unittest import TestCase
 
 with warnings.catch_warnings():
@@ -1144,6 +1142,7 @@ class ConstantsDeprecationTests(TestCase):
         L{twisted.python.constants} is deprecated since Twisted 16.0.
         """
         from twisted.python import constants
+        constants
 
         warningsShown = self.flushWarnings([self.test_constantsDeprecation])
         self.assertEqual(1, len(warningsShown))
