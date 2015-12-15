@@ -551,11 +551,11 @@ class RemoteAmpError(AmpError):
         # ("backslashescape") but Python 2.7 and Python 3.4 can't.
         if _PY3:
             errorCodeForMessage = "".join(
-                "\\x%2x" % c if c >= 0x80 else chr(c)
+                "\\x%2x" % (c,) if c >= 0x80 else chr(c)
                 for c in errorCode)
         else:
             errorCodeForMessage = "".join(
-                "\\x%2x" % ord(c) if ord(c) >= 0x80 else c
+                "\\x%2x" % (ord(c),) if ord(c) >= 0x80 else c
                 for c in errorCode)
 
         if othertb:
