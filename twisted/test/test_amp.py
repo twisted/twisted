@@ -2628,7 +2628,9 @@ class CommandTests(unittest.TestCase):
         not a byte string.
         """
         class NewCommand(amp.Command):
-            """A new command."""
+            """
+            A new command.
+            """
 
         self.assertEqual(b"NewCommand", NewCommand.commandName)
 
