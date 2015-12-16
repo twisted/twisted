@@ -716,11 +716,12 @@ class ProcessTests(unittest.TestCase):
 
         d = processProtocolClass.run(reactor, argv, env)
 
+        warnings = self.flushWarnings([UtilityProcessProtocol.run])
+
         # We only want the first warning, which will be the code we are
         # testing and not the reactor which may raise its own deprecation
         # warnings (like gireactor).
-        warning = self.flushWarnings()[0]
-
+        warning = warnings[0]
         self.assertEqual(
             warning["message"],
             ("Argument strings and environment keys/values passed to "
