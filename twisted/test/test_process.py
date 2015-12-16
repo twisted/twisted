@@ -24,7 +24,6 @@ import errno
 import gc
 import stat
 import operator
-import warnings
 
 
 try:
