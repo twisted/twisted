@@ -1371,7 +1371,7 @@ class MiceDeprecationTests(unittest.TestCase):
 
     def test_MiceDeprecation(self):
         """
-        L{twisted.protocols.mice} is deprecated since Twisted 15.2.
+        L{twisted.protocols.mice} is deprecated since Twisted 16.0.
         """
         reflect.namedAny("twisted.protocols.mice")
         warningsShown = self.flushWarnings()
