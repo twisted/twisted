@@ -713,11 +713,21 @@ class ProcessTests(unittest.TestCase):
             self.okayUnicode.encode(sys.getdefaultencoding()),
             self.encodedValue)
 
-        p = self.assertWarns(DeprecationWarning,
-            "Argument strings and environment keys/values passed to "
-            "reactor.spawnProcess should be str, not unicode.", __file__,
-            processProtocolClass.run, reactor, argv, env)
-        return p.getResult()
+        d = processProtocolClass.run(reactor, argv, env)
+
+        warnings = self.flushWarnings([UtilityProcessProtocol.run])
+
+        # We only want the first warning, which will be the code we are
+        # testing and not the reactor which may raise its own deprecation
+        # warnings (like gireactor).
+        warning = warnings[0]
+        self.assertEqual(
+            warning["message"],
+            ("Argument strings and environment keys/values passed to "
+             "reactor.spawnProcess should be str, not unicode."))
+        self.assertTrue(__file__.startswith(warning["filename"]))
+
+        return d.getResult()
 
 
     def test_deprecatedUnicodeArgvSupport(self):
