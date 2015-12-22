@@ -16,13 +16,9 @@ import errno
 
 from zipfile import ZipFile
 
-from twisted.python.compat import comparable, cmp, _PY3
+from twisted.python.compat import comparable, cmp
 from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.filepath import UnlistableError
-from twisted.python.runtime import platform
-
-from os.path import join as pathjoin, abspath, splitext
 
 from zope.interface import implementer
 
@@ -53,8 +49,8 @@ class ZipPath(AbstractFilePath):
         sep = _coerceToFilesystemEncoding(pathInArchive, ZIP_PATH_SEP)
         archiveFilename = _coerceToFilesystemEncoding(
             pathInArchive, archive.zipfile.filename)
-        self.path = pathjoin(archiveFilename,
-                             *(self.pathInArchive.split(sep)))
+        self.path = os.path.join(archiveFilename,
+                                 *(self.pathInArchive.split(sep)))
 
 
     def __cmp__(self, other):
@@ -66,7 +62,7 @@ class ZipPath(AbstractFilePath):
 
     def __repr__(self):
         parts = [_coerceToFilesystemEncoding(
-            self.sep, abspath(self.archive.path))]
+            self.sep, os.path.abspath(self.archive.path))]
         parts.extend(self.pathInArchive.split(self.sep))
         ossep = _coerceToFilesystemEncoding(self.sep, os.sep)
         return "ZipPath(%r)" % (ossep.join(parts),)
@@ -132,11 +128,9 @@ class ZipPath(AbstractFilePath):
             if self.isdir():
                 return list(self.archive.childmap[self.pathInArchive].keys())
             else:
-                raise UnlistableError(OSError(errno.ENOTDIR,
-                                              "Leaf zip entry listed"))
+                raise OSError(errno.ENOTDIR, "Leaf zip entry listed")
         else:
-            raise UnlistableError(OSError(errno.ENOENT,
-                                          "Non-existent zip entry listed"))
+            raise OSError(errno.ENOENT, "Non-existent zip entry listed")
 
 
     def splitext(self):
@@ -146,7 +140,7 @@ class ZipPath(AbstractFilePath):
         # This happens to work out because of the fact that we use OS-specific
         # path separators in the constructor to construct our fake 'path'
         # attribute.
-        return splitext(self.path)
+        return os.path.splitext(self.path)
 
 
     def basename(self):
@@ -292,7 +286,7 @@ class ZipArchive(ZipPath):
 
 
     def __repr__(self):
-        return 'ZipArchive(%r)' % (abspath(self.path),)
+        return 'ZipArchive(%r)' % (os.path.abspath(self.path),)
 
 
 __all__ = ['ZipArchive', 'ZipPath']
