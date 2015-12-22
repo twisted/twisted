@@ -473,7 +473,7 @@ def callTestFunction():
         self.addCleanup(sys.modules.pop, module.__name__)
 
         module.callTestFunction()
-        warningsShown = self.flushWarnings()
+        warningsShown = self.flushWarnings([module.testFunction])
         warnedPath = FilePath(warningsShown[0]["filename"].encode("utf-8"))
         expectedPath = self.package.sibling(
             b'twisted_renamed_helper').child(b'module.py')
