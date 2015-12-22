@@ -1143,10 +1143,8 @@ class FilePathTests(AbstractFilePathTests):
                                            'cross-device rename failure')
             return originalRename(src, dest)
 
-        from twisted.python.filepath import _os_fs
-
-        originalRename = _os_fs.rename
-        self.patch(_os_fs, "rename", faultyRename)
+        originalRename = os.rename
+        self.patch(os, "rename", faultyRename)
         return invokedWith
 
 
@@ -1428,7 +1426,7 @@ class FilePathTests(AbstractFilePathTests):
         def faultyMakedirs(path):
             raise OSError(errno.EACCES, 'Permission Denied')
 
-        self.patch(filepath, 'makedirs', faultyMakedirs)
+        self.patch(os, 'makedirs', faultyMakedirs)
         fp = filepath.FilePath(self.mktemp())
 
         exception = self.assertRaises(

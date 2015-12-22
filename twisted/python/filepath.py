@@ -1540,7 +1540,7 @@ class FilePath(AbstractFilePath):
             f.close()
         if platform.isWindows() and exists(self.path):
             remove(self.path)
-        _os_fs.rename(sib.path, self.asBytesMode().path)
+        os.rename(sib.path, self.asBytesMode().path)
 
 
     def __cmp__(self, other):
@@ -1715,8 +1715,8 @@ class FilePath(AbstractFilePath):
             filesystems)
         """
         try:
-            _os_fs.rename(self._getPathAsSameTypeAs(destination.path),
-                          destination.path)
+            os.rename(self._getPathAsSameTypeAs(destination.path),
+                      destination.path)
         except OSError as ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":
