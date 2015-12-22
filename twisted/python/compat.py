@@ -582,9 +582,12 @@ Return a list of the items of C{d}.
 
 def keys(d):
     """
-    Return a L{list} of the items of C{d}.
+    Return a L{list} of the keys of C{d}.
 
+    @param d: Dictionary to get the list of keys from.
     @type d: L{dict}
+
+    @return: A list of keys from the dictionary.
     @rtype: L{list}
     """
     if _PY3:
@@ -668,6 +671,7 @@ __all__ = [
     "InstanceType",
     "FileType",
     "items",
+    "keys",
     "iteritems",
     "itervalues",
     "xrange",
