@@ -1539,7 +1539,7 @@ class FilePath(AbstractFilePath):
         finally:
             f.close()
         if platform.isWindows() and exists(self.path):
-            remove(self.path)
+            os.remove(self.path)
         os.rename(sib.path, self.asBytesMode().path)
 
 
