@@ -22,10 +22,7 @@ from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.filepath import UnlistableError
 from twisted.python.runtime import platform
 
-if _PY3 and platform.isWindows():
-    from ._winpath import join as pathjoin, abspath, splitext
-else:
-    from os.path import join as pathjoin, abspath, splitext
+from os.path import join as pathjoin, abspath, splitext
 
 from zope.interface import implementer
 

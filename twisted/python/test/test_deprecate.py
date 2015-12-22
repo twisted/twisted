@@ -390,6 +390,11 @@ def callTestFunction():
         self.addCleanup(
             lambda: (sys.modules.clear(), sys.modules.update(modules)))
 
+        # On Windows on Python 3, most FilePath interactions produce
+        # DeprecationWarnings, so flush them here so that they don't interfere
+        # with the tests.
+        self.flushWarnings()
+
 
     def test_warning(self):
         """

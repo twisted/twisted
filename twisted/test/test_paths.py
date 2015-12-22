@@ -1428,7 +1428,7 @@ class FilePathTests(AbstractFilePathTests):
         def faultyMakedirs(path):
             raise OSError(errno.EACCES, 'Permission Denied')
 
-        self.patch(os, 'makedirs', faultyMakedirs)
+        self.patch(filepath, 'makedirs', faultyMakedirs)
         fp = filepath.FilePath(self.mktemp())
 
         exception = self.assertRaises(

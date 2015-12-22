@@ -43,21 +43,14 @@ _CREATE_FLAGS = (os.O_EXCL |
                  os.O_RDWR |
                  O_BINARY)
 
-if _PY3 and platform.isWindows():
-    from ._winpath import isabs, exists, normpath, abspath, splitext
-    from ._winpath import basename, dirname, join as joinpath, realpath
-    from ._winpath import listdir, utime, stat, symlink, chmod, rmdir, remove
-    from ._winpath import mkdir, makedirs, fdopen
-    import twisted.python._winpath as _os_fs
-else:
-    from os.path import isabs, exists, normpath, abspath, splitext
-    from os.path import basename, dirname, join as joinpath, realpath
-    from os import listdir, utime, stat, chmod, rmdir, remove
-    from os import mkdir, makedirs, fdopen
-    import os as _os_fs
+from os.path import isabs, exists, normpath, abspath, splitext
+from os.path import basename, dirname, join as joinpath, realpath
+from os import listdir, utime, stat, chmod, rmdir, remove
+from os import mkdir, makedirs, fdopen
+import os as _os_fs
 
-    if not platform.isWindows():
-        from os import symlink
+if not platform.isWindows():
+    from os import symlink
 
 
 def _stub_islink(path):
@@ -1551,7 +1544,7 @@ class FilePath(AbstractFilePath):
             f.close()
         if platform.isWindows() and exists(self.path):
             remove(self.path)
-        _os_fs.rename(sib.path, self.path)
+        _os_fs.rename(sib.path, self.asBytesMode().path)
 
 
     def __cmp__(self, other):
@@ -1726,7 +1719,8 @@ class FilePath(AbstractFilePath):
             filesystems)
         """
         try:
-            _os_fs.rename(self.path, destination.path)
+            _os_fs.rename(self._getPathAsSameTypeAs(destination.path),
+                          destination.path)
         except OSError as ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":

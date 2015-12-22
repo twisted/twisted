@@ -157,7 +157,6 @@ modules = [
     "twisted.python",
     "twisted.python._tzhelper",
     "twisted.python._url",
-    "twisted.python._winpath",
     "twisted.python.compat",
     "twisted.python.components",
     "twisted.python.constants",
