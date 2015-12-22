@@ -15,8 +15,6 @@ gi = Reactor(
     'gi', 'twisted.internet.gireactor', 'GObject Introspection integration reactor.')
 gtk3 = Reactor(
     'gtk3', 'twisted.internet.gtk3reactor', 'Gtk3 integration reactor.')
-gtk = Reactor(
-    'gtk', 'twisted.internet.gtkreactor', 'Gtk1 integration reactor.')
 gtk2 = Reactor(
     'gtk2', 'twisted.internet.gtk2reactor', 'Gtk2 integration reactor.')
 glib2 = Reactor(
