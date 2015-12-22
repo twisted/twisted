@@ -1102,8 +1102,7 @@ class TCPPortTestsMixin(object):
         try:
             connect(client, (port.getHost().host, port.getHost().port))
         except socket.error as e:
-            errnum, message = e.args
-            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+            self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         self.runReactor(reactor)
 
@@ -1185,8 +1184,7 @@ class TCPPortTestsMixin(object):
         try:
             connect(client, (port.getHost().host, port.getHost().port))
         except socket.error as e:
-            errnum, message = e.args
-            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+            self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
         self.runReactor(reactor)
         return factory.address
 

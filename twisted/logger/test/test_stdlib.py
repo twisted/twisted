@@ -6,6 +6,8 @@ Test cases for L{twisted.logger._format}.
 """
 
 import sys
+import os
+
 from io import BytesIO, TextIOWrapper
 import logging as py_logging
 from inspect import getsourcefile
@@ -15,6 +17,7 @@ from zope.interface.verify import verifyObject, BrokenMethodImplementation
 from twisted.trial import unittest
 
 from twisted.python.compat import _PY3, currentframe
+from twisted.python.runtime import platform
 from .._levels import LogLevel
 from .._observer import ILogObserver
 from .._stdlib import STDLibLogObserver
@@ -169,7 +172,13 @@ class STDLibLogObserverTests(unittest.TestCase):
         records, output = self.logEvent(event)
 
         self.assertEqual(len(records), 1)
-        self.assertTrue(output.endswith(u":Hello, dude!\n"),
+        if _PY3 and platform.isWindows():
+            # Windows on Python 3 uses "\r\n"
+            linesep = os.linesep
+        else:
+            # Windows on Python 2 and UNIX use "\n"
+            linesep = u"\n"
+        self.assertTrue(output.endswith(u":Hello, dude!" + linesep),
                         repr(output))
 
 

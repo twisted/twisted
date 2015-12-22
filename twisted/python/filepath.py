@@ -16,10 +16,6 @@ import base64
 from hashlib import sha1
 from warnings import warn
 
-from os.path import isabs, exists, normpath, abspath, splitext
-from os.path import basename, dirname, join as joinpath
-from os import listdir, utime, stat
-
 from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
 from stat import S_IRUSR, S_IWUSR, S_IXUSR
 from stat import S_IRGRP, S_IWGRP, S_IXGRP
@@ -31,7 +27,7 @@ from zope.interface import Interface, Attribute, implementer
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp, unicode
+from twisted.python.compat import comparable, cmp, unicode, _PY3
 from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
 from twisted.python.versions import Version
@@ -47,6 +43,21 @@ _CREATE_FLAGS = (os.O_EXCL |
                  os.O_RDWR |
                  O_BINARY)
 
+if _PY3 and platform.isWindows():
+    from ._winpath import isabs, exists, normpath, abspath, splitext
+    from ._winpath import basename, dirname, join as joinpath, realpath
+    from ._winpath import listdir, utime, stat, symlink, chmod, rmdir, remove
+    from ._winpath import mkdir, makedirs, fdopen
+    import twisted.python._winpath as _os_fs
+else:
+    from os.path import isabs, exists, normpath, abspath, splitext
+    from os.path import basename, dirname, join as joinpath, realpath
+    from os import listdir, utime, stat, chmod, rmdir, remove
+    from os import mkdir, makedirs, fdopen
+    import os as _os_fs
+
+    if not platform.isWindows():
+        from os import symlink
 
 
 def _stub_islink(path):
@@ -393,8 +404,8 @@ class AbstractFilePath(object):
                 # can walk through the directory
                 if (descend is None or descend(c)):
                     for subc in c.walk(descend):
-                        if os.path.realpath(self.path).startswith(
-                            os.path.realpath(subc.path)):
+                        if realpath(self.path).startswith(
+                            realpath(subc.path)):
                             raise LinkError("Cycle in file graph.")
                         yield subc
                 else:
@@ -948,7 +959,7 @@ class FilePath(AbstractFilePath):
         @raises LinkError: if links are not supported or links are cyclical.
         """
         if self.islink():
-            result = os.path.realpath(self.path)
+            result = realpath(self.path)
             if result == self.path:
                 raise LinkError("Cyclical link - will loop forever")
             return self.clonePath(result)
@@ -982,7 +993,7 @@ class FilePath(AbstractFilePath):
         @param linkFilePath: a FilePath representing the link to be created.
         @type linkFilePath: L{FilePath}
         """
-        os.symlink(self.path, linkFilePath.path)
+        symlink(self.path, linkFilePath.path)
 
 
     def open(self, mode='r'):
@@ -1049,7 +1060,7 @@ class FilePath(AbstractFilePath):
             the command line chmod)
         @type mode: L{int}
         """
-        os.chmod(self.path, mode)
+        chmod(self.path, mode)
 
 
     def getsize(self):
@@ -1405,9 +1416,9 @@ class FilePath(AbstractFilePath):
         if self.isdir() and not self.islink():
             for child in self.children():
                 child.remove()
-            os.rmdir(self.path)
+            rmdir(self.path)
         else:
-            os.remove(self.path)
+            remove(self.path)
         self.changed()
 
 
@@ -1423,7 +1434,7 @@ class FilePath(AbstractFilePath):
         @return: C{None}
         """
         try:
-            return os.makedirs(self.path)
+            return makedirs(self.path)
         except OSError as e:
             if not (
                 e.errno == errno.EEXIST and
@@ -1530,7 +1541,7 @@ class FilePath(AbstractFilePath):
             store the bytes while they are being written.  This can be used to
             make sure that temporary files can be identified by their suffix,
             for cleanup in case of crashes.
-        @type ext: L{bytes}
+        @type ext: L{bytes} or L{unicode}
         """
         sib = self.temporarySibling(ext)
         f = sib.open('w')
@@ -1539,8 +1550,8 @@ class FilePath(AbstractFilePath):
         finally:
             f.close()
         if platform.isWindows() and exists(self.path):
-            os.unlink(self.path)
-        os.rename(sib.path, self.path)
+            remove(self.path)
+        _os_fs.rename(sib.path, self.path)
 
 
     def __cmp__(self, other):
@@ -1557,7 +1568,7 @@ class FilePath(AbstractFilePath):
 
         @raise OSError: If the directory cannot be created.
         """
-        os.mkdir(self.path)
+        mkdir(self.path)
 
 
     def requireCreate(self, val=1):
@@ -1579,13 +1590,13 @@ class FilePath(AbstractFilePath):
 
         @return: A file-like object opened from this path.
         """
-        fdint = os.open(self.path, _CREATE_FLAGS)
+        fdint = _os_fs.open(self.path, _CREATE_FLAGS)
 
         # XXX TODO: 'name' attribute of returned files is not mutable or
         # settable via fdopen, so this file is slighly less functional than the
         # one returned from 'open' by default.  send a patch to Python...
 
-        return os.fdopen(fdint, 'w+b')
+        return fdopen(fdint, 'w+b')
 
 
     def temporarySibling(self, extension=b""):
@@ -1715,7 +1726,7 @@ class FilePath(AbstractFilePath):
             filesystems)
         """
         try:
-            os.rename(self.path, destination.path)
+            _os_fs.rename(self.path, destination.path)
         except OSError as ose:
             if ose.errno == errno.EXDEV:
                 # man 2 rename, ubuntu linux 5.10 "breezy":

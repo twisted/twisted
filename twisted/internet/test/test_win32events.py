@@ -5,7 +5,10 @@
 Tests for implementations of L{IReactorWin32Events}.
 """
 
-from thread import get_ident
+try:
+    from thread import get_ident
+except ImportError:
+    from threading import get_ident
 
 try:
     import win32event
