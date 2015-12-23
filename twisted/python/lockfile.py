@@ -89,11 +89,16 @@ else:
 
         if _PY3:
             size = 0
+            iterations = 0
             # Python 3 has no 'commit' flag for fopen, so let Windows catch
             # up... sigh -hawkie
             while size != len(value):
                 with _open(newvalname, "r") as f:
                     size = len(f.read())
+                iterations += 1
+
+                if iterations > 100000:
+                    raise Exception("Unable to get a lock.")
 
         try:
             rename(newlinkname, filename)
