@@ -91,14 +91,16 @@ else:
             readValue = ""
             iterations = 0
             # Python 3 has no 'commit' flag for fopen, so let Windows catch
-            # up... we do this by looping and reading it, hoping to get the
-            # correct value. It sucks, but, what can you do? - Amber
+            # up... we do this by looping and reading the file, hoping to get
+            # the correct value. It sucks, but, what can you do? Locks are
+            # global state, and as we all know, global state is BAD and EVIL.
+            # NOT EVEN ONCE - Amber
             while readValue != value:
                 with _open(newvalname, "r") as f:
                     readValue = f.read()
                 iterations += 1
 
-                if iterations > 100000:
+                if iterations > 1000000:
                     try:
                         # Try and remove the failed lock. We have given up at
                         # this point, so if we can't remove it, we can't really
@@ -106,6 +108,8 @@ else:
                         os.remove(newvalname)
                     except:
                         pass
+                    # We ought to plau sad_trombone.mp3 here. Give up and throw
+                    # an exception.
                     raise TimeoutError("Unable to get a lock.")
 
         try:
