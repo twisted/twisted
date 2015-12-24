@@ -172,13 +172,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         records, output = self.logEvent(event)
 
         self.assertEqual(len(records), 1)
-        if _PY3 and platform.isWindows():
-            # Windows on Python 3 uses "\r\n"
-            linesep = os.linesep
-        else:
-            # Windows on Python 2 and UNIX use "\n"
-            linesep = u"\n"
-        self.assertTrue(output.endswith(u":Hello, dude!" + linesep),
+        self.assertTrue(output.endswith(u":Hello, dude!\n"),
                         repr(output))
 
 
@@ -245,7 +239,7 @@ def handlerAndBytesIO():
     stream = output
     template = py_logging.BASIC_FORMAT
     if _PY3:
-        stream = TextIOWrapper(output, encoding="utf-8")
+        stream = TextIOWrapper(output, encoding="utf-8", newlines="\n")
     formatter = py_logging.Formatter(template)
     handler = py_logging.StreamHandler(stream)
     handler.setFormatter(formatter)
