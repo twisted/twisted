@@ -105,7 +105,6 @@ else:
                 with _open(newvalname, "r") as f:
                     readValue = f.read()
                 iterations += 1
-                print(iterations)
                 sleep(0.0001)
 
                 # What is a reasonable number here? Well, you give an inch, and
