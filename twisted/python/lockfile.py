@@ -88,6 +88,8 @@ else:
             f.flush()
 
         if _PY3:
+            from time import sleep
+
             readValue = ""
             iterations = 0
             # Python 3 has no 'commit' flag for fopen, so let Windows catch
@@ -99,8 +101,13 @@ else:
                 with _open(newvalname, "r") as f:
                     readValue = f.read()
                 iterations += 1
+                os.sleep(0.0001)
 
-                if iterations > 1000000:
+                # What is a reasonable number here? Well, you give an inch, and
+                # Windows takes a mile. There are 63,360 inches in a mile, so
+                # that seems as reasonable as any other number. This means we
+                # will try to get a lock for at least five seconds.
+                if iterations > 63360:
                     try:
                         # Try and remove the failed lock. We have given up at
                         # this point, so if we can't remove it, we can't really
