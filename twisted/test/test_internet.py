@@ -958,11 +958,16 @@ class DelayedTests(unittest.TestCase):
 
 
 
-resolve_helper = """
-from __future__ import print_function
+resolve_helper = r"""
 import %(reactor)s
 %(reactor)s.install()
 from twisted.internet import reactor
+
+import sys
+if hasattr(sys.stdout, "buffer"):
+    output = sys.stdout.buffer
+else:
+    output = sys.stdout
 
 class Foo(object):
     def __init__(self):
@@ -971,10 +976,10 @@ class Foo(object):
     def start(self):
         reactor.resolve('localhost').addBoth(self.done)
     def done(self, res):
-        print('done', res)
+        output.write(('done ' + res + '\n').encode('ascii'))
         reactor.stop()
     def failed(self):
-        print('failed')
+        output.write('failed\n')
         self.timer = None
         reactor.stop()
 f = Foo()
@@ -1027,11 +1032,7 @@ class ResolveTests(unittest.TestCase):
             # If the output is "done 127.0.0.1\n" we don't really care what
             # else happened.
             output = b''.join(output)
-            if _PY3 and platform.isWindows():
-                linesep = os.linesep.encode('ascii')
-            else:
-                linesep = b"\n"
-            if output != b'done 127.0.0.1' + linesep:
+            if output != b'done 127.0.0.1\n':
                 self.fail((
                     "The child process failed to produce the desired results:\n"
                     "   Reason for termination was: %r\n"

@@ -528,6 +528,7 @@ def _wrappedPdb():
     except ImportError:
         print("readline module not available")
         if hasattr(sys, "exc_clear"):
+            # exc_clear is only available on Python 2
             sys.exc_clear()
     for path in ('.pdbrc', 'pdbrc'):
         if os.path.exists(path):
@@ -535,6 +536,7 @@ def _wrappedPdb():
                 rcFile = file(path, 'r')
             except IOError:
                 if hasattr(sys, "exc_clear"):
+                    # exc_clear is only available on Python 2
                     sys.exc_clear()
             else:
                 dbg.rcLines.extend(rcFile.readlines())

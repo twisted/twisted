@@ -25,7 +25,9 @@ from twisted.python.deprecate import (
     _passed, _mutuallyExclusiveArguments
 )
 
+from twisted.python.compat import _PY3
 from twisted.python.versions import Version
+from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 
 from twisted.python.test import deprecatedattributes
@@ -393,7 +395,8 @@ def callTestFunction():
         # On Windows on Python 3, most FilePath interactions produce
         # DeprecationWarnings, so flush them here so that they don't interfere
         # with the tests.
-        self.flushWarnings()
+        if platform.isWindows() and _PY3:
+            self.flushWarnings()
 
 
     def test_warning(self):
