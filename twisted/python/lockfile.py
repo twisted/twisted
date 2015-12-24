@@ -88,17 +88,25 @@ else:
             f.flush()
 
         if _PY3:
-            size = 0
+            readValue = ""
             iterations = 0
             # Python 3 has no 'commit' flag for fopen, so let Windows catch
-            # up... sigh -hawkie
-            while size != len(value):
+            # up... we do this by looping and reading it, hoping to get the
+            # correct value. It sucks, but, what can you do? - Amber
+            while readValue != value:
                 with _open(newvalname, "r") as f:
-                    size = len(f.read())
+                    readValue = f.read()
                 iterations += 1
 
                 if iterations > 100000:
-                    raise Exception("Unable to get a lock.")
+                    try:
+                        # Try and remove the failed lock. We have given up at
+                        # this point, so if we can't remove it, we can't really
+                        # try much.
+                        os.remove(newvalname)
+                    except:
+                        pass
+                    raise TimeoutError("Unable to get a lock.")
 
         try:
             rename(newlinkname, filename)

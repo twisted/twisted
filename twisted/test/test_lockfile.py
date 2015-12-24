@@ -13,6 +13,7 @@ import os
 
 from twisted.trial import unittest
 from twisted.python import lockfile
+from twisted.python.compat import _PY3
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 
@@ -89,6 +90,47 @@ class UtilTests(unittest.TestCase):
         test_readlinkEACCESWindows.skip = (
             "special readlink EACCES handling only necessary and correct on "
             "Windows.")
+
+
+    def test_symlinkLockTimeoutWindows(self):
+        """
+        L{lockfile.symlink} on Python 3 on Windows cannot get an 'atomic' lock.
+        So, we have to fake it, and just loop until we have acquired it. If we
+        never get the correct value, we timeout.
+        """
+        name = self.mktemp()
+        class FakeOpen(object):
+            """
+            A fake open() for testing, that never returns any content and
+            throws away any writes.
+            """
+            def __init__(self, name, mode):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args, **kwargs):
+                pass
+
+            def write(self, data):
+                pass
+
+            def flush(self):
+                pass
+
+            def close(self):
+                pass
+
+            def read(self):
+                return ""
+
+        self.patch(lockfile, '_open', FakeOpen)
+        exc = self.assertRaises(TimeoutError, lockfile.symlink, name, 'data')
+    if not platform.isWindows() and not _PY3:
+        test_symlinkLockTimeout.skip = (
+            "The interesting(tm) symlink timeout support is only needed on "
+            "Windows on Python 3.")
 
 
     def test_kill(self):
