@@ -12,7 +12,6 @@ import sys
 import time
 
 from twisted.python.compat import _PY3
-from twisted.python.runtime import platform
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, abstract, defer
 from twisted.internet import interfaces, base

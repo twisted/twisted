@@ -22,6 +22,10 @@ def unique():
 
 from os import rename
 
+if not _PY3:
+    # Shh, pyflakes -- TimeoutError only exists on Python 3
+    TimeoutError = Exception
+
 if not platform.isWindows():
     from os import kill
     from os import symlink
@@ -101,7 +105,7 @@ else:
                 with _open(newvalname, "r") as f:
                     readValue = f.read()
                 iterations += 1
-                os.sleep(0.0001)
+                sleep(0.0001)
 
                 # What is a reasonable number here? Well, you give an inch, and
                 # Windows takes a mile. There are 63,360 inches in a mile, so

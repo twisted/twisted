@@ -5,8 +5,9 @@
 Test cases for L{twisted.logger._format}.
 """
 
+from __future__ import absolute_import, division
+
 import sys
-import os
 
 from io import BytesIO, TextIOWrapper
 import logging as py_logging
@@ -17,7 +18,6 @@ from zope.interface.verify import verifyObject, BrokenMethodImplementation
 from twisted.trial import unittest
 
 from twisted.python.compat import _PY3, currentframe
-from twisted.python.runtime import platform
 from .._levels import LogLevel
 from .._observer import ILogObserver
 from .._stdlib import STDLibLogObserver
