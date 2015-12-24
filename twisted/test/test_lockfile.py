@@ -131,7 +131,7 @@ class UtilTests(unittest.TestCase):
 
         self.patch(lockfile, '_open', FakeOpen)
         self.assertRaises(TimeoutError, lockfile.symlink, name, 'data')
-    if not platform.isWindows() and not _PY3:
+    if not (platform.isWindows() and _PY3):
         test_symlinkLockTimeoutWindows.skip = (
             "The interesting(tm) symlink timeout support is only needed on "
             "Windows on Python 3.")
