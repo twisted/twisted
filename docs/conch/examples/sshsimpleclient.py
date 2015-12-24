@@ -16,14 +16,15 @@ It will try to authenticate with a SSH key or ask for a password.
 Re-using a private key is dangerous, generate one.
 For this example you can use:
 
-$ ssh-keygen -t rsa -f ssh-keys/client_rsa
+$ ckeygen -t rsa -f ssh-keys/client_rsa
 """
 
-# Replace this with your username. Default will match the sshsimpleserver.py
+# Replace this with your username.
+# Default username and password will match the sshsimpleserver.py
 USER = 'user'
 HOST = 'localhost'
 PORT = 5022
-SERVER_FINGERPRINT = '94:9f:68:ac:0c:16:74:bc:87:3a:34:51:9a:5a:5e:8d'
+SERVER_FINGERPRINT = 'pu:t:se:rv:er:fi:ng:er:pr:in:t:he:re'
 
 # Path to RSA SSH keys accepted by the server.
 CLIENT_RSA_PUBLIC = 'ssh-keys/client_rsa.pub'
@@ -65,8 +66,6 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
 
 
     def getPublicKey(self):
-        # this works with rsa too
-        # just change the name here and in getPrivateKey
         if (
             not CLIENT_RSA_PUBLIC or
             not os.path.exists(CLIENT_RSA_PUBLIC) or
@@ -78,6 +77,9 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
 
 
     def getPrivateKey(self):
+        """
+        A deferred can also be returned.
+        """
         return defer.succeed(keys.Key.fromFile(CLIENT_RSA_PRIVATE))
 
 
