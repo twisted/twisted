@@ -105,6 +105,7 @@ else:
                 with _open(newvalname, "r") as f:
                     readValue = f.read()
                 iterations += 1
+                print(iterations)
                 sleep(0.0001)
 
                 # What is a reasonable number here? Well, you give an inch, and
@@ -119,7 +120,7 @@ else:
                         os.remove(newvalname)
                     except:
                         pass
-                    # We ought to plau sad_trombone.mp3 here. Give up and throw
+                    # We ought to play sad_trombone.mp3 here. Give up and throw
                     # an exception.
                     raise TimeoutError("Unable to get a lock.")
 
