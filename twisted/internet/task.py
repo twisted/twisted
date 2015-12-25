@@ -78,7 +78,7 @@ class LoopingCall:
         """
         DEPRECATED. Deferred fired when loop stops or fails.
 
-        Use the
+        Instead of this, use the deferred returned by C{start()}.
         """
         return self._deferred
 
