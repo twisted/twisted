@@ -719,6 +719,25 @@ class LoopTests(unittest.TestCase):
             "LoopingCall<None>(TestableLoopingCall.__init__, *(), **{})")
 
 
+    def test_deferredDeprecation(self):
+        """
+        L{LoopingCall.deferred} is deprecated.
+        """
+        loop = task.LoopingCall(lambda: None)
+
+        loop.deferred
+
+        message = (
+                'twisted.internet.task.LoopingCall.deferred was deprecated in '
+                'Twisted 16.0.0; '
+                'please use the deferred returned by start() instead'
+                )
+        warnings = self.flushWarnings([self.test_deferredDeprecation])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
+
+
 
 class ReactorLoopTests(unittest.TestCase):
     # Slightly inferior tests which exercise interactions with an actual
