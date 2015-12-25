@@ -22,10 +22,6 @@ def unique():
 
 from os import rename
 
-if not _PY3:
-    # Shh, pyflakes -- TimeoutError only exists on Python 3
-    TimeoutError = Exception
-
 if not platform.isWindows():
     from os import kill
     from os import symlink
@@ -121,7 +117,7 @@ else:
                         pass
                     # We ought to play sad_trombone.mp3 here. Give up and throw
                     # an exception.
-                    raise TimeoutError("Unable to get a lock.")
+                    raise RuntimeError("Unable to get a lock.")
 
         try:
             rename(newlinkname, filename)

@@ -25,9 +25,7 @@ if platform.isWindows():
         skipKill = ("On windows, lockfile.kill is not implemented in the "
                     "absence of win32api and/or pywintypes.")
 
-if not _PY3:
-    # Shh, pyflakes -- TimeoutError only exists on Python 3
-    TimeoutError = Exception
+
 
 class UtilTests(unittest.TestCase):
     """
@@ -130,7 +128,7 @@ class UtilTests(unittest.TestCase):
                 return ""
 
         self.patch(lockfile, '_open', FakeOpen)
-        self.assertRaises(TimeoutError, lockfile.symlink, name, 'data')
+        self.assertRaises(RuntimeError, lockfile.symlink, name, 'data')
     if not (platform.isWindows() and _PY3):
         test_symlinkLockTimeoutWindows.skip = (
             "The interesting(tm) symlink timeout support is only needed on "
