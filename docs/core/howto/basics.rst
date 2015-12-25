@@ -35,7 +35,7 @@ Fetching the application, getting the ``IService`` component, calling ``startSer
 However, ``twistd`` supplies many options which are highly useful for program set up:
 
 - choosing a reactor (for more on reactors, see :doc:`Choosing a Reactor <choosing-reactor>`),
-- logging configuration (see the :doc:`logging <logging>` documentation for more),
+- logging configuration (see the :doc:`logger <logger>` documentation for more),
 - daemonizing (forking to the background),
 - and :doc:`more <application>`.
 
@@ -46,7 +46,7 @@ When a straight Python file which defines an ``Application`` object called ``app
 
 When ``twistd`` runs, it records its process id in a ``twistd.pid`` file (this can be configured via a command line switch).
 In order to shutdown the ``twistd`` process, kill that pid.
-The usual way to do this would be:: 
+The usual way to do this would be::
 
     kill `cat twistd.pid`
 

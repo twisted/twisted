@@ -345,7 +345,7 @@ Keep in mind that this is true even if you elect not to explicitly interact with
 Twisted itself may log messages from threads, and Twisted may internally use APIs like :api:`twisted.internet.interfaces.IReactorThreads.callInThread <callInThread>` ; for example, Twisted uses threads to look up hostnames when making an outgoing connection.
 
 Given this extra wrinkle, it's usually best to see if you can find an existing log observer implementation that does what you need before implementing your own; thread safety can be tricky to implement.
-Luckily, :api:`twisted.python.logging <twisted.python.logging>` comes with several useful observers, which are documented below.
+Luckily, :api:`twisted.logger <twisted.logger>` comes with several useful observers, which are documented below.
 
 
 Writing an observer for event analysis
