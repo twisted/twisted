@@ -13,13 +13,6 @@ from twisted.internet.address import HostnameAddress
 from twisted.python.compat import nativeString
 
 try:
-    os.symlink
-except AttributeError:
-    symlinkSkip = "Platform does not support symlinks"
-else:
-    symlinkSkip = None
-
-try:
     socket.AF_UNIX
 except AttributeError:
     unixSkip = "Platform doesn't support UNIX sockets."
@@ -280,7 +273,6 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
                              UNIXAddress(linkName))
             self.assertEqual(UNIXAddress(linkName),
                              UNIXAddress(self._socketAddress))
-    test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
     def test_hashOfLinkedFiles(self):
@@ -292,7 +284,6 @@ class UNIXAddressTests(unittest.SynchronousTestCase):
         os.symlink(os.path.abspath(self._socketAddress), linkName)
         self.assertEqual(hash(UNIXAddress(self._socketAddress)),
                          hash(UNIXAddress(linkName)))
-    test_hashOfLinkedFiles.skip = symlinkSkip
 
 
 
@@ -336,7 +327,6 @@ class EmptyUNIXAddressTests(unittest.SynchronousTestCase,
                                 UNIXAddress(None))
             self.assertNotEqual(UNIXAddress(None),
                                 UNIXAddress(self._socketAddress))
-    test_comparisonOfLinkedFiles.skip = symlinkSkip
 
 
     def test_emptyHash(self):

@@ -580,12 +580,28 @@ Return a list of the items of C{d}.
 @rtype: L{list}
 """
 
+def keys(d):
+    """
+    Return a L{list} of the keys of C{d}.
+
+    @param d: Dictionary to get the list of keys from.
+    @type d: L{dict}
+
+    @return: A list of keys from the dictionary.
+    @rtype: L{list}
+    """
+    if _PY3:
+        return list(d.keys())
+    return d.keys()
+
 
 
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
-    L{bytes}.
+    L{bytes}. This should *not* be used on Windows, where environment variables
+    are always L{str}. This code is used by L{twisted.internet.process}, but
+    not L{twisted.internet._dumbwin32proc}.
     """
     if not _PY3:
         # On py2, nothing to do.
@@ -655,6 +671,7 @@ __all__ = [
     "InstanceType",
     "FileType",
     "items",
+    "keys",
     "iteritems",
     "itervalues",
     "xrange",

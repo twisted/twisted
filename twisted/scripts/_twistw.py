@@ -2,10 +2,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import, division, print_function
+
+import sys
+import os
+
 from twisted.python import log
 from twisted.application import app, service, internet
 from twisted import copyright
-import sys, os
 
 
 
@@ -16,10 +20,11 @@ class ServerOptions(app.ServerOptions):
                 ]
 
     def opt_version(self):
-        """Print version information and exit.
         """
-        print 'twistd (the Twisted Windows runner) %s' % copyright.version
-        print copyright.copyright
+        Print version information and exit.
+        """
+        print('twistd (the Twisted Windows runner) %s' % copyright.version)
+        print(copyright.copyright)
         sys.exit()
 
 
@@ -45,6 +50,6 @@ class WindowsApplicationRunner(app.ApplicationRunner):
         """
         service.IService(self.application).privilegedStartService()
         app.startApplication(self.application, not self.config['no_save'])
-        app.startApplication(internet.TimerService(0.1, lambda:None), 0)
+        app.startApplication(internet.TimerService(0.1, lambda: None), 0)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         log.msg("Server Shut Down.")

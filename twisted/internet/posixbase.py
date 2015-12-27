@@ -85,7 +85,8 @@ class _SocketWaker(log.Logger):
         self.fileno = self.r.fileno
 
     def wakeUp(self):
-        """Send a byte to my connection.
+        """
+        Send a byte to my connection.
         """
         try:
             util.untilConcludes(self.w.send, b'x')
