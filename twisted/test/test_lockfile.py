@@ -126,9 +126,9 @@ class UtilTests(unittest.TestCase):
 
             def read(self):
                 return ""
-        
+
         sleptFor = []
-    
+
         def fakeSleep(time):
             sleptFor.append(time)
 

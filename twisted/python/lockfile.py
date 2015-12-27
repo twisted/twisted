@@ -101,24 +101,25 @@ else:
 
                 if readValue != value:
                     iterations += 1
-    
-                    # What is a reasonable number here? Well, you give an inch, and
-                    # Windows takes a mile. Sleeping for a lot of time may waste time,
-                    # but waiting for a small (0.001s) time takes far longer on 3.5.
-                    # 10 seconds seems like a reasonable amount of time, assuming that
-                    # file I/O on Windows can be deathly slow.
+
+                    # What is a reasonable number here? Well, you give an inch,
+                    # and Windows takes a mile. Sleeping for a lot of time may
+                    # waste time, but waiting for a small (0.001s) time takes
+                    # far longer on 3.5. than the 0.001s you'd expect.
+                    # 10 seconds seems like a reasonable amount of time,
+                    # assuming that file I/O on Windows can be deathly slow.
                     if iterations > 100:
                         try:
-                            # Try and remove the failed lock. We have given up at
-                            # this point, so if we can't remove it, we can't really
-                            # try much.
+                            # Try and remove the failed lock. We have given up
+                            # at  this point, so if we can't remove it, we
+                            # can't really try much.
                             os.remove(newvalname)
                         except:
                             pass
-                        # We ought to play sad_trombone.mp3 here. Give up and throw
-                        # an exception.
+                        # We ought to play sad_trombone.mp3 here. Give up and
+                        # throw an exception.
                         raise RuntimeError("Unable to get a lock.")
-                    
+
                     _sleep(0.1)
 
         try:
