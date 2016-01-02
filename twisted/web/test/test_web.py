@@ -1102,8 +1102,8 @@ class CombinedLogFormatterTests(unittest.TestCase):
         request.client = IPv4Address("TCP", b"evil x-forwarded-for \x80", 12345)
         request.method = b"POS\x81"
         request.protocol = b"HTTP/1.\x82"
-        request.headers[b"referer"] = b"evil \x83"
-        request.headers[b"user-agent"] = b"evil \x84"
+        request.requestHeaders.addRawHeader(b"referer", b"evil \x83")
+        request.requestHeaders.addRawHeader(b"user-agent", b"evil \x84")
 
         line = http.combinedLogFormatter(timestamp, request)
         self.assertEqual(
@@ -1246,8 +1246,8 @@ class LogEscapingTests(unittest.TestCase):
         """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.headers[b'referer'] = (
-            b'http://malicious" ".website.invalid')
+        self.request.requestHeaders.addRawHeader(b'referer',
+                               b'http://malicious" ".website.invalid')
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
             b'"GET /dummy HTTP/1.0" 123 - '
@@ -1261,7 +1261,8 @@ class LogEscapingTests(unittest.TestCase):
         """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.headers[b'user-agent'] = b'Malicious Web" Evil'
+        self.request.requestHeaders.addRawHeader(b'user-agent', 
+                                                 b'Malicious Web" Evil')
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
             b'"GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')

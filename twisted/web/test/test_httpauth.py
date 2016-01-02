@@ -356,7 +356,8 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         L{IResource}.
         """
         authorization = b64encode(self.username + b':' + self.password)
-        request.headers[b'authorization'] = b'Basic ' + authorization
+        request.requestHeaders.addRawHeader(b'authorization',
+                                            b'Basic ' + authorization)
         return getChildForRequest(self.wrapper, request)
 
 
@@ -385,7 +386,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         """
         self.credentialFactories.append(BasicCredentialFactory('example.com'))
         request = self.makeRequest([self.childName])
-        request.headers['authorization'] = response
+        request.requestHeaders.addRawHeader(b'authorization', response)
         child = getChildForRequest(self.wrapper, request)
         d = request.notifyFinish()
         def cbFinished(result):
@@ -543,7 +544,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         """
         self.credentialFactories.append(BasicCredentialFactory('example.com'))
         request = self.makeRequest([self.childName])
-        request.headers[b'authorization'] = b'Basic decode should fail'
+        request.requestHeaders.addRawHeader(b'authorization', b'Basic decode should fail')
         child = getChildForRequest(self.wrapper, request)
         self.assertIsInstance(child, UnauthorizedResource)
 
@@ -585,7 +586,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
         self.credentialFactories.append(BadFactory())
         request = self.makeRequest([self.childName])
-        request.headers[b'authorization'] = b'Bad abc'
+        request.requestHeaders.addRawHeader(b'authorization', b'Bad abc')
         child = getChildForRequest(self.wrapper, request)
         request.render(child)
         self.assertEqual(request.responseCode, 500)
