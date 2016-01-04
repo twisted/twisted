@@ -1246,8 +1246,9 @@ class LogEscapingTests(unittest.TestCase):
         """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.requestHeaders.addRawHeader(b'referer',
-                               b'http://malicious" ".website.invalid')
+        self.request.requestHeaders.addRawHeader(
+            b'referer',
+            b'http://malicious" ".website.invalid')
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
             b'"GET /dummy HTTP/1.0" 123 - '

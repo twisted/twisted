@@ -19,6 +19,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ISSLTransport
 
+from twisted.web.http import Request
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
@@ -78,12 +79,12 @@ class DummyRequest(object):
         be called back with C{None} when C{finish} is called or which will be
         errbacked if C{processingFailed} is called.
 
-    @type headers: C{dict}
-    @ivar headers: A mapping of header name to header value for all request
+    @type requestheaders: C{Headers}
+    @ivar requestheaders: A Headers instance that stores values for all request
         headers.
 
-    @type outgoingHeaders: C{dict}
-    @ivar outgoingHeaders: A mapping of header name to header value for all
+    @type responseHeaders: C{Headers}
+    @ivar responseHeaders: A Headers instance that stores values for all
         response headers.
 
     @type responseCode: C{int}
@@ -115,14 +116,15 @@ class DummyRequest(object):
         self.session = None
         self.protoSession = session or Session(0, self)
         self.args = {}
-        self.outgoingHeaders = {}
         self.requestHeaders = Headers()
         self.responseHeaders = Headers()
         self.responseCode = None
-        self._headers = {}
         self._finishedDeferreds = []
         self._serverName = b"dummy"
         self.clientproto = b"HTTP/1.0"
+
+        # Steal functions and docstrings directly from twisted.web.http.Request
+        self.getAllHeaders = Request.getAllHeaders
 
     def getHeader(self, name):
         """
@@ -136,20 +138,6 @@ class DummyRequest(object):
         @return: The value of the specified request header.
         """
         return self.requestHeaders.getRawHeaders(name.lower(), [None])[0]
-
-
-    def getAllHeaders(self):
-        """
-        Return dictionary mapping the names of all received headers to the last
-        value received for each.
-
-        Since this method does not return all header information,
-        C{self.requestHeaders.getAllRawHeaders()} may be preferred.
-        """
-        headers = {}
-        for k, v in self.requestHeaders.getAllRawHeaders():
-            headers[k.lower()] = v[-1]
-        return headers
 
 
     def setHeader(self, name, value):

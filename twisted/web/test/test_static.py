@@ -19,7 +19,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
-from twisted.python.compat import iteritems, intToBytes, networkString
+from twisted.python.compat import intToBytes, networkString
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -711,7 +711,7 @@ class StaticMakeProducerTests(TestCase):
         """
         request = DummyRequest([])
         request.requestHeaders.addRawHeader(b'range', b'bytes=4-10')
-        contentType = b"text/plain"
+        contentType = "text/plain"
         request.requestHeaders.addRawHeader(b'range', b'bytes=10-12,15-20')
         resource = self.makeResourceWithContent(b'abc', type=contentType)
         with resource.openForReading() as file:
