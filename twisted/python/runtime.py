@@ -172,18 +172,19 @@ class Platform:
         return False
 
 
-    def supportsSymlinks(self):
+    def _supportsSymlinks(self):
         """
         Check for symlink support.
 
         @return: C{True} if symlinks are supported on the current platform,
                  otherwise C{False}.
         @rtype: L{bool}
-        @since: 16.0
         """
         if self.isWindows():
             # We do the isWindows() check as newer Pythons support the symlink
-            # support in Vista+, but only if you have some obscure permission.
+            # support in Vista+, but only if you have some obscure permission
+            # (SeCreateSymbolicLinkPrivilege), which can only be given on
+            # platforms with msc.exe (so, Business/Enterprise editions).
             # This uncommon requirement makes the Twisted test suite test fail
             # in 99.99% of cases as general users don't have permission to do
             # it, even if there is "symlink support".

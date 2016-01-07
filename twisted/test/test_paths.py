@@ -20,7 +20,7 @@ from twisted.trial.unittest import SkipTest, SynchronousTestCase as TestCase
 
 from zope.interface.verify import verifyObject
 
-if not platform.supportsSymlinks():
+if not platform._supportsSymlinks():
     symlinkSkip = "Platform does not support symlinks"
 else:
     symlinkSkip = None
