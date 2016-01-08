@@ -123,8 +123,21 @@ class DummyRequest(object):
         self._serverName = b"dummy"
         self.clientproto = b"HTTP/1.0"
 
-        # Steal functions and docstrings directly from twisted.web.http.Request
-        self.getAllHeaders = Request.getAllHeaders
+    def getAllHeaders(self):
+        """
+        Return dictionary mapping the names of all received headers to the last
+        value received for each.
+
+        Since this method does not return all header information,
+        C{self.requestHeaders.getAllRawHeaders()} may be preferred.
+
+        NOTE: This function is a direct copy of
+        C{twisted.web.http.Request.getAllRawHeaders}.
+        """
+        headers = {}
+        for k, v in self.requestHeaders.getAllRawHeaders():
+            headers[k.lower()] = v[-1]
+        return headers
 
     def getHeader(self, name):
         """

@@ -1,1 +1,0 @@
-twisted.web.test.requesthelper.DummyRequest's headers and outgoingHeaders attributes are removed.  All unit tests updated to use correct/current API.
