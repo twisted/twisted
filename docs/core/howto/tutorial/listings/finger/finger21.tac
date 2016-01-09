@@ -4,7 +4,7 @@ from twisted.internet import protocol, reactor, defer
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
-from twisted.web import resource, server, static, xmlrpc, microdom
+from twisted.web import resource, server, static, xmlrpc
 from twisted.spread import pb
 from zope.interface import Interface, implements
 import cgi

@@ -1434,8 +1434,7 @@ class SphinxBuilderTests(TestCase):
                 2. Is empty.
 
                 3. In the case where it's a path to a C{.html} file, the
-                   contents at least look enough like HTML to parse according
-                   to microdom's generous criteria.
+                   content looks like an HTML file.
 
         @return: C{None}
         """
