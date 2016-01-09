@@ -43,9 +43,9 @@ class ServerOptions(app.ServerOptions):
                ]
 
     optParameters = [
-                     ['prefix', None,'twisted',
+                     ['prefix', None, 'twisted',
                       "use the given prefix when syslogging"],
-                     ['pidfile','','twistd.pid',
+                     ['pidfile', '', 'twistd.pid',
                       "Name of the pidfile"],
                      ['chroot', None, None,
                       'Chroot to a supplied directory before running'],
@@ -79,30 +79,39 @@ class ServerOptions(app.ServerOptions):
 
 
 def checkPID(pidfile):
-    if not pidfile:
-        return
+    """
+    Check the file in C{pidfile} for a process ID, and then check if it is
+    running.
+
+    @return: C{0} if the PID file does not exist, C{1} if the PID file is stale
+             and removed.
+    @raises: L{SystemExit} if there is a catastrophic error or if the PID in
+             the file exists and we should not execute.
+    """
     if os.path.exists(pidfile):
         try:
             pid = int(open(pidfile).read())
         except ValueError:
-            sys.exit('Pidfile %s contains non-numeric value' % pidfile)
+            sys.exit('Pidfile %s contains non-numeric value' % (pidfile,))
         try:
             os.kill(pid, 0)
         except OSError as why:
-            if why[0] == errno.ESRCH:
-                # The pid doesn't exists.
-                log.msg('Removing stale pidfile %s' % pidfile, isError=True)
+            if why.args[0] == errno.ESRCH:
+                # The pid doesn't exist.
+                log.msg('Removing stale pidfile %s' % (pidfile,), isError=True)
                 os.remove(pidfile)
+                return 1
             else:
                 sys.exit("Can't check status of PID %s from pidfile %s: %s" %
-                         (pid, pidfile, why[1]))
+                         (pid, pidfile, why.args[1]))
         else:
             sys.exit("""\
 Another twistd server is running, PID %s\n
 This could either be a previously started instance of your application or a
 different application entirely. To start a new one, either run it in some other
 directory, or use the --pidfile and --logfile parameters to avoid clashes.
-""" %  pid)
+""" % pid)
+    return 0
 
 
 
@@ -190,7 +199,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
         """
         Do pre-application-creation setup.
         """
-        checkPID(self.config['pidfile'])
+        if self.config['pidfile']:
+            checkPID(self.config['pidfile'])
         self.config['nodaemon'] = (self.config['nodaemon']
                                    or self.config['debug'])
         self.oldstdout = sys.stdout
