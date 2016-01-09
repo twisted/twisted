@@ -106,8 +106,10 @@ class DummyRequest(object):
         while self.go:
             prod.resumeProducing()
 
+
     def unregisterProducer(self):
         self.go = 0
+
 
     def __init__(self, postpath, session=None):
         self.sitepath = []
@@ -125,6 +127,7 @@ class DummyRequest(object):
         self._serverName = b"dummy"
         self.clientproto = b"HTTP/1.0"
 
+
     def getAllHeaders(self):
         """
         Return dictionary mapping the names of all received headers to the last
@@ -140,6 +143,7 @@ class DummyRequest(object):
         for k, v in self.requestHeaders.getAllRawHeaders():
             headers[k.lower()] = v[-1]
         return headers
+
 
     def getHeader(self, name):
         """
@@ -159,6 +163,7 @@ class DummyRequest(object):
         """TODO: make this assert on write() if the header is content-length
         """
         self.responseHeaders.addRawHeader(name, value)
+
 
     def getSession(self):
         if self.session:
@@ -192,6 +197,7 @@ class DummyRequest(object):
         if not isinstance(data, bytes):
             raise TypeError("write() only accepts bytes")
         self.written.append(data)
+
 
     def notifyFinish(self):
         """
