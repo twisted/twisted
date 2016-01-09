@@ -100,6 +100,7 @@ class DummyRequest(object):
     method = b'GET'
     client = None
 
+
     def registerProducer(self, prod,s):
         self.go = 1
         while self.go:
@@ -287,6 +288,7 @@ class DummyRequest(object):
         @rtype: L{bytes}
         """
         return self.getClientIP()
+
 
     def redirect(self, url):
         """
