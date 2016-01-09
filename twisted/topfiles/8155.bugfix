@@ -1,0 +1,1 @@
+twistd on Python 3 + UNIX will no longer fail to check if PID files point to existing processes.
