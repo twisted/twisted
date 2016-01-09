@@ -15,6 +15,8 @@ from zope.interface import implementer
 
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
+from twisted.python.url import URL
+
 from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ISSLTransport
@@ -105,7 +107,6 @@ class DummyRequest(object):
 
     def unregisterProducer(self):
         self.go = 0
-
 
     def __init__(self, postpath, session=None):
         self.sitepath = []
@@ -287,7 +288,7 @@ class DummyRequest(object):
         """
         return self.getClientIP()
 
-    def redirect(self):
+    def redirect(self, url):
         """
         Utility function that does a redirect.
 
