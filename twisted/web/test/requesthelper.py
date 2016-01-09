@@ -22,6 +22,7 @@ from twisted.internet.interfaces import ISSLTransport
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
+from twisted.web._responses import FOUND
 
 
 class DummyChannel:
@@ -285,6 +286,15 @@ class DummyRequest(object):
         @rtype: L{bytes}
         """
         return self.getClientIP()
+
+    def redirect(self):
+        """
+        Utility function that does a redirect.
+
+        The request should have finish() called after this.
+        """
+        self.setResponseCode(FOUND)
+        self.setHeader(b"location", url)
 
 DummyRequest.getClient = deprecated(
     Version("Twisted", 15, 0, 0),

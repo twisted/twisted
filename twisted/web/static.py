@@ -29,6 +29,7 @@ from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
+from twisted.python.url import URL
 
 if _PY3:
     from urllib.parse import quote, unquote
@@ -62,16 +63,14 @@ class Data(resource.Resource):
 
 
 def addSlash(request):
-    qs = ''
-    qindex = request.uri.find('?')
-    if qindex != -1:
-        qs = request.uri[qindex:]
+    return _addSlash(request)
 
-    return "http%s://%s%s/%s" % (
-        request.isSecure() and 's' or '',
-        request.getHeader("host"),
-        (request.uri.split('?')[0]),
-        qs)
+def _addSlash(request):
+    """
+    Make sure that the path has a trailing slash.
+    """
+    url = URL.fromText(request.uri.decode('ascii'))
+    print(url)
 
 class Redirect(resource.Resource):
     def __init__(self, request):

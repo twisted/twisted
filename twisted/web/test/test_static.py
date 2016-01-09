@@ -25,6 +25,7 @@ from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.test._util import _render
+from twisted.web._responses import FOUND
 
 
 class StaticDataTests(TestCase):
@@ -380,6 +381,21 @@ class StaticFileTests(TestCase):
             self.assertEqual(b''.join(request.written), b'baz')
         d.addCallback(cbRendered)
         return d
+
+
+    def test_folderWithoutTrailingSlashRedirects(self):
+        """
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        base.child('folder').makedirs()
+        file = static.File(base.path)
+
+        request = DummyRequest([b"folder"])
+        child = resource.getChildForRequest(file, request)
+
+        self.successResultOf(self._render(child, request))
+        self.assertEqual(request.code, FOUND)
 
 
     def _makeFilePathWithStringIO(self):
