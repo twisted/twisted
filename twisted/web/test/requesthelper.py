@@ -15,8 +15,6 @@ from zope.interface import implementer
 
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
-from twisted.python.url import URL
-
 from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ISSLTransport
