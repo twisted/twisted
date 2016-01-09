@@ -35,7 +35,8 @@ from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
 from twisted.python import log
-from twisted.python.compat import NativeStringIO
+from twisted.python.filepath import FilePath
+from twisted.python.compat import NativeStringIO, intToBytes
 from twisted.python.usage import UsageError
 from twisted.python.log import ILogObserver
 from twisted.python.components import Componentized
@@ -49,7 +50,7 @@ except ImportError:
     _twistd_unix = None
 else:
     from twisted.scripts._twistd_unix import UnixApplicationRunner
-    from twisted.scripts._twistd_unix import UnixAppLogger
+    from twisted.scripts._twistd_unix import UnixAppLogger, checkPID
 
 
 try:
@@ -1470,6 +1471,8 @@ class DaemonizeTests(unittest.TestCase):
     """
     Tests for L{_twistd_unix.UnixApplicationRunner} daemonization.
     """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
 
     def setUp(self):
         self.mockos = MockOS()
@@ -1655,6 +1658,75 @@ class DaemonizeTests(unittest.TestCase):
         self.assertFalse(reactor._afterDaemonizeCalled)
 
 
+class CheckPIDTests(unittest.TestCase):
+    """
+    Tests for L{checkPID}.
+    """
 
-if _twistd_unix is None:
-    DaemonizeTests.skip = "twistd unix support not available"
+    def test_nonExistingPIDFile(self):
+        """
+        A path given to L{checkPID} that does not exist causes it to return
+        C{0}.
+        """
+        self.assertEqual(checkPID(self.mktemp()), 0)
+
+
+    def test_stalePIDFile(self):
+        """
+        A path given to L{checkPID} which points to a file that contains a
+        non-existing PID will remove the file given and return C{1}.
+        """
+        tempDir = FilePath(self.mktemp())
+        # This PID doesn't exist, right?
+        tempDir.setContent(b"999999999")
+
+        self.assertTrue(tempDir.exists())
+        self.assertEqual(checkPID(tempDir.path), 1)
+        tempDir.changed()
+        self.assertFalse(tempDir.exists())
+
+
+    def test_nonNumericPIDFile(self):
+        """
+        A path given to L{checkPID} which points to a file which contains
+        something that doesn't look like a PID (isn't an integer) will raise
+        L{SystemExit} saying so.
+        """
+        tempDir = FilePath(self.mktemp())
+        tempDir.setContent(b"i'm a goofy goober yeah")
+
+        e = self.assertRaises(SystemExit, checkPID, tempDir.path)
+        self.assertEqual(e.args[0],
+                         "Pidfile " + tempDir.path +
+                         " contains non-numeric value")
+
+
+    def test_noAccessPIDFile(self):
+        """
+        A path given to L{checkPID} which points to a file which contains a PID
+        that we do not have access to signals to will raise L{SystemExit}
+        saying we can't check the status.
+        """
+        tempDir = FilePath(self.mktemp())
+        # We shouldn't have access to PID 1... right?
+        tempDir.setContent(b"1")
+
+        e = self.assertRaises(SystemExit, checkPID, tempDir.path)
+        self.assertEqual(e.args[0],
+                         "Can't check status of PID 1 from pidfile " +
+                         tempDir.path + ": Operation not permitted")
+
+    def test_runningPIDFile(self):
+        """
+        A path given to L{checkPID} which points to a file which contains a PID
+        that is currently running will raise L{SystemExit} saying twistd is
+        already running
+        """
+        tempDir = FilePath(self.mktemp())
+        # We shouldn't have access to PID 1... right?
+        tempDir.setContent(intToBytes(os.getpid()))
+
+        e = self.assertRaises(SystemExit, checkPID, tempDir.path)
+        self.assertEqual(e.args[0].split("\n")[0],
+                         "Another twistd server is running, PID " +
+                         str(os.getpid()))
