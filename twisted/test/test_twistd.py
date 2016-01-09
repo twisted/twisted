@@ -1721,6 +1721,7 @@ class CheckPIDTests(unittest.TestCase):
                          "Can't check status of PID 1 from pidfile " +
                          tempDir.path + ": Operation not permitted")
 
+
     def test_runningPIDFile(self):
         """
         A path given to L{checkPID} which points to a file which contains a PID
