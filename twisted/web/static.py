@@ -30,6 +30,8 @@ from twisted.internet import abstract, interfaces
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 from twisted.python.url import URL
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecated
 
 if _PY3:
     from urllib.parse import quote, unquote
@@ -62,20 +64,37 @@ class Data(resource.Resource):
     render_HEAD = render_GET
 
 
+
+@deprecated(Version("Twisted", 16, 0, 0))
 def addSlash(request):
+    """
+    Add a trailing slash to C{request}'s URI. Deprecated, do not use.
+    """
     return _addSlash(request)
+
+
 
 def _addSlash(request):
     """
-    Make sure that the path has a trailing slash.
+    Add a trailing slash to C{request}'s URI.
+
+    @param request: The incoming request to add the ending slash to.
+    @type request: An object conforming to L{twisted.web.iweb.IRequest}
+
+    @return: A URI with a trailing slash, with query and fragment preserved.
+    @rtype: L{bytes}
     """
     url = URL.fromText(request.uri.decode('ascii'))
-    print(url)
+    # Add an empty path segment at the end, so that it adds a trailing slash
+    url = url.replace(path=list(url.path) + [u""])
+    return url.asText().encode('ascii')
+
+
 
 class Redirect(resource.Resource):
     def __init__(self, request):
         resource.Resource.__init__(self)
-        self.url = addSlash(request)
+        self.url = _addSlash(request)
 
     def render(self, request):
         return redirectTo(self.url, request)
@@ -609,7 +628,7 @@ class File(resource.Resource, filepath.FilePath):
 
 
     def redirect(self, request):
-        return redirectTo(addSlash(request), request)
+        return redirectTo(_addSlash(request), request)
 
 
     def listNames(self):
