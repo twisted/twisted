@@ -1474,6 +1474,7 @@ class DaemonizeTests(unittest.TestCase):
     if _twistd_unix is None:
         skip = "twistd unix not available"
 
+
     def setUp(self):
         self.mockos = MockOS()
         self.config = twistd.ServerOptions()
@@ -1658,12 +1659,14 @@ class DaemonizeTests(unittest.TestCase):
         self.assertFalse(reactor._afterDaemonizeCalled)
 
 
+
 class CheckPIDTests(unittest.TestCase):
     """
     Tests for L{checkPID}.
     """
     if _twistd_unix is None:
         skip = "twistd unix not available"
+
 
     def test_nonExistingPIDFile(self):
         """
