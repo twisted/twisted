@@ -19,7 +19,6 @@ from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ISSLTransport
 
-from twisted.web.http import Request
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
