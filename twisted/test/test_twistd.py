@@ -1662,6 +1662,8 @@ class CheckPIDTests(unittest.TestCase):
     """
     Tests for L{checkPID}.
     """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
 
     def test_nonExistingPIDFile(self):
         """
