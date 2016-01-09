@@ -52,10 +52,10 @@ class NameVirtualHostTests(TestCase):
         to the key indicated by the value of the I{Host} header in the request.
         """
         virtualHostResource = NameVirtualHost()
-        virtualHostResource.addHost('example.org', Data("winner", ""))
+        virtualHostResource.addHost(b'example.org', Data("winner", ""))
 
-        request = DummyRequest([''])
-        request.headers['host'] = 'example.org'
+        request = DummyRequest([b''])
+        request.requestHeaders.addRawHeader(b'host', b'example.org')
         d = _render(virtualHostResource, request)
         def cbRendered(ignored, request):
             self.assertEqual(''.join(request.written), "winner")
@@ -63,7 +63,7 @@ class NameVirtualHostTests(TestCase):
 
         # The port portion of the Host header should not be considered.
         requestWithPort = DummyRequest([''])
-        requestWithPort.headers['host'] = 'example.org:8000'
+        requestWithPort.requestHeaders.addRawHeader(b'host', b'example.org:8000')
         dWithPort = _render(virtualHostResource, requestWithPort)
         def cbRendered(ignored, requestWithPort):
             self.assertEqual(''.join(requestWithPort.written), "winner")
@@ -80,8 +80,8 @@ class NameVirtualHostTests(TestCase):
         """
         virtualHostResource = NameVirtualHost()
         virtualHostResource.default = Data("correct data", "")
-        request = DummyRequest([''])
-        request.headers['host'] = 'example.com'
+        request = DummyRequest([b''])
+        request.requestHeaders.addRawHeader(b'host', b'example.com')
         d = _render(virtualHostResource, request)
         def cbRendered(ignored):
             self.assertEqual(''.join(request.written), "correct data")
@@ -97,7 +97,7 @@ class NameVirtualHostTests(TestCase):
         """
         virtualHostResource = NameVirtualHost()
         request = DummyRequest([''])
-        request.headers['host'] = 'example.com'
+        request.requestHeaders.addRawHeader(b'host', b'example.com')
         d = _render(virtualHostResource, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, NOT_FOUND)

@@ -78,12 +78,12 @@ class DummyRequest(object):
         be called back with C{None} when C{finish} is called or which will be
         errbacked if C{processingFailed} is called.
 
-    @type headers: C{dict}
-    @ivar headers: A mapping of header name to header value for all request
+    @type requestheaders: C{Headers}
+    @ivar requestheaders: A Headers instance that stores values for all request
         headers.
 
-    @type outgoingHeaders: C{dict}
-    @ivar outgoingHeaders: A mapping of header name to header value for all
+    @type responseHeaders: C{Headers}
+    @ivar responseHeaders: A Headers instance that stores values for all
         response headers.
 
     @type responseCode: C{int}
@@ -115,14 +115,28 @@ class DummyRequest(object):
         self.session = None
         self.protoSession = session or Session(0, self)
         self.args = {}
-        self.outgoingHeaders = {}
         self.requestHeaders = Headers()
         self.responseHeaders = Headers()
         self.responseCode = None
-        self.headers = {}
         self._finishedDeferreds = []
         self._serverName = b"dummy"
         self.clientproto = b"HTTP/1.0"
+
+    def getAllHeaders(self):
+        """
+        Return dictionary mapping the names of all received headers to the last
+        value received for each.
+
+        Since this method does not return all header information,
+        C{self.requestHeaders.getAllRawHeaders()} may be preferred.
+
+        NOTE: This function is a direct copy of
+        C{twisted.web.http.Request.getAllRawHeaders}.
+        """
+        headers = {}
+        for k, v in self.requestHeaders.getAllRawHeaders():
+            headers[k.lower()] = v[-1]
+        return headers
 
     def getHeader(self, name):
         """
@@ -135,22 +149,13 @@ class DummyRequest(object):
         @rtype: C{bytes} or L{NoneType}
         @return: The value of the specified request header.
         """
-        return self.headers.get(name.lower(), None)
-
-
-    def getAllHeaders(self):
-        """
-        Retrieve all the values of the request headers as a dictionary.
-
-        @return: The entire C{headers} L{dict}.
-        """
-        return self.headers
+        return self.requestHeaders.getRawHeaders(name.lower(), [None])[0]
 
 
     def setHeader(self, name, value):
         """TODO: make this assert on write() if the header is content-length
         """
-        self.outgoingHeaders[name.lower()] = value
+        self.responseHeaders.addRawHeader(name, value)
 
     def getSession(self):
         if self.session:
