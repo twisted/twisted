@@ -52,6 +52,8 @@ For clients, we can use :api:`twisted.internet.ssl.optionsForClientTLS`.
 This takes two arguments, ``hostname`` (which indicates what hostname must be advertised in the server's certificate) and optionally ``trustRoot``.
 By default, :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` tries to obtain the trust roots from your platform, but you can specify your own.
 
+You may obtain an object suitable to pass as the ``trustRoot=`` paramater with an explicit list of :api:`twisted.internet.ssl.Certificate` or :api:`twisted.internet.ssl.PrivateCertificate` instances by calling :api:`twisted.internet.ssl.trustRootFromCertificates`. See the example :download:`ssl_trustroot.py <../examples/ssl_trustroot.py>`
+
 .. note::
 
    Currently, Twisted only supports loading of OpenSSL's default trust roots.
