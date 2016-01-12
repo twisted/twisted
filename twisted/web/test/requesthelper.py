@@ -276,6 +276,27 @@ class DummyRequest(object):
         """
         return IPv4Address('TCP', '127.0.0.1', 80)
 
+    def setHost(self, host, port, ssl=0):
+        """
+        Change the host and port the request thinks it's using.
+
+        @type host: C{bytes}
+        @param host: The value to which to change the host header.
+
+        @type ssl: C{bool}
+        @param ssl: A flag which, if C{True}, indicates that the request is
+            considered secure (if C{True}, L{isSecure} will return C{True}).
+        """
+        self._forceSSL = ssl # set first so isSecure will work
+        if self.isSecure():
+            default = 443
+        else:
+            default = 80
+        if port == default:
+            hostHeader = host
+        else:
+            hostHeader = host + b":" + intToBytes(port)
+        self.requestHeaders.addRawHeader(b"host", hostHeader)
 
     def getClient(self):
         """
