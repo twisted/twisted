@@ -13,6 +13,7 @@ from io import BytesIO
 
 from zope.interface import implementer
 
+from twisted.python.compat import intToBytes
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
 from twisted.internet.defer import Deferred

@@ -5,18 +5,20 @@
 Tests for L{twisted.web.vhost}.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.internet.defer import gatherResults
 from twisted.trial.unittest import TestCase
 from twisted.web.http import NOT_FOUND
-from twisted.web.resource import NoResource, Resource
+from twisted.web.resource import NoResource
 from twisted.web.static import Data
 from twisted.web.server import Site
 from twisted.web.vhost import (_HostResource,
                                NameVirtualHost,
-                               VirtualHostCollection,
                                VHostMonsterResource)
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.test._util import _render
+
 
 class HostResourceTests(TestCase):
     """
@@ -45,12 +47,13 @@ class HostResourceTests(TestCase):
         request.isSecure = lambda: False
         request.host = b''
 
-        step = hr.getChild(b'baz.com', request) #Consumes rest of path
+        step = hr.getChild(b'baz.com', request) # Consumes rest of path
         self.assertIsInstance(step, Data)
 
         request = DummyRequest([b'uri', b'test'])
         step = root.getChild(b'uri', request)
         self.assertIsInstance(step, NoResource)
+
 
 
 class NameVirtualHostTests(TestCase):
@@ -175,6 +178,7 @@ class NameVirtualHostTests(TestCase):
                               Data)
         self.assertEqual(request.prepath,  [])
         self.assertEqual(request.postpath, [b''])
+
 
 
 class VHostMonsterResourceTests(TestCase):
