@@ -27,7 +27,8 @@ except ImportError:
 else:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
-    from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
+    from OpenSSL.crypto import TYPE_RSA, TYPE_DSA
+    from OpenSSL.crypto import FILETYPE_PEM, FILETYPE_ASN1
     if getattr(SSL.Context, "set_tlsext_servername_callback", None) is None:
         skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
 
@@ -536,6 +537,36 @@ class ClientOptionsTests(unittest.SynchronousTestCase):
         )
         self.assertEqual(str(error), expectedText)
 
+
+class CertificateRequestTests(unittest.TestCase):
+    """
+    Tests serialization of CertificateRequests
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    def setUp(self):
+        self.keypair = sslverify.KeyPair.generate()
+        dn = sslverify.DistinguishedName(commonName=b'test')
+        self.request = sslverify.CertificateRequest.load(
+            self.keypair.certificateRequest(dn),
+        )
+
+    def test_load(self):
+        asnData = self.request.dump()
+
+        testReq = sslverify.CertificateRequest.load(asnData)
+        testData = testReq.dump()
+
+        self.assertEqual(asnData, testData)
+
+    def test_loadPEM(self):
+        pemData = self.request.dumpPEM()
+
+        testReq = sslverify.CertificateRequest.loadPEM(pemData)
+        testData = testReq.dumpPEM()
+
+        self.assertEqual(pemData, testData)
 
 
 class OpenSSLOptionsTests(unittest.TestCase):
@@ -2586,6 +2617,44 @@ class KeyPairTests(unittest.TestCase):
         self.sKey = makeCertificate(
             O=b"Server Test Certificate",
             CN=b"server")[0]
+        self.keyPem = OpenSSL.crypto.dump_privatekey(FILETYPE_PEM, self.sKey)
+        self.keyAsn = OpenSSL.crypto.dump_privatekey(FILETYPE_ASN1, self.sKey)
+
+
+    def test_inspectRSA(self):
+        keyPair = sslverify.KeyPair.generate(kind=TYPE_RSA, size=42)
+        self.assertTrue(
+            keyPair.inspect().startswith(
+                "42-bit RSA Key Pair with Hash:"
+            )
+        )
+
+
+    def test_inspectDSA(self):
+        # it seems that DSA enforces a 512-bit minimum despite what
+        # the docs say (it should throw an exception if size "isn't
+        # appropriate")
+        keyPair = sslverify.KeyPair.generate(kind=TYPE_DSA, size=512)
+        self.assertTrue(
+            keyPair.inspect().startswith(
+                "512-bit DSA Key Pair with Hash:"
+            ),
+            str(keyPair.inspect())
+        )
+
+
+    def test_dumpLoadAsn(self):
+        testKey = sslverify.KeyPair.load(self.keyAsn)
+        testData = testKey.dump()
+
+        self.assertEqual(self.keyAsn, testData)
+
+
+    def test_dumpLoadPem(self):
+        testKey = sslverify.KeyPair.loadPEM(self.keyPem)
+        testData = testKey.dumpPEM()
+
+        self.assertEqual(self.keyPem, testData)
 
 
     def test_getstateDeprecation(self):
