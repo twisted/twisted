@@ -148,13 +148,13 @@ class RecordingClientProtocol(protocol.Protocol):
 
     def __init__(self):
         self.deferred = defer.Deferred()
-
-
-    def connectionMade(self):
-        self.transport.getPeerCertificate()
+        self.peerCert = None
+        self.certChain = None
 
 
     def dataReceived(self, data):
+        self.certChain = self.transport.getPeerCertificateChain()
+        self.peerCert = self.transport.getPeerCertificate()
         self.deferred.callback(data)
 
 
@@ -480,6 +480,38 @@ class BufferingTests(unittest.TestCase):
 
         return clientProto.deferred.addCallback(
             self.assertEqual, b"+OK <some crap>\r\n")
+
+
+    @defer.inlineCallbacks
+    def test_peerCertificates(self):
+        serverProto = self.serverProto = SingleLineServerProtocol()
+        clientProto = self.clientProto = RecordingClientProtocol()
+
+        server = protocol.ServerFactory()
+        client = self.client = protocol.ClientFactory()
+
+        server.protocol = lambda: serverProto
+        client.protocol = lambda: clientProto
+
+        sCTX = ssl.DefaultOpenSSLContextFactory(certPath, certPath)
+        cCTX = ssl.ClientContextFactory()
+
+        port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
+        self.addCleanup(port.stopListening)
+
+        reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
+
+        pem = FilePath(__file__.encode("utf-8")).sibling(b"server.pem").getContent()
+        expectedCert = ssl.Certificate.loadPEM(pem)
+
+        # only after we've received some data will the SSL handshake
+        # be completely-complete
+        data = yield clientProto.deferred
+
+        # verify the certificate and chain are what we expect
+        peer = ssl.Certificate(clientProto.peerCert)
+        self.assertEqual(peer, expectedCert)
+        self.assertEqual([expectedCert], clientProto.certChain)
 
 
 

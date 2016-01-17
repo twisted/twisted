@@ -62,6 +62,7 @@ from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
+from twisted.internet._sslverify import Certificate
 
 
 @implementer(IPushProducer)
@@ -584,6 +585,16 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     def getPeerCertificate(self):
         return self._tlsConnection.get_peer_certificate()
+
+
+    def getPeerCertificateChain(self):
+        """
+        Returns a L{sequence} of L{twisted.internet.ssl.Certificate}
+        instances representing the certificate chain of the other
+        end. The first Certificate is the remote host's certificate
+        and the last is the root.
+        """
+        return Certificate.peerChainFromTransport(self)
 
 
     @property

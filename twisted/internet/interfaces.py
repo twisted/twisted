@@ -2243,6 +2243,11 @@ class ISSLTransport(ITCPTransport):
         Return an object with the peer's certificate info.
         """
 
+    def getPeerCertificateChain():
+        """
+        Return a list of L{twisted.internet.ssl.Certificate} instances
+        representing the chain of certificates, with the root last.
+        """
 
 
 class INegotiated(ISSLTransport):

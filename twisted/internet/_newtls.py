@@ -100,8 +100,9 @@ def startTLS(transport, contextFactory, normal, bypass):
             a client (C{True}) or a server (C{False})
           - a settable C{TLS} attribute which can be used to mark the fact
             that SSL has been started
-          - settable C{getHandle} and C{getPeerCertificate} attributes so
-            these L{ISSLTransport} methods can be added to it
+          - settable C{getHandle}, C{getPeerCertificate} and
+            C{getPeerCertificateChain} attributes so these
+            L{ISSLTransport} methods can be added to it
           - a C{protocol} attribute referring to the L{IProtocol} currently
             connected to the transport, which can also be set to a new
             L{IProtocol} for the transport to deliver data to
@@ -142,6 +143,7 @@ def startTLS(transport, contextFactory, normal, bypass):
 
     transport.getHandle = tlsProtocol.getHandle
     transport.getPeerCertificate = tlsProtocol.getPeerCertificate
+    transport.getPeerCertificateChain = tlsProtocol.getPeerCertificateChain
 
     # Mark the transport as secure.
     directlyProvides(transport, ISSLTransport)

@@ -385,8 +385,6 @@ class DistinguishedName(dict):
         if attr not in _x509names:
             raise AttributeError("%s is not a valid OpenSSL X509 name field" % (attr,))
         realAttr = _x509names[attr]
-        if not isinstance(value, bytes):
-            value = value.encode("ascii")
         self[realAttr] = value
 
 
@@ -540,6 +538,29 @@ class Certificate(CertBase):
         """
         return _handleattrhelper(Class, transport, 'peer')
     peerFromTransport = classmethod(peerFromTransport)
+
+
+    def peerChainFromTransport(Class, transport):
+        """
+        Get the certificate chain for the remote end of the given
+        transport.
+        """
+        method = getattr(transport.getHandle(), "get_peer_cert_chain", None)
+        if method is None:
+            raise CertificateError(
+                "non-TLS transport %r did not have peer certificate "
+                "chain" % (transport,)
+            )
+        chain = method()
+        if not chain:
+            raise CertificateError(
+                "TLS transport %r has no certificate chain" % (transport,)
+            )
+        cert_chain = []
+        for cert in chain:
+            cert_chain.append(Class(cert))
+        return cert_chain
+    peerChainFromTransport = classmethod(peerChainFromTransport)
 
 
     def hostFromTransport(Class, transport):
@@ -1009,6 +1030,32 @@ class OpenSSLCertificateAuthorities(object):
         store = context.get_cert_store()
         for cert in self._caCerts:
             store.add_cert(cert)
+
+
+
+def trustRootFromCertificates(certificates):
+    """
+    From a list of L{Certificate} or L{PrivateCertificate} instances
+    this returns an object which implements C{IOpenSSLTrustRoot} and
+    is hence suitable for use as the trustRoot= keyword argument to
+    L{optionsForClientTLS}
+
+    @param certificates: All certificates which will be trusted.
+    @type certificates: C{iterable} of L{CertBase}
+    """
+
+    certs = []
+    for cert in certificates:
+        # PrivateCertificate or Certificate are both okay
+        if isinstance(cert, CertBase):
+            cert = cert.original
+        else:
+            raise TypeError(
+                "certificates items must be twisted.internet.ssl.CertBase"
+                " instances"
+            )
+        certs.append(cert)
+    return OpenSSLCertificateAuthorities(certs)
 
 
 
