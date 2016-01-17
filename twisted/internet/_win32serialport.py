@@ -1,3 +1,4 @@
+ -*- test-case-name: twisted.internet.test.test_win32serialport -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -21,6 +22,7 @@ from twisted.internet import abstract
 # sibling imports
 from twisted.internet.serialport import BaseSerialPort
 
+
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     """A serial device, acting as a transport, that uses a win32 event."""
 
@@ -34,12 +36,12 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
             parity=parity, stopbits=stopbits, timeout=None,
             xonxoff=xonxoff, rtscts=rtscts)
 
-        # pyserial 3.0 (internal API changes)
+        # Try to detect pyserial version to support pyserial API changes.
         if hasattr(self._serial, '_port_handle'):
+            # Looks like pyserial 3.0.
             self._serialHandle = self._serial._port_handle
-            
-        # pyserial <= 2.7
         else:
+            # Looks like pyserial 2.7 or older.
             self._serialHandle = self._serial.hComPort
         
         self.flushInput()
