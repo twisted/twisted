@@ -239,6 +239,7 @@ modules = [
     "twisted.web.test.requesthelper",
     "twisted.web.util",
     "twisted.web.vhost",
+    "twisted.web.wsgi",
     "twisted.web.xmlrpc",
 ]
 
@@ -410,6 +411,7 @@ testModules = [
     "twisted.web.test.test_web__responses",
     "twisted.web.test.test_webclient",
     "twisted.web.test.test_vhost",
+    "twisted.web.test.test_wsgi",
     "twisted.web.test.test_xmlrpc",
 ]
 
