@@ -2171,16 +2171,16 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
     def test_trustRootFromCertificatesPrivatePublic(self):
         """
-        L{trustRootFromCertificates} accepts either a Certificate or a
-        PrivateCertificate instance.
+        L{trustRootFromCertificates} accepts either a L{sslverify.Certificate}
+        or a L{sslverify.PrivateCertificate} instance.
         """
         privateCert = sslverify.PrivateCertificate.loadPEM(A_KEYPAIR)
         cert = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
 
         mt = sslverify.trustRootFromCertificates([privateCert, cert])
 
-        # Verify that the returned object acts correctly when used as
-        # a trustRoot= param to optionsForClientTLS
+        # Verify that the returned object acts correctly when used as a
+        # trustRoot= param to optionsForClientTLS.
         sProto, cProto, pump = loopbackTLSConnectionInMemory(
             trustRoot=mt,
             privateKey=privateCert.privateKey.original,
@@ -2206,8 +2206,8 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         trust = sslverify.trustRootFromCertificates([selfSigned])
 
-        # since we trust this exact certificate, connections to this
-        # server should succeed.
+        # Since we trust this exact certificate, connections to this server
+        # should succeed.
         sProto, cProto, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
             privateKey=selfSigned.privateKey.original,
@@ -2220,16 +2220,15 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
     def test_trustRootCertificateAuthorityTrustsConnection(self):
         """
         L{trustRootFromCertificates} called with certificate A will cause
-        L{optionsForClientTLS} to accept client connections to a
-        server with certificate B where B is signed by A.
+        L{optionsForClientTLS} to accept client connections to a server with
+        certificate B where B is signed by A.
         """
         caCert, serverCert = certificatesForAuthorityAndServer()
 
         trust = sslverify.trustRootFromCertificates([caCert])
 
-        # since we've listed the CA's certificate as a trusted cert, a
-        # connection to the server certificate it signed should
-        # succeed.
+        # Since we've listed the CA's certificate as a trusted cert, a
+        # connection to the server certificate it signed should succeed.
         sProto, cProto, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
             privateKey=serverCert.privateKey.original,
@@ -2241,9 +2240,9 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
     def test_trustRootFromCertificatesUntrusted(self):
         """
-        L{trustRootFromCertificates} called with certificate A will
-        cause L{optionsForClientTLS} to disallow any connections to a
-        server with certificate B where B is not signed by A.
+        L{trustRootFromCertificates} called with certificate A will cause
+        L{optionsForClientTLS} to disallow any connections to a server with
+        certificate B where B is not signed by A.
         """
         key, cert = makeCertificate(O=b"Server Test Certificate", CN=b"server")
         serverCert = sslverify.PrivateCertificate.fromCertificateAndKeyPair(
@@ -2256,7 +2255,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         trust = sslverify.trustRootFromCertificates([untrustedCert])
 
-        # since we only trust 'untrustedCert' which has not signed our
+        # Since we only trust 'untrustedCert' which has not signed our
         # server's cert, we should reject this connection
         sProto, cProto, pump = loopbackTLSConnectionInMemory(
             trustRoot=trust,
@@ -2264,7 +2263,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
             serverCertificate=serverCert.original,
         )
 
-        # this connection should fail, so no data was received.
+        # This connection should fail, so no data was received.
         self.assertEqual(cProto.wrappedProtocol.data, b'')
 
         # It was an L{SSL.Error}.
@@ -2275,7 +2274,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 
-    def test_trustRootFromCertificatesOpenSslObjects(self):
+    def test_trustRootFromCertificatesOpenSSLObjects(self):
         """
         L{trustRootFromCertificates} rejects any L{OpenSSL.crypto.X509}
         instances in the list passed to it.
@@ -2288,8 +2287,8 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
             sslverify.trustRootFromCertificates, [certX509],
         )
         self.assertEqual(
-            "certificates items must be twisted.internet.ssl.CertBase"
-            " instances",
+            "certificates items must be twisted.internet.ssl.CertBase "
+            "instances",
             exception.args[0],
         )
 

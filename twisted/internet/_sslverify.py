@@ -1016,9 +1016,9 @@ def trustRootFromCertificates(certificates):
     """
     Builds an object that trusts multiple root L{Certificate}s.
 
-    When passed to L{optionsForClientTLS}, connections using those
-    options will reject any server certificate not signed by at least
-    one of the certificates in the `certificates` list.
+    When passed to L{optionsForClientTLS}, connections using those options will
+    reject any server certificate not signed by at least one of the
+    certificates in the `certificates` list.
 
     @since: 16.0.0
 
@@ -1026,8 +1026,8 @@ def trustRootFromCertificates(certificates):
     @type certificates: C{iterable} of L{CertBase}
 
     @rtype: L{IOpenSSLTrustRoot}
-    @return: an object suitable for use as the trustRoot= keyword
-        argument to L{optionsForClientTLS}
+    @return: an object suitable for use as the trustRoot= keyword argument to
+        L{optionsForClientTLS}
     """
 
     certs = []
