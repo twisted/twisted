@@ -1012,6 +1012,39 @@ class OpenSSLCertificateAuthorities(object):
 
 
 
+def trustRootFromCertificates(certificates):
+    """
+    Builds an object that trusts multiple root L{Certificate}s.
+
+    When passed to L{optionsForClientTLS}, connections using those options will
+    reject any server certificate not signed by at least one of the
+    certificates in the `certificates` list.
+
+    @since: 16.0.0
+
+    @param certificates: All certificates which will be trusted.
+    @type certificates: C{iterable} of L{CertBase}
+
+    @rtype: L{IOpenSSLTrustRoot}
+    @return: an object suitable for use as the trustRoot= keyword argument to
+        L{optionsForClientTLS}
+    """
+
+    certs = []
+    for cert in certificates:
+        # PrivateCertificate or Certificate are both okay
+        if isinstance(cert, CertBase):
+            cert = cert.original
+        else:
+            raise TypeError(
+                "certificates items must be twisted.internet.ssl.CertBase"
+                " instances"
+            )
+        certs.append(cert)
+    return OpenSSLCertificateAuthorities(certs)
+
+
+
 @implementer(IOpenSSLTrustRoot)
 class OpenSSLDefaultPaths(object):
     """
