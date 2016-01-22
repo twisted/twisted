@@ -508,6 +508,7 @@ class OpenSSHClientMixin:
         cmdline = ('ssh -2 -l testuser -p %i '
                    '-oUserKnownHostsFile=kh_test '
                    '-oPasswordAuthentication=no '
+                   '-oPubkeyAcceptedKeyTypes=ssh-dss '
                    # Always use the RSA key, since that's the one in kh_test.
                    '-oHostKeyAlgorithms=ssh-rsa '
                    '-a '
