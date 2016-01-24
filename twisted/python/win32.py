@@ -132,15 +132,19 @@ class _ErrorFormatter(object):
             from ctypes import WinError
         except ImportError:
             WinError = None
+
         try:
-            from win32api import FormatMessage
+            from pywincffi.core import dist
+            ffi, _ = dist.load()
+            getwinerror = lambda errorcode: ffi.getwinerror(errorcode)[1]
         except ImportError:
-            FormatMessage = None
+            getwinerror = None
+
         try:
             from socket import errorTab
         except ImportError:
             errorTab = None
-        return cls(WinError, FormatMessage, errorTab)
+        return cls(WinError, getwinerror, errorTab)
     fromEnvironment = classmethod(fromEnvironment)
 
 
@@ -159,6 +163,7 @@ class _ErrorFormatter(object):
         @return: The error message string
         @rtype: C{str}
         """
+
         if self.winError is not None:
             return self.winError(errorcode).strerror
         if self.formatMessage is not None:

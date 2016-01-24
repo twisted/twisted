@@ -13,16 +13,8 @@ import os
 
 from twisted.trial import unittest
 from twisted.python import lockfile
-from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 
-skipKill = None
-if platform.isWindows():
-    if(requireModule('win32api.OpenProcess') is None and
-        requireModule('pywintypes') is None
-            ):
-        skipKill = ("On windows, lockfile.kill is not implemented in the "
-                    "absence of win32api and/or pywintypes.")
 
 class UtilTests(unittest.TestCase):
     """
@@ -97,8 +89,73 @@ class UtilTests(unittest.TestCase):
         process which exists and signal C{0}.
         """
         lockfile.kill(os.getpid(), 0)
-    test_kill.skip = skipKill
 
+    def test_killERROR_ACCESS_DENIEDWindows(self):
+        """
+        L{lockfile.kill} returns without error if ERROR_ACCESS_DENIED is
+        raised by Windows.
+        """
+        def fakeKill(pid, signal):
+            raise WindowsError(lockfile.ERROR_ACCESS_DENIED, None)
+
+        self.patch(os, 'kill', fakeKill)
+        lockfile.kill(0, 0)
+
+    if not platform.isWindows():
+        test_killERROR_ACCESS_DENIEDWindows.skip = (
+            "special ERROR_ACCESS_DENIED handling in kill() only necessary on "
+            "on Windows.")
+
+    def test_killERROR_INVALID_PARAMETERWindows(self):
+        """
+        L{lockfile.kill} reraises as OSError(ESRCH) if ERROR_INVALID_PARAMETER
+        is raised by Windows.
+        """
+        def fakeKill(pid, signal):
+            raise WindowsError(lockfile.ERROR_INVALID_PARAMETER, None)
+
+        self.patch(os, 'kill', fakeKill)
+
+        exc = self.assertRaises(OSError, lockfile.kill, 0, 0)
+        self.assertEqual(exc.errno, errno.ESRCH)
+
+    if not platform.isWindows():
+        test_killERROR_INVALID_PARAMETERWindows.skip = (
+            "special ERROR_INVALID_PARAMETER handling in kill() only necessary "
+            "on Windows.")
+
+    def test_killOtherWindowsErrorReraisedOnWindows(self):
+        """
+        L{lockfile.kill} reraises any unhandled WindowsError on Windows.
+        """
+        def fakeKill(pid, signal):
+            raise WindowsError(123, errno.EINVAL)
+
+        self.patch(os, 'kill', fakeKill)
+        exc = self.assertRaises(WindowsError, lockfile.kill, 0, 0)
+        self.assertEqual(exc.winerror, 123)
+        self.assertEqual(exc.errno, errno.EINVAL)
+
+    if not platform.isWindows():
+        test_killOtherWindowsErrorReraisedOnWindows.skip = (
+            "special handling in kill() for other WindowsError only necessary "
+            "on Windows.")
+
+    def test_killOtherErrorReraisedOnWindows(self):
+        """
+        L{lockfile.kill} reraises any other unhandled exception on Windows.
+        """
+        def fakeKill(pid, signal):
+            raise IOError(123)
+
+        self.patch(os, 'kill', fakeKill)
+        exc = self.assertRaises(IOError, lockfile.kill, 0, 0)
+        self.assertEqual(exc.args, (123, ))
+
+    if not platform.isWindows():
+        test_killOtherErrorReraisedOnWindows.skip = (
+            "special handling in kill() for other WindowsError only necessary "
+            "on Windows.")
 
     def test_killESRCH(self):
         """
@@ -108,19 +165,6 @@ class UtilTests(unittest.TestCase):
         # Hopefully there is no process with PID 2 ** 31 - 1
         exc = self.assertRaises(OSError, lockfile.kill, 2 ** 31 - 1, 0)
         self.assertEqual(exc.errno, errno.ESRCH)
-    test_killESRCH.skip = skipKill
-
-
-    def test_noKillCall(self):
-        """
-        Verify that when L{lockfile.kill} does end up as None (e.g. on Windows
-        without pywin32), it doesn't end up being called and raising a
-        L{TypeError}.
-        """
-        self.patch(lockfile, "kill", None)
-        fl = lockfile.FilesystemLock(self.mktemp())
-        fl.lock()
-        self.assertFalse(fl.lock())
 
 
 
