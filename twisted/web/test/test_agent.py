@@ -2770,7 +2770,7 @@ class DummyResponse(object):
         is used by L{DummyResponse.protocol} to make a connection.
     """
 
-    code = b"200"
+    code = 200
     phrase = b"OK"
 
     def __init__(self, headers=None, transportFactory=AbortableStringTransport):
