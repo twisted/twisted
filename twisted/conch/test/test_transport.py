@@ -2150,8 +2150,8 @@ class SSHCiphersTests(unittest.TestCase):
         Test that setKeys sets up the ciphers.
         """
         key = '\x00' * 64
-        cipherItems = transport.SSHCiphers.cipherMap.items()
-        for cipName, (modName, keySize, counter) in cipherItems:
+        for cipName in transport.SSHTransportBase.supportedCiphers:
+            modName, keySize, counter = transport.SSHCiphers.cipherMap[cipName]
             encCipher = transport.SSHCiphers(cipName, 'none', 'none', 'none')
             decCipher = transport.SSHCiphers('none', cipName, 'none', 'none')
             cip = encCipher._getCipher(cipName, key, key)

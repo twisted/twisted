@@ -18,6 +18,7 @@ import string
 import hmac
 
 # external library imports
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 
@@ -86,6 +87,219 @@ class _MACParams(tuple):
 
     @ivar key: The HMAC key which will be used.
     """
+
+
+
+class SSHCiphers:
+    """
+    SSHCiphers represents all the encryption operations that need to occur
+    to encrypt and authenticate the SSH connection.
+
+    @cvar cipherMap: A dictionary mapping SSH encryption names to 3-tuples of
+                     (<cryptography.hazmat.primitives.interfaces.CipherAlgorithm>,
+                      <block size>, <cryptography.hazmat.primitives.interfaces.Mode>)
+    @cvar macMap: A dictionary mapping SSH MAC names to hash modules.
+
+    @ivar outCipType: the string type of the outgoing cipher.
+    @ivar inCipType: the string type of the incoming cipher.
+    @ivar outMACType: the string type of the incoming MAC.
+    @ivar inMACType: the string type of the incoming MAC.
+    @ivar encBlockSize: the block size of the outgoing cipher.
+    @ivar decBlockSize: the block size of the incoming cipher.
+    @ivar verifyDigestSize: the size of the incoming MAC.
+    @ivar outMAC: a tuple of (<hash module>, <inner key>, <outer key>,
+        <digest size>) representing the outgoing MAC.
+    @ivar inMAc: see outMAC, but for the incoming MAC.
+    """
+
+    cipherMap = {
+        '3des-cbc': (algorithms.TripleDES, 24, modes.CBC),
+        'blowfish-cbc': (algorithms.Blowfish, 16, modes.CBC),
+        'aes256-cbc': (algorithms.AES, 32, modes.CBC),
+        'aes192-cbc': (algorithms.AES, 24, modes.CBC),
+        'aes128-cbc': (algorithms.AES, 16, modes.CBC),
+        'cast128-cbc': (algorithms.CAST5, 16, modes.CBC),
+        'aes128-ctr': (algorithms.AES, 16, modes.CTR),
+        'aes192-ctr': (algorithms.AES, 24, modes.CTR),
+        'aes256-ctr': (algorithms.AES, 32, modes.CTR),
+        '3des-ctr': (algorithms.TripleDES, 24, modes.CTR),
+        'blowfish-ctr': (algorithms.Blowfish, 16, modes.CTR),
+        'cast128-ctr': (algorithms.CAST5, 16, modes.CTR),
+        'none': (None, 0, modes.CBC),
+    }
+    macMap = {
+        'hmac-sha2-512': sha512,
+        'hmac-sha2-256': sha256,
+        'hmac-sha1': sha1,
+        'hmac-md5': md5,
+        'none': None
+     }
+
+
+    def __init__(self, outCip, inCip, outMac, inMac):
+        self.outCipType = outCip
+        self.inCipType = inCip
+        self.outMACType = outMac
+        self.inMACType = inMac
+        self.encBlockSize = 0
+        self.decBlockSize = 0
+        self.verifyDigestSize = 0
+        self.outMAC = (None, '', '', 0)
+        self.inMAC = (None, '', '', 0)
+
+
+    def setKeys(self, outIV, outKey, inIV, inKey, outInteg, inInteg):
+        """
+        Set up the ciphers and hashes using the given keys,
+
+        @param outIV: the outgoing initialization vector
+        @param outKey: the outgoing encryption key
+        @param inIV: the incoming initialization vector
+        @param inKey: the incoming encryption key
+        @param outInteg: the outgoing integrity key
+        @param inInteg: the incoming integrity key.
+        """
+        o = self._getCipher(self.outCipType, outIV, outKey)
+        self.encryptor = o.encryptor()
+        self.encBlockSize = o.algorithm.block_size // 8
+        o = self._getCipher(self.inCipType, inIV, inKey)
+        self.decryptor = o.decryptor()
+        self.decBlockSize = o.algorithm.block_size // 8
+        self.outMAC = self._getMAC(self.outMACType, outInteg)
+        self.inMAC = self._getMAC(self.inMACType, inInteg)
+        if self.inMAC:
+            self.verifyDigestSize = self.inMAC[3]
+
+
+    def _getCipher(self, cip, iv, key):
+        """
+        Creates an initialized cipher object.
+
+        @param cip: the name of the cipher, maps into cipherMap
+        @param iv: the initialzation vector
+        @param key: the encryption key
+        """
+        algorithmClass, keySize, modeClass = self.cipherMap[cip]
+        # no cipher
+        if algorithmClass is None:
+            return _DummyCipher()
+
+        return Cipher(
+            algorithmClass(key[:keySize]),
+            modeClass(iv[:algorithmClass.block_size // 8]),
+            backend=default_backend(),
+        )
+
+
+    def _getMAC(self, mac, key):
+        """
+        Gets a 4-tuple representing the message authentication code.
+        (<hash module>, <inner hash value>, <outer hash value>,
+        <digest size>)
+
+        @param mac: a key mapping into macMap
+        @type mac: C{str}
+        @param key: the MAC key.
+        @type key: C{str}
+        """
+        mod = self.macMap[mac]
+        if not mod:
+            return (None, '', '', 0)
+
+        # With stdlib we can only get attributes fron an instantiated object.
+        hashObject = mod()
+        digestSize = hashObject.digest_size
+        blockSize = hashObject.block_size
+
+        # Truncation here appears to contravene RFC 2104, section 2.  However,
+        # implementing the hashing behavior prescribed by the RFC breaks
+        # interoperability with OpenSSH (at least version 5.5p1).
+        key = key[:digestSize] + ('\x00' * (blockSize - digestSize))
+        i = string.translate(key, hmac.trans_36)
+        o = string.translate(key, hmac.trans_5C)
+        result = _MACParams((mod, i, o, digestSize))
+        result.key = key
+        return result
+
+
+    def encrypt(self, blocks):
+        """
+        Encrypt blocks.
+
+        @type blocks: C{bytes}
+        """
+        return self.encryptor.update(blocks)
+
+
+    def decrypt(self, blocks):
+        """
+        Decrypt blocks.
+
+        @type blocks: C{bytes}
+        """
+        return self.decryptor.update(blocks)
+
+
+    def makeMAC(self, seqid, data):
+        """
+        Create a message authentication code (MAC) for the given packet using
+        the outgoing MAC values.
+
+        @param seqid: the sequence ID of the outgoing packet
+        @type seqid: C{int}
+        @param data: the data to create a MAC for
+        @type data: C{str}
+        @rtype: C{str}
+        """
+        if not self.outMAC[0]:
+            return ''
+        data = struct.pack('>L', seqid) + data
+        return hmac.HMAC(self.outMAC.key, data, self.outMAC[0]).digest()
+
+
+    def verify(self, seqid, data, mac):
+        """
+        Verify an incoming MAC using the incoming MAC values.  Return True
+        if the MAC is valid.
+
+        @param seqid: the sequence ID of the incoming packet
+        @type seqid: C{int}
+        @param data: the packet data to verify
+        @type data: C{str}
+        @param mac: the MAC sent with the packet
+        @type mac: C{str}
+        @rtype: C{bool}
+        """
+        if not self.inMAC[0]:
+            return mac == ''
+        data = struct.pack('>L', seqid) + data
+        outer = hmac.HMAC(self.inMAC.key, data, self.inMAC[0]).digest()
+        return mac == outer
+
+
+
+def _getSupportedCiphers():
+    """
+    Build a list of ciphers that are supported by the backend in use.
+    """
+    supportedCiphers = []
+    cs = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc',
+          'aes128-ctr', 'aes128-cbc', 'cast128-ctr', 'cast128-cbc',
+          'blowfish-ctr', 'blowfish-cbc', '3des-ctr', '3des-cbc']
+    for cipher in cs:
+        algorithmClass, keySize, modeClass = SSHCiphers.cipherMap[cipher]
+        try:
+            Cipher(
+                algorithmClass(b' ' * keySize),
+                modeClass(b' ' * (algorithmClass.block_size // 8)),
+                backend=default_backend(),
+            ).encryptor()
+        except UnsupportedAlgorithm:
+            pass
+        else:
+            supportedCiphers.append(cipher)
+    return supportedCiphers
+
 
 
 class SSHTransportBase(protocol.Protocol):
@@ -214,10 +428,7 @@ class SSHTransportBase(protocol.Protocol):
     # by default. To enable them, subclass this class and add it, or do:
     # SSHTransportBase.supportedCiphers.append('none')
     # List ordered by preference.
-    supportedCiphers = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc',
-                        'aes128-ctr', 'aes128-cbc', 'cast128-ctr',
-                        'cast128-cbc', 'blowfish-ctr', 'blowfish-cbc',
-                        '3des-ctr', '3des-cbc'] # ,'none']
+    supportedCiphers = _getSupportedCiphers()
     supportedMACs = [
         'hmac-sha2-512',
         'hmac-sha2-256',
@@ -1429,194 +1640,6 @@ class _DummyCipher(object):
 
     def decryptor(self):
         return _NullEncryptionContext()
-
-
-
-class SSHCiphers:
-    """
-    SSHCiphers represents all the encryption operations that need to occur
-    to encrypt and authenticate the SSH connection.
-
-    @cvar cipherMap: A dictionary mapping SSH encryption names to 3-tuples of
-                     (<cryptography.hazmat.primitives.interfaces.CipherAlgorithm>,
-                      <block size>, <cryptography.hazmat.primitives.interfaces.Mode>)
-    @cvar macMap: A dictionary mapping SSH MAC names to hash modules.
-
-    @ivar outCipType: the string type of the outgoing cipher.
-    @ivar inCipType: the string type of the incoming cipher.
-    @ivar outMACType: the string type of the incoming MAC.
-    @ivar inMACType: the string type of the incoming MAC.
-    @ivar encBlockSize: the block size of the outgoing cipher.
-    @ivar decBlockSize: the block size of the incoming cipher.
-    @ivar verifyDigestSize: the size of the incoming MAC.
-    @ivar outMAC: a tuple of (<hash module>, <inner key>, <outer key>,
-        <digest size>) representing the outgoing MAC.
-    @ivar inMAc: see outMAC, but for the incoming MAC.
-    """
-
-    cipherMap = {
-        '3des-cbc': (algorithms.TripleDES, 24, modes.CBC),
-        'blowfish-cbc': (algorithms.Blowfish, 16, modes.CBC),
-        'aes256-cbc': (algorithms.AES, 32, modes.CBC),
-        'aes192-cbc': (algorithms.AES, 24, modes.CBC),
-        'aes128-cbc': (algorithms.AES, 16, modes.CBC),
-        'cast128-cbc': (algorithms.CAST5, 16, modes.CBC),
-        'aes128-ctr': (algorithms.AES, 16, modes.CTR),
-        'aes192-ctr': (algorithms.AES, 24, modes.CTR),
-        'aes256-ctr': (algorithms.AES, 32, modes.CTR),
-        '3des-ctr': (algorithms.TripleDES, 24, modes.CTR),
-        'blowfish-ctr': (algorithms.Blowfish, 16, modes.CTR),
-        'cast128-ctr': (algorithms.CAST5, 16, modes.CTR),
-        'none': (None, 0, modes.CBC),
-    }
-    macMap = {
-        'hmac-sha2-512': sha512,
-        'hmac-sha2-256': sha256,
-        'hmac-sha1': sha1,
-        'hmac-md5': md5,
-        'none': None
-     }
-
-
-    def __init__(self, outCip, inCip, outMac, inMac):
-        self.outCipType = outCip
-        self.inCipType = inCip
-        self.outMACType = outMac
-        self.inMACType = inMac
-        self.encBlockSize = 0
-        self.decBlockSize = 0
-        self.verifyDigestSize = 0
-        self.outMAC = (None, '', '', 0)
-        self.inMAC = (None, '', '', 0)
-
-
-    def setKeys(self, outIV, outKey, inIV, inKey, outInteg, inInteg):
-        """
-        Set up the ciphers and hashes using the given keys,
-
-        @param outIV: the outgoing initialization vector
-        @param outKey: the outgoing encryption key
-        @param inIV: the incoming initialization vector
-        @param inKey: the incoming encryption key
-        @param outInteg: the outgoing integrity key
-        @param inInteg: the incoming integrity key.
-        """
-        o = self._getCipher(self.outCipType, outIV, outKey)
-        self.encryptor = o.encryptor()
-        self.encBlockSize = o.algorithm.block_size // 8
-        o = self._getCipher(self.inCipType, inIV, inKey)
-        self.decryptor = o.decryptor()
-        self.decBlockSize = o.algorithm.block_size // 8
-        self.outMAC = self._getMAC(self.outMACType, outInteg)
-        self.inMAC = self._getMAC(self.inMACType, inInteg)
-        if self.inMAC:
-            self.verifyDigestSize = self.inMAC[3]
-
-
-    def _getCipher(self, cip, iv, key):
-        """
-        Creates an initialized cipher object.
-
-        @param cip: the name of the cipher, maps into cipherMap
-        @param iv: the initialzation vector
-        @param key: the encryption key
-        """
-        algorithmClass, keySize, modeClass = self.cipherMap[cip]
-        # no cipher
-        if algorithmClass is None:
-            return _DummyCipher()
-
-        return Cipher(
-            algorithmClass(key[:keySize]),
-            modeClass(iv[:algorithmClass.block_size // 8]),
-            backend=default_backend(),
-        )
-
-
-    def _getMAC(self, mac, key):
-        """
-        Gets a 4-tuple representing the message authentication code.
-        (<hash module>, <inner hash value>, <outer hash value>,
-        <digest size>)
-
-        @param mac: a key mapping into macMap
-        @type mac: C{str}
-        @param key: the MAC key.
-        @type key: C{str}
-        """
-        mod = self.macMap[mac]
-        if not mod:
-            return (None, '', '', 0)
-
-        # With stdlib we can only get attributes fron an instantiated object.
-        hashObject = mod()
-        digestSize = hashObject.digest_size
-        blockSize = hashObject.block_size
-
-        # Truncation here appears to contravene RFC 2104, section 2.  However,
-        # implementing the hashing behavior prescribed by the RFC breaks
-        # interoperability with OpenSSH (at least version 5.5p1).
-        key = key[:digestSize] + ('\x00' * (blockSize - digestSize))
-        i = string.translate(key, hmac.trans_36)
-        o = string.translate(key, hmac.trans_5C)
-        result = _MACParams((mod, i, o, digestSize))
-        result.key = key
-        return result
-
-
-    def encrypt(self, blocks):
-        """
-        Encrypt blocks.
-
-        @type blocks: C{bytes}
-        """
-        return self.encryptor.update(blocks)
-
-
-    def decrypt(self, blocks):
-        """
-        Decrypt blocks.
-
-        @type blocks: C{bytes}
-        """
-        return self.decryptor.update(blocks)
-
-
-    def makeMAC(self, seqid, data):
-        """
-        Create a message authentication code (MAC) for the given packet using
-        the outgoing MAC values.
-
-        @param seqid: the sequence ID of the outgoing packet
-        @type seqid: C{int}
-        @param data: the data to create a MAC for
-        @type data: C{str}
-        @rtype: C{str}
-        """
-        if not self.outMAC[0]:
-            return ''
-        data = struct.pack('>L', seqid) + data
-        return hmac.HMAC(self.outMAC.key, data, self.outMAC[0]).digest()
-
-
-    def verify(self, seqid, data, mac):
-        """
-        Verify an incoming MAC using the incoming MAC values.  Return True
-        if the MAC is valid.
-
-        @param seqid: the sequence ID of the incoming packet
-        @type seqid: C{int}
-        @param data: the packet data to verify
-        @type data: C{str}
-        @param mac: the MAC sent with the packet
-        @type mac: C{str}
-        @rtype: C{bool}
-        """
-        if not self.inMAC[0]:
-            return mac == ''
-        data = struct.pack('>L', seqid) + data
-        outer = hmac.HMAC(self.inMAC.key, data, self.inMAC[0]).digest()
-        return mac == outer
 
 
 
