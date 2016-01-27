@@ -1248,7 +1248,7 @@ class SSHServerTransport(SSHTransportBase):
         # TODO: This could be computed when self.p is set up
         #  or do as openssh does and scan f for a single '1' bit instead
 
-        pSize = int.bit_length(self.p)
+        pSize = self.p.bit_length()
         y = _getRandomNumber(randbytes.secureRandom, pSize)
 
         serverDHpublicKey = _MPpow(self.g, y, self.p)
