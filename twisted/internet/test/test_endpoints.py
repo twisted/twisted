@@ -37,7 +37,9 @@ from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
-
+from twisted.protocols import basic, policies
+from twisted.protocols.tls import TLSMemoryBIOFactory
+from twisted.test.iosim import connectedServerAndClient
 
 pemPath = FilePath(testInitPath).sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
@@ -2893,10 +2895,20 @@ class SSLClientStringTests(unittest.TestCase):
             [casPath.child("thing1.pem"), casPath.child("thing2.pem")]
             if x.basename().lower().endswith('.pem')
         ]
-        self.assertEqual(sorted((Certificate(x) for x in certOptions.caCerts),
-                                key=lambda cert: cert.digest()),
-                         sorted(expectedCerts,
-                                key=lambda cert: cert.digest()))
+        addedCerts = []
+        class ListCtx(object):
+            def get_cert_store(self):
+                class Store(object):
+                    def add_cert(self, cert):
+                        addedCerts.append(cert)
+                return Store()
+        certOptions.trustRoot._addCACertsToContext(ListCtx())
+        self.assertEqual(
+            sorted((Certificate(x) for x in addedCerts),
+                   key=lambda cert: cert.digest()),
+            sorted(expectedCerts,
+                   key=lambda cert: cert.digest())
+        )
 
 
     def test_sslPositionalArgs(self):
@@ -2954,7 +2966,8 @@ class SSLClientStringTests(unittest.TestCase):
         casPathClone = casPath.child("ignored").parent()
         casPathClone.clonePath = UnreadableFilePath
         self.assertEqual(
-            [Certificate(x) for x in endpoints._loadCAsFromDir(casPathClone)],
+            [Certificate(x) for x in
+             endpoints._loadCAsFromDir(casPathClone)._caCerts],
             [Certificate.loadPEM(casPath.child("thing1.pem").getContent())])
 
 
@@ -3314,3 +3327,351 @@ class ConnectProtocolTests(unittest.TestCase):
 
         endpoint = Endpoint()
         self.assertIs(result, endpoints.connectProtocol(endpoint, object()))
+
+
+
+class FakeEndpoint(object):
+    """
+    A fake endpoint which connects to a L{StringTransport}.
+
+    @ivar deferred: A L{Deferred} to be returned instead from C{connect} if
+        non-L{None}.
+    """
+
+    def __init__(self):
+        self.deferred = None
+
+
+    def connect(self, fac):
+        """
+        Connect a factory to a L{StringTransport}.
+
+        @param fac: A factory.
+        @type fac: An L{IProtocolFactory} provider.
+
+        @return: A L{Deferred} which fires with the L{IProtocol} returned from
+            C{fac.buildProtcol}.
+        """
+        if self.deferred is not None:
+            return self.deferred
+        self.factory = fac
+        self.proto = fac.buildProtocol(None)
+        transport = StringTransport()
+        self.proto.makeConnection(transport)
+        self.transport = transport
+        return defer.succeed(self.proto)
+
+
+
+class UppercaseWrapperProtocol(policies.ProtocolWrapper):
+    """
+    A wrapper protocol which uppercases all strings passed through it.
+    """
+
+    def dataReceived(self, data):
+        """
+        Uppercase a string passed in from the transport.
+
+        @param data: The string to uppercase.
+        @type data: L{bytes}
+        """
+        policies.ProtocolWrapper.dataReceived(self, data.upper())
+
+
+    def write(self, data):
+        """
+        Uppercase a string passed out to the transport.
+
+        @param data: The string to uppercase.
+        @type data: L{bytes}
+        """
+        policies.ProtocolWrapper.write(self, data.upper())
+
+
+    def writeSequence(self, seq):
+        """
+        Uppercase a series of strings passed out to the transport.
+
+        @param seq: An iterable of strings.
+        """
+        for data in seq:
+            self.write(data)
+
+
+
+class UppercaseWrapperFactory(policies.WrappingFactory):
+    """
+    A wrapper factory which uppercases all strings passed through it.
+    """
+    protocol = UppercaseWrapperProtocol
+
+
+
+class NetstringTracker(basic.NetstringReceiver):
+    """
+    A netstring receiver which keeps track of the strings received.
+
+    @ivar strings: A L{list} of received strings, in order.
+    """
+
+    def __init__(self):
+        self.strings = []
+
+
+    def stringReceived(self, string):
+        """
+        Receive a string and append it to C{self.strings}.
+
+        @param string: The string to be appended to C{self.strings}.
+        """
+        self.strings.append(string)
+
+
+
+class NetstringFactory(protocol.ClientFactory):
+    """
+    A factory for L{NetstringTracker} protocols.
+    """
+
+    protocol = NetstringTracker
+
+
+
+class FakeError(Exception):
+    """
+    An error which isn't really an error.
+
+    This is raised in the L{wrapClientTLS} tests in place of a
+    'real' exception.
+    """
+
+
+
+class WrapperClientEndpointTests(unittest.TestCase):
+    """
+    Tests for L{_WrapperClientEndpoint}.
+    """
+
+    def setUp(self):
+        self.endpoint = FakeEndpoint()
+        self.context = object()
+        self.wrapper = endpoints._WrapperEndpoint(self.endpoint,
+                                                  UppercaseWrapperFactory)
+        self.factory = NetstringFactory()
+
+
+    def test_wrappingBehavior(self):
+        """
+        Any modifications performed by the underlying L{ProtocolWrapper}
+        propagate through to the wrapped L{Protocol}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        self.endpoint.proto.dataReceived(b'5:hello,')
+        self.assertEqual(proto.strings, [b'HELLO'])
+
+
+    def test_methodsAvailable(self):
+        """
+        Methods defined on the wrapped L{Protocol} are accessible from the
+        L{Protocol} returned from C{connect}'s L{Deferred}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        proto.sendString(b'spam')
+        self.assertEqual(self.endpoint.transport.value(), b'4:SPAM,')
+
+
+    def test_connectionFailure(self):
+        """
+        Connection failures propagate upward to C{connect}'s L{Deferred}.
+        """
+        self.endpoint.deferred = defer.Deferred()
+        d = self.wrapper.connect(self.factory)
+        self.assertNoResult(d)
+        self.endpoint.deferred.errback(FakeError())
+        self.failureResultOf(d, FakeError)
+
+
+    def test_connectionCancellation(self):
+        """
+        Cancellation propagates upward to C{connect}'s L{Deferred}.
+        """
+        canceled = []
+        self.endpoint.deferred = defer.Deferred(canceled.append)
+        d = self.wrapper.connect(self.factory)
+        self.assertNoResult(d)
+        d.cancel()
+        self.assert_(canceled)
+        self.failureResultOf(d, defer.CancelledError)
+
+
+    def test_transportOfTransportOfWrappedProtocol(self):
+        """
+        The transport of the wrapped L{Protocol}'s transport is the transport
+        passed to C{makeConnection}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        self.assertIdentical(
+            proto.transport.transport, self.endpoint.transport)
+
+
+
+def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
+    """
+    Given a L{MemoryReactor} and the result of calling L{wrapClientTLS},
+    extract the L{IOpenSSLClientConnectionCreator} associated with it.
+
+    Implementation presently uses private attributes but could (and should) be
+    refactored to just call C{.connect()} on the endpoint, when
+    L{HostnameEndpoint} starts directing its C{getaddrinfo} call through the
+    reactor it is passed somehow rather than via the global threadpool.
+
+    @param memoryReactor: the reactor attached to the given endpoint.
+        (Presently unused, but included so tests won't need to be modified to
+        honor it.)
+
+    @param tlsEndpoint: The result of calling L{wrapClientTLS}.
+
+    @return: the client connection creator associated with the endpoint
+        wrapper.
+    @rtype: L{IOpenSSLClientConnectionCreator}
+    """
+    return tlsEndpoint._wrapperFactory(None)._connectionCreator
+
+
+def makeHostnameEndpointSynchronous(hostnameEndpoint):
+    """
+    Make the given L{HostnameEndpoint} fire its L{defer.Deferred} from
+    C{connect} synchronously by patching its C{_deferToThread} implementation
+    to return an already-succeeded Deferred.
+
+    @param hostnameEndpoint: The hostname endpoint to patch.
+    """
+    family = AF_INET
+    socktype = SOCK_STREAM
+    proto = IPPROTO_TCP
+    canonname = b''
+    sockaddr = ('127.0.0.1', 4321)
+    gaiResult = family, socktype, proto, canonname, sockaddr
+    def synchronousDeferToThreadForGAI(*args):
+        return defer.succeed([gaiResult])
+    hostnameEndpoint._deferToThread = synchronousDeferToThreadForGAI
+
+class WrapClientTLSParserTests(unittest.TestCase):
+    """
+    Tests for L{_TLSWrapperClientEndpointParser}.
+    """
+
+    if skipSSL:
+        skip = skipSSL
+
+    def test_hostnameEndpointConstruction(self):
+        """
+        A L{HostnameEndpoint} is constructed from parameters passed to
+        L{clientFromString}.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor, b'tls:example.com:443:timeout=10:bindAddress=127.0.0.1')
+        hostnameEndpoint = endpoint._wrappedEndpoint
+        self.assertIs(hostnameEndpoint._reactor, reactor)
+        self.assertEqual(hostnameEndpoint._host, 'example.com')
+        self.assertEqual(hostnameEndpoint._port, 443)
+        self.assertEqual(hostnameEndpoint._timeout, 10)
+        self.assertEqual(hostnameEndpoint._bindAddress, b'127.0.0.1')
+
+
+    def test_utf8Encoding(self):
+        """
+        The hostname is decoded as UTF-8 bytes and appropriately encoded with
+        IDNA or passed along as unicode.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(
+            reactor, b'tls:\xc3\xa9xample.example.com:443')
+        self.assertEqual(
+            endpoint._wrappedEndpoint._host, b'xn--xample-9ua.example.com')
+        connectionCreator = connectionCreatorFromEndpoint(reactor, endpoint)
+        self.assertEqual(connectionCreator._hostname,
+                         u'\xe9xample.example.com')
+
+
+    def test_tls(self):
+        """
+        When passed a string endpoint description beginning with C{tls:},
+        L{clientFromString} returns a client endpoint initialized with the
+        values from the string.
+        """
+        # TODO: we can't peer into the unknowable chaos of the heart of OpenSSL
+        # (there's no public API to extract from a Context what its trust roots
+        # or certificate is); instead, we have to somehow extract information
+        # about this stuff from how the context behaves.  So this test is an
+        # integration test.  Problem: our test-fixture X509 certificates are a
+        # haphazard, disorganized mess, so asserting anything interesting about
+        # the certificates packaged here doesn't work just yet.
+
+        # There are good examples of how to construct relevant test-fixture
+        # data in
+        # twisted.test.test_sslverify.certificatesForAuthorityAndServer; we
+        # should extract those and do something like this.  Remember that this
+        # should test both positive and negative cases.
+
+        # Also: 'certKey' was a gigantic mistake the first time it cropped up,
+        # let's do better if we can this time.
+        reactor = MemoryReactor()
+        endpoint = endpoints.clientFromString(
+            reactor,
+            b'tls:example.net:4321:privateKey=%s:certKey=%s:caCertsDir=%s' % (
+                escapedPEMPathName, escapedPEMPathName, escapedCAsPathName
+            )
+        )
+        makeHostnameEndpointSynchronous(endpoint._wrappedEndpoint)
+        d = endpoint.connect(Factory.forProtocol(Protocol))
+        host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
+        print(factory)
+        print(factory._wrappedFactory)
+        print(factory._wrappedFactory.wrappedFactory)
+        clientProtocol = factory.buildProtocol(None)
+        self.assertNoResult(d)
+        assert clientProtocol is not None
+        serverCert = PrivateCertificate.loadPEM(pemPath.getContent())
+        serverOptions = CertificateOptions(
+            privateKey=serverCert.privateKey.original,
+            certificate=serverCert.original,
+            extraCertChain=[
+                Certificate.loadPEM(chainPath.getContent()).original],
+            trustRoot=serverCert,
+        )
+        plainServer = Protocol()
+        serverProtocol = TLSMemoryBIOFactory(
+            serverOptions, isClient=False,
+            wrappedFactory=Factory.forProtocol(lambda: plainServer)
+        ).buildProtocol(None)
+        sProto, cProto, pump = connectedServerAndClient(
+            lambda: serverProtocol,
+            lambda: clientProtocol,
+        )
+        # verify privateKey
+        plainServer.transport.write(b"hello\r\n")
+        plainClient = self.successResultOf(d)
+        plainClient.transport.write(b"hi you too\r\n")
+        pump.flush()
+        self.assertFalse(plainServer.transport.disconnecting)
+        self.assertFalse(plainClient.transport.disconnecting)
+        self.assertFalse(plainServer.transport.disconnected)
+        self.assertFalse(plainClient.transport.disconnected)
+        peerCertificate = Certificate.peerFromTransport(plainServer.transport)
+        self.assertEqual(peerCertificate,
+                         Certificate.loadPEM(pemPath.getContent()))
+
+
+    def test_tlsWithDefaults(self):
+        """
+        When passed an SSL strports description without extra arguments,
+        L{clientFromString} returns a client endpoint whose context factory is
+        initialized with default values.
+        """
+        reactor = object()
+        endpoint = endpoints.clientFromString(reactor, b'tls:example.com:443')
+        creator = connectionCreatorFromEndpoint(reactor, endpoint)
+        self.assertEqual(creator._hostname, u'example.com')
+        self.assertEqual(endpoint._wrappedEndpoint._host, u'example.com')
