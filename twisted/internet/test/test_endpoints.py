@@ -3558,7 +3558,7 @@ def makeHostnameEndpointSynchronous(hostnameEndpoint):
 
 class WrapClientTLSParserTests(unittest.TestCase):
     """
-    Tests for L{_TLSWrapperClientEndpointParser}.
+    Tests for L{_TLSClientEndpointParser}.
     """
 
     if skipSSL:
