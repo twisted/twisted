@@ -1031,6 +1031,7 @@ class Key(object):
         if self.type() == 'RSA':
             signer = self._keyObject.signer(
                 padding.PKCS1v15(), hashes.SHA1())
+            signer.update(data)
             ret = common.NS(signer.finalize())
 
         elif self.type() == 'DSA':
