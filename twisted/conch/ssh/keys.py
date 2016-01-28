@@ -478,15 +478,13 @@ class Key(object):
             # We have public components.
             keyObject = publicNumbers.public_key(default_backend())
         else:
-            if u is None:
-                u = rsa.rsa_crt_iqmp(p, q)
             privateNumbers = rsa.RSAPrivateNumbers(
                 p=p,
                 q=q,
                 d=d,
                 dmp1=rsa.rsa_crt_dmp1(d, p),
                 dmq1=rsa.rsa_crt_dmq1(d, q),
-                iqmp=u,
+                iqmp=rsa.rsa_crt_iqmp(p, q),
                 public_numbers=publicNumbers,
                 )
             keyObject = privateNumbers.private_key(default_backend())
