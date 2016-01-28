@@ -101,7 +101,6 @@ def generateDSAkey(options):
     from cryptography.hazmat.primitives.asymmetric import dsa
 
     print 'Generating public/private dsa key pair.'
-    params = dsa.DSAParameters.generate(int(options['bits']), default_backend())
     keyPrimitive = dsa.generate_private_key(
         key_size=int(options['bits']),
         backed=default_backend(),
