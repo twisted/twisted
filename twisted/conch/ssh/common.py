@@ -9,10 +9,8 @@ Maintainer: Paul Swartz
 """
 from __future__ import absolute_import, division
 
-import __builtin__
 import binascii
 import struct
-import warnings
 
 from twisted.python.compat import _PY3, long
 
