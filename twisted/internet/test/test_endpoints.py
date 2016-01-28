@@ -3618,10 +3618,15 @@ class WrapClientTLSParserTests(unittest.TestCase):
         # Also: 'certKey' was a gigantic mistake the first time it cropped up,
         # let's do better if we can this time.
         reactor = MemoryReactor()
+
+        # The certificate in question here is a self-signed certificate for
+        # 'localhost', so use 'localhost' as a hostname and the directory
+        # containing the cert itself for the CAs list.
         endpoint = endpoints.clientFromString(
             reactor,
-            b'tls:example.net:4321:privateKey=%s:certKey=%s:caCertsDir=%s' % (
-                escapedPEMPathName, escapedPEMPathName, escapedCAsPathName
+            b'tls:localhost:4321:privateKey=%s:certKey=%s:caCertsDir=%s' % (
+                escapedPEMPathName, escapedPEMPathName,
+                endpoints.quoteStringArgument(pemPath.parent().path)
             )
         )
         makeHostnameEndpointSynchronous(endpoint._wrappedEndpoint)
