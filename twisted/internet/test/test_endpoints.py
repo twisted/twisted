@@ -3331,7 +3331,7 @@ class ConnectProtocolTests(unittest.TestCase):
 
 
 
-class UppercaseWrapperProtocol(policies.ProtocolWrapper):
+class UppercaseWrapperProtocol(policies.ProtocolWrapper, object):
     """
     A wrapper protocol which uppercases all strings passed through it.
     """
@@ -3343,7 +3343,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
         @param data: The string to uppercase.
         @type data: L{bytes}
         """
-        policies.ProtocolWrapper.dataReceived(self, data.upper())
+        super(UppercaseWrapperProtocol, self).dataReceived(data.upper())
 
 
     def write(self, data):
@@ -3353,7 +3353,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
         @param data: The string to uppercase.
         @type data: L{bytes}
         """
-        policies.ProtocolWrapper.write(self, data.upper())
+        super(UppercaseWrapperProtocol, self).write(data.upper())
 
 
     def writeSequence(self, seq):
@@ -3367,7 +3367,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
 
 
 
-class UppercaseWrapperFactory(policies.WrappingFactory):
+class UppercaseWrapperFactory(policies.WrappingFactory, object):
     """
     A wrapper factory which uppercases all strings passed through it.
     """
@@ -3375,7 +3375,7 @@ class UppercaseWrapperFactory(policies.WrappingFactory):
 
 
 
-class NetstringTracker(basic.NetstringReceiver):
+class NetstringTracker(basic.NetstringReceiver, object):
     """
     A netstring receiver which keeps track of the strings received.
 
@@ -3393,15 +3393,6 @@ class NetstringTracker(basic.NetstringReceiver):
         @param string: The string to be appended to C{self.strings}.
         """
         self.strings.append(string)
-
-
-
-class NetstringFactory(protocol.ClientFactory):
-    """
-    A factory for L{NetstringTracker} protocols.
-    """
-
-    protocol = NetstringTracker
 
 
 
@@ -3425,7 +3416,7 @@ class WrapperClientEndpointTests(unittest.TestCase):
         self.context = object()
         self.wrapper = endpoints._WrapperEndpoint(self.endpoint,
                                                   UppercaseWrapperFactory)
-        self.factory = NetstringFactory()
+        self.factory = Factory.forProtocol(NetstringTracker)
 
 
     def test_wrappingBehavior(self):
