@@ -829,12 +829,14 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                 'bad_type')
 
 
-    def test_signRSA(self):
+    def test_signAndVerifyRSA(self):
         """
-        It can sing data using RSA.
+        Signed data can be verified using RSA.
         """
+        data = 'some-data'
         key = keys.Key.fromString(keydata.privateRSA_openssh)
-        self.assertEqual(key.sign(b''), self.rsaSignature)
+        signature = key.sign(data)
+        self.assertTrue(key.public().verify(signature, data))
 
 
     def test_signAndVerifyDSA(self):
@@ -843,15 +845,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         data = 'some-data'
         key = keys.Key.fromString(keydata.privateDSA_openssh)
-
         signature = key.sign(data)
-
         self.assertTrue(key.public().verify(signature, data))
 
 
     def test_verifyRSA(self):
         """
-        It can verify data signed by RSA keys.
+        A known-good RSA signature verifies successfully.
         """
         key = keys.Key.fromString(keydata.publicRSA_openssh)
         self.assertTrue(key.verify(self.rsaSignature, b''))
@@ -861,7 +861,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_verifyDSA(self):
         """
-        It can verify data signed by DSA keys.
+        A known-good DSA signature verifies successfully.
         """
         key = keys.Key.fromString(keydata.publicDSA_openssh)
         self.assertTrue(key.verify(self.dsaSignature, b''))
