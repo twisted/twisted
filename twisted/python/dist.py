@@ -74,7 +74,7 @@ _EXTRA_OPTIONS = dict(
          'idna >= 0.6'],
     conch=['gmpy',
            'pyasn1',
-           'cryptography',
+           'cryptography >= 1.0',
            ],
     soap=['soappy'],
     serial=['pyserial'],
