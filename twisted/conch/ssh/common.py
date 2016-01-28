@@ -20,23 +20,17 @@ def bytes_to_int(b):
 
 
 
-def int_to_bytes(val, endianness='big'):
+def int_to_bytes(val):
     """
     From: http://stackoverflow.com/a/14527004/539264
 
     FIXME add padding
 
-    Use :ref:`string formatting` and :func:`~binascii.unhexlify` to
-    convert ``val``, a :func:`long`, to a byte :func:`str`.
+    Use string formatting and L{binascii.unhexlify} to convert an integer to
+    bytes.
 
-    :param long val: The value to pack
-
-    :param str endianness: The endianness of the result. ``'big'`` for
-      big-endian, ``'little'`` for little-endian.
-
-    If you want byte- and word-ordering to differ, you're on your own.
-
-    Using :ref:`string formatting` lets us use Python's C innards.
+    @param val: The value to pack
+    @type val: L{long}
     """
 
     # one (1) hex digit per four (4) bits
@@ -51,10 +45,6 @@ def int_to_bytes(val, endianness='big'):
 
     # prepend zero (0) to the width, to zero-pad the output
     s = binascii.unhexlify(fmt % val)
-
-    if endianness == 'little':
-        # see http://stackoverflow.com/a/931095/309233
-        s = s[::-1]
 
     return s
 
