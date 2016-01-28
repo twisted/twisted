@@ -1882,9 +1882,9 @@ class _TLSClientEndpointParser(object):
         @param bindAddress: The address to which to bind outgoing connections.
         @type bindAddress: L{bytes}
 
-        @param kwargs: Extra arguments for creating the TLS context. This can
-            contain keys C{certKey}, C{privateKey}, and C{caCertsDir}. See
-            L{_parseClientSSL}. Passing arguments not listed will cause a
+        @param kwargs: Extra arguments for creating the TLS context.  This can
+            contain keys C{certKey}, C{privateKey}, and C{caCertsDir}.  See
+            L{_parseClientSSL}.  Passing arguments not listed will cause a
             L{ValueError} to be raised.
         @type kwargs: L{dict}
 
