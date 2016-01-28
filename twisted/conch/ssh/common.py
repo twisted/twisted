@@ -171,11 +171,11 @@ def install():
         if type(x) in (long, int):
             x = mpz(x)
         return pyPow(x, y, z)
-    if not _PY3:
+    if _PY3:
+        __builtins__['pow'] = _fastpow
+    else:
         import __builtin__
         __builtin__.pow = _fastpow
-    else:
-        __builtins__['pow'] = _fastpow
 
 try:
     import gmpy
