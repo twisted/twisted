@@ -10,7 +10,7 @@ from __future__ import absolute_import, division
 
 import base64
 import itertools
-from hashlib import md5, sha1
+from hashlib import md5
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
