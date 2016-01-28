@@ -1880,7 +1880,7 @@ class _TLSClientEndpointParser(object):
         @type timeout: L{bytes}
 
         @param bindAddress: The address to which to bind outgoing connections.
-        @type port: L{bytes}
+        @type bindAddress: L{bytes}
 
         @param kwargs: Extra arguments for creating the TLS context. This can
             contain keys C{certKey}, C{privateKey}, and C{caCertsDir}. See
