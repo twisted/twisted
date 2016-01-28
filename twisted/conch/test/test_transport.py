@@ -1865,7 +1865,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         self.proto.requestService(MockService())
         self.assertEqual(self.packets, [(transport.MSG_SERVICE_REQUEST,
-                                          '\x00\x00\x00\x0bMockService')])
+                                         '\x00\x00\x00\x0bMockService')])
 
 
     def test_disconnectKEXDH_REPLYBadSignature(self):
