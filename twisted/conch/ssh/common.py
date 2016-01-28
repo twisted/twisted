@@ -14,6 +14,8 @@ import binascii
 import struct
 import warnings
 
+from twisted.python.compat import _PY3, long
+
 
 def bytes_to_int(b):
     return int(binascii.hexlify(b), 16)
