@@ -765,7 +765,8 @@ class Key(object):
                 "d": numbers.d,
                 "p": numbers.p,
                 "q": numbers.q,
-                "u": numbers.iqmp,
+                # iqmp is q^-1 % p, u is p^-1 % q
+                "u": rsa.rsa_crt_iqmp(numbers.q, numbers.p),
             }
         elif isinstance(self._keyObject, dsa.DSAPublicKey):
             numbers = self._keyObject.public_numbers()
