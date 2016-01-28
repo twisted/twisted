@@ -1067,7 +1067,10 @@ class Key(object):
         if signatureType != self.sshType():
             return False
         if self.type() == 'RSA':
-            verifier = self._keyObject.verifier(
+            k = self._keyObject
+            if not self.isPublic():
+                k = k.public_key()
+            verifier = k.verifier(
                 common.getNS(signature)[0],
                 padding.PKCS1v15(),
                 hashes.SHA1(),
@@ -1077,7 +1080,10 @@ class Key(object):
             r = common.bytes_to_int(concatenatedSignature[:20])
             s = common.bytes_to_int(concatenatedSignature[20:])
             signature = utils.encode_dss_signature(r, s)
-            verifier = self._keyObject.verifier(
+            k = self._keyObject
+            if not self.isPublic():
+                k = k.public_key()
+            verifier = k.verifier(
                 signature, hashes.SHA1())
         else:
             raise BadKeyError("unknown key type %s" % (self.type(),))
@@ -1113,7 +1119,6 @@ def objectType(obj):
         return keyDataMapping[tuple(obj.keydata)]
     except (KeyError, AttributeError):
         raise BadKeyError("invalid key object", obj)
-
 
 
 if _PY3:

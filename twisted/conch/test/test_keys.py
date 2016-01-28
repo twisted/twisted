@@ -36,60 +36,6 @@ from twisted.trial import unittest
 from twisted.python.compat import long, _PY3
 
 
-class HelpersTests(unittest.TestCase):
-
-    if cryptography is None:
-        skip = skipCryptography
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
-
-
-    def setUp(self):
-        self._secureRandom = randbytes.secureRandom
-        randbytes.secureRandom = lambda x: b'\x55' * x
-
-
-    def tearDown(self):
-        randbytes.secureRandom = self._secureRandom
-        self._secureRandom = None
-
-    def _signRSA(self, data):
-        key = keys.Key.fromString(keydata.privateRSA_openssh)
-        sig = key.sign(data)
-        return key._keyObject, sig
-
-
-    def _signDSA(self, data):
-        key = keys.Key.fromString(keydata.privateDSA_openssh)
-        sig = key.sign(data)
-        return key._keyObject, sig
-
-
-    def test_signRSA(self):
-        """
-        Test that RSA keys return appropriate signatures.
-        """
-        data = b'data'
-        key, sig = self._signRSA(data)
-        sigData = keys.pkcs1Digest(data, keys.lenSig(key))
-        v = key.sign(sigData, b'')[0]
-        self.assertEqual(sig, common.NS(b'ssh-rsa') + common.MP(v))
-        return key, sig
-
-
-    def test_signDSA(self):
-        """
-        Test that DSA keys return appropriate signatures.
-        """
-        data = b'data'
-        key, sig = self._signDSA(data)
-        sigData = sha1(data).digest()
-        v = key.sign(sigData, b'\x55' * 19)
-        self.assertEqual(sig, common.NS(b'ssh-dss') + common.NS(
-            common.int_to_bytes(v[0], 20) + common.int_to_bytes(v[1], 20)))
-        return key, sig
-
-
 
 class ObjectTypeTests(unittest.TestCase):
     """
@@ -886,14 +832,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         self.assertEqual(key.sign(b''), self.rsaSignature)
-
-
-    def test_signDSA(self):
-        """
-        It can sing data using DSA.
-        """
-        key = keys.Key.fromString(keydata.privateDSA_openssh)
-        self.assertEqual(key.sign(b''), self.dsaSignature)
 
 
     def test_signAndVerifyDSA(self):
