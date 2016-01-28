@@ -16,10 +16,15 @@ except ImportError:
     pass
 
 from zope.interface import implementer, directlyProvides
+from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.error import ConnectionRefusedError
 
 from twisted.python.failure import Failure
 from twisted.internet import error
 from twisted.internet import interfaces
+
+from .proto_helpers import MemoryReactorClock
 
 
 class TLSNegotiation:
@@ -427,3 +432,82 @@ def connectedServerAndClient(ServerClass, ClientClass,
     cio = clientTransportFactory(c)
     sio = serverTransportFactory(s)
     return c, s, connect(s, sio, c, cio, debug)
+
+
+
+def _factoriesShouldConnect(clientInfo, serverInfo):
+    """
+    Should the client and server described by the arguments be connected to
+    each other, i.e. do their port numbers match?
+
+    @return: If they do match, return factories for the client and server that
+        should connect; otherwise return L{None}, indicating they shouldn't be
+        connected.
+    @rtype: L{types.NoneType} or 2-L{tuple} of (L{ClientFactory},
+        L{IProtocolFactory})
+    """
+    (clientHost, clientPort, clientFactory, clientTimeout,
+     clientBindAddress) = clientInfo
+    (serverPort, serverFactory, serverBacklog,
+     serverInterface) = serverInfo
+    if serverPort == clientPort:
+        return clientFactory, serverFactory
+    else:
+        return None
+
+
+
+class ConnectionCompleter(object):
+    """
+    
+    """
+    def __init__(self, memoryReactor):
+        """
+        
+        """
+        self._reactor = memoryReactor
+
+
+    def succeedOnce(self, debug=False):
+        """
+        Complete a single TCP connection established on a given L{MemoryReactor}.
+        """
+        memoryReactor = self._reactor
+        for clientInfo in memoryReactor.tcpClients:
+            for serverInfo in memoryReactor.tcpServers:
+                factories = _factoriesShouldConnect(clientInfo, serverInfo)
+                if factories:
+                    clientFactory, serverFactory = factories
+                    clientProtocol = clientFactory.buildProtocol(None)
+                    serverProtocol = serverFactory.buildProtocol(None)
+                    serverTransport = makeFakeServer(serverProtocol)
+                    clientTransport = makeFakeClient(clientProtocol)
+                    memoryReactor.tcpClients.remove(clientInfo)
+                    return connect(serverProtocol, serverTransport,
+                                   clientProtocol, clientTransport,
+                                   debug)
+
+
+    def failOnce(self, reason=Failure(ConnectionRefusedError())):
+        """
+        
+        """
+        return self._reactor.tcpClients.pop(0)[2].clientConnectionFailed(
+            self._reactor.connectors.pop(0), reason
+        )
+
+
+
+def connectableEndpoint(debug=False):
+    """
+    Create an endpoint that can be fired on demand.
+
+    @return: A client endpoint, and an object that will cause one of the
+        L{Deferred}s returned by that client endpoint.
+    @rtype: 2-L{tuple} of (L{IStreamClientEndpoint}, L{ConnectionCompleter})
+    """
+    reactor = MemoryReactorClock()
+    clientEndpoint = TCP4ClientEndpoint(reactor, "0.0.0.0", 4321)
+    serverEndpoint = TCP4ServerEndpoint(reactor, 4321)
+    serverEndpoint.listen(Factory.forProtocol(Protocol))
+    return clientEndpoint, ConnectionCompleter(reactor)

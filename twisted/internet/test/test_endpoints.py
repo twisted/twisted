@@ -16,7 +16,6 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject, verifyClass
 
 from twisted.trial import unittest
-from twisted.test import __file__ as testInitPath
 from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
 from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection
@@ -40,8 +39,10 @@ from twisted.python.systemd import ListenFDs
 from twisted.protocols import basic, policies
 from twisted.protocols.tls import TLSMemoryBIOFactory
 from twisted.test.iosim import connectedServerAndClient
+from twisted.test.iosim import connectableEndpoint
+from twisted.internet.error import ConnectingCancelledError
 
-pemPath = FilePath(testInitPath).sibling("server.pem")
+pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
 chainPath = casPath.child("chain.pem")
 escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
@@ -3330,39 +3331,6 @@ class ConnectProtocolTests(unittest.TestCase):
 
 
 
-class FakeEndpoint(object):
-    """
-    A fake endpoint which connects to a L{StringTransport}.
-
-    @ivar deferred: A L{Deferred} to be returned instead from C{connect} if
-        non-L{None}.
-    """
-
-    def __init__(self):
-        self.deferred = None
-
-
-    def connect(self, fac):
-        """
-        Connect a factory to a L{StringTransport}.
-
-        @param fac: A factory.
-        @type fac: An L{IProtocolFactory} provider.
-
-        @return: A L{Deferred} which fires with the L{IProtocol} returned from
-            C{fac.buildProtcol}.
-        """
-        if self.deferred is not None:
-            return self.deferred
-        self.factory = fac
-        self.proto = fac.buildProtocol(None)
-        transport = StringTransport()
-        self.proto.makeConnection(transport)
-        self.transport = transport
-        return defer.succeed(self.proto)
-
-
-
 class UppercaseWrapperProtocol(policies.ProtocolWrapper):
     """
     A wrapper protocol which uppercases all strings passed through it.
@@ -3453,7 +3421,7 @@ class WrapperClientEndpointTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self.endpoint = FakeEndpoint()
+        self.endpoint, self.completer = connectableEndpoint()
         self.context = object()
         self.wrapper = endpoints._WrapperEndpoint(self.endpoint,
                                                   UppercaseWrapperFactory)
@@ -3465,8 +3433,11 @@ class WrapperClientEndpointTests(unittest.TestCase):
         Any modifications performed by the underlying L{ProtocolWrapper}
         propagate through to the wrapped L{Protocol}.
         """
-        proto = self.successResultOf(self.wrapper.connect(self.factory))
-        self.endpoint.proto.dataReceived(b'5:hello,')
+        connecting = self.wrapper.connect(self.factory)
+        pump = self.completer.succeedOnce()
+        proto = self.successResultOf(connecting)
+        pump.server.transport.write(b'5:hello,')
+        pump.flush()
         self.assertEqual(proto.strings, [b'HELLO'])
 
 
@@ -3475,19 +3446,20 @@ class WrapperClientEndpointTests(unittest.TestCase):
         Methods defined on the wrapped L{Protocol} are accessible from the
         L{Protocol} returned from C{connect}'s L{Deferred}.
         """
-        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        connecting = self.wrapper.connect(self.factory)
+        pump = self.completer.succeedOnce()
+        proto = self.successResultOf(connecting)
         proto.sendString(b'spam')
-        self.assertEqual(self.endpoint.transport.value(), b'4:SPAM,')
+        self.assertEqual(pump.clientIO.getOutBuffer(), b'4:SPAM,')
 
 
     def test_connectionFailure(self):
         """
         Connection failures propagate upward to C{connect}'s L{Deferred}.
         """
-        self.endpoint.deferred = defer.Deferred()
         d = self.wrapper.connect(self.factory)
         self.assertNoResult(d)
-        self.endpoint.deferred.errback(FakeError())
+        self.completer.failOnce(FakeError())
         self.failureResultOf(d, FakeError)
 
 
@@ -3495,13 +3467,10 @@ class WrapperClientEndpointTests(unittest.TestCase):
         """
         Cancellation propagates upward to C{connect}'s L{Deferred}.
         """
-        canceled = []
-        self.endpoint.deferred = defer.Deferred(canceled.append)
         d = self.wrapper.connect(self.factory)
         self.assertNoResult(d)
         d.cancel()
-        self.assert_(canceled)
-        self.failureResultOf(d, defer.CancelledError)
+        self.failureResultOf(d, ConnectingCancelledError)
 
 
     def test_transportOfTransportOfWrappedProtocol(self):
@@ -3509,9 +3478,11 @@ class WrapperClientEndpointTests(unittest.TestCase):
         The transport of the wrapped L{Protocol}'s transport is the transport
         passed to C{makeConnection}.
         """
-        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        connecting = self.wrapper.connect(self.factory)
+        pump = self.completer.succeedOnce()
+        proto = self.successResultOf(connecting)
         self.assertIdentical(
-            proto.transport.transport, self.endpoint.transport)
+            proto.transport.transport, pump.clientIO)
 
 
 
