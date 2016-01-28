@@ -178,6 +178,8 @@ class SSHCiphers:
         @param cip: the name of the cipher, maps into cipherMap
         @param iv: the initialzation vector
         @param key: the encryption key
+
+        @return: the cipher object.
         """
         algorithmClass, keySize, modeClass = self.cipherMap[cip]
         # no cipher
@@ -227,6 +229,8 @@ class SSHCiphers:
         Encrypt blocks.
 
         @type blocks: C{bytes}
+
+        @return: the encrypted data.
         """
         return self.encryptor.update(blocks)
 
@@ -236,6 +240,8 @@ class SSHCiphers:
         Decrypt blocks.
 
         @type blocks: C{bytes}
+
+        @return: the decrypted data.
         """
         return self.decryptor.update(blocks)
 
@@ -281,6 +287,9 @@ class SSHCiphers:
 def _getSupportedCiphers():
     """
     Build a list of ciphers that are supported by the backend in use.
+
+    @return: a list of supported ciphers.
+    @rtype: L{list} of L{str}
     """
     supportedCiphers = []
     cs = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc',
@@ -1616,11 +1625,17 @@ class SSHClientTransport(SSHTransportBase):
 
 
 class _NullEncryptionContext(object):
+    """
+    An encryption context that does not actually encrypt anything.
+    """
     def update(self, data):
         return data
 
 
 class _DummyAlgorithm(object):
+    """
+    An encryption algorithm that does not actually encrypt anything.
+    """
     block_size = 64
 
 
@@ -1635,10 +1650,16 @@ class _DummyCipher(object):
 
 
     def encryptor(self):
+        """
+        Construct a noop encryptor.
+        """
         return _NullEncryptionContext()
 
 
     def decryptor(self):
+        """
+        Construct a noop decryptor.
+        """
         return _NullEncryptionContext()
 
 

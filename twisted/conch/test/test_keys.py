@@ -145,6 +145,7 @@ class KeyTests(unittest.TestCase):
     if pyasn1 is None:
         skip = "Cannot run without PyASN1"
 
+
     def setUp(self):
         self.rsaObj = keys.Key._fromRSAComponents(
             n=keydata.RSAData['n'],
@@ -535,7 +536,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         rsa1 = keys.Key(self.rsaObj)
         rsa2 = keys.Key(self.rsaObj)
-        rsa3 = keys.Key(keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
+        rsa3 = keys.Key(
+            keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
         dsa = keys.Key(self.dsaObj)
         self.assertTrue(rsa1 == rsa2)
         self.assertFalse(rsa1 == rsa3)
@@ -550,7 +552,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         rsa1 = keys.Key(self.rsaObj)
         rsa2 = keys.Key(self.rsaObj)
-        rsa3 = keys.Key(keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
+        rsa3 = keys.Key(
+            keys.Key._fromRSAComponents(n=long(5), e=long(3))._keyObject)
         dsa = keys.Key(self.dsaObj)
         self.assertFalse(rsa1 != rsa2)
         self.assertTrue(rsa1 != rsa3)
@@ -691,15 +694,15 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Return the over-the-wire SSH format of the DSA public key.
         """
-        public_numbers = self.dsaObj.private_numbers().public_numbers
+        publicNumbers = self.dsaObj.private_numbers().public_numbers
 
         self.assertEqual(
             keys.Key(self.dsaObj).blob(),
             common.NS(b'ssh-dss') +
-            common.MP(public_numbers.parameter_numbers.p) +
-            common.MP(public_numbers.parameter_numbers.q) +
-            common.MP(public_numbers.parameter_numbers.g) +
-            common.MP(public_numbers.y)
+            common.MP(publicNumbers.parameter_numbers.p) +
+            common.MP(publicNumbers.parameter_numbers.q) +
+            common.MP(publicNumbers.parameter_numbers.g) +
+            common.MP(publicNumbers.y)
             )
 
 

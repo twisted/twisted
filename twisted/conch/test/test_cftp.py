@@ -1412,7 +1412,8 @@ class OurServerSftpClientTests(CFTPClientTestBase):
 
 
 
-if unix is None or cryptography is None or pyasn1 is None or interfaces.IReactorProcess(reactor, None) is None:
+if None in (unix, cryptography, pyasn1,
+            interfaces.IReactorProcess(reactor, None)):
     if _reason is None:
         _reason = "don't run w/o spawnProcess or cryptography or pyasn1"
     OurServerCmdLineClientTests.skip = _reason

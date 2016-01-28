@@ -245,12 +245,12 @@ class Key(object):
                 raise BadKeyError('invalid DEK-info %r' % (lines[2],))
 
             if cipher == b'AES-128-CBC':
-                AlgorithmClass = algorithms.AES
+                algorithmClass = algorithms.AES
                 keySize = 16
                 if len(ivdata) != 32:
                     raise BadKeyError('AES encrypted key with a bad IV')
             elif cipher == b'DES-EDE3-CBC':
-                AlgorithmClass = algorithms.TripleDES
+                algorithmClass = algorithms.TripleDES
                 keySize = 24
                 if len(ivdata) != 16:
                     raise BadKeyError('DES encrypted key with a bad IV')
@@ -266,7 +266,7 @@ class Key(object):
             b64Data = base64.decodestring(b''.join(lines[3:-1]))
 
             decryptor = Cipher(
-                AlgorithmClass(decKey),
+                algorithmClass(decKey),
                 modes.CBC(iv),
                 backend=default_backend()
             ).decryptor()
@@ -472,6 +472,7 @@ class Key(object):
     @classmethod
     def _fromRSAComponents(cls, n, e, d=None, p=None, q=None, u=None):
         """
+        Build a key from RSA numerical components.
         """
         publicNumbers = rsa.RSAPublicNumbers(e=e, n=n)
         if d is None:
@@ -495,6 +496,7 @@ class Key(object):
     @classmethod
     def _fromDSAComponents(cls, y, p, q, g, x=None):
         """
+        Build a key from DSA numerical components.
         """
         publicNumbers = dsa.DSAPublicNumbers(
             y=y, parameter_numbers=dsa.DSAParameterNumbers(p=p, q=q, g=g))
@@ -616,7 +618,7 @@ class Key(object):
                     keyData['x'],
                     ))
         else:
-           raise BadKeyError('Unsupported key type.')
+            raise BadKeyError('Unsupported key type.')
 
         return keyObject
 
@@ -711,12 +713,15 @@ class Key(object):
 
         @rtype: L{str}
         """
-        if isinstance(self._keyObject, (rsa.RSAPublicKey, rsa.RSAPrivateKey)):
+        if isinstance(
+                self._keyObject, (rsa.RSAPublicKey, rsa.RSAPrivateKey)):
             return 'RSA'
-        elif isinstance(self._keyObject, (dsa.DSAPublicKey, dsa.DSAPrivateKey)):
+        elif isinstance(
+                self._keyObject, (dsa.DSAPublicKey, dsa.DSAPrivateKey)):
             return 'DSA'
         else:
-            raise RuntimeError('unknown type of object: %r' % (self._keyObject,))
+            raise RuntimeError(
+                'unknown type of object: %r' % (self._keyObject,))
 
 
     def sshType(self):
@@ -784,7 +789,7 @@ class Key(object):
                 "q": numbers.public_numbers.parameter_numbers.q,
             }
         else:
-            raise RuntimeError("Unexpected key type: %s" % self._keyObject)
+            raise RuntimeError("Unexpected key type: %s" % (self._keyObject,))
 
 
     def blob(self):
