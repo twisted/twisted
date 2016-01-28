@@ -718,13 +718,16 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Returns the SSH protocol-level format of the RSA private key.
         """
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        numbers = self.rsaObj.private_numbers()
+        u = rsa.rsa_crt_iqmp(numbers.q, numbers.p)
         self.assertEqual(
             keys.Key(self.rsaObj).privateBlob(),
             common.NS(b'ssh-rsa') +
             common.MP(self.rsaObj.private_numbers().public_numbers.n) +
             common.MP(self.rsaObj.private_numbers().public_numbers.e) +
             common.MP(self.rsaObj.private_numbers().d) +
-            common.MP(self.rsaObj.private_numbers().iqmp) +
+            common.MP(u) +
             common.MP(self.rsaObj.private_numbers().p) +
             common.MP(self.rsaObj.private_numbers().q)
             )

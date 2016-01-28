@@ -174,7 +174,7 @@ class Key(object):
 
         if keyType == b'ssh-rsa':
             n, e, d, u, p, q, rest = common.getMP(rest, 6)
-            return cls._fromRSAComponents(n=n, e=e, d=d, p=p, q=q, u=u)
+            return cls._fromRSAComponents(n=n, e=e, d=d, p=p, q=q)
         elif keyType == b'ssh-dss':
             p, q, g, y, x, rest = common.getMP(rest, 5)
             return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
