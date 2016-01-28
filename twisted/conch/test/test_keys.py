@@ -28,7 +28,6 @@ if cryptography and pyasn1:
     from twisted.conch.ssh import keys, common, sexpy
 
 import os, base64
-from hashlib import sha1
 from twisted.conch.test import keydata
 from twisted.python import randbytes
 from twisted.trial import unittest

@@ -42,7 +42,6 @@ from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
-from twisted.python.reflect import getClass
 from twisted.conch.ssh import address, service, common, _kex
 from twisted.test import proto_helpers
 
@@ -324,7 +323,7 @@ class MockOldFactoryPrivateKeys(MockFactory):
         We used to map key types to cryptography key objects.
         """
         keys = MockFactory.getPrivateKeys(self)
-        for name, key  in keys.items()[:]:
+        for name, key in keys.items()[:]:
             keys[name] = key.keyObject
         return keys
 
@@ -448,7 +447,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         """
         # the other setup was done in the setup method
         self.assertEqual(self.transport.value().split('\r\n', 1)[0],
-                          "SSH-2.0-Twisted")
+                         "SSH-2.0-Twisted")
 
 
     def test_sendPacketPlain(self):
@@ -661,9 +660,9 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(macs1, ','.join(self.proto.supportedMACs))
         self.assertEqual(macs2, ','.join(self.proto.supportedMACs))
         self.assertEqual(compressions1,
-                          ','.join(self.proto.supportedCompressions))
+                         ','.join(self.proto.supportedCompressions))
         self.assertEqual(compressions2,
-                          ','.join(self.proto.supportedCompressions))
+                         ','.join(self.proto.supportedCompressions))
         self.assertEqual(languages1, ','.join(self.proto.supportedLanguages))
         self.assertEqual(languages2, ','.join(self.proto.supportedLanguages))
         self.assertEqual(buf, '\x00' * 5)
@@ -852,7 +851,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.proto.dataReceived(self.transport.value())
         self.assertTrue(self.proto.gotVersion)
         self.assertEqual(self.proto.ourVersionString,
-                          self.proto.otherVersionString)
+                         self.proto.otherVersionString)
         self.assertTrue(kexInit[0])
 
 
@@ -943,7 +942,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.proto.loseConnection()
         self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
         self.assertEqual(self.packets[0][1][3],
-                          chr(transport.DISCONNECT_CONNECTION_LOST))
+                         chr(transport.DISCONNECT_CONNECTION_LOST))
 
 
     def test_badVersion(self):
@@ -1058,7 +1057,7 @@ here's some other stuff
         seqnum = self.proto.incomingPacketSequence
         def checkUnimplemented(seqnum=seqnum):
             self.assertEqual(self.packets[0][0],
-                              transport.MSG_UNIMPLEMENTED)
+                             transport.MSG_UNIMPLEMENTED)
             self.assertEqual(self.packets[0][1][3], chr(seqnum))
             self.proto.packets = []
             seqnum += 1
@@ -1224,7 +1223,7 @@ class ServerAndClientSSHTransportBaseCase:
         """
         self.assertEqual(self.proto.getPeer(),
                          address.SSHTransportAddress(
-                self.proto.transport.getPeer()))
+                             self.proto.transport.getPeer()))
 
     def test_getHost(self):
         """
@@ -1233,7 +1232,7 @@ class ServerAndClientSSHTransportBaseCase:
         """
         self.assertEqual(self.proto.getHost(),
                          address.SSHTransportAddress(
-                self.proto.transport.getHost()))
+                             self.proto.transport.getHost()))
 
 
 
@@ -1286,13 +1285,13 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         # Even if as server we prefer diffie-hellman-group-exchange-sha256 the
         # client preference is used.
         self.assertEqual(self.proto.kexAlg,
-                          'diffie-hellman-group1-sha1')
+                         'diffie-hellman-group1-sha1')
         self.assertEqual(self.proto.keyAlg,
-                          'ssh-dss')
+                         'ssh-dss')
         self.assertEqual(self.proto.outgoingCompressionType,
-                          'none')
+                         'none')
         self.assertEqual(self.proto.incomingCompressionType,
-                          'none')
+                         'none')
         ne = self.proto.nextEncryptions
         self.assertEqual(ne.outCipType, 'aes128-ctr')
         self.assertEqual(ne.inCipType, 'aes128-ctr')
@@ -1402,7 +1401,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         exchangeHash = h.digest()
 
         signature = self.proto.factory.privateKeys['ssh-rsa'].sign(
-                exchangeHash)
+            exchangeHash)
 
         self.assertEqual(
             self.packets,
@@ -1477,7 +1476,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         """
         self.proto.ssh_SERVICE_REQUEST(common.NS('ssh-userauth'))
         self.assertEqual(self.packets, [(transport.MSG_SERVICE_ACCEPT,
-                                          common.NS('ssh-userauth'))])
+                                         common.NS('ssh-userauth'))])
         self.assertEqual(self.proto.service.name, 'MockService')
 
 
@@ -1613,7 +1612,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
             (transport.MSG_KEX_DH_GEX_REPLY,
              common.NS(self.proto.factory.publicKeys['ssh-rsa'].blob()) +
              f + common.NS(self.proto.factory.privateKeys['ssh-rsa'].sign(
-                        exchangeHash))))
+                 exchangeHash))))
 
 
 

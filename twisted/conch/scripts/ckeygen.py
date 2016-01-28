@@ -16,7 +16,7 @@ if getpass.getpass == getpass.unix_getpass:
         reload(getpass)
 
 from twisted.conch.ssh import keys
-from twisted.python import failure, filepath, log, usage, randbytes
+from twisted.python import failure, filepath, log, usage
 
 
 
