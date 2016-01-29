@@ -10,6 +10,8 @@ from __future__ import absolute_import, division
 
 from base64 import decodestring
 
+from twisted.python.compat import long
+
 RSAData = {
     'n': long('106248668575524741116943830949539894737212779118943280948138'
               '20729711061576321820845393835692814935201176341295575504152775'
