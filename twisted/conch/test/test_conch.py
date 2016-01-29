@@ -515,6 +515,7 @@ class OpenSSHClientMixin:
 
             process.deferred = defer.Deferred()
             cmdline = ('ssh -2 -l testuser -p %i '
+                       '-F /dev/null '
                        '-oUserKnownHostsFile=kh_test '
                        '-oPasswordAuthentication=no '
                        # Always use the RSA key, since that's the one in kh_test.

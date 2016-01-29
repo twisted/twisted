@@ -1397,7 +1397,8 @@ class OurServerSftpClientTests(CFTPClientTestBase):
                 args = ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss')
             else:
                 args = ()
-            args += ('-o', 'IdentityFile=dsa_test',
+            args += ('-F', '/dev/null',
+                     '-o', 'IdentityFile=dsa_test',
                      '-o', 'UserKnownHostsFile=kh_test',
                      '-o', 'HostKeyAlgorithms=ssh-rsa',
                      '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
