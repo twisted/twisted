@@ -1393,6 +1393,7 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         cmds = ('-o', 'IdentityFile=dsa_test',
                 '-o', 'UserKnownHostsFile=kh_test',
                 '-o', 'HostKeyAlgorithms=ssh-rsa',
+                '-o', 'PubkeyAcceptedKeyTypes=ssh-dss',
                 '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
         d = getProcessOutputAndValue("sftp", cmds)
         def check(result):
