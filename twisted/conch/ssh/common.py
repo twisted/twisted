@@ -12,7 +12,7 @@ from __future__ import absolute_import, division
 import struct
 
 try:
-    from cryptography.utils import int_to_bytes, int_from_bytes
+    from cryptography.utils import int_from_bytes, int_to_bytes
 except ImportError:
     def int_to_bytes(integer, length=None):
         raise RuntimeError('cryptography not available')
@@ -20,22 +20,6 @@ except ImportError:
         raise RuntimeError('cryptography not available')
 
 from twisted.python.compat import _PY3, long
-
-
-def bytes_to_int(data, byteorder='big', signed=False):
-    """
-    Read an integer from bytes.
-
-    @param byteorder: The endianness of the data; C{'big'} or C{'little'}.
-    @type byteorder: L{str}
-
-    @param signed: Is this a signed integer?
-    @type signed: L{bool}
-
-    @return: the decoded integer.
-    @rtype: L{int}
-    """
-    return int_from_bytes(data, byteorder, signed=signed)
 
 
 def NS(t):
@@ -82,7 +66,7 @@ def getMP(data, count=1):
     c = 0
     for i in range(count):
         length, = struct.unpack('>L', data[c:c + 4])
-        mp.append(bytes_to_int(data[c + 4:c + 4 + length]))
+        mp.append(int_from_bytes(data[c + 4:c + 4 + length], 'big'))
         c += 4 + length
     return tuple(mp) + (data[c:],)
 

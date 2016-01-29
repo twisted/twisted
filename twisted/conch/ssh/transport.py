@@ -21,6 +21,7 @@ import hmac
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
+from cryptography.utils import int_from_bytes
 
 # twisted imports
 from twisted.internet import protocol, defer
@@ -30,7 +31,7 @@ from twisted.python import log, randbytes
 # sibling imports
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
-    NS, getNS, MP, getMP, _MPpow, ffs, bytes_to_int
+    NS, getNS, MP, getMP, _MPpow, ffs
 )
 
 
@@ -48,9 +49,7 @@ def _getRandomNumber(random, bits):
     """
     if bits % 8:
         raise ValueError("bits (%d) must be a multiple of 8" % (bits,))
-    bytes = random(bits / 8)
-    result = bytes_to_int(bytes)
-    return result
+    return int_from_bytes(random(bits / 8), 'big')
 
 
 

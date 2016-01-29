@@ -17,6 +17,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, utils
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.utils import int_from_bytes, int_to_bytes
 
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
@@ -1048,8 +1049,7 @@ class Key(object):
             # concatenated together. The sig[0], [1] numbers from obj.sign
             # are just numbers, and could be any length from 0 to 160 bits.
             # Make sure they are padded out to 160 bits (20 bytes each)
-            ret = common.NS(
-                common.int_to_bytes(r, 20) + common.int_to_bytes(s, 20))
+            ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
 
         else:
             raise BadKeyError("unknown key type %s" % (self.type(),))
@@ -1082,8 +1082,8 @@ class Key(object):
             )
         elif self.type() == 'DSA':
             concatenatedSignature = common.getNS(signature)[0]
-            r = common.bytes_to_int(concatenatedSignature[:20])
-            s = common.bytes_to_int(concatenatedSignature[20:])
+            r = int_from_bytes(concatenatedSignature[:20], 'big')
+            s = int_from_bytes(concatenatedSignature[20:], 'big')
             signature = utils.encode_dss_signature(r, s)
             k = self._keyObject
             if not self.isPublic():
