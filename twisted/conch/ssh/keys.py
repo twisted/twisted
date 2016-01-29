@@ -388,7 +388,7 @@ class Key(object):
             if kd[b'p'] > kd[b'q']:  # make p smaller than q
                 kd[b'p'], kd[b'q'] = kd[b'q'], kd[b'p']
             return cls._fromRSAComponents(
-                n=kd['n'], e=kd['e'], d=kd['d'], p=kd['p'], q=kd['q'])
+                n=kd[b'n'], e=kd[b'e'], d=kd[b'd'], p=kd[b'p'], q=kd[b'q'])
 
         else:
             raise BadKeyError('unknown lsh key type %s' % (sexp[1][0],))
@@ -1115,9 +1115,9 @@ def objectType(obj):
     @rtype: C{str}
     """
     keyDataMapping = {
-        ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa',
-        ('n', 'e', 'd', 'p', 'q', 'u'): 'ssh-rsa',
-        ('y', 'g', 'p', 'q', 'x'): 'ssh-dss'
+        ('n', 'e', 'd', 'p', 'q'): b'ssh-rsa',
+        ('n', 'e', 'd', 'p', 'q', 'u'): b'ssh-rsa',
+        ('y', 'g', 'p', 'q', 'x'): b'ssh-dss'
     }
     try:
         return keyDataMapping[tuple(obj.keydata)]

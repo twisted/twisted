@@ -104,7 +104,7 @@ class ObjectTypeTests(unittest.TestCase):
         """
         key = self.getRSAKey()
 
-        self.assertEqual(keys.objectType(key), 'ssh-rsa')
+        self.assertEqual(keys.objectType(key), b'ssh-rsa')
         self.checkDeprecation()
 
 
@@ -114,7 +114,7 @@ class ObjectTypeTests(unittest.TestCase):
         """
         key = self.getDSAKey()
 
-        self.assertEqual(keys.objectType(key), 'ssh-dss')
+        self.assertEqual(keys.objectType(key), b'ssh-dss')
         self.checkDeprecation()
 
 
@@ -305,7 +305,7 @@ SUrCyZXsNh6VXwjs3gKQ
 
         self.assertRaises(
             keys.BadKeyError,
-            keys.Key.fromString, data='{'+base64.encodestring(sexp)+'}',
+            keys.Key.fromString, data=b'{' + base64.encodestring(sexp) + b'}',
             )
 
 
@@ -743,7 +743,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertEqual(
             keys.Key(self.dsaObj).privateBlob(),
-            common.NS('ssh-dss') +
+            common.NS(b'ssh-dss') +
             common.MP(public_numbers.parameter_numbers.p) +
             common.MP(public_numbers.parameter_numbers.q) +
             common.MP(public_numbers.parameter_numbers.g) +
@@ -835,7 +835,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Signed data can be verified using RSA.
         """
-        data = 'some-data'
+        data = b'some-data'
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
@@ -845,7 +845,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Signed data can be verified using DSA.
         """
-        data = 'some-data'
+        data = b'some-data'
         key = keys.Key.fromString(keydata.privateDSA_openssh)
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
