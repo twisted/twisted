@@ -1048,7 +1048,8 @@ class Key(object):
             # concatenated together. The sig[0], [1] numbers from obj.sign
             # are just numbers, and could be any length from 0 to 160 bits.
             # Make sure they are padded out to 160 bits (20 bytes each)
-            ret = common.NS(common.int_to_bytes(r) + common.int_to_bytes(s))
+            ret = common.NS(
+                common.int_to_bytes(r, 20) + common.int_to_bytes(s, 20))
 
         else:
             raise BadKeyError("unknown key type %s" % (self.type(),))
