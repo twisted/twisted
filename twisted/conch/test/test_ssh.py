@@ -382,8 +382,9 @@ if cryptography is not None and pyasn1 is not None:
         def connectionLost(self, reason):
             if self.done:
                 return
-            if not hasattr(self,'expectedLoseConnection'):
-                unittest.fail('unexpectedly lost connection %s\n%s' % (self, reason))
+            if not hasattr(self, 'expectedLoseConnection'):
+                raise unittest.FailTest(
+                    'unexpectedly lost connection %s\n%s' % (self, reason))
             self.done = 1
 
         def receiveError(self, reasonCode, desc):
@@ -401,7 +402,7 @@ if cryptography is not None and pyasn1 is not None:
             self.loseConnection()
 
         def receiveUnimplemented(self, seqID):
-            unittest.fail('got unimplemented: seqid %s'  % seqID)
+            raise unittest.FailTest('got unimplemented: seqid %s' % (seqID,))
             self.expectedLoseConnection = 1
             self.loseConnection()
 
