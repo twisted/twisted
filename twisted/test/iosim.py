@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_amp.TLSTests,twisted.test.test_iosim -*-
+# -*- test-case-name: twisted.test.test_amp,twisted.test.test_iosim -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -440,6 +440,12 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
     Should the client and server described by the arguments be connected to
     each other, i.e. do their port numbers match?
 
+    @param clientInfo: the args for connectTCP
+    @type clientInfo: L{tuple}
+
+    @param serverInfo: the args for listenTCP
+    @type serverInfo: L{tuple}
+
     @return: If they do match, return factories for the client and server that
         should connect; otherwise return L{None}, indicating they shouldn't be
         connected.
@@ -459,30 +465,45 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
 
 class ConnectionCompleter(object):
     """
-    
+    A L{ConnectionCompleter} can cause synthetic TCP connections established by
+    L{MemoryReactor.connectTCP} and L{MemoryReactor.listenTCP} to succeed or
+    fail.
     """
     def __init__(self, memoryReactor):
         """
-        
+        Create a L{ConnectionCompleter} from a L{MemoryReactor}.
+
+        @param memoryReactor: The reactor to attach to.
+        @type memoryReactor: L{MemoryReactor}
         """
         self._reactor = memoryReactor
 
 
     def succeedOnce(self, debug=False):
         """
-        Complete a single TCP connection established on a given L{MemoryReactor}.
+        Complete a single TCP connection established on this
+        L{ConnectionCompleter}'s L{MemoryReactor}.
+
+        @param debug: A flag; whether to dump output from the established
+            connection to stdout.
+        @type debug: L{bool}
+
+        @return: a pump for the connection, or L{None} if no connection could
+            be established.
+        @rtype: L{IOPump} or L{None}
         """
         memoryReactor = self._reactor
-        for clientInfo in memoryReactor.tcpClients:
+        for clientIdx, clientInfo in enumerate(memoryReactor.tcpClients):
             for serverInfo in memoryReactor.tcpServers:
                 factories = _factoriesShouldConnect(clientInfo, serverInfo)
                 if factories:
+                    memoryReactor.tcpClients.remove(clientInfo)
+                    memoryReactor.connectors.pop(clientIdx)
                     clientFactory, serverFactory = factories
                     clientProtocol = clientFactory.buildProtocol(None)
                     serverProtocol = serverFactory.buildProtocol(None)
                     serverTransport = makeFakeServer(serverProtocol)
                     clientTransport = makeFakeClient(clientProtocol)
-                    memoryReactor.tcpClients.remove(clientInfo)
                     return connect(serverProtocol, serverTransport,
                                    clientProtocol, clientTransport,
                                    debug)
@@ -490,9 +511,13 @@ class ConnectionCompleter(object):
 
     def failOnce(self, reason=Failure(ConnectionRefusedError())):
         """
-        
+        Fail a single TCP connection established on this
+        L{ConnectionCompleter}'s L{MemoryReactor}.
+
+        @param reason: the reason to provide that the connection failed.
+        @type reason: L{Failure}
         """
-        return self._reactor.tcpClients.pop(0)[2].clientConnectionFailed(
+        self._reactor.tcpClients.pop(0)[2].clientConnectionFailed(
             self._reactor.connectors.pop(0), reason
         )
 
@@ -501,6 +526,10 @@ class ConnectionCompleter(object):
 def connectableEndpoint(debug=False):
     """
     Create an endpoint that can be fired on demand.
+
+    @param debug: A flag; whether to dump output from the established
+        connection to stdout.
+    @type debug: L{bool}
 
     @return: A client endpoint, and an object that will cause one of the
         L{Deferred}s returned by that client endpoint.
