@@ -9,45 +9,33 @@ Maintainer: Paul Swartz
 """
 from __future__ import absolute_import, division
 
-import binascii
 import struct
+
+try:
+    from cryptography.utils import int_to_bytes, int_from_bytes
+except ImportError:
+    def int_to_bytes(integer, length=None):
+        raise RuntimeError('cryptography not available')
+    def int_from_bytes(data, byteorder, signed=False):
+        raise RuntimeError('cryptography not available')
 
 from twisted.python.compat import _PY3, long
 
 
-def bytes_to_int(b):
-    return int(binascii.hexlify(b), 16)
-
-
-
-def int_to_bytes(val):
+def bytes_to_int(data, byteorder='big', signed=False):
     """
-    From: http://stackoverflow.com/a/14527004/539264
+    Read an integer from bytes.
 
-    FIXME add padding
+    @param byteorder: The endianness of the data; C{'big'} or C{'little'}.
+    @type byteorder: L{str}
 
-    Use string formatting and L{binascii.unhexlify} to convert an integer to
-    bytes.
+    @param signed: Is this a signed integer?
+    @type signed: L{bool}
 
-    @param val: The value to pack
-    @type val: L{long}
+    @return: the decoded integer.
+    @rtype: L{int}
     """
-
-    # one (1) hex digit per four (4) bits
-    width = val.bit_length()
-
-    # unhexlify wants an even multiple of eight (8) bits, but we don't
-    # want more digits than we need (hence the ternary-ish 'or')
-    width += 8 - ((width % 8) or 8)
-
-    # format width specifier: four (4) bits per hex digit
-    fmt = '%%0%dx' % (width // 4)
-
-    # prepend zero (0) to the width, to zero-pad the output
-    s = binascii.unhexlify(fmt % val)
-
-    return s
-
+    return int_from_bytes(data, byteorder, signed)
 
 
 def NS(t):
