@@ -1038,7 +1038,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         firstOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
-            method=SSL.SSLv3_METHOD,
+            method=SSL.TLSv1_2_METHOD,
             verify=True,
             caCerts=[self.sCert],
             verifyDepth=2,
@@ -1058,7 +1058,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         opts.__setstate__(state)
         self.assertEqual(opts.privateKey, self.sKey)
         self.assertEqual(opts.certificate, self.sCert)
-        self.assertEqual(opts.method, SSL.SSLv3_METHOD)
+        self.assertEqual(opts.method, SSL.TLSv1_2_METHOD)
         self.assertEqual(opts.verify, True)
         self.assertEqual(opts.caCerts, [self.sCert])
         self.assertEqual(opts.verifyDepth, 2)
