@@ -35,7 +35,7 @@ def bytes_to_int(data, byteorder='big', signed=False):
     @return: the decoded integer.
     @rtype: L{int}
     """
-    return int_from_bytes(data, byteorder, signed)
+    return int_from_bytes(data, byteorder, signed=signed)
 
 
 def NS(t):
