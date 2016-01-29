@@ -174,16 +174,13 @@ class KeyTests(unittest.TestCase):
             b'\xdf\x0c\xc4E@4,d\xbc\t\xd9\xae\xdd[\xed-\x82nQ\x8cf\x9b\xe8\xe1'
             b'jrg\x84p<'
         )
-        self.oldSecureRandom = randbytes.secureRandom
-        randbytes.secureRandom = lambda x: b'\xff' * x
+        self.patch(randbytes, 'secureRandom', lambda x: b'\xff' * x)
         self.keyFile = self.mktemp()
         with open(self.keyFile, 'wb') as f:
             f.write(keydata.privateRSA_lsh)
 
 
     def tearDown(self):
-        randbytes.secureRandom = self.oldSecureRandom
-        del self.oldSecureRandom
         os.unlink(self.keyFile)
 
 

@@ -346,8 +346,7 @@ class TransportTestCase(unittest.TestCase):
             Return a consistent entropy value
             """
             return '\x99' * len
-        self.oldSecureRandom = randbytes.secureRandom
-        randbytes.secureRandom = secureRandom
+        self.patch(randbytes, 'secureRandom', secureRandom)
         def stubSendPacket(messageType, payload):
             self.packets.append((messageType, payload))
         self.proto.makeConnection(self.transport)
@@ -372,11 +371,6 @@ class TransportTestCase(unittest.TestCase):
         # just change the key exchange state to what it would be when key
         # exchange is finished.
         proto._keyExchangeState = proto._KEY_EXCHANGE_NONE
-
-
-    def tearDown(self):
-        randbytes.secureRandom = self.oldSecureRandom
-        self.oldSecureRandom = None
 
 
     def simulateKeyExchange(self, sharedSecret, exchangeHash):
