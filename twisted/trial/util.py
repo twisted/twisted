@@ -33,7 +33,7 @@ __all__ = [
     'excInfoOrFailureToExcInfo', 'suppress', 'acquireAttribute']
 
 DEFAULT_TIMEOUT = object()
-DEFAULT_TIMEOUT_DURATION = 120.0
+DEFAULT_TIMEOUT_DURATION = 10.0
 
 
 

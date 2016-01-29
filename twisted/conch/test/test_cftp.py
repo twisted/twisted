@@ -31,7 +31,7 @@ from twisted.python.fakepwd import UserDatabase
 from twisted.trial.unittest import TestCase
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
-from twisted.internet.utils import getProcessOutputAndValue
+from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
@@ -1388,19 +1388,28 @@ class OurServerSftpClientTests(CFTPClientTestBase):
             return attrs
 
         self.patch(FileTransferForTestAvatar, "_getAttrs", _getAttrs)
-
         self.server.factory.expectedLoseConnection = True
-        cmds = ('-o', 'IdentityFile=dsa_test',
-                '-o', 'UserKnownHostsFile=kh_test',
-                '-o', 'HostKeyAlgorithms=ssh-rsa',
-                '-o', 'PubkeyAcceptedKeyTypes=ssh-dss',
-                '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
-        d = getProcessOutputAndValue("sftp", cmds)
+
+        d = getProcessValue(
+            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+        def hasPAKT(status):
+            if status == 0:
+                args = ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss')
+            else:
+                args = ()
+            args += ('-o', 'IdentityFile=dsa_test',
+                     '-o', 'UserKnownHostsFile=kh_test',
+                     '-o', 'HostKeyAlgorithms=ssh-rsa',
+                     '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
+            return args
+
         def check(result):
             self.assertEqual(result[2], 0)
             for i in ['testDirectory', 'testRemoveFile',
                       'testRenameFile', 'testfile1']:
                 self.assertIn(i, result[0])
+        d.addCallback(hasPAKT)
+        d.addCallback(lambda args: getProcessOutputAndValue('sftp', args))
         return d.addCallback(check)
 
 

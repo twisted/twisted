@@ -11,6 +11,7 @@ from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
+from twisted.internet.utils import getProcessValue
 from twisted.python import log, runtime
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
@@ -504,20 +505,28 @@ class OpenSSHClientMixin:
 
         @return: L{defer.Deferred}
         """
-        process.deferred = defer.Deferred()
-        cmdline = ('ssh -2 -l testuser -p %i '
-                   '-oUserKnownHostsFile=kh_test '
-                   '-oPasswordAuthentication=no '
-                   '-oPubkeyAcceptedKeyTypes=ssh-dss '
-                   # Always use the RSA key, since that's the one in kh_test.
-                   '-oHostKeyAlgorithms=ssh-rsa '
-                   '-a '
-                   '-i dsa_test ') + sshArgs + \
-                   ' 127.0.0.1 ' + remoteCommand
-        port = self.conchServer.getHost().port
-        cmds = (cmdline % port).split()
-        reactor.spawnProcess(process, "ssh", cmds)
-        return process.deferred
+        d = getProcessValue(
+            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+        def hasPAKT(status):
+            if status == 0:
+                opts = '-oPubkeyAcceptedKeyTypes=ssh-dss '
+            else:
+                opts = ''
+
+            process.deferred = defer.Deferred()
+            cmdline = ('ssh -2 -l testuser -p %i '
+                       '-oUserKnownHostsFile=kh_test '
+                       '-oPasswordAuthentication=no '
+                       # Always use the RSA key, since that's the one in kh_test.
+                       '-oHostKeyAlgorithms=ssh-rsa '
+                       '-a '
+                       '-i dsa_test ') + opts + sshArgs + \
+                       ' 127.0.0.1 ' + remoteCommand
+            port = self.conchServer.getHost().port
+            cmds = (cmdline % port).split()
+            reactor.spawnProcess(process, "ssh", cmds)
+            return process.deferred
+        return d.addCallback(hasPAKT)
 
 
 
