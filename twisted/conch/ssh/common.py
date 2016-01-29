@@ -15,9 +15,9 @@ try:
     from cryptography.utils import int_from_bytes, int_to_bytes
 except ImportError:
     def int_to_bytes(integer, length=None):
-        raise RuntimeError('cryptography not available')
+        raise RuntimeError('cryptography 1.0 not available')
     def int_from_bytes(data, byteorder, signed=False):
-        raise RuntimeError('cryptography not available')
+        raise RuntimeError('cryptography 1.0 not available')
 
 from twisted.python.compat import _PY3, long
 
