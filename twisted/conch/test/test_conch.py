@@ -11,6 +11,7 @@ from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
+from twisted.internet.utils import getProcessValue
 from twisted.python import log, runtime
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
@@ -504,19 +505,36 @@ class OpenSSHClientMixin:
 
         @return: L{defer.Deferred}
         """
-        process.deferred = defer.Deferred()
-        cmdline = ('ssh -2 -l testuser -p %i '
-                   '-oUserKnownHostsFile=kh_test '
-                   '-oPasswordAuthentication=no '
-                   # Always use the RSA key, since that's the one in kh_test.
-                   '-oHostKeyAlgorithms=ssh-rsa '
-                   '-a '
-                   '-i dsa_test ') + sshArgs + \
-                   ' 127.0.0.1 ' + remoteCommand
-        port = self.conchServer.getHost().port
-        cmds = (cmdline % port).split()
-        reactor.spawnProcess(process, "ssh", cmds)
-        return process.deferred
+        # PubkeyAcceptedKeyTypes does not exist prior to OpenSSH 7.0 so we
+        # first need to check if we can set it. If we can, -V will just print
+        # the version without doing anything else; if we can't, we will get a
+        # configuration error.
+        d = getProcessValue(
+            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+        def hasPAKT(status):
+            if status == 0:
+                opts = '-oPubkeyAcceptedKeyTypes=ssh-dss '
+            else:
+                opts = ''
+
+            process.deferred = defer.Deferred()
+            # Pass -F /dev/null to avoid the user's configuration file from
+            # being loaded, as it may contain settings that cause our tests to
+            # fail or hang.
+            cmdline = ('ssh -2 -l testuser -p %i '
+                       '-F /dev/null '
+                       '-oUserKnownHostsFile=kh_test '
+                       '-oPasswordAuthentication=no '
+                       # Always use the RSA key, since that's the one in kh_test.
+                       '-oHostKeyAlgorithms=ssh-rsa '
+                       '-a '
+                       '-i dsa_test ') + opts + sshArgs + \
+                       ' 127.0.0.1 ' + remoteCommand
+            port = self.conchServer.getHost().port
+            cmds = (cmdline % port).split()
+            reactor.spawnProcess(process, "ssh", cmds)
+            return process.deferred
+        return d.addCallback(hasPAKT)
 
 
 

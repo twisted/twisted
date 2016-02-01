@@ -31,7 +31,7 @@ from twisted.python.fakepwd import UserDatabase
 from twisted.trial.unittest import TestCase
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
-from twisted.internet.utils import getProcessOutputAndValue
+from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
@@ -1388,18 +1388,36 @@ class OurServerSftpClientTests(CFTPClientTestBase):
             return attrs
 
         self.patch(FileTransferForTestAvatar, "_getAttrs", _getAttrs)
-
         self.server.factory.expectedLoseConnection = True
-        cmds = ('-o', 'IdentityFile=dsa_test',
-                '-o', 'UserKnownHostsFile=kh_test',
-                '-o', 'HostKeyAlgorithms=ssh-rsa',
-                '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
-        d = getProcessOutputAndValue("sftp", cmds)
+
+        # PubkeyAcceptedKeyTypes does not exist prior to OpenSSH 7.0 so we
+        # first need to check if we can set it. If we can, -V will just print
+        # the version without doing anything else; if we can't, we will get a
+        # configuration error.
+        d = getProcessValue(
+            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+        def hasPAKT(status):
+            if status == 0:
+                args = ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss')
+            else:
+                args = ()
+            # Pass -F /dev/null to avoid the user's configuration file from
+            # being loaded, as it may contain settings that cause our tests to
+            # fail or hang.
+            args += ('-F', '/dev/null',
+                     '-o', 'IdentityFile=dsa_test',
+                     '-o', 'UserKnownHostsFile=kh_test',
+                     '-o', 'HostKeyAlgorithms=ssh-rsa',
+                     '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
+            return args
+
         def check(result):
             self.assertEqual(result[2], 0)
             for i in ['testDirectory', 'testRemoveFile',
                       'testRenameFile', 'testfile1']:
                 self.assertIn(i, result[0])
+        d.addCallback(hasPAKT)
+        d.addCallback(lambda args: getProcessOutputAndValue('sftp', args))
         return d.addCallback(check)
 
 
