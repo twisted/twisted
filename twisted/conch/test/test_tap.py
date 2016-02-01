@@ -6,9 +6,9 @@ Tests for L{twisted.conch.tap}.
 """
 
 try:
-    import Crypto.Cipher.DES3
-except:
-    Crypto = None
+    import cryptography
+except ImportError:
+    cryptography = None
 
 try:
     import pyasn1
@@ -20,7 +20,7 @@ try:
 except ImportError:
     unix = None
 
-if Crypto and pyasn1 and unix:
+if cryptography and pyasn1 and unix:
     from twisted.conch import tap
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 
@@ -38,8 +38,8 @@ class MakeServiceTests(TestCase):
     Tests for L{tap.makeService}.
     """
 
-    if not Crypto:
-        skip = "can't run w/o PyCrypto"
+    if not cryptography:
+        skip = "can't run without cryptography"
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"

@@ -351,8 +351,8 @@ class SSHCheckerTests(unittest.TestCase):
 
     skip = None
 
-    if requireModule('Crypto') is None:
-        skip = 'PyCrypto is not available'
+    if requireModule('cryptography') is None:
+        skip = 'cryptography is not available'
 
     if requireModule('pyasn1') is None:
         skip = 'pyasn1 is not available'

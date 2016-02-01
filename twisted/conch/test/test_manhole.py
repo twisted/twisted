@@ -354,7 +354,7 @@ class ManholeLoopbackTelnetTests(_TelnetMixin, unittest.TestCase, ManholeLoopbac
 
 class ManholeLoopbackSSHTests(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
     if ssh is None:
-        skip = "Crypto requirements missing, can't run manhole tests over ssh"
+        skip = "cryptography requirements missing, can't run manhole tests over ssh"
 
 class ManholeLoopbackStdioTests(_StdioMixin, unittest.TestCase, ManholeLoopbackMixin):
     if stdio is None:

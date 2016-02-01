@@ -7,20 +7,19 @@ Common functions for the SSH classes.
 
 Maintainer: Paul Swartz
 """
-
 from __future__ import absolute_import, division
 
 import struct
-import warnings
-
-from twisted.python.compat import _PY3, long
 
 try:
-    from Crypto import Util
+    from cryptography.utils import int_from_bytes, int_to_bytes
 except ImportError:
-    warnings.warn("PyCrypto not installed, but continuing anyways!",
-            RuntimeWarning)
+    def int_to_bytes(integer, length=None):
+        raise RuntimeError('cryptography 1.0 not available')
+    def int_from_bytes(data, byteorder, signed=False):
+        raise RuntimeError('cryptography 1.0 not available')
 
+from twisted.python.compat import _PY3, long
 
 
 def NS(t):
@@ -48,7 +47,7 @@ def getNS(s, count=1):
 def MP(number):
     if number == 0: return b'\000'*4
     assert number > 0
-    bn = Util.number.long_to_bytes(number)
+    bn = int_to_bytes(number)
     if ord(bn[0:1]) & 128:
         bn = b'\000' + bn
     return struct.pack('>L', len(bn)) + bn
@@ -67,7 +66,7 @@ def getMP(data, count=1):
     c = 0
     for i in range(count):
         length, = struct.unpack('>L', data[c:c + 4])
-        mp.append(Util.number.bytes_to_long(data[c + 4:c + 4 + length]))
+        mp.append(int_from_bytes(data[c + 4:c + 4 + length], 'big'))
         c += 4 + length
     return tuple(mp) + (data[c:],)
 
@@ -128,17 +127,17 @@ def install():
     getMP = _fastgetMP
     MP = _fastMP
     _MPpow = _fastMPpow
-    # XXX: We override builtin pow so that PyCrypto can benefit from gmpy too.
+    # XXX: We override builtin pow so that other code can benefit too.
     # This is monkeypatching, and therefore VERY BAD.
     def _fastpow(x, y, z=None, mpz=gmpy.mpz):
         if type(x) in (long, int):
             x = mpz(x)
         return pyPow(x, y, z)
-    if not _PY3:
+    if _PY3:
+        __builtins__['pow'] = _fastpow
+    else:
         import __builtin__
         __builtin__.pow = _fastpow
-    else:
-        __builtins__['pow'] = _fastpow
 
 try:
     import gmpy

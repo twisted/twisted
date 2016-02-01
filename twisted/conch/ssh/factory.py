@@ -78,7 +78,7 @@ class SSHFactory(protocol.Factory):
         """
         Called when the factory is started to get the  private portions of the
         servers host keys.  Returns a dictionary mapping SSH key types to
-        C{Crypto.PublicKey.pubkey.pubkey} objects.
+        L{twisted.conch.ssh.keys.Key} objects.
 
         @rtype: C{dict}
         """

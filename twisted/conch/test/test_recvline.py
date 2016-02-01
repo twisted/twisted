@@ -454,7 +454,7 @@ class _BaseMixin:
 class _SSHMixin(_BaseMixin):
     def setUp(self):
         if not ssh:
-            raise unittest.SkipTest("Crypto requirements missing, can't run historic recvline tests over ssh")
+            raise unittest.SkipTest("cryptography requirements missing, can't run historic recvline tests over ssh")
 
         u, p = 'testuser', 'testpass'
         rlm = TerminalRealm()
