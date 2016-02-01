@@ -1390,6 +1390,10 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         self.patch(FileTransferForTestAvatar, "_getAttrs", _getAttrs)
         self.server.factory.expectedLoseConnection = True
 
+        # PubkeyAcceptedKeyTypes does not exist prior to OpenSSH 7.0 so we
+        # first need to check if we can set it. If we can, -V will just print
+        # the version without doing anything else; if we can't, we will get a
+        # configuration error.
         d = getProcessValue(
             'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
         def hasPAKT(status):
@@ -1397,6 +1401,9 @@ class OurServerSftpClientTests(CFTPClientTestBase):
                 args = ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss')
             else:
                 args = ()
+            # Pass -F /dev/null to avoid the user's configuration file from
+            # being loaded, as it may contain settings that cause our tests to
+            # fail or hang.
             args += ('-F', '/dev/null',
                      '-o', 'IdentityFile=dsa_test',
                      '-o', 'UserKnownHostsFile=kh_test',

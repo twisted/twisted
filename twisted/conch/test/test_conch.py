@@ -505,6 +505,10 @@ class OpenSSHClientMixin:
 
         @return: L{defer.Deferred}
         """
+        # PubkeyAcceptedKeyTypes does not exist prior to OpenSSH 7.0 so we
+        # first need to check if we can set it. If we can, -V will just print
+        # the version without doing anything else; if we can't, we will get a
+        # configuration error.
         d = getProcessValue(
             'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
         def hasPAKT(status):
@@ -514,6 +518,9 @@ class OpenSSHClientMixin:
                 opts = ''
 
             process.deferred = defer.Deferred()
+            # Pass -F /dev/null to avoid the user's configuration file from
+            # being loaded, as it may contain settings that cause our tests to
+            # fail or hang.
             cmdline = ('ssh -2 -l testuser -p %i '
                        '-F /dev/null '
                        '-oUserKnownHostsFile=kh_test '
