@@ -39,7 +39,7 @@ except ImportError:
             n = len(hex_string)
         else:
             n = length * 2
-            return binascii.unhexlify(hex_string.zfill(n + (n & 1)))
+        return binascii.unhexlify(hex_string.zfill(n + (n & 1)))
 
 from twisted.python.compat import _PY3, long
 
