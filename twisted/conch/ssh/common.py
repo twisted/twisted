@@ -32,6 +32,7 @@ except ImportError:
 
         return result
 
+
     def int_to_bytes(integer, length=None):
         hex_string = '%x' % integer
         if length is None:

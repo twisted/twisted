@@ -736,15 +736,15 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         Returns the SSH protocol-level format of the DSA private key.
         """
-        public_numbers = self.dsaObj.private_numbers().public_numbers
+        publicNumbers = self.dsaObj.private_numbers().public_numbers
 
         self.assertEqual(
             keys.Key(self.dsaObj).privateBlob(),
             common.NS(b'ssh-dss') +
-            common.MP(public_numbers.parameter_numbers.p) +
-            common.MP(public_numbers.parameter_numbers.q) +
-            common.MP(public_numbers.parameter_numbers.g) +
-            common.MP(public_numbers.y) +
+            common.MP(publicNumbers.parameter_numbers.p) +
+            common.MP(publicNumbers.parameter_numbers.q) +
+            common.MP(publicNumbers.parameter_numbers.g) +
+            common.MP(publicNumbers.y) +
             common.MP(self.dsaObj.private_numbers().x)
             )
 

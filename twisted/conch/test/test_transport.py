@@ -2130,12 +2130,12 @@ class SSHCiphersTests(unittest.TestCase):
         """
         ciphers = transport.SSHCiphers('A', 'B', 'C', 'D')
         iv = key = '\x00' * 16
-        for cipName, (algorithmClass, keySize, counter) in ciphers.cipherMap.items():
+        for cipName, (algClass, keySize, counter) in ciphers.cipherMap.items():
             cip = ciphers._getCipher(cipName, iv, key)
             if cipName == 'none':
                 self.assertIsInstance(cip, transport._DummyCipher)
             else:
-                self.assertIsInstance(cip.algorithm, algorithmClass)
+                self.assertIsInstance(cip.algorithm, algClass)
 
 
     def test_setKeysCiphers(self):
