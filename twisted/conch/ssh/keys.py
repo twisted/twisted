@@ -16,8 +16,14 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, utils
+try:
+    from cryptography.hazmat.primitives.asymmetric.utils import (
+        encode_dss_signature, decode_dss_signature)
+except ImportError:
+    from cryptography.hazmat.primitives.asymmetric.utils import (
+        encode_rfc6979_signature as encode_dss_signature,
+        decode_rfc6979_signature as decode_dss_signature)
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.utils import int_from_bytes, int_to_bytes
 
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
@@ -25,6 +31,7 @@ from pyasn1.codec.ber import decoder as berDecoder
 from pyasn1.codec.ber import encoder as berEncoder
 
 from twisted.conch.ssh import common, sexpy
+from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, long, izip, nativeString, _PY3
 from twisted.python.deprecate import deprecated
@@ -1044,7 +1051,7 @@ class Key(object):
             signer = self._keyObject.signer(hashes.SHA1())
             signer.update(data)
             signature = signer.finalize()
-            (r, s) = utils.decode_dss_signature(signature)
+            (r, s) = decode_dss_signature(signature)
             # SSH insists that the DSS signature blob be two 160-bit integers
             # concatenated together. The sig[0], [1] numbers from obj.sign
             # are just numbers, and could be any length from 0 to 160 bits.
@@ -1084,7 +1091,7 @@ class Key(object):
             concatenatedSignature = common.getNS(signature)[0]
             r = int_from_bytes(concatenatedSignature[:20], 'big')
             s = int_from_bytes(concatenatedSignature[20:], 'big')
-            signature = utils.encode_dss_signature(r, s)
+            signature = encode_dss_signature(r, s)
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()

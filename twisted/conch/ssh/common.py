@@ -14,10 +14,31 @@ import struct
 try:
     from cryptography.utils import int_from_bytes, int_to_bytes
 except ImportError:
-    def int_to_bytes(integer, length=None):
-        raise RuntimeError('cryptography 1.0 not available')
+    import binascii
+
     def int_from_bytes(data, byteorder, signed=False):
-        raise RuntimeError('cryptography 1.0 not available')
+        assert byteorder == 'big'
+        assert not signed
+
+        if len(data) % 4 != 0:
+            data = (b'\x00' * (4 - (len(data) % 4))) + data
+
+        result = 0
+
+        while len(data) > 0:
+            digit, = struct.unpack('>I', data[:4])
+            result = (result << 32) + digit
+            data = data[4:]
+
+        return result
+
+    def int_to_bytes(integer, length=None):
+        hex_string = '%x' % integer
+        if length is None:
+            n = len(hex_string)
+        else:
+            n = length * 2
+            return binascii.unhexlify(hex_string.zfill(n + (n & 1)))
 
 from twisted.python.compat import _PY3, long
 
