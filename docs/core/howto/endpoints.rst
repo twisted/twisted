@@ -151,13 +151,14 @@ TCP
 TLS
    Required arguments: ``host``, ``port``.  Optional arguments: ``timeout``, ``bindAddress``, ``certificate``, ``privateKey``, ``trustRoots``, ``endpoint``.
 
-   - ``host`` is a (UTF-8 encoded) hostname to connect to.
+   - ``host`` is a (UTF-8 encoded) hostname to connect to, as well as the host name to verify against.
    - ``port`` is a numeric port number to connect to.
+   - ``timeout`` and ``bindAddress`` have the same meaning as the ``timeout`` for TCP.
    - ``certificate`` is the certificate to use for the client; it should be the path name of a PEM file containing a certificate for which ``privateKey`` is the private key.
    - ``privateKey`` is the client's private key, matching the certificate specified by ``certificate``.
      It should be the path name of a PEM file containing an X.509 client certificate.
      If ``certificate`` is specified but ``privateKey`` is unspecified, Twisted will look for the certificate in the same file as specified by ``certificate`` .
-   - ``timeout`` and ``bindAddress`` have the same meaning as the ``timeout`` for TCP.
+   - ``trustRoots`` specifies a path to a directory of PEM-encoded certificate files.  If you leave this unspecified, Twisted will do its best to use the platform default set of trust roots, which should be the default WebTrust set.
    - the optional ``endpoint`` parameter changes the meaning of the ``tls:`` endpoint slightly.
      Rather than the default of connecting over TCP with the same hostname used for verification, you can connect over *any* endpoint type.
      If you specify the endpoint here, ``host`` and ``port`` are used for certificate verification purposes only.
