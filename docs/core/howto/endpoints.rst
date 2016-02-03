@@ -156,7 +156,20 @@ TLS
    - ``certificate`` is the certificate to use for the client; it should be the path name of a PEM file containing a certificate for which ``privateKey`` is the private key.
    - ``privateKey`` is the client's private key, matching the certificate specified by ``certificate``.
      It should be the path name of a PEM file containing an X.509 client certificate.
-     If ``certificate`` is specified buto/var/run/awesome.sock`` .
+     If ``certificate`` is specified but ``privateKey`` is unspecified, Twisted will look for the certificate in the same file as specified by ``certificate`` .
+   - ``timeout`` and ``bindAddress`` have the same meaning as the ``timeout`` for TCP.
+   - the optional ``endpoint`` parameter changes the meaning of the ``tls:`` endpoint slightly.
+     Rather than the default of connecting over TCP with the same hostname used for verification, you can connect over *any* endpoint type.
+     If you specify the endpoint here, ``host`` and ``port`` are used for certificate verification purposes only.
+     Bear in mind you will need to backslash-escape the colons in the endpoint description here.
+
+   This client connects to the supplied hostname, validates the server's hostname against the supplied hostname, and then upgrades to TLS immediately after validation succeeds.
+
+   The simplest example of this would be: ``tls:example.com:443`` .
+
+   You can use the ``endpoint:`` feature with TCP if you want to connect to a host name; for example, if your DNS is not working, but you know that the IP address 7.6.5.4 points to ``awesome.site.example.com``, you could specify: ``tls:awesome.site.example.com:443:endpoint=tcp\:7.6.5.4\:443`` .
+
+   You can use it with any other endpoint type as well, though; for example, if you had a local UNIX socket that established a tunnel to ``awesome.site.example.com`` in ``/var/run/awesome.sock``, you could instead do ``tls:awesome.site.example.com:443:endpoint=unix\:/var/run/awesome.sock`` .
 
    Or, from python code::
 
