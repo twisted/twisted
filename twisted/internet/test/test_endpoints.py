@@ -3587,10 +3587,11 @@ class WrapClientTLSParserTests(unittest.TestCase):
         # containing the cert itself for the CAs list.
         endpoint = endpoints.clientFromString(
             reactor,
-            b'tls:localhost:4321:privateKey=%s:certKey=%s:caCertsDir=%s' % (
+            'tls:localhost:4321:privateKey={}:certificate={}:trustRoots={}'
+            .format(
                 escapedPEMPathName, escapedPEMPathName,
                 endpoints.quoteStringArgument(pemPath.parent().path)
-            )
+            ).encode('ascii')
         )
         makeHostnameEndpointSynchronous(endpoint._wrappedEndpoint)
         d = endpoint.connect(Factory.forProtocol(Protocol))
