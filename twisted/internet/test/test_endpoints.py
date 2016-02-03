@@ -3598,9 +3598,6 @@ class WrapClientTLSParserTests(unittest.TestCase):
         makeHostnameEndpointSynchronous(endpoint._wrappedEndpoint)
         d = endpoint.connect(Factory.forProtocol(Protocol))
         host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
-        print(factory)
-        print(factory._wrappedFactory)
-        print(factory._wrappedFactory.wrappedFactory)
         clientProtocol = factory.buildProtocol(None)
         self.assertNoResult(d)
         assert clientProtocol is not None
