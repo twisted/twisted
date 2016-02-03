@@ -1584,7 +1584,7 @@ def _loadCAsFromDir(directoryPath):
             # Duplicate certificate, invalid certificate, etc.  We don't care.
             pass
         else:
-            caCerts[theCert.digest()] = theCert.original
+            caCerts[theCert.digest()] = theCert
     return trustRootFromCertificates(caCerts.values())
 
 
