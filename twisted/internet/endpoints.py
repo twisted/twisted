@@ -60,6 +60,9 @@ __all__ = ["clientFromString", "serverFromString",
            "wrapClientTLS"]
 
 
+# This is a workaround for a bug in Emacs.
+# http://debbugs.gnu.org/cgi/bugreport.cgi?bug=21840
+_backslash = "\\ ".strip()
 
 class _WrappingProtocol(Protocol):
     """
@@ -1294,7 +1297,7 @@ def _tokenize(description):
             yield _OP, n
             current = ''
             ops = nextOps[n]
-        elif n == '\\':
+        elif n == _backslash:
             current += next(description)
         else:
             current += n
@@ -1508,7 +1511,8 @@ def quoteStringArgument(argument):
 
     @rtype: C{str}
     """
-    return argument.replace('\\', '\\\\').replace(':', '\\:')
+    return (argument.replace(_backslash, _backslash + _backslash)
+            .replace(':', '\\:'))
 
 
 
