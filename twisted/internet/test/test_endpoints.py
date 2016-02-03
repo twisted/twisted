@@ -14,6 +14,7 @@ from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
 from zope.interface import implementer
 from zope.interface.verify import verifyObject, verifyClass
+from types import FunctionType
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import MemoryReactorClock as MemoryReactor
@@ -3645,3 +3646,59 @@ class WrapClientTLSParserTests(unittest.TestCase):
         creator = connectionCreatorFromEndpoint(reactor, endpoint)
         self.assertEqual(creator._hostname, u'example.com')
         self.assertEqual(endpoint._wrappedEndpoint._host, u'example.com')
+
+
+
+def replacingGlobals(function, **newGlobals):
+    """
+    Create a copy of the given function with the given globals substituted.
+
+    The globals must already exist in the function's existing global scope.
+
+    @param function: any function object.
+    @type function: L{types.FunctionType}
+
+    @param newGlobals: each keyword argument should be a global to set in the
+        new function's returned scope.
+    @type newGlobals: L{dict}
+
+    @return: a new function, like C{function}, but with new global scope.
+    """
+    try:
+        codeObject = function.func_code
+        funcGlobals = function.func_globals
+    except AttributeError:
+        codeObject = function.__code__
+        funcGlobals = function.__globals__
+    for key in newGlobals:
+        if key not in funcGlobals:
+            raise TypeError(
+                "Name bound by replacingGlobals but not present in module: {}"
+                .format(key)
+            )
+    mergedGlobals = {}
+    mergedGlobals.update(funcGlobals)
+    mergedGlobals.update(newGlobals)
+    newFunction = FunctionType(codeObject, mergedGlobals)
+    mergedGlobals[function.__name__] = newFunction
+    return newFunction
+
+
+
+class WrapClientTLSTests(unittest.TestCase):
+    """
+    Tests for the error-reporting behavior of L{wrapClientTLS} when
+    C{pyOpenSSL} is unavailable.
+    """
+
+    def test_noOpenSSL(self):
+        """
+        If SSL is not supported, L{TLSMemoryBIOFactory} will be L{None}, which
+        causes C{_wrapper} to also be L{None}.  If C{_wrapper} is L{None}, then
+        an exception is raised.
+        """
+        replaced = replacingGlobals(endpoints.wrapClientTLS,
+                                    TLSMemoryBIOFactory=None)
+        notImplemented = self.assertRaises(NotImplementedError, replaced,
+                                           None, None)
+        self.assertIn("OpenSSL not available", str(notImplemented))
