@@ -3568,22 +3568,18 @@ class WrapClientTLSParserTests(unittest.TestCase):
         L{clientFromString} returns a client endpoint initialized with the
         values from the string.
         """
-        # TODO: we can't peer into the unknowable chaos of the heart of OpenSSL
+        # We can't peer into the unknowable chaos of the heart of OpenSSL
         # (there's no public API to extract from a Context what its trust roots
         # or certificate is); instead, we have to somehow extract information
         # about this stuff from how the context behaves.  So this test is an
-        # integration test.  Problem: our test-fixture X509 certificates are a
-        # haphazard, disorganized mess, so asserting anything interesting about
-        # the certificates packaged here doesn't work just yet.
+        # integration test.
 
         # There are good examples of how to construct relevant test-fixture
         # data in
-        # twisted.test.test_sslverify.certificatesForAuthorityAndServer; we
-        # should extract those and do something like this.  Remember that this
+        # twisted.test.test_sslverify.certificatesForAuthorityAndServer; that
+        # more directly tests the nuances of this code.  Remember that this
         # should test both positive and negative cases.
 
-        # Also: 'certKey' was a gigantic mistake the first time it cropped up,
-        # let's do better if we can this time.
         reactor = MemoryReactor()
 
         # The certificate in question here is a self-signed certificate for
