@@ -46,6 +46,10 @@ from twisted.python.systemd import ListenFDs
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory
     from twisted.internet._sslverify import _idnaBytes, _idnaText
+    from twisted.internet.ssl import (
+        optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
+        CertificateOptions,
+    )
 except ImportError:
     TLSMemoryBIOFactory = None
 
@@ -1600,7 +1604,6 @@ def _parseClientSSLOptions(kwargs):
 
     @return: The remaining arguments, including a new key C{sslContextFactory}.
     """
-    from twisted.internet import ssl
     certKey = kwargs.pop('certKey', None)
     privateKey = kwargs.pop('privateKey', None)
     caCertsDir = kwargs.pop('caCertsDir', None)
@@ -1608,13 +1611,13 @@ def _parseClientSSLOptions(kwargs):
     clientCertificate = None
     trustRoot = None
     if privateKey is not None and certKey is not None:
-        clientCertificate = ssl.PrivateCertificate.loadPEM(
+        clientCertificate = PrivateCertificate.loadPEM(
             b"\n".join([FilePath(privateKey).getContent(),
                         FilePath(certKey).getContent()]))
     if caCertsDir is not None:
         trustRoot = _loadCAsFromDir(FilePath(caCertsDir))
     if hostname is not None:
-        configuration = ssl.optionsForClientTLS(
+        configuration = optionsForClientTLS(
             _idnaText(hostname), trustRoot=trustRoot,
             clientCertificate=clientCertificate
         )
@@ -1626,7 +1629,7 @@ def _parseClientSSLOptions(kwargs):
         else:
             privateKeyOpenSSL = None
             certificateOpenSSL = None
-        configuration = ssl.CertificateOptions(
+        configuration = CertificateOptions(
             trustRoot=trustRoot,
             privateKey=privateKeyOpenSSL,
             certificate=certificateOpenSSL,
@@ -1870,7 +1873,8 @@ class _TLSClientEndpointParser(object):
     prefix = 'tls'
 
     def _parseClient(self, reactor, host, port, timeout=b'30',
-                     bindAddress=None, **kwargs):
+                     bindAddress=None, certificate=None, privateKey=None,
+                     trustRoots=None, endpoint=None, **kwargs):
         """
         Internal method to construct an endpoint from string parameters.
 
@@ -1889,25 +1893,46 @@ class _TLSClientEndpointParser(object):
         @param bindAddress: The address to which to bind outgoing connections.
         @type bindAddress: L{bytes}
 
-        @param kwargs: Extra arguments for creating the TLS context.  This can
-            contain keys C{certKey}, C{privateKey}, and C{caCertsDir}.  See
-            L{_parseClientSSL}.  Passing arguments not listed will cause a
-            L{ValueError} to be raised.
-        @type kwargs: L{dict}
+        @param certificate: a string describing a certificate
+
+        @param privateKey: a string describing a certificate
+
+        @param endpoint: a string endpoint description
 
         @return: a client TLS endpoint
         @rtype: L{IStreamClientEndpoint}
         """
-        host = host.decode('utf-8')
-        wrappedEndpoint = HostnameEndpoint(
-            reactor, _idnaBytes(host), int(port), int(timeout), bindAddress)
-        kwargs['hostname'] = host
-        kwargs = _parseClientSSLOptions(kwargs)
-        contextFactory = kwargs.pop('sslContextFactory')
         if kwargs:
-            raise TypeError(
-                'extra keyword arguments present', list(kwargs.keys()))
-        return wrapClientTLS(contextFactory, wrappedEndpoint)
+            raise TypeError('extra keyword arguments present',
+                            list(kwargs.keys()))
+        host = host.decode('utf-8')
+        if endpoint is None:
+            endpoint = HostnameEndpoint(reactor, _idnaBytes(host), int(port),
+                                        int(timeout), bindAddress)
+        else:
+            endpoint = clientFromString(reactor, endpoint)
+        if certificate is None:
+            clientCertificate = None
+        else:
+            certBytes = FilePath(certificate).getContent()
+            if privateKey is None:
+                clientCertificate = PrivateCertificate.loadPEM(certBytes)
+            else:
+                clientCertificate = (
+                    PrivateCertificate.fromCertificateAndKeyPair(
+                        Certificate.loadPEM(certBytes),
+                        KeyPair.load(FilePath(privateKey).getContent(), 1)
+                    )
+                )
+        if trustRoots is None:
+            trustRoot = None
+        else:
+            trustRoot = _loadCAsFromDir(FilePath(trustRoots))
+        connectionCreator = optionsForClientTLS(
+            _idnaText(host), trustRoot=trustRoot,
+            clientCertificate=clientCertificate
+        )
+        return wrapClientTLS(connectionCreator, endpoint)
 
 
     def parseStreamClient(self, reactor, *args, **kwargs):
