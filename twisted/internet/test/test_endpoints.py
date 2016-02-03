@@ -3500,6 +3500,7 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
     return tlsEndpoint._wrapperFactory(None)._connectionCreator
 
 
+
 def makeHostnameEndpointSynchronous(hostnameEndpoint):
     """
     Make the given L{HostnameEndpoint} fire its L{defer.Deferred} from
@@ -3517,6 +3518,8 @@ def makeHostnameEndpointSynchronous(hostnameEndpoint):
     def synchronousDeferToThreadForGAI(*args):
         return defer.succeed([gaiResult])
     hostnameEndpoint._deferToThread = synchronousDeferToThreadForGAI
+
+
 
 class WrapClientTLSParserTests(unittest.TestCase):
     """
