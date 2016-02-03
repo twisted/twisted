@@ -148,13 +148,23 @@ TCP
 
    For example, ``tcp:host=twistedmatrix.com:port=80:timeout=15``.
 
-SSL
-   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``caCertsDir``.
-   ``certKey`` (optional) gives a filesystem path to a certificate (PEM format).
-   ``privateKey`` (optional) gives a filesystem path to a private key (PEM format).
-   ``caCertsDir`` (optional) gives a filesystem path to a directory containing trusted CA certificates to use to verify the server certificate.
+TLS
+   Required arguments: ``host``, ``port``.  Optional arguments: ``timeout``, ``bindAddress``, ``certificate``, ``privateKey``, ``trustRoots``, ``endpoint``.
 
-   For example, ``ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs`` .
+   - ``host`` is a (UTF-8 encoded) hostname to connect to.
+   - ``port`` is a numeric port number to connect to.
+   - ``certificate`` is the certificate to use for the client; it should be the path name of a PEM file containing a certificate for which ``privateKey`` is the private key.
+   - ``privateKey`` is the client's private key, matching the certificate specified by ``certificate``.
+     It should be the path name of a PEM file containing an X.509 client certificate.
+     If ``certificate`` is specified buto/var/run/awesome.sock`` .
+
+   Or, from python code::
+
+     wrapped = HostnameEndpoint('example.com', 443)
+     contextFactory = CertificateOptions(hostname=u'example.com')
+     endpoint = wrapClientTLS(contextFactory, wrapped)
+     conn = endpoint.connect(Factory.forProtocol(Protocol))
+
 UNIX
    Supported arguments: ``path``, ``timeout``, ``checkPID``.
    ``path`` gives a filesystem path to a listening UNIX domain socket server.
@@ -162,30 +172,6 @@ UNIX
 
    For example, ``unix:path=/var/run/web.sock``.
 
-TLS
-   Supported arguments: ``host``, ``port``, ``timeout``, ``bindAddress``, ``certKey``, ``privateKey``, ``caCertsDir``.
-   The latter three arguments have the same semantics as the SSL client.
-   ``host`` is a UTF-8 encoded hostname to connect to.
-   ``timeout`` is optional.
-   ``bindAddress`` is optional.
-   This client connects to the supplied hostname,
-   validates the server's hostname against the supplied hostname,
-   and then upgrades to TLS immediately after validation succeeds.
-
-   For example, ``tls:example.com:443`` .
-
-   Or, from python code::
-
-     wrapped = HostnameEndpoint('example.com', 443)
-     contextEndpoint = CertificateOptions(hostname=u'example.com')
-     endpoint = wrapClientTLS(contextFactory, wrapped)
-     conn = endpoint.connect(Factory.forProtocol(Protocol))
-
-TLS wrapper
-   Supported arguments: ``wrappedEndpoint``, ``hostname``, ``certKey``, ``privateKey``, ``caCertsDir``.
-   The latter three arguments have the same semantics as the SSL client.
-   ``hostname`` (optional) gives a hostname to use for SSL server validation.
-   This client connects to the wrapped endpoint and then upgrades to TLS as soon as the connection is established.
 
    For example, ``tls:tcp\:example.com\:443:caCertsDir=/etc/ssl/certs`` .
    This connects to the endpoint ``tcp:example.com:443`` before starting TLS.
@@ -210,6 +196,16 @@ TCP (Hostname)
 
       endpoint = HostnameEndpoint(reactor, "twistedmatrix.com", 80)
       conn = endpoint.connect(Factory.forProtocol(Protocol))
+
+SSL (Deprecated)
+   You should generally prefer the "TLS" endpoint, above, unless you need to work with versions of Twisted older than 16.0.
+
+   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``caCertsDir``.
+   ``certKey`` (optional) gives a filesystem path to a certificate (PEM format).
+   ``privateKey`` (optional) gives a filesystem path to a private key (PEM format).
+   ``caCertsDir`` (optional) gives a filesystem path to a directory containing trusted CA certificates to use to verify the server certificate.
+
+   For example, ``ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs`` .
 
 
 Servers
