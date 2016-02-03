@@ -3548,8 +3548,9 @@ class WrapClientTLSParserTests(unittest.TestCase):
 
     def test_utf8Encoding(self):
         """
-        The hostname is decoded as UTF-8 bytes and appropriately encoded with
-        IDNA or passed along as unicode.
+        The hostname passed to L{clientFromString} is treated as utf-8 bytes;
+        it is then encoded as IDNA when it is passed along to
+        L{HostnameEndpoint}, and passed as unicode to L{optionsForClientTLS}.
         """
         reactor = object()
         endpoint = endpoints.clientFromString(
