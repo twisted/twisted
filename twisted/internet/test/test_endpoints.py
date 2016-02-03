@@ -2401,7 +2401,7 @@ class ParserTests(unittest.TestCase):
         descriptions.
         """
         self.assertEqual(
-            self.parse('unix:foo\x5c:bar\x5c=baz\x5c:qux\x5c', self.f),
+            self.parse('unix:foo\x5c:bar\x5c=baz\x5c:qux\x5c\x5c', self.f),
             ('UNIX', ('foo:bar=baz:qux\x5c', self.f),
              {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
 
