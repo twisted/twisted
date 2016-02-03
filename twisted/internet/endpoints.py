@@ -48,8 +48,9 @@ try:
     from twisted.internet._sslverify import _idnaBytes, _idnaText
     from twisted.internet.ssl import (
         optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
-        CertificateOptions,
+        CertificateOptions, trustRootFromCertificates
     )
+    from OpenSSL.SSL import Error as SSLError
 except ImportError:
     TLSMemoryBIOFactory = None
 
@@ -1563,13 +1564,11 @@ def _loadCAsFromDir(directoryPath):
     """
     Load certificate-authority certificate objects in a given directory.
 
-    @param directoryPath: a L{FilePath} pointing at a directory to load .pem
-        files from.
+    @param directoryPath: a L{unicode} or L{bytes} pointing at a directory to
+        load .pem files from, or L{None}.
 
     @return: an L{IOpenSSLTrustRoot} provider.
     """
-    from twisted.internet import ssl
-
     caCerts = {}
     for child in directoryPath.children():
         if not child.basename().split('.')[-1].lower() == 'pem':
@@ -1580,14 +1579,56 @@ def _loadCAsFromDir(directoryPath):
             # Permission denied, corrupt disk, we don't care.
             continue
         try:
-            theCert = ssl.Certificate.loadPEM(data)
-        except ssl.SSL.Error:
+            theCert = Certificate.loadPEM(data)
+        except SSLError:
             # Duplicate certificate, invalid certificate, etc.  We don't care.
             pass
         else:
             caCerts[theCert.digest()] = theCert.original
-    from twisted.internet._sslverify import OpenSSLCertificateAuthorities
-    return OpenSSLCertificateAuthorities(caCerts.values())
+    return trustRootFromCertificates(caCerts.values())
+
+
+
+def _parseTrustRootPath(pathName):
+    """
+    Parse a string referring to a directory full of certificate authorities
+    into a trust root.
+
+    @param pathName: path name
+    @type pathName: L{unicode} or L{bytes} or L{None}
+
+    @return: L{None} or L{IOpenSSLTrustRoot}
+    """
+    if pathName is None:
+        return None
+    return _loadCAsFromDir(FilePath(pathName))
+
+
+
+def _privateCertFromPaths(certificatePath, keyPath):
+    """
+    Parse a certificate path and key path, either or both of which might be
+    C{None}, into a certificate object.
+
+    @param certificatePath: the certificate path
+    @type certificatePath: L{bytes} or L{unicode} or L{None}
+
+    @param keyPath: the private key path
+    @type keyPath: L{bytes} or L{unicode} or L{None}
+
+    @return: a L{PrivateCertificate} or L{None}
+    """
+    if certificatePath is None:
+        return None
+    certBytes = FilePath(certificatePath).getContent()
+    if keyPath is None:
+        return PrivateCertificate.loadPEM(certBytes)
+    else:
+        return PrivateCertificate.fromCertificateAndKeyPair(
+            Certificate.loadPEM(certBytes),
+            KeyPair.load(FilePath(keyPath).getContent(), 1)
+        )
+
 
 
 
@@ -1598,24 +1639,15 @@ def _parseClientSSLOptions(kwargs):
 
     @param kwargs: A dict of keyword arguments to be parsed, potentially
         containing keys C{certKey}, C{privateKey}, C{caCertsDir}, and
-        C{hostname}. See L{_parseClientSSL}.
-
+        C{hostname}.  See L{_parseClientSSL}.
     @type kwargs: L{dict}
 
     @return: The remaining arguments, including a new key C{sslContextFactory}.
     """
-    certKey = kwargs.pop('certKey', None)
-    privateKey = kwargs.pop('privateKey', None)
-    caCertsDir = kwargs.pop('caCertsDir', None)
     hostname = kwargs.pop('hostname', None)
-    clientCertificate = None
-    trustRoot = None
-    if privateKey is not None and certKey is not None:
-        clientCertificate = PrivateCertificate.loadPEM(
-            b"\n".join([FilePath(privateKey).getContent(),
-                        FilePath(certKey).getContent()]))
-    if caCertsDir is not None:
-        trustRoot = _loadCAsFromDir(FilePath(caCertsDir))
+    clientCertificate = _privateCertFromPaths(kwargs.pop('certKey', None),
+                                              kwargs.pop('privateKey', None))
+    trustRoot = _parseTrustRootPath(kwargs.pop('caCertsDir', None))
     if hostname is not None:
         configuration = optionsForClientTLS(
             _idnaText(hostname), trustRoot=trustRoot,
@@ -1906,33 +1938,15 @@ class _TLSClientEndpointParser(object):
             raise TypeError('extra keyword arguments present',
                             list(kwargs.keys()))
         host = host.decode('utf-8')
-        if endpoint is None:
-            endpoint = HostnameEndpoint(reactor, _idnaBytes(host), int(port),
-                                        int(timeout), bindAddress)
-        else:
-            endpoint = clientFromString(reactor, endpoint)
-        if certificate is None:
-            clientCertificate = None
-        else:
-            certBytes = FilePath(certificate).getContent()
-            if privateKey is None:
-                clientCertificate = PrivateCertificate.loadPEM(certBytes)
-            else:
-                clientCertificate = (
-                    PrivateCertificate.fromCertificateAndKeyPair(
-                        Certificate.loadPEM(certBytes),
-                        KeyPair.load(FilePath(privateKey).getContent(), 1)
-                    )
-                )
-        if trustRoots is None:
-            trustRoot = None
-        else:
-            trustRoot = _loadCAsFromDir(FilePath(trustRoots))
-        connectionCreator = optionsForClientTLS(
-            _idnaText(host), trustRoot=trustRoot,
-            clientCertificate=clientCertificate
+        return wrapClientTLS(
+            optionsForClientTLS(
+                _idnaText(host), trustRoot=_parseTrustRootPath(trustRoots),
+                clientCertificate=_privateCertFromPaths(certificate,
+                                                        privateKey)),
+            clientFromString(reactor, endpoint) if endpoint is not None
+            else HostnameEndpoint(reactor, _idnaBytes(host), int(port),
+                                  int(timeout), bindAddress)
         )
-        return wrapClientTLS(connectionCreator, endpoint)
 
 
     def parseStreamClient(self, reactor, *args, **kwargs):
