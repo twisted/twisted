@@ -1847,6 +1847,10 @@ def wrapClientTLS(contextFactory, wrappedEndpoint):
     @param endpoint: The endpoint to wrap.
     @type endpoint: An L{IStreamClientEndpoint} provider.
     """
+    if TLSMemoryBIOFactory is None:
+        raise NotImplemented(
+            "OpenSSL not available. Try `pip install twisted[tls]`."
+        )
     return _WrapperEndpoint(
         wrappedEndpoint,
         lambda protocolFactory:
