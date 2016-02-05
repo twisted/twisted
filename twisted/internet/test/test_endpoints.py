@@ -38,9 +38,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
 from twisted.protocols import basic, policies
-from twisted.protocols.tls import TLSMemoryBIOFactory
-from twisted.test.iosim import connectedServerAndClient
-from twisted.test.iosim import connectableEndpoint
+from twisted.test.iosim import connectedServerAndClient, connectableEndpoint
 from twisted.internet.error import ConnectingCancelledError
 from twisted.python.compat import nativeString
 
@@ -54,9 +52,11 @@ escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
 try:
     from twisted.test.test_sslverify import makeCertificate
-    from twisted.internet.ssl import PrivateCertificate, Certificate
-    from twisted.internet.ssl import CertificateOptions, KeyPair
-    from twisted.internet.ssl import DiffieHellmanParameters
+    from twisted.internet.ssl import (
+        PrivateCertificate, Certificate, CertificateOptions, KeyPair,
+        DiffieHellmanParameters
+    )
+    from twisted.protocols.tls import TLSMemoryBIOFactory
     from OpenSSL.SSL import (
         ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3
     )
