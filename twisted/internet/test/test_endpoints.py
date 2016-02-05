@@ -42,6 +42,7 @@ from twisted.protocols.tls import TLSMemoryBIOFactory
 from twisted.test.iosim import connectedServerAndClient
 from twisted.test.iosim import connectableEndpoint
 from twisted.internet.error import ConnectingCancelledError
+from twisted.python.compat import nativeString
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 casPath = getModule(__name__).filePath.sibling("fake_CAs")
@@ -3537,7 +3538,9 @@ class WrapClientTLSParserTests(unittest.TestCase):
         """
         reactor = object()
         endpoint = endpoints.clientFromString(
-            reactor, b'tls:example.com:443:timeout=10:bindAddress=127.0.0.1')
+            reactor,
+            nativeString(
+                'tls:example.com:443:timeout=10:bindAddress=127.0.0.1'))
         hostnameEndpoint = endpoint._wrappedEndpoint
         self.assertIs(hostnameEndpoint._reactor, reactor)
         self.assertEqual(hostnameEndpoint._host, 'example.com')
@@ -3554,7 +3557,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
         """
         reactor = object()
         endpoint = endpoints.clientFromString(
-            reactor, b'tls:\xc3\xa9xample.example.com:443')
+            reactor, 'tls:\xc3\xa9xample.example.com:443')
         self.assertEqual(
             endpoint._wrappedEndpoint._host, b'xn--xample-9ua.example.com')
         connectionCreator = connectionCreatorFromEndpoint(reactor, endpoint)

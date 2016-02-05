@@ -35,7 +35,7 @@ from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, unicode
 from twisted.python.components import proxyForInterface
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.failure import Failure
@@ -1893,6 +1893,61 @@ def wrapClientTLS(contextFactory, wrappedEndpoint):
 
 
 
+def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
+                    certificate=None, privateKey=None, trustRoots=None,
+                    endpoint=None, **kwargs):
+    """
+    Internal method to construct an endpoint from string parameters.
+
+    @param reactor: The reactor passed to L{clientFromString}.
+
+    @param host: The hostname to connect to.
+    @type host: L{bytes} or L{unicode}
+
+    @param port: The port to connect to.
+    @type port: L{bytes} or L{unicode}
+
+    @param timeout: For each individual connection attempt, the number of
+        seconds to wait before assuming the connection has failed.
+    @type timeout: L{bytes} or L{unicode}
+
+    @param bindAddress: The address to which to bind outgoing connections.
+    @type bindAddress: L{bytes} or L{unicode}
+
+    @param certificate: a string representing a filesystem path to a
+        PEM-encoded certificate.
+    @type certificate: L{bytes} or L{unicode}
+
+    @param privateKey: a string representing a filesystem path to a PEM-encoded
+        certificate.
+    @type privateKey: L{bytes} or L{unicode}
+
+    @param endpoint: an optional string endpoint description of an endpoint to
+        wrap; if this is passed then C{host} is used only for certificate
+        verification.
+    @type endpoint: L{bytes} or L{unicode}
+
+    @return: a client TLS endpoint
+    @rtype: L{IStreamClientEndpoint}
+    """
+    if kwargs:
+        raise TypeError('unrecognized keyword arguments present',
+                        list(kwargs.keys()))
+    host = host if isinstance(host, unicode) else host.decode("utf-8")
+    port = int(port)
+    timeout = int(timeout)
+    return wrapClientTLS(
+        optionsForClientTLS(
+            _idnaText(host), trustRoot=_parseTrustRootPath(trustRoots),
+            clientCertificate=_privateCertFromPaths(certificate,
+                                                    privateKey)),
+        clientFromString(reactor, endpoint) if endpoint is not None
+        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout,
+                              bindAddress)
+    )
+
+
+
 @implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
 class _TLSClientEndpointParser(object):
     """
@@ -1904,55 +1959,14 @@ class _TLSClientEndpointParser(object):
     """
     prefix = 'tls'
 
-    def _parseClient(self, reactor, host, port, timeout=b'30',
-                     bindAddress=None, certificate=None, privateKey=None,
-                     trustRoots=None, endpoint=None, **kwargs):
+    @staticmethod
+    def parseStreamClient(reactor, *args, **kwargs):
         """
-        Internal method to construct an endpoint from string parameters.
-
-        @param reactor: The reactor passed to L{clientFromString}.
-
-        @param host: The hostname to connect to.
-        @type host: L{bytes}
-
-        @param port: The port to connect to.
-        @type port: L{bytes}
-
-        @param timeout: For each individual connection attempt, the number of
-            seconds to wait before assuming the connection has failed.
-        @type timeout: L{bytes}
-
-        @param bindAddress: The address to which to bind outgoing connections.
-        @type bindAddress: L{bytes}
-
-        @param certificate: a string describing a certificate
-
-        @param privateKey: a string describing a certificate
-
-        @param endpoint: a string endpoint description
-
-        @return: a client TLS endpoint
-        @rtype: L{IStreamClientEndpoint}
-        """
-        if kwargs:
-            raise TypeError('extra keyword arguments present',
-                            list(kwargs.keys()))
-        host = host.decode('utf-8')
-        return wrapClientTLS(
-            optionsForClientTLS(
-                _idnaText(host), trustRoot=_parseTrustRootPath(trustRoots),
-                clientCertificate=_privateCertFromPaths(certificate,
-                                                        privateKey)),
-            clientFromString(reactor, endpoint) if endpoint is not None
-            else HostnameEndpoint(reactor, _idnaBytes(host), int(port),
-                                  int(timeout), bindAddress)
-        )
-
-
-    def parseStreamClient(self, reactor, *args, **kwargs):
-        """
-        Redirects to another function (self._parseClient); tricks
-        zope.interface into believing the interface is correctly implemented.
+        Redirects to another function L{_parseClientTLS}; tricks zope.interface
+        into believing the interface is correctly implemented, since the
+        signature is (C{reactor}, C{*args}, C{**kwargs}).  See
+        L{_parseClientTLS} for an the specific signature description for this
+        endpoint parser.
 
         @param reactor: The reactor passed to L{clientFromString}.
 
@@ -1965,7 +1979,7 @@ class _TLSClientEndpointParser(object):
         @return: a client TLS endpoint
         @rtype: L{IStreamClientEndpoint}
         """
-        return self._parseClient(reactor, *args, **kwargs)
+        return _parseClientTLS(reactor, *args, **kwargs)
 
 
 
