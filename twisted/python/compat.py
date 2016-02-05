@@ -384,7 +384,7 @@ def _matchingString(constantString, inputString):
     parsing or processing, that must be of a matching type in order to use
     string operations on it.  L{_matchingString} will take a constant string
     (either L{bytes} or L{unicode}) and convert it to the same type as the
-    input string.  L{constantString} should contain only characters from ASCII;
+    input string.  C{constantString} should contain only characters from ASCII;
     to ensure this, it will be encoded or decoded regardless.
 
     @param constantString: A string literal used in processing.
@@ -394,7 +394,7 @@ def _matchingString(constantString, inputString):
     @type inputString: L{unicode} or L{bytes}
 
     @return: C{constantString} converted into the same type as C{inputString}
-    @rtype: the type of L{inputString}
+    @rtype: the type of C{inputString}
     """
     if isinstance(constantString, bytes):
         otherType = constantString.decode("ascii")
