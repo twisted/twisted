@@ -2413,8 +2413,8 @@ class ParserTests(unittest.TestCase):
         for interpolation into L{endpoints.serverFromString} and
         L{endpoints.clientFactory} arguments.
         """
-        self.assertEqual(endpoints.quoteStringArgument("some : stuff \\"),
-                         "some \\: stuff \\\\")
+        self.assertEqual(endpoints.quoteStringArgument("some : stuff \x5c"),
+                         "some \x5c: stuff \x5c\x5c")
 
 
     def test_impliedEscape(self):
