@@ -1962,7 +1962,7 @@ def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
     timeout = int(timeout)
     return wrapClientTLS(
         optionsForClientTLS(
-            _idnaText(host), trustRoot=_parseTrustRootPath(trustRoots),
+            host, trustRoot=_parseTrustRootPath(trustRoots),
             clientCertificate=_privateCertFromPaths(certificate,
                                                     privateKey)),
         clientFromString(reactor, endpoint) if endpoint is not None
