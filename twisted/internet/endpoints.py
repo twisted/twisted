@@ -35,11 +35,12 @@ from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
-from twisted.python.compat import nativeString, unicode
+from twisted.python.compat import nativeString, unicode, _matchingString
 from twisted.python.components import proxyForInterface
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
+from twisted.python.compat import iterbytes
 from twisted.python.systemd import ListenFDs
 
 
@@ -1276,12 +1277,13 @@ def _tokenize(description):
 
     @param description: a string as described by L{serverFromString} or
         L{clientFromString}.
+    @type description: L{str} or L{bytes}
 
     @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
         starting with L{_OP} will contain a second element of either ':' (i.e.
         'next parameter') or '=' (i.e. 'assign parameter value').  For example,
-        the string 'hello:greeting=world' would result in a generator
-        yielding these values::
+        the string 'hello:greeting=world' would result in a generator yielding
+        these values::
 
             _STRING, 'hello'
             _OP, ':'
@@ -1289,18 +1291,23 @@ def _tokenize(description):
             _OP, '='
             _STRING, 'world'
     """
-    current = ''
-    ops = ':='
-    nextOps = {':': ':=', '=': ':'}
-    description = iter(description)
-    for n in description:
-        if n in ops:
+    empty = _matchingString(u'', description)
+    colon = _matchingString(u':', description)
+    equals = _matchingString(u'=', description)
+    backslash = _matchingString(u'\x5c', description)
+    current = empty
+
+    ops = colon + equals
+    nextOps = {colon: colon + equals, equals: colon}
+    iterdesc = iter(iterbytes(description))
+    for n in iterdesc:
+        if n in iterbytes(ops):
             yield _STRING, current
             yield _OP, n
-            current = ''
+            current = empty
             ops = nextOps[n]
-        elif n == '\x5C':
-            current += next(description)
+        elif n == backslash:
+            current += next(iterdesc)
         else:
             current += n
     yield _STRING, current
@@ -1321,16 +1328,17 @@ def _parse(description):
         C{_parse('a:b:d=1:c')} would be C{(['a', 'b', 'c'], {'d': '1'})}.
     """
     args, kw = [], {}
+    colon = _matchingString(u':', description)
     def add(sofar):
         if len(sofar) == 1:
             args.append(sofar[0])
         else:
-            kw[sofar[0]] = sofar[1]
+            kw[nativeString(sofar[0])] = sofar[1]
     sofar = ()
     for (type, value) in _tokenize(description):
         if type is _STRING:
             sofar += (value,)
-        elif value == ':':
+        elif value == colon:
             add(sofar)
             sofar = ()
     add(sofar)
@@ -1393,10 +1401,10 @@ def _parseServer(description, factory, default=None):
     if parser is None:
         # If the required parser is not found in _server, check if
         # a plugin exists for the endpointType
-        for plugin in getPlugins(IStreamServerEndpointStringParser):
-            if plugin.prefix == endpointType:
-                return (plugin, args[1:], kw)
-        raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
+        plugin = _matchPluginToPrefix(
+            getPlugins(IStreamServerEndpointStringParser), endpointType
+        )
+        return (plugin, args[1:], kw)
     return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
 
 
@@ -1415,6 +1423,19 @@ def _serverFromStringLegacy(reactor, description, default):
     # Chop out the factory.
     args = args[:1] + args[2:]
     return _endpointServerFactories[name](reactor, *args, **kw)
+
+
+
+def _matchPluginToPrefix(plugins, endpointType):
+    """
+    Match plugin to prefix.
+    """
+    endpointType = endpointType.lower()
+    for plugin in plugins:
+        if (_matchingString(plugin.prefix.lower(),
+                            endpointType) == endpointType):
+            return plugin
+    raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
 
 
 
@@ -1571,7 +1592,7 @@ def _loadCAsFromDir(directoryPath):
     """
     caCerts = {}
     for child in directoryPath.children():
-        if not child.basename().split('.')[-1].lower() == 'pem':
+        if not child.asTextMode().basename().split(u'.')[-1].lower() == u'pem':
             continue
         try:
             data = child.getContent()
@@ -1810,11 +1831,11 @@ def clientFromString(reactor, description):
     args, kwargs = _parse(description)
     aname = args.pop(0)
     name = aname.upper()
-    for plugin in getPlugins(IStreamClientEndpointStringParserWithReactor):
-        if plugin.prefix.upper() == name:
-            return plugin.parseStreamClient(reactor, *args, **kwargs)
     if name not in _clientParsers:
-        raise ValueError("Unknown endpoint type: %r" % (aname,))
+        plugin = _matchPluginToPrefix(
+            getPlugins(IStreamClientEndpointStringParserWithReactor), name
+        )
+        return plugin.parseStreamClient(reactor, *args, **kwargs)
     kwargs = _clientParsers[name](*args, **kwargs)
     return _endpointClientFactories[name](reactor, **kwargs)
 
@@ -1934,6 +1955,9 @@ def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
         raise TypeError('unrecognized keyword arguments present',
                         list(kwargs.keys()))
     host = host if isinstance(host, unicode) else host.decode("utf-8")
+    bindAddress = (bindAddress
+                   if isinstance(bindAddress, unicode) or bindAddress is None
+                   else bindAddress.decode("utf-8"))
     port = int(port)
     timeout = int(timeout)
     return wrapClientTLS(

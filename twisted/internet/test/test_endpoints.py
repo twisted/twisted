@@ -3543,10 +3543,11 @@ class WrapClientTLSParserTests(unittest.TestCase):
                 'tls:example.com:443:timeout=10:bindAddress=127.0.0.1'))
         hostnameEndpoint = endpoint._wrappedEndpoint
         self.assertIs(hostnameEndpoint._reactor, reactor)
-        self.assertEqual(hostnameEndpoint._host, 'example.com')
+        self.assertEqual(hostnameEndpoint._host, b'example.com')
         self.assertEqual(hostnameEndpoint._port, 443)
         self.assertEqual(hostnameEndpoint._timeout, 10)
-        self.assertEqual(hostnameEndpoint._bindAddress, b'127.0.0.1')
+        self.assertEqual(hostnameEndpoint._bindAddress,
+                         nativeString('127.0.0.1'))
 
 
     def test_utf8Encoding(self):
@@ -3557,7 +3558,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         """
         reactor = object()
         endpoint = endpoints.clientFromString(
-            reactor, 'tls:\xc3\xa9xample.example.com:443')
+            reactor, b'tls:\xc3\xa9xample.example.com:443'
+        )
         self.assertEqual(
             endpoint._wrappedEndpoint._host, b'xn--xample-9ua.example.com')
         connectionCreator = connectionCreatorFromEndpoint(reactor, endpoint)
@@ -3643,7 +3645,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
         endpoint = endpoints.clientFromString(reactor, b'tls:example.com:443')
         creator = connectionCreatorFromEndpoint(reactor, endpoint)
         self.assertEqual(creator._hostname, u'example.com')
-        self.assertEqual(endpoint._wrappedEndpoint._host, u'example.com')
+        self.assertEqual(endpoint._wrappedEndpoint._host, b'example.com')
 
 
 

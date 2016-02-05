@@ -375,6 +375,38 @@ def nativeString(s):
 
 
 
+def _matchingString(constantString, inputString):
+    """
+    Some functions, such as C{os.path.join}, operate on string arguments which
+    may be bytes or text, and wish to return a value of the same type.  In
+    those cases you may wish to have a string constant (in the case of
+    C{os.path.join}, that constant would be C{os.path.sep}) involved in the
+    parsing or processing, that must be of a matching type in order to use
+    string operations on it.  L{_matchingString} will take a constant string
+    (either L{bytes} or L{unicode}) and convert it to the same type as the
+    input string.  L{constantString} should contain only characters from ASCII;
+    to ensure this, it will be encoded or decoded regardless.
+
+    @param constantString: A string literal used in processing.
+    @type constantString: L{unicode} or L{bytes}
+
+    @param inputString: A byte string or text string provided by the user.
+    @type inputString: L{unicode} or L{bytes}
+
+    @return: C{constantString} converted into the same type as C{inputString}
+    @rtype: the type of L{inputString}
+    """
+    if isinstance(constantString, bytes):
+        otherType = constantString.decode("ascii")
+    else:
+        otherType = constantString.encode("ascii")
+    if type(constantString) == type(inputString):
+        return constantString
+    else:
+        return otherType
+
+
+
 if _PY3:
     def reraise(exception, traceback):
         raise exception.with_traceback(traceback)
