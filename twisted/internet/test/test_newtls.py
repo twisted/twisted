@@ -98,6 +98,7 @@ class ProducerProtocol(ConnectableProtocol):
         self.transport.unregisterProducer()
         # The producer was unregistered from the TLSMemoryBIOProtocol:
         self.result.append(self.transport.protocol._producer)
+        self.transport.write(b'x')
         self.transport.loseConnection()
 
 
@@ -166,6 +167,7 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
                         self.transport.protocol._producer._producer._producer)
                     result.append(self.transport.producer._producer._producer)
                 self.transport.unregisterProducer()
+                self.transport.write(b'x')
                 self.transport.loseConnection()
 
         class StartTLSProtocol(ConnectableProtocol):

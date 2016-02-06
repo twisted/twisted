@@ -166,6 +166,7 @@ class ImmediatelyDisconnectingProtocol(protocol.Protocol):
     """
 
     def connectionMade(self):
+        self.transport.write(b'x')
         self.transport.loseConnection()
 
 

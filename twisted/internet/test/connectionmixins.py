@@ -387,6 +387,7 @@ class ConnectionTestsMixin(object):
                 ClientFactory.forProtocol(lambda: clientProtocol))
             def disconnect(proto):
                 msg("About to disconnect %r" % (proto,))
+                proto.transport.write(b'x')
                 proto.transport.loseConnection()
             client.addCallback(disconnect)
             client.addErrback(lostConnectionDeferred.errback)
