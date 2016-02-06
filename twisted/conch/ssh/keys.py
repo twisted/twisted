@@ -578,6 +578,7 @@ class Key(object):
 
 
     @property
+    @deprecated(Version('Twisted', 16, 1, 0))
     def keyObject(self):
         """
         An C{Crypto.PublicKey} object similar to this key.
@@ -632,6 +633,7 @@ class Key(object):
 
 
     @keyObject.setter
+    @deprecated(Version('Twisted', 16, 1, 0))
     def keyObject(self, value):
         # Lazy import to have PyCrypto as a soft dependency.
         from Crypto.PublicKey import DSA, RSA

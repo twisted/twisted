@@ -31,8 +31,8 @@ import os, base64
 from twisted.conch.test import keydata
 from twisted.python import randbytes
 from twisted.trial import unittest
-
 from twisted.python.compat import long, _PY3
+from twisted.python.versions import Version
 
 
 
@@ -949,6 +949,18 @@ class KeyKeyObjectTests(unittest.TestCase):
     if Crypto is None:
         skip = skipPyCrypto
 
+
+    def test_deprecation(self):
+        """
+        Accessing the L{keys.Key.keyObject} property emits a deprecation
+        warning.
+        """
+        keys.Key.fromString(keydata.publicRSA_openssh).keyObject
+
+        [warning] = self.flushWarnings([KeyKeyObjectTests.test_deprecation])
+        self.assertIs(warning['category'], DeprecationWarning)
+
+
     def test_keyObjectGetRSAPublic(self):
         """
         It will return the PyCypto RSA instance with the same components as
@@ -1025,6 +1037,9 @@ class KeyKeyObjectTests(unittest.TestCase):
         self.assertEqual('DSA', key.type())
 
         key.keyObject = newPyCryptoKey
+        [warning] = self.flushWarnings([
+            KeyKeyObjectTests.test_keyObjectSetRSAPublic])
+        self.assertIs(warning['category'], DeprecationWarning)
 
         self.assertEqual('RSA', key.type())
         self.assertEqual({
