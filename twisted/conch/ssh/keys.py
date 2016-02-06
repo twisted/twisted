@@ -581,11 +581,10 @@ class Key(object):
     @deprecated(Version('Twisted', 16, 1, 0))
     def keyObject(self):
         """
-        An C{Crypto.PublicKey} object similar to this key.
+        A C{Crypto.PublicKey} object similar to this key.
 
-        This instance member is deprecated.
-
-        It provides the compatibility layer for PyCryto during the transition.
+        As PyCrypto is no longer used for the underlying operations, this
+        property should be avoided.
         """
         # Lazy import to have PyCrypto as a soft dependency.
         from Crypto.PublicKey import DSA, RSA
@@ -671,7 +670,7 @@ class Key(object):
                     )
 
         else:
-            raise BadKeyError('PyCrytpo key type not supported.')
+            raise BadKeyError('PyCrypto key type not supported.')
 
 
         self._keyObject = newKey._keyObject

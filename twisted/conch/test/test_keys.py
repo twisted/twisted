@@ -715,7 +715,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_privateBlobRSA(self):
         """
-        Returns the SSH protocol-level format of the RSA private key.
+        L{keys.Key.privateBlob} returns the SSH protocol-level format of an
+        RSA private key.
         """
         from cryptography.hazmat.primitives.asymmetric import rsa
         numbers = self.rsaObj.private_numbers()
@@ -734,7 +735,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_privateBlobDSA(self):
         """
-        Returns the SSH protocol-level format of the DSA private key.
+        L{keys.Key.privateBlob} returns the SSH protocol-level format of a DSA
+        private key.
         """
         publicNumbers = self.dsaObj.private_numbers().public_numbers
 
@@ -760,7 +762,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_toOpenSSHRSA(self):
         """
-        It can serializes RSA key in OpenSSH format.
+        L{keys.Key.toString} serializes an RSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateRSA_agentv3)
         self.assertEqual(key.toString('openssh'), keydata.privateRSA_openssh)
@@ -774,7 +776,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_toOpenSSHDSA(self):
         """
-        It can serializes DSA key in OpenSSH format.
+        L{keys.Key.toString} serializes a DSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateDSA_lsh)
         self.assertEqual(key.toString('openssh'), keydata.privateDSA_openssh)
@@ -786,7 +788,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_toLSHRSA(self):
         """
-        It can serializes RSA key in LSH format.
+        L{keys.Key.toString} serializes an RSA key in LSH format.
         """
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         self.assertEqual(key.toString('lsh'), keydata.privateRSA_lsh)
@@ -796,7 +798,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_toLSHDSA(self):
         """
-        It can serializes DSA key in LSH format.
+        L{keys.Key.toString} serializes a DSA key in LSH format.
         """
         key = keys.Key.fromString(keydata.privateDSA_openssh)
         self.assertEqual(key.toString('lsh'), keydata.privateDSA_lsh)
@@ -806,7 +808,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_toAgentv3RSA(self):
         """
-        It can serializes RSA key in Agent v3 format.
+        L{keys.Key.toString} serializes an RSA key in Agent v3 format.
         """
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         self.assertEqual(key.toString('agentv3'), keydata.privateRSA_agentv3)
@@ -814,7 +816,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_toAgentv3DSA(self):
         """
-        It can serializes DSA key in Agent v3 format.
+        L{keys.Key.toString} serializes a DSA key in Agent v3 format.
         """
         key = keys.Key.fromString(keydata.privateDSA_openssh)
         self.assertEqual(key.toString('agentv3'), keydata.privateDSA_agentv3)
@@ -822,7 +824,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_toStringErrors(self):
         """
-        Test that toString raises errors appropriately.
+        L{keys.Key.toString} raises L{keys.BadKeyError} when passed an invalid
+        format type.
         """
         self.assertRaises(keys.BadKeyError, keys.Key(self.rsaObj).toString,
                 'bad_type')
@@ -879,7 +882,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_reprPrivateRSA(self):
         """
-        It will represent all components of a private RSA key.
+        The repr of a L{keys.Key} contains all of the RSA components for an RSA
+        private key.
         """
         self.assertEqual(repr(keys.Key(self.rsaObj)),
 """<RSA Private Key (768 bits)
@@ -920,7 +924,8 @@ attr u:
 
     def test_reprPublicRSA(self):
         """
-        It will represent all components of a public RSA key.
+        The repr of a L{keys.Key} contains all of the RSA components for an RSA
+        public key.
         """
         self.assertEqual(repr(keys.Key(self.rsaObj).public()),
 """<RSA Public Key (768 bits)
@@ -939,10 +944,9 @@ attr n:
 
 class KeyKeyObjectTests(unittest.TestCase):
     """
-    Unit test for the Key.keyObject deprecated ivar which provide the
-    compatibility layer to PyCryto during the transition.
+    The L{keys.Key.keyObject} property provides deprecated access to a PyCrypto
+    key instance of the corresponding type.
     """
-
     if cryptography is None:
         skip = skipCryptography
 
@@ -963,8 +967,8 @@ class KeyKeyObjectTests(unittest.TestCase):
 
     def test_keyObjectGetRSAPublic(self):
         """
-        It will return the PyCypto RSA instance with the same components as
-        a public RSA key.
+        The PyCrypto key instance for an RSA public key has the same components
+        as the internal key.
         """
         key = keys.Key.fromString(keydata.publicRSA_openssh)
 
@@ -974,10 +978,11 @@ class KeyKeyObjectTests(unittest.TestCase):
         self.assertEqual(keydata.RSAData['e'], result.key.e)
         self.assertEqual(keydata.RSAData['n'], result.key.n)
 
+
     def test_keyObjectGetRSAPrivate(self):
         """
-        It will return the PyCypto RSA instance with the same components as
-        a private RSA key.
+        The PyCrypto key instance for an RSA private key has the same
+        components as the internal key.
         """
         key = keys.Key.fromString(keydata.privateRSA_openssh)
 
@@ -994,8 +999,8 @@ class KeyKeyObjectTests(unittest.TestCase):
 
     def test_keyObjectGetDSAPublic(self):
         """
-        It will return the PyCypto DSA instance with the same components as
-        a public DSA key.
+        The PyCrypto key instance for a DSA public key has the same components
+        as the internal key.
         """
         key = keys.Key.fromString(keydata.publicDSA_openssh)
 
@@ -1010,8 +1015,8 @@ class KeyKeyObjectTests(unittest.TestCase):
 
     def test_keyObjectGetDSAPrivate(self):
         """
-        It will return the PyCypto DSA instance with the same components as
-        a private DSA key.
+        The PyCrypto key instance for a DSA private key has the same components
+        as the internal key.
         """
         key = keys.Key.fromString(keydata.privateDSA_openssh)
 
@@ -1027,10 +1032,11 @@ class KeyKeyObjectTests(unittest.TestCase):
 
     def test_keyObjectSetRSAPublic(self):
         """
-        It will update the key based on a public PyCrpto RSA key.
+        Setting the L{keys.Key.keyObject} property to a PyCrypto public RSA key
+        instance updates the internal key.
         """
         key = keys.Key.fromString(keydata.publicDSA_openssh)
-        newPyCryptoKey =  Crypto.PublicKey.RSA.construct((
+        newPyCryptoKey = Crypto.PublicKey.RSA.construct((
             keydata.RSAData['n'],
             keydata.RSAData['e'],
             ))
@@ -1048,12 +1054,14 @@ class KeyKeyObjectTests(unittest.TestCase):
             },
             key.data())
 
+
     def test_keyObjectSetRSAPrivate(self):
         """
-        It will update the key based on a private PyCrpto RSA key.
+        Setting the L{keys.Key.keyObject} property to a PyCrypto private RSA
+        key instance updates the internal key.
         """
         key = keys.Key.fromString(keydata.publicDSA_openssh)
-        newPyCryptoKey =  Crypto.PublicKey.RSA.construct((
+        newPyCryptoKey = Crypto.PublicKey.RSA.construct((
             keydata.RSAData['n'],
             keydata.RSAData['e'],
             keydata.RSAData['d'],
@@ -1076,12 +1084,14 @@ class KeyKeyObjectTests(unittest.TestCase):
             },
             key.data())
 
+
     def test_keyObjectSetDSAPublic(self):
         """
-        It will update the key based on a public PyCrpto DSA key.
+        Setting the L{keys.Key.keyObject} property to a PyCrypto public DSA key
+        instance updates the internal key.
         """
         key = keys.Key.fromString(keydata.publicRSA_openssh)
-        newPyCryptoKey =  Crypto.PublicKey.DSA.construct((
+        newPyCryptoKey = Crypto.PublicKey.DSA.construct((
             keydata.DSAData['y'],
             keydata.DSAData['g'],
             keydata.DSAData['p'],
@@ -1100,12 +1110,14 @@ class KeyKeyObjectTests(unittest.TestCase):
             },
             key.data())
 
+
     def test_keyObjectSetDSAPrivate(self):
         """
-        It will update the key based on a private PyCrpto DSA key.
+        Setting the L{keys.Key.keyObject} property to a PyCrypto private DSA
+        key instance updates the internal key.
         """
         key = keys.Key.fromString(keydata.publicRSA_openssh)
-        newPyCryptoKey =  Crypto.PublicKey.DSA.construct((
+        newPyCryptoKey = Crypto.PublicKey.DSA.construct((
             keydata.DSAData['y'],
             keydata.DSAData['g'],
             keydata.DSAData['p'],
