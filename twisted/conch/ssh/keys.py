@@ -15,7 +15,7 @@ from hashlib import md5
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, utils
+from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding
 try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
