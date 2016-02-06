@@ -326,11 +326,11 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             try:
                 self._tlsConnection.do_handshake()
             except WantReadError:
-                # This is the expected case - there's no data in the connection's
-                # input buffer yet, so it won't be able to complete the whole
-                # handshake now.  If this is the speak-first side of the
-                # connection, then some bytes will be in the send buffer now; flush
-                # them.
+                # This is the expected case - there's no data in the
+                # connection's input buffer yet, so it won't be able to
+                # complete the whole handshake now. If this is the speak-first
+                # side of the connection, then some bytes will be in the send
+                # buffer now; flush them.
                 self._flushSendBIO()
 
 
