@@ -11,10 +11,10 @@ if requireModule('pyasn1'):
 else:
     pyasn1Skip =  "Cannot run without PyASN1"
 
-if requireModule('Crypto'):
+if requireModule('cryptography'):
     cryptoSkip = None
 else:
-    cryptoSkip = "can't run w/o PyCrypto"
+    cryptoSkip = "can't run w/o cryptography"
 
 if requireModule('tty'):
     ttySkip = None

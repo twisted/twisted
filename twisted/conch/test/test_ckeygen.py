@@ -12,12 +12,12 @@ from StringIO import StringIO
 
 from twisted.python.reflect import requireModule
 
-if requireModule('Crypto') and requireModule('pyasn1'):
+if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.keys import Key, BadKeyError
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint, _saveKey)
 else:
-    skip = "PyCrypto and pyasn1 required for twisted.conch.scripts.ckeygen."
+    skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
@@ -81,11 +81,7 @@ class KeyGenTests(TestCase):
         base.makedirs()
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
-        _saveKey(
-            key.keyObject,
-            {'filename': filename, 'pass': 'passphrase'},
-            'rsa',
-            )
+        _saveKey(key, {'filename': filename, 'pass': 'passphrase'})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -112,11 +108,7 @@ class KeyGenTests(TestCase):
         base.makedirs()
         filename = base.child('id_rsa').path
         key = Key.fromString(privateRSA_openssh)
-        _saveKey(
-            key.keyObject,
-            {'filename': filename, 'no-passphrase': True},
-            'rsa',
-            )
+        _saveKey(key, {'filename': filename, 'no-passphrase': True})
         self.assertEqual(
             key.fromString(
                 base.child('id_rsa').getContent(), None, b''),
@@ -134,11 +126,7 @@ class KeyGenTests(TestCase):
 
         self.patch(__builtin__, 'raw_input', lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
-        _saveKey(
-            key.keyObject,
-            {'filename': None, 'no-passphrase': True},
-            'rsa',
-            )
+        _saveKey(key, {'filename': None, 'no-passphrase': True})
 
         persistedKeyContent = base.child('custom_key').getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b'')
