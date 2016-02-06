@@ -318,15 +318,20 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # Now that we ourselves have a transport (initialized by the
         # ProtocolWrapper.makeConnection call above), kick off the TLS
         # handshake.
-        try:
-            self._tlsConnection.do_handshake()
-        except WantReadError:
-            # This is the expected case - there's no data in the connection's
-            # input buffer yet, so it won't be able to complete the whole
-            # handshake now.  If this is the speak-first side of the
-            # connection, then some bytes will be in the send buffer now; flush
-            # them.
-            self._flushSendBIO()
+
+        # The connection might already be aborted (eg. by a callback during
+        # connection setup), so don't even bother trying to handshake in that
+        # case.
+        if not self._aborted:
+            try:
+                self._tlsConnection.do_handshake()
+            except WantReadError:
+                # This is the expected case - there's no data in the connection's
+                # input buffer yet, so it won't be able to complete the whole
+                # handshake now.  If this is the speak-first side of the
+                # connection, then some bytes will be in the send buffer now; flush
+                # them.
+                self._flushSendBIO()
 
 
     def _flushSendBIO(self):
