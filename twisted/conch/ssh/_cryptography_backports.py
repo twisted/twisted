@@ -18,8 +18,8 @@ def intFromBytes(data, byteorder, signed=False):
     @param data: The packed integer.
 
     @type byteorder: L{str}
-    @param byteorder: The byte order the data is in. Only C{'big'} is currently
-    supported.
+    @param byteorder: The byte order the data is in.  Only C{'big'} is
+        currently supported.
 
     @type signed: L{bool}
     @param signed: C{True} for signed, C{False} for unsigned.
