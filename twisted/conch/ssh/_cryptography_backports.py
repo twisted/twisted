@@ -3,6 +3,9 @@
 # See LICENSE for details.
 """
 Backported functions from Cryptography to support older versions.
+
+These functions can be obtained from C{cryptography.utils} instead, from
+version 1.1 onwards.
 """
 import binascii
 import struct

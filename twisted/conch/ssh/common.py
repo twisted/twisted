@@ -11,11 +11,8 @@ from __future__ import absolute_import, division
 
 import struct
 
-try:
-    from cryptography.utils import int_from_bytes, int_to_bytes
-except ImportError:
-    from twisted.conch.ssh._cryptography_backports import (
-        intFromBytes as int_from_bytes, intToBytes as int_to_bytes)
+from twisted.conch.ssh._cryptography_backports import (
+    intFromBytes as int_from_bytes, intToBytes as int_to_bytes)
 
 from twisted.python.compat import _PY3, long
 
