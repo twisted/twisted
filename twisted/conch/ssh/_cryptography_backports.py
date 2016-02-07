@@ -59,7 +59,7 @@ def intToBytes(integer, length=None):
     """
     hexString = '%x' % (integer,)
     if length is None:
-        n = len(hex_string)
+        n = len(hexString)
     else:
         n = length * 2
     return binascii.unhexlify(hexString.zfill(n + (n & 1)))
