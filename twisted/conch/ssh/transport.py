@@ -10,24 +10,20 @@ RFC 4253.
 Maintainer: Paul Swartz
 """
 
-# base library imports
 import struct
 import zlib
 from hashlib import md5, sha1, sha256, sha512
 import string
 import hmac
 
-# external library imports
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 
-# twisted imports
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
 
 
-# sibling imports
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
     NS, getNS, MP, getMP, _MPpow, ffs, int_from_bytes
@@ -38,8 +34,12 @@ def _getRandomNumber(random, bits):
     """
     Generate a random number in the range [0, 2 ** bits).
 
-    @param bits: The number of bits in the result.
+    @type random: L{callable}
+    @param random: A callable taking a count of bytes and returning that many
+    random bytes.
+
     @type bits: C{int}
+    @param bits: The number of bits in the result.
 
     @rtype: C{int} or C{long}
     @return: The newly generated random number.
@@ -60,11 +60,22 @@ def _generateX(random, bits):
 
         X9.42 requires that the private key x be in the interval
         [2, (q - 2)].  x should be randomly generated in this interval.
+
+    @type random: L{callable}
+    @param random: A callable taking a count of bytes and returning that many
+    random bytes.
+
+    @type bits: L{int}
+    @param bits: The size of the key to generate, in bits.
+
+    @rtype: L{int}
+    @return: A suitable 'x' value.
     """
     while True:
         x = _getRandomNumber(random, bits)
         if 2 <= x <= (2 ** bits) - 2:
             return x
+
 
 
 class _MACParams(tuple):
@@ -180,7 +191,6 @@ class SSHCiphers:
         @return: the cipher object.
         """
         algorithmClass, keySize, modeClass = self.cipherMap[cip]
-        # no cipher
         if algorithmClass is None:
             return _DummyCipher()
 
@@ -197,10 +207,14 @@ class SSHCiphers:
         (<hash module>, <inner hash value>, <outer hash value>,
         <digest size>)
 
+        @type mac: L{bytes}
         @param mac: a key mapping into macMap
-        @type mac: C{str}
+
+        @type key: L{bytes}
         @param key: the MAC key.
-        @type key: C{str}
+
+        @rtype: L{bytes}
+        @return: The MAC components.
         """
         mod = self.macMap[mac]
         if not mod:
@@ -224,22 +238,26 @@ class SSHCiphers:
 
     def encrypt(self, blocks):
         """
-        Encrypt blocks.
+        Encrypt some data.
 
-        @type blocks: C{bytes}
+        @type blocks: L{bytes}
+        @param blocks: The data to encrypt.
 
-        @return: the encrypted data.
+        @rtype: L{bytes}
+        @return: The encrypted data.
         """
         return self.encryptor.update(blocks)
 
 
     def decrypt(self, blocks):
         """
-        Decrypt blocks.
+        Decrypt some data.
 
-        @type blocks: C{bytes}
+        @type blocks: L{bytes}
+        @param blocks: The data to decrypt.
 
-        @return: the decrypted data.
+        @rtype: L{bytes}
+        @return: The decrypted data.
         """
         return self.decryptor.update(blocks)
 
@@ -249,11 +267,14 @@ class SSHCiphers:
         Create a message authentication code (MAC) for the given packet using
         the outgoing MAC values.
 
-        @param seqid: the sequence ID of the outgoing packet
-        @type seqid: C{int}
-        @param data: the data to create a MAC for
-        @type data: C{str}
+        @type seqid: L{int}
+        @param seqid: The sequence ID of the outgoing packet.
+
+        @type data: L{bytes}
+        @param data: The data to create a MAC for.
+
         @rtype: C{str}
+        @return: The serialized MAC.
         """
         if not self.outMAC[0]:
             return ''
@@ -263,16 +284,19 @@ class SSHCiphers:
 
     def verify(self, seqid, data, mac):
         """
-        Verify an incoming MAC using the incoming MAC values.  Return True
-        if the MAC is valid.
+        Verify an incoming MAC using the incoming MAC values.
 
-        @param seqid: the sequence ID of the incoming packet
-        @type seqid: C{int}
-        @param data: the packet data to verify
-        @type data: C{str}
-        @param mac: the MAC sent with the packet
-        @type mac: C{str}
+        @type seqid: L{int}
+        @param seqid: The sequence ID of the incoming packet.
+
+        @type data: L{bytes}
+        @param data: The packet data to verify.
+
+        @type mac: L{bytes}
+        @param mac: The MAC sent with the packet.
+
         @rtype: C{bool}
+        @return: C{True} if the MAC is valid.
         """
         if not self.inMAC[0]:
             return mac == ''
@@ -423,8 +447,6 @@ class SSHTransportBase(protocol.Protocol):
         to send them while a key exchange is in progress.  When the key
         exchange completes, another attempt is made to send these messages.
     """
-
-
     protocolVersion = '2.0'
     version = 'Twisted'
     comment = ''
@@ -477,6 +499,13 @@ class SSHTransportBase(protocol.Protocol):
     _blockedByKeyExchange = None
 
     def connectionLost(self, reason):
+        """
+        When the underlying connection is closed, stop the running service (if
+        any), and log out the avatar (if any).
+
+        @type reason: L{twisted.python.failure.Failure}
+        @param reason: The cause of the connection being closed.
+        """
         if self.service:
             self.service.serviceStopped()
         if hasattr(self, 'avatar'):
@@ -594,11 +623,14 @@ class SSHTransportBase(protocol.Protocol):
         Try to return a decrypted, authenticated, and decompressed packet
         out of the buffer.  If there is not enough data, return None.
 
-        @rtype: C{str}/C{None}
+        @rtype: C{str} or C{None}
+        @return: The decoded packet, if any.
         """
         bs = self.currentEncryptions.decBlockSize
         ms = self.currentEncryptions.verifyDigestSize
-        if len(self.buf) < bs: return # not enough data
+        if len(self.buf) < bs:
+            # Not enough data for a block
+            return
         if not hasattr(self, 'first'):
             first = self.currentEncryptions.decrypt(self.buf[:bs])
         else:
@@ -607,12 +639,13 @@ class SSHTransportBase(protocol.Protocol):
         packetLen, paddingLen = struct.unpack('!LB', first[:5])
         if packetLen > 1048576: # 1024 ** 2
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
-                                'bad packet length %s' % packetLen)
+                                'bad packet length %s' % (packetLen,))
             return
         if len(self.buf) < packetLen + 4 + ms:
+            # Not enough data for a packet
             self.first = first
-            return # not enough packet
-        if(packetLen + 4) % bs != 0:
+            return
+        if (packetLen + 4) % bs != 0:
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
                 'bad packet mod (%i%%%i == %i)' % (packetLen + 4, bs,
@@ -634,8 +667,8 @@ class SSHTransportBase(protocol.Protocol):
         if self.incomingCompression:
             try:
                 payload = self.incomingCompression.decompress(payload)
-            except: # bare except, because who knows what kind of errors
-                    # decompression can raise
+            except:
+                # Tolerate any errors in decompression
                 log.err()
                 self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR,
                                     'compression error')
@@ -663,7 +696,8 @@ class SSHTransportBase(protocol.Protocol):
         received, this method adds data to the buffer, and pulls out any
         packets.
 
-        @type data: C{str}
+        @type data: L{bytes}
+        @param data: The data that was received.
         """
         self.buf = self.buf + data
         if not self.gotVersion:
@@ -691,12 +725,15 @@ class SSHTransportBase(protocol.Protocol):
         """
         Send a received message to the appropriate method.
 
-        @type messageNum: C{int}
-        @type payload: c{str}
+        @type messageNum: L{int}
+        @param messageNum: The message number.
+
+        @type payload: C{bytes}
+        @param payload: The message payload.
         """
         if messageNum < 50 and messageNum in messages:
             messageType = messages[messageNum][4:]
-            f = getattr(self, 'ssh_%s' % messageType, None)
+            f = getattr(self, 'ssh_%s' % (messageType,), None)
             if f is not None:
                 f(payload)
             else:
@@ -711,6 +748,7 @@ class SSHTransportBase(protocol.Protocol):
             log.msg(repr(payload))
             self.sendUnimplemented()
 
+
     def getPeer(self):
         """
         Returns an L{SSHTransportAddress} corresponding to the other (peer)
@@ -721,6 +759,7 @@ class SSHTransportBase(protocol.Protocol):
         @since: 12.1
         """
         return address.SSHTransportAddress(self.transport.getPeer())
+
 
     def getHost(self):
         """
@@ -753,7 +792,6 @@ class SSHTransportBase(protocol.Protocol):
         _kex.getKex(value)
         self._kexAlg = value
 
-
     # Client-initiated rekeying looks like this:
     #
     #  C> MSG_KEXINIT
@@ -767,6 +805,7 @@ class SSHTransportBase(protocol.Protocol):
     #
     # Server-initiated rekeying is the same, only the first two messages are
     # switched.
+
 
     def ssh_KEXINIT(self, packet):
         """
@@ -788,18 +827,25 @@ class SSHTransportBase(protocol.Protocol):
         Starts setting up the key exchange, keys, encryptions, and
         authentications.  Extended by ssh_KEXINIT in SSHServerTransport and
         SSHClientTransport.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
+
+        @return: A L{tuple} of negotiated key exchange algorithms, key
+        algorithms, and unhandled data, or C{None} if something went wrong.
         """
         self.otherKexInitPayload = chr(MSG_KEXINIT) + packet
-        #cookie = packet[: 16] # taking this is useless
+        # This is useless to us:
+        # cookie = packet[: 16]
         k = getNS(packet[16:], 10)
         strings, rest = k[:-1], k[-1]
         (kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS,
          langSC) = [s.split(',') for s in strings]
-        # these are the server directions
+        # These are the server directions
         outs = [encSC, macSC, compSC]
         ins = [encCS, macSC, compCS]
         if self.isClient:
-            outs, ins = ins, outs # switch directions
+            outs, ins = ins, outs # Switch directions
         server = (self.supportedKeyExchanges, self.supportedPublicKeys,
                 self.supportedCiphers, self.supportedCiphers,
                 self.supportedMACs, self.supportedMACs,
@@ -839,7 +885,7 @@ class SSHTransportBase(protocol.Protocol):
         else:
             self.sendKexInit()
 
-        return kexAlgs, keyAlgs, rest # for SSHServerTransport to use
+        return kexAlgs, keyAlgs, rest # For SSHServerTransport to use
 
 
     def ssh_DISCONNECT(self, packet):
@@ -850,6 +896,9 @@ class SSHTransportBase(protocol.Protocol):
 
         This means that the other side has disconnected.  Pass the message up
         and disconnect ourselves.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         reasonCode = struct.unpack('>L', packet[: 4])[0]
         description, foo = getNS(packet[4:])
@@ -861,6 +910,9 @@ class SSHTransportBase(protocol.Protocol):
         """
         Called when we receive a MSG_IGNORE message.  No payload.
         This means nothing; we simply return.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
 
 
@@ -870,6 +922,9 @@ class SSHTransportBase(protocol.Protocol):
             long packet
 
         This means that the other side did not implement one of our packets.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         seqnum, = struct.unpack('>L', packet)
         self.receiveUnimplemented(seqnum)
@@ -883,6 +938,9 @@ class SSHTransportBase(protocol.Protocol):
             string language
 
         This means the other side has passed along some debugging info.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         alwaysDisplay = bool(packet[0])
         message, lang, foo = getNS(packet[1:], 2)
@@ -895,8 +953,9 @@ class SSHTransportBase(protocol.Protocol):
         running a service previously, stop it first.
 
         @type service: C{SSHService}
+        @param service: The service to attach.
         """
-        log.msg('starting service %s' % service.name)
+        log.msg('starting service %s' % (service.name,))
         if self.service:
             self.service.serviceStopped()
         self.service = service
@@ -962,9 +1021,17 @@ class SSHTransportBase(protocol.Protocol):
         """
         Get one of the keys for authentication/encryption.
 
-        @type c: C{str}
-        @type sharedSecret: C{str}
-        @type exchangeHash: C{str}
+        @type c: L{bytes}
+        @param c: The letter identifying which key this is.
+
+        @type sharedSecret: L{bytes}
+        @param sharedSecret: The shared secret K.
+
+        @type exchangeHash: L{bytes}
+        @param exchangeHash: The hash H from key exchange.
+
+        @rtype: L{bytes}
+        @return: The derived key.
         """
         hashProcessor = _kex.getHashProcessor(self.kexAlg)
         k1 = hashProcessor(sharedSecret + exchangeHash + c + self.sessionID)
@@ -995,7 +1062,7 @@ class SSHTransportBase(protocol.Protocol):
         integKeySC = self._getKey('F', sharedSecret, exchangeHash)
         outs = [initIVSC, encKeySC, integKeySC]
         ins = [initIVCS, encKeyCS, integKeyCS]
-        if self.isClient: # reverse for the client
+        if self.isClient: # Reverse for the client
             log.msg('REVERSE')
             outs, ins = ins, outs
         self.nextEncryptions.setKeys(outs[0], outs[1], ins[0], ins[1],
@@ -1026,8 +1093,13 @@ class SSHTransportBase(protocol.Protocol):
 
     def isEncrypted(self, direction="out"):
         """
-        Return True if the connection is encrypted in the given direction.
-        Direction must be one of ["out", "in", "both"].
+        Check if the connection is encrypted in the given direction.
+
+        @type direction: L{str}
+        @param direction: The direction: one of 'out', 'in', or 'both'.
+
+        @rtype: L{bool}
+        @return: C{True} if it is encrypted.
         """
         if direction == "out":
             return self.currentEncryptions.outCipType != 'none'
@@ -1041,15 +1113,20 @@ class SSHTransportBase(protocol.Protocol):
 
     def isVerified(self, direction="out"):
         """
-        Return True if the connecction is verified/authenticated in the
-        given direction.  Direction must be one of ["out", "in", "both"].
+        Check if the connection is verified/authentication in the given direction.
+
+        @type direction: L{str}
+        @param direction: The direction: one of 'out', 'in', or 'both'.
+
+        @rtype: L{bool}
+        @return: C{True} if it is verified.
         """
         if direction == "out":
             return self.currentEncryptions.outMACType != 'none'
         elif direction == "in":
             return self.currentEncryptions.inMACType != 'none'
         elif direction == "both":
-            return self.isVerified("in")and self.isVerified("out")
+            return self.isVerified("in") and self.isVerified("out")
         else:
             raise TypeError('direction must be "out", "in", or "both"')
 
@@ -1062,8 +1139,9 @@ class SSHTransportBase(protocol.Protocol):
         self.sendDisconnect(DISCONNECT_CONNECTION_LOST,
                             "user closed connection")
 
+    # Client methods
 
-    # client methods
+
     def receiveError(self, reasonCode, description):
         """
         Called when we receive a disconnect error message from the other
@@ -1088,7 +1166,7 @@ class SSHTransportBase(protocol.Protocol):
         @param seqnum: the sequence number that was not understood.
         @type seqnum: C{int}
         """
-        log.msg('other side unimplemented packet #%s' % seqnum)
+        log.msg('other side unimplemented packet #%s' % (seqnum,))
 
 
     def receiveDebug(self, alwaysDisplay, message, lang):
@@ -1104,7 +1182,7 @@ class SSHTransportBase(protocol.Protocol):
         @type lang: C{str}
         """
         if alwaysDisplay:
-            log.msg('Remote Debug Message: %s' % message)
+            log.msg('Remote Debug Message: %s' % (message,))
 
 
 
@@ -1138,14 +1216,14 @@ class SSHServerTransport(SSHTransportBase):
         packet MUST be ignored.
         """
         retval = SSHTransportBase.ssh_KEXINIT(self, packet)
-        if not retval: # disconnected
+        if not retval: # Disconnected
             return
         else:
             kexAlgs, keyAlgs, rest = retval
-        if ord(rest[0]): # first_kex_packet_follows
+        if ord(rest[0]): # Flag first_kex_packet_follows?
             if (kexAlgs[0] != self.supportedKeyExchanges[0] or
                 keyAlgs[0] != self.supportedPublicKeys[0]):
-                self.ignoreNextPacket = True # guess was wrong
+                self.ignoreNextPacket = True # Guess was wrong
 
 
     def _ssh_KEXDH_INIT(self, packet):
@@ -1162,6 +1240,9 @@ class SSHServerTransport(SSHTransportBase):
                 integer e (the client's Diffie-Hellman public key)
 
         We send the KEXDH_REPLY with our host key and signature.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
         y = _getRandomNumber(randbytes.secureRandom, 512)
@@ -1200,6 +1281,9 @@ class SSHServerTransport(SSHTransportBase):
 
         If we were told to ignore the next key exchange packet by ssh_KEXINIT,
         drop it on the floor and return.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         if self.ignoreNextPacket:
             self.ignoreNextPacket = 0
@@ -1229,6 +1313,9 @@ class SSHServerTransport(SSHTransportBase):
 
         If we were told to ignore the next key exchange packet by ssh_KEXINIT,
         drop it on the floor and return.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         if self.ignoreNextPacket:
             self.ignoreNextPacket = 0
@@ -1246,6 +1333,9 @@ class SSHServerTransport(SSHTransportBase):
 
         We send the MSG_KEX_DH_GEX_REPLY message with our host key and
         signature.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
         # TODO: we should also look at the value they send to us and reject
@@ -1286,6 +1376,9 @@ class SSHServerTransport(SSHTransportBase):
         Called when we get a MSG_NEWKEYS message.  No payload.
         When we get this, the keys have been set on both sides, and we
         start using them to encrypt and authenticate the connection.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         if packet != '':
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
@@ -1302,6 +1395,9 @@ class SSHServerTransport(SSHTransportBase):
         The client has requested a service.  If we can start the service,
         start it; otherwise, disconnect with
         DISCONNECT_SERVICE_NOT_AVAILABLE.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         service, rest = getNS(packet)
         cls = self.factory.getService(self, service)
@@ -1417,6 +1513,11 @@ class SSHClientTransport(SSHTransportBase):
 
         We verify the host key by calling verifyHostKey, then continue in
         _continueKEXDH_REPLY.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
+
+        @return: A deferred firing when key exchange is complete.
         """
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
@@ -1442,6 +1543,9 @@ class SSHClientTransport(SSHTransportBase):
         Payload::
             string g (group generator)
             string p (group prime)
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_REPLY(packet)
@@ -1456,6 +1560,8 @@ class SSHClientTransport(SSHTransportBase):
     def _continueKEXDH_REPLY(self, ignored, pubKey, f, signature):
         """
         The host key has been verified, so we generate the keys.
+
+        @param ignored: Ignored.
 
         @param pubKey: the public key blob for the server's public key.
         @type pubKey: C{str}
@@ -1492,11 +1598,16 @@ class SSHClientTransport(SSHTransportBase):
 
         We verify the host key by calling verifyHostKey, then continue in
         _continueGEX_REPLY.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
+
+        @return: A deferred firing once key exchange is complete.
         """
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
-        fingerprint = ':'.join(map(lambda c: '%02x'%ord(c),
+        fingerprint = ':'.join(map(lambda c: '%02x' % (ord(c),),
             md5(pubKey).digest()))
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
@@ -1509,6 +1620,8 @@ class SSHClientTransport(SSHTransportBase):
     def _continueGEX_REPLY(self, ignored, pubKey, f, signature):
         """
         The host key has been verified, so we generate the keys.
+
+        @param ignored: Ignored.
 
         @param pubKey: the public key blob for the server's public key.
         @type pubKey: C{str}
@@ -1559,6 +1672,9 @@ class SSHClientTransport(SSHTransportBase):
         Called when we receive a MSG_NEWKEYS message.  No payload.
         If we've finished setting up our own keys, start using them.
         Otherwise, remember that we've received this message.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         if packet != '':
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
@@ -1577,6 +1693,9 @@ class SSHClientTransport(SSHTransportBase):
             string service name
 
         Start the service we requested.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
         """
         if packet == '':
             log.msg('got SERVICE_ACCEPT without payload')
@@ -1594,22 +1713,27 @@ class SSHClientTransport(SSHTransportBase):
         Request that a service be run over this transport.
 
         @type instance: subclass of L{twisted.conch.ssh.service.SSHService}
+        @param instance: The service to run.
         """
         self.sendPacket(MSG_SERVICE_REQUEST, NS(instance.name))
         self.instance = instance
 
+    # Client methods
 
-    # client methods
+
     def verifyHostKey(self, hostKey, fingerprint):
         """
         Returns a Deferred that gets a callback if it is a valid key, or
         an errback if not.
 
-        @type hostKey:      C{str}
-        @type fingerprint:  C{str}
-        @rtype:             L{twisted.internet.defer.Deferred}
+        @type hostKey: L{bytes}
+        @param hostKey: The host key to verify.
+
+        @type fingerprint: L{bytes}
+        @param fingerprint: The fingerprint of the key.
+
+        @return: A deferred firing with C{True} if the key is valid.
         """
-        # return if it's good
         return defer.fail(NotImplementedError())
 
 
@@ -1627,7 +1751,17 @@ class _NullEncryptionContext(object):
     An encryption context that does not actually encrypt anything.
     """
     def update(self, data):
+        """
+        'Encrypt' new data by doing nothing.
+
+        @type data: L{bytes}
+        @param data: The data to 'encrypt'.
+
+        @rtype: L{bytes}
+        @return: The 'encrypted' data.
+        """
         return data
+
 
 
 class _DummyAlgorithm(object):
@@ -1635,6 +1769,7 @@ class _DummyAlgorithm(object):
     An encryption algorithm that does not actually encrypt anything.
     """
     block_size = 64
+
 
 
 class _DummyCipher(object):
@@ -1650,6 +1785,8 @@ class _DummyCipher(object):
     def encryptor(self):
         """
         Construct a noop encryptor.
+
+        @return: The encryptor.
         """
         return _NullEncryptionContext()
 
@@ -1657,6 +1794,8 @@ class _DummyCipher(object):
     def decryptor(self):
         """
         Construct a noop decryptor.
+
+        @return: The decryptor.
         """
         return _NullEncryptionContext()
 

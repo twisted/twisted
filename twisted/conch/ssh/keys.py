@@ -67,18 +67,29 @@ class Key(object):
     @ivar keyObject: DEPRECATED. The C{Crypto.PublicKey} object
         that operations are performed with.
     """
-
-    def fromFile(Class, filename, type=None, passphrase=None):
+    def fromFile(cls, filename, type=None, passphrase=None):
         """
-        Return a Key object corresponding to the data in filename.  type
-        and passphrase function as they do in fromString.
+        Load a key from a file.
+
+        @param filename: The path to load key data from.
+
+        @type type: L{str} or C{None}
+        @param type: A string describing the format the key data is in, or
+        C{None} to attempt detection of the type.
+
+        @type passphrase: L{bytes} or C{None}
+        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        if there is no encryption.
+
+        @rtype: L{Key}
+        @return: The loaded key.
         """
         with open(filename, 'rb') as f:
-            return Class.fromString(f.read(), type, passphrase)
+            return cls.fromString(f.read(), type, passphrase)
     fromFile = classmethod(fromFile)
 
 
-    def fromString(Class, data, type=None, passphrase=None):
+    def fromString(cls, data, type=None, passphrase=None):
         """
         Return a Key object corresponding to the string data.
         type is optionally the type of string, matching a _fromString_*
@@ -86,19 +97,28 @@ class Key(object):
         to guess a type.  If the key is encrypted, passphrase is used as
         the decryption key.
 
-        @type data: C{bytes}
-        @type type: C{None}/C{bytes}
-        @type passphrase: C{None}/C{bytes}
-        @rtype: C{Key}
+        @type data: L{bytes}
+        @param data: The key data.
+
+        @type type: L{str} or C{None}
+        @param type: A string describing the format the key data is in, or
+        C{None} to attempt detection of the type.
+
+        @type passphrase: L{bytes} or C{None}
+        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        if there is no encryption.
+
+        @rtype: L{Key}
+        @return: The loaded key.
         """
         if type is None:
-            type = Class._guessStringType(data)
+            type = cls._guessStringType(data)
         if type is None:
-            raise BadKeyError('cannot guess the type of %r' % data)
-        method = getattr(Class, '_fromString_%s' % type.upper(), None)
+            raise BadKeyError('cannot guess the type of %r' % (data,))
+        method = getattr(cls, '_fromString_%s' % (type.upper(),), None)
         if method is None:
-            raise BadKeyError('no _fromString method for %s' % type)
-        if method.__code__.co_argcount == 2:  # no passphrase
+            raise BadKeyError('no _fromString method for %s' % (type,))
+        if method.__code__.co_argcount == 2:  # No passphrase
             if passphrase:
                 raise BadKeyError('key not encrypted')
             return method(data)
@@ -123,7 +143,8 @@ class Key(object):
             integer g
             integer y
 
-        @type blob: C{bytes}
+        @type blob: L{bytes}
+        @param blob: The key data.
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
@@ -132,7 +153,8 @@ class Key(object):
         keyType, rest = common.getNS(blob)
         if keyType == b'ssh-rsa':
             e, n, rest = common.getMP(rest, 2)
-            return cls(rsa.RSAPublicNumbers(e, n).public_key(default_backend()))
+            return cls(
+                rsa.RSAPublicNumbers(e, n).public_key(default_backend()))
         elif keyType == b'ssh-dss':
             p, q, g, y, rest = common.getMP(rest, 4)
             return cls(
@@ -146,7 +168,7 @@ class Key(object):
                 ).public_key(default_backend())
             )
         else:
-            raise BadKeyError('unknown blob type: %s' % keyType)
+            raise BadKeyError('unknown blob type: %s' % (keyType,))
 
 
     @classmethod
@@ -172,7 +194,8 @@ class Key(object):
             integer y
             integer x
 
-        @type blob: C{bytes}
+        @type blob: L{bytes}
+        @param blob: The key data.
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
@@ -187,7 +210,7 @@ class Key(object):
             p, q, g, y, x, rest = common.getMP(rest, 5)
             return cls._fromDSAComponents(y=y, g=g, p=p, q=q, x=x)
         else:
-            raise BadKeyError('unknown blob type: %s' % keyType)
+            raise BadKeyError('unknown blob type: %s' % (keyType,))
 
 
     @classmethod
@@ -197,7 +220,8 @@ class Key(object):
         string.  The format of an OpenSSH public key string is::
             <key type> <base64-encoded public key blob>
 
-        @type data: C{bytes}
+        @type data: L{bytes}
+        @param data: The key data.
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
@@ -227,8 +251,12 @@ class Key(object):
         The ASN.1 structure of a DSA key is::
             (0, p, q, g, y, x)
 
-        @type data: C{bytes}
-        @type passphrase: C{bytes}
+        @type data: L{bytes}
+        @param data: The key data.
+
+        @type passphrase: L{bytes} or C{None}
+        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        if it is not encrypted.
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
@@ -240,15 +268,15 @@ class Key(object):
         """
         lines = data.strip().split(b'\n')
         kind = lines[0][11:14]
-        if lines[1].startswith(b'Proc-Type: 4,ENCRYPTED'):  # encrypted key
+        if lines[1].startswith(b'Proc-Type: 4,ENCRYPTED'):
             if not passphrase:
                 raise EncryptedKeyError('Passphrase must be provided '
                                         'for an encrypted key')
 
             # Determine cipher and initialization vector
             try:
-                _, cipher_iv_info = lines[2].split(b' ', 1)
-                cipher, ivdata = cipher_iv_info.rstrip().split(b',', 1)
+                _, cipherIVInfo = lines[2].split(b' ', 1)
+                cipher, ivdata = cipherIVInfo.rstrip().split(b',', 1)
             except ValueError:
                 raise BadKeyError('invalid DEK-info %r' % (lines[2],))
 
@@ -265,7 +293,7 @@ class Key(object):
             else:
                 raise BadKeyError('unknown encryption type %r' % (cipher,))
 
-            # extract keyData for decoding
+            # Extract keyData for decoding
             iv = bytes(bytearray([int(ivdata[i:i + 2], 16)
                                   for i in range(0, len(ivdata), 2)]))
             ba = md5(passphrase + iv[:8]).digest()
@@ -293,7 +321,7 @@ class Key(object):
                 'Failed to decode key (Bad Passphrase?): %s' % (e,))
 
         if kind == b'RSA':
-            if len(decodedKey) == 2:  # alternate RSA key
+            if len(decodedKey) == 2:  # Alternate RSA key
                 decodedKey = decodedKey[0]
             if len(decodedKey) < 6:
                 raise BadKeyError('RSA key failed to decode properly')
@@ -301,7 +329,7 @@ class Key(object):
             n, e, d, p, q, dmp1, dmq1, iqmp = [
                 long(value) for value in decodedKey[1:9]
             ]
-            if p > q:  # make p smaller than q
+            if p > q:  # Make p smaller than q
                 p, q = q, p
             return cls(
                 rsa.RSAPrivateNumbers(
@@ -345,7 +373,8 @@ class Key(object):
         The names for a RSA (key type 'rsa-pkcs1-sha1') key are: n, e.
         The names for a DSA (key type 'dsa') key are: y, g, p, q.
 
-        @type data: C{bytes}
+        @type data: L{bytes}
+        @param data: The key data.
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
@@ -376,7 +405,8 @@ class Key(object):
         The names for a RSA (key type 'rsa-pkcs1-sha1') key are: n, e, d, p, q.
         The names for a DSA (key type 'dsa') key are: y, g, p, q, x.
 
-        @type data: C{bytes}
+        @type data: L{bytes}
+        @param data: The key data.
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
@@ -393,7 +423,7 @@ class Key(object):
                 y=kd[b'y'], g=kd[b'g'], p=kd[b'p'], q=kd[b'q'], x=kd[b'x'])
         elif sexp[1][0] == b'rsa-pkcs1':
             assert len(kd) == 8, len(kd)
-            if kd[b'p'] > kd[b'q']:  # make p smaller than q
+            if kd[b'p'] > kd[b'q']:  # Make p smaller than q
                 kd[b'p'], kd[b'q'] = kd[b'q'], kd[b'p']
             return cls._fromRSAComponents(
                 n=kd[b'n'], e=kd[b'e'], d=kd[b'd'], p=kd[b'p'], q=kd[b'q'])
@@ -425,7 +455,8 @@ class Key(object):
             integer y
             integer x
 
-        @type data: C{bytes}
+        @type data: L{bytes}
+        @param data: The key data.
 
         @return: A new key.
         @rtype: L{twisted.conch.ssh.keys.Key}
@@ -451,10 +482,13 @@ class Key(object):
             raise BadKeyError("unknown key type %s" % (keyType,))
 
 
-    def _guessStringType(Class, data):
+    def _guessStringType(cls, data):
         """
         Guess the type of key in data.  The types map to _fromString_*
         methods.
+
+        @type data: L{bytes}
+        @param data: The key data.
         """
         if data.startswith(b'ssh-'):
             return 'public_openssh'
@@ -481,6 +515,28 @@ class Key(object):
     def _fromRSAComponents(cls, n, e, d=None, p=None, q=None, u=None):
         """
         Build a key from RSA numerical components.
+
+        @type n: L{int}
+        @param n: The 'n' RSA variable.
+
+        @type e: L{int}
+        @param e: The 'e' RSA variable.
+
+        @type d: L{int} or C{None}
+        @param d: The 'd' RSA variable (optional for a public key).
+
+        @type p: L{int} or C{None}
+        @param p: The 'p' RSA variable (optional for a public key).
+
+        @type q: L{int} or C{None}
+        @param q: The 'q' RSA variable (optional for a public key).
+
+        @type u: L{int} or C{None}
+        @param u: The 'u' RSA variable. Ignored, as its value is determined by
+        p and q.
+
+        @rtype: L{Key}
+        @return: An RSA key constructed from the values as given.
         """
         publicNumbers = rsa.RSAPublicNumbers(e=e, n=n)
         if d is None:
@@ -505,6 +561,24 @@ class Key(object):
     def _fromDSAComponents(cls, y, p, q, g, x=None):
         """
         Build a key from DSA numerical components.
+
+        @type y: L{int}
+        @param y: The 'y' DSA variable.
+
+        @type p: L{int}
+        @param p: The 'p' DSA variable.
+
+        @type q: L{int}
+        @param q: The 'q' DSA variable.
+
+        @type g: L{int}
+        @param g: The 'g' DSA variable.
+
+        @type x: L{int} or C{None}
+        @param x: The 'x' DSA variable (optional for a public key)
+
+        @rtype: L{Key}
+        @return: A DSA key constructed from the values as given.
         """
         publicNumbers = dsa.DSAPublicNumbers(
             y=y, parameter_numbers=dsa.DSAParameterNumbers(p=p, q=q, g=g))
@@ -562,14 +636,14 @@ class Key(object):
         for k, v in sorted(self.data().items()):
             if _PY3 and isinstance(k, bytes):
                 k = k.decode('ascii')
-            lines.append('attr %s:' % k)
+            lines.append('attr %s:' % (k,))
             by = common.MP(v)[4:]
             while by:
                 m = by[:15]
                 by = by[15:]
                 o = ''
                 for c in iterbytes(m):
-                    o = o + '%02x:' % ord(c)
+                    o = o + '%02x:' % (ord(c),)
                 if len(m) < 15:
                     o = o[:-1]
                 lines.append('\t' + o)
@@ -650,7 +724,6 @@ class Key(object):
                     )
             else:
                 newKey = self._fromRSAComponents(e=rawKey.e, n=rawKey.n)
-
         elif isinstance(value, DSA._DSAobj):
             rawKey = value.key
             if rawKey.has_private():
@@ -668,19 +741,20 @@ class Key(object):
                     q=rawKey.q,
                     g=rawKey.g,
                     )
-
         else:
             raise BadKeyError('PyCrypto key type not supported.')
-
 
         self._keyObject = newKey._keyObject
 
 
     def isPublic(self):
         """
-        Returns True if this Key is a public key.
+        Check if this instance is a public key.
+
+        @return: C{True} if this is a public key.
         """
-        return isinstance(self._keyObject, (rsa.RSAPublicKey, dsa.DSAPublicKey))
+        return isinstance(
+            self._keyObject, (rsa.RSAPublicKey, dsa.DSAPublicKey))
 
 
     def public(self):
@@ -688,6 +762,9 @@ class Key(object):
         Returns a version of this key containing only the public key data.
         If this is a public key, this may or may not be the same object
         as self.
+
+        @rtype: L{Key}
+        @return: A public key.
         """
         return Key(self._keyObject.public_key())
 
@@ -777,7 +854,7 @@ class Key(object):
                 "d": numbers.d,
                 "p": numbers.p,
                 "q": numbers.q,
-                # iqmp is q^-1 % p, u is p^-1 % q
+                # Use a trick: iqmp is q^-1 % p, u is p^-1 % q
                 "u": rsa.rsa_crt_iqmp(numbers.q, numbers.p),
             }
         elif isinstance(self._keyObject, dsa.DSAPublicKey):
@@ -820,7 +897,7 @@ class Key(object):
             integer g
             integer y
 
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         type = self.type()
         data = self.data()
@@ -892,7 +969,7 @@ class Key(object):
 
         @rtype: L{bytes}
         """
-        method = getattr(self, '_toString_%s' % type.upper(), None)
+        method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))
         if method.__code__.co_argcount == 2:
@@ -910,9 +987,9 @@ class Key(object):
 
         @param extra: Comment for a public key or passphrase for a
             private key
-        @type extra: C{bytes}
+        @type extra: L{bytes}
 
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         data = self.data()
         if self.isPublic():
@@ -937,7 +1014,7 @@ class Key(object):
             asn1Data = berEncoder.encode(asn1Sequence)
             if extra:
                 iv = randbytes.secureRandom(8)
-                hexiv = ''.join(['%02X' % ord(x) for x in iterbytes(iv)])
+                hexiv = ''.join(['%02X' % (ord(x),) for x in iterbytes(iv)])
                 hexiv = hexiv.encode('ascii')
                 lines.append(b'Proc-Type: 4,ENCRYPTED')
                 lines.append(b'DEK-Info: DES-EDE3-CBC,' + hexiv + b'\n')
@@ -967,7 +1044,7 @@ class Key(object):
         Return a public or private LSH key.  See _fromString_PUBLIC_LSH and
         _fromString_PRIVATE_LSH for the key formats.
 
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         data = self.data()
         type = self.type()
@@ -1020,7 +1097,7 @@ class Key(object):
         Return a private Secure Shell Agent v3 key.  See
         _fromString_AGENTV3 for the key format.
 
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         data = self.data()
         if not self.isPublic():
@@ -1035,12 +1112,15 @@ class Key(object):
 
     def sign(self, data):
         """
-        Returns a signature with this Key.
+        Sign some data with this key.
 
         SECSH-TRANS RFC 4253 Section 6.6.
 
-        @type data: C{bytes}
-        @rtype: C{bytes}
+        @type data: L{bytes}
+        @param data: The data to sign.
+
+        @rtype: L{bytes}
+        @return: A signature for the given data.
         """
         if self.type() == 'RSA':
             signer = self._keyObject.signer(
@@ -1066,11 +1146,16 @@ class Key(object):
 
     def verify(self, signature, data):
         """
-        Returns true if the signature for data is valid for this Key.
+        Verify a signature using this key.
 
-        @type signature: C{bytes}
-        @type data: C{bytes}
-        @rtype: C{bool}
+        @type signature: L{bytes}
+        @param signature: The signature to verify.
+
+        @type data: L{bytes}
+        @param data: The signed data.
+
+        @rtype: L{bool}
+        @return: C{True} if the signature is valid.
         """
         if len(signature) == 40:
             # DSA key with no padding
@@ -1135,5 +1220,5 @@ def objectType(obj):
 
 
 if _PY3:
-    # objectType is deprecated and not being ported to Python 3.
+    # The objectType function is deprecated and not being ported to Python 3.
     del objectType

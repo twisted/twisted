@@ -11,35 +11,8 @@ from __future__ import absolute_import, division
 
 import struct
 
-try:
-    from cryptography.utils import int_from_bytes, int_to_bytes
-except ImportError:
-    import binascii
-
-    def int_from_bytes(data, byteorder, signed=False):
-        assert byteorder == 'big'
-        assert not signed
-
-        if len(data) % 4 != 0:
-            data = (b'\x00' * (4 - (len(data) % 4))) + data
-
-        result = 0
-
-        while len(data) > 0:
-            digit, = struct.unpack('>I', data[:4])
-            result = (result << 32) + digit
-            data = data[4:]
-
-        return result
-
-
-    def int_to_bytes(integer, length=None):
-        hex_string = '%x' % integer
-        if length is None:
-            n = len(hex_string)
-        else:
-            n = length * 2
-        return binascii.unhexlify(hex_string.zfill(n + (n & 1)))
+from twisted.conch.ssh._cryptography_backports import (
+    intFromBytes as int_from_bytes, intToBytes as int_to_bytes)
 
 from twisted.python.compat import _PY3, long
 
@@ -59,7 +32,7 @@ def getNS(s, count=1):
     ns = []
     c = 0
     for i in range(count):
-        l, = struct.unpack('!L',s[c:c + 4])
+        l, = struct.unpack('!L', s[c:c + 4])
         ns.append(s[c + 4:4 + l + c])
         c += 4 + l
     return tuple(ns) + (s[c:],)
@@ -67,7 +40,8 @@ def getNS(s, count=1):
 
 
 def MP(number):
-    if number == 0: return b'\000'*4
+    if number == 0:
+        return b'\000' * 4
     assert number > 0
     bn = int_to_bytes(number)
     if ord(bn[0:1]) & 128:
@@ -98,7 +72,7 @@ def _MPpow(x, y, z):
     """
     Return the MP version of C{(x ** y) % z}.
     """
-    return MP(pow(x,y,z))
+    return MP(pow(x, y, z))
 
 
 
