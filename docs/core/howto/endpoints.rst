@@ -99,6 +99,55 @@ implemented like this:
 .. note::
    If you've used ``ClientFactory`` before, keep in mind that the ``connect`` method takes a ``Factory``, not a ``ClientFactory``.
    Even if you pass a ``ClientFactory`` to ``endpoint.connect``, its ``clientConnectionFailed`` and ``clientConnectionLost`` methods will not be called.
+   In particular, clients that extend ``ReconnectingClientFactory`` won't reconnect. The next section describes how to set up reconnecting clients on endpoints.
+
+
+Reconnecting Clients
+~~~~~~~~~~~~~~~~~~~~
+
+If your application needs to maintain a persistent connection to a
+server, you will need a means of detecting when a connection attempt
+fails (or an existing connection is lost) and triggering an attempt to
+reconnect. :class:`~twisted.application.internet.ReconnectingClientService`
+provides this functionality.
+
+Creating a ``ReconnectingClientService`` is straightforward:
+
+.. code-block:: python
+
+   myReconnectingService = ReconnectingClientService(myEndpoint, myFactory)
+
+If you already have a parent service, you can add the reconnecting
+service as a child service:
+
+.. code-block:: python
+
+   parentService.addService(myReconnectingService)
+
+If you do not have a parent service, you can start and stop the
+reconnecting service using its ``startService`` and ``stopService``
+methods. ``stopService`` returns a ``Deferred`` that fires once the
+current connection closes or the current connection attempt is
+cancelled.
+
+By default, ``ReconnectingClientService`` approximately triples the
+delay before attempting to reconnect each time a connection attempt
+fails, until a maximum delay of one hour is reached. Each time a
+connection attempt succeeds, the delay is reset to the initial delay
+of one second. A small amount of random jitter is added to each delay
+(in order to prevent clients which were disconnected simultaneously
+from attempting to reconnect simultaneously). You can adjust all of
+these parameters by passing additional arguments to the
+``ReconnectingClientService`` constructor.
+
+.. note::
+
+   Before endpoints, reconnecting clients were created as subclasses
+   of ``ReconnectingClientFactory``. These subclasses were required to
+   call ``resetDelay``. One of the many advantages of using endpoints
+   is that these special subclasses are no longer
+   needed. ``ReconnectingClientService`` accepts ordinary
+   ``ClientFactory`` subclasses.
 
 
 Maximizing the Return on your Endpoint Investment
