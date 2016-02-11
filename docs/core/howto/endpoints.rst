@@ -175,7 +175,7 @@ TLS
    Or, from python code::
 
      wrapped = HostnameEndpoint('example.com', 443)
-     contextFactory = CertificateOptions(hostname=u'example.com')
+     contextFactory = optionsForClientTLS(hostname=u'example.com')
      endpoint = wrapClientTLS(contextFactory, wrapped)
      conn = endpoint.connect(Factory.forProtocol(Protocol))
 
