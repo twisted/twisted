@@ -35,13 +35,25 @@ from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, unicode, _matchingString
 from twisted.python.components import proxyForInterface
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
+from twisted.python.compat import iterbytes
 from twisted.python.systemd import ListenFDs
 
+
+try:
+    from twisted.protocols.tls import TLSMemoryBIOFactory
+    from twisted.internet._sslverify import _idnaBytes, _idnaText
+    from twisted.internet.ssl import (
+        optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
+        CertificateOptions, trustRootFromCertificates
+    )
+    from OpenSSL.SSL import Error as SSLError
+except ImportError:
+    TLSMemoryBIOFactory = None
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -50,7 +62,8 @@ __all__ = ["clientFromString", "serverFromString",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
            "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
            "ProcessEndpoint", "HostnameEndpoint",
-           "StandardErrorBehavior", "connectProtocol"]
+           "StandardErrorBehavior", "connectProtocol",
+           "wrapClientTLS"]
 
 
 
@@ -1264,12 +1277,13 @@ def _tokenize(description):
 
     @param description: a string as described by L{serverFromString} or
         L{clientFromString}.
+    @type description: L{str} or L{bytes}
 
     @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
         starting with L{_OP} will contain a second element of either ':' (i.e.
         'next parameter') or '=' (i.e. 'assign parameter value').  For example,
-        the string 'hello:greet\=ing=world' would result in a generator
-        yielding these values::
+        the string 'hello:greeting=world' would result in a generator yielding
+        these values::
 
             _STRING, 'hello'
             _OP, ':'
@@ -1277,18 +1291,23 @@ def _tokenize(description):
             _OP, '='
             _STRING, 'world'
     """
-    current = ''
-    ops = ':='
-    nextOps = {':': ':=', '=': ':'}
-    description = iter(description)
-    for n in description:
-        if n in ops:
+    empty = _matchingString(u'', description)
+    colon = _matchingString(u':', description)
+    equals = _matchingString(u'=', description)
+    backslash = _matchingString(u'\x5c', description)
+    current = empty
+
+    ops = colon + equals
+    nextOps = {colon: colon + equals, equals: colon}
+    iterdesc = iter(iterbytes(description))
+    for n in iterdesc:
+        if n in iterbytes(ops):
             yield _STRING, current
             yield _OP, n
-            current = ''
+            current = empty
             ops = nextOps[n]
-        elif n == '\\':
-            current += next(description)
+        elif n == backslash:
+            current += next(iterdesc)
         else:
             current += n
     yield _STRING, current
@@ -1309,16 +1328,17 @@ def _parse(description):
         C{_parse('a:b:d=1:c')} would be C{(['a', 'b', 'c'], {'d': '1'})}.
     """
     args, kw = [], {}
+    colon = _matchingString(u':', description)
     def add(sofar):
         if len(sofar) == 1:
             args.append(sofar[0])
         else:
-            kw[sofar[0]] = sofar[1]
+            kw[nativeString(sofar[0])] = sofar[1]
     sofar = ()
     for (type, value) in _tokenize(description):
         if type is _STRING:
             sofar += (value,)
-        elif value == ':':
+        elif value == colon:
             add(sofar)
             sofar = ()
     add(sofar)
@@ -1381,10 +1401,10 @@ def _parseServer(description, factory, default=None):
     if parser is None:
         # If the required parser is not found in _server, check if
         # a plugin exists for the endpointType
-        for plugin in getPlugins(IStreamServerEndpointStringParser):
-            if plugin.prefix == endpointType:
-                return (plugin, args[1:], kw)
-        raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
+        plugin = _matchPluginToPrefix(
+            getPlugins(IStreamServerEndpointStringParser), endpointType
+        )
+        return (plugin, args[1:], kw)
     return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
 
 
@@ -1403,6 +1423,19 @@ def _serverFromStringLegacy(reactor, description, default):
     # Chop out the factory.
     args = args[:1] + args[2:]
     return _endpointServerFactories[name](reactor, *args, **kw)
+
+
+
+def _matchPluginToPrefix(plugins, endpointType):
+    """
+    Match plugin to prefix.
+    """
+    endpointType = endpointType.lower()
+    for plugin in plugins:
+        if (_matchingString(plugin.prefix.lower(),
+                            endpointType) == endpointType):
+            return plugin
+    raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
 
 
 
@@ -1501,7 +1534,10 @@ def quoteStringArgument(argument):
 
     @rtype: C{str}
     """
-    return argument.replace('\\', '\\\\').replace(':', '\\:')
+    backslash, colon = '\\:'
+    for c in backslash, colon:
+        argument = argument.replace(c, backslash + c)
+    return argument
 
 
 
@@ -1549,16 +1585,14 @@ def _loadCAsFromDir(directoryPath):
     """
     Load certificate-authority certificate objects in a given directory.
 
-    @param directoryPath: a L{FilePath} pointing at a directory to load .pem
-        files from.
+    @param directoryPath: a L{unicode} or L{bytes} pointing at a directory to
+        load .pem files from, or L{None}.
 
-    @return: a C{list} of L{OpenSSL.crypto.X509} objects.
+    @return: an L{IOpenSSLTrustRoot} provider.
     """
-    from twisted.internet import ssl
-
     caCerts = {}
     for child in directoryPath.children():
-        if not child.basename().split('.')[-1].lower() == 'pem':
+        if not child.asTextMode().basename().split(u'.')[-1].lower() == u'pem':
             continue
         try:
             data = child.getContent()
@@ -1566,13 +1600,94 @@ def _loadCAsFromDir(directoryPath):
             # Permission denied, corrupt disk, we don't care.
             continue
         try:
-            theCert = ssl.Certificate.loadPEM(data)
-        except ssl.SSL.Error:
+            theCert = Certificate.loadPEM(data)
+        except SSLError:
             # Duplicate certificate, invalid certificate, etc.  We don't care.
             pass
         else:
-            caCerts[theCert.digest()] = theCert.original
-    return caCerts.values()
+            caCerts[theCert.digest()] = theCert
+    return trustRootFromCertificates(caCerts.values())
+
+
+
+def _parseTrustRootPath(pathName):
+    """
+    Parse a string referring to a directory full of certificate authorities
+    into a trust root.
+
+    @param pathName: path name
+    @type pathName: L{unicode} or L{bytes} or L{None}
+
+    @return: L{None} or L{IOpenSSLTrustRoot}
+    """
+    if pathName is None:
+        return None
+    return _loadCAsFromDir(FilePath(pathName))
+
+
+
+def _privateCertFromPaths(certificatePath, keyPath):
+    """
+    Parse a certificate path and key path, either or both of which might be
+    C{None}, into a certificate object.
+
+    @param certificatePath: the certificate path
+    @type certificatePath: L{bytes} or L{unicode} or L{None}
+
+    @param keyPath: the private key path
+    @type keyPath: L{bytes} or L{unicode} or L{None}
+
+    @return: a L{PrivateCertificate} or L{None}
+    """
+    if certificatePath is None:
+        return None
+    certBytes = FilePath(certificatePath).getContent()
+    if keyPath is None:
+        return PrivateCertificate.loadPEM(certBytes)
+    else:
+        return PrivateCertificate.fromCertificateAndKeyPair(
+            Certificate.loadPEM(certBytes),
+            KeyPair.load(FilePath(keyPath).getContent(), 1)
+        )
+
+
+
+def _parseClientSSLOptions(kwargs):
+    """
+    Parse common arguments for SSL endpoints, creating an L{CertificateOptions}
+    instance.
+
+    @param kwargs: A dict of keyword arguments to be parsed, potentially
+        containing keys C{certKey}, C{privateKey}, C{caCertsDir}, and
+        C{hostname}.  See L{_parseClientSSL}.
+    @type kwargs: L{dict}
+
+    @return: The remaining arguments, including a new key C{sslContextFactory}.
+    """
+    hostname = kwargs.pop('hostname', None)
+    clientCertificate = _privateCertFromPaths(kwargs.pop('certKey', None),
+                                              kwargs.pop('privateKey', None))
+    trustRoot = _parseTrustRootPath(kwargs.pop('caCertsDir', None))
+    if hostname is not None:
+        configuration = optionsForClientTLS(
+            _idnaText(hostname), trustRoot=trustRoot,
+            clientCertificate=clientCertificate
+        )
+    else:
+        # _really_ though, you should specify a hostname.
+        if clientCertificate is not None:
+            privateKeyOpenSSL = clientCertificate.privateKey.original
+            certificateOpenSSL = clientCertificate.original
+        else:
+            privateKeyOpenSSL = None
+            certificateOpenSSL = None
+        configuration = CertificateOptions(
+            trustRoot=trustRoot,
+            privateKey=privateKeyOpenSSL,
+            certificate=certificateOpenSSL,
+        )
+    kwargs['sslContextFactory'] = configuration
+    return kwargs
 
 
 
@@ -1594,38 +1709,16 @@ def _parseClientSSL(*args, **kwargs):
         will be scanned for files ending in C{.pem}, all of which will be
         considered valid certificate authorities for this connection.
 
-    @type caCertsDir: C{str}
+    @type caCertsDir: L{str}
 
-    @return: The coerced values as a C{dict}.
+    @param hostname: The hostname to use for validating the server's
+        certificate.
+    @type hostname: L{unicode}
+
+    @return: The coerced values as a L{dict}.
     """
-    from twisted.internet import ssl
     kwargs = _parseClientTCP(*args, **kwargs)
-    certKey = kwargs.pop('certKey', None)
-    privateKey = kwargs.pop('privateKey', None)
-    caCertsDir = kwargs.pop('caCertsDir', None)
-    if certKey is not None:
-        certx509 = ssl.Certificate.loadPEM(
-            FilePath(certKey).getContent()).original
-    else:
-        certx509 = None
-    if privateKey is not None:
-        privateKey = ssl.PrivateCertificate.loadPEM(
-            FilePath(privateKey).getContent()).privateKey.original
-    else:
-        privateKey = None
-    if caCertsDir is not None:
-        verify = True
-        caCerts = _loadCAsFromDir(FilePath(caCertsDir))
-    else:
-        verify = False
-        caCerts = None
-    kwargs['sslContextFactory'] = ssl.CertificateOptions(
-        certificate=certx509,
-        privateKey=privateKey,
-        verify=verify,
-        caCerts=caCerts
-    )
-    return kwargs
+    return _parseClientSSLOptions(kwargs)
 
 
 
@@ -1737,11 +1830,11 @@ def clientFromString(reactor, description):
     args, kwargs = _parse(description)
     aname = args.pop(0)
     name = aname.upper()
-    for plugin in getPlugins(IStreamClientEndpointStringParserWithReactor):
-        if plugin.prefix.upper() == name:
-            return plugin.parseStreamClient(reactor, *args, **kwargs)
     if name not in _clientParsers:
-        raise ValueError("Unknown endpoint type: %r" % (aname,))
+        plugin = _matchPluginToPrefix(
+            getPlugins(IStreamClientEndpointStringParserWithReactor), name
+        )
+        return plugin.parseStreamClient(reactor, *args, **kwargs)
     kwargs = _clientParsers[name](*args, **kwargs)
     return _endpointClientFactories[name](reactor, **kwargs)
 
@@ -1767,3 +1860,154 @@ def connectProtocol(endpoint, protocol):
         def buildProtocol(self, addr):
             return protocol
     return endpoint.connect(OneShotFactory())
+
+
+
+@implementer(interfaces.IStreamClientEndpoint)
+class _WrapperEndpoint(object):
+    """
+    An endpoint that wraps another endpoint.
+    """
+
+    def __init__(self, wrappedEndpoint, wrapperFactory):
+        """
+        Construct a L{_WrapperEndpoint}.
+        """
+        self._wrappedEndpoint = wrappedEndpoint
+        self._wrapperFactory = wrapperFactory
+
+
+    def connect(self, protocolFactory):
+        """
+        Connect the given protocol factory and unwrap its result.
+        """
+        return self._wrappedEndpoint.connect(
+            self._wrapperFactory(protocolFactory)
+        ).addCallback(lambda protocol: protocol.wrappedProtocol)
+
+
+
+def wrapClientTLS(connectionCreator, wrappedEndpoint):
+    """
+    Wrap an endpoint which upgrades to TLS as soon as the connection is
+    established.
+
+    @since: 16.0
+
+    @param connectionCreator: The TLS options to use when connecting; see
+        L{twisted.internet.ssl.optionsForClientTLS} for how to construct this.
+    @type connectionCreator:
+        L{twisted.internet.interfaces.IOpenSSLClientConnectionCreator}
+
+    @param wrappedEndpoint: The endpoint to wrap.
+    @type wrappedEndpoint: An L{IStreamClientEndpoint} provider.
+
+    @return: an endpoint that provides transport level encryption layered on
+        top of C{wrappedEndpoint}
+    @rtype: L{twisted.internet.interfaces.IStreamClientEndpoint}
+    """
+    if TLSMemoryBIOFactory is None:
+        raise NotImplementedError(
+            "OpenSSL not available. Try `pip install twisted[tls]`."
+        )
+    return _WrapperEndpoint(
+        wrappedEndpoint,
+        lambda protocolFactory:
+        TLSMemoryBIOFactory(connectionCreator, True, protocolFactory)
+    )
+
+
+
+def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
+                    certificate=None, privateKey=None, trustRoots=None,
+                    endpoint=None, **kwargs):
+    """
+    Internal method to construct an endpoint from string parameters.
+
+    @param reactor: The reactor passed to L{clientFromString}.
+
+    @param host: The hostname to connect to.
+    @type host: L{bytes} or L{unicode}
+
+    @param port: The port to connect to.
+    @type port: L{bytes} or L{unicode}
+
+    @param timeout: For each individual connection attempt, the number of
+        seconds to wait before assuming the connection has failed.
+    @type timeout: L{bytes} or L{unicode}
+
+    @param bindAddress: The address to which to bind outgoing connections.
+    @type bindAddress: L{bytes} or L{unicode}
+
+    @param certificate: a string representing a filesystem path to a
+        PEM-encoded certificate.
+    @type certificate: L{bytes} or L{unicode}
+
+    @param privateKey: a string representing a filesystem path to a PEM-encoded
+        certificate.
+    @type privateKey: L{bytes} or L{unicode}
+
+    @param endpoint: an optional string endpoint description of an endpoint to
+        wrap; if this is passed then C{host} is used only for certificate
+        verification.
+    @type endpoint: L{bytes} or L{unicode}
+
+    @return: a client TLS endpoint
+    @rtype: L{IStreamClientEndpoint}
+    """
+    if kwargs:
+        raise TypeError('unrecognized keyword arguments present',
+                        list(kwargs.keys()))
+    host = host if isinstance(host, unicode) else host.decode("utf-8")
+    bindAddress = (bindAddress
+                   if isinstance(bindAddress, unicode) or bindAddress is None
+                   else bindAddress.decode("utf-8"))
+    port = int(port)
+    timeout = int(timeout)
+    return wrapClientTLS(
+        optionsForClientTLS(
+            host, trustRoot=_parseTrustRootPath(trustRoots),
+            clientCertificate=_privateCertFromPaths(certificate,
+                                                    privateKey)),
+        clientFromString(reactor, endpoint) if endpoint is not None
+        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout,
+                              bindAddress)
+    )
+
+
+
+@implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
+class _TLSClientEndpointParser(object):
+    """
+    Stream client endpoint string parser for L{wrapClientTLS} with
+    L{HostnameEndpoint}.
+
+    @ivar prefix: See
+        L{IStreamClientEndpointStringParserWithReactor.prefix}.
+    """
+    prefix = 'tls'
+
+    @staticmethod
+    def parseStreamClient(reactor, *args, **kwargs):
+        """
+        Redirects to another function L{_parseClientTLS}; tricks zope.interface
+        into believing the interface is correctly implemented, since the
+        signature is (C{reactor}, C{*args}, C{**kwargs}).  See
+        L{_parseClientTLS} for an the specific signature description for this
+        endpoint parser.
+
+        @param reactor: The reactor passed to L{clientFromString}.
+
+        @param args: The positional arguments in the endpoint description.
+        @type args: L{tuple}
+
+        @param kwargs: The named arguments in the endpoint description.
+        @type kwargs: L{dict}
+
+        @return: a client TLS endpoint
+        @rtype: L{IStreamClientEndpoint}
+        """
+        return _parseClientTLS(reactor, *args, **kwargs)
+
+
+

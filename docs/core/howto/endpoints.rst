@@ -148,13 +148,39 @@ TCP
 
    For example, ``tcp:host=twistedmatrix.com:port=80:timeout=15``.
 
-SSL
-   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``caCertsDir``.
-   ``certKey`` (optional) gives a filesystem path to a certificate (PEM format).
-   ``privateKey`` (optional) gives a filesystem path to a private key (PEM format).
-   ``caCertsDir`` (optional) gives a filesystem path to a directory containing trusted CA certificates to use to verify the server certificate.
+TLS
+   Required arguments: ``host``, ``port``.
 
-   For example, ``ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs`` .
+   Optional arguments: ``timeout``, ``bindAddress``, ``certificate``, ``privateKey``, ``trustRoots``, ``endpoint``.
+
+   - ``host`` is a (UTF-8 encoded) hostname to connect to, as well as the host name to verify against.
+   - ``port`` is a numeric port number to connect to.
+   - ``timeout`` and ``bindAddress`` have the same meaning as the ``timeout`` and ``bindAddress`` for TCP clients.
+   - ``certificate`` is the certificate to use for the client; it should be the path name of a PEM file containing a certificate for which ``privateKey`` is the private key.
+   - ``privateKey`` is the client's private key, matching the certificate specified by ``certificate``.
+     It should be the path name of a PEM file containing an X.509 client certificate.
+     If ``certificate`` is specified but ``privateKey`` is unspecified, Twisted will look for the certificate in the same file as specified by ``certificate``.
+   - ``trustRoots`` specifies a path to a directory of PEM-encoded certificate files.  If you leave this unspecified, Twisted will do its best to use the platform default set of trust roots, which should be the default WebTrust set.
+   - the optional ``endpoint`` parameter changes the meaning of the ``tls:`` endpoint slightly.
+     Rather than the default of connecting over TCP with the same hostname used for verification, you can connect over *any* endpoint type.
+     If you specify the endpoint here, ``host`` and ``port`` are used for certificate verification purposes only.
+     Bear in mind you will need to backslash-escape the colons in the endpoint description here.
+
+   This client connects to the supplied hostname, validates the server's hostname against the supplied hostname, and then upgrades to TLS immediately after validation succeeds.
+
+   The simplest example of this would be: ``tls:example.com:443``.
+
+   You can use the ``endpoint:`` feature with TCP if you want to connect to a host name; for example, if your DNS is not working, but you know that the IP address 7.6.5.4 points to ``awesome.site.example.com``, you could specify: ``tls:awesome.site.example.com:443:endpoint=tcp\:7.6.5.4\:443``.
+
+   You can use it with any other endpoint type as well, though; for example, if you had a local UNIX socket that established a tunnel to ``awesome.site.example.com`` in ``/var/run/awesome.sock``, you could instead do ``tls:awesome.site.example.com:443:endpoint=unix\:/var/run/awesome.sock``.
+
+   Or, from python code::
+
+     wrapped = HostnameEndpoint('example.com', 443)
+     contextFactory = optionsForClientTLS(hostname=u'example.com')
+     endpoint = wrapClientTLS(contextFactory, wrapped)
+     conn = endpoint.connect(Factory.forProtocol(Protocol))
+
 UNIX
    Supported arguments: ``path``, ``timeout``, ``checkPID``.
    ``path`` gives a filesystem path to a listening UNIX domain socket server.
@@ -175,6 +201,24 @@ TCP (Hostname)
 
       endpoint = HostnameEndpoint(reactor, "twistedmatrix.com", 80)
       conn = endpoint.connect(Factory.forProtocol(Protocol))
+
+SSL (Deprecated)
+
+   .. note::
+
+       You should generally prefer the "TLS" client endpoint, above, unless you need to work with versions of Twisted older than 16.0.
+       Among other things:
+
+        - the ``ssl:`` client endpoint requires that you pass ''both'' ``hostname=`` (for hostname verification) as well as ``host=`` (for a TCP connection address) in order to get hostname verification, which is required for security, whereas ``tls:`` does the correct thing by default by using the same hostname for both.
+
+        - the ``ssl:`` client endpoint doesn't work with IPv6, and the ``tls:`` endpoint does.
+
+   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``caCertsDir``.
+   ``certKey`` (optional) gives a filesystem path to a certificate (PEM format).
+   ``privateKey`` (optional) gives a filesystem path to a private key (PEM format).
+   ``caCertsDir`` (optional) gives a filesystem path to a directory containing trusted CA certificates to use to verify the server certificate.
+
+   For example, ``ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs``.
 
 
 Servers
