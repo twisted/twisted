@@ -149,7 +149,9 @@ TCP
    For example, ``tcp:host=twistedmatrix.com:port=80:timeout=15``.
 
 TLS
-   Required arguments: ``host``, ``port``.  Optional arguments: ``timeout``, ``bindAddress``, ``certificate``, ``privateKey``, ``trustRoots``, ``endpoint``.
+   Required arguments: ``host``, ``port``.
+
+   Optional arguments: ``timeout``, ``bindAddress``, ``certificate``, ``privateKey``, ``trustRoots``, ``endpoint``.
 
    - ``host`` is a (UTF-8 encoded) hostname to connect to, as well as the host name to verify against.
    - ``port`` is a numeric port number to connect to.
