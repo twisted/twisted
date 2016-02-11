@@ -1652,7 +1652,6 @@ def _privateCertFromPaths(certificatePath, keyPath):
 
 
 
-
 def _parseClientSSLOptions(kwargs):
     """
     Parse common arguments for SSL endpoints, creating an L{CertificateOptions}
