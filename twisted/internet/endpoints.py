@@ -1887,19 +1887,20 @@ class _WrapperEndpoint(object):
 
 
 
-def wrapClientTLS(contextFactory, wrappedEndpoint):
+def wrapClientTLS(connectionCreator, wrappedEndpoint):
     """
     Wrap an endpoint which upgrades to TLS as soon as the connection is
     established.
 
     @since: 15.5
 
-    @param contextFactory: The TLS context factory which will be used when
-        upgrading to TLS.
-    @type contextFactory: L{twisted.internet.ssl.ClientContextFactory}
+    @param connectionCreator: The TLS options to use when connecting; see
+        L{twisted.internet.ssl.optionsForClientTLS} for how to construct this.
+    @type connectionCreator:
+        L{twisted.internet.interfaces.IOpenSSLClientConnectionCreator}
 
-    @param endpoint: The endpoint to wrap.
-    @type endpoint: An L{IStreamClientEndpoint} provider.
+    @param wrappedEndpoint: The endpoint to wrap.
+    @type wrappedEndpoint: An L{IStreamClientEndpoint} provider.
     """
     if TLSMemoryBIOFactory is None:
         raise NotImplementedError(
