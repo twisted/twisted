@@ -203,7 +203,15 @@ TCP (Hostname)
       conn = endpoint.connect(Factory.forProtocol(Protocol))
 
 SSL (Deprecated)
-   You should generally prefer the "TLS" endpoint, above, unless you need to work with versions of Twisted older than 16.0.
+
+   .. note::
+
+       You should generally prefer the "TLS" client endpoint, above, unless you need to work with versions of Twisted older than 16.0.
+       Among other things:
+
+        - the ``ssl:`` client endpoint requires that you pass ''both'' ``hostname=`` (for hostname verification) as well as ``host=`` (for a TCP connection address) in order to get hostname verification, which is required for security, whereas ``tls:`` does the correct thing by default by using the same hostname for both.
+
+        - the ``ssl:`` client endpoint doesn't work with IPv6, and the ``tls:`` endpoint does.
 
    All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``caCertsDir``.
    ``certKey`` (optional) gives a filesystem path to a certificate (PEM format).
