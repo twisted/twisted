@@ -157,7 +157,7 @@ TLS
    - ``certificate`` is the certificate to use for the client; it should be the path name of a PEM file containing a certificate for which ``privateKey`` is the private key.
    - ``privateKey`` is the client's private key, matching the certificate specified by ``certificate``.
      It should be the path name of a PEM file containing an X.509 client certificate.
-     If ``certificate`` is specified but ``privateKey`` is unspecified, Twisted will look for the certificate in the same file as specified by ``certificate`` .
+     If ``certificate`` is specified but ``privateKey`` is unspecified, Twisted will look for the certificate in the same file as specified by ``certificate``.
    - ``trustRoots`` specifies a path to a directory of PEM-encoded certificate files.  If you leave this unspecified, Twisted will do its best to use the platform default set of trust roots, which should be the default WebTrust set.
    - the optional ``endpoint`` parameter changes the meaning of the ``tls:`` endpoint slightly.
      Rather than the default of connecting over TCP with the same hostname used for verification, you can connect over *any* endpoint type.
@@ -166,11 +166,11 @@ TLS
 
    This client connects to the supplied hostname, validates the server's hostname against the supplied hostname, and then upgrades to TLS immediately after validation succeeds.
 
-   The simplest example of this would be: ``tls:example.com:443`` .
+   The simplest example of this would be: ``tls:example.com:443``.
 
-   You can use the ``endpoint:`` feature with TCP if you want to connect to a host name; for example, if your DNS is not working, but you know that the IP address 7.6.5.4 points to ``awesome.site.example.com``, you could specify: ``tls:awesome.site.example.com:443:endpoint=tcp\:7.6.5.4\:443`` .
+   You can use the ``endpoint:`` feature with TCP if you want to connect to a host name; for example, if your DNS is not working, but you know that the IP address 7.6.5.4 points to ``awesome.site.example.com``, you could specify: ``tls:awesome.site.example.com:443:endpoint=tcp\:7.6.5.4\:443``.
 
-   You can use it with any other endpoint type as well, though; for example, if you had a local UNIX socket that established a tunnel to ``awesome.site.example.com`` in ``/var/run/awesome.sock``, you could instead do ``tls:awesome.site.example.com:443:endpoint=unix\:/var/run/awesome.sock`` .
+   You can use it with any other endpoint type as well, though; for example, if you had a local UNIX socket that established a tunnel to ``awesome.site.example.com`` in ``/var/run/awesome.sock``, you could instead do ``tls:awesome.site.example.com:443:endpoint=unix\:/var/run/awesome.sock``.
 
    Or, from python code::
 
@@ -187,7 +187,7 @@ UNIX
    For example, ``unix:path=/var/run/web.sock``.
 
 
-   For example, ``tls:tcp\:example.com\:443:caCertsDir=/etc/ssl/certs`` .
+   For example, ``tls:tcp\:example.com\:443:caCertsDir=/etc/ssl/certs``.
    This connects to the endpoint ``tcp:example.com:443`` before starting TLS.
    The colons are escaped because the TLS endpoint string syntax itself calls ``clientFromString`` to create the wrapped endpoint, and expects a single string argument.
 
@@ -219,7 +219,7 @@ SSL (Deprecated)
    ``privateKey`` (optional) gives a filesystem path to a private key (PEM format).
    ``caCertsDir`` (optional) gives a filesystem path to a directory containing trusted CA certificates to use to verify the server certificate.
 
-   For example, ``ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs`` .
+   For example, ``ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs``.
 
 
 Servers
