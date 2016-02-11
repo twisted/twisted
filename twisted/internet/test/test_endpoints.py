@@ -3637,7 +3637,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
 
     def test_tlsWithDefaults(self):
         """
-        When passed an SSL strports description without extra arguments,
+        When passed a C{tls:} strports description without extra arguments,
         L{clientFromString} returns a client endpoint whose context factory is
         initialized with default values.
         """
