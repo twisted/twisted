@@ -1901,6 +1901,10 @@ def wrapClientTLS(connectionCreator, wrappedEndpoint):
 
     @param wrappedEndpoint: The endpoint to wrap.
     @type wrappedEndpoint: An L{IStreamClientEndpoint} provider.
+
+    @return: an endpoint that provides transport level encryption layered on
+        top of C{wrappedEndpoint}
+    @rtype: L{twisted.internet.interfaces.IStreamClientEndpoint}
     """
     if TLSMemoryBIOFactory is None:
         raise NotImplementedError(
