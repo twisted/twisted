@@ -186,17 +186,6 @@ UNIX
 
    For example, ``unix:path=/var/run/web.sock``.
 
-
-   For example, ``tls:tcp\:example.com\:443:caCertsDir=/etc/ssl/certs``.
-   This connects to the endpoint ``tcp:example.com:443`` before starting TLS.
-   The colons are escaped because the TLS endpoint string syntax itself calls ``clientFromString`` to create the wrapped endpoint, and expects a single string argument.
-
-   Or, from python code::
-
-     wrapped = TCP4ClientEndpoint('example.com', 443)
-     endpoint = wrapClientTLS(contextFactory, wrapped)
-     conn = endpoint.connect(Factory.forProtocol(Protocol))
-
 TCP (Hostname)
    Supported arguments: ``host``, ``port``, ``timeout``.
    ``host`` is a hostname to connect to.
