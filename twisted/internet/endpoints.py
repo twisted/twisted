@@ -1909,7 +1909,7 @@ def wrapClientTLS(connectionCreator, wrappedEndpoint):
     return _WrapperEndpoint(
         wrappedEndpoint,
         lambda protocolFactory:
-        TLSMemoryBIOFactory(contextFactory, True, protocolFactory)
+        TLSMemoryBIOFactory(connectionCreator, True, protocolFactory)
     )
 
 
