@@ -1892,7 +1892,7 @@ def wrapClientTLS(connectionCreator, wrappedEndpoint):
     Wrap an endpoint which upgrades to TLS as soon as the connection is
     established.
 
-    @since: 15.5
+    @since: 16.0
 
     @param connectionCreator: The TLS options to use when connecting; see
         L{twisted.internet.ssl.optionsForClientTLS} for how to construct this.
