@@ -1660,10 +1660,10 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         self.assertEqual(ep._getaddrinfo, socket.getaddrinfo)
 
 
-    def test_endpointConnectingCancelled(self):
+    def test_endpointConnectingCancelled(self, advance=None):
         """
         Calling L{Deferred.cancel} on the L{Deferred} returned from
-        L{IStreamClientEndpoint.connect} is errbacked with an expected
+        L{IStreamClientEndpoint.connect} will cause it to be errbacked with a
         L{ConnectingCancelledError} exception.
         """
         mreactor = MemoryReactor()
@@ -1675,6 +1675,8 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
             mreactor, clientFactory)
 
         d = ep.connect(clientFactory)
+        if advance is not None:
+            mreactor.advance(advance)
         d.cancel()
         # When canceled, the connector will immediately notify its factory that
         # the connection attempt has failed due to a UserError.
@@ -1687,6 +1689,16 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         self.assertIsInstance(failure.value, error.ConnectingCancelledError)
         self.assertEqual(failure.value.address, address)
         self.assertTrue(mreactor.tcpClients[0][2]._connector.stoppedConnecting)
+
+
+    def test_endpointConnectingCancelledAfterAllAttemptsStarted(self):
+        """
+        Calling L{Deferred.cancel} on the L{Deferred} returned from
+        L{IStreamClientEndpoint.connect} after enough time has passed that all
+        connection attempts have been initiated will cause it to be errbacked
+        with a L{ConnectingCancelledError} exception.
+        """
+        self.test_endpointConnectingCancelled(advance=0.31)
 
 
     def test_endpointConnectFailure(self):
