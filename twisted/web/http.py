@@ -102,6 +102,12 @@ from twisted.protocols import policies, basic
 from twisted.web.iweb import IRequest, IAccessLogFormatter
 from twisted.web.http_headers import Headers
 
+try:
+    from twisted.web.http2 import H2Connection
+    H2_ENABLED = True
+except ImportError:
+    H2_ENABLED = False
+
 from twisted.web._responses import (
     SWITCHING,
 
