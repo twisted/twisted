@@ -669,35 +669,14 @@ class HostnameEndpoint(object):
         connection which is established first.
         """
         wf = protocolFactory
-        pending = []
-
-        def _canceller(d):
-            """
-            The outgoing connection attempt was cancelled.  Fail that L{Deferred}
-            with an L{error.ConnectingCancelledError}.
-
-            @param d: The L{Deferred <defer.Deferred>} that was cancelled
-            @type d: L{Deferred <defer.Deferred>}
-
-            @return: C{None}
-            """
-            d.errback(error.ConnectingCancelledError(
-                HostnameAddress(self._host, self._port)))
-            for p in pending[:]:
-                p.cancel()
-
-        def errbackForGai(failure):
-            """
-            Errback for when L{_nameResolution} returns a Deferred that fires
-            with failure.
-            """
-            return defer.fail(error.DNSLookupError(
-                "Couldn't find the hostname '%s'" % (self._host,)))
-
-        def _endpoints(gaiResult):
+        d = self._nameResolution(self._host, self._port)
+        d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
+            "Couldn't find the hostname '%s'" % (self._host,))))
+        @d.addCallback
+        def gaiResultToEndpoints(gaiResult):
             """
             This method matches the host address family with an endpoint for
-            every address returned by GAI.
+            every address returned by C{getaddrinfo}.
 
             @param gaiResult: A list of 5-tuples as returned by GAI.
             @type gaiResult: list
@@ -709,71 +688,78 @@ class HostnameEndpoint(object):
                 elif family in [AF_INET]:
                     yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
                             sockaddr[1], self._timeout, self._bindAddress)
-                        # Yields an endpoint for every address returned by GAI
+                    # Yields an endpoint for every address returned by GAI
 
+        def _canceller(d):
+            # This canceller must remain defined outside of
+            # `attemptConnection`, because Defereds should not participate in
+            # cycles with their cancellers; that would create a potentially
+            # problematic circular reference and possibly gc.garbage.
+            d.errback(error.ConnectingCancelledError(
+                HostnameAddress(self._host, self._port)))
+
+        @d.addCallback
         def attemptConnection(endpoints):
             """
-            When L{endpoints} yields an endpoint, this method attempts to connect it.
-            """
-            # The trial attempts for each endpoints, the recording of
-            # successful and failed attempts, and the algorithm to pick the
-            # winner endpoint goes here.
-            # Return a Deferred that fires with the endpoint that wins,
-            # or `failures` if none succeed.
+            When L{gaiResultToEndpoints} yields an endpoint, this function
+            attempts to connect it.  The trial attempts for each endpoints, the
+            recording of successful and failed attempts, and the algorithm to
+            pick the winner endpoint goes here.
 
-            endpointsListExhausted = []
-            successful = []
+            @return: a Deferred that fires with the result of the
+                C{endpoint.connect} method that completes the fastest, or fails
+                with the first connection error it encountered if none of them
+                succeed.
+            """
+            pending = []
             failures = []
             winner = defer.Deferred(canceller=_canceller)
 
-            def usedEndpointRemoval(connResult, connAttempt):
-                pending.remove(connAttempt)
-                return connResult
-
-            def afterConnectionAttempt(connResult):
-                if lc.running:
-                    lc.stop()
-
-                successful.append(True)
-                for p in pending[:]:
-                    p.cancel()
-                winner.callback(connResult)
-                return None
-
             def checkDone():
-                if endpointsListExhausted and not pending and not successful:
-                    winner.errback(failures.pop())
+                if pending or checkDone.completed or checkDone.endpointsLeft:
+                    return
+                winner.errback(failures.pop())
+            checkDone.completed = False
+            checkDone.endpointsLeft = True
 
-            def connectFailed(reason):
-                failures.append(reason)
-                checkDone()
-                return None
-
+            @LoopingCall
             def iterateEndpoint():
-                try:
-                    endpoint = next(endpoints)
-                except StopIteration:
+                endpoint = next(endpoints, None)
+                if endpoint is None:
                     # The list of endpoints ends.
-                    endpointsListExhausted.append(True)
-                    lc.stop()
+                    checkDone.endpointsLeft = False
+                    iterateEndpoint.stop()
                     checkDone()
-                else:
-                    dconn = endpoint.connect(wf)
-                    pending.append(dconn)
-                    dconn.addBoth(usedEndpointRemoval, dconn)
-                    dconn.addCallback(afterConnectionAttempt)
-                    dconn.addErrback(connectFailed)
+                    return
 
-            lc = LoopingCall(iterateEndpoint)
-            lc.clock = self._reactor
-            lc.start(0.3)
+                eachAttempt = endpoint.connect(wf)
+                pending.append(eachAttempt)
+                @eachAttempt.addBoth
+                def noLongerPending(result):
+                    pending.remove(eachAttempt)
+                    return result
+                @eachAttempt.addCallback
+                def succeeded(result):
+                    if iterateEndpoint.running:
+                        iterateEndpoint.stop()
+                    winner.callback(result)
+                @eachAttempt.addErrback
+                def failed(reason):
+                    failures.append(reason)
+                    checkDone()
+
+            iterateEndpoint.clock = self._reactor
+            iterateEndpoint.start(0.3)
+            @winner.addBoth
+            def cancelRemainingPending(result):
+                checkDone.completed = True
+                for remaining in pending[:]:
+                    remaining.cancel()
+                return result
             return winner
 
-        d = self._nameResolution(self._host, self._port)
-        d.addErrback(errbackForGai)
-        d.addCallback(_endpoints)
-        d.addCallback(attemptConnection)
         return d
+
 
     def _nameResolution(self, host, port):
         """
