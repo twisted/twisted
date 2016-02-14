@@ -111,7 +111,6 @@ class INameResolver(Interface):
         """
 
 
-class IResolverSimple(Interface):
 
 class IResolverSimple(Interface):
     def getHostByName(name, timeout = (1, 3, 11, 45)):
