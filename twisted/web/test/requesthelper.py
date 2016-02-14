@@ -52,6 +52,9 @@ class DummyChannel:
         def registerProducer(self, producer, streaming):
             self.producers.append((producer, streaming))
 
+        def unregisterProducer(self):
+            pass
+
         def loseConnection(self):
             self.disconnected = True
 
@@ -68,6 +71,53 @@ class DummyChannel:
 
     def requestDone(self, request):
         pass
+
+
+    def writeHeaders(self, version, code, reason, headers):
+        response_line = version + b" " + code + b" " + reason + b"\r\n"
+        headerSequence = [response_line]
+        headerSequence.extend(
+            name + b': ' + value + b"\r\n" for name, value in headers
+        )
+        headerSequence.append("\r\n")
+        self.transport.writeSequence(headerSequence)
+
+
+    def getPeer(self):
+        return self.transport.getPeer()
+
+
+    def getHost(self):
+        return self.transport.getHost()
+
+
+    def registerProducer(self, producer, streaming):
+        self.transport.registerProducer(producer, streaming)
+
+
+    def unregisterProducer(self):
+        self.transport.unregisterProducer()
+
+
+    def write(self, data):
+        self.transport.write(data)
+
+
+    def writeSequence(self, iovec):
+        self.transport.writeSequence(iovec)
+
+
+    def loseConnection(self):
+        self.transport.loseConnection()
+
+
+    def endRequest(self):
+        pass
+
+
+    @property
+    def producers(self):
+        return self.transport.producers
 
 
 
