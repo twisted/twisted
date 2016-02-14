@@ -635,24 +635,46 @@ class TCP6ClientEndpoint(object):
 @implementer(interfaces.IStreamClientEndpoint)
 class HostnameEndpoint(object):
     """
-    A name-based endpoint that connects to the fastest amongst the
-    resolved host addresses.
+    A name-based endpoint that connects to the fastest amongst the resolved
+    host addresses.
 
     @ivar _getaddrinfo: A hook used for testing name resolution.
 
     @ivar _deferToThread: A hook used for testing deferToThread.
+
+    @cvar _DEFAULT_TIME_BETWEEN_ATTEMPTS: The default time to use between
+        attempts, in seconds, when no C{timeBetweenAttempts} is given to
+        L{HostnameEndpoint.__init__}.
     """
     _getaddrinfo = staticmethod(socket.getaddrinfo)
     _deferToThread = staticmethod(threads.deferToThread)
+    _DEFAULT_TIME_BETWEEN_ATTEMPTS = 0.3
 
-    def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
+    def __init__(self, reactor, host, port, timeout=30, bindAddress=None,
+                 timeBetweenAttempts=None):
         """
+        Create a L{HostnameEndpoint}.
+
+        @param reactor: The reactor to use for connections and delayed calls.
+        @type reactor: provider of L{IReactorTCP} and L{IReactorTime}
+
         @param host: A hostname to connect to.
         @type host: L{bytes}
+
+        @param port: The port number to connect to.
+        @type port: L{int}
 
         @param timeout: For each individual connection attempt, the number of
             seconds to wait before assuming the connection has failed.
         @type timeout: L{int}
+
+        @param bindAddress: the local address of the network interface to make
+            the connections from.
+        @type bindAddress: L{bytes}
+
+        @param timeBetweenAttempts: The number of seconds to wait between
+            attempts.
+        @type timeBetweenAttempts: L{float}
 
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
@@ -661,6 +683,9 @@ class HostnameEndpoint(object):
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
+        if timeBetweenAttempts is None:
+            self._timeBetweenAttempts = self._DEFAULT_TIME_BETWEEN_ATTEMPTS
+        self._timeBetweenAttempts = timeBetweenAttempts
 
 
     def connect(self, protocolFactory):
@@ -703,9 +728,9 @@ class HostnameEndpoint(object):
         def startConnectionAttempts(endpoints):
             """
             Given a sequence of endpoints obtained via name resolution, start
-            connecting to a new one every 300 milliseconds until one of the
-            connections succeeds, all of them fail, or the attempt is
-            cancelled.
+            connecting to a new one every C{self._timeBetweenAttempts} seconds
+            until one of the connections succeeds, all of them fail, or the
+            attempt is cancelled.
 
             @param endpoints: an iterable of all the endpoints we might try to
                 connect to, as determined by name resolution.
@@ -756,7 +781,7 @@ class HostnameEndpoint(object):
                     checkDone()
 
             iterateEndpoint.clock = self._reactor
-            iterateEndpoint.start(0.3)
+            iterateEndpoint.start(self._timeBetweenAttempts)
             @winner.addBoth
             def cancelRemainingPending(result):
                 checkDone.completed = True
