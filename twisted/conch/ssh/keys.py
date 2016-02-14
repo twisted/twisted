@@ -10,6 +10,7 @@ from __future__ import absolute_import, division
 
 import base64
 import itertools
+import warnings
 from hashlib import md5
 
 from cryptography.exceptions import InvalidSignature
@@ -34,7 +35,7 @@ from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, long, izip, nativeString, _PY3
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.versions import Version
 
 
@@ -601,7 +602,16 @@ class Key(object):
         @param keyObject: Low level key.
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
-        self._keyObject = keyObject
+        # Avoid importing PyCrypto if at all possible
+        if keyObject.__class__.__module__.startswith('Crypto.PublicKey'):
+            warningString = getDeprecationWarningString(
+                Key,
+                Version("Twisted", 16, 0, 0),
+                replacement='passing a cryptography key object')
+            warnings.warn(warningString, DeprecationWarning, stacklevel=2)
+            self.keyObject = keyObject
+        else:
+            self._keyObject = keyObject
 
 
     def __eq__(self, other):

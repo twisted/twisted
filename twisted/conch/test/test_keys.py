@@ -15,6 +15,8 @@ except ImportError:
 
 try:
     import Crypto.Cipher.DES3
+    import Crypto.PublicKey.RSA
+    import Crypto.PublicKey.DSA
 except ImportError:
     # we'll have to skip some tests without PyCypto
     Crypto = None
@@ -32,6 +34,7 @@ from twisted.conch.test import keydata
 from twisted.python import randbytes
 from twisted.trial import unittest
 from twisted.python.compat import long, _PY3
+from twisted.python.versions import Version
 
 
 
@@ -1134,5 +1137,25 @@ class KeyKeyObjectTests(unittest.TestCase):
             'p': keydata.DSAData['p'],
             'q': keydata.DSAData['q'],
             'x': keydata.DSAData['x'],
+            },
+            key.data())
+
+
+    def test_constructorPyCrypto(self):
+        """
+        Passing a PyCrypto key object to L{keys.Key} is deprecated.
+        """
+        pycryptoKey = Crypto.PublicKey.RSA.construct((
+            keydata.RSAData['n'],
+            keydata.RSAData['e']))
+        key = self.callDeprecated(
+            (Version('Twisted', 16, 0, 0),
+             'passing a cryptography key object'),
+            keys.Key,
+            pycryptoKey)
+        self.assertEqual('RSA', key.type())
+        self.assertEqual({
+            'n': keydata.RSAData['n'],
+            'e': keydata.RSAData['e'],
             },
             key.data())
