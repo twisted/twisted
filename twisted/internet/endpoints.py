@@ -642,16 +642,16 @@ class HostnameEndpoint(object):
 
     @ivar _deferToThread: A hook used for testing deferToThread.
 
-    @cvar _DEFAULT_TIME_BETWEEN_ATTEMPTS: The default time to use between
-        attempts, in seconds, when no C{timeBetweenAttempts} is given to
+    @cvar _DEFAULT_ATTEMPT_DELAY: The default time to use between attempts, in
+        seconds, when no C{attemptDelay} is given to
         L{HostnameEndpoint.__init__}.
     """
     _getaddrinfo = staticmethod(socket.getaddrinfo)
     _deferToThread = staticmethod(threads.deferToThread)
-    _DEFAULT_TIME_BETWEEN_ATTEMPTS = 0.3
+    _DEFAULT_ATTEMPT_DELAY = 0.3
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None,
-                 timeBetweenAttempts=None):
+                 attemptDelay=None):
         """
         Create a L{HostnameEndpoint}.
 
@@ -672,9 +672,9 @@ class HostnameEndpoint(object):
             the connections from.
         @type bindAddress: L{bytes}
 
-        @param timeBetweenAttempts: The number of seconds to wait between
+        @param attemptDelay: The number of seconds to delay between connection
             attempts.
-        @type timeBetweenAttempts: L{float}
+        @type attemptDelay: L{float}
 
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
@@ -683,9 +683,9 @@ class HostnameEndpoint(object):
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
-        if timeBetweenAttempts is None:
-            self._timeBetweenAttempts = self._DEFAULT_TIME_BETWEEN_ATTEMPTS
-        self._timeBetweenAttempts = timeBetweenAttempts
+        if attemptDelay is None:
+            attemptDelay = self._DEFAULT_ATTEMPT_DELAY
+        self._attemptDelay = attemptDelay
 
 
     def connect(self, protocolFactory):
@@ -728,9 +728,9 @@ class HostnameEndpoint(object):
         def startConnectionAttempts(endpoints):
             """
             Given a sequence of endpoints obtained via name resolution, start
-            connecting to a new one every C{self._timeBetweenAttempts} seconds
-            until one of the connections succeeds, all of them fail, or the
-            attempt is cancelled.
+            connecting to a new one every C{self._attemptDelay} seconds until
+            one of the connections succeeds, all of them fail, or the attempt
+            is cancelled.
 
             @param endpoints: an iterable of all the endpoints we might try to
                 connect to, as determined by name resolution.
@@ -781,7 +781,8 @@ class HostnameEndpoint(object):
                     checkDone()
 
             iterateEndpoint.clock = self._reactor
-            iterateEndpoint.start(self._timeBetweenAttempts)
+            iterateEndpoint.start(self._attemptDelay)
+
             @winner.addBoth
             def cancelRemainingPending(result):
                 checkDone.completed = True

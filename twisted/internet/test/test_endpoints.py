@@ -1698,7 +1698,9 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         connection attempts have been initiated will cause it to be errbacked
         with a L{ConnectingCancelledError} exception.
         """
-        self.test_endpointConnectingCancelled(advance=0.31)
+        oneBetween = endpoints.HostnameEndpoint._DEFAULT_ATTEMPT_DELAY
+        advance = oneBetween + (oneBetween / 2.0)
+        self.test_endpointConnectingCancelled(advance=advance)
 
 
     def test_endpointConnectFailure(self):
@@ -1718,7 +1720,7 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
             mreactor, clientFactory)
 
         d = ep.connect(clientFactory)
-        mreactor.advance(0.3)
+        mreactor.advance(endpoints.HostnameEndpoint._DEFAULT_ATTEMPT_DELAY)
         self.assertEqual(self.failureResultOf(d).value, expectedError)
 
 
