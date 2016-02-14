@@ -692,24 +692,31 @@ class HostnameEndpoint(object):
 
         def _canceller(d):
             # This canceller must remain defined outside of
-            # `attemptConnection`, because Defereds should not participate in
-            # cycles with their cancellers; that would create a potentially
-            # problematic circular reference and possibly gc.garbage.
+            # `startConnectionAttempts`, because Deferred should not
+            # participate in cycles with their cancellers; that would create a
+            # potentially problematic circular reference and possibly
+            # gc.garbage.
             d.errback(error.ConnectingCancelledError(
                 HostnameAddress(self._host, self._port)))
 
         @d.addCallback
-        def attemptConnection(endpoints):
+        def startConnectionAttempts(endpoints):
             """
-            When L{gaiResultToEndpoints} yields an endpoint, this function
-            attempts to connect it.  The trial attempts for each endpoints, the
-            recording of successful and failed attempts, and the algorithm to
-            pick the winner endpoint goes here.
+            Given a sequence of endpoints obtained via name resolution, start
+            connecting to a new one every 300 milliseconds until one of the
+            connections succeeds, all of them fail, or the attempt is
+            cancelled.
+
+            @param endpoints: an iterable of all the endpoints we might try to
+                connect to, as determined by name resolution.
+            @type endpoints: iterable of L{IStreamServerEndpoint}
 
             @return: a Deferred that fires with the result of the
                 C{endpoint.connect} method that completes the fastest, or fails
                 with the first connection error it encountered if none of them
                 succeed.
+            @rtype: L{Deferred} failing with L{error.ConnectingCancelledError}
+                or firing with L{IProtocol}
             """
             pending = []
             failures = []
