@@ -12,11 +12,17 @@ __metaclass__ = type
 import signal
 import time
 import inspect
+import socket
 
+from zope.interface import implementer
+
+from twisted.internet.interfaces import INameResolver
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, succeed
+from twisted.internet.base import AddressInformation
 from twisted.internet.test.reactormixins import ReactorBuilder
+
 
 
 class ObjectModelIntegrationMixin(object):
@@ -38,6 +44,34 @@ class ObjectModelIntegrationMixin(object):
             self.assertTrue(
                 issubclass(subclass, object),
                 "%r is not new-style" % (subclass,))
+
+
+
+@implementer(INameResolver)
+class MemoryNameResolver(object):
+    """
+    An in-memory provider of L{INameResolver} which returns a fixed
+    list of AddressInformation for testing purposes.
+    """
+    def __init__(self, names):
+        """
+        @param names: A fixed list of results which will be returned
+           in response to L{INameResolver.getAddressInformation}
+           calls.
+        @type names: A C{list} of L{AddressInformation} instances.
+        """
+        self._names = names
+
+
+    def getAddressInformation(self, name, service, family=None, type=None,
+                              protocol=None, flags=None):
+        return succeed([
+                address
+                for address
+                in self._names[name, service]
+                if family is None or family == address.family
+                and type is None or type == address.type
+                and protocol is None or protocol == address.protocol])
 
 
 
@@ -327,6 +361,34 @@ class SystemEventTestsBuilder(ReactorBuilder):
         self.runReactor(reactor)
         self.assertEqual(events, ['tested'])
 
+
+    def test_resolve(self):
+        """
+        C{reactor.resolve(name)} calls the C{getAddressInformation}
+        method of the installed resolver and returns a L{Deferred}
+        which fires with the first C{AF_INET} family element from the
+        result of C{getAddressInformation}.
+        """
+        resolver = MemoryNameResolver({
+                ('example.com', 0): [
+                    AddressInformation(
+                        socket.AF_INET6,
+                        socket.SOCK_STREAM,
+                        socket.IPPROTO_TCP,
+                        "",
+                        ("::1", 0)),
+                    AddressInformation(
+                        socket.AF_INET,
+                        socket.SOCK_STREAM,
+                        socket.IPPROTO_TCP,
+                        "",
+                        ("127.0.0.1", 22))]})
+
+        reactor = self.buildReactor()
+        reactor.installResolver(resolver)
+        d = reactor.resolve("example.com")
+        d.addCallback(self.assertEquals, "127.0.0.1")
+        return d
 
 
 globals().update(SystemEventTestsBuilder.makeTestCaseClasses())
