@@ -23,6 +23,7 @@ from twisted.internet.interfaces import ISSLTransport
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
+from twisted.web._responses import FOUND
 
 
 class DummyChannel:
@@ -73,7 +74,7 @@ class DummyChannel:
 
 class DummyRequest(object):
     """
-    Represents a dummy or fake request.
+    Represents a dummy or fake request. See L{twisted.web.server.Request}.
 
     @ivar _finishedDeferreds: C{None} or a C{list} of L{Deferreds} which will
         be called back with C{None} when C{finish} is called or which will be
@@ -98,10 +99,12 @@ class DummyRequest(object):
     method = b'GET'
     client = None
 
+
     def registerProducer(self, prod,s):
         self.go = 1
         while self.go:
             prod.resumeProducing()
+
 
     def unregisterProducer(self):
         self.go = 0
@@ -123,6 +126,7 @@ class DummyRequest(object):
         self._serverName = b"dummy"
         self.clientproto = b"HTTP/1.0"
 
+
     def getAllHeaders(self):
         """
         Return dictionary mapping the names of all received headers to the last
@@ -138,6 +142,7 @@ class DummyRequest(object):
         for k, v in self.requestHeaders.getAllRawHeaders():
             headers[k.lower()] = v[-1]
         return headers
+
 
     def getHeader(self, name):
         """
@@ -157,6 +162,7 @@ class DummyRequest(object):
         """TODO: make this assert on write() if the header is content-length
         """
         self.responseHeaders.addRawHeader(name, value)
+
 
     def getSession(self):
         if self.session:
@@ -190,6 +196,7 @@ class DummyRequest(object):
         if not isinstance(data, bytes):
             raise TypeError("write() only accepts bytes")
         self.written.append(data)
+
 
     def notifyFinish(self):
         """
@@ -277,6 +284,7 @@ class DummyRequest(object):
         """
         return IPv4Address('TCP', '127.0.0.1', 80)
 
+
     def setHost(self, host, port, ssl=0):
         """
         Change the host and port the request thinks it's using.
@@ -299,6 +307,7 @@ class DummyRequest(object):
             hostHeader = host + b":" + intToBytes(port)
         self.requestHeaders.addRawHeader(b"host", hostHeader)
 
+
     def getClient(self):
         """
         Get the client's IP address, if it has one.
@@ -307,6 +316,16 @@ class DummyRequest(object):
         @rtype: L{bytes}
         """
         return self.getClientIP()
+
+
+    def redirect(self, url):
+        """
+        Utility function that does a redirect.
+
+        The request should have finish() called after this.
+        """
+        self.setResponseCode(FOUND)
+        self.setHeader(b"location", url)
 
 DummyRequest.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
