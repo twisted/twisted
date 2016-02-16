@@ -1,1 +1,0 @@
-Expected failures from standard library unittest no longer fail with Trial reporters.
