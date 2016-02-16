@@ -25,6 +25,7 @@ from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test.requesthelper import DummyRequest
 from twisted.web.test._util import _render
+from twisted.web._responses import FOUND
 
 
 class StaticDataTests(TestCase):
@@ -380,6 +381,26 @@ class StaticFileTests(TestCase):
             self.assertEqual(b''.join(request.written), b'baz')
         d.addCallback(cbRendered)
         return d
+
+
+    def test_directoryWithoutTrailingSlashRedirects(self):
+        """
+        A request for a path which is a directory but does not have a trailing
+        slash will be redirected to a URL which does have a slash by L{File}.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        base.child('folder').makedirs()
+        file = static.File(base.path)
+
+        request = DummyRequest([b"folder"])
+        request.uri = b"http://dummy/folder#baz?foo=bar"
+        child = resource.getChildForRequest(file, request)
+
+        self.successResultOf(self._render(child, request))
+        self.assertEqual(request.responseCode, FOUND)
+        self.assertEqual(request.responseHeaders.getRawHeaders(b"location"),
+                         [b"http://dummy/folder/#baz?foo=bar"])
 
 
     def _makeFilePathWithStringIO(self):
@@ -1689,3 +1710,19 @@ class LoadMimeTypesTests(TestCase):
         args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
         defaultInit = defaults[args.index("init")]
         self.assertIdentical(defaultInit, mimetypes.init)
+
+
+class StaticDeprecationTests(TestCase):
+
+    def test_addSlashDeprecated(self):
+        """
+        L{twisted.web.static.addSlash} is deprecated.
+        """
+        from twisted.web.static import addSlash
+
+        addSlash(DummyRequest([b'']))
+
+        warnings = self.flushWarnings([self.test_addSlashDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['message'],
+            "twisted.web.static.addSlash was deprecated in Twisted 16.0.0")
