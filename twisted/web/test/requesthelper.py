@@ -74,7 +74,7 @@ class DummyChannel:
 
 class DummyRequest(object):
     """
-    Represents a dummy or fake request.
+    Represents a dummy or fake request. See L{twisted.web.server.Request}.
 
     @ivar _finishedDeferreds: C{None} or a C{list} of L{Deferreds} which will
         be called back with C{None} when C{finish} is called or which will be
@@ -284,6 +284,7 @@ class DummyRequest(object):
         """
         return IPv4Address('TCP', '127.0.0.1', 80)
 
+
     def setHost(self, host, port, ssl=0):
         """
         Change the host and port the request thinks it's using.
@@ -305,6 +306,7 @@ class DummyRequest(object):
         else:
             hostHeader = host + b":" + intToBytes(port)
         self.requestHeaders.addRawHeader(b"host", hostHeader)
+
 
     def getClient(self):
         """
