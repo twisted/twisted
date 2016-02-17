@@ -235,6 +235,7 @@ class HTTP0_9Tests(HTTP1_0Tests):
         self.assertEqual(response, expectedResponse)
 
 
+
 class HTTPLoopbackTests(unittest.TestCase):
 
     expectedHeaders = {b'request': b'/foo/bar',
@@ -1146,7 +1147,7 @@ Hello,
                 content.append(self.content.read())
                 method.append(self.method)
                 path.append(self.path)
-                decoder.append(self.channel._transferDecoder)
+                decoder.append(self._channel._transferDecoder)
                 testcase.didRequest = True
                 self.finish()
 
@@ -1556,10 +1557,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
         Response-Line and whatever response headers are set.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
-        req.transport = trans
+        req._transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
@@ -1578,10 +1581,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} casts non-bytes header value to bytes
         transparently.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
-        req.transport = trans
+        req._transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
@@ -1610,10 +1615,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         Response-Line, whatever response headers are set, and uses chunked
         encoding for the response body.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
-        req.transport = trans
+        req._transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.1"
@@ -1635,10 +1642,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} sends an HTTP Response-Line, whatever response
         headers are set, and a last-modified header with that time.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
-        req.transport = trans
+        req._transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
@@ -1793,7 +1802,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # Then something goes wrong and content should get closed.
         req.connectionLost(Failure(ConnectionLost("Finished")))
         self.assertTrue(content.closed)
-        self.assertIdentical(req.channel, None)
+        self.assertIdentical(req._channel, None)
 
 
     def test_registerProducerTwiceFails(self):
@@ -1846,7 +1855,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # This is a roundabout assertion: http.StringTransport doesn't
         # implement registerProducer, so Request.registerProducer can't have
         # tried to call registerProducer on the transport.
-        self.assertIsInstance(req.transport, http.StringTransport)
+        self.assertIsInstance(req._transport, http.StringTransport)
 
 
     def test_registerProducerWhenQueuedDoesntRegisterPullProducer(self):
@@ -1865,7 +1874,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # This is a roundabout assertion: http.StringTransport doesn't
         # implement registerProducer, so Request.registerProducer can't have
         # tried to call registerProducer on the transport.
-        self.assertIsInstance(req.transport, http.StringTransport)
+        self.assertIsInstance(req._transport, http.StringTransport)
 
 
     def test_registerProducerWhenNotQueuedRegistersPushProducer(self):
@@ -1877,7 +1886,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         producer = DummyProducer()
         req.registerProducer(producer, True)
-        self.assertEqual([(producer, True)], req.transport.producers)
+        self.assertEqual([(producer, True)], req._transport.producers)
 
 
     def test_registerProducerWhenNotQueuedRegistersPullProducer(self):
@@ -1889,7 +1898,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         producer = DummyProducer()
         req.registerProducer(producer, False)
-        self.assertEqual([(producer, False)], req.transport.producers)
+        self.assertEqual([(producer, False)], req._transport.producers)
 
 
     def test_connectionLostNotification(self):
@@ -1901,7 +1910,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request = http.Request(d, True)
         finished = request.notifyFinish()
         request.connectionLost(Failure(ConnectionLost("Connection done")))
-        self.assertIdentical(request.channel, None)
+        self.assertIdentical(request._channel, None)
         return self.assertFailure(finished, ConnectionLost)
 
 
@@ -1997,10 +2006,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         producer from the request and the request's transport.
         """
         req = http.Request(DummyChannel(), False)
-        req.transport = StringTransport()
+        req._transport = StringTransport()
         req.registerProducer(DummyProducer(), False)
         req.unregisterProducer()
-        self.assertEqual((None, None), (req.producer, req.transport.producer))
+        self.assertEqual((None, None), (req.producer, req._transport.producer))
 
 
     def test_unregisterNonQueuedStreamingProducer(self):
@@ -2009,10 +2018,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         producer from the request and the request's transport.
         """
         req = http.Request(DummyChannel(), False)
-        req.transport = StringTransport()
+        req._transport = StringTransport()
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
-        self.assertEqual((None, None), (req.producer, req.transport.producer))
+        self.assertEqual((None, None), (req.producer, req._transport.producer))
 
 
     def test_unregisterQueuedNonStreamingProducer(self):

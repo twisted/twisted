@@ -505,8 +505,8 @@ class RequestTests(unittest.TestCase):
         fail = failure.Failure(Exception("Oh no!"))
         request.processingFailed(fail)
 
-        self.assertNotIn(b"Oh no!", request.transport.getvalue())
-        self.assertIn(b"Processing Failed", request.transport.getvalue())
+        self.assertNotIn(b"Oh no!", request._transport.getvalue())
+        self.assertIn(b"Processing Failed", request._transport.getvalue())
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -525,7 +525,7 @@ class RequestTests(unittest.TestCase):
         fail = failure.Failure(Exception("Oh no!"))
         request.processingFailed(fail)
 
-        self.assertIn(b"Oh no!", request.transport.getvalue())
+        self.assertIn(b"Oh no!", request._transport.getvalue())
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -545,7 +545,7 @@ class RequestTests(unittest.TestCase):
         fail = failure.Failure(Exception(u"\u2603"))
         request.processingFailed(fail)
 
-        self.assertIn(b"&#9731;", request.transport.getvalue())
+        self.assertIn(b"&#9731;", request._transport.getvalue())
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -774,11 +774,11 @@ class NewRenderTests(unittest.TestCase):
     def testGoodMethods(self):
         req = self._getReq()
         req.requestReceived(b'GET', b'/newrender', b'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'hi hi')
+        self.assertEqual(req._transport.getvalue().splitlines()[-1], b'hi hi')
 
         req = self._getReq()
         req.requestReceived(b'HEH', b'/newrender', b'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'ho ho')
+        self.assertEqual(req._transport.getvalue().splitlines()[-1], b'ho ho')
 
     def testBadMethods(self):
         req = self._getReq()
@@ -806,7 +806,7 @@ class NewRenderTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'HEAD', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 200)
-        self.assertEqual(-1, req.transport.getvalue().find(b'hi hi'))
+        self.assertEqual(-1, req._transport.getvalue().find(b'hi hi'))
 
 
     def test_unsupportedHead(self):
@@ -817,7 +817,7 @@ class NewRenderTests(unittest.TestCase):
         resource = HeadlessResource()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
-        headers, body = req.transport.getvalue().split(b'\r\n\r\n')
+        body = req._transport.getvalue()
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b'')
 
@@ -838,7 +838,7 @@ class NewRenderTests(unittest.TestCase):
 
         request.requestReceived(b"GET", b"/newrender", b"HTTP/1.0")
 
-        headers, body = request.transport.getvalue().split(b'\r\n\r\n')
+        body = request._transport.getvalue()
         self.assertEqual(request.code, 500)
         expected = [
             '',
@@ -939,7 +939,7 @@ class AllowedMethodsTests(unittest.TestCase):
         req.requestReceived(b'POST', b'/gettableresource?'
                             b'value=<script>bad', b'HTTP/1.0')
         self.assertEqual(req.code, 405)
-        renderedPage = req.transport.getvalue()
+        renderedPage = req._transport.getvalue()
         self.assertNotIn(b"<script>bad", renderedPage)
         self.assertIn(b'&lt;script&gt;bad', renderedPage)
 
@@ -954,7 +954,7 @@ class AllowedMethodsTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'<style>bad', b'/gettableresource', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
-        renderedPage = req.transport.getvalue()
+        renderedPage = req._transport.getvalue()
         self.assertNotIn(b"<style>bad", renderedPage)
         self.assertIn(b'&lt;style&gt;bad', renderedPage)
 
@@ -1262,7 +1262,7 @@ class LogEscapingTests(unittest.TestCase):
         """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.requestHeaders.addRawHeader(b'user-agent', 
+        self.request.requestHeaders.addRawHeader(b'user-agent',
                                                  b'Malicious Web" Evil')
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
