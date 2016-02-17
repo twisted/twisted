@@ -209,7 +209,7 @@ class INotify(FileDescriptor, object):
         """
         self._inotify.remove(self._fd, wd)
         iwp = self._watchpoints.pop(wd)
-        self._watchpaths.pop(iwp.asBytesMode().path)
+        self._watchpaths.pop(iwp.path)
 
 
     def connectionLost(self, reason):
@@ -260,7 +260,7 @@ class INotify(FileDescriptor, object):
             except KeyError:
                 continue
 
-            path = iwp.asBytesMode().path
+            path = iwp.path
             if name:
                 path = path.child(name)
             iwp._notify(path, mask)
@@ -296,7 +296,7 @@ class INotify(FileDescriptor, object):
         meaning that we generate double events, your app must be resistant.
         """
         try:
-            listdir = iwp.asBytesMode().path.children()
+            listdir = iwp.path.children()
         except OSError:
             # Somebody or something (like a test) removed this directory while
             # we were in the callLater(0...) waiting. It doesn't make sense to
