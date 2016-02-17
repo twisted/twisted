@@ -9,6 +9,8 @@ ctypes and a version of libc which supports inotify system calls are
 required.
 """
 
+from __future__ import absolute_import, division
+
 import ctypes
 import ctypes.util
 

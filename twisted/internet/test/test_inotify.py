@@ -5,10 +5,15 @@
 Tests for the inotify wrapper in L{twisted.internet.inotify}.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.internet import defer, reactor
 from twisted.python import filepath, runtime
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+
+from twisted.python import _inotify
+from twisted.internet import inotify
 
 if requireModule('twisted.python._inotify') is not None:
     from twisted.internet import inotify
@@ -70,7 +75,8 @@ class INotifyTests(unittest.TestCase):
         if expectedPath is None:
             expectedPath = self.dirname.child("foo.bar")
         notified = defer.Deferred()
-        def cbNotified((watch, filename, events)):
+        def cbNotified(*args):
+            watch, filename, events = args
             self.assertEqual(filename, expectedPath)
             self.assertTrue(events & mask)
         notified.addCallback(cbNotified)
@@ -387,7 +393,8 @@ class INotifyTests(unittest.TestCase):
         expectedPath.touch()
 
         notified = defer.Deferred()
-        def cbNotified((ignored, filename, events)):
+        def cbNotified(*args):
+            ignored, filename, events = args
             self.assertEqual(filename, expectedPath)
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
@@ -423,7 +430,8 @@ class INotifyTests(unittest.TestCase):
         expectedPath2.touch()
 
         notified = defer.Deferred()
-        def cbNotified((ignored, filename, events)):
+        def cbNotified(*args):
+            ignored, filename, events = args
             self.assertEqual(filename, expectedPath2)
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
