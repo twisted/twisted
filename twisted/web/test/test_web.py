@@ -271,7 +271,7 @@ class ConditionalTests(unittest.TestCase):
         else:
             validator = b"If-Not-Match: " + etag
         for line in [b"GET / HTTP/1.1", validator, b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.OK)
         self.assertEqual(httpBody(result), b"correct")
@@ -297,7 +297,7 @@ class ConditionalTests(unittest.TestCase):
         """
         for line in [b"GET / HTTP/1.1",
                      b"If-Modified-Since: " + http.datetimeToString(100), b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
         self.assertEqual(httpBody(result), b"")
@@ -365,7 +365,7 @@ class ConditionalTests(unittest.TestCase):
         with an empty response body.
         """
         for line in [b"GET / HTTP/1.1", b"If-None-Match: MatchingTag", b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpHeader(result, b"ETag"), b"MatchingTag")
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
@@ -383,7 +383,7 @@ class ConditionalTests(unittest.TestCase):
         """
         for line in [b"GET /with-content-type HTTP/1.1",
                      b"If-None-Match: MatchingTag", b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
         self.assertEqual(httpBody(result), b"")
@@ -1262,7 +1262,7 @@ class LogEscapingTests(unittest.TestCase):
         """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.requestHeaders.addRawHeader(b'user-agent', 
+        self.request.requestHeaders.addRawHeader(b'user-agent',
                                                  b'Malicious Web" Evil')
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
