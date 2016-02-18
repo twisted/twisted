@@ -468,6 +468,11 @@ class _DisconnectFactory(object):
         """
         Create a L{_ReconnectingProtocolProxy} with the disconnect-notification
         callback we were called with.
+
+        @param addr: The address the connection is coming from.
+
+        @return: a L{_ReconnectingProtocolProxy} for a protocol produced by
+            C{self._protocolFactory}
         """
         return _ReconnectingProtocolProxy(
             self._protocolFactory.buildProtocol(addr),
