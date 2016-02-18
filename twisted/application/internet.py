@@ -399,14 +399,27 @@ class StreamServerEndpointService(service.Service, object):
 
 
 
-class _RestartableProtocolProxy(object):
+class _ReconnectingProtocolProxy(object):
     """
-    A proxy for a Protocol to provide connectionLost notification.
+    A proxy for a Protocol to provide connectionLost notification to a client
+    connection service, in support of reconnecting when connections are lost.
     """
 
-    def __init__(self, protocol, clientService):
+    def __init__(self, protocol, lostNotification):
+        """
+        Create a L{_ReconnectingProtocolProxy}.
+
+        @param protocol: the application-provided L{interfaces.IProtocol}
+            provider.
+        @type protocol: provider of L{interfaces.IProtocol} which may
+            additionally provide L{interfaces.IHalfCloseableProtocol} and
+            L{interfaces.IFileDescriptorReceiver}.
+
+        @param lostNotification: a 0-argument callable to invoke when the
+            connection is lost.
+        """
         self._protocol = protocol
-        self._clientService = clientService
+        self._lostNotification = lostNotification
 
         for iface in [interfaces.IHalfCloseableProtocol,
                       interfaces.IFileDescriptorReceiver]:
@@ -415,13 +428,10 @@ class _RestartableProtocolProxy(object):
 
 
     def connectionLost(self, reason):
-        result = self._protocol.connectionLost(reason)
-        self._clientService._protocol = None
-        psd = self._clientService._protocolStoppingDeferred
-        self._clientService._protocolStoppingDeferred = None
-        if psd is not None:
-            psd.callback(None)
-        return result
+        try:
+            return self._protocol.connectionLost(reason)
+        finally:
+            self._lostNotification()
 
 
     def __getattr__(self, item):
@@ -434,34 +444,70 @@ class _RestartableProtocolProxy(object):
 
 
 
-class _RestartableProtocolFactoryProxy(object):
+class _ReconnectingFactoryProxy(object):
     """
-    A wrapper for a ProtocolFactory to facilitate restarting Protocols.
+    Reconnecting factory proxy.
     """
 
     def __init__(self, protocolFactory, clientService):
-        self.protocolFactory = protocolFactory
-        self.clientService = clientService
+        self._protocolFactory = protocolFactory
+        self._clientService = clientService
 
 
     def buildProtocol(self, addr):
-        protocol = self.protocolFactory.buildProtocol(addr)
-        return _RestartableProtocolProxy(protocol, self.clientService)
+        return _ReconnectingProtocolProxy(
+            self._protocolFactory.buildProtocol(addr),
+            self._clientService._protocolDisconnected
+        )
 
 
     def __getattr__(self, item):
-        return getattr(self.protocolFactory, item)
+        return getattr(self._protocolFactory, item)
 
 
     def __repr__(self):
         return '<%s wrapping %r>' % (
-            self.__class__.__name__, self.protocolFactory)
+            self.__class__.__name__, self._protocolFactory)
 
 
 
-class ReconnectingClientService(service.Service, object):
+def backoffPolicy(initialDelay=1.0, maxDelay=3600.0,
+                  factor=1.5, jitter=random.random):
     """
-    Service which auto-reconnects clients with an exponential back-off.
+    A timeout policy for L{ClientService} which computes an exponential backoff
+    interval with configurable parameters.
+
+    @param initialDelay: Delay for the first reconnection attempt (default
+        1.0s).
+
+    @param maxDelay: Maximum number of seconds between connection attempts
+        (default 3600.0, or 1 hour).  Note that this value is before jitter is
+        applied, so the actual maximum possible delay is this value plus the
+        maximum possible result of C{jitter()}.
+
+    @param factor: A multiplicative factor by which the delay grows on each
+        failed reattempt.  Default: 1.5.
+
+    @param jitter: A 0-argument callable that introduces noise into the delay.
+        By default, L{random.random}, i.e. a pseudorandom floating-point value
+        between zero and one.
+
+    @return: a 1-argument callable that, given an attempt count, returns a
+        floating point number; the number of seconds to delay.
+    @rtype: see L{ClientService.__init__}'s C{retryPolicy} argument.
+    """
+    def policy(attempt):
+        return min(initialDelay * (factor ** attempt), maxDelay) + jitter()
+    return policy
+
+_defaultBackoffPolicy = backoffPolicy()
+
+
+
+class ClientService(service.Service, object):
+    """
+    A L{ClientService} maintains a single outgoing connection to a client
+    endpoint, with configurable timeout policies.
     """
 
     _log = Logger()
@@ -470,34 +516,7 @@ class ReconnectingClientService(service.Service, object):
     _protocol = None
     _protocolStoppingDeferred = None
 
-    @staticmethod
-    def exponentialBackoffWithJitter(initialDelay=1.0, maxDelay=3600.0,
-                                     factor=1.5, jitter=random.random):
-        """
-        Create a 1-argument callable that, given an attempt count, returns a
-        floating point number.
-
-        @param initialDelay: Delay for the first reconnection attempt (default
-            1.0s).
-
-        @param maxDelay: Maximum number of seconds between connection attempts
-            (default 3600.0, or 1 hour).  Note that this value is before jitter
-            is applied, so the actual maximum possible delay is this value plus
-            the maximum possible result of C{jitter()}.
-
-        @param factor: A multiplicative factor by which the delay grows on each
-            failed reattempt.  Default: 1.5.
-
-        @param jitter: A 0-argument callable that introduces noise into the
-            delay.  By default, L{random.random}, i.e. a pseudorandom
-            floating-point value between zero and one.
-        """
-        def policy(attempt):
-            return min(initialDelay * (factor ** attempt), maxDelay) + jitter()
-        return policy
-
-
-    def __init__(self, endpoint, factory, timeoutForAttempt=None, clock=None):
+    def __init__(self, endpoint, factory, retryPolicy=None, clock=None):
         """
         @param endpoint: A L{stream client endpoint
             <interfaces.IStreamClientEndpoint>} provider which will be used to
@@ -505,6 +524,12 @@ class ReconnectingClientService(service.Service, object):
 
         @param factory: A L{protocol factory <interfaces.IProtocolFactory>}
             which will be used to create clients for the endpoint.
+
+        @param retryPolicy: A policy configuring how long L{ClientService} will
+            wait between attempts to connect to C{endpoint}.
+        @type retryPolicy: callable taking (the number of failed connection
+            attempts made in a row (L{int})) and returning the number of
+            seconds to wait before making another attempt.
 
         @param clock: The clock used to schedule reconnection.  It's mainly
             useful to be parametrized in tests.  If the factory is serialized,
@@ -516,18 +541,21 @@ class ReconnectingClientService(service.Service, object):
             from twisted.internet import reactor
             clock = reactor
         self._endpoint = endpoint
-        self._attempt = 0
+        self._failedAttempts = 0
         self._factory = factory
-        if timeoutForAttempt is None:
-            timeoutForAttempt = self.exponentialBackoffWithJitter()
-        self._timeoutForAttempt = timeoutForAttempt
+        if retryPolicy is None:
+            retryPolicy = _defaultBackoffPolicy
+        self._timeoutForAttempt = retryPolicy
         self._clock = clock
 
 
     def startService(self):
-        super(ReconnectingClientService, self).startService()
-        self._attempt = 0
-        proxiedFactory = _RestartableProtocolFactoryProxy(self._factory, self)
+        """
+        Start this L{ClientService}, initiating the connection retry loop.
+        """
+        super(ClientService, self).startService()
+        self._failedAttempts = 0
+        proxiedFactory = _ReconnectingFactoryProxy(self._factory, self)
 
         def connectNow():
             d = self._connectingDeferred = self._endpoint.connect(
@@ -538,23 +566,35 @@ class ReconnectingClientService(service.Service, object):
             d.addBoth(_clearConnectionAttempt)
             def clientConnected(protocol):
                 self._protocol = protocol
-                self._attempt = 0
+                self._failedAttempts = 0
             d.addCallback(clientConnected)
             d.addErrback(retry)
 
         def retry(error):
             if not self.running:
                 return
-            self._attempt += 1
-            delay = self._timeoutForAttempt(self._attempt)
+            self._failedAttempts += 1
+            delay = self._timeoutForAttempt(self._failedAttempts)
             self._log.info(
-                "Scheduling retry #{attempt} to connect {endpoint} in "
+                "Scheduling retry {attempt} to connect {endpoint} in "
                 "{delay} seconds.",
-                attempt=self._attempt, endpoint=self._endpoint, delay=delay,
+                attempt=self._failedAttempts, endpoint=self._endpoint,
+                delay=delay,
             )
             self._delayedRetry = self._clock.callLater(delay, connectNow)
 
         connectNow()
+
+
+    def _protocolDisconnected(self):
+        """
+        The established protocol was disconnected.
+        """
+        self._protocol = None
+        psd = self._protocolStoppingDeferred
+        self._protocolStoppingDeferred = None
+        if psd is not None:
+            psd.callback(None)
 
 
     def stopService(self):
@@ -564,7 +604,7 @@ class ReconnectingClientService(service.Service, object):
         @return: a L{Deferred} that fires when all outstanding connections are
             closed and all in-progress connection attempts halted.
         """
-        super(ReconnectingClientService, self).stopService()
+        super(ClientService, self).stopService()
 
         waitFor = []
 
@@ -593,7 +633,7 @@ class ReconnectingClientService(service.Service, object):
 
 __all__ = (['TimerService', 'CooperatorService', 'MulticastServer',
             'StreamServerEndpointService', 'UDPServer',
-            'ReconnectingClientService'] +
+            'ClientService'] +
            [tran + side
             for tran in 'TCP UNIX SSL UNIXDatagram'.split()
             for side in 'Server Client'.split()])

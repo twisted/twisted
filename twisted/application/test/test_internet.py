@@ -17,7 +17,7 @@ from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 from twisted.application import internet
 from twisted.application.internet import (
-    StreamServerEndpointService, TimerService, ReconnectingClientService)
+    StreamServerEndpointService, TimerService, ClientService)
 from twisted.internet.defer import Deferred, CancelledError
 from twisted.internet.interfaces import (
     IStreamServerEndpoint, IStreamClientEndpoint, IListeningPort
@@ -485,23 +485,22 @@ def catchLogs(testCase, logPublisher=globalLogPublisher):
 
 
 
-class ReconnectingClientServiceTests(TestCase):
+class ClientServiceTests(TestCase):
     """
-    Tests for L{ReconnectingClientService}.
+    Tests for L{ClientService}.
     """
 
     def makeReconnector(self, fireImmediately=True, startService=True, **kw):
         """
-        Create a L{ReconnectingClientService} along with a
-        L{ConnectInformation} indicating the connections in progress on its
-        endpoint.
+        Create a L{ClientService} along with a L{ConnectInformation} indicating
+        the connections in progress on its endpoint.
         """
         nkw = {}
         nkw.update(clock=Clock())
         nkw.update(kw)
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
         factory = Factory.forProtocol(Protocol)
-        service = ReconnectingClientService(endpoint, factory, **nkw)
+        service = ClientService(endpoint, factory, **nkw)
         def stop():
             service._protocol = None
             if service.running:
