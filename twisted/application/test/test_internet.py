@@ -432,6 +432,7 @@ class ConnectInformation(object):
     def __init__(self):
         self.connectQueue = []
         self.constructedProtocols = []
+        self.applicationProtocols = []
 
 
 
@@ -499,12 +500,21 @@ class ClientServiceTests(TestCase):
         nkw.update(clock=Clock())
         nkw.update(kw)
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
-        factory = Factory.forProtocol(Protocol)
+        class RememberingFactory(Factory, object):
+            protocol = Protocol
+            def buildProtocol(self, addr):
+                result = super(RememberingFactory, self).buildProtocol(addr)
+                cq.applicationProtocols.append(result)
+                return result
+        factory = RememberingFactory()
         service = ClientService(endpoint, factory, **nkw)
         def stop():
             service._protocol = None
             if service.running:
                 service.stopService()
+            # Ensure that we don't leave any state in the reactor after
+            # stopService.
+            self.assertEqual(service._clock.getDelayedCalls(), [])
         self.addCleanup(stop)
         if startService:
             service.startService()
@@ -568,8 +578,10 @@ class ClientServiceTests(TestCase):
         """
         clock = Clock()
         cq, service = self.makeReconnector(clock=clock)
+        awaitingProtocol = service.whenConnected()
         self.assertEqual(clock.getDelayedCalls(), [])
-        self.assertIdentical(service._protocol, cq.constructedProtocols[0])
+        self.assertIdentical(self.successResultOf(awaitingProtocol),
+                             cq.applicationProtocols[0])
 
 
     def test_clientConnectionFailed(self):
@@ -582,7 +594,7 @@ class ClientServiceTests(TestCase):
                                            clock=clock)
         self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].errback(Failure(Exception()))
-        self.assertIdentical(service._protocol, None)
+        self.assertNoResult(service.whenConnected())
         clock.advance(100.)
         self.assertEqual(len(cq.connectQueue), 2)
 
@@ -592,10 +604,19 @@ class ClientServiceTests(TestCase):
         When a client connection is lost, the service removes its reference
         to the protocol and calls retry.
         """
-        cq, service = self.makeReconnector()
-        service.startService()
+        clock = Clock()
+        cq, service = self.makeReconnector(clock=clock, fireImmediately=False)
+        self.assertEquals(len(cq.connectQueue), 1)
+        cq.connectQueue[0].callback(None)
+        self.assertEquals(len(cq.connectQueue), 1)
+        self.assertIdentical(self.successResultOf(service.whenConnected()),
+                             cq.applicationProtocols[0])
         cq.constructedProtocols[0].connectionLost(Failure(Exception()))
-        self.assertIdentical(service._protocol, None)
+        clock.advance(100.)
+        self.assertEquals(len(cq.connectQueue), 2)
+        cq.connectQueue[1].callback(None)
+        self.assertIdentical(self.successResultOf(service.whenConnected()),
+                             cq.applicationProtocols[1])
 
 
     def test_clientConnectionLostWhileStopping(self):
@@ -606,6 +627,23 @@ class ClientServiceTests(TestCase):
         """
         cq, service = self.makeReconnector()
         d = service.stopService()
-        cq.constructedProtocols[0].connectionLost(Failure(Exception()))
-        self.assertIdentical(service._protocol, None)
+        cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
+        self.assertFailure(service.whenConnected(), CancelledError)
         self.assertTrue(d.called)
+
+
+    def test_startTwice(self):
+        """
+        If L{ClientService} is started when it's already started, it will log a
+        complaint and do nothing else (in particular it will not make
+        additional connections).
+        """
+        cq, service = self.makeReconnector(fireImmediately=False,
+                                           startService=False)
+        self.assertEqual(len(cq.connectQueue), 0)
+        service.startService()
+        self.assertEqual(len(cq.connectQueue), 1)
+        messages = catchLogs(self)
+        service.startService()
+        self.assertEqual(len(cq.connectQueue), 1)
+        self.assertIn("Duplicate ClientService.startService", messages()[0])

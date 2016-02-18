@@ -525,7 +525,8 @@ class _StubDelayedCall(object):
 class ClientService(service.Service, object):
     """
     A L{ClientService} maintains a single outgoing connection to a client
-    endpoint, with configurable timeout policies.
+    endpoint, reconnecting after a configurable timeout when a connection
+    fails, either before or after connecting.
     """
 
     _log = Logger()
@@ -564,11 +565,34 @@ class ClientService(service.Service, object):
         self._connectionInProgress = succeed(None)
         self._loseConnection = lambda: None
 
+        self._currentConnection = None
+        self._awaitingConnected = []
+
+
+    def whenConnected(self):
+        """
+        Retrieve the currently-connected L{Protocol}, or the next one to
+        connect.
+
+        @return: a Deferred that fires with a protocol produced by the factory
+            passed to C{__init__}
+        @rtype: L{Deferred} firing with L{IProtocol} or failing with
+            L{CancelledError} the service is stopped.
+        """
+        if self._currentConnection is not None:
+            return succeed(self._currentConnection)
+        else:
+            # XXX WROOONG
+            return Deferred()
+
 
     def startService(self):
         """
         Start this L{ClientService}, initiating the connection retry loop.
         """
+        if self.running:
+            self._log.warn("Duplicate ClientService.startService {log_source}")
+            return
         super(ClientService, self).startService()
         self._failedAttempts = 0
 
@@ -576,11 +600,16 @@ class ClientService(service.Service, object):
             self._failedAttempts = 0
             self._loseConnection = protocol.transport.loseConnection
             self._lostDeferred = Deferred()
+            self._currentConnection = protocol._protocol
+            self._awaitingConnected, waiting = [], self._awaitingConnected
+            for w in waiting:
+                w.callback(self._currentConnection)
 
         def clientDisconnect(reason):
+            self._currentConnection = None
             self._loseConnection = lambda: None
             self._lostDeferred.callback(None)
-            # XXX SHOULD BE A retry() HERE
+            retry(reason)
 
         factoryProxy = _DisconnectFactory(self._factory, clientDisconnect)
 
@@ -590,7 +619,9 @@ class ClientService(service.Service, object):
                                           .addCallback(clientConnect)
                                           .addErrback(retry))
 
-        def retry(error=None):
+        def retry(failure):
+            if not self.running:
+                return
             self._failedAttempts += 1
             delay = self._timeoutForAttempt(self._failedAttempts)
             self._log.info("Scheduling retry {attempt} to connect {endpoint} "
