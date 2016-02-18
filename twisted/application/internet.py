@@ -510,16 +510,13 @@ _defaultPolicy = backoffPolicy()
 
 
 
-class _StubDelayedCall(object):
+def _noop():
     """
-    An object with a C{cancel} method, to stand in for a delayed call.
+    Do nothing; this stands in for C{transport.loseConnection()} and
+    C{DelayedCall.cancel()} when L{ClientService} is in a state where there's
+    nothing to do.
     """
 
-    @staticmethod
-    def cancel():
-        """
-        Do nothing.
-        """
 
 
 class ClientService(service.Service, object):
@@ -560,10 +557,10 @@ class ClientService(service.Service, object):
         self._factory = factory
         self._timeoutForAttempt = retryPolicy
         self._clock = clock
-        self._delayedRetry = _StubDelayedCall
+        self._stopRetry = _noop
         self._lostDeferred = succeed(None)
         self._connectionInProgress = succeed(None)
-        self._loseConnection = lambda: None
+        self._loseConnection = _noop
 
         self._currentConnection = None
         self._awaitingConnected = []
@@ -615,7 +612,7 @@ class ClientService(service.Service, object):
         factoryProxy = _DisconnectFactory(self._factory, clientDisconnect)
 
         def connectNow():
-            self._delayedRetry = _StubDelayedCall
+            self._stopRetry = _noop
             self._connectionInProgress = (self._endpoint.connect(factoryProxy)
                                           .addCallback(clientConnect)
                                           .addErrback(retry))
@@ -628,7 +625,7 @@ class ClientService(service.Service, object):
             self._log.info("Scheduling retry {attempt} to connect {endpoint} "
                            "in {delay} seconds.", attempt=self._failedAttempts,
                            endpoint=self._endpoint, delay=delay)
-            self._delayedRetry = self._clock.callLater(delay, connectNow)
+            self._stopRetry = self._clock.callLater(delay, connectNow).cancel
 
         connectNow()
 
@@ -641,8 +638,8 @@ class ClientService(service.Service, object):
             closed and all in-progress connection attempts halted.
         """
         super(ClientService, self).stopService()
-        self._delayedRetry.cancel()
-        self._delayedRetry = _StubDelayedCall
+        self._stopRetry()
+        self._stopRetry = _noop
         self._connectionInProgress.cancel()
         self._loseConnection()
         return gatherResults([self._connectionInProgress, self._lostDeferred])
