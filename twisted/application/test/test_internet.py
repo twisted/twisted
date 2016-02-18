@@ -3,6 +3,9 @@
 
 """
 Tests for (new code in) L{twisted.application.internet}.
+
+@var AT_LEAST_ONE_ATTEMPT: At least enough seconds for L{ClientService} to make
+    one attempt.
 """
 
 from __future__ import absolute_import, division
@@ -486,6 +489,8 @@ def catchLogs(testCase, logPublisher=globalLogPublisher):
 
 
 
+AT_LEAST_ONE_ATTEMPT = 100.
+
 class ClientServiceTests(TestCase):
     """
     Tests for L{ClientService}.
@@ -551,7 +556,7 @@ class ClientServiceTests(TestCase):
         clock = Clock()
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         cq.connectQueue[0].errback(Exception())
-        clock.advance(100)
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.assertEqual(len(cq.connectQueue), 2)
         d = service.stopService()
         cq.connectQueue[1].errback(Exception())
@@ -595,7 +600,7 @@ class ClientServiceTests(TestCase):
         self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].errback(Failure(Exception()))
         self.assertNoResult(service.whenConnected())
-        clock.advance(100.)
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.assertEqual(len(cq.connectQueue), 2)
 
 
@@ -612,7 +617,7 @@ class ClientServiceTests(TestCase):
         self.assertIdentical(self.successResultOf(service.whenConnected()),
                              cq.applicationProtocols[0])
         cq.constructedProtocols[0].connectionLost(Failure(Exception()))
-        clock.advance(100.)
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.assertEquals(len(cq.connectQueue), 2)
         cq.connectQueue[1].callback(None)
         self.assertIdentical(self.successResultOf(service.whenConnected()),
@@ -647,3 +652,38 @@ class ClientServiceTests(TestCase):
         service.startService()
         self.assertEqual(len(cq.connectQueue), 1)
         self.assertIn("Duplicate ClientService.startService", messages()[0])
+
+
+    def test_whenConnectedLater(self):
+        """
+        L{ClientService.whenConnected} returns a L{Deferred} that fires when a
+        connection is established.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        a = service.whenConnected()
+        b = service.whenConnected()
+        self.assertNoResult(a)
+        self.assertNoResult(b)
+        cq.connectQueue[0].callback(None)
+        resultA = self.successResultOf(a)
+        resultB = self.successResultOf(b)
+        self.assertIdentical(resultA, resultB)
+        self.assertIdentical(resultA, cq.applicationProtocols[0])
+
+
+    def test_whenConnectedStopService(self):
+        """
+        L{ClientService.whenConnected} returns a L{Deferred} that fails when
+        L{ClientService.stopService} is called.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
+        a = service.whenConnected()
+        b = service.whenConnected()
+        self.assertNoResult(a)
+        self.assertNoResult(b)
+        service.stopService()
+        self.assertFailure(a, CancelledError)
+        self.assertFailure(b, CancelledError)
+

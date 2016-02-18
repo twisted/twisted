@@ -582,8 +582,9 @@ class ClientService(service.Service, object):
         if self._currentConnection is not None:
             return succeed(self._currentConnection)
         else:
-            # XXX WROOONG
-            return Deferred()
+            result = Deferred()
+            self._awaitingConnected.append(result)
+            return result
 
 
     def startService(self):
