@@ -557,15 +557,8 @@ class ClientServiceTests(TestCase):
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         self.assertEqual(len(cq.connectQueue), 1)
         self.assertNoResult(cq.connectQueue[0])
-        messages = catchLogs(self)
         d = service.stopService()
         self.successResultOf(d)
-        [msg] = messages()
-        self.assertSubstring(
-            "Cancelling connection attempt to endpoint <twisted.application"
-            ".test.test_internet.ClientTestEndpoint object",
-            msg
-        )
 
 
     def test_clientConnected(self):
@@ -615,5 +608,4 @@ class ClientServiceTests(TestCase):
         d = service.stopService()
         cq.constructedProtocols[0].connectionLost(Failure(Exception()))
         self.assertIdentical(service._protocol, None)
-        self.assertIdentical(service._protocolStoppingDeferred, None)
         self.assertTrue(d.called)

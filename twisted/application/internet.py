@@ -48,7 +48,9 @@ from twisted.logger import Logger
 
 from twisted.application import service
 from twisted.internet import task
-from twisted.internet.defer import CancelledError, gatherResults, Deferred
+from twisted.internet.defer import (
+    CancelledError, gatherResults, Deferred, succeed
+)
 from twisted.internet import interfaces
 
 
@@ -415,8 +417,8 @@ class _ReconnectingProtocolProxy(object):
             additionally provide L{interfaces.IHalfCloseableProtocol} and
             L{interfaces.IFileDescriptorReceiver}.
 
-        @param lostNotification: a 0-argument callable to invoke when the
-            connection is lost.
+        @param lostNotification: a 1-argument callable to invoke with the
+            C{reason} when the connection is lost.
         """
         self._protocol = protocol
         self._lostNotification = lostNotification
@@ -428,10 +430,13 @@ class _ReconnectingProtocolProxy(object):
 
 
     def connectionLost(self, reason):
+        """
+        The connection was lost.  Relay this information.
+        """
         try:
             return self._protocol.connectionLost(reason)
         finally:
-            self._lostNotification()
+            self._lostNotification(reason)
 
 
     def __getattr__(self, item):
@@ -444,20 +449,21 @@ class _ReconnectingProtocolProxy(object):
 
 
 
-class _ReconnectingFactoryProxy(object):
+class _DisconnectFactory(object):
     """
-    Reconnecting factory proxy.
+    A L{_DisconnectFactory} is a proxy for L{IProtocolFactory} that catches
+    C{connectionLost} notifications and relays them.
     """
 
-    def __init__(self, protocolFactory, clientService):
+    def __init__(self, protocolFactory, protocolDisconnected):
         self._protocolFactory = protocolFactory
-        self._clientService = clientService
+        self._protocolDisconnected = protocolDisconnected
 
 
     def buildProtocol(self, addr):
         return _ReconnectingProtocolProxy(
             self._protocolFactory.buildProtocol(addr),
-            self._clientService._protocolDisconnected
+            self._protocolDisconnected
         )
 
 
@@ -500,8 +506,20 @@ def backoffPolicy(initialDelay=1.0, maxDelay=3600.0,
         return min(initialDelay * (factor ** attempt), maxDelay) + jitter()
     return policy
 
-_defaultBackoffPolicy = backoffPolicy()
+_defaultPolicy = backoffPolicy()
 
+
+
+class _StubDelayedCall(object):
+    """
+    An object with a C{cancel} method, to stand in for a delayed call.
+    """
+
+    @staticmethod
+    def cancel():
+        """
+        Do nothing.
+        """
 
 
 class ClientService(service.Service, object):
@@ -511,10 +529,6 @@ class ClientService(service.Service, object):
     """
 
     _log = Logger()
-    _delayedRetry = None
-    _connectingDeferred = None
-    _protocol = None
-    _protocolStoppingDeferred = None
 
     def __init__(self, endpoint, factory, retryPolicy=None, clock=None):
         """
@@ -537,16 +551,18 @@ class ClientService(service.Service, object):
             reactor) will be restored when deserialized.
         @type clock: L{IReactorTime}
         """
-        if clock is None:
-            from twisted.internet import reactor
-            clock = reactor
+        clock = _maybeGlobalReactor(clock)
+        retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
+
         self._endpoint = endpoint
         self._failedAttempts = 0
         self._factory = factory
-        if retryPolicy is None:
-            retryPolicy = _defaultBackoffPolicy
         self._timeoutForAttempt = retryPolicy
         self._clock = clock
+        self._delayedRetry = _StubDelayedCall
+        self._lostDeferred = succeed(None)
+        self._connectionInProgress = succeed(None)
+        self._loseConnection = lambda: None
 
 
     def startService(self):
@@ -555,46 +571,34 @@ class ClientService(service.Service, object):
         """
         super(ClientService, self).startService()
         self._failedAttempts = 0
-        proxiedFactory = _ReconnectingFactoryProxy(self._factory, self)
+
+        def clientConnect(protocol):
+            self._failedAttempts = 0
+            self._loseConnection = protocol.transport.loseConnection
+            self._lostDeferred = Deferred()
+
+        def clientDisconnect(reason):
+            self._loseConnection = lambda: None
+            self._lostDeferred.callback(None)
+            # XXX SHOULD BE A retry() HERE
+
+        factoryProxy = _DisconnectFactory(self._factory, clientDisconnect)
 
         def connectNow():
-            d = self._connectingDeferred = self._endpoint.connect(
-                proxiedFactory)
-            def _clearConnectionAttempt(result):
-                self._connectingDeferred = None
-                return result
-            d.addBoth(_clearConnectionAttempt)
-            def clientConnected(protocol):
-                self._protocol = protocol
-                self._failedAttempts = 0
-            d.addCallback(clientConnected)
-            d.addErrback(retry)
+            self._delayedRetry = _StubDelayedCall
+            self._connectionInProgress = (self._endpoint.connect(factoryProxy)
+                                          .addCallback(clientConnect)
+                                          .addErrback(retry))
 
-        def retry(error):
-            if not self.running:
-                return
+        def retry(error=None):
             self._failedAttempts += 1
             delay = self._timeoutForAttempt(self._failedAttempts)
-            self._log.info(
-                "Scheduling retry {attempt} to connect {endpoint} in "
-                "{delay} seconds.",
-                attempt=self._failedAttempts, endpoint=self._endpoint,
-                delay=delay,
-            )
+            self._log.info("Scheduling retry {attempt} to connect {endpoint} "
+                           "in {delay} seconds.", attempt=self._failedAttempts,
+                           endpoint=self._endpoint, delay=delay)
             self._delayedRetry = self._clock.callLater(delay, connectNow)
 
         connectNow()
-
-
-    def _protocolDisconnected(self):
-        """
-        The established protocol was disconnected.
-        """
-        self._protocol = None
-        psd = self._protocolStoppingDeferred
-        self._protocolStoppingDeferred = None
-        if psd is not None:
-            psd.callback(None)
 
 
     def stopService(self):
@@ -605,29 +609,11 @@ class ClientService(service.Service, object):
             closed and all in-progress connection attempts halted.
         """
         super(ClientService, self).stopService()
-
-        waitFor = []
-
-        if self._delayedRetry is not None and self._delayedRetry.active():
-            self._delayedRetry.cancel()
-            self._delayedRetry = None
-
-        if self._connectingDeferred is not None:
-            waitFor.append(self._connectingDeferred)
-            self._connectingDeferred.addErrback(lambda result:
-                                                result.trap(CancelledError))
-            self._log.info(
-                "Cancelling connection attempt to endpoint {endpoint}.",
-                endpoint=self._endpoint
-            )
-            self._connectingDeferred.cancel()
-
-        if self._protocol is not None:
-            self._protocolStoppingDeferred = Deferred()
-            waitFor.append(self._protocolStoppingDeferred)
-            self._protocol.transport.loseConnection()
-
-        return gatherResults(waitFor)
+        self._delayedRetry.cancel()
+        self._delayedRetry = _StubDelayedCall
+        self._connectionInProgress.cancel()
+        self._loseConnection()
+        return gatherResults([self._connectionInProgress, self._lostDeferred])
 
 
 
