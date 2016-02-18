@@ -39,7 +39,7 @@ reactor.listen/connect* methods for more information.
 
 from __future__ import absolute_import, division
 
-import random
+from random import random as _goodEnoughRandom
 
 from zope.interface import directlyProvides
 
@@ -477,8 +477,8 @@ class _DisconnectFactory(object):
 
 
 
-def backoffPolicy(initialDelay=1.0, maxDelay=3600.0,
-                  factor=1.5, jitter=random.random):
+def backoffPolicy(initialDelay=1.0, maxDelay=3600.0, factor=1.5,
+                  jitter=_goodEnoughRandom):
     """
     A timeout policy for L{ClientService} which computes an exponential backoff
     interval with configurable parameters.
@@ -495,7 +495,7 @@ def backoffPolicy(initialDelay=1.0, maxDelay=3600.0,
         failed reattempt.  Default: 1.5.
 
     @param jitter: A 0-argument callable that introduces noise into the delay.
-        By default, L{random.random}, i.e. a pseudorandom floating-point value
+        By default, C{random.random}, i.e. a pseudorandom floating-point value
         between zero and one.
 
     @return: a 1-argument callable that, given an attempt count, returns a
