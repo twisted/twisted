@@ -605,7 +605,7 @@ class ClientService(service.Service, object):
 
         def clientDisconnect(reason):
             self._currentConnection = None
-            self._loseConnection = lambda: None
+            self._loseConnection = _noop
             self._lostDeferred.callback(None)
             retry(reason)
 
