@@ -432,6 +432,10 @@ class _ReconnectingProtocolProxy(object):
     def connectionLost(self, reason):
         """
         The connection was lost.  Relay this information.
+
+        @param reason: The reason the connection was lost.
+
+        @return: the underlying protocol's result
         """
         try:
             return self._protocol.connectionLost(reason)
@@ -461,6 +465,10 @@ class _DisconnectFactory(object):
 
 
     def buildProtocol(self, addr):
+        """
+        Create a L{_ReconnectingProtocolProxy} with the disconnect-notification
+        callback we were called with.
+        """
         return _ReconnectingProtocolProxy(
             self._protocolFactory.buildProtocol(addr),
             self._protocolDisconnected

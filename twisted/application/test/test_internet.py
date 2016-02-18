@@ -500,6 +500,20 @@ class ClientServiceTests(TestCase):
         """
         Create a L{ClientService} along with a L{ConnectInformation} indicating
         the connections in progress on its endpoint.
+
+        @param fireImmediately: Should all of the endpoint connection attempts
+            fire synchronously?
+        @type fireImmediately: L{bool}
+
+        @param startService: Should the L{ClientService} be started before
+            being returned?
+        @type startService: L{bool}
+
+        @param kw: Arbitrary keyword arguments to be passed on to
+            L{ClientService}
+
+        @return: a 2-tuple of L{ConnectInformation} (for information about test
+            state) and L{ClientService} (the system under test)
         """
         nkw = {}
         nkw.update(clock=Clock())
