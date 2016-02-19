@@ -7,8 +7,10 @@ Tests for L{twisted.web.util}.
 
 from __future__ import absolute_import, division
 
+import gc
+
 from twisted.python.failure import Failure
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.internet import defer
 from twisted.python.compat import _PY3, intToBytes, networkString
 from twisted.web import resource, util
@@ -316,7 +318,7 @@ class SDResource(resource.Resource):
 
 
 
-class DeferredResourceTests(TestCase):
+class DeferredResourceTests(SynchronousTestCase):
     """
     Tests for L{DeferredResource}.
     """
@@ -344,3 +346,18 @@ class DeferredResourceTests(TestCase):
         deferredResource = DeferredResource(defer.succeed(result))
         deferredResource.render(request)
         self.assertEqual(rendered, [result])
+
+
+    def test_renderNoFailure(self):
+        """
+        If the L{Deferred} fails, L{DeferredResource} does not cause an
+        unhandled error to be logged.
+        """
+        request = DummyRequest([])
+        deferredResource = DeferredResource(
+            defer.fail(Failure(RuntimeError())))
+        deferredResource.render(request)
+        del deferredResource
+        gc.collect()
+        errors = self.flushLoggedErrors(RuntimeError)
+        self.assertEqual(errors, [])
