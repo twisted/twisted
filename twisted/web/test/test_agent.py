@@ -2888,6 +2888,7 @@ class ReadBodyTests(TestCase):
         warning, but no exception when cancelling.
         """
         response = DummyResponse(transportFactory=StringTransport)
+        response.transport.abortConnection = None
         d = self.assertWarns(
             DeprecationWarning,
             'Using readBody with a transport that does not have an '
