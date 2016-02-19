@@ -275,6 +275,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     _writeBlockedOnRead = False
     _producer = None
     _aborted = False
+    _shuttingDown = False
 
     def __init__(self, factory, wrappedProtocol, _connectWrapped=True):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
@@ -318,15 +319,20 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # Now that we ourselves have a transport (initialized by the
         # ProtocolWrapper.makeConnection call above), kick off the TLS
         # handshake.
-        try:
-            self._tlsConnection.do_handshake()
-        except WantReadError:
-            # This is the expected case - there's no data in the connection's
-            # input buffer yet, so it won't be able to complete the whole
-            # handshake now.  If this is the speak-first side of the
-            # connection, then some bytes will be in the send buffer now; flush
-            # them.
-            self._flushSendBIO()
+
+        # The connection might already be aborted (eg. by a callback during
+        # connection setup), so don't even bother trying to handshake in that
+        # case.
+        if not self._aborted:
+            try:
+                self._tlsConnection.do_handshake()
+            except WantReadError:
+                # This is the expected case - there's no data in the
+                # connection's input buffer yet, so it won't be able to
+                # complete the whole handshake now. If this is the speak-first
+                # side of the connection, then some bytes will be in the send
+                # buffer now; flush them.
+                self._flushSendBIO()
 
 
     def _flushSendBIO(self):
@@ -426,6 +432,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         Initiate, or reply to, the shutdown handshake of the TLS layer.
         """
+        self._shuttingDown = True
         try:
             shutdownSuccess = self._tlsConnection.shutdown()
         except Error:
@@ -483,6 +490,14 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         if self.disconnecting:
             return
+        # If connection setup has not finished, OpenSSL 1.0.2f+ will not shut
+        # down the connection until we write some data to the connection which
+        # allows the handshake to complete. However, since no data should be
+        # written after loseConnection, this means we'll be stuck forever
+        # waiting for shutdown to complete. Instead, we simply abort the
+        # connection without trying to shut down cleanly:
+        if not self._handshakeDone and not self._writeBlockedOnRead:
+            self.abortConnection()
         self.disconnecting = True
         if not self._writeBlockedOnRead and self._producer is None:
             self._shutdownTLS()

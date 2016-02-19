@@ -79,6 +79,14 @@ class _LoopbackTransport(object):
         self.q.disconnect = True
         self.q.put(None)
 
+
+    def abortConnection(self):
+        """
+        Abort the connection. Same as L{loseConnection}.
+        """
+        self.loseConnection()
+
+
     def getPeer(self):
         return _LoopbackAddress()
 

@@ -1826,7 +1826,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         sErr = sProto.wrappedProtocol.lostReason.value
 
         self.assertIsInstance(cErr, ZeroDivisionError)
-        self.assertIsInstance(sErr, ConnectionClosed)
+        self.assertIsInstance(sErr, (ConnectionClosed, SSL.Error))
         errors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertTrue(errors)
 
