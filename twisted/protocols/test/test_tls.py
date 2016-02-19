@@ -708,6 +708,7 @@ class TLSMemoryBIOTests(TestCase):
             # will be written out before the connection is closed, rather than
             # just small amounts that can be returned in a single bio_read:
             clientProtocol.transport.write(chunkOfBytes)
+            serverProtocol.transport.write(b'x')
             serverProtocol.transport.loseConnection()
 
             # Now wait for the client and server to notice.
@@ -772,27 +773,27 @@ class TLSMemoryBIOTests(TestCase):
         If TLSMemoryBIOProtocol.loseConnection is called multiple times, all
         but the first call have no effect.
         """
-        wrapperFactory = TLSMemoryBIOFactory(ClientTLSContext(),
-                                             True, ClientFactory())
-        tlsProtocol = TLSMemoryBIOProtocol(wrapperFactory, Protocol())
-        transport = StringTransport()
-        tlsProtocol.makeConnection(transport)
-        self.assertEqual(tlsProtocol.disconnecting, False)
-
+        tlsClient, tlsServer, handshakeDeferred, disconnectDeferred = (
+            self.handshakeProtocols())
+        self.successResultOf(handshakeDeferred)
         # Make sure loseConnection calls _shutdownTLS the first time (mostly
         # to make sure we've overriding it correctly):
         calls = []
-        def _shutdownTLS(shutdown=tlsProtocol._shutdownTLS):
+        def _shutdownTLS(shutdown=tlsClient._shutdownTLS):
             calls.append(1)
             return shutdown()
-        tlsProtocol._shutdownTLS = _shutdownTLS
-        tlsProtocol.loseConnection()
-        self.assertEqual(tlsProtocol.disconnecting, True)
+        tlsClient._shutdownTLS = _shutdownTLS
+        tlsClient.write(b'x')
+        tlsClient.loseConnection()
+        self.assertEqual(tlsClient.disconnecting, True)
         self.assertEqual(calls, [1])
 
         # Make sure _shutdownTLS isn't called a second time:
-        tlsProtocol.loseConnection()
+        tlsClient.loseConnection()
         self.assertEqual(calls, [1])
+
+        # We do successfully disconnect at some point:
+        return disconnectDeferred
 
 
     def test_unexpectedEOF(self):
