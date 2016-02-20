@@ -350,13 +350,16 @@ class DeferredResourceTests(SynchronousTestCase):
 
     def test_renderNoFailure(self):
         """
-        If the L{Deferred} fails, L{DeferredResource} does not cause an
-        unhandled error to be logged.
+        If the L{Deferred} fails, L{DeferredResource} reports the failure via
+        C{processingFailed}, and does not cause an unhandled error to be
+        logged.
         """
         request = DummyRequest([])
-        deferredResource = DeferredResource(
-            defer.fail(Failure(RuntimeError())))
+        d = request.notifyFinish()
+        failure = Failure(RuntimeError())
+        deferredResource = DeferredResource(defer.fail(failure))
         deferredResource.render(request)
+        self.assertEqual(self.failureResultOf(d), failure)
         del deferredResource
         gc.collect()
         errors = self.flushLoggedErrors(RuntimeError)
