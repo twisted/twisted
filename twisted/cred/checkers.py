@@ -95,7 +95,7 @@ class InMemoryUsernamePasswordDatabaseDontUse(object):
             return defer.maybeDeferred(
                 credentials.checkPassword,
                 self.users[credentials.username]).addCallback(
-                self._cbPasswordMatch, bytes(credentials.username))
+                self._cbPasswordMatch, credentials.username)
         else:
             return defer.fail(error.UnauthorizedLogin())
 
