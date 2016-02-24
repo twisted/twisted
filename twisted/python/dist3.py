@@ -59,6 +59,7 @@ modules = [
     "twisted.cred.credentials",
     "twisted.cred.error",
     "twisted.cred.portal",
+    "twisted.cred.strcred"
     "twisted.cred.test",
     "twisted.internet",
     "twisted.internet._baseprocess",
