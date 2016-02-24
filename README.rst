@@ -1,4 +1,4 @@
-Twisted 16.0.0pre1
+Twisted 16.0.0
 ==============
 
 |pypi|
@@ -6,7 +6,7 @@ Twisted 16.0.0pre1
 
     <reaperhulk> I continue to believe that networks are totally reliable despite ample evidence from my CI that I am wrong
 
-For information on what's new in Twisted 16.0.0pre1, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.0.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
