@@ -663,8 +663,8 @@ class OldSubprojectDeprecationBase(TestCase):
         """
         Former subprojects no longer have an importable C{_version.py}.
         """
-        with self.assertRaises(AttributeError) as e:
-            module = reflect.namedAny(
+        with self.assertRaises(AttributeError):
+            reflect.namedAny(
                 "twisted.{}._version".format(self.subproject))
 
 
