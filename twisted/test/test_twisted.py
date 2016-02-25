@@ -681,9 +681,10 @@ for subproject in subprojects:
     newName = subproject.title() + "VersionDeprecationTests"
 
     SubprojectTestCase.__name__ = newName
-    SubprojectTestCase.__qualname__= ".".join(
-        OldSubprojectDeprecationBase.__qualname__.split()[0:-1] +
-        [newName])
+    if _PY3:
+        SubprojectTestCase.__qualname__= ".".join(
+            OldSubprojectDeprecationBase.__qualname__.split()[0:-1] +
+            [newName])
 
     globals().update({subproject.title() +
                       "VersionDeprecationTests": SubprojectTestCase})
