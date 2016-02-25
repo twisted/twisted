@@ -641,7 +641,10 @@ class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
 
 
 class OldSubprojectDeprecationBase(TestCase):
-
+    """
+    Base L{TestCase} for verifying each former subproject has a deprecated
+    C{__version__} and a removed C{_version.py}.
+    """
     subproject = None
 
     def test_deprecated(self):
@@ -669,13 +672,15 @@ class OldSubprojectDeprecationBase(TestCase):
 
 
 
-
 subprojects = ["mail", "conch", "runner", "web", "words", "names", "news",
                "pair"]
 
 for subproject in subprojects:
 
     class SubprojectTestCase(OldSubprojectDeprecationBase):
+        """
+        See L{OldSubprojectDeprecationBase}.
+        """
         subproject = subproject
 
     newName = subproject.title() + "VersionDeprecationTests"
