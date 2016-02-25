@@ -9,10 +9,13 @@ the code in C{twisted/__init__.py}.
 from __future__ import division, absolute_import
 
 import sys
+import twisted
+
 from types import ModuleType, FunctionType
 
 from twisted import _checkRequirements
 from twisted.python.compat import _PY3
+from twisted.python import reflect
 from twisted.trial.unittest import TestCase, SkipTest
 
 
@@ -634,3 +637,58 @@ class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
                 pass
             else:
                 raise SkipTest("Mismatched system version of zope.interface")
+
+
+
+class OldSubprojectDeprecationBase(TestCase):
+
+    subproject = None
+
+    def test_deprecated(self):
+        """
+        The C{__version__} attribute of former subprojects is deprecated.
+        """
+        module = reflect.namedAny("twisted.{}".format(self.subproject))
+        self.assertEqual(module.__version__, twisted.__version__)
+
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "twisted.{}.__version__ was deprecated in Twisted 16.0.0: "
+            "Use twisted.__version__ instead.".format(self.subproject),
+            warningsShown[0]['message'])
+
+
+    def test_noversionpy(self):
+        """
+        Former subprojects no longer have an importable C{_version.py}.
+        """
+        with self.assertRaises(AttributeError) as e:
+            module = reflect.namedAny(
+                "twisted.{}._version".format(self.subproject))
+
+
+
+
+subprojects = ["mail", "conch", "runner", "web", "words", "names", "news",
+               "pair"]
+
+for subproject in subprojects:
+
+    class SubprojectTestCase(OldSubprojectDeprecationBase):
+        subproject = subproject
+
+    newName = subproject.title() + "VersionDeprecationTests"
+
+    SubprojectTestCase.__name__ = newName
+    SubprojectTestCase.__qualname__= ".".join(
+        OldSubprojectDeprecationBase.__qualname__.split()[0:-1] +
+        [newName])
+
+    globals().update({subproject.title() +
+                      "VersionDeprecationTests": SubprojectTestCase})
+
+    del SubprojectTestCase
+    del newName
+
+del OldSubprojectDeprecationBase
