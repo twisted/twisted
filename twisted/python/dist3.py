@@ -48,6 +48,7 @@ modules = [
     "twisted.application.test",
     "twisted.conch",
     "twisted.conch.ssh",
+    "twisted.conch.ssh._cryptography_backports",
     "twisted.conch.ssh.common",
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.sexpy",
