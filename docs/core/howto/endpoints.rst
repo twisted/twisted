@@ -157,7 +157,7 @@ Retry Policies
 
 ``ClientService`` will immediately attempt an outgoing connection when ``startService`` is called.
 If that connection attempt fails for any reason (name resolution, connection refused, network unreachable, and so on), it will retry according to the policy specified in the ``retryPolicy`` constructor argument.
-By default, ``ClientService`` will use an exponential backoff algorithm with a minimum delay of 1 second and a maximum delay of 1 hour, and a jitter of up to 1 additional second to prevent stampeding-herd performance cascades.
+By default, ``ClientService`` will use an exponential backoff algorithm with a minimum delay of 1 second and a maximum delay of 1 minute, and a jitter of up to 1 additional second to prevent stampeding-herd performance cascades.
 This is a good default, and if you do not have highly specialized requirements, you probably want to use it.
 If you need to tune these parameters, you have two options:
 
