@@ -34,6 +34,7 @@ from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
 from twisted.plugin import IPlugin, getPlugins
+from twisted.protocols import haproxy
 from twisted.python import log
 from twisted.python.compat import nativeString, unicode, _matchingString
 from twisted.python.components import proxyForInterface
@@ -41,6 +42,7 @@ from twisted.python.constants import NamedConstant, Names
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.compat import iterbytes
+from twisted.python.compat import iteritems
 from twisted.python.systemd import ListenFDs
 
 
@@ -1283,6 +1285,41 @@ class _TCP6ServerParser(object):
 
 
 
+@implementer(IPlugin, IStreamServerEndpointStringParser)
+class _HAProxyServerParser(object):
+    """
+    Stream server endpoint string parser for the HAProxyServerEndpoint type.
+
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
+    """
+    prefix = "haproxy"
+
+    def _parseServer(self, reactor, *args, **kwargs):
+        """
+        Internal parser function.
+
+        @param reactor: An L{IReactorTCP} provider.
+
+        @param wrapped: The name of the endpoint to wrap. Ex: tcp6.
+        @type wrapped: str
+        """
+        # Rebuild the description to re-dispatch the request.
+        description = ':'.join(str(arg) for arg in args)
+        description += ':'.join(
+            '%s=%s' % (str(key), quoteStringArgument(str(value)))
+            for key, value in iteritems(kwargs)
+        )
+        return _WrapperServerEndpoint(
+            serverFromString(reactor, description),
+            haproxy.HAProxyFactory,
+        )
+
+
+    def parseStreamServer(self, reactor, *args, **kwargs):
+        return self._parseServer(reactor, *args, **kwargs)
+
+
+
 _serverParsers = {"tcp": _parseTCP,
                   "unix": _parseUNIX,
                   "ssl": _parseSSL,
@@ -1906,6 +1943,30 @@ class _WrapperEndpoint(object):
 
 
 
+@implementer(interfaces.IStreamServerEndpoint)
+class _WrapperServerEndpoint(object):
+    """
+    A server endpoint that wraps another server endpoint.
+    """
+
+    def __init__(self, wrappedEndpoint, wrapperFactory):
+        """
+        Construct a L{_WrapperServerEndpoint}.
+        """
+        self._wrappedEndpoint = wrappedEndpoint
+        self._wrapperFactory = wrapperFactory
+
+
+    def listen(self, protocolFactory):
+        """
+        Connect the given protocol factory and unwrap its result.
+        """
+        return self._wrappedEndpoint.listen(
+            self._wrapperFactory(protocolFactory)
+        )
+
+
+
 def wrapClientTLS(connectionCreator, wrappedEndpoint):
     """
     Wrap an endpoint which upgrades to TLS as soon as the connection is
@@ -2027,6 +2088,3 @@ class _TLSClientEndpointParser(object):
         @rtype: L{IStreamClientEndpoint}
         """
         return _parseClientTLS(reactor, *args, **kwargs)
-
-
-
