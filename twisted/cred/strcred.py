@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_strcred -*-
+# -*- test-case-name: twisted.cred.test.test_strcred -*-
 #
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -13,6 +13,8 @@ Examples:
  - memory:admin:asdf:user:lkj
  - unix
 """
+
+from __future__ import absolute_import, division
 
 import sys
 
