@@ -7,6 +7,7 @@ Backported functions from Cryptography to support older versions.
 These functions can be obtained from C{cryptography.utils} instead, from
 version 1.1 onwards.
 """
+from __future__ import absolute_import, division
 import binascii
 import struct
 
