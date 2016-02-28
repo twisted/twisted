@@ -1,7 +1,21 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 16.0.0pre1 (2016-02-16)
+Twisted Core 16.0.0pre2 (2016-02-28)
+====================================
+
+Features
+--------
+ - twisted.cred.strports has been ported to Python 3. (#8216)
+
+Deprecations and Removals
+-------------------------
+ - The __version__ attribute of former subprojects (conch, mail,
+   names, news, pair, runner, web, and words) is deprecated in
+   preference to the central twisted.__version__. (#8219)
+
+
+Twisted Core 16.0.0pre2 (2016-02-28)
 ====================================
 
 Features

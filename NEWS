@@ -1,7 +1,69 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 16.0.0pre1 (2016-02-16)
+Twisted Core 16.0.0pre2 (2016-02-28)
+====================================
+
+Features
+--------
+ - twisted.cred.strports has been ported to Python 3. (#8216)
+
+Deprecations and Removals
+-------------------------
+ - The __version__ attribute of former subprojects (conch, mail,
+   names, news, pair, runner, web, and words) is deprecated in
+   preference to the central twisted.__version__. (#8219)
+
+
+Twisted Conch 16.0.0pre2 (2016-02-28)
+=====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 16.0.0pre2 (2016-02-28)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 16.0.0pre2 (2016-02-28)
+=====================================
+
+No significant changes have been made for this release.
+
+
+Twisted News 16.0.0pre2 (2016-02-28)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 16.0.0pre2 (2016-02-28)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.0.0pre2 (2016-02-28)
+======================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 16.0.0pre2 (2016-02-28)
+===================================
+
+No significant changes have been made for this release.
+
+
+Twisted Words 16.0.0pre2 (2016-02-28)
+=====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Core 16.0.0pre1 (2016-02-28)
 ====================================
 
 Features
@@ -59,7 +121,7 @@ Other
    #8115, #8119, #8122, #8139, #8144, #8154, #8162, #8180, #8187
 
 
-Twisted Conch 16.0.0pre1 (2016-02-16)
+Twisted Conch 16.0.0pre1 (2016-02-28)
 =====================================
 
 Features
@@ -83,37 +145,37 @@ Other
  - #7037, #7715, #8200, #8208
 
 
-Twisted Mail 16.0.0pre1 (2016-02-16)
+Twisted Mail 16.0.0pre1 (2016-02-28)
 ====================================
 
 No significant changes have been made for this release.
 
 
-Twisted Names 16.0.0pre1 (2016-02-16)
+Twisted Names 16.0.0pre1 (2016-02-28)
 =====================================
 
 No significant changes have been made for this release.
 
 
-Twisted News 16.0.0pre1 (2016-02-16)
+Twisted News 16.0.0pre1 (2016-02-28)
 ====================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 16.0.0pre1 (2016-02-16)
+Twisted Pair 16.0.0pre1 (2016-02-28)
 ====================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 16.0.0pre1 (2016-02-16)
+Twisted Runner 16.0.0pre1 (2016-02-28)
 ======================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 16.0.0pre1 (2016-02-16)
+Twisted Web 16.0.0pre1 (2016-02-28)
 ===================================
 
 Features
@@ -147,7 +209,7 @@ Other
  - #8140, #8182
 
 
-Twisted Words 16.0.0pre1 (2016-02-16)
+Twisted Words 16.0.0pre1 (2016-02-28)
 =====================================
 
 No significant changes have been made for this release.
