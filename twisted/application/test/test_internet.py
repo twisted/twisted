@@ -23,7 +23,8 @@ from twisted.application.internet import (
     StreamServerEndpointService, TimerService, ClientService)
 from twisted.internet.defer import Deferred, CancelledError
 from twisted.internet.interfaces import (
-    IStreamServerEndpoint, IStreamClientEndpoint, IListeningPort
+    IStreamServerEndpoint, IStreamClientEndpoint, IListeningPort,
+    IHalfCloseableProtocol, IFileDescriptorReceiver
 )
 from twisted.internet import task
 from twisted.python.failure import Failure
@@ -496,7 +497,8 @@ class ClientServiceTests(TestCase):
     Tests for L{ClientService}.
     """
 
-    def makeReconnector(self, fireImmediately=True, startService=True, **kw):
+    def makeReconnector(self, fireImmediately=True, startService=True,
+                        protocolType=Protocol, **kw):
         """
         Create a L{ClientService} along with a L{ConnectInformation} indicating
         the connections in progress on its endpoint.
@@ -520,7 +522,7 @@ class ClientServiceTests(TestCase):
         nkw.update(kw)
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
         class RememberingFactory(Factory, object):
-            protocol = Protocol
+            protocol = protocolType
             def buildProtocol(self, addr):
                 result = super(RememberingFactory, self).buildProtocol(addr)
                 cq.applicationProtocols.append(result)
@@ -561,6 +563,23 @@ class ClientServiceTests(TestCase):
         self.assertEqual(protocol.transport.disconnecting, True)
         protocol.connectionLost(Failure(Exception()))
         self.successResultOf(d)
+
+
+    def test_interfacesForTransport(self):
+        """
+        If the protocol objects returned by the factory given to
+        L{ClientService} provide special "marker" interfaces for their
+        transport - L{IHalfCloseableProtocol} or L{IFileDescriptorReceiver} -
+        those interfaces will be provided by the protocol objects passed on to
+        the reactor.
+        """
+        @implementer(IHalfCloseableProtocol, IFileDescriptorReceiver)
+        class FancyProtocol(Protocol, object):
+            "Provider of various interfaces."
+        cq, service = self.makeReconnector(protocolType=FancyProtocol)
+        reactorFacing = cq.constructedProtocols[0]
+        self.assertTrue(IFileDescriptorReceiver.providedBy(reactorFacing))
+        self.assertTrue(IHalfCloseableProtocol.providedBy(reactorFacing))
 
 
     def test_stopServiceWhileRetrying(self):

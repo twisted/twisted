@@ -423,11 +423,6 @@ class _ReconnectingProtocolProxy(object):
         self._protocol = protocol
         self._lostNotification = lostNotification
 
-        for iface in [interfaces.IHalfCloseableProtocol,
-                      interfaces.IFileDescriptorReceiver]:
-            if iface.providedBy(self._protocol):
-                directlyProvides(self, iface)
-
 
     def connectionLost(self, reason):
         """
