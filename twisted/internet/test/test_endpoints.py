@@ -1689,6 +1689,7 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         self.assertIsInstance(failure.value, error.ConnectingCancelledError)
         self.assertEqual(failure.value.address, address)
         self.assertTrue(mreactor.tcpClients[0][2]._connector.stoppedConnecting)
+        self.assertEqual([], mreactor.getDelayedCalls())
 
 
     def test_endpointConnectingCancelledAfterAllAttemptsStarted(self):
@@ -1722,6 +1723,7 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         d = ep.connect(clientFactory)
         mreactor.advance(endpoints.HostnameEndpoint._DEFAULT_ATTEMPT_DELAY)
         self.assertEqual(self.failureResultOf(d).value, expectedError)
+        self.assertEqual([], mreactor.getDelayedCalls())
 
 
     def test_endpointConnectFailureAfterIteration(self):
@@ -1746,6 +1748,7 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin,
         host, port, factory, timeout, bindAddress = mreactor.tcpClients[0]
         factory.clientConnectionFailed(mreactor.connectors[0], expectedError)
         self.assertEqual(self.failureResultOf(d).value, expectedError)
+        self.assertEqual([], mreactor.getDelayedCalls())
 
 
     def test_endpointConnectSuccessAfterIteration(self):
@@ -1905,6 +1908,7 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
         self.assertIsInstance(failure.value, error.ConnectingCancelledError)
         self.assertEqual(failure.value.address, address)
         self.assertTrue(mreactor.tcpClients[0][2]._connector.stoppedConnecting)
+        self.assertEqual([], mreactor.getDelayedCalls())
 
 
     def test_endpointConnectFailure(self):
@@ -1922,6 +1926,7 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin,
         d = ep.connect(clientFactory)
         mreactor.advance(0.3)
         self.assertEqual(self.failureResultOf(d).value, expectedError)
+        self.assertEqual([], mreactor.getDelayedCalls())
 
 
 
@@ -2030,6 +2035,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].factory, clientFactory)
+        self.assertEqual([], self.mreactor.getDelayedCalls())
 
 
     def test_IPv6IsFaster(self):
@@ -2063,6 +2069,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].factory, clientFactory)
+        self.assertEqual([], self.mreactor.getDelayedCalls())
 
 
     def test_otherConnectionsCancelled(self):
@@ -2090,6 +2097,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
         self.assertEqual(True,
                 self.mreactor.tcpClients[0][2]._connector.stoppedConnecting)
+        self.assertEqual([], self.mreactor.getDelayedCalls())
 
 
 

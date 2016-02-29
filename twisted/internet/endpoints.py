@@ -760,7 +760,6 @@ class HostnameEndpoint(object):
                 if endpoint is None:
                     # The list of endpoints ends.
                     checkDone.endpointsLeft = False
-                    iterateEndpoint.stop()
                     checkDone()
                     return
 
@@ -772,8 +771,6 @@ class HostnameEndpoint(object):
                     return result
                 @eachAttempt.addCallback
                 def succeeded(result):
-                    if iterateEndpoint.running:
-                        iterateEndpoint.stop()
                     winner.callback(result)
                 @eachAttempt.addErrback
                 def failed(reason):
@@ -788,6 +785,8 @@ class HostnameEndpoint(object):
                 checkDone.completed = True
                 for remaining in pending[:]:
                     remaining.cancel()
+                if iterateEndpoint.running:
+                    iterateEndpoint.stop()
                 return result
             return winner
 
