@@ -41,17 +41,15 @@ from __future__ import absolute_import, division
 
 from random import random as _goodEnoughRandom
 
-from zope.interface import directlyProvides
-
 from twisted.python import log
 from twisted.logger import Logger
 
 from twisted.application import service
 from twisted.internet import task
+from twisted.python.failure import Failure
 from twisted.internet.defer import (
-    CancelledError, gatherResults, Deferred, succeed
+    CancelledError, gatherResults, Deferred, succeed, fail
 )
-from twisted.internet import interfaces
 
 
 
@@ -566,6 +564,7 @@ class ClientService(service.Service, object):
 
         self._endpoint = endpoint
         self._failedAttempts = 0
+        self._stopped = False
         self._factory = factory
         self._timeoutForAttempt = retryPolicy
         self._clock = clock
@@ -590,10 +589,24 @@ class ClientService(service.Service, object):
         """
         if self._currentConnection is not None:
             return succeed(self._currentConnection)
+        elif self._stopped:
+            return fail(CancelledError())
         else:
             result = Deferred()
             self._awaitingConnected.append(result)
             return result
+
+
+    def _unawait(self, value):
+        """
+        Fire all outstanding L{ClientService.whenConnected} L{Deferred}s.
+
+        @param value: the value to fire the L{Deferred}s with.
+        """
+        self._awaitingConnected, waiting = [], self._awaitingConnected
+        for w in waiting:
+            w.callback(value)
+
 
 
     def startService(self):
@@ -611,9 +624,7 @@ class ClientService(service.Service, object):
             self._loseConnection = protocol.transport.loseConnection
             self._lostDeferred = Deferred()
             self._currentConnection = protocol._protocol
-            self._awaitingConnected, waiting = [], self._awaitingConnected
-            for w in waiting:
-                w.callback(self._currentConnection)
+            self._unawait(self._currentConnection)
 
         def clientDisconnect(reason):
             self._currentConnection = None
@@ -650,10 +661,12 @@ class ClientService(service.Service, object):
             closed and all in-progress connection attempts halted.
         """
         super(ClientService, self).stopService()
+        self._stopped = True
         self._stopRetry()
         self._stopRetry = _noop
         self._connectionInProgress.cancel()
         self._loseConnection()
+        self._unawait(Failure(CancelledError()))
         return gatherResults([self._connectionInProgress, self._lostDeferred])
 
 

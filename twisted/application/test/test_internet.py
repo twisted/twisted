@@ -17,7 +17,7 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.application import internet
 from twisted.application.internet import (
     StreamServerEndpointService, TimerService, ClientService)
@@ -492,7 +492,7 @@ def catchLogs(testCase, logPublisher=globalLogPublisher):
 
 AT_LEAST_ONE_ATTEMPT = 100.
 
-class ClientServiceTests(TestCase):
+class ClientServiceTests(SynchronousTestCase):
     """
     Tests for L{ClientService}.
     """
@@ -632,7 +632,11 @@ class ClientServiceTests(TestCase):
                                            clock=clock)
         self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].errback(Failure(Exception()))
-        self.assertNoResult(service.whenConnected())
+        whenConnected = service.whenConnected()
+        self.assertNoResult(whenConnected)
+        # Don't fail during test tear-down when service shutdown causes all
+        # waiting connections to fail.
+        whenConnected.addErrback(lambda ignored: ignored.trap(CancelledError))
         clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.assertEqual(len(cq.connectQueue), 2)
 
@@ -663,10 +667,11 @@ class ClientServiceTests(TestCase):
         protocol stopping deferred is called and the reference to the protocol
         is removed.
         """
-        cq, service = self.makeReconnector()
+        clock = Clock()
+        cq, service = self.makeReconnector(clock=clock)
         d = service.stopService()
         cq.constructedProtocols[0].connectionLost(Failure(IndentationError()))
-        self.assertFailure(service.whenConnected(), CancelledError)
+        self.failureResultOf(service.whenConnected(), CancelledError)
         self.assertTrue(d.called)
 
 
@@ -717,6 +722,7 @@ class ClientServiceTests(TestCase):
         self.assertNoResult(a)
         self.assertNoResult(b)
         service.stopService()
-        self.assertFailure(a, CancelledError)
-        self.assertFailure(b, CancelledError)
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.failureResultOf(a, CancelledError)
+        self.failureResultOf(b, CancelledError)
 
