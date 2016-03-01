@@ -612,7 +612,6 @@ class ClientService(service.Service, object):
             w.callback(value)
 
 
-
     def startService(self):
         """
         Start this L{ClientService}, initiating the connection retry loop.

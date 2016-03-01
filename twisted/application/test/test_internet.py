@@ -515,18 +515,25 @@ class ClientServiceTests(SynchronousTestCase):
             being returned?
         @type startService: L{bool}
 
+        @param protocolType: a 0-argument callable returning a new L{IProtocol}
+            provider to be used for application-level protocol connections.
+
         @param kw: Arbitrary keyword arguments to be passed on to
             L{ClientService}
 
         @return: a 2-tuple of L{ConnectInformation} (for information about test
-            state) and L{ClientService} (the system under test)
+            state) and L{ClientService} (the system under test).  The
+            L{ConnectInformation} has 2 additional attributes;
+            C{applicationFactory} and C{applicationProtocols}, which refer to
+            the unwrapped protocol factory and protocol instances passed in to
+            L{ClientService} respectively.
         """
         nkw = {}
         nkw.update(clock=Clock())
         nkw.update(kw)
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
 
-        # endpointForTesting is totally generic to any LLPI client that uses
+        # `endpointForTesting` is totally generic to any LLPI client that uses
         # endpoints, and maintains all its state internally; however,
         # applicationProtocols and applicationFactory are bonus attributes that
         # are only specifically interesitng to tests that use wrapper
@@ -605,7 +612,9 @@ class ClientServiceTests(SynchronousTestCase):
         """
         @implementer(IHalfCloseableProtocol, IFileDescriptorReceiver)
         class FancyProtocol(Protocol, object):
-            "Provider of various interfaces."
+            """
+            Provider of various interfaces.
+            """
         cq, service = self.makeReconnector(protocolType=FancyProtocol)
         reactorFacing = cq.constructedProtocols[0]
         self.assertTrue(IFileDescriptorReceiver.providedBy(reactorFacing))
