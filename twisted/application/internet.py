@@ -489,6 +489,8 @@ def backoffPolicy(initialDelay=1.0, maxDelay=60.0, factor=1.5,
     A timeout policy for L{ClientService} which computes an exponential backoff
     interval with configurable parameters.
 
+    @since: 16.1.0
+
     @param initialDelay: Delay for the first reconnection attempt (default
         1.0s).
     @type initialDelay: L{float}
@@ -534,6 +536,8 @@ class ClientService(service.Service, object):
     A L{ClientService} maintains a single outgoing connection to a client
     endpoint, reconnecting after a configurable timeout when a connection
     fails, either before or after connecting.
+
+    @since: 16.1.0
     """
 
     _log = Logger()
