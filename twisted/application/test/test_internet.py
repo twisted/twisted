@@ -432,11 +432,14 @@ class ConnectInformation(object):
         will trigger building a factory.
 
     @ivar constructedProtocols: a L{list} of protocols constructed.
+
+    @ivar passedFactories: a L{list} of L{IProtocolFactory}; the ones actually
+        passed to the underlying endpoint / i.e. the reactor.
     """
     def __init__(self):
         self.connectQueue = []
         self.constructedProtocols = []
-        self.applicationProtocols = []
+        self.passedFactories = []
 
 
 
@@ -455,6 +458,7 @@ def endpointForTesting(fireImmediately=False):
     class ClientTestEndpoint(object):
         def connect(self, factory):
             result = Deferred()
+            info.passedFactories.append(factory)
             @result.addCallback
             def createProtocol(ignored):
                 protocol = factory.buildProtocol(None)
@@ -521,13 +525,24 @@ class ClientServiceTests(SynchronousTestCase):
         nkw.update(clock=Clock())
         nkw.update(kw)
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
+
+        # endpointForTesting is totally generic to any LLPI client that uses
+        # endpoints, and maintains all its state internally; however,
+        # applicationProtocols and applicationFactory are bonus attributes that
+        # are only specifically interesitng to tests that use wrapper
+        # protocols.  For now, set them here, externally.
+
+        applicationProtocols = cq.applicationProtocols = []
+
         class RememberingFactory(Factory, object):
             protocol = protocolType
             def buildProtocol(self, addr):
                 result = super(RememberingFactory, self).buildProtocol(addr)
-                cq.applicationProtocols.append(result)
+                applicationProtocols.append(result)
                 return result
-        factory = RememberingFactory()
+
+        cq.applicationFactory = factory = RememberingFactory()
+
         service = ClientService(endpoint, factory, **nkw)
         def stop():
             service._protocol = None
@@ -548,6 +563,21 @@ class ClientServiceTests(SynchronousTestCase):
         """
         cq, service = self.makeReconnector(fireImmediately=False)
         self.assertEqual(len(cq.connectQueue), 1)
+
+
+    def test_startStopFactory(self):
+        """
+        Although somewhat obscure, L{IProtocolFactory} includes both C{doStart}
+        and C{doStop} methods; ensure that when these methods are called on the
+        factory that was passed to the reactor, the factory that was passed
+        from the application receives them.
+        """
+        cq, service = self.makeReconnector()
+        firstAppFactory = cq.applicationFactory
+        self.assertEqual(firstAppFactory.numPorts, 0)
+        firstPassedFactory = cq.passedFactories[0]
+        firstPassedFactory.doStart()
+        self.assertEqual(firstAppFactory.numPorts, 1)
 
 
     def test_stopServiceWhileConnected(self):
