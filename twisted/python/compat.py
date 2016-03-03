@@ -679,6 +679,12 @@ deprecatedModuleAttribute(
     "twisted.python.compat",
     "OrderedDict")
 
+if _PY3:
+    from base64 import encodebytes as _b64encodebytes
+    from base64 import decodebytes as _b64decodebytes
+else:
+    from base64 import encodestring as _b64encodebytes
+    from base64 import decodestring as _b64decodebytes
 
 
 __all__ = [
@@ -710,4 +716,7 @@ __all__ = [
     "urlquote",
     "urlunquote",
     "cookielib",
+    "_keys",
+    "_b64encodebytes",
+    "_b64decodebytes",
 ]

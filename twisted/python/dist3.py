@@ -47,6 +47,8 @@ modules = [
     "twisted.application.strports",
     "twisted.application.test",
     "twisted.conch",
+    "twisted.conch.checkers",
+    "twisted.conch.error",
     "twisted.conch.ssh",
     "twisted.conch.ssh._cryptography_backports",
     "twisted.conch.ssh.common",
@@ -161,6 +163,7 @@ modules = [
     "twisted.python.deprecate",
     "twisted.python.dist3",
     "twisted.python.failure",
+    "twisted.python.fakepwd",
     "twisted.python.filepath",
     "twisted.python.lockfile",
     "twisted.python.log",
@@ -249,6 +252,7 @@ testModules = [
     "twisted.application.test.test_internet",
     "twisted.application.test.test_service",
     "twisted.conch.test.test_keys",
+    "twisted.conch.test.test_checkers",
     "twisted.cred.test.test_cramauth",
     "twisted.cred.test.test_cred",
     "twisted.cred.test.test_digestauth",
@@ -466,9 +470,6 @@ almostModules = [
     "twisted.names.root",
     # Echo is ported for twisted.application tests:
     "twisted.protocols.wire",
-    # Required by twisted.test.test_twistd
-    # https://twistedmatrix.com/trac/ticket/7958
-    "twisted.python.fakepwd",
     # Missing test coverage:
     "twisted.protocols.loopback",
     # Minimally used by setup3.py:

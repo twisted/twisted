@@ -15,7 +15,6 @@ else:
     cryptSkip = None
 
 import os
-import base64
 
 from collections import namedtuple
 from io import BytesIO
@@ -23,6 +22,7 @@ from io import BytesIO
 from zope.interface.verify import verifyObject
 
 from twisted.python import util
+from twisted.python.compat import _b64encodebytes
 from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
@@ -33,6 +33,7 @@ from twisted.cred.credentials import UsernamePassword, IUsernamePassword, \
 from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
 from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 from twisted.test.test_process import MockOS
+
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     dependencySkip = None
@@ -162,9 +163,10 @@ class SSHPublicKeyDatabaseTests(TestCase):
 
     def setUp(self):
         self.checker = checkers.SSHPublicKeyDatabase()
-        self.key1 = base64.encodebytes(b"foobar")
-        self.key2 = base64.encodebytes(b"eggspam")
-        self.content = b"t1 %s foo\nt2 %s egg\n" % (self.key1, self.key2)
+        self.key1 = _b64encodebytes(b"foobar")
+        self.key2 = _b64encodebytes(b"eggspam")
+        self.content = (b"t1 " + self.key1 + b" foo\nt2 " + self.key2 +
+                        b" egg\n")
 
         self.mockos = MockOS()
         self.mockos.path = FilePath(self.mktemp())

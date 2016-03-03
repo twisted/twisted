@@ -8,7 +8,7 @@ Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 
 from __future__ import absolute_import, division
 
-import base64
+import sys
 import binascii
 import errno
 
@@ -20,7 +20,6 @@ else:
     import crypt
 
 try:
-    # Python 2.5 got spwd to interface with shadow passwords
     import spwd
 except ImportError:
     spwd = None
@@ -33,7 +32,7 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
-from twisted.python.compat import _keys, _PY3
+from twisted.python.compat import _keys, _PY3, _b64decodebytes
 from twisted.python import failure, reflect, log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
@@ -58,6 +57,7 @@ def _pwdGetByName(username):
 
     @param username: the username of the user to return the passwd database
         information for.
+    @type username: L{str}
     """
     if pwd is None:
         return None
@@ -72,6 +72,7 @@ def _shadowGetByName(username):
 
     @param username: the username of the user to return the shadow database
         information for.
+    @type username: L{str}
     """
     if spwd is not None:
         f = spwd.getspnam
@@ -88,8 +89,8 @@ class UNIXPasswordDatabase:
     databases of a compatible format.
 
     @ivar _getByNameFunctions: a C{list} of functions which are called in order
-        to valid a user.  The default value is such that the /etc/passwd
-        database will be tried first, followed by the /etc/shadow database.
+        to valid a user.  The default value is such that the C{/etc/passwd}
+        database will be tried first, followed by the C{/etc/shadow} database.
     """
     credentialInterfaces = IUsernamePassword,
 
@@ -103,7 +104,10 @@ class UNIXPasswordDatabase:
         for func in self._getByNameFunctions:
             try:
                 if _PY3:
-                    username = credentials.username.decode('ascii')
+                    # CPython decodes these using the default filesystem
+                    # encoding, but we want bytes, so encode it back.
+                    username = credentials.username.decode(
+                        sys.getfilesystemencoding())
                 else:
                     username = credentials.username
                 pwnam = func(username)
@@ -116,7 +120,10 @@ class UNIXPasswordDatabase:
                         continue
 
                     if _PY3:
-                        password = credentials.password.decode('ascii')
+                        # CPython decodes these using the default filesystem
+                        # encoding, but we want bytes, so encode it back.
+                        password = credentials.password.decode(
+                            sys.getfilesystemencoding())
                     else:
                         password = credentials.password
 
@@ -222,7 +229,7 @@ class SSHPublicKeyDatabase:
                 if len(l2) < 2:
                     continue
                 try:
-                    if base64.decodestring(l2[1]) == credentials.blob:
+                    if _b64decodebytes(l2[1]) == credentials.blob:
                         return True
                 except binascii.Error:
                     continue
