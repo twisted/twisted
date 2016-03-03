@@ -19,12 +19,6 @@ try:
     import spwd
 except ImportError:
     spwd = None
-    try:
-        import shadow
-    except ImportError:
-        shadow = None
-else:
-    shadow = None
 
 from zope.interface import providedBy, implementer, Interface
 
@@ -64,16 +58,14 @@ def _pwdGetByName(username):
 
 def _shadowGetByName(username):
     """
-    Look up a user in the /etc/shadow database using the spwd or shadow
-    modules.  If neither module is available, return None.
+    Look up a user in the /etc/shadow database using the spwd module. If it is
+    not available, return C{None}.
 
     @param username: the username of the user to return the shadow database
         information for.
     """
     if spwd is not None:
         f = spwd.getspnam
-    elif shadow is not None:
-        f = shadow.getspnam
     else:
         return None
     return runAsEffectiveUser(0, 0, f, username)

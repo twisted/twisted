@@ -140,32 +140,9 @@ class HelperTests(TestCase):
 
     def test_shadowGetByNameWithoutSpwd(self):
         """
-        L{_shadowGetByName} uses the C{shadow} module to return a tuple of items
-        from the UNIX /etc/shadow database if the C{spwd} module is not present
-        and the C{shadow} module is.
-        """
-        userdb = ShadowDatabase()
-        userdb.addUser('bob', 'passphrase', 1, 2, 3, 4, 5, 6, 7)
-        self.patch(checkers, 'spwd', None)
-        self.patch(checkers, 'shadow', userdb)
-        self.patch(util, 'os', self.mockos)
-
-        self.mockos.euid = 2345
-        self.mockos.egid = 1234
-
-        self.assertEqual(
-            checkers._shadowGetByName('bob'), userdb.getspnam('bob'))
-        self.assertEqual(self.mockos.seteuidCalls, [0, 2345])
-        self.assertEqual(self.mockos.setegidCalls, [0, 1234])
-
-
-    def test_shadowGetByNameWithoutEither(self):
-        """
-        L{_shadowGetByName} returns C{None} if neither C{spwd} nor C{shadow} is
-        present.
+        L{_shadowGetByName} returns C{None} if C{spwd} is not present.
         """
         self.patch(checkers, 'spwd', None)
-        self.patch(checkers, 'shadow', None)
 
         self.assertIs(checkers._shadowGetByName('bob'), None)
         self.assertEqual(self.mockos.seteuidCalls, [])
