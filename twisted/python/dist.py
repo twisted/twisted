@@ -28,8 +28,9 @@ Maintainer: Christopher Armstrong
 
 from distutils.command import build_scripts, install_data, build_ext
 from distutils.errors import CompileError
-from distutils import core
 from distutils.core import Extension
+from setuptools import setup as _setup
+
 import fnmatch
 import os
 import platform
@@ -129,7 +130,7 @@ def setup(**kw):
     @param conditionalExtensions: Extensions to optionally build.
     @type conditionalExtensions: C{list} of L{ConditionalExtension}
     """
-    return core.setup(**get_setup_args(**kw))
+    return _setup(**get_setup_args(**kw))
 
 
 def get_setup_args(**kw):
@@ -183,7 +184,8 @@ def getVersion(base):
 # Names that are excluded from globbing results:
 EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
                  "RCS", "SCCS", ".svn"]
-EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py"]
+EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py", "*.cache",
+                    "*.old"]
 
 
 def _filterNames(names):

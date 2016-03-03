@@ -15,13 +15,11 @@ which must run on multiple platforms (eg the setup.py script).
 import os
 import re
 import sys
-import tarfile
 import textwrap
 
 from zope.interface import Interface, implementer
 
 from datetime import date
-from tempfile import mkdtemp
 from subprocess import PIPE, STDOUT, Popen
 
 from twisted.python.versions import Version
@@ -1029,142 +1027,11 @@ def filePathDelta(origin, destination):
 
 
 
-class DistributionBuilder(object):
-    """
-    A builder of Twisted distributions.
-
-    This knows how to build tarballs for Twisted.
-    """
-
-    def __init__(self, rootDirectory, outputDirectory, templatePath=None):
-        """
-        Create a distribution builder.
-
-        @param rootDirectory: root of a Twisted export which will populate
-            subsequent tarballs.
-        @type rootDirectory: L{FilePath}.
-
-        @param outputDirectory: The directory in which to create the tarballs.
-        @type outputDirectory: L{FilePath}
-
-        @param templatePath: Path to the template file that is used for the
-            howto documentation.
-        @type templatePath: L{FilePath}
-        """
-        self.rootDirectory = rootDirectory
-        self.outputDirectory = outputDirectory
-        self.templatePath = templatePath
-
-
-    def buildTwisted(self, version):
-        """
-        Build the main Twisted distribution in C{Twisted-<version>.tar.bz2}.
-
-        bin/admin is excluded.
-
-        @type version: C{str}
-        @param version: The version of Twisted to build.
-
-        @return: The tarball file.
-        @rtype: L{FilePath}.
-        """
-        releaseName = "Twisted-%s" % (version,)
-        buildPath = lambda *args: '/'.join((releaseName,) + args)
-
-        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
-        tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
-
-        docPath = self.rootDirectory.child("docs")
-
-        # Generate docs!
-        if docPath.isdir():
-            SphinxBuilder().build(docPath)
-
-        for binthing in self.rootDirectory.child("bin").children():
-            # bin/admin should not be included.
-            if binthing.basename() != "admin":
-                tarball.add(binthing.path,
-                            buildPath("bin", binthing.basename()))
-
-        for submodule in self.rootDirectory.child("twisted").children():
-            if submodule.basename() == "plugins":
-                for plugin in submodule.children():
-                    tarball.add(plugin.path, buildPath("twisted", "plugins",
-                                                       plugin.basename()))
-            else:
-                tarball.add(submodule.path, buildPath("twisted",
-                                                      submodule.basename()))
-
-        for docDir in self.rootDirectory.child("doc").children():
-            if docDir.basename() != "historic":
-                tarball.add(docDir.path, buildPath("doc", docDir.basename()))
-
-        for toplevel in self.rootDirectory.children():
-            if not toplevel.isdir():
-                tarball.add(toplevel.path, buildPath(toplevel.basename()))
-
-        tarball.close()
-
-        return outputFile
-
-
-
-class UncleanWorkingDirectory(Exception):
-    """
-    Raised when the working directory of a repository is unclean.
-    """
-
-
-
 class NotWorkingDirectory(Exception):
     """
     Raised when a directory does not appear to be a repository directory of a
     supported VCS.
     """
-
-
-
-def buildAllTarballs(checkout, destination, templatePath=None):
-    """
-    Build the complete tarball (including documentation) for Twisted.
-
-    This should be called after the version numbers have been updated and
-    NEWS files created.
-
-    @type checkout: L{FilePath}
-    @param checkout: The repository from which a pristine source tree will be
-        exported.
-    @type destination: L{FilePath}
-    @param destination: The directory in which tarballs will be placed.
-    @type templatePath: L{FilePath}
-    @param templatePath: Location of the template file that is used for the
-        howto documentation.
-
-    @raise UncleanWorkingDirectory: If there are modifications to the
-        working directory of C{checkout}.
-    @raise NotWorkingDirectory: If the C{checkout} path is not a supported VCS
-        repository.
-    """
-    cmd = getRepositoryCommand(checkout)
-    cmd.ensureIsWorkingDirectory(checkout)
-
-    if not cmd.isStatusClean(checkout):
-        raise UncleanWorkingDirectory(
-            "There are local modifications to the repository in %s."
-            % (checkout.path,))
-
-    workPath = FilePath(mkdtemp())
-    export = workPath.child("export")
-    cmd.exportTo(checkout, export)
-    twistedPath = export.child("twisted")
-    version = Project(twistedPath).getVersion()
-    versionString = version.base()
-
-    if not destination.exists():
-        destination.createDirectory()
-    db = DistributionBuilder(export, destination, templatePath=templatePath)
-    db.buildTwisted(versionString)
-    workPath.remove()
 
 
 
@@ -1201,36 +1068,6 @@ class ChangeVersionsScript(object):
 
         self.changeAllProjectVersions(FilePath("."), options["prerelease"],
                                       options["patch"])
-
-
-
-class BuildTarballsScript(object):
-    """
-    A thing for building release tarballs. See L{main}.
-    """
-    buildAllTarballs = staticmethod(buildAllTarballs)
-
-    def main(self, args):
-        """
-        Build all release tarballs.
-
-        @type args: list of C{str}
-        @param args: The command line arguments to process.  This must contain
-            at least two strings: the checkout directory and the destination
-            directory. An optional third string can be specified for the
-            website template file, used for building the howto documentation.
-            If this string isn't specified, the default template included in
-            twisted will be used.
-        """
-        if len(args) < 2 or len(args) > 3:
-            sys.exit("Must specify at least two arguments: "
-                     "Twisted checkout and destination path. The optional "
-                     "third argument is the website template path.")
-        if len(args) == 2:
-            self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]))
-        elif len(args) == 3:
-            self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]),
-                                  FilePath(args[2]))
 
 
 

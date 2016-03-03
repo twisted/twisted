@@ -52,8 +52,9 @@ def main(args):
         packages=getPackages('twisted'),
         conditionalExtensions=getExtensions(),
         scripts=scripts,
+        include_package_data=True,
+        data_files=getDataFiles("twisted"),
         extras_require=_EXTRAS_REQUIRE,
-        data_files=getDataFiles('twisted'),
         **STATIC_PACKAGE_METADATA))
 
     setup(**setup_args)
