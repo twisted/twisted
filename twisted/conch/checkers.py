@@ -43,8 +43,14 @@ from twisted.python.versions import Version
 
 def verifyCryptedPassword(crypted, pw):
     """
+    Check that the password, when crypted, matches the stored crypted password.
+
+    @param crypted: The stored crypted password.
     @type crypted: L{str}
+    @param pw: The password the user has given.
     @type pw: L{str}
+
+    @rtype: L{bool}
     """
     return crypt.crypt(pw, crypted) == crypted
 
@@ -101,15 +107,17 @@ class UNIXPasswordDatabase:
 
 
     def requestAvatarId(self, credentials):
+        # We get bytes, but the Py3 pwd module uses str. So attempt to decode
+        # it using the same method that CPython does for the file on disk.
+        if _PY3:
+            username = credentials.username.decode(sys.getfilesystemencoding())
+            password = credentials.password.decode(sys.getfilesystemencoding())
+        else:
+            username = credentials.username
+            password = credentials.password
+
         for func in self._getByNameFunctions:
             try:
-                if _PY3:
-                    # CPython decodes these using the default filesystem
-                    # encoding, but we want bytes, so encode it back.
-                    username = credentials.username.decode(
-                        sys.getfilesystemencoding())
-                else:
-                    username = credentials.username
                 pwnam = func(username)
             except KeyError:
                 return defer.fail(UnauthorizedLogin("invalid username"))
@@ -118,14 +126,6 @@ class UNIXPasswordDatabase:
                     crypted = pwnam[1]
                     if crypted == '':
                         continue
-
-                    if _PY3:
-                        # CPython decodes these using the default filesystem
-                        # encoding, but we want bytes, so encode it back.
-                        password = credentials.password.decode(
-                            sys.getfilesystemencoding())
-                    else:
-                        password = credentials.password
 
                     if verifyCryptedPassword(crypted, password):
                         return defer.succeed(credentials.username)
