@@ -26,7 +26,7 @@ Maintainer: Christopher Armstrong
     as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
 """
 
-from distutils.command import build_scripts, install_data, build_ext
+from distutils.command import build_scripts, build_ext
 from distutils.errors import CompileError
 from setuptools import setup as _setup
 from setuptools import Extension

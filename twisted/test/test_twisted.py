@@ -671,9 +671,11 @@ class OldSubprojectDeprecationBase(TestCase):
                 "twisted.{}._version".format(self.subproject))
 
 
-
-subprojects = ["mail", "conch", "runner", "web", "words", "names", "news",
-               "pair"]
+if _PY3:
+    subprojects = ["conch", "web", "names"]
+else:
+    subprojects = ["mail", "conch", "runner", "web", "words", "names", "news",
+                   "pair"]
 
 for subproject in subprojects:
 

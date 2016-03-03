@@ -37,12 +37,13 @@ def main():
     from twisted.python.dist import STATIC_PACKAGE_METADATA
 
     args = STATIC_PACKAGE_METADATA.copy()
-    args['install_requires'] = ["zope.interface >= 4.0.2"]
-    args['py_modules'] = modulesToInstall + testDataFiles
-    args['zip_safe'] = False
-    args['include_package_data'] = True
-    args['cmdclass'] = {'sdist': DisabledSdist}
-    args['scripts'] = ['bin/trial', 'bin/twistd']
+    args.update(dict(
+        install_requires=["zope.interface >= 4.0.2"],
+        py_modules=modulesToInstall + testDataFiles,
+        zip_safe=False,
+        include_package_data=True,
+        scripts=['bin/trial', 'bin/twistd'],
+    ))
 
     setup(**args)
 

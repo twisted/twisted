@@ -135,6 +135,8 @@ modules = [
     "twisted.persisted.styles",
     "twisted.plugin",
     "twisted.plugins",
+    "twisted.plugins.cred_anonymous",
+    "twisted.plugins.cred_file",
     "twisted.plugins.cred_sshkeys",
     "twisted.plugins.twisted_trial",
     "twisted.plugins.twisted_web",
@@ -451,6 +453,10 @@ testDataFiles = [
     "twisted.trial.test.packages",
     "twisted.trial.test.sample",
     "twisted.trial.test.scripttest",
+    "twisted.trial.test.weird",
+    "twisted.trial.test.mockcustomsuite",
+    "twisted.trial.test.mockcustomsuite2",
+    "twisted.trial.test.mockcustomsuite3",
 ]
 
 
