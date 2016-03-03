@@ -2575,15 +2575,20 @@ class ServerStringTests(unittest.TestCase):
         # The endpoint string is the same as in the valid case except for
         # a different chain file.  We use an empty temp file which obviously
         # will never contain any certificates.
-        self.assertRaises(
-            ValueError,
-            endpoints.serverFromString,
-            object(),
-            self.SSL_CHAIN_TEMPLATE % (
-                escapedPEMPathName,
-                endpoints.quoteStringArgument(fp.path),
+        with self.assertRaises(ValueError) as caught:
+            endpoints.serverFromString(
+                object(),
+                self.SSL_CHAIN_TEMPLATE % (
+                    escapedPEMPathName,
+                    endpoints.quoteStringArgument(fp.path),
+                )
             )
-        )
+
+        # The raised exception should list what file it is attempting to find
+        # the chain in.
+        self.assertEqual(str(caught.exception),
+                         ("Specified chain file '%s' doesn't contain any valid"
+                          " certificates in PEM format.") % (fp.path,))
 
 
     def test_sslDHparameters(self):
