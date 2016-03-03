@@ -28,9 +28,8 @@ Maintainer: Christopher Armstrong
 
 from distutils.command import build_scripts, install_data, build_ext
 from distutils.errors import CompileError
-from distutils.core import Extension
 from setuptools import setup as _setup
-
+from setuptools import Extension
 import fnmatch
 import os
 import platform
@@ -142,28 +141,11 @@ def get_setup_args(**kw):
         del kw['plugins']
 
     if 'cmdclass' not in kw:
-        kw['cmdclass'] = {
-            'install_data': install_data_twisted,
-            'build_scripts': build_scripts_twisted}
+        kw['cmdclass'] = {'build_scripts': build_scripts_twisted}
 
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
         del kw["conditionalExtensions"]
-
-        if 'ext_modules' not in kw:
-            # This is a workaround for distutils behavior; ext_modules isn't
-            # actually used by our custom builder.  distutils deep-down checks
-            # to see if there are any ext_modules defined before invoking
-            # the build_ext command.  We need to trigger build_ext regardless
-            # because it is the thing that does the conditional checks to see
-            # if it should build any extensions.  The reason we have to delay
-            # the conditional checks until then is that the compiler objects
-            # are not yet set up when this code is executed.
-            kw["ext_modules"] = extensions
-
-        class my_build_ext(build_ext_twisted):
-            conditionalExtensions = extensions
-        kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
     return kw
 
 
@@ -226,45 +208,6 @@ def relativeTo(base, relativee):
     raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
 
 
-def getDataFiles(dname, ignore=None, parent=None):
-    """
-    Get all the data files that should be included in this distutils Project.
-
-    'dname' should be the path to the package that you're distributing.
-
-    'ignore' is a list of sub-packages to ignore.  This facilitates
-    disparate package hierarchies.  That's a fancy way of saying that
-    the 'twisted' package doesn't want to include the 'twisted.conch'
-    package, so it will pass ['conch'] as the value.
-
-    'parent' is necessary if you're distributing a subpackage like
-    twisted.conch.  'dname' should point to 'twisted/conch' and 'parent'
-    should point to 'twisted'.  This ensures that your data_files are
-    generated correctly, only using relative paths for the first element
-    of the tuple ('twisted/conch/*').
-    The default 'parent' is the current working directory.
-    """
-    parent = parent or "."
-    ignore = ignore or []
-    result = []
-    for directory, subdirectories, filenames in os.walk(dname):
-        resultfiles = []
-        for exname in EXCLUDE_NAMES:
-            if exname in subdirectories:
-                subdirectories.remove(exname)
-        for ig in ignore:
-            if ig in subdirectories:
-                subdirectories.remove(ig)
-        for filename in _filterNames(filenames):
-            resultfiles.append(filename)
-        if resultfiles:
-            result.append((relativeTo(parent, directory),
-                           [relativeTo(parent,
-                                       os.path.join(directory, filename))
-                            for filename in resultfiles]))
-    return result
-
-
 def getExtensions():
     """
     Get the C extensions used for Twisted.
@@ -295,36 +238,6 @@ def getExtensions():
 
     return extensions
 
-
-
-def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
-    """
-    Get all packages which are under dname. This is necessary for
-    Python 2.2's distutils. Pretty similar arguments to getDataFiles,
-    including 'parent'.
-    """
-    parent = parent or ""
-    prefix = []
-    if parent:
-        prefix = [parent]
-    bname = os.path.basename(dname)
-    ignore = ignore or []
-    if bname in ignore:
-        return []
-    if results is None:
-        results = []
-    if pkgname is None:
-        pkgname = []
-    subfiles = os.listdir(dname)
-    abssubfiles = [os.path.join(dname, x) for x in subfiles]
-    if '__init__.py' in subfiles:
-        results.append(prefix + pkgname + [bname])
-        for subdir in filter(os.path.isdir, abssubfiles):
-            getPackages(subdir, pkgname=pkgname + [bname],
-                        results=results, ignore=ignore,
-                        parent=parent)
-    res = ['.'.join(result) for result in results]
-    return res
 
 
 def getScripts(basedir=''):
@@ -363,96 +276,6 @@ class build_scripts_twisted(build_scripts.build_scripts):
                 if os.path.exists(pypath):
                     os.unlink(pypath)
                 os.rename(fpath, pypath)
-
-
-
-class install_data_twisted(install_data.install_data):
-    """
-    I make sure data files are installed in the package directory.
-    """
-    def finalize_options(self):
-        self.set_undefined_options('install',
-            ('install_lib', 'install_dir')
-        )
-        install_data.install_data.finalize_options(self)
-
-
-
-class build_ext_twisted(build_ext.build_ext):
-    """
-    Allow subclasses to easily detect and customize Extensions to
-    build at install-time.
-    """
-
-    def prepare_extensions(self):
-        """
-        Prepare the C{self.extensions} attribute (used by
-        L{build_ext.build_ext}) by checking which extensions in
-        L{conditionalExtensions} should be built.  In addition, if we are
-        building on NT, define the WIN32 macro to 1.
-        """
-        # always define WIN32 under Windows
-        if os.name == 'nt':
-            self.define_macros = [("WIN32", 1)]
-        else:
-            self.define_macros = []
-
-        # On Solaris 10, we need to define the _XOPEN_SOURCE and
-        # _XOPEN_SOURCE_EXTENDED macros to build in order to gain access to
-        # the msg_control, msg_controllen, and msg_flags members in
-        # sendmsg.c. (according to
-        # http://stackoverflow.com/questions/1034587).  See the documentation
-        # of X/Open CAE in the standards(5) man page of Solaris.
-        if sys.platform.startswith('sunos'):
-            self.define_macros.append(('_XOPEN_SOURCE', 1))
-            self.define_macros.append(('_XOPEN_SOURCE_EXTENDED', 1))
-
-        self.extensions = [x for x in self.conditionalExtensions
-                           if x.condition(self)]
-
-        for ext in self.extensions:
-            ext.define_macros.extend(self.define_macros)
-
-
-    def build_extensions(self):
-        """
-        Check to see which extension modules to build and then build them.
-        """
-        self.prepare_extensions()
-        build_ext.build_ext.build_extensions(self)
-
-
-    def _remove_conftest(self):
-        for filename in ("conftest.c", "conftest.o", "conftest.obj"):
-            try:
-                os.unlink(filename)
-            except EnvironmentError:
-                pass
-
-
-    def _compile_helper(self, content):
-        conftest = open("conftest.c", "w")
-        try:
-            conftest.write(content)
-            conftest.close()
-
-            try:
-                self.compiler.compile(["conftest.c"], output_dir='')
-            except CompileError:
-                return False
-            return True
-        finally:
-            self._remove_conftest()
-
-
-    def _check_header(self, header_name):
-        """
-        Check if the given header can be included by trying to compile a file
-        that contains only an #include line.
-        """
-        self.compiler.announce("checking for %s ..." % header_name, 0)
-        return self._compile_helper("#include <%s>\n" % header_name)
-
 
 
 def _checkCPython(sys=sys, platform=platform):
