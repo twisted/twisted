@@ -574,6 +574,9 @@ if _PY3:
     def items(d):
         return list(d.items())
 
+    def _keys(d):
+        return list(d.keys())
+
     xrange = range
     izip = zip
 else:
@@ -585,6 +588,9 @@ else:
 
     def items(d):
         return d.items()
+
+    def _keys(d):
+        return d.keys()
 
     xrange = xrange
     from itertools import izip
@@ -611,6 +617,14 @@ Return a list of the items of C{d}.
 @type d: L{dict}
 @rtype: L{list}
 """
+
+_keys.__doc__ = """
+Return a list of the keys of C{d}.
+
+@type d: L{dict}
+@rtype: L{list}
+"""
+
 
 
 
