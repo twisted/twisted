@@ -14,7 +14,7 @@ import os
 
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py
-from setuptools.command.install_scripts import install_scripts
+from distutils.command.build_scripts import build_scripts
 
 
 class PickyBuildPy(build_py):
@@ -24,19 +24,22 @@ class PickyBuildPy(build_py):
     """
     def find_package_modules(self, package, package_dir):
         from twisted.python.dist3 import modulesToInstall, testDataFiles
-        return [
+
+        modules = [
             module for module
             in super(build_py, self).find_package_modules(package, package_dir)
-            if module in modulesToInstall or module in testDataFiles]
+            if ".".join([module[0], module[1]]) in modulesToInstall or
+               ".".join([module[0], module[1]]) in testDataFiles]
+        return modules
 
 
 
-class PickyInstallScripts(install_scripts):
+class PickyBuildScripts(build_scripts):
 
-    def write_script(self, script_name, contents, mode="t", *ignored):
+    def copy_scripts(self):
         from twisted.python.dist3 import portedScripts
-        if script_name in portedScripts:
-            return super(PickyInstallScripts, self).write_script(script_name, contents, mode=mode)
+        self.scripts = portedScripts
+        return super(PickyBuildScripts, self).copy_scripts()
 
 
 
@@ -50,9 +53,9 @@ def main():
 
     args = STATIC_PACKAGE_METADATA.copy()
     args.update(dict(
-        cmd_class={
+        cmdclass={
             'build_py': PickyBuildPy,
-            'install_scripts': PickyInstallScripts,
+            'build_scripts': PickyBuildScripts,
         },
         packages=find_packages(),
         install_requires=["zope.interface >= 4.0.2"],
