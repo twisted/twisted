@@ -294,18 +294,6 @@ class build_scripts_twisted(build_scripts.build_scripts):
 
 
 
-class install_data_twisted(install_data.install_data):
-    """
-    I make sure data files are installed in the package directory.
-    """
-    def finalize_options(self):
-        self.set_undefined_options('install',
-            ('install_lib', 'install_dir')
-        )
-        install_data.install_data.finalize_options(self)
-
-
-
 class build_ext_twisted(build_ext.build_ext):
     """
     Allow subclasses to easily detect and customize Extensions to
