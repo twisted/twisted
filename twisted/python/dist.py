@@ -255,8 +255,8 @@ def getScripts(basedir=''):
     for specialExclusion in ['.svn', '_preamble.py', '_preamble.pyc']:
         if specialExclusion in thingies:
             thingies.remove(specialExclusion)
-    return filter(os.path.isfile,
-                  [os.path.join(scriptdir, x) for x in thingies])
+    return list(filter(os.path.isfile,
+                       [os.path.join(scriptdir, x) for x in thingies]))
 
 
 ## Helpers and distutil tweaks
