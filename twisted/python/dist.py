@@ -26,14 +26,14 @@ Maintainer: Christopher Armstrong
     as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
 """
 
+import os
+import platform
+import sys
+
 from distutils.command import build_scripts, build_ext
 from distutils.errors import CompileError
 from setuptools import setup as _setup
 from setuptools import Extension
-import fnmatch
-import os
-import platform
-import sys
 
 from twisted import copyright
 from twisted.python.compat import execfile
