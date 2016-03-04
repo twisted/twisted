@@ -133,13 +133,6 @@ def setup(**kw):
 
 
 def get_setup_args(**kw):
-    if 'plugins' in kw:
-        py_modules = []
-        for plg in kw['plugins']:
-            py_modules.append("twisted.plugins." + plg)
-        kw.setdefault('py_modules', []).extend(py_modules)
-        del kw['plugins']
-
     if 'cmdclass' not in kw:
         kw['cmdclass'] = {'build_scripts': build_scripts_twisted}
 
@@ -177,50 +170,6 @@ def getVersion(base):
     execfile(vfile, ns)
     return ns['version'].base()
 
-
-# Names that are excluded from globbing results:
-EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
-                 "RCS", "SCCS", ".svn"]
-EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py", "*.cache",
-                    "*.old"]
-
-
-def _filterNames(names):
-    """
-    Given a list of file names, return those names that should be copied.
-    """
-    names = [n for n in names
-             if n not in EXCLUDE_NAMES]
-    # This is needed when building a distro from a working
-    # copy (likely a checkout) rather than a pristine export:
-    for pattern in EXCLUDE_PATTERNS:
-        names = [n for n in names
-                 if (not fnmatch.fnmatch(n, pattern))
-                 and (not n.endswith('.py'))]
-    return names
-
-
-def relativeTo(base, relativee):
-    """
-    Gets 'relativee' relative to 'basepath'.
-
-    i.e.,
-
-    >>> relativeTo('/home/', '/home/radix/')
-    'radix'
-    >>> relativeTo('.', '/home/radix/Projects/Twisted') # curdir is /home/radix
-    'Projects/Twisted'
-
-    The 'relativee' must be a child of 'basepath'.
-    """
-    basepath = os.path.abspath(base)
-    relativee = os.path.abspath(relativee)
-    if relativee.startswith(basepath):
-        relative = relativee[len(basepath):]
-        if relative.startswith(os.sep):
-            relative = relative[1:]
-        return os.path.join(base, relative)
-    raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
 
 
 def getExtensions():
