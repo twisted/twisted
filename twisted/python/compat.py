@@ -612,6 +612,18 @@ Return a list of the items of C{d}.
 @rtype: L{list}
 """
 
+def _keys(d):
+    """
+    Return a list of the keys of C{d}.
+
+    @type d: L{dict}
+    @rtype: L{list}
+    """
+    if _PY3:
+        return list(d.keys())
+    else:
+        return d.keys()
+
 
 
 def bytesEnviron():
@@ -665,6 +677,12 @@ deprecatedModuleAttribute(
     "twisted.python.compat",
     "OrderedDict")
 
+if _PY3:
+    from base64 import encodebytes as _b64encodebytes
+    from base64 import decodebytes as _b64decodebytes
+else:
+    from base64 import encodestring as _b64encodebytes
+    from base64 import decodestring as _b64decodebytes
 
 
 __all__ = [
@@ -696,4 +714,7 @@ __all__ = [
     "urlquote",
     "urlunquote",
     "cookielib",
+    "_keys",
+    "_b64encodebytes",
+    "_b64decodebytes",
 ]

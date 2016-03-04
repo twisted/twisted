@@ -6,7 +6,12 @@
 Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 """
 
-import base64, binascii, errno
+from __future__ import absolute_import, division
+
+import sys
+import binascii
+import errno
+
 try:
     import pwd
 except ImportError:
@@ -15,19 +20,11 @@ else:
     import crypt
 
 try:
-    # Python 2.5 got spwd to interface with shadow passwords
     import spwd
 except ImportError:
     spwd = None
-    try:
-        import shadow
-    except ImportError:
-        shadow = None
-else:
-    shadow = None
 
 from zope.interface import providedBy, implementer, Interface
-
 
 from twisted.conch import error
 from twisted.conch.ssh import keys
@@ -35,6 +32,7 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
+from twisted.python.compat import _keys, _PY3, _b64decodebytes
 from twisted.python import failure, reflect, log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
@@ -44,6 +42,16 @@ from twisted.python.versions import Version
 
 
 def verifyCryptedPassword(crypted, pw):
+    """
+    Check that the password, when crypted, matches the stored crypted password.
+
+    @param crypted: The stored crypted password.
+    @type crypted: L{str}
+    @param pw: The password the user has given.
+    @type pw: L{str}
+
+    @rtype: L{bool}
+    """
     return crypt.crypt(pw, crypted) == crypted
 
 
@@ -55,6 +63,7 @@ def _pwdGetByName(username):
 
     @param username: the username of the user to return the passwd database
         information for.
+    @type username: L{str}
     """
     if pwd is None:
         return None
@@ -64,16 +73,15 @@ def _pwdGetByName(username):
 
 def _shadowGetByName(username):
     """
-    Look up a user in the /etc/shadow database using the spwd or shadow
-    modules.  If neither module is available, return None.
+    Look up a user in the /etc/shadow database using the spwd module. If it is
+    not available, return C{None}.
 
     @param username: the username of the user to return the shadow database
         information for.
+    @type username: L{str}
     """
     if spwd is not None:
         f = spwd.getspnam
-    elif shadow is not None:
-        f = shadow.getspnam
     else:
         return None
     return runAsEffectiveUser(0, 0, f, username)
@@ -87,8 +95,8 @@ class UNIXPasswordDatabase:
     databases of a compatible format.
 
     @ivar _getByNameFunctions: a C{list} of functions which are called in order
-        to valid a user.  The default value is such that the /etc/passwd
-        database will be tried first, followed by the /etc/shadow database.
+        to valid a user.  The default value is such that the C{/etc/passwd}
+        database will be tried first, followed by the C{/etc/shadow} database.
     """
     credentialInterfaces = IUsernamePassword,
 
@@ -99,9 +107,18 @@ class UNIXPasswordDatabase:
 
 
     def requestAvatarId(self, credentials):
+        # We get bytes, but the Py3 pwd module uses str. So attempt to decode
+        # it using the same method that CPython does for the file on disk.
+        if _PY3:
+            username = credentials.username.decode(sys.getfilesystemencoding())
+            password = credentials.password.decode(sys.getfilesystemencoding())
+        else:
+            username = credentials.username
+            password = credentials.password
+
         for func in self._getByNameFunctions:
             try:
-                pwnam = func(credentials.username)
+                pwnam = func(username)
             except KeyError:
                 return defer.fail(UnauthorizedLogin("invalid username"))
             else:
@@ -109,7 +126,8 @@ class UNIXPasswordDatabase:
                     crypted = pwnam[1]
                     if crypted == '':
                         continue
-                    if verifyCryptedPassword(crypted, credentials.password):
+
+                    if verifyCryptedPassword(crypted, password):
                         return defer.succeed(credentials.username)
         # fallback
         return defer.fail(UnauthorizedLogin("unable to verify password"))
@@ -211,7 +229,7 @@ class SSHPublicKeyDatabase:
                 if len(l2) < 2:
                     continue
                 try:
-                    if base64.decodestring(l2[1]) == credentials.blob:
+                    if _b64decodebytes(l2[1]) == credentials.blob:
                         return True
                 except binascii.Error:
                     continue
@@ -243,7 +261,7 @@ class SSHProtocolChecker:
         self.successfulCredentials = {}
 
     def get_credentialInterfaces(self):
-        return self.checkers.keys()
+        return _keys(self.checkers)
 
     credentialInterfaces = property(get_credentialInterfaces)
 
@@ -354,7 +372,7 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
     """
     for line in fileobj:
         line = line.strip()
-        if line and not line.startswith('#'):  # for comments
+        if line and not line.startswith(b'#'):  # for comments
             try:
                 yield parseKey(line)
             except keys.BadKeyError as e:
@@ -553,7 +571,7 @@ class SSHPublicKeyChecker(object):
             was any error verifying the signature.
 
         @return: The user's username, if authentication was successful
-        @rtype: C{str}
+        @rtype: L{bytes}
         """
         try:
             if pubKey.verify(credentials.signature, credentials.sigData):
