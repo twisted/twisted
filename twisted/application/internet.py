@@ -622,22 +622,24 @@ class ClientService(service.Service, object):
         super(ClientService, self).startService()
         self._failedAttempts = 0
 
-        def clientConnect(protocol):
-            self._failedAttempts = 0
-            self._loseConnection = protocol.transport.loseConnection
-            self._lostDeferred = Deferred()
-            self._currentConnection = protocol._protocol
-            self._unawait(self._currentConnection)
-
-        def clientDisconnect(reason):
-            self._currentConnection = None
-            self._loseConnection = _noop
-            self._lostDeferred.callback(None)
-            retry(reason)
-
-        factoryProxy = _DisconnectFactory(self._factory, clientDisconnect)
-
         def connectNow():
+            thisLostDeferred = Deferred()
+
+            def clientConnect(protocol):
+                self._failedAttempts = 0
+                self._loseConnection = protocol.transport.loseConnection
+                self._lostDeferred = thisLostDeferred
+                self._currentConnection = protocol._protocol
+                self._unawait(self._currentConnection)
+
+            def clientDisconnect(reason):
+                self._currentConnection = None
+                self._loseConnection = _noop
+                thisLostDeferred.callback(None)
+                retry(reason)
+
+            factoryProxy = _DisconnectFactory(self._factory, clientDisconnect)
+
             self._stopRetry = _noop
             self._connectionInProgress = (self._endpoint.connect(factoryProxy)
                                           .addCallback(clientConnect)
@@ -664,13 +666,18 @@ class ClientService(service.Service, object):
             closed and all in-progress connection attempts halted.
         """
         super(ClientService, self).stopService()
-        self._stopped = True
         self._stopRetry()
         self._stopRetry = _noop
         self._connectionInProgress.cancel()
         self._loseConnection()
-        self._unawait(Failure(CancelledError()))
-        return gatherResults([self._connectionInProgress, self._lostDeferred])
+        self._currentConnection = None
+        def finishStopping(result):
+            if not self.running:
+                self._stopped = True
+                self._unawait(Failure(CancelledError()))
+            return None
+        return (gatherResults([self._connectionInProgress, self._lostDeferred])
+                .addBoth(finishStopping))
 
 
 
