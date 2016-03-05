@@ -1,3 +1,6 @@
+Twisted Release Process
+=======================
+
 This document describes the Twisted release process.
 Although it is still incomplete, every effort has been made to ensure that it is accurate and up-to-date.
 
@@ -7,7 +10,7 @@ If you want to make changes to the release process, follow the normal Twisted de
 
 
 Outcomes
-========
+--------
 
 By the end of a Twisted release we'll have:
 
@@ -22,7 +25,7 @@ By the end of a Twisted release we'll have:
 
 
 Prerequisites
-=============
+-------------
 
 To release Twisted, you will need:
 
@@ -36,7 +39,7 @@ To release Twisted, you will need:
 
 
 Version numbers
-===============
+---------------
 
 Twisted releases use a time-based numbering scheme.
 Releases versions like YY.MM.mm, where YY is the last two digits of the year of the release, MM is the number of the release in the year, and mm is the number of the patch release.
@@ -60,7 +63,7 @@ Please retrieve it after you run it.
 
 
 Overview
-========
+--------
 
 To release Twisted, we
 
@@ -70,7 +73,7 @@ To release Twisted, we
 
 
 Prepare for a release
-=====================
+---------------------
 
 1. Check the milestone for the upcoming release
 
@@ -95,7 +98,7 @@ Prepare for a release
 6. Make a branch (``mkbranch release-$RELEASE-4290``, using ``mkbranch`` from ``twisted-dev-tools``)
 
 How to do a pre-release
-=======================
+-----------------------
 
 1. Check ​buildbot to make sure all supported platforms are green (wait for pending builds if necessary).
 2. If a previously supported platform does not currently have a buildbot, move from supported platforms to "expected to work" in ``INSTALL``. (Pending #1305)
@@ -131,7 +134,7 @@ How to do a pre-release
 
 
 Pre-release announcement
-========================
+------------------------
 
 The pre-release announcement should mention the important changes since the last release, and exhort readers to test this pre-release.
 
@@ -166,10 +169,10 @@ A week is a generally good length of time to wait before doing the final release
 
 
 How to do a final release
-=========================
+-------------------------
 
 Prepare the branch
-------------------
+~~~~~~~~~~~~~~~~~~
 
 1. Have the release branch, previously used to generate a pre-release, checked out
 2. Run ``./bin/admin/change-versions``
@@ -185,7 +188,7 @@ Prepare the branch
 
 
 Cut the tarballs & installers
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Create a new staging area for the release (e.g. ``mkdir /tmp/twisted-release``)
 2. Using a checkout of the release branch or the release tag (with no local changes!), run ``./bin/admin/build-tarballs . /tmp/twisted-release/``
@@ -204,7 +207,7 @@ Cut the tarballs & installers
 
 
 Update documentation
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 1. Get the dependencies
 
@@ -226,7 +229,7 @@ Update documentation
 
 
 Distribute
-----------
+~~~~~~~~~~
 
 1. Create a tarball with the contents of the release directory: ``cd /tmp/twisted-release; tar -cvjf ../release.tar.bz2 *``
 2. Upload to the official upload locations (see #2888)
@@ -248,7 +251,7 @@ Distribute
 
 
 Announce
---------
+~~~~~~~~
 
 1. Update Downloads pages
 
@@ -286,7 +289,7 @@ Announce
 
 
 Release announcement
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 The final release announcement should:
 
@@ -339,7 +342,7 @@ Here's an example::
 
 
 When things go wrong
-====================
+--------------------
 
 If you discover a showstopper bug during the release process, you have three options.
 
@@ -354,7 +357,7 @@ If you choose the third option, then you should:
 
 
 Bug fix releases
-================
+----------------
 
 Sometimes, bugs happen, and sometimes these are regressions in the current released version.
 This section goes over doing these "point" releases.
@@ -372,7 +375,7 @@ This section goes over doing these "point" releases.
 
 
 Open questions
-==============
+--------------
 
 - How do we manage the case where there are untested builds in trunk?
 - Should picking a release quote be part of the release or the pre-release?
