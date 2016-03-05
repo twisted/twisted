@@ -664,12 +664,13 @@ class Site(http.HTTPFactory):
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
+        from binascii import hexlify
         from hashlib import md5
         import random
         self.counter = self.counter + 1
-        return md5(networkString(
+        return hexlify(md5(networkString(
                 "%s_%s" % (str(random.random()), str(self.counter)))
-                   ).hexdigest()
+                   ).digest())
 
 
     def makeSession(self):

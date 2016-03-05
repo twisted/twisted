@@ -1,0 +1,1 @@
+Ensure to generate Session.uid as 'bytes' type with both Python 2/3

@@ -108,6 +108,35 @@ class SiteTest(unittest.TestCase):
         self.assertIs(site.requestFactory, channel.requestFactory)
 
 
+    def test_makeSession(self):
+        """
+        C{Site} generate a new C{Session} instance.
+        The C{Session} uid type should be consistent with documentation, e.g.
+        ${bytes}
+        """
+        site = server.Site(resource.Resource())
+
+        session = site.makeSession()
+        self.assertIsInstance(session, server.Session)
+        self.assertIsInstance(session.uid, bytes)
+        
+        session.expire()  # avoid delayed calls lingering after test exit
+
+
+    def test_getSession(self):
+        """
+        Get a previously generated session, by its unique ID.
+        This raises a KeyError if the session is not found.
+        """
+        site = server.Site(resource.Resource())
+        session = site.makeSession()
+
+        session = site.getSession(session.uid)
+        self.assertIsInstance(session, server.Session)
+
+        session.expire()
+        self.assertRaises(KeyError, site.getSession, session.uid)
+
 
 class SessionTests(unittest.TestCase):
     """
