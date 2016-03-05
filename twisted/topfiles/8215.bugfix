@@ -1,1 +1,1 @@
-Ensure to generate Session.uid as 'bytes' type with both Python 2/3
+twisted.web.server.site.makeSession now generates an uid of type bytes on both Python 2 and 3.

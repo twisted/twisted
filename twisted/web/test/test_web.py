@@ -60,6 +60,22 @@ class SiteTest(unittest.TestCase):
     Unit tests for L{server.Site}.
     """
 
+    def getAutoExpiringSession(self, site):
+        """
+        Create a new session which auto expires at cleanup.
+
+        @param site: The site on which the session is created.
+        @type site: L{server.Site}
+
+        @return: A newly created session.
+        @rtype: L{server.Session}
+        """
+        session = site.makeSession()
+        # Clean delayed calls from session expiration.
+        self.addCleanup(session.expire)
+        return session
+
+
     def test_simplestSite(self):
         """
         L{Site.getResourceFor} returns the C{b""} child of the root resource it
@@ -110,32 +126,34 @@ class SiteTest(unittest.TestCase):
 
     def test_makeSession(self):
         """
-        C{Site} generate a new C{Session} instance.
-        The C{Session} uid type should be consistent with documentation, e.g.
-        ${bytes}
+        It generates a new C{Session} instance with an uid of type L{bytes}.
         """
         site = server.Site(resource.Resource())
+        session = self.getAutoExpiringSession(site)
 
-        session = site.makeSession()
         self.assertIsInstance(session, server.Session)
         self.assertIsInstance(session.uid, bytes)
-        
-        session.expire()  # avoid delayed calls lingering after test exit
 
 
-    def test_getSession(self):
+    def test_getSessionExistent(self):
         """
-        Get a previously generated session, by its unique ID.
-        This raises a KeyError if the session is not found.
+        It gets a previously generated session, by its unique ID.
         """
         site = server.Site(resource.Resource())
-        session = site.makeSession()
+        createdSession = self.getAutoExpiringSession(site)
 
-        session = site.getSession(session.uid)
-        self.assertIsInstance(session, server.Session)
+        retrievedSession = site.getSession(createdSession.uid)
 
-        session.expire()
-        self.assertRaises(KeyError, site.getSession, session.uid)
+        self.assertIs(createdSession, retrievedSession)
+
+
+    def test_getSessionNonExistent(self):
+        """
+        It raises a KeyError if the session is not found.
+        """
+        site = server.Site(resource.Resource())
+
+        self.assertRaises(KeyError, site.getSession, b'no-such-uid')
 
 
 class SessionTests(unittest.TestCase):
