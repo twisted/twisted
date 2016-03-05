@@ -126,7 +126,8 @@ class SiteTest(unittest.TestCase):
 
     def test_makeSession(self):
         """
-        It generates a new C{Session} instance with an uid of type L{bytes}.
+        L{site.getSession} generates a new C{Session} instance with an uid of
+        type L{bytes}.
         """
         site = server.Site(resource.Resource())
         session = self.getAutoExpiringSession(site)
@@ -137,7 +138,8 @@ class SiteTest(unittest.TestCase):
 
     def test_getSessionExistent(self):
         """
-        It gets a previously generated session, by its unique ID.
+        L{site.getSession} gets a previously generated session, by its unique
+        ID.
         """
         site = server.Site(resource.Resource())
         createdSession = self.getAutoExpiringSession(site)
@@ -149,7 +151,7 @@ class SiteTest(unittest.TestCase):
 
     def test_getSessionNonExistent(self):
         """
-        It raises a KeyError if the session is not found.
+        L{site.getSession} raises a L{KeyError} if the session is not found.
         """
         site = server.Site(resource.Resource())
 
