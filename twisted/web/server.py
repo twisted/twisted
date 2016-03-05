@@ -544,7 +544,9 @@ class Session(components.Componentized):
     This utility class contains no functionality, but is used to
     represent a session.
 
-    @ivar uid: A unique identifier for the session, C{bytes}.
+    @ivar uid: A unique identifier for the session.
+    @type uid: L{bytes}
+
     @ivar _reactor: An object providing L{IReactorTime} to use for scheduling
         expiration.
     @ivar sessionTimeout: timeout of a session, in seconds.
@@ -664,12 +666,13 @@ class Site(http.HTTPFactory):
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
+        from binascii import hexlify
         from hashlib import md5
         import random
         self.counter = self.counter + 1
-        return md5(networkString(
+        return hexlify(md5(networkString(
                 "%s_%s" % (str(random.random()), str(self.counter)))
-                   ).hexdigest()
+                   ).digest())
 
 
     def makeSession(self):
@@ -684,8 +687,12 @@ class Site(http.HTTPFactory):
 
     def getSession(self, uid):
         """
-        Get a previously generated session, by its unique ID.
-        This raises a KeyError if the session is not found.
+        Get a previously generated session.
+
+        @param uid: Unique ID of the session.
+        @type uid: L{bytes}.
+
+        @raise: L{KeyError} if the session is not found.
         """
         return self.sessions[uid]
 

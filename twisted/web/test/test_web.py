@@ -60,6 +60,22 @@ class SiteTest(unittest.TestCase):
     Unit tests for L{server.Site}.
     """
 
+    def getAutoExpiringSession(self, site):
+        """
+        Create a new session which auto expires at cleanup.
+
+        @param site: The site on which the session is created.
+        @type site: L{server.Site}
+
+        @return: A newly created session.
+        @rtype: L{server.Session}
+        """
+        session = site.makeSession()
+        # Clean delayed calls from session expiration.
+        self.addCleanup(session.expire)
+        return session
+
+
     def test_simplestSite(self):
         """
         L{Site.getResourceFor} returns the C{b""} child of the root resource it
@@ -107,6 +123,39 @@ class SiteTest(unittest.TestCase):
         self.assertIs(site, channel.site)
         self.assertIs(site.requestFactory, channel.requestFactory)
 
+
+    def test_makeSession(self):
+        """
+        L{site.getSession} generates a new C{Session} instance with an uid of
+        type L{bytes}.
+        """
+        site = server.Site(resource.Resource())
+        session = self.getAutoExpiringSession(site)
+
+        self.assertIsInstance(session, server.Session)
+        self.assertIsInstance(session.uid, bytes)
+
+
+    def test_getSessionExistent(self):
+        """
+        L{site.getSession} gets a previously generated session, by its unique
+        ID.
+        """
+        site = server.Site(resource.Resource())
+        createdSession = self.getAutoExpiringSession(site)
+
+        retrievedSession = site.getSession(createdSession.uid)
+
+        self.assertIs(createdSession, retrievedSession)
+
+
+    def test_getSessionNonExistent(self):
+        """
+        L{site.getSession} raises a L{KeyError} if the session is not found.
+        """
+        site = server.Site(resource.Resource())
+
+        self.assertRaises(KeyError, site.getSession, b'no-such-uid')
 
 
 class SessionTests(unittest.TestCase):
