@@ -602,6 +602,51 @@ class ClientServiceTests(SynchronousTestCase):
         self.successResultOf(d)
 
 
+    def test_startServiceWhileStopping(self):
+        """
+        When L{ClientService} is stopping - that is,
+        L{ClientService.stopService} has been called, but the L{Deferred} it
+        returns has not fired yet - calling L{startService} will cause a new
+        connection to be made, and new calls to L{whenConnected} to succeed.
+        """
+        cq, service = self.makeReconnector(fireImmediately=False)
+        cq.connectQueue[0].callback(None)
+        first = cq.constructedProtocols[0]
+        stopped = service.stopService()
+        self.assertNoResult(stopped)
+        nextProtocol = service.whenConnected()
+        self.assertNoResult(nextProtocol)
+        service.startService()
+        self.assertNoResult(nextProtocol)
+        self.assertNoResult(stopped)
+        self.assertEqual(first.transport.disconnecting, True)
+        cq.connectQueue[1].callback(None)
+        self.assertEqual(len(cq.constructedProtocols), 2)
+        self.assertIdentical(self.successResultOf(nextProtocol),
+                             cq.applicationProtocols[1])
+        secondStopped = service.stopService()
+        first.connectionLost(Failure(Exception()))
+        self.successResultOf(stopped)
+        self.assertNoResult(secondStopped)
+
+
+    def test_startServiceWhileStopped(self):
+        """
+        When L{ClientService} is stopped - that is,
+        L{ClientService.stopService} has been called and the L{Deferred} it
+        returns has fired - calling L{startService} will cause a new connection
+        to be made, and new calls to L{whenConnected} to succeed.
+        """
+        cq, service = self.makeReconnector(fireImmediately=False)
+        stopped = service.stopService()
+        self.successResultOf(stopped)
+        self.failureResultOf(service.whenConnected(), CancelledError)
+        service.startService()
+        cq.connectQueue[-1].callback(None)
+        self.assertIdentical(cq.applicationProtocols[-1],
+                             self.successResultOf(service.whenConnected()))
+
+
     def test_interfacesForTransport(self):
         """
         If the protocol objects returned by the factory given to
