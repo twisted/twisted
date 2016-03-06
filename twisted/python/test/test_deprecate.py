@@ -708,6 +708,8 @@ class ClassWithDeprecatedProperty(object):
     def someProperty(self):
         """
         Getter docstring.
+
+        @return: The property.
         """
         return self._someProtectedValue
 
