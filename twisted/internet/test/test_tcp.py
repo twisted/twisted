@@ -11,7 +11,9 @@ from __future__ import division, absolute_import
 __metaclass__ = type
 
 import errno
+import os
 import socket
+import sys
 
 from functools import wraps
 
@@ -26,7 +28,7 @@ from twisted.python import log
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
-    ConnectionAborted, DNSLookupError, NoProtocol)
+    ConnectionAborted, DNSLookupError, NoProtocol, ServiceNameUnknownError)
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
     findFreePort, ConnectableProtocol, EndpointCreator,
@@ -40,7 +42,8 @@ from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, maybeDeferred, gatherResults, succeed, fail)
 from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
-from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
+from twisted.internet.protocol import (
+    ClientFactory, Factory, Protocol, ServerFactory)
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.tcp import Connection, Server, _resolveIPv6
@@ -68,6 +71,12 @@ else:
 if platform.isWindows():
     from twisted.internet.test import _win32ifaces
     getLinkLocalIPv6Addresses = _win32ifaces.win32GetLinkLocalIPv6Addresses
+
+    try:
+        from twisted.internet.iocpreactor.reactor import IOCPReactor
+    except ImportError:
+        IOCPReactor = None
+
 else:
     try:
         from twisted.internet.test import _posixifaces
@@ -75,6 +84,9 @@ else:
         getLinkLocalIPv6Addresses = lambda: []
     else:
         getLinkLocalIPv6Addresses = _posixifaces.posixGetLinkLocalIPv6Addresses
+
+    # Outside of Windows we don't have an IOCP reactor.
+    IOCPReactor = None
 
 
 
@@ -700,6 +712,136 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         self.assertEqual(BrokenContextFactory.message, str(results[0]))
 
 
+    def test_connectPortUnderflow(self):
+        """
+        When trying to connect using a port outside of the 1-65535 range the
+        error is raised as an errback.
+        """
+        def test(message):
+            self.assertConnectPortError(-1, message)
+
+        if sys.version_info[:2] == (2, 6):
+            # On Python 2.6 we get this generic error.
+            test('Connection refused')
+        elif platform.isWindows():
+            if self.reactorFactory is IOCPReactor:
+                # Windows IOCP reactor.
+                test("can't convert negative value to unsigned short")
+            else:
+                # Windows select reactor.
+                test('getsockaddrarg: port must be 0-65535.')
+        else:
+            test('getsockaddrarg: port must be 0-65535.')
+
+
+    def test_connectPortOverflow(self):
+        """
+        When trying to connect using a port outside of the 1-65535 range the
+        error is raised as an errback.
+        """
+        def test(message):
+            self.assertConnectPortError(65536, message)
+
+        if sys.version_info[:2] == (2, 6):
+            # On Python 2.6 we get generic errors.
+            if platform.isMacOSX():
+                test("Can't assign requested address")
+            else:
+                test('Connection refused')
+        elif platform.isWindows():
+            if self.reactorFactory is IOCPReactor:
+                # Windows IOCP reactor.
+                test('value too large to convert to unsigned short')
+            else:
+                # Windows select reactor.
+                test('getsockaddrarg: port must be 0-65535.')
+        else:
+            test('getsockaddrarg: port must be 0-65535.')
+
+
+    def test_connectPortZero(self):
+        """
+        An error is raised as errback when trying to listed on the
+        reserved port C{0}.
+        """
+        def test(message):
+            self.assertConnectPortError(0, message)
+
+        if platform.isMacOSX():
+            test("Can't assign requested address")
+        elif platform.isWindows():
+            if self.reactorFactory is IOCPReactor:
+                # Windows IOCP reactor.
+                test('Unknown error')
+            else:
+                # Windows select reactor.
+                test('The requested address is not valid in its context.')
+        else:
+            if os.getenv('LANG', None) == 'fr_FR.UTF-8':
+                # Coverage builder is executed with French locale.
+                test('Connexion refus\xc3\xa9e')
+            else:
+                test('Connection refused')
+
+
+    def test_connectPortNotNumeric(self):
+        """
+        When trying to connect with an endpoint using a port which can not be
+        resolved to a service an errback is raised.
+        """
+        self.assertConnectPortError(
+            'invalid', "service/proto not found ('invalid')")
+
+
+    # This is used to count the number of calls in a single test run.
+    # It is defined as a class member but used as an instance member.
+    assertConnectPortErrorCalls = 0
+
+
+    def assertConnectPortError(self, port, message):
+        """
+        Check that trying to connect to C{port} will raise an errback.
+
+        @param port: Port number for which to try a client connection.
+        @type  port: C{int}
+
+        @param message: String representation of the expected error.
+        @type  message: C{str}
+
+        @raise AssertionError: when called multiple time from the same test.
+        """
+        def resetCallCount():
+            self.assertConnectPortErrorCalls = 0
+
+        if self.assertConnectPortErrorCalls != 0:
+            raise AssertionError(
+                'This assertion can only be called once per test.')
+        else:
+            self.assertConnectPortErrorCalls = 1
+        self.addCleanup(resetCallCount)
+
+        reactor = self.buildReactor()
+        results = []
+
+        # Connect with invalid port number.
+        fakeServerAddress = self.addressClass("TCP", self.interface, port)
+        endpoint = self.endpoints.client(reactor, fakeServerAddress)
+        connectDeferred = endpoint.connect(Factory.forProtocol(Protocol))
+
+        def whenRun():
+            """
+            Accumulate errors and stop reactor.
+            """
+            connectDeferred.addErrback(lambda failure: results.append(failure))
+            connectDeferred.addBoth(lambda ign: reactor.stop())
+        needsRunningReactor(reactor, whenRun)
+
+        self.runReactor(reactor)
+
+        errors = [failure.value.args[0] for failure in results]
+        self.assertEqual([message], errors)
+
+
 
 class TCP4ClientTestsBuilder(TCPClientTestsBase):
     """
@@ -851,6 +993,25 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
 
         clientFactory.reason.trap(ConnectionRefusedError)
         self.assertEqual(protocolMadeAndClosed, [(1, 1)])
+
+
+    def test_invalidServiceName(self):
+        """
+        When connection is done with an invalid service name as port
+        L{ServiceNameUnknownError} is raised.
+        """
+        reactor = self.buildReactor()
+
+        error = self.assertRaises(
+            ServiceNameUnknownError,
+            reactor.connectTCP,
+                self.interface, 'invalid-port', MyClientFactory(),
+            )
+
+        self.assertEqual(
+            "Service name given as port is unknown: "
+            "service/proto not found ('invalid-port').",
+            str(error))
 
 
 
@@ -2519,3 +2680,12 @@ class SimpleUtilityTests(TestCase):
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))
+
+
+    def test_resolveIPv6OverflowPort(self):
+        """
+        L{_resolveIPv6} preserve the requested port number, event when it is
+        not valid.
+        """
+        result = _resolveIPv6("::1", 123456)
+        self.assertEqual(result[:2], ("::1", 123456))

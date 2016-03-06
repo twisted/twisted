@@ -82,7 +82,7 @@ else:
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import base, address, fdesc
+from twisted.internet import address, base, defer, fdesc
 from twisted.internet.task import deferLater
 from twisted.python import log, failure, reflect
 from twisted.python.util import untilConcludes
@@ -414,9 +414,11 @@ class _BaseBaseClient(object):
         if self._requiresResolution:
             d = self.reactor.resolve(self.addr[0])
             d.addCallback(lambda n: (n,) + self.addr[1:])
-            d.addCallbacks(self._setRealAddress, self.failIfNotConnected)
         else:
-            self._setRealAddress(self.addr)
+            d = defer.succeed(self.addr)
+
+        d.addCallback(self._setRealAddress)
+        d.addErrback(self.failIfNotConnected)
 
 
     def _setRealAddress(self, address):
@@ -640,7 +642,19 @@ def _resolveIPv6(ip, port):
     @raise socket.gaierror: if either the IP or port is not numeric as it
         should be.
     """
-    return socket.getaddrinfo(ip, port, 0, 0, 0, _NUMERIC_ONLY)[0][4]
+    usedPort = port
+    if isinstance(port, int):
+        # On OS X `getaddrinfo` will reject invalid port number while other
+        # systems accept it as long as it is an int.
+        # We pass a valid port which is later overwritten.
+        usedPort = 1
+
+    result = socket.getaddrinfo(ip, usedPort, 0, 0, 0, _NUMERIC_ONLY)[0][4]
+    # On non OS X `getaddrinfo` will also `resolve` invalid port numbers into a
+    # valid one. Example 123456 is resolved as 57920, but we want to preserve the
+    # initial port number.
+    result = (result[0], port, result[2], result[3])
+    return result
 
 
 
