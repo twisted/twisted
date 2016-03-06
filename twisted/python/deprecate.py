@@ -40,7 +40,12 @@ To deprecate properties you can use::
             '''
             Docstring for badProperty.
             '''
-            ...
+
+        @badProperty.setter
+        def badProperty(self, value):
+            '''
+            Setter sill also raise the deprecation warning.
+            '''
 
 
 To mark module-level attributes as being deprecated you can use::
@@ -325,7 +330,10 @@ def deprecatedProperty(version, replacement=None):
         path.
     @type replacement: C{str} or callable
 
-    @since: 16.0.0
+    @return: A new property with deprecated setter and getter.
+    @rtype: C{property}
+
+    @since: 16.1.0
     """
 
     class _DeprecatedProperty(property):
