@@ -757,7 +757,11 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
 
         self.assertDocstring(
             ClassWithDeprecatedProperty.someProperty,
-            ['Getter docstring.', 'Deprecated in Twisted 1.2.3.'],
+            [
+                'Getter docstring.',
+                '@return: The property.',
+                'Deprecated in Twisted 1.2.3.',
+                ],
             )
         ClassWithDeprecatedProperty.someProperty.deprecatedVersion = Version(
             'Twisted', 1, 2, 3)
