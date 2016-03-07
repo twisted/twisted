@@ -1526,29 +1526,114 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(req.responseHeaders.getRawHeaders(b"test"), [b"lemur"])
 
 
-    def test_addCookieWithMinimumArguments(self):
+    def test_addCookieWithMinimumArgumentsUnicode(self):
         """
-        Add a Set-Cookie header with just name and value to the response.
+        L{http.Request.setCookie} adds a new cookie to be sent with the
+        response, and can be called with just a key and a value. L{unicode}
+        arguments are encoded using UTF-8.
         """
-        req = http.Request(DummyChannel(), False)
-        req.addCookie("foo", "bar")
-        self.assertEqual(req.cookies[0], "foo=bar")
+        expectedCookieValue = b"foo=bar"
+
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        req.addCookie(u"foo", u"bar")
+        self.assertEqual(req.cookies[0], b"foo=bar")
+
+        # Write nothing to make it produce the headers
+        req.write(b"")
+        writtenLines = channel.transport.written.getvalue().split(b"\r\n")
+
+        # There should be one Set-Cookie header
+        setCookieLines = [x for x in writtenLines
+                          if x.startswith(b"Set-Cookie")]
+        self.assertEqual(len(setCookieLines), 1)
+        self.assertEqual(setCookieLines[0],
+                         b"Set-Cookie: " + expectedCookieValue)
 
 
-    def test_addCookieWithAllArguments(self):
+    def test_addCookieWithAllArgumentsUnicode(self):
         """
-        Add a Set-Cookie header with name and value and all the supported
-        options to the response.
+        L{http.Request.setCookie} adds a new cookie to be sent with the
+        response. L{unicode} arguments are encoded using UTF-8.
         """
-        req = http.Request(DummyChannel(), False)
+        expectedCookieValue = (
+            b"foo=bar; Expires=Fri, 31 Dec 9999 23:59:59 GMT; "
+            b"Domain=.example.com; Path=/; Max-Age=31536000; "
+            b"Comment=test; Secure; HttpOnly")
+
+        channel = DummyChannel()
+        req = http.Request(channel, False)
         req.addCookie(
-            "foo", "bar", expires="Fri, 31 Dec 9999 23:59:59 GMT",
-            domain=".example.com", path="/", max_age="31536000",
-            comment="test", secure=True, httpOnly=True)
-        self.assertEqual(req.cookies[0],
-                         "foo=bar; Expires=Fri, 31 Dec 9999 23:59:59 GMT; "
-                         "Domain=.example.com; Path=/; Max-Age=31536000; "
-                         "Comment=test; Secure; HttpOnly")
+            u"foo", u"bar", expires=u"Fri, 31 Dec 9999 23:59:59 GMT",
+            domain=u".example.com", path=u"/", max_age=u"31536000",
+            comment=u"test", secure=True, httpOnly=True)
+        self.assertEqual(req.cookies[0], expectedCookieValue)
+
+        # Write nothing to make it produce the headers
+        req.write(b"")
+        writtenLines = channel.transport.written.getvalue().split(b"\r\n")
+
+        # There should be one Set-Cookie header
+        setCookieLines = [x for x in writtenLines
+                          if x.startswith(b"Set-Cookie")]
+        self.assertEqual(len(setCookieLines), 1)
+        self.assertEqual(setCookieLines[0],
+                         b"Set-Cookie: " + expectedCookieValue)
+
+
+    def test_addCookieWithMinimumArgumentsBytes(self):
+        """
+        L{http.Request.setCookie} adds a new cookie to be sent with the
+        response, and can be called with just a key and a value. L{bytes}
+        arguments are not decoded.
+        """
+        expectedCookieValue = b"foo=bar"
+
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        req.addCookie(b"foo", b"bar")
+        self.assertEqual(req.cookies[0], b"foo=bar")
+
+        # Write nothing to make it produce the headers
+        req.write(b"")
+        writtenLines = channel.transport.written.getvalue().split(b"\r\n")
+
+        # There should be one Set-Cookie header
+        setCookieLines = [x for x in writtenLines
+                          if x.startswith(b"Set-Cookie")]
+        self.assertEqual(len(setCookieLines), 1)
+        self.assertEqual(setCookieLines[0],
+                         b"Set-Cookie: " + expectedCookieValue)
+
+
+    def test_addCookieWithAllArgumentsBytes(self):
+        """
+        L{http.Request.setCookie} adds a new cookie to be sent with the
+        response. L{bytes} arguments are not decoded.
+        """
+        expectedCookieValue = (
+            b"foo=bar; Expires=Fri, 31 Dec 9999 23:59:59 GMT; "
+            b"Domain=.example.com; Path=/; Max-Age=31536000; "
+            b"Comment=test; Secure; HttpOnly")
+
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        req.addCookie(
+            b"foo", b"bar", expires=b"Fri, 31 Dec 9999 23:59:59 GMT",
+            domain=b".example.com", path=b"/", max_age=b"31536000",
+            comment=b"test", secure=True, httpOnly=True)
+        self.assertEqual(req.cookies[0], expectedCookieValue)
+
+        # Write nothing to make it produce the headers
+        req.write(b"")
+        writtenLines = channel.transport.written.getvalue().split(b"\r\n")
+
+        # There should be one Set-Cookie header
+        setCookieLines = [x for x in writtenLines
+                          if x.startswith(b"Set-Cookie")]
+        self.assertEqual(len(setCookieLines), 1)
+        self.assertEqual(setCookieLines[0],
+                         b"Set-Cookie: " + expectedCookieValue)
 
 
     def test_firstWrite(self):
