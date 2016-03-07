@@ -1636,6 +1636,39 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
                          b"Set-Cookie: " + expectedCookieValue)
 
 
+    def test_addCookieNonStringArgument(self):
+        """
+        L{http.Request.setCookie} will raise a L{DeprecationWarning} if
+        non-string (not L{bytes} or L{unicode}) arguments are given, and will
+        call C{str()} on it to preserve past behaviour.
+        """
+        expectedCookieValue = b"foo=10"
+
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        req.addCookie(b"foo", 10)
+        self.assertEqual(req.cookies[0], expectedCookieValue)
+
+        # Write nothing to make it produce the headers
+        req.write(b"")
+        writtenLines = channel.transport.written.getvalue().split(b"\r\n")
+
+        # There should be one Set-Cookie header
+        setCookieLines = [x for x in writtenLines
+                          if x.startswith(b"Set-Cookie")]
+        self.assertEqual(len(setCookieLines), 1)
+        self.assertEqual(setCookieLines[0],
+                         b"Set-Cookie: " + expectedCookieValue)
+
+        warnings = self.flushWarnings([self.test_addCookieNonStringArgument])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "Passing non-bytes or non-unicode cookie arguments is "
+            "deprecated since Twisted 16.1.")
+
+
     def test_firstWrite(self):
         """
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
