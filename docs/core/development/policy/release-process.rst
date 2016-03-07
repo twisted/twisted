@@ -109,24 +109,19 @@ How to do a pre-release
 7. Commit the changes made by build-news - this automatically removes the NEWS topfiles (see #4315)
 8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README`` if required
 9. ``git svn dcommit --dry`` to make sure everything looks fine, and then ``git svn dcommit`` to push up the changes.
-10. Make a temporary directory for the tarballs to live in (e.g. ``mkdir /tmp/twisted-release``)
-11. ``Run ./bin/admin/build-tarballs . /tmp/twisted-release/``
-
-  - Note: build-tarballs does not produce exactly the same output when run multiple times, even when nothing else has changed.
-    If a problem is encountered that requires build-tarballs to be re-run (either during the pre-release or later during the release), care must be taken to avoid releasing two or more different versions of the tarball.
-
-12. Copy ``NEWS`` to ``/tmp/twisted-release/`` as ``NEWS.txt`` for people to view without having to download the tarballs.
+10. Run ``python setup.py sdist -d /tmp/twisted-release`` to build the tarballs.
+11. Copy ``NEWS`` to ``/tmp/twisted-release/`` as ``NEWS.txt`` for people to view without having to download the tarballs.
     (e.g. ``cp NEWS /tmp/twisted-release/NEWS.txt``)
-13. Upload the tarballs to ``twistedmatrix.com/Releases/pre/$RELEASE`` (see #4353)
+12. Upload the tarballs to ``twistedmatrix.com/Releases/pre/$RELEASE`` (see #4353)
 
   - You can use ``rsync --rsh=ssh --partial --progress -av /tmp/twisted-release/ t-web@dornkirk.twistedmatrix.com:/srv/t-web/data/releases/pre/<RELEASE>/`` to do this.
 
-14. Write the pre-release announcement
+13. Write the pre-release announcement
 
   - Read through the NEWS file and summarize the interesting changes for the release
   - Get someone else to look over the announcement before doing it
 
-15. Announce the pre-release on
+14. Announce the pre-release on
 
   - the twisted-python mailing list
   - on IRC in the ``#twisted`` topic
@@ -193,15 +188,14 @@ Prepare the branch
 Cut the tarballs & installers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Create a new staging area for the release (e.g. ``mkdir /tmp/twisted-release``)
-2. Using a checkout of the release branch or the release tag (with no local changes!), run ``./bin/admin/build-tarballs . /tmp/twisted-release/``
-3. Build Windows MSI
+1. Using a checkout of the release branch or the release tag (with no local changes!), run ``python setup.py sdist -d /tmp/twisted-release`` to build the tarballs.
+2. Build Windows MSI
 
   - ​http://buildbot.twistedmatrix.com/builders/windows7-64-py2.7-msi
   - For "Branch" specify the release branch, e.g. "branches/releases/release-$RELEASE-4290"
   - Download the latest .whl files from from ​http://buildbot.twistedmatrix.com/builds/twisted-packages/ and save them in the staging directory
 
-4. Sign the tarballs and Windows installers.
+3. Sign the tarballs and Windows installers.
    (You will need a PGP key for this - use something like Seahorse to generate one, if you don't have one.)
 
   - MD5: ``md5sum Tw* | gpg -a --clearsign > /tmp/twisted-release/twisted-$RELEASE-md5sums.txt``
