@@ -35,7 +35,10 @@ class PickyBuildPy(build_py):
 
 
 class PickyBuildScripts(build_scripts):
-
+    """
+    A version of build_scripts which doesn't install the scripts that aren't
+    yet ported to Python 3.
+    """
     def copy_scripts(self):
         from twisted.python.dist3 import portedScripts
         self.scripts = portedScripts
