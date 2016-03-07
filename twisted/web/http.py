@@ -547,6 +547,9 @@ class Request:
                 i.e., ?foo=bar&foo=baz&quux=spam results in
                 {'foo': ['bar', 'baz'], 'quux': ['spam']}.
 
+    @ivar cookies: The cookies that will be sent in the response.
+    @type cookies: L{list} of L{bytes}
+
     @type requestHeaders: L{http_headers.Headers}
     @ivar requestHeaders: All received HTTP request headers.
 
