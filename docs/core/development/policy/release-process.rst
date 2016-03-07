@@ -177,7 +177,10 @@ Prepare the branch
 1. Have the release branch, previously used to generate a pre-release, checked out
 2. Run ``./bin/admin/change-versions``
 3. Add the quote of the release to the ``README``
-4. Make a new quote file for the next version: ``git mv docs/fun/Twisted.Quotes docs/historic/Quotes/Twisted-$API; echo '' > docs/fun/Twisted.Quotes; git add docs/fun/Twisted.Quotes``
+4. Make a new quote file for the next version
+
+   - ``git mv docs/fun/Twisted.Quotes docs/historic/Quotes/Twisted-$API; echo '' > docs/fun/Twisted.Quotes; git add docs/fun/Twisted.Quotes``
+
 5. Commit the version and ``README`` changes.
 6. Submit the ticket for review
 7. Pause until the ticket is reviewed and accepted.
@@ -380,7 +383,9 @@ Open questions
 - How do we manage the case where there are untested builds in trunk?
 - Should picking a release quote be part of the release or the pre-release?
 - What bugs should be considered release blockers?
+
   - All bugs with a type from the release blocker family
   - Anybody can create/submit a new ticket with a release blocker type
   - Ultimately it's the RM's discretion to accept a ticket as a release blocker
+
 - Should news fragments contain information about who made the changes?
