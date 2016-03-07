@@ -26,14 +26,14 @@ Maintainer: Christopher Armstrong
     as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
 """
 
-from distutils.command import build_scripts, install_data, build_ext
-from distutils.errors import CompileError
-from distutils import core
-from distutils.core import Extension
-import fnmatch
 import os
 import platform
 import sys
+
+from distutils.command import build_scripts, build_ext
+from distutils.errors import CompileError
+from setuptools import setup as _setup
+from setuptools import Extension
 
 from twisted import copyright
 from twisted.python.compat import execfile
@@ -129,21 +129,12 @@ def setup(**kw):
     @param conditionalExtensions: Extensions to optionally build.
     @type conditionalExtensions: C{list} of L{ConditionalExtension}
     """
-    return core.setup(**get_setup_args(**kw))
+    return _setup(**get_setup_args(**kw))
 
 
 def get_setup_args(**kw):
-    if 'plugins' in kw:
-        py_modules = []
-        for plg in kw['plugins']:
-            py_modules.append("twisted.plugins." + plg)
-        kw.setdefault('py_modules', []).extend(py_modules)
-        del kw['plugins']
-
     if 'cmdclass' not in kw:
-        kw['cmdclass'] = {
-            'install_data': install_data_twisted,
-            'build_scripts': build_scripts_twisted}
+        kw['cmdclass'] = {'build_scripts': build_scripts_twisted}
 
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
@@ -180,88 +171,6 @@ def getVersion(base):
     return ns['version'].base()
 
 
-# Names that are excluded from globbing results:
-EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
-                 "RCS", "SCCS", ".svn"]
-EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py"]
-
-
-def _filterNames(names):
-    """
-    Given a list of file names, return those names that should be copied.
-    """
-    names = [n for n in names
-             if n not in EXCLUDE_NAMES]
-    # This is needed when building a distro from a working
-    # copy (likely a checkout) rather than a pristine export:
-    for pattern in EXCLUDE_PATTERNS:
-        names = [n for n in names
-                 if (not fnmatch.fnmatch(n, pattern))
-                 and (not n.endswith('.py'))]
-    return names
-
-
-def relativeTo(base, relativee):
-    """
-    Gets 'relativee' relative to 'basepath'.
-
-    i.e.,
-
-    >>> relativeTo('/home/', '/home/radix/')
-    'radix'
-    >>> relativeTo('.', '/home/radix/Projects/Twisted') # curdir is /home/radix
-    'Projects/Twisted'
-
-    The 'relativee' must be a child of 'basepath'.
-    """
-    basepath = os.path.abspath(base)
-    relativee = os.path.abspath(relativee)
-    if relativee.startswith(basepath):
-        relative = relativee[len(basepath):]
-        if relative.startswith(os.sep):
-            relative = relative[1:]
-        return os.path.join(base, relative)
-    raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
-
-
-def getDataFiles(dname, ignore=None, parent=None):
-    """
-    Get all the data files that should be included in this distutils Project.
-
-    'dname' should be the path to the package that you're distributing.
-
-    'ignore' is a list of sub-packages to ignore.  This facilitates
-    disparate package hierarchies.  That's a fancy way of saying that
-    the 'twisted' package doesn't want to include the 'twisted.conch'
-    package, so it will pass ['conch'] as the value.
-
-    'parent' is necessary if you're distributing a subpackage like
-    twisted.conch.  'dname' should point to 'twisted/conch' and 'parent'
-    should point to 'twisted'.  This ensures that your data_files are
-    generated correctly, only using relative paths for the first element
-    of the tuple ('twisted/conch/*').
-    The default 'parent' is the current working directory.
-    """
-    parent = parent or "."
-    ignore = ignore or []
-    result = []
-    for directory, subdirectories, filenames in os.walk(dname):
-        resultfiles = []
-        for exname in EXCLUDE_NAMES:
-            if exname in subdirectories:
-                subdirectories.remove(exname)
-        for ig in ignore:
-            if ig in subdirectories:
-                subdirectories.remove(ig)
-        for filename in _filterNames(filenames):
-            resultfiles.append(filename)
-        if resultfiles:
-            result.append((relativeTo(parent, directory),
-                           [relativeTo(parent,
-                                       os.path.join(directory, filename))
-                            for filename in resultfiles]))
-    return result
-
 
 def getExtensions():
     """
@@ -295,36 +204,6 @@ def getExtensions():
 
 
 
-def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
-    """
-    Get all packages which are under dname. This is necessary for
-    Python 2.2's distutils. Pretty similar arguments to getDataFiles,
-    including 'parent'.
-    """
-    parent = parent or ""
-    prefix = []
-    if parent:
-        prefix = [parent]
-    bname = os.path.basename(dname)
-    ignore = ignore or []
-    if bname in ignore:
-        return []
-    if results is None:
-        results = []
-    if pkgname is None:
-        pkgname = []
-    subfiles = os.listdir(dname)
-    abssubfiles = [os.path.join(dname, x) for x in subfiles]
-    if '__init__.py' in subfiles:
-        results.append(prefix + pkgname + [bname])
-        for subdir in filter(os.path.isdir, abssubfiles):
-            getPackages(subdir, pkgname=pkgname + [bname],
-                        results=results, ignore=ignore,
-                        parent=parent)
-    res = ['.'.join(result) for result in results]
-    return res
-
-
 def getScripts(basedir=''):
     """
     Returns a list of scripts for Twisted.
@@ -340,8 +219,8 @@ def getScripts(basedir=''):
     for specialExclusion in ['.svn', '_preamble.py', '_preamble.pyc']:
         if specialExclusion in thingies:
             thingies.remove(specialExclusion)
-    return filter(os.path.isfile,
-                  [os.path.join(scriptdir, x) for x in thingies])
+    return list(filter(os.path.isfile,
+                       [os.path.join(scriptdir, x) for x in thingies]))
 
 
 ## Helpers and distutil tweaks
@@ -361,18 +240,6 @@ class build_scripts_twisted(build_scripts.build_scripts):
                 if os.path.exists(pypath):
                     os.unlink(pypath)
                 os.rename(fpath, pypath)
-
-
-
-class install_data_twisted(install_data.install_data):
-    """
-    I make sure data files are installed in the package directory.
-    """
-    def finalize_options(self):
-        self.set_undefined_options('install',
-            ('install_lib', 'install_dir')
-        )
-        install_data.install_data.finalize_options(self)
 
 
 

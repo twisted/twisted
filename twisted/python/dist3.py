@@ -33,38 +33,36 @@ Only necessary while parts of Twisted are unported.
 
 from __future__ import division
 
-from os import path
-
 
 modules = [
-    "twisted",
+    "twisted.__init__",
     "twisted._version",
-    "twisted.application",
+    "twisted.application.__init__",
     "twisted.application.app",
     "twisted.application.internet",
     "twisted.application.reactors",
     "twisted.application.service",
     "twisted.application.strports",
-    "twisted.application.test",
-    "twisted.conch",
+    "twisted.application.test.__init__",
+    "twisted.conch.__init__",
     "twisted.conch.checkers",
     "twisted.conch.error",
-    "twisted.conch.ssh",
+    "twisted.conch.ssh.__init__",
     "twisted.conch.ssh._cryptography_backports",
     "twisted.conch.ssh.common",
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.sexpy",
-    "twisted.conch.test",
+    "twisted.conch.test.__init__",
     "twisted.copyright",
-    "twisted.cred",
+    "twisted.cred.__init__",
     "twisted.cred._digest",
     "twisted.cred.checkers",
     "twisted.cred.credentials",
     "twisted.cred.error",
     "twisted.cred.portal",
     "twisted.cred.strcred",
-    "twisted.cred.test",
-    "twisted.internet",
+    "twisted.cred.test.__init__",
+    "twisted.internet.__init__",
     "twisted.internet._baseprocess",
     "twisted.internet._glibbase",
     "twisted.internet._newtls",
@@ -97,16 +95,17 @@ modules = [
     "twisted.internet.stdio",
     "twisted.internet.task",
     "twisted.internet.tcp",
-    "twisted.internet.test",
+    "twisted.internet.test.__init__",
     "twisted.internet.test._posixifaces",
     "twisted.internet.test.connectionmixins",
+    "twisted.internet.test.fakeendpoint",
     "twisted.internet.test.modulehelpers",
     "twisted.internet.test.reactormixins",
     "twisted.internet.threads",
     "twisted.internet.udp",
     "twisted.internet.unix",
     "twisted.internet.utils",
-    "twisted.logger",
+    "twisted.logger.__init__",
     "twisted.logger._buffer",
     "twisted.logger._file",
     "twisted.logger._filter",
@@ -121,8 +120,8 @@ modules = [
     "twisted.logger._observer",
     "twisted.logger._stdlib",
     "twisted.logger._util",
-    "twisted.logger.test",
-    "twisted.names",
+    "twisted.logger.test.__init__",
+    "twisted.names.__init__",
     "twisted.names._rfc1982",
     "twisted.names.cache",
     "twisted.names.client",
@@ -131,29 +130,34 @@ modules = [
     "twisted.names.error",
     "twisted.names.hosts",
     "twisted.names.resolve",
-    "twisted.names.test",
-    "twisted.persisted",
+    "twisted.names.test.__init__",
+    "twisted.persisted.__init__",
     "twisted.persisted.aot",
     "twisted.persisted.crefutil",
     "twisted.persisted.sob",
     "twisted.persisted.styles",
     "twisted.plugin",
-    "twisted.plugins",
+    "twisted.plugins.__init__",
+    "twisted.plugins.cred_anonymous",
+    "twisted.plugins.cred_file",
+    "twisted.plugins.cred_memory",
     "twisted.plugins.cred_sshkeys",
+    "twisted.plugins.cred_unix",
+    "twisted.plugins.twisted_core",
     "twisted.plugins.twisted_trial",
     "twisted.plugins.twisted_web",
-    "twisted.positioning",
+    "twisted.positioning.__init__",
     "twisted.positioning._sentence",
     "twisted.positioning.base",
     "twisted.positioning.ipositioning",
     "twisted.positioning.nmea",
-    "twisted.protocols",
+    "twisted.protocols.__init__",
     "twisted.protocols.amp",
     "twisted.protocols.basic",
     "twisted.protocols.policies",
-    "twisted.protocols.test",
+    "twisted.protocols.test.__init__",
     "twisted.protocols.tls",
-    "twisted.python",
+    "twisted.python.__init__",
     "twisted.python._tzhelper",
     "twisted.python._url",
     "twisted.python.compat",
@@ -187,15 +191,15 @@ modules = [
     "twisted.python.util",
     "twisted.python.versions",
     "twisted.python.zippath",
-    "twisted.scripts",
+    "twisted.scripts.__init__",
     "twisted.scripts._twistd_unix",
     "twisted.scripts.trial",
     "twisted.scripts.twistd",
-    "twisted.test",
+    "twisted.test.__init__",
     "twisted.test.iosim",
     "twisted.test.proto_helpers",
     "twisted.test.ssl_helpers",
-    "twisted._threads",
+    "twisted._threads.__init__",
     "twisted._threads._convenience",
     "twisted._threads._ithreads",
     "twisted._threads._memory",
@@ -209,7 +213,7 @@ modules = [
     "twisted.trial.itrial",
     "twisted.trial.reporter",
     "twisted.trial.runner",
-    "twisted.trial.test",
+    "twisted.trial.test.__init__",
     "twisted.trial.test.detests",
     "twisted.trial.test.erroneous",
     "twisted.trial.test.packages",
@@ -218,7 +222,7 @@ modules = [
     "twisted.trial.test.suppression",
     "twisted.trial.unittest",
     "twisted.trial.util",
-    "twisted.web",
+    "twisted.web.__init__",
     "twisted.web._auth",
     "twisted.web._auth.basic",
     "twisted.web._auth.digest",
@@ -238,7 +242,7 @@ modules = [
     "twisted.web.static",
     "twisted.web.tap",
     "twisted.web.template",
-    "twisted.web.test",
+    "twisted.web.test.__init__",
     "twisted.web.test.requesthelper",
     "twisted.web.util",
     "twisted.web.vhost",
@@ -457,6 +461,10 @@ testDataFiles = [
     "twisted.trial.test.packages",
     "twisted.trial.test.sample",
     "twisted.trial.test.scripttest",
+    "twisted.trial.test.weird",
+    "twisted.trial.test.mockcustomsuite",
+    "twisted.trial.test.mockcustomsuite2",
+    "twisted.trial.test.mockcustomsuite3",
 ]
 
 
@@ -495,30 +503,6 @@ almostModules = [
     "twisted.web.server",
 ]
 
-
-def _processDataFileList(dataFiles):
-    """
-    Turn a list of file names into a format that distutils likes.
-
-    For example:
-
-        ["foo/bar.py", "baz/spam.py"]
-
-    ...is transformed into...
-
-        [("foo", ["foo/bar.py"]), ("baz", "baz/spam.py")]
-    """
-    files = {}
-
-    for file in dataFiles:
-        pathFragments = file.split(".")
-        targetDir = path.sep.join(pathFragments[:-1])
-
-        if not files.get(targetDir):
-            files[targetDir] = []
-        files[targetDir].append(path.sep.join(pathFragments) + ".py")
-
-    return list(files.items())
-
-
 modulesToInstall = modules + testModules + almostModules
+
+portedScripts = ["bin/trial", "bin/twistd"]

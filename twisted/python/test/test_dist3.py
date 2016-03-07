@@ -11,8 +11,7 @@ import os
 import twisted
 
 from twisted.trial.unittest import TestCase
-from twisted.python.dist3 import modulesToInstall
-from twisted.python.dist3 import testDataFiles, _processDataFileList
+from twisted.python.dist3 import modulesToInstall, testDataFiles
 
 
 class ModulesToInstallTests(TestCase):
@@ -51,20 +50,3 @@ class ModulesToInstallTests(TestCase):
         for file in testDataFiles:
             self.assertTrue(os.path.exists(
                 os.path.join(root, os.path.sep.join(file.split(".")) + ".py")))
-
-
-    def test_processDataFileList(self):
-        """
-        L{_processDataFileList} translates a list of files into a distutils
-        friendly format.
-        """
-        result = _processDataFileList(["foo.bar", "foo.baz.bar",
-                                       "foo.z", "baz.spam"])
-        self.assertIn(("foo", [os.path.sep.join(["foo", "bar.py"]),
-                               os.path.sep.join(["foo", "z.py"])]),
-                      result)
-        self.assertIn((os.path.sep.join(["foo", "baz"]),
-                       [os.path.sep.join(["foo", "baz", "bar.py"])]),
-                      result)
-        self.assertIn(("baz", [os.path.sep.join(["baz", "spam.py"])]),
-                      result)
