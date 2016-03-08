@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.3
+#!/usr/bin/env python3
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -11,40 +11,61 @@ from __future__ import division, absolute_import
 
 import sys
 import os
-from distutils.command.sdist import sdist
+
+from setuptools import setup, find_packages
+from setuptools.command.build_py import build_py
+from distutils.command.build_scripts import build_scripts
 
 
-class DisabledSdist(sdist):
+class PickyBuildPy(build_py):
     """
-    A version of the sdist command that does nothing.
+    A version of build_py that doesn't install the modules that aren't yet
+    ported to Python 3.
     """
-    def run(self):
-        sys.stderr.write(
-            "The sdist command only works with Python 2 at the moment.\n")
-        sys.exit(1)
+    def find_package_modules(self, package, package_dir):
+        from twisted.python.dist3 import modulesToInstall, testDataFiles
+
+        modules = [
+            module for module
+            in super(build_py, self).find_package_modules(package, package_dir)
+            if ".".join([module[0], module[1]]) in modulesToInstall or
+               ".".join([module[0], module[1]]) in testDataFiles]
+        return modules
+
+
+
+class PickyBuildScripts(build_scripts):
+    """
+    A version of build_scripts which doesn't install the scripts that aren't
+    yet ported to Python 3.
+    """
+    def copy_scripts(self):
+        from twisted.python.dist3 import portedScripts
+        self.scripts = portedScripts
+        return super(PickyBuildScripts, self).copy_scripts()
 
 
 
 def main():
-    from setuptools import setup
-
     # Make sure the to-be-installed version of Twisted is used, if available,
     # since we're importing from it:
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
-    from twisted.python.dist3 import modulesToInstall
-    from twisted.python.dist3 import testDataFiles, _processDataFileList
-    from twisted.python.dist import STATIC_PACKAGE_METADATA, getDataFiles
+    from twisted.python.dist import STATIC_PACKAGE_METADATA, getScripts
 
-    _dataFiles = _processDataFileList(testDataFiles)
     args = STATIC_PACKAGE_METADATA.copy()
-    args['install_requires'] = ["zope.interface >= 4.0.2"]
-    args['py_modules'] = modulesToInstall
-    args['data_files'] = getDataFiles('twisted') + _dataFiles
-    args['zip_safe'] = False
-    args['cmdclass'] = {'sdist': DisabledSdist}
-    args['scripts'] = ['bin/trial', 'bin/twistd']
+    args.update(dict(
+        cmdclass={
+            'build_py': PickyBuildPy,
+            'build_scripts': PickyBuildScripts,
+        },
+        packages=find_packages(),
+        install_requires=["zope.interface >= 4.0.2"],
+        zip_safe=False,
+        include_package_data=True,
+        scripts=getScripts(),
+    ))
 
     setup(**args)
 
