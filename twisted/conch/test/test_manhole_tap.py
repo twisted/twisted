@@ -34,7 +34,7 @@ from twisted.trial.unittest import TestCase
 
 class MakeServiceTests(TestCase):
     """
-    Tests for L{tap.makeService}.
+    Tests for L{manhole_tap.makeService}.
     """
 
     if not cryptography:
