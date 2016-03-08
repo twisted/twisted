@@ -15,7 +15,7 @@ from hashlib import md5
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding
 try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
@@ -33,7 +33,7 @@ from pyasn1.codec.ber import encoder as berEncoder
 
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
-from twisted.python import randbytes
+from twisted.python import randbytes, filepath
 from twisted.python.compat import iterbytes, long, izip, nativeString, _PY3
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.versions import Version
@@ -1227,6 +1227,49 @@ def objectType(obj):
         return keyDataMapping[tuple(obj.keydata)]
     except (KeyError, AttributeError):
         raise BadKeyError("invalid key object", obj)
+
+
+
+def _generateSavedRSAKey(directory=None, filename="server.pem", keySize=4096):
+    """
+    This function generates a persistent server key
+    """
+    if directory is None:
+        from appdirs import user_data_dir
+        directory = user_data_dir("Twisted", "Conch")
+
+    configDir = filepath.FilePath(directory)
+    configDir.makedirs(ignoreExistingDirectory=True)
+    pemFile = configDir.child(filename)
+
+    # If it doesn't exist, we want to generate a new key and save it
+    if not pemFile.exists():
+        privateKey = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=keySize,
+            backend=default_backend()
+        )
+
+        pem = privateKey.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+
+        pemFile.setContent(pem)
+
+    # By this point (save any hilarious race conditions) we should have a
+    # working PEM file. Load it!
+    # (Future archelogical readers: I chose not to short circuit above, because
+    # then there's two exit paths to this code!)
+    with pemFile.open("rb") as key_file:
+        privateKey = serialization.load_pem_private_key(
+            key_file.read(),
+            password=None,
+            backend=default_backend()
+        )
+        return Key(privateKey)
+
 
 
 if _PY3:
