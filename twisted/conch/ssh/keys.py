@@ -1230,10 +1230,13 @@ def objectType(obj):
 
 
 
-def _generateSavedRSAKey(directory=None, filename="server.pem", keySize=4096):
+def _generateSavedRSAKey(directory=None, filename=None, keySize=4096):
     """
     This function generates a persistent server key
     """
+    if filename is None:
+        filename = "server.pem"
+
     if directory is None:
         from appdirs import user_data_dir
         directory = user_data_dir("Twisted", "Conch")

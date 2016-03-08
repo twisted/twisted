@@ -18,6 +18,8 @@ from twisted.conch import manhole, manhole_ssh, telnet
 from twisted.conch.insults import insults
 from twisted.conch.ssh import keys
 
+
+
 class makeTelnetProtocol:
     def __init__(self, portal):
         self.portal = portal
@@ -26,6 +28,8 @@ class makeTelnetProtocol:
         auth = telnet.AuthenticatingTelnetProtocol
         args = (self.portal,)
         return telnet.TelnetTransport(auth, *args)
+
+
 
 class chainedProtocolFactory:
     def __init__(self, namespace):
@@ -50,6 +54,8 @@ class _StupidRealm:
                     lambda: None)
         raise NotImplementedError()
 
+
+
 class Options(usage.Options):
     optParameters = [
         ["telnetPort", "t", None, "strports description of the address on which to listen for telnet connections"],
@@ -67,6 +73,8 @@ class Options(usage.Options):
     def postOptions(self):
         if self['telnetPort'] is None and self['sshPort'] is None:
             raise usage.UsageError("At least one of --telnetPort and --sshPort must be specified")
+
+
 
 def makeService(options):
     """
@@ -122,7 +130,9 @@ def makeService(options):
         sshPortal = portal.Portal(sshRealm, [checker])
         sshFactory = manhole_ssh.ConchFactory(sshPortal)
 
-        sshKey = keys._generateSavedRSAKey()
+        sshKey = keys._generateSavedRSAKey(options['sshKeyDir'],
+                                           options['sshKeyName'],
+                                           int(options['sshKeySize']))
         sshFactory.publicKeys["ssh-rsa"] = sshKey
         sshFactory.privateKeys["ssh-rsa"] = sshKey
 

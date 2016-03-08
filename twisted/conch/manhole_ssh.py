@@ -16,6 +16,7 @@ from twisted.python import components
 
 from twisted.conch.insults import insults
 
+
 class _Glue:
     """A feeble class for making one attribute look like another.
 
@@ -27,6 +28,8 @@ class _Glue:
 
     def __getattr__(self, name):
         raise AttributeError(self.name, "has no attribute", name)
+
+
 
 class TerminalSessionTransport:
     def __init__(self, proto, chainedProtocol, avatar, width, height):
@@ -79,11 +82,15 @@ class TerminalSession(components.Adapter):
     def closed(self):
         pass
 
+
+
 class TerminalUser(avatar.ConchUser, components.Adapter):
     def __init__(self, original, avatarId):
         components.Adapter.__init__(self, original)
         avatar.ConchUser.__init__(self)
         self.channelLookup['session'] = session.SSHSession
+
+
 
 class TerminalRealm:
     userFactory = TerminalUser
@@ -116,6 +123,8 @@ class TerminalRealm:
                         self._getAvatar(avatarId),
                         lambda: None)
         raise NotImplementedError()
+
+
 
 class ConchFactory(factory.SSHFactory):
     publicKeys = {}
