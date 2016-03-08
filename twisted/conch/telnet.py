@@ -8,12 +8,15 @@ Telnet protocol implementation.
 @author: Jean-Paul Calderone
 """
 
+from __future__ import absolute_import, division
+
 import struct
 
 from zope.interface import implementer
 
 from twisted.internet import protocol, interfaces as iinternet, defer
 from twisted.python import log
+from twisted.python.compat import _bytesChr as chr, iterbytes
 
 MODE = chr(1)
 EDIT = 1
@@ -510,11 +513,11 @@ class Telnet(protocol.Protocol):
     def dataReceived(self, data):
         appDataBuffer = []
 
-        for b in data:
+        for b in iterbytes(data):
             if self.state == 'data':
                 if b == IAC:
                     self.state = 'escaped'
-                elif b == '\r':
+                elif b == b'\r':
                     self.state = 'newline'
                 else:
                     appDataBuffer.append(b)
@@ -528,7 +531,7 @@ class Telnet(protocol.Protocol):
                 elif b in (NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
                     self.state = 'data'
                     if appDataBuffer:
-                        self.applicationDataReceived(''.join(appDataBuffer))
+                        self.applicationDataReceived(b''.join(appDataBuffer))
                         del appDataBuffer[:]
                     self.commandReceived(b, None)
                 elif b in (WILL, WONT, DO, DONT):
@@ -541,19 +544,19 @@ class Telnet(protocol.Protocol):
                 command = self.command
                 del self.command
                 if appDataBuffer:
-                    self.applicationDataReceived(''.join(appDataBuffer))
+                    self.applicationDataReceived(b''.join(appDataBuffer))
                     del appDataBuffer[:]
                 self.commandReceived(command, b)
             elif self.state == 'newline':
                 self.state = 'data'
-                if b == '\n':
-                    appDataBuffer.append('\n')
-                elif b == '\0':
-                    appDataBuffer.append('\r')
+                if b == b'\n':
+                    appDataBuffer.append(b'\n')
+                elif b == b'\0':
+                    appDataBuffer.append(b'\r')
                 elif b == IAC:
                     # IAC isn't really allowed after \r, according to the
                     # RFC, but handling it this way is less surprising than
-                    # delivering the IAC to the app as application data. 
+                    # delivering the IAC to the app as application data.
                     # The purpose of the restriction is to allow terminals
                     # to unambiguously interpret the behavior of the CR
                     # after reading only one more byte.  CR LF is supposed
@@ -561,10 +564,10 @@ class Telnet(protocol.Protocol):
                     # CR NUL another (cursor to first column).  Absent the
                     # NUL, it still makes sense to interpret this as CR and
                     # then apply all the usual interpretation to the IAC.
-                    appDataBuffer.append('\r')
+                    appDataBuffer.append(b'\r')
                     self.state = 'escaped'
                 else:
-                    appDataBuffer.append('\r' + b)
+                    appDataBuffer.append(b'\r' + b)
             elif self.state == 'subnegotiation':
                 if b == IAC:
                     self.state = 'subnegotiation-escaped'
@@ -576,7 +579,7 @@ class Telnet(protocol.Protocol):
                     commands = self.commands
                     del self.commands
                     if appDataBuffer:
-                        self.applicationDataReceived(''.join(appDataBuffer))
+                        self.applicationDataReceived(b''.join(appDataBuffer))
                         del appDataBuffer[:]
                     self.negotiate(commands)
                 else:
@@ -586,7 +589,7 @@ class Telnet(protocol.Protocol):
                 raise ValueError("How'd you do this?")
 
         if appDataBuffer:
-            self.applicationDataReceived(''.join(appDataBuffer))
+            self.applicationDataReceived(b''.join(appDataBuffer))
 
 
     def connectionLost(self, reason):
@@ -812,7 +815,7 @@ class Telnet(protocol.Protocol):
 
 class ProtocolTransportMixin:
     def write(self, bytes):
-        self.transport.write(bytes.replace('\n', '\r\n'))
+        self.transport.write(bytes.replace(b'\n', b'\r\n'))
 
     def writeSequence(self, seq):
         self.transport.writeSequence(seq)
@@ -898,7 +901,7 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
         self.protocol.dataReceived(bytes)
 
     def write(self, data):
-        ProtocolTransportMixin.write(self, data.replace('\xff','\xff\xff'))
+        ProtocolTransportMixin.write(self, data.replace(b'\xff', b'\xff\xff'))
 
 
 class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
@@ -964,7 +967,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         # attribute of which will be an ITerminalProtocol.  Maybe.
         # You know what, XXX TODO clean this up.
         if len(bytes) == 4:
-            width, height = struct.unpack('!HH', ''.join(bytes))
+            width, height = struct.unpack('!HH', b''.join(bytes))
             self.protocol.terminalProtocol.terminalSize(width, height)
         else:
             log.msg("Wrong number of NAWS bytes")
@@ -987,7 +990,7 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
 from twisted.protocols import basic
 
 class StatefulTelnetProtocol(basic.LineReceiver, TelnetProtocol):
-    delimiter = '\n'
+    delimiter = b'\n'
 
     state = 'Discard'
 
@@ -1026,7 +1029,7 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
         self.portal = portal
 
     def connectionMade(self):
-        self.transport.write("Username: ")
+        self.transport.write(b"Username: ")
 
     def connectionLost(self, reason):
         StatefulTelnetProtocol.connectionLost(self, reason)
@@ -1040,7 +1043,7 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
     def telnet_User(self, line):
         self.username = line
         self.transport.will(ECHO)
-        self.transport.write("Password: ")
+        self.transport.write(b"Password: ")
         return 'Password'
 
     def telnet_Password(self, line):
@@ -1065,8 +1068,8 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
         self.transport.protocol = protocol
 
     def _ebLogin(self, failure):
-        self.transport.write("\nAuthentication failed\n")
-        self.transport.write("Username: ")
+        self.transport.write(b"\nAuthentication failed\n")
+        self.transport.write(b"Username: ")
         self.state = "User"
 
 __all__ = [
