@@ -1283,9 +1283,9 @@ def _getPersistentRSAKey(directory=None, filename=None, keySize=4096,
     # working PEM file. Load it!
     # (Future archelogical readers: I chose not to short circuit above, because
     # then there's two exit paths to this code!)
-    with pemFile.open("rb") as key_file:
+    with pemFile.open("rb") as keyFile:
         privateKey = serialization.load_pem_private_key(
-            key_file.read(),
+            keyFile.read(),
             password=None,
             backend=default_backend()
         )
