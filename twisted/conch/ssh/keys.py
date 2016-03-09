@@ -1247,6 +1247,9 @@ def _getPersistentRSAKey(directory=None, filename=None, keySize=4096,
     @param filename: The filename of the key file.
     @type filename: L{str} or L{bytes}
 
+    @param keySize: The size of the key, if it needs to be generated.
+    @type keySize: L{int}
+
     @returns: A persistent key.
     @rtype: L{Key}
     """

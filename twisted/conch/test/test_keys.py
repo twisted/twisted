@@ -29,12 +29,15 @@ except ImportError:
 if cryptography and pyasn1:
     from twisted.conch.ssh import keys, common, sexpy
 
-import os, base64
+import base64
+import os
+
 from twisted.conch.test import keydata
 from twisted.python import randbytes
 from twisted.trial import unittest
 from twisted.python.compat import long, _PY3
 from twisted.python.versions import Version
+from twisted.python.filepath import FilePath
 
 
 
@@ -1169,3 +1172,56 @@ class PersistentRSAKeyTests(unittest.TestCase):
 
     if cryptography is None:
         skip = skipCryptography
+
+
+    def test_providedArguments(self):
+        """
+        L{keys._getPersistentRSAKey} will put the key in
+        C{directory}/C{filename}, with the key length of C{keySize}.
+        """
+        tempDir = self.mktemp()
+
+        key = keys._getPersistentRSAKey(directory=tempDir,
+                                        filename="mykey.pem", keySize=512)
+        self.assertEqual(key.size(), 512)
+        self.assertTrue(FilePath(tempDir).child("mykey.pem").exists())
+
+
+    def test_defaultArguments(self):
+        """
+        L{keys._getPersistentRSAKey}, when no arguments are given, will put the
+        key in the user's data directory.
+        """
+        tempDir = self.mktemp()
+
+        class FakeAppdirs(object):
+            @classmethod
+            def user_data_dir(cls, maker, product):
+                return tempDir
+
+        key = keys._getPersistentRSAKey(_appdirs=FakeAppdirs)
+
+        self.assertEqual(key.size(), 4096)
+        self.assertTrue(FilePath(tempDir).child("server.pem"))
+
+
+    def test_noRegeneration(self):
+        """
+        L{keys._getPersistentRSAKey} will not regenerate the key if the key
+        already exists.
+        """
+        tempDir = self.mktemp()
+
+        key = keys._getPersistentRSAKey(directory=tempDir,
+                                        filename="mykey.pem", keySize=512)
+        self.assertEqual(key.size(), 512)
+        self.assertTrue(FilePath(tempDir).child("mykey.pem").exists())
+        keyContent = FilePath(tempDir).child("mykey.pem").getContent()
+
+        # Set the key size to 1024 bits. Since it exists already, it will find
+        # the 512 bit key, and not generate a 1024 bit key.
+        key = keys._getPersistentRSAKey(directory=tempDir,
+                                        filename="mykey.pem", keySize=1024)
+        self.assertEqual(key.size(), 512)
+        self.assertEqual(FilePath(tempDir).child("mykey.pem").getContent(),
+                         keyContent)
