@@ -1469,10 +1469,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             "Python 3 has no separate long integer type.")
 
 
-    def test_setLastModified(self):
+    def test_setLastModifiedNeverSet(self):
         """
-        L{http.Request.setLastModified} takes a timestamp in seconds since the
-        epoch and sets the Last-Modified header for the response.
+        When no previous value was set and no 'if-modified-since' value was
+        requested, L{http.Request.setLastModified} takes a timestamp in seconds
+        since the epoch and sets the Last-Modified header for the response.
         """
         req = http.Request(DummyChannel(), False)
         req.setLastModified(0)
@@ -1508,7 +1509,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.setLastModified} takes a timestamp in seconds since the
         epoch and calls setLastModified for the response. If the resource has
         not been modified since the 'if-modified-since' value of
-        one-day-after-the-epoch, then setLastModified should return CACHED
+        one-day-after-the-epoch, then setLastModified returns L{http.CACHED}.
         """
         req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
@@ -1516,7 +1517,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
                           [b'02 Jan 1970 00:00:00 GMT']
             )
         result = req.setLastModified(0)
-        self.assertEqual(result,  http.CACHED)
+        self.assertEqual(result, http.CACHED)
 
 
     def test_setLastModifiedNotCached(self):
@@ -1524,7 +1525,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.setLastModified} takes a timestamp in seconds since the
         epoch and calls setLastModified for the response. If the resource has
         been modified since the 'if-modified-since' value of 'the epoch', then
-        setLastModified should not return CACHED
+        setLastModified will return C{NONE}.
         """
         req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
@@ -1532,7 +1533,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
                           [b'01 Jan 1970 00:00:00 GMT']
             )
         result = req.setLastModified(1000000)
-        self.assertEqual(result,  None)
+        self.assertEqual(result, None)
 
 
     def test_setLastModified3807(self):
@@ -1549,7 +1550,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             )
         result = req.setLastModified(1000000)
         result = req.setLastModified(0)
-        self.assertEqual(result,  None)
+        self.assertEqual(result, None)
 
 
     def test_setHost(self):
