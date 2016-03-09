@@ -11,7 +11,7 @@ insults/SSH integration support.
 from zope.interface import implementer
 
 from twisted.conch import avatar, interfaces as iconch, error as econch
-from twisted.conch.ssh import factory, keys, session
+from twisted.conch.ssh import factory, session
 from twisted.python import components
 
 from twisted.conch.insults import insults
