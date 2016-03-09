@@ -7,16 +7,19 @@ Tests for L{twisted.conch.recvline} and fixtures for testing related
 functionality.
 """
 
-import sys, os
+import os
+import sys
 
 from twisted.conch.insults import insults
 from twisted.conch import recvline
+from twisted.conch.ssh.keys import _getPersistentRSAKey
 
 from twisted.python import reflect, components
 from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
+
 
 class ArrowsTests(unittest.TestCase):
     def setUp(self):
@@ -467,6 +470,11 @@ class _SSHMixin(_BaseMixin):
             rlm,
             [checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
         sshFactory = ConchFactory(ptl)
+
+        sshKey = _getPersistentRSAKey(self.mktemp(), keySize=512)
+        sshFactory.publicKeys["ssh-rsa"] = sshKey
+        sshFactory.privateKeys["ssh-rsa"] = sshKey
+
         sshFactory.serverProtocol = self.serverProtocol
         sshFactory.startFactory()
 
