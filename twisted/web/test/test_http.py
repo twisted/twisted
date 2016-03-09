@@ -1469,6 +1469,89 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             "Python 3 has no separate long integer type.")
 
 
+    def test_setLastModified(self):
+        """
+        L{http.Request.setLastModified} takes a timestamp in seconds since the
+        epoch and sets the Last-Modified header for the response.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.setLastModified(0)
+        self.assertEqual(req.lastModified, 0)
+
+
+    def test_setLastModifiedUpdate(self):
+        """
+        L{http.Request.setLastModified} takes a timestamp in seconds since the
+        epoch and sets the Last-Modified header for the response, if the
+        current value is lower (older) than the supplied value.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.setLastModified(0)
+        req.setLastModified(1)
+        self.assertEqual(req.lastModified, 1)
+
+
+    def test_setLastModifiedIgnore(self):
+        """
+        L{http.Request.setLastModified} takes a timestamp in seconds since the
+        epoch and sets the Last-Modified header for the response, unless the
+        current value is lower (older) than the supplied value.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.setLastModified(1)
+        req.setLastModified(0)
+        self.assertEqual(req.lastModified, 1)
+
+
+    def test_setLastModifiedCached(self):
+        """
+        L{http.Request.setLastModified} takes a timestamp in seconds since the
+        epoch and calls setLastModified for the response. If the resource has
+        not been modified since the 'if-modified-since' value of
+        one-day-after-the-epoch, then setLastModified should return CACHED
+        """
+        req = http.Request(DummyChannel(), False)
+        req.requestHeaders.setRawHeaders(
+            networkString('if-modified-since'),
+                          [b'02 Jan 1970 00:00:00 GMT']
+            )
+        result = req.setLastModified(0)
+        self.assertEqual(result,  http.CACHED)
+
+
+    def test_setLastModifiedNotCached(self):
+        """
+        L{http.Request.setLastModified} takes a timestamp in seconds since the
+        epoch and calls setLastModified for the response. If the resource has
+        been modified since the 'if-modified-since' value of 'the epoch', then
+        setLastModified should not return CACHED
+        """
+        req = http.Request(DummyChannel(), False)
+        req.requestHeaders.setRawHeaders(
+            networkString('if-modified-since'),
+                          [b'01 Jan 1970 00:00:00 GMT']
+            )
+        result = req.setLastModified(1000000)
+        self.assertEqual(result,  None)
+
+
+    def test_setLastModified3807(self):
+        """
+        L{http.Request.setLastModified} takes a timestamp in seconds since the
+        epoch and calls setLastModified for the response. If the resource has
+        been modified since the 'if-modified-since' value of 'the epoch', then
+        setLastModified should return None. Otherwise, CACHED. See ticket 3807
+        """
+        req = http.Request(DummyChannel(), False)
+        req.requestHeaders.setRawHeaders(
+            networkString('if-modified-since'),
+                          [b'01 Jan 1970 00:00:01 GMT']
+            )
+        result = req.setLastModified(1000000)
+        result = req.setLastModified(0)
+        self.assertEqual(result,  None)
+
+
     def test_setHost(self):
         """
         L{http.Request.setHost} sets the value of the host request header.
