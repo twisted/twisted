@@ -11,7 +11,6 @@ from __future__ import absolute_import, division
 import base64
 import itertools
 import warnings
-import appdirs
 
 from hashlib import md5
 
@@ -1233,7 +1232,7 @@ def objectType(obj):
 
 
 def _getPersistentRSAKey(directory=None, filename=None, keySize=4096,
-                         _appdirs=appdirs):
+                         _appdirs=None):
     """
     This function returns a persistent L{Key}.
 
@@ -1253,6 +1252,9 @@ def _getPersistentRSAKey(directory=None, filename=None, keySize=4096,
     @returns: A persistent key.
     @rtype: L{Key}
     """
+    if _appdirs is None:
+        import appdirs as _appdirs
+
     if filename is None:
         filename = "server.pem"
 
