@@ -1159,3 +1159,13 @@ class KeyKeyObjectTests(unittest.TestCase):
             'e': keydata.RSAData['e'],
             },
             key.data())
+
+
+
+class PersistentRSAKeyTests(unittest.TestCase):
+    """
+    Tests for L{keys._getPersistentRSAKey}.
+    """
+
+    if cryptography is None:
+        skip = skipCryptography

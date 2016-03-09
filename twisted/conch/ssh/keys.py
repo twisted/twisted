@@ -11,6 +11,8 @@ from __future__ import absolute_import, division
 import base64
 import itertools
 import warnings
+import appdirs
+
 from hashlib import md5
 
 from cryptography.exceptions import InvalidSignature
@@ -1230,16 +1232,29 @@ def objectType(obj):
 
 
 
-def _generateSavedRSAKey(directory=None, filename=None, keySize=4096):
+def _getPersistentRSAKey(directory=None, filename=None, keySize=4096,
+                         _appdirs=appdirs):
     """
-    This function generates a persistent server key
+    This function returns a persistent L{Key}.
+
+    The key is loaded from a PEM file in C{directory}, named C{filename}. If it
+    does not exist, a key with the key size of C{keySize} is generated and
+    saved.
+
+    @param directory: The directory the key is stored in.
+    @type directory: L{str} or L{bytes}
+
+    @param filename: The filename of the key file.
+    @type filename: L{str} or L{bytes}
+
+    @returns: A persistent key.
+    @rtype: L{Key}
     """
     if filename is None:
         filename = "server.pem"
 
     if directory is None:
-        from appdirs import user_data_dir
-        directory = user_data_dir("Twisted", "Conch")
+        directory = _appdirs.user_data_dir("Twisted", "Conch")
 
     configDir = filepath.FilePath(directory)
     configDir.makedirs(ignoreExistingDirectory=True)

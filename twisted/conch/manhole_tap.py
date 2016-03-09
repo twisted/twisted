@@ -130,7 +130,7 @@ def makeService(options):
         sshPortal = portal.Portal(sshRealm, [checker])
         sshFactory = manhole_ssh.ConchFactory(sshPortal)
 
-        sshKey = keys._generateSavedRSAKey(options['sshKeyDir'],
+        sshKey = keys._getPersistentRSAKey(options['sshKeyDir'],
                                            options['sshKeyName'],
                                            int(options['sshKeySize']))
         sshFactory.publicKeys["ssh-rsa"] = sshKey
