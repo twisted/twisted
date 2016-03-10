@@ -1,1 +1,0 @@
-twisted.internet.endpoints.serverFromString, when parsing a SSL strports definition, now gives the correct error message when an empty chain file is given.
