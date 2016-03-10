@@ -1138,10 +1138,9 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     keyPEM = FilePath(privateKey).getContent()
     privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
     if extraCertChain is not None:
-        extraCertChain = FilePath(extraCertChain).getContent()
         matches = re.findall(
             r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',
-            nativeString(extraCertChain),
+            nativeString(FilePath(extraCertChain).getContent()),
             flags=re.DOTALL
         )
         chainCertificates = [ssl.Certificate.loadPEM(chainCertPEM).original
