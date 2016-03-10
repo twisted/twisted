@@ -1,36 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 16.0.0pre3 (2016-03-03)
-====================================
-
-Bugfixes
---------
- - twisted.internet.endpoints.serverFromString, when parsing a SSL
-   strports definition, now gives the correct error message when an
-   empty chain file is given. (#8222)
-
-
-Twisted Core 16.0.0pre2 (2016-02-28)
-====================================
-
-Features
---------
- - twisted.cred.strports has been ported to Python 3. (#8216)
-
-Deprecations and Removals
--------------------------
- - The __version__ attribute of former subprojects (conch, mail,
-   names, news, pair, runner, web, and words) is deprecated in
-   preference to the central twisted.__version__. (#8219)
-
-Other
------
- - #8220
-
-
-Twisted Core 16.0.0pre1 (2016-02-16)
-====================================
+Twisted Core 16.0.0 (2016-03-10)
+================================
 
 Features
 --------
@@ -52,6 +24,7 @@ Features
    twisted.internet.ssl.optionsForClientTLS that trusts multiple
    certificates. (#7671)
  - twisted.python.roots is now ported to Python 3. (#8131)
+ - twisted.cred.strports has been ported to Python 3. (#8216)
 
 Bugfixes
 --------
@@ -64,6 +37,9 @@ Bugfixes
  - twisted.internet.task.LoopingCall.withCount when run with internal
    of 0, now calls the countCallable with 1, regardless of the time
    passed between calls. (#8125)
+ - twisted.internet.endpoints.serverFromString, when parsing a SSL
+   strports definition, now gives the correct error message when an
+   empty chain file is given. (#8222)
 
 Improved Documentation
 ----------------------
@@ -80,11 +56,15 @@ Deprecations and Removals
    GLib, GTK3, or GObject-Introspection reactors. (#8145)
  - twisted.protocols.mice, containing a Logitech MouseMan serial
    driver, has been deprecated. (#8148)
+ - The __version__ attribute of former subprojects (conch, mail,
+   names, news, pair, runner, web, and words) is deprecated in
+   preference to the central twisted.__version__. (#8219)
 
 Other
 -----
  - #6842, #6978, #7668, #7791, #7881, #7943, #7944, #8050, #8104,
-   #8115, #8119, #8122, #8139, #8144, #8154, #8162, #8180, #8187
+   #8115, #8119, #8122, #8139, #8144, #8154, #8162, #8180, #8187,
+   #8220
 
 
 Twisted Core 15.5.0 (2015-11-28)
