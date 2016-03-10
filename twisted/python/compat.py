@@ -688,7 +688,12 @@ else:
 
 def _bytesChr(i):
     """
-    Like L{chr} but always returns L{bytes}.
+    Like L{chr} but always works on ASCII, returning L{bytes}.
+
+    @param i: The ASCII code point to return.
+    @type i: L{int}
+
+    @rtype: L{bytes}
     """
     if _PY3:
         return bytes([i])

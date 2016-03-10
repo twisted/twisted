@@ -666,13 +666,13 @@ class TelnetTests(unittest.TestCase):
             b'\xff\xfa\x01\xff\xff\xff\xf0')
 
 
-    def _deliver(self, b, *expected):
+    def _deliver(self, bytes, *expected):
         """
         Pass the given bytes to the protocol's C{dataReceived} method and
         assert that the given events occur.
         """
         received = self.protocol.events = []
-        self.protocol.dataReceived(b)
+        self.protocol.dataReceived(bytes)
         self.assertEqual(received, list(expected))
 
 
