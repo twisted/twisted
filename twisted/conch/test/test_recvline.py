@@ -12,7 +12,6 @@ import sys
 
 from twisted.conch.insults import insults
 from twisted.conch import recvline
-from twisted.conch.ssh.keys import _getPersistentRSAKey
 
 from twisted.python import reflect, components
 from twisted.internet import defer, error
@@ -301,7 +300,8 @@ backspace = "\x7f"
 from twisted.cred import checkers
 
 try:
-    from twisted.conch.ssh import userauth, transport, channel, connection, session
+    from twisted.conch.ssh import (userauth, transport, channel, connection,
+                                   session, keys)
     from twisted.conch.manhole_ssh import TerminalUser, TerminalSession, TerminalRealm, TerminalSessionTransport, ConchFactory
 except ImportError:
     ssh = False
@@ -471,7 +471,7 @@ class _SSHMixin(_BaseMixin):
             [checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
         sshFactory = ConchFactory(ptl)
 
-        sshKey = _getPersistentRSAKey(self.mktemp(), keySize=512)
+        sshKey = keys._getPersistentRSAKey(self.mktemp(), keySize=512)
         sshFactory.publicKeys["ssh-rsa"] = sshKey
         sshFactory.privateKeys["ssh-rsa"] = sshKey
 
