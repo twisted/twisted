@@ -547,6 +547,9 @@ class Request:
                 i.e., ?foo=bar&foo=baz&quux=spam results in
                 {'foo': ['bar', 'baz'], 'quux': ['spam']}.
 
+    @ivar cookies: The cookies that will be sent in the response.
+    @type cookies: L{list} of L{bytes}
+
     @type requestHeaders: L{http_headers.Headers}
     @ivar requestHeaders: All received HTTP request headers.
 
@@ -870,7 +873,7 @@ class Request:
 
         if not self.startedWriting:
             # write headers
-            self.write('')
+            self.write(b'')
 
         if self.chunked:
             # write last chunk and closing CRLF
@@ -938,7 +941,7 @@ class Request:
                     l.extend([name, b": ", value, b"\r\n"])
 
             for cookie in self.cookies:
-                l.append(networkString('Set-Cookie: %s\r\n' % (cookie,)))
+                l.append(b'Set-Cookie: ' + cookie + b'\r\n')
 
             l.append(b"\r\n")
 
@@ -971,50 +974,75 @@ class Request:
         L{twisted.web.server.Session} class for details.
 
         @param k: cookie name
-        @type k: L{str}
+        @type k: L{bytes} or L{unicode}
 
         @param v: cookie value
-        @type v: L{str}
+        @type v: L{bytes} or L{unicode}
 
         @param expires: cookie expire attribute value in
-        "Wdy, DD Mon YYYY HH:MM:SS GMT" format
-        @type expires: L{str}
+            "Wdy, DD Mon YYYY HH:MM:SS GMT" format
+        @type expires: L{bytes} or L{unicode}
 
         @param domain: cookie domain
-        @type domain: L{str}
+        @type domain: L{bytes} or L{unicode}
 
         @param path: cookie path
-        @type path: L{str}
+        @type path: L{bytes} or L{unicode}
 
         @param max_age: cookie expiration in seconds from reception
-        @type max_age: L{str}
+        @type max_age: L{bytes} or L{unicode}
 
         @param comment: cookie comment
-        @type comment: L{str}
+        @type comment: L{bytes} or L{unicode}
 
         @param secure: direct browser to send the cookie on encrypted
-        connections only
+            connections only
         @type secure: L{bool}
 
         @param httpOnly: direct browser not to expose cookies through channels
-        other than HTTP (and HTTPS) requests
+            other than HTTP (and HTTPS) requests
         @type httpOnly: L{bool}
+
+        @raises: L{DeprecationWarning} if an argument is not L{bytes} or
+            L{unicode}.
         """
-        cookie = '%s=%s' % (k, v)
+        def _ensureBytes(val):
+            """
+            Ensure that C{val} is bytes, encoding using UTF-8 if needed.
+            """
+            if val is None:
+                # It's None, so we don't want to touch it
+                return val
+
+            if isinstance(val, bytes):
+                return val
+            elif isinstance(val, unicode):
+                return val.encode('utf8')
+
+            # Not bytes or unicode, relying on string conversion legacy
+            # str() it, and warn, it's the best we can do
+            warnings.warn(
+                "Passing non-bytes or non-unicode cookie arguments is "
+                "deprecated since Twisted 16.1.",
+                category=DeprecationWarning, stacklevel=3)
+
+            return str(val).encode('utf8')
+
+        cookie = _ensureBytes(k) + b"=" + _ensureBytes(v)
         if expires is not None:
-            cookie = cookie + "; Expires=%s" % (expires, )
+            cookie = cookie + b"; Expires=" + _ensureBytes(expires)
         if domain is not None:
-            cookie = cookie + "; Domain=%s" % (domain, )
+            cookie = cookie + b"; Domain=" + _ensureBytes(domain)
         if path is not None:
-            cookie = cookie + "; Path=%s" % (path, )
+            cookie = cookie + b"; Path=" + _ensureBytes(path)
         if max_age is not None:
-            cookie = cookie + "; Max-Age=%s" % (max_age, )
+            cookie = cookie + b"; Max-Age=" + _ensureBytes(max_age)
         if comment is not None:
-            cookie = cookie + "; Comment=%s" % (comment, )
+            cookie = cookie + b"; Comment=" + _ensureBytes(comment)
         if secure:
-            cookie = cookie + "; Secure"
+            cookie = cookie + b"; Secure"
         if httpOnly:
-            cookie = cookie + "; HttpOnly"
+            cookie = cookie + b"; HttpOnly"
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):

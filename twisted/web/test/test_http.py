@@ -1526,29 +1526,99 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(req.responseHeaders.getRawHeaders(b"test"), [b"lemur"])
 
 
-    def test_addCookieWithMinimumArguments(self):
+    def _checkCookie(self, expectedCookieValue, *args, **kwargs):
         """
-        Add a Set-Cookie header with just name and value to the response.
+        Call L{http.Request.setCookie} with C{*args} and C{**kwargs}, and check
+        that the cookie value is equal to C{expectedCookieValue}.
         """
-        req = http.Request(DummyChannel(), False)
-        req.addCookie("foo", "bar")
-        self.assertEqual(req.cookies[0], "foo=bar")
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+        req.addCookie(*args, **kwargs)
+        self.assertEqual(req.cookies[0], expectedCookieValue)
+
+        # Write nothing to make it produce the headers
+        req.write(b"")
+        writtenLines = channel.transport.written.getvalue().split(b"\r\n")
+
+        # There should be one Set-Cookie header
+        setCookieLines = [x for x in writtenLines
+                          if x.startswith(b"Set-Cookie")]
+        self.assertEqual(len(setCookieLines), 1)
+        self.assertEqual(setCookieLines[0],
+                         b"Set-Cookie: " + expectedCookieValue)
 
 
-    def test_addCookieWithAllArguments(self):
+    def test_addCookieWithMinimumArgumentsUnicode(self):
         """
-        Add a Set-Cookie header with name and value and all the supported
-        options to the response.
+        L{http.Request.setCookie} adds a new cookie to be sent with the
+        response, and can be called with just a key and a value. L{unicode}
+        arguments are encoded using UTF-8.
         """
-        req = http.Request(DummyChannel(), False)
-        req.addCookie(
-            "foo", "bar", expires="Fri, 31 Dec 9999 23:59:59 GMT",
-            domain=".example.com", path="/", max_age="31536000",
-            comment="test", secure=True, httpOnly=True)
-        self.assertEqual(req.cookies[0],
-                         "foo=bar; Expires=Fri, 31 Dec 9999 23:59:59 GMT; "
-                         "Domain=.example.com; Path=/; Max-Age=31536000; "
-                         "Comment=test; Secure; HttpOnly")
+        expectedCookieValue = b"foo=bar"
+
+        self._checkCookie(expectedCookieValue, u"foo", u"bar")
+
+
+    def test_addCookieWithAllArgumentsUnicode(self):
+        """
+        L{http.Request.setCookie} adds a new cookie to be sent with the
+        response. L{unicode} arguments are encoded using UTF-8.
+        """
+        expectedCookieValue = (
+            b"foo=bar; Expires=Fri, 31 Dec 9999 23:59:59 GMT; "
+            b"Domain=.example.com; Path=/; Max-Age=31536000; "
+            b"Comment=test; Secure; HttpOnly")
+
+        self._checkCookie(expectedCookieValue,
+            u"foo", u"bar", expires=u"Fri, 31 Dec 9999 23:59:59 GMT",
+            domain=u".example.com", path=u"/", max_age=u"31536000",
+            comment=u"test", secure=True, httpOnly=True)
+
+
+    def test_addCookieWithMinimumArgumentsBytes(self):
+        """
+        L{http.Request.setCookie} adds a new cookie to be sent with the
+        response, and can be called with just a key and a value. L{bytes}
+        arguments are not decoded.
+        """
+        expectedCookieValue = b"foo=bar"
+
+        self._checkCookie(expectedCookieValue, b"foo", b"bar")
+
+
+    def test_addCookieWithAllArgumentsBytes(self):
+        """
+        L{http.Request.setCookie} adds a new cookie to be sent with the
+        response. L{bytes} arguments are not decoded.
+        """
+        expectedCookieValue = (
+            b"foo=bar; Expires=Fri, 31 Dec 9999 23:59:59 GMT; "
+            b"Domain=.example.com; Path=/; Max-Age=31536000; "
+            b"Comment=test; Secure; HttpOnly")
+
+        self._checkCookie(expectedCookieValue,
+            b"foo", b"bar", expires=b"Fri, 31 Dec 9999 23:59:59 GMT",
+            domain=b".example.com", path=b"/", max_age=b"31536000",
+            comment=b"test", secure=True, httpOnly=True)
+
+
+    def test_addCookieNonStringArgument(self):
+        """
+        L{http.Request.setCookie} will raise a L{DeprecationWarning} if
+        non-string (not L{bytes} or L{unicode}) arguments are given, and will
+        call C{str()} on it to preserve past behaviour.
+        """
+        expectedCookieValue = b"foo=10"
+
+        self._checkCookie(expectedCookieValue, b"foo", 10)
+
+        warnings = self.flushWarnings([self._checkCookie])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "Passing non-bytes or non-unicode cookie arguments is "
+            "deprecated since Twisted 16.1.")
 
 
     def test_firstWrite(self):
