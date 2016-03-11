@@ -1196,8 +1196,10 @@ class PersistentRSAKeyTests(unittest.TestCase):
 
         class FakeAppdirs(object):
             @classmethod
-            def user_data_dir(cls, maker, product):
+            def dataDir(cls, maker, product):
                 return tempDir
+
+            user_data_dir = _dataDir
 
         key = keys._getPersistentRSAKey(_appdirs=FakeAppdirs)
 

@@ -1249,6 +1249,8 @@ def _getPersistentRSAKey(directory=None, filename=None, keySize=4096,
     @param keySize: The size of the key, if it needs to be generated.
     @type keySize: L{int}
 
+    @param _appdirs: Private mocking function for testing, do not use.
+
     @returns: A persistent key.
     @rtype: L{Key}
     """
