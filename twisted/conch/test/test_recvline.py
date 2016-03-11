@@ -13,7 +13,7 @@ import sys
 from twisted.conch.insults import insults
 from twisted.conch import recvline
 
-from twisted.python import reflect, components
+from twisted.python import reflect, components, filepath
 from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.cred import portal
@@ -471,7 +471,8 @@ class _SSHMixin(_BaseMixin):
             [checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
         sshFactory = ConchFactory(ptl)
 
-        sshKey = keys._getPersistentRSAKey(self.mktemp(), keySize=512)
+        sshKey = keys._getPersistentRSAKey(filepath.FilePath(self.mktemp()),
+                                           keySize=512)
         sshFactory.publicKeys["ssh-rsa"] = sshKey
         sshFactory.privateKeys["ssh-rsa"] = sshKey
 
