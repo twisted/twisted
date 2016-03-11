@@ -4,13 +4,14 @@ Twisted 16.0.0
 |pypi|
 |coverage|
 
-..
+.. code::
 
     <idnar> oh, sorry, this is easier than the last time I looked
     <glyph> idnar: HAHA PWNT
     <glyph> idnar: I WORKED SUPER HARD TO MAKE YOUR LIFE EASIER FOR MONTHS AND
             NOW YOU HAVE TO EAT CROWWWW
     <glyph> idnar: I AM THE WINNER IN THIS TRANSACTION SOMEHOW
+
 
 For information on what's new in Twisted 16.0.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
