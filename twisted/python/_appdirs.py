@@ -14,16 +14,15 @@ from twisted.python.compat import currentframe
 from twisted.python.reflect import qual
 
 
-def getDataDirectory(qualname=None):
+def getDataDirectory(moduleName=None):
     """
-    Get a data directory for the caller function, or C{qualname} if given.
+    Get a data directory for the caller function, or C{moduleName} if given.
 
     @returns: A directory for putting data in.
     @rtype: L{str}
     """
-    if not qualname:
+    if not moduleName:
         caller = currentframe(1)
-        qualname = ".".join([inspect.getmodule(caller).__name__,
-                             caller.f_code.co_name])
+        moduleName = inspect.getmodule(caller).__name__
 
-    return appdirs.user_data_dir(qualname)
+    return appdirs.user_data_dir(moduleName)

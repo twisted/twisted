@@ -318,6 +318,7 @@ testModules = [
     "twisted.positioning.test.test_sentence",
     "twisted.protocols.test.test_basic",
     "twisted.protocols.test.test_tls",
+    "twisted.python.test.test_appdirs",
     "twisted.python.test.test_components",
     "twisted.python.test.test_constants",
     "twisted.python.test.test_deprecate",
