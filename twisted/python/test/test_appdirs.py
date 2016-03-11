@@ -16,7 +16,9 @@ from twisted.trial import unittest
 
 
 class AppdirsTests(unittest.TestCase):
-
+    """
+    Tests for L{_appdirs}.
+    """
     if not _appdirs:
         skip = "appdirs package not installed"
 
