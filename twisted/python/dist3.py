@@ -158,6 +158,7 @@ modules = [
     "twisted.protocols.test.__init__",
     "twisted.protocols.tls",
     "twisted.python.__init__",
+    "twisted.python._appdirs",
     "twisted.python._tzhelper",
     "twisted.python._url",
     "twisted.python.compat",

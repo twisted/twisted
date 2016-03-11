@@ -1231,44 +1231,26 @@ def objectType(obj):
 
 
 
-def _getPersistentRSAKey(directory=None, filename=None, keySize=4096,
-                         _appdirs=None):
+def _getPersistentRSAKey(location, keySize=4096):
     """
     This function returns a persistent L{Key}.
 
-    The key is loaded from a PEM file in C{directory}, named C{filename}. If it
-    does not exist, a key with the key size of C{keySize} is generated and
-    saved.
+    The key is loaded from a PEM file in C{location}. If it does not exist, a
+    key with the key size of C{keySize} is generated and saved.
 
-    @param directory: The directory the key is stored in.
-    @type directory: L{str} or L{bytes}
-
-    @param filename: The filename of the key file.
-    @type filename: L{str} or L{bytes}
+    @param location: Where the key is stored.
+    @type location: L{twisted.python.filepath.FilePath)
 
     @param keySize: The size of the key, if it needs to be generated.
     @type keySize: L{int}
 
-    @param _appdirs: Private mocking function for testing, do not use.
-
     @returns: A persistent key.
     @rtype: L{Key}
     """
-    if _appdirs is None:
-        import appdirs as _appdirs
-
-    if filename is None:
-        filename = "server.pem"
-
-    if directory is None:
-        directory = _appdirs.user_data_dir("Twisted", "Conch")
-
-    configDir = filepath.FilePath(directory)
-    configDir.makedirs(ignoreExistingDirectory=True)
-    pemFile = configDir.child(filename)
+    location.parent().makedirs(ignoreExistingDirectory=True)
 
     # If it doesn't exist, we want to generate a new key and save it
-    if not pemFile.exists():
+    if not location.exists():
         privateKey = rsa.generate_private_key(
             public_exponent=65537,
             key_size=keySize,
@@ -1281,13 +1263,13 @@ def _getPersistentRSAKey(directory=None, filename=None, keySize=4096,
             encryption_algorithm=serialization.NoEncryption()
         )
 
-        pemFile.setContent(pem)
+        location.setContent(pem)
 
     # By this point (save any hilarious race conditions) we should have a
     # working PEM file. Load it!
-    # (Future archelogical readers: I chose not to short circuit above, because
-    # then there's two exit paths to this code!)
-    with pemFile.open("rb") as keyFile:
+    # (Future archaelogical readers: I chose not to short circuit above,
+    # because then there's two exit paths to this code!)
+    with location.open("rb") as keyFile:
         privateKey = serialization.load_pem_private_key(
             keyFile.read(),
             password=None,
