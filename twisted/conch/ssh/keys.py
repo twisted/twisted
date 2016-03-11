@@ -34,7 +34,7 @@ from pyasn1.codec.ber import encoder as berEncoder
 
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
-from twisted.python import randbytes, filepath
+from twisted.python import randbytes
 from twisted.python.compat import iterbytes, long, izip, nativeString, _PY3
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.versions import Version

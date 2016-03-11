@@ -11,7 +11,6 @@ import appdirs
 import inspect
 
 from twisted.python.compat import currentframe
-from twisted.python.reflect import qual
 
 
 def getDataDirectory(moduleName=None):
