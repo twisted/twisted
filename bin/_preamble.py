@@ -13,7 +13,7 @@ import sys, os
 
 path = os.path.abspath(sys.argv[0])
 while os.path.dirname(path) != path:
-    if os.path.exists(os.path.join(path, 'twisted', '__init__.py')):
-        sys.path.insert(0, path)
+    if os.path.exists(os.path.join(path, 'src', 'twisted', '__init__.py')):
+        sys.path.insert(0, os.path.join(path, 'src'))
         break
     path = os.path.dirname(path)
