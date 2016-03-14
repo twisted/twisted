@@ -8,9 +8,9 @@
 #  - Things only useful when running from a source checkout (_preamble.py)
 
 # Do not include the old topfiles, or news fragments
-recursive-exclude twisted *.misc *.bugfix *.doc *.feature *.removal
-recursive-exclude twisted NEWS README topfiles
-exclude twisted/topfiles/CREDITS twisted/topfiles/ChangeLog.Old
+recursive-exclude src/twisted *.misc *.bugfix *.doc *.feature *.removal
+recursive-exclude src/twisted NEWS README topfiles
+exclude src/twisted/topfiles/CREDITS src/twisted/topfiles/ChangeLog.Old
 
 # Include NEWS, READMEs, etc
 recursive-include docs README
