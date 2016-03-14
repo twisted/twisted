@@ -1,0 +1,1 @@
+twisted.conch.manhole_ssh.ConchFactory (used by `twistd manhole`) no longer uses a hardcoded SSH server key, and will generate a persistent one, saving it in your user appdir. If you use ConchFactory, you will now need to provide your own SSH server key.

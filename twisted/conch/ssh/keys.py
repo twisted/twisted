@@ -11,11 +11,12 @@ from __future__ import absolute_import, division
 import base64
 import itertools
 import warnings
+
 from hashlib import md5
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding
 try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
@@ -1227,6 +1228,55 @@ def objectType(obj):
         return keyDataMapping[tuple(obj.keydata)]
     except (KeyError, AttributeError):
         raise BadKeyError("invalid key object", obj)
+
+
+
+def _getPersistentRSAKey(location, keySize=4096):
+    """
+    This function returns a persistent L{Key}.
+
+    The key is loaded from a PEM file in C{location}. If it does not exist, a
+    key with the key size of C{keySize} is generated and saved.
+
+    @param location: Where the key is stored.
+    @type location: L{twisted.python.filepath.FilePath)
+
+    @param keySize: The size of the key, if it needs to be generated.
+    @type keySize: L{int}
+
+    @returns: A persistent key.
+    @rtype: L{Key}
+    """
+    location.parent().makedirs(ignoreExistingDirectory=True)
+
+    # If it doesn't exist, we want to generate a new key and save it
+    if not location.exists():
+        privateKey = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=keySize,
+            backend=default_backend()
+        )
+
+        pem = privateKey.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+
+        location.setContent(pem)
+
+    # By this point (save any hilarious race conditions) we should have a
+    # working PEM file. Load it!
+    # (Future archaelogical readers: I chose not to short circuit above,
+    # because then there's two exit paths to this code!)
+    with location.open("rb") as keyFile:
+        privateKey = serialization.load_pem_private_key(
+            keyFile.read(),
+            password=None,
+            backend=default_backend()
+        )
+        return Key(privateKey)
+
 
 
 if _PY3:

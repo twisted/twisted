@@ -29,12 +29,15 @@ except ImportError:
 if cryptography and pyasn1:
     from twisted.conch.ssh import keys, common, sexpy
 
-import os, base64
+import base64
+import os
+
 from twisted.conch.test import keydata
 from twisted.python import randbytes
 from twisted.trial import unittest
 from twisted.python.compat import long, _PY3
 from twisted.python.versions import Version
+from twisted.python.filepath import FilePath
 
 
 
@@ -1159,3 +1162,46 @@ class KeyKeyObjectTests(unittest.TestCase):
             'e': keydata.RSAData['e'],
             },
             key.data())
+
+
+
+class PersistentRSAKeyTests(unittest.TestCase):
+    """
+    Tests for L{keys._getPersistentRSAKey}.
+    """
+
+    if cryptography is None:
+        skip = skipCryptography
+
+
+    def test_providedArguments(self):
+        """
+        L{keys._getPersistentRSAKey} will put the key in
+        C{directory}/C{filename}, with the key length of C{keySize}.
+        """
+        tempDir = FilePath(self.mktemp())
+        keyFile = tempDir.child("mykey.pem")
+
+        key = keys._getPersistentRSAKey(keyFile, keySize=512)
+        self.assertEqual(key.size(), 512)
+        self.assertTrue(keyFile.exists())
+
+
+    def test_noRegeneration(self):
+        """
+        L{keys._getPersistentRSAKey} will not regenerate the key if the key
+        already exists.
+        """
+        tempDir = FilePath(self.mktemp())
+        keyFile = tempDir.child("mykey.pem")
+
+        key = keys._getPersistentRSAKey(keyFile, keySize=512)
+        self.assertEqual(key.size(), 512)
+        self.assertTrue(keyFile.exists())
+        keyContent = keyFile.getContent()
+
+        # Set the key size to 1024 bits. Since it exists already, it will find
+        # the 512 bit key, and not generate a 1024 bit key.
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
+        self.assertEqual(key.size(), 512)
+        self.assertEqual(keyFile.getContent(), keyContent)

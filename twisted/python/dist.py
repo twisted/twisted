@@ -75,6 +75,7 @@ _EXTRA_OPTIONS = dict(
     conch=['gmpy',
            'pyasn1',
            'cryptography >= 0.9.1',
+           'appdirs >= 1.4.0',
            ],
     soap=['soappy'],
     serial=['pyserial'],
