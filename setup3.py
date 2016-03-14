@@ -49,8 +49,8 @@ class PickyBuildScripts(build_scripts):
 def main():
     # Make sure the to-be-installed version of Twisted is used, if available,
     # since we're importing from it:
-    if os.path.exists('twisted'):
-        sys.path.insert(0, '.')
+    if os.path.exists('src/twisted'):
+        sys.path.insert(0, 'src')
 
     from twisted.python.dist import STATIC_PACKAGE_METADATA, getScripts
 
@@ -65,6 +65,7 @@ def main():
         zip_safe=False,
         include_package_data=True,
         scripts=getScripts(),
+        package_dir={"": "src"},
     ))
 
     setup(**args)
