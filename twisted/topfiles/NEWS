@@ -1,6 +1,72 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.0.0 (2016-03-10)
+================================
+
+Features
+--------
+ - todo parameter for IReporter.addExpectedSuccess and
+   IReporter.addUnexpectedSuccess is no longer required. If not
+   provided, a sensible default will be used instead. (#4811)
+ - A new string endpoint type, "tls:", allows for properly-verified
+   TLS (unlike "ssl:", always matching hostname resolution with
+   certificate hostname verification) with faster IPv4/IPv6
+   connections.  This comes with an accompanying function,
+   twisted.internet.endpoints.wrapClientTLS, which can wrap an
+   arbitrary client endpoint with client TLS. (#5642)
+ - twisted.python.filepath.makedirs accepts an ignoreExistingDirectory
+   flag which ignore the OSError raised by os.makedirs if requested
+   directory already exists. (#5704)
+ - twisted.protocols.amp has been ported to Python 3. (#6833)
+ - twisted.internet.ssl.trustRootFromCertificates returns an object
+   suitable for use as trustRoot= to
+   twisted.internet.ssl.optionsForClientTLS that trusts multiple
+   certificates. (#7671)
+ - twisted.python.roots is now ported to Python 3. (#8131)
+ - twisted.cred.strports has been ported to Python 3. (#8216)
+
+Bugfixes
+--------
+ - Expected failures from standard library unittest no longer fail
+   with Trial reporters. (#4811)
+ - twisted.internet.endpoints.HostnameEndpoint.connect no longer fails
+   with an AlreadyCalledError when the Deferred it returns is
+   cancelled after all outgoing connection attempts have been made but
+   none have yet succeeded or failed. (#8014)
+ - twisted.internet.task.LoopingCall.withCount when run with internal
+   of 0, now calls the countCallable with 1, regardless of the time
+   passed between calls. (#8125)
+ - twisted.internet.endpoints.serverFromString, when parsing a SSL
+   strports definition, now gives the correct error message when an
+   empty chain file is given. (#8222)
+
+Improved Documentation
+----------------------
+ - The Twisted Project has adopted the Contributor Covenant as its
+   Code of Conduct. (#8173)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.task.LoopingCall.deferred is now deprecated. Use
+   the deferred returned by twisted.internet.task.LoopingCall.start()
+   (#8116)
+ - twisted.internet.gtkreactor, the GTK+ 1 reactor deprecated since
+   Twisted 10.1, has been removed. This does not affect the GTK2,
+   GLib, GTK3, or GObject-Introspection reactors. (#8145)
+ - twisted.protocols.mice, containing a Logitech MouseMan serial
+   driver, has been deprecated. (#8148)
+ - The __version__ attribute of former subprojects (conch, mail,
+   names, news, pair, runner, web, and words) is deprecated in
+   preference to the central twisted.__version__. (#8219)
+
+Other
+-----
+ - #6842, #6978, #7668, #7791, #7881, #7943, #7944, #8050, #8104,
+   #8115, #8119, #8122, #8139, #8144, #8154, #8162, #8180, #8187,
+   #8220
+
+
 Twisted Core 15.5.0 (2015-11-28)
 ================================
 

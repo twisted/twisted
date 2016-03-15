@@ -1,1 +1,0 @@
-twisted.internet.endpoints.HostnameEndpoint.connect no longer fails with an AlreadyCalledError when the Deferred it returns is cancelled after all outgoing connection attempts have been made but none have yet succeeded or failed.

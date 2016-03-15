@@ -1,1 +1,0 @@
-twisted.web.http.Request's headers and request_headers attributes, deprecated since Twisted 13.2, have been removed.

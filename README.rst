@@ -1,12 +1,19 @@
-Twisted 15.5.0
+Twisted 16.0.0
 ==============
 
 |pypi|
 |coverage|
 
-    <reaperhulk> I continue to believe that networks are totally reliable despite ample evidence from my CI that I am wrong
+.. code::
 
-For information on what's new in Twisted 15.5.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+    <idnar> oh, sorry, this is easier than the last time I looked
+    <glyph> idnar: HAHA PWNT
+    <glyph> idnar: I WORKED SUPER HARD TO MAKE YOUR LIFE EASIER FOR MONTHS AND
+            NOW YOU HAVE TO EAT CROWWWW
+    <glyph> idnar: I AM THE WINNER IN THIS TRANSACTION SOMEHOW
+
+
+For information on what's new in Twisted 16.0.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -67,7 +74,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2015 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2016 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.

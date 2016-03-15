@@ -1,1 +1,0 @@
-twisted.web.http_headers._DictHeaders now correctly handles updating via keyword arguments in Python 3 (therefore twisted.web.http_headers is now fully ported to Python 3).

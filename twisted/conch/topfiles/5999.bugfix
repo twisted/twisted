@@ -1,1 +1,0 @@
-twisted.conch.ssh.channel.SSHChannel's getPeer and getHost methods now return an object which provides IAddress instead of an old-style tuple address.

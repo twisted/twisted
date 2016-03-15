@@ -1,6 +1,30 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 16.0.0 (2016-03-10)
+=================================
+
+Features
+--------
+ - twisted.conch now uses cryptography instead of PyCrypto for its
+   underlying crypto operations. (#7413)
+ - twisted.conch.ssh.keys is now ported to Python 3. (#7998)
+
+Bugfixes
+--------
+ - twisted.conch.ssh.channel.SSHChannel's getPeer and getHost methods
+   now return an object which provides IAddress instead of an old-
+   style tuple address. (#5999)
+ - twisted.conch.endpoint.SSHCommandClientEndpoint, when
+   authentication is delegated to an SSH agent, no longer leaves the
+   agent connection opened when connection to the server is lost.
+   (#8138)
+
+Other
+-----
+ - #7037, #7715, #8200, #8208
+
+
 Twisted Conch 15.5.0 (2015-11-28)
 =================================
 

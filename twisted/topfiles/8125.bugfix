@@ -1,1 +1,0 @@
-twisted.internet.task.LoopingCall.withCount when run with internal of 0, now calls the countCallable with 1, regardless of the time passed between calls.
