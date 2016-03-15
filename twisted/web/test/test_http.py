@@ -235,6 +235,94 @@ class HTTP0_9Tests(HTTP1_0Tests):
         self.assertEqual(response, expectedResponse)
 
 
+
+class ProtocolNegotiationTests(unittest.TestCase):
+    requests = (
+        b"GET / HTTP/1.1\r\n"
+        b"Accept: text/html\r\n"
+        b"Connection: close\r\n"
+        b"\r\n"
+        b"GET / HTTP/1.0\r\n"
+        b"\r\n")
+
+
+    def _negotiatedProtocolForTransportInstance(self, t):
+        """
+        Run a request using the specific instance of a transport. Returns the
+        negotiated protocol string.
+        """
+        a = http._genericHTTPChannelProtocolFactory(b'')
+        a.requestFactory = DummyHTTPHandler
+        a.makeConnection(t)
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+        a.connectionLost(IOError("all done"))
+        return a._negotiatedProtocol
+
+
+    def test_protocolUnspecified(self):
+        """
+        If the transport has no support for protocol negotiation (no
+        negotiatedProtocol attribute), HTTP/1.1 is assumed.
+        """
+        b = StringTransport()
+        negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
+        self.assertEqual(negotiatedProtocol, b'http/1.1')
+
+
+    def test_protocolNone(self):
+        """
+        If the transport has no support for protocol negotiation (returns None
+        for negotiatedProtocol), HTTP/1.1 is assumed.
+        """
+        b = StringTransport()
+        b.negotiatedProtocol = None
+        negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
+        self.assertEqual(negotiatedProtocol, b'http/1.1')
+
+
+    def test_http11(self):
+        """
+        If the transport reports that HTTP/1.1 is negotiated, that's what's
+        negotiated.
+        """
+        b = StringTransport()
+        b.negotiatedProtocol = b'http/1.1'
+        negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
+        self.assertEqual(negotiatedProtocol, b'http/1.1')
+
+
+    def test_http2(self):
+        """
+        If the transport reports that HTTP/2 is negotiated, that's what's
+        negotiated. Currently HTTP/2 is unsupported, so this raises an
+        AssertionError.
+        """
+        b = StringTransport()
+        b.negotiatedProtocol = b'h2'
+        self.assertRaises(
+            AssertionError,
+            self._negotiatedProtocolForTransportInstance,
+            b,
+        )
+
+
+    def test_unknownProtocol(self):
+        """
+        If the transport reports that a protocol other than HTTP/1.1 or HTTP/2
+        is negotiated, an error occurs.
+        """
+        b = StringTransport()
+        b.negotiatedProtocol = b'smtp'
+        self.assertRaises(
+            AssertionError,
+            self._negotiatedProtocolForTransportInstance,
+            b,
+        )
+
+
+
 class HTTPLoopbackTests(unittest.TestCase):
 
     expectedHeaders = {b'request': b'/foo/bar',

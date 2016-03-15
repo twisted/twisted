@@ -97,10 +97,13 @@ from twisted.python.versions import Version
 from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IProtocol
 from twisted.protocols import policies, basic
 
 from twisted.web.iweb import IRequest, IAccessLogFormatter
 from twisted.web.http_headers import Headers
+
+H2_ENABLED = False
 
 from twisted.web._responses import (
     SWITCHING,
@@ -1978,6 +1981,92 @@ def proxiedLogFormatter(timestamp, request):
 
 
 
+class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
+    """
+    A proxy object that wraps one of the HTTP protocol objects, and switches
+    between them depending on TLS negotiated protocol.
+
+    @ivar _negotiatedProtocol: The protocol negotiated with ALPN or NPN, if
+        any.
+    @type _negotiatedProtocol: Either a bytestring containing the ALPN token
+        for the negotiated protocol, or C{None} if no protocol has yet been
+        negotiated.
+
+    @ivar _channel: The object capable of behaving like a L{HTTPChannel} that
+        is backing this object. By default this is a L{HTTPChannel}, but if a
+        HTTP protocol upgrade takes place this may be a different channel
+        object. Must implement L{IProtocol}.
+    @type _channel: L{HTTPChannel}
+
+    @ivar _requestFactory: A callable to use to build L{IRequest} objects.
+    @type _requestFactory: L{IRequest}
+
+    @ivar _site: A reference to the creating L{twisted.web.server.Site} object.
+    @type _site: L{twisted.web.server.Site}
+    """
+    _negotiatedProtocol = None
+    _requestFactory = Request
+    _site = None
+
+
+    @property
+    def requestFactory(self):
+        return self._channel.requestFactory
+
+
+    @requestFactory.setter
+    def requestFactory(self, value):
+        self._requestFactory = value
+        self._channel.requestFactory = value
+
+
+    @property
+    def site(self):
+        return self._channel.site
+
+
+    @site.setter
+    def site(self, value):
+        self._site = value
+        self._channel.site = value
+
+
+    def dataReceived(self, data):
+        """
+        A override of L{IProtocol.dataReceived} that checks what protocol we're
+        using.
+        """
+        if self._negotiatedProtocol is None:
+            try:
+                negotiatedProtocol = self._channel.transport.negotiatedProtocol
+            except AttributeError:
+                # Plaintext HTTP, always HTTP/1.1
+                negotiatedProtocol = b'http/1.1'
+
+            if negotiatedProtocol is None:
+                negotiatedProtocol = b'http/1.1'
+
+            if negotiatedProtocol == b'h2':
+                assert H2_ENABLED, "Cannot negotiate HTTP/2 without support."
+            else:
+                # Only HTTP/2 and HTTP/1.1 are supported right now.
+                assert negotiatedProtocol == b'http/1.1', \
+                       "Unsupported protocol negotiated"
+
+            self._negotiatedProtocol = negotiatedProtocol
+
+        return self._channel.dataReceived(data)
+
+
+
+def _genericHTTPChannelProtocolFactory(self):
+    """
+    Returns an appropriately initialized _GenericHTTPChannelProtocol.
+    """
+    return _GenericHTTPChannelProtocol(HTTPChannel())
+
+
+
 class HTTPFactory(protocol.ServerFactory):
     """
     Factory for HTTP server.
@@ -2001,7 +2090,7 @@ class HTTPFactory(protocol.ServerFactory):
         timestamps.
     """
 
-    protocol = HTTPChannel
+    protocol = _genericHTTPChannelProtocolFactory
 
     logPath = None
 
