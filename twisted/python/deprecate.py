@@ -34,7 +34,6 @@ To deprecate properties you can use::
 
     class OtherwiseUndeprecatedClass(object):
 
-        @property
         @deprecatedProperty(Version('Twisted', 16, 0, 0))
         def badProperty(self):
             '''

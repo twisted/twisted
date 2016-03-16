@@ -722,6 +722,7 @@ class ClassWithDeprecatedProperty(object):
         self._someProtectedValue = value
 
 
+
 class DeprecatedDecoratorTests(SynchronousTestCase):
     """
     Tests for deprecated decorators.
@@ -797,7 +798,7 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         self.assertEqual(message, warnings[0]['message'])
 
 
-    def test_classMethod(self):
+    def test_class(self):
         """
         When L{deprecated} is used on a class, instantiations raise a
         L{DeprecationWarning} and class's docstring is updated to inform the
@@ -818,7 +819,7 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
             'twisted.python.test.test_deprecate.DeprecatedClass '
             'was deprecated in Twisted 1.2.3'
             )
-        warnings = self.flushWarnings([self.test_classMethod])
+        warnings = self.flushWarnings([self.test_class])
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(message, warnings[0]['message'])
