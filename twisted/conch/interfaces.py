@@ -5,7 +5,10 @@
 This module contains interfaces defined for the L{twisted.conch} package.
 """
 
+from __future__ import absolute_import, division
+
 from zope.interface import Interface, Attribute
+
 
 class IConchUser(Interface):
     """
@@ -54,6 +57,8 @@ class IConchUser(Interface):
         The method is called with arguments of windowSize, maxPacket, data.
         """
 
+
+
 class ISession(Interface):
 
     def getPty(term, windowSize, modes):
@@ -92,6 +97,7 @@ class ISession(Interface):
         """
         Called when the session is closed.
         """
+
 
 
 class ISFTPServer(Interface):
@@ -404,5 +410,3 @@ class ISFTPFile(Interface):
         @param attrs: a dictionary in the same format as the attrs argument to
         L{openFile}.
         """
-
-
