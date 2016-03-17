@@ -17,8 +17,9 @@ from twisted import copyright, plugin
 from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted.persisted import sob
+from twisted.logger import _logFor, ILogObserver
 from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.python.log import ILogObserver
+from twisted.python.log import ILogObserver as LegacyILogObserver
 from twisted.python.reflect import qual, namedAny
 
 # Expose the new implementation of installReactor at the old location.
@@ -180,12 +181,20 @@ class AppLogger(object):
         if self._observerFactory is not None:
             observer = self._observerFactory()
         else:
-            observer = application.getComponent(ILogObserver, None)
+            observer = application.getComponent(LegacyILogObserver, None)
 
         if observer is None:
             observer = self._getLogObserver()
         self._observer = observer
-        log.startLoggingWithObserver(self._observer)
+
+        from twisted.logger import globalLogBeginner, LegacyLogObserverWrapper
+
+        if ILogObserver.providedBy(self._observer):
+            observers = [self._observer]
+        else:
+            observers = [LegacyLogObserverWrapper(self._observer)]
+
+        globalLogBeginner.beginLoggingTo(observers)
         self._initialLog()
 
 
@@ -194,10 +203,11 @@ class AppLogger(object):
         Print twistd start log message.
         """
         from twisted.internet import reactor
-        log.msg("twistd %s (%s %s) starting up." % (
-            copyright.version, sys.executable, runtime.shortPythonVersion())
-        )
-        log.msg('reactor class: %s.' % (qual(reactor.__class__),))
+        _logFor(self).info("twistd {version} ({exe} {pyVersion}) starting up.",
+            version=copyright.version, exe=sys.executable,
+                           pyVersion=runtime.shortPythonVersion())
+        _logFor(self).info('reactor class: {reactor}.',
+                           reactor=qual(reactor.__class__))
 
 
     def _getLogObserver(self):

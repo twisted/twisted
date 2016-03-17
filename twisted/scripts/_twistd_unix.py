@@ -146,6 +146,8 @@ class UnixAppLogger(app.AppLogger):
             from twisted.python import syslog
             return syslog.SyslogObserver(self._syslogPrefix).emit
 
+        from twisted.logger import textFileLogObserver
+
         if self._logfilename == '-':
             if not self._nodaemon:
                 sys.exit('Daemons cannot log to stdout, exiting!')
@@ -167,7 +169,7 @@ class UnixAppLogger(app.AppLogger):
                         from twisted.internet import reactor
                         reactor.callFromThread(logFile.rotate)
                     signal.signal(signal.SIGUSR1, rotateLog)
-        return log.FileLogObserver(logFile).emit
+        return textFileLogObserver(logFile)
 
 
 

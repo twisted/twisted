@@ -121,3 +121,6 @@ from ._json import (
     eventAsJSON, eventFromJSON,
     jsonFileLogObserver, eventsFromJSONLogFile
 )
+
+_log = Logger()
+_logFor = lambda _:_log.__get__(_, _.__class__)
