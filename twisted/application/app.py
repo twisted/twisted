@@ -17,8 +17,9 @@ from twisted import copyright, plugin
 from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted.persisted import sob
-from twisted.logger import _logFor, ILogObserver
 from twisted.python import runtime, log, usage, failure, util, logfile
+from twisted.logger import (globalLogBeginner, LegacyLogObserverWrapper,
+                            _logFor, ILogObserver)
 from twisted.python.log import ILogObserver as LegacyILogObserver
 from twisted.python.reflect import qual, namedAny
 
@@ -186,8 +187,6 @@ class AppLogger(object):
         if observer is None:
             observer = self._getLogObserver()
         self._observer = observer
-
-        from twisted.logger import globalLogBeginner, LegacyLogObserverWrapper
 
         if ILogObserver.providedBy(self._observer):
             observers = [self._observer]
