@@ -166,8 +166,10 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         Called by event loop when an I/O event occurs.
         """
-        log.callWithLogger(
-            source, self._doReadOrWrite, source, source, condition)
+        try:
+            self._doReadOrWrite(source, source, condition)
+        except Exception:
+            log.err()
         return True  # True = don't auto-remove the source
 
 

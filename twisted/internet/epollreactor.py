@@ -393,7 +393,10 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             except KeyError:
                 pass
             else:
-                log.callWithLogger(selectable, _drdw, selectable, fd, event)
+                try:
+                    _drdw(selectable, fd, event)
+                except Exception:
+                    log.err()
 
     doIteration = doPoll
 

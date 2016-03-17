@@ -103,8 +103,10 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase,
                 break
             if key != KEY_WAKEUP:
                 assert key == KEY_NORMAL
-                log.callWithLogger(evt.owner, self._callEventCallback,
-                                   rc, bytes, evt)
+                try:
+                    self._callEventCallback(rc, bytes, evt)
+                except Exception:
+                    log.err()
                 processed_events += 1
             if processed_events >= EVENTS_PER_LOOP:
                 break
