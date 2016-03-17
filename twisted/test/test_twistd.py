@@ -34,7 +34,6 @@ from twisted import plugin, logger
 from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
-from twisted.python import log
 from twisted.python.compat import NativeStringIO
 from twisted.python.usage import UsageError
 from twisted.python.log import (ILogObserver as LegacyILogObserver,
