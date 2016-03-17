@@ -10,16 +10,17 @@ import pdb
 import getpass
 import traceback
 import signal
+import warnings
 
 from operator import attrgetter
 
-from twisted import copyright, plugin
+from twisted import copyright, plugin, logger
 from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.logger import (globalLogBeginner, LegacyLogObserverWrapper,
-                            _logFor, ILogObserver)
+                            _logFor, ILogObserver, globalLogPublisher)
 from twisted.python.log import ILogObserver as LegacyILogObserver
 from twisted.python.reflect import qual, namedAny
 
@@ -182,7 +183,9 @@ class AppLogger(object):
         if self._observerFactory is not None:
             observer = self._observerFactory()
         else:
-            observer = application.getComponent(LegacyILogObserver, None)
+            observer = application.getComponent(ILogObserver, None)
+            if observer is None:
+                observer = application.getComponent(LegacyILogObserver, None)
 
         if observer is None:
             observer = self._getLogObserver()
@@ -191,6 +194,14 @@ class AppLogger(object):
         if ILogObserver.providedBy(self._observer):
             observers = [self._observer]
         else:
+
+            warnings.warn(
+                ("Passing legacy log observers using --logger was deprecated "
+                 "in Twisted 16.1. Please use loggers that provide "
+                 "twisted.logger.ILogObserver instead."),
+                DeprecationWarning,
+                stacklevel=2)
+
             observers = [LegacyLogObserverWrapper(self._observer)]
 
         globalLogBeginner.beginLoggingTo(observers)
@@ -218,16 +229,16 @@ class AppLogger(object):
             logFile = sys.stdout
         else:
             logFile = logfile.LogFile.fromFullPath(self._logfilename)
-        return log.FileLogObserver(logFile).emit
+        return logger.textFileLogObserver(logFile)
 
 
     def stop(self):
         """
         Remove all log observers previously set up by L{AppLogger.start}.
         """
-        log.msg("Server Shut Down.")
+        _logFor(self).info("Server Shut Down.")
         if self._observer is not None:
-            log.removeObserver(self._observer)
+            globalLogPublisher.removeObserver(self._observer)
             self._observer = None
 
 
