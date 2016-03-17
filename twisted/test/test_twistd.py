@@ -37,7 +37,8 @@ from twisted.scripts import twistd
 from twisted.python import log
 from twisted.python.compat import NativeStringIO
 from twisted.python.usage import UsageError
-from twisted.python.log import ILogObserver as LegacyILogObserver
+from twisted.python.log import (ILogObserver as LegacyILogObserver,
+                                textFromEventDict)
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize
@@ -1144,8 +1145,8 @@ class AppLoggerTests(unittest.TestCase):
 
     def setUp(self):
         """
-        Override L{log.addObserver} so that we can trace the observers
-        installed in C{self.observers}.
+        Override L{globaLogBeginner.beginLoggingTo} so that we can trace the
+        observers installed in C{self.observers}.
         """
         self.observers = []
 
@@ -1166,10 +1167,11 @@ class AppLoggerTests(unittest.TestCase):
 
 
     def _makeObserver(self):
-
+        """
+        Make a new observer which captures all logs sent to it.
+        """
         @implementer(ILogObserver)
         class TestObserver(object):
-
             _logs = []
 
             def __call__(self, event):
@@ -1180,12 +1182,9 @@ class AppLoggerTests(unittest.TestCase):
 
     def _checkObserver(self, observer):
         """
-        Ensure that initial C{twistd} logs are written to the given list.
+        Ensure that initial C{twistd} logs are written to logs.
 
-        @type logs: C{list}
-        @param logs: The list whose C{append} method was specified as the
-            initial log observer.
-
+        @param observer: The observer made by L{self._makeObserver).
         """
         self.assertEqual(self.observers, [observer])
         self.assertIn("starting up", observer._logs[0]["log_format"])
@@ -1194,8 +1193,8 @@ class AppLoggerTests(unittest.TestCase):
 
     def test_start(self):
         """
-        L{app.AppLogger.start} calls L{log.addObserver}, and then writes some
-        messages about twistd and the reactor.
+        L{app.AppLogger.start} calls L{globalLogBeginner.addObserver}, and then
+        writes some messages about twistd and the reactor.
         """
         logger = app.AppLogger({})
         observer = self._makeObserver()
@@ -1255,13 +1254,43 @@ class AppLoggerTests(unittest.TestCase):
 
     def test_configuredLogObserverBeatsComponent(self):
         """
-        C{--logger} takes precedence over a ILogObserver component set on
+        C{--logger} takes precedence over a L{ILogObserver} component set on
         Application.
+        """
+        observer = self._makeObserver()
+        application = Componentized()
+        application.setComponent(ILogObserver, observer)
+        self._checkObserver(self._setupConfiguredLogger(application))
+        self.assertEqual(observer._logs, [])
+
+
+    def test_configuredLogObserverBeatsLegacyComponent(self):
+        """
+        C{--logger} takes precedence over a L{LegacyILogObserver} component
+        set on Application.
         """
         nonlogs = []
         application = Componentized()
-        application.setComponent(ILogObserver, nonlogs.append)
+        application.setComponent(LegacyILogObserver, nonlogs.append)
         self._checkObserver(self._setupConfiguredLogger(application))
+        self.assertEqual(nonlogs, [])
+
+
+    def test_loggerComponentBeatsLegacyLoggerComponent(self):
+        """
+        A L{ILogObserver} takes precedence over a L{LegacyILogObserver}
+        component set on Application.
+        """
+        nonlogs = []
+        observer = self._makeObserver()
+        application = Componentized()
+        application.setComponent(ILogObserver, observer)
+        application.setComponent(LegacyILogObserver, nonlogs.append)
+
+        logger = app.AppLogger({})
+        logger.start(application)
+
+        self._checkObserver(observer)
         self.assertEqual(nonlogs, [])
 
 
@@ -1351,6 +1380,26 @@ class AppLoggerTests(unittest.TestCase):
         logger.stop()
         self.assertEqual(removed, [observer])
         self.assertIdentical(logger._observer, None)
+
+
+    def test_legacyObserversDeprecated(self):
+        """
+        L{app.AppLogger} using a legacy logger observer is deprecated.
+        """
+        logs = []
+        logger = app.AppLogger({})
+        logger._getLogObserver = lambda: logs.append
+        logger.start(Componentized())
+
+        self.assertIn("starting up", textFromEventDict(logs[0]))
+
+        warnings = self.flushWarnings(
+            [self.test_legacyObserversDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]["message"],
+                         ("Passing legacy log observers using --logger was "
+                          "deprecated in Twisted 16.1. Please use loggers "
+                          "that provide twisted.logger.ILogObserver instead."))
 
 
 
