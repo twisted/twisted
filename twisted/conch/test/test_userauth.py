@@ -73,14 +73,14 @@ class ClientUserAuth(userauth.SSHUserAuthClient):
         """
         Return 'foo' as the password.
         """
-        return defer.succeed(b'foo')
+        return defer.succeed('foo')
 
 
     def getGenericAnswers(self, name, information, answers):
         """
         Return 'foo' as the answer to two questions.
         """
-        return defer.succeed((b'foo', b'foo'))
+        return defer.succeed(('foo', 'foo'))
 
 
 
