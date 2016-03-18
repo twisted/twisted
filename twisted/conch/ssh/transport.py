@@ -521,7 +521,8 @@ class SSHTransportBase(protocol.Protocol):
         version and the MSG_KEXINIT packet.
         """
         self.transport.write(self.ourVersionString + b'\r\n')
-        self.currentEncryptions = SSHCiphers(b'none', b'none', b'none', b'none')
+        self.currentEncryptions = SSHCiphers(b'none', b'none', b'none',
+                                             b'none')
         self.currentEncryptions.setKeys(b'', b'', b'', b'', b'', b'')
         self.sendKexInit()
 

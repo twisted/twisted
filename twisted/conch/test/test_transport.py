@@ -1265,19 +1265,20 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         set up the first common algorithm found in the client's preference
         list.
         """
-        self.proto.dataReceived(b'SSH-2.0-Twisted\r\n\x00\x00\x01\xf4\x04\x14'
-                b'\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99'
-                b'\x99\x00\x00\x00bdiffie-hellman-group1-sha1,diffie-hellman-g'
-                b'roup-exchange-sha1,diffie-hellman-group-exchange-sha256\x00'
-                b'\x00\x00\x0fssh-dss,ssh-rsa\x00\x00\x00\x85aes128-ctr,aes128-'
-                b'cbc,aes192-ctr,aes192-cbc,aes256-ctr,aes256-cbc,cast128-ctr,c'
-                b'ast128-cbc,blowfish-ctr,blowfish-cbc,3des-ctr,3des-cbc\x00'
-                b'\x00\x00\x85aes128-ctr,aes128-cbc,aes192-ctr,aes192-cbc,aes25'
-                b'6-ctr,aes256-cbc,cast128-ctr,cast128-cbc,blowfish-ctr,blowfis'
-                b'h-cbc,3des-ctr,3des-cbc\x00\x00\x00\x12hmac-md5,hmac-sha1\x00'
-                b'\x00\x00\x12hmac-md5,hmac-sha1\x00\x00\x00\tnone,zlib\x00\x00'
-                b'\x00\tnone,zlib\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                b'\x00\x00\x99\x99\x99\x99')
+        self.proto.dataReceived(
+            b'SSH-2.0-Twisted\r\n\x00\x00\x01\xf4\x04\x14'
+            b'\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99'
+            b'\x99\x00\x00\x00bdiffie-hellman-group1-sha1,diffie-hellman-g'
+            b'roup-exchange-sha1,diffie-hellman-group-exchange-sha256\x00'
+            b'\x00\x00\x0fssh-dss,ssh-rsa\x00\x00\x00\x85aes128-ctr,aes128-'
+            b'cbc,aes192-ctr,aes192-cbc,aes256-ctr,aes256-cbc,cast128-ctr,c'
+            b'ast128-cbc,blowfish-ctr,blowfish-cbc,3des-ctr,3des-cbc\x00'
+            b'\x00\x00\x85aes128-ctr,aes128-cbc,aes192-ctr,aes192-cbc,aes25'
+            b'6-ctr,aes256-cbc,cast128-ctr,cast128-cbc,blowfish-ctr,blowfis'
+            b'h-cbc,3des-ctr,3des-cbc\x00\x00\x00\x12hmac-md5,hmac-sha1\x00'
+            b'\x00\x00\x12hmac-md5,hmac-sha1\x00\x00\x00\tnone,zlib\x00\x00'
+            b'\x00\tnone,zlib\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            b'\x00\x00\x99\x99\x99\x99')
 
         # Even if as server we prefer diffie-hellman-group-exchange-sha256 the
         # client preference is used.
@@ -2210,7 +2211,8 @@ class SSHCiphersTests(unittest.TestCase):
             ]
 
         for key, data, mac in vectors:
-            outMAC = transport.SSHCiphers(b'none', b'none', b'hmac-md5', b'none')
+            outMAC = transport.SSHCiphers(b'none', b'none', b'hmac-md5',
+                                          b'none')
             outMAC.outMAC = outMAC._getMAC(b"hmac-md5", key)
             (seqid,) = struct.unpack('>L', data[:4])
             shortened = data[4:]
