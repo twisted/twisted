@@ -12,11 +12,11 @@ Maintainer: Paul Swartz
 
 from __future__ import absolute_import, division
 
+import binascii
+import hmac
+import string
 import struct
 import zlib
-import string
-import hmac
-import binascii
 
 from hashlib import md5, sha1, sha256, sha512
 
@@ -26,7 +26,6 @@ from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
-
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
