@@ -124,6 +124,7 @@ class MockTransportBase(transport.SSHTransportBase):
         self.ignoreds.append(packet)
 
 
+
 class MockCipher(object):
     """
     A mocked-up version of twisted.conch.ssh.transport.SSHCiphers.
@@ -196,7 +197,6 @@ class MockCompression:
     compressing, it reverses the data and adds a 0x66 byte to the end.
     """
 
-
     def compress(self, payload):
         return payload[::-1] # reversed
 
@@ -246,6 +246,7 @@ class MockService(service.SSHService):
         A message that this service responds to.
         """
         self.transport.sendPacket(0xff, packet)
+
 
 
 class MockFactory(factory.SSHFactory):
@@ -302,7 +303,6 @@ class MockOldFactoryPublicKeys(MockFactory):
     getPublicKeys().  We return those here for testing.
     """
 
-
     def getPublicKeys(self):
         """
         We used to map key types to public key blobs as strings.
@@ -320,7 +320,6 @@ class MockOldFactoryPrivateKeys(MockFactory):
     objects from getPrivateKeys().  We return those here for testing.
     """
 
-
     def getPrivateKeys(self):
         """
         We used to map key types to cryptography key objects.
@@ -331,6 +330,7 @@ class MockOldFactoryPrivateKeys(MockFactory):
         return keys
 
 
+
 class TransportTestCase(unittest.TestCase):
     """
     Base class for transport test cases.
@@ -339,6 +339,7 @@ class TransportTestCase(unittest.TestCase):
 
     if dependencySkip:
         skip = dependencySkip
+
 
     def setUp(self):
         self.transport = proto_helpers.StringTransport()
@@ -1140,7 +1141,6 @@ class ServerAndClientSSHTransportBaseCase:
     Tests that need to be run on both the server and the client.
     """
 
-
     def checkDisconnected(self, kind=None):
         """
         Helper function to check if the transport disconnected.
@@ -1213,6 +1213,7 @@ class ServerAndClientSSHTransportBaseCase:
             proto2.supportedMACs = []
         self.connectModifiedProtocol(blankMACs)
 
+
     def test_getPeer(self):
         """
         Test that the transport's L{getPeer} method returns an
@@ -1221,6 +1222,7 @@ class ServerAndClientSSHTransportBaseCase:
         self.assertEqual(self.proto.getPeer(),
                          address.SSHTransportAddress(
                              self.proto.transport.getPeer()))
+
 
     def test_getHost(self):
         """
@@ -1323,7 +1325,6 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertTrue(self.proto.ignoreNextPacket)
         self.proto.ssh_DEBUG(b"\x01\x00\x00\x00\x04test\x00\x00\x00\x00")
         self.assertTrue(self.proto.ignoreNextPacket)
-
 
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(b'\x00\x00\x08\x00')
         self.assertFalse(self.proto.ignoreNextPacket)
@@ -1672,19 +1673,20 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         algorithms will set up the first common algorithm, ordered after our
         preference.
         """
-        self.proto.dataReceived(b'SSH-2.0-Twisted\r\n\x00\x00\x01\xf4\x04\x14'
-                b'\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99'
-                b'\x99\x00\x00\x00bdiffie-hellman-group1-sha1,diffie-hellman-g'
-                b'roup-exchange-sha1,diffie-hellman-group-exchange-sha256\x00'
-                b'\x00\x00\x0fssh-dss,ssh-rsa\x00\x00\x00\x85aes128-ctr,aes128-'
-                b'cbc,aes192-ctr,aes192-cbc,aes256-ctr,aes256-cbc,cast128-ctr,c'
-                b'ast128-cbc,blowfish-ctr,blowfish-cbc,3des-ctr,3des-cbc\x00'
-                b'\x00\x00\x85aes128-ctr,aes128-cbc,aes192-ctr,aes192-cbc,aes25'
-                b'6-ctr,aes256-cbc,cast128-ctr,cast128-cbc,blowfish-ctr,blowfis'
-                b'h-cbc,3des-ctr,3des-cbc\x00\x00\x00\x12hmac-md5,hmac-sha1\x00'
-                b'\x00\x00\x12hmac-md5,hmac-sha1\x00\x00\x00\tzlib,none\x00\x00'
-                b'\x00\tzlib,none\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                b'\x00\x00\x99\x99\x99\x99')
+        self.proto.dataReceived(
+            b'SSH-2.0-Twisted\r\n\x00\x00\x01\xf4\x04\x14'
+            b'\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99\x99'
+            b'\x99\x00\x00\x00bdiffie-hellman-group1-sha1,diffie-hellman-g'
+            b'roup-exchange-sha1,diffie-hellman-group-exchange-sha256\x00'
+            b'\x00\x00\x0fssh-dss,ssh-rsa\x00\x00\x00\x85aes128-ctr,aes128-'
+            b'cbc,aes192-ctr,aes192-cbc,aes256-ctr,aes256-cbc,cast128-ctr,c'
+            b'ast128-cbc,blowfish-ctr,blowfish-cbc,3des-ctr,3des-cbc\x00'
+            b'\x00\x00\x85aes128-ctr,aes128-cbc,aes192-ctr,aes192-cbc,aes25'
+            b'6-ctr,aes256-cbc,cast128-ctr,cast128-cbc,blowfish-ctr,blowfis'
+            b'h-cbc,3des-ctr,3des-cbc\x00\x00\x00\x12hmac-md5,hmac-sha1\x00'
+            b'\x00\x00\x12hmac-md5,hmac-sha1\x00\x00\x00\tzlib,none\x00\x00'
+            b'\x00\tzlib,none\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            b'\x00\x00\x99\x99\x99\x99')
         # Even if client prefer diffie-hellman-group1-sha1, we will go for
         # diffie-hellman-group-exchange-sha256 as this what we prefer and is
         # also supported by the server.
@@ -2010,6 +2012,7 @@ class GetMACTests(unittest.TestCase):
     if dependencySkip:
         skip = dependencySkip
 
+
     def setUp(self):
         self.ciphers = transport.SSHCiphers(b'A', b'B', b'C', b'D')
 
@@ -2118,6 +2121,7 @@ class SSHCiphersTests(unittest.TestCase):
     if dependencySkip:
         skip = dependencySkip
 
+
     def test_init(self):
         """
         Test that the initializer sets up the SSHCiphers object.
@@ -2150,8 +2154,10 @@ class SSHCiphersTests(unittest.TestCase):
         key = b'\x00' * 64
         for cipName in transport.SSHTransportBase.supportedCiphers:
             modName, keySize, counter = transport.SSHCiphers.cipherMap[cipName]
-            encCipher = transport.SSHCiphers(cipName, b'none', b'none', b'none')
-            decCipher = transport.SSHCiphers(b'none', cipName, b'none', b'none')
+            encCipher = transport.SSHCiphers(cipName, b'none', b'none',
+                                             b'none')
+            decCipher = transport.SSHCiphers(b'none', cipName, b'none',
+                                             b'none')
             cip = encCipher._getCipher(cipName, key, key)
             bs = cip.algorithm.block_size // 8
             encCipher.setKeys(key, key, b'', b'', b'', b'')
@@ -2228,6 +2234,7 @@ class TransportLoopbackTests(unittest.TestCase):
     """
     if dependencySkip:
         skip = dependencySkip
+
 
     def _runClientServer(self, mod):
         """
@@ -2333,6 +2340,7 @@ class TransportLoopbackTests(unittest.TestCase):
         return defer.DeferredList(deferreds, fireOnOneErrback=True)
 
 
+
 class RandomNumberTests(unittest.TestCase):
     """
     Tests for the random number generator L{_getRandomNumber} and private
@@ -2340,6 +2348,7 @@ class RandomNumberTests(unittest.TestCase):
     """
     if dependencySkip:
         skip = dependencySkip
+
 
     def test_usesSuppliedRandomFunction(self):
         """
