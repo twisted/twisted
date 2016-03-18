@@ -21,7 +21,6 @@ from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.logger import (globalLogBeginner, LegacyLogObserverWrapper,
                             _logFor, ILogObserver, globalLogPublisher)
-from twisted.python.log import ILogObserver as LegacyILogObserver
 from twisted.python.reflect import qual, namedAny
 
 # Expose the new implementation of installReactor at the old location.
@@ -144,7 +143,8 @@ class AppProfiler(object):
 class AppLogger(object):
     """
     An L{AppLogger} attaches the configured log observer specified on the
-    commandline to a L{ServerOptions} object or the custom L{ILogObserver}.
+    commandline to a L{ServerOptions} object, a custom L{ILogObserver}, or a
+    legacy custom {log.ILogObserver}.
 
     @ivar _logfilename: The name of the file to which to log, if other than the
         default.
@@ -154,7 +154,8 @@ class AppLogger(object):
         None.
 
     @ivar _observer: log observer added at C{start} and removed at C{stop}.
-    @type _observer: C{callable}
+    @type _observer: a callable that implements L{ILogObserver} or
+        L{log.ILogObserver}.
     """
     _observer = None
 
@@ -171,13 +172,13 @@ class AppLogger(object):
         Initialize the global logging system for the given application.
 
         If a custom logger was specified on the command line it will be used.
-        If not, and an L{ILogObserver} component has been set on
-        C{application}, then it will be used as the log observer.  Otherwise a
-        log observer will be created based on the command-line options for
-        built-in loggers (e.g.  C{--logfile}).
+        If not, and an L{ILogObserver} or legacy L{log.ILogObserver} component
+        has been set on C{application}, then it will be used as the log
+        observer. Otherwise a log observer will be created based on the command
+        line options for built-in loggers (e.g.  C{--logfile}).
 
         @param application: The application on which to check for an
-            L{ILogObserver}.
+            L{ILogObserver} or legacy L{log.ILogObserver}.
         @type application: L{twisted.python.components.Componentized}
         """
         if self._observerFactory is not None:
@@ -185,7 +186,8 @@ class AppLogger(object):
         else:
             observer = application.getComponent(ILogObserver, None)
             if observer is None:
-                observer = application.getComponent(LegacyILogObserver, None)
+                # If there's no new ILogObserver, try the legacy one
+                observer = application.getComponent(log.ILogObserver, None)
 
         if observer is None:
             observer = self._getLogObserver()
@@ -194,14 +196,13 @@ class AppLogger(object):
         if ILogObserver.providedBy(self._observer):
             observers = [self._observer]
         else:
-
             warnings.warn(
-                ("Passing legacy log observers using --logger was deprecated "
-                 "in Twisted 16.1. Please use loggers that provide "
-                 "twisted.logger.ILogObserver instead."),
+                ("Using legacy log observer factories in "
+                 "twisted.application.app.AppLogger was deprecated in "
+                 "Twisted 16.1. Please use a factory that produces "
+                 "twisted.logger.ILogObserver implementing objects instead."),
                 DeprecationWarning,
                 stacklevel=2)
-
             observers = [LegacyLogObserverWrapper(self._observer)]
 
         globalLogBeginner.beginLoggingTo(observers)

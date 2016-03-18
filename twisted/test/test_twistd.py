@@ -1396,9 +1396,11 @@ class AppLoggerTests(unittest.TestCase):
             [self.test_legacyObserversDeprecated])
         self.assertEqual(len(warnings), 1)
         self.assertEqual(warnings[0]["message"],
-                         ("Passing legacy log observers using --logger was "
-                          "deprecated in Twisted 16.1. Please use loggers "
-                          "that provide twisted.logger.ILogObserver instead."))
+                         ("Using legacy log observer factories in "
+                          "twisted.application.app.AppLogger was deprecated "
+                          "in Twisted 16.1. Please use a factory that "
+                          "produces twisted.logger.ILogObserver implementing "
+                          "objects instead."))
 
 
 
