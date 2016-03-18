@@ -1106,11 +1106,11 @@ def _patchTextFileLogObserver(patch):
     logFiles = []
     oldFileLogObserver = logger.textFileLogObserver
 
-    def FileLogObserver(logFile, *args, **kwargs):
+    def observer(logFile, *args, **kwargs):
         logFiles.append(logFile)
         return oldFileLogObserver(logFile, *args, **kwargs)
 
-    patch(logger, 'textFileLogObserver', FileLogObserver)
+    patch(logger, 'textFileLogObserver', observer)
     return logFiles
 
 
@@ -1168,6 +1168,9 @@ class AppLoggerTests(unittest.TestCase):
     def _makeObserver(self):
         """
         Make a new observer which captures all logs sent to it.
+
+        @return: An observer that stores all logs sent to it.
+        @rtype: Callable that implements L{ILogObserver}.
         """
         @implementer(ILogObserver)
         class TestObserver(object):
