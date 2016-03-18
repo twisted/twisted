@@ -14,7 +14,6 @@ from __future__ import absolute_import, division
 
 import binascii
 import hmac
-import string
 import struct
 import zlib
 
