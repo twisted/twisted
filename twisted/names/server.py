@@ -260,7 +260,7 @@ class DNSServerFactory(protocol.ServerFactory):
         return response
 
 
-    def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
+    def gotResolverResponse(self, ans_auth_add, protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling the
         deferred response from C{self.resolver.query}.
@@ -295,6 +295,7 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
+        ans, auth, add = ans_auth_add
         response = self._responseFromMessage(
             message=message, rCode=dns.OK,
             answers=ans, authority=auth, additional=add)
