@@ -542,19 +542,20 @@ class SSHTransportBase(protocol.Protocol):
                 "Cannot send KEXINIT while key exchange state is %r" % (
                     self._keyExchangeState,))
 
-        self.ourKexInitPayload = (chr(MSG_KEXINIT) +
-               randbytes.secureRandom(16) +
-               NS(b','.join(self.supportedKeyExchanges)) +
-               NS(b','.join(self.supportedPublicKeys)) +
-               NS(b','.join(self.supportedCiphers)) +
-               NS(b','.join(self.supportedCiphers)) +
-               NS(b','.join(self.supportedMACs)) +
-               NS(b','.join(self.supportedMACs)) +
-               NS(b','.join(self.supportedCompressions)) +
-               NS(b','.join(self.supportedCompressions)) +
-               NS(b','.join(self.supportedLanguages)) +
-               NS(b','.join(self.supportedLanguages)) +
-               b'\000' + b'\000\000\000\000')
+        self.ourKexInitPayload = b''.join([
+            chr(MSG_KEXINIT),
+            randbytes.secureRandom(16),
+            NS(b','.join(self.supportedKeyExchanges)),
+            NS(b','.join(self.supportedPublicKeys)),
+            NS(b','.join(self.supportedCiphers)),
+            NS(b','.join(self.supportedCiphers)),
+            NS(b','.join(self.supportedMACs)),
+            NS(b','.join(self.supportedMACs)),
+            NS(b','.join(self.supportedCompressions)),
+            NS(b','.join(self.supportedCompressions)),
+            NS(b','.join(self.supportedLanguages)),
+            NS(b','.join(self.supportedLanguages)),
+            b'\000\000\000\000\000'])
         self.sendPacket(MSG_KEXINIT, self.ourKexInitPayload[1:])
         self._keyExchangeState = self._KEY_EXCHANGE_REQUESTED
         self._blockedByKeyExchange = []
@@ -642,7 +643,7 @@ class SSHTransportBase(protocol.Protocol):
         packetLen, paddingLen = struct.unpack('!LB', first[:5])
         if packetLen > 1048576: # 1024 ** 2
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
-                                'bad packet length %s' % (packetLen,))
+                                b'bad packet length %s' % (packetLen,))
             return
         if len(self.buf) < packetLen + 4 + ms:
             # Not enough data for a packet
@@ -651,7 +652,7 @@ class SSHTransportBase(protocol.Protocol):
         if (packetLen + 4) % bs != 0:
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                'bad packet mod (%i%%%i == %i)' % (packetLen + 4, bs,
+                b'bad packet mod (%i%%%i == %i)' % (packetLen + 4, bs,
                                                    (packetLen + 4) % bs))
             return
         encData, self.buf = self.buf[:4 + packetLen], self.buf[4 + packetLen:]
