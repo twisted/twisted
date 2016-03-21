@@ -50,7 +50,6 @@ class ClientUserAuth(userauth.SSHUserAuthClient):
     A mock user auth client.
     """
 
-
     def getPublicKey(self):
         """
         If this is the first time we've been called, return a blob for
@@ -60,7 +59,8 @@ class ClientUserAuth(userauth.SSHUserAuthClient):
         if self.lastPublicKey:
             return keys.Key.fromString(keydata.publicRSA_openssh)
         else:
-            return defer.succeed(keys.Key.fromString(keydata.publicDSA_openssh))
+            return defer.succeed(
+                keys.Key.fromString(keydata.publicDSA_openssh))
 
 
     def getPrivateKey(self):
@@ -91,7 +91,6 @@ class OldClientAuth(userauth.SSHUserAuthClient):
     getPrivateKey() and a string from getPublicKey
     """
 
-
     def getPrivateKey(self):
         return defer.succeed(keys.Key.fromString(
             keydata.privateRSA_openssh).keyObject)
@@ -106,7 +105,6 @@ class ClientAuthWithoutPrivateKey(userauth.SSHUserAuthClient):
     """
     This client doesn't have a private key, but it does have a public key.
     """
-
 
     def getPrivateKey(self):
         return
@@ -134,7 +132,6 @@ class FakeTransport(transport.SSHTransportBase):
     @type lostConnection: C{bool}
     """
 
-
     class Service(object):
         """
         A mock service, representing the other service offered by the server.
@@ -146,13 +143,11 @@ class FakeTransport(transport.SSHTransportBase):
             pass
 
 
-
     class Factory(object):
         """
         A mock factory, representing the factory that spawned this user auth
         service.
         """
-
 
         def getService(self, transport, service):
             """
@@ -162,14 +157,12 @@ class FakeTransport(transport.SSHTransportBase):
                 return FakeTransport.Service
 
 
-
     def __init__(self, portal):
         self.factory = self.Factory()
         self.factory.portal = portal
         self.lostConnection = False
         self.transport = self
         self.packets = []
-
 
 
     def sendPacket(self, messageType, message):
@@ -256,7 +249,6 @@ class SSHUserAuthServerTests(unittest.TestCase):
     Tests for SSHUserAuthServer.
     """
 
-
     if keys is None:
         skip = "cannot run without cryptography"
 
@@ -307,7 +299,8 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
         See RFC 4252, Section 5.1.
         """
-        packet = NS(b'foo') + NS(b'none') + NS(b'password') + chr(0) + NS(b'foo')
+        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), chr(0),
+                           NS(b'foo')])
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
         def check(ignored):
             self.assertEqual(
@@ -326,7 +319,8 @@ class SSHUserAuthServerTests(unittest.TestCase):
         See RFC 4252, Section 5.1.
         """
         # packet = username, next_service, authentication type, FALSE, password
-        packet = NS(b'foo') + NS(b'none') + NS(b'password') + chr(0) + NS(b'bar')
+        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), chr(0),
+                           NS(b'bar')])
         self.authServer.clock = task.Clock()
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
         self.assertEqual(self.authServer.transport.packets, [])
@@ -527,7 +521,8 @@ class SSHUserAuthServerTests(unittest.TestCase):
         Test that the server disconnects if the client fails authentication
         too many times.
         """
-        packet = NS(b'foo') + NS(b'none') + NS(b'password') + chr(0) + NS(b'bar')
+        packet = b''.join([NS(b'foo'), NS(b'none'), NS(b'password'), chr(0),
+                           NS(b'bar')])
         self.authServer.clock = task.Clock()
         for i in range(21):
             d = self.authServer.ssh_USERAUTH_REQUEST(packet)
@@ -575,7 +570,6 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
         d1 = self.authServer.tryAuth(b'publickey', None, None)
         return self.assertFailure(d1, ConchError).addCallback(secondTest)
-
 
 
 
@@ -781,7 +775,8 @@ class SSHUserAuthClientTests(unittest.TestCase):
         failed Deferred.  getPassword() should return a failed Deferred.
         getGenericAnswers() should return a failed Deferred.
         """
-        authClient = userauth.SSHUserAuthClient(b'foo', FakeTransport.Service())
+        authClient = userauth.SSHUserAuthClient(b'foo',
+                                                FakeTransport.Service())
         self.assertIs(authClient.getPublicKey(), None)
         def check(result):
             result.trap(NotImplementedError)
@@ -799,7 +794,6 @@ class SSHUserAuthClientTests(unittest.TestCase):
 
 
 class LoopbackTests(unittest.TestCase):
-
 
     if keys is None:
         skip = "cannot run without cryptography or PyASN1"
