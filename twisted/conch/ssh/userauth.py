@@ -66,7 +66,6 @@ class SSHUserAuthServer(service.SSHService):
     @ivar clock: an object with a callLater method.  Stubbed out for testing.
     """
 
-
     name = 'ssh-userauth'
     loginTimeout = 10 * 60 * 60
     # 10 minutes before we disconnect them
@@ -148,7 +147,7 @@ class SSHUserAuthServer(service.SSHService):
             return defer.fail(
                     error.ConchError('unsupported authentication, failing'))
         kind = kind.replace(b'-', b'_')
-        f = getattr(self, 'auth_%s' % kind, None)
+        f = getattr(self, 'auth_%s' % (kind,), None)
         if f:
             ret = f(data)
             if not ret:
@@ -158,7 +157,7 @@ class SSHUserAuthServer(service.SSHService):
                             % (kind, )))
             else:
                 return ret
-        return defer.fail(error.ConchError('bad auth type: %s' % kind))
+        return defer.fail(error.ConchError('bad auth type: %s' % (kind,)))
 
 
     def ssh_USERAUTH_REQUEST(self, packet):
@@ -339,7 +338,6 @@ class SSHUserAuthClient(service.SSHService):
         with
     @type lastPublicKey: L{Key}
     """
-
 
     name = 'ssh-userauth'
     preferredOrder = [b'publickey', b'password', b'keyboard-interactive']
