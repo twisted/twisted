@@ -157,4 +157,4 @@ else:
             """
             No-op.
             """
-            raise unittest.SkipTest(skip)
+            raise unittest.SkipTest(_skip)
