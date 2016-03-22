@@ -9,7 +9,10 @@ Currently implemented authentication types are public-key and password.
 Maintainer: Paul Swartz
 """
 
+from __future__ import absolute_import, division
+
 import struct
+
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, transport, service
 from twisted.conch.ssh.common import NS, getNS
@@ -49,11 +52,11 @@ class SSHUserAuthServer(service.SSHService):
     @type interfaceToMethod: C{dict}
     @ivar supportedAuthentications: A list of the supported authentication
         methods.
-    @type supportedAuthentications: C{list} of C{str}
+    @type supportedAuthentications: C{list} of C{bytes}
     @ivar user: the last username the client tried to authenticate with
-    @type user: C{str}
+    @type user: C{bytes}
     @ivar method: the current authentication method
-    @type method: C{str}
+    @type method: C{bytes}
     @ivar nextService: the service the user wants started after authentication
         has been completed.
     @type nextService: C{str}
@@ -63,7 +66,6 @@ class SSHUserAuthServer(service.SSHService):
     @ivar clock: an object with a callLater method.  Stubbed out for testing.
     """
 
-
     name = 'ssh-userauth'
     loginTimeout = 10 * 60 * 60
     # 10 minutes before we disconnect them
@@ -72,8 +74,8 @@ class SSHUserAuthServer(service.SSHService):
     passwordDelay = 1 # number of seconds to delay on a failed password
     clock = reactor
     interfaceToMethod = {
-        credentials.ISSHPrivateKey : 'publickey',
-        credentials.IUsernamePassword : 'password',
+        credentials.ISSHPrivateKey : b'publickey',
+        credentials.IUsernamePassword : b'password',
     }
 
 
@@ -97,8 +99,8 @@ class SSHUserAuthServer(service.SSHService):
 
         if not self.transport.isEncrypted('in'):
             # don't let us transport password in plaintext
-            if 'password' in self.supportedAuthentications:
-                self.supportedAuthentications.remove('password')
+            if b'password' in self.supportedAuthentications:
+                self.supportedAuthentications.remove(b'password')
         self._cancelLoginTimeout = self.clock.callLater(
             self.loginTimeout,
             self.timeoutAuthentication)
@@ -122,7 +124,7 @@ class SSHUserAuthServer(service.SSHService):
         self._cancelLoginTimeout = None
         self.transport.sendDisconnect(
             transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
-            'you took too long')
+            b'you took too long')
 
 
     def tryAuth(self, kind, user, data):
@@ -131,11 +133,11 @@ class SSHUserAuthServer(service.SSHService):
         auth_* method.
 
         @param kind: the authentication method to try.
-        @type kind: C{str}
+        @type kind: C{bytes}
         @param user: the username the client is authenticating with.
-        @type user: C{str}
+        @type user: C{bytes}
         @param data: authentication specific data sent by the client.
-        @type data: C{str}
+        @type data: C{bytes}
         @return: A Deferred called back if the method succeeded, or erred back
             if it failed.
         @rtype: C{defer.Deferred}
@@ -144,17 +146,18 @@ class SSHUserAuthServer(service.SSHService):
         if kind not in self.supportedAuthentications:
             return defer.fail(
                     error.ConchError('unsupported authentication, failing'))
-        kind = kind.replace('-', '_')
-        f = getattr(self,'auth_%s'%kind, None)
+        kind = kind.replace(b'-', b'_')
+        f = getattr(self, 'auth_%s' % (kind,), None)
         if f:
             ret = f(data)
             if not ret:
                 return defer.fail(
-                        error.ConchError('%s return None instead of a Deferred'
-                            % kind))
+                        error.ConchError(
+                            '%s return None instead of a Deferred'
+                            % (kind, )))
             else:
                 return ret
-        return defer.fail(error.ConchError('bad auth type: %s' % kind))
+        return defer.fail(error.ConchError('bad auth type: %s' % (kind,)))
 
 
     def ssh_USERAUTH_REQUEST(self, packet):
@@ -165,7 +168,7 @@ class SSHUserAuthServer(service.SSHService):
             string method
             <authentication specific data>
 
-        @type packet: C{str}
+        @type packet: C{bytes}
         """
         user, nextService, method, rest = getNS(packet, 3)
         if user != self.user or nextService != self.nextService:
@@ -198,7 +201,7 @@ class SSHUserAuthServer(service.SSHService):
             raise error.ConchError('could not get next service: %s'
                                   % self.nextService)
         log.msg('%s authenticated with %s' % (self.user, self.method))
-        self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
+        self.transport.sendPacket(MSG_USERAUTH_SUCCESS, b'')
         self.transport.setService(service())
 
 
@@ -212,7 +215,7 @@ class SSHUserAuthServer(service.SSHService):
         """
         reason.trap(error.NotEnoughAuthentication)
         self.transport.sendPacket(MSG_USERAUTH_FAILURE,
-                NS(','.join(self.supportedAuthentications)) + '\xff')
+                NS(b','.join(self.supportedAuthentications)) + b'\xff')
 
 
     def _ebBadAuth(self, reason):
@@ -239,11 +242,11 @@ class SSHUserAuthServer(service.SSHService):
             if self.loginAttempts > self.attemptsBeforeDisconnect:
                 self.transport.sendDisconnect(
                         transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
-                        'too many bad auths')
+                        b'too many bad auths')
                 return
         self.transport.sendPacket(
                 MSG_USERAUTH_FAILURE,
-                NS(','.join(self.supportedAuthentications)) + '\x00')
+                NS(b','.join(self.supportedAuthentications)) + b'\x00')
 
 
     def auth_publickey(self, packet):
@@ -262,7 +265,7 @@ class SSHUserAuthServer(service.SSHService):
         signature = hasSig and getNS(rest)[0] or None
         if hasSig:
             b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
-                NS(self.user) + NS(self.nextService) + NS('publickey') +
+                NS(self.user) + NS(self.nextService) + NS(b'publickey') +
                 chr(hasSig) +  NS(pubKey.sshType()) + NS(blob))
             c = credentials.SSHPrivateKey(self.user, algName, blob, b,
                     signature)
@@ -323,11 +326,11 @@ class SSHUserAuthClient(service.SSHService):
         first, in order of preference, if supported by the server
     @type preferredOrder: C{list}
     @ivar user: the name of the user to authenticate as
-    @type user: C{str}
+    @type user: C{bytes}
     @ivar instance: the service to start after authentication has finished
     @type instance: L{service.SSHService}
     @ivar authenticatedWith: a list of strings of authentication methods we've tried
-    @type authenticatedWith: C{list} of C{str}
+    @type authenticatedWith: C{list} of C{bytes}
     @ivar triedPublicKeys: a list of public key objects that we've tried to
         authenticate with
     @type triedPublicKeys: C{list} of L{Key}
@@ -336,9 +339,8 @@ class SSHUserAuthClient(service.SSHService):
     @type lastPublicKey: L{Key}
     """
 
-
     name = 'ssh-userauth'
-    preferredOrder = ['publickey', 'password', 'keyboard-interactive']
+    preferredOrder = [b'publickey', b'password', b'keyboard-interactive']
 
 
     def __init__(self, user, instance):
@@ -350,7 +352,7 @@ class SSHUserAuthClient(service.SSHService):
         self.authenticatedWith = []
         self.triedPublicKeys = []
         self.lastPublicKey = None
-        self.askForAuth('none', '')
+        self.askForAuth(b'none', b'')
 
 
     def askForAuth(self, kind, extraData):
@@ -358,9 +360,9 @@ class SSHUserAuthClient(service.SSHService):
         Send a MSG_USERAUTH_REQUEST.
 
         @param kind: the authentication method to try.
-        @type kind: C{str}
+        @type kind: C{bytes}
         @param extraData: method-specific data to go in the packet
-        @type extraData: C{str}
+        @type extraData: C{bytes}
         """
         self.lastAuth = kind
         self.transport.sendPacket(MSG_USERAUTH_REQUEST, NS(self.user) +
@@ -372,9 +374,9 @@ class SSHUserAuthClient(service.SSHService):
         Dispatch to an authentication method.
 
         @param kind: the authentication method
-        @type kind: C{str}
+        @type kind: C{bytes}
         """
-        kind = kind.replace('-', '_')
+        kind = kind.replace(b'-', b'_')
         log.msg('trying to auth with %s' % (kind,))
         f = getattr(self,'auth_%s' % (kind,), None)
         if f:
@@ -386,7 +388,7 @@ class SSHUserAuthClient(service.SSHService):
         Generic callback for a failed authentication attempt.  Respond by
         asking for the list of accepted methods (the 'none' method)
         """
-        self.askForAuth('none', '')
+        self.askForAuth(b'none', b'')
 
 
     def ssh_USERAUTH_SUCCESS(self, packet):
@@ -412,7 +414,7 @@ class SSHUserAuthClient(service.SSHService):
         C{self.tryAuth} with the most preferred method.
 
         @param packet: the L{MSG_USERAUTH_FAILURE} payload.
-        @type packet: C{str}
+        @type packet: C{bytes}
 
         @return: a L{defer.Deferred} that will be callbacked with C{None} as
             soon as all authentication methods have been tried, or C{None} if no
@@ -430,7 +432,7 @@ class SSHUserAuthClient(service.SSHService):
             comparison key which is then used for sorting.
 
             @param meth: the authentication method.
-            @type meth: C{str}
+            @type meth: C{bytes}
 
             @return: the comparison key for C{meth}.
             @rtype: C{int}
@@ -441,7 +443,7 @@ class SSHUserAuthClient(service.SSHService):
                 # put the element at the end of the list.
                 return len(self.preferredOrder)
 
-        canContinue = sorted([meth for meth in canContinue.split(',')
+        canContinue = sorted([meth for meth in canContinue.split(b',')
                               if meth not in self.authenticatedWith],
                              key=orderByPreference)
 
@@ -453,11 +455,11 @@ class SSHUserAuthClient(service.SSHService):
         if result:
             return
         try:
-            method = iterator.next()
+            method = next(iterator)
         except StopIteration:
             self.transport.sendDisconnect(
                 transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
-                'no more authentication methods available')
+                b'no more authentication methods available')
         else:
             d = defer.maybeDeferred(self.tryAuth, method)
             d.addCallback(self._cbUserauthFailure, iterator)
@@ -471,11 +473,11 @@ class SSHUserAuthClient(service.SSHService):
         in order to handle this request.
         """
         func = getattr(self, 'ssh_USERAUTH_PK_OK_%s' %
-                       self.lastAuth.replace('-', '_'), None)
+                       self.lastAuth.replace(b'-', b'_'), None)
         if func is not None:
             return func(packet)
         else:
-            self.askForAuth('none', '')
+            self.askForAuth(b'none', b'')
 
 
     def ssh_USERAUTH_PK_OK_publickey(self, packet):
@@ -485,11 +487,11 @@ class SSHUserAuthClient(service.SSHService):
         """
         publicKey = self.lastPublicKey
         b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
-             NS(self.user) + NS(self.instance.name) + NS('publickey') +
-             '\x01' + NS(publicKey.sshType()) + NS(publicKey.blob()))
+             NS(self.user) + NS(self.instance.name) + NS(b'publickey') +
+             b'\x01' + NS(publicKey.sshType()) + NS(publicKey.blob()))
         d  = self.signData(publicKey, b)
         if not d:
-            self.askForAuth('none', '')
+            self.askForAuth(b'none', b'')
             # this will fail, we'll move on
             return
         d.addCallback(self._cbSignedData)
@@ -504,7 +506,7 @@ class SSHUserAuthClient(service.SSHService):
         """
         prompt, language, rest = getNS(packet, 2)
         self._oldPass = self._newPass = None
-        d = self.getPassword('Old Password: ')
+        d = self.getPassword(b'Old Password: ')
         d = d.addCallbacks(self._setOldPass, self._ebAuth)
         d.addCallback(lambda ignored: self.getPassword(prompt))
         d.addCallbacks(self._setNewPass, self._ebAuth)
@@ -536,10 +538,10 @@ class SSHUserAuthClient(service.SSHService):
         authentication request with the signature.
 
         @param signedData: the data signed by the user's private key.
-        @type signedData: C{str}
+        @type signedData: C{bytes}
         """
         publicKey = self.lastPublicKey
-        self.askForAuth('publickey', '\x01' + NS(publicKey.sshType()) +
+        self.askForAuth(b'publickey', b'\x01' + NS(publicKey.sshType()) +
                 NS(publicKey.blob()) + NS(signedData))
 
 
@@ -549,7 +551,7 @@ class SSHUserAuthClient(service.SSHService):
         password for now.
 
         @param op: the old password as entered by the user
-        @type op: C{str}
+        @type op: C{bytes}
         """
         self._oldPass = op
 
@@ -560,11 +562,11 @@ class SSHUserAuthClient(service.SSHService):
         and send the authentication message with both.
 
         @param np: the new password as entered by the user
-        @type np: C{str}
+        @type np: C{bytes}
         """
         op = self._oldPass
         self._oldPass = None
-        self.askForAuth('password', '\xff' + NS(op) + NS(np))
+        self.askForAuth(b'password', b'\xff' + NS(op) + NS(np))
 
 
     def _cbGenericAnswers(self, responses):
@@ -573,7 +575,7 @@ class SSHUserAuthClient(service.SSHService):
         questions.  Send the info back to the server in a
         MSG_USERAUTH_INFO_RESPONSE.
 
-        @param responses: a list of C{str} responses
+        @param responses: a list of C{bytes} responses
         @type responses: C{list}
         """
         data = struct.pack('!L', len(responses))
@@ -602,7 +604,7 @@ class SSHUserAuthClient(service.SSHService):
             self.lastPublicKey = publicKey
             self.triedPublicKeys.append(publicKey)
             log.msg('using key of type %s' % publicKey.type())
-            self.askForAuth('publickey', '\x00' + NS(publicKey.sshType()) +
+            self.askForAuth(b'publickey', b'\x00' + NS(publicKey.sshType()) +
                             NS(publicKey.blob()))
             return True
         else:
@@ -633,7 +635,7 @@ class SSHUserAuthClient(service.SSHService):
         @rtype: C{bool}
         """
         log.msg('authing with keyboard-interactive')
-        self.askForAuth('keyboard-interactive', NS('') + NS(''))
+        self.askForAuth(b'keyboard-interactive', NS(b'') + NS(b''))
         return True
 
 
@@ -643,9 +645,9 @@ class SSHUserAuthClient(service.SSHService):
         server.
 
         @param password: the password the user entered
-        @type password: C{str}
+        @type password: C{bytes}
         """
-        self.askForAuth('password', '\x00' + NS(password))
+        self.askForAuth(b'password', b'\x00' + NS(password))
 
 
     def signData(self, publicKey, signData):
@@ -662,7 +664,7 @@ class SSHUserAuthClient(service.SSHService):
         @type publicKey: L{keys.Key}
 
         @param signData: the data to be signed by the private key.
-        @type signData: C{str}
+        @type signData: C{bytes}
         @return: a Deferred that's called back with the signature
         @rtype: L{defer.Deferred}
         """
@@ -680,9 +682,9 @@ class SSHUserAuthClient(service.SSHService):
         @param privateKey: the private key object
         @type publicKey: L{keys.Key}
         @param signData: the data to be signed by the private key.
-        @type signData: C{str}
+        @type signData: C{bytes}
         @return: the signature
-        @rtype: C{str}
+        @rtype: C{bytes}
         """
         return privateKey.sign(signData)
 
@@ -717,7 +719,7 @@ class SSHUserAuthClient(service.SSHService):
         prompt is a string to display for the password, or None for a generic
         'user@hostname's password: '.
 
-        @type prompt: C{str}/C{None}
+        @type prompt: C{bytes}/C{None}
         @rtype: L{defer.Deferred}
         """
         return defer.fail(NotImplementedError())
@@ -745,7 +747,7 @@ MSG_USERAUTH_PK_OK            = 60
 
 messages = {}
 for k, v in locals().items():
-    if k[:4]=='MSG_':
+    if k[:4] == 'MSG_':
         messages[v] = k
 
 SSHUserAuthServer.protocolMessages = messages
