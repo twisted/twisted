@@ -37,10 +37,9 @@ class SSHService(log.Logger):
         """
         called when we receive a packet on the transport
         """
-        #print self.protocolMessages
         if messageNum in self.protocolMessages:
             messageType = self.protocolMessages[messageNum]
-            f = getattr(self,'ssh_%s' % messageType[4:],
+            f = getattr(self, 'ssh_%s' % messageType[4:],
                         None)
             if f is not None:
                 return f(packet)

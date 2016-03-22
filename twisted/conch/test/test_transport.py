@@ -255,7 +255,8 @@ class MockFactory(factory.SSHFactory):
     A mocked-up factory based on twisted.conch.ssh.factory.SSHFactory.
     """
     services = {
-        'ssh-userauth': MockService}
+        'ssh-userauth': MockService
+    }
 
 
     def getPublicKeys(self):

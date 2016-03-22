@@ -10,6 +10,8 @@ Maintainer: Paul Swartz
 
 from __future__ import absolute_import, division
 
+import random
+
 from functools import cmp_to_key
 
 from twisted.internet import protocol
@@ -19,30 +21,33 @@ from twisted.python.compat import cmp
 from twisted.conch import error
 from twisted.conch.ssh import _kex, transport, userauth, connection
 
-import random
 
 
 class SSHFactory(protocol.Factory):
     """
     A Factory for SSH servers.
+
+    @ivar services: THe services this factory offers.
+    @type services: L{dict} with L{str} keys and
+        L{twisted.conch.ssh.service.SSHService} values.
     """
     protocol = transport.SSHServerTransport
 
     services = {
-        'ssh-userauth':userauth.SSHUserAuthServer,
-        'ssh-connection':connection.SSHConnection
+        'ssh-userauth': userauth.SSHUserAuthServer,
+        'ssh-connection': connection.SSHConnection
     }
     def startFactory(self):
         """
         Check for public and private keys.
         """
-        if not hasattr(self,'publicKeys'):
+        if not hasattr(self, 'publicKeys'):
             self.publicKeys = self.getPublicKeys()
-        if not hasattr(self,'privateKeys'):
+        if not hasattr(self, 'privateKeys'):
             self.privateKeys = self.getPrivateKeys()
         if not self.publicKeys or not self.privateKeys:
             raise error.ConchError('no host keys, failing')
-        if not hasattr(self,'primes'):
+        if not hasattr(self, 'primes'):
             self.primes = self.getPrimes()
 
 
@@ -108,7 +113,8 @@ class SSHFactory(protocol.Factory):
         @rtype:     C{tuple}
         """
         primesKeys = list(self.primes.keys())
-        primesKeys.sort(key=cmp_to_key(lambda x, y: cmp(abs(x - bits),  abs(y - bits))))
+        primesKeys.sort(key=cmp_to_key(
+            lambda x, y: cmp(abs(x - bits), abs(y - bits))))
         realBits = primesKeys[0]
         return random.choice(self.primes[realBits])
 
