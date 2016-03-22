@@ -20,6 +20,8 @@ from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
 from twisted.python import failure, log
+from twisted.python.compat import (items, nativeString, networkString,
+                                   _bytesChr as chr)
 
 
 
@@ -147,7 +149,7 @@ class SSHUserAuthServer(service.SSHService):
             return defer.fail(
                     error.ConchError('unsupported authentication, failing'))
         kind = kind.replace(b'-', b'_')
-        f = getattr(self, 'auth_%s' % (kind,), None)
+        f = getattr(self, 'auth_%s' % (nativeString(kind),), None)
         if f:
             ret = f(data)
             if not ret:
@@ -174,7 +176,7 @@ class SSHUserAuthServer(service.SSHService):
         if user != self.user or nextService != self.nextService:
             self.authenticatedWith = [] # clear auth state
         self.user = user
-        self.nextService = nextService
+        self.nextService = nativeString(nextService)
         self.method = method
         d = self.tryAuth(method, user, rest)
         if not d:
@@ -187,12 +189,13 @@ class SSHUserAuthServer(service.SSHService):
         return d
 
 
-    def _cbFinishedAuth(self, (interface, avatar, logout)):
+    def _cbFinishedAuth(self, args):
         """
         The callback when user has successfully been authenticated.  For a
         description of the arguments, see L{twisted.cred.portal.Portal.login}.
         We start the service requested by the user.
         """
+        (interface, avatar, logout) = args
         self.transport.avatar = avatar
         self.transport.logoutFunction = logout
         service = self.transport.factory.getService(self.transport,
@@ -259,14 +262,15 @@ class SSHUserAuthServer(service.SSHService):
 
         Create a SSHPublicKey credential and verify it using our portal.
         """
-        hasSig = ord(packet[0])
+        hasSig = ord(packet[0:1])
         algName, blob, rest = getNS(packet[1:], 2)
         pubKey = keys.Key.fromString(blob)
         signature = hasSig and getNS(rest)[0] or None
         if hasSig:
             b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
-                NS(self.user) + NS(self.nextService) + NS(b'publickey') +
-                chr(hasSig) +  NS(pubKey.sshType()) + NS(blob))
+                 NS(self.user) + NS(networkString(self.nextService)) +
+                 NS(b'publickey') + chr(hasSig) + NS(pubKey.sshType()) +
+                 NS(blob))
             c = credentials.SSHPrivateKey(self.user, algName, blob, b,
                     signature)
             return self.portal.login(c, None, interfaces.IConchUser)
@@ -366,7 +370,7 @@ class SSHUserAuthClient(service.SSHService):
         """
         self.lastAuth = kind
         self.transport.sendPacket(MSG_USERAUTH_REQUEST, NS(self.user) +
-                NS(self.instance.name) + NS(kind) + extraData)
+                NS(networkString(self.instance.name)) + NS(kind) + extraData)
 
 
     def tryAuth(self, kind):
@@ -378,7 +382,7 @@ class SSHUserAuthClient(service.SSHService):
         """
         kind = kind.replace(b'-', b'_')
         log.msg('trying to auth with %s' % (kind,))
-        f = getattr(self,'auth_%s' % (kind,), None)
+        f = getattr(self, 'auth_%s' % (nativeString(kind),), None)
         if f:
             return f()
 
@@ -473,7 +477,7 @@ class SSHUserAuthClient(service.SSHService):
         in order to handle this request.
         """
         func = getattr(self, 'ssh_USERAUTH_PK_OK_%s' %
-                       self.lastAuth.replace(b'-', b'_'), None)
+                       nativeString(self.lastAuth.replace(b'-', b'_')), None)
         if func is not None:
             return func(packet)
         else:
@@ -486,9 +490,10 @@ class SSHUserAuthClient(service.SSHService):
         signature and try to authenticate with it.
         """
         publicKey = self.lastPublicKey
-        b = (NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) +
-             NS(self.user) + NS(self.instance.name) + NS(b'publickey') +
-             b'\x01' + NS(publicKey.sshType()) + NS(publicKey.blob()))
+        b = b''.join([NS(self.transport.sessionID), chr(MSG_USERAUTH_REQUEST),
+                      NS(self.user), NS(networkString(self.instance.name)),
+                      NS(b'publickey'), b'\x01', NS(publicKey.sshType()),
+                      NS(publicKey.blob())])
         d  = self.signData(publicKey, b)
         if not d:
             self.askForAuth(b'none', b'')
@@ -519,12 +524,12 @@ class SSHUserAuthClient(service.SSHService):
         responses.
         """
         name, instruction, lang, data = getNS(packet, 3)
-        numPrompts = struct.unpack('!L', data[:4])[0]
+        numPrompts = struct.unpack('!L', data[:4])[0:1]
         data = data[4:]
         prompts = []
         for i in range(numPrompts):
             prompt, data = getNS(data)
-            echo = bool(ord(data[0]))
+            echo = bool(ord(data[0:1]))
             data = data[1:]
             prompts.append((prompt, echo))
         d = self.getGenericAnswers(name, instruction, prompts)
@@ -746,7 +751,7 @@ MSG_USERAUTH_INFO_RESPONSE    = 61
 MSG_USERAUTH_PK_OK            = 60
 
 messages = {}
-for k, v in locals().items():
+for k, v in items(locals()):
     if k[:4] == 'MSG_':
         messages[v] = k
 

@@ -45,6 +45,7 @@ from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
+from twisted.python.compat import _bytesChr as chr, iterbytes
 from twisted.conch.ssh import address, service, common, _kex
 from twisted.test import proto_helpers
 
@@ -939,7 +940,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         self.transport.loseConnection = stubLoseConnection
         self.proto.loseConnection()
         self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
-        self.assertEqual(self.packets[0][1][3],
+        self.assertEqual(self.packets[0][1][3:4],
                          chr(transport.DISCONNECT_CONNECTION_LOST))
 
 
@@ -954,12 +955,12 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
             def stubLoseConnection():
                 disconnected[0] = True
             self.transport.loseConnection = stubLoseConnection
-            for c in version + b'\r\n':
+            for c in iterbytes(version + b'\r\n'):
                 self.proto.dataReceived(c)
             self.assertTrue(disconnected[0])
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
             self.assertEqual(
-                self.packets[0][1][3],
+                self.packets[0][1][3:4],
                 chr(transport.DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED))
         testBad(b'SSH-1.5-OpenSSH')
         testBad(b'SSH-3.0-Twisted')
@@ -975,7 +976,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         data = (b"""here's some stuff beforehand
 here's some other stuff
 """ + proto.ourVersionString + b"\r\n")
-        [proto.dataReceived(c) for c in data]
+        [proto.dataReceived(c) for c in iterbytes(data)]
         self.assertTrue(proto.gotVersion)
         self.assertEqual(proto.otherVersionString, proto.ourVersionString)
 
@@ -1027,7 +1028,7 @@ here's some other stuff
             self.assertEqual(self.proto.getPacket(), None)
             self.assertEqual(len(self.packets), 1)
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
-            self.assertEqual(self.packets[0][1][3], chr(error))
+            self.assertEqual(self.packets[0][1][3:4], chr(error))
 
         testBad(b'\xff' * 8) # big packet
         testBad(b'\x00\x00\x00\x05\x00BCDE') # length not modulo blocksize
@@ -1056,7 +1057,7 @@ here's some other stuff
         def checkUnimplemented(seqnum=seqnum):
             self.assertEqual(self.packets[0][0],
                              transport.MSG_UNIMPLEMENTED)
-            self.assertEqual(self.packets[0][1][3], chr(seqnum))
+            self.assertEqual(self.packets[0][1][3:4], chr(seqnum))
             self.proto.packets = []
             seqnum += 1
 
@@ -1148,7 +1149,7 @@ class ServerAndClientSSHTransportBaseCase:
         if kind is None:
             kind = transport.DISCONNECT_PROTOCOL_ERROR
         self.assertEqual(self.packets[-1][0], transport.MSG_DISCONNECT)
-        self.assertEqual(self.packets[-1][1][3], chr(kind))
+        self.assertEqual(self.packets[-1][1][3:4], chr(kind))
 
 
     def connectModifiedProtocol(self, protoModification,
@@ -1281,7 +1282,6 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             b'\x00\x00\x12hmac-md5,hmac-sha1\x00\x00\x00\tnone,zlib\x00\x00'
             b'\x00\tnone,zlib\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
             b'\x00\x00\x99\x99\x99\x99')
-
         # Even if as server we prefer diffie-hellman-group-exchange-sha256 the
         # client preference is used.
         self.assertEqual(self.proto.kexAlg,
@@ -1438,7 +1438,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.proto.sessionID, b'CD')
         self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
         newKeys = [self.proto._getKey(c, b'AB', b'EF')
-                   for c in b'ABCDEF']
+                   for c in iterbytes(b'ABCDEF')]
         self.assertEqual(
             self.proto.nextEncryptions.keys,
             (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5],
@@ -1756,17 +1756,6 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.assertKexInitResponseForDH(b'diffie-hellman-group1-sha1')
 
 
-    def test_KEXINIT_badKexAlg(self):
-        """
-        Test that the client raises a ConchError if it receives a
-        KEXINIT message but doesn't have a key exchange algorithm that we
-        understand.
-        """
-        self.proto.supportedKeyExchanges = [b'diffie-hellman-group2-sha1']
-        data = self.transport.value().replace(b'group1', b'group2')
-        self.assertRaises(ConchError, self.proto.dataReceived, data)
-
-
     def test_KEXDH_REPLY(self):
         """
         Test that the KEXDH_REPLY message verifies the server.
@@ -1810,7 +1799,8 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.simulateKeyExchange(b'AB', b'EF')
         self.assertEqual(self.proto.sessionID, b'CD')
         self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b''))
-        newKeys = [self.proto._getKey(c, b'AB', b'EF') for c in b'ABCDEF']
+        newKeys = [self.proto._getKey(c, b'AB', b'EF')
+                   for c in iterbytes(b'ABCDEF')]
         self.assertEqual(self.proto.nextEncryptions.keys,
                           (newKeys[0], newKeys[2], newKeys[1], newKeys[3],
                            newKeys[4], newKeys[5]))
@@ -2052,8 +2042,8 @@ class GetMACTests(unittest.TestCase):
         params = self.ciphers._getMAC(hmacName, secret)
 
         key = secret[:digestSize] + b'\x00' * blockPadSize
-        innerPad = b''.join(chr(ord(b) ^ 0x36) for b in key)
-        outerPad = b''.join(chr(ord(b) ^ 0x5c) for b in key)
+        innerPad = b''.join(chr(ord(b) ^ 0x36) for b in iterbytes(key))
+        outerPad = b''.join(chr(ord(b) ^ 0x5c) for b in iterbytes(key))
         self.assertEqual(
             (hashProcessor, innerPad, outerPad, digestSize), params)
         self.assertEqual(key, params.key)
