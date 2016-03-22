@@ -25,7 +25,8 @@ from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
-from twisted.python.compat import items, _bytesChr as chr, networkString, iterbytes, nativeString
+from twisted.python.compat import (items, _bytesChr as chr, networkString,
+                                   iterbytes, nativeString)
 
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import address, keys, _kex
@@ -1624,8 +1625,9 @@ class SSHClientTransport(SSHTransportBase):
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
-        fingerprint = networkString(':'.join(map(lambda c: '%02x' % (ord(c),),
-                                                 iterbytes(md5(pubKey).digest()))))
+        fingerprint = networkString(
+            ':'.join(map(lambda c: '%02x' % (ord(c),),
+                         iterbytes(md5(pubKey).digest()))))
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
         d.addErrback(
