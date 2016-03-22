@@ -59,6 +59,7 @@ class DummyHTTPHandler(http.Request):
         self.finish()
 
 
+
 class LoopbackHTTPClient(http.HTTPClient):
 
     def connectionMade(self):
@@ -319,6 +320,104 @@ class ProtocolNegotiationTests(unittest.TestCase):
             AssertionError,
             self._negotiatedProtocolForTransportInstance,
             b,
+        )
+
+
+
+class ResponseWriteOrderingTests(unittest.TestCase):
+    requests = (
+        b"GET / HTTP/1.1\r\n"
+        b"Accept: text/html\r\n"
+        b"\r\n"
+        b"GET / HTTP/1.1\r\n"
+        b"\r\n")
+
+
+    def setUp(self):
+        self.transport = StringTransport()
+        self.channel = http.HTTPChannel()
+        self.channel.requestFactory = http.Request
+        self.channel.makeConnection(self.transport)
+        self.channel.dataReceived(self.requests)
+
+
+    def test_cannotWriteBeforeHeaders(self):
+        """
+        The HTTPChannel forbids writes before headers are sent.
+        """
+        self.assertRaises(
+            AssertionError,
+            self.channel.write,
+            b"some response data",
+        )
+
+
+    def test_cannot100ContinueAfterHeaders(self):
+        """
+        The HTTPChannel forbids sending 100 Continue after headers were sent.
+        """
+        self.channel.writeHeaders(b"HTTP/1.1", b"200", b"OK", [])
+        self.assertRaises(
+            AssertionError,
+            self.channel._send100Continue,
+        )
+
+
+    def test_cannotSendHeadersTwice(self):
+        """
+        The HTTPChannel forbids sending a header block twice.
+        """
+        self.channel.writeHeaders(b"HTTP/1.1", b"200", b"OK", [])
+        self.assertRaises(
+            AssertionError,
+            self.channel.writeHeaders,
+            b"HTTP/1.1",
+            b"200",
+            b"OK",
+            [],
+        )
+
+
+    def test_completingRequestAllows100ContinueAfterHeaders(self):
+        """
+        The HTTPChannel allows a 100 Continue once a request is complete.
+        """
+        self.channel.writeHeaders(b"HTTP/1.1", b"200", b"OK", [])
+        self.channel.requestDone(self.channel.requests[0])
+        self.channel._send100Continue()
+
+        self.assertEqual(
+            self.transport.value(),
+            b"HTTP/1.1 200 OK\r\n\r\nHTTP/1.1 100 Continue\r\n\r\n",
+        )
+
+
+    def test_completingRequestAllowsNewHeaders(self):
+        """
+        The HTTPChannel allows sending a new header block after headers are
+        complete.
+        """
+        self.channel.writeHeaders(b"HTTP/1.1", b"200", b"OK", [])
+        self.channel.requestDone(self.channel.requests[0])
+        self.channel.writeHeaders(b"HTTP/1.1", b"204", b"No Content", [])
+
+        self.assertEqual(
+            self.transport.value(),
+            b"HTTP/1.1 200 OK\r\n\r\nHTTP/1.1 204 No Content\r\n\r\n",
+        )
+
+
+    def test_canWriteAfterHeaders(self):
+        """
+        The HTTPChannel allows writing data after headers.
+        """
+        headers = [(b'Content-Length', b'5')]
+        self.channel.writeHeaders(b"HTTP/1.1", b"200", b"OK", headers)
+        self.channel.write(b'hello')
+
+        self.assertEqual(
+            self.transport.value(),
+            b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello",
         )
 
 
@@ -1234,7 +1333,7 @@ Hello,
                 content.append(self.content.read())
                 method.append(self.method)
                 path.append(self.path)
-                decoder.append(self.channel._transferDecoder)
+                decoder.append(self._channel._transferDecoder)
                 testcase.didRequest = True
                 self.finish()
 
@@ -1714,10 +1813,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
         Response-Line and whatever response headers are set.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
-        req.transport = trans
+        req._transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
@@ -1736,10 +1837,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} casts non-bytes header value to bytes
         transparently.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
-        req.transport = trans
+        req._transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
@@ -1768,10 +1871,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         Response-Line, whatever response headers are set, and uses chunked
         encoding for the response body.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
-        req.transport = trans
+        req._transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.1"
@@ -1793,10 +1898,12 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} sends an HTTP Response-Line, whatever response
         headers are set, and a last-modified header with that time.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
         trans = StringTransport()
+        channel.transport = trans
+        req = http.Request(channel, False)
 
-        req.transport = trans
+        req._transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
@@ -1951,7 +2058,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # Then something goes wrong and content should get closed.
         req.connectionLost(Failure(ConnectionLost("Finished")))
         self.assertTrue(content.closed)
-        self.assertIdentical(req.channel, None)
+        self.assertIdentical(req._channel, None)
 
 
     def test_registerProducerTwiceFails(self):
@@ -2004,7 +2111,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # This is a roundabout assertion: http.StringTransport doesn't
         # implement registerProducer, so Request.registerProducer can't have
         # tried to call registerProducer on the transport.
-        self.assertIsInstance(req.transport, http.StringTransport)
+        self.assertIsInstance(req._transport, http.StringTransport)
 
 
     def test_registerProducerWhenQueuedDoesntRegisterPullProducer(self):
@@ -2023,7 +2130,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # This is a roundabout assertion: http.StringTransport doesn't
         # implement registerProducer, so Request.registerProducer can't have
         # tried to call registerProducer on the transport.
-        self.assertIsInstance(req.transport, http.StringTransport)
+        self.assertIsInstance(req._transport, http.StringTransport)
 
 
     def test_registerProducerWhenNotQueuedRegistersPushProducer(self):
@@ -2035,7 +2142,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         producer = DummyProducer()
         req.registerProducer(producer, True)
-        self.assertEqual([(producer, True)], req.transport.producers)
+        self.assertEqual([(producer, True)], req._transport.producers)
 
 
     def test_registerProducerWhenNotQueuedRegistersPullProducer(self):
@@ -2047,7 +2154,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         producer = DummyProducer()
         req.registerProducer(producer, False)
-        self.assertEqual([(producer, False)], req.transport.producers)
+        self.assertEqual([(producer, False)], req._transport.producers)
 
 
     def test_connectionLostNotification(self):
@@ -2059,7 +2166,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request = http.Request(d, True)
         finished = request.notifyFinish()
         request.connectionLost(Failure(ConnectionLost("Connection done")))
-        self.assertIdentical(request.channel, None)
+        self.assertIdentical(request._channel, None)
         return self.assertFailure(finished, ConnectionLost)
 
 
@@ -2155,10 +2262,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         producer from the request and the request's transport.
         """
         req = http.Request(DummyChannel(), False)
-        req.transport = StringTransport()
+        req._transport = StringTransport()
         req.registerProducer(DummyProducer(), False)
         req.unregisterProducer()
-        self.assertEqual((None, None), (req.producer, req.transport.producer))
+        self.assertEqual((None, None), (req.producer, req._transport.producer))
 
 
     def test_unregisterNonQueuedStreamingProducer(self):
@@ -2167,10 +2274,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         producer from the request and the request's transport.
         """
         req = http.Request(DummyChannel(), False)
-        req.transport = StringTransport()
+        req._transport = StringTransport()
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
-        self.assertEqual((None, None), (req.producer, req.transport.producer))
+        self.assertEqual((None, None), (req.producer, req._transport.producer))
 
 
     def test_unregisterQueuedNonStreamingProducer(self):
