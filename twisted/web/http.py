@@ -2096,14 +2096,20 @@ class HTTPFactory(protocol.ServerFactory):
 
     timeOut = 60 * 60 * 12
 
-    _reactor = reactor
-
-    def __init__(self, logPath=None, timeout=60*60*12, logFormatter=None):
+    def __init__(self, logPath=None, timeout=60*60*12, logFormatter=None,
+                 reactor=None):
         """
         @param logFormatter: An object to format requests into log lines for
             the access log.
         @type logFormatter: L{IAccessLogFormatter} provider
+
+        @param reactor: A L{IReactorTime} provider used to compute logging
+            timestamps.
         """
+        if not reactor:
+            from twisted.internet import reactor
+        self._reactor = reactor
+
         if logPath is not None:
             logPath = os.path.abspath(logPath)
         self.logPath = logPath
