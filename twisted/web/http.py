@@ -95,7 +95,7 @@ from twisted.python.deprecate import deprecated
 from twisted.python import log
 from twisted.python.versions import Version
 from twisted.python.components import proxyForInterface
-from twisted.internet import interfaces, reactor, protocol, address
+from twisted.internet import interfaces, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
 from twisted.protocols import policies, basic
