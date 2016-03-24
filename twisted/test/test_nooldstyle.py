@@ -113,16 +113,16 @@ class OldStyleDecoratorTests(unittest.TestCase):
                                    "TWISTED_NEWSTYLE=1")
 
 
+
 class NewStyleOnly(object):
     """
     A base testclass that takes a module and tests if the classes defined
     in it are old-style.
 
-    CAVEATS: This is maybe slightly dumb, and only looks in non-test
-    modules (because some test modules have side effects). It also doesn't
-    look inside functions, for classes defined there, or nested classes.
+    CAVEATS: This is maybe slightly dumb. It doesn't look inside functions, for
+    classes defined there, or nested classes.
     """
-    module = None
+    skip = _skip
 
     def test_newStyleClassesOnly(self):
         """
@@ -130,8 +130,8 @@ class NewStyleOnly(object):
         """
         try:
             module = namedAny(self.module)
-        except ImportError:
-            raise unittest.SkipTest("Not importable.")
+        except ImportError as e:
+            raise unittest.SkipTest("Not importable: {}".format(e))
 
         oldStyleClasses = []
 
@@ -141,12 +141,13 @@ class NewStyleOnly(object):
                 if isinstance(val, types.ClassType):
                     oldStyleClasses.append(fullyQualifiedName(val))
 
-
         if oldStyleClasses:
             raise unittest.FailTest(
                 "Old-style classes in {module}: {val}".format(
                     module=self.module,
                     val=", ".join(oldStyleClasses)))
+
+
 
 for x in getModule("twisted").walkModules():
 
@@ -156,22 +157,20 @@ for x in getModule("twisted").walkModules():
         "twisted.test.process_"
     ]
 
-    nope = False
+    is_ignored = [x.name.startswith(ignored) for ignored in ignoredModules]
 
-    for ignored in ignoredModules:
-        if x.name.startswith(ignored):
-            nope = True
-
-    if nope:
+    if True in is_ignored:
         continue
+
 
     class Test(NewStyleOnly, unittest.TestCase):
         """
-        See L{NewStyleOnly}.
+        @see: L{NewStyleOnly}
         """
         module = x.name
-        skip = _skip
 
     acceptableName = x.name.replace(".", "_")
     Test.__name__ = acceptableName
     locals().update({acceptableName: Test})
+
+    del Test
