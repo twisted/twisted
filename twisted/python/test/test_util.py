@@ -1120,6 +1120,9 @@ class PadToTests(unittest.TestCase):
 
 
 class ReplaceIfTests(unittest.TestCase):
+    """
+    Tests for L{util._replaceIf}.
+    """
 
     def test_replacesIfTrue(self):
         """
