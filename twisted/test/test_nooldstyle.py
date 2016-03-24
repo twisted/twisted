@@ -133,13 +133,20 @@ class NewStyleOnly(object):
         except ImportError:
             raise unittest.SkipTest("Not importable.")
 
+        oldStyleClasses = []
+
         for name, val in inspect.getmembers(module):
             if hasattr(val, "__module__") \
                and val.__module__ == self.module:
                 if isinstance(val, types.ClassType):
-                    raise unittest.FailTest(
-                        "{val} is an old-style class".format(
-                            val=fullyQualifiedName(val)))
+                    oldStyleClasses.append(fullyQualifiedName(val))
+
+
+        if oldStyleClasses:
+            raise unittest.FailTest(
+                "Old-style classes in {module}: {val}".format(
+                    module=self.module,
+                    val=", ".join(oldStyleClasses)))
 
 for x in getModule("twisted").walkModules():
 
