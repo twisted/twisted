@@ -30,6 +30,10 @@ class SomeOldStyleClass:
     """
     I am a docstring!
     """
+    bar = "baz"
+
+    def func(self):
+        return "hi"
 
 
 
@@ -48,12 +52,13 @@ class OldStyleDecoratorTests(unittest.TestCase):
     def test_makesNewStyle(self):
         """
         L{_oldStyle} wraps an old-style class and returns a new-style class
-        that descends from the old-style one.
+        that has the same functions, attributes, etc.
         """
         self.assertEqual(type(SomeOldStyleClass), types.ClassType)
         updatedClass = _oldStyle(SomeOldStyleClass)
         self.assertEqual(type(updatedClass), type)
-        self.assertIn(SomeOldStyleClass, updatedClass.__bases__)
+        self.assertEqual(updatedClass().func(), "hi")
+        self.assertEqual(updatedClass().bar, "baz")
 
 
     def test_carriesAttributes(self):

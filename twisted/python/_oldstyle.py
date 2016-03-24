@@ -72,10 +72,5 @@ else:
         """
         _ensureOldClass(cls)
 
-        class OverwrittenClass(cls, object):
-            __doc__ = cls.__doc__
-
-        OverwrittenClass.__name__ = cls.__name__
-        OverwrittenClass.__module__ = cls.__module__
-
+        OverwrittenClass = type(cls.__name__, (object,), cls.__dict__)
         return OverwrittenClass
