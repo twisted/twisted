@@ -1119,6 +1119,7 @@ class PadToTests(unittest.TestCase):
         self.assertEqual([], items)
 
 
+
 class ReplaceIfTests(unittest.TestCase):
     """
     Tests for L{util._replaceIf}.
