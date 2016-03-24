@@ -113,58 +113,58 @@ class OldStyleDecoratorTests(unittest.TestCase):
                                    "TWISTED_NEWSTYLE=1")
 
 
-if not _skip:
+class NewStyleOnly(object):
+    """
+    A base testclass that takes a module and tests if the classes defined
+    in it are old-style.
 
-    class NewStyleOnly(object):
+    CAVEATS: This is maybe slightly dumb, and only looks in non-test
+    modules (because some test modules have side effects). It also doesn't
+    look inside functions, for classes defined there, or nested classes.
+    """
+    module = None
+
+    def test_newStyleClassesOnly(self):
         """
-        A base testclass that takes a module and tests if the classes defined
-        in it are old-style.
-
-        CAVEATS: This is maybe slightly dumb, and only looks in non-test
-        modules (because some test modules have side effects). It also doesn't
-        look inside functions, for classes defined there, or nested classes.
+        Test that C{self.module} has no old-style classes in it.
         """
-        module = None
+        try:
+            module = namedAny(self.module)
+        except ImportError:
+            raise unittest.SkipTest("Not importable.")
 
-        def test_newStyleClassesOnly(self):
-            """
-            Test that C{self.module} has no old-style classes in it.
-            """
-            try:
-                module = namedAny(self.module)
-            except ImportError:
-                raise unittest.SkipTest("Not importable.")
+        for name, val in inspect.getmembers(module):
+            if hasattr(val, "__module__") \
+               and val.__module__ == self.module:
+                if isinstance(val, types.ClassType):
+                    raise unittest.FailTest(
+                        "{val} is an old-style class".format(
+                            val=fullyQualifiedName(val)))
 
-            for name, val in inspect.getmembers(module):
-                if hasattr(val, "__module__") \
-                   and val.__module__ == self.module:
-                    if isinstance(val, types.ClassType):
-                        raise unittest.FailTest(
-                            "{val} is an old-style class".format(
-                                val=fullyQualifiedName(val)))
+for x in getModule("twisted").walkModules():
 
-    for x in getModule("twisted").walkModules():
-        if ".test." in x.name:
-            continue
+    ignoredModules = [
+        "twisted.test.reflect_helper",
+        "twisted.internet.test.process_",
+        "twisted.test.process_"
+    ]
 
-        class Test(NewStyleOnly, unittest.TestCase):
-            """
-            See L{NewStyleOnly}.
-            """
-            module = x.name
+    nope = False
 
-        acceptableName = x.name.replace(".", "_")
-        Test.__name__ = acceptableName
-        locals().update({acceptableName: Test})
+    for ignored in ignoredModules:
+        if x.name.startswith(ignored):
+            nope = True
 
-else:
+    if nope:
+        continue
 
-    class NewStyleOnly(unittest.TestCase):
+    class Test(NewStyleOnly, unittest.TestCase):
         """
-        Just skip, it doesn't make sense right now.
+        See L{NewStyleOnly}.
         """
-        def test_newStyleClassesOnly(self):
-            """
-            No-op.
-            """
-            raise unittest.SkipTest(_skip)
+        module = x.name
+        skip = _skip
+
+    acceptableName = x.name.replace(".", "_")
+    Test.__name__ = acceptableName
+    locals().update({acceptableName: Test})
