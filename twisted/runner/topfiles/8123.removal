@@ -1,0 +1,1 @@
+twisted.runner.inetdtap and twisted.runner.inetdconf RPC support was deprecated as it was broken for a long time.
