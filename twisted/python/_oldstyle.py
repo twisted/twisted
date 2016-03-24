@@ -12,6 +12,18 @@ import os
 import types
 
 from twisted.python.compat import _PY3
+from twisted.python.util import _replaceIf
+
+
+def passthru(arg):
+    """
+    Return C{arg}. Do nothing.
+
+    @param arg: The arg to return.
+    @return: C{arg}
+    """
+    return arg
+
 
 
 def _ensureOldClass(cls):
@@ -20,7 +32,7 @@ def _ensureOldClass(cls):
 
     @param cls: The class to check.
 
-    @return: C{None} if it is an old-style class.
+    @return: The class, if it is an old-style class.
     @raises: L{ValueError} if it is a new-style class.
     """
     if not type(cls) is types.ClassType:
@@ -32,45 +44,21 @@ def _ensureOldClass(cls):
              "decorate old-style classes.").format(
                  cls=fullyQualifiedName(cls)))
 
+    return cls
 
-if _PY3:
 
-    def _oldStyle(cls):
-        """
-        No such thing as an old style class on Python 3.
 
-        @param cls: The class to wrap (or in this case, not wrap).
-        @return: C{cls}, unchanged
-        """
-        return cls
+@_replaceIf(_PY3, passthru)
+@_replaceIf(int(os.environ.get('TWISTED_NEWSTYLE', 0)) == 0, _ensureOldClass)
+def _oldStyle(cls):
+    """
+    A decorator which conditionally converts old-style classes to new-style
+    classes. If it is Python 3, or if "TWISTED_NEWSTYLE" is not set or has a 0
+    value in the environment, this decorator is a no-op.
 
-elif int(os.environ.get('TWISTED_NEWSTYLE', 0)) == 0:
-
-    def _oldStyle(cls):
-        """
-        We don't want to override anything, but throw an exception if a
-        new-style class is decorated.
-
-        @param cls: The class to wrap (or in this case, not wrap).
-        @type cls: L{types.ClassType}
-
-        @return: C{cls}, unchanged
-        @raises: L{ValueError} if C{cls} is a new-style class.
-        """
-        _ensureOldClass(cls)
-        return cls
-
-else:
-
-    def _oldStyle(cls):
-        """
-        A decorator which converts old-style classes to new-style classes.
-
-        @param cls: An old-style class to convert to new-style.
-        @type cls: L{types.ClassType}
-        @return: A new-style subclass of C{cls}.
-        """
-        _ensureOldClass(cls)
-
-        OverwrittenClass = type(cls.__name__, (object,), cls.__dict__)
-        return OverwrittenClass
+    @param cls: An old-style class to convert to new-style.
+    @type cls: L{types.ClassType}
+    @return: A new-style version of C{cls}.
+    """
+    _ensureOldClass(cls)
+    return type(cls.__name__, (object,), cls.__dict__)

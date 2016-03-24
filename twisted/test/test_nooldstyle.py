@@ -33,6 +33,11 @@ class SomeOldStyleClass:
     bar = "baz"
 
     def func(self):
+        """
+        A function on a old style class.
+
+        @return: "hi", for testing.
+        """
         return "hi"
 
 
