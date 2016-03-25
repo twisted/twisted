@@ -19,8 +19,6 @@ from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.logger import (globalLogBeginner, LegacyLogObserverWrapper,
-                            _logFor, ILogObserver, globalLogPublisher)
 from twisted.python.reflect import qual, namedAny
 
 # Expose the new implementation of installReactor at the old location.
@@ -184,7 +182,7 @@ class AppLogger(object):
         if self._observerFactory is not None:
             observer = self._observerFactory()
         else:
-            observer = application.getComponent(ILogObserver, None)
+            observer = application.getComponent(logger.ILogObserver, None)
             if observer is None:
                 # If there's no new ILogObserver, try the legacy one
                 observer = application.getComponent(log.ILogObserver, None)
@@ -193,19 +191,25 @@ class AppLogger(object):
             observer = self._getLogObserver()
         self._observer = observer
 
-        if ILogObserver.providedBy(self._observer):
+        if logger.ILogObserver.providedBy(self._observer):
             observers = [self._observer]
+        elif log.ILogObserver.providedBy(self._observer):
+            observers = [logger.LegacyLogObserverWrapper(self._observer)]
         else:
             warnings.warn(
-                ("Using legacy log observer factories in "
+                ("Passing a logger factory which makes log observers which do "
+                 "not implement twisted.logger.ILogObserver or "
+                 "twisted.python.log.ILogObserver to "
                  "twisted.application.app.AppLogger was deprecated in "
                  "Twisted 16.1. Please use a factory that produces "
-                 "twisted.logger.ILogObserver implementing objects instead."),
+                 "twisted.logger.ILogObserver (or the legacy "
+                 "twisted.python.log.ILogObserver) implementing objects "
+                 "instead."),
                 DeprecationWarning,
                 stacklevel=2)
-            observers = [LegacyLogObserverWrapper(self._observer)]
+            observers = [logger.LegacyLogObserverWrapper(self._observer)]
 
-        globalLogBeginner.beginLoggingTo(observers)
+        logger.globalLogBeginner.beginLoggingTo(observers)
         self._initialLog()
 
 
@@ -214,11 +218,12 @@ class AppLogger(object):
         Print twistd start log message.
         """
         from twisted.internet import reactor
-        _logFor(self).info("twistd {version} ({exe} {pyVersion}) starting up.",
+        logger._loggerFor(self).info(
+            "twistd {version} ({exe} {pyVersion}) starting up.",
             version=copyright.version, exe=sys.executable,
-                           pyVersion=runtime.shortPythonVersion())
-        _logFor(self).info('reactor class: {reactor}.',
-                           reactor=qual(reactor.__class__))
+            pyVersion=runtime.shortPythonVersion())
+        logger._loggerFor(self).info('reactor class: {reactor}.',
+                                     reactor=qual(reactor.__class__))
 
 
     def _getLogObserver(self):
@@ -237,9 +242,9 @@ class AppLogger(object):
         """
         Remove all log observers previously set up by L{AppLogger.start}.
         """
-        _logFor(self).info("Server Shut Down.")
+        logger._loggerFor(self).info("Server Shut Down.")
         if self._observer is not None:
-            globalLogPublisher.removeObserver(self._observer)
+            logger.globalLogPublisher.removeObserver(self._observer)
             self._observer = None
 
 

@@ -1384,9 +1384,37 @@ class AppLoggerTests(unittest.TestCase):
         self.assertIdentical(logger._observer, None)
 
 
-    def test_legacyObserversDeprecated(self):
+    def test_legacyObservers(self):
         """
-        L{app.AppLogger} using a legacy logger observer is deprecated.
+        L{app.AppLogger} using a legacy logger observer still works, wrapping
+        it in a compat shim.
+        """
+        logs = []
+        logger = app.AppLogger({})
+
+        @implementer(LegacyILogObserver)
+        class LoggerObserver(object):
+            """
+            An observer which implements the legacy L{LegacyILogObserver}.
+            """
+            def __call__(self, x):
+                """
+                Add C{x} to the logs list.
+                """
+                logs.append(x)
+
+        logger._observerFactory = lambda: LoggerObserver()
+        logger.start(Componentized())
+
+        self.assertIn("starting up", textFromEventDict(logs[0]))
+        warnings = self.flushWarnings(
+            [self.test_legacyObservers])
+        self.assertEqual(len(warnings), 0)
+
+
+    def test_unmarkedObserversDeprecated(self):
+        """
+        L{app.AppLogger} using a logger observer which
         """
         logs = []
         logger = app.AppLogger({})
@@ -1396,14 +1424,17 @@ class AppLoggerTests(unittest.TestCase):
         self.assertIn("starting up", textFromEventDict(logs[0]))
 
         warnings = self.flushWarnings(
-            [self.test_legacyObserversDeprecated])
+            [self.test_unmarkedObserversDeprecated])
         self.assertEqual(len(warnings), 1)
         self.assertEqual(warnings[0]["message"],
-                         ("Using legacy log observer factories in "
+                         ("Passing a logger factory which makes log observers "
+                          "which do not implement twisted.logger.ILogObserver "
+                          "or twisted.python.log.ILogObserver to "
                           "twisted.application.app.AppLogger was deprecated "
                           "in Twisted 16.1. Please use a factory that "
-                          "produces twisted.logger.ILogObserver implementing "
-                          "objects instead."))
+                          "produces twisted.logger.ILogObserver (or the "
+                          "legacy twisted.python.log.ILogObserver) "
+                          "implementing objects instead."))
 
 
 

@@ -54,7 +54,7 @@ __all__ = [
     "extractField",
 
     # From ._logger
-    "Logger",
+    "Logger", "_loggerFor",
 
     # From ._observer
     "ILogObserver", "LogPublisher",
@@ -94,7 +94,7 @@ from ._format import (
     formatEvent, formatEventAsClassicLogText, formatTime, timeFormatRFC3339,
 )
 
-from ._logger import Logger
+from ._logger import Logger, _loggerFor
 
 from ._observer import ILogObserver, LogPublisher
 
@@ -121,6 +121,3 @@ from ._json import (
     eventAsJSON, eventFromJSON,
     jsonFileLogObserver, eventsFromJSONLogFile
 )
-
-_log = Logger()
-_logFor = lambda _:_log.__get__(_, _.__class__)
