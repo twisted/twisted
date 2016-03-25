@@ -279,6 +279,23 @@ How to deprecate APIs
 ---------------------
 
 
+Classes
+^^^^^^^
+
+Classes are deprecated by raising an warning when they are access from withing their module, using the :api:`twisted.python.deprecate.deprecatedModuleAttribute <deprecatedModuleAttribute>` helper.
+
+.. code-block:: python
+
+    class SSLContextFactory:
+        """
+        An SSL context factory.
+        """
+        deprecatedModuleAttribute(
+            Version("Twisted", 12, 2, 0),
+            "Use twisted.internet.ssl.DefaultOpenSSLContextFactory instead.",
+            "twisted.mail.protocols", "SSLContextFactory")
+
+
 Functions and methods
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -287,7 +304,7 @@ The warning should be of type ``DeprecationWarning`` and the stack level should 
 The deprecation message must include the name of the function which is deprecated, the version of Twisted in which it was first deprecated, and a suggestion for a replacement.
 If the API provides functionality which it is determined is beyond the scope of Twisted or it has no replacement, then it may be deprecated without a replacement.
 
-There is also a :api:`twisted.python.deprecate.deprecated <@deprecated>` decorator.
+There is also a :api:`twisted.python.deprecate.deprecated <deprecated>` decorator which works for new-style classes.
 
 For example:
 
@@ -332,8 +349,8 @@ For example:
 Instance attributes
 ^^^^^^^^^^^^^^^^^^^
 
-To deprecate an attribute on instances of a class, make the attribute into a property and call ``warnings.warn`` from the getter and/or setter function for that property.
-You can also use the helper decorator.
+To deprecate an attribute on instances of a new-type class, make the attribute into a property and call ``warnings.warn`` from the getter and/or setter function for that property.
+You can also use the :api:`twisted.python.deprecate.deprecatedProperty <deprecatedProperty>` decorator which works for new-style classes.
 
 .. code-block:: python
 
@@ -360,13 +377,11 @@ You can also use the helper decorator.
             self._user = user
 
 
-        @deprecated(Version("Twisted", 1, 2, 0))
-        @property
+        @deprecatedProperty(Version("Twisted", 1, 2, 0))
         def user(self):
             return self._user
 
 
-        @deprecated(Version("Twisted", 1, 2, 0))
         @user.setter
         def user(self, value):
             self._user = value
