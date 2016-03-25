@@ -141,8 +141,8 @@ class AppProfiler(object):
 class AppLogger(object):
     """
     An L{AppLogger} attaches the configured log observer specified on the
-    commandline to a L{ServerOptions} object, a custom L{ILogObserver}, or a
-    legacy custom {log.ILogObserver}.
+    commandline to a L{ServerOptions} object, a custom L{logger.ILogObserver},
+    or a legacy custom {log.ILogObserver}.
 
     @ivar _logfilename: The name of the file to which to log, if other than the
         default.
@@ -152,7 +152,7 @@ class AppLogger(object):
         None.
 
     @ivar _observer: log observer added at C{start} and removed at C{stop}.
-    @type _observer: a callable that implements L{ILogObserver} or
+    @type _observer: a callable that implements L{logger.ILogObserver} or
         L{log.ILogObserver}.
     """
     _observer = None
@@ -170,13 +170,13 @@ class AppLogger(object):
         Initialize the global logging system for the given application.
 
         If a custom logger was specified on the command line it will be used.
-        If not, and an L{ILogObserver} or legacy L{log.ILogObserver} component
-        has been set on C{application}, then it will be used as the log
-        observer. Otherwise a log observer will be created based on the command
-        line options for built-in loggers (e.g.  C{--logfile}).
+        If not, and an L{logger.ILogObserver} or legacy L{log.ILogObserver}
+        component has been set on C{application}, then it will be used as the
+        log observer. Otherwise a log observer will be created based on the
+        command line options for built-in loggers (e.g. C{--logfile}).
 
         @param application: The application on which to check for an
-            L{ILogObserver} or legacy L{log.ILogObserver}.
+            L{logger.ILogObserver} or legacy L{log.ILogObserver}.
         @type application: L{twisted.python.components.Componentized}
         """
         if self._observerFactory is not None:
