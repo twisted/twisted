@@ -1,6 +1,101 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.1.0pre1 (2016-03-25)
+====================================
+
+Features
+--------
+ - twisted.application.internet.ClientService, a service that
+   maintains a persistent outgoing endpoint-based connection; a
+   replacement for ReconnectingClientFactory that uses modern APIs.
+   (#4735)
+ - Twisted now uses setuptools' sdist to build tarballs. (#7985)
+
+Bugfixes
+--------
+ - Twisted is now compatible with OpenSSL 1.0.2f. (#8189)
+
+Other
+-----
+ - #4543, #8124, #8193, #8210, #8220, #8223, #8226, #8242
+
+
+Twisted Conch 16.1.0pre1 (2016-03-25)
+=====================================
+
+Features
+--------
+ - twisted.conch.checkers is now ported to Python 3. (#8225)
+ - twisted.conch.telnet is now ported to Python 3. (#8228)
+ - twisted.conch.manhole_ssh.ConchFactory (used by `twistd manhole`)
+   no longer uses a hardcoded SSH server key, and will generate a
+   persistent one, saving it in your user appdir. If you use
+   ConchFactory, you will now need to provide your own SSH server key.
+   (#8229)
+
+Other
+-----
+ - #8237, #8240
+
+
+Twisted Mail 16.1.0pre1 (2016-03-25)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 16.1.0pre1 (2016-03-25)
+=====================================
+
+No significant changes have been made for this release.
+
+
+Twisted News 16.1.0pre1 (2016-03-25)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 16.1.0pre1 (2016-03-25)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.1.0pre1 (2016-03-25)
+======================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 16.1.0pre1 (2016-03-25)
+===================================
+
+Features
+--------
+ - twisted.web.http.Request.addCookie now supports both unicode and
+   bytes arguments, with unicode arguments being encoded to UTF-8.
+   (#8067)
+
+Bugfixes
+--------
+ - twisted.web.util.DeferredResource no longer causes spurious
+   "Unhandled error in Deferred" log messages. (#8192)
+ - twisted.web.server.site.makeSession now generates an uid of type
+   bytes on both Python 2 and 3. (#8215)
+
+Other
+-----
+ - #8238
+
+
+Twisted Words 16.1.0pre1 (2016-03-25)
+=====================================
+
+No significant changes have been made for this release.
+
+
 Twisted Core 16.0.0 (2016-03-10)
 ================================
 
