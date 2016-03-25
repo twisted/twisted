@@ -1,4 +1,4 @@
-Twisted 16.0.0
+Twisted 16.1.0pre1
 ==============
 
 |pypi|
@@ -13,7 +13,7 @@ Twisted 16.0.0
     <glyph> idnar: I AM THE WINNER IN THIS TRANSACTION SOMEHOW
 
 
-For information on what's new in Twisted 16.0.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.1.0pre1, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
