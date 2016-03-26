@@ -30,19 +30,21 @@ from zope.interface.verify import verifyObject
 from twisted.trial import unittest
 from twisted.test.test_process import MockOS
 
-from twisted import plugin
+from twisted import plugin, logger
 from twisted.application.service import IServiceMaker
 from twisted.application import service, app, reactors
 from twisted.scripts import twistd
-from twisted.python import log
 from twisted.python.compat import NativeStringIO
 from twisted.python.usage import UsageError
-from twisted.python.log import ILogObserver
+from twisted.python.log import (ILogObserver as LegacyILogObserver,
+                                textFromEventDict)
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize
 from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.python.fakepwd import UserDatabase
+from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
+
 try:
     from twisted.scripts import _twistd_unix
 except ImportError:
@@ -1091,10 +1093,10 @@ class AppProfilingTests(unittest.TestCase):
 
 
 
-def _patchFileLogObserver(patch):
+def _patchTextFileLogObserver(patch):
     """
-    Patch L{log.FileLogObserver} to record every call and keep a reference to
-    the passed log file for tests.
+    Patch L{logger.textFileLogObserver} to record every call and keep a
+    reference to the passed log file for tests.
 
     @param patch: a callback for patching (usually L{unittest.TestCase.patch}).
 
@@ -1102,13 +1104,13 @@ def _patchFileLogObserver(patch):
     @rtype: C{list}
     """
     logFiles = []
-    oldFileLobObserver = log.FileLogObserver
+    oldFileLogObserver = logger.textFileLogObserver
 
-    def FileLogObserver(logFile):
+    def observer(logFile, *args, **kwargs):
         logFiles.append(logFile)
-        return oldFileLobObserver(logFile)
+        return oldFileLogObserver(logFile, *args, **kwargs)
 
-    patch(log, 'FileLogObserver', FileLogObserver)
+    patch(logger, 'textFileLogObserver', observer)
     return logFiles
 
 
@@ -1142,16 +1144,17 @@ class AppLoggerTests(unittest.TestCase):
 
     def setUp(self):
         """
-        Override L{log.addObserver} so that we can trace the observers
-        installed in C{self.observers}.
+        Override L{globaLogBeginner.beginLoggingTo} so that we can trace the
+        observers installed in C{self.observers}.
         """
         self.observers = []
 
-        def startLoggingWithObserver(observer):
-            self.observers.append(observer)
-            log.addObserver(observer)
+        def beginLoggingTo(observers):
+            for observer in observers:
+                self.observers.append(observer)
+                globalLogPublisher.addObserver(observer)
 
-        self.patch(log, 'startLoggingWithObserver', startLoggingWithObserver)
+        self.patch(globalLogBeginner, 'beginLoggingTo', beginLoggingTo)
 
 
     def tearDown(self):
@@ -1159,30 +1162,45 @@ class AppLoggerTests(unittest.TestCase):
         Remove all installed observers.
         """
         for observer in self.observers:
-            log.removeObserver(observer)
+            globalLogPublisher.removeObserver(observer)
 
 
-    def _checkObserver(self, logs):
+    def _makeObserver(self):
         """
-        Ensure that initial C{twistd} logs are written to the given list.
+        Make a new observer which captures all logs sent to it.
 
-        @type logs: C{list}
-        @param logs: The list whose C{append} method was specified as the
-            initial log observer.
+        @return: An observer that stores all logs sent to it.
+        @rtype: Callable that implements L{ILogObserver}.
         """
-        self.assertEqual(self.observers, [logs.append])
-        self.assertIn("starting up", logs[0]["message"][0])
-        self.assertIn("reactor class", logs[1]["message"][0])
+        @implementer(ILogObserver)
+        class TestObserver(object):
+            _logs = []
+
+            def __call__(self, event):
+                self._logs.append(event)
+
+        return TestObserver()
+
+
+    def _checkObserver(self, observer):
+        """
+        Ensure that initial C{twistd} logs are written to logs.
+
+        @param observer: The observer made by L{self._makeObserver).
+        """
+        self.assertEqual(self.observers, [observer])
+        self.assertIn("starting up", observer._logs[0]["log_format"])
+        self.assertIn("reactor class", observer._logs[1]["log_format"])
 
 
     def test_start(self):
         """
-        L{app.AppLogger.start} calls L{log.addObserver}, and then writes some
-        messages about twistd and the reactor.
+        L{app.AppLogger.start} calls L{globalLogBeginner.addObserver}, and then
+        writes some messages about twistd and the reactor.
         """
         logger = app.AppLogger({})
-        observer = []
-        logger._getLogObserver = lambda: observer.append
+        observer = self._makeObserver()
+        logger._getLogObserver = lambda: observer
         logger.start(Componentized())
         self._checkObserver(observer)
 
@@ -1194,11 +1212,11 @@ class AppLoggerTests(unittest.TestCase):
         new one.
         """
         application = Componentized()
-        logs = []
-        application.setComponent(ILogObserver, logs.append)
+        observer = self._makeObserver()
+        application.setComponent(ILogObserver, observer)
         logger = app.AppLogger({})
         logger.start(application)
-        self._checkObserver(logs)
+        self._checkObserver(observer)
 
 
     def _setupConfiguredLogger(self, application, extraLogArgs={},
@@ -1217,12 +1235,12 @@ class AppLoggerTests(unittest.TestCase):
         @rtype: C{list}
         @return: The logs accumulated by the log observer.
         """
-        logs = []
-        logArgs = {"logger": lambda: logs.append}
+        observer = self._makeObserver()
+        logArgs = {"logger": lambda: observer}
         logArgs.update(extraLogArgs)
         logger = appLogger(logArgs)
         logger.start(application)
-        return logs
+        return observer
 
 
     def test_startUsesConfiguredLogObserver(self):
@@ -1238,13 +1256,43 @@ class AppLoggerTests(unittest.TestCase):
 
     def test_configuredLogObserverBeatsComponent(self):
         """
-        C{--logger} takes precedence over a ILogObserver component set on
+        C{--logger} takes precedence over a L{ILogObserver} component set on
         Application.
+        """
+        observer = self._makeObserver()
+        application = Componentized()
+        application.setComponent(ILogObserver, observer)
+        self._checkObserver(self._setupConfiguredLogger(application))
+        self.assertEqual(observer._logs, [])
+
+
+    def test_configuredLogObserverBeatsLegacyComponent(self):
+        """
+        C{--logger} takes precedence over a L{LegacyILogObserver} component
+        set on Application.
         """
         nonlogs = []
         application = Componentized()
-        application.setComponent(ILogObserver, nonlogs.append)
+        application.setComponent(LegacyILogObserver, nonlogs.append)
         self._checkObserver(self._setupConfiguredLogger(application))
+        self.assertEqual(nonlogs, [])
+
+
+    def test_loggerComponentBeatsLegacyLoggerComponent(self):
+        """
+        A L{ILogObserver} takes precedence over a L{LegacyILogObserver}
+        component set on Application.
+        """
+        nonlogs = []
+        observer = self._makeObserver()
+        application = Componentized()
+        application.setComponent(ILogObserver, observer)
+        application.setComponent(LegacyILogObserver, nonlogs.append)
+
+        logger = app.AppLogger({})
+        logger.start(application)
+
+        self._checkObserver(observer)
         self.assertEqual(nonlogs, [])
 
 
@@ -1284,7 +1332,7 @@ class AppLoggerTests(unittest.TestCase):
         returns a log observer pointing at C{sys.stdout}.
         """
         logger = app.AppLogger({"logfile": "-"})
-        logFiles = _patchFileLogObserver(self.patch)
+        logFiles = _patchTextFileLogObserver(self.patch)
 
         logger._getLogObserver()
 
@@ -1303,7 +1351,7 @@ class AppLoggerTests(unittest.TestCase):
         When passing the C{logfile} option, L{app.AppLogger._getLogObserver}
         returns a log observer pointing at the specified path.
         """
-        logFiles = _patchFileLogObserver(self.patch)
+        logFiles = _patchTextFileLogObserver(self.patch)
         filename = self.mktemp()
         logger = app.AppLogger({"logfile": filename})
 
@@ -1326,7 +1374,7 @@ class AppLoggerTests(unittest.TestCase):
         def remove(observer):
             removed.append(observer)
 
-        self.patch(log, 'removeObserver', remove)
+        self.patch(globalLogPublisher, 'removeObserver', remove)
         logger = app.AppLogger({})
         logger._observer = observer
         logger.stop()
@@ -1334,6 +1382,61 @@ class AppLoggerTests(unittest.TestCase):
         logger.stop()
         self.assertEqual(removed, [observer])
         self.assertIdentical(logger._observer, None)
+
+
+    def test_legacyObservers(self):
+        """
+        L{app.AppLogger} using a legacy logger observer still works, wrapping
+        it in a compat shim.
+        """
+        logs = []
+        logger = app.AppLogger({})
+
+        @implementer(LegacyILogObserver)
+        class LoggerObserver(object):
+            """
+            An observer which implements the legacy L{LegacyILogObserver}.
+            """
+            def __call__(self, x):
+                """
+                Add C{x} to the logs list.
+                """
+                logs.append(x)
+
+        logger._observerFactory = lambda: LoggerObserver()
+        logger.start(Componentized())
+
+        self.assertIn("starting up", textFromEventDict(logs[0]))
+        warnings = self.flushWarnings(
+            [self.test_legacyObservers])
+        self.assertEqual(len(warnings), 0)
+
+
+    def test_unmarkedObserversDeprecated(self):
+        """
+        L{app.AppLogger} using a logger observer which does not implement
+        L{ILogObserver} or L{LegacyILogObserver} will be wrapped in a compat
+        shim and raise a L{DeprecationWarning}.
+        """
+        logs = []
+        logger = app.AppLogger({})
+        logger._getLogObserver = lambda: logs.append
+        logger.start(Componentized())
+
+        self.assertIn("starting up", textFromEventDict(logs[0]))
+
+        warnings = self.flushWarnings(
+            [self.test_unmarkedObserversDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]["message"],
+                         ("Passing a logger factory which makes log observers "
+                          "which do not implement twisted.logger.ILogObserver "
+                          "or twisted.python.log.ILogObserver to "
+                          "twisted.application.app.AppLogger was deprecated "
+                          "in Twisted 16.2. Please use a factory that "
+                          "produces twisted.logger.ILogObserver (or the "
+                          "legacy twisted.python.log.ILogObserver) "
+                          "implementing objects instead."))
 
 
 
@@ -1367,7 +1470,7 @@ class UnixAppLoggerTests(unittest.TestCase):
         L{UnixAppLogger._getLogObserver} returns a log observer pointing at
         C{sys.stdout}.
         """
-        logFiles = _patchFileLogObserver(self.patch)
+        logFiles = _patchTextFileLogObserver(self.patch)
 
         logger = UnixAppLogger({"logfile": "-", "nodaemon": True})
         logger._getLogObserver()
@@ -1396,7 +1499,7 @@ class UnixAppLoggerTests(unittest.TestCase):
         returns a log observer pointing at the specified path, and a signal
         handler rotating the log is installed.
         """
-        logFiles = _patchFileLogObserver(self.patch)
+        logFiles = _patchTextFileLogObserver(self.patch)
         filename = self.mktemp()
         logger = UnixAppLogger({"logfile": filename})
         logger._getLogObserver()
@@ -1441,7 +1544,7 @@ class UnixAppLoggerTests(unittest.TestCase):
         L{UnixAppLogger._getLogObserver} points at C{twistd.log} in the current
         directory.
         """
-        logFiles = _patchFileLogObserver(self.patch)
+        logFiles = _patchTextFileLogObserver(self.patch)
         logger = UnixAppLogger({"logfile": "", "nodaemon": False})
         logger._getLogObserver()
 

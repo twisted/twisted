@@ -1,0 +1,1 @@
+Passing a factory that produces log observers that do not implement twisted.logger.ILogObserver or twisted.python.log.ILogObserver to twisted.application.app.AppLogger has been deprecated. This is primarily used by twistd's --logger option. Please use factories that produce log observers implementing twisted.logger.ILogObserver or the legacy twisted.python.log.ILogObserver.

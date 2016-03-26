@@ -14,7 +14,7 @@ from twisted.python.util import (
     switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
 from twisted.internet.interfaces import IReactorDaemonize
-from twisted import copyright
+from twisted import copyright, logger
 from twisted.python.runtime import platformType
 
 
@@ -167,7 +167,7 @@ class UnixAppLogger(app.AppLogger):
                         from twisted.internet import reactor
                         reactor.callFromThread(logFile.rotate)
                     signal.signal(signal.SIGUSR1, rotateLog)
-        return log.FileLogObserver(logFile).emit
+        return logger.textFileLogObserver(logFile)
 
 
 
