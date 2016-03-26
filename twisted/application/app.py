@@ -201,7 +201,7 @@ class AppLogger(object):
                  "not implement twisted.logger.ILogObserver or "
                  "twisted.python.log.ILogObserver to "
                  "twisted.application.app.AppLogger was deprecated in "
-                 "Twisted 16.1. Please use a factory that produces "
+                 "Twisted 16.2. Please use a factory that produces "
                  "twisted.logger.ILogObserver (or the legacy "
                  "twisted.python.log.ILogObserver) implementing objects "
                  "instead."),

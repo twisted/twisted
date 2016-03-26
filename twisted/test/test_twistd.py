@@ -1414,7 +1414,9 @@ class AppLoggerTests(unittest.TestCase):
 
     def test_unmarkedObserversDeprecated(self):
         """
-        L{app.AppLogger} using a logger observer which
+        L{app.AppLogger} using a logger observer which does not implement
+        L{ILogObserver} or L{LegacyILogObserver} will be wrapped in a compat
+        shim and raise a L{DeprecationWarning}.
         """
         logs = []
         logger = app.AppLogger({})
@@ -1431,7 +1433,7 @@ class AppLoggerTests(unittest.TestCase):
                           "which do not implement twisted.logger.ILogObserver "
                           "or twisted.python.log.ILogObserver to "
                           "twisted.application.app.AppLogger was deprecated "
-                          "in Twisted 16.1. Please use a factory that "
+                          "in Twisted 16.2. Please use a factory that "
                           "produces twisted.logger.ILogObserver (or the "
                           "legacy twisted.python.log.ILogObserver) "
                           "implementing objects instead."))
