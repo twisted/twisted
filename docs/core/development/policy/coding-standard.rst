@@ -41,7 +41,7 @@ Parts of the Twisted test suite may serve as good examples of how to write tests
 The names of test modules must begin with ``test_`` so that they are automatically discoverable by test runners such as Trial.
 Twisted's unit tests are written using :api:`twisted.trial <twisted.trial>`, an xUnit library which has been extensively customized for use in testing Twisted and Twisted-based libraries.
 
-Implementation (ie, non-test) source files should begin with a ``test-case-name`` tag which gives the name of any test modules or packages which exercise them.
+Implementation (i.e., non-test) source files should begin with a ``test-case-name`` tag which gives the name of any test modules or packages which exercise them.
 This lets tools discover a subset of the entire test suite which they can run first to find tests which might be broken by a particular change.
 
 It is strongly suggested that developers learn to use Emacs, and use the ``twisted-dev.el`` file included in `twisted-emacs <http://launchpad.net/twisted-emacs>`_ to bind the F9 key to "run unit tests" and bang on it frequently.
@@ -267,11 +267,11 @@ For example:
         def __init__(self, speed, stealth):
             """
             @param speed: The maximum rate at which this ninja can travel (m/s)
-            @type speed: C{int} or C{float}
+            @type speed: L{int} or L{float}
 
             @param stealth: This ninja's ability to avoid being noticed in its
                 activities, as a percentage modifier.
-            @type: C{int}
+            @type: L{int}
             """
             self.speed = speed
             self._stealth = stealth
@@ -299,7 +299,8 @@ For example:
             """
 
 
-Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_ .
+Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_.
+Please note that pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
 
 Additionally, to accommodate emacs users, single quotes of the type of the docstring's triple-quote should be escaped.
 This will prevent font-lock from accidentally fontifying large portions of the file as a string.
@@ -317,7 +318,7 @@ For example,
         can't convert the C{foo} to a C{bar} it will raise a L{FooException}.
 
         @param f: C{foo}
-        @type f: str
+        @type f: L{str}
 
         For example::
 
@@ -505,6 +506,39 @@ In this case, wrap the chain in parenthesis, and start each chained call on a se
             .addCallback(wozers))
 
 
+Using the Global Reactor
+------------------------
+
+Even though it may be convenient, module-level imports of the global Twisted reactor (``from twisted.internet import reactor``) should not be done.
+Importing the reactor at the module's import time means that reactor selection occurs then, and not at the request of the code that originally imported it.
+Applications which may wish to import their own reactor, or otherwise use a reactor different than Twisted's default (for example, using the experimental cfreactor on OS X), have to monkeypatch it in, or use other similar hacks.
+This is especially apparent in Twisted's own test suite; many tests wish to provide their own reactor which controls the passage of time and simulate timeouts.
+
+The generally used pattern for accepting the user's choice of reactor, importing the global one if none is specified, is below, taken (and trimmed for brevity) from existing Twisted source code.
+
+.. code-block:: python
+
+    class Session(object):
+        """
+        A user's session with a system.
+
+        @ivar _reactor: An object providing L{IReactorTime} to use for scheduling
+            expiration.
+        """
+        def __init__(self, site, uid, reactor=None):
+            """
+            Initialize a session with a unique ID for that session.
+            """
+            if reactor is None:
+                from twisted.internet import reactor
+            self._reactor = reactor
+
+            # ... other code ...
+
+
+The reactor attribute should be private by default, but if it is useful to the users of the code, there is no reason why it can not be public.
+
+
 Callback Arguments
 ------------------
 
@@ -608,7 +642,7 @@ C code must be optional, and work across multiple platforms (MSVC++9/10/14 for P
 
 C code should be kept in external bindings packages which Twisted depends on.
 If creating new C extension modules, using `cffi <https://cffi.readthedocs.org/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
-Consider optimising for `PyPy <http://pypy.org/performance.html>`_ instead of creating bespoke C code.
+Consider optimizing for `PyPy <http://pypy.org/performance.html>`_ instead of creating bespoke C code.
 
 
 Commit Messages
