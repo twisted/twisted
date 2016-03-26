@@ -38,7 +38,7 @@ Others can be found at places such as ``twisted.web.test`` (for ``twisted.web`` 
 The latter arrangement, ``twisted.somepackage.test``, is preferred for new tests except when a test module already exists in ``twisted.test`` .
 
 Parts of the Twisted test suite may serve as good examples of how to write tests for Twisted or for Twisted-based libraries (newer parts of the test suite are generally better examples than older parts - check when the code you are looking at was written before you use it as an example of what you should write).
-The names of test modules should begin with ``test_`` so that they are automatically discoverable by test runners such as Trial.
+The names of test modules must begin with ``test_`` so that they are automatically discoverable by test runners such as Trial.
 Twisted's unit tests are written using :api:`twisted.trial <twisted.trial>`, an xUnit library which has been extensively customized for use in testing Twisted and Twisted-based libraries.
 
 Implementation (ie, non-test) source files should begin with a ``test-case-name`` tag which gives the name of any test modules or packages which exercise them.
@@ -116,7 +116,9 @@ Modules
 Modules must be named in all lower-case, preferably short, single words.
 If a module name contains multiple words, they may be separated by underscores or not separated at all.
 
-Modules must have a copyright message, a docstring and a reference to a test module that contains the bulk of its tests.
+Modules must have a copyright message, a docstring, and a reference to a test module that contains the bulk of its tests.
+New modules must have the ``absolute_import``, ``division``, and optionally the ``print_function`` imports from the ``__future__`` module.
+
 Use this template:
 
 :download:`new_module_template.py <../listings/new_module_template.py>`
@@ -159,11 +161,13 @@ In case of local names conflicts due to import, use the ``as`` syntax, for examp
 
 The encoding must always be ASCII, so no coding cookie is necessary.
 
+Python 3 compatible modules must be listed in the relevant sections of ``twisted.python.dist3``.
+
 
 Packages
 --------
 
-Package names should follow the same conventions as module names.
+Package names follow the same conventions as module names.
 All modules must be encapsulated in some package.
 Nested packages may be used to further organize related modules.
 
@@ -192,10 +196,39 @@ To simplify maintaining this state, packages must also not import each other cir
 While this applies to all packages within Twisted, one ``twisted.python`` deserves particular attention, as it may not depend on any other Twisted package.
 
 
-String Formatting Operations
-----------------------------
+Strings
+-------
 
-When using `string formatting operations <https://docs.python.org/2.7/library/stdtypes.html#string-formatting>`_ like ``formatString % values`` you should always use a tuple if you're using non-mapping ``values``.
+All strings in Twisted which are not interfacing directly with Python should be marked explicitly as "bytestrings" or "text/Unicode strings".
+This is done by using the ``b`` (for bytestrings) or ``u`` (for Unicode strings) prefixes when using string literals.
+String literals not marked with this are "native/bare strings", and have a different meaning on Python 2 (where a bare string is a bytestring) and Python 3 (where a bare string is a Unicode string).
+
+.. code-block:: python
+
+    u"I am text, also known as a Unicode string!"
+    b"I am a bytestring!"
+    "I am a native bare string, and therefore may be either!"
+
+Bytestrings and text must not be implicitly concatenated, as this causes an invisible ASCII encode/decode on Python 2, and causes an exception on Python 3.
+
+Use ``+`` to combine bytestrings, not string formatting (either "percent formatting" or ``.format()``).
+String formatting is not available on Python 3.3 and 3.4.
+
+.. code-block:: python
+
+    HTTPVersion = b"1.1"
+    transport.write(b"HTTP/" + HTTPVersion)
+
+
+Utilities are available in :api:`twisted.python.compat <twisted.python.compat>` to paper over some use cases where other Python code (especially the standard library) expects a "native string", or provides a native string where a bytestring is actually required (namely :api:`twisted.python.compat <twisted.python.compat.nativeString>` and :api:`twisted.python.compat <twisted.python.compat.networkString>`)
+
+
+String Formatting Operations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`String formatting operations <https://docs.python.org/2.7/library/stdtypes.html#string-formatting>`_ like ``formatString % values`` should only be used on text strings, not byte strings, as they do not work on Python 3.3 and 3.4.
+
+When using "percent formatting", you should always use a tuple if you're using non-mapping ``values``.
 This is to avoid unexpected behavior when you think you're passing in a single value, but the value is unexpectedly a tuple, e.g.:
 
 .. code-block:: python
@@ -251,8 +284,7 @@ Docstrings are *never* to be used to provide semantic information about an objec
 
 Docstrings should be indented to the level of the code they are documenting.
 
-Docstrings should be triple-quoted.
-The opening and the closing of the docstrings should be on a line by themselves.
+Docstrings must be triple-quoted, with opening and the closing of the docstrings being on a line by themselves.
 For example:
 
 .. code-block:: python
@@ -267,7 +299,7 @@ For example:
             """
 
 
-Docstrings should be written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_ .
+Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_ .
 
 Additionally, to accommodate emacs users, single quotes of the type of the docstring's triple-quote should be escaped.
 This will prevent font-lock from accidentally fontifying large portions of the file as a string.
@@ -447,7 +479,7 @@ New-style Classes
 
 Classes and instances in Python come in two flavors: old-style or classic, and new-style.
 Up to Python 2.1, old-style classes were the only flavour available to the user, new-style classes were introduced in Python 2.2 to unify classes and types.
-All classes added to Twisted should be written as new-style classes.
+All classes added to Twisted must be written as new-style classes.
 If ``x`` is an instance of a new-style class, then ``type(x)`` is the same as ``x.__class__``.
 
 
@@ -553,9 +585,8 @@ An attribute (or function, method or class) should be considered private when on
 Python 3
 --------
 
-Twisted is being ported to Python 3.  Be sure to
-follow `the    guidelines for Python 3 compatibility. <http://twistedmatrix.com/trac/wiki/Plan/Python3#Reviewerchecklist>`_ Check on them often as they may
-change as lessons are learned during the porting effort.
+Twisted is being ported to Python 3, targeting Python 3.3+.
+Please see :doc:`Porting to Python 3 </core/howto/python3>` for details.
 
 
 Database
@@ -573,13 +604,11 @@ All SQL keywords should be in upper case.
 C Code
 ------
 
-Wherever possible, C code should be optional, and the default Python implementation should be maintained in tandem with it.
-C code should be strict ANSI C, and **must** build using GCC as well as Visual Studio for Windows, and really shouldn't have any problems with other compilers either.
-Don't do anything tricky.
+C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7, 3.3/3.4, and 3.5 on Windows, as well as recent GCCs and Clangs for Linux, OS X, and FreeBSD).
 
-C code should only be used for efficiency, not for binding to external libraries.
-If your particular code is not frequently run, write it in Python.
-If you require the use of an external library, develop a separate, external bindings package and make your Twisted code depend on it.
+C code should be kept in external bindings packages which Twisted depends on.
+If creating new C extension modules, using `cffi <https://cffi.readthedocs.org/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
+Consider optimising for `PyPy <http://pypy.org/performance.html>`_ instead of creating bespoke C code.
 
 
 Commit Messages
@@ -604,10 +633,9 @@ Source Control
 --------------
 
 Twisted currently uses Subversion for source control.
-All development **should** occur using branches; when a task is considered complete another Twisted developer may review it and if no problems are found, it may be merged into trunk.
+All development must occur using branches; when a task is considered complete another Twisted developer may review it and if no problems are found, it may be merged into trunk.
 The Twisted wiki has `a start <http://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_.
-Branches **must** be used for major development.
-Branches should be managed using `Combinator <http://divmod.org/trac/wiki/DivmodCombinator>`_ (but if you can manage them in some other way without anyone noticing, knock yourself out).
+Branches can be managed using `Combinator <http://divmod.org/trac/wiki/DivmodCombinator>`_ for interfacing with the SVN repo, or using `twisted-dev-tools <https://github.com/twisted/twisted-dev-tools>`_ if interacting with the Git mirror.
 
 Certain features of Subversion should be avoided.
 
