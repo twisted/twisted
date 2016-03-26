@@ -509,12 +509,12 @@ In this case, wrap the chain in parenthesis, and start each chained call on a se
 Using the Global Reactor
 ------------------------
 
-Even though it may be convenient, module-level imports of the global Twisted reactor (``from twisted.internet import reactor``) should not be done.
-Importing the reactor at the module's import time means that reactor selection occurs then, and not at the request of the code that originally imported it.
-Applications which may wish to import their own reactor, or otherwise use a reactor different than Twisted's default (for example, using the experimental cfreactor on OS X), have to monkeypatch it in, or use other similar hacks.
+Even though it may be convenient, module-level imports of the global Twisted reactor (``from twisted.internet import reactor``) should be avoided.
+Importing the reactor at the module level means that reactor selection occurs on initial import, and not at the request of the code that originally imported the module.
+Applications may wish to import their own reactor, or otherwise use a reactor different than Twisted's default (for example, using the experimental cfreactor on OS X); importing at the module level means they would have to monkeypatch in the different reactor, or use similar hacks.
 This is especially apparent in Twisted's own test suite; many tests wish to provide their own reactor which controls the passage of time and simulate timeouts.
 
-The generally used pattern for accepting the user's choice of reactor, importing the global one if none is specified, is below, taken (and trimmed for brevity) from existing Twisted source code.
+Below is an example of the pattern for accepting the user's choice of reactor -- importing the global one if none is specified -- taken (and trimmed for brevity) from existing Twisted source code.
 
 .. code-block:: python
 
