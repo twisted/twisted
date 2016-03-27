@@ -1045,8 +1045,7 @@ class AccessLogTestsMixin(object):
         reactor.advance(1234567890)
 
         logPath = self.mktemp()
-        factory = self.factory(logPath=logPath)
-        factory._reactor = reactor
+        factory = self.factory(logPath=logPath, reactor=reactor)
         factory.startFactory()
 
         try:
@@ -1147,7 +1146,7 @@ class CombinedLogFormatterTests(unittest.TestCase):
         reactor.advance(1234567890)
 
         timestamp = http.datetimeToLogString(reactor.seconds())
-        request = DummyRequestForLogTest(http.HTTPFactory())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
         request.client = IPv4Address("TCP", b"evil x-forwarded-for \x80", 12345)
         request.method = b"POS\x81"
         request.protocol = b"HTTP/1.\x82"
@@ -1188,7 +1187,7 @@ class ProxiedLogFormatterTests(unittest.TestCase):
         reactor.advance(1234567890)
 
         timestamp = http.datetimeToLogString(reactor.seconds())
-        request = DummyRequestForLogTest(http.HTTPFactory())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
         expected = http.combinedLogFormatter(timestamp, request).replace(
             u"1.2.3.4", u"172.16.1.2")
         request.requestHeaders.setRawHeaders(b"x-forwarded-for", [header])
@@ -1357,3 +1356,29 @@ class ServerAttributesTests(unittest.TestCase):
             warnings[0]['message'],
             ("twisted.web.server.string_date_time was deprecated in Twisted "
              "12.1.0: Please use twisted.web.http.stringToDatetime instead"))
+
+
+
+class ExplicitHTTPFactoryReactor(unittest.TestCase):
+    """
+    L{http.HTTPFactory} accepts explicit reactor selection.
+    """
+
+    def test_explicitReactor(self):
+        """
+        L{http.HTTPFactory.__init__} accepts a reactor argument which is set on
+        L{http.HTTPFactory._reactor}.
+        """
+        reactor = "I am a reactor!"
+        factory = http.HTTPFactory(reactor=reactor)
+        self.assertIs(factory._reactor, reactor)
+
+
+    def test_defaultReactor(self):
+        """
+        Giving no reactor argument to L{http.HTTPFactory.__init__} means it
+        will select the global reactor.
+        """
+        from twisted.internet import reactor
+        factory = http.HTTPFactory()
+        self.assertIs(factory._reactor, reactor)
