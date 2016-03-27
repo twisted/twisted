@@ -199,7 +199,7 @@ While this applies to all packages within Twisted, one ``twisted.python`` deserv
 Strings
 -------
 
-All strings in Twisted which are not interfacing directly with Python should be marked explicitly as "bytestrings" or "text/Unicode strings".
+All strings in Twisted which are not interfacing directly with Python (e.g. ``sys.path`` contents, module names, and anything which returns ``str`` on both Python 2 and 3)  should be marked explicitly as "bytestrings" or "text/Unicode strings".
 This is done by using the ``b`` (for bytestrings) or ``u`` (for Unicode strings) prefixes when using string literals.
 String literals not marked with this are "native/bare strings", and have a different meaning on Python 2 (where a bare string is a bytestring) and Python 3 (where a bare string is a Unicode string).
 
@@ -512,7 +512,7 @@ Using the Global Reactor
 Even though it may be convenient, module-level imports of the global Twisted reactor (``from twisted.internet import reactor``) should be avoided.
 Importing the reactor at the module level means that reactor selection occurs on initial import, and not at the request of the code that originally imported the module.
 Applications may wish to import their own reactor, or otherwise use a reactor different than Twisted's default (for example, using the experimental cfreactor on OS X); importing at the module level means they would have to monkeypatch in the different reactor, or use similar hacks.
-This is especially apparent in Twisted's own test suite; many tests wish to provide their own reactor which controls the passage of time and simulate timeouts.
+This is especially apparent in Twisted's own test suite; many tests wish to provide their own reactor which controls the passage of time and simulates timeouts.
 
 Below is an example of the pattern for accepting the user's choice of reactor -- importing the global one if none is specified -- taken (and trimmed for brevity) from existing Twisted source code.
 
