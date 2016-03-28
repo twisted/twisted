@@ -261,7 +261,7 @@ class DNSServerFactory(protocol.ServerFactory):
         return response
 
 
-    def gotResolverResponse(self, ans_auth_add, protocol, message, address):
+    def gotResolverResponse(self, response, protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling the
         deferred response from C{self.resolver.query}.
@@ -275,8 +275,8 @@ class DNSServerFactory(protocol.ServerFactory):
         The resolved answers count will be logged if C{DNSServerFactory.verbose}
         is C{>1}.
 
-        @param ans_auth_add: Answer records, authority records and additional records
-        @type ans_auth_add: L{tuple} of L{list} of L{dns.RRHeader} instances
+        @param response: Answer records, authority records and additional records
+        @type response: L{tuple} of L{list} of L{dns.RRHeader} instances
 
         @param protocol: The DNS protocol instance to which to send a response
             message.
@@ -290,7 +290,7 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
-        ans, auth, add = ans_auth_add
+        ans, auth, add = response
         response = self._responseFromMessage(
             message=message, rCode=dns.OK,
             answers=ans, authority=auth, additional=add)
