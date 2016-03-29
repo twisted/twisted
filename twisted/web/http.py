@@ -625,7 +625,7 @@ class Request:
         if attr == 'transport':
             warnings.warn(
                 "twisted.web.http.Request.transport was deprecated in Twisted "
-                "16.1.0. Call directly into the Request object instead.",
+                "16.2.0. Call directly into the Request object instead.",
                 category=DeprecationWarning,
                 stacklevel=2
             )
@@ -633,7 +633,7 @@ class Request:
         elif attr == 'channel':
             warnings.warn(
                 "twisted.web.http.Request.channel was deprecated in Twisted "
-                "16.1.0. Call directly into the Request object instead.",
+                "16.2.0. Call directly into the Request object instead.",
                 category=DeprecationWarning,
                 stacklevel=2
             )
@@ -653,7 +653,7 @@ class Request:
         if attr == 'transport':
             warnings.warn(
                 "twisted.web.http.Request.transport was deprecated in Twisted "
-                "16.1.0. Call directly into the Request object instead.",
+                "16.2.0. Call directly into the Request object instead.",
                 category=DeprecationWarning,
                 stacklevel=2
             )
@@ -661,7 +661,7 @@ class Request:
         elif attr == 'channel':
             warnings.warn(
                 "twisted.web.http.Request.channel was deprecated in Twisted "
-                "16.1.0. Call directly into the Request object instead.",
+                "16.2.0. Call directly into the Request object instead.",
                 category=DeprecationWarning,
                 stacklevel=2
             )

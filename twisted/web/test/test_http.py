@@ -2332,7 +2332,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(
             warnings[0]['message'],
             "twisted.web.http.Request.transport was deprecated in "
-            "Twisted 16.1.0. Call directly into the Request object instead."
+            "Twisted 16.2.0. Call directly into the Request object instead."
         )
 
 
@@ -2354,7 +2354,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(
             warnings[0]['message'],
             "twisted.web.http.Request.transport was deprecated in "
-            "Twisted 16.1.0. Call directly into the Request object instead."
+            "Twisted 16.2.0. Call directly into the Request object instead."
         )
 
 
@@ -2377,7 +2377,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(
             warnings[0]['message'],
             "twisted.web.http.Request.channel was deprecated in Twisted "
-            "16.1.0. Call directly into the Request object instead."
+            "16.2.0. Call directly into the Request object instead."
         )
 
 
@@ -2399,7 +2399,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(
             warnings[0]['message'],
             "twisted.web.http.Request.channel was deprecated in Twisted "
-            "16.1.0. Call directly into the Request object instead."
+            "16.2.0. Call directly into the Request object instead."
         )
 
 
