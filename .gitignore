@@ -4,6 +4,7 @@
 *.so
 _trial_temp*/
 build/
+.tox/
 dropin.cache
 doc/
 docs/_build/
