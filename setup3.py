@@ -60,7 +60,7 @@ def main():
             'build_py': PickyBuildPy,
             'build_scripts': PickyBuildScripts,
         },
-        packages=find_packages(),
+        packages=find_packages("src"),
         install_requires=["zope.interface >= 4.0.2"],
         zip_safe=False,
         include_package_data=True,
