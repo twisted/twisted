@@ -99,7 +99,6 @@ class OldStyleDecoratorTests(unittest.TestCase):
         On Python 3 or on Py2 when C{TWISTED_NEWSTYLE} is not set, L{_oldStyle}
         is a no-op.
         """
-        print(_oldstyle._oldStyle)
         updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
         self.assertEqual(type(updatedClass), type(SomeOldStyleClass))
         self.assertIs(updatedClass, SomeOldStyleClass)

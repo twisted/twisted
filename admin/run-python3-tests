@@ -17,9 +17,7 @@ import sys
 testModules = []
 extraArguments = []
 installed = False
-twistedPath = os.path.join(
-    os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0]))),
-    "src")
+twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
 
 
 for argument in sys.argv[1:]:
