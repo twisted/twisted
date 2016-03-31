@@ -7,7 +7,6 @@ Tests for L{twisted.python._oldstyle._oldStyle}.
 
 from __future__ import absolute_import, division
 
-import os
 import types
 import inspect
 
@@ -152,6 +151,8 @@ class NewStyleOnly(object):
 def _buildTestClasses(_locals):
     """
     Build the test classes that use L{NewStyleOnly}, one class per module.
+
+    @param _locals: The global C{locals()} dict.
     """
     for x in getModule("twisted").walkModules():
 
@@ -161,9 +162,9 @@ def _buildTestClasses(_locals):
             "twisted.test.process_"
         ]
 
-        is_ignored = [x.name.startswith(ignored) for ignored in ignoredModules]
+        isIgnored = [x.name.startswith(ignored) for ignored in ignoredModules]
 
-        if True in is_ignored:
+        if True in isIgnored:
             continue
 
 

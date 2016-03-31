@@ -26,7 +26,7 @@ def passthru(arg):
 
 
 
-def _shouldEnableNewStyle(environ=os.environ):
+def _shouldEnableNewStyle():
     """
     Returns whether or not we should enable the new-style conversion of
     old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
@@ -35,7 +35,7 @@ def _shouldEnableNewStyle(environ=os.environ):
 
     @rtype: L{bool}
     """
-    value = environ.get('TWISTED_NEWSTYLE', '')
+    value = os.environ.get('TWISTED_NEWSTYLE', '')
 
     if value in ['', 'no', 'false', 'False', '0']:
         return False
