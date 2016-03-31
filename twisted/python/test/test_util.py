@@ -1117,3 +1117,66 @@ class PadToTests(unittest.TestCase):
         items = []
         util.padTo(4, items)
         self.assertEqual([], items)
+
+
+
+class ReplaceIfTests(unittest.TestCase):
+    """
+    Tests for L{util._replaceIf}.
+    """
+
+    def test_replacesIfTrue(self):
+        """
+        L{util._replaceIf} swaps out the body of a function if the conditional
+        is C{True}.
+        """
+        @util._replaceIf(True, lambda: "hi")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "hi")
+        self.assertEqual(test.__name__, "test")
+        self.assertEqual(test.__module__, "twisted.python.test.test_util")
+
+
+    def test_keepsIfFalse(self):
+        """
+        L{util._replaceIf} keeps the original body of the function if the
+        conditional is C{False}.
+        """
+        @util._replaceIf(False, lambda: "hi")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "bye")
+
+
+    def test_multipleReplace(self):
+        """
+        In the case that multiple conditions are true, the first one
+        (to the reader) is chosen by L{util._replaceIf}
+        """
+        @util._replaceIf(True, lambda: "hi")
+        @util._replaceIf(False, lambda: "bar")
+        @util._replaceIf(True, lambda: "baz")
+        def test():
+            return "bye"
+
+        self.assertEqual(test(), "hi")
+
+
+    def test_boolsOnly(self):
+        """
+        L{util._replaceIf}'s condition argument only accepts bools.
+        """
+        with self.assertRaises(ValueError) as e:
+
+            @util._replaceIf("hi", "there")
+            def test():
+                """
+                Some test function.
+                """
+
+        self.assertEqual(e.exception.args[0],
+                         ("condition argument to _replaceIf requires a bool, "
+                          "not 'hi'"))
