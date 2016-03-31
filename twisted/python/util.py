@@ -912,8 +912,10 @@ def _replaceIf(condition, alternative):
     If C{condition}, replace this function with C{alternative}.
 
     @param condition: A L{bool} which says whether this should be replaced.
+
     @param alternative: An alternative function that will be swapped in instead
-    of the original, if C{condition} is truthy.
+        of the original, if C{condition} is truthy.
+
     @return: A decorator.
     """
     def decorator(func):
@@ -923,8 +925,8 @@ def _replaceIf(condition, alternative):
         elif condition is False:
             call = func
         else:
-            raise ValueError(
-                "condition argument to _replaceIf requires a bool.")
+            raise ValueError(("condition argument to _replaceIf requires a "
+                              "bool, not {}").format(repr(condition)))
 
         @wraps(func)
         def wrapped(*args, **kwargs):

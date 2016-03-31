@@ -15,13 +15,13 @@ from twisted.python.reflect import namedAny, fullyQualifiedName
 from twisted.python.modules import getModule
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
-from twisted.python._oldstyle import _oldStyle
+from twisted.python import _oldstyle
 
 _skip = None
 
 if _PY3:
     _skip = "Not relevant on Python 3."
-elif int(os.environ.get('TWISTED_NEWSTYLE', 0)) == 0:
+elif not _oldstyle._shouldEnableNewStyle():
     _skip = "Not running with TWISTED_NEWSTYLE=1"
 
 
@@ -60,7 +60,7 @@ class OldStyleDecoratorTests(unittest.TestCase):
         that has the same functions, attributes, etc.
         """
         self.assertEqual(type(SomeOldStyleClass), types.ClassType)
-        updatedClass = _oldStyle(SomeOldStyleClass)
+        updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
         self.assertEqual(type(updatedClass), type)
         self.assertEqual(updatedClass().func(), "hi")
         self.assertEqual(updatedClass().bar, "baz")
@@ -71,7 +71,7 @@ class OldStyleDecoratorTests(unittest.TestCase):
         The class returned by L{_oldStyle} has the same C{__name__},
         C{__module__}, and docstring (C{__doc__}) attributes as the original.
         """
-        updatedClass = _oldStyle(SomeOldStyleClass)
+        updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
 
         self.assertEqual(updatedClass.__name__, SomeOldStyleClass.__name__)
         self.assertEqual(updatedClass.__doc__, SomeOldStyleClass.__doc__)
@@ -85,7 +85,7 @@ class OldStyleDecoratorTests(unittest.TestCase):
         """
 
         with self.assertRaises(ValueError) as e:
-            _oldStyle(SomeNewStyleClass)
+            _oldstyle._oldStyle(SomeNewStyleClass)
 
         self.assertEqual(
             e.exception.args[0],
@@ -99,7 +99,9 @@ class OldStyleDecoratorTests(unittest.TestCase):
         On Python 3 or on Py2 when C{TWISTED_NEWSTYLE} is not set, L{_oldStyle}
         is a no-op.
         """
-        updatedClass = _oldStyle(SomeOldStyleClass)
+        print(_oldstyle._oldStyle)
+        updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
+        self.assertEqual(type(updatedClass), type(SomeOldStyleClass))
         self.assertIs(updatedClass, SomeOldStyleClass)
 
     if _PY3:
@@ -149,28 +151,34 @@ class NewStyleOnly(object):
 
 
 
-for x in getModule("twisted").walkModules():
+def _buildTestClasses(_locals):
 
-    ignoredModules = [
-        "twisted.test.reflect_helper",
-        "twisted.internet.test.process_",
-        "twisted.test.process_"
-    ]
+    for x in getModule("twisted").walkModules():
 
-    is_ignored = [x.name.startswith(ignored) for ignored in ignoredModules]
+        ignoredModules = [
+            "twisted.test.reflect_helper",
+            "twisted.internet.test.process_",
+            "twisted.test.process_"
+        ]
 
-    if True in is_ignored:
-        continue
+        is_ignored = [x.name.startswith(ignored) for ignored in ignoredModules]
+
+        if True in is_ignored:
+            continue
 
 
-    class Test(NewStyleOnly, unittest.TestCase):
-        """
-        @see: L{NewStyleOnly}
-        """
-        module = x.name
+        class Test(NewStyleOnly, unittest.TestCase):
+            """
+            @see: L{NewStyleOnly}
+            """
+            module = x.name
 
-    acceptableName = x.name.replace(".", "_")
-    Test.__name__ = acceptableName
-    locals().update({acceptableName: Test})
+        acceptableName = x.name.replace(".", "_")
+        Test.__name__ = acceptableName
+        if hasattr(Test, "__qualname__"):
+            Test.__qualname__ = acceptableName
+        _locals.update({acceptableName: Test})
 
-    del Test
+
+
+_buildTestClasses(locals())

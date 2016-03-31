@@ -1178,4 +1178,5 @@ class ReplaceIfTests(unittest.TestCase):
                 """
 
         self.assertEqual(e.exception.args[0],
-                         "condition argument to _replaceIf requires a bool.")
+                         ("condition argument to _replaceIf requires a bool, "
+                          "not 'hi'"))

@@ -26,6 +26,24 @@ def passthru(arg):
 
 
 
+def _shouldEnableNewStyle(environ=os.environ):
+    """
+    Returns whether or not we should enable the new-style conversion of
+    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
+    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
+    values and everything else as a truthy value.
+
+    @rtype: L{bool}
+    """
+    value = environ.get('TWISTED_NEWSTYLE', '')
+
+    if value in ['', 'no', 'false', 'False', '0']:
+        return False
+    else:
+        return True
+
+
+
 def _ensureOldClass(cls):
     """
     Ensure that C{cls} is an old-style class.
@@ -49,15 +67,17 @@ def _ensureOldClass(cls):
 
 
 @_replaceIf(_PY3, passthru)
-@_replaceIf(int(os.environ.get('TWISTED_NEWSTYLE', 0)) == 0, _ensureOldClass)
+@_replaceIf(not _shouldEnableNewStyle(), _ensureOldClass)
 def _oldStyle(cls):
     """
     A decorator which conditionally converts old-style classes to new-style
-    classes. If it is Python 3, or if "TWISTED_NEWSTYLE" is not set or has a 0
-    value in the environment, this decorator is a no-op.
+    classes. If it is Python 3, or if the C{TWISTED_NEWSTYLE} environment
+    variable has a falsey (C{no}, C{false}, C{False}, or C{0}) value in the
+    environment, this decorator is a no-op.
 
     @param cls: An old-style class to convert to new-style.
     @type cls: L{types.ClassType}
+
     @return: A new-style version of C{cls}.
     """
     _ensureOldClass(cls)
