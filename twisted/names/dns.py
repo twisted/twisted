@@ -1231,7 +1231,7 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar protocol: The 8 bit IP protocol number for which this service map is
         relevant.
 
-    @type map: C{str}
+    @type map: C{bytestring}
     @ivar map: A bitvector indicating the services available at the specified
         address.
 
@@ -1659,10 +1659,10 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Host information.
 
-    @type cpu: C{str}
+    @type cpu: C{bytestring}
     @ivar cpu: Specifies the CPU type.
 
-    @type os: C{str}
+    @type os: C{bytestring}
     @ivar os: Specifies the OS.
 
     @type ttl: C{int}

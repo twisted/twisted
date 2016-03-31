@@ -6,11 +6,10 @@ Tests for L{twisted.names} example scripts.
 """
 
 import sys
-from StringIO import StringIO
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SkipTest, TestCase
-
+from twisted.python.compat import NativeStringIO
 
 
 class ExampleTestBase(object):
@@ -37,9 +36,9 @@ class ExampleTestBase(object):
         self.originalPath = sys.path[:]
         self.originalModules = sys.modules.copy()
 
-        self.fakeErr = StringIO()
+        self.fakeErr = NativeStringIO()
         self.patch(sys, 'stderr', self.fakeErr)
-        self.fakeOut = StringIO()
+        self.fakeOut = NativeStringIO()
         self.patch(sys, 'stdout', self.fakeOut)
 
         # Get documentation root
@@ -81,7 +80,7 @@ class ExampleTestBase(object):
         """
         self.assertEqual(
             self.examplePath.open().readline().rstrip(),
-            '#!/usr/bin/env python')
+            b'#!/usr/bin/env python')
 
 
     def test_usageConsistency(self):

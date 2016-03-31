@@ -5,16 +5,16 @@
 """
 Authoritative resolvers.
 """
+from __future__ import absolute_import
 
 import os
 import time
 
-from twisted.names import dns, error
+from twisted.names import dns, error, common
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.python.compat import execfile
 
-import common
 
 def getSerial(filename = '/tmp/twisted-names.serial'):
     """Return a monotonically increasing (across program runs) integer.
@@ -24,20 +24,20 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
     """
     serial = time.strftime('%Y%m%d')
 
-    o = os.umask(0177)
+    o = os.umask(0o177)
     try:
         if not os.path.exists(filename):
-            f = file(filename, 'w')
+            f = open(filename, 'w')
             f.write(serial + ' 0')
             f.close()
     finally:
         os.umask(o)
 
-    serialFile = file(filename, 'r')
+    serialFile = open(filename, 'r')
     lastSerial, ID = serialFile.readline().split()
     ID = (lastSerial == serial) and (int(ID) + 1) or 0
     serialFile.close()
-    serialFile = file(filename, 'w')
+    serialFile = open(filename, 'w')
     serialFile.write('%s %d' % (serial, ID))
     serialFile.close()
     serial = serial + ('%02d' % (ID,))
@@ -244,7 +244,7 @@ class PySourceAuthority(FileAuthority):
         g, l = self.setupConfigNamespace(), {}
         execfile(filename, g, l)
         if not l.has_key('zone'):
-            raise ValueError, "No zone defined in " + filename
+            raise ValueError("No zone defined in " + filename)
 
         self.records = {}
         for rr in l['zone']:
@@ -337,7 +337,7 @@ class BindAuthority(FileAuthority):
         if f:
             f(ttl, type, domain, rdata)
         else:
-            raise NotImplementedError, "Record class %r not supported" % cls
+            raise NotImplementedError("Record class %r not supported" % cls)
 
 
     def class_IN(self, ttl, type, domain, rdata):
@@ -347,11 +347,11 @@ class BindAuthority(FileAuthority):
             r.ttl = ttl
             self.records.setdefault(domain.lower(), []).append(r)
 
-            print 'Adding IN Record', domain, ttl, r
+            print('Adding IN Record', domain, ttl, r)
             if type == 'SOA':
                 self.soa = (domain, r)
         else:
-            raise NotImplementedError, "Record type %r not supported" % type
+            raise NotImplementedError("Record type %r not supported" % type)
 
 
     #
