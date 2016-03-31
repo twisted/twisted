@@ -51,13 +51,13 @@ class SomeNewStyleClass(object):
 
 class OldStyleDecoratorTests(unittest.TestCase):
     """
-    Tests for L{_oldStyle}.
+    Tests for L{_oldstyle._oldStyle}.
     """
 
     def test_makesNewStyle(self):
         """
-        L{_oldStyle} wraps an old-style class and returns a new-style class
-        that has the same functions, attributes, etc.
+        L{_oldstyle._oldStyle} wraps an old-style class and returns a new-style
+        class that has the same functions, attributes, etc.
         """
         self.assertEqual(type(SomeOldStyleClass), types.ClassType)
         updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
@@ -68,7 +68,7 @@ class OldStyleDecoratorTests(unittest.TestCase):
 
     def test_carriesAttributes(self):
         """
-        The class returned by L{_oldStyle} has the same C{__name__},
+        The class returned by L{_oldstyle._oldStyle} has the same C{__name__},
         C{__module__}, and docstring (C{__doc__}) attributes as the original.
         """
         updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
@@ -80,10 +80,9 @@ class OldStyleDecoratorTests(unittest.TestCase):
 
     def test_onlyOldStyleMayBeDecorated(self):
         """
-        Using L{_oldStyle} on a new-style class on Python 2 will raise an
-        exception.
+        Using L{_oldstyle._oldStyle} on a new-style class on Python 2 will
+        raise an exception.
         """
-
         with self.assertRaises(ValueError) as e:
             _oldstyle._oldStyle(SomeNewStyleClass)
 
@@ -96,8 +95,8 @@ class OldStyleDecoratorTests(unittest.TestCase):
 
     def test_noOpByDefault(self):
         """
-        On Python 3 or on Py2 when C{TWISTED_NEWSTYLE} is not set, L{_oldStyle}
-        is a no-op.
+        On Python 3 or on Py2 when C{TWISTED_NEWSTYLE} is not set,
+        L{_oldStyle._oldStyle} is a no-op.
         """
         updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
         self.assertEqual(type(updatedClass), type(SomeOldStyleClass))
@@ -151,7 +150,9 @@ class NewStyleOnly(object):
 
 
 def _buildTestClasses(_locals):
-
+    """
+    Build the test classes that use L{NewStyleOnly}, one class per module.
+    """
     for x in getModule("twisted").walkModules():
 
         ignoredModules = [
