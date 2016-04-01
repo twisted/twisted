@@ -206,6 +206,8 @@ verifyHostname, VerificationError = _selectVerifyImplementation(OpenSSL)
 
 from zope.interface import Interface, implementer
 
+from constantly import Flags, FlagConstant
+
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import (
@@ -215,7 +217,6 @@ from twisted.internet.interfaces import (
 from twisted.python import reflect, util
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 from twisted.python.compat import nativeString, networkString, unicode
-from twisted.python.constants import Flags, FlagConstant
 from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 

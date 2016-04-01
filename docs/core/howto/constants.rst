@@ -1,11 +1,10 @@
-
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
-
-
 Symbolic Constants
 ==================
+
+.. note::
+
+   ``twisted.python.constants`` has been deprecated in Twisted, and the same code has been spun out into `Constantly <http://constantly.readthedocs.org/en/latest/>`_\.
+   The API is identical, just install it from PyPI and replace ``import twisted.python.constants`` with ``import constantly`` in your code.
 
 
 Overview
@@ -95,14 +94,14 @@ The order is defined to be the same as the instantiation order of the constants:
     ...   a = NamedConstant()
     ...   b = NamedConstant()
     ...   c = NamedConstant()
-    ... 
+    ...
     >>> Letters.a < Letters.b < Letters.c
     True
-    >>> Letters.a > Letters.b 
+    >>> Letters.a > Letters.b
     False
     >>> sorted([Letters.b, Letters.a, Letters.c])
     [<Letters=a>, <Letters=b>, <Letters=c>]
-    >>> 
+    >>>
 
 A subclass of ``Names`` may define class methods to implement custom functionality.
 Consider this definition of ``METHOD`` :
@@ -118,7 +117,7 @@ Consider this definition of ``METHOD`` :
         PUT = NamedConstant()
         POST = NamedConstant()
         DELETE = NamedConstant()
-    
+
         @classmethod
         def isIdempotent(cls, method):
             """
@@ -238,7 +237,7 @@ As with ``Names`` , a subclass of ``Values`` can define custom methods:
         NO_CONTENT = ValueConstant("204")
         NOT_MODIFIED = ValueConstant("304")
         NOT_FOUND = ValueConstant("404")
-    
+
         @classmethod
         def hasBody(cls, status):
             """
@@ -260,7 +259,7 @@ This functionality can be used as any class methods are used:
 
 Constants As Flags
 ------------------
-  
+
 Integers are often used as a simple set for constants.
 The values for these constants are assigned as powers of two so that bits in the integer can be set to represent them.
 Individual bits are often called *flags* .
@@ -384,7 +383,7 @@ Consider this addition to that class:
     from twisted.python.constants import FlagConstant, Flags
     class Permission(Flags):
         ...
-    
+
         @classmethod
         def format(cls, permissions):
             """

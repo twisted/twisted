@@ -31,17 +31,16 @@ def main(args):
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
-    requirements = ["zope.interface >= 3.6.0"]
-
     from twisted.python.dist import (
         STATIC_PACKAGE_METADATA, getExtensions, getScripts,
         setup, _EXTRAS_REQUIRE)
 
-    setup_args = STATIC_PACKAGE_METADATA.copy()
+    args = STATIC_PACKAGE_METADATA.copy()
 
-    setup_args.update(dict(
+    args.update(dict(
         packages=setuptools.find_packages(),
-        install_requires=requirements,
+        install_requires=["zope.interface >= 3.6.0",
+                          "constantly >= 15.1.0"],
         conditionalExtensions=getExtensions(),
         scripts=getScripts(),
         include_package_data=True,
@@ -49,7 +48,7 @@ def main(args):
         extras_require=_EXTRAS_REQUIRE,
     ))
 
-    setup(**setup_args)
+    setup(**args)
 
 
 if __name__ == "__main__":

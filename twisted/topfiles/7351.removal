@@ -1,0 +1,1 @@
+twisted.python.constants is deprecated in preference to constantly on PyPI, which is the same code rolled into its own package.
