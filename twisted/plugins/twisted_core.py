@@ -5,9 +5,10 @@ from __future__ import absolute_import, division
 
 from twisted.internet.endpoints import (
     _SystemdParser, _TCP6ServerParser, _StandardIOParser,
-    _TLSClientEndpointParser)
+    _TLSClientEndpointParser, _HAProxyServerParser)
 
 systemdEndpointParser = _SystemdParser()
 tcp6ServerEndpointParser = _TCP6ServerParser()
 stdioEndpointParser = _StandardIOParser()
 tlsClientEndpointParser = _TLSClientEndpointParser()
+haProxyServerEndpointParser = _HAProxyServerParser()

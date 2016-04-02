@@ -3729,3 +3729,50 @@ class WrapClientTLSTests(unittest.TestCase):
         notImplemented = self.assertRaises(NotImplementedError, replaced,
                                            None, None)
         self.assertIn("OpenSSL not available", str(notImplemented))
+
+
+class HAProxyServerParserTests(unittest.TestCase):
+    """
+    Tests that the parser generates the correct endpoints.
+    """
+
+    def test_tcp4(self):
+        """
+        Test if the parser generates a wrapped TCP4 endpoint.
+        """
+        parser = endpoints._HAProxyServerParser()
+        server = parser.parseStreamServer(reactor, 'haproxy', 'tcp', '8080')
+        self.assertIsInstance(server, endpoints._WrapperServerEndpoint)
+        self.assertIsInstance(
+            server._wrappedEndpoint._wrappedEndpoint,
+            endpoints.TCP4ServerEndpoint,
+        )
+
+    def test_tcp6(self):
+        """
+        Test if the parser generates a wrapped TCP6 endpoint.
+        """
+        parser = endpoints._HAProxyServerParser()
+        server = parser.parseStreamServer(reactor, 'haproxy', 'tcp6', '8080')
+        self.assertIsInstance(server, endpoints._WrapperServerEndpoint)
+        self.assertIsInstance(
+            server._wrappedEndpoint._wrappedEndpoint,
+            endpoints.TCP6ServerEndpoint,
+        )
+
+    def test_unix(self):
+        """
+        Test if the parser generates a wrapped UNIX endpoint.
+        """
+        parser = endpoints._HAProxyServerParser()
+        server = parser.parseStreamServer(
+            reactor,
+            'haproxy',
+            'unix',
+            '/tmp/test',
+        )
+        self.assertIsInstance(server, endpoints._WrapperServerEndpoint)
+        self.assertIsInstance(
+            server._wrappedEndpoint._wrappedEndpoint,
+            endpoints.UNIXServerEndpoint,
+        )
