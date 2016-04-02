@@ -22,11 +22,11 @@ class RPCServerTests(unittest.TestCase):
             'some-versions', '/tmp/rpc.conf', 'tcp', 'some-service')
 
         message = (
-            'twisted.runner.inetdtap.RPCServer '
-            'was deprecated in Twisted 16.0.0'
+            'twisted.runner.inetdtap.RPCServer was deprecated in '
+            'Twisted 16.1.0: '
+            'The RPC server is no longer maintained.'
             )
         warnings = self.flushWarnings([self.test_deprecation])
         self.assertEqual(1, len(warnings))
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(message, warnings[0]['message'])
-
