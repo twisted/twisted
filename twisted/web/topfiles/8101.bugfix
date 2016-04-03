@@ -1,0 +1,1 @@
+twisted.web.http.HTTPChannel.headerReceived now respond with 400 and disconnect when a malformed header is received.

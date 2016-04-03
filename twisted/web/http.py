@@ -1822,7 +1822,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param line: A line from the header section of a request, excluding the
             line delimiter.
         """
-        header, data = line.split(b':', 1)
+        try:
+            header, data = line.split(b':', 1)
+        except ValueError:
+            _respondToBadRequestAndDisconnect(self.transport)
+            return
+
         header = header.lower()
         data = data.strip()
         if header == b'content-length':
