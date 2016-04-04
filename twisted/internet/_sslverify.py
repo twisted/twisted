@@ -264,7 +264,7 @@ def protocolNegotiationMechanisms():
 
     @return: A combination of flags from L{ProtocolNegotiationSupport} that
         indicate which mechanisms for protocol negotiation are supported.
-    @rtype: L{FlagConstant}
+    @rtype: L{constantly.FlagConstant}
     """
     support = ProtocolNegotiationSupport.NOSUPPORT
     ctx = SSL.Context(SSL.SSLv23_METHOD)
