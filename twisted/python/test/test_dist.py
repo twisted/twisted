@@ -16,7 +16,8 @@ from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
 from twisted.python.dist import (get_setup_args, ConditionalExtension,
-                                 build_scripts_twisted, _EXTRAS_REQUIRE)
+                                 build_scripts_twisted, _EXTRAS_REQUIRE,
+                                 _EXTRAS_REQUIRE_PY3)
 from twisted.python.filepath import FilePath
 
 
@@ -60,9 +61,9 @@ class SetupTests(TestCase):
 
 
 
-class OptionalDependenciesTests(TestCase):
+class OptionalDependenciesPy2Tests(TestCase):
     """
-    Tests for L{_EXTRAS_REQUIRE}
+    Tests for L{_EXTRAS_REQUIRE}.
     """
 
     def test_distributeTakesExtrasRequire(self):
@@ -206,6 +207,102 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
+        self.assertIn('pyserial', deps)
+        self.assertIn('pypiwin32', deps)
+
+
+
+class OptionalDependenciesPy3Tests(TestCase):
+    """
+    Tests for L{_EXTRAS_REQUIRE_PY3}.
+    """
+
+    def test_extrasRequireDictContainsKeys(self):
+        """
+        L{_EXTRAS_REQUIRE_PY3} contains options for all documented extras:
+        C{tls}, C{conch}, C{serial}, C{all_non_platform}, and
+        C{windows_platform}. It does not include the C{dev}, C{soap}, or
+        C{osx_platform} dependencies, which contains packages that have not
+        been ported.
+        """
+        self.assertNotIn('dev', _EXTRAS_REQUIRE_PY3)
+        self.assertNotIn('soap', _EXTRAS_REQUIRE_PY3)
+        self.assertNotIn('osx_platform', _EXTRAS_REQUIRE_PY3)
+
+        self.assertIn('tls', _EXTRAS_REQUIRE_PY3)
+        self.assertIn('conch', _EXTRAS_REQUIRE_PY3)
+        self.assertIn('serial', _EXTRAS_REQUIRE_PY3)
+        self.assertIn('all_non_platform', _EXTRAS_REQUIRE_PY3)
+        self.assertIn('windows_platform', _EXTRAS_REQUIRE_PY3)
+
+
+    def test_extrasRequiresTlsDeps(self):
+        """
+        L{_EXTRAS_REQUIRE_PY3}'s C{tls} extra contains setuptools requirements
+        for the packages required to make Twisted's transport layer security
+        fully work for both clients and servers.
+        """
+        deps = _EXTRAS_REQUIRE_PY3['tls']
+        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('service_identity', deps)
+        self.assertIn('idna >= 0.6', deps)
+
+
+    def test_extrasRequiresConchDeps(self):
+        """
+        L{_EXTRAS_REQUIRE_PY3}'s C{conch} extra contains setuptools
+        requirements for the packages required to make Twisted Conch's secure
+        shell server work.
+        """
+        deps = _EXTRAS_REQUIRE_PY3['conch']
+        self.assertIn('gmpy', deps)
+        self.assertIn('pyasn1', deps)
+        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('appdirs >= 1.4.0', deps)
+
+
+    def test_extrasRequiresSerialDeps(self):
+        """
+        L{_EXTRAS_REQUIRE_PY3}'s C{serial} extra contains setuptools
+        requirements for the packages required to make Twisted's serial support
+        work.
+        """
+        self.assertIn(
+            'pyserial',
+            _EXTRAS_REQUIRE_PY3['serial']
+        )
+
+
+    def test_extrasRequiresAllNonPlatformDeps(self):
+        """
+        L{_EXTRAS_REQUIRE_PY3}'s C{all_non_platform} extra contains setuptools
+        requirements for all of Twisted's optional dependencies which work on
+        all supported operating systems.
+        """
+        deps = _EXTRAS_REQUIRE_PY3['all_non_platform']
+        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('service_identity', deps)
+        self.assertIn('idna >= 0.6', deps)
+        self.assertIn('gmpy', deps)
+        self.assertIn('pyasn1', deps)
+        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('pyserial', deps)
+        self.assertIn('appdirs >= 1.4.0', deps)
+
+
+    def test_extrasRequiresWindowsPlatformDeps(self):
+        """
+        L{_EXTRAS_REQUIRE_PY3}'s C{windows_platform} extra contains setuptools
+        requirements for all of Twisted's optional dependencies usable on the
+        Microsoft Windows platform.
+        """
+        deps = _EXTRAS_REQUIRE_PY3['windows_platform']
+        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('service_identity', deps)
+        self.assertIn('idna >= 0.6', deps)
+        self.assertIn('gmpy', deps)
+        self.assertIn('pyasn1', deps)
+        self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('pypiwin32', deps)
 
