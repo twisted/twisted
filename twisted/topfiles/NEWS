@@ -1,6 +1,26 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.1.0 (2016-04-04)
+================================
+
+Features
+--------
+ - twisted.application.internet.ClientService, a service that
+   maintains a persistent outgoing endpoint-based connection; a
+   replacement for ReconnectingClientFactory that uses modern APIs.
+   (#4735)
+ - Twisted now uses setuptools' sdist to build tarballs. (#7985)
+
+Bugfixes
+--------
+ - Twisted is now compatible with OpenSSL 1.0.2f. (#8189)
+
+Other
+-----
+ - #4543, #8124, #8193, #8210, #8220, #8223, #8226, #8242
+
+
 Twisted Core 16.0.0 (2016-03-10)
 ================================
 
