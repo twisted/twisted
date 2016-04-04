@@ -105,6 +105,22 @@ _EXTRAS_REQUIRE = {
     ),
 }
 
+_PLATFORM_INDEPENDENT_PY3 = (
+    _EXTRA_OPTIONS['tls'] +
+    _EXTRA_OPTIONS['conch'] +
+    _EXTRA_OPTIONS['serial']
+)
+
+_EXTRAS_REQUIRE_PY3 = {
+    'tls': _EXTRA_OPTIONS['tls'],
+    'conch': _EXTRA_OPTIONS['conch'],
+    'serial': _EXTRA_OPTIONS['serial'],
+    'all_non_platform': _PLATFORM_INDEPENDENT_PY3,
+    'windows_platform': (
+        _EXTRA_OPTIONS['windows'] + _PLATFORM_INDEPENDENT_PY3
+    ),
+}
+
 
 class ConditionalExtension(Extension):
     """

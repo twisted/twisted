@@ -52,7 +52,8 @@ def main():
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
-    from twisted.python.dist import STATIC_PACKAGE_METADATA, getScripts
+    from twisted.python.dist import (STATIC_PACKAGE_METADATA, getScripts,
+                                     _EXTRAS_REQUIRE_PY3)
 
     args = STATIC_PACKAGE_METADATA.copy()
     args.update(dict(
@@ -60,11 +61,12 @@ def main():
             'build_py': PickyBuildPy,
             'build_scripts': PickyBuildScripts,
         },
-        packages=find_packages(),
-        install_requires=["zope.interface >= 4.0.2"],
-        zip_safe=False,
+        extras_require=_EXTRAS_REQUIRE_PY3,
         include_package_data=True,
+        install_requires=["zope.interface >= 4.0.2"],
+        packages=find_packages(),
         scripts=getScripts(),
+        zip_safe=False,
     ))
 
     setup(**args)

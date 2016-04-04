@@ -40,13 +40,13 @@ def main(args):
     setup_args = STATIC_PACKAGE_METADATA.copy()
 
     setup_args.update(dict(
-        packages=setuptools.find_packages(),
-        install_requires=requirements,
         conditionalExtensions=getExtensions(),
-        scripts=getScripts(),
-        include_package_data=True,
-        zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,
+        include_package_data=True,
+        install_requires=requirements,
+        packages=setuptools.find_packages(),
+        scripts=getScripts(),
+        zip_safe=False,
     ))
 
     setup(**setup_args)
