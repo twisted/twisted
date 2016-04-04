@@ -16,7 +16,7 @@ For a deeper explanation of what optional dependencies are and how they are decl
 
 The following optional dependencies are supported:
 
-* **dev** - packages that aid in the development of Twisted itself.
+* **dev** - packages that aid in the development of Twisted itself. (Available on Python 2)
     * `TwistedChecker`_
     * `pyflakes`_
     * `twisted-dev-tools`_
@@ -24,25 +24,25 @@ The following optional dependencies are supported:
     * `Sphinx`_
     * `pydoctor`_
 
-* **tls** - packages that are needed to work with TLS.
+* **tls** - packages that are needed to work with TLS. (Available on Python 2 & 3)
     * `pyOpenSSL`_
     * `service_identity`_
     * `idna`_
 
-* **conch** - packages for working with conch/SSH.
+* **conch** - packages for working with conch/SSH. (Available on Python 2 & 3)
     * `gmpy`_
     * `pyasn1`_
     * `cryptography`_
 
-* **soap** - the `SOAPpy`_ package to work with SOAP.
+* **soap** - the `SOAPpy`_ package to work with SOAP. (Available on Python 2)
 
-* **serial** - the `pyserial`_ package to work with serial data.
+* **serial** - the `pyserial`_ package to work with serial data. (Available on Python 2 & 3)
 
-* **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options.
+* **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options on Python 2, and **tls**, **conch**, and **serial** options on Python 3.
 
-* **osx_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
+* **osx_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis. (Available on Python 2)
 
-* **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's apis.
+* **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's apis. (Available on Python 2 & 3)
 
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker
