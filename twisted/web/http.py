@@ -1825,7 +1825,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         try:
             header, data = line.split(b':', 1)
         except ValueError:
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
             return
 
         header = header.lower()
