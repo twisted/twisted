@@ -14,7 +14,8 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
-from twisted.python.compat import _PY3, iterbytes, networkString, unicode, intToBytes
+from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
+                                   intToBytes, NativeStringIO)
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -2324,6 +2325,34 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
         self.assertEqual((None, existing), (req.producer, transport.producer))
+
+
+    def test_finishProducesLog(self):
+        """
+        L{http.Request.finish} will call the channel's factory to produce a log
+        message.
+        """
+        factory = http.HTTPFactory()
+        factory._logDateTime = "sometime"
+        factory._logDateTimeCall = True
+        factory.startFactory()
+        factory.logFile = NativeStringIO()
+
+        channel = DummyChannel()
+        trans = StringTransport()
+        channel.transport = trans
+        channel.factory = factory
+        req = http.Request(channel, False)
+
+        req.gotLength(1)
+        req.requestReceived(b'GET', b'/path', b'HTTP/1.1')
+
+        req.write(b"blah")
+        req.finish()
+
+        # A log message should be written out
+        self.assertIn('sometime "GET /path HTTP/1.1"',
+                      factory.logFile.getvalue())
 
 
     def test_transportDeprecated(self):
