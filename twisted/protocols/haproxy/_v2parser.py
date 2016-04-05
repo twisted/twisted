@@ -96,7 +96,14 @@ class V2Parser(object):
     @staticmethod
     def _bytesToIPv4(bytestring):
         """
-        Convert a bytestring to an IPv4 representation.
+        Convert packed 32-bit IPv4 address bytes into a dotted-quad ASCII bytes
+        representation of that address.
+
+        @param bytestring: 4 octets representing an IPv4 address.
+        @type bytestring: L{bytes}
+
+        @return: a dotted-quad notation IPv4 address.
+        @rtype: L{bytes}
         """
         return b'.'.join(
             ('%i' % ord(b)).encode('ascii')
