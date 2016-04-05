@@ -11,7 +11,7 @@ from twisted.protocols import policies
 from twisted.internet import interfaces
 from twisted.internet.endpoints import _WrapperServerEndpoint
 
-from ._exc import InvalidProxyHeader
+from ._exceptions import InvalidProxyHeader
 from ._v1parser import V1Parser
 from ._v2parser import V2Parser
 

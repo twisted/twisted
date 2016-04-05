@@ -160,7 +160,7 @@ modules = [
     "twisted.protocols.telnet",
     "twisted.protocols.test.__init__",
     "twisted.protocols.haproxy.__init__",
-    "twisted.protocols.haproxy._exc",
+    "twisted.protocols.haproxy._exceptions",
     "twisted.protocols.haproxy._info",
     "twisted.protocols.haproxy._interfaces",
     "twisted.protocols.haproxy._v1parser",

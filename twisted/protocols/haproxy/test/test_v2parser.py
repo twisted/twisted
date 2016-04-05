@@ -8,7 +8,7 @@ Test cases for L{twisted.protocols.haproxy.V2Parser}.
 from twisted.trial import unittest
 from twisted.internet import address
 
-from .. import _exc
+from .._exceptions import InvalidProxyHeader
 from .. import _v2parser
 
 V2_SIGNATURE = b'\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A'
@@ -150,7 +150,7 @@ class V2ParserTests(unittest.TestCase):
         """
         header = _makeHeaderIPv4(sig=b'\x00'*12)
         self.assertRaises(
-            _exc.InvalidProxyHeader,
+            InvalidProxyHeader,
             _v2parser.V2Parser.parse,
             header,
         )
@@ -162,7 +162,7 @@ class V2ParserTests(unittest.TestCase):
         """
         header = _makeHeaderIPv4(verCom=b'\x11')
         self.assertRaises(
-            _exc.InvalidProxyHeader,
+            InvalidProxyHeader,
             _v2parser.V2Parser.parse,
             header,
         )
@@ -174,7 +174,7 @@ class V2ParserTests(unittest.TestCase):
         """
         header = _makeHeaderIPv4(verCom=b'\x23')
         self.assertRaises(
-            _exc.InvalidProxyHeader,
+            InvalidProxyHeader,
             _v2parser.V2Parser.parse,
             header,
         )
@@ -186,7 +186,7 @@ class V2ParserTests(unittest.TestCase):
         """
         header = _makeHeaderIPv4(famProto=b'\x40')
         self.assertRaises(
-            _exc.InvalidProxyHeader,
+            InvalidProxyHeader,
             _v2parser.V2Parser.parse,
             header,
         )
@@ -198,7 +198,7 @@ class V2ParserTests(unittest.TestCase):
         """
         header = _makeHeaderIPv4(famProto=b'\x24')
         self.assertRaises(
-            _exc.InvalidProxyHeader,
+            InvalidProxyHeader,
             _v2parser.V2Parser.parse,
             header,
         )
@@ -373,7 +373,7 @@ class V2ParserTests(unittest.TestCase):
         testValue = b'NEEDMOREDATA'
         parser = _v2parser.V2Parser()
         self.assertRaises(
-            _exc.InvalidProxyHeader,
+            InvalidProxyHeader,
             parser.feed,
             testValue,
         )
