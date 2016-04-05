@@ -7,15 +7,14 @@ Test cases for L{twisted.protocols.haproxy.HAProxyProtocol}.
 
 from twisted.trial import unittest
 from twisted.internet import address
-from twisted.internet import protocol
+from twisted.internet.protocol import Protocol, Factory
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 
-from .. import _wrapper
+from .._wrapper import HAProxyWrappingFactory
 
 
 
-class StaticProtocol(protocol.Protocol):
-
+class StaticProtocol(Protocol):
     """
     Protocol stand-in that maintains test state.
     """
@@ -34,26 +33,17 @@ class StaticProtocol(protocol.Protocol):
 
 
 
-class StaticFactory(protocol.Factory):
-
-    """
-    Protocol factory stand-in that maintains test state.
-    """
-
-    protocol = StaticProtocol
-
-
-
 class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
     """
-    Test L{twisted.protocols.haproxy.HAProxyWrappingFactory} with v1 PROXY headers.
+    Test L{twisted.protocols.haproxy.HAProxyWrappingFactory} with v1 PROXY
+    headers.
     """
 
     def test_invalidHeaderDisconnects(self):
         """
         Test if invalid headers result in connectionLost events.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'127.1.1.1', 8080),
         )
@@ -68,7 +58,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         """
         Test if invalid headers result in connectionLost events.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'127.1.1.1', 8080),
         )
@@ -84,7 +74,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         """
         Test if IPv4 headers result in the correct host and peer data.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'127.0.0.1', 8080),
         )
@@ -117,7 +107,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         """
         Test if IPv6 headers result in the correct host and peer data.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
@@ -150,7 +140,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         """
         Test if non-header bytes are passed to the wrapped protocol.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
@@ -164,7 +154,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         """
         Test if header streaming passes extra data appropriately.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
@@ -179,7 +169,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         """
         Test if wrapper writes all data to wrapped protocol after parsing.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
@@ -194,7 +184,8 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
 
 class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
     """
-    Test L{twisted.protocols.haproxy.HAProxyWrappingFactory} with v2 PROXY headers.
+    Test L{twisted.protocols.haproxy.HAProxyWrappingFactory} with v2 PROXY
+    headers.
     """
 
     IPV4HEADER = (
@@ -247,7 +238,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         """
         Test if invalid headers result in connectionLost events.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
@@ -262,7 +253,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         """
         Test if IPv4 headers result in the correct host and peer data.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'127.0.0.1', 8080),
         )
@@ -295,7 +286,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         """
         Test if IPv6 headers result in the correct host and peer data.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'::1', 8080),
         )
@@ -328,7 +319,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         """
         Test if UNIX headers result in the correct host and peer data.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.UNIXAddress(b'/home/test/sockets/server.sock'),
         )
@@ -351,7 +342,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         """
         Test if non-header bytes are passed to the wrapped protocol.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
@@ -365,7 +356,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         """
         Test if header streaming passes extra data appropriately.
         """
-        factory = _wrapper.HAProxyWrappingFactory(StaticFactory())
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
