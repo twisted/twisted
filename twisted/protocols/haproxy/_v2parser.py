@@ -106,7 +106,7 @@ class V2Parser(object):
         @rtype: L{bytes}
         """
         return b'.'.join(
-            ('%i' % ord(b)).encode('ascii')
+            ('%i' % (ord(b),)).encode('ascii')
             for b in compat.iterbytes(bytestring)
         )
 
