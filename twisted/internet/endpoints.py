@@ -34,7 +34,6 @@ from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
 from twisted.plugin import IPlugin, getPlugins
-from twisted.protocols import haproxy
 from twisted.python import log
 from twisted.python.compat import nativeString, unicode, _matchingString
 from twisted.python.components import proxyForInterface
@@ -42,7 +41,6 @@ from twisted.python.constants import NamedConstant, Names
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.compat import iterbytes
-from twisted.python.compat import iteritems
 from twisted.python.systemd import ListenFDs
 
 
@@ -1279,41 +1277,6 @@ class _TCP6ServerParser(object):
     def parseStreamServer(self, reactor, *args, **kwargs):
         # Redirects to another function (self._parseServer), tricks zope.interface
         # into believing the interface is correctly implemented.
-        return self._parseServer(reactor, *args, **kwargs)
-
-
-
-@implementer(IPlugin, IStreamServerEndpointStringParser)
-class _HAProxyServerParser(object):
-    """
-    Stream server endpoint string parser for the HAProxyServerEndpoint type.
-
-    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
-    """
-    prefix = "haproxy"
-
-    def _parseServer(self, reactor, *args, **kwargs):
-        """
-        Internal parser function.
-
-        @param reactor: An L{IReactorTCP} provider.
-
-        @param wrapped: The name of the endpoint to wrap. Ex: tcp6.
-        @type wrapped: str
-        """
-        # Rebuild the description to re-dispatch the request.
-        description = ':'.join(str(arg) for arg in args)
-        description += ':'.join(
-            '%s=%s' % (str(key), quoteStringArgument(str(value)))
-            for key, value in iteritems(kwargs)
-        )
-        return _WrapperServerEndpoint(
-            serverFromString(reactor, description),
-            haproxy.HAProxyWrappingFactory,
-        )
-
-
-    def parseStreamServer(self, reactor, *args, **kwargs):
         return self._parseServer(reactor, *args, **kwargs)
 
 

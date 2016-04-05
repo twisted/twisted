@@ -6,10 +6,8 @@
 HAProxy PROXY protocol implementations.
 """
 
-from ._wrapper import HAProxyProtocolWrapper
-from ._wrapper import HAProxyWrappingFactory
+from ._wrapper import proxyEndpoint
 
-__all__ = (
-    'HAProxyProtocolWrapper',
-    'HAProxyWrappingFactory',
-)
+__all__ = [
+    'proxyEndpoint',
+]
