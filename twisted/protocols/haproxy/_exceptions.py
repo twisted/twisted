@@ -47,9 +47,6 @@ def convertError(sourceType, targetType):
     @type targetType: L{Exception}
     """
     try:
-
         yield None
-
     except sourceType:
-
         compat.reraise(targetType(), sys.exc_info()[-1])

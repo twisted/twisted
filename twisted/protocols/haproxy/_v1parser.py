@@ -10,7 +10,10 @@ IProxyParser implementation for version one of the PROXY protocol.
 from zope.interface import implementer
 from twisted.internet import address
 
-from . import _exc
+from ._exceptions import (
+    convertError, InvalidProxyHeader, InvalidNetworkProtocol,
+    MissingAddressData
+)
 from . import _info
 from . import _interfaces
 
@@ -58,7 +61,7 @@ class V1Parser(object):
         """
         self.buffer += data
         if len(self.buffer) > 107 and self.NEWLINE not in self.buffer:
-            raise _exc.InvalidProxyHeader()
+            raise InvalidProxyHeader()
         lines = (self.buffer).split(self.NEWLINE, 1)
         if not len(lines) > 1:
             return (None, None)
@@ -97,40 +100,32 @@ class V1Parser(object):
         destAddr = None
         destPort = None
 
-        with _exc.convertError(ValueError, _exc.InvalidProxyHeader):
-
+        with convertError(ValueError, InvalidProxyHeader):
             proxyStr, line = line.split(b' ', 1)
 
         if proxyStr != cls.PROXYSTR:
+            raise InvalidProxyHeader()
 
-            raise _exc.InvalidProxyHeader()
-
-        with _exc.convertError(ValueError, _exc.InvalidNetworkProtocol):
-
+        with convertError(ValueError, InvalidNetworkProtocol):
             networkProtocol, line = line.split(b' ', 1)
 
         if networkProtocol not in cls.ALLOWED_NET_PROTOS:
-
-            raise _exc.InvalidNetworkProtocol()
+            raise InvalidNetworkProtocol()
 
         if networkProtocol == cls.UNKNOWN_PROTO:
 
             return _info.ProxyInfo(originalLine, None, None)
 
-        with _exc.convertError(ValueError, _exc.MissingAddressData):
-
+        with convertError(ValueError, MissingAddressData):
             sourceAddr, line = line.split(b' ', 1)
 
-        with _exc.convertError(ValueError, _exc.MissingAddressData):
-
+        with convertError(ValueError, MissingAddressData):
             destAddr, line = line.split(b' ', 1)
 
-        with _exc.convertError(ValueError, _exc.MissingAddressData):
-
+        with convertError(ValueError, MissingAddressData):
             sourcePort, line = line.split(b' ', 1)
 
-        with _exc.convertError(ValueError, _exc.MissingAddressData):
-
+        with convertError(ValueError, MissingAddressData):
             destPort = line.split(b' ')[0]
 
         if networkProtocol == cls.TCP4_PROTO:

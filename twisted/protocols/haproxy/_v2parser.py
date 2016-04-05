@@ -15,7 +15,10 @@ from zope.interface import implementer
 from twisted.internet import address
 from twisted.python import compat
 
-from . import _exc
+from ._exceptions import (
+    convertError, InvalidProxyHeader, InvalidNetworkProtocol,
+    MissingAddressData
+)
 from . import _info
 from . import _interfaces
 
@@ -81,7 +84,7 @@ class V2Parser(object):
         """
         self.buffer += data
         if len(self.buffer) < 16:
-            raise _exc.InvalidProxyHeader()
+            raise InvalidProxyHeader()
 
         size = struct.unpack('!H', self.buffer[14:16])[0] + 16
         if len(self.buffer) < size:
@@ -147,25 +150,25 @@ class V2Parser(object):
         """
         prefix = line[:12]
         addrInfo = None
-        with _exc.convertError(IndexError, _exc.InvalidProxyHeader):
+        with convertError(IndexError, InvalidProxyHeader):
             # Use single value slices to ensure bytestring values are returned
             # instead of int in PY3.
             versionCommand = ord(line[12:13])
             familyProto = ord(line[13:14])
 
         if prefix != cls.PREFIX:
-            raise _exc.InvalidProxyHeader()
+            raise InvalidProxyHeader()
 
         version, command = versionCommand & _HIGH, versionCommand & _LOW
         if version not in cls.VERSIONS or command not in cls.COMMANDS:
-            raise _exc.InvalidProxyHeader()
+            raise InvalidProxyHeader()
 
         if cls.COMMANDS[command] == _LOCALCOMMAND:
             return _info.ProxyInfo(line, None, None)
 
         family, netproto = familyProto & _HIGH, familyProto & _LOW
         if family not in cls.NETFAMILIES or netproto not in cls.NETPROTOCOLS:
-            raise _exc.InvalidNetworkProtocol()
+            raise InvalidNetworkProtocol()
 
         if (
                 cls.NETFAMILIES[family] == socket.AF_UNSPEC or
@@ -176,7 +179,7 @@ class V2Parser(object):
         addressFormat = cls.ADDRESSFORMATS[familyProto]
         addrInfo = line[16:16+struct.calcsize(addressFormat)]
         if cls.NETFAMILIES[family] == socket.AF_UNIX:
-            with _exc.convertError(struct.error, _exc.MissingAddressData):
+            with convertError(struct.error, MissingAddressData):
                 source, dest = struct.unpack(addressFormat, addrInfo)
             return _info.ProxyInfo(
                 line,
@@ -193,7 +196,7 @@ class V2Parser(object):
             addrCls = address.IPv6Address
             addrParser = cls._bytesToIPv6
 
-        with _exc.convertError(struct.error, _exc.MissingAddressData):
+        with convertError(struct.error, MissingAddressData):
             info = struct.unpack(addressFormat, addrInfo)
             source, dest, sPort, dPort = info
 

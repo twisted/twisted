@@ -8,7 +8,9 @@ Test cases for L{twisted.protocols.haproxy.V1Parser}.
 from twisted.trial import unittest
 from twisted.internet import address
 
-from .. import _exc
+from .._exceptions import (
+    InvalidProxyHeader, InvalidNetworkProtocol, MissingAddressData
+)
 from .. import _v1parser
 
 
@@ -22,7 +24,7 @@ class V1ParserTests(unittest.TestCase):
         Test that an exception is raised when the PROXY header is missing.
         """
         self.assertRaises(
-            _exc.InvalidProxyHeader,
+            InvalidProxyHeader,
             _v1parser.V1Parser.parse,
             b'NOTPROXY ',
         )
@@ -33,7 +35,7 @@ class V1ParserTests(unittest.TestCase):
         Test that an exception is raised when the proto is not TCP or UNKNOWN.
         """
         self.assertRaises(
-            _exc.InvalidNetworkProtocol,
+            InvalidNetworkProtocol,
             _v1parser.V1Parser.parse,
             b'PROXY WUTPROTO ',
         )
@@ -44,7 +46,7 @@ class V1ParserTests(unittest.TestCase):
         Test that an exception is raised when the proto has no source data.
         """
         self.assertRaises(
-            _exc.MissingAddressData,
+            MissingAddressData,
             _v1parser.V1Parser.parse,
             b'PROXY TCP4 ',
         )
@@ -55,7 +57,7 @@ class V1ParserTests(unittest.TestCase):
         Test that an exception is raised when the proto has no destination.
         """
         self.assertRaises(
-            _exc.MissingAddressData,
+            MissingAddressData,
             _v1parser.V1Parser.parse,
             b'PROXY TCP4 127.0.0.1 8080 8888',
         )
@@ -132,7 +134,7 @@ class V1ParserTests(unittest.TestCase):
         self.assertFalse(info)
         self.assertFalse(remaining)
         self.assertRaises(
-            _exc.InvalidProxyHeader,
+            InvalidProxyHeader,
             parser.feed,
             b' ' * 100,
         )
