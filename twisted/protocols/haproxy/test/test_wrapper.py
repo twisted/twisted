@@ -8,22 +8,9 @@ Test cases for L{twisted.protocols.haproxy.HAProxyProtocol}.
 from twisted.trial import unittest
 from twisted.internet import address
 from twisted.internet import protocol
+from twisted.test.proto_helpers import StringTransportWithDisconnection
 
 from .. import _wrapper
-
-
-class StaticTransport(object):
-
-    """
-    Transport stand-in that maintains test state.
-    """
-
-    def __init__(self):
-        self.disconnected = False
-
-
-    def loseConnection(self):
-        self.disconnected = True
 
 
 
@@ -70,10 +57,12 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'127.1.1.1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
+        transport.protocol = proto
         proto.makeConnection(transport)
         proto.dataReceived(b'NOTPROXY anything can go here\r\n')
-        self.assertTrue(transport.disconnected)
+        self.assertFalse(transport.connected)
+
 
     def test_invalidPartialHeaderDisconnects(self):
         """
@@ -83,11 +72,12 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'127.1.1.1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
+        transport.protocol = proto
         proto.makeConnection(transport)
         proto.dataReceived(b'PROXY TCP4 1.1.1.1\r\n')
         proto.dataReceived(b'2.2.2.2 8080\r\n')
-        self.assertTrue(transport.disconnected)
+        self.assertFalse(transport.connected)
 
 
     def test_validIPv4HeaderResolves_getPeerHost(self):
@@ -98,7 +88,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'127.0.0.1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(b'PROXY TCP4 1.1.1.1 2.2.2.2 8080 8888\r\n')
         self.assertEqual(proto.getPeer().host, b'1.1.1.1')
@@ -131,7 +121,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(b'PROXY TCP6 ::1 ::2 8080 8888\r\n')
         self.assertEqual(proto.getPeer().host, b'::1')
@@ -164,7 +154,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(b'PROXY TCP6 ::1 ::2 8080 8888\r\nHTTP/1.1 / GET')
         self.assertEqual(proto.wrappedProtocol.data, b'HTTP/1.1 / GET')
@@ -178,11 +168,12 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(b'PROXY TCP6 ::1 ::2 ')
         proto.dataReceived(b'8080 8888\r\nHTTP/1.1 / GET')
         self.assertEqual(proto.wrappedProtocol.data, b'HTTP/1.1 / GET')
+
 
     def test_overflowBytesSentToWrappedProtocolAfter(self):
         """
@@ -192,7 +183,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(b'PROXY TCP6 ::1 ::2 ')
         proto.dataReceived(b'8080 8888\r\nHTTP/1.1 / GET')
@@ -260,10 +251,11 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
+        transport.protocol = proto
         proto.makeConnection(transport)
         proto.dataReceived(b'\x00' + self.IPV4HEADER[1:])
-        self.assertTrue(transport.disconnected)
+        self.assertFalse(transport.connected)
 
 
     def test_validIPv4HeaderResolves_getPeerHost(self):
@@ -274,7 +266,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'127.0.0.1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(self.IPV4HEADER)
         self.assertEqual(proto.getPeer().host, b'127.0.0.1')
@@ -307,7 +299,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv4Address('TCP', b'::1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(self.IPV6HEADER)
         self.assertEqual(proto.getPeer().host, b'0:0:0:0:0:0:0:1')
@@ -340,7 +332,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.UNIXAddress(b'/home/test/sockets/server.sock'),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(self.UNIXHEADER)
         self.assertEqual(proto.getPeer().name, b'/home/tests/mysockets/sock')
@@ -363,7 +355,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(self.IPV6HEADER + b'HTTP/1.1 / GET')
         self.assertEqual(proto.wrappedProtocol.data, b'HTTP/1.1 / GET')
@@ -377,7 +369,7 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         proto = factory.buildProtocol(
             address.IPv6Address('TCP', b'::1', 8080),
         )
-        transport = StaticTransport()
+        transport = StringTransportWithDisconnection()
         proto.makeConnection(transport)
         proto.dataReceived(self.IPV6HEADER[:18])
         proto.dataReceived(self.IPV6HEADER[18:] + b'HTTP/1.1 / GET')
