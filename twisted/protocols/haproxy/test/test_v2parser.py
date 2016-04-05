@@ -155,6 +155,7 @@ class V2ParserTests(unittest.TestCase):
             header,
         )
 
+
     def test_invalidFamily(self):
         """
         Test if an invalid family raises InvalidProxyError.
@@ -165,6 +166,7 @@ class V2ParserTests(unittest.TestCase):
             _v2parser.V2Parser.parse,
             header,
         )
+
 
     def test_invalidProto(self):
         """
@@ -338,6 +340,7 @@ class V2ParserTests(unittest.TestCase):
         info, overflow = parser.feed(header)
         self.assertTrue(info)
         self.assertEqual(overflow, testValue)
+
 
     def test_segmentTooSmall(self):
         """
