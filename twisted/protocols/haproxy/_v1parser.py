@@ -46,11 +46,11 @@ class V1Parser(object):
         Consume a chunk of data and attempt to parse it.
 
         @param data: A bytestring.
-        @type data: bytes
+        @type data: L{bytes}
 
         @return: A two-tuple containing, in order, a
-            L{twisted.protocols.haproxy.IProxyInfo} and any bytes fed to the
-            parser that followed the end of the header. Both of these values
+            L{_interfaces.IProxyInfo} and any bytes fed to the
+            parser that followed the end of the header.  Both of these values
             are None until a complete header is parsed.
 
         @raises InvalidProxyHeader: If the bytes fed to the parser create an
@@ -78,8 +78,7 @@ class V1Parser(object):
             protocol header line.
         @type line: bytes
 
-        @return: A L{twisted.protocols.haproxy.IProxyInfo} containing the
-            parsed data.
+        @return: A L{_interfaces.IProxyInfo} containing the parsed data.
 
         @raises InvalidProxyHeader: If the bytestring does not represent a
             valid PROXY header.

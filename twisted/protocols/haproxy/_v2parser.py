@@ -71,10 +71,10 @@ class V2Parser(object):
         @param data: A bytestring.
         @type data: bytes
 
-        @return: A two-tuple containing, in order, a
-            L{twisted.protocols.haproxy.IProxyInfo} and any bytes fed to the
-            parser that followed the end of the header. Both of these values
-            are None until a complete header is parsed.
+        @return: A two-tuple containing, in order, a L{_interfaces.IProxyInfo}
+            and any bytes fed to the parser that followed the end of the
+            header.  Both of these values are None until a complete header is
+            parsed.
 
         @raises InvalidProxyHeader: If the bytes fed to the parser create an
             invalid PROXY header.
@@ -139,7 +139,7 @@ class V2Parser(object):
             protocol version 2 header.
         @type line: bytes
 
-        @return: A L{twisted.protocols.haproxy.IProxyInfo} containing the
+        @return: A L{_interfaces.IProxyInfo} containing the
             parsed data.
 
         @raises InvalidProxyHeader: If the bytestring does not represent a
