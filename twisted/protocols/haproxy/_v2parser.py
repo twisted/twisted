@@ -114,7 +114,14 @@ class V2Parser(object):
     @staticmethod
     def _bytesToIPv6(bytestring):
         """
-        Convert a bytestring to an IPv6 representation.
+        Convert packed 128-bit IPv6 address bytes into a colon-separated ASCII
+        bytes representation of that address.
+
+        @param bytestring: 16 octets representing an IPv6 address.
+        @type bytestring: L{bytes}
+
+        @return: a dotted-quad notation IPv6 address.
+        @rtype: L{bytes}
         """
         hexString = binascii.b2a_hex(bytestring)
         return b':'.join(
