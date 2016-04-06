@@ -2337,18 +2337,20 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory._logDateTimeCall = True
         factory.startFactory()
         factory.logFile = NativeStringIO()
+        proto = factory.buildProtocol(None)
 
-        channel = DummyChannel()
+        val = [
+            b"GET /path HTTP/1.1\r\n",
+            b"\r\n\r\n"
+            ]
+
         trans = StringTransport()
-        channel.transport = trans
-        channel.factory = factory
-        req = http.Request(channel, False)
+        proto.makeConnection(trans)
 
-        req.gotLength(1)
-        req.requestReceived(b'GET', b'/path', b'HTTP/1.1')
+        for x in val:
+            proto.dataReceived(x)
 
-        req.write(b"blah")
-        req.finish()
+        proto._channel.requests[0].finish()
 
         # A log message should be written out
         self.assertIn('sometime "GET /path HTTP/1.1"',
