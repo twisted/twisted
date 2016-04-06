@@ -1,0 +1,1 @@
+twisted.web.http.Request once again has a reference to the HTTPFactory which created it, the absence of which was preventing log messages from being created. 
