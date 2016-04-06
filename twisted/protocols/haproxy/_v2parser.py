@@ -8,12 +8,12 @@ IProxyParser implementation for version two of the PROXY protocol.
 """
 
 import binascii
-import socket
 import struct
 
 from zope.interface import implementer
 from twisted.internet import address
 from twisted.python import compat
+from twisted.python.constants import Values, ValueConstant
 
 from ._exceptions import (
     convertError, InvalidProxyHeader, InvalidNetworkProtocol,
@@ -22,10 +22,28 @@ from ._exceptions import (
 from . import _info
 from . import _interfaces
 
+class NetFamily(Values):
+    """
+    Values for the 'family' field.
+    """
+    UNSPEC = ValueConstant(0x00)
+    INET = ValueConstant(0x10)
+    INET6 = ValueConstant(0x20)
+    UNIX = ValueConstant(0x30)
+
+
+
+class NetProtocol(Values):
+    """
+    Values for 'protocol' field.
+    """
+    UNSPEC = ValueConstant(0)
+    STREAM = ValueConstant(1)
+    DGRAM = ValueConstant(2)
+
 
 _HIGH = 0b11110000
 _LOW = 0b00001111
-_UNSPECPROTO = 'UNSPEC'
 _LOCALCOMMAND = 'LOCAL'
 _PROXYCOMMAND = 'PROXY'
 
@@ -38,19 +56,8 @@ class V2Parser(object):
     """
 
     PREFIX = b'\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A'
-    VERSIONS = (32,)
+    VERSIONS = [32]
     COMMANDS = {0: _LOCALCOMMAND, 1: _PROXYCOMMAND}
-    NETFAMILIES = {
-        0: socket.AF_UNSPEC,
-        16: socket.AF_INET,
-        32: socket.AF_INET6,
-        48: socket.AF_UNIX,
-    }
-    NETPROTOCOLS = {
-        0: _UNSPECPROTO,
-        1: socket.SOCK_STREAM,
-        2: socket.SOCK_DGRAM,
-    }
     ADDRESSFORMATS = {
         # TCP4
         17: '!4s4s2H',
@@ -167,18 +174,18 @@ class V2Parser(object):
             return _info.ProxyInfo(line, None, None)
 
         family, netproto = familyProto & _HIGH, familyProto & _LOW
-        if family not in cls.NETFAMILIES or netproto not in cls.NETPROTOCOLS:
-            raise InvalidNetworkProtocol()
-
+        with convertError(ValueError, InvalidNetworkProtocol):
+            family = NetFamily.lookupByValue(family)
+            netproto = NetProtocol.lookupByValue(netproto)
         if (
-                cls.NETFAMILIES[family] == socket.AF_UNSPEC or
-                cls.NETPROTOCOLS[netproto] == _UNSPECPROTO
+                family is NetFamily.UNSPEC or
+                netproto is NetProtocol.UNSPEC
         ):
             return _info.ProxyInfo(line, None, None)
 
         addressFormat = cls.ADDRESSFORMATS[familyProto]
         addrInfo = line[16:16+struct.calcsize(addressFormat)]
-        if cls.NETFAMILIES[family] == socket.AF_UNIX:
+        if family is NetFamily.UNIX:
             with convertError(struct.error, MissingAddressData):
                 source, dest = struct.unpack(addressFormat, addrInfo)
             return _info.ProxyInfo(
@@ -188,11 +195,11 @@ class V2Parser(object):
             )
 
         addrType = 'TCP'
-        if cls.NETPROTOCOLS[netproto] == socket.SOCK_DGRAM:
+        if netproto is NetProtocol.DGRAM:
             addrType = 'UDP'
         addrCls = address.IPv4Address
         addrParser = cls._bytesToIPv4
-        if cls.NETFAMILIES[family] == socket.AF_INET6:
+        if family is NetFamily.INET6:
             addrCls = address.IPv6Address
             addrParser = cls._bytesToIPv6
 
