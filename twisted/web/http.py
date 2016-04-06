@@ -2263,11 +2263,17 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @property
     def factory(self):
+        """
+        @see: L{HTTPChannel.factory}
+        """
         return self._channel.factory
 
 
     @factory.setter
     def factory(self, value):
+        """
+        @see: L{HTTPChannel.factory}
+        """
         self._channel.factory = value
 
 
