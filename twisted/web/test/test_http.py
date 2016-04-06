@@ -238,7 +238,11 @@ class HTTP0_9Tests(HTTP1_0Tests):
 
 
 
-class ProtocolNegotiationTests(unittest.TestCase):
+class GenericHTTPChannelTests(unittest.TestCase):
+    """
+    Tests for L{http._genericHTTPChannelProtocol}, a L{HTTPChannel}-alike which
+    can handle different HTTP protocol channels.
+    """
     requests = (
         b"GET / HTTP/1.1\r\n"
         b"Accept: text/html\r\n"
@@ -322,6 +326,15 @@ class ProtocolNegotiationTests(unittest.TestCase):
             self._negotiatedProtocolForTransportInstance,
             b,
         )
+
+
+    def test_factory(self):
+        """
+        The C{factory} attribute is taken from the inner channel.
+        """
+        a = http._genericHTTPChannelProtocolFactory(b'')
+        a._channel.factory = b"Foo"
+        self.assertEqual(a.factory, b"Foo")
 
 
 
@@ -2342,7 +2355,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         val = [
             b"GET /path HTTP/1.1\r\n",
             b"\r\n\r\n"
-            ]
+        ]
 
         trans = StringTransport()
         proto.makeConnection(trans)
