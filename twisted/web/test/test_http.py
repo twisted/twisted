@@ -14,7 +14,8 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
-from twisted.python.compat import _PY3, iterbytes, networkString, unicode, intToBytes
+from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
+                                   intToBytes, NativeStringIO)
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -237,7 +238,11 @@ class HTTP0_9Tests(HTTP1_0Tests):
 
 
 
-class ProtocolNegotiationTests(unittest.TestCase):
+class GenericHTTPChannelTests(unittest.TestCase):
+    """
+    Tests for L{http._genericHTTPChannelProtocol}, a L{HTTPChannel}-alike which
+    can handle different HTTP protocol channels.
+    """
     requests = (
         b"GET / HTTP/1.1\r\n"
         b"Accept: text/html\r\n"
@@ -321,6 +326,15 @@ class ProtocolNegotiationTests(unittest.TestCase):
             self._negotiatedProtocolForTransportInstance,
             b,
         )
+
+
+    def test_factory(self):
+        """
+        The C{factory} attribute is taken from the inner channel.
+        """
+        a = http._genericHTTPChannelProtocolFactory(b'')
+        a._channel.factory = b"Foo"
+        self.assertEqual(a.factory, b"Foo")
 
 
 
@@ -2324,6 +2338,36 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
         self.assertEqual((None, existing), (req.producer, transport.producer))
+
+
+    def test_finishProducesLog(self):
+        """
+        L{http.Request.finish} will call the channel's factory to produce a log
+        message.
+        """
+        factory = http.HTTPFactory()
+        factory._logDateTime = "sometime"
+        factory._logDateTimeCall = True
+        factory.startFactory()
+        factory.logFile = NativeStringIO()
+        proto = factory.buildProtocol(None)
+
+        val = [
+            b"GET /path HTTP/1.1\r\n",
+            b"\r\n\r\n"
+        ]
+
+        trans = StringTransport()
+        proto.makeConnection(trans)
+
+        for x in val:
+            proto.dataReceived(x)
+
+        proto._channel.requests[0].finish()
+
+        # A log message should be written out
+        self.assertIn('sometime "GET /path HTTP/1.1"',
+                      factory.logFile.getvalue())
 
 
     def test_transportDeprecated(self):
