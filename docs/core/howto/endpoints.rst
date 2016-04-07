@@ -353,3 +353,10 @@ systemd
    For example, ``systemd:domain=INET6:index=3``.
 
    See also :doc:`Deploying Twisted with systemd <systemd>`.
+
+PROXY
+  The PROXY protocol is a stream wrapper and can be applied any of the other server endpoints by placing ``haproxy:`` in front of a normal port definition.
+
+  For example, ``haproxy:tcp:port=80:interface=192.168.1.1`` or ``haproxy:ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.
+
+  The PROXY protocol provides a way for load balancers and reverse proxies to send down the real IP of a connection's source and destination without relying on X-Forwarded-For headers. A Twisted service using this endpoint wrapper must run behind a service that sends valid PROXY protocol headers. For more on the protocol see `the formal specification <http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt>`_. Both version one and two of the protocol are currently supported.
