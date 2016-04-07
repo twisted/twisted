@@ -26,11 +26,6 @@ class HAProxyProtocolWrapper(policies.ProtocolWrapper, object):
     the data provided by the PROXY header.
     """
 
-    V1PARSER = V1Parser
-    V1BYTES = V1PARSER.PROXYSTR
-    V2PARSER = V2Parser
-    V2BYTES = V2PARSER.PREFIX
-
     def __init__(self, factory, wrappedProtocol):
         policies.ProtocolWrapper.__init__(self, factory, wrappedProtocol)
         self._proxyInfo = None
@@ -38,18 +33,18 @@ class HAProxyProtocolWrapper(policies.ProtocolWrapper, object):
 
 
     def dataReceived(self, data):
-        if self._proxyInfo:
+        if self._proxyInfo is not None:
             return self.wrappedProtocol.dataReceived(data)
 
-        if not self._parser:
+        if self._parser is None:
             if (
                     len(data) >= 16 and
-                    data[:12] == self.V2BYTES and
+                    data[:12] == V2Parser.PREFIX and
                     ord(data[12:13]) & 0b11110000 == 0x20
             ):
-                self._parser = self.V2PARSER()
-            elif len(data) >= 8 and data[:5] == self.V1BYTES:
-                self._parser = self.V1PARSER()
+                self._parser = V2Parser()
+            elif len(data) >= 8 and data[:5] == V1Parser.PROXYSTR:
+                self._parser = V1Parser()
             else:
                 self.loseConnection()
                 return None
