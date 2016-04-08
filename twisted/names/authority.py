@@ -18,47 +18,32 @@ from twisted.python.compat import execfile
 
 
 def getSerial(filename = '/tmp/twisted-names.serial'):
-    """Return a monotonically increasing (across program runs) integer.
+    """
+    Return a monotonically increasing (across program runs) integer.
 
-    State is stored in the given file.  If it does not exist, it is
-    created with rw-/---/--- permissions.
+    State is stored in the given file. If it does not exist, it is created with
+    C{rw-/---/---} permissions.
     """
     serial = time.strftime('%Y%m%d')
 
     o = os.umask(0o177)
     try:
         if not os.path.exists(filename):
-            f = open(filename, 'w')
-            f.write(serial + ' 0')
-            f.close()
+            with open(filename, 'w') as f:
+                f.write(serial + ' 0')
     finally:
         os.umask(o)
 
-    serialFile = open(filename, 'r')
-    lastSerial, ID = serialFile.readline().split()
+    with open(filename, 'r') as serialFile:
+        lastSerial, ID = serialFile.readline().split()
+
     ID = (lastSerial == serial) and (int(ID) + 1) or 0
-    serialFile.close()
-    serialFile = open(filename, 'w')
-    serialFile.write('%s %d' % (serial, ID))
-    serialFile.close()
+
+    with open(filename, 'w') as serialFile:
+        serialFile.write('%s %d' % (serial, ID))
+
     serial = serial + ('%02d' % (ID,))
     return serial
-
-
-#class LookupCacherMixin(object):
-#    _cache = None
-#
-#    def _lookup(self, name, cls, type, timeout = 10):
-#        if not self._cache:
-#            self._cache = {}
-#            self._meth = super(LookupCacherMixin, self)._lookup
-#
-#        if self._cache.has_key((name, cls, type)):
-#            return self._cache[(name, cls, type)]
-#        else:
-#            r = self._meth(name, cls, type, timeout)
-#            self._cache[(name, cls, type)] = r
-#            return r
 
 
 
@@ -68,8 +53,11 @@ class FileAuthority(common.ResolverBase):
 
     @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
         processing will be done.
+
     @ivar _ADDRESS_TYPES: Record types which are useful for inclusion in the
         additional section generated during additional processing.
+
+    @ivar soa: A 2-tuple containing
     """
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
@@ -86,7 +74,6 @@ class FileAuthority(common.ResolverBase):
 
     def __setstate__(self, state):
         self.__dict__ = state
-#        print 'setstate ', self.soa
 
 
     def _additionalRecords(self, answer, authority, ttl):
@@ -273,7 +260,9 @@ class BindAuthority(FileAuthority):
 
     def loadFile(self, filename):
         self.origin = os.path.basename(filename) + '.' # XXX - this might suck
-        lines = open(filename).readlines()
+
+        with open(filename, 'rb') as f:
+            lines = f.readlines()
         lines = self.stripComments(lines)
         lines = self.collapseContinuations(lines)
         self.parseLines(lines)
@@ -366,41 +355,31 @@ class BindAuthority(FileAuthority):
         if line[0] == '@':
             line = line[1:]
             owner = origin
-#            print 'default owner'
         elif not line[0].isdigit() and line[0] not in MARKERS:
             owner = line[0]
             line = line[1:]
-#            print 'owner is ', owner
 
         if line[0].isdigit() or line[0] in MARKERS:
             domain = owner
             owner = origin
-#            print 'woops, owner is ', owner, ' domain is ', domain
         else:
             domain = line[0]
             line = line[1:]
-#            print 'domain is ', domain
 
         if line[0] in dns.QUERY_CLASSES.values():
             cls = line[0]
             line = line[1:]
-#            print 'cls is ', cls
             if line[0].isdigit():
                 ttl = int(line[0])
                 line = line[1:]
-#                print 'ttl is ', ttl
         elif line[0].isdigit():
             ttl = int(line[0])
             line = line[1:]
-#            print 'ttl is ', ttl
             if line[0] in dns.QUERY_CLASSES.values():
                 cls = line[0]
                 line = line[1:]
-#                print 'cls is ', cls
 
         type = line[0]
-#        print 'type is ', type
         rdata = line[1:]
-#        print 'rdata is ', rdata
 
         self.addRecord(owner, ttl, type, domain, cls, rdata)
