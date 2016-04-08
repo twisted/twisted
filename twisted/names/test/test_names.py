@@ -25,7 +25,6 @@ from twisted.names.error import DomainError
 from twisted.names.client import Resolver
 from twisted.names.secondary import (
     SecondaryAuthorityService, SecondaryAuthority)
-from twisted.python.compat import NativeStringIO
 
 from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 
