@@ -86,12 +86,12 @@ class SecondaryAuthority(FileAuthority):
         be attempted.
     @type primary: C{str}
 
-    @ivar _port: The port number of the server from which zone transfers will be
-        attempted.
-    @type: C{int}
+    @ivar _port: The port number of the server from which zone transfers will
+        be attempted.
+    @type _port: C{int}
 
-    @ivar _reactor: The reactor to use to perform the zone transfers, or C{None}
-        to use the global reactor.
+    @ivar _reactor: The reactor to use to perform the zone transfers, or
+        C{None} to use the global reactor.
     """
 
     transferring = False

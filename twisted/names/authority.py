@@ -57,7 +57,8 @@ class FileAuthority(common.ResolverBase):
     @ivar _ADDRESS_TYPES: Record types which are useful for inclusion in the
         additional section generated during additional processing.
 
-    @ivar soa: A 2-tuple containing
+    @ivar soa: A 2-tuple containing the SOA domain name as a L{bytes} and a
+        L{dns.Record_SOA}.
     """
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
