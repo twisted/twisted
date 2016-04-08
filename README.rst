@@ -64,6 +64,12 @@ Twisted has a comprehensive test suite, which can be run by ``tox``::
   $ tox -e py27-tests # to run the tests for Python 2.7
   $ tox -e py34-tests # to run the tests for Python 3.4
 
+
+You can test running the test suite under the different reactors with the ``TWISTED_REACTOR`` environment variable::
+
+  $ env TWISTED_REACTOR=epoll tox -e py27-tests
+
+
 Some of these tests may fail if you:
 
 * don't have the dependencies required for a particular subsystem installed,
