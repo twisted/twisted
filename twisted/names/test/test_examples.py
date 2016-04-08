@@ -5,6 +5,8 @@
 Tests for L{twisted.names} example scripts.
 """
 
+from __future__ import absolute_import, division
+
 import sys
 
 from twisted.python.filepath import FilePath

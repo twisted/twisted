@@ -1,7 +1,8 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import absolute_import
+
+from __future__ import absolute_import, division
 
 __all__ = ['SecondaryAuthority', 'SecondaryAuthorityService']
 
