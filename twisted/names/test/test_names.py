@@ -140,7 +140,7 @@ my_domain_com = NoFileAuthority(
         b'my-domain.com': [
             my_soa,
             dns.Record_A(b'1.2.3.4', ttl='1S'),
-            dns.Record_NS(b'ns1.domain', ttl='2M'),
+            dns.Record_NS(b'ns1.domain', ttl=b'2M'),
             dns.Record_NS(b'ns2.domain', ttl='3H'),
             dns.Record_SRV(257, 16383, 43690, b'some.other.place.fool',
                            ttl='4D')
