@@ -25,9 +25,11 @@ class SecondaryAuthorityService(service.Service):
         """
         @param primary: The IP address of the server from which to perform
         zone transfers.
+        @type primary: L{str}
 
         @param domains: A sequence of domain names for which to perform
         zone transfers.
+        @type domains: L{list} of L{bytes}
         """
         self.primary = primary
         self.domains = [SecondaryAuthority(primary, d) for d in domains]
@@ -45,7 +47,7 @@ class SecondaryAuthorityService(service.Service):
             C{int} giving a port number.  Together, these define where zone
             transfers will be attempted from.
 
-        @param domain: A C{str} giving the domain to transfer.
+        @param domain: A C{bytes} giving the domain to transfer.
 
         @return: A new instance of L{SecondaryAuthorityService}.
         """
@@ -100,6 +102,11 @@ class SecondaryAuthority(FileAuthority):
     _reactor = None
 
     def __init__(self, primaryIP, domain):
+        """
+        @param domain: The domain for which this will be the secondary
+            authority.
+        @type domain: L{bytes}
+        """
         # Yep.  Skip over FileAuthority.__init__.  This is a hack until we have
         # a good composition-based API for the complicated DNS record lookup
         # logic we want to share.
@@ -112,7 +119,7 @@ class SecondaryAuthority(FileAuthority):
     def fromServerAddressAndDomain(cls, serverAddress, domain):
         """
         Construct a new L{SecondaryAuthority} from a tuple giving a server
-        address and a C{str} giving the name of a domain for which this is an
+        address and a C{bytes} giving the name of a domain for which this is an
         authority.
 
         @param serverAddress: A two-tuple, the first element of which is a
@@ -120,7 +127,7 @@ class SecondaryAuthority(FileAuthority):
             C{int} giving a port number.  Together, these define where zone
             transfers will be attempted from.
 
-        @param domain: A C{str} giving the domain to transfer.
+        @param domain: A C{bytes} giving the domain to transfer.
 
         @return: A new instance of L{SecondaryAuthority}.
         """

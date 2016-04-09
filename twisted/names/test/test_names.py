@@ -997,7 +997,7 @@ class SecondaryAuthorityTests(unittest.TestCase):
         with the I{A} records the authority has cached from the primary.
         """
         secondary = SecondaryAuthority.fromServerAddressAndDomain(
-            (b'192.168.1.2', 1234), b'example.com')
+            ('192.168.1.2', 1234), b'example.com')
         secondary._reactor = reactor = MemoryReactorClock()
 
         secondary.transfer()
