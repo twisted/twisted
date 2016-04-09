@@ -888,13 +888,13 @@ class SFTPTestProcess(protocol.ProcessProtocol):
 
 class CFTPClientTestBase(SFTPTestBase):
     def setUp(self):
-        f = open('dsa_test.pub','w')
-        f.write(test_ssh.publicDSA_openssh)
+        f = open('rsa_test.pub','w')
+        f.write(test_ssh.publicRSA_openssh)
         f.close()
-        f = open('dsa_test','w')
-        f.write(test_ssh.privateDSA_openssh)
+        f = open('rsa_test','w')
+        f.write(test_ssh.privateRSA_openssh)
         f.close()
-        os.chmod('dsa_test', 33152)
+        os.chmod('rsa_test', 33152)
         f = open('kh_test','w')
         f.write('127.0.0.1 ' + test_ssh.publicRSA_openssh)
         f.close()
@@ -921,7 +921,7 @@ class CFTPClientTestBase(SFTPTestBase):
         return defer.maybeDeferred(self.server.stopListening)
 
     def tearDown(self):
-        for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
+        for f in ['rsa_test.pub', 'rsa_test', 'kh_test']:
             try:
                 os.remove(f)
             except:
@@ -947,7 +947,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
                '--known-hosts kh_test '
                '--user-authentications publickey '
                '--host-key-algorithms ssh-rsa '
-               '-i dsa_test '
+               '-i rsa_test '
                '-a '
                '-v '
                '127.0.0.1')
@@ -1291,7 +1291,7 @@ class OurServerBatchFileTests(CFTPClientTestBase):
                     '--known-hosts kh_test '
                     '--user-authentications publickey '
                     '--host-key-algorithms ssh-rsa '
-                    '-i dsa_test '
+                    '-i rsa_test '
                     '-a '
                     '-v -b %s 127.0.0.1') % (port, fn)
         cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
@@ -1403,17 +1403,17 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         # the version without doing anything else; if we can't, we will get a
         # configuration error.
         d = getProcessValue(
-            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-rsa', '-V'))
         def hasPAKT(status):
             if status == 0:
-                args = ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss')
+                args = ('-o', 'PubkeyAcceptedKeyTypes=ssh-rsa')
             else:
                 args = ()
             # Pass -F /dev/null to avoid the user's configuration file from
             # being loaded, as it may contain settings that cause our tests to
             # fail or hang.
             args += ('-F', '/dev/null',
-                     '-o', 'IdentityFile=dsa_test',
+                     '-o', 'IdentityFile=rsa_test',
                      '-o', 'UserKnownHostsFile=kh_test',
                      '-o', 'HostKeyAlgorithms=ssh-rsa',
                      '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
