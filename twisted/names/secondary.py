@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import, division
+
 __all__ = ['SecondaryAuthority', 'SecondaryAuthorityService']
 
 from twisted.internet import task, defer
