@@ -37,6 +37,7 @@ from zope.interface.adapter import AdapterRegistry
 # twisted imports
 from twisted.python.compat import NativeStringIO
 from twisted.python import reflect
+from twisted.python._oldstyle import _oldStyle
 
 
 
@@ -146,6 +147,7 @@ def getRegistry():
 # FIXME: deprecate attribute somehow?
 CannotAdapt = TypeError
 
+@_oldStyle
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
 
@@ -189,6 +191,7 @@ class Adapter:
         return self.original.isuper(iface, adapter)
 
 
+@_oldStyle
 class Componentized:
     """I am a mixin to allow you to be adapted in various ways persistently.
 
