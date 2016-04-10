@@ -35,10 +35,10 @@ def unparseEndpoint(args, kwargs):
 
     description = ':'.join(
         [quoteStringArgument(str(arg)) for arg in args] +
-        ['%s=%s' % (quoteStringArgument(str(key)),
+        sorted(['%s=%s' % (quoteStringArgument(str(key)),
                     quoteStringArgument(str(value)))
          for key, value in iteritems(kwargs)
-        ])
+        ]))
     return description
 
 
