@@ -11,11 +11,11 @@ from __future__ import absolute_import, division
 import os
 import types
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _shouldEnableNewStyle, _PY3
 from twisted.python.util import _replaceIf
 
 
-def passthru(arg):
+def passthru(arg, **kwargs):
     """
     Return C{arg}. Do nothing.
 
@@ -26,25 +26,7 @@ def passthru(arg):
 
 
 
-def _shouldEnableNewStyle():
-    """
-    Returns whether or not we should enable the new-style conversion of
-    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
-    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
-    values and everything else as a truthy value.
-
-    @rtype: L{bool}
-    """
-    value = os.environ.get('TWISTED_NEWSTYLE', '')
-
-    if value in ['', 'no', 'false', 'False', '0']:
-        return False
-    else:
-        return True
-
-
-
-def _ensureOldClass(cls):
+def _ensureOldClass(cls, **kwargs):
     """
     Ensure that C{cls} is an old-style class.
 
@@ -65,10 +47,9 @@ def _ensureOldClass(cls):
     return cls
 
 
-
 @_replaceIf(_PY3, passthru)
 @_replaceIf(not _shouldEnableNewStyle(), _ensureOldClass)
-def _oldStyle(cls):
+def _oldStyle(cls, bases=(object,)):
     """
     A decorator which conditionally converts old-style classes to new-style
     classes. If it is Python 3, or if the C{TWISTED_NEWSTYLE} environment
@@ -81,4 +62,13 @@ def _oldStyle(cls):
     @return: A new-style version of C{cls}.
     """
     _ensureOldClass(cls)
-    return type(cls.__name__, (object,), cls.__dict__)
+    return type(cls.__name__, bases, cls.__dict__)
+
+
+def _oldStyleWithBases(bases=(object,)):
+    """
+    """
+    def _old(cls):
+        return _oldStyle(cls, bases=bases)
+
+    return _old
