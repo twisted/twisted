@@ -28,6 +28,7 @@ from twisted.internet import reactor
 
 
 
+@_oldStyle
 class wxRunner:
     """Make sure GUI events are handled."""
     

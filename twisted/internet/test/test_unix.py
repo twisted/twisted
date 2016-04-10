@@ -52,7 +52,7 @@ else:
 
 
 
-class UNIXFamilyMixin:
+class UNIXFamilyMixin(object):
     """
     Test-helper defining mixin for things related to AF_UNIX sockets.
     """

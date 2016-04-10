@@ -90,7 +90,7 @@ class ConnectableProtocol(Protocol):
 
 
 
-class EndpointCreator:
+class EndpointCreator(object):
     """
     Create client and server endpoints that know how to connect to each other.
     """
