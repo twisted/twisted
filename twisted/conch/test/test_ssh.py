@@ -364,12 +364,12 @@ if cryptography is not None and pyasn1 is not None:
                 C{(generator, prime)} tupple.
             """
             # In these tests, we hardwire the prime values to those defined by
-            # the diffie-hellman-group1-sha1 key exchange algorithm, to avoid
+            # the diffie-hellman-group14-sha1 key exchange algorithm, to avoid
             # requiring a moduli file when running tests.
             # See OpenSSHFactory.getPrimes.
             return {
                 2048: [
-                    _kex.getDHGeneratorAndPrime('diffie-hellman-group1-sha1')]
+                    _kex.getDHGeneratorAndPrime('diffie-hellman-group14-sha1')]
             }
 
         def getService(self, trans, name):
