@@ -1,0 +1,1014 @@
+# -*- test-case-name: twisted.web.test.test_http2 -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+"""
+HTTP2 Implementation
+
+This is the basic server-side protocol implementation used by the Twisted
+Web server for HTTP2.  This functionality is intended to be combined with the
+HTTP/1.1 and HTTP/1.0 functionality in twisted.web.http to provide complete
+protocol support for HTTP-type protocols.
+
+Some function is currently missing here, including:
+
+- handling flow control, both remote and local
+- handling remote settings changes
+- deciding on suitable local settings values
+"""
+from __future__ import absolute_import
+
+import io
+
+from collections import deque
+
+from zope.interface import implementer
+
+import priority
+import h2.connection
+import h2.events
+import h2.exceptions
+
+from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet.interfaces import (
+    IProtocol, ITransport, IConsumer, IPushProducer
+)
+from twisted.internet.protocol import Protocol
+from twisted.internet.task import LoopingCall
+from twisted.protocols.tls import _PullToPush
+
+
+_END_STREAM_SENTINEL = object()
+
+
+
+@implementer(IProtocol, IPushProducer)
+class H2Connection(Protocol):
+    """
+    A class representing a single HTTP/2 connection.
+
+    This implementation of IProtocol works hand in hand with H2Stream. This is
+    because we have the requirement to register multiple producers for a single
+    HTTP/2 connection, one for each stream. The standard Twisted interfaces
+    don't really allow for this, so instead there's a custom interface between
+    the two objects that allows them to work hand-in-hand here.
+
+    @ivar conn: The HTTP/2 connection state machine.
+    @type conn: C{h2.connection.H2Connection}
+
+    @ivar streams: A mapping of stream IDs to L{H2Stream} objects, used to call
+        specific methods on streams when events occur.
+    @type streams: C{dict}, mapping C{int} stream IDs to L{H2Stream} objects.
+
+    @ivar priority: A HTTP/2 priority tree used to ensure that responses are
+        prioritised appropriately.
+    @type priority: L{priority.PriorityTree}
+
+    @ivar _consumerBlocked: A flag tracking whether or not the IConsumer that
+        is consuming this data has asked us to stop producing.
+    @type _consumerBlocked: C{bool}
+
+    @ivar _sendingDeferred: A deferred used to restart the data-sending loop
+        when more response data has been produced. Will not be present if there
+        is outstanding data still to send.
+    @type _consumerBlocked: A L{twisted.internet.defer.Deferred}, or C{None}
+
+    @ivar _outboundStreamQueues: A map of stream IDs to queues, used to store
+        data blocks that are yet to be sent on the connection. These are used
+        both to handle producers that do not respect IConsumer but also to
+        allow priority to multiplex data appropriately.
+    @type _outboundStreamQueues: A C{dict} mapping C{int} stream IDs to
+        C{collections.deque} queues, which contain either C{bytes} objects or
+        L{_END_STREAM_SENTINEL}.
+
+    @ivar _sender: A handle to the data-sending loop, allowing it to be
+        terminated if needed.
+    @type _sender: L{twisted.internet.task.LoopingCall}
+    """
+    factory = None
+    site = None
+
+
+    def __init__(self):
+        self.conn = h2.connection.H2Connection(client_side=False)
+        self.streams = {}
+
+        self.priority = priority.PriorityTree()
+        self._consumerBlocked = None
+        self._sendingDeferred = None
+        self._outboundStreamQueues = {}
+        self._streamCleanupCallbacks = {}
+
+        # Start the data sending function.
+        self._sender = LoopingCall(self._sendPrioritisedData)
+        self._sender.start(interval=0)
+
+
+    # Implementation of IProtocol
+    def connectionMade(self):
+        """
+        Called by the reactor when a connection is received. May also be called
+        by the GenericHTTPChannel during upgrade to HTTP/2.
+        """
+        self.conn.initiate_connection()
+        self.transport.write(self.conn.data_to_send())
+
+
+    def dataReceived(self, data):
+        """
+        Called whenever a chunk of data is received from the transport.
+
+        @param data: The data received from the transport.
+        @type data: C{bytes}
+        """
+        try:
+            events = self.conn.receive_data(data)
+        except h2.exceptions.ProtocolError:
+            # A remote protocol error terminates the connection.
+            dataToSend = self.conn.data_to_send()
+            self.transport.write(dataToSend)
+            self.transport.loseConnection()
+            self.connectionLost("Protocol error from peer.")
+            return
+
+        for event in events:
+            # TODO: Consider replacing with dictionary-dispatch.
+            if isinstance(event, h2.events.RequestReceived):
+                self._requestReceived(event)
+            elif isinstance(event, h2.events.DataReceived):
+                self._requestDataReceived(event)
+            elif isinstance(event, h2.events.StreamEnded):
+                self._requestEnded(event)
+            elif isinstance(event, h2.events.StreamReset):
+                self._requestAborted(event)
+            elif isinstance(event, h2.events.WindowUpdated):
+                self._handleWindowUpdate(event)
+            elif isinstance(event, h2.events.PriorityUpdated):
+                self._handlePriorityUpdate(event)
+            elif isinstance(event, h2.events.ConnectionTerminated):
+                self.transport.loseConnection()
+                self.connectionLost("Shutdown by remote peer")
+
+        dataToSend = self.conn.data_to_send()
+        if dataToSend:
+            self.transport.write(dataToSend)
+
+
+    def connectionLost(self, reason):
+        """
+        Called when the transport connection is lost.
+
+        Informs all outstanding response handlers that the connection has been
+        lost, and cleans up all internal state.
+        """
+        try:
+            self._sender.stop()
+        except Exception:
+            pass
+
+        for stream in self.streams.values():
+            stream.connectionLost(reason)
+
+        for streamID in list(self.streams.keys()):
+            self._requestDone(streamID)
+
+
+    # Implementation of IPushProducer
+    #
+    # Here's how we handle IPushProducer. We have multiple outstanding
+    # H2Streams. Each of these exposes an IConsumer interface to the response
+    # handler that allows it to push data into the H2Stream. The H2Stream then
+    # writes the data into the H2Connection object.
+    #
+    # The H2Connection needs to manage these writes to account for:
+    #
+    # - flow control
+    # - priority
+    #
+    # We manage each of these in different ways.
+    #
+    # For flow control, we simply use the equivalent of the IPushProducer
+    # interface. We simply tell the H2Stream: "Hey, you can't send any data
+    # right now, sorry!". When that stream becomes unblocked, we free it up
+    # again. This allows the H2Stream to propagate this backpressure up the
+    # chain.
+    #
+    # For priority, we need to keep a backlog of data frames that we can send,
+    # and interleave them appropriately. This backlog is most sensibly kept in
+    # the H2Connection object itself. We keep one queue per stream, which is
+    # where the writes go, and then we have a loop that manages popping these
+    # streams off in priority order.
+    #
+    # Logically then, we go as follows:
+    #
+    # 1. Stream calls writeDataToStream(). This causes a DataFrame to be placed
+    #    on the queue for that stream. It also informs the priority
+    #    implementation that this stream is unblocked.
+    # 2. The _sendPrioritisedData() function spins in a tight loop. Each
+    #    iteration it asks the priority implementation which stream should send
+    #    next, and pops a data frame off that stream's queue. If, after sending
+    #    that frame, there is no data left on that stream's queue, the function
+    #    informs the priority implementation that the stream is blocked.
+    #
+    # If all streams are blocked, or if there are no outstanding streams, the
+    # _sendPrioritisedData function waits to be awoken when more data is ready
+    # to send.
+    #
+    # Note that all of this only applies to *data*. Headers and other control
+    # frames deliberately skip this processing as they are not subject to flow
+    # control or priority constraints.
+    def stopProducing(self):
+        """
+        Stop producing data.
+
+        This tells the H2Connection that its consumer has died, so it must stop
+        producing data for good.
+        """
+        self.connectionLost("stopProducing")
+
+
+    def pauseProducing(self):
+        """
+        Pause producing data.
+
+        Tells the H2Connection that it has produced too much data to process
+        for the time being, and to stop until resumeProducing() is called.
+        """
+        self._consumerBlocked = Deferred()
+
+
+    def resumeProducing(self):
+        """
+        Resume producing data.
+
+        This tells the H2Connection to re-add itself to the main loop and
+        produce more data for the consumer.
+        """
+        if self._consumerBlocked is not None:
+            self._consumerBlocked.callback(None)
+            self._consumerBlocked = None
+
+
+    @inlineCallbacks
+    def _sendPrioritisedData(self):
+        """
+        The data sending loop. Must be used within L{LoopingCall}.
+
+        This function sends data on streams according to the rules of HTTP/2
+        priority. It ensures that the data from each stream is interleved
+        according to the priority signalled by the client, making sure that the
+        connection is used with maximal efficiency.
+
+        This function will execute if data is available: if all data is
+        exhausted, the function will place a deferred onto the C{H2Connection}
+        object and wait until it is called to resume executing.
+        """
+        stream = None
+
+        while stream is None:
+            try:
+                stream = next(self.priority)
+            except priority.DeadlockError:
+                # All streams are currently blocked or not progressing. Wait
+                # until a new one becomes available.
+                assert self._sendingDeferred is None
+                self._sendingDeferred = Deferred()
+                yield self._sendingDeferred
+                self._sendingDeferred = None
+                continue
+
+        # Wait behind the transport.
+        if self._consumerBlocked is not None:
+            yield self._consumerBlocked
+
+        remainingWindow = self.conn.local_flow_control_window(stream)
+        frameData = self._outboundStreamQueues[stream].popleft()
+        maxFrameSize = min(self.conn.max_outbound_frame_size, remainingWindow)
+
+        if frameData is _END_STREAM_SENTINEL:
+            # There's no error handling here even though this can throw
+            # ProtocolError because we really shouldn't encounter this problem.
+            # If we do, that's a nasty bug.
+            self.conn.end_stream(stream)
+            self.transport.write(self.conn.data_to_send())
+
+            # Clean up the stream
+            self._requestDone(stream)
+        else:
+            # Respect the max frame size.
+            if len(frameData) > maxFrameSize:
+                excessData = frameData[maxFrameSize:]
+                frameData = frameData[:maxFrameSize]
+                self._outboundStreamQueues[stream].appendleft(excessData)
+
+            # There's deliberately no error handling here, because this just
+            # absolutely should not happen.
+            self.conn.send_data(stream, frameData)
+            self.transport.write(self.conn.data_to_send())
+
+            # If there's no data left, this stream is now blocked.
+            if not self._outboundStreamQueues[stream]:
+                self.priority.block(stream)
+
+            # Also, if the stream's flow control window is exhausted, tell it
+            # to stop.
+            if self.remainingOutboundWindow(stream) <= 0:
+                self.streams[stream].flowControlBlocked()
+
+
+    # Internal functions.
+    def _requestReceived(self, event):
+        """
+        Internal handler for when a request has been received.
+
+        @param event: The Hyper-h2 event that encodes information about the
+            received request.
+        @type event: L{h2.events.RequestReceived}
+        """
+        stream = H2Stream(
+            event.stream_id, self, event.headers, self.requestFactory
+        )
+        stream.site = self.site
+        stream.factory = self.factory
+        self.streams[event.stream_id] = stream
+        self._streamCleanupCallbacks[event.stream_id] = Deferred()
+        self._outboundStreamQueues[event.stream_id] = deque()
+
+        # Add the stream to the priority tree but immediately block it.
+        try:
+            self.priority.insert_stream(event.stream_id)
+        except priority.DuplicateStreamError:
+            # Stream already in the tree. This can happen if we received a
+            # PRIORITY frame before a HEADERS frame. Just move on: we set the
+            # stream up properly in _handlePriorityUpdate.
+            pass
+        else:
+            self.priority.block(event.stream_id)
+
+
+    def _requestDataReceived(self, event):
+        """
+        Internal handler for when a chunk of data is received for a given
+        request.
+
+        @param event: The Hyper-h2 event that encodes information about the
+            received data.
+        @type event: L{h2.events.DataReceived}
+        """
+        stream = self.streams[event.stream_id]
+        stream.receiveDataChunk(event.data, event.flow_controlled_length)
+
+
+    def _requestEnded(self, event):
+        """
+        Internal handler for when a request is complete, and we expect no
+        further data for that request.
+
+        @param event: The Hyper-h2 event that encodes information about the
+            completed stream.
+        @type event: L{h2.events.StreamEnded}
+        """
+        stream = self.streams[event.stream_id]
+        stream.requestComplete()
+
+
+    def _requestAborted(self, event):
+        """
+        Internal handler for when a request is aborted by a remote peer.
+
+        @param event: The Hyper-h2 event that encodes information about the
+            reset stream.
+        @type event: L{h2.events.StreamReset}
+        """
+        stream = self.streams[event.stream_id]
+        stream.connectionLost("Stream reset")
+        self._requestDone(event.stream_id)
+
+
+    def _handlePriorityUpdate(self, event):
+        """
+        Internal handler for when a stream priority is updated.
+
+        @param event: The Hyper-h2 event that encodes information about the
+            stream reprioritization.
+        @type event: L{h2.events.PriorityUpdate}
+        """
+        try:
+            self.priority.reprioritize(
+                stream_id=event.stream_id,
+                depends_on=event.depends_on or None,
+                weight=event.weight,
+                exclusive=event.exclusive,
+            )
+        except priority.MissingStreamError:
+            # A PRIORITY frame arrived before the HEADERS frame that would
+            # trigger us to insert the stream into the tree. That's fine: we
+            # can create the stream here and mark it as blocked.
+            self.priority.insert_stream(
+                stream_id=event.stream_id,
+                depends_on=event.depends_on or None,
+                weight=event.weight,
+                exclusive=event.exclusive,
+            )
+            self.priority.block(event.stream_id)
+
+
+    def writeHeaders(self, version, code, reason, headers, streamID):
+        """
+        Called by C{Request} objects to write a complete set of HTTP headers to
+        a stream.
+
+        @param version: The HTTP version in use. Unused in HTTP/2.
+        @type version: C{bytes}
+
+        @param code: The HTTP status code to write.
+        @type code: C{bytes}
+
+        @param reason: The HTTP reason phrase to write. Unused in HTTP/2.
+        @type reason: C{bytes}
+
+        @param headers: The headers to write to the stream.
+        @type headers: L{twisted.web.http_headers.Headers}
+
+        @param streamID: The ID of the stream to write the headers to.
+        @type streamID: C{int}
+        """
+        headers.insert(0, (b':status', code))
+        self.conn.send_headers(streamID, headers)
+        self.transport.write(self.conn.data_to_send())
+
+
+    def writeDataToStream(self, streamID, data):
+        """
+        May be called by L{H2Stream} objects to write response data to a given
+        stream. Writes a single data frame.
+
+        @param streamID: The ID of the stream to write the data to.
+        @type streamID: C{int}
+
+        @param data: The data chunk to write to the stream.
+        @type data: C{bytes}
+        """
+        self._outboundStreamQueues[streamID].append(data)
+
+        # There's obviously no point unblocking this stream and the sending
+        # loop if the data can't actually be sent, so confirm that there's
+        # some room to send data.
+        if self.conn.local_flow_control_window(streamID) > 0:
+            self.priority.unblock(streamID)
+            if self._sendingDeferred is not None:
+                self._sendingDeferred.callback(streamID)
+                self._sendingDeferred = None
+
+        if self.remainingOutboundWindow(streamID) <= 0:
+            self.streams[streamID].flowControlBlocked()
+
+
+    def endRequest(self, streamID):
+        """
+        Called by L{H2Stream} objects to signal completion of a response.
+
+        @param streamID: The ID of the stream to write the data to.
+        @type streamID: C{int}
+        """
+        self._outboundStreamQueues[streamID].append(_END_STREAM_SENTINEL)
+        self.priority.unblock(streamID)
+        if self._sendingDeferred is not None:
+            self._sendingDeferred.callback(streamID)
+            self._sendingDeferred = None
+
+
+    def abortRequest(self, streamID):
+        """
+        Called by L{H2Stream} objects to request early termination of a stream.
+        This emits a RstStream frame and then removes all stream state.
+
+        @param streamID: The ID of the stream to write the data to.
+        @type streamID: C{int}
+        """
+        self.conn.reset_stream(streamID)
+        self.transport.write(self.conn.data_to_send())
+        self._requestDone(streamID)
+
+
+    def _requestDone(self, streamID):
+        """
+        Called internally by the data sending loop to clean up state that was
+        being used for the stream. Called when the stream is complete.
+
+        @param streamID: The ID of the stream to clean up state for.
+        @type streamID: C{int}
+        """
+        del self._outboundStreamQueues[streamID]
+        self.priority.remove_stream(streamID)
+        del self.streams[streamID]
+        cleanupCallback = self._streamCleanupCallbacks.pop(streamID)
+        cleanupCallback.callback(streamID)
+
+
+    def remainingOutboundWindow(self, streamID):
+        """
+        Called to determine how much room is left in the send window for a
+        given stream. Allows us to handle blocking and unblocking producers.
+
+        @param streamID: The ID of the stream whose flow control window we'll
+            check.
+        @type streamID: C{int}
+        """
+        # TODO: This involves a fair bit of looping and computation for
+        # something that is called a lot. Consider caching values somewhere.
+        windowSize = self.conn.local_flow_control_window(streamID)
+        sendQueue = self._outboundStreamQueues[streamID]
+        alreadyConsumed = sum(
+            len(chunk) for chunk in sendQueue
+            if chunk is not _END_STREAM_SENTINEL
+        )
+
+        return windowSize - alreadyConsumed
+
+
+    def _handleWindowUpdate(self, event):
+        """
+        Manage flow control windows.
+
+        Streams that are blocked on flow control will register themselves with
+        the connection. This will fire deferreds that wake those streams up and
+        allow them to continue processing.
+
+        @param event: The Hyper-h2 event that encodes information about the
+            flow control window change.
+        @type event: L{h2.events.WindowUpdated}
+        """
+        streamID = event.stream_id
+
+        if streamID:
+            # Update applies only to a specific stream. If we don't have the
+            # stream, that's ok: just ignore it.
+            if self._outboundStreamQueues.get(streamID):
+                self.priority.unblock(streamID)
+
+            try:
+                self.streams[streamID].windowUpdated()
+            except KeyError:
+                pass
+        else:
+            # Update strictly applies to all streams.
+            for stream in self.streams.values():
+                stream.windowUpdated()
+
+                # If we still have data to send for this stream, unblock it.
+                if self._outboundStreamQueues.get(stream.streamID):
+                    self.priority.unblock(stream.streamID)
+
+
+    def getPeer(self):
+        """
+        @see L{ITransport.getPeer}
+        """
+        return self.transport.getPeer()
+
+
+    def getHost(self):
+        """
+        @see L{ITransport.getHost}
+        """
+        return self.transport.getHost()
+
+
+    def openStreamWindow(self, streamID, increment):
+        """
+        Open the stream window by a given increment.
+
+        @param streamID: The ID of the stream whose window needs to be opened.
+        @type streamID: C{int}
+
+        @param increment: The amount by which the stream window must be
+        incremented.
+        @type increment: C{int}
+        """
+        # TODO: Consider whether we want some kind of consolidating logic here.
+        self.conn.increment_flow_control_window(increment, stream_id=streamID)
+        self.conn.increment_flow_control_window(increment, stream_id=None)
+        self.transport.write(self.conn.data_to_send())
+
+
+    def _send100Continue(self, streamID):
+        """
+        Sends a 100 Continue response, used to signal to clients that further
+        processing will be performed.
+
+        @param streamID: The ID of the stream that needs the 100 Continue
+        response
+        @type streamID: C{int}
+        """
+        headers = [(b':status', b'100')]
+        self.conn.send_headers(headers=headers, stream_id=streamID)
+        self.transport.write(self.conn.data_to_send())
+
+
+    def _respondToBadRequestAndDisconnect(self, streamID):
+        """
+        This is a quick and dirty way of responding to bad requests.
+
+        As described by HTTP standard we should be patient and accept the
+        whole request from the client before sending a polite bad request
+        response, even in the case when clients send tons of data.
+
+        Unlike in the HTTP/1.1 case, this does not actually disconnect the
+        underlying transport: there's no need. This instead just sends a 400
+        response and terminates the stream.
+
+        @param streamID: The ID of the stream that needs the 100 Continue
+        response
+        @type streamID: C{int}
+        """
+        headers = [(b':status', '400')]
+        self.conn.send_headers(
+            headers=headers,
+            stream_id=streamID,
+            end_stream=True
+        )
+        self.transport.write(self.conn.data_to_send())
+
+        stream = self.streams[streamID]
+        stream.connectionLost("Stream reset")
+        self._requestDone(streamID)
+
+
+
+@implementer(ITransport, IConsumer, IPushProducer)
+class H2Stream(object):
+    """
+    A class representing a single HTTP/2 stream.
+
+    This class works hand-in-hand with H2Connection. It acts to provide an
+    implementation of ITransport, IConsumer, and IProducer that work for a
+    single HTTP/2 connection, while tightly cleaving to the interface provided
+    by those interfaces. It does this by having a tight coupling to
+    H2Connection, which allows associating many of the functions of ITransport,
+    IConsumer, and IProducer to objects on a stream-specific level.
+
+    @ivar streamID: The numerical stream ID that this object corresponds to.
+    @type streamID: C{int}
+
+    @ivar producing: Whether this stream is currently allowed to produce data
+        to its consumer.
+    @type producing: C{bool}
+
+    @ivar command: The HTTP verb used on the request.
+    @type command: C{unicode}
+
+    @ivar path: The HTTP path used on the request.
+    @type path: C{unicode}
+
+    @ivar producer: The object producing the response, if any.
+    @type producer: L{IProducer}
+
+    @ivar _producerProducing: Whether the producer stored in producer is
+        currently producing data.
+    @type _producerProducing: C{bool}
+
+    @ivar _inboundDataBuffer: Any data that has been received from the network
+        but has not yet been received by the consumer.
+    @type _inboundDataBuffer: A L{collections.deque} containing C{bytes}
+
+    @ivar _conn: A reference to the connection this stream belongs to.
+    @type _conn: L{H2Connection}
+
+    @ivar _request: A request object that this stream corresponds to.
+    @type _request: L{twisted.web.iweb.IRequest}
+
+    @ivar _buffer: A buffer containing data produced by the producer that could
+        not be sent on the network at this time.
+    @type _buffer: L{io.BytesIO}
+    """
+    def __init__(self, streamID, connection, headers, requestFactory):
+        self.streamID = streamID
+        self.producing = True
+        self.command = None
+        self.path = None
+        self.producer = None
+        self._producerProducing = False
+        self._hasStreamingProducer = None
+        self._inboundDataBuffer = deque()
+        self._conn = connection
+        self._request = requestFactory(self, queued=False)
+        self._buffer = io.BytesIO()
+
+        self._convertHeaders(headers)
+
+    def _convertHeaders(self, headers):
+        """
+        This method converts the HTTP/2 header set into something that looks
+        like HTTP/1.1. In particular, it strips the 'special' headers and adds
+        a Host: header.
+
+        @param headers: The HTTP/2 header set.
+        @type headers: A C{list} of C{tuple}s of header name and header value,
+            both as C{unicode}.
+        """
+        gotLength = False
+
+        for header in headers:
+            if not header[0].startswith(b':'):
+                gotLength = (
+                    _addHeaderToRequest(self._request, header) or gotLength
+                )
+            elif header[0] == u':method':
+                self.command = header[1].encode('utf-8')
+            elif header[0] == u':path':
+                self.path = header[1].encode('utf-8')
+            elif header[0] == u':authority':
+                # This is essentially the Host: header from HTTP/1.1
+                _addHeaderToRequest(self._request, (u'host', header[1]))
+
+        if not gotLength:
+            self._request.gotLength(None)
+
+        self._request.parseCookies()
+        expectContinue = self._request.requestHeaders.getRawHeaders(b'expect')
+        if expectContinue and expectContinue[0].lower() == b'100-continue':
+            self._request._send100Continue()
+
+
+    # Methods called by the H2Connection
+    def receiveDataChunk(self, data, flow_controlled_length):
+        """
+        Called when the connection has received a chunk of data from the
+        underlying transport. If the stream has been registered with a
+        consumer, and is currently able to push data, immediately passes it
+        through. Otherwise, buffers the chunk until we can start producing.
+
+        @param data: The chunk of data that was received.
+        @type data: C{bytes}
+
+        @param flow_controlled_length: The total flow controlled length of this
+            chunk, which is used when we want to re-open the window. May be
+            different to C{len(data)}.
+        @type flow_controlled_length: C{int}
+        """
+        if not self.producing:
+            # Buffer data.
+            self._inboundDataBuffer.append((data, flow_controlled_length))
+        else:
+            self._request.handleContentChunk(data)
+            self._conn.openStreamWindow(self.streamID, flow_controlled_length)
+
+
+    def requestComplete(self):
+        """
+        Called by the L{H2Connection} when the all data for a request has been
+        received. Currently, with the legacy Request object, just calls
+        requestReceived unless the producer wants us to be quiet.
+        """
+        if self.producing:
+            self._request.requestReceived(self.command, self.path, b'HTTP/2')
+        else:
+            self._inboundDataBuffer.append((_END_STREAM_SENTINEL, None))
+
+
+    def connectionLost(self, reason):
+        """
+        Called by the L{H2Connection} when a connection is lost or a stream is
+        reset.
+
+        @param reason: The reason the connection was lost.
+        @type reason: C{str}
+        """
+        self._request.connectionLost(reason)
+
+
+    def windowUpdated(self):
+        """
+        Called by the L{H2Connection} when this stream's flow control window
+        has been opened.
+        """
+        # If we don't have a producer, we have no-one to tell.
+        if not self.producer:
+            return
+
+        # If we're not blocked on flow control, we don't care.
+        if self._producerProducing:
+            return
+
+        # We check whether the stream's flow control window is actually above
+        # 0, and then, if a producer is registered and we still have space in
+        # the window, we unblock it.
+        remainingWindow = self._conn.remainingOutboundWindow(self.streamID)
+        if not remainingWindow > 0:
+            return
+
+        # We have a producer and space in the window, so that producer can
+        # start producing again!
+        self._producerProducing = True
+        self.producer.resumeProducing()
+
+
+    def flowControlBlocked(self):
+        """
+        Called by the L{H2Connection} when this stream's flow control window
+        has been exhausted.
+        """
+        if not self.producer:
+            return
+
+        if self._producerProducing:
+            self.producer.pauseProducing()
+            self._producerProducing = False
+
+
+    # Methods called by the consumer (usually an IRequest).
+    def writeHeaders(self, version, code, reason, headers):
+        """
+        Called by the consumer to write headers to the stream.
+
+        @param version: The HTTP version.
+        @type version: C{str}
+
+        @param code: The status code.
+        @type code: C{int}
+
+        @param reason: The reason phrase. Ignored in HTTP/2.
+        @type reason: C{str}
+
+        @param headers: The HTTP response headers.
+        @type: Any iterable of two-tuples of C{bytes}, representing header
+            names and header values.
+        """
+        self._conn.writeHeaders(version, code, reason, headers, self.streamID)
+
+
+    def requestDone(self, request):
+        """
+        Called by a consumer to clean up whatever permanent state is in use.
+
+        @param request: The request calling the method.
+        @type request: L{twisted.web.iweb.IRequest}
+        """
+        self._conn.endRequest(self.streamID)
+
+
+    def _send100Continue(self):
+        """
+        Sends a 100 Continue response, used to signal to clients that further
+        processing will be performed.
+        """
+        self._conn._send100Continue(self.streamID)
+
+
+    def _respondToBadRequestAndDisconnect(self):
+        """
+        This is a quick and dirty way of responding to bad requests.
+
+        As described by HTTP standard we should be patient and accept the
+        whole request from the client before sending a polite bad request
+        response, even in the case when clients send tons of data.
+
+        Unlike in the HTTP/1.1 case, this does not actually disconnect the
+        underlying transport: there's no need. This instead just sends a 400
+        response and terminates the stream.
+        """
+        self._conn._respondToBadRequestAndDisconnect(self.streamID)
+
+
+    # Implementation: ITransport
+    def write(self, data):
+        """
+        Write a single chunk of data into a data frame.
+
+        @param data: The data chunk to send.
+        @type data: C{bytes}
+        """
+        self._conn.writeDataToStream(self.streamID, data)
+        return
+
+
+    def writeSequence(self, iovec):
+        """
+        Write a sequence of chunks of data into data frames.
+
+        @param iovec: A sequence of chunks to send.
+        @type iovec: An iterable of C{bytes} chunks.
+        """
+        for chunk in iovec:
+            self.write(chunk)
+
+
+    def loseConnection(self):
+        """
+        Close the connection after writing all pending data.
+        """
+        self._conn.endRequest(self.streamID)
+
+
+    def abortConnection(self):
+        """
+        Forcefully abort the connection by sending a RstStream frame.
+        """
+        self._conn.abortRequest(self.streamID)
+
+
+    def getPeer(self):
+        """
+        Get information about the peer.
+        """
+        self._conn.getPeer()
+
+
+    def getHost(self):
+        """
+        Similar to getPeer, but for this side of the connection.
+        """
+        self._conn.getHost()
+
+
+    # Implementation: IConsumer
+    def registerProducer(self, producer, streaming):
+        """
+        @see L{IConsumer.registerProducer}
+        """
+        if self.producer:
+            raise ValueError(
+                "registering producer %s before previous one (%s) was "
+                "unregistered" % (producer, self.producer))
+
+        if not streaming:
+            self.hasStreamingProducer = False
+            producer = _PullToPush(producer, self)
+            producer.startStreaming()
+        else:
+            self.hasStreamingProducer = True
+
+        self.producer = producer
+        self._producerProducing = True
+
+
+    def unregisterProducer(self):
+        """
+        @see L{IConsumer.unregisterProducer}
+        """
+        # When the producer is unregistered, we're done.
+        if self.producer is not None and not self.hasStreamingProducer:
+            self.producer.stopStreaming()
+
+        self._producerProducing = False
+        self.producer = None
+        self.hasStreamingProducer = None
+
+
+    # Implementation: IPushProducer
+    def stopProducing(self):
+        """
+        @see L{IProducer.stopProducing}
+        """
+        self.producing = False
+        self.abortConnection()
+
+
+    def pauseProducing(self):
+        """
+        @see L{IPushProducer.pauseProducing}
+        """
+        self.producing = False
+
+
+    def resumeProducing(self):
+        """
+        @see L{IPushProducer.resumeProducing}
+        """
+        self.producing = True
+        consumedLength = 0
+
+        while self.producing and self._inboundDataBuffer:
+            # Allow for pauseProducing to be called in response to a call to
+            # resumeProducing.
+            chunk, flow_controlled_length = self._inboundDataBuffer.popleft()
+
+            if chunk is _END_STREAM_SENTINEL:
+                self.requestComplete()
+            else:
+                consumedLength += flow_controlled_length
+                self._request.handleContentChunk(chunk)
+
+        self._conn.openStreamWindow(self.streamID, consumedLength)
+
+
+
+def _addHeaderToRequest(request, header):
+    """
+    Add a header tuple to a request header object.
+    """
+    requestHeaders = request.requestHeaders
+    name, value = header
+    name, value = name.encode('utf-8'), value.encode('utf-8')
+    values = requestHeaders.getRawHeaders(name)
+
+    if values is not None:
+        values.append(value)
+    else:
+        requestHeaders.setRawHeaders(name, [value])
+
+    if name == b'content-length':
+        request.gotLength(int(value))
+        return True
+
+    return False

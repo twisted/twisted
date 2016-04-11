@@ -80,7 +80,9 @@ _EXTRA_OPTIONS = dict(
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],
-    windows=['pypiwin32']
+    windows=['pypiwin32'],
+    http2=['h2 >= 2.2.0, < 3.0',
+           'priority >= 1.1.0, < 2.0'],
 )
 
 _PLATFORM_INDEPENDENT = (
@@ -96,6 +98,7 @@ _EXTRAS_REQUIRE = {
     'conch': _EXTRA_OPTIONS['conch'],
     'soap': _EXTRA_OPTIONS['soap'],
     'serial': _EXTRA_OPTIONS['serial'],
+    'http2': _EXTRA_OPTIONS['http2'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'osx_platform': (
         _EXTRA_OPTIONS['osx'] + _PLATFORM_INDEPENDENT
