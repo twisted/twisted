@@ -253,6 +253,7 @@ modules = [
     "twisted.web.demo",
     "twisted.web.error",
     "twisted.web.guard",
+    "twisted.web.http2",
     "twisted.web.http_headers",
     "twisted.web.proxy",
     "twisted.web.resource",
@@ -425,6 +426,7 @@ testModules = [
     "twisted.web.test.test_error",
     # The downloadPage tests weren't ported:
     "twisted.web.test.test_http",
+    "twisted.web.test.test_http2",
     "twisted.web.test.test_flatten",
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_httpauth",

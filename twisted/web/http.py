@@ -104,7 +104,12 @@ from twisted.protocols import policies, basic
 from twisted.web.iweb import IRequest, IAccessLogFormatter
 from twisted.web.http_headers import Headers
 
-H2_ENABLED = False
+try:
+    from twisted.web.http2 import H2Connection
+    H2_ENABLED = True
+except ImportError:
+    H2Connection = None
+    H2_ENABLED = False
 
 from twisted.web._responses import (
     SWITCHING,
@@ -951,7 +956,8 @@ class Request:
             self._transport.write(b"0\r\n\r\n")
 
         # log request
-        if hasattr(self._channel, "factory"):
+        if (hasattr(self._channel, "factory") and
+            self._channel.factory is not None):
             self._channel.factory.log(self)
 
         self.finished = 1
@@ -2255,9 +2261,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @ivar _site: A reference to the creating L{twisted.web.server.Site} object.
     @type _site: L{twisted.web.server.Site}
+
+    @ivar _factory: A reference to the creating L{HTTPFactory} object.
+    @type _factory: L{HTTPFactory}
     """
     _negotiatedProtocol = None
     _requestFactory = Request
+    _factory = None
     _site = None
 
 
@@ -2274,6 +2284,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         """
         @see: L{HTTPChannel.factory}
         """
+        self._factory = value
         self._channel.factory = value
 
 
@@ -2316,6 +2327,12 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
             if negotiatedProtocol == b'h2':
                 assert H2_ENABLED, "Cannot negotiate HTTP/2 without support."
+                transport = self._channel.transport
+                self._channel = H2Connection()
+                self._channel.requestFactory = self._requestFactory
+                self._channel.site = self._site
+                self._channel.factory = self._factory
+                self._channel.makeConnection(transport)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
                 assert negotiatedProtocol == b'http/1.1', \
