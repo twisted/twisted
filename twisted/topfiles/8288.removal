@@ -1,0 +1,1 @@
+twisted.internet.qtreactor, a stub that imported the external qtreactor, has been removed.
