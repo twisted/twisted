@@ -586,6 +586,8 @@ class APIBuilder(object):
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
+             "--intersphinx",
+             "https://python-hyper.org/h2/en/stable/objects.inv",
              "--html-write-function-pages", "--quiet", "--make-html"])
 
 

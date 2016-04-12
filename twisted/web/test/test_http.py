@@ -299,11 +299,23 @@ class GenericHTTPChannelTests(unittest.TestCase):
         self.assertEqual(negotiatedProtocol, b'http/1.1')
 
 
-    def test_http2(self):
+    def test_http2_present(self):
         """
-        If the transport reports that HTTP/2 is negotiated, that's what's
-        negotiated. Currently HTTP/2 is unsupported, so this raises an
-        AssertionError.
+        If the transport reports that HTTP/2 is negotiated and HTTP/2 is
+        present, that's what's negotiated.
+        """
+        b = StringTransport()
+        b.negotiatedProtocol = b'h2'
+        negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
+        self.assertEqual(negotiatedProtocol, b'h2')
+    if not http.H2_ENABLED:
+        test_http2_present.skip = "HTTP/2 support not present"
+
+
+    def test_http2_absent(self):
+        """
+        If the transport reports that HTTP/2 is negotiated and HTTP/2 is not
+        present, an error is encountered.
         """
         b = StringTransport()
         b.negotiatedProtocol = b'h2'
@@ -312,6 +324,8 @@ class GenericHTTPChannelTests(unittest.TestCase):
             self._negotiatedProtocolForTransportInstance,
             b,
         )
+    if http.H2_ENABLED:
+        test_http2_absent.skip = "HTTP/2 support present"
 
 
     def test_unknownProtocol(self):
