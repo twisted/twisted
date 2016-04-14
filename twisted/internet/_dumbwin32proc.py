@@ -23,7 +23,7 @@ import pywintypes
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
 PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 
-from zope.interface import implements
+from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
 from twisted.python.win32 import quoteArguments
@@ -94,6 +94,8 @@ def _invalidWin32App(pywinerr):
 
     return pywinerr.args[0] == 193
 
+
+@implementer(IProcessTransport, IConsumer, IProducer)
 class Process(_pollingfile._PollingTimer, BaseProcess):
     """A process that integrates with the Twisted event loop.
 
@@ -112,8 +114,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 
     """
-    implements(IProcessTransport, IConsumer, IProducer)
-
     closedNotifies = 0
 
     def __init__(self, reactor, protocol, command, args, environment, path):

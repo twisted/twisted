@@ -54,7 +54,7 @@ from threading import Thread
 from Queue import Queue, Empty
 import sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
@@ -75,11 +75,13 @@ def dictRemove(dct, value):
 def raiseException(e):
     raise e
 
+
+
+@implementer(IReactorFDSet)
 class ThreadedSelectReactor(posixbase.PosixReactorBase):
     """A threaded select() based reactor - runs on all POSIX platforms and on
     Win32.
     """
-    implements(IReactorFDSet)
 
     def __init__(self):
         threadable.init(1)

@@ -7,7 +7,7 @@ TCP support for IOCP reactor
 
 import socket, operator, errno, struct
 
-from zope.interface import implements, classImplements
+from zope.interface import implementer, classImplements
 
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.protocol import Protocol
@@ -35,15 +35,14 @@ connectExErrors = {
         ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,
         }
 
+@implementer(IReadWriteHandle, interfaces.ITCPTransport,
+             interfaces.ISystemHandle)
 class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     """
     @ivar TLS: C{False} to indicate the connection is in normal TCP mode,
         C{True} to indicate that TLS has been started and that operations must
         be routed through the L{TLSMemoryBIOProtocol} instance.
     """
-    implements(IReadWriteHandle, interfaces.ITCPTransport,
-               interfaces.ISystemHandle)
-
     TLS = False
 
 
@@ -388,8 +387,8 @@ class Connector(TCPConnector):
 
 
 
+@implementer(interfaces.IListeningPort)
 class Port(_SocketCloser, _LogOwner):
-    implements(interfaces.IListeningPort)
 
     connected = False
     disconnected = False
@@ -586,5 +585,3 @@ class Port(_SocketCloser, _LogOwner):
 
         if rc and rc != ERROR_IO_PENDING:
             self.handleAccept(rc, evt)
-
-

@@ -7,7 +7,7 @@ UDP support for IOCP reactor
 
 import socket, operator, struct, warnings, errno
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import defer, address, error, interfaces
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -21,6 +21,8 @@ from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 
 
 
+@implementer(IReadWriteHandle, interfaces.IListeningPort,
+             interfaces.IUDPTransport, interfaces.ISystemHandle)
 class Port(abstract.FileHandle):
     """
     UDP port, listening for packets.
@@ -28,10 +30,6 @@ class Port(abstract.FileHandle):
     @ivar addressFamily: L{socket.AF_INET} or L{socket.AF_INET6}, depending on
         whether this port is listening on an IPv4 address or an IPv6 address.
     """
-    implements(
-        IReadWriteHandle, interfaces.IListeningPort, interfaces.IUDPTransport,
-        interfaces.ISystemHandle)
-
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
     dynamicReadBuffers = False
@@ -410,13 +408,11 @@ class MulticastMixin:
 
 
 
+@implementer(interfaces.IMulticastTransport)
 class MulticastPort(MulticastMixin, Port):
     """
     UDP Port that supports multicasting.
     """
-
-    implements(interfaces.IMulticastTransport)
-
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192,
                  reactor=None, listenMultiple=False):

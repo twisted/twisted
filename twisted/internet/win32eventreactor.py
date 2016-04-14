@@ -50,7 +50,7 @@ import sys
 from threading import Thread
 from weakref import WeakKeyDictionary
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Win32 imports
 from win32file import FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT, WSAEventSelect
@@ -118,8 +118,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
         will also forget about it.
     @type _closedAndNotReading: C{WeakKeyDictionary}
     """
-    implements(IReactorFDSet, IReactorWin32Events)
-
     dummyEvent = CreateEvent(None, 0, 0, None)
 
     def __init__(self):
@@ -370,7 +368,6 @@ class _ThreadedWin32EventsMixin(object):
     @ivar _reactorThread: The L{threading.Thread} which is running the
         L{Win32Reactor}.  This is C{None} until it is actually needed.
     """
-    implements(IReactorWin32Events)
 
     _reactor = None
     _reactorThread = None
