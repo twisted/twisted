@@ -78,6 +78,7 @@ from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.threads import blockingCallFromThread
 
 
+@implementer(IReactorFDSet, IReactorWin32Events)
 class Win32Reactor(posixbase.PosixReactorBase):
     """
     Reactor that uses Win32 event APIs.
@@ -357,6 +358,7 @@ class _ThreadFDWrapper(object):
 
 
 
+@implementer(IReactorWin32Events)
 class _ThreadedWin32EventsMixin(object):
     """
     This mixin implements L{IReactorWin32Events} for another reactor by running
