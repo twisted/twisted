@@ -38,6 +38,7 @@ class ExampleTestBase(object):
         self.originalPath = sys.path[:]
         self.originalModules = sys.modules.copy()
 
+        # Python usually expects native strs to be written to sys.stdout/stderr
         self.fakeErr = NativeStringIO()
         self.patch(sys, 'stderr', self.fakeErr)
         self.fakeOut = NativeStringIO()
