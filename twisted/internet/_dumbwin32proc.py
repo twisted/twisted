@@ -183,8 +183,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         cmdline = quoteArguments(args)
 
         if _PY3:
-            # The command, too, needs to be Unicode.
-            command = _maybeMBCS(command)
+            # The command, too, needs to be Unicode, if it is a value.
+            command = _maybeMBCS(command) if command else command
 
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
