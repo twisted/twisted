@@ -28,7 +28,7 @@ PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.compat import items, _PY3, unicode
+from twisted.python.compat import items, _PY3, unicode, _maybeMBCS
 from twisted.python.win32 import quoteArguments
 
 from twisted.internet import error
@@ -177,14 +177,14 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         env.update(environment or {})
 
         if _PY3:
-            # Make sure all the arguments are str
-            args = [x.decode('mbcs') if isinstance(x, bytes) else x
-                    for x in args]
+            # Make sure all the arguments are Unicode.
+            args = [_maybeMBCS(x) for x in args]
 
         cmdline = quoteArguments(args)
 
-        if _PY3 and isinstance(command, bytes):
-            command = command.decode('mbcs')
+        if _PY3:
+            # The command, too, needs to be Unicode.
+            command = _maybeMBCS(command)
 
         # TODO: error detection here.  See #2787 and #4184.
         def doCreate():
@@ -202,11 +202,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                 newenv = {}
                 for key, value in items(env):
 
-                    if not isinstance(value, unicode):
-                        value = value.decode('mbcs')
-
-                    if not isinstance(key, unicode):
-                        key = key.decode('mbcs')
+                    key = _maybeMBCS(key)
+                    value = _maybeMBCS(value)
 
                     newenv[key] = value
 

@@ -702,6 +702,24 @@ def _bytesChr(i):
 
 
 
+def _maybeMBCS(s):
+    """
+    Convert C{s} to a L{unicode} string, if required.
+
+    @param s: The string to convert.
+    @type s: L{bytes} or L{unicode}
+
+    @rtype: L{unicode}
+    """
+    assert os.name == "win32"
+    assert type(s) in [bytes, unicode]
+
+    if isinstance(s, bytes):
+        return s.decode('mbcs')
+    return s
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -735,4 +753,5 @@ __all__ = [
     "_b64encodebytes",
     "_b64decodebytes",
     "_bytesChr",
+    "_maybeMBCS",
 ]
