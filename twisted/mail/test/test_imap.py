@@ -1649,8 +1649,6 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        # Create the initial file.
-        FilePath(infile).touch()
         SimpleServer.theAccount.addMailbox('PARTIAL/SUBTHING')
         def login():
             return self.client.login('testuser', 'password-test')
