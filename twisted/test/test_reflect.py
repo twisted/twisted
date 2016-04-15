@@ -18,7 +18,6 @@ from twisted.python import reflect
 from twisted.python.reflect import (
     accumulateMethods, prefixedMethods, prefixedMethodNames,
     addMethodNamesToDict, fullyQualifiedName)
-from twisted.python.versions import Version
 
 
 class Base(object):
@@ -891,56 +890,3 @@ class GetClassTests(unittest.TestCase):
         new = NewClass()
         self.assertEqual(reflect.getClass(NewClass).__name__, 'type')
         self.assertEqual(reflect.getClass(new).__name__, 'NewClass')
-
-
-if not _PY3:
-    # The functions tested below are deprecated but still used by external
-    # projects like Nevow 0.10. They are not going to be ported to Python 3
-    # (hence the condition above) and will be removed as soon as no project used
-    # by Twisted will depend on these functions. Also, have a look at the
-    # comments related to those functions in twisted.python.reflect.
-    class DeprecationTests(unittest.TestCase):
-        """
-        Test deprecations in twisted.python.reflect
-        """
-
-        def test_allYourBase(self):
-            """
-            Test deprecation of L{reflect.allYourBase}. See #5481 for removal.
-            """
-            self.callDeprecated(
-                (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-                reflect.allYourBase, DeprecationTests)
-
-
-        def test_accumulateBases(self):
-            """
-            Test deprecation of L{reflect.accumulateBases}. See #5481 for removal.
-            """
-            l = []
-            self.callDeprecated(
-                (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-                reflect.accumulateBases, DeprecationTests, l, None)
-
-
-        def test_getcurrent(self):
-            """
-            Test deprecation of L{reflect.getcurrent}.
-            """
-
-            class C:
-                pass
-
-            self.callDeprecated(
-                Version("Twisted", 14, 0, 0),
-                reflect.getcurrent, C)
-
-
-        def test_isinst(self):
-            """
-            Test deprecation of L{reflect.isinst}.
-            """
-
-            self.callDeprecated(
-                (Version("Twisted", 14, 0, 0), "isinstance"),
-                reflect.isinst, object(), object)
