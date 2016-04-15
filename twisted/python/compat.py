@@ -711,8 +711,8 @@ def _maybeMBCS(s):
 
     @rtype: L{unicode}
     """
-    assert sys.platform == "win32"
-    assert type(s) in [bytes, unicode]
+    assert sys.platform == "win32", "only reasonable on Windows"
+    assert type(s) in [bytes, unicode], type(s) + " is not bytes or unicode"
 
     if isinstance(s, bytes):
         return s.decode('mbcs')
