@@ -21,7 +21,6 @@ from collections import OrderedDict
 
 from zope.interface import implements
 
-from twisted.python.filepath import FilePath
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
 from twisted.protocols import loopback
