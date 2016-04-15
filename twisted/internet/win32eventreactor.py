@@ -1,11 +1,11 @@
+# -*- test-case-name: twisted.internet.test.test_win32events -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 A win32event based implementation of the Twisted main loop.
 
-This requires pywin32 (formerly win32all) or ActivePython to be installed.
+This requires pywin32 or ActivePython to be installed.
 
 To install the event loop (and you should do this before any connections,
 listeners or connectors are added)::
@@ -17,36 +17,15 @@ LIMITATIONS:
  1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
  2. Process running has some problems (see L{Process} docstring).
 
-
-TODO:
- 1. Event loop handling of writes is *very* problematic (this is causing failed tests).
-    Switch to doing it the correct way, whatever that means (see below).
- 2. Replace icky socket loopback waker with event based waker (use dummyEvent object)
- 3. Switch everyone to using Free Software so we don't have to deal with proprietary APIs.
-
-
-ALTERNATIVE SOLUTIONS:
- - IIRC, sockets can only be registered once. So we switch to a structure
-   like the poll() reactor, thus allowing us to deal with write events in
-   a decent fashion. This should allow us to pass tests, but we're still
-   limited to 64 events.
-
-Or:
-
- - Instead of doing a reactor, we make this an addon to the select reactor.
-   The WFMO event loop runs in a separate thread. This means no need to maintain
-   separate code for networking, 64 event limit doesn't apply to sockets,
-   we can run processes and other win32 stuff in default event loop. The
-   only problem is that we're stuck with the icky socket based waker.
-   Another benefit is that this could be extended to support >64 events
-   in a simpler manner than the previous solution.
-
-The 2nd solution is probably what will get implemented.
+For a high-performance main loop on Windows, use
+L{twisted.internet.iocpreactor.reactor.IOCPReactor}.
 """
 
-# System imports
+from __future__ import absolute_import, division
+
 import time
 import sys
+
 from threading import Thread
 from weakref import WeakKeyDictionary
 
@@ -70,9 +49,9 @@ from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT
 
 import win32gui
 
-# Twisted imports
 from twisted.internet import posixbase
 from twisted.python import log, threadable, failure
+from twisted.python.compat import keys
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.threads import blockingCallFromThread
@@ -177,7 +156,8 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def removeReader(self, reader):
-        """Remove a Selectable for notification of data available to read.
+        """
+        Remove a Selectable for notification of data available to read.
         """
         if reader in self._reads:
             del self._events[self._reads[reader]]
@@ -191,7 +171,8 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def removeWriter(self, writer):
-        """Remove a Selectable for notification of data available to write.
+        """
+        Remove a Selectable for notification of data available to write.
         """
         if writer in self._writes:
             del self._writes[writer]
@@ -205,11 +186,17 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def getReaders(self):
-        return self._reads.keys()
+        """
+        Return a L{list} of all readers.
+        """
+        return keys(self._reads)
 
 
     def getWriters(self):
-        return self._writes.keys()
+        """
+        Return a L{list} of all writers.
+        """
+        return keys(self._writes)
 
 
     def doWaitForMultipleEvents(self, timeout):
@@ -225,11 +212,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         # If any descriptors are trying to close, try to get them out of the way
         # first.
-        for reader in self._closedAndReading.keys():
+        for reader in keys(self._closedAndReading):
             ranUserCode = True
             self._runAction('doRead', reader)
 
-        for fd in self._writes.keys():
+        for fd in self.getWriters():
             ranUserCode = True
             log.callWithLogger(fd, self._runWrite, fd)
 
@@ -245,7 +232,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             time.sleep(timeout)
             return
 
-        handles = self._events.keys() or [self.dummyEvent]
+        handles = keys(self._events) or [self.dummyEvent]
         timeout = int(timeout * 1000)
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:

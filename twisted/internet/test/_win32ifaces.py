@@ -5,6 +5,10 @@
 Windows implementation of local network interface enumeration.
 """
 
+from __future__ import absolute_import, division
+
+from twisted.python.compat import nativeString
+
 from socket import socket, AF_INET6, SOCK_STREAM
 from ctypes import (
     WinDLL, byref, create_string_buffer, c_int, c_void_p,
@@ -115,5 +119,5 @@ def win32GetLinkLocalIPv6Addresses():
             byref(retBytes))
         if ret:
             raise RuntimeError("WSAAddressToString failure")
-        retList.append(string_at(addressStringBuf))
+        retList.append(nativeString(string_at(addressStringBuf)))
     return [addr for addr in retList if '%' in addr]
