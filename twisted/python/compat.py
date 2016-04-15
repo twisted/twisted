@@ -704,7 +704,7 @@ def _bytesChr(i):
 
 def _maybeMBCS(s):
     """
-    Convert C{s} to a L{unicode} string, if required.
+    Convert the string C{s} to a L{unicode} string, if required.
 
     @param s: The string to convert.
     @type s: L{bytes} or L{unicode}
@@ -712,7 +712,7 @@ def _maybeMBCS(s):
     @rtype: L{unicode}
     """
     assert sys.platform == "win32", "only reasonable on Windows"
-    assert type(s) in [bytes, unicode], type(s) + " is not bytes or unicode"
+    assert type(s) in [bytes, unicode], str(type(s)) + " is not a string"
 
     if isinstance(s, bytes):
         return s.decode('mbcs')
