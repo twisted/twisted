@@ -51,7 +51,7 @@ import win32gui
 
 from twisted.internet import posixbase
 from twisted.python import log, threadable, failure
-from twisted.python.compat import keys
+from twisted.python.compat import _keys
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.threads import blockingCallFromThread
@@ -189,14 +189,14 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """
         Return a L{list} of all readers.
         """
-        return keys(self._reads)
+        return _keys(self._reads)
 
 
     def getWriters(self):
         """
         Return a L{list} of all writers.
         """
-        return keys(self._writes)
+        return _keys(self._writes)
 
 
     def doWaitForMultipleEvents(self, timeout):
@@ -212,7 +212,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         # If any descriptors are trying to close, try to get them out of the way
         # first.
-        for reader in keys(self._closedAndReading):
+        for reader in _keys(self._closedAndReading):
             ranUserCode = True
             self._runAction('doRead', reader)
 
@@ -232,7 +232,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             time.sleep(timeout)
             return
 
-        handles = keys(self._events) or [self.dummyEvent]
+        handles = _keys(self._events) or [self.dummyEvent]
         timeout = int(timeout * 1000)
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:
