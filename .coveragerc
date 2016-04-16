@@ -1,6 +1,15 @@
 [run]
-source = twisted
 branch = True
+parallel = True
+include =
+   */twisted/*
+   twisted/*
+
+[paths]
+source=
+   twisted
+   build/*/lib/python*/site-packages/twisted
+   build/pypy*/site-packages/twisted
 
 [report]
 precision = 2
