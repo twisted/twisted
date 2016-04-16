@@ -1038,7 +1038,7 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
         self.assertEqual(warnings[0]['message'],
             "%s should implement done() but doesn't. Falling back to "
             "printErrors() and friends." % reflect.qual(result.__class__))
-        self.assertEqual(warnings[0]['filename'], __file__)
+        self.assertTrue(__file__.startswith(warnings[0]['filename']))
         self.assertEqual(len(warnings), 1)
 
 
