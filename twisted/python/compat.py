@@ -709,6 +709,7 @@ def _maybeMBCS(s):
     @param s: The string to convert.
     @type s: L{bytes} or L{unicode}
 
+    @return: The string, decoded using MBCS if needed.
     @rtype: L{unicode}
     """
     assert sys.platform == "win32", "only reasonable on Windows"
