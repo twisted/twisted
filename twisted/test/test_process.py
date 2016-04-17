@@ -52,7 +52,6 @@ if not runtime.platform.isWindows():
     properEnv = bytesEnviron()
     properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
         sys.getfilesystemencoding())
-
 else:
     properEnv = dict(os.environ)
 
