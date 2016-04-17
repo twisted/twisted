@@ -51,7 +51,7 @@ def attributeEscapingDoneOutside(data):
     """
     Escape some character or UTF-8 byte data for inclusion in the top level of
     an attribute.  L{attributeEscapingDoneOutside} actually passes the data
-    through unchanged, because L{flattenWithAttributeEscaping} handles the
+    through unchanged, because L{writeWithAttributeEscaping} handles the
     quoting of the text within attributes outside the generator returned by
     L{_flattenElement}; this is used as the C{dataEscaper} argument to that
     L{_flattenElement} call so that that generator does not redundantly escape
