@@ -5,14 +5,21 @@
 Tests for implementations of L{inetdtap}.
 """
 
-from twisted.runner import inetdtap
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+
+inetdtap = requireModule('twisted.runner.inetdtap')
+inetdtapSkip = None
+if inetdtap is None:
+    inetdtapSkip = 'inetdtap not available'
 
 
 class RPCServerTests(unittest.TestCase):
     """
     Tests for L{inetdtap.RPCServer}
     """
+    if inetdtapSkip:
+        skip = inetdtapSkip
 
     def test_deprecation(self):
         """

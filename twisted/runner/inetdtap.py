@@ -10,7 +10,7 @@ invoke other programs to handle incoming sockets.
 This is a useful thing as a "networking swiss army knife" tool, like netcat.
 """
 
-import os, pwd, grp, socket
+import pwd, grp, socket
 
 from twisted.runner import inetd, inetdconf
 from twisted.python import log, usage
