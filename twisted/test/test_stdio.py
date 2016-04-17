@@ -15,7 +15,7 @@ from twisted.trial import unittest
 from twisted.python import filepath, log
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-from twisted.python.compat import xrange, intToBytes
+from twisted.python.compat import xrange, intToBytes, bytesEnviron
 from twisted.internet import error, defer, protocol, stdio, reactor
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 
@@ -32,6 +32,11 @@ if platform.isWindows():
     if requireModule('win32process') is None:
         skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
                                 "in the absence of win32process.")
+    properEnv = dict(os.environ)
+else:
+    properEnv = bytesEnviron()
+    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+        sys.getfilesystemencoding())
 
 
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
@@ -102,8 +107,6 @@ class StandardInputOutputTests(unittest.TestCase):
 
         @return: The L{IProcessTransport} provider for the spawned process.
         """
-        import twisted
-        subenv = dict(os.environ)
         args = [sys.executable,
                 b"-m", b"twisted.test." + sibling,
                 reactor.__class__.__module__] + list(args)
@@ -111,7 +114,7 @@ class StandardInputOutputTests(unittest.TestCase):
             proto,
             sys.executable,
             args,
-            env=subenv,
+            env=properEnv,
             **kw)
 
 
