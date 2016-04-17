@@ -465,6 +465,8 @@ testDataFiles = [
     "twisted.test.process_cmdline",
     "twisted.test.process_echoer",
     "twisted.test.process_fds",
+    "twisted.test.process_getargv",
+    "twisted.test.process_getenv",
     "twisted.test.process_linger",
     "twisted.test.process_reader",
     "twisted.test.process_signal",
