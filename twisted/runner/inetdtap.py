@@ -53,7 +53,7 @@ class RPCServer(internet.TCPServer):
     DEPRECATED.
     """
     deprecatedModuleAttribute(
-        Version("Twisted", 16, 1, 0),
+        Version("Twisted", 16, 2, 0),
         "The RPC server is no longer maintained.",
         __name__, "RPCServer")
 

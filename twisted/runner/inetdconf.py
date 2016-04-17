@@ -29,7 +29,7 @@ class InvalidRPCServicesConfError(InvalidConfError):
     DEPRECATED. Invalid rpc services file
     """
     deprecatedModuleAttribute(
-        Version("Twisted", 16, 1, 0),
+        Version("Twisted", 16, 2, 0),
         "The RPC service configuration is no longer maintained.",
         __name__, "InvalidRPCServicesConfError")
 
@@ -186,7 +186,7 @@ class RPCServicesConf(SimpleConfFile):
     @ivar self.services: dict mapping rpc service names to rpc ports.
     """
     deprecatedModuleAttribute(
-        Version("Twisted", 16, 1, 0),
+        Version("Twisted", 16, 2, 0),
         "The RPC service configuration is no longer maintained.",
         __name__, "RPCServicesConf")
 

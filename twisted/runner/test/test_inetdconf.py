@@ -22,7 +22,7 @@ class InvalidRPCServicesConfErrorTests(unittest.TestCase):
 
         message = (
             'twisted.runner.inetdconf.InvalidRPCServicesConfError was '
-            'deprecated in Twisted 16.1.0: '
+            'deprecated in Twisted 16.2.0: '
             'The RPC service configuration is no longer maintained.'
             )
         warnings = self.flushWarnings([self.test_deprecation])
@@ -45,7 +45,7 @@ class RPCServicesConfTests(unittest.TestCase):
 
         message = (
             'twisted.runner.inetdconf.RPCServicesConf was deprecated in '
-            'Twisted 16.1.0: '
+            'Twisted 16.2.0: '
             'The RPC service configuration is no longer maintained.'
             )
         warnings = self.flushWarnings([self.test_deprecation])

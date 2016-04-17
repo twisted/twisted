@@ -30,7 +30,7 @@ class RPCServerTests(unittest.TestCase):
 
         message = (
             'twisted.runner.inetdtap.RPCServer was deprecated in '
-            'Twisted 16.1.0: '
+            'Twisted 16.2.0: '
             'The RPC server is no longer maintained.'
             )
         warnings = self.flushWarnings([self.test_deprecation])
