@@ -42,7 +42,7 @@ from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
 from twisted.python.compat import _PY3, networkString, xrange, bytesEnviron
-from twisted.python.filepath import FilePath, _asFilesystemBytes
+from twisted.python.filepath import FilePath
 
 
 # Get the current Python executable as a bytestring.

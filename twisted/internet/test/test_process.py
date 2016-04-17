@@ -41,13 +41,13 @@ if platform.isWindows():
 
     properEnv = dict(os.environ)
     properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
-    properEnv = bytesEnviron()
 else:
     import resource
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
 
+    properEnv = bytesEnviron()
     properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
         sys.getfilesystemencoding())
 
