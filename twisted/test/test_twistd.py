@@ -257,19 +257,6 @@ class ServerOptionsTests(unittest.TestCase):
                 helpOutput,))
 
 
-    def test_reactor(self):
-        """
-        The reactor is selected by C{--reactor}.
-        """
-        calls = []
-        self.patch(app, "installReactor", calls.append)
-
-        config = twistd.ServerOptions()
-        config.parseOptions(["--reactor", "default"])
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(calls, ['default'])
-
-
     def test_postOptionsSubCommandCausesNoSave(self):
         """
         postOptions should set no_save to True when a subcommand is used.
