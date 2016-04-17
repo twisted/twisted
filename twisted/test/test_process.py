@@ -54,6 +54,7 @@ if not runtime.platform.isWindows():
         sys.getfilesystemencoding())
 else:
     properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
 class StubProcessProtocol(protocol.ProcessProtocol):

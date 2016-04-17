@@ -33,6 +33,7 @@ if platform.isWindows():
         skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
                                 "in the absence of win32process.")
     properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 else:
     properEnv = bytesEnviron()
     properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(

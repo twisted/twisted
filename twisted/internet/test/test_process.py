@@ -47,6 +47,7 @@ else:
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
     properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
 
@@ -733,7 +734,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         reactor = self.buildReactor()
         reactor.callWhenRunning(
             reactor.spawnProcess, Waiter(), pyExe,
-            [pyExe, b"-m", self.keepStdioOpenProgram, b"child",
+            [pyExe, b"-u", b"-m", self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
             env=properEnv, usePTY=self.usePTY)
 
@@ -834,7 +835,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def spawnChild():
             d = succeed(None)
             d.addCallback(lambda dummy: utils.getProcessOutputAndValue(
-                pyExe, [b"-m", us] + args, env=properEnv, reactor=reactor))
+                pyExe, [b"-m", us] + args, env=properEnv,
+                reactor=reactor))
             d.addCallback(processFinished)
             d.addBoth(shutdown)
 

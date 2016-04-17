@@ -458,7 +458,6 @@ testDataFiles = [
     "twisted.positioning.test.receiver",
     "twisted.python.test.pullpipe",
     "twisted.python.test.pullpipe",
-    "twisted.test._preamble",
     "twisted.test.plugin_basic",
     "twisted.test.plugin_extra1",
     "twisted.test.plugin_extra2",
