@@ -11,7 +11,6 @@ L{twisted.internet.stdio.StandardIO} has finished.
 
 from __future__ import absolute_import, division
 
-__import__('_preamble')
 import sys
 
 from twisted.internet.protocol import Protocol

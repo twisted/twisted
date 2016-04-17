@@ -1,9 +1,7 @@
 [run]
 branch = True
 parallel = True
-include =
-   */twisted/*
-   twisted/*
+source = twisted
 
 [paths]
 source=
