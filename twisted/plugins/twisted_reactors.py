@@ -21,8 +21,11 @@ epoll = Reactor(
 kqueue = Reactor(
     'kqueue', 'twisted.internet.kqreactor', 'kqueue(2)-based reactor.')
 
-if not _PY3:
+__all__ = [
+    "default", "select", "poll", "epoll", "kqueue"
+]
 
+if not _PY3:
     wx = Reactor(
         'wx', 'twisted.internet.wxreactor', 'wxPython integration reactor.')
     gi = Reactor(
@@ -48,12 +51,6 @@ if not _PY3:
         'iocp', 'twisted.internet.iocpreactor',
         'Win32 IO Completion Ports-based reactor.')
 
-if _PY3:
-    __all__ = [
-        "default", "select", "poll", "epoll", "kqueue"
-    ]
-else:
-    __all__ = [
-        "default", "select", "wx", "gi", "gtk2", "gtk3", "glib2", "glade",
-        "win32er", "poll", "epoll", "cf", "kqueue", "iocp"
-    ]
+    __all__.extend([
+        "wx", "gi", "gtk2", "gtk3", "glib2", "glade", "win32er", "cf", "iocp"
+    ])
