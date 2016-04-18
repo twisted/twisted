@@ -14,12 +14,14 @@ if inetdtap is None:
     inetdtapSkip = 'inetdtap not available'
 
 
+
 class RPCServerTests(unittest.TestCase):
     """
     Tests for L{inetdtap.RPCServer}
     """
     if inetdtapSkip:
         skip = inetdtapSkip
+
 
     def test_deprecation(self):
         """
