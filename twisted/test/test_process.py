@@ -491,12 +491,15 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
 
 
 class ProcessTests(unittest.TestCase):
-    """Test running a process."""
-
+    """
+    Test running a process.
+    """
     usePTY = False
 
-    def testStdio(self):
-        """twisted.internet.stdio test."""
+    def test_stdio(self):
+        """
+        L{twisted.internet.stdio} test.
+        """
         scriptPath = b"twisted.test.process_twisted"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
@@ -566,11 +569,14 @@ class ProcessTests(unittest.TestCase):
         d.addCallback(check)
         return d
 
-    def testManyProcesses(self):
+
+    def test_manyProcesses(self):
 
         def _check(results, protocols):
             for p in protocols:
-                self.assertEqual(p.stages, [1, 2, 3, 4, 5], "[%d] stages = %s" % (id(p.transport), str(p.stages)))
+                self.assertEqual(p.stages, [1, 2, 3, 4, 5],
+                                 "[%d] stages = %s" % (id(p.transport),
+                                                       str(p.stages)))
                 # test status code
                 f = p.reason
                 f.trap(error.ProcessTerminated)
@@ -617,7 +623,7 @@ class ProcessTests(unittest.TestCase):
         return finished.addCallback(asserts).addErrback(takedownProcess)
 
 
-    def testCommandLine(self):
+    def test_commandLine(self):
         args = [br'a\"b ', br'a\b ', br' a\\"b', br' a\\b', br'"foo bar" "',
                 b'\tab', b'"\\', b'a"b', b"a'b"]
         scriptPath = b"twisted.test.process_cmdline"
@@ -852,21 +858,21 @@ class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
         os.kill(p.pid, signal.SIGTERM)
         if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
 
-    def testKill(self):
+    def test_kill(self):
         if self.verbose: print("starting processes")
         self.createProcesses(usePTY=0)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
         return self._onClose()
 
-    def testClosePty(self):
+    def test_closePty(self):
         if self.verbose: print("starting processes")
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
         return self._onClose()
 
-    def testKillPty(self):
+    def test_killPty(self):
         if self.verbose: print("starting processes")
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.kill, 0)
@@ -956,7 +962,7 @@ class FDChecker(protocol.ProcessProtocol):
 
 class FDTests(unittest.TestCase):
 
-    def testFD(self):
+    def test_FD(self):
         scriptPath = b"twisted.test.process_fds"
         d = defer.Deferred()
         p = FDChecker(d)
@@ -967,7 +973,7 @@ class FDTests(unittest.TestCase):
         d.addCallback(lambda x : self.assertFalse(p.failed, p.failed))
         return d
 
-    def testLinger(self):
+    def test_linger(self):
         # See what happens when all the pipes close before the process
         # actually stops. This test *requires* SIGCHLD catching to work,
         # as there is no other way to find out the process is done.
@@ -1037,7 +1043,7 @@ class PosixProcessBase(object):
                 "%s not found in /bin or /usr/bin" % (commandName,))
 
 
-    def testNormalTermination(self):
+    def test_normalTermination(self):
         cmd = self.getCommand('true')
 
         d = defer.Deferred()
@@ -2157,7 +2163,7 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
         return d.addCallback(processEnded)
 
 
-    def testProcess(self):
+    def test_process(self):
         cmd = self.getCommand('gzip')
         s = b"there's no place like home!\n" * 3
         p = Accumulator()
@@ -2188,7 +2194,7 @@ class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
     # testProcess, but not without p.transport.closeStdin
     #  might be solveable: TODO: add test if so
 
-    def testOpeningTTY(self):
+    def test_openingTTY(self):
         scriptPath = b"twisted.test.process_tty"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
@@ -2206,7 +2212,7 @@ class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
         return d.addCallback(processEnded)
 
 
-    def testBadArgs(self):
+    def test_badArgs(self):
         pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs,
@@ -2242,7 +2248,7 @@ class Win32ProcessTests(unittest.TestCase):
     Test process programs that are packaged with twisted.
     """
 
-    def testStdinReader(self):
+    def test_stdinReader(self):
         scriptPath = b"twisted.test.process_stdinreader"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
@@ -2257,7 +2263,7 @@ class Win32ProcessTests(unittest.TestCase):
         return d.addCallback(processEnded)
 
 
-    def testBadArgs(self):
+    def test_badArgs(self):
         pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError,
@@ -2478,7 +2484,7 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(procutils.which("executable"), [])
 
 
-    def testWhich(self):
+    def test_which(self):
         j = os.path.join
         paths = procutils.which("executable")
         expectedPaths = [j(self.foobaz, "executable"),
@@ -2488,7 +2494,7 @@ class UtilTests(unittest.TestCase):
         self.assertEqual(paths, expectedPaths)
 
 
-    def testWhichPathExt(self):
+    def test_whichPathExt(self):
         j = os.path.join
         old = os.environ.get('PATHEXT', None)
         os.environ['PATHEXT'] = os.pathsep.join(('.bin', '.exe', '.sh'))
