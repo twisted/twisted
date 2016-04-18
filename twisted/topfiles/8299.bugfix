@@ -1,0 +1,1 @@
+twisted.application-using applications (trial, twistd, etc) now work with the --reactor option on Python 3.

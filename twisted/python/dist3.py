@@ -149,6 +149,7 @@ modules = [
     "twisted.plugins.cred_unix",
     "twisted.plugins.twisted_core",
     "twisted.plugins.twisted_trial",
+    "twisted.plugins.twisted_reactors",
     "twisted.plugins.twisted_web",
     "twisted.positioning.__init__",
     "twisted.positioning._sentence",
