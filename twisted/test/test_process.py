@@ -828,7 +828,7 @@ class TestTwoProcessesBase:
     def _onClose(self):
         return defer.gatherResults([ p.deferred for p in self.pp ])
 
-    def testClose(self):
+    def test_close(self):
         if self.verbose: print("starting processes")
         self.createProcesses()
         reactor.callLater(1, self.close, 0)
@@ -2208,7 +2208,8 @@ class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
             self.assertEqual(
                 p.outF.getvalue(),
                 b"hello world!\r\nhello world!\r\n",
-                "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
+                ("Error message from process_tty "
+                 "follows:\n\n%s\n\n" % (p.outF.getvalue(),)))
         return d.addCallback(processEnded)
 
 
