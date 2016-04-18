@@ -2367,12 +2367,12 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
         Test C{os.environ} (inherited by every subprocess on Windows) that
         contains an ascii-encodable Unicode string. This is different from
         passing Unicode environment explicitly to spawnProcess (which is not
-        supported).
+        supported on Python 2).
         """
         os.environ[self.goodKey] = self.goodValue
         self.addCleanup(operator.delitem, os.environ, self.goodKey)
 
-        p = GetEnvironmentDictionary.run(reactor, [], {})
+        p = GetEnvironmentDictionary.run(reactor, [], properEnv)
         def gotEnvironment(environ):
             self.assertEqual(
                 environ[self.goodKey.encode('ascii')],
