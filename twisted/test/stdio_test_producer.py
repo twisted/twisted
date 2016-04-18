@@ -10,7 +10,6 @@ that process transports implement IProducer properly.
 
 from __future__ import absolute_import, division
 
-__import__('_preamble')
 import sys
 
 from twisted.internet import stdio, protocol
