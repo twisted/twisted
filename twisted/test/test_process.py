@@ -387,7 +387,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
         """
         self = cls()
         reactor.spawnProcess(
-            self, pyExe, [pyExe, "-u", b"-m", self.programName] + argv,
+            self, pyExe, [pyExe, b"-u", b"-m", self.programName] + argv,
             env=env)
         return self
 
@@ -500,7 +500,7 @@ class ProcessTests(unittest.TestCase):
         scriptPath = b"twisted.test.process_twisted"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-m", scriptPath],
+        reactor.spawnProcess(p, pyExe, [pyExe, b'-u', b"-m", scriptPath],
                              env=properEnv,
                              path=None, usePTY=self.usePTY)
         p.transport.write(b"hello, world")
@@ -526,7 +526,7 @@ class ProcessTests(unittest.TestCase):
         p = TrivialProcessProtocol(finished)
         scriptPath = b"twisted.test.process_echoer"
         procTrans = reactor.spawnProcess(p, pyExe,
-                                         [pyExe, b"-m", scriptPath],
+                                         [pyExe, b'-u', b"-m", scriptPath],
                                          env=properEnv)
         self.assertTrue(procTrans.pid)
 
@@ -577,7 +577,7 @@ class ProcessTests(unittest.TestCase):
                 self.assertEqual(f.value.exitCode, 23)
 
         scriptPath = b"twisted.test.process_tester"
-        args = [pyExe, b"-m", scriptPath]
+        args = [pyExe, b'-u', b"-m", scriptPath]
         protocols = []
         deferreds = []
 
@@ -602,7 +602,7 @@ class ProcessTests(unittest.TestCase):
         p = EchoProtocol(finished)
 
         scriptPath = b"twisted.test.process_echoer"
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-m", scriptPath],
+        reactor.spawnProcess(p, pyExe, [pyExe, b'-u', b"-m", scriptPath],
                              env=properEnv)
 
         def asserts(ignored):
@@ -960,7 +960,7 @@ class FDTests(unittest.TestCase):
         scriptPath = b"twisted.test.process_fds"
         d = defer.Deferred()
         p = FDChecker(d)
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-m", scriptPath],
+        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath],
                              env=properEnv,
                              childFDs={0:"w", 1:"r", 2:2,
                                        3:"w", 4:"r", 5:"w"})
