@@ -320,9 +320,7 @@ def _flattenTree(request, root, write):
             roots.append(frame.f_locals['root'])
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
-            if type(element) is bytes:
-                assert False
-            elif isinstance(element, Deferred):
+            if isinstance(element, Deferred):
                 def cbx(originalAndToFlatten):
                     original, toFlatten = originalAndToFlatten
                     stack.append(toFlatten)
@@ -358,13 +356,10 @@ def _writeFlattenedData(state, write, result):
         except:
             result.errback()
         else:
-            if type(element) is bytes:
-                assert False
-            else:
-                def cby(original):
-                    _writeFlattenedData(state, write, result)
-                    return original
-                element.addCallbacks(cby, result.errback)
+            def cby(original):
+                _writeFlattenedData(state, write, result)
+                return original
+            element.addCallbacks(cby, result.errback)
         break
 
 
