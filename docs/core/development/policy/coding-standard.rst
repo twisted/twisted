@@ -7,8 +7,10 @@ Naming
 Try to choose names which are both easy to remember and meaningful.
 Some silliness is OK at the module naming level (see :api:`twisted.spread <twisted.spread>` ...) but when choosing class names, be as precise as possible.
 
-Try to avoid overloaded terms.
+Try to avoid terms that may have existing definitions or uses.
 This rule is often broken, since it is incredibly difficult, as most normal words have already been taken by some other software.
+As an example, using the term "reactor" elsewhere in Twisted for something that is not an implementor of ``IReactor`` adds additional meaning to the word and will cause confusion.
+
 More importantly, try to avoid meaningless words.
 In particular, words like "handler", "processor", "engine", "manager", and "component" don't really indicate what something does, only that it does *something*.
 
@@ -32,6 +34,10 @@ What follows is intended to be a synopsis of the most important points.
 Test Suite
 ~~~~~~~~~~
 
+.. note::
+
+   The :doc:`test standard <test-standard>` contains more in-depth information on this topic.
+
 The Twisted test suite is spread across many subpackages of the ``twisted`` package.
 Many older tests are in ``twisted.test`` .
 Others can be found at places such as ``twisted.web.test`` (for ``twisted.web`` tests) or ``twisted.internet.test`` (for ``twisted.internet`` tests).
@@ -43,30 +49,6 @@ Twisted's unit tests are written using :api:`twisted.trial <twisted.trial>`, an 
 
 Implementation (i.e., non-test) source files should begin with a ``test-case-name`` tag which gives the name of any test modules or packages which exercise them.
 This lets tools discover a subset of the entire test suite which they can run first to find tests which might be broken by a particular change.
-
-It is strongly suggested that developers learn to use Emacs, and use the ``twisted-dev.el`` file included in `twisted-emacs <http://launchpad.net/twisted-emacs>`_ to bind the F9 key to "run unit tests" and bang on it frequently.
-Support for other editors is unavailable at this time but we would love to provide it.
-
-To run the whole Twisted test without using emacs, use ``trial``:
-
-.. code-block:: console
-
-    $ bin/trial twisted
-
-
-To run an individual test module, such as ``twisted/mail/test/test_pop3.py``, specify the module name:
-
-.. code-block:: console
-
-    $ bin/trial twisted.mail.test.test_pop3
-
-
-To run the tests associated with a particular implementation file, such as ``twisted/mail/pop3.py``, use the ``testmodule`` option:
-
-.. code-block:: console
-
-    $ bin/trial twisted/mail/pop3.py
-
 
 All unit test methods should have docstrings specifying at a high level the intent of the test.
 That is, a description that users of the method would understand.
