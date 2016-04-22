@@ -27,8 +27,6 @@ Overview
 Twisted development should always be `test-driven <http://en.wikipedia.org/wiki/Test-driven_development>`_ .
 The complete test suite in the head of the SVN trunk is required to be passing on `supported platforms <http://buildbot.twistedmatrix.com/supported>`_ at all times.
 Regressions in the test suite are addressed by reverting whatever revisions introduced them.
-For complete documentation about testing Twisted itself, refer to the :doc:`Test Standard <test-standard>`.
-What follows is intended to be a synopsis of the most important points.
 
 
 Test Suite
@@ -37,6 +35,7 @@ Test Suite
 .. note::
 
    The :doc:`test standard <test-standard>` contains more in-depth information on this topic.
+   What follows is intended to be a synopsis of the most important points.
 
 The Twisted test suite is spread across many subpackages of the ``twisted`` package.
 Many older tests are in ``twisted.test`` .
