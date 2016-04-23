@@ -38,7 +38,7 @@ from twisted.web.http import unquote
 from twisted.python import log, reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
-from twisted.web.error import UnsupportedMethod
+from twisted.web.error import UnsupportedMethod, CannotUpgrade
 
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
@@ -615,6 +615,15 @@ class Session(components.Componentized):
 version = networkString("TwistedWeb/%s" % (copyright.version,))
 
 
+
+def H2C(self, headers):
+    print("Negotiating H2C!")
+
+    raise CannotUpgrade()
+
+    return None, True
+
+
 class Site(http.HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
@@ -647,6 +656,7 @@ class Site(http.HTTPFactory):
         http.HTTPFactory.__init__(self, *args, **kwargs)
         self.sessions = {}
         self.resource = resource
+        self.upgradeables = {}
         if requestFactory is not None:
             self.requestFactory = requestFactory
 

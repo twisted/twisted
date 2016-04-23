@@ -100,6 +100,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
 from twisted.protocols import policies, basic
 
+from twisted.web.error import CannotUpgrade
 from twisted.web.iweb import IRequest, IAccessLogFormatter
 from twisted.web.http_headers import Headers
 
@@ -2012,7 +2013,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     _negotiatedProtocol = None
     _requestFactory = Request
     _site = None
+    _buffering = False
+    _replay = False
 
+
+    def __init__(self, *args, **kwargs):
+        self._buffer = []
+        super(_GenericHTTPChannelProtocol, self).__init__(*args, **kwargs)
 
     @property
     def factory(self):
@@ -2052,17 +2059,65 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._channel.site = value
 
 
+    def _upgrade(self):
+        """
+        Look at the headers and determine if they want us to upgrade.
+        """
+        content = b"".join(self._buffer).split(b"\r\n\r\n", 1)[0].split("\r\n")
+        headers = {}
+
+        for line in content[1:]:
+            key, val = line.split(b":", 1)
+            headers[key.lower()] = val.lstrip()
+
+        if b"connection" not in headers or b"upgrade" not in headers:
+            print("not negotiating")
+            return b"http/1.1"
+
+        else:
+            if not b"upgrade" in headers[b"connection"].lower().split(b", "):
+                # connection is there and upgrade is there but its not saying to upgrade
+                return b"http/1.1"
+
+            for upgrade in headers[b"upgrade"].split(b", "):
+
+                upgrader = self.site.upgradeables.get(upgrade.lower())
+
+                if upgrader:
+                    try:
+                        self._channel, self._replay = upgrader(self, headers)
+                    except CannotUpgrade:
+                        pass
+
+                return b"http/1.1"
+
+            return None
+
+
+    def _bufferData(self, data):
+
+        self._buffer.append(data)
+        if b"\r\n\r\n" in data:
+            self._negotiatedProtocol = self._upgrade()
+
+            if self._negotiatedProtocol == b"http/1.1":
+                for x in self._buffer:
+                    self._channel.dataReceived(x)
+            self._buffering = False
+            self._buffer = []
+
+
     def dataReceived(self, data):
         """
         A override of L{IProtocol.dataReceived} that checks what protocol we're
         using.
         """
-        if self._negotiatedProtocol is None:
+        if not self._buffering and self._negotiatedProtocol is None:
             try:
                 negotiatedProtocol = self._channel.transport.negotiatedProtocol
             except AttributeError:
-                # Plaintext HTTP, always HTTP/1.1
-                negotiatedProtocol = b'http/1.1'
+                self._buffering = True
+                return self._bufferData(data)
 
             if negotiatedProtocol is None:
                 negotiatedProtocol = b'http/1.1'
@@ -2076,7 +2131,11 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
             self._negotiatedProtocol = negotiatedProtocol
 
-        return self._channel.dataReceived(data)
+        elif self._buffering:
+            self._bufferData(data)
+
+        else:
+            return self._channel.dataReceived(data)
 
 
 
