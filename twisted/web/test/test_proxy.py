@@ -123,14 +123,6 @@ class DummyChannel(object):
         self.lostReason = reason
 
 
-    def getPeer(self):
-        return self.transport.getPeer()
-
-
-    def getHost(self):
-        return self.transport.getHost()
-
-
 
 class ProxyClientTests(TestCase):
     """

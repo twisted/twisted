@@ -110,10 +110,10 @@ class Request(Copyable, http.Request, components.Componentized):
 
     def getStateToCopyFor(self, issuer):
         x = self.__dict__.copy()
-        del x['_transport']
+        del x['transport']
         # XXX refactor this attribute out; it's from protocol
         # del x['server']
-        del x['_channel']
+        del x['channel']
         del x['content']
         del x['site']
         self.content.seek(0, 0)
@@ -164,7 +164,7 @@ class Request(Copyable, http.Request, components.Componentized):
         """
 
         # get site from channel
-        self.site = self._channel.site
+        self.site = self.channel.site
 
         # set various default headers
         self.setHeader(b'server', version)
