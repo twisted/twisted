@@ -34,9 +34,8 @@ else:
     from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address
 from twisted.web import iweb, http, util
-from twisted.web.http import unquote
+from twisted.web.http import unquote, _version as version
 from twisted.python import log, reflect, failure, components
-from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod, CannotUpgrade
 
@@ -612,17 +611,6 @@ class Session(components.Componentized):
             self._expireCall.reset(self.sessionTimeout)
 
 
-version = networkString("TwistedWeb/%s" % (copyright.version,))
-
-
-
-def H2C(self, headers):
-    print("Negotiating H2C!")
-
-    raise CannotUpgrade()
-
-    return None, True
-
 
 class Site(http.HTTPFactory):
     """
@@ -656,7 +644,6 @@ class Site(http.HTTPFactory):
         http.HTTPFactory.__init__(self, *args, **kwargs)
         self.sessions = {}
         self.resource = resource
-        self.upgradeables = {}
         if requestFactory is not None:
             self.requestFactory = requestFactory
 

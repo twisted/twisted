@@ -8,6 +8,7 @@ Test HTTP support.
 from __future__ import absolute_import, division
 
 import random, cgi, base64
+import math
 
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
@@ -20,8 +21,9 @@ from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers
-from twisted.web.http import PotentialDataLoss, _DataLoss
+from twisted.web.http import PotentialDataLoss, _DataLoss, _version
 from twisted.web.http import _IdentityTransferDecoder
+from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost
 from twisted.protocols import loopback
@@ -2533,3 +2535,72 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                     "in Twisted 15.0.0; please use Twisted Names to "
                     "resolve hostnames instead")},
                          sub(["category", "message"], warnings[0]))
+
+
+class HTTPUpgradeTests(unittest.TestCase):
+    """
+    Tests for HTTP/1.1 protocol upgrade.
+    """
+
+    def test_basic(self):
+
+        piTimes = 10
+
+        class Pitocol(Protocol):
+            """
+            A protocol that writes pi to the transport.
+            """
+            def dataReceived(protoself, data):
+                """
+                A C{dataReceived} that expects "GO" and will then write out
+                "3.14" * C{piTimes}. If there's any other data, that won't
+                """
+                if not protoself.connected:
+                    self.fail("dataReceived called when disconnected!")
+                if data == b"GO":
+                    for i in range(piTimes):
+                        protoself.transport.write(b"3.14")
+                protoself.transport.loseConnection()
+
+        piFactory = Factory()
+        piFactory.protocol = Pitocol
+
+        def piNegotiate(channel, headers):
+            pi = piFactory.buildProtocol(None)
+            return pi, False, {}
+
+
+        from twisted.web.http import _respondToUpgrade, HTTPFactory
+
+        factory = HTTPFactory()
+        factory._logDateTime = "sometime"
+        factory._logDateTimeCall = True
+        factory.startFactory()
+
+        factory.upgradeables[b"pitocol"] = piNegotiate
+
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        val = [
+            b"GET / HTTP/1.1\r\n"
+            b"Connection: keep-alive, Upgrade\r\n",
+            b"Upgrade: pitocol\r\n\r\n",
+        ]
+
+        for x in val:
+            protocol.dataReceived(x)
+
+        expectedValue = b"".join([
+            b"HTTP/1.1 101 Switching Protocols\r\nServer: ",
+            _version, b"\r\nUpgrade: pitocol\r\nConnection: Upgrade\r\n\r\n"])
+
+        self.assertEqual(trans.value(), expectedValue)
+        trans.clear()
+
+        protocol.dataReceived(b"GO")
+
+        self.assertEqual(trans.value(), b"3.14" * 10)
+        self.assertTrue(trans.disconnecting)

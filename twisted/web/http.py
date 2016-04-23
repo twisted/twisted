@@ -89,6 +89,7 @@ except ImportError:
 from zope.interface import implementer, provider
 
 # twisted imports
+from twisted import copyright
 from twisted.python.compat import (
     _PY3, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
@@ -131,6 +132,8 @@ if _PY3:
     _intTypes = int
 else:
     _intTypes = (int, long)
+
+_version = networkString("TwistedWeb/%s" % (copyright.version,))
 
 protocol_version = "HTTP/1.1"
 
@@ -1987,6 +1990,22 @@ def proxiedLogFormatter(timestamp, request):
 
 
 
+def _respondToUpgrade(transport, newProtocol, headers):
+
+    transport.write(b"HTTP/1.1 101 Switching Protocols\r\n")
+
+    transport.write(b"Server: " + _version + b"\r\n")
+    transport.write(b"Upgrade: " + newProtocol + b"\r\n")
+    transport.write(b"Connection: Upgrade\r\n")
+
+    for k, v in headers.items():
+
+        transport.write(k + b": " + v + b"\r\n")
+
+    transport.write(b"\r\n")
+
+
+
 class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     """
     A proxy object that wraps one of the HTTP protocol objects, and switches
@@ -2063,7 +2082,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         """
         Look at the headers and determine if they want us to upgrade.
         """
-        content = b"".join(self._buffer).split(b"\r\n\r\n", 1)[0].split("\r\n")
+        content = b"".join(self._buffer).split(b"\r\n\r\n", 1)[0].split(b"\r\n")
         headers = {}
 
         for line in content[1:]:
@@ -2081,11 +2100,16 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
             for upgrade in headers[b"upgrade"].split(b", "):
 
-                upgrader = self.site.upgradeables.get(upgrade.lower())
+                upgrader = self.factory.upgradeables.get(upgrade.lower())
 
                 if upgrader:
                     try:
-                        self._channel, self._replay = upgrader(self, headers)
+                        res = upgrader(self, headers)
+                        transport = self._channel.transport
+                        self._channel, self._replay, headersToSend = res
+                        _respondToUpgrade(transport, upgrade, headersToSend)
+                        self._channel.makeConnection(transport)
+                        return upgrade
                     except CannotUpgrade:
                         pass
 
@@ -2197,6 +2221,7 @@ class HTTPFactory(protocol.ServerFactory):
         if logFormatter is None:
             logFormatter = combinedLogFormatter
         self._logFormatter = logFormatter
+        self.upgradeables = {}
 
         # For storing the cached log datetime and the callback to update it
         self._logDateTime = None
