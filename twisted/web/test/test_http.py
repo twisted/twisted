@@ -265,7 +265,8 @@ class GenericHTTPChannelTests(unittest.TestCase):
         a.makeConnection(t)
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
-            a.dataReceived(byte)
+            if not t.disconnecting:
+                a.dataReceived(byte)
         a.connectionLost(IOError("all done"))
         return a._negotiatedProtocol
 
@@ -311,11 +312,9 @@ class GenericHTTPChannelTests(unittest.TestCase):
         """
         b = StringTransport()
         b.negotiatedProtocol = b'h2'
-        self.assertRaises(
-            AssertionError,
-            self._negotiatedProtocolForTransportInstance,
-            b,
-        )
+        negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
+        self.assertEqual(negotiatedProtocol, None)
+        self.assertEqual(b.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
 
     def test_unknownProtocol(self):
@@ -325,11 +324,9 @@ class GenericHTTPChannelTests(unittest.TestCase):
         """
         b = StringTransport()
         b.negotiatedProtocol = b'smtp'
-        self.assertRaises(
-            AssertionError,
-            self._negotiatedProtocolForTransportInstance,
-            b,
-        )
+        negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
+        self.assertEqual(negotiatedProtocol, None)
+        self.assertEqual(b.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
 
     def test_factory(self):
@@ -2539,6 +2536,32 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                          sub(["category", "message"], warnings[0]))
 
 
+class Pitocol(Protocol):
+    """
+    A protocol that writes pi to the transport.
+    """
+    def dataReceived(protoself, data):
+        """
+        A C{dataReceived} that expects "GO" and will then write out
+        "3.14" * C{piTimes}. If there's any other data, that won't
+        """
+        if not protoself.connected:
+            self.fail("dataReceived called when disconnected!")
+        if data == b"GO":
+            for i in range(piTimes):
+                protoself.transport.write(b"3.14")
+        protoself.transport.loseConnection()
+
+
+
+
+piTimes = 100
+piFactory = Factory()
+piFactory.protocol = Pitocol
+piFactory.startFactory()
+
+
+
 class HTTPUpgradeTests(unittest.TestCase):
     """
     Tests for HTTP/1.1 protocol upgrade.
@@ -2561,33 +2584,12 @@ class HTTPUpgradeTests(unittest.TestCase):
         and an "Upgrade" header that lists a protocol we support will be
         upgraded to that protocol.
         """
-        piTimes = 10
-
-        class Pitocol(Protocol):
-            """
-            A protocol that writes pi to the transport.
-            """
-            def dataReceived(protoself, data):
-                """
-                A C{dataReceived} that expects "GO" and will then write out
-                "3.14" * C{piTimes}. If there's any other data, that won't
-                """
-                if not protoself.connected:
-                    self.fail("dataReceived called when disconnected!")
-                if data == b"GO":
-                    for i in range(piTimes):
-                        protoself.transport.write(b"3.14")
-                protoself.transport.loseConnection()
-
-        piFactory = Factory()
-        piFactory.protocol = Pitocol
 
         class PiUpgrader(object):
 
             def upgrade(self, verb, path, headers):
                 pi = piFactory.buildProtocol(None)
                 return pi, False, {b"beep": b"boop"}
-
 
         factory = self._makeFactory()
         factory._addUpgrader(b"pitocol", PiUpgrader())
@@ -2616,13 +2618,56 @@ class HTTPUpgradeTests(unittest.TestCase):
 
         protocol.dataReceived(b"GO")
 
-        self.assertEqual(trans.value(), b"3.14" * 10)
+        self.assertEqual(trans.value(), b"3.14" * piTimes)
+        self.assertTrue(trans.disconnecting)
+
+
+    def test_upgradeNegotiatedHTTP11(self):
+        """
+        A ALPN-negotiated HTTP/1.1 protocol needs to be read and checked for
+        any upgrade requests.
+        """
+        class PiUpgrader(object):
+
+            def upgrade(self, verb, path, headers):
+                pi = piFactory.buildProtocol(None)
+                return pi, False, {b"beep": b"boop"}
+
+        factory = self._makeFactory()
+        factory._addUpgrader(b"pitocol", PiUpgrader())
+
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        trans.negotiatedProtocol = b'http/1.1'
+        protocol.makeConnection(trans)
+
+        val = [
+            b"GET / HTTP/1.1\r\n"
+            b"Connection: keep-alive, Upgrade\r\n",
+            b"Upgrade: pitocol\r\n\r\n",
+        ]
+
+        for x in iterbytes(b"".join(val)):
+            protocol.dataReceived(x)
+
+        expectedValue = b"".join([
+            b"HTTP/1.1 101 Switching Protocols\r\nServer: ",
+            _version, b"\r\nUpgrade: pitocol\r\nConnection: Upgrade\r\n",
+            b"beep: boop\r\n\r\n"])
+
+        self.assertEqual(trans.value(), expectedValue)
+        trans.clear()
+
+        protocol.dataReceived(b"GO")
+
+        self.assertEqual(trans.value(), b"3.14" * piTimes)
         self.assertTrue(trans.disconnecting)
 
 
     def test_notHTTP(self):
         """
-        A non-HTTP request should return with a "bad request" error.
+        A non-HTTP request returns with a "bad request" error.
         """
         factory = self._makeFactory()
         protocol = factory.buildProtocol(None)
@@ -2639,6 +2684,31 @@ class HTTPUpgradeTests(unittest.TestCase):
 
         expectedValue = b"HTTP/1.1 400 Bad Request\r\n\r\n"
         self.assertEqual(trans.value(), expectedValue)
+
+
+    def test_tooMuchData(self):
+        """
+        Too much data being sent before completed headers will cause a "bad
+        request" error.
+        """
+        factory = self._makeFactory()
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        val = [
+            b"GET / HTTP/1.1\r\n",
+            b"a" * http._MAX_HEADERS_SIZE
+        ]
+
+        for x in iterbytes(b"".join(val)):
+            if not trans.disconnecting:
+                protocol.dataReceived(x)
+
+        expectedValue = b"HTTP/1.1 400 Bad Request\r\n\r\n"
+        self.assertEqual(trans.value(), expectedValue)
+        self.assertEqual(trans.disconnecting, True)
 
 
     def test_mangledStatusLine(self):
