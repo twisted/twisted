@@ -2582,7 +2582,7 @@ class HTTPUpgradeTests(unittest.TestCase):
         piFactory = Factory()
         piFactory.protocol = Pitocol
 
-        def piNegotiate(channel, path, headers):
+        def piNegotiate(path, headers):
             pi = piFactory.buildProtocol(None)
             return pi, False, {b"beep": b"boop"}
 
@@ -2597,8 +2597,7 @@ class HTTPUpgradeTests(unittest.TestCase):
         val = [
             b"GET / HTTP/1.1\r\n"
             b"Connection: keep-alive, Upgrade\r\n",
-            b"Upgrade: pitocol\r\n",
-            b"beep: boop\r\n\r\n",
+            b"Upgrade: pitocol\r\n\r\n",
         ]
 
         for x in iterbytes(b"".join(val)):
@@ -2606,7 +2605,8 @@ class HTTPUpgradeTests(unittest.TestCase):
 
         expectedValue = b"".join([
             b"HTTP/1.1 101 Switching Protocols\r\nServer: ",
-            _version, b"\r\nUpgrade: pitocol\r\nConnection: Upgrade\r\n\r\n"])
+            _version, b"\r\nUpgrade: pitocol\r\nConnection: Upgrade\r\n",
+            b"beep: boop\r\n\r\n"])
 
         self.assertEqual(trans.value(), expectedValue)
         trans.clear()

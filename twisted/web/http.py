@@ -2127,10 +2127,11 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
             if upgrader:
                 try:
-                    res = upgrader(self, path, headers)
+                    res = upgrader(path, headers)
                     transport = self._channel.transport
                     self._channel, self._replay, headersToSend = res
-                    _respondToUpgrade(transport, upgrade, headersToSend)
+                    if not self._replay:
+                        _respondToUpgrade(transport, upgrade, headersToSend)
                     self._channel.makeConnection(transport)
                     return upgrade
                 except CannotUpgrade:

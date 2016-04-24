@@ -761,6 +761,22 @@ class IAgentEndpointFactory(Interface):
         """
 
 
+class IHTTPUpgradeable(Interface):
+    """
+    A factory which produces L{IProtocol} providers which will "take over" an
+    upgraded HTTP/1.1 request's transport.
+    """
+
+    def upgrade(self, path, headers):
+        """
+        Return a L{IProtocol} provider which will "take over" the transport.
+
+        @param path: The path of the incoming upgrade request.
+
+        @rtype: a 3-tuple of L{IProtocol} provider, whether to replay the original HTTP/1.1 request to the new protocol (in which case the returned L{IProtocol} provider will be responsible for the C{101 Switching Protocols} response), and extra headers to send with the C{101 Switching Protocols} response, if Twisted is responsible for sending it.
+        """
+
+
 
 UNKNOWN_LENGTH = u"twisted.web.iweb.UNKNOWN_LENGTH"
 
