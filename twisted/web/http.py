@@ -2110,35 +2110,38 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
             key, val = line.split(b":", 1)
             headers[key.lower()] = val.lstrip()
 
+        verb = requestLine[0]
         path = requestLine[1]
 
         if b"connection" not in headers or b"upgrade" not in headers:
-            print("no upgrade")
+            # Regular HTTP/1.1, no "Upgrade" or "Connection" (we need both)
             return b"http/1.1"
 
         if not b"upgrade" in headers[b"connection"].lower().split(b", "):
-            # connection is there and upgrade is there but its not saying to upgrade
+            # "Connection" is there and "Upgrade" is there but "Connection"
+            # does not say to upgrade
             print("no upgrade")
             return b"http/1.1"
 
         for upgrade in headers[b"upgrade"].split(b", "):
             # See if we can upgrade to this. If we can't, try the next,
-            upgrader = self.factory.upgradeables.get(upgrade.lower())
+            upgrader = self.factory._upgradeables.get(upgrade.lower())
 
             if upgrader:
                 try:
-                    res = upgrader(path, headers)
+                    res = upgrader.upgrade(verb, path, headers)
                     transport = self._channel.transport
                     self._channel, self._replay, headersToSend = res
+
                     if not self._replay:
                         _respondToUpgrade(transport, upgrade, headersToSend)
+
                     self._channel.makeConnection(transport)
                     return upgrade
                 except CannotUpgrade:
                     # This one failed, try the next one
                     pass
 
-        print("no negotiate")
         # Negotiation failed!
         return b"http/1.1"
 
@@ -2252,12 +2255,15 @@ class HTTPFactory(protocol.ServerFactory):
         if logFormatter is None:
             logFormatter = combinedLogFormatter
         self._logFormatter = logFormatter
-        self.upgradeables = {}
+        self._upgradeables = {}
 
         # For storing the cached log datetime and the callback to update it
         self._logDateTime = None
         self._logDateTimeCall = None
 
+
+    def _addUpgrader(self, name, upgrader):
+        self._upgradeables[name] = upgrader
 
     def _updateLogDateTime(self):
         """

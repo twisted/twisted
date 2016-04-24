@@ -2582,12 +2582,15 @@ class HTTPUpgradeTests(unittest.TestCase):
         piFactory = Factory()
         piFactory.protocol = Pitocol
 
-        def piNegotiate(path, headers):
-            pi = piFactory.buildProtocol(None)
-            return pi, False, {b"beep": b"boop"}
+        class PiUpgrader(object):
+
+            def upgrade(self, verb, path, headers):
+                pi = piFactory.buildProtocol(None)
+                return pi, False, {b"beep": b"boop"}
+
 
         factory = self._makeFactory()
-        factory.upgradeables[b"pitocol"] = piNegotiate
+        factory._addUpgrader(b"pitocol", PiUpgrader())
 
         protocol = factory.buildProtocol(None)
 
