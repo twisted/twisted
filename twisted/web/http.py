@@ -134,6 +134,7 @@ else:
     _intTypes = (int, long)
 
 _version = networkString("TwistedWeb/%s" % (copyright.version,))
+_MAX_HEADERS_SIZE = 16384 # 16K, on par with IIS
 
 protocol_version = "HTTP/1.1"
 
@@ -1612,7 +1613,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
 
     maxHeaders = 500
-    totalHeadersSize = 16384
+    totalHeadersSize = _MAX_HEADERS_SIZE
 
     length = 0
     persistent = 1
@@ -1999,7 +2000,6 @@ def _respondToUpgrade(transport, newProtocol, headers):
     transport.write(b"Connection: Upgrade\r\n")
 
     for k, v in headers.items():
-
         transport.write(k + b": " + v + b"\r\n")
 
     transport.write(b"\r\n")
@@ -2035,9 +2035,12 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     _buffering = False
     _replay = False
 
+    _maxHeadersLength = _MAX_HEADERS_SIZE
+
 
     def __init__(self, *args, **kwargs):
-        self._buffer = []
+        self._buffer = b""
+        self._bufferLen = 0
         super(_GenericHTTPChannelProtocol, self).__init__(*args, **kwargs)
 
     @property
@@ -2082,51 +2085,78 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         """
         Look at the headers and determine if they want us to upgrade.
         """
-        content = b"".join(self._buffer).split(b"\r\n\r\n", 1)[0].split(b"\r\n")
+        content = self._buffer.split(b"\r\n\r\n", 1)[0].split(b"\r\n")
         headers = {}
+
+        requestLine = content[0].split(b" ")
+
+        if not len(requestLine) == 3:
+            _respondToBadRequestAndDisconnect(self._channel.transport)
+            return None
+
+        if requestLine[2].lower() == b"http/1.0":
+            # It's HTTP/1.0, return that
+            print("http1.0")
+            return b"http/1.0"
+
+        if not requestLine[2].lower() == b"http/1.1":
+            # If it's not HTTP/1.0 or HTTP/1.1, we don't really know what to
+            # do!
+            print("not 1.1")
+            _respondToBadRequestAndDisconnect(self._channel.transport)
+            return None
 
         for line in content[1:]:
             key, val = line.split(b":", 1)
             headers[key.lower()] = val.lstrip()
 
+        path = requestLine[1]
+
         if b"connection" not in headers or b"upgrade" not in headers:
-            print("not negotiating")
+            print("no upgrade")
             return b"http/1.1"
 
-        else:
-            if not b"upgrade" in headers[b"connection"].lower().split(b", "):
-                # connection is there and upgrade is there but its not saying to upgrade
-                return b"http/1.1"
+        if not b"upgrade" in headers[b"connection"].lower().split(b", "):
+            # connection is there and upgrade is there but its not saying to upgrade
+            print("no upgrade")
+            return b"http/1.1"
 
-            for upgrade in headers[b"upgrade"].split(b", "):
+        for upgrade in headers[b"upgrade"].split(b", "):
+            # See if we can upgrade to this. If we can't, try the next,
+            upgrader = self.factory.upgradeables.get(upgrade.lower())
 
-                upgrader = self.factory.upgradeables.get(upgrade.lower())
+            if upgrader:
+                try:
+                    res = upgrader(self, path, headers)
+                    transport = self._channel.transport
+                    self._channel, self._replay, headersToSend = res
+                    _respondToUpgrade(transport, upgrade, headersToSend)
+                    self._channel.makeConnection(transport)
+                    return upgrade
+                except CannotUpgrade:
+                    # This one failed, try the next one
+                    pass
 
-                if upgrader:
-                    try:
-                        res = upgrader(self, headers)
-                        transport = self._channel.transport
-                        self._channel, self._replay, headersToSend = res
-                        _respondToUpgrade(transport, upgrade, headersToSend)
-                        self._channel.makeConnection(transport)
-                        return upgrade
-                    except CannotUpgrade:
-                        pass
-
-                return b"http/1.1"
-
-            return None
+        print("no negotiate")
+        # Negotiation failed!
+        return b"http/1.1"
 
 
     def _bufferData(self, data):
+        """
+        Add data to the buffer.
+        """
+        self._buffer += (data)
+        self._bufferLen += len(data)
 
-        self._buffer.append(data)
-        if b"\r\n\r\n" in data:
+        if self._bufferLen > self._maxHeadersLength:
+            _respondToBadRequestAndDisconnect(self._channel)
+
+        if b"\r\n\r\n" in self._buffer:
             self._negotiatedProtocol = self._upgrade()
 
             if self._negotiatedProtocol == b"http/1.1":
-                for x in self._buffer:
-                    self._channel.dataReceived(x)
+                self._channel.dataReceived(self._buffer)
             self._buffering = False
             self._buffer = []
 

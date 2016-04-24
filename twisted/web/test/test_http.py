@@ -21,8 +21,9 @@ from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers
-from twisted.web.http import PotentialDataLoss, _DataLoss, _version
-from twisted.web.http import _IdentityTransferDecoder
+from twisted.web.http import (
+    _respondToUpgrade, HTTPFactory, PotentialDataLoss, _DataLoss, _version,
+    _IdentityTransferDecoder)
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost
@@ -272,7 +273,8 @@ class GenericHTTPChannelTests(unittest.TestCase):
     def test_protocolUnspecified(self):
         """
         If the transport has no support for protocol negotiation (no
-        negotiatedProtocol attribute), HTTP/1.1 is assumed.
+        negotiatedProtocol attribute), the protocol of the first request is
+        used.
         """
         b = StringTransport()
         negotiatedProtocol = self._negotiatedProtocolForTransportInstance(b)
@@ -281,8 +283,8 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
     def test_protocolNone(self):
         """
-        If the transport has no support for protocol negotiation (returns None
-        for negotiatedProtocol), HTTP/1.1 is assumed.
+        If the transport has no support for protocol negotiation, the request
+        is inspected and the protocol the request requests is returned.
         """
         b = StringTransport()
         b.negotiatedProtocol = None
@@ -2541,9 +2543,24 @@ class HTTPUpgradeTests(unittest.TestCase):
     """
     Tests for HTTP/1.1 protocol upgrade.
     """
+    def _makeFactory(self):
+        """
+        Make a testing suitable L{HTTPFactory} which doesn't rely on a running
+        reactor.
+        """
+        factory = HTTPFactory()
+        factory._logDateTime = "sometime"
+        factory._logDateTimeCall = True
+        factory.startFactory()
+        return factory
 
-    def test_basic(self):
 
+    def test_upgrade(self):
+        """
+        A HTTP/1.1 request with a "Connection" header that contains "Upgrade"
+        and an "Upgrade" header that lists a protocol we support will be
+        upgraded to that protocol.
+        """
         piTimes = 10
 
         class Pitocol(Protocol):
@@ -2565,18 +2582,11 @@ class HTTPUpgradeTests(unittest.TestCase):
         piFactory = Factory()
         piFactory.protocol = Pitocol
 
-        def piNegotiate(channel, headers):
+        def piNegotiate(channel, path, headers):
             pi = piFactory.buildProtocol(None)
-            return pi, False, {}
+            return pi, False, {b"beep": b"boop"}
 
-
-        from twisted.web.http import _respondToUpgrade, HTTPFactory
-
-        factory = HTTPFactory()
-        factory._logDateTime = "sometime"
-        factory._logDateTimeCall = True
-        factory.startFactory()
-
+        factory = self._makeFactory()
         factory.upgradeables[b"pitocol"] = piNegotiate
 
         protocol = factory.buildProtocol(None)
@@ -2587,10 +2597,11 @@ class HTTPUpgradeTests(unittest.TestCase):
         val = [
             b"GET / HTTP/1.1\r\n"
             b"Connection: keep-alive, Upgrade\r\n",
-            b"Upgrade: pitocol\r\n\r\n",
+            b"Upgrade: pitocol\r\n",
+            b"beep: boop\r\n\r\n",
         ]
 
-        for x in val:
+        for x in iterbytes(b"".join(val)):
             protocol.dataReceived(x)
 
         expectedValue = b"".join([
@@ -2604,3 +2615,46 @@ class HTTPUpgradeTests(unittest.TestCase):
 
         self.assertEqual(trans.value(), b"3.14" * 10)
         self.assertTrue(trans.disconnecting)
+
+
+    def test_notHTTP(self):
+        """
+        A non-HTTP request should return with a "bad request" error.
+        """
+        factory = self._makeFactory()
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        val = [
+            b"BEEP BOOP IRC/1234\r\n\r\n",
+        ]
+
+        for x in iterbytes(b"".join(val)):
+            protocol.dataReceived(x)
+
+        expectedValue = b"HTTP/1.1 400 Bad Request\r\n\r\n"
+        self.assertEqual(trans.value(), expectedValue)
+
+
+    def test_mangledStatusLine(self):
+        """
+        A non-HTTP first-line (or a mangled one) will return with a
+        "bad request" error.
+        """
+        factory = self._makeFactory()
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        val = [
+            b"GET/ HTTP/1.1\r\n\r\n",
+        ]
+
+        for x in iterbytes(b"".join(val)):
+            protocol.dataReceived(x)
+
+        expectedValue = b"HTTP/1.1 400 Bad Request\r\n\r\n"
+        self.assertEqual(trans.value(), expectedValue)
