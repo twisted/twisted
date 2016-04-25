@@ -91,7 +91,7 @@ from zope.interface import implementer, provider
 # twisted imports
 from twisted import copyright
 from twisted.python.compat import (
-    _PY3, unicode, intToBytes, networkString, nativeString, iterbytes)
+    _PY3, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from twisted.python.versions import Version
@@ -2104,6 +2104,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
         if requestLine[2].lower() == b"http/1.0":
             # It's HTTP/1.0, return that.
+            self._replay = True
             return b"http/1.0"
 
         if not requestLine[2].lower() == b"http/1.1":
@@ -2123,6 +2124,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
         if b"upgrade" not in headers:
             # Regular HTTP/1.1, no "Upgrade"
+            self._replay = True
             return b"http/1.1"
 
         for upgrade in headers[b"upgrade"].split(b","):
@@ -2148,6 +2150,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                     pass
 
         # Negotiation failed!
+        self._replay = True
         return b"http/1.1"
 
 
@@ -2166,8 +2169,8 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
             self._negotiatedProtocol = self._upgrade()
             self._buffering = False
 
-            if self._negotiatedProtocol in [b"http/1.1", b"http/1.0"]:
-                res = self.dataReceived(self._buffer)
+            if self._replay:
+                self.dataReceived(self._buffer)
 
             del self._buffer
 
@@ -2181,7 +2184,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
             return self._bufferData(data)
 
         elif self._negotiatedProtocol is None:
-
             try:
                 # Does ALPN/NPN/some other transport negotiation have the
                 # protocol the client desires negotiated?
@@ -2195,7 +2197,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                     self._channel.transport)
 
             elif negotiatedProtocol in [b"http/1.1", None]:
-
                 if getattr(self.factory, "_upgradeables"):
                     # We can upgrade to different protocols through HTTP/1.1
                     # Upgrade, so we need to check the request to see if it

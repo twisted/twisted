@@ -37,7 +37,7 @@ from twisted.web import iweb, http, util
 from twisted.web.http import unquote, _version as version
 from twisted.python import log, reflect, failure, components
 from twisted.web import resource
-from twisted.web.error import UnsupportedMethod, CannotUpgrade
+from twisted.web.error import UnsupportedMethod
 
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecatedModuleAttribute

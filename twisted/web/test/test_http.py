@@ -8,7 +8,6 @@ Test HTTP support.
 from __future__ import absolute_import, division
 
 import random, cgi, base64
-import math
 
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
@@ -22,8 +21,9 @@ from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers
 from twisted.web.http import (
-    _respondToUpgrade, HTTPFactory, PotentialDataLoss, _DataLoss, _version,
+    HTTPFactory, PotentialDataLoss, _DataLoss, _version,
     _IdentityTransferDecoder)
+from twisted.web.error import CannotUpgrade
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost
@@ -2537,6 +2537,7 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                          sub(["category", "message"], warnings[0]))
 
 
+
 class Pitocol(Protocol):
     """
     A protocol that writes pi to the transport.
@@ -2546,8 +2547,6 @@ class Pitocol(Protocol):
         A C{dataReceived} that expects "GO" and will then write out
         "3.14" * C{piTimes}. If there's any other data, that won't
         """
-        if not protoself.connected:
-            self.fail("dataReceived called when disconnected!")
         if data == b"GO":
             for i in range(piTimes):
                 protoself.transport.write(b"3.14")
@@ -2571,6 +2570,8 @@ class HTTPUpgradeTests(unittest.TestCase):
         """
         Make a testing suitable L{HTTPFactory} which doesn't rely on a running
         reactor.
+
+        @return: A L{HTTPFactory}.
         """
         factory = HTTPFactory()
         factory._logDateTime = "sometime"
@@ -2585,7 +2586,6 @@ class HTTPUpgradeTests(unittest.TestCase):
         and an "Upgrade" header that lists a protocol we support will be
         upgraded to that protocol.
         """
-
         class PiUpgrader(object):
 
             def upgrade(self, verb, path, headers):
@@ -2621,6 +2621,52 @@ class HTTPUpgradeTests(unittest.TestCase):
 
         self.assertEqual(trans.value(), b"3.14" * piTimes)
         self.assertTrue(trans.disconnecting)
+
+
+    def test_upgradeWithReplay(self):
+        """
+        A HTTP/1.1 request with a "Connection" header that contains "Upgrade"
+        and an "Upgrade" header that lists a protocol we support will be
+        upgraded to that protocol. If the upgrader says it wants a replay of
+        the request, it will be replayed.
+        """
+        val = [
+            b"GET / HTTP/1.1\r\n"
+            b"Connection: keep-alive, Upgrade\r\n",
+            b"Upgrade: replay\r\n\r\n",
+        ]
+
+        class Echo(Protocol):
+            """
+            A protocol that echos back to the transport.
+            """
+            def dataReceived(protoself, data):
+                """
+                Echo out the data.
+                """
+                protoself.transport.write(data)
+
+        echoFactory = Factory()
+        echoFactory.protocol = Echo
+        echoFactory.startFactory()
+
+        class ReplayUpgrader(object):
+
+            def upgrade(self, verb, path, headers):
+                echo = echoFactory.buildProtocol(None)
+                return echo, True, {}
+
+        factory = self._makeFactory()
+        factory._addUpgrader(b"replay", ReplayUpgrader())
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        for x in iterbytes(b"".join(val)):
+            protocol.dataReceived(x)
+
+        self.assertEqual(trans.value(), b"".join(val))
 
 
     def test_upgradeNegotiatedHTTP11(self):
@@ -2716,8 +2762,8 @@ class HTTPUpgradeTests(unittest.TestCase):
 
     def test_mangledStatusLine(self):
         """
-        A non-HTTP first-line (or a mangled one) will return with a
-        "bad request" error.
+        A non-HTTP first-line (or a mangled one) will return with a "bad
+        request" error.
         """
         factory = self._makeFactory()
         factory._addUpgrader(b"unused", None)
@@ -2737,9 +2783,10 @@ class HTTPUpgradeTests(unittest.TestCase):
         self.assertEqual(trans.value(), expectedValue)
 
 
-    def test_regularRequest(self):
+    def test_regularRequestHTTP11(self):
         """
-        A regular HTTP/1.1 request (that does not want to upgrade) will be passed right through.
+        A regular HTTP/1.1 request (that does not want to upgrade) will be
+        passed right through.
         """
         factory = self._makeFactory()
         factory._addUpgrader(b"unused", None)
@@ -2749,11 +2796,93 @@ class HTTPUpgradeTests(unittest.TestCase):
         protocol.makeConnection(trans)
 
         val = [
-            b"GET/ HTTP/1.1\r\n\r\n",
+            b"GET / HTTP/1.1\r\n"
+            b"Expect: 100-continue\r\n\r\n",
         ]
 
         for x in iterbytes(b"".join(val)):
             protocol.dataReceived(x)
 
-        expectedValue = b"HTTP/1.1 400 Bad Request\r\n\r\n"
+        expectedValue = b"HTTP/1.1 100 Continue\r\n\r\n"
+        self.assertEqual(trans.value(), expectedValue)
+
+
+    def test_regularRequestHTTP10(self):
+        """
+        A regular HTTP/1.0 request (that does not want to upgrade) will be
+        passed right through.
+        """
+        factory = self._makeFactory()
+        factory._addUpgrader(b"unused", None)
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        val = [
+            b"GET / HTTP/1.0\r\n\r\n",
+        ]
+
+        for x in iterbytes(b"".join(val)):
+            protocol.dataReceived(x)
+
+        expectedValue = b""
+        self.assertEqual(trans.value(), expectedValue)
+
+
+    def test_noAvailableUpgrader(self):
+        """
+        An upgrade request that cannot be served with an upgrade (because we
+        don't have it) will continue on as normal without upgrading, per the
+        RFC.
+        """
+        factory = self._makeFactory()
+        factory._addUpgrader(b"someotherprotocol", None)
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        val = [
+            b"GET / HTTP/1.1\r\n"
+            b"Connection: Upgrade\r\n",
+            b"Upgrade: beepboopprotocol\r\n",
+            b"Expect: 100-continue\r\n\r\n",
+        ]
+
+        for x in iterbytes(b"".join(val)):
+            protocol.dataReceived(x)
+
+        expectedValue = b"HTTP/1.1 100 Continue\r\n\r\n"
+        self.assertEqual(trans.value(), expectedValue)
+
+
+    def test_cannotUpgrade(self):
+        """
+        An upgrade request that cannot be served with an upgrade (because the
+        upgrader fails safely) will continue on as normal without upgrading,
+        per the RFC.
+        """
+        class FailingUpgrade(object):
+            def upgrade(self, *args, **kwargs):
+                raise CannotUpgrade()
+
+        factory = self._makeFactory()
+        factory._addUpgrader(b"failing", FailingUpgrade())
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        val = [
+            b"GET / HTTP/1.1\r\n"
+            b"Connection: Upgrade\r\n",
+            b"Upgrade: failing\r\n",
+            b"Expect: 100-continue\r\n\r\n",
+        ]
+
+        for x in iterbytes(b"".join(val)):
+            protocol.dataReceived(x)
+
+        expectedValue = b"HTTP/1.1 100 Continue\r\n\r\n"
         self.assertEqual(trans.value(), expectedValue)

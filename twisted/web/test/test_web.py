@@ -298,7 +298,7 @@ class ConditionalTests(unittest.TestCase):
         self.channel = self.site.buildProtocol(None)
         self.transport = http.StringTransport()
         self.transport.close = lambda *a, **kw: None
-        self.transport.disconnecting = 0
+        self.transport.disconnecting = lambda *a, **kw: 0
         self.transport.getPeer = lambda *a, **kw: "peer"
         self.transport.getHost = lambda *a, **kw: "host"
         self.channel.makeConnection(self.transport)
@@ -319,7 +319,7 @@ class ConditionalTests(unittest.TestCase):
             validator = b"If-Modified-Since: " + modifiedSince
         else:
             validator = b"If-Not-Match: " + etag
-        for line in [b"GET / HTTP/1.1", validator, b"\r\n"]:
+        for line in [b"GET / HTTP/1.1", validator, b""]:
             self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.OK)
