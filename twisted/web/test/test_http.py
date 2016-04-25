@@ -9,6 +9,8 @@ from __future__ import absolute_import, division
 
 import random, cgi, base64
 
+from zope.interface import implementer
+
 try:
     from urlparse import urlparse, urlunsplit, clear_cache
 except ImportError:
@@ -19,7 +21,7 @@ from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
-from twisted.web import http, http_headers
+from twisted.web import http, http_headers, iweb
 from twisted.web.http import (
     HTTPFactory, PotentialDataLoss, _DataLoss, _version,
     _IdentityTransferDecoder)
@@ -2586,6 +2588,7 @@ class HTTPUpgradeTests(unittest.TestCase):
         and an "Upgrade" header that lists a protocol we support will be
         upgraded to that protocol.
         """
+        @implementer(iweb.IHTTPUpgradeable)
         class PiUpgrader(object):
 
             def upgrade(self, verb, path, headers):
@@ -2650,6 +2653,7 @@ class HTTPUpgradeTests(unittest.TestCase):
         echoFactory.protocol = Echo
         echoFactory.startFactory()
 
+        @implementer(iweb.IHTTPUpgradeable)
         class ReplayUpgrader(object):
 
             def upgrade(self, verb, path, headers):
@@ -2674,6 +2678,7 @@ class HTTPUpgradeTests(unittest.TestCase):
         A ALPN-negotiated HTTP/1.1 protocol needs to be read and checked for
         any upgrade requests.
         """
+        @implementer(iweb.IHTTPUpgradeable)
         class PiUpgrader(object):
 
             def upgrade(self, verb, path, headers):
