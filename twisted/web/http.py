@@ -1592,7 +1592,7 @@ class _ChunkedTransferDecoder(object):
 
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
-    A receiver for HTTP requests.
+    A receiver for HTTP/1.1 and HTTP/1.0 requests.
 
     @ivar MAX_LENGTH: Maximum length for initial request line and each line
         from the header.
@@ -1617,7 +1617,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     length = 0
     persistent = 1
-    __header = ''
+    __header = b''
     __first_line = 1
     __content = None
 
@@ -1687,7 +1687,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             # End of headers.
             if self.__header:
                 self.headerReceived(self.__header)
-            self.__header = ''
+            self.__header = b''
             self.allHeadersReceived()
             if self.length == 0:
                 self.allContentReceived()
@@ -1695,7 +1695,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.setRawMode()
         elif line[0] in b' \t':
             # Continuation of a multi line header.
-            self.__header = self.__header + '\n' + line
+            self.__header = self.__header + b'\n' + line
         # Regular header line.
         # Processing of header line is delayed to allow accumulating multi
         # line headers.
@@ -1992,7 +1992,14 @@ def proxiedLogFormatter(timestamp, request):
 
 
 def _respondToUpgrade(transport, newProtocol, headers):
+    """
+    Respond on C{transport} with a C{HTTP/1.1 101 Switching Protocols} status,
+    the headers to say that we have upgraded to C{newProtocol}, and the
+    additional C{headers}.
 
+    @type newProtocol: L{bytes}
+    @type headers: L{dict} with L{bytes} keys and values
+    """
     transport.write(b"HTTP/1.1 101 Switching Protocols\r\n")
 
     transport.write(b"Server: " + _version + b"\r\n")
