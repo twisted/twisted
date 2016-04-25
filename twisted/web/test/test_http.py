@@ -261,6 +261,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         negotiated protocol string.
         """
         a = http._genericHTTPChannelProtocolFactory(b'')
+        a.factory = HTTPFactory()
         a.requestFactory = DummyHTTPHandler
         a.makeConnection(t)
         # one byte at a time, to stress it.
@@ -2670,6 +2671,7 @@ class HTTPUpgradeTests(unittest.TestCase):
         A non-HTTP request returns with a "bad request" error.
         """
         factory = self._makeFactory()
+        factory._addUpgrader(b"unused", None)
         protocol = factory.buildProtocol(None)
 
         trans = StringTransport()
@@ -2692,6 +2694,7 @@ class HTTPUpgradeTests(unittest.TestCase):
         request" error.
         """
         factory = self._makeFactory()
+        factory._addUpgrader(b"unused", None)
         protocol = factory.buildProtocol(None)
 
         trans = StringTransport()
@@ -2717,6 +2720,29 @@ class HTTPUpgradeTests(unittest.TestCase):
         "bad request" error.
         """
         factory = self._makeFactory()
+        factory._addUpgrader(b"unused", None)
+        protocol = factory.buildProtocol(None)
+
+        trans = StringTransport()
+        protocol.makeConnection(trans)
+
+        val = [
+            b"GET/ HTTP/1.1\r\n\r\n",
+        ]
+
+        for x in iterbytes(b"".join(val)):
+            protocol.dataReceived(x)
+
+        expectedValue = b"HTTP/1.1 400 Bad Request\r\n\r\n"
+        self.assertEqual(trans.value(), expectedValue)
+
+
+    def test_regularRequest(self):
+        """
+        A regular HTTP/1.1 request (that does not want to upgrade) will be passed right through.
+        """
+        factory = self._makeFactory()
+        factory._addUpgrader(b"unused", None)
         protocol = factory.buildProtocol(None)
 
         trans = StringTransport()

@@ -2175,36 +2175,53 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     def dataReceived(self, data):
         """
         A override of L{IProtocol.dataReceived} that checks what protocol we're
-        using.
+        using, and negotiates HTTP/1.1 Upgrade if needed.
         """
         if self._buffering:
             return self._bufferData(data)
 
         elif self._negotiatedProtocol is None:
+
             try:
+                # Does ALPN/NPN/some other transport negotiation have the
+                # protocol the client desires negotiated?
                 negotiatedProtocol = self._channel.transport.negotiatedProtocol
             except AttributeError:
-                # The transport didn't negotiate the protocol (e.g. it's
-                # plaintext non-ALPN), so we should investigate the content.
-                self._buffering = True
-                return self._bufferData(data)
+                negotiatedProtocol = None
 
             if negotiatedProtocol == b'h2':
+                # We can't handle HTTP/2 yet
                 return _respondToBadRequestAndDisconnect(
                     self._channel.transport)
+
             elif negotiatedProtocol in [b"http/1.1", None]:
-                # If it's HTTP/1.1 (which may be an upgrade) or we don't know
-                # yet, look at the request.
-                self._buffering = True
-                return self._bufferData(data)
+
+                if getattr(self.factory, "_upgradeables"):
+                    # We can upgrade to different protocols through HTTP/1.1
+                    # Upgrade, so we need to check the request to see if it
+                    # wants us to do this. We handle it here rather than in
+                    # HTTPChannel so that all the switching between protocols
+                    # is kept in one place.
+                    # In this case, a negotiatedProtocol of None means that the
+                    # transport didn't negotiate it for us, and we have to
+                    # assume HTTP/1.1 or HTTP/1.0. Hence we need to inspect
+                    # this request.
+                    self._buffering = True
+                    return self._bufferData(data)
+                else:
+                    # We can't possibly upgrade to anything (because the HTTP
+                    # factory has no extra protocols configures), so we must
+                    # just assume HTTP/1.1.
+                    negotiatedProtocol = b"http/1.1"
+
             else:
+                # A protocol which we didn't understand was negotiated by ALPN.
                 return _respondToBadRequestAndDisconnect(
                     self._channel.transport)
 
             self._negotiatedProtocol = negotiatedProtocol
 
-        else:
-            return self._channel.dataReceived(data)
+        return self._channel.dataReceived(data)
 
 
 
