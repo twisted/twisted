@@ -225,10 +225,10 @@ class ConnectionPool:
         self.connkw = connkw
 
         for arg in self.CP_ARGS:
-            cp_arg = 'cp_%s' % arg
-            if cp_arg in connkw:
+            cpArg = 'cp_%s' % (arg,)
+            if cpArg in connkw:
                 setattr(self, arg, connkw[cp_arg])
-                del connkw[cp_arg]
+                del connkw[cpArg]
 
         self.min = min(self.min, self.max)
         self.max = max(self.min, self.max)
