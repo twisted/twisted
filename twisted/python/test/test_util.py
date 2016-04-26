@@ -844,22 +844,6 @@ class RunAsEffectiveUserTests(unittest.TestCase):
 
 
 
-def _getDeprecationSuppression(f):
-    """
-    Returns a tuple of arguments needed to suppress deprecation warnings from
-    a specified function.
-
-    @param f: function to suppress dperecation warnings for
-    @type f: L{callable}
-
-    @return: tuple to add to C{suppress} attribute
-    """
-    return SUPPRESS(
-        category=DeprecationWarning,
-        message='%s was deprecated' % (fullyQualifiedName(f),))
-
-
-
 class InitGroupsTests(unittest.TestCase):
     """
     Tests for L{util.initgroups}.
