@@ -12,6 +12,9 @@ Test running processes.
     cause spurious failures if this value is pushed too high.  U{Please see
     this ticket for a discussion of how we arrived at its current value.
     <http://twistedmatrix.com/trac/ticket/3404>}
+
+@var properEnv: A copy of L{os.environ} which has L{bytes} keys/values on POSIX
+    platforms and native L{str} keys/values on Windows.
 """
 
 from __future__ import division, absolute_import

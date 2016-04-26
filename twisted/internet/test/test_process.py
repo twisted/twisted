@@ -3,6 +3,9 @@
 
 """
 Tests for implementations of L{IReactorProcess}.
+
+@var properEnv: A copy of L{os.environ} which has L{bytes} keys/values on POSIX
+    platforms and native L{str} keys/values on Windows.
 """
 
 from __future__ import division, absolute_import, print_function

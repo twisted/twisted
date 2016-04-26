@@ -1,3 +1,7 @@
+"""
+A cross-platform copying tool that supports globbing.
+"""
+
 import sys
 import glob
 import shutil
