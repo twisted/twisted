@@ -2,14 +2,15 @@
 # See LICENSE for details.
 
 """
-Tests for twisted.enterprise.adbapi.
+Tests for L{twisted.enterprise.adbapi}.
 """
 
-from twisted.trial import unittest
+from __future__ import absolute_import, division
 
 import os
 import stat
 
+from twisted.trial import unittest
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.enterprise.adbapi import Connection, Transaction
 from twisted.internet import reactor, defer, interfaces

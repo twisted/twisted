@@ -6,10 +6,13 @@
 An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
+from __future__ import absolute_import, division
+
 import sys
 
 from twisted.internet import threads
 from twisted.python import reflect, log
+from twisted.python._oldstyle import _oldStyle
 
 
 class ConnectionLost(Exception):
@@ -75,6 +78,8 @@ class Connection(object):
         return getattr(self._connection, name)
 
 
+
+@_oldStyle
 class Transaction:
     """A lightweight wrapper for a DB-API 'cursor' object.
 
@@ -122,6 +127,8 @@ class Transaction:
         return getattr(self._cursor, name)
 
 
+
+@_oldStyle
 class ConnectionPool:
     """
     Represent a pool of connections to a DB-API 2.0 compliant database.
@@ -226,9 +233,12 @@ class ConnectionPool:
 
         # these are optional so import them here
         from twisted.python import threadpool
-        import thread
+        try:
+            from thread import get_ident
+        except ImportError:
+            from threading import get_ident
 
-        self.threadID = thread.get_ident
+        self.threadID = get_ident
         self.threadpool = threadpool.ThreadPool(self.min, self.max)
         self.startID = self._reactor.callWhenRunning(self._start)
 
@@ -285,13 +295,13 @@ class ConnectionPool:
             result = func(conn, *args, **kw)
             conn.commit()
             return result
-        except:
+        except Exception as e:
             excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
             except:
                 log.err(None, "Rollback failed")
-            raise excType, excValue, excTraceback
+            raise e
 
 
     def runInteraction(self, interaction, *args, **kw):
@@ -446,13 +456,13 @@ class ConnectionPool:
             trans.close()
             conn.commit()
             return result
-        except:
+        except Exception as e:
             excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
             except:
                 log.err(None, "Rollback failed")
-            raise excType, excValue, excTraceback
+            raise e
 
 
     def _runQuery(self, trans, *args, **kw):
