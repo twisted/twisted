@@ -227,7 +227,7 @@ class ConnectionPool:
         for arg in self.CP_ARGS:
             cpArg = 'cp_%s' % (arg,)
             if cpArg in connkw:
-                setattr(self, arg, connkw[cp_arg])
+                setattr(self, arg, connkw[cpArg])
                 del connkw[cpArg]
 
         self.min = min(self.min, self.max)
