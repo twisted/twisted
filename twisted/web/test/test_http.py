@@ -812,12 +812,19 @@ class ParsingTests(unittest.TestCase):
         When client sends invalid HTTP method containing
         non-ascii characters HTTP 400 'Bad Request' status will be returned.
         """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
         badRequestLine = b"GE\xc2\xa9 / HTTP/1.1\r\n\r\n"
-        channel = self.runRequest(badRequestLine, http.Request, 0)
+        channel = self.runRequest(badRequestLine, MyRequest, 0)
         self.assertEqual(
             channel.transport.value(),
             b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.assertTrue(channel.transport.disconnecting)
+        self.assertEqual(processed, [])
 
 
     def test_basicAuth(self):
@@ -895,12 +902,19 @@ class ParsingTests(unittest.TestCase):
         (Bad Request) response is sent to the client and the connection is
         closed.
         """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
         requestLines = [b"GET / HTTP/1.0", b"Content-Length: x", b"", b""]
-        channel = self.runRequest(b"\n".join(requestLines), http.Request, 0)
+        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
         self.assertEqual(
             channel.transport.value(),
             b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.assertTrue(channel.transport.disconnecting)
+        self.assertEqual(processed, [])
 
 
     def test_invalidHeaderNoColon(self):
@@ -908,12 +922,19 @@ class ParsingTests(unittest.TestCase):
         If a header without colon is received a 400 (Bad Request) response
         is sent to the client and the connection is closed.
         """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
         requestLines = [b"GET / HTTP/1.0", b"HeaderName ", b"", b""]
-        channel = self.runRequest(b"\n".join(requestLines), http.Request, 0)
+        channel = self.runRequest(b"\n".join(requestLines), MyRequest, 0)
         self.assertEqual(
             channel.transport.value(),
             b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.assertTrue(channel.transport.disconnecting)
+        self.assertEqual(processed, [])
 
 
     def test_headerLimitPerRequest(self):
@@ -963,13 +984,24 @@ class ParsingTests(unittest.TestCase):
         on the size of headers received per request starting from initial
         command line.
         """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
         channel = http.HTTPChannel()
         channel.totalHeadersSize = 10
         httpRequest = b'GET /path/longer/than/10 HTTP/1.1\n'
 
         channel = self.runRequest(
-            httpRequest=httpRequest, channel=channel, success=False)
+            httpRequest=httpRequest,
+            requestFactory=MyRequest,
+            channel=channel,
+            success=False
+        )
 
+        self.assertEqual(processed, [])
         self.assertEqual(
             channel.transport.value(),
             b"HTTP/1.1 400 Bad Request\r\n\r\n")
@@ -981,6 +1013,12 @@ class ParsingTests(unittest.TestCase):
         on the size of headers received per request counting first line
         and total headers.
         """
+        processed = []
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
         channel = http.HTTPChannel()
         channel.totalHeadersSize = 40
         httpRequest = (
@@ -989,8 +1027,12 @@ class ParsingTests(unittest.TestCase):
             )
 
         channel = self.runRequest(
-            httpRequest=httpRequest, channel=channel, success=False)
+            httpRequest=httpRequest,
+            requestFactory=MyRequest,
+            channel=channel, success=False
+        )
 
+        self.assertEqual(processed, [])
         self.assertEqual(
             channel.transport.value(),
             b"HTTP/1.1 400 Bad Request\r\n\r\n")

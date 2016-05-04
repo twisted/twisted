@@ -1681,7 +1681,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         elif line == b'':
             # End of headers.
             if self.__header:
-                self.headerReceived(self.__header)
+                ok = self.headerReceived(self.__header)
+                # If the last header we got is invalid, we MUST NOT proceed
+                # with processing. We'll have sent a 400 anyway, so just stop.
+                if not ok:
+                    return
             self.__header = ''
             self.allHeadersReceived()
             if self.length == 0:
@@ -1713,12 +1717,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type line: C{bytes}
         @param line: A line from the header section of a request, excluding the
             line delimiter.
+
+        @return: A flag indicating whether the header was valid.
+        @rtype: L{bool}
         """
         try:
             header, data = line.split(b':', 1)
         except ValueError:
             _respondToBadRequestAndDisconnect(self.transport)
-            return
+            return False
 
         header = header.lower()
         data = data.strip()
@@ -1728,7 +1735,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             except ValueError:
                 _respondToBadRequestAndDisconnect(self.transport)
                 self.length = None
-                return
+                return False
             self._transferDecoder = _IdentityTransferDecoder(
                 self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
         elif header == b'transfer-encoding' and data.lower() == b'chunked':
@@ -1747,7 +1754,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
             _respondToBadRequestAndDisconnect(self.transport)
-            return
+            return False
+
+        return True
 
 
     def allContentReceived(self):
