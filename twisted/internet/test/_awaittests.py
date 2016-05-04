@@ -9,18 +9,35 @@ from twisted.internet import reactor
 
 class AwaitTests(TestCase):
 
-    @deferredCoroutine
-    async def test_basic(self):
+    def test_basic(self):
         """
-        foooo L{foo}
+        L{deferredCoroutine} allows a function to C{await} on a L{Deferred}.
         """
+        @deferredCoroutine
+        async def run():
+            d = Deferred()
+            d.callback("foo")
+            res = await d
+            return res
 
-
-        d = Deferred()
-
-        reactor.callLater(0, d.callback, "foo")
-
-        res = await d
-
-
+        d = run()
+        res = self.successResultOf(d)
         self.assertEqual(res, "foo")
+
+
+    def test_exception(self):
+        """
+        An exception in a function wrapped with L{deferredCoroutine} will cause
+        the returned L{Deferred} to fire with a failure.
+        """
+        @deferredCoroutine
+        async def run():
+            d = Deferred()
+            d.callback("foo")
+            res = await d
+            raise ValueError("Oh no!")
+
+        d = run()
+        res = self.failureResultOf(d)
+        self.assertEqual(type(res.value), ValueError)
+        self.assertEqual(res.value.args, ("Oh no!",))

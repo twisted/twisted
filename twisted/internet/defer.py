@@ -694,6 +694,8 @@ def _awaitTick(result, coro, deferred):
         result = coro.send(result)
     except StopIteration as e:
         deferred.callback(e.value)
+    except:
+        deferred.errback()
 
     if isinstance(result, Deferred):
         result.addBoth(_awaitTick, coro=coro, deferred=deferred)
