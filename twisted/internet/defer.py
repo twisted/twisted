@@ -662,6 +662,86 @@ class Deferred:
     __repr__ = __str__
 
 
+    def __await__(self):
+        awaiter = _MakeDeferredAwaitable(self)
+        return awaiter.__await__()
+
+
+class _MakeDeferredAwaitable(object):
+    """
+    A subgenerator which is created by L{Deferred.__await__}.
+    """
+    result = _NO_RESULT
+
+    def __init__(self, d):
+        self.d = d
+        self.d.addBoth(self._setResult)
+
+    def _setResult(self, value):
+        self.result = value
+
+    def __next__(self):
+        if self.result is not _NO_RESULT:
+            raise StopIteration(self.result)
+        return self.d
+
+    def __await__(self):
+        return self
+
+
+def _awaitTick(result, coro, deferred):
+    try:
+        result = coro.send(result)
+    except StopIteration as e:
+        deferred.callback(e.value)
+
+    if isinstance(result, Deferred):
+        result.addBoth(_awaitTick, coro=coro, deferred=deferred)
+
+    return deferred
+
+
+def deferredCoroutine(f):
+    """
+    A decorator for supporting coroutine-style programming using L{Deferred}s.
+    It implements the awaitable protocol from PEP-0492.
+
+    When using this decorator, the wrapped function may use the C{await}
+    keyword to suspend execution until the awaited L{Deferred} has fired. For
+    example::
+
+        import treq
+        from twisted.internet.defer import deferredCoroutine
+        from twisted.internet.task import react
+
+        def main(reactor):
+            pages = [
+                "https://google.com/",
+                "https://twistedmatrix.com",
+            ]
+            d = crawl(pages)
+            d.addCallback(print)
+            return d
+
+        @deferredCoroutine
+        async def crawl(pages):
+            results = {}
+
+            for page in pages:
+                results[page] = await treq.content(await treq.get(page))
+            return results
+
+        react(main)
+
+    In the above example, L{treq.get} and L{treq.content} return L{Deferreds},
+    and the decorated function returns a L{Deferred} itself.
+    """
+    def wrapped(*args, **kwargs):
+        coro = f(*args, **kwargs)
+        return _awaitTick(None, coro, Deferred())
+
+    return wrapped
+
 
 class DebugInfo:
     """
