@@ -23,7 +23,6 @@ from twisted.trial import unittest
 from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python import util
-from twisted.python.reflect import fullyQualifiedName
 from twisted.python.filepath import FilePath
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
@@ -841,22 +840,6 @@ class RunAsEffectiveUserTests(unittest.TestCase):
         self._testUIDGIDSwitch(1, 1, 2, 1, [0, 2, 0, 1], [])
         self._testUIDGIDSwitch(1, 1, 1, 2, [0, 1, 0, 1], [2, 1])
         self._testUIDGIDSwitch(1, 1, 2, 2, [0, 2, 0, 1], [2, 1])
-
-
-
-def _getDeprecationSuppression(f):
-    """
-    Returns a tuple of arguments needed to suppress deprecation warnings from
-    a specified function.
-
-    @param f: function to suppress dperecation warnings for
-    @type f: L{callable}
-
-    @return: tuple to add to C{suppress} attribute
-    """
-    return SUPPRESS(
-        category=DeprecationWarning,
-        message='%s was deprecated' % (fullyQualifiedName(f),))
 
 
 
