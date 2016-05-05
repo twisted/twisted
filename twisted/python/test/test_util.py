@@ -23,7 +23,6 @@ from twisted.trial import unittest
 from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python import util
-from twisted.python.reflect import fullyQualifiedName
 from twisted.python.filepath import FilePath
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
