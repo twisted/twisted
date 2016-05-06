@@ -423,6 +423,8 @@ class HTTPClient(basic.LineReceiver):
         Given a complete HTTP header, extract the field name and value and
         process the header.
 
+        Invalid headers are ignored.
+
         @param header: a complete HTTP request header of the form
             'field-name: value'.
         @type header: C{bytes}
@@ -430,6 +432,7 @@ class HTTPClient(basic.LineReceiver):
         try:
             key, val = header.split(b':', 1)
         except ValueError:
+            # Ignore invalid headers.
             return
         val = val.lstrip()
         self.handleHeader(key, val)

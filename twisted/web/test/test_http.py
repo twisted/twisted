@@ -2366,7 +2366,7 @@ class MultilineHeadersTests(unittest.TestCase):
         self.assertEqual(c.length, 10)
 
 
-    def test_extractIncorrectHeader(self):
+    def test_extractHeaderIncorrectNoException(self):
         """
         An invalid header (e.g. header without colon) does not raise exception in
         L{HTTPClient.extractHeader}.
@@ -2377,13 +2377,40 @@ class MultilineHeadersTests(unittest.TestCase):
         c.lineReceived(b'HTTP/1.0 200')
         c.lineReceived(b'X-Invalid-Header 0')
         self.assertFalse(self.handleHeaderCalled)
-
         # Signal end of headers.
         c.lineReceived(b'')
+
         self.assertFalse(self.handleHeaderCalled)
         self.assertTrue(self.handleEndHeadersCalled)
         self.assertEqual(c.version, b'HTTP/1.0')
         self.assertEqual(c.status, b'200')
+
+
+    def test_extractHeaderIgnored(self):
+        """
+        An invalid header parsed by L{HTTPClient.extractHeader} is ignored
+        while previous or future headers are processed.
+        """
+        c = ClientDriver()
+        c.handleHeader = self.ourHandleHeader
+        c.handleEndHeaders = self.ourHandleEndHeaders
+        c.lineReceived(b'HTTP/1.1 200')
+        c.lineReceived(b'Pre-Header: pre-value')
+        c.lineReceived(b'X-Invalid-Header 0')
+        c.lineReceived(b'Post-Header: post-value')
+        self.assertFalse(self.handleHeaderCalled)
+        # Signal end of headers.
+        c.lineReceived(b'')
+
+        self.assertTrue(self.handleHeaderCalled)
+        self.assertTrue(self.handleEndHeadersCalled)
+        self.assertEqual(c.version, b'HTTP/1.1')
+        self.assertEqual(c.status, b'200')
+        self.assertEqual({
+            'pre-header': 'pre-value',
+            'post-header': 'post-value',
+            },
+            c.receivedHeaders)
 
 
     def test_noHeaders(self):
