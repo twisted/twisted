@@ -2366,6 +2366,26 @@ class MultilineHeadersTests(unittest.TestCase):
         self.assertEqual(c.length, 10)
 
 
+    def test_extractIncorrectHeader(self):
+        """
+        An invalid header (e.g. header without colon) does not raise exception in
+        L{HTTPClient.extractHeader}.
+        """
+        c = ClientDriver()
+        c.handleHeader = self.ourHandleHeader
+        c.handleEndHeaders = self.ourHandleEndHeaders
+        c.lineReceived(b'HTTP/1.0 200')
+        c.lineReceived(b'X-Invalid-Header 0')
+        self.assertFalse(self.handleHeaderCalled)
+
+        # Signal end of headers.
+        c.lineReceived(b'')
+        self.assertFalse(self.handleHeaderCalled)
+        self.assertTrue(self.handleEndHeadersCalled)
+        self.assertEqual(c.version, b'HTTP/1.0')
+        self.assertEqual(c.status, b'200')
+
+
     def test_noHeaders(self):
         """
         An HTTP request with no headers will not cause any calls to

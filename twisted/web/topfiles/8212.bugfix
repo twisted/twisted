@@ -1,0 +1,1 @@
+twisted.web.http.HttpClient does not raise unhandled exceptions when receiving malformed headers from server

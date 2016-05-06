@@ -427,7 +427,10 @@ class HTTPClient(basic.LineReceiver):
             'field-name: value'.
         @type header: C{bytes}
         """
-        key, val = header.split(b':', 1)
+        try:
+            key, val = header.split(b':', 1)
+        except ValueError:
+            return
         val = val.lstrip()
         self.handleHeader(key, val)
         if key.lower() == b'content-length':
