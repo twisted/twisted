@@ -12,9 +12,10 @@ from inspect import getsourcefile
 
 from zope.interface.verify import verifyObject, BrokenMethodImplementation
 
+from twisted.python.compat import _PY3, currentframe
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 
-from twisted.python.compat import _PY3, currentframe
 from .._levels import LogLevel
 from .._observer import ILogObserver
 from .._stdlib import STDLibLogObserver
@@ -181,6 +182,35 @@ class STDLibLogObserverTests(unittest.TestCase):
 
         self.assertEqual(len(records), 1)
         self.assertEqual(str(records[0].msg), "")
+
+
+    def test_failure(self):
+        """
+        An event with a failure logs the failure details as well.
+        """
+        try:
+            1 / 0
+        except ZeroDivisionError:
+            failure = Failure()
+        event = dict(log_format='Hi mom', who='me', log_failure=failure)
+        records, output = self.logEvent(event)
+        self.assertEqual(len(records), 1)
+        self.assertIn(u'ZeroDivisionError', output)
+
+
+    def test_cleanedFailure(self):
+        """
+        An event with a cleaned failure logs the failure details as well.
+        """
+        try:
+            1 / 0
+        except ZeroDivisionError:
+            failure = Failure()
+        failure.cleanFailure()
+        event = dict(log_format='Hi mom', who='me', log_failure=failure)
+        records, output = self.logEvent(event)
+        self.assertEqual(len(records), 1)
+        self.assertIn(u'ZeroDivisionError', output)
 
 
 
