@@ -107,13 +107,13 @@ class STDLibLogObserver(object):
         level = event.get("log_level", LogLevel.info)
         failure = event.get('log_failure')
         if failure is None:
-            exc_info = None
+            excInfo = None
         else:
-            exc_info = (
+            excInfo = (
                 failure.type, failure.value, failure.getTracebackObject())
         stdlibLevel = toStdlibLogLevelMapping.get(level, stdlibLogging.INFO)
         self.logger.log(
-            stdlibLevel, StringifiableFromEvent(event), exc_info=exc_info)
+            stdlibLevel, StringifiableFromEvent(event), exc_info=excInfo)
 
 
 
