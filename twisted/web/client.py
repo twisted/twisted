@@ -246,7 +246,7 @@ class HTTPPageGetter(http.HTTPClient):
 
     def timeout(self):
         self.quietLoss = True
-        self.transport.loseConnection()
+        self.transport.abortConnection()
         self.factory.noPage(defer.TimeoutError("Getting %s took longer than %s seconds." % (self.factory.url, self.factory.timeout)))
 
 
