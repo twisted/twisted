@@ -188,28 +188,38 @@ class STDLibLogObserverTests(unittest.TestCase):
         """
         An event with a failure logs the failure details as well.
         """
-        try:
+        def failing_func():
             1 / 0
+        try:
+            failing_func()
         except ZeroDivisionError:
             failure = Failure()
         event = dict(log_format='Hi mom', who='me', log_failure=failure)
         records, output = self.logEvent(event)
         self.assertEqual(len(records), 1)
+        self.assertIn(u'Hi mom', output)
+        self.assertIn(u'in failing_func', output)
         self.assertIn(u'ZeroDivisionError', output)
 
 
     def test_cleanedFailure(self):
         """
-        An event with a cleaned failure logs the failure details as well.
+        A cleaned Failure object has a fake traceback object; make sure that
+        logging such a failure still results in the exception details being
+        logged.
         """
-        try:
+        def failing_func():
             1 / 0
+        try:
+            failing_func()
         except ZeroDivisionError:
             failure = Failure()
         failure.cleanFailure()
         event = dict(log_format='Hi mom', who='me', log_failure=failure)
         records, output = self.logEvent(event)
         self.assertEqual(len(records), 1)
+        self.assertIn(u'Hi mom', output)
+        self.assertIn(u'in failing_func', output)
         self.assertIn(u'ZeroDivisionError', output)
 
 
