@@ -1,4 +1,4 @@
-Twisted 16.1.1
+Twisted 16.2.0pre1
 ==============
 
 |pypi|
@@ -12,7 +12,7 @@ Twisted 16.1.1
     * idnar imagines hawkowl crashing in through somebody's window to yell at them for using ancient software
 
 
-For information on what's new in Twisted 16.1.1, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.2.0pre1, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
