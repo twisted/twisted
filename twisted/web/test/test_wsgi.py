@@ -99,7 +99,7 @@ class WSGIResourceTests(TestCase):
         self.assertRaises(
             RuntimeError,
             self.resource.getChildWithDefault,
-            b"foo", Request(DummyChannel(), False))
+            b"foo", Request(DummyChannel()))
         self.assertRaises(
             RuntimeError,
             self.resource.putChild,
@@ -168,7 +168,7 @@ class WSGITestsMixin:
 
         channel = channelFactory()
         channel.site = Site(root)
-        request = requestFactory(channel, False)
+        request = requestFactory(channel)
         for k, v in headers:
             request.requestHeaders.addRawHeader(
                 _toByteString(k), _toByteString(v))
@@ -270,7 +270,7 @@ class WSGITestsMixin:
                 return Request.requestReceived(
                     self, command=command, path=path, version=version)
 
-        request = CannedRequest(channel, queued=False)
+        request = CannedRequest(channel)
         request.gotLength(0)  # Initialize buffer for request body.
 
         return request, result

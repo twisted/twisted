@@ -438,7 +438,7 @@ class ProxyRequestTests(TestCase):
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
         reactor = MemoryReactor()
-        request = ProxyRequest(channel, False, reactor)
+        request = ProxyRequest(channel, reactor)
         request.gotLength(len(data))
         request.handleContentChunk(data)
         request.requestReceived(method, b'http://example.com' + uri,
@@ -497,7 +497,7 @@ class ProxyRequestTests(TestCase):
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
         reactor = MemoryReactor()
-        request = ProxyRequest(channel, False, reactor)
+        request = ProxyRequest(channel, reactor)
         request.gotLength(0)
         request.requestReceived(b'GET', b'http://example.com:1234/foo/bar',
                                 b'HTTP/1.0')
@@ -535,7 +535,7 @@ class ReverseProxyRequestTests(TestCase):
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
         reactor = MemoryReactor()
-        request = ReverseProxyRequest(channel, False, reactor)
+        request = ReverseProxyRequest(channel, reactor)
         request.factory = DummyFactory(u"example.com", 1234)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')

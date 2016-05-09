@@ -450,21 +450,21 @@ class RequestTests(unittest.TestCase):
         L{server.Request} instances provide L{iweb.IRequest}.
         """
         self.assertTrue(
-            verifyObject(iweb.IRequest, server.Request(DummyChannel(), True)))
+            verifyObject(iweb.IRequest, server.Request(DummyChannel())))
 
 
     def testChildLink(self):
-        request = server.Request(DummyChannel(), 1)
+        request = server.Request(DummyChannel())
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         self.assertEqual(request.childLink(b'baz'), b'bar/baz')
-        request = server.Request(DummyChannel(), 1)
+        request = server.Request(DummyChannel())
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar/', b'HTTP/1.0')
         self.assertEqual(request.childLink(b'baz'), b'baz')
 
     def testPrePathURLSimple(self):
-        request = server.Request(DummyChannel(), 1)
+        request = server.Request(DummyChannel())
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
         request.setHost(b'example.com', 80)
@@ -473,7 +473,7 @@ class RequestTests(unittest.TestCase):
     def testPrePathURLNonDefault(self):
         d = DummyChannel()
         d.transport.port = 81
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'example.com', 81)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
@@ -482,7 +482,7 @@ class RequestTests(unittest.TestCase):
     def testPrePathURLSSLPort(self):
         d = DummyChannel()
         d.transport.port = 443
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'example.com', 443)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
@@ -492,7 +492,7 @@ class RequestTests(unittest.TestCase):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 443
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'example.com', 443)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
@@ -502,7 +502,7 @@ class RequestTests(unittest.TestCase):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 80
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'example.com', 80)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
@@ -512,7 +512,7 @@ class RequestTests(unittest.TestCase):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 81
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'example.com', 81)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
@@ -521,7 +521,7 @@ class RequestTests(unittest.TestCase):
     def testPrePathURLSetSSLHost(self):
         d = DummyChannel()
         d.transport.port = 81
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'foo.com', 81, 1)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo/bar', b'HTTP/1.0')
@@ -534,7 +534,7 @@ class RequestTests(unittest.TestCase):
         preserve the original meaning.
         """
         d = DummyChannel()
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'example.com', 80)
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
@@ -548,14 +548,16 @@ class RequestTests(unittest.TestCase):
         message.
         """
         d = DummyChannel()
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.site = server.Site(resource.Resource())
         request.site.displayTracebacks = False
         fail = failure.Failure(Exception("Oh no!"))
         request.processingFailed(fail)
 
-        self.assertNotIn(b"Oh no!", request.transport.getvalue())
-        self.assertIn(b"Processing Failed", request.transport.getvalue())
+        self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
+        self.assertIn(
+            b"Processing Failed", request.transport.written.getvalue()
+        )
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -568,13 +570,13 @@ class RequestTests(unittest.TestCase):
         to C{True} writes out the failure.
         """
         d = DummyChannel()
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.site = server.Site(resource.Resource())
         request.site.displayTracebacks = True
         fail = failure.Failure(Exception("Oh no!"))
         request.processingFailed(fail)
 
-        self.assertIn(b"Oh no!", request.transport.getvalue())
+        self.assertIn(b"Oh no!", request.transport.written.getvalue())
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -588,13 +590,13 @@ class RequestTests(unittest.TestCase):
         entities.
         """
         d = DummyChannel()
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.site = server.Site(resource.Resource())
         request.site.displayTracebacks = True
         fail = failure.Failure(Exception(u"\u2603"))
         request.processingFailed(fail)
 
-        self.assertIn(b"&#9731;", request.transport.getvalue())
+        self.assertIn(b"&#9731;", request.transport.written.getvalue())
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -622,7 +624,7 @@ class GzipEncoderTests(unittest.TestCase):
         instance of L{server._GzipEncoder} which implements
         L{iweb._IRequestEncoder}.
         """
-        request = server.Request(self.channel, False)
+        request = server.Request(self.channel)
         request.gotLength(0)
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"gzip,deflate"])
@@ -638,7 +640,7 @@ class GzipEncoderTests(unittest.TestCase):
         If the client request passes a I{Accept-Encoding} header which mentions
         gzip, L{server._GzipEncoder} automatically compresses the data.
         """
-        request = server.Request(self.channel, False)
+        request = server.Request(self.channel)
         request.gotLength(0)
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"gzip,deflate"])
@@ -656,7 +658,7 @@ class GzipEncoderTests(unittest.TestCase):
         L{server.GzipEncoderFactory} doesn't return a L{server._GzipEncoder} if
         the I{Accept-Encoding} header doesn't mention gzip support.
         """
-        request = server.Request(self.channel, False)
+        request = server.Request(self.channel)
         request.gotLength(0)
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"foo,bar"])
@@ -674,7 +676,7 @@ class GzipEncoderTests(unittest.TestCase):
         L{server.GzipEncoderFactory} reads them properly to detect if gzip is
         supported.
         """
-        request = server.Request(self.channel, False)
+        request = server.Request(self.channel)
         request.gotLength(0)
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"deflate", b"gzip"])
@@ -692,7 +694,7 @@ class GzipEncoderTests(unittest.TestCase):
         If the content is already encoded and the I{Content-Encoding} header is
         set, L{server.GzipEncoderFactory} properly appends gzip to it.
         """
-        request = server.Request(self.channel, False)
+        request = server.Request(self.channel)
         request.gotLength(0)
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"deflate", b"gzip"])
@@ -713,7 +715,7 @@ class GzipEncoderTests(unittest.TestCase):
         L{server.GzipEncoderFactory} normalizes it and appends gzip to the
         field value.
         """
-        request = server.Request(self.channel, False)
+        request = server.Request(self.channel)
         request.gotLength(0)
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"deflate", b"gzip"])
@@ -752,7 +754,7 @@ class RememberURLTests(unittest.TestCase):
         rr.putChild(b'bar', resource.Resource())
         chan = self.createServer(r)
         for url in [b'/foo/', b'/foo/bar', b'/foo/bar/baz', b'/foo/bar/']:
-            request = server.Request(chan, 1)
+            request = server.Request(chan)
             request.setHost(b'example.com', 81)
             request.gotLength(0)
             request.requestReceived(b'GET', url, b'HTTP/1.0')
@@ -764,7 +766,7 @@ class RememberURLTests(unittest.TestCase):
         rr.putChild(b'bar', resource.Resource())
         chan = self.createServer(rr)
         for url in [b'/', b'/bar', b'/bar/baz', b'/bar/']:
-            request = server.Request(chan, 1)
+            request = server.Request(chan)
             request.setHost(b'example.com', 81)
             request.gotLength(0)
             request.requestReceived(b'GET', url, b'HTTP/1.0')
@@ -815,7 +817,7 @@ class NewRenderTests(unittest.TestCase):
             resource = NewRenderResource()
         d.site.resource.putChild(b'newrender', resource)
         d.transport.port = 81
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'example.com', 81)
         request.gotLength(0)
         return request
@@ -823,11 +825,15 @@ class NewRenderTests(unittest.TestCase):
     def testGoodMethods(self):
         req = self._getReq()
         req.requestReceived(b'GET', b'/newrender', b'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'hi hi')
+        self.assertEqual(
+            req.transport.written.getvalue().splitlines()[-1], b'hi hi'
+        )
 
         req = self._getReq()
         req.requestReceived(b'HEH', b'/newrender', b'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'ho ho')
+        self.assertEqual(
+            req.transport.written.getvalue().splitlines()[-1], b'ho ho'
+        )
 
     def testBadMethods(self):
         req = self._getReq()
@@ -855,7 +861,7 @@ class NewRenderTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'HEAD', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 200)
-        self.assertEqual(-1, req.transport.getvalue().find(b'hi hi'))
+        self.assertEqual(-1, req.transport.written.getvalue().find(b'hi hi'))
 
 
     def test_unsupportedHead(self):
@@ -866,7 +872,7 @@ class NewRenderTests(unittest.TestCase):
         resource = HeadlessResource()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
-        headers, body = req.transport.getvalue().split(b'\r\n\r\n')
+        headers, body = req.transport.written.getvalue().split(b'\r\n\r\n')
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b'')
 
@@ -887,7 +893,7 @@ class NewRenderTests(unittest.TestCase):
 
         request.requestReceived(b"GET", b"/newrender", b"HTTP/1.0")
 
-        headers, body = request.transport.getvalue().split(b'\r\n\r\n')
+        headers, body = request.transport.written.getvalue().split(b'\r\n\r\n')
         self.assertEqual(request.code, 500)
         expected = [
             '',
@@ -940,7 +946,7 @@ class AllowedMethodsTests(unittest.TestCase):
         d = DummyChannel()
         d.site.resource.putChild(b'gettableresource', GettableResource())
         d.transport.port = 81
-        request = server.Request(d, 1)
+        request = server.Request(d)
         request.setHost(b'example.com', 81)
         request.gotLength(0)
         return request
@@ -988,7 +994,7 @@ class AllowedMethodsTests(unittest.TestCase):
         req.requestReceived(b'POST', b'/gettableresource?'
                             b'value=<script>bad', b'HTTP/1.0')
         self.assertEqual(req.code, 405)
-        renderedPage = req.transport.getvalue()
+        renderedPage = req.transport.written.getvalue()
         self.assertNotIn(b"<script>bad", renderedPage)
         self.assertIn(b'&lt;script&gt;bad', renderedPage)
 
@@ -1003,7 +1009,7 @@ class AllowedMethodsTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'<style>bad', b'/gettableresource', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
-        renderedPage = req.transport.getvalue()
+        renderedPage = req.transport.written.getvalue()
         self.assertNotIn(b"<style>bad", renderedPage)
         self.assertIn(b'&lt;style&gt;bad', renderedPage)
 

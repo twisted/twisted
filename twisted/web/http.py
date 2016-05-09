@@ -587,24 +587,17 @@ class Request:
     _forceSSL = 0
     _disconnected = False
 
-    def __init__(self, channel, queued):
+    def __init__(self, channel):
         """
         @param channel: the channel we're connected to.
-        @param queued: are we in the request queue, or can we start writing to
-            the transport?
         """
         self.notifications = []
         self.channel = channel
-        self.queued = queued
         self.requestHeaders = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
         self.cookies = [] # outgoing cookies
-
-        if queued:
-            self.transport = StringTransport()
-        else:
-            self.transport = self.channel.transport
+        self.transport = self.channel.transport
 
 
     def _cleanup(self):
@@ -616,44 +609,18 @@ class Request:
             self.unregisterProducer()
         self.channel.requestDone(self)
         del self.channel
-        try:
-            self.content.close()
-        except OSError:
-            # win32 suckiness, no idea why it does this
-            pass
-        del self.content
+        if self.content is not None:
+            try:
+                self.content.close()
+            except OSError:
+                # win32 suckiness, no idea why it does this
+                pass
+            del self.content
         for d in self.notifications:
             d.callback(None)
         self.notifications = []
 
     # methods for channel - end users should not use these
-
-    def noLongerQueued(self):
-        """
-        Notify the object that it is no longer queued.
-
-        We start writing whatever data we have to the transport, etc.
-
-        This method is not intended for users.
-        """
-        if not self.queued:
-            raise RuntimeError("noLongerQueued() got called unnecessarily.")
-
-        self.queued = 0
-
-        # set transport to real one and send any buffer data
-        data = self.transport.getvalue()
-        self.transport = self.channel.transport
-        if data:
-            self.transport.write(data)
-
-        # if we have producer, register it with transport
-        if (self.producer is not None) and not self.finished:
-            self.transport.registerProducer(self.producer, self.streamingProducer)
-
-        # if we're finished, clean up
-        if self.finished:
-            self._cleanup()
 
     def gotLength(self, length):
         """
@@ -807,18 +774,13 @@ class Request:
         self.streamingProducer = streaming
         self.producer = producer
 
-        if self.queued:
-            if streaming:
-                producer.pauseProducing()
-        else:
-            self.transport.registerProducer(producer, streaming)
+        self.transport.registerProducer(producer, streaming)
 
     def unregisterProducer(self):
         """
         Unregister the producer.
         """
-        if not self.queued:
-            self.transport.unregisterProducer()
+        self.transport.unregisterProducer()
         self.producer = None
 
 
@@ -887,8 +849,7 @@ class Request:
             self.channel.factory.log(self)
 
         self.finished = 1
-        if not self.queued:
-            self._cleanup()
+        self._cleanup()
 
 
     def write(self, data):
@@ -1264,10 +1225,11 @@ class Request:
         """
         if self._forceSSL:
             return True
-        transport = getattr(getattr(self, 'channel', None), 'transport', None)
+        transport = getattr(self, 'transport', None)
         if interfaces.ISSLTransport(transport, None) is not None:
             return True
         return False
+
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
@@ -1626,6 +1588,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     def __init__(self):
         # the request queue
         self.requests = []
+        self._handlingRequest = False
+        self._dataBuffer = []
         self._transferDecoder = None
 
 
@@ -1659,7 +1623,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 return
 
             # create a new Request object
-            request = self.requestFactory(self, len(self.requests))
+            request = self.requestFactory(self)
             self.requests.append(request)
 
             self.__first_line = 0
@@ -1706,7 +1670,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def _finishRequestBody(self, data):
         self.allContentReceived()
-        self.setLineMode(data)
+        self._dataBuffer.append(data)
+        #self.setLineMode(data)
 
 
     def headerReceived(self, line):
@@ -1777,12 +1742,28 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeOut:
             self._savedTimeOut = self.setTimeout(None)
 
+        # Pause the transport if we can. If we can't that's ok, we'll buffer.
+        try:
+            self.transport.pauseProducing()
+            print "production paused"
+        except AttributeError:
+            pass
+
+        self._handlingRequest = True
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
 
     def rawDataReceived(self, data):
         self.resetTimeout()
+
+        # If we're currently handling a request, buffer this data. We shouldn't
+        # have received it (we've paused the transport), but let's be cautious.
+        if self._handlingRequest:
+            self._dataBuffer.append(data)
+            return
+
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
@@ -1854,18 +1835,28 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         del self.requests[0]
 
         if self.persistent:
-            # notify next request it can start writing
-            if self.requests:
-                self.requests[0].noLongerQueued()
-            else:
-                if self._savedTimeOut:
-                    self.setTimeout(self._savedTimeOut)
+            self._handlingRequest = False
+            # Get the transport to keep writing.
+            try:
+                self.transport.resumeProducing()
+            except AttributeError:
+                pass
+
+            if self._savedTimeOut:
+                self.setTimeout(self._savedTimeOut)
+
+            # Receive our buffered data, if any.
+            data = b''.join(self._dataBuffer)
+            self._dataBuffer = []
+            self.setLineMode(data)
         else:
             self.transport.loseConnection()
+
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
         policies.TimeoutMixin.timeoutConnection(self)
+
 
     def connectionLost(self, reason):
         self.setTimeout(None)

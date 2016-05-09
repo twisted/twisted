@@ -727,13 +727,13 @@ class WebClientTests(unittest.TestCase):
         # Verify the behavior if no bytes are ever written.
         first = client.downloadPage(
             self.getURL("wait"),
-            self.mktemp(), timeout=0.01)
+            self.mktemp(), timeout=0.1)
 
         # Verify the behavior if some bytes are written but then the request
         # never completes.
         second = client.downloadPage(
             self.getURL("write-then-wait"),
-            self.mktemp(), timeout=0.01)
+            self.mktemp(), timeout=0.1)
 
         return defer.gatherResults([
             self.assertFailure(first, defer.TimeoutError),

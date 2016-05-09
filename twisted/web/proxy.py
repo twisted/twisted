@@ -134,8 +134,8 @@ class ProxyRequest(Request):
     protocols = {b'http': ProxyClientFactory}
     ports = {b'http': 80}
 
-    def __init__(self, channel, queued, reactor=reactor):
-        Request.__init__(self, channel, queued)
+    def __init__(self, channel, reactor=reactor):
+        Request.__init__(self, channel)
         self.reactor = reactor
 
 
@@ -195,8 +195,8 @@ class ReverseProxyRequest(Request):
 
     proxyClientFactoryClass = ProxyClientFactory
 
-    def __init__(self, channel, queued, reactor=reactor):
-        Request.__init__(self, channel, queued)
+    def __init__(self, channel, reactor=reactor):
+        Request.__init__(self, channel)
         self.reactor = reactor
 
 

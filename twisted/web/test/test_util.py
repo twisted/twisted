@@ -37,7 +37,7 @@ class RedirectToTests(TestCase):
         its request, and set the response code to C{FOUND}, so the browser will
         be redirected.
         """
-        request = Request(DummyChannel(), True)
+        request = Request(DummyChannel())
         request.method = b'GET'
         targetURL = b"http://target.example.com/4321"
         redirectTo(targetURL, request)
@@ -53,7 +53,7 @@ class RedirectToTests(TestCase):
         """
         L{redirectTo} will raise TypeError if unicode object is passed in URL
         """
-        request = Request(DummyChannel(), True)
+        request = Request(DummyChannel())
         request.method = b'GET'
         targetURL = u'http://target.example.com/4321'
         self.assertRaises(TypeError, redirectTo, targetURL, request)
