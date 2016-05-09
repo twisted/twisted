@@ -1,6 +1,134 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.2.0pre1 (2016-05-09)
+====================================
+
+Features
+--------
+ - twisted.protocols.haproxy.proxyEndpoint provides an endpoint that
+   wraps any other stream server endpoint with the PROXY protocol that
+   retains information about the original client connection handled by
+   the proxy; this wrapper is also exposed via the string description
+   prefix 'haproxy'; for example 'twistd web --port haproxy:tcp:8765'.
+   (#8203)
+ - twisted.application.app.AppLogger (used by twistd) now uses the new
+   logging system. (#8235)
+
+Bugfixes
+--------
+ - twisted.application-using applications (trial, twistd, etc) now
+   work with the --reactor option on Python 3. (#8299)
+ - Failures are now logged by STDLibLogObserver. (#8316)
+
+Improved Documentation
+----------------------
+ - Deprecation documentation was extended to include a quick check
+   list for developers. (#5645)
+ - The Twisted Deprecation Policy is now documented in the Twisted
+   Development Policy. (#8082)
+ - The documentation examples for UDP now work on Python 3. (#8280)
+
+Deprecations and Removals
+-------------------------
+ - Passing a factory that produces log observers that do not implement
+   twisted.logger.ILogObserver or twisted.python.log.ILogObserver to
+   twisted.application.app.AppLogger has been deprecated. This is
+   primarily used by twistd's --logger option. Please use factories
+   that produce log observers implementing twisted.logger.ILogObserver
+   or the legacy twisted.python.log.ILogObserver. (#8235)
+ - twisted.internet.qtreactor, a stub that imported the external
+   qtreactor, has been removed. (#8288)
+
+Other
+-----
+ - #6266, #8231, #8244, #8256, #8266, #8269, #8275, #8277, #8286,
+   #8291, #8292, #8304, #8315
+
+
+Twisted Conch 16.2.0pre1 (2016-05-09)
+=====================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #8279
+
+
+Twisted Mail 16.2.0pre1 (2016-05-09)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 16.2.0pre1 (2016-05-09)
+=====================================
+
+Features
+--------
+ - twisted.names.server is now ported to Python 3 (#8195)
+ - twisted.names.authority and twisted.names.secondary have been
+   ported to Python 3 (#8259)
+
+
+Twisted News 16.2.0pre1 (2016-05-09)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 16.2.0pre1 (2016-05-09)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 16.2.0pre1 (2016-05-09)
+======================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.runner.inetdtap and twisted.runner.inetdconf RPC support
+   was deprecated as it was broken for a long time. (#8123)
+
+
+Twisted Web 16.2.0pre1 (2016-05-09)
+===================================
+
+Features
+--------
+ - twisted.web.http.HTTPFactory's constructor now accepts a reactor
+   argument, for explicit reactor selection. (#8246)
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPChannel.headerReceived now respond with 400
+   and disconnect when a malformed header is received. (#8101)
+ - twisted.web.http.Request once again has a reference to the
+   HTTPFactory which created it, the absence of which was preventing
+   log messages from being created.  (#8272)
+ - twisted.web.http.HTTPChannel no longer processes requests that have
+   invalid headers as the final header in their header block. (#8317)
+ - twisted.web.client.HTTPClientFactory (and the getPage and
+   downloadPage APIs) now timeouts correctly on TLS connections where
+   the remote party is not responding on the connection. (#8318)
+
+Other
+-----
+ - #8300
+
+
+Twisted Words 16.2.0pre1 (2016-05-09)
+=====================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.words.protocols.msn, deprecated since Twisted 15.1, has
+   been removed. (#8253)
+ - twisted.words.protocols.oscar is deprecated. (#8260)
+
+
 Twisted Core 16.1.1 (2016-04-08)
 ================================
 

@@ -1,6 +1,16 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 16.2.0pre1 (2016-05-09)
+=====================================
+
+Features
+--------
+ - twisted.names.server is now ported to Python 3 (#8195)
+ - twisted.names.authority and twisted.names.secondary have been
+   ported to Python 3 (#8259)
+
+
 Twisted Names 16.1.1 (2016-04-08)
 =================================
 
