@@ -3,6 +3,12 @@ Twisted 16.1.1
 
 |pypi|
 |coverage|
+|status|
+|download|
+|python|
+|Wheels|
+|readthedocs|
+|license|
 
 .. code::
 
@@ -106,3 +112,21 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
+
+.. |status| image:: https://img.shields.io/pypi/status/twisted.svg
+.. _pypi: https://pypi.python.org/pypi/twisted
+
+.. |wheels| image:: https://img.shields.io/pypi/wheel/twisted.svg
+.. _pypi: https://pypi.python.org/pypi/twisted
+
+.. |python| image:: https://img.shields.io/pypi/pyversions/twisted.svg
+.. _pypi: https://pypi.python.org/pypi/twisted
+
+.. |download| image:: https://img.shields.io/pypi/dm/twisted.svg
+    :target: https://pypi.python.org/pypi/twisted
+    
+.. |readthedocs| image:: https://readthedocs.org/projects/twisted/badge/?version=latest
+    :target: http://twisted.readthedocs.org/en/latest/?badge=latest
+
+.. |license| image:: https://img.shields.io/pypi/l/twisted.svg
+    :target: https://pypi.python.org/pypi/twisted
