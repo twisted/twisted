@@ -1,0 +1,1 @@
+twisted.python.reflect's deprecated functions have been removed. This includes funcinfo (deprecated since Twisted 2.5), allYourBase and accumulateBases (deprecated since Twisted 11.0), getcurrent and isinst (deprecated since Twisted 14.0).
