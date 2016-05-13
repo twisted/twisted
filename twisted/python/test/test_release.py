@@ -34,7 +34,7 @@ from twisted.python._release import (
     APIBuilder, BuildAPIDocsScript,
     runCommand, NotWorkingDirectory,
     ChangeVersionsScript, NewsBuilder, SphinxBuilder,
-    GitCommand, SVNCommand, getRepositoryCommand, IVCSCommand)
+    GitCommand, getRepositoryCommand, IVCSCommand)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -74,17 +74,11 @@ else:
     gitSkip = "git is not present."
 
 
-if not skip and which("svn") and which("svnadmin"):
-    svnSkip = skip
-else:
-    svnSkip = "svn is not present."
-
-
 
 class ExternalTempdirTestCase(TestCase):
     """
     A test case which has mkdir make directories outside of the usual spot, so
-    that SVN and Git commands don't interfere with the Twisted checkout.
+    that Git commands don't interfere with the Twisted checkout.
     """
     def mktemp(self):
         """
@@ -1301,35 +1295,6 @@ class NewsBuilderGitTests(NewsBuilderMixin, ExternalTempdirTestCase):
         return runCommand(["git", "-C", project.path, "status", "--short"])
 
 
-class NewsBuilderSVNTests(NewsBuilderMixin, ExternalTempdirTestCase):
-    """
-    Tests for L{NewsBuilder} using SVN.
-    """
-    skip = svnSkip
-
-    def _commit(self, project=None):
-        """
-        Make the C{project} directory a valid subversion directory with all
-        files committed.
-        """
-        if project is None:
-            project = self.project
-
-        repositoryPath = self.mktemp()
-        repository = FilePath(repositoryPath)
-
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    project.path])
-
-        runCommand(["svn", "add"] + glob.glob(project.path + "/*"))
-        runCommand(["svn", "commit", project.path, "-m", "yay"])
-
-
-    def _getStatus(self, project):
-        return runCommand(["svn", "status", project.path])
-
-
 
 class SphinxBuilderTests(TestCase):
     """
@@ -1734,74 +1699,15 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
 
 
-
-class SVNCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
-    """
-    Specific L{CommandsTestMixin} related to Subversion checkouts through
-    L{SVNCommand}.
-    """
-    createCommand = SVNCommand
-    skip = svnSkip
-
-
-    def makeRepository(self, root):
-        """
-        Create a Subversion repository and a checkout at the specified path.
-        Note that due to how Subversion functions, it creates 2 directories and
-        the caller has to use the path returned by this function to access the
-        Subversion checkout.
-
-        @type root: L{FilePath}
-        @params root: The directory to create the Subversion repository and
-            checkout into.
-
-        @return: The path to the Subversion checkout.
-        @rtype: L{FilePath}
-        """
-        repository = root.child('repository')
-        checkout = root.child('checkout')
-
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-        return checkout
-
-
-    def commitRepository(self, repository):
-        """
-        Add and commit all the files from the specified Subversion checkout.
-
-        @type repository: L{FilePath}
-        @params repository: The Subversion checkout to commit into.
-        """
-        runCommand(["svn", "add"] + glob.glob(repository.path + "/*"))
-        runCommand(["svn", "commit", repository.path, "-m", "hop"])
-
-
-
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
-    Test the L{getRepositoryCommand} to acces the right set of VCS commands
+    Test the L{getRepositoryCommand} to access the right set of VCS commands
     depending on the repository manipulated.
     """
-    skip = svnSkip or gitSkip
+    skip = gitSkip
 
     def setUp(self):
         self.repos = FilePath(self.mktemp())
-
-
-    def test_subversion(self):
-        """
-        L{getRepositoryCommand} from a Subversion checkout returns
-        L{SVNCommand}.
-        """
-        repository = self.repos.child('repository')
-        checkout = self.repos.child('checkout')
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-        cmd = getRepositoryCommand(self.repos.child("checkout"))
-        self.assertIs(cmd, SVNCommand)
 
 
     def test_git(self):
@@ -1813,29 +1719,10 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
         self.assertIs(cmd, GitCommand)
 
 
-    def test_subversionPreferredOverGit(self):
-        """
-        L{getRepositoryCommand} from a directory which looks like both as a
-        Subversion checkout or a Git directory returns a L{SVNCommand}, which
-        is the currently preferred way of dealing with Twisted release scripts.
-        """
-        _gitInit(self.repos.child("checkout"))
-
-        repository = self.repos.child('repository')
-        checkout = self.repos.child('checkout')
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-
-        cmd = getRepositoryCommand(self.repos.child("checkout"))
-        self.assertTrue(cmd, SVNCommand)
-
-
     def test_unknownRepository(self):
         """
-        L{getRepositoryCommand} from a directory which doesn't look like a
-        Subversion checkout nor a Git repository produce a
-        L{NotWorkingDirectory} exceptions.
+        L{getRepositoryCommand} from a directory which doesn't look like a Git
+        repository produces a L{NotWorkingDirectory} exception.
         """
         self.assertRaises(NotWorkingDirectory, getRepositoryCommand,
                           self.repos)
@@ -1851,10 +1738,3 @@ class VCSCommandInterfaceTests(TestCase):
         L{GitCommand} implements L{IVCSCommand}.
         """
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
-
-
-    def test_svn(self):
-        """
-        L{SVNCommand} implements L{IVCSCommand}.
-        """
-        self.assertTrue(IVCSCommand.implementedBy(SVNCommand))
