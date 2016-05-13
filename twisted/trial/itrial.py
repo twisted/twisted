@@ -9,16 +9,15 @@ Maintainer: Jonathan Lange
 
 from __future__ import division, absolute_import
 
-import zope.interface as zi
-from zope.interface import Attribute
+from zope.interface import Attribute, Interface
 
 
-class ITestCase(zi.Interface):
+class ITestCase(Interface):
     """
     The interface that a test case must implement in order to be used in Trial.
     """
 
-    failureException = zi.Attribute(
+    failureException = Attribute(
         "The exception class that is raised by failed assertions")
 
 
@@ -56,18 +55,18 @@ class ITestCase(zi.Interface):
 
 
 
-class IReporter(zi.Interface):
+class IReporter(Interface):
     """
     I report results from a run of a test suite.
     """
 
-    stream = zi.Attribute(
+    stream = Attribute(
         "Deprecated in Twisted 8.0. "
         "The io-stream that this reporter will write to")
-    tbformat = zi.Attribute("Either 'default', 'brief', or 'verbose'")
-    args = zi.Attribute(
+    tbformat = Attribute("Either 'default', 'brief', or 'verbose'")
+    args = Attribute(
         "Additional string argument passed from the command line")
-    shouldStop = zi.Attribute(
+    shouldStop = Attribute(
         """
         A boolean indicating that this reporter would like the test run to stop.
         """)

@@ -6,29 +6,29 @@
 Interfaces used by the PROXY protocol modules.
 """
 
-import zope.interface
+from zope.interface import Interface, Attribute
 
 
-class IProxyInfo(zope.interface.Interface):
+class IProxyInfo(Interface):
     """
     Data container for PROXY protocol header data.
     """
 
-    header = zope.interface.Attribute(
+    header = Attribute(
         "The raw byestring that represents the PROXY protocol header.",
     )
-    source = zope.interface.Attribute(
+    source = Attribute(
         "An L{twisted.internet.interfaces.IAddress} representing the "
         "connection source."
     )
-    destination = zope.interface.Attribute(
+    destination = Attribute(
         "An L{twisted.internet.interfaces.IAddress} representing the "
         "connection destination."
     )
 
 
 
-class IProxyParser(zope.interface.Interface):
+class IProxyParser(Interface):
     """
     Streaming parser that handles PROXY protocol headers.
     """

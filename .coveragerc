@@ -12,3 +12,18 @@ source=
 [report]
 precision = 2
 ignore_errors = True
+exclude_lines =
+   \(Interface\):
+   \(ICredentials\):
+   \(IResolverSimple\):
+   \(ILoggingContext\):
+   \(IFileDescriptor\):
+   \(IReadDescriptor\):
+   \(IWriteDescriptor\):
+   \(IReadDescriptor, IWriteDescriptor\):
+   \(IProducer\):
+   \(ITransport\):
+   \(ITCPTransport\):
+   \(ISSLTransport\):
+   \(IReactorFromThreads, IReactorInThreads\):
+   \(IReadHandle, IWriteHandle\):
