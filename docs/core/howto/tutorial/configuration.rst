@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-The Evolution of Finger: configuration and packaging of the finger service
-==========================================================================
+The Evolution of Finger: configuration of the finger service
+============================================================
 
 
 
@@ -21,10 +21,9 @@ This is the eleventh part of the Twisted tutorial :doc:`Twisted from Scratch, or
 
 
 
-In this part, we make it easier for non-programmers to configure a finger
-server and show how to package it in the .deb and RPM package formats. Plugins
-are discussed further in the :doc:`Twisted Plugin System <../plugin>` 
-howto. Writing twistd plugins is covered in :doc:`Writing a twistd Plugin <../tap>` , and .tac applications are covered in :doc:`Using the Twisted Application Framework <../application>` .
+In this part, we make it easier for non-programmers to configure a finger server.
+Plugins are discussed further in the :doc:`Twisted Plugin System <../plugin>` howto.
+Writing twistd plugins is covered in :doc:`Writing a twistd Plugin <../tap>`, and .tac applications are covered in :doc:`Using the Twisted Application Framework <../application>`.
 
 
 
@@ -42,7 +41,7 @@ to ``finger/__init__.py`` and...
 
 
 
-Full source code for finger module here: 
+Full source code for finger module here:
 
 :download:`finger.py <listings/finger/finger/finger.py>`
 
@@ -84,7 +83,7 @@ And now, the following works
 
 .. code-block:: console
 
-    
+
     % sudo twistd -n finger --file=/etc/users --ircnick=fingerbot
 
 
@@ -92,61 +91,3 @@ And now, the following works
 
 
 For more details about this, see the :doc:`twistd plugin documentation <../tap>` .
-
-
-
-
-
-OS Integration
---------------
-
-
-
-If we already have the "finger" package installed in
-``PYTHONPATH`` (e.g.  we added it to ``site-packages`` ), we
-can achieve easy integration:
-
-
-
-
-
-Debian
-~~~~~~
-
-
-
-
-.. code-block:: console
-
-    
-    % tap2deb --unsigned -m "Foo <foo@example.com>" --type=python finger.tac
-    % sudo dpkg -i .build/*.deb
-
-
-
-
-
-Red Hat / Mandrake
-~~~~~~~~~~~~~~~~~~
-
-
-
-
-.. code-block:: console
-
-    
-    % tap2rpm --type=python finger.tac
-    % sudo rpm -i *.rpm
-
-
-
-
-These packages will properly install and register ``init.d`` 
-scripts, etc. for the given file.
-
-
-
-
-If it doesn't work on your favorite OS: patches accepted!
-
-

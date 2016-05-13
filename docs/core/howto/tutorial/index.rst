@@ -55,4 +55,4 @@ This tutorial is split into eleven parts:
 #. :doc:`The Evolution of Finger: using a single factory for multiple protocols <factory>`
 #. :doc:`The Evolution of Finger: a Twisted finger client <client>`
 #. :doc:`The Evolution of Finger: making a finger library <library>`
-#. :doc:`The Evolution of Finger: configuration and packaging of the finger service <configuration>`
+#. :doc:`The Evolution of Finger: configuration of the finger service <configuration>`
