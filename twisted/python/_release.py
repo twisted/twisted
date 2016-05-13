@@ -193,7 +193,6 @@ class GitCommand(object):
 
 
 
-
 def getRepositoryCommand(directory):
     """
     Detect the VCS used in the specified directory and return a L{GitCommand}
