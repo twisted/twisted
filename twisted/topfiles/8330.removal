@@ -1,0 +1,1 @@
+twisted.manhole -- not to be confused with manhole in Conch -- has been removed. This includes the semi-functional Glade reactor, the manhole application, and the manhole-old twistd plugin.
