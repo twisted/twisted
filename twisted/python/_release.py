@@ -193,90 +193,20 @@ class GitCommand(object):
 
 
 
-@implementer(IVCSCommand)
-class SVNCommand(object):
-    """
-    Subset of SVN commands to release Twisted from a Subversion checkout.
-    """
-    @staticmethod
-    def ensureIsWorkingDirectory(path):
-        """
-        Ensure that C{path} is a SVN working directory.
-
-        @type path: L{twisted.python.filepath.FilePath}
-        @param path: The path to check.
-        """
-        if "is not a working copy" in runCommand(
-                ["svn", "status", path.path]):
-            raise NotWorkingDirectory(
-                "%s does not appear to be an SVN working directory."
-                % (path.path,))
-
-
-    @staticmethod
-    def isStatusClean(path):
-        """
-        Return the SVN status of the files in the specified path.
-
-        @type path: L{twisted.python.filepath.FilePath}
-        @param path: The path to get the status from (can be a directory or a
-            file.)
-        """
-        status = runCommand(["svn", "status", path.path]).strip()
-        return status == ''
-
-
-    @staticmethod
-    def remove(path):
-        """
-        Remove the specified path from a Subversion checkout.
-
-        @type path: L{twisted.python.filepath.FilePath}
-        @param path: The path to remove from the checkout.
-        """
-        runCommand(["svn", "rm", path.path])
-
-
-    @staticmethod
-    def exportTo(fromDir, exportDir):
-        """
-        Export the content of a SVN checkout to the specified directory.
-
-        @type fromDir: L{twisted.python.filepath.FilePath}
-        @param fromDir: The path to the Subversion checkout to export.
-
-        @type exportDir: L{twisted.python.filepath.FilePath}
-        @param exportDir: The directory to export the content of the checkout
-            to. This directory doesn't have to exist prior to exporting the
-            repository.
-        """
-        runCommand(["svn", "export", fromDir.path, exportDir.path])
-
-
-
 def getRepositoryCommand(directory):
     """
-    Detect the VCS used in the specified directory and return either a
-    L{SVNCommand} or a L{GitCommand} if the directory is a Subversion checkout
-    or a Git repository, respectively.
-    If the directory is neither one nor the other, it raises a
-    L{NotWorkingDirectory} exception.
+    Detect the VCS used in the specified directory and return a L{GitCommand}
+    if the directory is a Git repository. If the directory is not git, it
+    raises a L{NotWorkingDirectory} exception.
 
     @type directory: L{FilePath}
     @param directory: The directory to detect the VCS used from.
 
-    @rtype: L{SVNCommand} or L{GitCommand}
+    @rtype: L{GitCommand}
 
     @raise NotWorkingDirectory: if no supported VCS can be found from the
         specified directory.
     """
-    try:
-        SVNCommand.ensureIsWorkingDirectory(directory)
-        return SVNCommand
-    except (NotWorkingDirectory, OSError):
-        # It's not SVN, but that's okay, eat the error
-        pass
-
     try:
         GitCommand.ensureIsWorkingDirectory(directory)
         return GitCommand
