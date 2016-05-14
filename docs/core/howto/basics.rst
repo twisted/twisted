@@ -53,18 +53,3 @@ The usual way to do this would be::
 To prevent ``twistd`` from daemonizing, you can pass it the ``--no-daemon`` option (or ``-n``, in conjunction with other short options).
 
 As always, the gory details are in the manual page.
-
-
-OS Integration
---------------
-
-If you have an :api:`twisted.application.service.Application <Application>` that runs with ``twistd``, you can deploy it on RedHat Linux or Debian GNU/Linux based systems using the ``tap2deb`` or ``tap2rpm`` tools.
-These take a Twisted ``Application`` file (of any of the supported formats — Python source, XML or pickle), and build a Debian or RPM package (respectively) that installs the ``Application`` as a system service.
-The package includes the ``Application`` file, a default ``/etc/init.d/`` script that starts and stops the process with twistd, and post-installation scripts that configure the ``Application`` to be run in the appropriate init levels.
-
-.. note::
-
-    ``tap2rpm`` and ``tap2deb`` do not package your entire application and dependent code, just the Twisted Application file.
-    You will need to find some other way to package your Python code, such as `distutils <http://docs.python.org/library/distutils.html>`_' ``bdist_rpm`` command.
-
-For more savvy users, these tools also generate the source package, allowing you to modify and polish things which automated software cannot detect (such as dependencies or relationships to virtual packages).
