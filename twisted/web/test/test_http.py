@@ -2035,67 +2035,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             ValueError, req.registerProducer, DummyProducer(), True)
 
 
-    def test_registerProducerWhenQueuedPausesPushProducer(self):
-        """
-        Calling L{Request.registerProducer} with an IPushProducer when the
-        request is queued pauses the producer.
-        """
-        req = http.Request(DummyChannel(), True)
-        producer = DummyProducer()
-        req.registerProducer(producer, True)
-        self.assertEqual(['pause'], producer.events)
-
-
-    def test_registerProducerWhenQueuedDoesntPausePullProducer(self):
-        """
-        Calling L{Request.registerProducer} with an IPullProducer when the
-        request is queued does not pause the producer, because it doesn't make
-        sense to pause a pull producer.
-        """
-        req = http.Request(DummyChannel(), True)
-        producer = DummyProducer()
-        req.registerProducer(producer, False)
-        self.assertEqual([], producer.events)
-
-
-    def test_registerProducerWhenQueuedDoesntRegisterPushProducer(self):
-        """
-        Calling L{Request.registerProducer} with an IPushProducer when the
-        request is queued does not register the producer on the request's
-        transport.
-        """
-        self.assertIdentical(
-            None, getattr(http.StringTransport, 'registerProducer', None),
-            "StringTransport cannot implement registerProducer for this test "
-            "to be valid.")
-        req = http.Request(DummyChannel(), True)
-        producer = DummyProducer()
-        req.registerProducer(producer, True)
-        # This is a roundabout assertion: http.StringTransport doesn't
-        # implement registerProducer, so Request.registerProducer can't have
-        # tried to call registerProducer on the transport.
-        self.assertIsInstance(req.transport, http.StringTransport)
-
-
-    def test_registerProducerWhenQueuedDoesntRegisterPullProducer(self):
-        """
-        Calling L{Request.registerProducer} with an IPullProducer when the
-        request is queued does not register the producer on the request's
-        transport.
-        """
-        self.assertIdentical(
-            None, getattr(http.StringTransport, 'registerProducer', None),
-            "StringTransport cannot implement registerProducer for this test "
-            "to be valid.")
-        req = http.Request(DummyChannel(), True)
-        producer = DummyProducer()
-        req.registerProducer(producer, False)
-        # This is a roundabout assertion: http.StringTransport doesn't
-        # implement registerProducer, so Request.registerProducer can't have
-        # tried to call registerProducer on the transport.
-        self.assertIsInstance(req.transport, http.StringTransport)
-
-
     def test_registerProducerWhenNotQueuedRegistersPushProducer(self):
         """
         Calling L{Request.registerProducer} with an IPushProducer when the
@@ -2241,38 +2180,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
-
-
-    def test_unregisterQueuedNonStreamingProducer(self):
-        """
-        L{Request.unregisterProducer} unregisters a queued non-streaming
-        producer from the request but not from the transport.
-        """
-        existing = DummyProducer()
-        channel = DummyChannel()
-        transport = StringTransport()
-        channel.transport = transport
-        transport.registerProducer(existing, True)
-        req = http.Request(channel, True)
-        req.registerProducer(DummyProducer(), False)
-        req.unregisterProducer()
-        self.assertEqual((None, existing), (req.producer, transport.producer))
-
-
-    def test_unregisterQueuedStreamingProducer(self):
-        """
-        L{Request.unregisterProducer} unregisters a queued streaming producer
-        from the request but not from the transport.
-        """
-        existing = DummyProducer()
-        channel = DummyChannel()
-        transport = StringTransport()
-        channel.transport = transport
-        transport.registerProducer(existing, True)
-        req = http.Request(channel, True)
-        req.registerProducer(DummyProducer(), True)
-        req.unregisterProducer()
-        self.assertEqual((None, existing), (req.producer, transport.producer))
 
 
     def test_finishProducesLog(self):
@@ -2489,46 +2396,6 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
               b"Version: HTTP/1.1",
               b"Request: /",
               b"'''\n3\nabc'''\n")])
-
-
-    def test_expect100ContinueWithPipelining(self):
-        """
-        If a HTTP/1.1 client sends a 'Expect: 100-continue' header, followed
-        by another pipelined request, the 100 response does not interfere with
-        the response to the second request.
-        """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
-        channel.makeConnection(transport)
-        channel.dataReceived(
-            b"GET / HTTP/1.1\r\n"
-            b"Host: www.example.com\r\n"
-            b"Expect: 100-continue\r\n"
-            b"Content-Length: 3\r\n"
-            b"\r\nabc"
-            b"POST /foo HTTP/1.1\r\n"
-            b"Host: www.example.com\r\n"
-            b"Content-Length: 4\r\n"
-            b"\r\ndefg")
-        response = transport.value()
-        self.assertTrue(
-            response.startswith(b"HTTP/1.1 100 Continue\r\n\r\n"))
-        response = response[len(b"HTTP/1.1 100 Continue\r\n\r\n"):]
-        self.assertResponseEquals(
-            response,
-            [(b"HTTP/1.1 200 OK",
-              b"Command: GET",
-              b"Content-Length: 13",
-              b"Version: HTTP/1.1",
-              b"Request: /",
-              b"'''\n3\nabc'''\n"),
-             (b"HTTP/1.1 200 OK",
-              b"Command: POST",
-              b"Content-Length: 14",
-              b"Version: HTTP/1.1",
-              b"Request: /foo",
-              b"'''\n4\ndefg'''\n")])
 
 
 
