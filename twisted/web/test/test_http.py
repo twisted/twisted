@@ -44,6 +44,7 @@ class DateTimeTests(unittest.TestCase):
             self.assertEqual(time, time2)
 
 
+
 class DummyHTTPHandler(http.Request):
 
     def process(self):
@@ -74,6 +75,19 @@ class DummyNewHTTPHandler(DummyHTTPHandler):
 
     def __init__(self, channel):
         DummyHTTPHandler.__init__(self, channel)
+
+
+
+class DelayedHTTPHandler(DummyHTTPHandler):
+    """
+    Like L{DummyHTTPHandler}, but doesn't respond immediately.
+    """
+    def process(self):
+        pass
+
+
+    def delayedProcess(self):
+        DummyHTTPHandler.process(self)
 
 
 
@@ -193,6 +207,32 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         self.assertResponseEquals(value, self.expected_response)
 
 
+    def test_noPipelining(self):
+        """
+        Test that pipelined requests get buffered, not processed in parallel.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandler
+        a.makeConnection(b)
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+        value = b.value()
+
+        # So far only one request should have been dispatched.
+        self.assertEqual(value, b'')
+        self.assertEqual(1, len(a.requests))
+
+        # Now, process each request one at a time.
+        while a.requests:
+            self.assertEqual(1, len(a.requests))
+            a.requests[0].delayedProcess()
+
+        value = b.value()
+        self.assertResponseEquals(value, self.expected_response)
+
+
 
 class HTTP1_1Tests(HTTP1_0Tests):
 
@@ -268,6 +308,10 @@ class HTTP0_9Tests(HTTP1_0Tests):
 
     def assertResponseEquals(self, response, expectedResponse):
         self.assertEqual(response, expectedResponse)
+
+
+    def test_noPipelining(self):
+        raise unittest.SkipTest("HTTP/0.9 not supported")
 
 
 
