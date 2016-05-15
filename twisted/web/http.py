@@ -1665,6 +1665,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             _respondToBadRequestAndDisconnect(self.transport)
             return
 
+        # If we're currently handling a request, buffer this data. We shouldn't
+        # have received it (we've paused the transport), but let's be cautious.
+        if self._handlingRequest:
+            self._dataBuffer.append(line)
+            self._dataBuffer.append(b'\r\n')
+            return
+
         if self.__first_line:
             # if this connection is not persistent, drop any data which
             # the client (illegally) sent after the last request.
