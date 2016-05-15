@@ -33,6 +33,14 @@ Only necessary while parts of Twisted are unported.
 
 from __future__ import division
 
+import sys
+
+
+if sys.version_info < (3, 5):
+    _PY35OrBetter = False
+else:
+    _PY35OrBetter = True
+
 
 modules = [
     "twisted.__init__",
@@ -451,6 +459,7 @@ testModules = [
 ]
 
 
+
 testDataFiles = [
     "twisted.conch.test.keydata",
     "twisted.internet.test.process_cli",
@@ -496,6 +505,7 @@ testDataFiles = [
 ]
 
 
+
 almostModules = [
     # Required for Trial
     "twisted.python.logfile",
@@ -531,6 +541,15 @@ almostModules = [
     "twisted.web.server",
 ]
 
-modulesToInstall = modules + testModules + almostModules
 
+
+if _PY35OrBetter:
+    testModules.extend([
+        "twisted.internet.test.test_await",
+        "twisted.internet.test._awaittests",
+    ])
+
+
+
+modulesToInstall = modules + testModules + almostModules
 portedScripts = ["bin/trial", "bin/twistd"]

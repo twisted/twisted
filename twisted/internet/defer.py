@@ -667,6 +667,7 @@ class Deferred:
         return awaiter.__await__()
 
 
+
 class _MakeDeferredAwaitable(object):
     """
     A subgenerator which is created by L{Deferred.__await__}.
@@ -687,20 +688,6 @@ class _MakeDeferredAwaitable(object):
 
     def __await__(self):
         return self
-
-
-def _awaitTick(result, coro, deferred):
-    try:
-        result = coro.send(result)
-    except StopIteration as e:
-        deferred.callback(e.value)
-    except:
-        deferred.errback()
-
-    if isinstance(result, Deferred):
-        result.addBoth(_awaitTick, coro=coro, deferred=deferred)
-
-    return deferred
 
 
 def deferredCoroutine(f):
@@ -740,9 +727,10 @@ def deferredCoroutine(f):
     """
     def wrapped(*args, **kwargs):
         coro = f(*args, **kwargs)
-        return _awaitTick(None, coro, Deferred())
+        return _inlineCallbacks(None, coro, Deferred())
 
     return wrapped
+
 
 
 class DebugInfo:
@@ -1731,10 +1719,40 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
         return d
 
 
+def sleep(time, result=None, reactor=None):
+    """
+    Suspend execution in the callback chain for C{time} seconds.
+
+    This is similar to L{os.sleep} but instead returns a L{Deferred} which
+    fires after C{time} with C{result}. This can be used as such::
+
+        def getSlower(reactor):
+            d = treq.get("https://twistedmatrix.com/")
+            d.addCallback(lambda r: sleep(1, result=r, reactor=reactor))
+            return d
+
+    @param time: Number of seconds to sleep for.
+    @type time: L{int} or L{float}
+
+    @param result: Result to fire with.
+
+    @param reactor: The reactor which is used for timekeeping.
+
+    @returns: A L{Deferred} that fires in at least C{time} seconds with
+        C{result}, if given.
+    """
+    if reactor is None:
+        from twisted.internet import reactor
+
+    d = Deferred()
+    reactor.callLater(time, d.callback, result)
+    return d
+
+
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred",
+           "maybeDeferred", "deferredCoroutine", "sleep",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
            "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
