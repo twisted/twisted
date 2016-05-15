@@ -31,16 +31,7 @@ Only necessary while parts of Twisted are unported.
     Python 3.
 """
 
-from __future__ import division
-
-import sys
-
-
-if sys.version_info < (3, 5):
-    _PY35OrBetter = False
-else:
-    _PY35OrBetter = True
-
+from __future__ import absolute_import, division
 
 modules = [
     "twisted.__init__",
@@ -456,12 +447,14 @@ testModules = [
     "twisted.web.test.test_vhost",
     "twisted.web.test.test_wsgi",
     "twisted.web.test.test_xmlrpc",
+    "twisted.internet.test.test_await",
 ]
 
 
 
 testDataFiles = [
     "twisted.conch.test.keydata",
+    "twisted.internet.test._awaittests",
     "twisted.internet.test.process_cli",
     "twisted.internet.test.process_helper",
     "twisted.positioning.test.receiver",
@@ -490,6 +483,9 @@ testDataFiles = [
     "twisted.test.stdio_test_producer",
     "twisted.test.stdio_test_write",
     "twisted.test.stdio_test_writeseq",
+    "twisted.trial.test.mockcustomsuite",
+    "twisted.trial.test.mockcustomsuite2",
+    "twisted.trial.test.mockcustomsuite3",
     "twisted.trial.test.mockdoctest",
     "twisted.trial.test.moduleself",
     "twisted.trial.test.moduletest",
@@ -499,9 +495,6 @@ testDataFiles = [
     "twisted.trial.test.sample",
     "twisted.trial.test.scripttest",
     "twisted.trial.test.weird",
-    "twisted.trial.test.mockcustomsuite",
-    "twisted.trial.test.mockcustomsuite2",
-    "twisted.trial.test.mockcustomsuite3",
 ]
 
 
@@ -541,15 +534,6 @@ almostModules = [
     "twisted.web.server",
 ]
 
-
-
-if _PY35OrBetter:
-    testModules.extend([
-        "twisted.internet.test.test_await",
-        "twisted.internet.test._awaittests",
-    ])
-
-
-
 modulesToInstall = modules + testModules + almostModules
+
 portedScripts = ["bin/trial", "bin/twistd"]
