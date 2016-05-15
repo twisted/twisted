@@ -600,12 +600,16 @@ class Request:
         """
         self.notifications = []
         self.channel = channel
-        self.queued = queued
         self.requestHeaders = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
         self.cookies = [] # outgoing cookies
         self.transport = self.channel.transport
+
+        if queued is _QUEUED_SENTINEL:
+            queued = False
+
+        self.queued = queued
 
 
     def _cleanup(self):
