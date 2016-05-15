@@ -2519,3 +2519,24 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                     "in Twisted 15.0.0; please use Twisted Names to "
                     "resolve hostnames instead")},
                          sub(["category", "message"], warnings[0]))
+
+
+    def test_noLongerQueued(self):
+        """
+        L{Request.noLongerQueued} is deprecated, as we no longer process
+        requests simultaneously.
+        """
+        channel = DummyChannel()
+        request = http.Request(channel)
+        request.noLongerQueued()
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_noLongerQueued])
+
+        self.assertEqual(1, len(warnings))
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.noLongerQueued was deprecated "
+                    "in Twisted 16.3.0")},
+                         sub(["category", "message"], warnings[0]))
