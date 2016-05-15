@@ -14,12 +14,14 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
+from zope.interface import classProvides
+
 from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
                                    intToBytes, NativeStringIO)
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
-from twisted.web import http, http_headers
+from twisted.web import http, http_headers, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
 from twisted.internet.task import Clock
@@ -58,6 +60,20 @@ class DummyHTTPHandler(http.Request):
         self.setHeader(b"Content-Length", intToBytes(len(request)))
         self.write(request)
         self.finish()
+
+
+
+class DummyNewHTTPHandler(DummyHTTPHandler):
+    """
+    This is exactly like the DummyHTTPHandler but it takes only one argument
+    in its constructor, with no default arguments. This exists to test an
+    alternative code path in L{HTTPChannel}.
+    """
+    classProvides(iweb.INonQueuedRequestFactory)
+
+
+    def __init__(self, channel):
+        DummyHTTPHandler.__init__(self, channel)
 
 
 
@@ -158,6 +174,23 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         self.assertFalse(transport.disconnecting)
         protocol.dataReceived(b'x')
         self.assertEqual(len(protocol.requests), 1)
+
+
+    def test_noPipeliningApi(self):
+        """
+        Test that a L{http.Request} subclass with no queued kwarg works as
+        expected.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DummyNewHTTPHandler
+        a.makeConnection(b)
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+        a.connectionLost(IOError("all done"))
+        value = b.value()
+        self.assertResponseEquals(value, self.expected_response)
 
 
 
