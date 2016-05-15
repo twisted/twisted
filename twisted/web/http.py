@@ -634,6 +634,17 @@ class Request:
 
     # methods for channel - end users should not use these
 
+    def noLongerQueued(self):
+        """
+        Notify the object that it is no longer queued.
+
+        We start writing whatever data we have to the transport, etc.
+
+        This method is not intended for users.
+        """
+        pass
+
+
     def gotLength(self, length):
         """
         Called when HTTP channel got length of content in this request.
@@ -1323,6 +1334,10 @@ class Request:
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
     "Twisted Names to resolve hostnames")(Request.getClient)
+
+
+Request.noLongerQueued = deprecated(
+    Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
 
 
 class _DataLoss(Exception):
