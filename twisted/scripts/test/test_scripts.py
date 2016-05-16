@@ -162,6 +162,7 @@ class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
                    ('pyhtmlizer', 'twisted.scripts.htmlizer.Options'),
                    ('tap2rpm', 'twisted.scripts.tap2rpm.MyOptions'),
                    ('tap2deb', 'twisted.scripts.tap2deb.MyOptions'),
+                   ('manhole', 'twisted.scripts.manhole.MyOptions')
                    ]
 
 
