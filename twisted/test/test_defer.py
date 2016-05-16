@@ -7,9 +7,10 @@ Test cases for L{twisted.internet.defer}.
 
 from __future__ import division, absolute_import
 
-import warnings
-import gc, traceback
+import gc
 import re
+import traceback
+import warnings
 
 from twisted.python import failure, log
 from twisted.python.compat import _PY3
@@ -2446,3 +2447,50 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         self.assertFalse(timeoutCall.active())
         self.assertEqual(self.lock._timeoutCall, None)
         self.failureResultOf(deferred, defer.CancelledError)
+
+
+
+class SleepTests(unittest.TestCase):
+    """
+    Tests for L{defer.sleep}.
+    """
+
+    def test_withResult(self):
+        """
+        Passing C{result} to L{defer.sleep} will schedule it to be called back
+        with that result.
+        """
+        reactor = Clock()
+        d = defer.sleep(1, result="kickit", reactor=reactor)
+
+        self.assertEqual(len(reactor.calls), 1)
+        self.assertEqual(reactor.calls[0].func, d.callback)
+        self.assertEqual(reactor.calls[0].args, ("kickit",))
+
+
+    def test_withoutResult(self):
+        """
+        Not passing C{result} to L{defer.sleep} will schedule it to be called
+        back with a result of C{None}.
+        """
+        reactor = Clock()
+        d = defer.sleep(1, reactor=reactor)
+
+        self.assertEqual(len(reactor.calls), 1)
+        self.assertEqual(reactor.calls[0].func, d.callback)
+        self.assertEqual(reactor.calls[0].args, (None,))
+
+
+    def test_timePasses(self):
+        """
+        After C{time} passes, the reactor will call the C{callback} argument of
+        the L{defer.Deferred} it created.
+        """
+        reactor = Clock()
+        d = defer.sleep(1, result="kickit", reactor=reactor)
+
+        reactor.advance(0.5)
+        self.assertFalse(d.called)
+        reactor.advance(0.5)
+        self.assertTrue(d.called)
+        self.assertEqual(self.successResultOf(d), "kickit")

@@ -1650,9 +1650,41 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 
 
+def sleep(time, result=None, reactor=None):
+    """
+    Suspend execution in the callback chain for C{time} seconds.
+
+    This is similar to L{os.sleep} but instead returns a L{Deferred} which
+    fires after C{time} with C{result}. This can be used as such::
+
+        @inlineCallbacks
+        def sleepABit(reactor):
+            print("hi! I'm going to sleep!")
+            result = yield sleep(1, result="beep", reactor=reactor)
+            print(result) # prints beep
+
+    @param time: Number of seconds to sleep for.
+    @type time: L{int} or L{float}
+
+    @param result: Result to fire with.
+
+    @param reactor: The reactor which is used for timekeeping.
+
+    @returns: A L{Deferred} that fires in at least C{time} seconds with
+        C{result}, if given.
+    """
+    if reactor is None:
+        from twisted.internet import reactor
+
+    d = Deferred()
+    reactor.callLater(time, d.callback, result)
+    return d
+
+
+
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred",
+           "maybeDeferred", "sleep",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
            "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
