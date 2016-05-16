@@ -390,6 +390,41 @@ With ``inlineCallbacks``, we can rewrite this as:
 Our exception handling is simplified because we can use Python's familiar ``try`` / ``except`` syntax for handling ``ConnectionError``\ s.
 
 
+Coroutines with async/await
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    Only available on Python 3.5 and higher.
+
+    .. versionadded:: 16.3
+
+On Python 3.5 and higher, the :pep:`492` ("Coroutines with async and await syntax") "await" functionality can be used with Deferreds.
+It is similar to ``inlineCallbacks``, except that it uses the ``await`` keyword instead of ``yield``, the ``return`` keyword instead of ``returnValue``, and is cleaner internally.
+
+Wrapping a coroutine function (that is, a function defined by ``async def funcname():``) with :api:`twisted.internet.defer.deferredCoroutine <deferredCoroutine>` will allow you to "await" on Deferreds inside it.
+Calling the wrapped coroutine will return a Deferred; you can mix and match code which uses regular Deferreds, ``inlineCallbacks``, and ``deferredCoroutine`` freely.
+
+Awaiting on a Deferred which fires with a Failure will raise the exception inside your coroutine as if it were regular Python.
+If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``deferredCoroutine`` returns for you.
+Calling ``return`` will cause the Deferred that ``deferredCoroutine`` returned for you to fire with a result.
+
+.. code-block:: python3
+
+   import json
+   from twisted.internet.defer import deferredCoroutine
+   from twisted.logger import Logger
+   log = Logger()
+
+   @deferredCoroutine
+   async def getUsers():
+       try:
+           return json.loads(await makeRequest("GET", "/users"))
+       except ConnectionError:
+           log.failure("makeRequest failed due to connection error")
+           return []
+
+
 Conclusion
 ----------
 
