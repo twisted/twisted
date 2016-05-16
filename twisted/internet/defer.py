@@ -690,6 +690,7 @@ class _MakeDeferredAwaitable(object):
         return self
 
 
+
 def deferredCoroutine(f):
     """
     A decorator for supporting coroutine-style programming using L{Deferred}s.
