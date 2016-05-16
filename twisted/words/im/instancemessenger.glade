@@ -1837,7 +1837,6 @@ AIM (OSCAR)
 	    <use_arrows_always>False</use_arrows_always>
 	    <items>twisted.words
 twisted.reality
-twisted.manhole
 </items>
 	    <child>
 	      <left_attach>1</left_attach>
