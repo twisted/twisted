@@ -150,5 +150,4 @@ class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
     generateFor = [('twistd', 'twisted.scripts.twistd.ServerOptions'),
                    ('trial', 'twisted.scripts.trial.Options'),
                    ('pyhtmlizer', 'twisted.scripts.htmlizer.Options'),
-                   ('manhole', 'twisted.scripts.manhole.MyOptions')
                    ]
