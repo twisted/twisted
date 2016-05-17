@@ -651,11 +651,11 @@ Twisted currently uses Git for source control.
 All development must occur using branches; when a task is considered complete another Twisted developer may review it and if no problems are found, it may be merged into trunk.
 The Twisted wiki has `a start <http://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_.
 
-If you wish to ignore certain files, create a ``.gitignore`` file.
+If you wish to ignore certain files, create a ``.gitignore`` file, or edit it if it exists.
 For example:
 
  .. code-block:: console
-     
+
      dropin.cache
      *.pyc
      *.pyo

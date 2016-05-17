@@ -589,7 +589,7 @@ Links
 - Ron Jeffries expounds on the importance of `Unit      Tests at 100% <http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm>`_ .
 - Ron Jeffries writes about the `Unit      Test <http://www.xprogramming.com/Practices/PracUnitTest.html>`_ in the `Extreme      Programming practices of C3 <http://www.xprogramming.com/Practices/xpractices.htm>`_ .
 - `PyUnit's homepage <http://pyunit.sourceforge.net>`_ .
-- The top-level tests directory, `twisted/test <http://twistedmatrix.com/trac/browser/trunk/twisted/test>`_ , in Git.
+- The top-level tests directory, `twisted/test <https://github.com/twisted/twisted/tree/trunk/twisted/test>`_.
 
 
   
