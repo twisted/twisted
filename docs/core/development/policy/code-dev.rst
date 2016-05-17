@@ -3,7 +3,7 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Working from Twisted's Subversion repository
+Working from Twisted's code repository
 ============================================
 
 
@@ -13,7 +13,7 @@ Working from Twisted's Subversion repository
 If you're going to be doing development on Twisted itself, or if you want
 to take advantage of bleeding-edge features (or bug fixes) that are not yet
 available in a numbered release, you'll probably want to check out a tree from
-the Twisted Subversion repository. The Trunk is where all current development
+the Twisted Git repository. The Trunk is where all current development
 takes place.
 
 
@@ -31,7 +31,7 @@ Checkout
 
 
 
-Subversion tutorials can be found elsewhere, see in particular `the Subversion homepage <http://subversion.apache.org/>`_ . The
+Git tutorials can be found elsewhere, see in particular `Git and GitHub learning resources <https://help.github.com/articles/good-resources-for-learning-git-and-github/>`_ . The
 relevant data you need to check out a copy of the Twisted tree is available on
 the `development page <http://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_ , and is as follows:
 
@@ -42,7 +42,7 @@ the `development page <http://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_ 
 .. code-block:: console
 
     
-    $ svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
+    $ git clone https://github.com/twisted/twisted Twisted
 
 
 
@@ -53,8 +53,8 @@ Alternate tree names
 
 
 
-By using ``svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk otherdir`` , you can put the workspace tree in a directory other than "Twisted" . I do this (with a name like "Twisted-Subversion" ) to
-remind myself that this tree comes from Subversion and not from a released
+By using ``git clone https://github.com/twisted/twisted otherdir`` , you can put the workspace tree in a directory other than "Twisted" . I do this (with a name like "Twisted-Git" ) to
+remind myself that this tree comes from Git and not from a released
 version (like "Twisted-1.0.5" ). This practice can cause a few problems,
 because there are a few places in the Twisted tree that need to know where
 the tree starts, so they can add it to ``sys.path`` without
@@ -81,21 +81,6 @@ problems.
 
 
 
-Combinator
-----------
-
-
-
-In order to simplify the use of Subversion, we typically use `Divmod Combinator <http://twistedmatrix.com/trac/wiki/Combinator>`_ .
-You may find it to be useful, too.  In particular, because Twisted uses
-branches for almost all feature development, if you plan to contribute to
-Twisted you will probably find Combinator very useful.  For more details,
-see the Combinator website, as well as the `UQDS <http://twistedmatrix.com/trac/wiki/UltimateQualityDevelopmentSystem>`_ page.
-
-
-
-
-
 Compiling C extensions
 ----------------------
 
@@ -114,7 +99,7 @@ The first is to do a regular distutils ``./setup.py build`` , which
 will create a directory under ``build/`` to hold both the generated ``.so`` files as well as a copy of the 600-odd ``.py`` files
 that make up Twisted. If you do this, you will need to set your PYTHONPATH to
 something like ``MyDir/Twisted/build/lib.linux-i686-2.5`` in order to
-run code against the Subversion twisted (as opposed to whatever's installed in ``/usr/lib/python2.5`` or wherever python usually looks). In
+run code against the Git twisted (as opposed to whatever's installed in ``/usr/lib/python2.5`` or wherever python usually looks). In
 addition, you will need to re-run the ``build`` command *every time* you change a ``.py`` file. The ``build/lib.foo`` 
 directory is a copy of the main tree, and that copy is only updated when you
 re-run ``setup.py build`` . It is easy to forget this and then wonder
@@ -232,9 +217,9 @@ Committing and Post-commit Hooks
 --------------------------------
 
 
-
-Twisted uses a customized `trac-post-commit-hook <http://bazaar.launchpad.net/~exarkun/twisted-trac-integration/trunk/annotate/head%3A/trac-hooks/trac-post-commit-hook>`_ to enable ticket updates based on svn commit
-logs. When making a branch for a ticket, the branch name should end
+Twisted's Trac installation is notified when the Git repository changes,
+and will update the ticket depending on the Git commit logs.
+When making a branch for a ticket, the branch name should end
 in ``-<ticket number>`` , for
 example ``my-branch-9999`` . This will add a ticket comment containing a
 changeset link and branch name. To make your commit message show up as a comment
