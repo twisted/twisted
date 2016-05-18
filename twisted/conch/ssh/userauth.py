@@ -194,6 +194,8 @@ class SSHUserAuthServer(service.SSHService):
         The callback when user has successfully been authenticated.  For a
         description of the arguments, see L{twisted.cred.portal.Portal.login}.
         We start the service requested by the user.
+
+        @param args: See L{twisted.cred.portal.Portal.login}.
         """
         (interface, avatar, logout) = args
         self.transport.avatar = avatar
