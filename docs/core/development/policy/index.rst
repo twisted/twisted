@@ -13,7 +13,7 @@ Twisted Development Policy
    writing-standard
    test-standard
    compatibility-policy
-   svn-dev
+   code-dev
    release-process
 
 This series of documents is designed for people who wish to contribute to the Twisted codebase.
@@ -22,5 +22,5 @@ This series of documents is designed for people who wish to contribute to the Tw
 - :doc:`Documentation writing standard <writing-standard>`
 - :doc:`Testing standard <test-standard>`
 - :doc:`Compatibility Policy <compatibility-policy>`
-- :doc:`Working from Twisted's Subversion repository <svn-dev>`
+- :doc:`Working from Twisted's Git repository <code-dev>`
 - :doc:`Releasing Twisted <release-process>`
