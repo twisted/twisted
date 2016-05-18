@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 16.2.0pre1 (2016-05-09)
-====================================
+Twisted Core 16.2.0 (2016-05-18)
+================================
 
 Features
 --------
@@ -46,8 +46,8 @@ Other
    #8291, #8292, #8304, #8315
 
 
-Twisted Conch 16.2.0pre1 (2016-05-09)
-=====================================
+Twisted Conch 16.2.0 (2016-05-18)
+=================================
 
 No significant changes have been made for this release.
 
@@ -56,14 +56,14 @@ Other
  - #8279
 
 
-Twisted Mail 16.2.0pre1 (2016-05-09)
-====================================
+Twisted Mail 16.2.0 (2016-05-18)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Names 16.2.0pre1 (2016-05-09)
-=====================================
+Twisted Names 16.2.0 (2016-05-18)
+=================================
 
 Features
 --------
@@ -72,20 +72,20 @@ Features
    ported to Python 3 (#8259)
 
 
-Twisted News 16.2.0pre1 (2016-05-09)
-====================================
+Twisted News 16.2.0 (2016-05-18)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 16.2.0pre1 (2016-05-09)
-====================================
+Twisted Pair 16.2.0 (2016-05-18)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 16.2.0pre1 (2016-05-09)
-======================================
+Twisted Runner 16.2.0 (2016-05-18)
+==================================
 
 Deprecations and Removals
 -------------------------
@@ -93,8 +93,8 @@ Deprecations and Removals
    was deprecated as it was broken for a long time. (#8123)
 
 
-Twisted Web 16.2.0pre1 (2016-05-09)
-===================================
+Twisted Web 16.2.0 (2016-05-18)
+===============================
 
 Features
 --------
@@ -119,8 +119,8 @@ Other
  - #8300
 
 
-Twisted Words 16.2.0pre1 (2016-05-09)
-=====================================
+Twisted Words 16.2.0 (2016-05-18)
+=================================
 
 Deprecations and Removals
 -------------------------
