@@ -10,9 +10,11 @@ and serializing such structures to an XML string representation, optimized
 for use in streaming XML applications.
 """
 
-import types
+from __future__ import absolute_import, division
 
-from zope.interface import implements, Interface, Attribute
+from zope.interface import implementer, Interface, Attribute
+
+from twisted.python.compat import StringType, iteritems, itervalues, unicode
 
 def _splitPrefix(name):
     """ Internal method for splitting a prefixed Element name into its
@@ -65,7 +67,7 @@ class _ListSerializer:
             return
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isinstance(elem, types.StringTypes):
+        if isinstance(elem, StringType):
             write(escapeToXml(elem))
             return
 
@@ -74,9 +76,9 @@ class _ListSerializer:
         uri = elem.uri
         defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
 
-        for p, u in elem.localPrefixes.iteritems():
+        for p, u in iteritems(elem.localPrefixes):
             self.prefixes[u] = p
-        self.prefixStack.append(elem.localPrefixes.keys())
+        self.prefixStack.append(list(elem.localPrefixes.keys()))
 
         # Inherit the default namespace
         if defaultUri is None:
@@ -106,13 +108,13 @@ class _ListSerializer:
            (uri != defaultUri or not prefix or not inScope):
             write(" xmlns='%s'" % (defaultUri))
 
-        for p, u in elem.localPrefixes.iteritems():
+        for p, u in iteritems(elem.localPrefixes):
             write(" xmlns:%s='%s'" % (p, u))
 
         # Serialize attributes
         for k,v in elem.attributes.items():
             # If the attribute name is a tuple, it's a qualified attribute
-            if isinstance(k, types.TupleType):
+            if isinstance(k, tuple):
                 attr_uri, attr_name = k
                 attr_prefix = self.getPrefix(attr_uri)
 
@@ -284,6 +286,7 @@ class IElement(Interface):
         @type node: C{unicode} or object implementing L{IElement}
         """
 
+@implementer(IElement)
 class Element(object):
     """ Represents an XML element node.
 
@@ -383,8 +386,6 @@ class Element(object):
                          namespace uri to.
     """
 
-    implements(IElement)
-
     _idCounter = 0
 
     def __init__(self, qname, defaultUri=None, attribs=None,
@@ -401,7 +402,7 @@ class Element(object):
         self.localPrefixes = localPrefixes or {}
         self.uri, self.name = qname
         if defaultUri is None and \
-           self.uri not in self.localPrefixes.itervalues():
+           self.uri not in itervalues(self.localPrefixes):
             self.defaultUri = self.uri
         else:
             self.defaultUri = defaultUri
@@ -435,12 +436,12 @@ class Element(object):
         """ Retrieve the first CData (content) node
         """
         for n in self.children:
-            if isinstance(n, types.StringTypes): return n
+            if isinstance(n, StringType): return n
         return ""
 
     def _dqa(self, attr):
         """ Dequalify an attribute key as needed """
-        if isinstance(attr, types.TupleType) and not attr[0]:
+        if isinstance(attr, tuple) and not attr[0]:
             return attr[1]
         else:
             return attr
@@ -477,7 +478,7 @@ class Element(object):
     def addContent(self, text):
         """ Add some text data to this Element. """
         c = self.children
-        if len(c) > 0 and isinstance(c[-1], types.StringTypes):
+        if len(c) > 0 and isinstance(c[-1], StringType):
             c[-1] = c[-1] + text
         else:
             c.append(text)
@@ -587,7 +588,7 @@ else:
             try:
                 self.dataReceived(buffer)
             except sux.ParseError as e:
-                raise ParserError, str(e)
+                raise ParserError(str(e))
 
 
         def findUri(self, prefix):
@@ -606,7 +607,7 @@ else:
             uri = None
 
             # Pass 1 - Identify namespace decls
-            for k, v in attributes.items():
+            for k, v in list(attributes.items()):
                 if k.startswith("xmlns"):
                     x, p = _splitPrefix(k)
                     if (x is None): # I.e.  default declaration
@@ -690,7 +691,7 @@ else:
             # Ensure the document hasn't already ended
             if self.rootElem is None:
                 # XXX: Write more legible explanation
-                raise ParserError, "Element closed after end of document."
+                raise ParserError("Element closed after end of document.")
 
             # Fix up name
             prefix, name = _splitPrefix(name)
@@ -703,7 +704,7 @@ else:
             if self.currElem is None:
                 # Ensure element name and uri matches
                 if self.rootElem.name != name or self.rootElem.uri != uri:
-                    raise ParserError, "Mismatched root elements"
+                    raise ParserError("Mismatched root elements")
                 self.DocumentEndEvent()
                 self.rootElem = None
 
@@ -713,7 +714,7 @@ else:
                 # element
                 if self.currElem.name != name or self.currElem.uri != uri:
                     # XXX: Write more legible explanation
-                    raise ParserError, "Malformed element close"
+                    raise ParserError("Malformed element close")
 
                 # Pop prefix and default NS stack
                 self.prefixStack.pop()
@@ -753,7 +754,7 @@ class ExpatElementStream:
         try:
             self.parser.Parse(buffer)
         except self.error as e:
-            raise ParserError, str(e)
+            raise ParserError(str(e))
 
     def _onStartElement(self, name, attrs):
         # Generate a qname tuple from the provided name.  See

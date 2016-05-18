@@ -269,6 +269,11 @@ modules = [
     "twisted.web.vhost",
     "twisted.web.wsgi",
     "twisted.web.xmlrpc",
+    "twisted.words.xish.domish",
+    "twisted.words.xish.utility",
+    "twisted.words.xish.xmlstream",
+    "twisted.words.xish.xpath",
+    "twisted.words.xish.xpathparser",
 ]
 
 
@@ -448,6 +453,10 @@ testModules = [
     "twisted.web.test.test_vhost",
     "twisted.web.test.test_wsgi",
     "twisted.web.test.test_xmlrpc",
+    "twisted.words.test.test_domish",
+    "twisted.words.test.test_xishutil",
+    "twisted.words.test.test_xmlstream",
+    "twisted.words.test.test_xpath",
 ]
 
 

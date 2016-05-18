@@ -11,10 +11,11 @@ L{domish.Element<twisted.words.xish.domish.Element>} instances against
 XPath-like expressions.
 """
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+from __future__ import absolute_import, division
+
+from io import StringIO
+
+from twisted.python.compat import unicode
 
 class LiteralValue(str):
     def value(self, elem):
@@ -288,7 +289,7 @@ class XPathQuery:
         return self.baseLocation.matches(elem)
 
     def queryForString(self, elem):
-        result = StringIO.StringIO()
+        result = StringIO()
         self.baseLocation.queryForString(elem, result)
         return result.getvalue()
 

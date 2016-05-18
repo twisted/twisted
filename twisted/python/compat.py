@@ -702,6 +702,13 @@ def _bytesChr(i):
 
 
 
+try:
+    from sys import intern
+except:
+    intern = intern
+
+
+
 __all__ = [
     "reraise",
     "execfile",

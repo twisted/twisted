@@ -5,6 +5,9 @@
 Tests for L{twisted.words.xish.domish}, a DOM-like library for XMPP.
 """
 
+from __future__ import absolute_import, division
+
+from twisted.python.compat import unicode
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.words.xish import domish
@@ -146,7 +149,7 @@ class DomishStreamTestsMixin:
         self.stream.parse(xml)
 
     def testHarness(self):
-        xml = "<root><child/><child2/></root>"
+        xml = b"<root><child/><child2/></root>"
         self.stream.parse(xml)
         self.assertEqual(self.doc_started, True)
         self.assertEqual(self.root.name, 'root')
@@ -155,11 +158,11 @@ class DomishStreamTestsMixin:
         self.assertEqual(self.doc_ended, True)
 
     def testBasic(self):
-        xml = "<stream:stream xmlns:stream='etherx' xmlns='jabber'>\n" + \
-              "  <message to='bar'>" + \
-              "    <x xmlns='xdelay'>some&amp;data&gt;</x>" + \
-              "  </message>" + \
-              "</stream:stream>"
+        xml = b"<stream:stream xmlns:stream='etherx' xmlns='jabber'>\n" + \
+              b"  <message to='bar'>" + \
+              b"    <x xmlns='xdelay'>some&amp;data&gt;</x>" + \
+              b"  </message>" + \
+              b"</stream:stream>"
 
         self.stream.parse(xml)
         self.assertEqual(self.root.name, 'stream')
@@ -171,14 +174,14 @@ class DomishStreamTestsMixin:
         self.assertEqual(unicode(self.elements[0].x), 'some&data>')
 
     def testNoRootNS(self):
-        xml = "<stream><error xmlns='etherx'/></stream>"
+        xml = b"<stream><error xmlns='etherx'/></stream>"
 
         self.stream.parse(xml)
         self.assertEqual(self.root.uri, '')
         self.assertEqual(self.elements[0].uri, 'etherx')
 
     def testNoDefaultNS(self):
-        xml = "<stream:stream xmlns:stream='etherx'><error/></stream:stream>"""
+        xml = b"<stream:stream xmlns:stream='etherx'><error/></stream:stream>"
 
         self.stream.parse(xml)
         self.assertEqual(self.root.uri, 'etherx')
@@ -187,14 +190,14 @@ class DomishStreamTestsMixin:
         self.assertEqual(self.elements[0].defaultUri, '')
 
     def testChildDefaultNS(self):
-        xml = "<root xmlns='testns'><child/></root>"
+        xml = b"<root xmlns='testns'><child/></root>"
 
         self.stream.parse(xml)
         self.assertEqual(self.root.uri, 'testns')
         self.assertEqual(self.elements[0].uri, 'testns')
 
     def testEmptyChildNS(self):
-        xml = "<root xmlns='testns'><child1><child2 xmlns=''/></child1></root>"
+        xml = b"<root xmlns='testns'><child1><child2 xmlns=''/></child1></root>"
 
         self.stream.parse(xml)
         self.assertEqual(self.elements[0].child2.uri, '')
@@ -205,7 +208,7 @@ class DomishStreamTestsMixin:
         Whitespace in an xmlns value is preserved in the resulting node's C{uri}
         attribute.
         """
-        xml = "<root xmlns:foo=' bar baz '><foo:bar foo:baz='quux'/></root>"
+        xml = b"<root xmlns:foo=' bar baz '><foo:bar foo:baz='quux'/></root>"
         self.stream.parse(xml)
         self.assertEqual(self.elements[0].uri, " bar baz ")
         self.assertEqual(
@@ -213,7 +216,7 @@ class DomishStreamTestsMixin:
 
 
     def testChildPrefix(self):
-        xml = "<root xmlns='testns' xmlns:foo='testns2'><foo:child/></root>"
+        xml = b"<root xmlns='testns' xmlns:foo='testns2'><foo:child/></root>"
 
         self.stream.parse(xml)
         self.assertEqual(self.root.localPrefixes['foo'], 'testns2')
@@ -221,7 +224,7 @@ class DomishStreamTestsMixin:
 
     def testUnclosedElement(self):
         self.assertRaises(domish.ParserError, self.stream.parse,
-                                              "<root><error></root>")
+                                              b"<root><error></root>")
 
     def test_namespaceReuse(self):
         """
@@ -233,10 +236,10 @@ class DomishStreamTestsMixin:
         prefix end up in their C{localPrefixes} attribute, too.
         """
 
-        xml = """<root>
-                   <foo:child1 xmlns:foo='testns'/>
-                   <child2 xmlns='testns'/>
-                 </root>"""
+        xml = b"""<root>
+                    <foo:child1 xmlns:foo='testns'/>
+                    <child2 xmlns='testns'/>
+                  </root>"""
 
         self.stream.parse(xml)
         self.assertEqual('child1', self.elements[0].name)
