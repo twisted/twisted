@@ -122,7 +122,7 @@ class _text_Function:
         pass
 
     def value(self, elem):
-        return str(elem)
+        return unicode(elem)
 
 
 class _Location:
@@ -162,7 +162,7 @@ class _Location:
             for c in elem.elements():
                 self.childLocation.queryForString(c, resultbuf)
         else:
-            resultbuf.write(str(elem))
+            resultbuf.write(unicode(elem))
 
     def queryForNodes(self, elem, resultlist):
         if not self.matchesPredicates(elem):
