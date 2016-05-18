@@ -19,6 +19,14 @@ TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 def check(location):
 
     location = os.path.abspath(location)
+
+    branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
+                        cwd=location).strip()
+
+    if branch == "trunk":
+        print("On trunk, no need to look at this.")
+        sys.exit(0)
+
     r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
                    cwd=location)
     files = r.strip().split(os.linesep)
@@ -27,6 +35,11 @@ def check(location):
     for change in files:
         print(change)
     print("----")
+
+    if len(files) == 1:
+        if files[0] == os.sep.join(["docs", "fun", "Twisted.Quotes"]):
+            print("Quotes change only; no topfile needed.")
+            sys.exit(0)
 
     for change in files:
         if os.sep + "topfiles" + os.sep in change:
