@@ -143,7 +143,7 @@ class SSHConnection(service.SSHService):
                     channel.localWindowSize,
                     channel.localMaxPacket)+channel.specificData)
             log.callWithLogger(channel, channel.channelOpen, packet)
-        except Exception, e:
+        except Exception as e:
             log.err(e, 'channel open failed')
             if isinstance(e, error.ConchError):
                 textualInfo, reason = e.args
@@ -630,7 +630,7 @@ for name, value in locals().copy().items():
         messages[value] = name # doesn't handle doubles
 
 import string
-alphanums = string.letters + string.digits
+alphanums = string.ascii_letters + string.digits
 TRANSLATE_TABLE = ''.join([chr(i) in alphanums and chr(i) or '_'
     for i in range(256)])
 SSHConnection.protocolMessages = messages
