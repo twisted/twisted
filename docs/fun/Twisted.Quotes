@@ -1,8 +1,2 @@
-<lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
-%
-<hawkowl> https://github.com/python/cpython/blob/master/Lib/asyncio/futures.py#L142
-<hawkowl> what does just * mean
-<glyph> hawkowl: it's like "lol" but for signatures
-%
 Audience: "What about eggs, are those still a thing?"
 glyph: ::holds mic close:: "Nooooo."
