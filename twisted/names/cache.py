@@ -68,7 +68,7 @@ class CacheResolver(common.ResolverBase):
         else:
             if self.verbose:
                 log.msg('Cache hit for ' + repr(name))
-            diff = now - when
+            diff = int(now - when)
 
             try:
                 result = (
