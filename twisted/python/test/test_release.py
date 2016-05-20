@@ -1780,7 +1780,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            r = CheckTopfileScript(logs.append).main([])
+            CheckTopfileScript(logs.append).main([])
 
         self.assertEqual(e.exception.args,
                          ("Must specify one argument: the Twisted checkout",))
@@ -1796,7 +1796,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            r = CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
@@ -1809,7 +1809,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            r = CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1], "On trunk, no need to look at this.")
@@ -1825,7 +1825,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            r = CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
@@ -1852,7 +1852,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            r = CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
@@ -1882,13 +1882,13 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            r = CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
 
 
-    def test_topfileAdded(self):
+    def test_topfileButNotFragmentAdded(self):
         """
         Running it on a branch with a non-fragment in the topfiles dir does not
         return green.
@@ -1912,7 +1912,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         logs = []
 
         with self.assertRaises(SystemExit) as e:
-            r = CheckTopfileScript(logs.append).main([self.repo.path])
+            CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
