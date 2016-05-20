@@ -90,18 +90,26 @@ class ExternalTempdirTestCase(TestCase):
 
 
 
-def _gitInit(path):
+def _gitConfig(path):
     """
-    Run a git init, and set some config that git requires. This isn't needed in
-    real usage.
+    Set some config in the repo that Git requires to make commits.
     """
-    runCommand(["git", "init", path.path])
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
                 "user.name", '"someone"'])
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
                 "user.email", '"someone@someplace.com"'])
+
+
+
+def _gitInit(path):
+    """
+    Run a git init, and set some config that git requires. This isn't needed in
+    real usage.
+    """
+    runCommand(["git", "init", path.path])
+    _gitConfig(path)
 
 
 
@@ -1762,6 +1770,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         self.repo = FilePath(self.mktemp())
 
         runCommand(["git", "clone", self.origin.path, self.repo.path])
+        _gitConfig(self.repo)
 
 
     def test_noArgs(self):
