@@ -1852,7 +1852,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
     def test_topfileAdded(self):
         """
-        Running it on a branch with a topfile added
+        Running it on a branch with a fragment added returns green.
         """
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)
@@ -1867,7 +1867,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         runCommand(["git", "add", fragment.path, unrelated.path],
                    cwd=self.repo.path)
-        runCommand(["git", "commit", "-m", "topgile"],
+        runCommand(["git", "commit", "-m", "topfile"],
                    cwd=self.repo.path)
 
         logs = []
@@ -1877,3 +1877,33 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
+
+
+    def test_topfileAdded(self):
+        """
+        Running it on a branch with a non-fragment in the topfiles dir does not
+        return green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        notFragment = topfiles.child("1234.txt")
+        notFragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", notFragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "not topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            r = CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
