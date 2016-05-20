@@ -206,9 +206,9 @@ class XPathTests(unittest.TestCase):
         xp = XPathQuery("/foo[text() = 'somecontent']")
         self.assertEqual(xp.matches(self.e), True)
 
-    def test_textCondition(self):
+    def test_textConditionUnicode(self):
         """
-        Test matching a node with given text.
+        A node can be matched by text with non-ascii code points.
         """
         xp = XPathQuery(u"//*[text()='\N{SNOWMAN}']")
         self.assertEqual(xp.matches(self.e), True)
