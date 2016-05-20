@@ -31,7 +31,7 @@ from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
     changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
-    APIBuilder, BuildAPIDocsScript,
+    APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
     ChangeVersionsScript, NewsBuilder, SphinxBuilder,
     GitCommand, getRepositoryCommand, IVCSCommand)
@@ -1699,6 +1699,7 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
 
 
+
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to access the right set of VCS commands
@@ -1738,3 +1739,141 @@ class VCSCommandInterfaceTests(TestCase):
         L{GitCommand} implements L{IVCSCommand}.
         """
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
+
+
+
+class CheckTopfileScriptTests(ExternalTempdirTestCase):
+    """
+    Tests for L{CheckTopfileScript}.
+    """
+    skip = gitSkip
+
+    def setUp(self):
+        self.origin = FilePath(self.mktemp())
+        _gitInit(self.origin)
+        runCommand(["git", "checkout", "-b", "trunk"],
+                   cwd=self.origin.path)
+        self.origin.child("test").setContent(b"test!")
+        runCommand(["git", "add", self.origin.child("test").path],
+                   cwd=self.origin.path)
+        runCommand(["git", "commit", "-m", "initial"],
+                   cwd=self.origin.path)
+
+        self.repo = FilePath(self.mktemp())
+
+        runCommand(["git", "clone", self.origin.path, self.repo.path])
+
+
+    def test_noArgs(self):
+        """
+        Too few arguments returns a failure.
+        """
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            r = CheckTopfileScript(logs.append).main([])
+
+        self.assertEqual(e.exception.args,
+                         ("Must specify one argument: the Twisted checkout",))
+
+
+    def test_nothing(self):
+        """
+        No topfiles means a failure.
+        """
+        runCommand(["git", "checkout", "-b", "mypatch"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            r = CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+
+
+    def test_trunk(self):
+        """
+        Running it on trunk always gives green.
+        """
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            r = CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "On trunk, no need to look at this.")
+
+
+    def test_release(self):
+        """
+        Running it a release branch always gives green.
+        """
+        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            r = CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1],
+                         "On a release branch, no need to look at this.")
+
+
+    def test_onlyQuotes(self):
+        """
+        Running it on a branch with only a quotefile change gives green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        fun = self.repo.child("docs").child("fun")
+        fun.makedirs()
+        quotes = fun.child("Twisted.Quotes")
+        quotes.setContent(b"Beep boop")
+
+        runCommand(["git", "add", quotes.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "quotes"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            r = CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1],
+                         "Quotes change only; no topfile needed.")
+
+
+    def test_topfileAdded(self):
+        """
+        Running it on a branch with a topfile added
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "topgile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            r = CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")

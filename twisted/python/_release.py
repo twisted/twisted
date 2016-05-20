@@ -30,6 +30,9 @@ from twisted.python.usage import Options, UsageError
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
 
+# Types of topfiles.
+TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
+
 
 def runCommand(args, cwd=None):
     """
@@ -1040,3 +1043,60 @@ class BuildAPIDocsScript(object):
             sys.exit("Must specify two arguments: "
                      "Twisted checkout and destination path")
         self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
+
+
+
+class CheckTopfileScript(object):
+    """
+    A thing for checking whether a checkout has a topfile.
+    """
+    def __init__(self, _print):
+        self._print = _print
+
+
+    def main(self, args):
+        """
+        Run the script.
+
+        @type args: L{list} of L{str}
+        @param args: The command line arguments to process. This must contain
+            one string: the path to the root of the Twisted checkout.
+        """
+        if len(args) != 1:
+            sys.exit("Must specify one argument: the Twisted checkout")
+
+        location = os.path.abspath(args[0])
+
+        branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
+                            cwd=location).strip()
+
+        if branch == "trunk":
+            self._print("On trunk, no need to look at this.")
+            sys.exit(0)
+
+        elif branch.startswith("release-"):
+            self._print("On a release branch, no need to look at this.")
+            sys.exit(0)
+
+        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
+                       cwd=location)
+        files = r.strip().split(os.linesep)
+
+        self._print("Looking at these files:")
+        for change in files:
+            self._print(change)
+        self._print("----")
+
+        if len(files) == 1:
+            if files[0] == os.sep.join(["docs", "fun", "Twisted.Quotes"]):
+                self._print("Quotes change only; no topfile needed.")
+                sys.exit(0)
+
+        for change in files:
+            if os.sep + "topfiles" + os.sep in change:
+                if change.rsplit(".", 1)[1] in TOPFILE_TYPES:
+                    self._print("Found " + change)
+                    sys.exit(0)
+
+        self._print("No topfile found. Have you committed it?")
+        sys.exit(1)
