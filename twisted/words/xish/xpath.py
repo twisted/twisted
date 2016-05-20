@@ -15,9 +15,9 @@ from __future__ import absolute_import, division
 
 from io import StringIO
 
-from twisted.python.compat import unicode
+from twisted.python.compat import StringType, unicode
 
-class LiteralValue(str):
+class LiteralValue(unicode):
     def value(self, elem):
         return self
 
@@ -183,7 +183,7 @@ class _Location:
                 self.childLocation.queryForStringList(c, resultlist)
         else:
             for c in elem.children:
-                if isinstance(c, (str, unicode)):
+                if isinstance(c, StringType):
                     resultlist.append(c)
 
 
@@ -270,7 +270,7 @@ class _AnyLocation:
     def queryForStringList(self, elem, resultlist):
         if self.isRootMatch(elem):
             for c in elem.children:
-                if isinstance(c, (str, unicode)):
+                if isinstance(c, StringType):
                     resultlist.append(c)
         for c in elem.elements():
             self.queryForStringList(c, resultlist)
@@ -279,8 +279,10 @@ class _AnyLocation:
 class XPathQuery:
     def __init__(self, queryStr):
         self.queryStr = queryStr
-        from twisted.words.xish.xpathparser import parse
-        self.baseLocation = parse('XPATH', queryStr)
+        from twisted.words.xish.xpathparser import (XPathParser,
+                                                    XPathParserScanner)
+        parser = XPathParser(XPathParserScanner(queryStr))
+        self.baseLocation = getattr(parser, 'XPATH')()
 
     def __hash__(self):
         return self.queryStr.__hash__()

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -5,9 +6,10 @@ from __future__ import absolute_import, division
 
 from twisted.trial import unittest
 
+from twisted.words.xish import xpath
 from twisted.words.xish.domish import Element
 from twisted.words.xish.xpath import XPathQuery
-from twisted.words.xish import xpath
+from twisted.words.xish.xpathparser import SyntaxError
 
 class XPathTests(unittest.TestCase):
     def setUp(self):
@@ -34,7 +36,9 @@ class XPathTests(unittest.TestCase):
         #        <foo/>
         #        <gar>MNO</gar>
         #     </bar>
-        #     <bar attrib4='value4' attrib5='value6'/>
+        #     <bar attrib4='value4' attrib5='value6' attrib6='á'>
+        #         <quux>☃</quux>
+        #     </bar>
         # </foo>
         self.e = Element(("testns", "foo"))
         self.e["attrib1"] = "value1"
@@ -67,6 +71,9 @@ class XPathTests(unittest.TestCase):
         self.bar7 = self.e.addElement("bar")
         self.bar7["attrib4"] = "value4"
         self.bar7["attrib5"] = "value6"
+        self.bar7["attrib6"] = u"á"
+        self.quux = self.bar7.addElement("quux")
+        self.quux.addContent(u"\N{SNOWMAN}")
 
     def test_staticMethods(self):
         """
@@ -131,6 +138,14 @@ class XPathTests(unittest.TestCase):
         self.assertEqual(xp.matches(self.e), True)
         self.assertEqual(xp.queryForNodes(self.e), [self.bar2])
 
+    def test_locationWithValueUnicode(self):
+        """
+        Test matching foo with child bar.
+        """
+        xp = XPathQuery(u"/foo/*[@attrib6='á']")
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.bar7])
+
     def test_namespaceFound(self):
         """
         Test matching node with namespace.
@@ -154,10 +169,24 @@ class XPathTests(unittest.TestCase):
 
     def test_queryForString(self):
         """
-        Test for queryForString and queryForStringList.
+        queryforString on absolute paths returns their first CDATA.
         """
         xp = XPathQuery("/foo")
         self.assertEqual(xp.queryForString(self.e), "somecontent")
+
+    def test_queryForStringList(self):
+        """
+        queryforStringList on absolute paths returns all their CDATA.
+        """
+        xp = XPathQuery("/foo")
+        self.assertEqual(xp.queryForStringList(self.e),
+                          ["somecontent", "somemorecontent"])
+
+    def test_queryForStringListAnyLocation(self):
+        """
+        queryforStringList on relative paths returns all their CDATA.
+        """
+        xp = XPathQuery("//foo")
         self.assertEqual(xp.queryForStringList(self.e),
                           ["somecontent", "somemorecontent"])
 
@@ -176,6 +205,14 @@ class XPathTests(unittest.TestCase):
         """
         xp = XPathQuery("/foo[text() = 'somecontent']")
         self.assertEqual(xp.matches(self.e), True)
+
+    def test_textCondition(self):
+        """
+        Test matching a node with given text.
+        """
+        xp = XPathQuery(u"//*[text()='\N{SNOWMAN}']")
+        self.assertEqual(xp.matches(self.e), True)
+        self.assertEqual(xp.queryForNodes(self.e), [self.quux])
 
     def test_textNotOperator(self):
         """
@@ -248,3 +285,12 @@ class XPathTests(unittest.TestCase):
                                  @attrib5='value6']""")
         self.assertEqual(xp.matches(self.e), True)
         self.assertEqual(xp.queryForNodes(self.e), [self.bar5, self.bar6, self.bar7])
+
+    def test_badXPathNoClosingBracket(self):
+        """
+        A missing closing bracket raises a SyntaxError.
+
+        This test excercises the most common failure mode.
+        """
+        exc = self.assertRaises(SyntaxError, XPathQuery, """//bar[@attrib1""")
+        self.assertTrue(exc.msg.startswith("Trying to find one of"))
