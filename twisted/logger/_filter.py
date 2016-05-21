@@ -41,7 +41,7 @@ class PredicateResult(Names):
 
 
 
-class ILogFilterPredicate(Interface):
+class ILogFilterPredicate(Interface): # noqa
     """
     A predicate that determined whether an event should be logged.
     """

@@ -109,7 +109,7 @@ class Bucket:
         return self.content == 0
 
 
-class IBucketFilter(Interface):
+class IBucketFilter(Interface): # noqa
     def getBucketFor(*somethings, **some_kw):
         """
         Return a L{Bucket} corresponding to the provided parameters.

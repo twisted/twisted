@@ -289,7 +289,7 @@ MAX_VALUE_LENGTH = 0xffff
 
 
 
-class IArgumentType(Interface):
+class IArgumentType(Interface): # noqa
     """
     An L{IArgumentType} can serialize a Python object into an AMP box and
     deserialize information from an AMP box back into a Python object.
@@ -354,7 +354,7 @@ class IArgumentType(Interface):
 
 
 
-class IBoxSender(Interface):
+class IBoxSender(Interface): # noqa
     """
     A transport which can send L{AmpBox} objects.
     """
@@ -380,7 +380,7 @@ class IBoxSender(Interface):
 
 
 
-class IBoxReceiver(Interface):
+class IBoxReceiver(Interface): # noqa
     """
     An application object which can receive L{AmpBox} objects and dispatch them
     appropriately.
@@ -410,7 +410,7 @@ class IBoxReceiver(Interface):
 
 
 
-class IResponderLocator(Interface):
+class IResponderLocator(Interface): # noqa
     """
     An application object which can look up appropriate responder methods for
     AMP commands.

@@ -79,7 +79,7 @@ class CommandFailed(Exception):
 
 
 
-class IVCSCommand(Interface):
+class IVCSCommand(Interface): # noqa
     """
     An interface for VCS commands.
     """

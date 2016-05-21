@@ -32,7 +32,7 @@ from twisted.python import log, failure
 
 
 
-class _IKQueue(Interface):
+class _IKQueue(Interface): # noqa
     """
     An interface for KQueue implementations.
     """

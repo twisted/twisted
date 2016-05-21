@@ -67,7 +67,7 @@ armor = base64.urlsafe_b64encode
 
 
 
-class IFilePath(Interface):
+class IFilePath(Interface): # noqa
     """
     File path object.
 

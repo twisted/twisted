@@ -18,7 +18,7 @@ class AlreadyQuit(Exception):
 
 
 
-class IWorker(Interface):
+class IWorker(Interface): # noqa
     """
     A worker that can perform some work concurrently.
 

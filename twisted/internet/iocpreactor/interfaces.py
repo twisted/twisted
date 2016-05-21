@@ -11,7 +11,7 @@ from zope.interface import Interface
 
 
 
-class IReadHandle(Interface):
+class IReadHandle(Interface): # noqa
     def readFromHandle(bufflist, evt):
         """
         Read into the given buffers from this handle.
@@ -26,7 +26,7 @@ class IReadHandle(Interface):
 
 
 
-class IWriteHandle(Interface):
+class IWriteHandle(Interface): # noqa
     def writeToHandle(buff, evt):
         """
         Write the given buffer to this handle.
@@ -41,7 +41,5 @@ class IWriteHandle(Interface):
 
 
 
-class IReadWriteHandle(IReadHandle, IWriteHandle):
+class IReadWriteHandle(IReadHandle, IWriteHandle): # noqa
     pass
-
-

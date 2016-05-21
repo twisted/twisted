@@ -15,7 +15,7 @@ from twisted.pair import raw
 from zope.interface import implements, Interface
 
 
-class IEthernetProtocol(Interface):
+class IEthernetProtocol(Interface): # noqa
     """An interface for protocols that handle Ethernet frames"""
     def addProto():
         """Add an IRawPacketProtocol protocol"""
@@ -32,7 +32,7 @@ class EthernetHeader:
 class EthernetProtocol(protocol.AbstractDatagramProtocol):
 
     implements(IEthernetProtocol)
-    
+
     def __init__(self):
         self.etherProtos = {}
 

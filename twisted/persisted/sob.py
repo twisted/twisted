@@ -54,7 +54,7 @@ def _decrypt(passphrase, data):
 
 
 
-class IPersistable(Interface):
+class IPersistable(Interface): # noqa
 
     """An object which can be saved in several formats to a file"""
 

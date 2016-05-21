@@ -15,7 +15,7 @@ from twisted.plugin import IPlugin, getPlugins
 from twisted.python.reflect import namedAny
 
 
-class IReactorInstaller(Interface):
+class IReactorInstaller(Interface): # noqa
     """
     Definition of a reactor which can probably be installed.
     """

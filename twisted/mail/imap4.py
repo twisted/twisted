@@ -422,7 +422,7 @@ class IllegalOperation(IMAP4Exception): pass
 
 class IllegalMailboxEncoding(IMAP4Exception): pass
 
-class IMailboxListener(Interface):
+class IMailboxListener(Interface): # noqa
     """Interface for objects interested in mailbox events"""
 
     def modeChanged(writeable):
@@ -4423,7 +4423,7 @@ def collapseNestedLists(items):
     return ''.join(pieces[1:])
 
 
-class IClientAuthentication(Interface):
+class IClientAuthentication(Interface): # noqa
     def getName():
         """Return an identifier associated with this authentication scheme.
 
@@ -4497,7 +4497,7 @@ class ReadOnlyMailbox(MailboxException):
         return 'Mailbox open in read-only state'
 
 
-class IAccount(Interface):
+class IAccount(Interface): # noqa
     """Interface for Account classes
 
     Implementors of this interface should consider implementing
@@ -4652,7 +4652,7 @@ class IAccount(Interface):
         C{IMailboxInfo} or C{IMailbox}.  A Deferred may also be returned.
         """
 
-class INamespacePresenter(Interface):
+class INamespacePresenter(Interface): # noqa
     def getPersonalNamespaces():
         """Report the available personal namespaces.
 
@@ -5305,7 +5305,7 @@ def getBodyStructure(msg, extended=False):
 
 
 
-class IMessagePart(Interface):
+class IMessagePart(Interface): # noqa
     def getHeaders(negate, *names):
         """Retrieve a group of message headers.
 
@@ -5368,7 +5368,7 @@ class IMessage(IMessagePart):
         @return: An RFC822-formatted date string.
         """
 
-class IMessageFile(Interface):
+class IMessageFile(Interface): # noqa
     """Optional message interface for representing messages as files.
 
     If provided by message objects, this interface will be used instead
@@ -5381,7 +5381,7 @@ class IMessageFile(Interface):
         of which this message consists.
         """
 
-class ISearchableMailbox(Interface):
+class ISearchableMailbox(Interface): # noqa
     def search(query, uid):
         """Search for messages that meet the given query criteria.
 
@@ -5406,7 +5406,7 @@ class ISearchableMailbox(Interface):
         @raise IllegalQueryError: Raised when query is not valid.
         """
 
-class IMessageCopier(Interface):
+class IMessageCopier(Interface): # noqa
     def copy(messageObject):
         """Copy the given message object into this mailbox.
 
@@ -5424,7 +5424,7 @@ class IMessageCopier(Interface):
         with the UID when the copy finishes.
         """
 
-class IMailboxInfo(Interface):
+class IMailboxInfo(Interface): # noqa
     """Interface specifying only the methods required for C{listMailboxes}.
 
     Implementations can return objects implementing only these methods for
@@ -5619,7 +5619,7 @@ class IMailbox(IMailboxInfo):
         read-write.
         """
 
-class ICloseableMailbox(Interface):
+class ICloseableMailbox(Interface): # noqa
     """A supplementary interface for mailboxes which require cleanup on close.
 
     Implementing this interface is optional.  If it is implemented, the protocol

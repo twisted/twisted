@@ -25,7 +25,7 @@ from twisted.internet import defer
 from twisted.plugin import IPlugin
 
 
-class IServiceMaker(Interface):
+class IServiceMaker(Interface): # noqa
     """
     An object which can be used to construct services in a flexible
     way.
@@ -86,7 +86,7 @@ class ServiceMaker(object):
 
 
 
-class IService(Interface):
+class IService(Interface): # noqa
     """
     A service.
 
@@ -203,7 +203,7 @@ class Service(object):
 
 
 
-class IServiceCollection(Interface):
+class IServiceCollection(Interface): # noqa
     """
     Collection of services.
 
@@ -322,7 +322,7 @@ class MultiService(Service):
 
 
 
-class IProcess(Interface):
+class IProcess(Interface): # noqa
     """
     Process running parameters.
 

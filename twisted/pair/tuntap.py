@@ -125,7 +125,7 @@ class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
 
 
 
-class _IInputOutputSystem(Interface):
+class _IInputOutputSystem(Interface): # noqa
     """
     An interface for performing some basic kinds of I/O (particularly that I/O
     which might be useful for L{twisted.pair.tuntap}-using code).
@@ -431,4 +431,3 @@ class TuntapPort(abstract.FileDescriptor):
 TuntapPort.loseConnection = deprecated(
     Version("Twisted", 14, 0, 0),
     TuntapPort.stopListening)(TuntapPort.loseConnection)
-

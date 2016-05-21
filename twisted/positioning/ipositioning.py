@@ -11,7 +11,7 @@ from __future__ import absolute_import, division
 from zope.interface import Attribute, Interface
 
 
-class IPositioningReceiver(Interface):
+class IPositioningReceiver(Interface): # noqa
     """
     An interface for positioning providers.
     """
@@ -89,7 +89,7 @@ class IPositioningReceiver(Interface):
 
 
 
-class IPositioningBeacon(Interface):
+class IPositioningBeacon(Interface): # noqa
     """
     A positioning beacon.
     """
@@ -101,7 +101,7 @@ class IPositioningBeacon(Interface):
 
 
 
-class INMEAReceiver(Interface):
+class INMEAReceiver(Interface): # noqa
     """
     An object that can receive NMEA data.
     """

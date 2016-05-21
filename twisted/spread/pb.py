@@ -162,7 +162,7 @@ class PBConnectionLost(Exception):
 
 
 
-class IPerspective(Interface):
+class IPerspective(Interface): # noqa
     """
     per*spec*tive, n. : The relationship of aspects of a subject to each
     other and to a whole: 'a perspective of history'; 'a need to view

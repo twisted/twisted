@@ -90,7 +90,7 @@ class NewsServerError(Exception):
     pass
 
 
-class INewsStorage(Interface):
+class INewsStorage(Interface): # noqa
     """
     An interface for storing and requesting news articles
     """

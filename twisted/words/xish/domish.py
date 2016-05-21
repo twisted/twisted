@@ -210,7 +210,7 @@ class Namespace:
     def __getitem__(self, n):
         return (self._uri, n)
 
-class IElement(Interface):
+class IElement(Interface): # noqa
     """
     Interface to XML element nodes.
 
@@ -844,5 +844,3 @@ class ExpatElementStream:
 
 ## def parseFile(filename):
 ##     return FileParser().parse(filename)
-
-

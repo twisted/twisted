@@ -14,7 +14,7 @@ from twisted.python import failure
 from twisted.cred import error, credentials
 
 
-class ICredentialsChecker(Interface):
+class ICredentialsChecker(Interface): # noqa
     """
     An object that can check sub-interfaces of ICredentials.
     """

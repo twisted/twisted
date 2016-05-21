@@ -967,7 +967,7 @@ KeyPair.__setstate__ = deprecated(Version("Twisted", 15, 0, 0),
 
 
 
-class IOpenSSLTrustRoot(Interface):
+class IOpenSSLTrustRoot(Interface): # noqa
     """
     Trust settings for an OpenSSL context.
 

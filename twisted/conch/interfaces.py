@@ -7,7 +7,7 @@ This module contains interfaces defined for the L{twisted.conch} package.
 
 from zope.interface import Interface, Attribute
 
-class IConchUser(Interface):
+class IConchUser(Interface): # noqa
     """
     A user who has been authenticated to Cred through Conch.  This is
     the interface between the SSH connection and the user.
@@ -54,7 +54,7 @@ class IConchUser(Interface):
         The method is called with arguments of windowSize, maxPacket, data.
         """
 
-class ISession(Interface):
+class ISession(Interface): # noqa
 
     def getPty(term, windowSize, modes):
         """
@@ -94,7 +94,7 @@ class ISession(Interface):
         """
 
 
-class ISFTPServer(Interface):
+class ISFTPServer(Interface): # noqa
     """
     SFTP subsystem for server-side communication.
 
@@ -305,7 +305,7 @@ class ISFTPServer(Interface):
 
 
 
-class IKnownHostEntry(Interface):
+class IKnownHostEntry(Interface): # noqa
     """
     A L{IKnownHostEntry} is an entry in an OpenSSH-formatted C{known_hosts}
     file.
@@ -346,7 +346,7 @@ class IKnownHostEntry(Interface):
 
 
 
-class ISFTPFile(Interface):
+class ISFTPFile(Interface): # noqa
     """
     This represents an open file on the server.  An object adhering to this
     interface should be returned from L{openFile}().
@@ -404,5 +404,3 @@ class ISFTPFile(Interface):
         @param attrs: a dictionary in the same format as the attrs argument to
         L{openFile}.
         """
-
-

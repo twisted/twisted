@@ -24,7 +24,7 @@ deprecatedModuleAttribute(
 
 
 
-class ILookupTable(Interface):
+class ILookupTable(Interface): # noqa
     """
     Interface for character lookup classes.
     """
@@ -36,7 +36,7 @@ class ILookupTable(Interface):
 
 
 
-class IMappingTable(Interface):
+class IMappingTable(Interface): # noqa
     """
     Interface for character mapping classes.
     """

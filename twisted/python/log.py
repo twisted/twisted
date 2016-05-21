@@ -45,7 +45,7 @@ class ILogContext:
 
 
 
-class ILogObserver(Interface):
+class ILogObserver(Interface): # noqa
     """
     An observer which can do something with log events.
 

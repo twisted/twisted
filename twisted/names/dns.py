@@ -193,7 +193,7 @@ OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 # https://tools.ietf.org/html/rfc6891#section-9
 EBADVERSION = 16
 
-class IRecord(Interface):
+class IRecord(Interface): # noqa
     """
     An single entry in a zone of authority.
     """
@@ -302,7 +302,7 @@ def readPrecisely(file, l):
     return buff
 
 
-class IEncodable(Interface):
+class IEncodable(Interface): # noqa
     """
     Interface for something which can be encoded to and decoded
     from a file object.

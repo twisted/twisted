@@ -12,7 +12,7 @@ from __future__ import division, absolute_import
 from zope.interface import Interface, Attribute
 
 
-class IAddress(Interface):
+class IAddress(Interface): # noqa
     """
     An address, e.g. a TCP C{(host, port)}.
 
@@ -21,7 +21,7 @@ class IAddress(Interface):
 
 ### Reactor Interfaces
 
-class IConnector(Interface):
+class IConnector(Interface): # noqa
     """
     Object used to interface between connections and protocols.
 
@@ -55,7 +55,7 @@ class IConnector(Interface):
 
 
 
-class IResolverSimple(Interface):
+class IResolverSimple(Interface): # noqa
     def getHostByName(name, timeout = (1, 3, 11, 45)):
         """
         Resolve the domain name C{name} into an IP address.
@@ -84,7 +84,7 @@ class IResolverSimple(Interface):
 
 
 
-class IResolver(IResolverSimple):
+class IResolver(IResolverSimple): # noqa
     def query(query, timeout=None):
         """
         Dispatch C{query} to the method which can handle its type.
@@ -622,7 +622,7 @@ class IResolver(IResolverSimple):
 
 
 
-class IReactorTCP(Interface):
+class IReactorTCP(Interface): # noqa
 
     def listenTCP(port, factory, backlog=50, interface=''):
         """
@@ -671,7 +671,7 @@ class IReactorTCP(Interface):
                  docs for details.
         """
 
-class IReactorSSL(Interface):
+class IReactorSSL(Interface): # noqa
 
     def connectSSL(host, port, factory, contextFactory, timeout=30, bindAddress=None):
         """
@@ -713,7 +713,7 @@ class IReactorSSL(Interface):
 
 
 
-class IReactorUNIX(Interface):
+class IReactorUNIX(Interface): # noqa
     """
     UNIX socket methods.
     """
@@ -760,7 +760,7 @@ class IReactorUNIX(Interface):
 
 
 
-class IReactorUNIXDatagram(Interface):
+class IReactorUNIXDatagram(Interface): # noqa
     """
     Datagram UNIX socket methods.
     """
@@ -806,7 +806,7 @@ class IReactorUNIXDatagram(Interface):
 
 
 
-class IReactorWin32Events(Interface):
+class IReactorWin32Events(Interface): # noqa
     """
     Win32 Event API methods
 
@@ -839,7 +839,7 @@ class IReactorWin32Events(Interface):
 
 
 
-class IReactorUDP(Interface):
+class IReactorUDP(Interface): # noqa
     """
     UDP socket methods.
     """
@@ -867,7 +867,7 @@ class IReactorUDP(Interface):
 
 
 
-class IReactorMulticast(Interface):
+class IReactorMulticast(Interface): # noqa
     """
     UDP socket methods that support multicast.
 
@@ -894,7 +894,7 @@ class IReactorMulticast(Interface):
 
 
 
-class IReactorSocket(Interface):
+class IReactorSocket(Interface): # noqa
     """
     Methods which allow a reactor to use externally created sockets.
 
@@ -1030,7 +1030,7 @@ class IReactorSocket(Interface):
 
 
 
-class IReactorProcess(Interface):
+class IReactorProcess(Interface): # noqa
 
     def spawnProcess(processProtocol, executable, args=(), env={}, path=None,
                      uid=None, gid=None, usePTY=0, childFDs=None):
@@ -1116,7 +1116,7 @@ class IReactorProcess(Interface):
                         insufficient system resources to create a new process.
         """
 
-class IReactorTime(Interface):
+class IReactorTime(Interface): # noqa
     """
     Time methods that a Reactor should implement.
     """
@@ -1159,7 +1159,7 @@ class IReactorTime(Interface):
         """
 
 
-class IDelayedCall(Interface):
+class IDelayedCall(Interface): # noqa
     """
     A scheduled call.
 
@@ -1218,7 +1218,7 @@ class IDelayedCall(Interface):
 
 
 
-class IReactorFromThreads(Interface):
+class IReactorFromThreads(Interface): # noqa
     """
     This interface is the set of thread-safe methods which may be invoked on
     the reactor from other threads.
@@ -1242,7 +1242,7 @@ class IReactorFromThreads(Interface):
         """
 
 
-class IReactorInThreads(Interface):
+class IReactorInThreads(Interface): # noqa
     """
     This interface contains the methods exposed by a reactor which will let you
     run functions in another thread.
@@ -1258,7 +1258,7 @@ class IReactorInThreads(Interface):
 
 
 
-class IReactorThreads(IReactorFromThreads, IReactorInThreads):
+class IReactorThreads(IReactorFromThreads, IReactorInThreads): # noqa
     """
     Dispatch methods to be run in threads.
 
@@ -1282,7 +1282,7 @@ class IReactorThreads(IReactorFromThreads, IReactorInThreads):
 
 
 
-class IReactorCore(Interface):
+class IReactorCore(Interface): # noqa
     """
     Core methods that a Reactor must implement.
     """
@@ -1413,7 +1413,7 @@ class IReactorCore(Interface):
         """
 
 
-class IReactorPluggableResolver(Interface):
+class IReactorPluggableResolver(Interface): # noqa
     """
     A reactor with a pluggable name resolver interface.
     """
@@ -1429,7 +1429,7 @@ class IReactorPluggableResolver(Interface):
         """
 
 
-class IReactorDaemonize(Interface):
+class IReactorDaemonize(Interface): # noqa
     """
     A reactor which provides hooks that need to be called before and after
     daemonization.
@@ -1460,7 +1460,7 @@ class IReactorDaemonize(Interface):
 
 
 
-class IReactorFDSet(Interface):
+class IReactorFDSet(Interface): # noqa
     """
     Implement me to be able to use L{IFileDescriptor} type resources.
 
@@ -1533,7 +1533,7 @@ class IReactorFDSet(Interface):
         """
 
 
-class IListeningPort(Interface):
+class IListeningPort(Interface): # noqa
     """
     A listening port.
     """
@@ -1563,7 +1563,7 @@ class IListeningPort(Interface):
         """
 
 
-class ILoggingContext(Interface):
+class ILoggingContext(Interface): # noqa
     """
     Give context information that will be used to log events generated by
     this item.
@@ -1577,7 +1577,7 @@ class ILoggingContext(Interface):
 
 
 
-class IFileDescriptor(ILoggingContext):
+class IFileDescriptor(ILoggingContext): # noqa
     """
     An interface representing a UNIX-style numeric file descriptor.
     """
@@ -1615,7 +1615,7 @@ class IFileDescriptor(ILoggingContext):
 
 
 
-class IReadDescriptor(IFileDescriptor):
+class IReadDescriptor(IFileDescriptor): # noqa
     """
     An L{IFileDescriptor} that can read.
 
@@ -1632,7 +1632,7 @@ class IReadDescriptor(IFileDescriptor):
         """
 
 
-class IWriteDescriptor(IFileDescriptor):
+class IWriteDescriptor(IFileDescriptor): # noqa
     """
     An L{IFileDescriptor} that can write.
 
@@ -1649,13 +1649,13 @@ class IWriteDescriptor(IFileDescriptor):
         """
 
 
-class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor):
+class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor): # noqa
     """
     An L{IFileDescriptor} that can both read and write.
     """
 
 
-class IHalfCloseableDescriptor(Interface):
+class IHalfCloseableDescriptor(Interface): # noqa
     """
     A descriptor that can be half-closed.
     """
@@ -1671,7 +1671,7 @@ class IHalfCloseableDescriptor(Interface):
         """
 
 
-class ISystemHandle(Interface):
+class ISystemHandle(Interface): # noqa
     """
     An object that wraps a networking OS-specific handle.
     """
@@ -1689,7 +1689,7 @@ class ISystemHandle(Interface):
         """
 
 
-class IConsumer(Interface):
+class IConsumer(Interface): # noqa
     """
     A consumer consumes data from a producer.
     """
@@ -1740,7 +1740,7 @@ class IConsumer(Interface):
 
 
 
-class IProducer(Interface):
+class IProducer(Interface): # noqa
     """
     A producer produces data for a consumer.
 
@@ -1757,7 +1757,7 @@ class IProducer(Interface):
         """
 
 
-class IPushProducer(IProducer):
+class IPushProducer(IProducer): # noqa
     """
     A push producer, also known as a streaming producer is expected to
     produce (write to this consumer) data on a continuous basis, unless
@@ -1781,7 +1781,7 @@ class IPushProducer(IProducer):
         more data for its consumer.
         """
 
-class IPullProducer(IProducer):
+class IPullProducer(IProducer): # noqa
     """
     A pull producer, also known as a non-streaming producer, is
     expected to produce data each time resumeProducing() is called.
@@ -1797,7 +1797,7 @@ class IPullProducer(IProducer):
         produced data.
         """
 
-class IProtocol(Interface):
+class IProtocol(Interface): # noqa
 
     def dataReceived(data):
         """
@@ -1845,7 +1845,7 @@ class IProtocol(Interface):
         """
 
 
-class IProcessProtocol(Interface):
+class IProcessProtocol(Interface): # noqa
     """
     Interface for process-related event handlers.
     """
@@ -1911,7 +1911,7 @@ class IProcessProtocol(Interface):
 
 
 
-class IHalfCloseableProtocol(Interface):
+class IHalfCloseableProtocol(Interface): # noqa
     """
     Implemented to indicate they want notification of half-closes.
 
@@ -1946,7 +1946,7 @@ class IHalfCloseableProtocol(Interface):
 
 
 
-class IFileDescriptorReceiver(Interface):
+class IFileDescriptorReceiver(Interface): # noqa
     """
     Protocols may implement L{IFileDescriptorReceiver} to receive file
     descriptors sent to them.  This is useful in conjunction with
@@ -1965,7 +1965,7 @@ class IFileDescriptorReceiver(Interface):
 
 
 
-class IProtocolFactory(Interface):
+class IProtocolFactory(Interface): # noqa
     """
     Interface for protocol factories.
     """
@@ -1995,7 +1995,7 @@ class IProtocolFactory(Interface):
         """
 
 
-class ITransport(Interface):
+class ITransport(Interface): # noqa
     """
     I am a transport for bytes.
 
@@ -2056,7 +2056,7 @@ class ITransport(Interface):
         """
 
 
-class ITCPTransport(ITransport):
+class ITCPTransport(ITransport): # noqa
     """
     A TCP based transport.
     """
@@ -2124,7 +2124,7 @@ class ITCPTransport(ITransport):
 
 
 
-class IUNIXTransport(ITransport):
+class IUNIXTransport(ITransport): # noqa
     """
     Transport for stream-oriented unix domain connections.
     """
@@ -2151,7 +2151,7 @@ class IUNIXTransport(ITransport):
 
 
 
-class IOpenSSLServerConnectionCreator(Interface):
+class IOpenSSLServerConnectionCreator(Interface): # noqa
     """
     A provider of L{IOpenSSLServerConnectionCreator} can create
     L{OpenSSL.SSL.Connection} objects for TLS servers.
@@ -2180,7 +2180,7 @@ class IOpenSSLServerConnectionCreator(Interface):
 
 
 
-class IOpenSSLClientConnectionCreator(Interface):
+class IOpenSSLClientConnectionCreator(Interface): # noqa
     """
     A provider of L{IOpenSSLClientConnectionCreator} can create
     L{OpenSSL.SSL.Connection} objects for TLS clients.
@@ -2207,7 +2207,7 @@ class IOpenSSLClientConnectionCreator(Interface):
 
 
 
-class ITLSTransport(ITCPTransport):
+class ITLSTransport(ITCPTransport): # noqa
     """
     A TCP transport that supports switching to TLS midstream.
 
@@ -2233,7 +2233,7 @@ class ITLSTransport(ITCPTransport):
 
 
 
-class ISSLTransport(ITCPTransport):
+class ISSLTransport(ITCPTransport): # noqa
     """
     A SSL/TLS based transport.
     """
@@ -2245,7 +2245,7 @@ class ISSLTransport(ITCPTransport):
 
 
 
-class INegotiated(ISSLTransport):
+class INegotiated(ISSLTransport): # noqa
     """
     A TLS based transport that supports using ALPN/NPN to negotiate the
     protocol to be used inside the encrypted tunnel.
@@ -2265,7 +2265,7 @@ class INegotiated(ISSLTransport):
 
 
 
-class ICipher(Interface):
+class ICipher(Interface): # noqa
     """
     A TLS cipher.
     """
@@ -2275,7 +2275,7 @@ class ICipher(Interface):
 
 
 
-class IAcceptableCiphers(Interface):
+class IAcceptableCiphers(Interface): # noqa
     """
     A list of acceptable ciphers for a TLS context.
     """
@@ -2294,7 +2294,7 @@ class IAcceptableCiphers(Interface):
 
 
 
-class IProcessTransport(ITransport):
+class IProcessTransport(ITransport): # noqa
     """
     A process transport.
     """
@@ -2368,7 +2368,7 @@ class IProcessTransport(ITransport):
         """
 
 
-class IServiceCollection(Interface):
+class IServiceCollection(Interface): # noqa
     """
     An object which provides access to a collection of services.
     """
@@ -2391,7 +2391,7 @@ class IServiceCollection(Interface):
         """
 
 
-class IUDPTransport(Interface):
+class IUDPTransport(Interface): # noqa
     """
     Transport for UDP DatagramProtocols.
     """
@@ -2454,7 +2454,7 @@ class IUDPTransport(Interface):
         """
 
 
-class IUNIXDatagramTransport(Interface):
+class IUNIXDatagramTransport(Interface): # noqa
     """
     Transport for UDP PacketProtocols.
     """
@@ -2470,7 +2470,7 @@ class IUNIXDatagramTransport(Interface):
         """
 
 
-class IUNIXDatagramConnectedTransport(Interface):
+class IUNIXDatagramConnectedTransport(Interface): # noqa
     """
     Transport for UDP ConnectedPacketProtocols.
     """
@@ -2491,7 +2491,7 @@ class IUNIXDatagramConnectedTransport(Interface):
         """
 
 
-class IMulticastTransport(Interface):
+class IMulticastTransport(Interface): # noqa
     """
     Additional functionality for multicast UDP.
     """
@@ -2542,7 +2542,7 @@ class IMulticastTransport(Interface):
         """
 
 
-class IStreamClientEndpoint(Interface):
+class IStreamClientEndpoint(Interface): # noqa
     """
     A stream client endpoint is a place that L{ClientFactory} can connect to.
     For example, a remote TCP host/port pair would be a TCP client endpoint.
@@ -2563,7 +2563,7 @@ class IStreamClientEndpoint(Interface):
 
 
 
-class IStreamServerEndpoint(Interface):
+class IStreamServerEndpoint(Interface): # noqa
     """
     A stream server endpoint is a place that a L{Factory} can listen for
     incoming connections.
@@ -2583,7 +2583,7 @@ class IStreamServerEndpoint(Interface):
 
 
 
-class IStreamServerEndpointStringParser(Interface):
+class IStreamServerEndpointStringParser(Interface): # noqa
     """
     An L{IStreamServerEndpointStringParser} is like an
     L{IStreamClientEndpointStringParserWithReactor}, except for
@@ -2613,7 +2613,7 @@ class IStreamServerEndpointStringParser(Interface):
         """
 
 
-class IStreamClientEndpointStringParserWithReactor(Interface):
+class IStreamClientEndpointStringParserWithReactor(Interface): # noqa
     """
     An L{IStreamClientEndpointStringParserWithReactor} is a parser which can
     convert a set of string C{*args} and C{**kwargs} into an

@@ -1538,7 +1538,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
 # -- Cred Objects --
 
 
-class IFTPShell(Interface):
+class IFTPShell(Interface): # noqa
     """
     An abstraction of the shell commands used by the FTP protocol for
     a given user account.
@@ -1675,7 +1675,7 @@ class IFTPShell(Interface):
 
 
 
-class IReadFile(Interface):
+class IReadFile(Interface): # noqa
     """
     A file out of which bytes may be read.
     """
@@ -1693,7 +1693,7 @@ class IReadFile(Interface):
 
 
 
-class IWriteFile(Interface):
+class IWriteFile(Interface): # noqa
     """
     A file into which bytes may be written.
     """

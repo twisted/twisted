@@ -13,7 +13,7 @@ from zope.interface import Attribute, implementer, Interface
 from twisted.conch import error
 
 
-class _IKexAlgorithm(Interface):
+class _IKexAlgorithm(Interface): # noqa
     """
     An L{_IKexAlgorithm} describes a key exchange algorithm.
     """
@@ -29,7 +29,7 @@ class _IKexAlgorithm(Interface):
 
 
 
-class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
+class _IFixedGroupKexAlgorithm(_IKexAlgorithm): # noqa
     """
     An L{_IFixedGroupKexAlgorithm} describes a key exchange algorithm with a
     fixed prime / generator group.
@@ -46,7 +46,7 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
 
 
 
-class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
+class _IGroupExchangeKexAlgorithm(_IKexAlgorithm): # noqa
     """
     An L{_IGroupExchangeKexAlgorithm} describes a key exchange algorithm
     that uses group exchange between the client and server.

@@ -29,7 +29,7 @@ from twisted.cred import error
 
 
 
-class ICredentials(Interface):
+class ICredentials(Interface): # noqa
     """
     I check credentials.
 
@@ -39,7 +39,7 @@ class ICredentials(Interface):
 
 
 
-class IUsernameDigestHash(ICredentials):
+class IUsernameDigestHash(ICredentials): # noqa
     """
     This credential is used when a CredentialChecker has access to the hash
     of the username:realm:password as in an Apache .htdigest file.
@@ -55,7 +55,7 @@ class IUsernameDigestHash(ICredentials):
 
 
 
-class IUsernameHashedPassword(ICredentials):
+class IUsernameHashedPassword(ICredentials): # noqa
     """
     I encapsulate a username and a hashed password.
 
@@ -85,7 +85,7 @@ class IUsernameHashedPassword(ICredentials):
 
 
 
-class IUsernamePassword(ICredentials):
+class IUsernamePassword(ICredentials): # noqa
     """
     I encapsulate a username and a plaintext password.
 
@@ -118,7 +118,7 @@ class IUsernamePassword(ICredentials):
 
 
 
-class IAnonymous(ICredentials):
+class IAnonymous(ICredentials): # noqa
     """
     I am an explicitly anonymous request for access.
     """

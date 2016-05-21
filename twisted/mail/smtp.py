@@ -43,7 +43,7 @@ else:
 # Used for fast success code lookup
 SUCCESS = dict.fromkeys(xrange(200,300))
 
-class IMessageDelivery(Interface):
+class IMessageDelivery(Interface): # noqa
     def receivedHeader(helo, origin, recipients):
         """
         Generate the Received header for a message
@@ -99,7 +99,7 @@ class IMessageDelivery(Interface):
         not to be accepted.
         """
 
-class IMessageDeliveryFactory(Interface):
+class IMessageDeliveryFactory(Interface): # noqa
     """An alternate interface to implement for handling message delivery.
 
     It is useful to implement this interface instead of L{IMessageDelivery}
@@ -479,7 +479,7 @@ class User:
     def __str__(self):
         return str(self.dest)
 
-class IMessage(Interface):
+class IMessage(Interface): # noqa
     """Interface definition for messages that can be sent via SMTP."""
 
     def lineReceived(line):

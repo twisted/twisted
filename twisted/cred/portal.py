@@ -16,7 +16,7 @@ from twisted.cred import error
 from zope.interface import providedBy, Interface
 
 
-class IRealm(Interface):
+class IRealm(Interface): # noqa
     """
     The realm connects application-specific objects to the
     authentication system.

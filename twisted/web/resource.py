@@ -26,7 +26,7 @@ from twisted.web.error import UnsupportedMethod
 
 
 
-class IResource(Interface):
+class IResource(Interface): # noqa
     """
     A web resource.
     """
@@ -355,7 +355,7 @@ class ForbiddenResource(ErrorPage):
 
 
 
-class _IEncodingResource(Interface):
+class _IEncodingResource(Interface): # noqa
     """
     A resource which knows about L{_IRequestEncoderFactory}.
 

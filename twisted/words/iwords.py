@@ -5,7 +5,7 @@
 from zope.interface import Interface, Attribute
 
 
-class IProtocolPlugin(Interface):
+class IProtocolPlugin(Interface): # noqa
     """Interface for plugins providing an interface to a Words service
     """
 
@@ -22,7 +22,7 @@ class IProtocolPlugin(Interface):
         """
 
 
-class IGroup(Interface):
+class IGroup(Interface): # noqa
     name = Attribute("A short string, unique among groups.")
 
     def add(user):
@@ -78,7 +78,7 @@ class IGroup(Interface):
         """
 
 
-class IChatClient(Interface):
+class IChatClient(Interface): # noqa
     """Interface through which IChatService interacts with clients.
     """
 
@@ -140,7 +140,7 @@ class IChatClient(Interface):
         """
 
 
-class IUser(Interface):
+class IUser(Interface): # noqa
     """Interface through which clients interact with IChatService.
     """
 
@@ -186,7 +186,7 @@ class IUser(Interface):
         """
 
 
-class IChatService(Interface):
+class IChatService(Interface): # noqa
     name = Attribute("A short string identifying this chat service (eg, a hostname)")
 
     createGroupOnRequest = Attribute(

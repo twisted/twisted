@@ -49,7 +49,7 @@ class NoSuchMethod(AttributeError):
     """Raised if there is no such remote method"""
 
 
-class IPBRoot(Interface):
+class IPBRoot(Interface): # noqa
     """Factory for root Referenceable objects for PB servers."""
 
     def rootObject(broker):

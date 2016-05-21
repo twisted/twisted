@@ -117,7 +117,7 @@ def loadAliasFile(domains, filename=None, fp=None):
 
 
 
-class IAlias(Interface):
+class IAlias(Interface): # noqa
     """
     An interface for aliases.
     """

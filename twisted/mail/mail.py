@@ -353,7 +353,7 @@ class DomainWithDefaultDict:
 
 
 
-class IDomain(Interface):
+class IDomain(Interface): # noqa
     """
     An interface for email domains.
     """
@@ -396,7 +396,7 @@ class IDomain(Interface):
 
 
 
-class IAliasableDomain(IDomain):
+class IAliasableDomain(IDomain): # noqa
     """
     An interface for email domains which can be aliased to other domains.
     """

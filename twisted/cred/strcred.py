@@ -25,7 +25,7 @@ from twisted.python import usage
 
 
 
-class ICheckerFactory(Interface):
+class ICheckerFactory(Interface): # noqa
     """
     A factory for objects which provide
     L{twisted.cred.checkers.ICredentialsChecker}.

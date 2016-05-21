@@ -466,7 +466,7 @@ class PathEntry(_ModuleIteratorHelper):
     def _packagePaths(self):
         yield self.filePath
 
-class IPathImportMapper(Interface):
+class IPathImportMapper(Interface): # noqa
     """
     This is an internal interface, used to map importers to factories for
     FilePath-like objects.

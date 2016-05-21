@@ -42,7 +42,7 @@ class AuthenticationFailed(Exception):
 
 
 # This should be public.  See #6541.
-class _ISSHConnectionCreator(Interface):
+class _ISSHConnectionCreator(Interface): # noqa
     """
     An L{_ISSHConnectionCreator} knows how to create SSH connections somehow.
     """

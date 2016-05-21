@@ -7,7 +7,7 @@ Public Jabber Interfaces.
 
 from zope.interface import Attribute, Interface
 
-class IInitializer(Interface):
+class IInitializer(Interface): # noqa
     """
     Interface for XML stream initializers.
 
@@ -17,7 +17,7 @@ class IInitializer(Interface):
 
 
 
-class IInitiatingInitializer(IInitializer):
+class IInitiatingInitializer(IInitializer): # noqa
     """
     Interface for XML stream initializers for the initiating entity.
     """
@@ -33,7 +33,7 @@ class IInitiatingInitializer(IInitializer):
 
 
 
-class IIQResponseTracker(Interface):
+class IIQResponseTracker(Interface): # noqa
     """
     IQ response tracker interface.
 
@@ -54,7 +54,7 @@ class IIQResponseTracker(Interface):
 
 
 
-class IXMPPHandler(Interface):
+class IXMPPHandler(Interface): # noqa
     """
     Interface for XMPP protocol handlers.
 
@@ -127,7 +127,7 @@ class IXMPPHandler(Interface):
 
 
 
-class IXMPPHandlerCollection(Interface):
+class IXMPPHandlerCollection(Interface): # noqa
     """
     Collection of handlers.
 
@@ -157,7 +157,7 @@ class IXMPPHandlerCollection(Interface):
 
 
 
-class IService(Interface):
+class IService(Interface): # noqa
     """
     External server-side component service interface.
 

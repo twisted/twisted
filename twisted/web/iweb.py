@@ -16,7 +16,7 @@ from twisted.internet.interfaces import IPushProducer
 from twisted.cred.credentials import IUsernameDigestHash
 
 
-class IRequest(Interface):
+class IRequest(Interface): # noqa
     """
     An HTTP request.
 
@@ -311,7 +311,7 @@ class IRequest(Interface):
 
 
 
-class IAccessLogFormatter(Interface):
+class IAccessLogFormatter(Interface): # noqa
     """
     An object which can represent an HTTP request as a line of text for
     inclusion in an access log file.
@@ -333,7 +333,7 @@ class IAccessLogFormatter(Interface):
 
 
 
-class ICredentialFactory(Interface):
+class ICredentialFactory(Interface): # noqa
     """
     A credential factory defines a way to generate a particular kind of
     authentication challenge and a way to interpret the responses to these
@@ -380,7 +380,7 @@ class ICredentialFactory(Interface):
 
 
 
-class IBodyProducer(IPushProducer):
+class IBodyProducer(IPushProducer): # noqa
     """
     Objects which provide L{IBodyProducer} write bytes to an object which
     provides L{IConsumer<twisted.internet.interfaces.IConsumer>} by calling its
@@ -439,7 +439,7 @@ class IBodyProducer(IPushProducer):
 
 
 
-class IRenderable(Interface):
+class IRenderable(Interface): # noqa
     """
     An L{IRenderable} is an object that may be rendered by the
     L{twisted.web.template} templating system.
@@ -472,7 +472,7 @@ class IRenderable(Interface):
 
 
 
-class ITemplateLoader(Interface):
+class ITemplateLoader(Interface): # noqa
     """
     A loader for templates; something usable as a value for
     L{twisted.web.template.Element}'s C{loader} attribute.
@@ -488,7 +488,7 @@ class ITemplateLoader(Interface):
 
 
 
-class IResponse(Interface):
+class IResponse(Interface): # noqa
     """
     An object representing an HTTP response received from an HTTP server.
 
@@ -562,7 +562,7 @@ class IResponse(Interface):
 
 
 
-class _IRequestEncoder(Interface):
+class _IRequestEncoder(Interface): # noqa
     """
     An object encoding data passed to L{IRequest.write}, for example for
     compression purpose.
@@ -593,7 +593,7 @@ class _IRequestEncoder(Interface):
 
 
 
-class _IRequestEncoderFactory(Interface):
+class _IRequestEncoderFactory(Interface): # noqa
     """
     A factory for returing L{_IRequestEncoder} instances.
 
@@ -608,7 +608,7 @@ class _IRequestEncoderFactory(Interface):
 
 
 
-class IClientRequest(Interface):
+class IClientRequest(Interface): # noqa
     """
     An object representing an HTTP request to make to an HTTP server.
 
@@ -630,7 +630,7 @@ class IClientRequest(Interface):
 
 
 
-class IAgent(Interface):
+class IAgent(Interface): # noqa
     """
     An agent makes HTTP requests.
 
@@ -704,7 +704,7 @@ class IAgent(Interface):
         """
 
 
-class IPolicyForHTTPS(Interface):
+class IPolicyForHTTPS(Interface): # noqa
     """
     An L{IPolicyForHTTPS} provides a policy for verifying the certificates of
     HTTPS connections, in the form of a L{client connection creator
@@ -735,7 +735,7 @@ class IPolicyForHTTPS(Interface):
 
 
 
-class IAgentEndpointFactory(Interface):
+class IAgentEndpointFactory(Interface): # noqa
     """
     An L{IAgentEndpointFactory} provides a way of constructing an endpoint
     used for outgoing Agent requests. This is useful in the case of needing to

@@ -5,7 +5,7 @@
 from zope.interface import Interface
 
 
-class IRawDatagramProtocol(Interface):
+class IRawDatagramProtocol(Interface): # noqa
     """An interface for protocols such as UDP, ICMP and TCP."""
 
     def addProto():
@@ -19,7 +19,7 @@ class IRawDatagramProtocol(Interface):
         """
 
 
-class IRawPacketProtocol(Interface):
+class IRawPacketProtocol(Interface): # noqa
     """An interface for low-level protocols such as IP and ARP."""
 
     def addProto():

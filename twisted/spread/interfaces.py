@@ -8,7 +8,7 @@ Twisted Spread Interfaces.
 from zope.interface import Interface
 
 
-class IJellyable(Interface):
+class IJellyable(Interface): # noqa
     def jellyFor(jellier):
         """
         Jelly myself for jellier.
@@ -16,7 +16,7 @@ class IJellyable(Interface):
 
 
 
-class IUnjellyable(Interface):
+class IUnjellyable(Interface): # noqa
     def unjellyFor(jellier, jellyList):
         """
         Unjelly myself for the jellier.

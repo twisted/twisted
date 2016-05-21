@@ -19,7 +19,7 @@ OBSERVER_DISABLED = (
 
 
 
-class ILogObserver(Interface):
+class ILogObserver(Interface): # noqa
     """
     An observer which can handle log events.
 

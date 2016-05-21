@@ -9,7 +9,7 @@ Interfaces used by the PROXY protocol modules.
 import zope.interface
 
 
-class IProxyInfo(zope.interface.Interface):
+class IProxyInfo(zope.interface.Interface): # noqa
     """
     Data container for PROXY protocol header data.
     """
@@ -28,7 +28,7 @@ class IProxyInfo(zope.interface.Interface):
 
 
 
-class IProxyParser(zope.interface.Interface):
+class IProxyParser(zope.interface.Interface): # noqa
     """
     Streaming parser that handles PROXY protocol headers.
     """

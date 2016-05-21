@@ -848,7 +848,7 @@ class Base(protocol.DatagramProtocol):
         raise NotImplementedError
 
 
-class IContact(Interface):
+class IContact(Interface): # noqa
     """A user of a registrar or proxy"""
 
 
@@ -857,7 +857,7 @@ class Registration:
         self.secondsToExpiry = secondsToExpiry
         self.contactURL = contactURL
 
-class IRegistry(Interface):
+class IRegistry(Interface): # noqa
     """Allows registration of logical->physical URL mapping."""
 
     def registerAddress(domainURL, logicalURL, physicalURL):
@@ -879,7 +879,7 @@ class IRegistry(Interface):
         """
 
 
-class ILocator(Interface):
+class ILocator(Interface): # noqa
     """Allow looking up physical address for logical URL."""
 
     def getAddress(logicalURL):
@@ -1001,7 +1001,7 @@ class Proxy(Base):
         """Called with responses that are addressed at this server."""
         pass
 
-class IAuthorizer(Interface):
+class IAuthorizer(Interface): # noqa
     def getChallenge(peer):
         """Generate a challenge the client may respond to.
 

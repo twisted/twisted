@@ -330,7 +330,7 @@ deprecatedModuleAttribute(
 
 
 
-class IAuthorizedKeysDB(Interface):
+class IAuthorizedKeysDB(Interface): # noqa
     """
     An object that provides valid authorized ssh keys mapped to usernames.
 

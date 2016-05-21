@@ -13,7 +13,7 @@ import zope.interface as zi
 from zope.interface import Attribute
 
 
-class ITestCase(zi.Interface):
+class ITestCase(zi.Interface): # noqa
     """
     The interface that a test case must implement in order to be used in Trial.
     """
@@ -56,7 +56,7 @@ class ITestCase(zi.Interface):
 
 
 
-class IReporter(zi.Interface):
+class IReporter(zi.Interface): # noqa
     """
     I report results from a run of a test suite.
     """

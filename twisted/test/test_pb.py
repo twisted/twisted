@@ -1687,7 +1687,7 @@ class NSPTests(unittest.TestCase):
 
 
 
-class IForwarded(Interface):
+class IForwarded(Interface): # noqa
     """
     Interface used for testing L{util.LocalAsyncForwarder}.
     """

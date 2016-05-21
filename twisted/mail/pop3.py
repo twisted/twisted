@@ -1336,7 +1336,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
 
 
-class IServerFactory(Interface):
+class IServerFactory(Interface): # noqa
     """
     An interface for querying capabilities of a POP3 server.
 
@@ -1401,7 +1401,7 @@ class IServerFactory(Interface):
 
 
 
-class IMailbox(Interface):
+class IMailbox(Interface): # noqa
     """
     An interface for mailbox access.
 

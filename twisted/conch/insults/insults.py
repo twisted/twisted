@@ -14,7 +14,7 @@ from twisted.internet import protocol, defer, interfaces as iinternet
 
 
 
-class ITerminalProtocol(Interface):
+class ITerminalProtocol(Interface): # noqa
     def makeConnection(transport):
         """Called with an L{ITerminalTransport} when a connection is established.
         """

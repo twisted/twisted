@@ -13,7 +13,7 @@ from hashlib import md5
 from zope.interface import Interface, Attribute, implements
 
 
-class ISASLMechanism(Interface):
+class ISASLMechanism(Interface): # noqa
     name = Attribute("""Common name for the SASL Mechanism.""")
 
     def getInitialResponse():

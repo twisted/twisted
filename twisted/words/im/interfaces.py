@@ -18,7 +18,7 @@ from zope.interface import Interface, Attribute
 #   (Note: User may be a bot, so don't assume all UIs are built on gui toolkits)
 
 
-class IAccount(Interface):
+class IAccount(Interface): # noqa
     """
     I represent a user's account with a chat service.
     """
@@ -68,7 +68,7 @@ class IAccount(Interface):
         @rtype: L{Person<IPerson>}
         """
 
-class IClient(Interface):
+class IClient(Interface): # noqa
 
     account = Attribute('The L{IAccount} I am a Client for')
 
@@ -99,7 +99,7 @@ class IClient(Interface):
         pass
 
 
-class IPerson(Interface):
+class IPerson(Interface): # noqa
 
     def __init__(name, account):
         """
@@ -139,7 +139,7 @@ class IPerson(Interface):
         """
 
 
-class IGroup(Interface):
+class IGroup(Interface): # noqa
     """
     A group which you may have a conversation with.
 
@@ -191,7 +191,7 @@ class IGroup(Interface):
         """
 
 
-class IConversation(Interface):
+class IConversation(Interface): # noqa
     """
     A conversation with a specific person.
     """
@@ -222,7 +222,7 @@ class IConversation(Interface):
         @param person: XXX Shouldn't this always be Conversation.person?
         """
 
-class IGroupConversation(Interface):
+class IGroupConversation(Interface): # noqa
 
     def show():
         """
@@ -279,7 +279,7 @@ class IGroupConversation(Interface):
         """
 
 
-class IChatUI(Interface):
+class IChatUI(Interface): # noqa
 
     def registerAccountClient(client):
         """

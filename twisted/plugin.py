@@ -38,7 +38,7 @@ from twisted.python.compat import iteritems
 
 
 
-class IPlugin(Interface):
+class IPlugin(Interface): # noqa
     """
     Interface that must be implemented by all plugins.
 
