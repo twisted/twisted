@@ -92,7 +92,11 @@ class ExternalTempdirTestCase(TestCase):
 
 def _gitConfig(path):
     """
-    Set some config in the repo that Git requires to make commits.
+    Set some config in the repo that Git requires to make commits. This isn't
+    needed in real usage, just for tests.
+
+    @param path: The path to the Git repository.
+    @type path: L{FilePath}
     """
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
@@ -107,6 +111,9 @@ def _gitInit(path):
     """
     Run a git init, and set some config that git requires. This isn't needed in
     real usage.
+
+    @param path: The path to where the Git repo will be created.
+    @type path: L{FilePath}
     """
     runCommand(["git", "init", path.path])
     _gitConfig(path)
