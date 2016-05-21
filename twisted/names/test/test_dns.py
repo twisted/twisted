@@ -291,6 +291,18 @@ class NameTests(unittest.TestCase):
         stream = BytesIO(b"\xc0\x00")
         self.assertRaises(ValueError, name.decode, stream)
 
+    def test_equality(self):
+        """
+        Test comparisons between L{Name} instances, including validating
+        case insensitivity
+        """
+        name1 = dns.Name(b"foo.bar")
+        name2 = dns.Name(b"foo.bar")
+        self.assertEqual(name1, name2)
+        name2 = dns.Name(b"bar.foo")
+        self.assertNotEqual(name1, name2)
+        name2 = dns.Name(b"fOO.bar")
+        self.assertEqual(name1, name2)
 
 
 class RoundtripDNSTests(unittest.TestCase):
