@@ -499,13 +499,13 @@ class Name:
 
     def __eq__(self, other):
         if isinstance(other, Name):
-            return self.name == other.name
+            return self.name.lower() == other.name.lower()
         return NotImplemented
 
 
     def __ne__(self, other):
         if isinstance(other, Name):
-            return self.name != other.name
+            return self.name.lower() != other.name.lower()
         return NotImplemented
 
 
