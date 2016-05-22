@@ -856,12 +856,12 @@ version                         Print the SFTP version.
                     elif c == '\\': # quoted character
                         del line[i]
                         if line[i] not in '\'"\\':
-                            raise IndexError, "bad quote: \\%s" % line[i]
+                            raise IndexError("bad quote: \\%s" % line[i])
                         ret.append(line[i])
                     else:
                         ret.append(line[i])
             except IndexError:
-                raise IndexError, "unterminated quote"
+                raise IndexError("unterminated quote")
         ret = line.split(None, 1)
         if len(ret) == 1:
             return ret[0], ''

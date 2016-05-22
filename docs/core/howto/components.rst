@@ -32,7 +32,7 @@ For example:
             self.sideLength = sideLength
 
         def area(self):
-            raise NotImplementedError, "Subclasses must implement area"
+            raise NotImplementedError("Subclasses must implement area")
 
     class Triangle(Shape):
         def area(self):
@@ -61,7 +61,7 @@ For example:
             self.sideLength = sideLength
 
         def area(self):
-            raise NotImplementedError, "Subclasses must implement area"
+            raise NotImplementedError("Subclasses must implement area")
 
     class Color:
         color = None

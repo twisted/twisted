@@ -72,5 +72,5 @@ class Shortcut:
     def __getattr__( self, name ):
         if name != "_base":
             return getattr(self._base, name)
-        raise AttributeError, "%s instance has no attribute %s" % \
-                (self.__class__.__name__, name)
+        raise AttributeError("%s instance has no attribute %s" % \
+                (self.__class__.__name__, name))

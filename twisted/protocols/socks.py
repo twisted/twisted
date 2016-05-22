@@ -153,7 +153,7 @@ class SOCKSv4(protocol.Protocol):
             d.addCallback(lambda (h, p),
                           self = self: self.makeReply(90, 0, p, h))
         else:
-            raise RuntimeError, "Bad Connect Code: %s" % code
+            raise RuntimeError("Bad Connect Code: %s" % code)
         assert self.buf == "", "hmm, still stuff in buffer... %s" % repr(
             self.buf)
 

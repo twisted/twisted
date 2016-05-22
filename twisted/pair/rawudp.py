@@ -25,11 +25,11 @@ class RawUDPProtocol(protocol.AbstractDatagramProtocol):
 
     def addProto(self, num, proto):
         if not isinstance(proto, protocol.DatagramProtocol):
-            raise TypeError, 'Added protocol must be an instance of DatagramProtocol'
+            raise TypeError('Added protocol must be an instance of DatagramProtocol')
         if num < 0:
-            raise TypeError, 'Added protocol must be positive or zero'
+            raise TypeError('Added protocol must be positive or zero')
         if num >= 2**16:
-            raise TypeError, 'Added protocol must fit in 16 bits'
+            raise TypeError('Added protocol must fit in 16 bits')
         if num not in self.udpProtos:
             self.udpProtos[num] = []
         self.udpProtos[num].append(proto)
