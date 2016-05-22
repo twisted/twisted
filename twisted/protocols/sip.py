@@ -340,7 +340,7 @@ def parseViaHeader(value):
     result = {}
     pname, pversion, transport = protocolinfo.split("/")
     if pname != "SIP" or pversion != "2.0":
-        raise ValueError, "wrong protocol or version: %r" % value
+        raise ValueError("wrong protocol or version: %r" % value)
     result["transport"] = transport
     if ":" in by:
         host, port = by.split(":")
@@ -556,7 +556,7 @@ class Message:
 
     def creationFinished(self):
         if (self.length != None) and (self.length != len(self.body)):
-            raise ValueError, "wrong body length"
+            raise ValueError("wrong body length")
         self.finished = 1
 
     def toString(self):
@@ -655,7 +655,7 @@ class MessagesParser(basic.LineReceiver):
             self.reset()
         else:
             # we have enough data and message wasn't finished? something is wrong
-            raise RuntimeError, "this should never happen"
+            raise RuntimeError("this should never happen")
 
     def dataReceived(self, data):
         try:
@@ -826,7 +826,7 @@ class Base(protocol.DatagramProtocol):
         @param message: The message to send.
         """
         if destURL.transport not in ("udp", None):
-            raise RuntimeError, "only UDP currently supported"
+            raise RuntimeError("only UDP currently supported")
         if self.debug:
             log.msg("Sending %r to %r" % (message.toString(), destURL))
         self.transport.write(message.toString(), (destURL.host, destURL.port or self.PORT))

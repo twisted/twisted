@@ -4162,7 +4162,7 @@ def Query(sorted=0, **kwarg):
 def Or(*args):
     """The disjunction of two or more queries"""
     if len(args) < 2:
-        raise IllegalQueryError, args
+        raise IllegalQueryError(args)
     elif len(args) == 2:
         return '(OR %s %s)' % args
     else:
@@ -4330,7 +4330,7 @@ def parseNestedParens(s, handleLiteral = 1):
                 elif handleLiteral and c == '{':
                     end = s.find('}', i)
                     if end == -1:
-                        raise ValueError, "Malformed literal"
+                        raise ValueError("Malformed literal")
                     literalSize = int(s[i+1:end])
                     contentStack[-1].append((s[end+3:end+3+literalSize],))
                     i = end + 3 + literalSize
@@ -4712,7 +4712,7 @@ class MemoryAccount(object):
     def addMailbox(self, name, mbox = None):
         name = name.upper()
         if name in self.mailboxes:
-            raise MailboxCollision, name
+            raise MailboxCollision(name)
         if mbox is None:
             mbox = self._emptyMailbox(name, self.allocateID())
         self.mailboxes[name] = mbox
@@ -4750,7 +4750,7 @@ class MemoryAccount(object):
             # as part of their root.
             for others in self.mailboxes.keys():
                 if others != name and others.startswith(name):
-                    raise MailboxException, "Hierarchically inferior mailboxes exist and \\Noselect is set"
+                    raise MailboxException("Hierarchically inferior mailboxes exist and \\Noselect is set")
         mbox.destroy()
 
         # iff there are no hierarchically inferior names, we will
@@ -4762,14 +4762,14 @@ class MemoryAccount(object):
         oldname = oldname.upper()
         newname = newname.upper()
         if oldname not in self.mailboxes:
-            raise NoSuchMailbox, oldname
+            raise NoSuchMailbox(oldname)
 
         inferiors = self._inferiorNames(oldname)
         inferiors = [(o, o.replace(oldname, newname, 1)) for o in inferiors]
 
         for (old, new) in inferiors:
             if new in self.mailboxes:
-                raise MailboxCollision, new
+                raise MailboxCollision(new)
 
         for (old, new) in inferiors:
             self.mailboxes[new] = self.mailboxes[old]
@@ -4793,7 +4793,7 @@ class MemoryAccount(object):
     def unsubscribe(self, name):
         name = name.upper()
         if name not in self.subscriptions:
-            raise MailboxException, "Not currently subscribed to " + name
+            raise MailboxException("Not currently subscribed to " + name)
         self.subscriptions.remove(name)
 
     def listMailboxes(self, ref, wildcard):
@@ -6116,14 +6116,14 @@ def parseTime(s):
     }
     m = re.match('%(day)s-%(mon)s-%(year)s' % expr, s)
     if not m:
-        raise ValueError, "Cannot parse time string %r" % (s,)
+        raise ValueError("Cannot parse time string %r" % (s,))
     d = m.groupdict()
     try:
         d['mon'] = 1 + (months.index(d['mon'].lower()) % 12)
         d['year'] = int(d['year'])
         d['day'] = int(d['day'])
     except ValueError:
-        raise ValueError, "Cannot parse time string %r" % (s,)
+        raise ValueError("Cannot parse time string %r" % (s,))
     else:
         return time.struct_time(
             (d['year'], d['mon'], d['day'], 0, 0, 0, -1, -1, -1)
