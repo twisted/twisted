@@ -12,7 +12,7 @@ from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
-
+from twisted.python import compat
 
 
 
@@ -890,7 +890,7 @@ FILEXFER_ATTR_UIDGID      = 0x00000002
 FILEXFER_ATTR_OWNERGROUP  = FILEXFER_ATTR_UIDGID
 FILEXFER_ATTR_PERMISSIONS = 0x00000004
 FILEXFER_ATTR_ACMODTIME   = 0x00000008
-FILEXFER_ATTR_EXTENDED    = 0x80000000L
+FILEXFER_ATTR_EXTENDED    = compat.long(0x80000000)
 
 FILEXFER_TYPE_REGULAR        = 1
 FILEXFER_TYPE_DIRECTORY      = 2

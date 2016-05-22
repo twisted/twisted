@@ -12,8 +12,8 @@ import socket
 
 from twisted.internet import protocol
 from twisted.pair import raw
+from twisted.python import compat
 from zope.interface import implements
-
 
 class IPHeader:
     def __init__(self, data):
@@ -29,7 +29,7 @@ class IPHeader:
         self.dont_fragment = (frag_off & 0x4000 != 0)
         self.more_fragments = (frag_off & 0x2000 != 0)
 
-MAX_SIZE = 2L**32
+MAX_SIZE = compat.long(2)**32
 
 class IPProtocol(protocol.AbstractDatagramProtocol):
     implements(raw.IRawPacketProtocol)

@@ -11,7 +11,7 @@ from twisted.conch import error
 from twisted.conch.ssh import channel, common, connection
 from twisted.trial import unittest
 from twisted.conch.test import test_userauth
-
+from twisted.python import compat
 
 class TestChannel(channel.SSHChannel):
     """
@@ -354,7 +354,7 @@ class ConnectionTests(unittest.TestCase):
         Like L{test_lookupChannelError}, but for the case where the failure code
         is represented as a C{long} instead of a C{int}.
         """
-        self._lookupChannelErrorTest(123L)
+        self._lookupChannelErrorTest(compat.long(123))
 
 
     def test_CHANNEL_OPEN_CONFIRMATION(self):
