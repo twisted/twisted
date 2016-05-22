@@ -371,11 +371,11 @@ Twisted's Perspective Broker protocol) is implemented:
     class SimplePerspective(pb.Avatar):
     
         def perspective_echo(self, text):
-            print 'echoing',text
+            print('echoing',text)
             return text
     
         def logout(self):
-            print self, "logged out"
+            print(self, "logged out")
     
     
     class SimpleRealm:

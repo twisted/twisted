@@ -7,7 +7,7 @@
 """
 A toy email server.
 """
-
+from __future__ import print_function
 from zope.interface import implements
 
 from twisted.internet import defer
@@ -52,8 +52,8 @@ class ConsoleMessage:
 
     
     def eomReceived(self):
-        print "New message received:"
-        print "\n".join(self.lines)
+        print("New message received:")
+        print("\n".join(self.lines))
         self.lines = None
         return defer.succeed(None)
 

@@ -5,6 +5,8 @@
 Test cases for Ltwisted.mail.pop3} module.
 """
 
+from __future__ import print_function
+
 import StringIO
 import hmac
 import base64
@@ -191,7 +193,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         parts = line.split()
         code = parts[0]
         if code != '+OK':
-            print parts
+            print(parts)
             raise AssertionError('code is ' + code)
         self.lines = []
         self.retr(1)

@@ -13,6 +13,8 @@ authenticated.  Success anonymous login requests are given an instance of
 MyPerspective with the name "Anonymous".
 """
 
+from __future__ import print_function
+
 from sys import stdout
 
 from zope.interface import implements
@@ -46,8 +48,8 @@ class MyPerspective(Avatar):
         Print a simple message which gives the argument this method was
         called with and this avatar's name.
         """
-        print "I am %s.  perspective_foo(%s) called on %s." % (
-            self.name, arg, self)
+        print("I am %s.  perspective_foo(%s) called on %s." % (
+            self.name, arg, self))
 
 
 

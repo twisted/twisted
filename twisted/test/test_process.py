@@ -17,7 +17,7 @@ Test running processes.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import gzip
 import os
@@ -826,7 +826,7 @@ class TestTwoProcessesBase:
         pp = self.pp[num]
         self.assertFalse(pp.finished, "Process finished too early")
         p.loseConnection()
-        if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
+        if self.verbose: print((self.pp[0].finished, self.pp[1].finished))
 
     def _onClose(self):
         return defer.gatherResults([ p.deferred for p in self.pp ])
@@ -854,12 +854,12 @@ class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
         return self._onClose()
 
     def kill(self, num):
-        if self.verbose: print("kill [%d] with SIGTERM" % num)
+        if self.verbose: print(("kill [%d] with SIGTERM" % num))
         p = self.processes[num]
         pp = self.pp[num]
         self.assertFalse(pp.finished, "Process finished too early")
         os.kill(p.pid, signal.SIGTERM)
-        if self.verbose: print(self.pp[0].finished, self.pp[1].finished)
+        if self.verbose: print((self.pp[0].finished, self.pp[1].finished))
 
     def test_kill(self):
         if self.verbose: print("starting processes")

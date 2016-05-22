@@ -3,6 +3,8 @@
 
 """Demo of wxPython integration with Twisted."""
 
+from __future__ import print_function
+
 import sys
 
 from wx import Frame, DefaultPosition, Size, Menu, MenuBar, App
@@ -38,7 +40,7 @@ class MyFrame(Frame):
 class MyApp(App):
 
     def twoSecondsPassed(self):
-        print "two seconds passed"
+        print("two seconds passed")
 
     def OnInit(self):
         frame = MyFrame(None, -1, "Hello, world")

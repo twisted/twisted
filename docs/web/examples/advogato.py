@@ -8,6 +8,8 @@ Usage:
     $ python advogato.py <name> <diary entry file>
 """
 
+from __future__ import print_function
+
 import sys
 from getpass import getpass
 
@@ -27,7 +29,7 @@ class AddDiary:
         d.addCallbacks(self.login, self.noLogin)
 
     def noLogin(self, reason):
-        print "could not login"
+        print("could not login")
         reactor.stop()
 
     def login(self, cookie):
@@ -38,7 +40,7 @@ class AddDiary:
         reactor.stop()
 
     def errorSetDiary(self, error):
-        print "could not set diary", error
+        print("could not set diary", error)
         reactor.stop()
 
 diary = AddDiary(sys.argv[1], getpass())

@@ -5,7 +5,7 @@
 """
 Implementation module for the I{cftp} command.
 """
-from __future__ import division
+from __future__ import division, print_function
 import os, sys, getpass, struct, tty, fcntl, stat
 import fnmatch, pwd, glob
 
@@ -58,7 +58,7 @@ def run():
     try:
         options.parseOptions(args)
     except usage.UsageError as u:
-        print 'ERROR: %s' % u
+        print('ERROR: %s' % u)
         sys.exit(1)
     if options['log']:
         realout = sys.stdout
@@ -105,7 +105,7 @@ def _ebExit(f):
         s = f.value.value
     else:
         s = str(f)
-    print s
+    print(s)
     #exitStatus = "conch: exiting with error %s" % f
     try:
         reactor.stop()

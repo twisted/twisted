@@ -294,7 +294,7 @@ this:
     
     class ClientThing(pb.Referenceable):
         def remote_print(self, message):
-            print message
+            print(message)
         def join(self):
             d = self.remoteUser.callRemote("joinGroup", "#twisted",
                                            allowMattress=False)
@@ -1016,10 +1016,10 @@ when the connection is lost.
             self.clients = []
         def attached(self, mind):
             self.clients.append(mind)
-            print "attached to", mind
+            print("attached to", mind)
         def detached(self, mind):
             self.clients.remove(mind)
-            print "detached from", mind
+            print("detached from", mind)
         def update(self, message):
             for c in self.clients:
                 c.callRemote("update", message)

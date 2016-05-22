@@ -2,21 +2,23 @@
 # this code is essentially the same as
 # the first example in howto/pb-usage
 
+from __future__ import print_function
+
 from twisted.spread import pb
 from twisted.internet import reactor
 
 def gotObject(object):
-    print "got object:", object
+    print("got object:", object)
     object.callRemote("getUser","moshez").addCallback(gotData)
 # or
 #   object.callRemote("getUsers").addCallback(gotData)
    
 def gotData(data):
-    print 'server sent:', data
+    print('server sent:', data)
     reactor.stop()
     
 def gotNoObject(reason):
-    print "no object:",reason
+    print("no object:",reason)
     reactor.stop()
 
 factory = pb.PBClientFactory()

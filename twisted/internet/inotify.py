@@ -19,8 +19,8 @@ at some point)::
         @param filepath: FilePath on which the event happened.
         @param mask: inotify event as hexadecimal masks
         \"""
-        print "event %s on %s" % (
-            ', '.join(inotify.humanReadableMask(mask)), filepath)
+        print("event %s on %s" % (
+            ', '.join(inotify.humanReadableMask(mask)), filepath))
 
     notifier = inotify.INotify()
     notifier.startReading()
@@ -28,7 +28,7 @@ at some point)::
 
 @since: 10.1
 """
-
+from __future__ import print_function
 import os
 import struct
 
