@@ -172,7 +172,7 @@ class ResolverBase:
     # IResolverSimple
     def getHostByName(self, name, timeout=None, effort=10):
         # XXX - respect timeout
-        return self.lookupAllRecords(name, timeout
+        return self.lookupAddress(name, timeout
             ).addCallback(self._cbRecords, name, effort
             )
 
@@ -200,15 +200,19 @@ def extractRecord(resolver, name, answers, level=10):
         if r.name == name and r.type == dns.A:
             return socket.inet_ntop(socket.AF_INET, r.payload.address)
     for r in answers:
+        print("ZZZ searching for CNAME in {0} does {1} match {2}".format(r, r.name, name))
         if r.name == name and r.type == dns.CNAME:
+            print("ZZZ looking at CNAME {0}".format(r.name))
             result = extractRecord(
                 resolver, r.payload.name, answers, level - 1)
             if not result:
+                print("ZZZ going to re-getHostByName")
                 return resolver.getHostByName(
                     str(r.payload.name), effort=level - 1)
             return result
     # No answers, but maybe there's a hint at who we should be asking about
     # this
+    print("ZZZ Ending up looking at NS records :( {}".format(answers))
     for r in answers:
         if r.type == dns.NS:
             from twisted.names import client
