@@ -45,7 +45,7 @@ def run():
     options = Options()
     try:
         options.parseOptions()
-    except usage.UsageError, e:
+    except usage.UsageError as e:
         print str(e)
         sys.exit(1)
     filename = options['filename']

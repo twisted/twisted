@@ -586,7 +586,7 @@ else:
         def parse(self, buffer):
             try:
                 self.dataReceived(buffer)
-            except sux.ParseError, e:
+            except sux.ParseError as e:
                 raise ParserError, str(e)
 
 
@@ -752,7 +752,7 @@ class ExpatElementStream:
     def parse(self, buffer):
         try:
             self.parser.Parse(buffer)
-        except self.error, e:
+        except self.error as e:
             raise ParserError, str(e)
 
     def _onStartElement(self, name, attrs):

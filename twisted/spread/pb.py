@@ -887,7 +887,7 @@ class Broker(banana.Banana):
             if object is None:
                 raise Error("Invalid Object ID")
             netResult = object.remoteMessageReceived(self, message, netArgs, netKw)
-        except Error, e:
+        except Error as e:
             if answerRequired:
                 # If the error is Jellyable or explicitly allowed via our
                 # security options, send it back and let the code on the
