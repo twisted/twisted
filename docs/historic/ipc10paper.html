@@ -258,7 +258,7 @@ class ServerOptions(usage.Options):
 try:
     config = ServerOptions()
     config.parseOptions()
-except usage.error, ue:
+except usage.error as ue:
     print "%s: %s" % (sys.argv[0], ue)
     sys.exit(1)
 </pre>

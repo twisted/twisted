@@ -35,7 +35,7 @@ def run():
     opts = Options()
     try:
         opts.parseOptions()
-    except usage.UsageError, message:
+    except usage.UsageError as message:
         print "{}: {}".format(sys.argv[0], message)
         return
 
