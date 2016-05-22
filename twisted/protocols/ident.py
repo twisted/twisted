@@ -100,7 +100,8 @@ class IdentServer(basic.LineOnlyReceiver):
             )
 
 
-    def _cbLookup(self, (sysName, userId), sport, cport):
+    def _cbLookup(self, sysname_userid, sport, cport):
+        (sysName, userId) = sysname_userid
         self.sendLine('%d, %d : USERID : %s : %s' % (sport, cport, sysName, userId))
 
     def _ebLookup(self, failure, sport, cport):

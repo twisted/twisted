@@ -103,7 +103,8 @@ class SRVConnector:
         self.servers = []
         self.orderedServers = []
 
-    def _cbGotServers(self, (answers, auth, add)):
+    def _cbGotServers(self, answers_auth_add):
+        (answers, auth, add) = answers_auth_add
         if len(answers) == 1 and answers[0].type == dns.SRV \
                              and answers[0].payload \
                              and answers[0].payload.target == dns.Name('.'):

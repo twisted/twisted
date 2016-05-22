@@ -386,10 +386,12 @@ class Canvas(Widget):
         if self.y >= height:
             self.y = height - 1
 
-    def __getitem__(self, (x, y)):
+    def __getitem__(self, index):
+        (x, y) = index
         return self.contents[(self._width * y) + x]
 
-    def __setitem__(self, (x, y), value):
+    def __setitem__(self, index, value):
+        (x, y) = index
         self.contents[(self._width * y) + x] = value
 
     def clear(self):
@@ -420,7 +422,16 @@ def verticalLine(terminal, x, top, bottom):
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 
 
-def rectangle(terminal, (top, left), (width, height)):
+def rectangle(terminal, position, dimension):
+    """ Draw a rectangle
+
+    @type position: C{tuple}
+    @param position: A tuple of the (top, left) coordinates of the rectangle.
+    @type dimension: C{tuple}
+    @param dimension: A tuple of the (width, height) size of the rectangle.
+    """
+    (top, left) = position
+    (width, height) = dimension
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
 
     terminal.cursorPosition(top, left)

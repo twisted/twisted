@@ -185,9 +185,17 @@ class SSHForwardingClient(protocol.Protocol):
             self.channel = None
 
 
-def packOpen_direct_tcpip((connHost, connPort), (origHost, origPort)):
+def packOpen_direct_tcpip(destination, source):
     """Pack the data suitable for sending in a CHANNEL_OPEN packet.
+
+    @type destination: C{tuple}
+    @param destination: A tuple of the (host, port) of the destination host.
+
+    @type source: C{tuple}
+    @param source: A tuple of the (host, port) of the source host.
     """
+    (connHost, connPort) = destination
+    (origHost, origPort) = source
     conn = common.NS(connHost) + struct.pack('>L', connPort)
     orig = common.NS(origHost) + struct.pack('>L', origPort)
     return conn + orig
@@ -205,7 +213,8 @@ def unpackOpen_direct_tcpip(data):
 
 unpackOpen_forwarded_tcpip = unpackOpen_direct_tcpip
     
-def packGlobal_tcpip_forward((host, port)):
+def packGlobal_tcpip_forward(host_port):
+    (host, port) = host_port
     return common.NS(host) + struct.pack('>L', port)
 
 def unpackGlobal_tcpip_forward(data):

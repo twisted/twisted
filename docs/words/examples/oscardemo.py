@@ -46,7 +46,8 @@ if any of those features don't work, tell paul (Z3Penguin).  thanks."""%SN)
         self.setIdleTime(0)
         self.clientReady()
         self.createChat('%s Chat'%SN).addCallback(self.createdRoom)
-    def createdRoom(self, (exchange, fullName, instance)):
+    def createdRoom(self, result):
+        (exchange, fullName, instance) = result
         print 'created room',exchange, fullName, instance
         self.joinChat(exchange, fullName, instance).addCallback(self.chatJoined)
     def updateBuddy(self, user):
@@ -66,7 +67,8 @@ if any of those features don't work, tell paul (Z3Penguin).  thanks."""%SN)
             self.lastUser = user.name
             self.sendMessage(user.name, multiparts, wantAck = 1, autoResponse = (self.awayMessage!=None)).addCallback( \
                 self.messageAck)
-    def messageAck(self, (username, message)):
+    def messageAck(self, result):
+        (username, message) = result
         print 'message sent to %s acked' % username
     def gotAway(self, away, user):
         if away != None:
