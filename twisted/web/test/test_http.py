@@ -14,7 +14,7 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
-from zope.interface import classProvides
+from zope.interface import provider
 
 from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
                                    intToBytes, NativeStringIO)
@@ -64,15 +64,13 @@ class DummyHTTPHandler(http.Request):
 
 
 
+@provider(iweb.INonQueuedRequestFactory)
 class DummyNewHTTPHandler(DummyHTTPHandler):
     """
     This is exactly like the DummyHTTPHandler but it takes only one argument
     in its constructor, with no default arguments. This exists to test an
     alternative code path in L{HTTPChannel}.
     """
-    classProvides(iweb.INonQueuedRequestFactory)
-
-
     def __init__(self, channel):
         DummyHTTPHandler.__init__(self, channel)
 
