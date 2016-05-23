@@ -641,6 +641,9 @@ class Request:
         We start writing whatever data we have to the transport, etc.
 
         This method is not intended for users.
+
+        In 16.3 this method was changed to become a no-op, as L{Request}
+        objects are now never queued.
         """
         pass
 
