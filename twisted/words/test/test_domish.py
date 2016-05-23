@@ -7,13 +7,26 @@ Tests for L{twisted.words.xish.domish}, a DOM-like library for XMPP.
 
 from __future__ import absolute_import, division
 
+from zope.interface.verify import verifyObject
+
 from twisted.python.compat import unicode
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.words.xish import domish
 
 
-class DomishTests(unittest.TestCase):
+class ElementTests(unittest.TestCase):
+    """
+    Tests for L{domish.Element}.
+    """
+
+    def test_interface(self):
+        """
+        L{domish.Element} implements L{domish.IElement}.
+        """
+        verifyObject(domish.IElement, domish.Element((None, u"foo")))
+
+
     def testEscaping(self):
         s = "&<>'\""
         self.assertEqual(domish.escapeToXml(s), "&amp;&lt;&gt;'\"")
@@ -79,6 +92,15 @@ class DomishTests(unittest.TestCase):
         self.assertEqual(e.hasAttribute("attrib1"), 0)
         self.assertEqual(e.hasAttribute("attrib2"), 0)
         self.assertEqual(e[("testns2", "attrib2")], "value2")
+
+
+    def test_addElementContent(self):
+        """
+        Content passed to addElement becomes character data on the new child.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        child = element.addElement("bar", content=u"abc")
+        self.assertEqual(u"abc", unicode(child))
 
 
     def test_elements(self):

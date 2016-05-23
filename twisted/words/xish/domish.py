@@ -236,41 +236,47 @@ class IElement(Interface):
         @param prefixes: dictionary that maps namespace URIs to suggested
                          prefix names.
         @type prefixes: L{dict}
+
         @param closeElement: flag that determines whether to include the
-                             closing tag of the element in the serialized
-                             string. A value of C{0} only generates the
-                             element's start tag. A value of C{1} yields a
-                             complete serialization.
-        @type closeElement: C{int}
+            closing tag of the element in the serialized string. A value of
+            C{0} only generates the element's start tag. A value of C{1} yields
+            a complete serialization.
+        @type closeElement: L{int}
+
         @param defaultUri: Initial default namespace URI. This is most useful
-                           for partial rendering, where the logical parent
-                           element (of which the starttag was already
-                           serialized) declares a default namespace that should
-                           be inherited.
-        @type defaultUri: C{str}
+            for partial rendering, where the logical parent element (of which
+            the starttag was already serialized) declares a default namespace
+            that should be inherited.
+        @type defaultUri: L{unicode}
+
         @param prefixesInScope: list of prefixes that are assumed to be
-                                declared by ancestors.
+            declared by ancestors.
         @type prefixesInScope: C{list}
+
         @return: (partial) serialized XML
         @rtype: C{unicode}
         """
 
-    def addElement(name, defaultUri = None, content = None):
-        """ Create an element and add as child.
+    def addElement(name, defaultUri=None, content=None):
+        """
+        Create an element and add as child.
 
         The new element is added to this element as a child, and will have
         this element as its parent.
 
-        @param name: element name. This can be either a C{unicode} object that
-                     contains the local name, or a tuple of (uri, local_name)
-                     for a fully qualified name. In the former case,
-                     the namespace URI is inherited from this element.
-        @type name: C{unicode} or C{tuple} of (C{unicode}, C{unicode})
+        @param name: element name. This can be either a L{unicode} object that
+            contains the local name, or a tuple of (uri, local_name) for a
+            fully qualified name. In the former case, the namespace URI is
+            inherited from this element.
+        @type name: L{unicode} or L{tuple} of (L{unicode}, L{unicode})
+
         @param defaultUri: default namespace URI for child elements. If
-                           C{None}, this is inherited from this element.
-        @type defaultUri: C{unicode}
+            L{None}, this is inherited from this element.
+        @type defaultUri: L{unicode}
+
         @param content: text contained by the new element.
-        @type content: C{unicode}
+        @type content: L{unicode}
+
         @return: the created element
         @rtype: object providing L{IElement}
         """
@@ -283,8 +289,21 @@ class IElement(Interface):
         L{IElement}.
 
         @param node: the child node.
-        @type node: C{unicode} or object implementing L{IElement}
+        @type node: L{unicode} or object implementing L{IElement}
         """
+
+    def addContent(text):
+        """
+        Adds character data to this element.
+
+        If the current last child of this element is a string, the text will
+        be appended to that string. Otherwise, the text will be added as a new
+        child.
+
+        @param text: The character data to be added to this element.
+        @type node: L{unicode}
+        """
+
 
 @implementer(IElement)
 class Element(object):
@@ -473,35 +492,34 @@ class Element(object):
         if IElement.providedBy(node):
             node.parent = self
         self.children.append(node)
-        return self.children[-1]
+        return node
 
     def addContent(self, text):
         """ Add some text data to this Element. """
+        text = unicode(text)
         c = self.children
-        if len(c) > 0 and isinstance(c[-1], StringType):
+        if len(c) > 0 and isinstance(c[-1], unicode):
             c[-1] = c[-1] + text
         else:
             c.append(text)
         return c[-1]
 
     def addElement(self, name, defaultUri = None, content = None):
-        result = None
-        if isinstance(name, type(())):
+        if isinstance(name, tuple):
             if defaultUri is None:
                 defaultUri = name[0]
-            self.children.append(Element(name, defaultUri))
+            child = Element(name, defaultUri)
         else:
             if defaultUri is None:
                 defaultUri = self.defaultUri
-            self.children.append(Element((defaultUri, name), defaultUri))
+            child = Element((defaultUri, name), defaultUri)
 
-        result = self.children[-1]
-        result.parent = self
+        self.addChild(child)
 
         if content:
-            result.children.append(content)
+            child.addContent(content)
 
-        return result
+        return child
 
     def addRawXml(self, rawxmlstring):
         """ Add a pre-serialized chunk o' XML as a child of this Element. """
