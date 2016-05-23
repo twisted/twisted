@@ -309,7 +309,7 @@ def print_error(input, err, scanner):
 def wrap_error_reporter(parser, rule):
     try:
         return getattr(parser, rule)()
-    except SyntaxError as e:
+    except SyntaxError, e:
         input = parser._scanner.input
         print_error(input, e, parser._scanner)
     except NoMoreTokens:
