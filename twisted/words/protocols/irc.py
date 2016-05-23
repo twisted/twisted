@@ -47,10 +47,10 @@ from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
 
 NUL = chr(0)
-CR = chr(015)
-NL = chr(012)
+CR = chr(0o15)
+NL = chr(0o12)
 LF = NL
-SPC = chr(040)
+SPC = chr(0o40)
 
 # This includes the CRLF terminator characters.
 MAX_COMMAND_LENGTH = 512
@@ -3633,7 +3633,7 @@ def stripFormatting(text):
 
 # CTCP constants and helper functions
 
-X_DELIM = chr(001)
+X_DELIM = chr(0o01)
 
 def ctcpExtract(message):
     """
@@ -3677,7 +3677,7 @@ def ctcpExtract(message):
 
 # CTCP escaping
 
-M_QUOTE= chr(020)
+M_QUOTE= chr(0o20)
 
 mQuoteTable = {
     NUL: M_QUOTE + '0',
