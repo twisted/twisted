@@ -459,7 +459,8 @@ class _MaildirMailboxAppendMessageTask:
             try:
                 self.osrename(self.tmpname, newname)
                 break
-            except OSError, (err, estr):
+            except OSError as e:
+                (err, estr) = e.args
                 import errno
                 # if the newname exists, retry with a new newname.
                 if err != errno.EEXIST:
@@ -626,7 +627,8 @@ class MaildirMailbox(pop3.Mailbox):
         for (real, trash) in self.deleted.items():
             try:
                 os.rename(trash, real)
-            except OSError, (err, estr):
+            except OSError as e:
+                (err, estr) = e.args
                 import errno
                 # If the file has been deleted from disk, oh well!
                 if err != errno.ENOENT:
