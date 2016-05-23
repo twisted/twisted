@@ -313,6 +313,62 @@ class HTTP0_9Tests(HTTP1_0Tests):
 
 
 
+class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
+    """
+    Tests that multiple pipelined requests with bodies are correctly buffered.
+    """
+
+    requests = (
+        b"POST / HTTP/1.1\r\n"
+        b"Content-Length: 10\r\n"
+        b"\r\n"
+        b"0123456789POST / HTTP/1.1\r\n"
+        b"Content-Length: 10\r\n"
+        b"\r\n"
+        b"0123456789"
+    )
+
+    expectedResponses = [
+        (b"HTTP/1.1 200 OK",
+         b"Request: /",
+         b"Command: POST",
+         b"Version: HTTP/1.1",
+         b"Content-Length: 21",
+         b"'''\n10\n0123456789'''\n"),
+        (b"HTTP/1.1 200 OK",
+         b"Request: /",
+         b"Command: POST",
+         b"Version: HTTP/1.1",
+         b"Content-Length: 21",
+         b"'''\n10\n0123456789'''\n")]
+
+    def test_noPipelining(self):
+        """
+        Test that pipelined requests get buffered, not processed in parallel.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandler
+        a.makeConnection(b)
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+        value = b.value()
+
+        # So far only one request should have been dispatched.
+        self.assertEqual(value, b'')
+        self.assertEqual(1, len(a.requests))
+
+        # Now, process each request one at a time.
+        while a.requests:
+            self.assertEqual(1, len(a.requests))
+            a.requests[0].delayedProcess()
+
+        value = b.value()
+        self.assertResponseEquals(value, self.expectedResponses)
+
+
+
 class GenericHTTPChannelTests(unittest.TestCase):
     """
     Tests for L{http._genericHTTPChannelProtocol}, a L{HTTPChannel}-alike which
