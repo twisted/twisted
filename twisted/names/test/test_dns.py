@@ -293,8 +293,8 @@ class NameTests(unittest.TestCase):
 
     def test_equality(self):
         """
-        Test comparisons between L{Name} instances, including validating
-        case insensitivity
+        L{Name} instances are equal as long as they have the same value for
+        L{Name.name}, regardless of the case.
         """
         name1 = dns.Name(b"foo.bar")
         name2 = dns.Name(b"foo.bar")
