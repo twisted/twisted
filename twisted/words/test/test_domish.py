@@ -74,9 +74,6 @@ class ElementTests(unittest.TestCase):
         # Check content merging
         self.assertEqual(e.children[-1], "abc123")
 
-        # Check str()/content extraction
-        self.assertEqual(str(e), "somecontent")
-
         # Check direct child accessor
         self.assertEqual(e.bar2, b2)
         e.bar2.addContent("subcontent")
@@ -92,6 +89,64 @@ class ElementTests(unittest.TestCase):
         self.assertEqual(e.hasAttribute("attrib1"), 0)
         self.assertEqual(e.hasAttribute("attrib2"), 0)
         self.assertEqual(e[("testns2", "attrib2")], "value2")
+
+
+    def test_characterData(self):
+        """
+        Extract character data using L{unicode}.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        element.addContent(u"somecontent")
+
+        text = unicode(element)
+        self.assertEqual(u"somecontent", text)
+        self.assertIsInstance(text, unicode)
+
+
+    def test_characterDataNativeString(self):
+        """
+        Extract ascii character data using L{str}.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        element.addContent("somecontent")
+
+        text = str(element)
+        self.assertEqual("somecontent", text)
+
+
+    def test_characterDataUnicode(self):
+        """
+        Extract character data using L{unicode}.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        element.addContent(u"\N{SNOWMAN}")
+
+        text = unicode(element)
+        self.assertEqual(u"\N{SNOWMAN}", text)
+        self.assertIsInstance(text, unicode)
+
+
+    def test_characterDataBytes(self):
+        """
+        Extract character data as UTF-8 using L{bytes}.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        element.addContent(u"\N{SNOWMAN}")
+
+        text = bytes(element)
+        self.assertEqual(u"\N{SNOWMAN}".encode('utf-8'), text)
+        self.assertIsInstance(text, bytes)
+
+
+    def test_characterDataMixed(self):
+        """
+        Mixing addChild with cdata and element, the first cdata is returned.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        element.addChild(u"abc")
+        element.addElement("bar")
+        element.addChild(u"def")
+        self.assertEqual(u"abc", unicode(element))
 
 
     def test_addElementContent(self):

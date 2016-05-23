@@ -14,7 +14,8 @@ from __future__ import absolute_import, division
 
 from zope.interface import implementer, Interface, Attribute
 
-from twisted.python.compat import StringType, iteritems, itervalues, unicode
+from twisted.python.compat import (_PY3, StringType, iteritems, itervalues,
+                                   unicode)
 
 def _splitPrefix(name):
     """ Internal method for splitting a prefixed Element name into its
@@ -282,11 +283,14 @@ class IElement(Interface):
         """
 
     def addChild(node):
-        """ Adds a node as child of this element.
+        """
+        Adds a node as child of this element.
 
         The C{node} will be added to the list of childs of this element, and
         will have this element set as its parent when C{node} provides
-        L{IElement}.
+        L{IElement}. If C{node} is a L{unicode} and the current last child is
+        character data (L{unicode}), the text from C{node} is appended to the
+        existing last child.
 
         @param node: the child node.
         @type node: L{unicode} or object implementing L{IElement}
@@ -451,12 +455,25 @@ class Element(object):
     def __setitem__(self, key, value):
         self.attributes[self._dqa(key)] = value
 
-    def __str__(self):
-        """ Retrieve the first CData (content) node
+    def __unicode__(self):
+        """
+        Retrieve the first CData (content) node
         """
         for n in self.children:
-            if isinstance(n, StringType): return n
-        return ""
+            if isinstance(n, StringType):
+                return n
+        return u""
+
+    def __bytes__(self):
+        """
+        Retrieve the first character data node as UTF-8 bytes.
+        """
+        return unicode(self).encode('utf-8')
+
+    if _PY3:
+        __str__ = __unicode__
+    else:
+        __str__ = __bytes__
 
     def _dqa(self, attr):
         """ Dequalify an attribute key as needed """
