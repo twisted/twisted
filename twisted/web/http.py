@@ -754,7 +754,7 @@ class Request:
                         self.args.update(cgiArgs)
                 except:
                     # It was a bad request.
-                    _respondToBadRequestAndDisconnect(self.channel.transport)
+                    self.channel._respondToBadRequestAndDisconnect()
                     return
             self.content.seek(0, 0)
 
@@ -1678,7 +1678,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._receivedHeaderSize += len(line)
         if (self._receivedHeaderSize > self.totalHeadersSize):
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
             return
 
         # If we're currently handling a request, buffer this data. We shouldn't
@@ -1712,13 +1712,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
             parts = line.split()
             if len(parts) != 3:
-                _respondToBadRequestAndDisconnect(self.transport)
+                self._respondToBadRequestAndDisconnect()
                 return
             command, request, version = parts
             try:
                 command.decode("ascii")
             except UnicodeDecodeError:
-                _respondToBadRequestAndDisconnect(self.transport)
+                self._respondToBadRequestAndDisconnect()
                 return
 
             self._command = command
@@ -1770,7 +1770,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         try:
             header, data = line.split(b':', 1)
         except ValueError:
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
             return False
 
         header = header.lower()
@@ -1779,7 +1779,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             try:
                 self.length = int(data)
             except ValueError:
-                _respondToBadRequestAndDisconnect(self.transport)
+                self._respondToBadRequestAndDisconnect()
                 self.length = None
                 return False
             self._transferDecoder = _IdentityTransferDecoder(
@@ -1799,7 +1799,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
             return False
 
         return True
@@ -1843,7 +1843,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
 
 
     def allHeadersReceived(self):
@@ -1951,20 +1951,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         return False
 
 
+    def _respondToBadRequestAndDisconnect(self):
+        """
+        This is a quick and dirty way of responding to bad requests.
 
-def _respondToBadRequestAndDisconnect(transport):
-    """
-    This is a quick and dirty way of responding to bad requests.
+        As described by HTTP standard we should be patient and accept the
+        whole request from the client before sending a polite bad request
+        response, even in the case when clients send tons of data.
 
-    As described by HTTP standard we should be patient and accept the
-    whole request from the client before sending a polite bad request
-    response, even in the case when clients send tons of data.
-
-    @param transport: Transport handling connection to the client.
-    @type transport: L{interfaces.ITransport}
-    """
-    transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
-    transport.loseConnection()
+        @param transport: Transport handling connection to the client.
+        @type transport: L{interfaces.ITransport}
+        """
+        self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+        self.transport.loseConnection()
 
 
 
