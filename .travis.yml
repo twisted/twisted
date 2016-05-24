@@ -1,0 +1,24 @@
+language: python
+
+addons:
+  apt:
+    packages:
+    - libssl-dev
+    - libssl1.0.0
+
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+
+env:
+  global:
+    - TRIAL_REPORTER=text
+
+install:
+  - pip install tox
+  - pip install tox-travis
+
+script:
+  - tox
