@@ -7,7 +7,7 @@ Tests for C{await} support in Deferreds.
 These tests can only work and be imported on Python 3.5!
 """
 
-from twisted.internet.defer import Deferred, deferredCoroutine, sleep
+from twisted.internet.defer import Deferred, deferredCoroutine
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import Clock
 
@@ -59,7 +59,9 @@ class AwaitTests(TestCase):
         @deferredCoroutine
         async def runone():
             sections.append(2)
-            await sleep(1, reactor=reactor)
+            d = Deferred()
+            reactor.callLater(1, d.callback, None)
+            await d
             sections.append(3)
             return "Yay!"
 
@@ -69,7 +71,9 @@ class AwaitTests(TestCase):
             sections.append(1)
             result = await runone()
             sections.append(4)
-            await sleep(1, reactor=reactor)
+            d = Deferred()
+            reactor.callLater(1, d.callback, None)
+            await d
             sections.append(5)
             return result
 

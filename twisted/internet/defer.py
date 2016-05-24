@@ -1720,40 +1720,9 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
         return d
 
 
-def sleep(time, result=None, reactor=None):
-    """
-    Suspend execution in the callback chain for C{time} seconds.
-
-    This is similar to L{os.sleep} but instead returns a L{Deferred} which
-    fires after C{time} with C{result}. This can be used as such::
-
-        def getSlower(reactor):
-            d = treq.get("https://twistedmatrix.com/")
-            d.addCallback(lambda r: sleep(1, result=r, reactor=reactor))
-            return d
-
-    @param time: Number of seconds to sleep for.
-    @type time: L{int} or L{float}
-
-    @param result: Result to fire with.
-
-    @param reactor: The reactor which is used for timekeeping.
-
-    @returns: A L{Deferred} that fires in at least C{time} seconds with
-        C{result}, if given.
-    """
-    if reactor is None:
-        from twisted.internet import reactor
-
-    d = Deferred()
-    reactor.callLater(time, d.callback, result)
-    return d
-
-
-
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred", "deferredCoroutine", "sleep",
+           "maybeDeferred", "deferredCoroutine",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
            "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
