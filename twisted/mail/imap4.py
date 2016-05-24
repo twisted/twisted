@@ -1215,7 +1215,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     select_DELETE = auth_DELETE
 
     def do_RENAME(self, tag, oldname, newname):
-        oldname, newname = [self._parseMbox(n) for n in oldname, newname]
+        oldname, newname = [self._parseMbox(n) for n in (oldname, newname)]
         if oldname.lower() == 'inbox' or newname.lower() == 'inbox':
             self.sendNegativeResponse(tag, 'You cannot rename the inbox, or rename another mailbox to inbox.')
             return
