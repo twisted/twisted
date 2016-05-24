@@ -93,7 +93,7 @@ def readlinesfromfile(file):
 <pre class="python">
 try:
    fp = open("file")
-except IOError, OSError:
+except (IOError, OSError):
    print "could not open file"
 </pre>
 <hr />

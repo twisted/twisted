@@ -105,7 +105,7 @@ option was seen, 0 otherwise. Here is an example for usage:
     options = Options()
     try:
         options.parseOptions(command_line)
-    except usage.UsageError, errortext:
+    except usage.UsageError as errortext:
         print '%s: %s' % (sys.argv[0], errortext)
         print '%s: Try --help for usage details.' % (sys.argv[0])
         sys.exit(1)
@@ -199,7 +199,7 @@ Here is an example:
     config = Options()
     try:
         config.parseOptions() # When given no argument, parses sys.argv[1:]
-    except usage.UsageError, errortext:
+    except usage.UsageError as errortext:
         print '%s: %s' % (sys.argv[0], errortext)
         print '%s: Try --help for usage details.' % (sys.argv[0])
         sys.exit(1)
