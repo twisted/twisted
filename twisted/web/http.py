@@ -726,8 +726,8 @@ class Request:
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
-        self.client = self.channel.transport.getPeer()
-        self.host = self.channel.transport.getHost()
+        self.client = self.channel.getPeer()
+        self.host = self.channel.getHost()
 
         # Argument processing
         args = self.args
@@ -799,13 +799,13 @@ class Request:
 
         self.streamingProducer = streaming
         self.producer = producer
-        self.transport.registerProducer(producer, streaming)
+        self.channel.registerProducer(producer, streaming)
 
     def unregisterProducer(self):
         """
         Unregister the producer.
         """
-        self.transport.unregisterProducer()
+        self.channel.unregisterProducer()
         self.producer = None
 
 
@@ -867,7 +867,7 @@ class Request:
 
         if self.chunked:
             # write last chunk and closing CRLF
-            self.transport.write(b"0\r\n\r\n")
+            self.channel.write(b"0\r\n\r\n")
 
         # log request
         if hasattr(self.channel, "factory"):
@@ -892,11 +892,9 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            l = []
-            l.append(
-                version + b" " +
-                intToBytes(self.code) + b" " +
-                self.code_message + b"\r\n")
+            code = intToBytes(self.code)
+            reason = self.code_message
+            headers = []
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
@@ -904,7 +902,7 @@ class Request:
             if ((version == b"HTTP/1.1") and
                 (self.responseHeaders.getRawHeaders(b'content-length') is None) and
                 self.method != b"HEAD" and self.code not in NO_BODY_CODES):
-                l.append(b'Transfer-Encoding: chunked\r\n')
+                headers.append((b'Transfer-Encoding', b'chunked'))
                 self.chunked = 1
 
             if self.lastModified is not None:
@@ -928,14 +926,12 @@ class Request:
                             category=DeprecationWarning, stacklevel=2)
                         # Backward compatible cast for non-bytes values
                         value = networkString('%s' % (value,))
-                    l.extend([name, b": ", value, b"\r\n"])
+                    headers.append((name, value))
 
             for cookie in self.cookies:
-                l.append(b'Set-Cookie: ' + cookie + b'\r\n')
+                headers.append((b'Set-Cookie', cookie))
 
-            l.append(b"\r\n")
-
-            self.transport.writeSequence(l)
+            self.channel.writeHeaders(version, code, reason, headers)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -950,9 +946,9 @@ class Request:
         self.sentLength = self.sentLength + len(data)
         if data:
             if self.chunked:
-                self.transport.writeSequence(toChunk(data))
+                self.channel.writeSequence(toChunk(data))
             else:
-                self.transport.write(data)
+                self.channel.write(data)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
                   max_age=None, comment=None, secure=None, httpOnly=False):
@@ -1331,6 +1327,14 @@ class Request:
         for d in self.notifications:
             d.errback(reason)
         self.notifications = []
+
+
+    def loseConnection(self):
+        """
+        Pass the loseConnection through to the underlying channel.
+        """
+        self.channel.loseConnection()
+
 
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
@@ -1949,6 +1953,124 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if interfaces.ISSLTransport(self.transport, None) is not None:
             return True
         return False
+
+
+    def writeHeaders(self, version, code, reason, headers):
+        """
+        Called by L{Request} objects to write a complete set of HTTP headers to
+        a transport.
+
+        @param version: The HTTP version in use.
+        @type version: L{bytes}
+
+        @param code: The HTTP status code to write.
+        @type code: L{bytes}
+
+        @param reason: The HTTP reason phrase to write.
+        @type reason: L{bytes}
+
+        @param headers: The headers to write to the transport.
+        @type headers: L{twisted.web.http_headers.Headers}
+        """
+        responseLine = version + b" " + code + b" " + reason + b"\r\n"
+        headerSequence = [responseLine]
+        headerSequence.extend(
+            name + b': ' + value + b"\r\n" for name, value in headers
+        )
+        headerSequence.append(b"\r\n")
+        self.transport.writeSequence(headerSequence)
+
+
+    def write(self, data):
+        """
+        Called by L{Request} objects to write response data.
+
+        @param data: The data chunk to write to the stream.
+        @type data: L{bytes}
+
+        @return: C{None}
+        """
+        self.transport.write(data)
+
+
+    def writeSequence(self, iovec):
+        """
+        Write a list of strings to the HTTP response.
+
+        @param iovec: A list of byte strings to write to the stream.
+        @type data: L{list} of L{bytes}
+
+        @return: C{None}
+        """
+        self.transport.writeSequence(iovec)
+
+
+    def getPeer(self):
+        """
+        Get the remote address of this connection.
+
+        @return: An L{IAddress} provider.
+        """
+        return self.transport.getPeer()
+
+
+    def getHost(self):
+        """
+        Get the local address of this connection.
+
+        @return: An L{IAddress} provider.
+        """
+        return self.transport.getHost()
+
+
+    def loseConnection(self):
+        """
+        Closes the connection. Will write any data that is pending to be sent
+        on the network, but if this response has not yet been written to the
+        network will not write anything.
+
+        @return: C{None}
+        """
+        return self.transport.loseConnection()
+
+
+    def registerProducer(self, producer, streaming):
+        """
+        Register to receive data from a producer.
+
+        This sets self to be a consumer for a producer.  When this object runs
+        out of data (as when a send(2) call on a socket succeeds in moving the
+        last data from a userspace buffer into a kernelspace buffer), it will
+        ask the producer to resumeProducing().
+
+        For L{IPullProducer} providers, C{resumeProducing} will be called once
+        each time data is required.
+
+        For L{IPushProducer} providers, C{pauseProducing} will be called
+        whenever the write buffer fills up and C{resumeProducing} will only be
+        called when it empties.
+
+        @type producer: L{IProducer} provider
+        @param producer: The L{IProducer} that will be producing data.
+
+        @type streaming: L{bool}
+        @param streaming: C{True} if C{producer} provides L{IPushProducer},
+        C{False} if C{producer} provides L{IPullProducer}.
+
+        @raise RuntimeError: If a producer is already registered.
+
+        @return: C{None}
+        """
+        return self.transport.registerProducer(producer, streaming)
+
+
+    def unregisterProducer(self):
+        """
+        Stop consuming data from a producer, without disconnecting.
+
+        @return: C{None}
+        """
+        return self.transport.unregisterProducer()
 
 
     def _send100Continue(self):
