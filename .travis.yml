@@ -17,8 +17,7 @@ env:
     - TRIAL_REPORTER=text
 
 install:
-  - pip install tox
-  - pip install tox-travis
+  - pip install tox tox-travis
 
 script:
   - tox
