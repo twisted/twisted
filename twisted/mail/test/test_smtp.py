@@ -496,7 +496,7 @@ To: foo
             data = transport.value()
             transport.clear()
             if not re.match(expect, data):
-                raise AssertionError, (send, expect, data)
+                raise AssertionError(send, expect, data)
             if data[:3] == '354':
                 for line in msg.splitlines():
                     if line and line[0] == '.':
@@ -509,7 +509,7 @@ To: foo
                 transport.clear()
                 resp, msgdata = msgexpect
                 if not re.match(resp, data):
-                    raise AssertionError, (resp, data)
+                    raise AssertionError(resp, data)
                 for recip in msgdata[2]:
                     expected = list(msgdata[:])
                     expected[2] = [recip]

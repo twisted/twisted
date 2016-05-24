@@ -2546,8 +2546,7 @@ class IRCClient(basic.LineReceiver):
     def ctcpReply_PING(self, user, channel, data):
         nick = user.split('!', 1)[0]
         if (not self._pings) or (not self._pings.has_key((nick, data))):
-            raise IRCBadMessage,\
-                  "Bogus PING response from %s: %s" % (user, data)
+            raise IRCBadMessage("Bogus PING response from %s: %s" % (user, data))
 
         t0 = self._pings[(nick, data)]
         self.pong(user, time.time() - t0)
@@ -2703,8 +2702,7 @@ def dccParseAddress(address):
         try:
             address = long(address)
         except ValueError:
-            raise IRCBadMessage,\
-                  "Indecipherable address %r" % (address,)
+            raise IRCBadMessage("Indecipherable address %r" % (address,))
         else:
             address = (
                 (address >> 24) & 0xFF,

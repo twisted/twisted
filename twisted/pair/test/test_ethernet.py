@@ -180,7 +180,7 @@ class EthernetTests(unittest.TestCase):
         except components.CannotAdapt:
             pass
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooSmall(self):
@@ -194,7 +194,7 @@ class EthernetTests(unittest.TestCase):
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooBig(self):
@@ -208,7 +208,7 @@ class EthernetTests(unittest.TestCase):
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
     def testAddingBadProtos_TooBig2(self):
         """Adding a protocol with a number >=2**16 raises an exception."""
@@ -221,4 +221,4 @@ class EthernetTests(unittest.TestCase):
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')

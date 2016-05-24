@@ -153,7 +153,7 @@ class FileTransferServer(FileTransferBase):
     def _cbOpenFile(self, fileObj, requestId):
         fileId = str(hash(fileObj))
         if fileId in self.openFiles:
-            raise KeyError, 'id already open'
+            raise KeyError('id already open')
         self.openFiles[fileId] = fileObj
         self.sendPacket(FXP_HANDLE, requestId + NS(fileId))
 
@@ -267,7 +267,7 @@ class FileTransferServer(FileTransferBase):
     def _cbOpenDirectory(self, dirObj, requestId):
         handle = str(hash(dirObj))
         if handle in self.openDirs:
-            raise KeyError, "already opened this directory"
+            raise KeyError("already opened this directory")
         self.openDirs[handle] = [dirObj, iter(dirObj)]
         self.sendPacket(FXP_HANDLE, requestId + NS(handle))
 

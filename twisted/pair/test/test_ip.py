@@ -371,7 +371,7 @@ class IPTests(unittest.TestCase):
         except components.CannotAdapt:
             pass
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooSmall(self):
@@ -385,7 +385,7 @@ class IPTests(unittest.TestCase):
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooBig(self):
@@ -399,7 +399,7 @@ class IPTests(unittest.TestCase):
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
     def testAddingBadProtos_TooBig2(self):
         """Adding a protocol with a number >=2**32 raises an exception."""
@@ -412,4 +412,4 @@ class IPTests(unittest.TestCase):
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
