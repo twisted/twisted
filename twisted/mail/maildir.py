@@ -97,11 +97,11 @@ def initializeMaildir(dir):
     @param dir: The path name for a user directory.
     """
     if not os.path.isdir(dir):
-        os.mkdir(dir, 0o700)
+        os.mkdir(dir, 0700)
         for subdir in ['new', 'cur', 'tmp', '.Trash']:
-            os.mkdir(os.path.join(dir, subdir), 0o700)
+            os.mkdir(os.path.join(dir, subdir), 0700)
         for subdir in ['new', 'cur', 'tmp']:
-            os.mkdir(os.path.join(dir, '.Trash', subdir), 0o700)
+            os.mkdir(os.path.join(dir, '.Trash', subdir), 0700)
         # touch
         open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w').close()
 
@@ -484,7 +484,7 @@ class _MaildirMailboxAppendMessageTask:
         while True:
             self.tmpname = os.path.join(self.mbox.path, "tmp", _generateMaildirName())
             try:
-                self.fh = self.osopen(self.tmpname, attr, 0o600)
+                self.fh = self.osopen(self.tmpname, attr, 0600)
                 return None
             except OSError:
                 tries += 1
