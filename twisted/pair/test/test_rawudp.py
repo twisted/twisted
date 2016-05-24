@@ -276,7 +276,7 @@ class RawUDPTests(unittest.TestCase):
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(42, "silliness")
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must be an instance of DatagramProtocol',):
                 pass
             else:
@@ -290,7 +290,7 @@ class RawUDPTests(unittest.TestCase):
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(-1, protocol.DatagramProtocol())
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must be positive or zero',):
                 pass
             else:
@@ -304,7 +304,7 @@ class RawUDPTests(unittest.TestCase):
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(2**16, protocol.DatagramProtocol())
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 16 bits',):
                 pass
             else:
@@ -317,7 +317,7 @@ class RawUDPTests(unittest.TestCase):
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(2**16+1, protocol.DatagramProtocol())
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 16 bits',):
                 pass
             else:

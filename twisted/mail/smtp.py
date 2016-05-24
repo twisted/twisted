@@ -642,7 +642,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         try:
             addr = Address(m.group('path'), self.host)
-        except AddressError, e:
+        except AddressError as e:
             self.sendCode(553, str(e))
             return
 
@@ -680,7 +680,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         try:
             user = User(m.group('path'), self._helo, self, self._from)
-        except AddressError, e:
+        except AddressError as e:
             self.sendCode(553, str(e))
             return
 
@@ -735,7 +735,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 if rcvdhdr:
                     msg.lineReceived(rcvdhdr)
                 msgs.append(msg)
-            except SMTPServerError, e:
+            except SMTPServerError as e:
                 self.sendCode(e.code, e.resp)
                 self.mode = COMMAND
                 self._disconnect(msgs)
@@ -819,7 +819,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
             for message in self.__messages:
                 message.lineReceived(line)
-        except SMTPServerError, e:
+        except SMTPServerError as e:
             self.datafailed = e
             for message in self.__messages:
                 message.connectionLost()

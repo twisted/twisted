@@ -48,7 +48,7 @@ def run():
     options = GeneralOptions()
     try:
         options.parseOptions(sys.argv[1:])
-    except usage.UsageError, u:
+    except usage.UsageError as u:
         print 'ERROR: %s' % u
         options.opt_help()
         sys.exit(1)

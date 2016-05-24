@@ -379,7 +379,7 @@ class IPTests(unittest.TestCase):
         e = ip.IPProtocol()
         try:
             e.addProto(-1, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must be positive or zero',):
                 pass
             else:
@@ -393,7 +393,7 @@ class IPTests(unittest.TestCase):
         e = ip.IPProtocol()
         try:
             e.addProto(2L**32, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 32 bits',):
                 pass
             else:
@@ -406,7 +406,7 @@ class IPTests(unittest.TestCase):
         e = ip.IPProtocol()
         try:
             e.addProto(2L**32+1, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 32 bits',):
                 pass
             else:
