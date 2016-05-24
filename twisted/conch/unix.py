@@ -464,7 +464,7 @@ class UnixSFTPFile:
             mode = attrs["permissions"]
             del attrs["permissions"]
         else:
-            mode = 0o777
+            mode = 0777
         fd = server.avatar._runAsUser(os.open, filename, openFlags, mode)
         if attrs:
             server.avatar._runAsUser(server._setAttrs, filename, attrs)

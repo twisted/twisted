@@ -84,12 +84,12 @@ class OpenSSHFactoryTests(TestCase):
         """
         keyFile = self.keysDir.child("ssh_host_two_key")
         # Fake permission error by changing the mode
-        keyFile.chmod(0o000)
-        self.addCleanup(keyFile.chmod, 0o777)
+        keyFile.chmod(0000)
+        self.addCleanup(keyFile.chmod, 0777)
         # And restore the right mode when seteuid is called
         savedSeteuid = os.seteuid
         def seteuid(euid):
-            keyFile.chmod(0o777)
+            keyFile.chmod(0777)
             return savedSeteuid(euid)
         self.patch(os, "seteuid", seteuid)
         keys = self.factory.getPrivateKeys()

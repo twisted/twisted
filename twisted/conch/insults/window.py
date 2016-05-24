@@ -409,14 +409,14 @@ class Canvas(Widget):
 def horizontalLine(terminal, y, left, right):
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
     terminal.cursorPosition(left, y)
-    terminal.write(chr(0o161) * (right - left))
+    terminal.write(chr(0161) * (right - left))
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 
 def verticalLine(terminal, x, top, bottom):
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
     for n in xrange(top, bottom):
         terminal.cursorPosition(x, n)
-        terminal.write(chr(0o170))
+        terminal.write(chr(0170))
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 
 
@@ -424,18 +424,18 @@ def rectangle(terminal, (top, left), (width, height)):
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
 
     terminal.cursorPosition(top, left)
-    terminal.write(chr(0o154))
-    terminal.write(chr(0o161) * (width - 2))
-    terminal.write(chr(0o153))
+    terminal.write(chr(0154))
+    terminal.write(chr(0161) * (width - 2))
+    terminal.write(chr(0153))
     for n in range(height - 2):
         terminal.cursorPosition(left, top + n + 1)
-        terminal.write(chr(0o170))
+        terminal.write(chr(0170))
         terminal.cursorForward(width - 2)
-        terminal.write(chr(0o170))
+        terminal.write(chr(0170))
     terminal.cursorPosition(0, top + height - 1)
-    terminal.write(chr(0o155))
-    terminal.write(chr(0o161) * (width - 2))
-    terminal.write(chr(0o152))
+    terminal.write(chr(0155))
+    terminal.write(chr(0161) * (width - 2))
+    terminal.write(chr(0152))
 
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 
