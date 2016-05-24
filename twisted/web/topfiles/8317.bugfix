@@ -1,1 +1,0 @@
-twisted.web.http.HTTPChannel no longer processes requests that have invalid headers as the final header in their header block.

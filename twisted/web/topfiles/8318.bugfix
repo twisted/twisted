@@ -1,1 +1,0 @@
-twisted.web.client.HTTPClientFactory (and the getPage and downloadPage APIs) now timeouts correctly on TLS connections where the remote party is not responding on the connection.
