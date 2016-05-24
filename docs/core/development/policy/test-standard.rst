@@ -120,8 +120,8 @@ failing tests, they will not be happy and may decide to *hunt you down* .
 Since this is a geographically dispersed team, the person who can help
 you get your code working probably isn't in the room with you.  You may want
 to share your work in progress over the network, but you want to leave the
-main Subversion tree in good working order.
-So `use a branch <http://svnbook.red-bean.com/en/1.0/ch04.html>`_ ,
+main Git tree in good working order.
+So `use a branch <https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging>`_ ,
 and merge your changes back in only after your problem is solved and all the
 unit tests pass again.
 
@@ -589,7 +589,7 @@ Links
 - Ron Jeffries expounds on the importance of `Unit      Tests at 100% <http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm>`_ .
 - Ron Jeffries writes about the `Unit      Test <http://www.xprogramming.com/Practices/PracUnitTest.html>`_ in the `Extreme      Programming practices of C3 <http://www.xprogramming.com/Practices/xpractices.htm>`_ .
 - `PyUnit's homepage <http://pyunit.sourceforge.net>`_ .
-- The top-level tests directory, `twisted/test <http://twistedmatrix.com/trac/browser/trunk/twisted/test>`_ , in Subversion.
+- The top-level tests directory, `twisted/test <https://github.com/twisted/twisted/tree/trunk/twisted/test>`_.
 
 
   

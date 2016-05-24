@@ -620,7 +620,7 @@ class Site(http.HTTPFactory):
     A web site: manage log, sessions, and resources.
 
     @ivar counter: increment value used for generating unique sessions ID.
-    @ivar requestFactory: A factory which is called with (channel, queued)
+    @ivar requestFactory: A factory which is called with (channel)
         and creates L{Request} instances. Default to L{Request}.
     @ivar displayTracebacks: if set, Twisted internal errors are displayed on
         rendered pages. Default to C{True}.
