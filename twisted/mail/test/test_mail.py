@@ -1986,7 +1986,7 @@ rm -f process.alias.out
 while read i; do
     echo $i >> process.alias.out
 done""")
-        os.chmod(sh.path, 0o700)
+        os.chmod(sh.path, 0700)
         a = mail.alias.ProcessAlias(sh.path, None, None)
         m = a.createMessageReceiver()
 
