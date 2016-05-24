@@ -1856,7 +1856,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         expectContinue = req.requestHeaders.getRawHeaders(b'expect')
         if (expectContinue and expectContinue[0].lower() == b'100-continue' and
             self._version == b'HTTP/1.1'):
-            req.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
+            self._send100Continue()
 
 
     def checkPersistence(self, request, version):
@@ -1949,6 +1949,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if interfaces.ISSLTransport(self.transport, None) is not None:
             return True
         return False
+
+
+    def _send100Continue(self):
+        """
+        Sends a 100 Continue response, used to signal to clients that further
+        processing will be performed.
+        """
+        self.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
 
 
     def _respondToBadRequestAndDisconnect(self):
