@@ -1251,10 +1251,8 @@ class Request:
         """
         if self._forceSSL:
             return True
-        transport = getattr(self, 'transport', None)
-        if interfaces.ISSLTransport(transport, None) is not None:
-            return True
-        return False
+        channel = getattr(self, 'channel', None)
+        return channel.isSecure()
 
 
     def _authorize(self):
@@ -1936,6 +1934,21 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+
+
+    def isSecure(self):
+        """
+        Return True if this channel is using a secure transport.
+
+        Normally this method returns True if this instance is using a transport
+        that implements ISSLTransport.
+
+        @returns: True if this request is secure
+        @rtype: C{bool}
+        """
+        if interfaces.ISSLTransport(self.transport, None) is not None:
+            return True
+        return False
 
 
 
