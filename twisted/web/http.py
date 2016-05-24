@@ -100,7 +100,8 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
 from twisted.protocols import policies, basic
 
-from twisted.web.iweb import IRequest, IAccessLogFormatter
+from twisted.web.iweb import (
+    IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
 from twisted.web.http_headers import Headers
 
 H2_ENABLED = False
@@ -534,6 +535,10 @@ class HTTPClient(basic.LineReceiver):
 NO_BODY_CODES = (204, 304)
 
 
+# Sentinel object that detects people explicitly passing `queued` to Request.
+_QUEUED_SENTINEL = object()
+
+
 @implementer(interfaces.IConsumer)
 class Request:
     """
@@ -587,24 +592,24 @@ class Request:
     _forceSSL = 0
     _disconnected = False
 
-    def __init__(self, channel, queued):
+    def __init__(self, channel, queued=_QUEUED_SENTINEL):
         """
         @param channel: the channel we're connected to.
-        @param queued: are we in the request queue, or can we start writing to
-            the transport?
+        @param queued: (deprecated) are we in the request queue, or can we
+            start writing to the transport?
         """
         self.notifications = []
         self.channel = channel
-        self.queued = queued
         self.requestHeaders = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
         self.cookies = [] # outgoing cookies
+        self.transport = self.channel.transport
 
-        if queued:
-            self.transport = StringTransport()
-        else:
-            self.transport = self.channel.transport
+        if queued is _QUEUED_SENTINEL:
+            queued = False
+
+        self.queued = queued
 
 
     def _cleanup(self):
@@ -616,12 +621,13 @@ class Request:
             self.unregisterProducer()
         self.channel.requestDone(self)
         del self.channel
-        try:
-            self.content.close()
-        except OSError:
-            # win32 suckiness, no idea why it does this
-            pass
-        del self.content
+        if self.content is not None:
+            try:
+                self.content.close()
+            except OSError:
+                # win32 suckiness, no idea why it does this
+                pass
+            del self.content
         for d in self.notifications:
             d.callback(None)
         self.notifications = []
@@ -635,25 +641,12 @@ class Request:
         We start writing whatever data we have to the transport, etc.
 
         This method is not intended for users.
+
+        In 16.3 this method was changed to become a no-op, as L{Request}
+        objects are now never queued.
         """
-        if not self.queued:
-            raise RuntimeError("noLongerQueued() got called unnecessarily.")
+        pass
 
-        self.queued = 0
-
-        # set transport to real one and send any buffer data
-        data = self.transport.getvalue()
-        self.transport = self.channel.transport
-        if data:
-            self.transport.write(data)
-
-        # if we have producer, register it with transport
-        if (self.producer is not None) and not self.finished:
-            self.transport.registerProducer(self.producer, self.streamingProducer)
-
-        # if we're finished, clean up
-        if self.finished:
-            self._cleanup()
 
     def gotLength(self, length):
         """
@@ -806,19 +799,13 @@ class Request:
 
         self.streamingProducer = streaming
         self.producer = producer
-
-        if self.queued:
-            if streaming:
-                producer.pauseProducing()
-        else:
-            self.transport.registerProducer(producer, streaming)
+        self.transport.registerProducer(producer, streaming)
 
     def unregisterProducer(self):
         """
         Unregister the producer.
         """
-        if not self.queued:
-            self.transport.unregisterProducer()
+        self.transport.unregisterProducer()
         self.producer = None
 
 
@@ -1264,10 +1251,11 @@ class Request:
         """
         if self._forceSSL:
             return True
-        transport = getattr(getattr(self, 'channel', None), 'transport', None)
+        transport = getattr(self, 'transport', None)
         if interfaces.ISSLTransport(transport, None) is not None:
             return True
         return False
+
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
@@ -1349,6 +1337,10 @@ class Request:
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
     "Twisted Names to resolve hostnames")(Request.getClient)
+
+
+Request.noLongerQueued = deprecated(
+    Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
 
 
 class _DataLoss(Exception):
@@ -1585,6 +1577,34 @@ class _ChunkedTransferDecoder(object):
 
 
 
+@implementer(interfaces.IPushProducer)
+class _NoPushProducer(object):
+    """
+    A no-op version of L{interfaces.IPushProducer}, used to abstract over the
+    possibility that a L{HTTPChannel} transport does not provide
+    L{IPushProducer}.
+    """
+    def pauseProducing(self):
+        """
+        Pause producing data.
+
+        Tells a producer that it has produced too much data to process for
+        the time being, and to stop until resumeProducing() is called.
+        """
+        pass
+
+
+    def resumeProducing(self):
+        """
+        Resume producing data.
+
+        This tells a producer to re-add itself to the main loop and produce
+        more data for its consumer.
+        """
+        pass
+
+
+
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
@@ -1605,6 +1625,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar _receivedHeaderSize: Bytes received so far for the header.
     @type _receivedHeaderSize: C{int}
+
+    @ivar _handlingRequest: Whether a request is currently being processed.
+    @type _handlingRequest: L{bool}
+
+    @ivar _dataBuffer: Any data that has been received from the connection
+        while processing an outstanding request.
+    @type _dataBuffer: L{list} of L{bytes}
+
+    @ivar _producer: Either the transport, if it provides
+        L{interfaces.IPushProducer}, or a null implementation of
+        L{interfaces.IPushProducer}. Used to attempt to prevent the transport
+        from producing excess data when we're responding to a request.
+    @type _producer: L{interfaces.IPushProducer}
     """
 
     maxHeaders = 500
@@ -1626,11 +1659,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     def __init__(self):
         # the request queue
         self.requests = []
+        self._handlingRequest = False
+        self._dataBuffer = []
         self._transferDecoder = None
 
 
     def connectionMade(self):
         self.setTimeout(self.timeOut)
+        self._producer = interfaces.IPushProducer(
+            self.transport, _NoPushProducer()
+        )
 
 
     def lineReceived(self, line):
@@ -1643,6 +1681,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._receivedHeaderSize += len(line)
         if (self._receivedHeaderSize > self.totalHeadersSize):
             _respondToBadRequestAndDisconnect(self.transport)
+            return
+
+        # If we're currently handling a request, buffer this data. We shouldn't
+        # have received it (we've paused the transport), but let's be cautious.
+        if self._handlingRequest:
+            self._dataBuffer.append(line)
+            self._dataBuffer.append(b'\r\n')
             return
 
         if self.__first_line:
@@ -1659,7 +1704,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 return
 
             # create a new Request object
-            request = self.requestFactory(self, len(self.requests))
+            if INonQueuedRequestFactory.providedBy(self.requestFactory):
+                request = self.requestFactory(self)
+            else:
+                request = self.requestFactory(self, len(self.requests))
             self.requests.append(request)
 
             self.__first_line = 0
@@ -1706,7 +1754,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def _finishRequestBody(self, data):
         self.allContentReceived()
-        self.setLineMode(data)
+        self._dataBuffer.append(data)
 
 
     def headerReceived(self, line):
@@ -1777,12 +1825,23 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeOut:
             self._savedTimeOut = self.setTimeout(None)
 
+        # Pause the producer if we can. If we can't, that's ok, we'll buffer.
+        self._producer.pauseProducing()
+        self._handlingRequest = True
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
 
     def rawDataReceived(self, data):
         self.resetTimeout()
+
+        # If we're currently handling a request, buffer this data. We shouldn't
+        # have received it (we've paused the transport), but let's be cautious.
+        if self._handlingRequest:
+            self._dataBuffer.append(data)
+            return
+
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
@@ -1854,18 +1913,24 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         del self.requests[0]
 
         if self.persistent:
-            # notify next request it can start writing
-            if self.requests:
-                self.requests[0].noLongerQueued()
-            else:
-                if self._savedTimeOut:
-                    self.setTimeout(self._savedTimeOut)
+            self._handlingRequest = False
+            self._producer.resumeProducing()
+
+            if self._savedTimeOut:
+                self.setTimeout(self._savedTimeOut)
+
+            # Receive our buffered data, if any.
+            data = b''.join(self._dataBuffer)
+            self._dataBuffer = []
+            self.setLineMode(data)
         else:
             self.transport.loseConnection()
+
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
         policies.TimeoutMixin.timeoutConnection(self)
+
 
     def connectionLost(self, reason):
         self.setTimeout(None)

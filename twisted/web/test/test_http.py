@@ -14,12 +14,14 @@ try:
 except ImportError:
     from urllib.parse import urlparse, urlunsplit, clear_cache
 
+from zope.interface import provider
+
 from twisted.python.compat import (_PY3, iterbytes, networkString, unicode,
                                    intToBytes, NativeStringIO)
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
-from twisted.web import http, http_headers
+from twisted.web import http, http_headers, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
 from twisted.internet.task import Clock
@@ -42,6 +44,7 @@ class DateTimeTests(unittest.TestCase):
             self.assertEqual(time, time2)
 
 
+
 class DummyHTTPHandler(http.Request):
 
     def process(self):
@@ -58,6 +61,31 @@ class DummyHTTPHandler(http.Request):
         self.setHeader(b"Content-Length", intToBytes(len(request)))
         self.write(request)
         self.finish()
+
+
+
+@provider(iweb.INonQueuedRequestFactory)
+class DummyNewHTTPHandler(DummyHTTPHandler):
+    """
+    This is exactly like the DummyHTTPHandler but it takes only one argument
+    in its constructor, with no default arguments. This exists to test an
+    alternative code path in L{HTTPChannel}.
+    """
+    def __init__(self, channel):
+        DummyHTTPHandler.__init__(self, channel)
+
+
+
+class DelayedHTTPHandler(DummyHTTPHandler):
+    """
+    Like L{DummyHTTPHandler}, but doesn't respond immediately.
+    """
+    def process(self):
+        pass
+
+
+    def delayedProcess(self):
+        DummyHTTPHandler.process(self)
 
 
 
@@ -160,6 +188,49 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(len(protocol.requests), 1)
 
 
+    def test_noPipeliningApi(self):
+        """
+        Test that a L{http.Request} subclass with no queued kwarg works as
+        expected.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DummyNewHTTPHandler
+        a.makeConnection(b)
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+        a.connectionLost(IOError("all done"))
+        value = b.value()
+        self.assertResponseEquals(value, self.expected_response)
+
+
+    def test_noPipelining(self):
+        """
+        Test that pipelined requests get buffered, not processed in parallel.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandler
+        a.makeConnection(b)
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+        value = b.value()
+
+        # So far only one request should have been dispatched.
+        self.assertEqual(value, b'')
+        self.assertEqual(1, len(a.requests))
+
+        # Now, process each request one at a time.
+        while a.requests:
+            self.assertEqual(1, len(a.requests))
+            a.requests[0].delayedProcess()
+
+        value = b.value()
+        self.assertResponseEquals(value, self.expected_response)
+
+
 
 class HTTP1_1Tests(HTTP1_0Tests):
 
@@ -235,6 +306,66 @@ class HTTP0_9Tests(HTTP1_0Tests):
 
     def assertResponseEquals(self, response, expectedResponse):
         self.assertEqual(response, expectedResponse)
+
+
+    def test_noPipelining(self):
+        raise unittest.SkipTest("HTTP/0.9 not supported")
+
+
+
+class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
+    """
+    Tests that multiple pipelined requests with bodies are correctly buffered.
+    """
+
+    requests = (
+        b"POST / HTTP/1.1\r\n"
+        b"Content-Length: 10\r\n"
+        b"\r\n"
+        b"0123456789POST / HTTP/1.1\r\n"
+        b"Content-Length: 10\r\n"
+        b"\r\n"
+        b"0123456789"
+    )
+
+    expectedResponses = [
+        (b"HTTP/1.1 200 OK",
+         b"Request: /",
+         b"Command: POST",
+         b"Version: HTTP/1.1",
+         b"Content-Length: 21",
+         b"'''\n10\n0123456789'''\n"),
+        (b"HTTP/1.1 200 OK",
+         b"Request: /",
+         b"Command: POST",
+         b"Version: HTTP/1.1",
+         b"Content-Length: 21",
+         b"'''\n10\n0123456789'''\n")]
+
+    def test_noPipelining(self):
+        """
+        Test that pipelined requests get buffered, not processed in parallel.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandler
+        a.makeConnection(b)
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+        value = b.value()
+
+        # So far only one request should have been dispatched.
+        self.assertEqual(value, b'')
+        self.assertEqual(1, len(a.requests))
+
+        # Now, process each request one at a time.
+        while a.requests:
+            self.assertEqual(1, len(a.requests))
+            a.requests[0].delayedProcess()
+
+        value = b.value()
+        self.assertResponseEquals(value, self.expectedResponses)
 
 
 
@@ -2035,67 +2166,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             ValueError, req.registerProducer, DummyProducer(), True)
 
 
-    def test_registerProducerWhenQueuedPausesPushProducer(self):
-        """
-        Calling L{Request.registerProducer} with an IPushProducer when the
-        request is queued pauses the producer.
-        """
-        req = http.Request(DummyChannel(), True)
-        producer = DummyProducer()
-        req.registerProducer(producer, True)
-        self.assertEqual(['pause'], producer.events)
-
-
-    def test_registerProducerWhenQueuedDoesntPausePullProducer(self):
-        """
-        Calling L{Request.registerProducer} with an IPullProducer when the
-        request is queued does not pause the producer, because it doesn't make
-        sense to pause a pull producer.
-        """
-        req = http.Request(DummyChannel(), True)
-        producer = DummyProducer()
-        req.registerProducer(producer, False)
-        self.assertEqual([], producer.events)
-
-
-    def test_registerProducerWhenQueuedDoesntRegisterPushProducer(self):
-        """
-        Calling L{Request.registerProducer} with an IPushProducer when the
-        request is queued does not register the producer on the request's
-        transport.
-        """
-        self.assertIdentical(
-            None, getattr(http.StringTransport, 'registerProducer', None),
-            "StringTransport cannot implement registerProducer for this test "
-            "to be valid.")
-        req = http.Request(DummyChannel(), True)
-        producer = DummyProducer()
-        req.registerProducer(producer, True)
-        # This is a roundabout assertion: http.StringTransport doesn't
-        # implement registerProducer, so Request.registerProducer can't have
-        # tried to call registerProducer on the transport.
-        self.assertIsInstance(req.transport, http.StringTransport)
-
-
-    def test_registerProducerWhenQueuedDoesntRegisterPullProducer(self):
-        """
-        Calling L{Request.registerProducer} with an IPullProducer when the
-        request is queued does not register the producer on the request's
-        transport.
-        """
-        self.assertIdentical(
-            None, getattr(http.StringTransport, 'registerProducer', None),
-            "StringTransport cannot implement registerProducer for this test "
-            "to be valid.")
-        req = http.Request(DummyChannel(), True)
-        producer = DummyProducer()
-        req.registerProducer(producer, False)
-        # This is a roundabout assertion: http.StringTransport doesn't
-        # implement registerProducer, so Request.registerProducer can't have
-        # tried to call registerProducer on the transport.
-        self.assertIsInstance(req.transport, http.StringTransport)
-
-
     def test_registerProducerWhenNotQueuedRegistersPushProducer(self):
         """
         Calling L{Request.registerProducer} with an IPushProducer when the
@@ -2241,38 +2311,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
-
-
-    def test_unregisterQueuedNonStreamingProducer(self):
-        """
-        L{Request.unregisterProducer} unregisters a queued non-streaming
-        producer from the request but not from the transport.
-        """
-        existing = DummyProducer()
-        channel = DummyChannel()
-        transport = StringTransport()
-        channel.transport = transport
-        transport.registerProducer(existing, True)
-        req = http.Request(channel, True)
-        req.registerProducer(DummyProducer(), False)
-        req.unregisterProducer()
-        self.assertEqual((None, existing), (req.producer, transport.producer))
-
-
-    def test_unregisterQueuedStreamingProducer(self):
-        """
-        L{Request.unregisterProducer} unregisters a queued streaming producer
-        from the request but not from the transport.
-        """
-        existing = DummyProducer()
-        channel = DummyChannel()
-        transport = StringTransport()
-        channel.transport = transport
-        transport.registerProducer(existing, True)
-        req = http.Request(channel, True)
-        req.registerProducer(DummyProducer(), True)
-        req.unregisterProducer()
-        self.assertEqual((None, existing), (req.producer, transport.producer))
 
 
     def test_finishProducesLog(self):
@@ -2491,46 +2529,6 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
               b"'''\n3\nabc'''\n")])
 
 
-    def test_expect100ContinueWithPipelining(self):
-        """
-        If a HTTP/1.1 client sends a 'Expect: 100-continue' header, followed
-        by another pipelined request, the 100 response does not interfere with
-        the response to the second request.
-        """
-        transport = StringTransport()
-        channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandler
-        channel.makeConnection(transport)
-        channel.dataReceived(
-            b"GET / HTTP/1.1\r\n"
-            b"Host: www.example.com\r\n"
-            b"Expect: 100-continue\r\n"
-            b"Content-Length: 3\r\n"
-            b"\r\nabc"
-            b"POST /foo HTTP/1.1\r\n"
-            b"Host: www.example.com\r\n"
-            b"Content-Length: 4\r\n"
-            b"\r\ndefg")
-        response = transport.value()
-        self.assertTrue(
-            response.startswith(b"HTTP/1.1 100 Continue\r\n\r\n"))
-        response = response[len(b"HTTP/1.1 100 Continue\r\n\r\n"):]
-        self.assertResponseEquals(
-            response,
-            [(b"HTTP/1.1 200 OK",
-              b"Command: GET",
-              b"Content-Length: 13",
-              b"Version: HTTP/1.1",
-              b"Request: /",
-              b"'''\n3\nabc'''\n"),
-             (b"HTTP/1.1 200 OK",
-              b"Command: POST",
-              b"Content-Length: 14",
-              b"Version: HTTP/1.1",
-              b"Request: /foo",
-              b"'''\n4\ndefg'''\n")])
-
-
 
 def sub(keys, d):
     """
@@ -2574,4 +2572,25 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                     "twisted.web.http.Request.getClient was deprecated "
                     "in Twisted 15.0.0; please use Twisted Names to "
                     "resolve hostnames instead")},
+                         sub(["category", "message"], warnings[0]))
+
+
+    def test_noLongerQueued(self):
+        """
+        L{Request.noLongerQueued} is deprecated, as we no longer process
+        requests simultaneously.
+        """
+        channel = DummyChannel()
+        request = http.Request(channel)
+        request.noLongerQueued()
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_noLongerQueued])
+
+        self.assertEqual(1, len(warnings))
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.noLongerQueued was deprecated "
+                    "in Twisted 16.3.0")},
                          sub(["category", "message"], warnings[0]))

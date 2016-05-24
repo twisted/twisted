@@ -1,0 +1,1 @@
+twisted.web would previously dispatch pipelined requests simultaneously and queue the responses. This behaviour did not enforce any of the guarantees required by RFC 7230 or make it possible for users to enforce those requirements. For this reason, the parallel dispatch of requests has been removed. Pipelined requests are now processed serially.
