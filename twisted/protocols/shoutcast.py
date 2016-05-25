@@ -104,8 +104,8 @@ class ShoutcastClient(http.HTTPClient):
 
         Will only be called on non-empty metadata.
         """
-        raise NotImplementedError, "implement in subclass"
+        raise NotImplementedError("implement in subclass")
     
     def gotMP3Data(self, data):
         """Called with chunk of MP3 data."""
-        raise NotImplementedError, "implement in subclass"
+        raise NotImplementedError("implement in subclass")

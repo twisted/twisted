@@ -17,7 +17,7 @@ def test(i):
     log.msg("message %s" % i)
     warnings.warn("warning %s" % i)
     try:
-        raise RuntimeError, "error %s" % i
+        raise RuntimeError("error %s" % i)
     except:
         log.err()
 
