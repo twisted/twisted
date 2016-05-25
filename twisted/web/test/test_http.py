@@ -371,7 +371,7 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
 
 class ShutdownTests(unittest.TestCase):
     """
-    Tests that shutting down a connection works properly.
+    Tests that connections can be shut down by L{http.Request} objects.
     """
     class ShutdownHTTPHandler(http.Request):
         """
@@ -391,7 +391,8 @@ class ShutdownTests(unittest.TestCase):
 
     def test_losingConnection(self):
         """
-        Test that loseConnection inside the request terminates the transport.
+        Calling L{http.Request.loseConnection} causes the transport to be
+        disconnected.
         """
         b = StringTransport()
         a = http.HTTPChannel()
@@ -410,11 +411,13 @@ class ShutdownTests(unittest.TestCase):
 
 class SecurityTests(unittest.TestCase):
     """
-    Tests that isSecure functions properly.
+    Tests that L{http.Request.isSecure} correctly takes the transport into
+    account.
     """
     def test_isSecure(self):
         """
-        Test that a secure transport works properly.
+        Calling L{http.Request.isSecure} when the channel is backed with a
+        secure transport will return L{True}.
         """
         b = DummyChannel.SSL()
         a = http.HTTPChannel()
@@ -425,7 +428,8 @@ class SecurityTests(unittest.TestCase):
 
     def test_notSecure(self):
         """
-        Test that an insecure transport works properly.
+        Calling L{http.Request.isSecure} when the channel is not backed with a
+        secure transport will return L{False}.
         """
         b = DummyChannel.TCP()
         a = http.HTTPChannel()
@@ -436,7 +440,8 @@ class SecurityTests(unittest.TestCase):
 
     def test_notSecureAfterFinish(self):
         """
-        After a request is finished, it always reigsters insecure.
+        After a request is finished, calling L{http.Request.isSecure} will
+        always return L{False}.
         """
         b = DummyChannel.SSL()
         a = http.HTTPChannel()
