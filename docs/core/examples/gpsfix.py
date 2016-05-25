@@ -49,7 +49,7 @@ if __name__ == '__main__':
     o = GPSOptions()
     try:
         o.parseOptions()
-    except usage.UsageError, errortext:
+    except usage.UsageError as errortext:
         print '%s: %s' % (sys.argv[0], errortext)
         print '%s: Try --help for usage details.' % (sys.argv[0])
         raise SystemExit(1)

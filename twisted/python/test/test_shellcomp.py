@@ -76,13 +76,13 @@ def test_genZshFunction(self, cmdName, optionsFQPN):
     # dependencies (pyOpenSSL, etc) so we have to skip them.
     try:
         o = reflect.namedAny(optionsFQPN)()
-    except Exception, e:
+    except Exception as e:
         raise unittest.SkipTest("Couldn't import or instantiate "
                                 "Options class: %s" % (e,))
 
     try:
         o.parseOptions(["", "--_shell-completion", "zsh:2"])
-    except ImportError, e:
+    except ImportError as e:
         # this can happen for commands which don't have all
         # the necessary dependencies installed. skip test.
         # skip
@@ -103,7 +103,7 @@ def test_genZshFunction(self, cmdName, optionsFQPN):
             try:
                 o.parseOptions([cmd, "", "--_shell-completion",
                                 "zsh:3"])
-            except ImportError, e:
+            except ImportError as e:
                 # this can happen for commands which don't have all
                 # the necessary dependencies installed. skip test.
                 raise unittest.SkipTest("ImportError calling parseOptions() "

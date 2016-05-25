@@ -188,7 +188,7 @@ class EthernetTests(unittest.TestCase):
         e = ethernet.EthernetProtocol()
         try:
             e.addProto(-1, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must be positive or zero',):
                 pass
             else:
@@ -202,7 +202,7 @@ class EthernetTests(unittest.TestCase):
         e = ethernet.EthernetProtocol()
         try:
             e.addProto(2**16, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 16 bits',):
                 pass
             else:
@@ -215,7 +215,7 @@ class EthernetTests(unittest.TestCase):
         e = ethernet.EthernetProtocol()
         try:
             e.addProto(2**16+1, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 16 bits',):
                 pass
             else:

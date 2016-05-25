@@ -86,7 +86,7 @@ def fromBase64(s):
 
     try:
         return b64decode(s)
-    except Exception, e:
+    except Exception as e:
         raise SASLIncorrectEncodingError(str(e))
 
 

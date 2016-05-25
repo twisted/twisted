@@ -919,7 +919,7 @@ class Proxy(Base):
             f = self.handle_request_default
         try:
             d = f(message, addr)
-        except SIPError, e:
+        except SIPError as e:
             self.deliverResponse(self.responseFromRequest(e.code, message))
         except:
             log.err()

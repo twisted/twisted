@@ -20,7 +20,7 @@ from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 
 try:
     from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
-except ImportError, e:
+except ImportError as e:
     StdioInteractingSession = None
     _reason = str(e)
     del e

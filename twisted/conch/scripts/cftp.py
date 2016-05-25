@@ -57,7 +57,7 @@ def run():
     options = ClientOptions()
     try:
         options.parseOptions(args)
-    except usage.UsageError, u:
+    except usage.UsageError as u:
         print 'ERROR: %s' % u
         sys.exit(1)
     if options['log']:

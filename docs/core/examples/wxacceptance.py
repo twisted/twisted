@@ -21,7 +21,7 @@ try:
     from wx import Frame as wxFrame, DefaultPosition as wxDefaultPosition, \
          Size as wxSize, Menu as wxMenu, MenuBar as wxMenuBar, \
          EVT_MENU, MessageDialog as wxMessageDialog, App as wxApp
-except ImportError, e:
+except ImportError as e:
     from wxPython.wx import *
 
 from twisted.python import log
