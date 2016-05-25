@@ -1,0 +1,1 @@
+twisted.names.client.Resolver as well as all resolvers inheriting from twisted.names.common.ResolverBase can now understand DNS answers that come back in a different case than the query. Example: querying for www.google.com and the answer comes back with an A record for www.google.COM will now work.
