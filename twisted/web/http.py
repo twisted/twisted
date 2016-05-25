@@ -1248,6 +1248,8 @@ class Request:
         if self._forceSSL:
             return True
         channel = getattr(self, 'channel', None)
+        if channel is None:
+            return False
         return channel.isSecure()
 
 
