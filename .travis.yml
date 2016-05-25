@@ -1,5 +1,9 @@
 language: python
 
+branches:
+  only:
+    - trunk
+
 addons:
   apt:
     packages:
