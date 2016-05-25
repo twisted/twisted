@@ -4793,7 +4793,7 @@ class MemoryAccount(object):
     def unsubscribe(self, name):
         name = name.upper()
         if name not in self.subscriptions:
-            raise MailboxException("Not currently subscribed to " + name)
+            raise MailboxException("Not currently subscribed to %s" % (name,))
         self.subscriptions.remove(name)
 
     def listMailboxes(self, ref, wildcard):

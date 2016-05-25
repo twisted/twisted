@@ -146,8 +146,8 @@ class InetdConf(SimpleConfFile):
                 port = int(serviceName)
                 serviceName = 'unknown'
             except:
-                raise UnknownService("Unknown service: %s (%s)" \
-                      % (serviceName, protocol))
+                raise UnknownService("Unknown service: %s (%s)" % (
+                    serviceName, protocol))
 
         self.services.append(InetdService(serviceName, port, socketType,
                                           protocol, wait, user, group, program,
@@ -170,8 +170,8 @@ class ServicesConf(SimpleConfFile):
             port, protocol = portAndProtocol.split('/')
             port = long(port)
         except:
-            raise InvalidServicesConfError('Invalid port/protocol:' + \
-                                            repr(portAndProtocol))
+            raise InvalidServicesConfError(
+                'Invalid port/protocol: %s' % (repr(portAndProtocol),))
 
         self.services[(name, protocol)] = port
         for alias in aliases:
@@ -199,7 +199,7 @@ class RPCServicesConf(SimpleConfFile):
         try:
             port = long(port)
         except:
-            raise InvalidRPCServicesConfError('Invalid port:' + repr(port))
+            raise InvalidRPCServicesConfError('Invalid port: %s' % (repr(port),))
 
         self.services[name] = port
         for alias in aliases:

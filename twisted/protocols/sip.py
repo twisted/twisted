@@ -340,7 +340,7 @@ def parseViaHeader(value):
     result = {}
     pname, pversion, transport = protocolinfo.split("/")
     if pname != "SIP" or pversion != "2.0":
-        raise ValueError("wrong protocol or version: %r" % value)
+        raise ValueError("wrong protocol or version: %r" % (value,))
     result["transport"] = transport
     if ":" in by:
         host, port = by.split(":")

@@ -856,7 +856,7 @@ version                         Print the SFTP version.
                     elif c == '\\': # quoted character
                         del line[i]
                         if line[i] not in '\'"\\':
-                            raise IndexError("bad quote: \\%s" % line[i])
+                            raise IndexError("bad quote: \\%s" % (line[i],))
                         ret.append(line[i])
                     else:
                         ret.append(line[i])
