@@ -199,7 +199,8 @@ class RPCServicesConf(SimpleConfFile):
         try:
             port = long(port)
         except:
-            raise InvalidRPCServicesConfError('Invalid port: %s' % (repr(port),))
+            raise InvalidRPCServicesConfError(
+                'Invalid port: %s' % (repr(port),))
 
         self.services[name] = port
         for alias in aliases:
