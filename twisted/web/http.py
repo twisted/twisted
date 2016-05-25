@@ -1234,15 +1234,16 @@ class Request:
 
     def isSecure(self):
         """
-        Return True if this request is using a secure transport.
+        Return L{True} if this request is using a secure transport.
 
-        Normally this method returns True if this request's HTTPChannel
-        instance is using a transport that implements ISSLTransport.
+        Normally this method returns L{True} if this request's L{HTTPChannel}
+        instance is using a transport that implements
+        L{interfaces.ISSLTransport}.
 
-        This will also return True if setHost() has been called
-        with ssl=True.
+        This will also return L{True} if L{Request.setHost} has been called
+        with C{ssl=True}.
 
-        @returns: True if this request is secure
+        @returns: L{True} if this request is secure
         @rtype: C{bool}
         """
         if self._forceSSL:
@@ -1945,12 +1946,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def isSecure(self):
         """
-        Return True if this channel is using a secure transport.
+        Return L{True} if this channel is using a secure transport.
 
-        Normally this method returns True if this instance is using a transport
-        that implements ISSLTransport.
+        Normally this method returns L{True} if this instance is using a
+        transport that implements L{interfaces.ISSLTransport}.
 
-        @returns: True if this request is secure
+        @returns: L{True} if this request is secure
         @rtype: C{bool}
         """
         if interfaces.ISSLTransport(self.transport, None) is not None:
