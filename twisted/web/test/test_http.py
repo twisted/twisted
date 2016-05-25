@@ -408,6 +408,48 @@ class ShutdownTests(unittest.TestCase):
 
 
 
+class SecurityTests(unittest.TestCase):
+    """
+    Tests that isSecure functions properly.
+    """
+    def test_isSecure(self):
+        """
+        Test that a secure transport works properly.
+        """
+        b = DummyChannel.SSL()
+        a = http.HTTPChannel()
+        a.makeConnection(b)
+        req = http.Request(a)
+        self.assertTrue(req.isSecure())
+
+
+    def test_notSecure(self):
+        """
+        Test that an insecure transport works properly.
+        """
+        b = DummyChannel.TCP()
+        a = http.HTTPChannel()
+        a.makeConnection(b)
+        req = http.Request(a)
+        self.assertFalse(req.isSecure())
+
+
+    def test_notSecureAfterFinish(self):
+        """
+        After a request is finished, it always reigsters insecure.
+        """
+        b = DummyChannel.SSL()
+        a = http.HTTPChannel()
+        a.makeConnection(b)
+        req = http.Request(a)
+        a.requests.append(req)
+
+        req.setResponseCode(200)
+        req.finish()
+        self.assertFalse(req.isSecure())
+
+
+
 class GenericHTTPChannelTests(unittest.TestCase):
     """
     Tests for L{http._genericHTTPChannelProtocol}, a L{HTTPChannel}-alike which
