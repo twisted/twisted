@@ -39,9 +39,9 @@ class EthernetProtocol(protocol.AbstractDatagramProtocol):
     def addProto(self, num, proto):
         proto = raw.IRawPacketProtocol(proto)
         if num < 0:
-            raise TypeError, 'Added protocol must be positive or zero'
+            raise TypeError('Added protocol must be positive or zero')
         if num >= 2**16:
-            raise TypeError, 'Added protocol must fit in 16 bits'
+            raise TypeError('Added protocol must fit in 16 bits')
         if num not in self.etherProtos:
             self.etherProtos[num] = []
         self.etherProtos[num].append(proto)

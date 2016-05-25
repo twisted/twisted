@@ -257,7 +257,7 @@ per-group object. We'll go out on a limb and call this the
             self.users = []
         def remote_send(self, from_user, message):
             if not self.allowMattress and "mattress" in message:
-                raise ValueError, "Don't say that word"
+                raise ValueError("Don't say that word")
             for user in self.users:
                 user.send("<%s> says: %s" % (from_user.name, message))
         def addUser(self, user):
@@ -468,7 +468,7 @@ that it will ever use, so no lookups are needed:
             self.users = []
         def send(self, from_user, message):
             if not self.allowMattress and "mattress" in message:
-                raise ValueError, "Don't say that word"
+                raise ValueError("Don't say that word")
             for user in self.users:
                 user.send("<%s> says: %s" % (from_user.name, message))
         def addUser(self, user):
