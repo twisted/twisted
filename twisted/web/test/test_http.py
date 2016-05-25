@@ -860,7 +860,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
 
 
 
-class ChunkingTests(unittest.TestCase):
+class ChunkingTests(unittest.TestCase, ResponseTestMixin):
 
     strings = [b"abcv", b"", b"fdfsd423", b"Ffasfas\r\n",
                b"523523\n\rfsdf", b"4234"]
@@ -883,6 +883,29 @@ class ChunkingTests(unittest.TestCase):
             except ValueError:
                 pass
         self.assertEqual(result, self.strings)
+
+    def test_chunkedResponses(self):
+        """
+        Test that the L{HTTPChannel} correctly chunks responses when needed.
+        """
+        channel = http.HTTPChannel()
+        req = http.Request(channel, False)
+        trans = StringTransport()
+
+        channel.transport = trans
+
+        req.setResponseCode(200)
+        req.clientproto = b"HTTP/1.1"
+        req.responseHeaders.setRawHeaders(b"test", [b"lemur"])
+        req.write(b'Hello')
+        req.write(b'World!')
+
+        self.assertResponseEquals(
+            trans.value(),
+            [(b"HTTP/1.1 200 OK",
+              b"Test: lemur",
+              b"Transfer-Encoding: chunked",
+              b"5\r\nHello\r\n6\r\nWorld!\r\n")])
 
 
 
