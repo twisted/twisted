@@ -369,6 +369,45 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
 
 
 
+class ShutdownTests(unittest.TestCase):
+    """
+    Tests that shutting down a connection works properly.
+    """
+    class ShutdownHTTPHandler(http.Request):
+        """
+        A HTTP handler that just immediately calls loseConnection.
+        """
+        def process(self):
+            self.loseConnection()
+
+
+    request = (
+        b"POST / HTTP/1.1\r\n"
+        b"Content-Length: 10\r\n"
+        b"\r\n"
+        b"0123456789"
+    )
+
+
+    def test_losingConnection(self):
+        """
+        Test that loseConnection inside the request terminates the transport.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = self.ShutdownHTTPHandler
+        a.makeConnection(b)
+        a.dataReceived(self.request)
+
+        # The transport should have been shut down.
+        self.assertTrue(b.disconnecting)
+
+        # No response should have been written.
+        value = b.value()
+        self.assertEqual(value, b'')
+
+
+
 class GenericHTTPChannelTests(unittest.TestCase):
     """
     Tests for L{http._genericHTTPChannelProtocol}, a L{HTTPChannel}-alike which
