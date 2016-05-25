@@ -1,0 +1,1 @@
+twisted.web.http.HTTPChannel now implements ITransport. Along with this change, twisted.web.http.Request now directs all its writes to the HTTPChannel, rather than to the backing transport. This change is required for future HTTP/2 work.
