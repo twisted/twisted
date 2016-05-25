@@ -1609,6 +1609,7 @@ class _NoPushProducer(object):
 
 
 
+@implementer(interfaces.ITransport)
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
