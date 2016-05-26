@@ -8,7 +8,6 @@ Test HTTP/2 support.
 from __future__ import absolute_import, division
 
 import itertools
-import json
 
 from twisted.internet import defer
 from twisted.protocols.test.test_tls import NonStreamingProducer
