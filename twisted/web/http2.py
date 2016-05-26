@@ -31,7 +31,7 @@ import h2.exceptions
 
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.interfaces import (
-    IProtocol, ITransport, IConsumer, IPushProducer
+    IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import LoopingCall
@@ -625,6 +625,17 @@ class H2Connection(Protocol):
         self.transport.write(self.conn.data_to_send())
 
 
+    def _isSecure(self):
+        """
+        Returns L{True} if this channel is using a secure transport.
+
+        @returns: L{True} if this channel is secure.
+        @rtype: L{bool}
+        """
+        # A channel is secure if its transport is ISSLTransport.
+        return ISSLTransport(self.transport, None) is not None
+
+
     def _send100Continue(self, streamID):
         """
         Sends a 100 Continue response, used to signal to clients that further
@@ -981,6 +992,16 @@ class H2Stream(object):
         Similar to getPeer, but for this side of the connection.
         """
         self._conn.getHost()
+
+
+    def isSecure(self):
+        """
+        Returns L{True} if this channel is using a secure transport.
+
+        @returns: L{True} if this channel is secure.
+        @rtype: L{bool}
+        """
+        return self._conn.isSecure()
 
 
     # Implementation: IConsumer
