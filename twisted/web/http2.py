@@ -410,7 +410,7 @@ class H2Connection(Protocol):
 
         @param event: The Hyper-h2 event that encodes information about the
             stream reprioritization.
-        @type event: L{h2.events.PriorityUpdate}
+        @type event: L{h2.events.PriorityUpdated}
         """
         try:
             self.priority.reprioritize(
