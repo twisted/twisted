@@ -705,6 +705,11 @@ class H2Stream(object):
         not be sent on the network at this time.
     @type _buffer: L{io.BytesIO}
     """
+    # We need a transport property for t.w.h.Request, but HTTP/2 doesn't want
+    # to expose it. So we just set it to None.
+    transport = None
+
+
     def __init__(self, streamID, connection, headers, requestFactory):
         self.streamID = streamID
         self.producing = True
