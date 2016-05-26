@@ -2721,3 +2721,15 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                     "twisted.web.http.Request.noLongerQueued was deprecated "
                     "in Twisted 16.3.0")},
                          sub(["category", "message"], warnings[0]))
+
+
+
+class HTTP_2_Tests(unittest.TestCase):
+    """
+    Tests for the HTTP/2 exposure in L{twisted.web.http}.
+    """
+    def test_http2NotPresent(self):
+        """
+        HTTP/2 support is not available in Twisted.
+        """
+        self.assertFalse(http.H2_ENABLED)

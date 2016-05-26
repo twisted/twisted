@@ -10,7 +10,7 @@ from __future__ import absolute_import, division
 
 import os
 
-from twisted.web import server, static, script, demo
+from twisted.web import server, static, script, demo, http
 from twisted.internet import interfaces, reactor
 from twisted.python import usage, reflect, threadpool
 from twisted.python.compat import _PY3
@@ -249,10 +249,31 @@ def makeService(config):
         personal.setServiceParent(s)
     else:
         if config['https']:
-            from twisted.internet.ssl import DefaultOpenSSLContextFactory
-            i = internet.SSLServer(int(config['https']), site,
-                          DefaultOpenSSLContextFactory(config['privkey'],
-                                                       config['certificate']))
+            from twisted.internet.ssl import CertificateOptions
+            from OpenSSL import crypto
+
+            with open(config['privkey'], 'rb') as f:
+                privateKey = crypto.load_privatekey(
+                    crypto.FILETYPE_PEM, f.read()
+                )
+
+            with open(config['certificate'], 'rb') as f:
+                certificate = crypto.load_certificate(
+                    crypto.FILETYPE_PEM, f.read()
+                )
+
+            acceptableProtocols = [b'http/1.1']
+            if http.H2_ENABLED:
+                acceptableProtocols.insert(0, b'h2')
+
+            i = internet.SSLServer(
+                int(config['https']),
+                site,
+                CertificateOptions(privateKey,
+                                   certificate,
+                                   acceptableProtocols=acceptableProtocols),
+                backlog=128
+            )
             i.setServiceParent(s)
         strports.service(config['port'], site).setServiceParent(s)
 
