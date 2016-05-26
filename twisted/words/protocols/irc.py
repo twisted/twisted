@@ -2545,7 +2545,7 @@ class IRCClient(basic.LineReceiver):
 
     def ctcpReply_PING(self, user, channel, data):
         nick = user.split('!', 1)[0]
-        if (not self._pings) or (not self._pings.has_key((nick, data))):
+        if (not self._pings) or ((nick, data) not in self._pings):
             raise IRCBadMessage(
                 "Bogus PING response from %s: %s" % (user, data))
 
