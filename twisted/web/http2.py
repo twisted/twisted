@@ -720,6 +720,26 @@ class H2Stream(object):
 
 
     def __init__(self, streamID, connection, headers, requestFactory):
+        """
+        Initialize this HTTP/2 stream.
+
+        @param streamID: The numerical stream ID that this object corresponds
+            to.
+        @type streamID: L{int}
+
+        @param connection: The HTTP/2 connection this stream belongs to.
+        @type connection: L{H2Connection}
+
+        @param headers: The HTTP/2 request headers.
+        @type headers: A L{list} of L{tuples} of header name and header value,
+            both as L{bytes}.
+
+        @param requestFactory: A function that builds appropriate request
+            request objects.
+        @type requestFactory: A callable that returns a
+            L{twisted.web.iweb.IRequest}.
+        """
+
         self.streamID = streamID
         self.producing = True
         self.command = None
