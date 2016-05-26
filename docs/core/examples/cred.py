@@ -106,8 +106,8 @@ class Protocol(basic.LineReceiver):
         self.sendLine("You have the following privileges: ")
         self.sendLine(" ".join(map(str, self.avatar.getPrivileges())))
 
-    def _cbLogin(self, interface_avatar_logout):
-        (interface, avatar, logout) = interface_avatar_logout
+    def _cbLogin(self, result):
+        (interface, avatar, logout) = result
         assert interface is IProtocolUser
         self.avatar = avatar
         self.logout = logout

@@ -70,8 +70,8 @@ class INotifyTests(unittest.TestCase):
         if expectedPath is None:
             expectedPath = self.dirname.child("foo.bar")
         notified = defer.Deferred()
-        def cbNotified(watch_filename_events):
-            (watch, filename, events) = watch_filename_events
+        def cbNotified(result):
+            (watch, filename, events) = result
             self.assertEqual(filename, expectedPath)
             self.assertTrue(events & mask)
         notified.addCallback(cbNotified)
@@ -388,8 +388,8 @@ class INotifyTests(unittest.TestCase):
         expectedPath.touch()
 
         notified = defer.Deferred()
-        def cbNotified(ignored_filename_events):
-            (ignored, filename, events) = ignored_filename_events
+        def cbNotified(result):
+            (ignored, filename, events) = result
             self.assertEqual(filename, expectedPath)
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
@@ -425,8 +425,8 @@ class INotifyTests(unittest.TestCase):
         expectedPath2.touch()
 
         notified = defer.Deferred()
-        def cbNotified(ignored_filename_events):
-            (ignored, filename, events) = ignored_filename_events
+        def cbNotified(result):
+            (ignored, filename, events) = result
             self.assertEqual(filename, expectedPath2)
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 

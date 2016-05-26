@@ -841,11 +841,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.sendCode(250, 'Delivery in progress')
 
 
-    def _cbAnonymousAuthentication(self, iface_avatar_logout):
+    def _cbAnonymousAuthentication(self, result):
         """
         Save the state resulting from a successful anonymous cred login.
         """
-        (iface, avatar, logout) = iface_avatar_logout
+        (iface, avatar, logout) = result
         if issubclass(iface, IMessageDeliveryFactory):
             self.deliveryFactory = avatar
             self.delivery = None

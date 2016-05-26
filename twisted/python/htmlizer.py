@@ -17,9 +17,9 @@ class TokenPrinter:
     def __init__(self, writer):
         self.writer = writer
 
-    def printtoken(self, type, token, srow_scol, erow_ecol, line):
-        (srow, scol) = srow_scol
-        (erow, ecol) = erow_ecol
+    def printtoken(self, type, token, sCoordinates, eCoordinates, line):
+        (srow, scol) = sCoordinates
+        (erow, ecol) = eCoordinates
         #print "printtoken(%r,%r,%r,(%r,%r),(%r,%r),%r), row=%r,col=%r" % (
         #    self, type, token, srow,scol, erow,ecol, line,
         #    self.currentLine, self.currentCol)

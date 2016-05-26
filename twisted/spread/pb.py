@@ -1157,8 +1157,8 @@ class PBClientFactory(protocol.ClientFactory):
         return root.callRemote("login", username).addCallback(
             self._cbResponse, password, client)
 
-    def _cbResponse(self, challenge_challenger, password, client):
-        (challenge, challenger) = challenge_challenger
+    def _cbResponse(self, result, password, client):
+        (challenge, challenger) = result
         return challenger.callRemote("respond", respond(challenge, password), client)
 
 
@@ -1317,12 +1317,12 @@ class _JellyableAvatarMixin:
     Helper class for code which deals with avatars which PB must be capable of
     sending to a peer.
     """
-    def _cbLogin(self, interface_avatar_logout):
+    def _cbLogin(self, result):
         """
         Ensure that the avatar to be returned to the client is jellyable and
         set up disconnection notification to call the realm's logout object.
         """
-        (interface, avatar, logout) = interface_avatar_logout
+        (interface, avatar, logout) = result
         if not IJellyable.providedBy(avatar):
             avatar = AsReferenceable(avatar, "perspective")
 

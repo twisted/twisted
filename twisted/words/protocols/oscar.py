@@ -230,7 +230,8 @@ class SSIBuddy:
                 self.alertSound = v
  
     def oscarRep(self, groupID, buddyID):
-        tlvData = reduce(lambda x,y: x+y, map(lambda k_v:TLV(k_v[0],k_v[1]), self.tlvs.items()), '\000\000')
+        # Result is a tupple of (k, v)
+        tlvData = reduce(lambda x,y: x+y, map(lambda result:TLV(result[0],result[1]), self.tlvs.items()), '\000\000')
         return struct.pack('!H', len(self.name)) + self.name + \
                struct.pack('!HH', groupID, buddyID) + '\000\000' + tlvData
 

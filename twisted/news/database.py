@@ -1031,7 +1031,8 @@ class NewsStorageAugmentation:
         return self.dbpool.runQuery(sql).addCallback(
             lambda result: result[0]
         ).addCallback(
-            lambda index_id_body: (index_id_body[0], index_id_body[1], StringIO.StringIO(index_id_body[2]))
+            # result is a tupple of (index, id, body)
+            lambda result: (result[0], result[1], StringIO.StringIO(result[2]))
         )
 
 ####

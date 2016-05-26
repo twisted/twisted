@@ -324,7 +324,8 @@ def parseRequest_pty_req(data):
     return term, winSize, modes
 
 def packRequest_pty_req(term, geometry, modes):
-    """Pack a pty-req request so that it is suitable for sending.
+    """
+    Pack a pty-req request so that it is suitable for sending.
 
     NOTE: modes must be packed before being sent here.
 
@@ -346,7 +347,8 @@ def parseRequest_window_change(data):
     return rows, cols, xpixel, ypixel
 
 def packRequest_window_change(geometry):
-    """Pack a window-change request so that it is suitable for sending.
+    """
+    Pack a window-change request so that it is suitable for sending.
 
     @type geometry: C{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)

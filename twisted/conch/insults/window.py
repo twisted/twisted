@@ -423,7 +423,8 @@ def verticalLine(terminal, x, top, bottom):
 
 
 def rectangle(terminal, position, dimension):
-    """ Draw a rectangle
+    """
+    Draw a rectangle
 
     @type position: C{tuple}
     @param position: A tuple of the (top, left) coordinates of the rectangle.

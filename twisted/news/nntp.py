@@ -429,8 +429,8 @@ class NNTPClient(basic.LineReceiver):
             self.gotSubscriptions(self._endState())
 
 
-    def _headerGroup(self, code_line):
-        (code, line) = code_line
+    def _headerGroup(self, response):
+        (code, line) = response
         self.gotGroup(tuple(line.split()))
         self._endState()
 
@@ -460,8 +460,8 @@ class NNTPClient(basic.LineReceiver):
             self.gotBody('\n'.join(self._endState())+'\n')
 
 
-    def _headerPost(self, code_message):
-        (code, message) = code_message
+    def _headerPost(self, response):
+        (code, message) = response
         if code == 340:
             self.transport.write(self._postText[0].replace('\n', '\r\n').replace('\r\n.', '\r\n..'))
             if self._postText[0][-1:] != '\n':
@@ -474,8 +474,8 @@ class NNTPClient(basic.LineReceiver):
         self._endState()
 
 
-    def _headerPosted(self, code_message):
-        (code, message) = code_message
+    def _headerPosted(self, response):
+        (code, message) = response
         if code == 240:
             self.postedOk()
         else:
@@ -504,8 +504,8 @@ class NNTPClient(basic.LineReceiver):
             self.gotNewGroups(self._endState())
 
 
-    def _headerMode(self, code_message):
-        (code, message) = code_message
+    def _headerMode(self, response):
+        (code, message) = response
         if code == 203:
             self.setStreamSuccess()
         else:
@@ -621,8 +621,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotListGroup, self._errListGroup)
 
 
-    def _gotListGroup(self, group_articles):
-        (group, articles) = group_articles
+    def _gotListGroup(self, result):
+        (group, articles) = result
         self.currentGroup = group
         if len(articles):
             self.currentIndex = int(articles[0])
@@ -772,8 +772,8 @@ class NNTPServer(basic.LineReceiver):
         defer.addCallbacks(self._gotGroup, self._errGroup)
 
 
-    def _gotGroup(self, name_num_high_low_flags):
-        (name, num, high, low, flags) = name_num_high_low_flags
+    def _gotGroup(self, result):
+        (name, num, high, low, flags) = result
         self.currentGroup = name
         self.currentIndex = low
         self.sendLine('211 %d %d %d %s group selected' % (num, low, high, name))
@@ -810,8 +810,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotArticle, self._errArticle)
 
 
-    def _gotArticle(self, index_id_article):
-        (index, id, article) = index_id_article
+    def _gotArticle(self, result):
+        (index, id, article) = result
         self.currentIndex = index
         self.sendLine('220 %d %s article' % (index, id))
         s = basic.FileSender()
@@ -840,8 +840,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotStat, self._errStat)
 
 
-    def _gotStat(self, index_id_article):
-        (index, id, article) = index_id_article
+    def _gotStat(self, result):
+        (index, id, article) = result
         self.currentIndex = index
         self.sendLine('223 %d %s article retreived - request text separately' % (index, id))
 
@@ -857,8 +857,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotHead, self._errHead)
 
 
-    def _gotHead(self, index_id_head):
-        (index, id, head) = index_id_head
+    def _gotHead(self, result):
+        (index, id, head) = result
         self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
         self.transport.write(head + '\r\n')
@@ -876,8 +876,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotBody, self._errBody)
 
 
-    def _gotBody(self, index_id_body):
-        (index, id, body) = index_id_body
+    def _gotBody(self, result):
+        (index, id, body) = result
         self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
         self.lastsent = ''

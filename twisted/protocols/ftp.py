@@ -874,8 +874,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             reply = USR_LOGGED_IN_PROCEED
         del self._user
 
-        def _cbLogin(interface_avatar_logout):
-            (interface, avatar, logout) = interface_avatar_logout
+        def _cbLogin(result):
+            (interface, avatar, logout) = result
             assert interface is IFTPShell, "The realm is busted, jerk."
             self.shell = avatar
             self.logout = logout
@@ -1316,8 +1316,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
-        def cbStat(size_arg):
-            (size,) = size_arg
+        def cbStat(result):
+            (size,) = result
             return (FILE_STATUS, str(size))
 
         return self.shell.stat(newsegs, ('size',)).addCallback(cbStat)
@@ -1341,8 +1341,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
-        def cbStat(modified_arg):
-            (modified,) = modified_arg
+        def cbStat(result):
+            (modified,) = result
             return (FILE_STATUS, time.strftime('%Y%m%d%H%M%S', time.gmtime(modified)))
 
         return self.shell.stat(newsegs, ('modified',)).addCallback(cbStat)

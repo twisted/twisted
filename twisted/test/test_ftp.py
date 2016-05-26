@@ -739,8 +739,8 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
             return defer.gatherResults([d1, d2])
         chainDeferred.addCallback(queueCommand)
 
-        def downloadDone(ignored_downloader):
-            (ignored, downloader) = ignored_downloader
+        def downloadDone(result):
+            (ignored, downloader) = result
             return downloader.buffer
         return chainDeferred.addCallback(downloadDone)
 
@@ -1328,8 +1328,8 @@ class FTPFileListingTests(unittest.TestCase):
         line1 = 'drw-r--r--   2 root     other        531 Jan  9  2003 A'
         line2 = 'lrw-r--r--   1 root     other          1 Jan 29 03:26 B -> A'
         line3 = 'woohoo! '
-        def check(file1_file2_other):
-            ((file1, file2), (other,)) = file1_file2_other
+        def check(result):
+            ((file1, file2), (other,)) = result
             self.assertTrue(other == 'woohoo! \r', 'incorrect other line')
             # file 1
             self.assertTrue(file1['filetype'] == 'd', 'misparsed fileitem')
@@ -1354,8 +1354,8 @@ class FTPFileListingTests(unittest.TestCase):
         return self.getFilesForLines([line1, line2, line3]).addCallback(check)
 
     def testUnknownLine(self):
-        def check(files_others):
-            (files, others) = files_others
+        def check(result):
+            (files, others) = result
             self.assertFalse(files, 'unexpected file entries')
             self.assertTrue(others == ['ABC\r', 'not a file\r'],
                             'incorrect unparsable lines: %s' % repr(others))
@@ -1372,8 +1372,8 @@ class FTPFileListingTests(unittest.TestCase):
             'B A -> D C/A B'
             )
 
-        def check(files_others):
-            (files, others) = files_others
+        def check(result):
+            (files, others) = result
             self.assertEqual([], others, 'unexpected others entries')
             self.assertEqual(
                 'A B', files[0]['filename'], 'misparsed filename')
@@ -1394,8 +1394,8 @@ class FTPFileListingTests(unittest.TestCase):
             'B A -> D\ C/A B'
             )
 
-        def check(files_others):
-            (files, others) = files_others
+        def check(result):
+            (files, others) = result
             self.assertEqual([], others, 'unexpected others entries')
             self.assertEqual(
                 'A B', files[0]['filename'], 'misparsed filename')

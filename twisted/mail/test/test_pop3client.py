@@ -177,8 +177,8 @@ class ListConsumer:
     def __init__(self):
         self.data = {}
 
-    def consume(self, item_value):
-        (item, value) = item_value
+    def consume(self, result):
+        (item, value) = result
         self.data.setdefault(item, []).append(value)
 
 class MessageConsumer:

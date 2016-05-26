@@ -776,14 +776,14 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         ).addErrback(self._ebUnexpected)
 
 
-    def _cbMailbox(self, interface_avatar_logout, user):
+    def _cbMailbox(self, result, user):
         """
         Complete successful authentication.
 
         Save the mailbox and logout function for the authenticated user and
         send a successful response to the client.
 
-        @type interface_avatar_logout: C{tuple}
+        @type result: C{tuple}
         @param interface_avatar_logout: The first item of the tuple is a
             C{zope.interface.Interface} which is the interface
             supported by the avatar.  The second item of the tuple is a
@@ -795,7 +795,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @type user: L{bytes}
         @param user: The user being authenticated.
         """
-        (interface, avatar, logout) = interface_avatar_logout
+        (interface, avatar, logout) = result
         if interface is not IMailbox:
             self.failResponse('Authentication failed')
             log.err("_cbMailbox() called with an interface other than IMailbox")
