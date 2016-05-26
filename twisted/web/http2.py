@@ -9,6 +9,9 @@ This is the basic server-side protocol implementation used by the Twisted
 Web server for HTTP2.  This functionality is intended to be combined with the
 HTTP/1.1 and HTTP/1.0 functionality in twisted.web.http to provide complete
 protocol support for HTTP-type protocols.
+
+This API is currently considered private because it's in early draft form. When
+it has stabilised, it'll be made public.
 """
 
 from __future__ import absolute_import, division
@@ -33,6 +36,10 @@ from twisted.internet.interfaces import (
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import LoopingCall
 from twisted.protocols.tls import _PullToPush
+
+
+# This API is currently considered private.
+__all__ = []
 
 
 _END_STREAM_SENTINEL = object()
