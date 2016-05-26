@@ -1115,7 +1115,6 @@ def _addHeaderToRequest(request, header):
     """
     requestHeaders = request.requestHeaders
     name, value = header
-    name, value = name.encode('utf-8'), value.encode('utf-8')
     values = requestHeaders.getRawHeaders(name)
 
     if values is not None:
