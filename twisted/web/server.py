@@ -34,9 +34,8 @@ else:
     from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address
 from twisted.web import iweb, http, util
-from twisted.web.http import unquote
+from twisted.web.http import unquote, _version as version
 from twisted.python import log, reflect, failure, components
-from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
 
@@ -611,8 +610,6 @@ class Session(components.Componentized):
         if self._expireCall is not None:
             self._expireCall.reset(self.sessionTimeout)
 
-
-version = networkString("TwistedWeb/%s" % (copyright.version,))
 
 
 class Site(http.HTTPFactory):

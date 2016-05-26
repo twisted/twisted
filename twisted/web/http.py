@@ -89,6 +89,7 @@ except ImportError:
 from zope.interface import implementer, provider
 
 # twisted imports
+from twisted import copyright
 from twisted.python.compat import (
     _PY3, unicode, intToBytes, networkString, nativeString)
 from twisted.python.deprecate import deprecated
@@ -102,6 +103,7 @@ from twisted.protocols import policies, basic
 
 from twisted.web.iweb import (
     IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
+from twisted.web.error import CannotUpgrade
 from twisted.web.http_headers import Headers
 
 H2_ENABLED = False
@@ -131,6 +133,9 @@ if _PY3:
     _intTypes = int
 else:
     _intTypes = (int, long)
+
+_version = networkString("TwistedWeb/%s" % (copyright.version,))
+_MAX_HEADERS_SIZE = 16384 # 16K, on par with IIS
 
 protocol_version = "HTTP/1.1"
 
@@ -1613,7 +1618,7 @@ class _NoPushProducer(object):
 @implementer(interfaces.ITransport)
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
-    A receiver for HTTP requests.
+    A receiver for HTTP/1.1 and HTTP/1.0 requests.
 
     @ivar MAX_LENGTH: Maximum length for initial request line and each line
         from the header.
@@ -1647,11 +1652,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
 
     maxHeaders = 500
-    totalHeadersSize = 16384
+    totalHeadersSize = _MAX_HEADERS_SIZE
 
     length = 0
     persistent = 1
-    __header = ''
+    __header = b''
     __first_line = 1
     __content = None
 
@@ -1740,7 +1745,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # with processing. We'll have sent a 400 anyway, so just stop.
                 if not ok:
                     return
-            self.__header = ''
+            self.__header = b''
             self.allHeadersReceived()
             if self.length == 0:
                 self.allContentReceived()
@@ -1748,7 +1753,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.setRawMode()
         elif line[0] in b' \t':
             # Continuation of a multi line header.
-            self.__header = self.__header + '\n' + line
+            self.__header = self.__header + b'\n' + line
         # Regular header line.
         # Processing of header line is delayed to allow accumulating multi
         # line headers.
@@ -2092,9 +2097,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         As described by HTTP standard we should be patient and accept the
         whole request from the client before sending a polite bad request
         response, even in the case when clients send tons of data.
-
-        @param transport: Transport handling connection to the client.
-        @type transport: L{interfaces.ITransport}
         """
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.transport.loseConnection()
@@ -2206,6 +2208,28 @@ def proxiedLogFormatter(timestamp, request):
 
 
 
+def _respondToUpgrade(transport, newProtocol, headers):
+    """
+    Respond on C{transport} with a C{HTTP/1.1 101 Switching Protocols} status,
+    the headers to say that we have upgraded to C{newProtocol}, and the
+    additional C{headers}.
+
+    @type newProtocol: L{bytes}
+    @type headers: L{dict} with L{bytes} keys and values
+    """
+    transport.write(b"HTTP/1.1 101 Switching Protocols\r\n")
+
+    transport.write(b"Server: " + _version + b"\r\n")
+    transport.write(b"Upgrade: " + newProtocol + b"\r\n")
+    transport.write(b"Connection: Upgrade\r\n")
+
+    for k, v in headers.items():
+        transport.write(k + b": " + v + b"\r\n")
+
+    transport.write(b"\r\n")
+
+
+
 class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     """
     A proxy object that wraps one of the HTTP protocol objects, and switches
@@ -2232,7 +2256,16 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     _negotiatedProtocol = None
     _requestFactory = Request
     _site = None
+    _buffering = False
+    _replay = False
 
+    _maxHeadersLength = _MAX_HEADERS_SIZE
+
+
+    def __init__(self, *args, **kwargs):
+        self._buffer = b""
+        self._bufferLen = 0
+        super(_GenericHTTPChannelProtocol, self).__init__(*args, **kwargs)
 
     @property
     def factory(self):
@@ -2272,31 +2305,151 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._channel.site = value
 
 
+    def _upgrade(self):
+        """
+        Look at the headers and determine if the client wants us to upgrade.
+        """
+        content = self._buffer.split(b"\r\n\r\n", 1)[0].split(b"\r\n")
+
+        headers = {}
+        requestLine = content[0].split(b" ")
+
+        # Should match "VERB PATH HTTP/VER"
+        if not len(requestLine) == 3:
+            self._respondToBadRequestAndDisconnect()
+            return None
+
+        if requestLine[2].lower() == b"http/1.0":
+            # It's HTTP/1.0, return that.
+            self._replay = True
+            return b"http/1.0"
+
+        if not requestLine[2].lower() == b"http/1.1":
+            # If it's not HTTP/1.0 or HTTP/1.1, we don't really know what to
+            # do!
+            self._respondToBadRequestAndDisconnect()
+            return None
+
+        # Get the header lines (that is, every line except the first, which is
+        # the request line
+        for line in content[1:]:
+            key, val = line.split(b":", 1)
+            headers[key.lower()] = val.strip()
+
+        verb = requestLine[0]
+        path = requestLine[1]
+
+        if b"upgrade" not in headers:
+            # Regular HTTP/1.1, no "Upgrade"
+            self._replay = True
+            return b"http/1.1"
+
+        for upgrade in headers[b"upgrade"].split(b","):
+            upgrade = upgrade.strip()
+            # See if we can upgrade to this. If we can't, try the next one, and
+            # so on, until we either get one we can upgrade to, or we just
+            # don't upgrade the connection.
+            upgrader = self.factory._upgradeables.get(upgrade.lower())
+
+            if upgrader:
+                try:
+                    res = upgrader.upgrade(verb, path, headers)
+                    transport = self._channel.transport
+                    self._channel, self._replay, headersToSend = res
+
+                    if not self._replay:
+                        _respondToUpgrade(transport, upgrade, headersToSend)
+
+                    self._channel.makeConnection(transport)
+                    return upgrade
+                except CannotUpgrade:
+                    # This one failed, try the next one
+                    pass
+
+        # Negotiation failed!
+        self._replay = True
+        return b"http/1.1"
+
+
+    def _bufferData(self, data):
+        """
+        Add data to the internal temporary buffer, and determine if we have
+        enough of it to see if the client wants to perform upgrade negotiation.
+        """
+        self._buffer += data
+        self._bufferLen += len(data)
+
+        if self._bufferLen > self._maxHeadersLength:
+            self._respondToBadRequestAndDisconnect()
+
+        if b"\r\n\r\n" in self._buffer:
+            self._negotiatedProtocol = self._upgrade()
+            self._buffering = False
+
+            if self._replay:
+                self.dataReceived(self._buffer)
+
+            del self._buffer
+
+
     def dataReceived(self, data):
         """
         A override of L{IProtocol.dataReceived} that checks what protocol we're
-        using.
+        using, and negotiates HTTP/1.1 Upgrade if needed.
         """
-        if self._negotiatedProtocol is None:
+        if self._buffering:
+            return self._bufferData(data)
+
+        elif self._negotiatedProtocol is None:
             try:
+                # Does ALPN/NPN/some other transport negotiation have the
+                # protocol the client desires negotiated?
                 negotiatedProtocol = self._channel.transport.negotiatedProtocol
             except AttributeError:
-                # Plaintext HTTP, always HTTP/1.1
-                negotiatedProtocol = b'http/1.1'
-
-            if negotiatedProtocol is None:
-                negotiatedProtocol = b'http/1.1'
+                negotiatedProtocol = None
 
             if negotiatedProtocol == b'h2':
-                assert H2_ENABLED, "Cannot negotiate HTTP/2 without support."
+                # We can't handle HTTP/2 yet
+                return self._respondToBadRequestAndDisconnect()
+
+            elif negotiatedProtocol in [b"http/1.1", None]:
+                if getattr(self.factory, "_upgradeables"):
+                    # We can upgrade to different protocols through HTTP/1.1
+                    # Upgrade, so we need to check the request to see if it
+                    # wants us to do this. We handle it here rather than in
+                    # HTTPChannel so that all the switching between protocols
+                    # is kept in one place.
+                    # In this case, a negotiatedProtocol of None means that the
+                    # transport didn't negotiate it for us, and we have to
+                    # assume HTTP/1.1 or HTTP/1.0. Hence we need to inspect
+                    # this request.
+                    self._buffering = True
+                    return self._bufferData(data)
+                else:
+                    # We can't possibly upgrade to anything (because the HTTP
+                    # factory has no extra protocols configures), so we must
+                    # just assume HTTP/1.1.
+                    negotiatedProtocol = b"http/1.1"
+
             else:
-                # Only HTTP/2 and HTTP/1.1 are supported right now.
-                assert negotiatedProtocol == b'http/1.1', \
-                       "Unsupported protocol negotiated"
+                # A protocol which we didn't understand was negotiated by ALPN.
+                return self._respondToBadRequestAndDisconnect()
 
             self._negotiatedProtocol = negotiatedProtocol
 
         return self._channel.dataReceived(data)
+
+
+    def _respondToBadRequestAndDisconnect(self):
+        """
+        This is a quick and dirty way of responding to bad requests.
+
+        As described by HTTP standard we should be patient and accept the
+        whole request from the client before sending a polite bad request
+        response, even in the case when clients send tons of data.
+        """
+        self._channel.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+        self._channel.transport.loseConnection()
 
 
 
@@ -2358,11 +2511,15 @@ class HTTPFactory(protocol.ServerFactory):
         if logFormatter is None:
             logFormatter = combinedLogFormatter
         self._logFormatter = logFormatter
+        self._upgradeables = {}
 
         # For storing the cached log datetime and the callback to update it
         self._logDateTime = None
         self._logDateTimeCall = None
 
+
+    def _addUpgrader(self, name, upgrader):
+        self._upgradeables[name] = upgrader
 
     def _updateLogDateTime(self):
         """

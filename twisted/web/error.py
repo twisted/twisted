@@ -385,3 +385,9 @@ class FlattenerError(Exception):
 
     def __str__(self):
         return repr(self)
+
+
+class CannotUpgrade(Exception):
+    """
+    Can't do a http upgrade.
+    """
