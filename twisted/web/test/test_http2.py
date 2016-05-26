@@ -296,7 +296,7 @@ class ConsumerDummyHandler(http.Request):
         http.Request.__init__(self, *args, **kwargs)
 
         # Production starts paused.
-        self._channel.pauseProducing()
+        self.channel.pauseProducing()
         self._requestReceived = False
         self._data = None
 
@@ -305,7 +305,7 @@ class ConsumerDummyHandler(http.Request):
         """
         Start the data pipe.
         """
-        self._channel.resumeProducing()
+        self.channel.resumeProducing()
 
 
     def requestReceived(self, *args, **kwargs):
@@ -333,8 +333,8 @@ class AbortingConsumerDummyHandler(ConsumerDummyHandler):
         """
         Start and then immediately stop the data pipe.
         """
-        self._channel.resumeProducing()
-        self._channel.stopProducing()
+        self.channel.resumeProducing()
+        self.channel.stopProducing()
 
 
 
@@ -843,7 +843,7 @@ class HTTP2ServerTests(unittest.TestCase):
 
         # This should have cancelled the request.
         self.assertTrue(request._disconnected)
-        self.assertTrue(request._channel is None)
+        self.assertTrue(request.channel is None)
 
         # An attempt to write should at this point raise an exception.
         self.assertRaises(KeyError, request.write, b"third chunk")
@@ -915,7 +915,7 @@ class HTTP2ServerTests(unittest.TestCase):
 
         # This should have cancelled the request.
         self.assertTrue(request._disconnected)
-        self.assertTrue(request._channel is None)
+        self.assertTrue(request.channel is None)
 
         # It should also have cancelled the sending loop.
         self.assertFalse(a._sender.running)
@@ -1022,7 +1022,7 @@ class HTTP2ServerTests(unittest.TestCase):
 
         # This should have cancelled the request.
         self.assertTrue(request._disconnected)
-        self.assertTrue(request._channel is None)
+        self.assertTrue(request.channel is None)
 
         # We expect 2 frames Settings and the 400 Headers.
         def validate(streamID):
