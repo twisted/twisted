@@ -303,7 +303,7 @@ class SSHConnection(connection.SSHConnection):
         remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
         log.msg(self.remoteForwards)
         log.msg(remoteHP)
-        if self.remoteForwards.has_key(remoteHP[1]):
+        if remoteHP[1] in self.remoteForwards:
             connectHP = self.remoteForwards[remoteHP[1]]
             log.msg('connect forwarding %s' % (connectHP,))
             return SSHConnectForwardingChannel(connectHP,
