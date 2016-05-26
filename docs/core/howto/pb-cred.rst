@@ -62,7 +62,7 @@ look something like this:
             self.groups = {} # indexed by name
             self.users = {} # indexed by name
         def remote_joinGroup(self, username, groupname):
-            if not self.groups.has_key(groupname):
+            if groupname not in self.groups:
                 self.groups[groupname] = []
             self.groups[groupname].append(self.users[username])
         def remote_sendMessage(self, from_username, groupname, message):
@@ -160,7 +160,7 @@ object. Rather than choosing an obvious name [#]_ , let's call this the
         def __init__(self):
             self.groups = {} # indexed by name
         def joinGroup(self, groupname, user):
-            if not self.groups.has_key(groupname):
+            if groupname not in self.groups:
                 self.groups[groupname] = []
             self.groups[groupname].append(user)
         def sendMessage(self, from_username, groupname, message):
