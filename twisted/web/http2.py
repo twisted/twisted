@@ -64,39 +64,39 @@ class H2Connection(Protocol):
     """
     A class representing a single HTTP/2 connection.
 
-    This implementation of IProtocol works hand in hand with H2Stream. This is
-    because we have the requirement to register multiple producers for a single
-    HTTP/2 connection, one for each stream. The standard Twisted interfaces
-    don't really allow for this, so instead there's a custom interface between
-    the two objects that allows them to work hand-in-hand here.
+    This implementation of L{IProtocol} works hand in hand with L{H2Stream}.
+    This is because we have the requirement to register multiple producers for
+    a single HTTP/2 connection, one for each stream. The standard Twisted
+    interfaces don't really allow for this, so instead there's a custom
+    interface between the two objects that allows them to work hand-in-hand here.
 
     @ivar conn: The HTTP/2 connection state machine.
-    @type conn: C{h2.connection.H2Connection}
+    @type conn: L{h2.connection.H2Connection}
 
     @ivar streams: A mapping of stream IDs to L{H2Stream} objects, used to call
         specific methods on streams when events occur.
-    @type streams: C{dict}, mapping C{int} stream IDs to L{H2Stream} objects.
+    @type streams: L{dict}, mapping L{int} stream IDs to L{H2Stream} objects.
 
     @ivar priority: A HTTP/2 priority tree used to ensure that responses are
         prioritised appropriately.
     @type priority: L{priority.PriorityTree}
 
-    @ivar _consumerBlocked: A flag tracking whether or not the IConsumer that
-        is consuming this data has asked us to stop producing.
-    @type _consumerBlocked: C{bool}
+    @ivar _consumerBlocked: A flag tracking whether or not the L{IConsumer}
+        that is consuming this data has asked us to stop producing.
+    @type _consumerBlocked: L{bool}
 
-    @ivar _sendingDeferred: A deferred used to restart the data-sending loop
+    @ivar _sendingDeferred: A L{Deferred} used to restart the data-sending loop
         when more response data has been produced. Will not be present if there
         is outstanding data still to send.
-    @type _consumerBlocked: A L{twisted.internet.defer.Deferred}, or C{None}
+    @type _consumerBlocked: A L{twisted.internet.defer.Deferred}, or L{None}
 
     @ivar _outboundStreamQueues: A map of stream IDs to queues, used to store
         data blocks that are yet to be sent on the connection. These are used
-        both to handle producers that do not respect IConsumer but also to
+        both to handle producers that do not respect L{IConsumer} but also to
         allow priority to multiplex data appropriately.
-    @type _outboundStreamQueues: A C{dict} mapping C{int} stream IDs to
-        C{collections.deque} queues, which contain either C{bytes} objects or
-        L{_END_STREAM_SENTINEL}.
+    @type _outboundStreamQueues: A L{dict} mapping L{int} stream IDs to
+        L{collections.deque} queues, which contain either L{bytes} objects or
+        C{_END_STREAM_SENTINEL}.
 
     @ivar _sender: A handle to the data-sending loop, allowing it to be
         terminated if needed.
@@ -124,7 +124,8 @@ class H2Connection(Protocol):
     def connectionMade(self):
         """
         Called by the reactor when a connection is received. May also be called
-        by the GenericHTTPChannel during upgrade to HTTP/2.
+        by the L{twisted.web.http._GenericHTTPChannel} during upgrade to
+        HTTP/2.
         """
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())
@@ -135,7 +136,7 @@ class H2Connection(Protocol):
         Called whenever a chunk of data is received from the transport.
 
         @param data: The data received from the transport.
-        @type data: C{bytes}
+        @type data: L{bytes}
         """
         try:
             events = self.conn.receive_data(data)
@@ -237,8 +238,8 @@ class H2Connection(Protocol):
         """
         Stop producing data.
 
-        This tells the H2Connection that its consumer has died, so it must stop
-        producing data for good.
+        This tells the L{H2Connection} that its consumer has died, so it must
+        stop producing data for good.
         """
         self.connectionLost("stopProducing")
 
@@ -247,7 +248,7 @@ class H2Connection(Protocol):
         """
         Pause producing data.
 
-        Tells the H2Connection that it has produced too much data to process
+        Tells the L{H2Connection} that it has produced too much data to process
         for the time being, and to stop until resumeProducing() is called.
         """
         self._consumerBlocked = Deferred()
@@ -257,7 +258,7 @@ class H2Connection(Protocol):
         """
         Resume producing data.
 
-        This tells the H2Connection to re-add itself to the main loop and
+        This tells the L{H2Connection} to re-add itself to the main loop and
         produce more data for the consumer.
         """
         if self._consumerBlocked is not None:
@@ -276,7 +277,7 @@ class H2Connection(Protocol):
         connection is used with maximal efficiency.
 
         This function will execute if data is available: if all data is
-        exhausted, the function will place a deferred onto the C{H2Connection}
+        exhausted, the function will place a deferred onto the L{H2Connection}
         object and wait until it is called to resume executing.
         """
         stream = None
@@ -431,23 +432,23 @@ class H2Connection(Protocol):
 
     def writeHeaders(self, version, code, reason, headers, streamID):
         """
-        Called by C{Request} objects to write a complete set of HTTP headers to
-        a stream.
+        Called by L{twisted.web.http.Request} objects to write a complete set
+        of HTTP headers to a stream.
 
         @param version: The HTTP version in use. Unused in HTTP/2.
-        @type version: C{bytes}
+        @type version: L{bytes}
 
         @param code: The HTTP status code to write.
-        @type code: C{bytes}
+        @type code: L{bytes}
 
         @param reason: The HTTP reason phrase to write. Unused in HTTP/2.
-        @type reason: C{bytes}
+        @type reason: L{bytes}
 
         @param headers: The headers to write to the stream.
         @type headers: L{twisted.web.http_headers.Headers}
 
         @param streamID: The ID of the stream to write the headers to.
-        @type streamID: C{int}
+        @type streamID: L{int}
         """
         headers.insert(0, (b':status', code))
         self.conn.send_headers(streamID, headers)
@@ -460,10 +461,10 @@ class H2Connection(Protocol):
         stream. Writes a single data frame.
 
         @param streamID: The ID of the stream to write the data to.
-        @type streamID: C{int}
+        @type streamID: L{int}
 
         @param data: The data chunk to write to the stream.
-        @type data: C{bytes}
+        @type data: L{bytes}
         """
         self._outboundStreamQueues[streamID].append(data)
 
@@ -485,7 +486,7 @@ class H2Connection(Protocol):
         Called by L{H2Stream} objects to signal completion of a response.
 
         @param streamID: The ID of the stream to write the data to.
-        @type streamID: C{int}
+        @type streamID: L{int}
         """
         self._outboundStreamQueues[streamID].append(_END_STREAM_SENTINEL)
         self.priority.unblock(streamID)
@@ -500,7 +501,7 @@ class H2Connection(Protocol):
         This emits a RstStream frame and then removes all stream state.
 
         @param streamID: The ID of the stream to write the data to.
-        @type streamID: C{int}
+        @type streamID: L{int}
         """
         self.conn.reset_stream(streamID)
         self.transport.write(self.conn.data_to_send())
@@ -513,7 +514,7 @@ class H2Connection(Protocol):
         being used for the stream. Called when the stream is complete.
 
         @param streamID: The ID of the stream to clean up state for.
-        @type streamID: C{int}
+        @type streamID: L{int}
         """
         del self._outboundStreamQueues[streamID]
         self.priority.remove_stream(streamID)
@@ -529,11 +530,11 @@ class H2Connection(Protocol):
 
         @param streamID: The ID of the stream whose flow control window we'll
             check.
-        @type streamID: C{int}
+        @type streamID: L{int}
 
         @return: The amount of room remaining in the send window for the given
             stream, including the data queued to be sent.
-        @rtype: C{int}
+        @rtype: L{int}
         """
         # TODO: This involves a fair bit of looping and computation for
         # something that is called a lot. Consider caching values somewhere.
@@ -610,11 +611,11 @@ class H2Connection(Protocol):
         Open the stream window by a given increment.
 
         @param streamID: The ID of the stream whose window needs to be opened.
-        @type streamID: C{int}
+        @type streamID: L{int}
 
         @param increment: The amount by which the stream window must be
         incremented.
-        @type increment: C{int}
+        @type increment: L{int}
         """
         # TODO: Consider whether we want some kind of consolidating logic here.
         self.conn.increment_flow_control_window(increment, stream_id=streamID)
@@ -629,7 +630,7 @@ class H2Connection(Protocol):
 
         @param streamID: The ID of the stream that needs the 100 Continue
         response
-        @type streamID: C{int}
+        @type streamID: L{int}
         """
         headers = [(b':status', b'100')]
         self.conn.send_headers(headers=headers, stream_id=streamID)
@@ -650,7 +651,7 @@ class H2Connection(Protocol):
 
         @param streamID: The ID of the stream that needs the 100 Continue
         response
-        @type streamID: C{int}
+        @type streamID: L{int}
         """
         headers = [(b':status', b'400')]
         self.conn.send_headers(
@@ -671,36 +672,37 @@ class H2Stream(object):
     """
     A class representing a single HTTP/2 stream.
 
-    This class works hand-in-hand with H2Connection. It acts to provide an
-    implementation of ITransport, IConsumer, and IProducer that work for a
-    single HTTP/2 connection, while tightly cleaving to the interface provided
-    by those interfaces. It does this by having a tight coupling to
-    H2Connection, which allows associating many of the functions of ITransport,
-    IConsumer, and IProducer to objects on a stream-specific level.
+    This class works hand-in-hand with L{H2Connection}. It acts to provide an
+    implementation of L{ITransport}, L{IConsumer}, and L{IProducer} that work
+    for a single HTTP/2 connection, while tightly cleaving to the interface
+    provided by those interfaces. It does this by having a tight coupling to
+    L{H2Connection}, which allows associating many of the functions of
+    L{ITransport}, L{IConsumer}, and L{IProducer} to objects on a
+    stream-specific level.
 
     @ivar streamID: The numerical stream ID that this object corresponds to.
-    @type streamID: C{int}
+    @type streamID: L{int}
 
     @ivar producing: Whether this stream is currently allowed to produce data
         to its consumer.
-    @type producing: C{bool}
+    @type producing: L{bool}
 
     @ivar command: The HTTP verb used on the request.
-    @type command: C{unicode}
+    @type command: L{unicode}
 
     @ivar path: The HTTP path used on the request.
-    @type path: C{unicode}
+    @type path: L{unicode}
 
     @ivar producer: The object producing the response, if any.
     @type producer: L{IProducer}
 
     @ivar _producerProducing: Whether the producer stored in producer is
         currently producing data.
-    @type _producerProducing: C{bool}
+    @type _producerProducing: L{bool}
 
     @ivar _inboundDataBuffer: Any data that has been received from the network
         but has not yet been received by the consumer.
-    @type _inboundDataBuffer: A L{collections.deque} containing C{bytes}
+    @type _inboundDataBuffer: A L{collections.deque} containing L{bytes}
 
     @ivar _conn: A reference to the connection this stream belongs to.
     @type _conn: L{H2Connection}
@@ -740,8 +742,8 @@ class H2Stream(object):
         a Host: header.
 
         @param headers: The HTTP/2 header set.
-        @type headers: A C{list} of C{tuple}s of header name and header value,
-            both as C{unicode}.
+        @type headers: A L{list} of L{tuple}s of header name and header value,
+            both as L{unicode}.
         """
         gotLength = False
 
@@ -776,12 +778,12 @@ class H2Stream(object):
         through. Otherwise, buffers the chunk until we can start producing.
 
         @param data: The chunk of data that was received.
-        @type data: C{bytes}
+        @type data: L{bytes}
 
         @param flowControlledLength: The total flow controlled length of this
             chunk, which is used when we want to re-open the window. May be
             different to C{len(data)}.
-        @type flowControlledLength: C{int}
+        @type flowControlledLength: L{int}
         """
         if not self.producing:
             # Buffer data.
@@ -794,8 +796,9 @@ class H2Stream(object):
     def requestComplete(self):
         """
         Called by the L{H2Connection} when the all data for a request has been
-        received. Currently, with the legacy Request object, just calls
-        requestReceived unless the producer wants us to be quiet.
+        received. Currently, with the legacy L{twisted.web.http.Request}
+        object, just calls requestReceived unless the producer wants us to be
+        quiet.
         """
         if self.producing:
             self._request.requestReceived(self.command, self.path, b'HTTP/2')
@@ -809,7 +812,7 @@ class H2Stream(object):
         reset.
 
         @param reason: The reason the connection was lost.
-        @type reason: C{str}
+        @type reason: L{str}
         """
         self._request.connectionLost(reason)
 
@@ -859,16 +862,16 @@ class H2Stream(object):
         Called by the consumer to write headers to the stream.
 
         @param version: The HTTP version.
-        @type version: C{str}
+        @type version: L{str}
 
         @param code: The status code.
-        @type code: C{int}
+        @type code: L{int}
 
         @param reason: The reason phrase. Ignored in HTTP/2.
-        @type reason: C{str}
+        @type reason: L{str}
 
         @param headers: The HTTP response headers.
-        @type: Any iterable of two-tuples of C{bytes}, representing header
+        @type: Any iterable of two-tuples of L{bytes}, representing header
             names and header values.
         """
         self._conn.writeHeaders(version, code, reason, headers, self.streamID)
@@ -913,7 +916,7 @@ class H2Stream(object):
         Write a single chunk of data into a data frame.
 
         @param data: The data chunk to send.
-        @type data: C{bytes}
+        @type data: L{bytes}
         """
         self._conn.writeDataToStream(self.streamID, data)
         return
@@ -924,7 +927,7 @@ class H2Stream(object):
         Write a sequence of chunks of data into data frames.
 
         @param iovec: A sequence of chunks to send.
-        @type iovec: An iterable of C{bytes} chunks.
+        @type iovec: An iterable of L{bytes} chunks.
         """
         for chunk in iovec:
             self.write(chunk)
@@ -978,13 +981,13 @@ class H2Stream(object):
         @param producer: The producer to register.
         @type producer: L{IProducer} provider
 
-        @param streaming: C{True} if C{producer} provides L{IPushProducer},
-        C{False} if C{producer} provides L{IPullProducer}.
-        @type streaming: C{bool}
+        @param streaming: L{True} if C{producer} provides L{IPushProducer},
+        L{False} if C{producer} provides L{IPullProducer}.
+        @type streaming: L{bool}
 
         @raise RuntimeError: If a producer is already registered.
 
-        @return: C{None}
+        @return: L{None}
         """
         if self.producer:
             raise ValueError(
