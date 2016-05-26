@@ -30,6 +30,14 @@ from twisted.python.usage import Options, UsageError
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
 
+# A list of third-party libraries' Intersphinx targets to allow documentation
+# linking. If you add a new dependency and want to use pydoctor's L{} to link
+# to their docs, add the objects.inv URL here.
+_INTERSPHINX_TARGETS = [
+    "https://python-hyper.org/h2/en/stable/objects.inv",  # hyper-h2
+    "https://python-hyper.org/priority/en/stable/objects.inv",  # priority
+]
+
 
 def runCommand(args, cwd=None):
     """
@@ -508,17 +516,20 @@ class APIBuilder(object):
             documentation will be written.
         """
         from pydoctor.driver import main
-        main(
-            ["--project-name", projectName,
+        args = [
+             "--project-name", projectName,
              "--project-url", projectURL,
              "--system-class", "pydoctor.twistedmodel.TwistedSystem",
              "--project-base-dir", packagePath.parent().path,
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
-             "--intersphinx",
-             "https://python-hyper.org/h2/en/stable/objects.inv",
-             "--html-write-function-pages", "--quiet", "--make-html"])
+             "--html-write-function-pages", "--quiet", "--make-html"
+        ]
+        for target in _INTERSPHINX_TARGETS:
+            args.extend(["--intersphinx", target])
+
+        main(args)
 
 
 
