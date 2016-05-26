@@ -106,7 +106,9 @@ class H2Connection(Protocol):
     site = None
 
     def __init__(self):
-        self.conn = h2.connection.H2Connection(client_side=False)
+        self.conn = h2.connection.H2Connection(
+            client_side=False, header_encoding=None
+        )
         self.streams = {}
 
         self.priority = priority.PriorityTree()
@@ -763,22 +765,22 @@ class H2Stream(object):
 
         @param headers: The HTTP/2 header set.
         @type headers: A L{list} of L{tuple}s of header name and header value,
-            both as L{unicode}.
+            both as L{bytes}.
         """
         gotLength = False
 
         for header in headers:
-            if not header[0].startswith(u':'):
+            if not header[0].startswith(b':'):
                 gotLength = (
                     _addHeaderToRequest(self._request, header) or gotLength
                 )
-            elif header[0] == u':method':
-                self.command = header[1].encode('utf-8')
-            elif header[0] == u':path':
-                self.path = header[1].encode('utf-8')
-            elif header[0] == u':authority':
+            elif header[0] == b':method':
+                self.command = header[1]
+            elif header[0] == b':path':
+                self.path = header[1]
+            elif header[0] == b':authority':
                 # This is essentially the Host: header from HTTP/1.1
-                _addHeaderToRequest(self._request, (u'host', header[1]))
+                _addHeaderToRequest(self._request, (b'host', header[1]))
 
         if not gotLength:
             self._request.gotLength(None)
