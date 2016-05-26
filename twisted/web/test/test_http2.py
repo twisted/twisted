@@ -846,7 +846,7 @@ class HTTP2ServerTests(unittest.TestCase):
         self.assertTrue(request.channel is None)
 
         # An attempt to write should at this point raise an exception.
-        self.assertRaises(KeyError, request.write, b"third chunk")
+        self.assertRaises(AttributeError, request.write, b"third chunk")
 
         # Check that everything is fine.
         # We expect that only the Settings, Headers, and one Data frame will
