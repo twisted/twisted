@@ -42,6 +42,7 @@ def _codeToMessage(code):
         return None
 
 
+
 class Error(Exception):
     """
     A basic HTTP error.
@@ -385,6 +386,7 @@ class FlattenerError(Exception):
 
     def __str__(self):
         return repr(self)
+
 
 
 class CannotUpgrade(Exception):
