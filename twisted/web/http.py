@@ -2214,6 +2214,7 @@ def _respondToUpgrade(transport, newProtocol, headers):
     the headers to say that we have upgraded to C{newProtocol}, and the
     additional C{headers}.
 
+    @type transport: Implementor of L{interfaces.ITransport}
     @type newProtocol: L{bytes}
     @type headers: L{dict} with L{bytes} keys and values
     """
@@ -2223,8 +2224,9 @@ def _respondToUpgrade(transport, newProtocol, headers):
     transport.write(b"Upgrade: " + newProtocol + b"\r\n")
     transport.write(b"Connection: Upgrade\r\n")
 
-    for k, v in headers.items():
-        transport.write(k + b": " + v + b"\r\n")
+    for key, val in headers.getAllRawHeaders():
+        for v in val:
+            transport.write(key + b": " + v + b"\r\n")
 
     transport.write(b"\r\n")
 
@@ -2311,7 +2313,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         """
         content = self._buffer.split(b"\r\n\r\n", 1)[0].split(b"\r\n")
 
-        headers = {}
+        headers = Headers()
         requestLine = content[0].split(b" ")
 
         # Should match "VERB PATH HTTP/VER"
@@ -2334,17 +2336,19 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         # the request line
         for line in content[1:]:
             key, val = line.split(b":", 1)
-            headers[key.lower()] = val.strip()
+            headers.addRawHeader(key.lower(), val.strip())
 
         verb = requestLine[0]
         path = requestLine[1]
 
-        if b"upgrade" not in headers:
+        if not headers.hasHeader(b"upgrade"):
             # Regular HTTP/1.1, no "Upgrade"
             self._replay = True
             return b"http/1.1"
 
-        for upgrade in headers[b"upgrade"].split(b","):
+        allUpgradeHeaders = b",".join(headers.getRawHeaders(b"upgrade"))
+
+        for upgrade in allUpgradeHeaders.split(b","):
             upgrade = upgrade.strip()
             # See if we can upgrade to this. If we can't, try the next one, and
             # so on, until we either get one we can upgrade to, or we just

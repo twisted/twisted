@@ -2766,7 +2766,7 @@ class HTTPUpgradeTests(unittest.TestCase):
 
             def upgrade(self, verb, path, headers):
                 pi = piFactory.buildProtocol(None)
-                return pi, False, {b"beep": b"boop"}
+                return pi, False, http_headers.Headers({b"beep": [b"boop"]})
 
         factory = self._makeFactory()
         factory._addUpgrader(b"pitocol", PiUpgrader())
@@ -2776,19 +2776,20 @@ class HTTPUpgradeTests(unittest.TestCase):
         trans = StringTransport()
         protocol.makeConnection(trans)
 
-        val = [
+        val = (
             b"GET / HTTP/1.1\r\n"
-            b"Connection: keep-alive, Upgrade\r\n",
-            b"Upgrade: pitocol\r\n\r\n",
-        ]
+            b"Connection: keep-alive, Upgrade\r\n"
+            b"Upgrade: pitocol\r\n\r\n"
+        )
 
-        for x in iterbytes(b"".join(val)):
+        for x in iterbytes(val):
             protocol.dataReceived(x)
 
-        expectedValue = b"".join([
-            b"HTTP/1.1 101 Switching Protocols\r\nServer: ",
-            _version, b"\r\nUpgrade: pitocol\r\nConnection: Upgrade\r\n",
-            b"beep: boop\r\n\r\n"])
+        expectedValue = (
+            b"HTTP/1.1 101 Switching Protocols\r\nServer: " +
+            _version + b"\r\nUpgrade: pitocol\r\nConnection: Upgrade\r\n"
+            b"Beep: boop\r\n\r\n"
+        )
 
         self.assertEqual(trans.value(), expectedValue)
         trans.clear()
@@ -2806,11 +2807,11 @@ class HTTPUpgradeTests(unittest.TestCase):
         upgraded to that protocol. If the upgrader says it wants a replay of
         the request, it will be replayed.
         """
-        val = [
+        val = (
             b"GET / HTTP/1.1\r\n"
-            b"Connection: keep-alive, Upgrade\r\n",
-            b"Upgrade: replay\r\n\r\n",
-        ]
+            b"Connection: keep-alive, Upgrade\r\n"
+            b"Upgrade: replay\r\n\r\n"
+        )
 
         class Echo(Protocol):
             """
@@ -2840,10 +2841,10 @@ class HTTPUpgradeTests(unittest.TestCase):
         trans = StringTransport()
         protocol.makeConnection(trans)
 
-        for x in iterbytes(b"".join(val)):
+        for x in iterbytes(val):
             protocol.dataReceived(x)
 
-        self.assertEqual(trans.value(), b"".join(val))
+        self.assertEqual(trans.value(), val)
 
 
     def test_upgradeNegotiatedHTTP11(self):
@@ -2856,7 +2857,7 @@ class HTTPUpgradeTests(unittest.TestCase):
 
             def upgrade(self, verb, path, headers):
                 pi = piFactory.buildProtocol(None)
-                return pi, False, {b"beep": b"boop"}
+                return pi, False, http_headers.Headers({b"beep": [b"boop"]})
 
         factory = self._makeFactory()
         factory._addUpgrader(b"pitocol", PiUpgrader())
@@ -2867,19 +2868,20 @@ class HTTPUpgradeTests(unittest.TestCase):
         trans.negotiatedProtocol = b'http/1.1'
         protocol.makeConnection(trans)
 
-        val = [
+        val = (
             b"GET / HTTP/1.1\r\n"
-            b"Connection: keep-alive, Upgrade\r\n",
-            b"Upgrade: pitocol\r\n\r\n",
-        ]
+            b"Connection: keep-alive, Upgrade\r\n"
+            b"Upgrade: pitocol\r\n\r\n"
+        )
 
-        for x in iterbytes(b"".join(val)):
+        for x in iterbytes(val):
             protocol.dataReceived(x)
 
-        expectedValue = b"".join([
-            b"HTTP/1.1 101 Switching Protocols\r\nServer: ",
-            _version, b"\r\nUpgrade: pitocol\r\nConnection: Upgrade\r\n",
-            b"beep: boop\r\n\r\n"])
+        expectedValue = (
+            b"HTTP/1.1 101 Switching Protocols\r\nServer: " +
+            _version + b"\r\nUpgrade: pitocol\r\nConnection: Upgrade\r\n"
+            b"Beep: boop\r\n\r\n"
+        )
 
         self.assertEqual(trans.value(), expectedValue)
         trans.clear()
