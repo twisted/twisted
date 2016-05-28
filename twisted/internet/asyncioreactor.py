@@ -1,13 +1,11 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
-Tulip-based reactor implementation.
+asyncio-based reactor implementation.
 """
 
-try:
-    from asyncio import get_event_loop, new_event_loop
-except ImportError:
-    # Try importing trollius, the Python 2 backport of asyncio, if asyncio
-    # is not found.
-    from trollius import get_event_loop, new_event_loop
+from asyncio import get_event_loop, new_event_loop
 
 from zope.interface import implementer
 
@@ -28,6 +26,7 @@ class _DCHandle(object):
         self.handle.cancel()
 
 
+
 @implementer(IReactorFDSet)
 class AsyncioSelectorReactor(PosixReactorBase):
     """
@@ -42,6 +41,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._delayedCalls = set()
         PosixReactorBase.__init__(self)
 
+
     def _read_or_write(self, selectable, read):
         method = selectable.doRead if read else selectable.doWrite
         try:
@@ -51,17 +51,20 @@ class AsyncioSelectorReactor(PosixReactorBase):
         if why:
             self._disconnectSelectable(selectable, why, read)
 
+
     def addReader(self, reader):
         self._readers.add(reader)
         fd = reader.fileno()
         self._asyncioEventloop.add_reader(fd, callWithLogger, reader,
                                           self._read_or_write, reader, True)
 
+
     def addWriter(self, writer):
         self._writers.add(writer)
         fd = writer.fileno()
         self._asyncioEventloop.add_writer(fd, callWithLogger, writer,
                                           self._read_or_write, writer, False)
+
 
     def removeReader(self, reader):
         try:
@@ -73,6 +76,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
             return
         self._asyncioEventloop.remove_reader(fd)
 
+
     def removeWriter(self, writer):
         try:
             self._writers.remove(writer)
@@ -83,22 +87,28 @@ class AsyncioSelectorReactor(PosixReactorBase):
             return
         self._asyncioEventloop.remove_writer(fd)
 
+
     def removeAll(self):
         return self._removeAll(self._readers, self._writers)
+
 
     def getReaders(self):
         return list(self._readers)
 
+
     def getWriters(self):
         return list(self._writers)
 
+
     def getDelayedCalls(self):
         return list(self._delayedCalls)
+
 
     def iterate(self, timeout):
         self._asyncioEventloop.call_later(timeout + 0.01,
                                           self._asyncioEventloop.stop)
         self._asyncioEventloop.run_forever()
+
 
     def run(self, installSignalHandlers=True):
         self.startRunning(installSignalHandlers=installSignalHandlers)
@@ -106,16 +116,20 @@ class AsyncioSelectorReactor(PosixReactorBase):
         if self._justStopped:
             self._justStopped = False
 
+
     def stop(self):
         PosixReactorBase.stop(self)
         self.callLater(0, self.fireSystemEvent, "shutdown")
+
 
     def crash(self):
         PosixReactorBase.crash(self)
         self._asyncioEventloop.stop()
 
+
     def seconds(self):
         return self._asyncioEventloop.time()
+
 
     def callLater(self, seconds, f, *args, **kwargs):
         def run():
@@ -124,9 +138,11 @@ class AsyncioSelectorReactor(PosixReactorBase):
             f(*args, **kwargs)
         handle = self._asyncioEventloop.call_later(seconds, run)
         dchandle = _DCHandle(handle)
+
         def cancel(dc):
             self._delayedCalls.remove(dc)
             dchandle.cancel()
+
         def reset(dc):
             dchandle.handle = self._asyncioEventloop.call_at(dc.time, run)
 
@@ -135,22 +151,14 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._delayedCalls.add(dc)
         return dc
 
+
     def callWhenRunning(self, f, *args, **kwargs):
         g = lambda: f(*args, **kwargs)
         self._asyncioEventloop.call_soon_threadsafe(g)
+
+
     callFromThread = callWhenRunning
 
-
-# Install some testing infrastructure; please don't look at this:
-@staticmethod
-def _reactorForTesting():
-    loop = new_event_loop()
-    loop.set_debug(True)
-    return AsyncioSelectorReactor(loop)
-def _installTestInfrastructure():
-    from twisted.internet.test.reactormixins import ReactorBuilder
-    ReactorBuilder._reactors.append("txtulip.reactor._reactorForTesting")
-_installTestInfrastructure()
 
 
 def install(eventloop=None):
