@@ -2720,8 +2720,8 @@ class Pitocol(Protocol):
     """
     def dataReceived(protoself, data):
         """
-        A C{dataReceived} that expects "GO" and will then write out
-        "3.14" * C{piTimes}. If there's any other data, that won't
+        A C{dataReceived} that expects "GO" and will then write out "3.14" *
+        C{piTimes}. If there's any other data, that won't write out pi.
         """
         if data == b"GO":
             for i in range(piTimes):

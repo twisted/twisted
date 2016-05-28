@@ -2368,7 +2368,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                     return upgrade
                 except CannotUpgrade:
                     # This one failed, try the next one
-                    pass
+                    continue
 
         # Negotiation failed!
         self._replay = True
@@ -2431,7 +2431,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                     return self._bufferData(data)
                 else:
                     # We can't possibly upgrade to anything (because the HTTP
-                    # factory has no extra protocols configures), so we must
+                    # factory has no extra protocols configured), so we must
                     # just assume HTTP/1.1.
                     negotiatedProtocol = b"http/1.1"
 
