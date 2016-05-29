@@ -34,6 +34,8 @@ VERSION_OFFSET = 2000
 # linking. If you add a new dependency and want to use pydoctor's L{} to link
 # to their docs, add the objects.inv URL here.
 _INTERSPHINX_TARGETS = [
+    "https://docs.python.org/2/objects.inv",
+    "https://pyopenssl.readthedocs.org/en/stable/objects.inv",
     "https://python-hyper.org/h2/en/stable/objects.inv",  # hyper-h2
     "https://python-hyper.org/priority/en/stable/objects.inv",  # priority
 ]
@@ -515,6 +517,12 @@ class APIBuilder(object):
         @param outputPath: An existing directory to which the generated API
             documentation will be written.
         """
+        intersphinxes = []
+
+        for intersphinx in intersphinxURLs:
+            intersphinxes.append("--intersphinx")
+            intersphinxes.append(intersphinx)
+
         from pydoctor.driver import main
         args = [
              "--project-name", projectName,
@@ -524,12 +532,8 @@ class APIBuilder(object):
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
-             "--html-write-function-pages", "--quiet", "--make-html"
-        ]
-        for target in _INTERSPHINX_TARGETS:
-            args.extend(["--intersphinx", target])
-
-        main(args)
+             "--html-write-function-pages", "--quiet", "--make-html",
+            ] + intersphinxes)
 
 
 
