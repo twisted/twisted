@@ -32,7 +32,7 @@ VERSION_OFFSET = 2000
 
 intersphinxURLs = [
     "https://docs.python.org/2/objects.inv",
-    "https://pyopenssl.readthedocs.org/en/stable/objects.inv",
+    "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
 ]
 
 
