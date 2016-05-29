@@ -29,12 +29,12 @@ import h2.connection
 import h2.events
 import h2.exceptions
 
-from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
 from twisted.internet.protocol import Protocol
-from twisted.internet.task import LoopingCall
 from twisted.protocols.tls import _PullToPush
 
 
@@ -118,8 +118,7 @@ class H2Connection(Protocol):
         self._streamCleanupCallbacks = {}
 
         # Start the data sending function.
-        self._sender = LoopingCall(self._sendPrioritisedData)
-        self._sender.start(interval=0)
+        self._sender = reactor.callLater(0, self._sendPrioritisedData)
 
 
     # Implementation of IProtocol
@@ -264,14 +263,15 @@ class H2Connection(Protocol):
         produce more data for the consumer.
         """
         if self._consumerBlocked is not None:
-            self._consumerBlocked.callback(None)
+            d = self._consumerBlocked
             self._consumerBlocked = None
+            d.callback(None)
 
 
-    @inlineCallbacks
-    def _sendPrioritisedData(self):
+    def _sendPrioritisedData(self, *args):
         """
-        The data sending loop. Must be used within L{LoopingCall}.
+        The data sending loop. This function repeatedly calls itself, either
+        from L{Deferred}s or from L{callLater}.
 
         This function sends data on streams according to the rules of HTTP/2
         priority. It ensures that the data from each stream is interleved
@@ -292,13 +292,12 @@ class H2Connection(Protocol):
                 # until a new one becomes available.
                 assert self._sendingDeferred is None
                 self._sendingDeferred = Deferred()
-                yield self._sendingDeferred
-                self._sendingDeferred = None
-                continue
+                self._sendingDeferred.addCallback(self._sendPrioritisedData)
+                return
 
         # Wait behind the transport.
         if self._consumerBlocked is not None:
-            yield self._consumerBlocked
+            self._consumerBlocked.addCallback(self._sendPrioritisedData)
 
         remainingWindow = self.conn.local_flow_control_window(stream)
         frameData = self._outboundStreamQueues[stream].popleft()
@@ -333,6 +332,8 @@ class H2Connection(Protocol):
             # to stop.
             if self.remainingOutboundWindow(stream) <= 0:
                 self.streams[stream].flowControlBlocked()
+
+        reactor.callLater(0, self._sendPrioritisedData)
 
 
     # Internal functions.
@@ -476,8 +477,9 @@ class H2Connection(Protocol):
         if self.conn.local_flow_control_window(streamID) > 0:
             self.priority.unblock(streamID)
             if self._sendingDeferred is not None:
-                self._sendingDeferred.callback(streamID)
+                d = self._sendingDeferred
                 self._sendingDeferred = None
+                d.callback(streamID)
 
         if self.remainingOutboundWindow(streamID) <= 0:
             self.streams[streamID].flowControlBlocked()
@@ -493,8 +495,9 @@ class H2Connection(Protocol):
         self._outboundStreamQueues[streamID].append(_END_STREAM_SENTINEL)
         self.priority.unblock(streamID)
         if self._sendingDeferred is not None:
-            self._sendingDeferred.callback(streamID)
+            d = self._sendingDeferred
             self._sendingDeferred = None
+            d.callback(streamID)
 
 
     def abortRequest(self, streamID):
