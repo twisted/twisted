@@ -204,7 +204,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
         f.close()
         creds = [
             self.callDeprecated(
-                versions.Version("Twisted", 15, 2, 0),
+                versions.Version("Twisted", 16, 3, 0),
                 credentials.UsernameHashedPassword, username, password)
             for (username, password) in self.users
         ]
@@ -266,7 +266,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         """
         hashedCreds = [
             self.callDeprecated(
-                versions.Version("Twisted", 15, 2, 0),
+                versions.Version("Twisted", 16, 3, 0),
                 credentials.UsernameHashedPassword, username, password)
             for (username, password) in self.users
         ]
