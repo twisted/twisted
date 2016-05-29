@@ -32,6 +32,10 @@ VERSION_OFFSET = 2000
 
 # Types of topfiles.
 TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
+intersphinxURLs = [
+    "https://docs.python.org/2/objects.inv",
+    "https://pyopenssl.readthedocs.org/en/stable/objects.inv",
+]
 
 
 def runCommand(args, cwd=None):
@@ -510,6 +514,12 @@ class APIBuilder(object):
         @param outputPath: An existing directory to which the generated API
             documentation will be written.
         """
+        intersphinxes = []
+
+        for intersphinx in intersphinxURLs:
+            intersphinxes.append("--intersphinx")
+            intersphinxes.append(intersphinx)
+
         from pydoctor.driver import main
         main(
             ["--project-name", projectName,
@@ -519,7 +529,8 @@ class APIBuilder(object):
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
-             "--html-write-function-pages", "--quiet", "--make-html"])
+             "--html-write-function-pages", "--quiet", "--make-html",
+            ] + intersphinxes)
 
 
 

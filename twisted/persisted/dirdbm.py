@@ -155,7 +155,7 @@ class DirDBM:
         try:
             return self._readFile(path)
         except:
-            raise KeyError, k
+            raise KeyError(k)
 
     def __delitem__(self, k):
         """
@@ -306,7 +306,7 @@ class DirDBM:
         if os.path.isfile(path):
             return os.path.getmtime(path)
         else:
-            raise KeyError, key
+            raise KeyError(key)
 
 
 class Shelf(DirDBM):

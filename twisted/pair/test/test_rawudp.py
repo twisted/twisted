@@ -276,13 +276,13 @@ class RawUDPTests(unittest.TestCase):
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(42, "silliness")
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must be an instance of DatagramProtocol',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooSmall(self):
@@ -290,13 +290,13 @@ class RawUDPTests(unittest.TestCase):
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(-1, protocol.DatagramProtocol())
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must be positive or zero',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooBig(self):
@@ -304,23 +304,23 @@ class RawUDPTests(unittest.TestCase):
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(2**16, protocol.DatagramProtocol())
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 16 bits',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
     def testAddingBadProtos_TooBig2(self):
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(2**16+1, protocol.DatagramProtocol())
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 16 bits',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')

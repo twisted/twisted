@@ -300,7 +300,7 @@ def run():
     options = GeneralOptions()
     try:
         options.parseOptions(args)
-    except usage.UsageError, u:
+    except usage.UsageError as u:
         print 'ERROR: %s' % u
         options.opt_help()
         sys.exit(1)
@@ -441,7 +441,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return None
         try:
             return defer.succeed(keys.Key.fromFile(file).keyObject)
-        except keys.BadKeyError, e:
+        except keys.BadKeyError as e:
             if e.args[0] == 'encrypted key with no password':
                 prompt = "Enter passphrase for key '%s': " % \
                        self.usedFiles[-1]
