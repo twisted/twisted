@@ -1824,7 +1824,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
     def test_release(self):
         """
-        Running it a release branch always gives green.
+        Running it on a release branch returns green if there is no topfiles.
         """
         runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
                    cwd=self.repo.path)
@@ -1836,7 +1836,37 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (0,))
         self.assertEqual(logs[-1],
-                         "On a release branch, no need to look at this.")
+                         "Release branch with no topfiles, all good.")
+
+
+    def test_releaseWithTopfiles(self):
+        """
+        Running it on a release branch returns red if there are new topfiles.
+        """
+        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "fragment"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1],
+                         "No topfiles should be on the release branch.")
 
 
     def test_onlyQuotes(self):

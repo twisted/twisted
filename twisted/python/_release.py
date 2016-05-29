@@ -1074,10 +1074,6 @@ class CheckTopfileScript(object):
             self._print("On trunk, no need to look at this.")
             sys.exit(0)
 
-        elif branch.startswith("release-"):
-            self._print("On a release branch, no need to look at this.")
-            sys.exit(0)
-
         r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
                        cwd=location)
         files = r.strip().split(os.linesep)
@@ -1092,11 +1088,24 @@ class CheckTopfileScript(object):
                 self._print("Quotes change only; no topfile needed.")
                 sys.exit(0)
 
+        topfiles = []
+
         for change in files:
             if os.sep + "topfiles" + os.sep in change:
                 if change.rsplit(".", 1)[1] in TOPFILE_TYPES:
-                    self._print("Found " + change)
-                    sys.exit(0)
+                    topfiles.append(change)
+
+        if branch.startswith("release-"):
+            if topfiles:
+                self._print("No topfiles should be on the release branch.")
+                sys.exit(1)
+            else:
+                self._print("Release branch with no topfiles, all good.")
+                sys.exit(0)
+
+        for change in topfiles:
+            self._print("Found " + change)
+            sys.exit(0)
 
         self._print("No topfile found. Have you committed it?")
         sys.exit(1)
