@@ -31,10 +31,10 @@ from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
     changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
-    APIBuilder, BuildAPIDocsScript,
+    APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
     ChangeVersionsScript, NewsBuilder, SphinxBuilder,
-    GitCommand, SVNCommand, getRepositoryCommand, IVCSCommand)
+    GitCommand, getRepositoryCommand, IVCSCommand)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -74,17 +74,11 @@ else:
     gitSkip = "git is not present."
 
 
-if not skip and which("svn") and which("svnadmin"):
-    svnSkip = skip
-else:
-    svnSkip = "svn is not present."
-
-
 
 class ExternalTempdirTestCase(TestCase):
     """
     A test case which has mkdir make directories outside of the usual spot, so
-    that SVN and Git commands don't interfere with the Twisted checkout.
+    that Git commands don't interfere with the Twisted checkout.
     """
     def mktemp(self):
         """
@@ -96,18 +90,33 @@ class ExternalTempdirTestCase(TestCase):
 
 
 
-def _gitInit(path):
+def _gitConfig(path):
     """
-    Run a git init, and set some config that git requires. This isn't needed in
-    real usage.
+    Set some config in the repo that Git requires to make commits. This isn't
+    needed in real usage, just for tests.
+
+    @param path: The path to the Git repository.
+    @type path: L{FilePath}
     """
-    runCommand(["git", "init", path.path])
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
                 "user.name", '"someone"'])
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
                 "user.email", '"someone@someplace.com"'])
+
+
+
+def _gitInit(path):
+    """
+    Run a git init, and set some config that git requires. This isn't needed in
+    real usage.
+
+    @param path: The path to where the Git repo will be created.
+    @type path: L{FilePath}
+    """
+    runCommand(["git", "init", path.path])
+    _gitConfig(path)
 
 
 
@@ -1301,35 +1310,6 @@ class NewsBuilderGitTests(NewsBuilderMixin, ExternalTempdirTestCase):
         return runCommand(["git", "-C", project.path, "status", "--short"])
 
 
-class NewsBuilderSVNTests(NewsBuilderMixin, ExternalTempdirTestCase):
-    """
-    Tests for L{NewsBuilder} using SVN.
-    """
-    skip = svnSkip
-
-    def _commit(self, project=None):
-        """
-        Make the C{project} directory a valid subversion directory with all
-        files committed.
-        """
-        if project is None:
-            project = self.project
-
-        repositoryPath = self.mktemp()
-        repository = FilePath(repositoryPath)
-
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    project.path])
-
-        runCommand(["svn", "add"] + glob.glob(project.path + "/*"))
-        runCommand(["svn", "commit", project.path, "-m", "yay"])
-
-
-    def _getStatus(self, project):
-        return runCommand(["svn", "status", project.path])
-
-
 
 class SphinxBuilderTests(TestCase):
     """
@@ -1735,73 +1715,15 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
 
 
 
-class SVNCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
-    """
-    Specific L{CommandsTestMixin} related to Subversion checkouts through
-    L{SVNCommand}.
-    """
-    createCommand = SVNCommand
-    skip = svnSkip
-
-
-    def makeRepository(self, root):
-        """
-        Create a Subversion repository and a checkout at the specified path.
-        Note that due to how Subversion functions, it creates 2 directories and
-        the caller has to use the path returned by this function to access the
-        Subversion checkout.
-
-        @type root: L{FilePath}
-        @params root: The directory to create the Subversion repository and
-            checkout into.
-
-        @return: The path to the Subversion checkout.
-        @rtype: L{FilePath}
-        """
-        repository = root.child('repository')
-        checkout = root.child('checkout')
-
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-        return checkout
-
-
-    def commitRepository(self, repository):
-        """
-        Add and commit all the files from the specified Subversion checkout.
-
-        @type repository: L{FilePath}
-        @params repository: The Subversion checkout to commit into.
-        """
-        runCommand(["svn", "add"] + glob.glob(repository.path + "/*"))
-        runCommand(["svn", "commit", repository.path, "-m", "hop"])
-
-
-
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
-    Test the L{getRepositoryCommand} to acces the right set of VCS commands
+    Test the L{getRepositoryCommand} to access the right set of VCS commands
     depending on the repository manipulated.
     """
-    skip = svnSkip or gitSkip
+    skip = gitSkip
 
     def setUp(self):
         self.repos = FilePath(self.mktemp())
-
-
-    def test_subversion(self):
-        """
-        L{getRepositoryCommand} from a Subversion checkout returns
-        L{SVNCommand}.
-        """
-        repository = self.repos.child('repository')
-        checkout = self.repos.child('checkout')
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-        cmd = getRepositoryCommand(self.repos.child("checkout"))
-        self.assertIs(cmd, SVNCommand)
 
 
     def test_git(self):
@@ -1813,29 +1735,10 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
         self.assertIs(cmd, GitCommand)
 
 
-    def test_subversionPreferredOverGit(self):
-        """
-        L{getRepositoryCommand} from a directory which looks like both as a
-        Subversion checkout or a Git directory returns a L{SVNCommand}, which
-        is the currently preferred way of dealing with Twisted release scripts.
-        """
-        _gitInit(self.repos.child("checkout"))
-
-        repository = self.repos.child('repository')
-        checkout = self.repos.child('checkout')
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-
-        cmd = getRepositoryCommand(self.repos.child("checkout"))
-        self.assertTrue(cmd, SVNCommand)
-
-
     def test_unknownRepository(self):
         """
-        L{getRepositoryCommand} from a directory which doesn't look like a
-        Subversion checkout nor a Git repository produce a
-        L{NotWorkingDirectory} exceptions.
+        L{getRepositoryCommand} from a directory which doesn't look like a Git
+        repository produces a L{NotWorkingDirectory} exception.
         """
         self.assertRaises(NotWorkingDirectory, getRepositoryCommand,
                           self.repos)
@@ -1853,8 +1756,200 @@ class VCSCommandInterfaceTests(TestCase):
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
 
 
-    def test_svn(self):
+
+class CheckTopfileScriptTests(ExternalTempdirTestCase):
+    """
+    Tests for L{CheckTopfileScript}.
+    """
+    skip = gitSkip
+
+    def setUp(self):
+        self.origin = FilePath(self.mktemp())
+        _gitInit(self.origin)
+        runCommand(["git", "checkout", "-b", "trunk"],
+                   cwd=self.origin.path)
+        self.origin.child("test").setContent(b"test!")
+        runCommand(["git", "add", self.origin.child("test").path],
+                   cwd=self.origin.path)
+        runCommand(["git", "commit", "-m", "initial"],
+                   cwd=self.origin.path)
+
+        self.repo = FilePath(self.mktemp())
+
+        runCommand(["git", "clone", self.origin.path, self.repo.path])
+        _gitConfig(self.repo)
+
+
+    def test_noArgs(self):
         """
-        L{SVNCommand} implements L{IVCSCommand}.
+        Too few arguments returns a failure.
         """
-        self.assertTrue(IVCSCommand.implementedBy(SVNCommand))
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([])
+
+        self.assertEqual(e.exception.args,
+                         ("Must specify one argument: the Twisted checkout",))
+
+
+    def test_nothing(self):
+        """
+        No topfiles means a failure.
+        """
+        runCommand(["git", "checkout", "-b", "mypatch"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+
+
+    def test_trunk(self):
+        """
+        Running it on trunk always gives green.
+        """
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "On trunk, no need to look at this.")
+
+
+    def test_release(self):
+        """
+        Running it on a release branch returns green if there is no topfiles.
+        """
+        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1],
+                         "Release branch with no topfiles, all good.")
+
+
+    def test_releaseWithTopfiles(self):
+        """
+        Running it on a release branch returns red if there are new topfiles.
+        """
+        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "fragment"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1],
+                         "No topfiles should be on the release branch.")
+
+
+    def test_onlyQuotes(self):
+        """
+        Running it on a branch with only a quotefile change gives green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        fun = self.repo.child("docs").child("fun")
+        fun.makedirs()
+        quotes = fun.child("Twisted.Quotes")
+        quotes.setContent(b"Beep boop")
+
+        runCommand(["git", "add", quotes.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "quotes"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1],
+                         "Quotes change only; no topfile needed.")
+
+
+    def test_topfileAdded(self):
+        """
+        Running it on a branch with a fragment added returns green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
+
+
+    def test_topfileButNotFragmentAdded(self):
+        """
+        Running it on a branch with a non-fragment in the topfiles dir does not
+        return green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        notFragment = topfiles.child("1234.txt")
+        notFragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", notFragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "not topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")

@@ -1,6 +1,63 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 16.2.0 (2016-05-18)
+===============================
+
+Features
+--------
+ - twisted.web.http.HTTPFactory's constructor now accepts a reactor
+   argument, for explicit reactor selection. (#8246)
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPChannel.headerReceived now respond with 400
+   and disconnect when a malformed header is received. (#8101)
+ - twisted.web.http.Request once again has a reference to the
+   HTTPFactory which created it, the absence of which was preventing
+   log messages from being created.  (#8272)
+ - twisted.web.http.HTTPChannel no longer processes requests that have
+   invalid headers as the final header in their header block. (#8317)
+ - twisted.web.client.HTTPClientFactory (and the getPage and
+   downloadPage APIs) now timeouts correctly on TLS connections where
+   the remote party is not responding on the connection. (#8318)
+
+Other
+-----
+ - #8300
+
+
+Twisted Web 16.1.1 (2016-04-08)
+===============================
+
+Bugfixes
+--------
+ - twisted.web.http.Request once again has a reference to the
+   HTTPFactory which created it, the absence of which was preventing
+   log messages from being created.  (#8272)
+
+
+Twisted Web 16.1.0 (2016-04-04)
+===============================
+
+Features
+--------
+ - twisted.web.http.Request.addCookie now supports both unicode and
+   bytes arguments, with unicode arguments being encoded to UTF-8.
+   (#8067)
+
+Bugfixes
+--------
+ - twisted.web.util.DeferredResource no longer causes spurious
+   "Unhandled error in Deferred" log messages. (#8192)
+ - twisted.web.server.site.makeSession now generates an uid of type
+   bytes on both Python 2 and 3. (#8215)
+
+Other
+-----
+ - #8238
+
+
 Twisted Web 16.0.0 (2016-03-10)
 ===============================
 

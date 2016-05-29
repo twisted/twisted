@@ -49,4 +49,5 @@ class ModulesToInstallTests(TestCase):
         root = os.path.dirname(os.path.dirname(twisted.__file__))
         for file in testDataFiles:
             self.assertTrue(os.path.exists(
-                os.path.join(root, os.path.sep.join(file.split(".")) + ".py")))
+                os.path.join(root, os.path.sep.join(file.split(".")) + ".py")),
+                            "Data file {0} does not exist".format(file))

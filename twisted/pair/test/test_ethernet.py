@@ -180,7 +180,7 @@ class EthernetTests(unittest.TestCase):
         except components.CannotAdapt:
             pass
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooSmall(self):
@@ -188,13 +188,13 @@ class EthernetTests(unittest.TestCase):
         e = ethernet.EthernetProtocol()
         try:
             e.addProto(-1, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must be positive or zero',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooBig(self):
@@ -202,23 +202,23 @@ class EthernetTests(unittest.TestCase):
         e = ethernet.EthernetProtocol()
         try:
             e.addProto(2**16, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 16 bits',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
     def testAddingBadProtos_TooBig2(self):
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = ethernet.EthernetProtocol()
         try:
             e.addProto(2**16+1, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 16 bits',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')

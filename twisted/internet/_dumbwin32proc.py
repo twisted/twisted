@@ -23,7 +23,7 @@ import pywintypes
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
 PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 
-from zope.interface import implements
+from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
 from twisted.python.win32 import quoteArguments
@@ -94,6 +94,8 @@ def _invalidWin32App(pywinerr):
 
     return pywinerr.args[0] == 193
 
+
+@implementer(IProcessTransport, IConsumer, IProducer)
 class Process(_pollingfile._PollingTimer, BaseProcess):
     """A process that integrates with the Twisted event loop.
 
@@ -112,8 +114,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 
     """
-    implements(IProcessTransport, IConsumer, IProducer)
-
     closedNotifies = 0
 
     def __init__(self, reactor, protocol, command, args, environment, path):
@@ -177,7 +177,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         try:
             try:
                 doCreate()
-            except TypeError, e:
+            except TypeError as e:
                 # win32process.CreateProcess cannot deal with mixed
                 # str/unicode environment, so we make it all Unicode
                 if e.args != ('All dictionary items must be strings, or '
@@ -188,7 +188,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                     newenv[unicode(key)] = unicode(value)
                 env = newenv
                 doCreate()
-        except pywintypes.error, pwte:
+        except pywintypes.error as pwte:
             if not _invalidWin32App(pwte):
                 # This behavior isn't _really_ documented, but let's make it
                 # consistent with the behavior that is documented.
@@ -210,7 +210,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                     try:
                         # Let's try again.
                         doCreate()
-                    except pywintypes.error, pwte2:
+                    except pywintypes.error as pwte2:
                         # d'oh, failed again!
                         if _invalidWin32App(pwte2):
                             raise OSError(

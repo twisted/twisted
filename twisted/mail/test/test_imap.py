@@ -21,7 +21,6 @@ from collections import OrderedDict
 
 from zope.interface import implements
 
-from twisted.python.filepath import FilePath
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
 from twisted.protocols import loopback
@@ -1649,8 +1648,6 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        # Create the initial file.
-        FilePath(infile).touch()
         SimpleServer.theAccount.addMailbox('PARTIAL/SUBTHING')
         def login():
             return self.client.login('testuser', 'password-test')

@@ -1170,7 +1170,7 @@ class ClientTLSOptions(object):
     L{optionsForClientTLS} API.
 
     @ivar _ctx: The context to use for new connections.
-    @type _ctx: L{SSL.Context}
+    @type _ctx: L{OpenSSL.SSL.Context}
 
     @ivar _hostname: The hostname to verify, as specified by the application,
         as some human-readable text.
@@ -1197,8 +1197,8 @@ class ClientTLSOptions(object):
         @param hostname: The hostname to verify as input by a human.
         @type hostname: L{unicode}
 
-        @param ctx: an L{SSL.Context} to use for new connections.
-        @type ctx: L{SSL.Context}.
+        @param ctx: an L{OpenSSL.SSL.Context} to use for new connections.
+        @type ctx: L{OpenSSL.SSL.Context}.
         """
         self._ctx = ctx
         self._hostname = hostname
@@ -1365,9 +1365,9 @@ class OpenSSLCertificateOptions(object):
     _OP_ALL = getattr(SSL, 'OP_ALL', 0x0000FFFF)
     _OP_NO_TICKET = getattr(SSL, 'OP_NO_TICKET', 0x00004000)
     _OP_NO_COMPRESSION = getattr(SSL, 'OP_NO_COMPRESSION', 0x00020000)
-    _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE ',
+    _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE',
                                            0x00400000)
-    _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE ', 0x00080000)
+    _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE', 0x00080000)
 
 
     @_mutuallyExclusiveArguments([

@@ -91,7 +91,6 @@ from zope.interface import implementer, provider
 # twisted imports
 from twisted.python.compat import (
     _PY3, unicode, intToBytes, networkString, nativeString)
-from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import deprecated
 from twisted.python import log
 from twisted.python.versions import Version
@@ -101,7 +100,8 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
 from twisted.protocols import policies, basic
 
-from twisted.web.iweb import IRequest, IAccessLogFormatter
+from twisted.web.iweb import (
+    IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
 from twisted.web.http_headers import Headers
 
 H2_ENABLED = False
@@ -535,6 +535,10 @@ class HTTPClient(basic.LineReceiver):
 NO_BODY_CODES = (204, 304)
 
 
+# Sentinel object that detects people explicitly passing `queued` to Request.
+_QUEUED_SENTINEL = object()
+
+
 @implementer(interfaces.IConsumer)
 class Request:
     """
@@ -569,16 +573,6 @@ class Request:
         which this request was received is closed and which is C{True} after
         that.
     @type _disconnected: C{bool}
-
-    @ivar _queuedHeaders: A L{tuple} of items that would normally be passed to
-        L{HTTPChannel.writeHeaders}. Used when the response is queued to store
-        the eventual headers.
-    @type _queuedHeaders: A L{tuple} of HTTP version (:{bytes}), status code
-        (L{int}), reason phrase (L{bytes}), and headers (L{list} of L{tuple}s
-        of C{(bytes, bytes)}.
-
-    @ivar _send100: Whether to send a 100-Continue response when unqueued.
-    @type _send100: L{bool}
     """
     producer = None
     finished = 0
@@ -597,77 +591,25 @@ class Request:
     content = None
     _forceSSL = 0
     _disconnected = False
-    _queuedHeaders = None
-    _send100 = False
 
-    def __init__(self, channel, queued):
+    def __init__(self, channel, queued=_QUEUED_SENTINEL):
         """
         @param channel: the channel we're connected to.
-        @param queued: are we in the request queue, or can we start writing to
-            the transport?
+        @param queued: (deprecated) are we in the request queue, or can we
+            start writing to the transport?
         """
         self.notifications = []
-        self._channel = channel
-        self.queued = queued
+        self.channel = channel
         self.requestHeaders = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
         self.cookies = [] # outgoing cookies
+        self.transport = self.channel.transport
 
-        if queued:
-            self._transport = StringTransport()
-        else:
-            self._transport = self._channel
+        if queued is _QUEUED_SENTINEL:
+            queued = False
 
-
-    def __getattr__(self, attr):
-        # This is implemented to deprecate some properties of this object.
-        if attr == 'transport':
-            warnings.warn(
-                "twisted.web.http.Request.transport was deprecated in Twisted "
-                "16.2.0. Call directly into the Request object instead.",
-                category=DeprecationWarning,
-                stacklevel=2
-            )
-            attr = '_transport'
-        elif attr == 'channel':
-            warnings.warn(
-                "twisted.web.http.Request.channel was deprecated in Twisted "
-                "16.2.0. Call directly into the Request object instead.",
-                category=DeprecationWarning,
-                stacklevel=2
-            )
-            attr = '_channel'
-
-        try:
-            return self.__dict__[attr]
-        except KeyError:
-            raise AttributeError(
-                "'%s' object has no attribute '%s'" %
-                (self.__class__.__name__, attr)
-            )
-
-
-    def __setattr__(self, attr, value):
-        # This is implemented to deprecate some properties of this object.
-        if attr == 'transport':
-            warnings.warn(
-                "twisted.web.http.Request.transport was deprecated in Twisted "
-                "16.2.0. Call directly into the Request object instead.",
-                category=DeprecationWarning,
-                stacklevel=2
-            )
-            attr = '_transport'
-        elif attr == 'channel':
-            warnings.warn(
-                "twisted.web.http.Request.channel was deprecated in Twisted "
-                "16.2.0. Call directly into the Request object instead.",
-                category=DeprecationWarning,
-                stacklevel=2
-            )
-            attr = '_channel'
-
-        self.__dict__[attr] = value
+        self.queued = queued
 
 
     def _cleanup(self):
@@ -677,14 +619,15 @@ class Request:
         if self.producer:
             log.err(RuntimeError("Producer was not unregistered for %s" % self.uri))
             self.unregisterProducer()
-        self._channel.requestDone(self)
-        del self._channel
-        try:
-            self.content.close()
-        except OSError:
-            # win32 suckiness, no idea why it does this
-            pass
-        del self.content
+        self.channel.requestDone(self)
+        del self.channel
+        if self.content is not None:
+            try:
+                self.content.close()
+            except OSError:
+                # win32 suckiness, no idea why it does this
+                pass
+            del self.content
         for d in self.notifications:
             d.callback(None)
         self.notifications = []
@@ -698,30 +641,12 @@ class Request:
         We start writing whatever data we have to the transport, etc.
 
         This method is not intended for users.
+
+        In 16.3 this method was changed to become a no-op, as L{Request}
+        objects are now never queued.
         """
-        if not self.queued:
-            raise RuntimeError("noLongerQueued() got called unnecessarily.")
+        pass
 
-        self.queued = 0
-
-        # set transport to real one and send any buffer data
-        data = self._transport.getvalue()
-        self._transport = self._channel
-        if self._send100:
-            self.channel._send100Continue()
-        if self._queuedHeaders:
-            self._transport.writeHeaders(*self._queuedHeaders)
-            self._queuedHeaders = None
-        if data:
-            self._transport.write(data)
-
-        # if we have producer, register it with transport
-        if (self.producer is not None) and not self.finished:
-            self._transport.registerProducer(self.producer, self.streamingProducer)
-
-        # if we're finished, clean up
-        if self.finished:
-            self._cleanup()
 
     def gotLength(self, length):
         """
@@ -801,8 +726,8 @@ class Request:
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
-        self.client = self._channel.getPeer()
-        self.host = self._channel.getHost()
+        self.client = self.channel.getPeer()
+        self.host = self.channel.getHost()
 
         # Argument processing
         args = self.args
@@ -829,7 +754,7 @@ class Request:
                         self.args.update(cgiArgs)
                 except:
                     # It was a bad request.
-                    self._channel._respondToBadRequestAndDisconnect()
+                    self.channel._respondToBadRequestAndDisconnect()
                     return
             self.content.seek(0, 0)
 
@@ -874,19 +799,13 @@ class Request:
 
         self.streamingProducer = streaming
         self.producer = producer
-
-        if self.queued:
-            if streaming:
-                producer.pauseProducing()
-        else:
-            self._channel.registerProducer(producer, streaming)
+        self.channel.registerProducer(producer, streaming)
 
     def unregisterProducer(self):
         """
         Unregister the producer.
         """
-        if not self.queued:
-            self._channel.unregisterProducer()
+        self.channel.unregisterProducer()
         self.producer = None
 
 
@@ -948,11 +867,11 @@ class Request:
 
         if self.chunked:
             # write last chunk and closing CRLF
-            self._transport.write(b"0\r\n\r\n")
+            self.channel.write(b"0\r\n\r\n")
 
         # log request
-        if hasattr(self._channel, "factory"):
-            self._channel.factory.log(self)
+        if hasattr(self.channel, "factory"):
+            self.channel.factory.log(self)
 
         self.finished = 1
         if not self.queued:
@@ -975,7 +894,6 @@ class Request:
             version = self.clientproto
             code = intToBytes(self.code)
             reason = self.code_message
-
             headers = []
 
             # if we don't have a content length, we send data in
@@ -1013,10 +931,7 @@ class Request:
             for cookie in self.cookies:
                 headers.append((b'Set-Cookie', cookie))
 
-            if self.queued:
-                self._queuedHeaders = (version, code, reason, headers)
-            else:
-                self._channel.writeHeaders(version, code, reason, headers)
+            self.channel.writeHeaders(version, code, reason, headers)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -1031,9 +946,9 @@ class Request:
         self.sentLength = self.sentLength + len(data)
         if data:
             if self.chunked:
-                self._transport.writeSequence(toChunk(data))
+                self.channel.writeSequence(toChunk(data))
             else:
-                self._transport.write(data)
+                self.channel.write(data)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
                   max_age=None, comment=None, secure=None, httpOnly=False):
@@ -1319,25 +1234,25 @@ class Request:
 
     def isSecure(self):
         """
-        Return True if this request is using a secure transport.
+        Return L{True} if this request is using a secure transport.
 
-        Normally this method returns True if this request's HTTPChannel
-        instance is using a transport that implements ISSLTransport.
+        Normally this method returns L{True} if this request's L{HTTPChannel}
+        instance is using a transport that implements
+        L{interfaces.ISSLTransport}.
 
-        This will also return True if setHost() has been called
-        with ssl=True.
+        This will also return L{True} if L{Request.setHost} has been called
+        with C{ssl=True}.
 
-        @returns: True if this request is secure
+        @returns: L{True} if this request is secure
         @rtype: C{bool}
         """
         if self._forceSSL:
             return True
-        transport = getattr(
-            getattr(self, '_channel', None), 'transport', None
-        )
-        if interfaces.ISSLTransport(transport, None) is not None:
-            return True
-        return False
+        channel = getattr(self, 'channel', None)
+        if channel is None:
+            return False
+        return channel.isSecure()
+
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
@@ -1409,7 +1324,7 @@ class Request:
         Clean up anything which can't be useful anymore.
         """
         self._disconnected = True
-        self._channel = None
+        self.channel = None
         if self.content is not None:
             self.content.close()
         for d in self.notifications:
@@ -1421,22 +1336,16 @@ class Request:
         """
         Pass the loseConnection through to the underlying channel.
         """
-        self._channel.loseConnection()
-
-
-    def _send100Continue(self):
-        """
-        Sends a "100 Continue" status code, where 100 Continue is supported.
-        """
-        if not self.queued:
-            self._channel._send100Continue()
-        else:
-            self._send100 = True
+        self.channel.loseConnection()
 
 
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
     "Twisted Names to resolve hostnames")(Request.getClient)
+
+
+Request.noLongerQueued = deprecated(
+    Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
 
 
 class _DataLoss(Exception):
@@ -1673,25 +1582,35 @@ class _ChunkedTransferDecoder(object):
 
 
 
-class _ChannelSendState(Names):
+@implementer(interfaces.IPushProducer)
+class _NoPushProducer(object):
     """
-    Defines a collection of states that indicate what portion of a HTTP
-    response has already been sent on L{HTTPChannel}. Used to enforce that
-    callers of methods on the L{HTTPChannel} are calling them at the
-    appropriate times and to prevent callers from sending invalid HTTP
-    responses.
-
-    The state of the channel send state goes from C{IDLE} (the previous
-    response is complete), optionally to C{SENT_100_CONTINUE}, and then to
-    C{SENT_HEADERS} When the response is complete, the state is reset to
-    C{IDLE}.
+    A no-op version of L{interfaces.IPushProducer}, used to abstract over the
+    possibility that a L{HTTPChannel} transport does not provide
+    L{IPushProducer}.
     """
-    IDLE = NamedConstant()
-    SENT_100_CONTINUE = NamedConstant()
-    SENT_HEADERS = NamedConstant()
+    def pauseProducing(self):
+        """
+        Pause producing data.
+
+        Tells a producer that it has produced too much data to process for
+        the time being, and to stop until resumeProducing() is called.
+        """
+        pass
+
+
+    def resumeProducing(self):
+        """
+        Resume producing data.
+
+        This tells a producer to re-add itself to the main loop and produce
+        more data for its consumer.
+        """
+        pass
 
 
 
+@implementer(interfaces.ITransport)
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
@@ -1712,6 +1631,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar _receivedHeaderSize: Bytes received so far for the header.
     @type _receivedHeaderSize: C{int}
+
+    @ivar _handlingRequest: Whether a request is currently being processed.
+    @type _handlingRequest: L{bool}
+
+    @ivar _dataBuffer: Any data that has been received from the connection
+        while processing an outstanding request.
+    @type _dataBuffer: L{list} of L{bytes}
+
+    @ivar _producer: Either the transport, if it provides
+        L{interfaces.IPushProducer}, or a null implementation of
+        L{interfaces.IPushProducer}. Used to attempt to prevent the transport
+        from producing excess data when we're responding to a request.
+    @type _producer: L{interfaces.IPushProducer}
     """
 
     maxHeaders = 500
@@ -1733,12 +1665,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     def __init__(self):
         # the request queue
         self.requests = []
+        self._handlingRequest = False
+        self._dataBuffer = []
         self._transferDecoder = None
-        self._sendState = _ChannelSendState.IDLE
 
 
     def connectionMade(self):
         self.setTimeout(self.timeOut)
+        self._producer = interfaces.IPushProducer(
+            self.transport, _NoPushProducer()
+        )
 
 
     def lineReceived(self, line):
@@ -1751,6 +1687,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._receivedHeaderSize += len(line)
         if (self._receivedHeaderSize > self.totalHeadersSize):
             self._respondToBadRequestAndDisconnect()
+            return
+
+        # If we're currently handling a request, buffer this data. We shouldn't
+        # have received it (we've paused the transport), but let's be cautious.
+        if self._handlingRequest:
+            self._dataBuffer.append(line)
+            self._dataBuffer.append(b'\r\n')
             return
 
         if self.__first_line:
@@ -1767,7 +1710,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 return
 
             # create a new Request object
-            request = self.requestFactory(self, len(self.requests))
+            if INonQueuedRequestFactory.providedBy(self.requestFactory):
+                request = self.requestFactory(self)
+            else:
+                request = self.requestFactory(self, len(self.requests))
             self.requests.append(request)
 
             self.__first_line = 0
@@ -1789,7 +1735,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         elif line == b'':
             # End of headers.
             if self.__header:
-                self.headerReceived(self.__header)
+                ok = self.headerReceived(self.__header)
+                # If the last header we got is invalid, we MUST NOT proceed
+                # with processing. We'll have sent a 400 anyway, so just stop.
+                if not ok:
+                    return
             self.__header = ''
             self.allHeadersReceived()
             if self.length == 0:
@@ -1810,7 +1760,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def _finishRequestBody(self, data):
         self.allContentReceived()
-        self.setLineMode(data)
+        self._dataBuffer.append(data)
 
 
     def headerReceived(self, line):
@@ -1821,8 +1771,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type line: C{bytes}
         @param line: A line from the header section of a request, excluding the
             line delimiter.
+
+        @return: A flag indicating whether the header was valid.
+        @rtype: L{bool}
         """
-        header, data = line.split(b':', 1)
+        try:
+            header, data = line.split(b':', 1)
+        except ValueError:
+            self._respondToBadRequestAndDisconnect()
+            return False
+
         header = header.lower()
         data = data.strip()
         if header == b'content-length':
@@ -1831,7 +1789,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             except ValueError:
                 self._respondToBadRequestAndDisconnect()
                 self.length = None
-                return
+                return False
             self._transferDecoder = _IdentityTransferDecoder(
                 self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
         elif header == b'transfer-encoding' and data.lower() == b'chunked':
@@ -1850,7 +1808,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
             self._respondToBadRequestAndDisconnect()
-            return
+            return False
+
+        return True
 
 
     def allContentReceived(self):
@@ -1871,12 +1831,23 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeOut:
             self._savedTimeOut = self.setTimeout(None)
 
+        # Pause the producer if we can. If we can't, that's ok, we'll buffer.
+        self._producer.pauseProducing()
+        self._handlingRequest = True
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
 
     def rawDataReceived(self, data):
         self.resetTimeout()
+
+        # If we're currently handling a request, buffer this data. We shouldn't
+        # have received it (we've paused the transport), but let's be cautious.
+        if self._handlingRequest:
+            self._dataBuffer.append(data)
+            return
+
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
@@ -1893,7 +1864,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         expectContinue = req.requestHeaders.getRawHeaders(b'expect')
         if (expectContinue and expectContinue[0].lower() == b'100-continue' and
             self._version == b'HTTP/1.1'):
-            req._send100Continue()
+            self._send100Continue()
 
 
     def checkPersistence(self, request, version):
@@ -1948,25 +1919,44 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         del self.requests[0]
 
         if self.persistent:
-            self._sendState = _ChannelSendState.IDLE
+            self._handlingRequest = False
+            self._producer.resumeProducing()
 
-            # notify next request it can start writing
-            if self.requests:
-                self.requests[0].noLongerQueued()
-            else:
-                if self._savedTimeOut:
-                    self.setTimeout(self._savedTimeOut)
+            if self._savedTimeOut:
+                self.setTimeout(self._savedTimeOut)
+
+            # Receive our buffered data, if any.
+            data = b''.join(self._dataBuffer)
+            self._dataBuffer = []
+            self.setLineMode(data)
         else:
             self.transport.loseConnection()
+
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
         policies.TimeoutMixin.timeoutConnection(self)
 
+
     def connectionLost(self, reason):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+
+
+    def isSecure(self):
+        """
+        Return L{True} if this channel is using a secure transport.
+
+        Normally this method returns L{True} if this instance is using a
+        transport that implements L{interfaces.ISSLTransport}.
+
+        @returns: L{True} if this request is secure
+        @rtype: C{bool}
+        """
+        if interfaces.ISSLTransport(self.transport, None) is not None:
+            return True
+        return False
 
 
     def writeHeaders(self, version, code, reason, headers):
@@ -1986,9 +1976,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param headers: The headers to write to the transport.
         @type headers: L{twisted.web.http_headers.Headers}
         """
-        assert self._sendState in (
-            _ChannelSendState.IDLE, _ChannelSendState.SENT_100_CONTINUE
-        )
         responseLine = version + b" " + code + b" " + reason + b"\r\n"
         headerSequence = [responseLine]
         headerSequence.extend(
@@ -1996,7 +1983,59 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         )
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
-        self._sendState = _ChannelSendState.SENT_HEADERS
+
+
+    def write(self, data):
+        """
+        Called by L{Request} objects to write response data.
+
+        @param data: The data chunk to write to the stream.
+        @type data: L{bytes}
+
+        @return: C{None}
+        """
+        self.transport.write(data)
+
+
+    def writeSequence(self, iovec):
+        """
+        Write a list of strings to the HTTP response.
+
+        @param iovec: A list of byte strings to write to the stream.
+        @type data: L{list} of L{bytes}
+
+        @return: C{None}
+        """
+        self.transport.writeSequence(iovec)
+
+
+    def getPeer(self):
+        """
+        Get the remote address of this connection.
+
+        @return: An L{IAddress} provider.
+        """
+        return self.transport.getPeer()
+
+
+    def getHost(self):
+        """
+        Get the local address of this connection.
+
+        @return: An L{IAddress} provider.
+        """
+        return self.transport.getHost()
+
+
+    def loseConnection(self):
+        """
+        Closes the connection. Will write any data that is pending to be sent
+        on the network, but if this response has not yet been written to the
+        network will not write anything.
+
+        @return: C{None}
+        """
+        return self.transport.loseConnection()
 
 
     def registerProducer(self, producer, streaming):
@@ -2038,71 +2077,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         return self.transport.unregisterProducer()
 
 
-    def write(self, data):
-        """
-        Called by L{Request} objects to write response data.
-
-        @param data: The data chunk to write to the stream.
-        @type data: L{bytes}
-
-        @return: C{None}
-        """
-        assert self._sendState == _ChannelSendState.SENT_HEADERS
-        self.transport.write(data)
-
-
-    def writeSequence(self, iovec):
-        """
-        Write a list of strings to the HTTP response.
-
-        @param iovec: A list of byte strings to write to the stream.
-        @type data: L{list} of L{bytes}
-
-        @return: C{None}
-        """
-        assert self._sendState == _ChannelSendState.SENT_HEADERS
-        self.transport.writeSequence(iovec)
-
-
-    def getPeer(self):
-        """
-        Get the remote address of this connection.
-
-        @return: An L{IAddress} provider.
-        """
-        return self.transport.getPeer()
-
-
-    def getHost(self):
-        """
-        Get the local address of this connection.
-
-        @return: An L{IAddress} provider.
-        """
-        return self.transport.getHost()
-
-
-    def loseConnection(self):
-        """
-        Closes the connection. Will write any data that is pending to be sent
-        on the network, but if this response has not yet been written to the
-        network will not write anything.
-
-        @return: C{None}
-        """
-        # TODO: Does this need to be smarter, particularly about queued
-        # responses?
-        return self.transport.loseConnection()
-
-
     def _send100Continue(self):
         """
         Sends a 100 Continue response, used to signal to clients that further
         processing will be performed.
         """
-        assert self._sendState == _ChannelSendState.IDLE
         self.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
-        self._sendState = _ChannelSendState.SENT_100_CONTINUE
 
 
     def _respondToBadRequestAndDisconnect(self):
@@ -2112,12 +2092,10 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         As described by HTTP standard we should be patient and accept the
         whole request from the client before sending a polite bad request
         response, even in the case when clients send tons of data.
+
+        @param transport: Transport handling connection to the client.
+        @type transport: L{interfaces.ITransport}
         """
-        # FIXME: There is nothing in this method to ensure that the response it
-        # sends is not intermingled with some other response body being written
-        # at the same time. Clearly this isn't the end of the world: the method
-        # has been arund a little while. Still, this should probably be
-        # refactored.
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.transport.loseConnection()
 
@@ -2254,6 +2232,22 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     _negotiatedProtocol = None
     _requestFactory = Request
     _site = None
+
+
+    @property
+    def factory(self):
+        """
+        @see: L{HTTPChannel.factory}
+        """
+        return self._channel.factory
+
+
+    @factory.setter
+    def factory(self, value):
+        """
+        @see: L{HTTPChannel.factory}
+        """
+        self._channel.factory = value
 
 
     @property

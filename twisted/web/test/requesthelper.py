@@ -116,12 +116,8 @@ class DummyChannel:
         pass
 
 
-    @property
-    def producers(self):
-        return self.transport.producers
-
-    def _send100Continue(self):
-        self.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
+    def isSecure(self):
+        return isinstance(self.transport, self.SSL)
 
 
 

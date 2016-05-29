@@ -1905,6 +1905,30 @@ class _WrapperEndpoint(object):
 
 
 
+@implementer(interfaces.IStreamServerEndpoint)
+class _WrapperServerEndpoint(object):
+    """
+    A server endpoint that wraps another server endpoint.
+    """
+
+    def __init__(self, wrappedEndpoint, wrapperFactory):
+        """
+        Construct a L{_WrapperServerEndpoint}.
+        """
+        self._wrappedEndpoint = wrappedEndpoint
+        self._wrapperFactory = wrapperFactory
+
+
+    def listen(self, protocolFactory):
+        """
+        Connect the given protocol factory and unwrap its result.
+        """
+        return self._wrappedEndpoint.listen(
+            self._wrapperFactory(protocolFactory)
+        )
+
+
+
 def wrapClientTLS(connectionCreator, wrappedEndpoint):
     """
     Wrap an endpoint which upgrades to TLS as soon as the connection is

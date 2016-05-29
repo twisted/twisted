@@ -9,7 +9,7 @@ from twisted.internet import main, error, interfaces
 from twisted.internet.abstract import _ConsumerMixin, _LogOwner
 from twisted.python import failure
 
-from zope.interface import implements
+from zope.interface import implementer
 import errno
 
 from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF
@@ -17,13 +17,12 @@ from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
 from twisted.internet.iocpreactor import iocpsupport as _iocp
 
 
-
+@implementer(interfaces.IPushProducer, interfaces.IConsumer,
+             interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
 class FileHandle(_ConsumerMixin, _LogOwner):
     """
     File handle that can read and write asynchronously
     """
-    implements(interfaces.IPushProducer, interfaces.IConsumer,
-               interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
     # read stuff
     maxReadBuffers = 16
     readBufferSize = 4096
@@ -397,4 +396,3 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
 
 __all__ = ['FileHandle']
-

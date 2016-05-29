@@ -1,4 +1,4 @@
-Twisted 16.0.0
+Twisted 16.2.0
 ==============
 
 |pypi|
@@ -6,14 +6,10 @@ Twisted 16.0.0
 
 .. code::
 
-    <idnar> oh, sorry, this is easier than the last time I looked
-    <glyph> idnar: HAHA PWNT
-    <glyph> idnar: I WORKED SUPER HARD TO MAKE YOUR LIFE EASIER FOR MONTHS AND
-            NOW YOU HAVE TO EAT CROWWWW
-    <glyph> idnar: I AM THE WINNER IN THIS TRANSACTION SOMEHOW
+    <lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
 
 
-For information on what's new in Twisted 16.0.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.2.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -63,6 +59,12 @@ Twisted has a comprehensive test suite, which can be run by ``tox``::
   $ tox -l            # to view all test environments
   $ tox -e py27-tests # to run the tests for Python 2.7
   $ tox -e py34-tests # to run the tests for Python 3.4
+
+
+You can test running the test suite under the different reactors with the ``TWISTED_REACTOR`` environment variable::
+
+  $ env TWISTED_REACTOR=epoll tox -e py27-tests
+
 
 Some of these tests may fail if you:
 

@@ -1,6 +1,40 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 16.2.0 (2016-05-18)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #8279
+
+
+Twisted Conch 16.1.1 (2016-04-08)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 16.1.0 (2016-04-04)
+=================================
+
+Features
+--------
+ - twisted.conch.checkers is now ported to Python 3. (#8225)
+ - twisted.conch.telnet is now ported to Python 3. (#8228)
+ - twisted.conch.manhole_ssh.ConchFactory (used by `twistd manhole`)
+   no longer uses a hardcoded SSH server key, and will generate a
+   persistent one, saving it in your user appdir. If you use
+   ConchFactory, you will now need to provide your own SSH server key.
+   (#8229)
+
+Other
+-----
+ - #8237, #8240
+
+
 Twisted Conch 16.0.0 (2016-03-10)
 =================================
 
