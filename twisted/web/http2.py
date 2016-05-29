@@ -794,7 +794,10 @@ class H2Stream(object):
                 _addHeaderToRequest(self._request, (b'host', header[1]))
 
         if not gotLength:
-            self._request.gotLength(None)
+            if self.command in (b'GET', b'HEAD'):
+                self._request.gotLength(0)
+            else:
+                self._request.gotLength(None)
 
         self._request.parseCookies()
         expectContinue = self._request.requestHeaders.getRawHeaders(b'expect')
