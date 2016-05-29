@@ -1,7 +1,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, time, stat, errno
+from __future__ import division, absolute_import
+
+import errno
+import os
+import pickle
+import stat
+import time
 
 from twisted.trial import unittest
 from twisted.python import logfile, runtime
@@ -11,7 +17,6 @@ class LogFileTests(unittest.TestCase):
     """
     Test the rotating log file.
     """
-
     def setUp(self):
         self.dir = self.mktemp()
         os.makedirs(self.dir)
@@ -24,12 +29,26 @@ class LogFileTests(unittest.TestCase):
         Restore back write rights on created paths: if tests modified the
         rights, that will allow the paths to be removed easily afterwards.
         """
-        os.chmod(self.dir, 0777)
+        os.chmod(self.dir, 0o777)
         if os.path.exists(self.path):
-            os.chmod(self.path, 0777)
+            os.chmod(self.path, 0o777)
 
 
-    def testWriting(self):
+    def test_abstractShouldRotate(self):
+        """
+        L{BaseLogFile.shouldRotate} is abstract and must be implemented by
+        subclass.
+        """
+        log = logfile.BaseLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+        self.assertRaises(NotImplementedError, log.shouldRotate)
+
+
+    def test_writing(self):
+        """
+        Log files can be written to, flushed and closed. Closing a log file
+        also flushes it.
+        """
         log = logfile.LogFile(self.name, self.dir)
         log.write("123")
         log.write("456")
@@ -37,11 +56,16 @@ class LogFileTests(unittest.TestCase):
         log.write("7890")
         log.close()
 
-        f = open(self.path, "r")
+        f = open(self.path)
         self.assertEqual(f.read(), "1234567890")
         f.close()
 
-    def testRotation(self):
+
+    def test_rotation(self):
+        """
+        Rotating log files autorotate after a period of time, and can also be
+        manually rotated.
+        """
         # this logfile should rotate every 10 bytes
         log = logfile.LogFile(self.name, self.dir, rotateLength=10)
 
@@ -49,29 +73,37 @@ class LogFileTests(unittest.TestCase):
         log.write("123")
         log.write("4567890")
         log.write("1" * 11)
-        self.assert_(os.path.exists("%s.1" % self.path))
-        self.assert_(not os.path.exists("%s.2" % self.path))
+        self.assertTrue(os.path.exists("{0}.1".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.2".format(self.path)))
         log.write('')
-        self.assert_(os.path.exists("%s.1" % self.path))
-        self.assert_(os.path.exists("%s.2" % self.path))
-        self.assert_(not os.path.exists("%s.3" % self.path))
+        self.assertTrue(os.path.exists("{0}.1".format(self.path)))
+        self.assertTrue(os.path.exists("{0}.2".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.3".format(self.path)))
         log.write("3")
-        self.assert_(not os.path.exists("%s.3" % self.path))
+        self.assertFalse(os.path.exists("{0}.3".format(self.path)))
 
         # test manual rotation
         log.rotate()
-        self.assert_(os.path.exists("%s.3" % self.path))
-        self.assert_(not os.path.exists("%s.4" % self.path))
+        self.assertTrue(os.path.exists("{0}.3".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.4".format(self.path)))
         log.close()
 
         self.assertEqual(log.listLogs(), [1, 2, 3])
 
-    def testAppend(self):
+
+    def test_append(self):
+        """
+        Log files can be written to, closed. Their size is the number of
+        bytes written to them. Everything that was written to them can
+        be read, even if the writing happened on seperate occasions,
+        and even if the log file was closed in between.
+        """
         log = logfile.LogFile(self.name, self.dir)
         log.write("0123456789")
         log.close()
 
         log = logfile.LogFile(self.name, self.dir)
+        self.addCleanup(log.close)
         self.assertEqual(log.size, 10)
         self.assertEqual(log._file.tell(), log.size)
         log.write("abc")
@@ -80,10 +112,20 @@ class LogFileTests(unittest.TestCase):
         f = log._file
         f.seek(0, 0)
         self.assertEqual(f.read(), "0123456789abc")
-        log.close()
 
-    def testLogReader(self):
+
+    def test_logReader(self):
+        """
+        Various tests for log readers.
+
+        First of all, log readers can get logs by number and read what
+        was written to those log files. Getting nonexistent log files
+        raises C{ValueError}. Using anything other than an integer
+        index raises C{TypeError}. As logs get older, their log
+        numbers increase.
+        """
         log = logfile.LogFile(self.name, self.dir)
+        self.addCleanup(log.close)
         log.write("abc\n")
         log.write("def\n")
         log.rotate()
@@ -119,14 +161,29 @@ class LogFileTests(unittest.TestCase):
         self.assertEqual(reader.readLines(), [])
         reader.close()
 
-    def testModePreservation(self):
+
+    def test_LogReaderReadsZeroLine(self):
+        """
+        L{LogReader.readLines} supports reading no line.
+        """
+        # We don't need any content, just a file path that can be opened.
+        with open(self.path, "w"):
+            pass
+
+        reader = logfile.LogReader(self.path)
+        self.addCleanup(reader.close)
+        self.assertEqual([], reader.readLines(0))
+
+
+    def test_modePreservation(self):
         """
         Check rotated files have same permissions as original.
         """
         open(self.path, "w").close()
-        os.chmod(self.path, 0707)
+        os.chmod(self.path, 0o707)
         mode = os.stat(self.path)[stat.ST_MODE]
         log = logfile.LogFile(self.name, self.dir)
+        self.addCleanup(log.close)
         log.write("abc")
         log.rotate()
         self.assertEqual(mode, os.stat(self.path)[stat.ST_MODE])
@@ -137,10 +194,11 @@ class LogFileTests(unittest.TestCase):
         Check it keeps working when permission on dir changes.
         """
         log = logfile.LogFile(self.name, self.dir)
+        self.addCleanup(log.close)
         log.write("abc")
 
         # change permissions so rotation would fail
-        os.chmod(self.dir, 0555)
+        os.chmod(self.dir, 0o555)
 
         # if this succeeds, chmod doesn't restrict us, so we can't
         # do the test
@@ -161,7 +219,6 @@ class LogFileTests(unittest.TestCase):
         self.assertEqual(f.tell(), 6)
         f.seek(0, 0)
         self.assertEqual(f.read(), "abcdef")
-        log.close()
 
 
     def test_maxNumberOfLog(self):
@@ -171,57 +228,66 @@ class LogFileTests(unittest.TestCase):
         """
         log = logfile.LogFile(self.name, self.dir, rotateLength=10,
                               maxRotatedFiles=3)
+        self.addCleanup(log.close)
         log.write("1" * 11)
         log.write("2" * 11)
-        self.failUnless(os.path.exists("%s.1" % self.path))
+        self.assertTrue(os.path.exists("{0}.1".format(self.path)))
 
         log.write("3" * 11)
-        self.failUnless(os.path.exists("%s.2" % self.path))
+        self.assertTrue(os.path.exists("{0}.2".format(self.path)))
 
         log.write("4" * 11)
-        self.failUnless(os.path.exists("%s.3" % self.path))
-        self.assertEqual(file("%s.3" % self.path).read(), "1" * 11)
+        self.assertTrue(os.path.exists("{0}.3".format(self.path)))
+        with open("{0}.3".format(self.path)) as fp:
+            self.assertEqual(fp.read(), "1" * 11)
 
         log.write("5" * 11)
-        self.assertEqual(file("%s.3" % self.path).read(), "2" * 11)
-        self.failUnless(not os.path.exists("%s.4" % self.path))
+        with open("{0}.3".format(self.path)) as fp:
+            self.assertEqual(fp.read(), "2" * 11)
+        self.assertTrue(not os.path.exists("{0}.4".format(self.path)))
+
 
     def test_fromFullPath(self):
         """
         Test the fromFullPath method.
         """
-        log1 = logfile.LogFile(self.name, self.dir, 10, defaultMode=0777)
-        log2 = logfile.LogFile.fromFullPath(self.path, 10, defaultMode=0777)
+        log1 = logfile.LogFile(self.name, self.dir, 10, defaultMode=0o777)
+        self.addCleanup(log1.close)
+        log2 = logfile.LogFile.fromFullPath(self.path, 10, defaultMode=0o777)
+        self.addCleanup(log2.close)
         self.assertEqual(log1.name, log2.name)
         self.assertEqual(os.path.abspath(log1.path), log2.path)
         self.assertEqual(log1.rotateLength, log2.rotateLength)
         self.assertEqual(log1.defaultMode, log2.defaultMode)
+
 
     def test_defaultPermissions(self):
         """
         Test the default permission of the log file: if the file exist, it
         should keep the permission.
         """
-        f = file(self.path, "w")
-        os.chmod(self.path, 0707)
+        f = open(self.path, "wb")
+        os.chmod(self.path, 0o707)
         currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         f.close()
-        logfile.LogFile(self.name, self.dir)
+        log1 = logfile.LogFile(self.name, self.dir)
         self.assertEqual(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]),
                           currentMode)
+        self.addCleanup(log1.close)
 
 
     def test_specifiedPermissions(self):
         """
         Test specifying the permissions used on the log file.
         """
-        logfile.LogFile(self.name, self.dir, defaultMode=0066)
+        log1 = logfile.LogFile(self.name, self.dir, defaultMode=0o066)
+        self.addCleanup(log1.close)
         mode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         if runtime.platform.isWindows():
             # The only thing we can get here is global read-only
-            self.assertEqual(mode, 0444)
+            self.assertEqual(mode, 0o444)
         else:
-            self.assertEqual(mode, 0066)
+            self.assertEqual(mode, 0o066)
 
 
     def test_reopen(self):
@@ -237,10 +303,10 @@ class LogFileTests(unittest.TestCase):
         log1.write("hello2")
         log1.close()
 
-        f = open(self.path, "r")
+        f = open(self.path)
         self.assertEqual(f.read(), "hello2")
         f.close()
-        f = open(savePath, "r")
+        f = open(savePath)
         self.assertEqual(f.read(), "hello1")
         f.close()
 
@@ -257,6 +323,83 @@ class LogFileTests(unittest.TestCase):
         self.assertEqual(e.errno, errno.ENOENT)
 
 
+    def test_persistence(self):
+        """
+        L{LogFile} objects can be pickled and unpickled, which preserves all
+        the various attributes of the log file.
+        """
+        rotateLength = 12345
+        defaultMode = 0o642
+        maxRotatedFiles = 42
+
+        log = logfile.LogFile(self.name, self.dir,
+                              rotateLength, defaultMode,
+                              maxRotatedFiles)
+        log.write("123")
+        log.close()
+
+        copy = pickle.loads(pickle.dumps(log))
+        self.addCleanup(copy.close)
+
+        # Check that the unpickled log is the same as the original one.
+        self.assertEqual(self.name, copy.name)
+        self.assertEqual(self.dir, copy.directory)
+        self.assertEqual(self.path, copy.path)
+        self.assertEqual(rotateLength, copy.rotateLength)
+        self.assertEqual(defaultMode, copy.defaultMode)
+        self.assertEqual(maxRotatedFiles, copy.maxRotatedFiles)
+        self.assertEqual(log.size, copy.size)
+
+
+    def test_cantChangeFileMode(self):
+        """
+        Opening a L{LogFile} which can be read and write but whose mode can't
+        be changed doesn't trigger an error.
+        """
+        if runtime.platform.isWindows():
+            name, directory = "NUL", ""
+            expectedPath = "NUL"
+        else:
+            name, directory = "null", "/dev"
+            expectedPath = "/dev/null"
+
+        log = logfile.LogFile(name, directory, defaultMode=0o555)
+        self.addCleanup(log.close)
+
+        self.assertEqual(log.path, expectedPath)
+        self.assertEqual(log.defaultMode, 0o555)
+
+
+    def test_listLogsWithBadlyNamedFiles(self):
+        """
+        L{LogFile.listLogs} doesn't choke if it encounters a file with an
+        unexpected name.
+        """
+        log = logfile.LogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+
+        with open("{0}.1".format(log.path), "w") as fp:
+            fp.write("123")
+        with open("{0}.bad-file".format(log.path), "w") as fp:
+            fp.write("123")
+
+        self.assertEqual([1], log.listLogs())
+
+
+    def test_listLogsIgnoresZeroSuffixedFiles(self):
+        """
+        L{LogFile.listLogs} ignores log files which rotated suffix is 0.
+        """
+        log = logfile.LogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+
+        for i in range(0, 3):
+            with open("{0}.{1}".format(log.path, i), "w") as fp:
+                fp.write("123")
+
+        self.assertEqual([1, 2], log.listLogs())
+
+
 
 class RiggedDailyLogFile(logfile.DailyLogFile):
     _clock = 0.0
@@ -266,16 +409,18 @@ class RiggedDailyLogFile(logfile.DailyLogFile):
         # rig the date to match _clock, not mtime
         self.lastDate = self.toDate()
 
+
     def toDate(self, *args):
         if args:
             return time.gmtime(*args)[:3]
         return time.gmtime(self._clock)[:3]
 
+
+
 class DailyLogFileTests(unittest.TestCase):
     """
     Test rotating log file.
     """
-
     def setUp(self):
         self.dir = self.mktemp()
         os.makedirs(self.dir)
@@ -283,7 +428,10 @@ class DailyLogFileTests(unittest.TestCase):
         self.path = os.path.join(self.dir, self.name)
 
 
-    def testWriting(self):
+    def test_writing(self):
+        """
+        A daily log file can be written to like an ordinary log file.
+        """
         log = RiggedDailyLogFile(self.name, self.dir)
         log.write("123")
         log.write("456")
@@ -291,13 +439,17 @@ class DailyLogFileTests(unittest.TestCase):
         log.write("7890")
         log.close()
 
-        f = open(self.path, "r")
+        f = open(self.path)
         self.assertEqual(f.read(), "1234567890")
         f.close()
 
-    def testRotation(self):
-        # this logfile should rotate every 10 bytes
+
+    def test_rotation(self):
+        """
+        Daily log files rotate daily.
+        """
         log = RiggedDailyLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
         days = [(self.path + '.' + log.suffix(day * 86400)) for day in range(3)]
 
         # test automatic rotation
@@ -307,14 +459,168 @@ class DailyLogFileTests(unittest.TestCase):
         log.write("4567890")
         log._clock = 86400  # 1970/01/02 00:00.00
         log.write("1" * 11)
-        self.assert_(os.path.exists(days[0]))
-        self.assert_(not os.path.exists(days[1]))
+        self.assertTrue(os.path.exists(days[0]))
+        self.assertFalse(os.path.exists(days[1]))
         log._clock = 172800 # 1970/01/03 00:00.00
         log.write('')
-        self.assert_(os.path.exists(days[0]))
-        self.assert_(os.path.exists(days[1]))
-        self.assert_(not os.path.exists(days[2]))
+        self.assertTrue(os.path.exists(days[0]))
+        self.assertTrue(os.path.exists(days[1]))
+        self.assertFalse(os.path.exists(days[2]))
         log._clock = 259199 # 1970/01/03 23:59.59
         log.write("3")
-        self.assert_(not os.path.exists(days[2]))
+        self.assertFalse(os.path.exists(days[2]))
 
+
+    def test_getLog(self):
+        """
+        Test retrieving log files with L{DailyLogFile.getLog}.
+        """
+        data = ["1\n", "2\n", "3\n"]
+        log = RiggedDailyLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+        for d in data:
+            log.write(d)
+        log.flush()
+
+        # This returns the current log file.
+        r = log.getLog(0.0)
+        self.addCleanup(r.close)
+
+        self.assertEqual(data, r.readLines())
+
+        # We can't get this log, it doesn't exist yet.
+        self.assertRaises(ValueError, log.getLog, 86400)
+
+        log._clock = 86401 # New day
+        r.close()
+        log.rotate()
+        r = log.getLog(0) # We get the previous log
+        self.addCleanup(r.close)
+        self.assertEqual(data, r.readLines())
+
+
+    def test_rotateAlreadyExists(self):
+        """
+        L{DailyLogFile.rotate} doesn't do anything if they new log file already
+        exists on the disk.
+        """
+        log = RiggedDailyLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+
+        # Build a new file with the same name as the file which would be created
+        # if the log file is to be rotated.
+        newFilePath = "{0}.{1}".format(log.path, log.suffix(log.lastDate))
+        with open(newFilePath, "w") as fp:
+            fp.write("123")
+        previousFile = log._file
+        log.rotate()
+        self.assertEqual(previousFile, log._file)
+
+
+    def test_rotatePermissionDirectoryNotOk(self):
+        """
+        L{DailyLogFile.rotate} doesn't do anything if the directory containing
+        the log files can't be written to.
+        """
+        log = logfile.DailyLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+
+        os.chmod(log.directory, 0o444)
+        # Restore permissions so tests can be cleaned up.
+        self.addCleanup(os.chmod, log.directory, 0o755)
+        previousFile = log._file
+        log.rotate()
+        self.assertEqual(previousFile, log._file)
+
+    if runtime.platform.isWindows():
+        test_rotatePermissionDirectoryNotOk.skip = (
+            "Making read-only directories on Windows is too complex for this "
+            "test to reasonably do.")
+
+
+    def test_rotatePermissionFileNotOk(self):
+        """
+        L{DailyLogFile.rotate} doesn't do anything if the log file can't be
+        written to.
+        """
+        log = logfile.DailyLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+
+        os.chmod(log.path, 0o444)
+        previousFile = log._file
+        log.rotate()
+        self.assertEqual(previousFile, log._file)
+
+
+    def test_toDate(self):
+        """
+        Test that L{DailyLogFile.toDate} converts its timestamp argument to a
+        time tuple (year, month, day).
+        """
+        log = logfile.DailyLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+
+        timestamp = time.mktime((2000, 1, 1, 0, 0, 0, 0, 0, 0))
+        self.assertEqual((2000, 1, 1), log.toDate(timestamp))
+
+
+    def test_toDateDefaultToday(self):
+        """
+        Test that L{DailyLogFile.toDate} returns today's date by default.
+
+        By mocking L{time.localtime}, we ensure that L{DailyLogFile.toDate}
+        returns the first 3 values of L{time.localtime} which is the current
+        date.
+
+        Note that we don't compare the *real* result of L{DailyLogFile.toDate}
+        to the *real* current date, as there's a slight possibility that the
+        date changes between the 2 function calls.
+        """
+        def mock_localtime(*args):
+            self.assertEqual((), args)
+            return list(range(0, 9))
+
+        log = logfile.DailyLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+
+        self.patch(time, "localtime", mock_localtime)
+        logDate = log.toDate()
+        self.assertEqual([0, 1, 2], logDate)
+
+
+    def test_toDateUsesArgumentsToMakeADate(self):
+        """
+        Test that L{DailyLogFile.toDate} uses its arguments to create a new
+        date.
+        """
+        log = logfile.DailyLogFile(self.name, self.dir)
+        self.addCleanup(log.close)
+
+        date = (2014, 10, 22)
+        seconds = time.mktime(date + (0,)*6)
+
+        logDate = log.toDate(seconds)
+        self.assertEqual(date, logDate)
+
+
+    def test_persistence(self):
+        """
+        L{DailyLogFile} objects can be pickled and unpickled, which preserves
+        all the various attributes of the log file.
+        """
+        defaultMode = 0o642
+
+        log = logfile.DailyLogFile(self.name, self.dir,
+                                   defaultMode)
+        self.addCleanup(log.close)
+        log.write("123")
+
+        # Check that the unpickled log is the same as the original one.
+        copy = pickle.loads(pickle.dumps(log))
+        self.addCleanup(copy.close)
+
+        self.assertEqual(self.name, copy.name)
+        self.assertEqual(self.dir, copy.directory)
+        self.assertEqual(self.path, copy.path)
+        self.assertEqual(defaultMode, copy.defaultMode)
+        self.assertEqual(log.lastDate, copy.lastDate)

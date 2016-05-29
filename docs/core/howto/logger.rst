@@ -4,9 +4,10 @@
 :LastChangedBy: $LastChangedBy$
 
 
+.. _core-howto-logger-main:
+
 Logging with twisted.logger
-==================================
-.. _core-howto-logger-main
+===========================
 
 
 The Basics
@@ -115,8 +116,8 @@ Capturing Failures
     except:
         log.failure("Math is hard!")
 
-The emitted event will have the ``"log_failure"`` key set, which is a :api:`twisted.python.failure.Failure <Failure>` than captures the exception.
-This can be used my observers to obtain a traceback.
+The emitted event will have the ``"log_failure"`` key set, which is a :api:`twisted.python.failure.Failure <Failure>` that captures the exception.
+This can be used by my observers to obtain a traceback.
 For example, :api:`twisted.logger.FileLogObserver <FileLogObserver>` will append the traceback to it's output::
 
     Math is hard!
@@ -177,7 +178,7 @@ These are:
 In the first example above, the call to ``log.debug`` will add a ``log_level`` key to the emitted event with a value of :api:`twisted.logger.LogLevel.debug <LogLevel.debug>` .
 In the second example, calling ``self.log.error`` would use a value of :api:`twisted.logger.LogLevel.error <LogLevel.error>` .
 
-The above descriptions are simply guidance, but it is worth noting that log levels have a reduced value if they are used inconsistantly.
+The above descriptions are simply guidance, but it is worth noting that log levels have a reduced value if they are used inconsistently.
 If one module in an application considers a message informational, and another module considers a similar message an error, then filtering based on log levels becomes harder.
 This is increasingly likely if the modules in question are developed by different parties, as will often be the case with externally source libraries and frameworks.
 (If a module tends to use higher levels than another, namespaces may be used to calibrate the relative use of log levels, but that is obviously suboptimal.)
@@ -280,8 +281,10 @@ Emitting applications should be cautious about inserting objects into event whic
 While observers are called synchronously, it is possible that an observer will do something like queue up the event for later serialization, in which case the serialized object may be different than intended.
 
 
-.. _core-howto-logger-saving-events-for-later:      Saving events for later
----------------------------------------------------------------------------
+.. _core-howto-logger-saving-events-for-later:
+
+Saving events for later
+-----------------------
 
 For compatibility reasons, ``twistd`` will log to a text-based format by default.
 However, it's much better to use a structured log file format which preserves information about the events being logged.
@@ -342,7 +345,7 @@ Keep in mind that this is true even if you elect not to explicitly interact with
 Twisted itself may log messages from threads, and Twisted may internally use APIs like :api:`twisted.internet.interfaces.IReactorThreads.callInThread <callInThread>` ; for example, Twisted uses threads to look up hostnames when making an outgoing connection.
 
 Given this extra wrinkle, it's usually best to see if you can find an existing log observer implementation that does what you need before implementing your own; thread safety can be tricky to implement.
-Luckily, :api:`twisted.python.logging <twisted.python.logging>` comes with several useful observers, which are documented below.
+Luckily, :api:`twisted.logger <twisted.logger>` comes with several useful observers, which are documented below.
 
 
 Writing an observer for event analysis
@@ -420,7 +423,7 @@ Just always be sure to use event format fields, not string concatenation, to ref
 Registering an observer
 -----------------------
 
-One way to register an observer is to contruct a :api:`twisted.logger.Logger <Logger>` object with it:
+One way to register an observer is to construct a :api:`twisted.logger.Logger <Logger>` object with it:
 
 .. code-block:: python
     
@@ -460,7 +463,7 @@ Observers can be registered to be forwarded events by calling the :api:`twisted.
     
     log.info("Hello")
 
-The result here is the same as the previous example, except that addtional observers can be (and may already have been) registered.
+The result here is the same as the previous example, except that additional observers can be (and may already have been) registered.
 We know that ``"Hello"`` will be printed.
 We don't know, but it's very possible, that the same event will also be handled by other observers.
 

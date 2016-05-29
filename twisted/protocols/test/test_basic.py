@@ -886,7 +886,7 @@ class RecvdAttributeMixin(object):
         incompleteMessage = (struct.pack(r.structFormat, 5) + (b'b' * 4))
         # Receive a complete message, followed by an incomplete one
         r.dataReceived(completeMessage + incompleteMessage)
-        self.assertEquals(result, [incompleteMessage])
+        self.assertEqual(result, [incompleteMessage])
 
 
     def test_recvdChanged(self):
@@ -908,7 +908,7 @@ class RecvdAttributeMixin(object):
         messageA = self.makeMessage(r, payloadA)
         messageB = self.makeMessage(r, payloadB)
         r.dataReceived(messageA + messageB)
-        self.assertEquals(result, [payloadA, payloadC])
+        self.assertEqual(result, [payloadA, payloadC])
 
 
     def test_switching(self):
@@ -1358,3 +1358,25 @@ class GPSDeprecationTests(unittest.TestCase):
         self.assertEqual(
             "twisted.protocols.gps was deprecated in Twisted 15.2.0: "
             "Use twisted.positioning instead.", warningsShown[0]['message'])
+
+
+
+class MiceDeprecationTests(unittest.TestCase):
+    """
+    L{twisted.protocols.mice} is deprecated.
+    """
+    if _PY3:
+        skip = "twisted.protocols.mice is not being ported to Python 3."
+
+
+    def test_MiceDeprecation(self):
+        """
+        L{twisted.protocols.mice} is deprecated since Twisted 16.0.
+        """
+        reflect.namedAny("twisted.protocols.mice")
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "twisted.protocols.mice was deprecated in Twisted 16.0.0: "
+            "There is no replacement for this module.",
+            warningsShown[0]['message'])

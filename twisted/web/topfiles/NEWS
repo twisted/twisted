@@ -1,6 +1,189 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 16.2.0 (2016-05-18)
+===============================
+
+Features
+--------
+ - twisted.web.http.HTTPFactory's constructor now accepts a reactor
+   argument, for explicit reactor selection. (#8246)
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPChannel.headerReceived now respond with 400
+   and disconnect when a malformed header is received. (#8101)
+ - twisted.web.http.Request once again has a reference to the
+   HTTPFactory which created it, the absence of which was preventing
+   log messages from being created.  (#8272)
+ - twisted.web.http.HTTPChannel no longer processes requests that have
+   invalid headers as the final header in their header block. (#8317)
+ - twisted.web.client.HTTPClientFactory (and the getPage and
+   downloadPage APIs) now timeouts correctly on TLS connections where
+   the remote party is not responding on the connection. (#8318)
+
+Other
+-----
+ - #8300
+
+
+Twisted Web 16.1.1 (2016-04-08)
+===============================
+
+Bugfixes
+--------
+ - twisted.web.http.Request once again has a reference to the
+   HTTPFactory which created it, the absence of which was preventing
+   log messages from being created.  (#8272)
+
+
+Twisted Web 16.1.0 (2016-04-04)
+===============================
+
+Features
+--------
+ - twisted.web.http.Request.addCookie now supports both unicode and
+   bytes arguments, with unicode arguments being encoded to UTF-8.
+   (#8067)
+
+Bugfixes
+--------
+ - twisted.web.util.DeferredResource no longer causes spurious
+   "Unhandled error in Deferred" log messages. (#8192)
+ - twisted.web.server.site.makeSession now generates an uid of type
+   bytes on both Python 2 and 3. (#8215)
+
+Other
+-----
+ - #8238
+
+
+Twisted Web 16.0.0 (2016-03-10)
+===============================
+
+Features
+--------
+ - twisted.web.http_headers._DictHeaders now correctly handles
+   updating via keyword arguments in Python 3 (therefore
+   twisted.web.http_headers is now fully ported to Python 3). (#6082)
+ - twisted.web.wsgi has been ported to Python 3. (#7993)
+ - twisted.web.http_headers.Headers now accepts both Unicode and
+   bytestring keys and values, encoding to iso-8859-1 and utf8
+   respectively. (#8129)
+ - twisted.web.vhost ported to Python 3. (#8132)
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPChannel now correctly handles non-ascii method
+   name by returning 400. Previously non-ascii method name was causing
+   unhandled exceptions. (#8102)
+ - twisted.web.static.File on Python 3 now redirects paths to
+   directories without a trailing slash, to a path with a trailing
+   slash, as on Python 2. (#8169)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.http.Request's headers and request_headers attributes,
+   deprecated since Twisted 13.2, have been removed. (#8136)
+ - twisted.web.static.addSlash is deprecated. (#8169)
+
+Other
+-----
+ - #8140, #8182
+
+
+Twisted Web 15.5.0 (2015-11-28)
+===============================
+
+Features
+--------
+ - twisted.web.http.Request.addCookie now supports the httpOnly
+   attribute which when set on cookies prevents the browser exposing
+   it through channels other than HTTP and HTTPS requests (i.e. they
+   will not be accessible through JavaScript). (#5911)
+ - twisted.web.client.downloadPage is now ported to Python 3. (#6197)
+ - twisted.web.client.Agent is now ported to Python 3. (#7407)
+ - twisted.web.tap (ran when calling `twistd web`) has now been ported
+   to Python 3. Not all features are enabled -- CGI, WSGI, and
+   distributed web serving will be enabled in their respective tickets
+   as they are ported. (#8008)
+
+Bugfixes
+--------
+ - twisted.web.client.URI now supports IPv6 addresses. Previously this
+   would mistake the colons used as IPv6 address group separators as
+   the start of a port specification. (#7650)
+ - twisted.web.util's failure template has been moved inline to work
+   around Python 3 distribution issues. (#8047)
+ - twisted.web.http.Request on Python 3 now handles multipart/form-
+   data requests correctly. (#8052)
+
+Other
+-----
+ - #8016, #8070
+
+
+Twisted Web 15.4.0 (2015-09-04)
+===============================
+
+Features
+--------
+ - twisted.web.proxy is now ported to Python 3. (#7939)
+ - twisted.web.guard is now ported to Python 3. (#7974)
+
+Bugfixes
+--------
+ - twisted.web.http.Request.setResponseCode now only allows bytes
+   messages. (#7981)
+ - twisted.web.server.Request.processingFailed will now correctly
+   write out the traceback on Python 3. (#7996)
+
+
+Twisted Web 15.3.0 (2015-08-04)
+===============================
+
+Features
+--------
+ - twisted.web.xmlrpc is now ported to Python 3. (#7795)
+ - twisted.web.template and twisted.web.util are now ported to Python
+   3. (#7811)
+ - twisted.web.error is now ported to Python 3. (#7845)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.html is now deprecated in favor of
+   twisted.web.template. (#4948)
+
+Other
+-----
+ - #7895, #7942, #7949, #7952, #7975
+
+
+Twisted Web 15.2.1 (2015-05-23)
+===============================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 15.2.0 (2015-05-18)
+===============================
+
+Features
+--------
+ - twisted.web.static is now ported to Python 3. (#6177)
+ - twisted.web.server.Site accepts requestFactory as constructor
+   argument. (#7016)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.util had some HTML generation functions deprecated
+   since 12.1 that have now been removed. (#7828)
+
+Other
+-----
+ - #6927, #7797, #7802, #7846
+
+
 Twisted Web 15.1.0 (2015-04-02)
 ===============================
 

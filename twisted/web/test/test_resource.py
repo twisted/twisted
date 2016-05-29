@@ -11,6 +11,7 @@ from twisted.web.error import UnsupportedMethod
 from twisted.web.resource import (
     NOT_FOUND, FORBIDDEN, Resource, ErrorPage, NoResource, ForbiddenResource,
     getChildForRequest)
+from twisted.web.http_headers import Headers
 from twisted.web.test.requesthelper import DummyRequest
 
 
@@ -48,8 +49,8 @@ class ErrorPageTests(TestCase):
             page.render(request), expected.encode('utf-8'))
         self.assertEqual(request.responseCode, code)
         self.assertEqual(
-            request.outgoingHeaders,
-            {b'content-type': b'text/html; charset=utf-8'})
+            request.responseHeaders,
+            Headers({b'content-type': [b'text/html; charset=utf-8']}))
 
 
     def test_errorPageRendering(self):

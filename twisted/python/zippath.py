@@ -1,63 +1,57 @@
-# -*- test-case-name: twisted.test.test_paths.ZipFilePathTests -*-
+# -*- test-case-name: twisted.python.test.test_zippath -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-This module contains implementations of IFilePath for zip files.
+This module contains implementations of L{IFilePath} for zip files.
 
-See the constructor for ZipArchive for use.
+See the constructor of L{ZipArchive} for use.
 """
 
-__metaclass__ = type
+from __future__ import absolute_import, division
 
 import os
 import time
 import errno
 
+from zipfile import ZipFile
 
-# Python 2.6 includes support for incremental unzipping of zipfiles, and
-# thus obviates the need for ChunkingZipFile.
-import sys
-if sys.version_info[:2] >= (2, 6):
-    _USE_ZIPFILE = True
-    from zipfile import ZipFile
-else:
-    _USE_ZIPFILE = False
-    from twisted.python.zipstream import ChunkingZipFile
-
+from twisted.python.compat import comparable, cmp
 from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
+from twisted.python.filepath import _coerceToFilesystemEncoding
 
 from zope.interface import implementer
-
-# using FilePath here exclusively rather than os to make sure that we don't do
-# anything OS-path-specific here.
 
 ZIP_PATH_SEP = '/'              # In zipfiles, "/" is universally used as the
                                 # path separator, regardless of platform.
 
 
+@comparable
 @implementer(IFilePath)
 class ZipPath(AbstractFilePath):
     """
     I represent a file or directory contained within a zip file.
     """
 
-    sep = ZIP_PATH_SEP
-
     def __init__(self, archive, pathInArchive):
         """
-        Don't construct me directly.  Use ZipArchive.child().
+        Don't construct me directly.  Use C{ZipArchive.child()}.
 
-        @param archive: a ZipArchive instance.
+        @param archive: a L{ZipArchive} instance.
 
         @param pathInArchive: a ZIP_PATH_SEP-separated string.
         """
         self.archive = archive
         self.pathInArchive = pathInArchive
+
         # self.path pretends to be os-specific because that's the way the
         # 'zipimport' module does it.
-        self.path = os.path.join(archive.zipfile.filename,
-                                 *(self.pathInArchive.split(ZIP_PATH_SEP)))
+        sep = _coerceToFilesystemEncoding(pathInArchive, ZIP_PATH_SEP)
+        archiveFilename = _coerceToFilesystemEncoding(
+            pathInArchive, archive.zipfile.filename)
+        self.path = os.path.join(archiveFilename,
+                                 *(self.pathInArchive.split(sep)))
+
 
     def __cmp__(self, other):
         if not isinstance(other, ZipPath):
@@ -67,17 +61,29 @@ class ZipPath(AbstractFilePath):
 
 
     def __repr__(self):
-        parts = [os.path.abspath(self.archive.path)]
-        parts.extend(self.pathInArchive.split(ZIP_PATH_SEP))
-        path = os.sep.join(parts)
-        return "ZipPath('%s')" % (path.encode('string-escape'),)
+        parts = [_coerceToFilesystemEncoding(
+            self.sep, os.path.abspath(self.archive.path))]
+        parts.extend(self.pathInArchive.split(self.sep))
+        ossep = _coerceToFilesystemEncoding(self.sep, os.sep)
+        return "ZipPath(%r)" % (ossep.join(parts),)
+
+
+    @property
+    def sep(self):
+        """
+        Return a zip directory separator.
+
+        @return: The zip directory separator.
+        @returntype: The same type as C{self.path}.
+        """
+        return _coerceToFilesystemEncoding(self.path, ZIP_PATH_SEP)
 
 
     def parent(self):
-        splitup = self.pathInArchive.split(ZIP_PATH_SEP)
+        splitup = self.pathInArchive.split(self.sep)
         if len(splitup) == 1:
             return self.archive
-        return ZipPath(self.archive, ZIP_PATH_SEP.join(splitup[:-1]))
+        return ZipPath(self.archive, self.sep.join(splitup[:-1]))
 
 
     def child(self, path):
@@ -92,30 +98,35 @@ class ZipPath(AbstractFilePath):
             it) as this means it may include special names with special
             meaning outside of the context of a zip archive.
         """
-        return ZipPath(self.archive, ZIP_PATH_SEP.join([self.pathInArchive, path]))
+        joiner = _coerceToFilesystemEncoding(path, ZIP_PATH_SEP)
+        pathInArchive = _coerceToFilesystemEncoding(path, self.pathInArchive)
+        return ZipPath(self.archive, joiner.join([pathInArchive, path]))
 
 
     def sibling(self, path):
         return self.parent().child(path)
 
-    # preauthChild = child
 
     def exists(self):
         return self.isdir() or self.isfile()
 
+
     def isdir(self):
         return self.pathInArchive in self.archive.childmap
+
 
     def isfile(self):
         return self.pathInArchive in self.archive.zipfile.NameToInfo
 
+
     def islink(self):
         return False
+
 
     def listdir(self):
         if self.exists():
             if self.isdir():
-                return self.archive.childmap[self.pathInArchive].keys()
+                return list(self.archive.childmap[self.pathInArchive].keys())
             else:
                 raise OSError(errno.ENOTDIR, "Leaf zip entry listed")
         else:
@@ -124,7 +135,7 @@ class ZipPath(AbstractFilePath):
 
     def splitext(self):
         """
-        Return a value similar to that returned by os.path.splitext.
+        Return a value similar to that returned by C{os.path.splitext}.
         """
         # This happens to work out because of the fact that we use OS-specific
         # path separators in the constructor to construct our fake 'path'
@@ -133,23 +144,23 @@ class ZipPath(AbstractFilePath):
 
 
     def basename(self):
-        return self.pathInArchive.split(ZIP_PATH_SEP)[-1]
+        return self.pathInArchive.split(self.sep)[-1]
+
 
     def dirname(self):
         # XXX NOTE: This API isn't a very good idea on filepath, but it's even
         # less meaningful here.
         return self.parent().path
 
+
     def open(self, mode="r"):
-        if _USE_ZIPFILE:
-            return self.archive.zipfile.open(self.pathInArchive, mode=mode)
-        else:
-            # XXX oh man, is this too much hax?
-            self.archive.zipfile.mode = mode
-            return self.archive.zipfile.readfile(self.pathInArchive)
+        pathInArchive = _coerceToFilesystemEncoding('', self.pathInArchive)
+        return self.archive.zipfile.open(pathInArchive, mode=mode)
+
 
     def changed(self):
         pass
+
 
     def getsize(self):
         """
@@ -157,8 +168,9 @@ class ZipPath(AbstractFilePath):
 
         @return: file size, in bytes
         """
+        pathInArchive = _coerceToFilesystemEncoding("", self.pathInArchive)
+        return self.archive.zipfile.NameToInfo[pathInArchive].file_size
 
-        return self.archive.zipfile.NameToInfo[self.pathInArchive].file_size
 
     def getAccessTime(self):
         """
@@ -177,8 +189,9 @@ class ZipPath(AbstractFilePath):
 
         @return: a number of seconds since the epoch.
         """
+        pathInArchive = _coerceToFilesystemEncoding("", self.pathInArchive)
         return time.mktime(
-            self.archive.zipfile.NameToInfo[self.pathInArchive].date_time
+            self.archive.zipfile.NameToInfo[pathInArchive].date_time
             + (0, 0, 0))
 
 
@@ -194,47 +207,59 @@ class ZipPath(AbstractFilePath):
 
 
 class ZipArchive(ZipPath):
-    """ I am a FilePath-like object which can wrap a zip archive as if it were a
+    """
+    I am a L{FilePath}-like object which can wrap a zip archive as if it were a
     directory.
+
+    It works similarly to L{FilePath} in L{bytes} and L{unicode} handling --
+    instantiating with a L{bytes} will return a "bytes mode" L{ZipArchive},
+    and instantiating with a L{unicode} will return a "text mode"
+    L{ZipArchive}. Methods that return new L{ZipArchive} or L{ZipPath}
+    instances will be in the mode of the argument to the creator method,
+    converting if required.
     """
     archive = property(lambda self: self)
-    def __init__(self, archivePathname):
-        """Create a ZipArchive, treating the archive at archivePathname as a zip file.
 
-        @param archivePathname: a str, naming a path in the filesystem.
+    def __init__(self, archivePathname):
         """
-        if _USE_ZIPFILE:
-            self.zipfile = ZipFile(archivePathname)
-        else:
-            self.zipfile = ChunkingZipFile(archivePathname)
+        Create a ZipArchive, treating the archive at archivePathname as a zip
+        file.
+
+        @param archivePathname: a L{bytes} or L{unicode}, naming a path in the
+            filesystem.
+        """
         self.path = archivePathname
-        self.pathInArchive = ''
+        self.zipfile = ZipFile(_coerceToFilesystemEncoding('',
+                                                           archivePathname))
+        self.pathInArchive = _coerceToFilesystemEncoding(archivePathname, '')
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
         # so there's no sense in trying to do this lazily or intelligently
         self.childmap = {}      # map parent: list of children
 
         for name in self.zipfile.namelist():
-            name = name.split(ZIP_PATH_SEP)
+            name = _coerceToFilesystemEncoding(self.path, name).split(self.sep)
             for x in range(len(name)):
                 child = name[-x]
-                parent = ZIP_PATH_SEP.join(name[:-x])
+                parent = self.sep.join(name[:-x])
                 if parent not in self.childmap:
                     self.childmap[parent] = {}
                 self.childmap[parent][child] = 1
-            parent = ''
+            parent = _coerceToFilesystemEncoding(archivePathname, '')
+
 
     def child(self, path):
         """
         Create a ZipPath pointing at a path within the archive.
 
-        @param path: a str with no path separators in it, either '/' or the
-        system path separator, if it's different.
+        @param path: a L{bytes} or L{unicode} with no path separators in it
+            (either '/' or the system path separator, if it's different).
         """
         return ZipPath(self, path)
 
+
     def exists(self):
         """
-        Returns true if the underlying archive exists.
+        Returns C{True} if the underlying archive exists.
         """
         return FilePath(self.zipfile.filename).exists()
 

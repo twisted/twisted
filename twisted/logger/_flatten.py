@@ -170,6 +170,9 @@ def flatFormat(event):
     keyFlattener = KeyFlattener()
     formatFields = aFormatter.parse(event["log_format"])
     for literalText, fieldName, formatSpec, conversion in formatFields:
-        key = keyFlattener.flatKey(fieldName, formatSpec, conversion or "s")
-        s.extend([literalText, unicode(fieldValues[key])])
+        s.append(literalText)
+        if fieldName is not None:
+            key = keyFlattener.flatKey(
+                    fieldName, formatSpec, conversion or "s")
+            s.append(unicode(fieldValues[key]))
     return u"".join(s)

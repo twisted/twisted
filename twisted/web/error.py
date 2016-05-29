@@ -7,6 +7,10 @@ Exception definitions for L{twisted.web}.
 """
 
 from __future__ import division, absolute_import
+try:
+    from future_builtins import ascii
+except ImportError:
+    pass
 
 __all__ = [
     'Error', 'PageRedirect', 'InfiniteRedirection', 'RenderError',
@@ -18,53 +22,72 @@ __all__ = [
 from collections import Sequence
 
 from twisted.web._responses import RESPONSES
+from twisted.python.compat import unicode, nativeString, intToBytes
+
+
+def _codeToMessage(code):
+    """
+    Returns the response message corresponding to an HTTP code, or None
+    if the code is unknown or unrecognized.
+
+    @type code: L{bytes}
+    @param code: Refers to an HTTP status code, for example C{http.NOT_FOUND}.
+
+    @return: A string message or none
+    @rtype: L{bytes}
+    """
+    try:
+        return RESPONSES.get(int(code))
+    except (ValueError, AttributeError):
+        return None
 
 
 class Error(Exception):
     """
     A basic HTTP error.
 
-    @type status: C{str}
+    @type status: L{bytes}
     @ivar status: Refers to an HTTP status code, for example C{http.NOT_FOUND}.
 
-    @type message: C{str}
+    @type message: L{bytes}
     @param message: A short error message, for example "NOT FOUND".
 
-    @type response: C{bytes}
+    @type response: L{bytes}
     @ivar response: A complete HTML document for an error page.
     """
     def __init__(self, code, message=None, response=None):
         """
         Initializes a basic exception.
 
-        @type code: C{str}
-        @param code: Refers to an HTTP status code, for example
-            C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
-            descriptive bytestring that is used instead.
+        @type code: L{bytes} or L{int}
+        @param code: Refers to an HTTP status code (for example, 200) either as
+            an integer or a bytestring representing such. If no C{message} is
+            given, C{code} is mapped to a descriptive bytestring that is used
+            instead.
 
-        @type message: C{str}
+        @type message: L{bytes}
         @param message: A short error message, for example "NOT FOUND".
 
-        @type response: C{bytes}
+        @type response: L{bytes}
         @param response: A complete HTML document for an error page.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
+        message = message or _codeToMessage(code)
 
         Exception.__init__(self, code, message, response)
+
+        if isinstance(code, int):
+            # If we're given an int, convert it to a bytestring
+            # downloadPage gives a bytes, Agent gives an int, and it worked by
+            # accident previously, so just make it keep working.
+            code = intToBytes(code)
+
         self.status = code
         self.message = message
         self.response = response
 
 
     def __str__(self):
-        return '%s %s' % (self.status, self.message)
+        return nativeString(self.status + b" " + self.message)
 
 
 
@@ -72,42 +95,32 @@ class PageRedirect(Error):
     """
     A request resulted in an HTTP redirect.
 
-    @type location: C{str}
+    @type location: L{bytes}
     @ivar location: The location of the redirect which was not followed.
     """
     def __init__(self, code, message=None, response=None, location=None):
         """
         Initializes a page redirect exception.
 
-        @type code: C{str}
+        @type code: L{bytes}
         @param code: Refers to an HTTP status code, for example
             C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
             descriptive string that is used instead.
 
-        @type message: C{str}
+        @type message: L{bytes}
         @param message: A short error message, for example "NOT FOUND".
 
-        @type response: C{str}
+        @type response: L{bytes}
         @param response: A complete HTML document for an error page.
 
-        @type location: C{str}
+        @type location: L{bytes}
         @param location: The location response-header field value. It is an
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
-
-        if location and message:
-            message = "%s to %s" % (message, location)
-
         Error.__init__(self, code, message, response)
+        if self.message and location:
+            self.message = self.message + b" to " + location
         self.location = location
 
 
@@ -116,7 +129,7 @@ class InfiniteRedirection(Error):
     """
     HTTP redirection is occurring endlessly.
 
-    @type location: C{str}
+    @type location: L{bytes}
     @ivar location: The first URL in the series of redirections which was
         not followed.
     """
@@ -124,35 +137,25 @@ class InfiniteRedirection(Error):
         """
         Initializes an infinite redirection exception.
 
-        @type code: C{str}
+        @type code: L{bytes}
         @param code: Refers to an HTTP status code, for example
             C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
             descriptive string that is used instead.
 
-        @type message: C{str}
+        @type message: L{bytes}
         @param message: A short error message, for example "NOT FOUND".
 
-        @type response: C{str}
+        @type response: L{bytes}
         @param response: A complete HTML document for an error page.
 
-        @type location: C{str}
+        @type location: L{bytes}
         @param location: The location response-header field value. It is an
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
         """
-        if not message:
-            try:
-                message = RESPONSES.get(int(code))
-            except ValueError:
-                # If code wasn't a stringified int, can't map the
-                # status code to a descriptive string so keep message
-                # unchanged.
-                pass
-
-        if location and message:
-            message = "%s to %s" % (message, location)
-
         Error.__init__(self, code, message, response)
+        if self.message and location:
+            self.message = self.message + b" to " + location
         self.location = location
 
 
@@ -162,6 +165,10 @@ class RedirectWithNoLocation(Error):
     Exception passed to L{ResponseFailed} if we got a redirect without a
     C{Location} header field.
 
+    @type uri: L{bytes}
+    @ivar uri: The URI which failed to give a proper location header
+        field.
+
     @since: 11.1
     """
 
@@ -169,21 +176,20 @@ class RedirectWithNoLocation(Error):
         """
         Initializes a page redirect exception when no location is given.
 
-        @type code: C{str}
+        @type code: L{bytes}
         @param code: Refers to an HTTP status code, for example
             C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to
             a descriptive string that is used instead.
 
-        @type message: C{str}
+        @type message: L{bytes}
         @param message: A short error message.
 
-        @type uri: C{str}
+        @type uri: L{bytes}
         @param uri: The URI which failed to give a proper location header
             field.
         """
-        message = "%s to %s" % (message, uri)
-
         Error.__init__(self, code, message)
+        self.message = self.message + b" to " + uri
         self.uri = uri
 
 
@@ -322,20 +328,21 @@ class FlattenerError(Exception):
         # There's a circular dependency between this class and 'Tag', although
         # only for an isinstance() check.
         from twisted.web.template import Tag
-        if isinstance(obj, (str, unicode)):
+
+        if isinstance(obj, (bytes, str, unicode)):
             # It's somewhat unlikely that there will ever be a str in the roots
             # list.  However, something like a MemoryError during a str.replace
             # call (eg, replacing " with &quot;) could possibly cause this.
             # Likewise, UTF-8 encoding a unicode string to a byte string might
             # fail like this.
             if len(obj) > 40:
-                if isinstance(obj, str):
-                    prefix = 1
+                if isinstance(obj, unicode):
+                    ellipsis = u'<...>'
                 else:
-                    prefix = 2
-                return repr(obj[:20])[:-1] + '<...>' + repr(obj[-20:])[prefix:]
+                    ellipsis = b'<...>'
+                return ascii(obj[:20] + ellipsis + obj[-20:])
             else:
-                return repr(obj)
+                return ascii(obj)
         elif isinstance(obj, Tag):
             if obj.filename is None:
                 return 'Tag <' + obj.tagName + '>'
@@ -344,7 +351,7 @@ class FlattenerError(Exception):
                     obj.filename, obj.lineNumber,
                     obj.columnNumber, obj.tagName)
         else:
-            return repr(obj)
+            return ascii(obj)
 
 
     def __repr__(self):

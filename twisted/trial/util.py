@@ -20,12 +20,10 @@ Maintainer: Jonathan Lange
 
 from __future__ import division, absolute_import, print_function
 
-import sys
 from random import randrange
 
 from twisted.internet import defer, utils, interfaces
 from twisted.python.failure import Failure
-from twisted.python import deprecate, versions
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
 
@@ -253,26 +251,6 @@ def profiled(f, outputFile):
     return _
 
 
-def getPythonContainers(meth):
-    """Walk up the Python tree from method 'meth', finding its class, its module
-    and all containing packages."""
-    containers = []
-    containers.append(meth.im_class)
-    moduleName = meth.im_class.__module__
-    while moduleName is not None:
-        module = sys.modules.get(moduleName, None)
-        if module is None:
-            module = __import__(moduleName)
-        containers.append(module)
-        moduleName = getattr(module, '__module__', None)
-    return containers
-
-deprecate.deprecatedModuleAttribute(
-    versions.Version("Twisted", 12, 3, 0),
-    "This function never worked correctly.  Implement lookup on your own.",
-    __name__, "getPythonContainers")
-
-
 
 @defer.inlineCallbacks
 def _runSequentially(callables, stopOnFirstError=False):
@@ -295,7 +273,7 @@ def _runSequentially(callables, stopOnFirstError=False):
         try:
             thing = yield d
             results.append((defer.SUCCESS, thing))
-        except:
+        except Exception:
             results.append((defer.FAILURE, Failure()))
             if stopOnFirstError:
                 break
@@ -352,8 +330,8 @@ def _unusedTestDirectory(base):
     """
     Find an unused directory named similarly to C{base}.
 
-    Once a directory is found, it will be locked and a marker dropped into it to
-    identify it as a trial temporary directory.
+    Once a directory is found, it will be locked and a marker dropped into it
+    to identify it as a trial temporary directory.
 
     @param base: A template path for the discovery process.  If this path
         exactly cannot be used, a path which varies only in a suffix of the
@@ -381,10 +359,10 @@ def _unusedTestDirectory(base):
                 # It exists though - delete it
                 _removeSafely(testdir)
 
-            # Create it anew and mark it as ours so the next _removeSafely on it
-            # succeeds.
+            # Create it anew and mark it as ours so the next _removeSafely on
+            # it succeeds.
             testdir.makedirs()
-            testdir.child('_trial_marker').setContent('')
+            testdir.child('_trial_marker').setContent(b'')
             return testdir, testDirLock
         else:
             # It is in use

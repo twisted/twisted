@@ -12,6 +12,12 @@ Maintainer: Itamar Shtull-Trauring
 
 from __future__ import division, absolute_import, print_function
 
+from twisted.python.runtime import platform
+
+if platform.isWindows():
+    raise ImportError(("twisted.internet.process does not work on Windows. "
+                       "Use the reactor.spawnProcess() API instead."))
+
 import errno
 import gc
 import os
@@ -988,10 +994,9 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         _BaseProcess.__init__(self, proto)
 
         if isinstance(usePTY, (tuple, list)):
-            masterfd, slavefd, ttyname = usePTY
+            masterfd, slavefd, _ = usePTY
         else:
             masterfd, slavefd = pty.openpty()
-            ttyname = os.ttyname(slavefd)
 
         try:
             self._fork(path, uid, gid, executable, args, environment,

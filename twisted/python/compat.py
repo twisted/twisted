@@ -16,11 +16,21 @@ the latest version of Python directly from your code, if possible.
 
 @var NativeStringIO: An in-memory file-like object that operates on the native
     string type (bytes in Python 2, unicode in Python 3).
+
+@var urllib_parse: a URL-parsing module (urlparse on Python 2, urllib.parse on
+    Python 3)
 """
 
-from __future__ import division
+from __future__ import absolute_import, division
 
-import sys, string, socket, struct, inspect
+import inspect
+import os
+import socket
+import string
+import struct
+import sys
+from types import MethodType as _MethodType
+
 from io import TextIOBase, IOBase
 
 
@@ -271,8 +281,10 @@ def comparable(klass):
 
 if _PY3:
     unicode = str
+    long = int
 else:
     unicode = unicode
+    long = long
 
 
 
@@ -360,6 +372,38 @@ def nativeString(s):
             # Ensure we're limited to ASCII subset:
             s.decode("ascii")
     return s
+
+
+
+def _matchingString(constantString, inputString):
+    """
+    Some functions, such as C{os.path.join}, operate on string arguments which
+    may be bytes or text, and wish to return a value of the same type.  In
+    those cases you may wish to have a string constant (in the case of
+    C{os.path.join}, that constant would be C{os.path.sep}) involved in the
+    parsing or processing, that must be of a matching type in order to use
+    string operations on it.  L{_matchingString} will take a constant string
+    (either L{bytes} or L{unicode}) and convert it to the same type as the
+    input string.  C{constantString} should contain only characters from ASCII;
+    to ensure this, it will be encoded or decoded regardless.
+
+    @param constantString: A string literal used in processing.
+    @type constantString: L{unicode} or L{bytes}
+
+    @param inputString: A byte string or text string provided by the user.
+    @type inputString: L{unicode} or L{bytes}
+
+    @return: C{constantString} converted into the same type as C{inputString}
+    @rtype: the type of C{inputString}
+    """
+    if isinstance(constantString, bytes):
+        otherType = constantString.decode("ascii")
+    else:
+        otherType = constantString.encode("ascii")
+    if type(constantString) == type(inputString):
+        return constantString
+    else:
+        return otherType
 
 
 
@@ -507,8 +551,16 @@ except ImportError:
 
 if _PY3:
     import urllib.parse as urllib_parse
+    from html import escape
+    from urllib.parse import quote as urlquote
+    from urllib.parse import unquote as urlunquote
+    from http import cookiejar as cookielib
 else:
     import urlparse as urllib_parse
+    from cgi import escape
+    from urllib import quote as urlquote
+    from urllib import unquote as urlunquote
+    import cookielib
 
 
 # Dealing with the differences in items/iteritems
@@ -516,22 +568,38 @@ if _PY3:
     def iteritems(d):
         return d.items()
 
+    def itervalues(d):
+        return d.values()
+
     def items(d):
         return list(d.items())
 
     xrange = range
+    izip = zip
 else:
     def iteritems(d):
         return d.iteritems()
+
+    def itervalues(d):
+        return d.itervalues()
 
     def items(d):
         return d.items()
 
     xrange = xrange
+    from itertools import izip
+    izip # shh pyflakes
 
 
 iteritems.__doc__ = """
 Return an iterable of the items of C{d}.
+
+@type d: L{dict}
+@rtype: iterable
+"""
+
+itervalues.__doc__ = """
+Return an iterable of the values of C{d}.
 
 @type d: L{dict}
 @rtype: iterable
@@ -544,6 +612,94 @@ Return a list of the items of C{d}.
 @rtype: L{list}
 """
 
+def _keys(d):
+    """
+    Return a list of the keys of C{d}.
+
+    @type d: L{dict}
+    @rtype: L{list}
+    """
+    if _PY3:
+        return list(d.keys())
+    else:
+        return d.keys()
+
+
+
+def bytesEnviron():
+    """
+    Return a L{dict} of L{os.environ} where all text-strings are encoded into
+    L{bytes}.
+    """
+    if not _PY3:
+        # On py2, nothing to do.
+        return dict(os.environ)
+
+    target = dict()
+    for x, y in os.environ.items():
+        target[os.environ.encodekey(x)] = os.environ.encodevalue(y)
+
+    return target
+
+
+
+def _constructMethod(cls, name, self):
+    """
+    Construct a bound method.
+
+    @param cls: The class that the method should be bound to.
+    @type cls: L{types.ClassType} or L{type}.
+
+    @param name: The name of the method.
+    @type name: native L{str}
+
+    @param self: The object that the method is bound to.
+    @type self: any object
+
+    @return: a bound method
+    @rtype: L{types.MethodType}
+    """
+    func = cls.__dict__[name]
+    if _PY3:
+        return _MethodType(func, self)
+    return _MethodType(func, self, cls)
+
+
+
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecatedModuleAttribute
+
+from collections import OrderedDict
+
+deprecatedModuleAttribute(
+    Version("Twisted", 15, 5, 0),
+    "Use collections.OrderedDict instead.",
+    "twisted.python.compat",
+    "OrderedDict")
+
+if _PY3:
+    from base64 import encodebytes as _b64encodebytes
+    from base64 import decodebytes as _b64decodebytes
+else:
+    from base64 import encodestring as _b64encodebytes
+    from base64 import decodestring as _b64decodebytes
+
+
+
+def _bytesChr(i):
+    """
+    Like L{chr} but always works on ASCII, returning L{bytes}.
+
+    @param i: The ASCII code point to return.
+    @type i: L{int}
+
+    @rtype: L{bytes}
+    """
+    if _PY3:
+        return bytes([i])
+    else:
+        return chr(i)
+
 
 
 __all__ = [
@@ -554,6 +710,7 @@ __all__ = [
     "set",
     "cmp",
     "comparable",
+    "OrderedDict",
     "nativeString",
     "NativeStringIO",
     "networkString",
@@ -566,6 +723,16 @@ __all__ = [
     "FileType",
     "items",
     "iteritems",
+    "itervalues",
     "xrange",
     "urllib_parse",
-    ]
+    "bytesEnviron",
+    "escape",
+    "urlquote",
+    "urlunquote",
+    "cookielib",
+    "_keys",
+    "_b64encodebytes",
+    "_b64decodebytes",
+    "_bytesChr",
+]

@@ -50,9 +50,9 @@ class ClockTests(unittest.TestCase):
         """
         c = task.Clock()
         call = c.callLater(1, lambda a, b: None, 1, b=2)
-        self.failUnless(interfaces.IDelayedCall.providedBy(call))
+        self.assertTrue(interfaces.IDelayedCall.providedBy(call))
         self.assertEqual(call.getTime(), 1)
-        self.failUnless(call.active())
+        self.assertTrue(call.active())
 
 
     def testCallLaterCancelled(self):
@@ -62,7 +62,7 @@ class ClockTests(unittest.TestCase):
         c = task.Clock()
         call = c.callLater(1, lambda a, b: None, 1, b=2)
         call.cancel()
-        self.failIf(call.active())
+        self.assertFalse(call.active())
 
 
     def test_callLaterOrdering(self):
@@ -73,7 +73,7 @@ class ClockTests(unittest.TestCase):
         c = task.Clock()
         call1 = c.callLater(10, lambda a, b: None, 1, b=2)
         call2 = c.callLater(1, lambda a, b: None, 3, b=4)
-        self.failIf(call1 is call2)
+        self.assertFalse(call1 is call2)
 
 
     def testAdvance(self):
@@ -87,7 +87,7 @@ class ClockTests(unittest.TestCase):
         self.assertEqual(events, [])
         c.advance(1)
         self.assertEqual(events, [None])
-        self.failIf(call.active())
+        self.assertFalse(call.active())
 
 
     def testAdvanceCancel(self):
@@ -173,7 +173,7 @@ class ClockTests(unittest.TestCase):
 
     def test_providesIReactorTime(self):
         c = task.Clock()
-        self.failUnless(interfaces.IReactorTime.providedBy(c),
+        self.assertTrue(interfaces.IReactorTime.providedBy(c),
                         "Clock does not provide IReactorTime")
 
 
@@ -494,6 +494,105 @@ class LoopTests(unittest.TestCase):
         self.assertNotIn(0, accumulator)
 
 
+    def test_withCountIntervalZero(self):
+        """
+        L{task.LoopingCall.withCount} with interval set to 0
+        will call the countCallable 1.
+        """
+        clock = task.Clock()
+        accumulator = []
+
+        def foo(cnt):
+            accumulator.append(cnt)
+            if len(accumulator) > 4:
+                loop.stop()
+
+        loop = task.LoopingCall.withCount(foo)
+        loop.clock = clock
+        deferred = loop.start(0, now=False)
+
+        clock.advance(0)
+        self.successResultOf(deferred)
+
+        self.assertEqual([1, 1, 1, 1, 1], accumulator)
+
+
+    def test_withCountIntervalZeroDelay(self):
+        """
+        L{task.LoopingCall.withCount} with interval set to 0 and a delayed
+        call during the loop run will still call the countCallable 1 as if
+        no delay occurred.
+        """
+        clock = task.Clock()
+        deferred = defer.Deferred()
+        accumulator = []
+
+        def foo(cnt):
+            accumulator.append(cnt)
+
+            if len(accumulator) == 2:
+                return deferred
+
+            if len(accumulator) > 4:
+                loop.stop()
+
+        loop = task.LoopingCall.withCount(foo)
+        loop.clock = clock
+        loop.start(0, now=False)
+
+        clock.advance(0)
+        # Loop will block at the third call.
+        self.assertEqual([1, 1], accumulator)
+
+        # Even if more time pass, the loops is not
+        # advanced.
+        clock.advance(2)
+        self.assertEqual([1, 1], accumulator)
+
+        # Once the waiting call got a result the loop continues without
+        # observing any delay in countCallable.
+        deferred.callback(None)
+        clock.advance(0)
+        self.assertEqual([1, 1, 1, 1, 1], accumulator)
+
+    def test_withCountIntervalZeroDelayThenNonZeroInterval(self):
+        """
+        L{task.LoopingCall.withCount} with interval set to 0 will still keep
+        the time when last called so when the interval is reset.
+        """
+        clock = task.Clock()
+        deferred = defer.Deferred()
+        accumulator = []
+
+        def foo(cnt):
+            accumulator.append(cnt)
+            if len(accumulator) == 2:
+                return deferred
+
+        loop = task.LoopingCall.withCount(foo)
+        loop.clock = clock
+        loop.start(0, now=False)
+
+        # Even if a lot of time pass, loop will block at the third call.
+        clock.advance(10)
+        self.assertEqual([1, 1], accumulator)
+
+        # When a new interval is set, once the waiting call got a result the
+        # loop continues with the new interval.
+        loop.interval = 2
+        deferred.callback(None)
+
+        # It will count skipped steps since the last loop call.
+        clock.advance(7)
+        self.assertEqual([1, 1, 3], accumulator)
+
+        clock.advance(2)
+        self.assertEqual([1, 1, 3, 1], accumulator)
+
+        clock.advance(4)
+        self.assertEqual([1, 1, 3, 1, 2], accumulator)
+
+
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
         # called a few times.
@@ -530,7 +629,7 @@ class LoopTests(unittest.TestCase):
         self.assertIdentical(theResult[0], lc)
 
         # Make sure it isn't planning to do anything further.
-        self.failIf(clock.calls)
+        self.assertFalse(clock.calls)
 
 
     def testDelayedStart(self):
@@ -554,7 +653,7 @@ class LoopTests(unittest.TestCase):
         lc.stop()
         self.assertIdentical(theResult[0], lc)
 
-        self.failIf(clock.calls)
+        self.assertFalse(clock.calls)
 
 
     def testBadDelay(self):
@@ -572,8 +671,8 @@ class LoopTests(unittest.TestCase):
         lc = TestableLoopingCall(clock, foo)
         lc.start(delay, now=False)
         lc.stop()
-        self.failIf(ran)
-        self.failIf(clock.calls)
+        self.assertFalse(ran)
+        self.assertFalse(clock.calls)
 
 
     def testStopAtOnce(self):
@@ -618,6 +717,25 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(
             repr(task.LoopingCall(TestableLoopingCall.__init__)),
             "LoopingCall<None>(TestableLoopingCall.__init__, *(), **{})")
+
+
+    def test_deferredDeprecation(self):
+        """
+        L{LoopingCall.deferred} is deprecated.
+        """
+        loop = task.LoopingCall(lambda: None)
+
+        loop.deferred
+
+        message = (
+                'twisted.internet.task.LoopingCall.deferred was deprecated in '
+                'Twisted 16.0.0; '
+                'please use the deferred returned by start() instead'
+                )
+        warnings = self.flushWarnings([self.test_deferredDeprecation])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
 
 
 
@@ -688,7 +806,7 @@ class ReactorLoopTests(unittest.TestCase):
         lc = TestableLoopingCall(clock, foo)
         lc.start(0.2)
         clock.pump(timings)
-        self.failIf(clock.calls)
+        self.assertFalse(clock.calls)
 
     def testFailurePropagation(self):
         # Tests if the failure of the errback of the deferred returned by the
@@ -710,7 +828,7 @@ class ReactorLoopTests(unittest.TestCase):
         self.assertFailure(d, TestException)
 
         clock.pump(timings)
-        self.failIf(clock.calls)
+        self.assertFalse(clock.calls)
         return d
 
 

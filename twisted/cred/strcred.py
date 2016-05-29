@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_strcred -*-
+# -*- test-case-name: twisted.cred.test.test_strcred -*-
 #
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -13,6 +13,8 @@ Examples:
  - memory:admin:asdf:user:lkj
  - unix
 """
+
+from __future__ import absolute_import, division
 
 import sys
 
@@ -206,13 +208,13 @@ class AuthOptionMixin:
         """
         try:
             self.addChecker(makeChecker(description))
-        except UnsupportedInterfaces, e:
+        except UnsupportedInterfaces as e:
             raise usage.UsageError(
                 'Auth plugin not supported: %s' % e.args[0])
-        except InvalidAuthType, e:
+        except InvalidAuthType as e:
             raise usage.UsageError(
                 'Auth plugin not recognized: %s' % e.args[0])
-        except Exception, e:
+        except Exception as e:
             raise usage.UsageError('Unexpected error: %s' % e)
 
 

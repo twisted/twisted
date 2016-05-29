@@ -9,19 +9,21 @@ Save and load Small OBjects to and from files, using various formats.
 Maintainer: Moshe Zadka
 """
 
-import os, sys
+from __future__ import division, absolute_import
+
+import os
+import sys
+import warnings
+
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+from io import BytesIO
 from hashlib import md5
 from twisted.python import log, runtime
 from twisted.persisted import styles
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 # Note:
 # These encrypt/decrypt functions only work for data formats
@@ -29,14 +31,27 @@ from zope.interface import implements, Interface
 # All data formats which persist saves hold that condition.
 def _encrypt(passphrase, data):
     from Crypto.Cipher import AES as cipher
+
+    warnings.warn(
+        'Saving encrypted persisted data is deprecated since Twisted 15.5.0',
+        DeprecationWarning, stacklevel=2)
+
     leftover = len(data) % cipher.block_size
     if leftover:
-        data += ' '*(cipher.block_size - leftover)
+        data += b' ' * (cipher.block_size - leftover)
     return cipher.new(md5(passphrase).digest()[:16]).encrypt(data)
+
+
 
 def _decrypt(passphrase, data):
     from Crypto.Cipher import AES
+
+    warnings.warn(
+        'Loading encrypted persisted data is deprecated since Twisted 15.5.0',
+        DeprecationWarning, stacklevel=2)
+
     return AES.new(md5(passphrase).digest()[:16]).decrypt(data)
+
 
 
 class IPersistable(Interface):
@@ -58,9 +73,8 @@ class IPersistable(Interface):
         """
 
 
+@implementer(IPersistable)
 class Persistent:
-
-    implements(IPersistable)
 
     style = "pickle"
 
@@ -92,7 +106,7 @@ class Persistent:
         if passphrase is None:
             dumpFunc(self.original, f)
         else:
-            s = StringIO.StringIO()
+            s = BytesIO()
             dumpFunc(self.original, s)
             f.write(_encrypt(passphrase, s.getvalue()))
         f.close()
@@ -164,8 +178,8 @@ def load(filename, style, passphrase=None):
     else:
         _load, mode = pickle.load, 'rb'
     if passphrase:
-        fp = StringIO.StringIO(_decrypt(passphrase,
-                                        open(filename, 'rb').read()))
+        with open(filename, 'rb') as loadedFile:
+            fp = BytesIO(_decrypt(passphrase, loadedFile.read()))
     else:
         fp = open(filename, mode)
     ee = _EverythingEphemeral(sys.modules['__main__'])
@@ -176,6 +190,7 @@ def load(filename, style, passphrase=None):
     finally:
         # restore __main__ if an exception is raised.
         sys.modules['__main__'] = ee.mainMod
+        fp.close()
 
     styles.doUpgrade()
     ee.initRun = 0
@@ -200,14 +215,13 @@ def loadValueFromFile(filename, variable, passphrase=None):
         mode = 'rb'
     else:
         mode = 'r'
-    fileObj = open(filename, mode)
+    with open(filename, mode) as fileObj:
+        data = fileObj.read()
     d = {'__file__': filename}
     if passphrase:
-        data = fileObj.read()
         data = _decrypt(passphrase, data)
-        exec data in d, d
-    else:
-        exec fileObj in d, d
+    codeObj = compile(data, filename, "exec")
+    eval(codeObj, d, d)
     value = d[variable]
     return value
 

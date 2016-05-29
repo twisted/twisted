@@ -101,12 +101,12 @@ class OptionalDependenciesTests(TestCase):
         the tools required for Twisted development.
         """
         deps = _EXTRAS_REQUIRE['dev']
-        self.assertIn('twistedchecker >= 0.2.0', deps)
-        self.assertIn('pyflakes >= 0.8.1', deps)
+        self.assertIn('twistedchecker >= 0.4.0', deps)
+        self.assertIn('pyflakes >= 1.0.0', deps)
         self.assertIn('twisted-dev-tools >= 0.0.2', deps)
         self.assertIn('python-subunit', deps)
-        self.assertIn('sphinx >= 1.2.2', deps)
-        self.assertIn('pydoctor >= 0.5', deps)
+        self.assertIn('sphinx >= 1.3.1', deps)
+        self.assertIn('pydoctor >= 15.0.0', deps)
 
 
     def test_extrasRequiresTlsDeps(self):
@@ -116,7 +116,7 @@ class OptionalDependenciesTests(TestCase):
         work for both clients and servers.
         """
         deps = _EXTRAS_REQUIRE['tls']
-        self.assertIn('pyopenssl >= 0.11', deps)
+        self.assertIn('pyopenssl >= 0.13', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
 
@@ -130,7 +130,8 @@ class OptionalDependenciesTests(TestCase):
         deps = _EXTRAS_REQUIRE['conch']
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
+        self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('appdirs >= 1.4.0', deps)
 
 
     def test_extrasRequiresSoapDeps(self):
@@ -162,14 +163,15 @@ class OptionalDependenciesTests(TestCase):
         all supported operating systems.
         """
         deps = _EXTRAS_REQUIRE['all_non_platform']
-        self.assertIn('pyopenssl >= 0.11', deps)
+        self.assertIn('pyopenssl >= 0.13', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
+        self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
+        self.assertIn('appdirs >= 1.4.0', deps)
 
 
     def test_extrasRequiresOsxPlatformDeps(self):
@@ -179,12 +181,12 @@ class OptionalDependenciesTests(TestCase):
         Mac OS X platform.
         """
         deps = _EXTRAS_REQUIRE['osx_platform']
-        self.assertIn('pyopenssl >= 0.11', deps)
+        self.assertIn('pyopenssl >= 0.13', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
+        self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('pyobjc', deps)
@@ -197,116 +199,15 @@ class OptionalDependenciesTests(TestCase):
         Microsoft Windows platform.
         """
         deps = _EXTRAS_REQUIRE['windows_platform']
-        self.assertIn('pyopenssl >= 0.11', deps)
+        self.assertIn('pyopenssl >= 0.13', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
+        self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
         self.assertIn('pypiwin32', deps)
-
-
-
-class GetExtensionsTests(TestCase):
-    """
-    Tests for L{dist.getExtensions}.
-    """
-
-    setupTemplate = (
-        "from twisted.python.dist import ConditionalExtension\n"
-        "extensions = [\n"
-        "    ConditionalExtension(\n"
-        "        '%s', ['twisted/some/thing.c'],\n"
-        "        condition=lambda builder: True)\n"
-        "    ]\n")
-
-    def setUp(self):
-        self.basedir = FilePath(self.mktemp()).child("twisted")
-        self.basedir.makedirs()
-        self.addCleanup(os.chdir, os.getcwd())
-        os.chdir(self.basedir.parent().path)
-
-
-    def writeSetup(self, name, *path):
-        """
-        Write out a C{setup.py} file to a location determined by
-        L{self.basedir} and L{path}. L{self.setupTemplate} is used to
-        generate its contents.
-        """
-        outdir = self.basedir.descendant(path)
-        outdir.makedirs()
-        setup = outdir.child("setup.py")
-        setup.setContent(self.setupTemplate % (name,))
-
-
-    def writeEmptySetup(self, *path):
-        """
-        Write out an empty C{setup.py} file to a location determined by
-        L{self.basedir} and L{path}.
-        """
-        outdir = self.basedir.descendant(path)
-        outdir.makedirs()
-        outdir.child("setup.py").setContent("")
-
-
-    def assertExtensions(self, expected):
-        """
-        Assert that the given names match the (sorted) names of discovered
-        extensions.
-        """
-        extensions = dist.getExtensions()
-        names = [extension.name for extension in extensions]
-        self.assertEqual(sorted(names), expected)
-
-
-    def test_getExtensions(self):
-        """
-        Files named I{setup.py} in I{twisted/topfiles} and I{twisted/*/topfiles}
-        are executed with L{execfile} in order to discover the extensions they
-        declare.
-        """
-        self.writeSetup("twisted.transmutate", "topfiles")
-        self.writeSetup("twisted.tele.port", "tele", "topfiles")
-        self.assertExtensions(["twisted.tele.port", "twisted.transmutate"])
-
-
-    def test_getExtensionsTooDeep(self):
-        """
-        Files named I{setup.py} in I{topfiles} directories are not considered if
-        they are too deep in the directory hierarchy.
-        """
-        self.writeSetup("twisted.trans.mog.rify", "trans", "mog", "topfiles")
-        self.assertExtensions([])
-
-
-    def test_getExtensionsNotTopfiles(self):
-        """
-        The folder in which I{setup.py} is discovered must be called I{topfiles}
-        otherwise it is ignored.
-        """
-        self.writeSetup("twisted.metamorphosis", "notfiles")
-        self.assertExtensions([])
-
-
-    def test_getExtensionsNotSupportedOnJava(self):
-        """
-        Extensions are not supported on Java-based platforms.
-        """
-        self.addCleanup(setattr, sys, "platform", sys.platform)
-        sys.platform = "java"
-        self.writeSetup("twisted.sorcery", "topfiles")
-        self.assertExtensions([])
-
-
-    def test_getExtensionsExtensionsLocalIsOptional(self):
-        """
-        It is acceptable for extensions to not define the C{extensions} local
-        variable.
-        """
-        self.writeEmptySetup("twisted.necromancy", "topfiles")
-        self.assertExtensions([])
 
 
 
@@ -330,21 +231,7 @@ from twisted.python import versions
 version = versions.Version("twisted", 0, 1, 2)
 """)
         f.close()
-        self.assertEqual(dist.getVersion("core", base=self.dirname), "0.1.2")
-
-    def test_getVersionOther(self):
-        """
-        Test that getting the version of a non-core project reads from
-        the [base]/[projname]/_version.py file.
-        """
-        os.mkdir(os.path.join(self.dirname, "blat"))
-        f = open(os.path.join(self.dirname, "blat", "_version.py"), "w")
-        f.write("""
-from twisted.python import versions
-version = versions.Version("twisted.blat", 9, 8, 10)
-""")
-        f.close()
-        self.assertEqual(dist.getVersion("blat", base=self.dirname), "9.8.10")
+        self.assertEqual(dist.getVersion(base=self.dirname), "0.1.2")
 
 
 
@@ -353,23 +240,6 @@ class GetScriptsTests(TestCase):
     Tests for L{dist.getScripts} which returns the scripts which should be
     included in the distribution of a project.
     """
-
-    def test_scriptsInSVN(self):
-        """
-        getScripts should return the scripts associated with a project
-        in the context of Twisted SVN.
-        """
-        basedir = self.mktemp()
-        os.mkdir(basedir)
-        os.mkdir(os.path.join(basedir, 'bin'))
-        os.mkdir(os.path.join(basedir, 'bin', 'proj'))
-        f = open(os.path.join(basedir, 'bin', 'proj', 'exy'), 'w')
-        f.write('yay')
-        f.close()
-        scripts = dist.getScripts('proj', basedir=basedir)
-        self.assertEqual(len(scripts), 1)
-        self.assertEqual(os.path.basename(scripts[0]), 'exy')
-
 
     def test_excludedPreamble(self):
         """
@@ -382,7 +252,7 @@ class GetScriptsTests(TestCase):
         bin.child('_preamble.py').setContent('some preamble code\n')
         bin.child('_preamble.pyc').setContent('some preamble byte code\n')
         bin.child('program').setContent('good program code\n')
-        scripts = dist.getScripts("", basedir=basedir.path)
+        scripts = dist.getScripts(basedir=basedir.path)
         self.assertEqual(scripts, [bin.child('program').path])
 
 
@@ -397,29 +267,15 @@ class GetScriptsTests(TestCase):
         f = open(os.path.join(basedir, 'bin', 'exy'), 'w')
         f.write('yay')
         f.close()
-        scripts = dist.getScripts('proj', basedir=basedir)
+        scripts = dist.getScripts(basedir=basedir)
         self.assertEqual(len(scripts), 1)
         self.assertEqual(os.path.basename(scripts[0]), 'exy')
 
 
-    def test_noScriptsInSVN(self):
-        """
-        When calling getScripts for a project which doesn't actually
-        have any scripts, in the context of an SVN checkout, an
-        empty list should be returned.
-        """
-        basedir = self.mktemp()
-        os.mkdir(basedir)
-        os.mkdir(os.path.join(basedir, 'bin'))
-        os.mkdir(os.path.join(basedir, 'bin', 'otherproj'))
-        scripts = dist.getScripts('noscripts', basedir=basedir)
-        self.assertEqual(scripts, [])
-
-
     def test_getScriptsTopLevel(self):
         """
-        Passing the empty string to getScripts returns scripts that are (only)
-        in the top level bin directory.
+        getScripts returns scripts that are (only) in the top level bin
+        directory.
         """
         basedir = FilePath(self.mktemp())
         basedir.createDirectory()
@@ -431,20 +287,8 @@ class GetScriptsTests(TestCase):
         subdir.createDirectory()
         subdir.child("not-included").setContent("not included")
 
-        scripts = dist.getScripts("", basedir=basedir.path)
+        scripts = dist.getScripts(basedir=basedir.path)
         self.assertEqual(scripts, [included.path])
-
-
-    def test_noScriptsInSubproject(self):
-        """
-        When calling getScripts for a project which doesn't actually
-        have any scripts in the context of that project's individual
-        project structure, an empty list should be returned.
-        """
-        basedir = self.mktemp()
-        os.mkdir(basedir)
-        scripts = dist.getScripts('noscripts', basedir=basedir)
-        self.assertEqual(scripts, [])
 
 
 

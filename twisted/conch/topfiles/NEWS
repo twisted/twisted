@@ -1,6 +1,126 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 16.2.0 (2016-05-18)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #8279
+
+
+Twisted Conch 16.1.1 (2016-04-08)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 16.1.0 (2016-04-04)
+=================================
+
+Features
+--------
+ - twisted.conch.checkers is now ported to Python 3. (#8225)
+ - twisted.conch.telnet is now ported to Python 3. (#8228)
+ - twisted.conch.manhole_ssh.ConchFactory (used by `twistd manhole`)
+   no longer uses a hardcoded SSH server key, and will generate a
+   persistent one, saving it in your user appdir. If you use
+   ConchFactory, you will now need to provide your own SSH server key.
+   (#8229)
+
+Other
+-----
+ - #8237, #8240
+
+
+Twisted Conch 16.0.0 (2016-03-10)
+=================================
+
+Features
+--------
+ - twisted.conch now uses cryptography instead of PyCrypto for its
+   underlying crypto operations. (#7413)
+ - twisted.conch.ssh.keys is now ported to Python 3. (#7998)
+
+Bugfixes
+--------
+ - twisted.conch.ssh.channel.SSHChannel's getPeer and getHost methods
+   now return an object which provides IAddress instead of an old-
+   style tuple address. (#5999)
+ - twisted.conch.endpoint.SSHCommandClientEndpoint, when
+   authentication is delegated to an SSH agent, no longer leaves the
+   agent connection opened when connection to the server is lost.
+   (#8138)
+
+Other
+-----
+ - #7037, #7715, #8200, #8208
+
+
+Twisted Conch 15.5.0 (2015-11-28)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh now supports the diffie-hellman-group-exchange-
+   sha256 key exchange algorithm. (#7672)
+ - twisted.conch.ssh now supports the diffie-hellman-group14-sha1 key
+   exchange algorithm. (#7717)
+ - twisted.conch.ssh.transport.SSHClientTransport now supports Diffie-
+   Hellman key exchange using MSG_KEX_DH_GEX_REQUEST as described in
+   RFC 4419. (#8100)
+ - twisted.conch.ssh now supports the hmac-sha2-256 and hmac-sha2-512
+   MAC algorithms. (#8108)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.ssh.keys.objectType is now deprecated. Use
+   twisted.conch.ssh.keys.Key.sshType. (#8080)
+ - twisted.conch.ssh.transport.SSHClientTransport no longer supports
+   Diffie-Hellman key exchange using MSG_KEX_DH_GEX_REQUEST_OLD for
+   pre RFC 4419 servers. (#8100)
+
+
+Twisted Conch 15.4.0 (2015-09-04)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #7977
+
+
+Twisted Conch 15.3.0 (2015-08-04)
+=================================
+
+Bugfixes
+--------
+ - The Conch Unix server now sets the HOME environment variable when
+   executing commands. (#7936)
+
+Other
+-----
+ - #7937
+
+
+Twisted Conch 15.2.1 (2015-05-23)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 15.2.0 (2015-05-18)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.forwarding now supports local->remote forwarding
+   of IPv6 (#7751)
+
+
 Twisted Conch 15.1.0 (2015-04-02)
 =================================
 

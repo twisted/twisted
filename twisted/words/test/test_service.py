@@ -216,7 +216,7 @@ class IRCProtocolTests(unittest.TestCase):
         for (prefix, command, args) in response:
             if command in expected:
                 expected.remove(command)
-        self.failIf(expected, "Missing responses for %r" % (expected,))
+        self.assertFalse(expected, "Missing responses for %r" % (expected,))
 
 
     def _login(self, user, nick, password=None):
@@ -512,7 +512,7 @@ class IRCProtocolTests(unittest.TestCase):
         response = self._response(user)
         event = self._response(other)
 
-        self.failIf(response)
+        self.assertFalse(response)
         self.assertEqual(len(event), 1)
         self.assertEqual(event[0][0], 'useruser!useruser@realmname')
         self.assertEqual(event[0][1], 'PRIVMSG', -1)
@@ -532,7 +532,7 @@ class IRCProtocolTests(unittest.TestCase):
         response = self._response(user)
         event = self._response(other)
 
-        self.failIf(response)
+        self.assertFalse(response)
         self.assertEqual(len(event), 1)
         self.assertEqual(event[0][0], 'useruser!useruser@realmname')
         self.assertEqual(event[0][1], 'PRIVMSG')
@@ -628,8 +628,8 @@ class IRCProtocolTests(unittest.TestCase):
         users[0].write('WHO #groupname\r\n')
 
         r = self._response(users[0])
-        self.failIf(self._response(users[1]))
-        self.failIf(self._response(users[2]))
+        self.assertFalse(self._response(users[1]))
+        self.assertFalse(self._response(users[2]))
 
         wantusers = ['userone', 'usertwo', 'userthree']
         for (prefix, code, stuff) in r[:-1]:
@@ -639,13 +639,13 @@ class IRCProtocolTests(unittest.TestCase):
             (myname, group, theirname, theirhost, theirserver, theirnick, flag, extra) = stuff
             self.assertEqual(myname, 'userone')
             self.assertEqual(group, '#groupname')
-            self.failUnless(theirname in wantusers)
+            self.assertTrue(theirname in wantusers)
             self.assertEqual(theirhost, 'realmname')
             self.assertEqual(theirserver, 'realmname')
             wantusers.remove(theirnick)
             self.assertEqual(flag, 'H')
             self.assertEqual(extra, '0 ' + theirnick)
-        self.failIf(wantusers)
+        self.assertFalse(wantusers)
 
         prefix, code, stuff = r[-1]
         self.assertEqual(prefix, 'realmname')

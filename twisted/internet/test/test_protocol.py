@@ -19,6 +19,7 @@ from twisted.internet.protocol import (
     ConsumerToProtocolAdapter)
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+from twisted.logger import LogLevel, globalLogPublisher
 
 
 
@@ -391,6 +392,47 @@ class FactoryTests(TestCase):
         self.assertEqual(factory.protocol, Protocol)
         self.assertEqual(factory.args, (1, 2))
         self.assertEqual(factory.kwargs, {"foo": 12})
+
+
+    def test_doStartLoggingStatement(self):
+        """
+        L{Factory.doStart} logs that it is starting a factory, followed by
+        the L{repr} of the L{Factory} instance that is being started.
+        """
+        events = []
+        globalLogPublisher.addObserver(events.append)
+        self.addCleanup(
+            lambda: globalLogPublisher.removeObserver(events.append))
+
+        f = Factory()
+        f.doStart()
+
+        self.assertIs(events[0]['factory'], f)
+        self.assertEqual(events[0]['log_level'], LogLevel.info)
+        self.assertEqual(events[0]['log_format'],
+                         'Starting factory {factory!r}')
+
+
+    def test_doStopLoggingStatement(self):
+        """
+        L{Factory.doStop} logs that it is stopping a factory, followed by
+        the L{repr} of the L{Factory} instance that is being stopped.
+        """
+        events = []
+        globalLogPublisher.addObserver(events.append)
+        self.addCleanup(
+            lambda: globalLogPublisher.removeObserver(events.append))
+
+        class MyFactory(Factory):
+            numPorts = 1
+
+        f = MyFactory()
+        f.doStop()
+
+        self.assertIs(events[0]['factory'], f)
+        self.assertEqual(events[0]['log_level'], LogLevel.info)
+        self.assertEqual(events[0]['log_format'],
+                         'Stopping factory {factory!r}')
 
 
 

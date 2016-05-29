@@ -5,6 +5,8 @@
 I am a simple test resource.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.web import static
 
 
@@ -13,7 +15,7 @@ class Test(static.Data):
     def __init__(self):
         static.Data.__init__(
             self,
-            """
+            b"""
             <html>
             <head><title>Twisted Web Demo</title><head>
             <body>

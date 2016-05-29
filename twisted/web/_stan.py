@@ -21,6 +21,11 @@ cumbersome.
     output.
 """
 
+from __future__ import absolute_import, division
+
+from twisted.python.compat import iteritems
+
+
 
 class slot(object):
     """
@@ -182,7 +187,7 @@ class Tag(object):
         """
         self.children.extend(children)
 
-        for k, v in kw.iteritems():
+        for k, v in iteritems(kw):
             if k[-1] == '_':
                 k = k[:-1]
 
@@ -224,7 +229,7 @@ class Tag(object):
         else:
             newchildren = self.children[:]
         newattrs = self.attributes.copy()
-        for key in newattrs:
+        for key in newattrs.keys():
             newattrs[key] = self._clone(newattrs[key], True)
 
         newslotdata = None

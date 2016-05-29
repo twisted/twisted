@@ -11,7 +11,11 @@ import warnings, os
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IAddress
+from twisted.python.filepath import _asFilesystemBytes
+from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import FancyEqMixin
+from twisted.python.runtime import platform
+from twisted.python.compat import _PY3
 
 
 @implementer(IAddress)
@@ -121,7 +125,7 @@ class UNIXAddress(FancyEqMixin, object):
     Object representing a UNIX socket endpoint.
 
     @ivar name: The filename associated with this socket.
-    @type name: C{str}
+    @type name: C{bytes}
     """
 
     compareAttributes = ('name', )
@@ -131,6 +135,24 @@ class UNIXAddress(FancyEqMixin, object):
         if _bwHack is not None:
             warnings.warn("twisted.internet.address.UNIXAddress._bwHack is deprecated since Twisted 11.0",
                     DeprecationWarning, stacklevel=2)
+
+
+    @property
+    def name(self):
+        return self._name
+
+
+    @name.setter
+    def name(self, name):
+        """
+        On UNIX, paths are always bytes. However, as paths are L{unicode} on
+        Python 3, and L{UNIXAddress} technically takes a file path, we convert
+        it to bytes to maintain compatibility with C{os.path} on Python 3.
+        """
+        if name is not None:
+            self._name = _asFilesystemBytes(name)
+        else:
+            self._name = None
 
 
     if getattr(os.path, 'samefile', None) is not None:
@@ -145,11 +167,19 @@ class UNIXAddress(FancyEqMixin, object):
                     return os.path.samefile(self.name, other.name)
                 except OSError:
                     pass
+                except (TypeError, ValueError) as e:
+                    # On Linux, abstract namespace UNIX sockets start with a
+                    # \0, which os.path doesn't like.
+                    if not _PY3 and not platform.isLinux():
+                        raise e
             return res
 
 
     def __repr__(self):
-        return 'UNIXAddress(%r)' % (self.name,)
+        name = self.name
+        if name:
+            name = _coerceToFilesystemEncoding('', self.name)
+        return 'UNIXAddress(%r)' % (name,)
 
 
     def __hash__(self):

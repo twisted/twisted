@@ -7,16 +7,19 @@ Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
 
-from cStringIO import StringIO
+from __future__ import division, absolute_import
+
+from io import BytesIO
+
 from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
-from twisted.internet.defer import Deferred
-from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 
+from twisted.internet.defer import Deferred
+from twisted.python.compat import unicode, nativeString, iteritems
+from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
+from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
-from twisted.web._stan import (
-    Tag, slot, voidElements, Comment, CDATA, CharRef)
 
 
 
@@ -37,9 +40,9 @@ def escapeForContent(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    data = data.replace('&', '&amp;'
-        ).replace('<', '&lt;'
-        ).replace('>', '&gt;')
+    data = data.replace(b'&', b'&amp;'
+        ).replace(b'<', b'&lt;'
+        ).replace(b'>', b'&gt;')
     return data
 
 
@@ -48,7 +51,7 @@ def attributeEscapingDoneOutside(data):
     """
     Escape some character or UTF-8 byte data for inclusion in the top level of
     an attribute.  L{attributeEscapingDoneOutside} actually passes the data
-    through unchanged, because L{flattenWithAttributeEscaping} handles the
+    through unchanged, because L{writeWithAttributeEscaping} handles the
     quoting of the text within attributes outside the generator returned by
     L{_flattenElement}; this is used as the C{dataEscaper} argument to that
     L{_flattenElement} call so that that generator does not redundantly escape
@@ -66,10 +69,10 @@ def attributeEscapingDoneOutside(data):
 
 
 
-def flattenWithAttributeEscaping(root):
+def writeWithAttributeEscaping(write):
     """
-    Decorate the generator returned by L{_flattenElement} so that its output is
-    properly quoted for inclusion within an XML attribute value.
+    Decorate a C{write} callable so that all output written is properly quoted
+    for inclusion within an XML attribute value.
 
     If a L{Tag <twisted.web.template.Tag>} C{x} is flattened within the context
     of the contents of another L{Tag <twisted.web.template.Tag>} C{y}, the
@@ -91,38 +94,22 @@ def flattenWithAttributeEscaping(root):
     comments and CDATA, so if you were to serialize a L{comment
     <twisted.web.template.Comment>} in an attribute you should get C{<y
     attr="&lt;-- comment --&gt;" />}.  Therefore in order to capture these
-    meta-characters, the attribute generator from L{_flattenElement} context is
-    wrapped with an L{flattenWithAttributeEscaping}.
-
-    Because I{all} characters serialized in the context of an attribute are
-    quoted before they are yielded by the generator returned by
-    L{flattenWithAttributeEscaping}, on the "outside" of the L{_flattenElement}
-    call, the L{_flattenElement} generator therefore no longer needs to quote
-    text that appears directly within the attribute itself.
+    meta-characters, flattening is done with C{write} callable that is wrapped
+    with L{writeWithAttributeEscaping}.
 
     The final case, and hopefully the much more common one as compared to
     serializing L{Tag <twisted.web.template.Tag>} and arbitrary L{IRenderable}
     objects within an attribute, is to serialize a simple string, and those
-    should be passed through for L{flattenWithAttributeEscaping} to quote
+    should be passed through for L{writeWithAttributeEscaping} to quote
     without applying a second, redundant level of quoting.
 
-    @param root: A value that may be yielded by L{_flattenElement}; either an
-        iterable yielding L{bytes} (or more iterables), or bytes itself.
-    @type root: L{bytes} or C{iterable}
+    @param write: A callable which will be invoked with the escaped L{bytes}.
 
-    @return: The same type as L{_flattenElement} returns, with all the bytes
-        encoded for representation within an attribute.
-    @rtype: the same type as the C{subFlatten} argument
+    @return: A callable that writes data with escaping.
     """
-    if isinstance(root, bytes):
-        root = escapeForContent(root)
-        root = root.replace('"', '&quot;')
-        yield root
-    elif isinstance(root, Deferred):
-        yield root.addCallback(flattenWithAttributeEscaping)
-    else:
-        for subroot in root:
-            yield flattenWithAttributeEscaping(subroot)
+    def _write(data):
+        write(escapeForContent(data).replace(b'"', b'&quot;'))
+    return _write
 
 
 
@@ -139,7 +126,7 @@ def escapedCDATA(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    return data.replace(']]>', ']]]]><![CDATA[>')
+    return data.replace(b']]>', b']]]]><![CDATA[>')
 
 
 
@@ -156,9 +143,9 @@ def escapedComment(data):
     """
     if isinstance(data, unicode):
         data = data.encode('utf-8')
-    data = data.replace('--', '- - ').replace('>', '&gt;')
-    if data and data[-1] == '-':
-        data += ' '
+    data = data.replace(b'--', b'- - ').replace(b'>', b'&gt;')
+    if data and data[-1:] == b'-':
+        data += b' '
     return data
 
 
@@ -177,7 +164,8 @@ def _getSlotValue(name, slotData, default=None):
 
 
 
-def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
+def _flattenElement(request, root, write, slotData, renderFactory,
+                    dataEscaper):
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -186,9 +174,12 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         L{IRenderable.render}.
 
     @param root: An object to be made flatter.  This may be of type C{unicode},
-        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{URL}, L{tuple},
-        L{list}, L{GeneratorType}, L{Deferred}, or an object that implements
+        C{str}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple}, L{list},
+        L{GeneratorType}, L{Deferred}, or an object that implements
         L{IRenderable}.
+
+    @param write: A callable which will be invoked with each L{bytes} produced
+        by flattening C{root}.
 
     @param slotData: A C{list} of C{dict} mapping C{str} slot names to data
         with which those slots will be replaced.
@@ -201,7 +192,7 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         rendering context.  This is really only one of two values:
         L{attributeEscapingDoneOutside} or L{escapeForContent}, depending on
         whether the rendering context is within an attribute or not.  See the
-        explanation in L{flattenWithAttributeEscaping}.
+        explanation in L{writeWithAttributeEscaping}.
 
     @return: An iterator that eventually yields L{bytes} that should be written
         to the output.  However it may also yield other iterators or
@@ -214,22 +205,22 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
         of the same type.
     """
     def keepGoing(newRoot, dataEscaper=dataEscaper,
-                  renderFactory=renderFactory):
-        return _flattenElement(request, newRoot, slotData, renderFactory,
-                               dataEscaper)
+                  renderFactory=renderFactory, write=write):
+        return _flattenElement(request, newRoot, write, slotData,
+                               renderFactory, dataEscaper)
     if isinstance(root, (bytes, unicode)):
-        yield dataEscaper(root)
+        write(dataEscaper(root))
     elif isinstance(root, slot):
         slotValue = _getSlotValue(root.name, slotData, root.default)
         yield keepGoing(slotValue)
     elif isinstance(root, CDATA):
-        yield '<![CDATA['
-        yield escapedCDATA(root.data)
-        yield ']]>'
+        write(b'<![CDATA[')
+        write(escapedCDATA(root.data))
+        write(b']]>')
     elif isinstance(root, Comment):
-        yield '<!--'
-        yield escapedComment(root.data)
-        yield '-->'
+        write(b'<!--')
+        write(escapedComment(root.data))
+        write(b'-->')
     elif isinstance(root, Tag):
         slotData.append(root.slotData)
         if root.render is not None:
@@ -246,23 +237,25 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             yield keepGoing(root.children)
             return
 
-        yield '<'
+        write(b'<')
         if isinstance(root.tagName, unicode):
             tagName = root.tagName.encode('ascii')
         else:
-            tagName = str(root.tagName)
-        yield tagName
-        for k, v in root.attributes.iteritems():
+            tagName = root.tagName
+        write(tagName)
+        for k, v in iteritems(root.attributes):
             if isinstance(k, unicode):
                 k = k.encode('ascii')
-            yield ' ' + k + '="'
+            write(b' ' + k + b'="')
             # Serialize the contents of the attribute, wrapping the results of
             # that serialization so that _everything_ is quoted.
-            attribute = keepGoing(v, attributeEscapingDoneOutside)
-            yield flattenWithAttributeEscaping(attribute)
-            yield '"'
-        if root.children or tagName not in voidElements:
-            yield '>'
+            yield keepGoing(
+                v,
+                attributeEscapingDoneOutside,
+                write=writeWithAttributeEscaping(write))
+            write(b'"')
+        if root.children or nativeString(tagName) not in voidElements:
+            write(b'>')
             # Regardless of whether we're in an attribute or not, switch back
             # to the escapeForContent dataEscaper.  The contents of a tag must
             # be quoted no matter what; in the top-level document, just so
@@ -271,15 +264,16 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
             # parse the tag within the attribute, all the quoting is still
             # correct.
             yield keepGoing(root.children, escapeForContent)
-            yield '</' + tagName + '>'
+            write(b'</' + tagName + b'>')
         else:
-            yield ' />'
+            write(b' />')
 
     elif isinstance(root, (tuple, list, GeneratorType)):
         for element in root:
             yield keepGoing(element)
     elif isinstance(root, CharRef):
-        yield '&#%d;' % (root.ordinal,)
+        escaped = '&#%d;' % (root.ordinal,)
+        write(escaped.encode('ascii'))
     elif isinstance(root, Deferred):
         yield root.addCallback(lambda result: (result, keepGoing(result)))
     elif IRenderable.providedBy(root):
@@ -290,7 +284,7 @@ def _flattenElement(request, root, slotData, renderFactory, dataEscaper):
 
 
 
-def _flattenTree(request, root):
+def _flattenTree(request, root, write):
     """
     Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
     first traversal of the tree.
@@ -303,21 +297,22 @@ def _flattenTree(request, root):
         L{list}, L{GeneratorType}, L{Deferred}, or something providing
         L{IRenderable}.
 
+    @param write: A callable which will be invoked with each L{bytes} produced
+        by flattening C{root}.
+
     @return: An iterator which yields objects of type L{bytes} and L{Deferred}.
         A L{Deferred} is only yielded when one is encountered in the process of
         flattening C{root}.  The returned iterator must not be iterated again
         until the L{Deferred} is called back.
     """
-    stack = [_flattenElement(request, root, [], None, escapeForContent)]
+    stack = [_flattenElement(request, root, write, [], None, escapeForContent)]
     while stack:
         try:
-            # In Python 2.5, after an exception, a generator's gi_frame is
-            # None.
             frame = stack[-1].gi_frame
-            element = stack[-1].next()
+            element = next(stack[-1])
         except StopIteration:
             stack.pop()
-        except Exception, e:
+        except Exception as e:
             stack.pop()
             roots = []
             for generator in stack:
@@ -325,10 +320,9 @@ def _flattenTree(request, root):
             roots.append(frame.f_locals['root'])
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
-            if type(element) is str:
-                yield element
-            elif isinstance(element, Deferred):
-                def cbx((original, toFlatten)):
+            if isinstance(element, Deferred):
+                def cbx(originalAndToFlatten):
+                    original, toFlatten = originalAndToFlatten
                     stack.append(toFlatten)
                     return original
                 yield element.addCallback(cbx)
@@ -356,20 +350,16 @@ def _writeFlattenedData(state, write, result):
     """
     while True:
         try:
-            element = state.next()
+            element = next(state)
         except StopIteration:
             result.callback(None)
         except:
             result.errback()
         else:
-            if type(element) is str:
-                write(element)
-                continue
-            else:
-                def cby(original):
-                    _writeFlattenedData(state, write, result)
-                    return original
-                element.addCallbacks(cby, result.errback)
+            def cby(original):
+                _writeFlattenedData(state, write, result)
+                return original
+            element.addCallbacks(cby, result.errback)
         break
 
 
@@ -398,7 +388,7 @@ def flatten(request, root, write):
         unexpected exception occurs.
     """
     result = Deferred()
-    state = _flattenTree(request, root)
+    state = _flattenTree(request, root, write)
     _writeFlattenedData(state, write, result)
     return result
 
@@ -408,15 +398,15 @@ def flattenString(request, root):
     """
     Collate a string representation of C{root} into a single string.
 
-    This is basically gluing L{flatten} to a C{StringIO} and returning the
-    results. See L{flatten} for the exact meanings of C{request} and
+    This is basically gluing L{flatten} to a L{NativeStringIO} and returning
+    the results. See L{flatten} for the exact meanings of C{request} and
     C{root}.
 
     @return: A L{Deferred} which will be called back with a single string as
         its result when C{root} has been completely flattened into C{write} or
         which will be errbacked if an unexpected exception occurs.
     """
-    io = StringIO()
+    io = BytesIO()
     d = flatten(request, root, io.write)
     d.addCallback(lambda _: io.getvalue())
     return d

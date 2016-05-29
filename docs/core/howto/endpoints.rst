@@ -99,6 +99,94 @@ implemented like this:
 .. note::
    If you've used ``ClientFactory`` before, keep in mind that the ``connect`` method takes a ``Factory``, not a ``ClientFactory``.
    Even if you pass a ``ClientFactory`` to ``endpoint.connect``, its ``clientConnectionFailed`` and ``clientConnectionLost`` methods will not be called.
+   In particular, clients that extend ``ReconnectingClientFactory`` won't reconnect. The next section describes how to set up reconnecting clients on endpoints.
+
+
+Persistent Client Connections
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:api:`twisted.application.internet.ClientService` can maintain a persistent outgoing connection to a server which can be started and stopped along with your application.
+
+One popular protocol to maintain a long-lived client connection to is IRC, so for an example of ``ClientService``, here's how you would make a long-lived encrypted connection to an IRC server (other details, like how to authenticate, omitted for brevity):
+
+.. code-block:: python
+
+   from twisted.internet.protocol import Factory
+   from twisted.internet.endpoints import clientFromString
+   from twisted.words.protocols.irc import IRCClient
+   from twisted.application.internet import ClientService
+   from twisted.internet import reactor
+
+   myEndpoint = clientFromString(reactor, "tls:example.com:6997")
+   myFactory = Factory.forProtocol(IRCClient)
+
+   myReconnectingService = ClientService(myEndpoint, myFactory)
+
+If you already have a parent service, you can add the reconnecting service as a child service:
+
+.. code-block:: python
+
+   parentService.addService(myReconnectingService)
+
+If you do not have a parent service, you can start and stop the reconnecting service using its ``startService`` and ``stopService`` methods.
+
+``ClientService.stopService`` returns a ``Deferred`` that fires once the current connection closes or the current connection attempt is cancelled.
+
+
+Getting The Active Client
+-------------------------
+
+When maintaining a long-lived connection, it's often useful to be able to get the current connection (if the connection is active) or wait for the next connection (if a connection attempt is currently in progress).
+For example, we might want to pass our ``ClientService`` from the previous example to some code that can send IRC notifications in response to some external event.
+The ``ClientService.whenConnected`` method returns a ``Deferred`` that fires with the next available ``Protocol`` instance.
+You can use it like so:
+
+.. code-block:: python
+
+    waitForConnection = myReconnectingService.whenConnected()
+    def connectedNow(clientForIRC):
+        clientForIRC.say("#bot-test", "hello, world!")
+    waitForConnection.addCallback(connectedNow)
+
+Keep in mind that you may need to wrap this up for your particular application, since when no existing connection is available, the callback is executed just as soon as the connection is established.
+For example, that little snippet is slightly oversimplified: at the time ``connectedNow`` is run, the bot hasn't authenticated or joined the channel yet, so its message will be refused.
+A real-life IRC bot would need to have its own method for waiting until the connection is fully ready for chat before chatting.
+
+Retry Policies
+--------------
+
+``ClientService`` will immediately attempt an outgoing connection when ``startService`` is called.
+If that connection attempt fails for any reason (name resolution, connection refused, network unreachable, and so on), it will retry according to the policy specified in the ``retryPolicy`` constructor argument.
+By default, ``ClientService`` will use an exponential backoff algorithm with a minimum delay of 1 second and a maximum delay of 1 minute, and a jitter of up to 1 additional second to prevent stampeding-herd performance cascades.
+This is a good default, and if you do not have highly specialized requirements, you probably want to use it.
+If you need to tune these parameters, you have two options:
+
+1. You can pass your own timeout policy to ``ClientService``'s constructor.
+   A timeout policy is a callable that takes the number of failed attempts, and computes a delay until the next connection attempt.
+   So, for example, if you are *really really sure* that you want to reconnect *every single second* if the service you are talking to goes down, you can do this:
+
+   .. code-block:: python
+
+      myReconnectingService = ClientService(myEndpoint, myFactory, retryPolicy=lambda ignored: 1)
+
+   Of course, unless you have only one client and only one server and they're both on localhost, this sort of policy is likely to cause massive performance degradation and thundering herd resource contention in the event of your server's failure, so you probably want to take the second option...
+
+2. You can tweak the default exponential backoff policy with a few parameters by passing the result of :api:`twisted.application.internet.backoffPolicy` to the ``retryPolicy`` argument.
+   For example, if you want to make it triple the delay between attempts, but start with a faster connection interval (half a second instead of one second), you could do it like so:
+
+   .. code-block:: python
+
+      myReconnectingService = ClientService(
+          myEndpoint, myFactory,
+          retryPolicy=backoffPolicy(initialDelay=0.5, factor=3.0)
+      )
+
+.. note::
+
+   Before endpoints, reconnecting clients were created as subclasses of ``ReconnectingClientFactory``.
+   These subclasses were required to call ``resetDelay``.
+   One of the many advantages of using endpoints is that these special subclasses are no longer needed.
+   ``ClientService`` accepts ordinary ``IProtocolFactory`` providers.
 
 
 Maximizing the Return on your Endpoint Investment
@@ -148,13 +236,39 @@ TCP
 
    For example, ``tcp:host=twistedmatrix.com:port=80:timeout=15``.
 
-SSL
-   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``caCertsDir``.
-   ``certKey`` (optional) gives a filesystem path to a certificate (PEM format).
-   ``privateKey`` (optional) gives a filesystem path to a private key (PEM format).
-   ``caCertsDir`` (optional) gives a filesystem path to a directory containing trusted CA certificates to use to verify the server certificate.
+TLS
+   Required arguments: ``host``, ``port``.
 
-   For example, ``ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs`` .
+   Optional arguments: ``timeout``, ``bindAddress``, ``certificate``, ``privateKey``, ``trustRoots``, ``endpoint``.
+
+   - ``host`` is a (UTF-8 encoded) hostname to connect to, as well as the host name to verify against.
+   - ``port`` is a numeric port number to connect to.
+   - ``timeout`` and ``bindAddress`` have the same meaning as the ``timeout`` and ``bindAddress`` for TCP clients.
+   - ``certificate`` is the certificate to use for the client; it should be the path name of a PEM file containing a certificate for which ``privateKey`` is the private key.
+   - ``privateKey`` is the client's private key, matching the certificate specified by ``certificate``.
+     It should be the path name of a PEM file containing an X.509 client certificate.
+     If ``certificate`` is specified but ``privateKey`` is unspecified, Twisted will look for the certificate in the same file as specified by ``certificate``.
+   - ``trustRoots`` specifies a path to a directory of PEM-encoded certificate files.  If you leave this unspecified, Twisted will do its best to use the platform default set of trust roots, which should be the default WebTrust set.
+   - the optional ``endpoint`` parameter changes the meaning of the ``tls:`` endpoint slightly.
+     Rather than the default of connecting over TCP with the same hostname used for verification, you can connect over *any* endpoint type.
+     If you specify the endpoint here, ``host`` and ``port`` are used for certificate verification purposes only.
+     Bear in mind you will need to backslash-escape the colons in the endpoint description here.
+
+   This client connects to the supplied hostname, validates the server's hostname against the supplied hostname, and then upgrades to TLS immediately after validation succeeds.
+
+   The simplest example of this would be: ``tls:example.com:443``.
+
+   You can use the ``endpoint:`` feature with TCP if you want to connect to a host name; for example, if your DNS is not working, but you know that the IP address 7.6.5.4 points to ``awesome.site.example.com``, you could specify: ``tls:awesome.site.example.com:443:endpoint=tcp\:7.6.5.4\:443``.
+
+   You can use it with any other endpoint type as well, though; for example, if you had a local UNIX socket that established a tunnel to ``awesome.site.example.com`` in ``/var/run/awesome.sock``, you could instead do ``tls:awesome.site.example.com:443:endpoint=unix\:/var/run/awesome.sock``.
+
+   Or, from python code::
+
+     wrapped = HostnameEndpoint('example.com', 443)
+     contextFactory = optionsForClientTLS(hostname=u'example.com')
+     endpoint = wrapClientTLS(contextFactory, wrapped)
+     conn = endpoint.connect(Factory.forProtocol(Protocol))
+
 UNIX
    Supported arguments: ``path``, ``timeout``, ``checkPID``.
    ``path`` gives a filesystem path to a listening UNIX domain socket server.
@@ -175,6 +289,24 @@ TCP (Hostname)
 
       endpoint = HostnameEndpoint(reactor, "twistedmatrix.com", 80)
       conn = endpoint.connect(Factory.forProtocol(Protocol))
+
+SSL (Deprecated)
+
+   .. note::
+
+       You should generally prefer the "TLS" client endpoint, above, unless you need to work with versions of Twisted older than 16.0.
+       Among other things:
+
+        - the ``ssl:`` client endpoint requires that you pass ''both'' ``hostname=`` (for hostname verification) as well as ``host=`` (for a TCP connection address) in order to get hostname verification, which is required for security, whereas ``tls:`` does the correct thing by default by using the same hostname for both.
+
+        - the ``ssl:`` client endpoint doesn't work with IPv6, and the ``tls:`` endpoint does.
+
+   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``caCertsDir``.
+   ``certKey`` (optional) gives a filesystem path to a certificate (PEM format).
+   ``privateKey`` (optional) gives a filesystem path to a private key (PEM format).
+   ``caCertsDir`` (optional) gives a filesystem path to a directory containing trusted CA certificates to use to verify the server certificate.
+
+   For example, ``ssl:host=twistedmatrix.com:port=443:caCertsDir=/etc/ssl/certs``.
 
 
 Servers
@@ -221,3 +353,10 @@ systemd
    For example, ``systemd:domain=INET6:index=3``.
 
    See also :doc:`Deploying Twisted with systemd <systemd>`.
+
+PROXY
+  The PROXY protocol is a stream wrapper and can be applied any of the other server endpoints by placing ``haproxy:`` in front of a normal port definition.
+
+  For example, ``haproxy:tcp:port=80:interface=192.168.1.1`` or ``haproxy:ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.
+
+  The PROXY protocol provides a way for load balancers and reverse proxies to send down the real IP of a connection's source and destination without relying on X-Forwarded-For headers. A Twisted service using this endpoint wrapper must run behind a service that sends valid PROXY protocol headers. For more on the protocol see `the formal specification <http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt>`_. Both version one and two of the protocol are currently supported.

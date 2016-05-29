@@ -496,7 +496,7 @@ To: foo
             data = transport.value()
             transport.clear()
             if not re.match(expect, data):
-                raise AssertionError, (send, expect, data)
+                raise AssertionError(send, expect, data)
             if data[:3] == '354':
                 for line in msg.splitlines():
                     if line and line[0] == '.':
@@ -509,7 +509,7 @@ To: foo
                 transport.clear()
                 resp, msgdata = msgexpect
                 if not re.match(resp, data):
-                    raise AssertionError, (resp, data)
+                    raise AssertionError(resp, data)
                 for recip in msgdata[2]:
                     expected = list(msgdata[:])
                     expected[2] = [recip]
@@ -656,7 +656,7 @@ class SMTPHelperTests(unittest.TestCase):
         d = {}
         for i in range(1000):
             m = smtp.messageid('testcase')
-            self.failIf(m in d)
+            self.assertFalse(m in d)
             d[m] = None
 
     def testQuoteAddr(self):
@@ -766,7 +766,7 @@ class EmptyLineTests(unittest.TestCase):
 
         out = transport.value().splitlines()
         self.assertEqual(len(out), 2)
-        self.failUnless(out[0].startswith('220'))
+        self.assertTrue(out[0].startswith('220'))
         self.assertEqual(out[1], "500 Error: bad syntax")
 
 
@@ -1288,9 +1288,9 @@ class ESMTPAuthenticationTests(unittest.TestCase):
         """
         d, credentials, mind, interfaces = loginArgs.pop()
         self.assertEqual(loginArgs, [])
-        self.failUnless(twisted.cred.credentials.IUsernamePassword.providedBy(credentials))
+        self.assertTrue(twisted.cred.credentials.IUsernamePassword.providedBy(credentials))
         self.assertEqual(credentials.username, username)
-        self.failUnless(credentials.checkPassword(password))
+        self.assertTrue(credentials.checkPassword(password))
         self.assertIn(smtp.IMessageDeliveryFactory, interfaces)
         self.assertIn(smtp.IMessageDelivery, interfaces)
         d.callback((smtp.IMessageDeliveryFactory, None, lambda: None))

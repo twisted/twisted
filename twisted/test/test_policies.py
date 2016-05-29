@@ -527,11 +527,11 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let almost 3 time units pass
         self.clock.pump([0.0, 0.5, 1.0, 1.0, 0.4])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Now let the timer elapse
         self.clock.pump([0.0, 0.2])
-        self.failUnless(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.proto.wrappedProtocol.disconnected)
 
 
     def test_sendAvoidsTimeout(self):
@@ -541,7 +541,7 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let half the countdown period elapse
         self.clock.pump([0.0, 0.5, 1.0])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Send some data (self.proto is the /real/ proto's transport, so this
         # is the write that gets called)
@@ -549,18 +549,18 @@ class TimeoutFactoryTests(unittest.TestCase):
 
         # More time passes, putting us past the original timeout
         self.clock.pump([0.0, 1.0, 1.0])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Make sure writeSequence delays timeout as well
         self.proto.writeSequence([b'bytes'] * 3)
 
         # Tick tock
         self.clock.pump([0.0, 1.0, 1.0])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Don't write anything more, just let the timeout expire
         self.clock.pump([0.0, 2.0])
-        self.failUnless(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.proto.wrappedProtocol.disconnected)
 
 
     def test_receiveAvoidsTimeout(self):
@@ -569,19 +569,19 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let half the countdown period elapse
         self.clock.pump([0.0, 1.0, 0.5])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Some bytes arrive, they should reset the counter
         self.proto.dataReceived(b'bytes bytes bytes')
 
         # We pass the original timeout
         self.clock.pump([0.0, 1.0, 1.0])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Nothing more arrives though, the new timeout deadline is passed,
         # the connection should be dropped.
         self.clock.pump([0.0, 1.0, 1.0])
-        self.failUnless(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.proto.wrappedProtocol.disconnected)
 
 
 
@@ -670,9 +670,9 @@ class TimeoutMixinTests(unittest.TestCase):
 
         # timeOut value is 3
         self.clock.pump([0, 0.5, 1.0, 1.0])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
         self.clock.pump([0, 1.0])
-        self.failUnless(self.proto.timedOut)
+        self.assertTrue(self.proto.timedOut)
 
 
     def test_noTimeout(self):
@@ -682,12 +682,12 @@ class TimeoutMixinTests(unittest.TestCase):
         self.proto.makeConnection(StringTransport())
 
         self.clock.pump([0, 0.5, 1.0, 1.0])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
         self.proto.dataReceived(b'hello there')
         self.clock.pump([0, 1.0, 1.0, 0.5])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
         self.clock.pump([0, 1.0])
-        self.failUnless(self.proto.timedOut)
+        self.assertTrue(self.proto.timedOut)
 
 
     def test_resetTimeout(self):
@@ -702,9 +702,9 @@ class TimeoutMixinTests(unittest.TestCase):
         self.assertEqual(self.proto.timeOut, 1)
 
         self.clock.pump([0, 0.9])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
         self.clock.pump([0, 0.2])
-        self.failUnless(self.proto.timedOut)
+        self.assertTrue(self.proto.timedOut)
 
 
     def test_cancelTimeout(self):
@@ -718,7 +718,7 @@ class TimeoutMixinTests(unittest.TestCase):
         self.assertEqual(self.proto.timeOut, None)
 
         self.clock.pump([0, 5, 5, 5])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
 
 
     def test_return(self):
@@ -832,7 +832,7 @@ class LoggingFactoryTests(unittest.TestCase):
 
         v = f.openFile.getvalue()
         self.assertIn('*', v)
-        self.failIf(t.value())
+        self.assertFalse(t.value())
 
         p.dataReceived(b'here are some bytes')
 

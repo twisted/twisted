@@ -13,7 +13,7 @@ import os, traceback
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.compat import execfile, networkString, NativeStringIO, _PY3
-from twisted.web import http, server, static, resource, html
+from twisted.web import http, server, static, resource, util
 
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
@@ -173,7 +173,7 @@ class PythonScript(resource.Resource):
         except:
             io = NativeStringIO()
             traceback.print_exc(file=io)
-            output = html.PRE(io.getvalue())
+            output = util._PRE(io.getvalue())
             if _PY3:
                 output = output.encode("utf8")
             request.write(output)

@@ -1,6 +1,383 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.2.0 (2016-05-18)
+================================
+
+Features
+--------
+ - twisted.protocols.haproxy.proxyEndpoint provides an endpoint that
+   wraps any other stream server endpoint with the PROXY protocol that
+   retains information about the original client connection handled by
+   the proxy; this wrapper is also exposed via the string description
+   prefix 'haproxy'; for example 'twistd web --port haproxy:tcp:8765'.
+   (#8203)
+ - twisted.application.app.AppLogger (used by twistd) now uses the new
+   logging system. (#8235)
+
+Bugfixes
+--------
+ - twisted.application-using applications (trial, twistd, etc) now
+   work with the --reactor option on Python 3. (#8299)
+ - Failures are now logged by STDLibLogObserver. (#8316)
+
+Improved Documentation
+----------------------
+ - Deprecation documentation was extended to include a quick check
+   list for developers. (#5645)
+ - The Twisted Deprecation Policy is now documented in the Twisted
+   Development Policy. (#8082)
+ - The documentation examples for UDP now work on Python 3. (#8280)
+
+Deprecations and Removals
+-------------------------
+ - Passing a factory that produces log observers that do not implement
+   twisted.logger.ILogObserver or twisted.python.log.ILogObserver to
+   twisted.application.app.AppLogger has been deprecated. This is
+   primarily used by twistd's --logger option. Please use factories
+   that produce log observers implementing twisted.logger.ILogObserver
+   or the legacy twisted.python.log.ILogObserver. (#8235)
+ - twisted.internet.qtreactor, a stub that imported the external
+   qtreactor, has been removed. (#8288)
+
+Other
+-----
+ - #6266, #8231, #8244, #8256, #8266, #8269, #8275, #8277, #8286,
+   #8291, #8292, #8304, #8315
+
+
+Twisted Core 16.1.1 (2016-04-08)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Core 16.1.0 (2016-04-04)
+================================
+
+Features
+--------
+ - twisted.application.internet.ClientService, a service that
+   maintains a persistent outgoing endpoint-based connection; a
+   replacement for ReconnectingClientFactory that uses modern APIs.
+   (#4735)
+ - Twisted now uses setuptools' sdist to build tarballs. (#7985)
+
+Bugfixes
+--------
+ - Twisted is now compatible with OpenSSL 1.0.2f. (#8189)
+
+Other
+-----
+ - #4543, #8124, #8193, #8210, #8220, #8223, #8226, #8242
+
+
+Twisted Core 16.0.0 (2016-03-10)
+================================
+
+Features
+--------
+ - todo parameter for IReporter.addExpectedSuccess and
+   IReporter.addUnexpectedSuccess is no longer required. If not
+   provided, a sensible default will be used instead. (#4811)
+ - A new string endpoint type, "tls:", allows for properly-verified
+   TLS (unlike "ssl:", always matching hostname resolution with
+   certificate hostname verification) with faster IPv4/IPv6
+   connections.  This comes with an accompanying function,
+   twisted.internet.endpoints.wrapClientTLS, which can wrap an
+   arbitrary client endpoint with client TLS. (#5642)
+ - twisted.python.filepath.makedirs accepts an ignoreExistingDirectory
+   flag which ignore the OSError raised by os.makedirs if requested
+   directory already exists. (#5704)
+ - twisted.protocols.amp has been ported to Python 3. (#6833)
+ - twisted.internet.ssl.trustRootFromCertificates returns an object
+   suitable for use as trustRoot= to
+   twisted.internet.ssl.optionsForClientTLS that trusts multiple
+   certificates. (#7671)
+ - twisted.python.roots is now ported to Python 3. (#8131)
+ - twisted.cred.strports has been ported to Python 3. (#8216)
+
+Bugfixes
+--------
+ - Expected failures from standard library unittest no longer fail
+   with Trial reporters. (#4811)
+ - twisted.internet.endpoints.HostnameEndpoint.connect no longer fails
+   with an AlreadyCalledError when the Deferred it returns is
+   cancelled after all outgoing connection attempts have been made but
+   none have yet succeeded or failed. (#8014)
+ - twisted.internet.task.LoopingCall.withCount when run with internal
+   of 0, now calls the countCallable with 1, regardless of the time
+   passed between calls. (#8125)
+ - twisted.internet.endpoints.serverFromString, when parsing a SSL
+   strports definition, now gives the correct error message when an
+   empty chain file is given. (#8222)
+
+Improved Documentation
+----------------------
+ - The Twisted Project has adopted the Contributor Covenant as its
+   Code of Conduct. (#8173)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.task.LoopingCall.deferred is now deprecated. Use
+   the deferred returned by twisted.internet.task.LoopingCall.start()
+   (#8116)
+ - twisted.internet.gtkreactor, the GTK+ 1 reactor deprecated since
+   Twisted 10.1, has been removed. This does not affect the GTK2,
+   GLib, GTK3, or GObject-Introspection reactors. (#8145)
+ - twisted.protocols.mice, containing a Logitech MouseMan serial
+   driver, has been deprecated. (#8148)
+ - The __version__ attribute of former subprojects (conch, mail,
+   names, news, pair, runner, web, and words) is deprecated in
+   preference to the central twisted.__version__. (#8219)
+
+Other
+-----
+ - #6842, #6978, #7668, #7791, #7881, #7943, #7944, #8050, #8104,
+   #8115, #8119, #8122, #8139, #8144, #8154, #8162, #8180, #8187,
+   #8220
+
+
+Twisted Core 15.5.0 (2015-11-28)
+================================
+
+Features
+--------
+ - twisted.python.url is a new abstraction for URLs, supporting RFC
+   3987 IRIs. (#5388)
+ - twisted.python.logfile is now ported to Python 3. (#6749)
+ - twisted.python.zippath has been ported to Python 3. (#6917)
+ - twisted.internet.ssl.CertificateOptions and
+   twisted.internet.ssl.optionsForClientTLS now take a
+   acceptableProtocols parameter that enables negotiation of the next
+   protocol to speak after the TLS handshake has completed. This field
+   advertises protocols over both NPN and ALPN. Also added new
+   INegotiated interface for TLS interfaces that support protocol
+   negotiation. This interface adds a negotiatedProtocol property that
+   reports what protocol, if any, was negotiated in the TLS handshake.
+   (#7860)
+ - twisted.python.urlpath.URLPath now operates correctly on Python 3,
+   using bytes instead of strings, and introduces the fromBytes
+   constructor to assist with creating them cross-version. (#7994)
+ - twisted.application.strports is now ported to Python 3. (#8011)
+ - twistd (the Twisted Daemon) is now ported to Python 3. (#8012)
+ - Python 3.5 is now supported on POSIX platforms. (#8042)
+ - twisted.internet.serialport is now ported on Python 3. (#8099)
+
+Bugfixes
+--------
+ - twisted.logger.formatEvent now can format an event if it was
+   flattened (twisted.logger.eventAsJSON does this) and has text after
+   the last replacement field. (#8003)
+ - twisted.cred.checkers.FilePasswordDB now logs an error if the
+   credentials db file does not exist, no longer raises an unhandled
+   error. (#8028)
+ - twisted.python.threadpool.ThreadPool now properly starts enough
+   threads to do any work scheduled before ThreadPool.start() is
+   called, such as when work is scheduled in the reactor via
+   reactor.callInThread() before reactor.run(). (#8090)
+
+Improved Documentation
+----------------------
+ - Twisted Development test standard documentation now contain
+   information about avoiding test data files. (#6535)
+ - The documentation for twisted.internet.defer.DeferredSemaphore now
+   describes the actual usage for limit and tokens instance
+   attributes. (#8024)
+
+Deprecations and Removals
+-------------------------
+ - twisted.python._initgroups, a C extension, has been removed and
+   stdlib support is now always used instead. (#5861)
+ - Python 2.6 is no longer supported. (#8017)
+ - twisted.python.util.OrderedDict is now deprecated, and uses of it
+   in Twisted are replaced with collections.OrderedDict. (#8051)
+ - twisted.persisted.sob.load, twisted.persisted.sob.loadValueFromFile
+   and twisted.persisted.sob.Persistent.save() are now deprecated when
+   used with a passphrase. The encyption used by these methods are
+   weak. (#8081)
+ - twisted.internet.interfaces.IStreamClientEndpointStringParser has
+   been removed and Twisted will no longer use parsers implementing
+   this interface. (#8094)
+
+Other
+-----
+ - #5976, #6628, #6894, #6980, #7228, #7693, #7731, #7997, #8046,
+   #8054, #8056, #8060, #8063, #8064, #8068, #8072, #8091, #8095,
+   #8096, #8098, #8106
+
+
+Twisted Core 15.4.0 (2015-09-04)
+================================
+
+Features
+--------
+ - Trial has been ported to Python 3. (#5965)
+ - Twisted now requires setuptools for installation. (#7177)
+ - twisted.internet.endpoints.clientFromString is now ported to Python
+   3. (#7973)
+ - twisted.internet._sslverify now uses SHA256 instead of MD5 for
+   certificate request signing by default. (#7979)
+ - twisted.internet.endpoints.serverFromString is now ported to Python
+   3. (#7982)
+ - twisted.positioning is now ported to Python 3. (#7987)
+ - twisted.python.failure.Failure's __repr__ now includes the
+   exception message. (#8004)
+
+Bugfixes
+--------
+ - fixed a bug which could lead to a hang at shutdown in
+   twisted.python.threadpool. (#2673)
+ - twisted.internet.kqreactor on Python 3 now supports EINTR
+   (Control-C) gracefully. (#7887)
+ - Fix a bug introduced in 15.3.0; pickling a lambda function after
+   importing twisted.persisted.styles raises PicklingError rather than
+   AttributeError. (#7989)
+
+Other
+-----
+ - #7902, #7980, #7990, #7992
+
+
+Twisted Core 15.3.0 (2015-08-04)
+================================
+
+Features
+--------
+ - twisted.application.app is now ported to Python 3 (#6914)
+ - twisted.plugin now supports Python 3 (#7182)
+ - twisted.cred.checkers is now ported to Python 3. (#7834)
+ - twisted.internet.unix is now ported to Python 3. (#7874)
+ - twisted.python.sendmsg has now been ported to Python 3, using the
+   stdlib sendmsg/recvmsg functionality when available. (#7884)
+ - twisted.internet.protocol.Factory now uses the new logging system
+   (twisted.logger) for all its logging statements. (#7897)
+ - twisted.internet.stdio is now ported to Python 3. (#7899)
+ - The isDocker method has been introduced on
+   twisted.python.runtime.Platform to detect if the running Python is
+   inside a Docker container. Additionally, Platform.supportsINotify()
+   now returns False if isDocker() is True, because of many Docker
+   storage layers having broken INotify. (#7968)
+
+Bugfixes
+--------
+ - twisted.logger.LogBeginner.beginLoggingTo now outputs the correct
+   warning when it is called more than once. (#7916)
+
+Deprecations and Removals
+-------------------------
+ - twisted.cred.pamauth (providing PAM support) has been removed due
+   to it being unusable in current supported Python versions. (#3728)
+ - twisted.application.app.HotshotRunner (twistd's hotshot profiler
+   module) is removed and twistd now uses cProfile by default. (#5137)
+ - twisted.python.win32.getProgramsMenuPath and
+   twisted.python.win32.getProgramFilesPath are now deprecated.
+   (#7883)
+ - twisted.lore has now been removed, in preference to Sphinx. (#7892)
+ - Deprecated zsh tab-complete files are now removed in preference to
+   twisted.python.usage's tab-complete functionality. (#7898)
+ - twisted.python.hashlib, deprecated since 13.1, has now been
+   removed. (#7905)
+ - twisted.trial.runner.DryRunVisitor, deprecated in Twisted 13.0, has
+   now been removed. (#7919)
+ - twisted.trial.util.getPythonContainers, deprecated since Twisted
+   12.3, is now removed. (#7920)
+ - Twisted no longer supports being packaged as subprojects. (#7964)
+
+Other
+-----
+ - #6136, #7035, #7803, #7817, #7827, #7844, #7876, #7906, #7908,
+   #7915, #7931, #7940, #7967, #7983
+
+
+Twisted Core 15.2.1 (2015-05-23)
+================================
+
+Bugfixes
+--------
+ - twisted.logger now marks the `isError` key correctly on legacy
+   events generated by writes to stderr. (#7903)
+
+Improved Documentation
+----------------------
+ - twisted.logger's documentation is now correctly listed in the table
+   of contents. (#7904)
+
+
+Twisted Core 15.2.0 (2015-05-18)
+================================
+
+Features
+--------
+ - twisted.internet.process has now been ported to Python 3. (#5987)
+ - twisted.cred.credentials is now ported to Python 3. (#6176)
+ - twisted.trial.unittest.TestCase's assertEqual, assertTrue, and
+   assertFalse methods now pass through the standard library's more
+   informative failure messages. (#6306)
+ - The new package twisted.logger provides a new, fully tested, and
+   feature-rich logging framework. The old module twisted.python.log
+   is now implemented using the new framework. The new logger HOWTO
+   documents the new framework. (#6750)
+ - twisted.python.modules is now ported to Python 3. (#7804)
+ - twisted.python.filepath.FilePath now supports Unicode (text) paths.
+   Like the os module, instantiating it with a Unicode path will
+   return a Unicode-mode FilePath, instantiating with a bytes path
+   will return a bytes-mode FilePath. (#7805)
+ - twisted.internet.kqreactor is now ported to Python 3 (#7823)
+ - twisted.internet.endpoints.ProcessEndpoint is now ported to Python
+   3. (#7824)
+ - twisted.python.filepath.FilePath now has asBytesMode and asTextMode
+   methods which return a FilePath in the requested mode. (#7830)
+ - twisted.python.components.proxyForInterface now creates method
+   proxies that can be used with functools.wraps. (#7832)
+ - The tls optional dependency will now also install the idna package
+   to validate idna2008 names. (#7853)
+
+Bugfixes
+--------
+ - Don't raise an exception if `DefaultLogObserver.emit()` gets an
+   event with a message that raises when `repr()` is called on it.
+   Specifically: use `textFromEventDict()` instead of a separate (and
+   inferior) message rendering implementation. (#6569)
+ - twisted.cred.credentials.DigestedCredentials incorrectly handled
+   md5-sess hashing according to the RFC, which has now been fixed.
+   (#7835)
+ - Fixed an issue with twisted.internet.task.LoopingCall.withCount
+   where sometimes the passed callable would be invoked with "0" when
+   we got close to tricky floating point boundary conditions. (#7836)
+ - twisted.internet.defer now properly works with the new logging
+   system. (#7851)
+ - Change `messages` key to `log_io` for events generated by
+   `LoggingFile`. (#7852)
+ - twisted.logger had literal characters in docstrings that are now
+   quoted. (#7854)
+ - twisted.logger now correctly formats a log event with a key named
+   `message` when passed to a legacy log observer. (#7855)
+ - twisted.internet.endpoints.HostnameEndpoint now uses getaddrinfo
+   properly on Python 3.4 and above. (#7886)
+
+Improved Documentation
+----------------------
+ - Fix a typo in narrative documentation for logger (#7875)
+
+Deprecations and Removals
+-------------------------
+ - tkunzip and tapconvert in twisted.scripts were deprecated in 11.0
+   and 12.1 respectively, and are now removed. (#6747)
+ - twisted.protocols.gps is deprecated in preference to
+   twisted.positioning. (#6810)
+ - twisted.scripts.tap2deb and twisted.scripts.tap2rpm are now
+   deprecated. (#7682)
+ - twisted.trial.reporter.TestResult and
+   twisted.trial.reporter.Reporter contained deprecated methods (since
+   8.0) which have now been removed. (#7815)
+
+Other
+-----
+ - #6027, #7287, #7701, #7727, #7758, #7776, #7786, #7812, #7819,
+   #7831, #7838, #7865, #7866, #7869, #7872, #7877, #7878, #7885
+
+
 Twisted Core 15.1.0 (2015-04-02)
 ================================
 

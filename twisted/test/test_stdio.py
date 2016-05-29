@@ -3,14 +3,22 @@
 
 """
 Tests for L{twisted.internet.stdio}.
+
+@var properEnv: A copy of L{os.environ} which has L{bytes} keys/values on POSIX
+    platforms and native L{str} keys/values on Windows.
 """
 
-import os, sys, itertools
+from __future__ import absolute_import, division
+
+import os
+import sys
+import itertools
 
 from twisted.trial import unittest
 from twisted.python import filepath, log
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
+from twisted.python.compat import xrange, intToBytes, bytesEnviron
 from twisted.internet import error, defer, protocol, stdio, reactor
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 
@@ -18,15 +26,21 @@ from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 # A short string which is intended to appear here and nowhere else,
 # particularly not in any random garbage output CPython unavoidable
 # generates (such as in warning text and so forth).  This is searched
-# for in the output from stdio_test_lastwrite.py and if it is found at
+# for in the output from stdio_test_lastwrite and if it is found at
 # the end, the functionality works.
-UNIQUE_LAST_WRITE_STRING = 'xyz123abc Twisted is great!'
+UNIQUE_LAST_WRITE_STRING = b'xyz123abc Twisted is great!'
 
 skipWindowsNopywin32 = None
 if platform.isWindows():
     if requireModule('win32process') is None:
         skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
                                 "in the absence of win32process.")
+    properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+else:
+    properEnv = bytesEnviron()
+    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+        sys.getfilesystemencoding())
 
 
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
@@ -64,7 +78,7 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
         Record all bytes received from the child process in the C{data}
         dictionary.  Fire C{onDataReceived} if it is not C{None}.
         """
-        self.data[name] = self.data.get(name, '') + bytes
+        self.data[name] = self.data.get(name, b'') + bytes
         if self.onDataReceived is not None:
             d, self.onDataReceived = self.onDataReceived, None
             d.callback(self)
@@ -97,21 +111,14 @@ class StandardInputOutputTests(unittest.TestCase):
 
         @return: The L{IProcessTransport} provider for the spawned process.
         """
-        import twisted
-        subenv = dict(os.environ)
-        subenv['PYTHONPATH'] = os.pathsep.join(
-            [os.path.abspath(
-                    os.path.dirname(os.path.dirname(twisted.__file__))),
-             subenv.get('PYTHONPATH', '')
-             ])
         args = [sys.executable,
-             filepath.FilePath(__file__).sibling(sibling).path,
-             reactor.__class__.__module__] + list(args)
+                b"-m", b"twisted.test." + sibling,
+                reactor.__class__.__module__] + list(args)
         return reactor.spawnProcess(
             proto,
             sys.executable,
             args,
-            env=subenv,
+            env=properEnv,
             **kw)
 
 
@@ -132,12 +139,13 @@ class StandardInputOutputTests(unittest.TestCase):
         log.msg("Child process logging to " + errorLogFile)
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
-        self._spawnProcess(p, 'stdio_test_loseconn.py', errorLogFile)
+        self._spawnProcess(p, b'stdio_test_loseconn', errorLogFile)
 
         def processEnded(reason):
             # Copy the child's log to ours so it's more visible.
-            for line in file(errorLogFile):
-                log.msg("Child logged: " + line.rstrip())
+            with open(errorLogFile, 'r') as f:
+                for line in f:
+                    log.msg("Child logged: " + line.rstrip())
 
             self.failIfIn(1, p.data)
             reason.trap(error.ProcessDone)
@@ -166,7 +174,7 @@ class StandardInputOutputTests(unittest.TestCase):
         d = self._requireFailure(p.onDataReceived, processEnded)
 
         self._spawnProcess(
-            p, 'stdio_test_halfclose.py', errorLogFile)
+            p, b'stdio_test_halfclose', errorLogFile)
         return d
 
 
@@ -190,9 +198,9 @@ class StandardInputOutputTests(unittest.TestCase):
 
         try:
             self._spawnProcess(
-                p, 'stdio_test_lastwrite.py', UNIQUE_LAST_WRITE_STRING,
+                p, b'stdio_test_lastwrite', UNIQUE_LAST_WRITE_STRING,
                 usePTY=True)
-        except ValueError, e:
+        except ValueError as e:
             # Some platforms don't work with usePTY=True
             raise unittest.SkipTest(str(e))
 
@@ -216,12 +224,12 @@ class StandardInputOutputTests(unittest.TestCase):
         """
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
-        self._spawnProcess(p, 'stdio_test_hostpeer.py')
+        self._spawnProcess(p, b'stdio_test_hostpeer')
 
         def processEnded(reason):
             host, peer = p.data[1].splitlines()
-            self.failUnless(host)
-            self.failUnless(peer)
+            self.assertTrue(host)
+            self.assertTrue(peer)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
@@ -234,10 +242,10 @@ class StandardInputOutputTests(unittest.TestCase):
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
 
-        self._spawnProcess(p, 'stdio_test_write.py')
+        self._spawnProcess(p, b'stdio_test_write')
 
         def processEnded(reason):
-            self.assertEqual(p.data[1], 'ok!')
+            self.assertEqual(p.data[1], b'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
@@ -250,20 +258,19 @@ class StandardInputOutputTests(unittest.TestCase):
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
 
-        self._spawnProcess(p, 'stdio_test_writeseq.py')
+        self._spawnProcess(p, b'stdio_test_writeseq')
 
         def processEnded(reason):
-            self.assertEqual(p.data[1], 'ok!')
+            self.assertEqual(p.data[1], b'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
 
     def _junkPath(self):
         junkPath = self.mktemp()
-        junkFile = file(junkPath, 'w')
-        for i in xrange(1024):
-            junkFile.write(str(i) + '\n')
-        junkFile.close()
+        with open(junkPath, 'wb') as junkFile:
+            for i in xrange(1024):
+                junkFile.write(intToBytes(i) + b'\n')
         return junkPath
 
 
@@ -276,21 +283,23 @@ class StandardInputOutputTests(unittest.TestCase):
         d = p.onCompletion
 
         written = []
-        toWrite = range(100)
+        toWrite = list(range(100))
 
         def connectionMade(ign):
             if toWrite:
-                written.append(str(toWrite.pop()) + "\n")
+                written.append(intToBytes(toWrite.pop()) + b"\n")
                 proc.write(written[-1])
                 reactor.callLater(0.01, connectionMade, None)
 
-        proc = self._spawnProcess(p, 'stdio_test_producer.py')
+        proc = self._spawnProcess(p, b'stdio_test_producer')
 
         p.onConnection.addCallback(connectionMade)
 
         def processEnded(reason):
-            self.assertEqual(p.data[1], ''.join(written))
-            self.failIf(toWrite, "Connection lost with %d writes left to go." % (len(toWrite),))
+            self.assertEqual(p.data[1], b''.join(written))
+            self.assertFalse(
+                toWrite,
+                "Connection lost with %d writes left to go." % (len(toWrite),))
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
@@ -305,10 +314,11 @@ class StandardInputOutputTests(unittest.TestCase):
 
         junkPath = self._junkPath()
 
-        self._spawnProcess(p, 'stdio_test_consumer.py', junkPath)
+        self._spawnProcess(p, b'stdio_test_consumer', junkPath)
 
         def processEnded(reason):
-            self.assertEqual(p.data[1], file(junkPath).read())
+            with open(junkPath, 'rb') as f:
+                self.assertEqual(p.data[1], f.read())
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
@@ -324,7 +334,7 @@ class StandardInputOutputTests(unittest.TestCase):
         onConnLost = defer.Deferred()
         proto = ConnectionLostNotifyingProtocol(onConnLost)
         path = filepath.FilePath(self.mktemp())
-        self.normal = normal = path.open('w')
+        self.normal = normal = path.open('wb')
         self.addCleanup(normal.close)
 
         kwargs = dict(stdout=normal.fileno())
@@ -349,7 +359,7 @@ class StandardInputOutputTests(unittest.TestCase):
                 if value == howMany:
                     connection.loseConnection()
                     return
-                connection.write(str(value))
+                connection.write(intToBytes(value))
                 break
             reactor.callLater(0, spin)
         reactor.callLater(0, spin)
@@ -357,10 +367,10 @@ class StandardInputOutputTests(unittest.TestCase):
         # Once the connection is lost, make sure the counter is at the
         # appropriate value.
         def cbLost(reason):
-            self.assertEqual(count.next(), howMany + 1)
+            self.assertEqual(next(count), howMany + 1)
             self.assertEqual(
                 path.getContent(),
-                ''.join(map(str, range(howMany))))
+                b''.join(map(intToBytes, range(howMany))))
         onConnLost.addCallback(cbLost)
         return onConnLost
 

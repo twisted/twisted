@@ -392,7 +392,9 @@ class StartupBehaviorTests(unittest.TestCase):
 
             if err:
                 log.msg("Unexpected output on standard error: %s" % (err,))
-            self.failIf(out, "Expected no output, instead received:\n%s" % (out,))
+            self.assertFalse(
+                out,
+                "Expected no output, instead received:\n%s" % (out,))
 
         def programTimeout(err):
             err.trap(error.TimeoutError)

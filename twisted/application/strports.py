@@ -9,11 +9,14 @@ Construct listening port services from a simple string description.
 @see: L{twisted.internet.endpoints.clientFromString}
 """
 
+from __future__ import absolute_import, division
+
 import warnings
 
 from twisted.internet import endpoints
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
+from twisted.python.compat import _PY3
 from twisted.application.internet import StreamServerEndpointService
 
 
@@ -101,3 +104,11 @@ def listen(description, factory, default=None):
 
 
 __all__ = ['parse', 'service', 'listen']
+
+if _PY3:
+    __all3__ = ['service']
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__

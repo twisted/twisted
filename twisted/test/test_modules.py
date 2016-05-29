@@ -11,22 +11,18 @@ from __future__ import division, absolute_import
 import sys
 import itertools
 import compileall
+import zipfile
 
 import twisted
 
 from twisted.python import modules
-from twisted.python.compat import _PY3, networkString
+from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
 from twisted.trial.unittest import TestCase
 from twisted.python.test.modules_helpers import TwistedModulesMixin
-
-if not _PY3:
-    # TODO: Zipfile support isn't ported yet.
-    # See https://tm.tl/#6917
-    import zipfile
-    from twisted.python.test.test_zippath import zipit
+from twisted.python.test.test_zippath import zipit
 
 
 
@@ -169,7 +165,7 @@ class BasicTests(TwistedModulesTestCase):
         existentPath = self.pathEntryWithOnePackage()
 
         nonexistentPath = FilePath(self.mktemp())
-        self.failIf(nonexistentPath.exists())
+        self.assertFalse(nonexistentPath.exists())
 
         self.replaceSysPath([existentPath.path])
 
@@ -191,7 +187,7 @@ class BasicTests(TwistedModulesTestCase):
         existentPath = self.pathEntryWithOnePackage()
 
         nonDirectoryPath = FilePath(self.mktemp())
-        self.failIf(nonDirectoryPath.exists())
+        self.assertFalse(nonDirectoryPath.exists())
         nonDirectoryPath.setContent(b"zip file or whatever\n")
 
         self.replaceSysPath([existentPath.path])
@@ -230,7 +226,7 @@ class BasicTests(TwistedModulesTestCase):
         packages, not submodules or subpackages.
         """
         for module in modules.iterModules():
-            self.failIf(
+            self.assertFalse(
                 '.' in module.name,
                 "no nested modules should be returned from iterModules: %r"
                 % (module.filePath))
@@ -513,12 +509,3 @@ class PythonPathTests(TestCase):
 
 __all__ = ["BasicTests", "PathModificationTests", "RebindingTests",
            "ZipPathModificationTests", "PythonPathTests"]
-
-if _PY3:
-    __all3__ = ["BasicTests", "PathModificationTests", "RebindingTests",
-                "PythonPathTests"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__

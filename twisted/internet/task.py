@@ -12,12 +12,15 @@ __metaclass__ = type
 
 import sys
 import time
+import warnings
 
 from zope.interface import implementer
 
 from twisted.python import log
 from twisted.python import reflect
+from twisted.python.deprecate import _getDeprecationWarningString
 from twisted.python.failure import Failure
+from twisted.python.versions import Version
 
 from twisted.internet import base, defer
 from twisted.internet.interfaces import IReactorTime
@@ -57,7 +60,7 @@ class LoopingCall:
 
     call = None
     running = False
-    deferred = None
+    _deferred = None
     interval = None
     _runAtStart = False
     starttime = None
@@ -69,6 +72,20 @@ class LoopingCall:
         from twisted.internet import reactor
         self.clock = reactor
 
+    @property
+    def deferred(self):
+        """
+        DEPRECATED. L{Deferred} fired when loop stops or fails.
+
+        Use the L{Deferred} returned by L{LoopingCall.start}.
+        """
+        warningString = _getDeprecationWarningString(
+            "twisted.internet.task.LoopingCall.deferred",
+            Version("Twisted", 16, 0, 0),
+            replacement='the deferred returned by start()')
+        warnings.warn(warningString, DeprecationWarning, stacklevel=2)
+
+        return self._deferred
 
     def withCount(cls, countCallable):
         """
@@ -86,6 +103,8 @@ class LoopingCall:
         elapsed, or if the callable itself blocks for longer than an interval,
         preventing I{itself} from being called.
 
+        When running with an interval if 0, count will be always 1.
+
         @param countCallable: A callable that will be invoked each time the
             resulting LoopingCall is run, with an integer specifying the number
             of calls that should have been invoked.
@@ -102,6 +121,11 @@ class LoopingCall:
 
         def counter():
             now = self.clock.seconds()
+
+            if self.interval == 0:
+                self._realLastTime = now
+                return countCallable(1)
+
             lastTime = self._realLastTime
             if lastTime is None:
                 lastTime = self.starttime
@@ -160,7 +184,9 @@ class LoopingCall:
         if interval < 0:
             raise ValueError("interval must be >= 0")
         self.running = True
-        d = self.deferred = defer.Deferred()
+        # Loop might fail to start and then self._deferred will be cleared.
+        # This why the local C{deferred} variable is used.
+        deferred = self._deferred = defer.Deferred()
         self.starttime = self.clock.seconds()
         self.interval = interval
         self._runAtStart = now
@@ -168,7 +194,7 @@ class LoopingCall:
             self()
         else:
             self._scheduleFrom(self.starttime)
-        return d
+        return deferred
 
     def stop(self):
         """Stop running function.
@@ -179,7 +205,7 @@ class LoopingCall:
         if self.call is not None:
             self.call.cancel()
             self.call = None
-            d, self.deferred = self.deferred, None
+            d, self._deferred = self._deferred, None
             d.callback(self)
 
     def reset(self):
@@ -201,12 +227,12 @@ class LoopingCall:
             if self.running:
                 self._scheduleFrom(self.clock.seconds())
             else:
-                d, self.deferred = self.deferred, None
+                d, self._deferred = self._deferred, None
                 d.callback(self)
 
         def eb(failure):
             self.running = False
-            d, self.deferred = self.deferred, None
+            d, self._deferred = self._deferred, None
             d.errback(failure)
 
         self.call = None

@@ -2,14 +2,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import division, absolute_import
+
 import os
 
-from zope.interface import implements, Interface, Attribute
+from zope.interface import implementer, Interface, Attribute
 
+from twisted.logger import Logger
 from twisted.internet import defer
-from twisted.python import failure, log
+from twisted.python import failure
 from twisted.cred import error, credentials
-
 
 
 class ICredentialsChecker(Interface):
@@ -49,15 +51,17 @@ class ICredentialsChecker(Interface):
 ANONYMOUS = ()
 
 
+@implementer(ICredentialsChecker)
 class AllowAnonymousAccess:
-    implements(ICredentialsChecker)
     credentialInterfaces = credentials.IAnonymous,
 
     def requestAvatarId(self, credentials):
         return defer.succeed(ANONYMOUS)
 
 
-class InMemoryUsernamePasswordDatabaseDontUse:
+
+@implementer(ICredentialsChecker)
+class InMemoryUsernamePasswordDatabaseDontUse(object):
     """
     An extremely simple credentials checker.
 
@@ -68,17 +72,16 @@ class InMemoryUsernamePasswordDatabaseDontUse:
     toy.  If you need a simple credentials checker for a real application,
     see L{FilePasswordDB}.
     """
-
-    implements(ICredentialsChecker)
-
     credentialInterfaces = (credentials.IUsernamePassword,
                             credentials.IUsernameHashedPassword)
 
     def __init__(self, **users):
         self.users = users
 
+
     def addUser(self, username, password):
         self.users[username] = password
+
 
     def _cbPasswordMatch(self, matched, username):
         if matched:
@@ -86,18 +89,22 @@ class InMemoryUsernamePasswordDatabaseDontUse:
         else:
             return failure.Failure(error.UnauthorizedLogin())
 
+
     def requestAvatarId(self, credentials):
         if credentials.username in self.users:
             return defer.maybeDeferred(
                 credentials.checkPassword,
                 self.users[credentials.username]).addCallback(
-                self._cbPasswordMatch, str(credentials.username))
+                self._cbPasswordMatch, credentials.username)
         else:
             return defer.fail(error.UnauthorizedLogin())
 
 
+
+@implementer(ICredentialsChecker)
 class FilePasswordDB:
-    """A file-based, text-based username/password database.
+    """
+    A file-based, text-based username/password database.
 
     Records in the datafile for this class are delimited by a particular
     string.  The username appears in a fixed field of the columns delimited
@@ -109,13 +116,12 @@ class FilePasswordDB:
     IUsernameHashedPassword credentials will be checkable as well.
     """
 
-    implements(ICredentialsChecker)
-
     cache = False
     _credCache = None
     _cacheTimestamp = 0
+    _log = Logger()
 
-    def __init__(self, filename, delim=':', usernameField=0, passwordField=1,
+    def __init__(self, filename, delim=b':', usernameField=0, passwordField=1,
                  caseSensitive=True, hash=None, cache=False):
         """
         @type filename: C{str}
@@ -192,22 +198,30 @@ class FilePasswordDB:
 
 
     def _loadCredentials(self):
-        try:
-            f = file(self.filename)
-        except:
-            log.err()
-            raise error.UnauthorizedLogin()
-        else:
-            for line in f:
-                line = line.rstrip()
-                parts = line.split(self.delim)
+        """
+        Loads the credentials from the configured file.
 
-                if self.ufield >= len(parts) or self.pfield >= len(parts):
-                    continue
-                if self.caseSensitive:
-                    yield parts[self.ufield], parts[self.pfield]
-                else:
-                    yield parts[self.ufield].lower(), parts[self.pfield]
+        @return: An iterable of C{username, password} couples.
+        @rtype: C{iterable}
+
+        @raise UnauthorizedLogin: when failing to read the credentials from the
+            file.
+        """
+        try:
+            with open(self.filename, "rb") as f:
+                for line in f:
+                    line = line.rstrip()
+                    parts = line.split(self.delim)
+
+                    if self.ufield >= len(parts) or self.pfield >= len(parts):
+                        continue
+                    if self.caseSensitive:
+                        yield parts[self.ufield], parts[self.pfield]
+                    else:
+                        yield parts[self.ufield].lower(), parts[self.pfield]
+        except IOError as e:
+            self._log.error("Unable to load credentials db: {e!r}", e=e)
+            raise error.UnauthorizedLogin()
 
 
     def getUser(self, username):
@@ -242,24 +256,6 @@ class FilePasswordDB:
             else:
                 return defer.maybeDeferred(c.checkPassword, p
                     ).addCallback(self._cbPasswordMatch, u)
-
-
-
-class PluggableAuthenticationModulesChecker:
-    implements(ICredentialsChecker)
-    credentialInterfaces = credentials.IPluggableAuthenticationModules,
-    service = 'Twisted'
-
-    def requestAvatarId(self, credentials):
-        try:
-            from twisted.cred import pamauth
-        except ImportError: # PyPAM is missing
-            return defer.fail(error.UnauthorizedLogin())
-        else:
-            d = pamauth.pamAuthenticate(self.service, credentials.username,
-                                        credentials.pamConversion)
-            d.addCallback(lambda x: credentials.username)
-            return d
 
 
 

@@ -10,6 +10,8 @@ import hmac
 import base64
 import itertools
 
+from collections import OrderedDict
+
 from zope.interface import implements
 
 from twisted.internet import defer
@@ -23,7 +25,6 @@ from twisted import internet
 from twisted.mail import pop3
 from twisted.protocols import loopback
 from twisted.python import failure
-from twisted.python.util import OrderedDict
 
 from twisted import cred
 import twisted.cred.portal
@@ -191,7 +192,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         code = parts[0]
         if code != '+OK':
             print parts
-            raise AssertionError, 'code is ' + code
+            raise AssertionError('code is ' + code)
         self.lines = []
         self.retr(1)
 
@@ -204,7 +205,7 @@ class MyPOP3Downloader(pop3.POP3Client):
 
     def handle_QUIT(self, line):
         if line[:3] != '+OK':
-            raise AssertionError, 'code is ' + line
+            raise AssertionError('code is ' + line)
 
 
 class POP3Tests(unittest.TestCase):
@@ -381,7 +382,7 @@ class AnotherPOP3Tests(unittest.TestCase):
         return d.addCallback(self._cbTestAuthListing, client)
 
     def _cbTestAuthListing(self, ignored, client):
-        self.failUnless(client.response[1].startswith('+OK'))
+        self.assertTrue(client.response[1].startswith('+OK'))
         self.assertEqual(sorted(client.response[2:5]),
                          ["AUTH1", "AUTHLAST", "SECONDAUTH"])
         self.assertEqual(client.response[5], ".")
@@ -554,7 +555,7 @@ class SASLTests(unittest.TestCase):
         p.connectionMade()
 
         p.lineReceived("CAPA")
-        self.failUnless(s.getvalue().find("SASL CRAM-MD5") >= 0)
+        self.assertTrue(s.getvalue().find("SASL CRAM-MD5") >= 0)
 
         p.lineReceived("AUTH CRAM-MD5")
         chal = s.getvalue().splitlines()[-1][2:]
@@ -562,8 +563,8 @@ class SASLTests(unittest.TestCase):
         response = hmac.HMAC('testpassword', chal).hexdigest()
 
         p.lineReceived(base64.encodestring('testuser ' + response).rstrip('\n'))
-        self.failUnless(p.mbox)
-        self.failUnless(s.getvalue().splitlines()[-1].find("+OK") >= 0)
+        self.assertTrue(p.mbox)
+        self.assertTrue(s.getvalue().splitlines()[-1].find("+OK") >= 0)
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
 
@@ -1067,4 +1068,4 @@ class POP3MiscTests(unittest.TestCase):
         """
         mod = twisted.mail.pop3
         for attr in mod.__all__:
-            self.failUnless(hasattr(mod, attr))
+            self.assertTrue(hasattr(mod, attr))

@@ -54,7 +54,7 @@ from threading import Thread
 from Queue import Queue, Empty
 import sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
@@ -75,11 +75,13 @@ def dictRemove(dct, value):
 def raiseException(e):
     raise e
 
+
+
+@implementer(IReactorFDSet)
 class ThreadedSelectReactor(posixbase.PosixReactorBase):
     """A threaded select() based reactor - runs on all POSIX platforms and on
     Win32.
     """
-    implements(IReactorFDSet)
 
     def __init__(self):
         threadable.init(1)
@@ -162,7 +164,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 # result) was passed
                 log.err()
                 self._preenDescriptorsInThread()
-            except (select.error, IOError), se:
+            except (select.error, IOError) as se:
                 # select(2) encountered an error
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list

@@ -213,13 +213,13 @@ class BasicFTPServerTests(FTPServerTestCase):
         # Issue commands, check responses
         def checkFailResponse(exception, command):
             failureResponseLines = exception.args[0]
-            self.failUnless(failureResponseLines[-1].startswith("530"),
+            self.assertTrue(failureResponseLines[-1].startswith("530"),
                             "%s - Response didn't start with 530: %r"
                             % (command, failureResponseLines[-1],))
 
         def checkPassResponse(result, command):
             result = result[0]
-            self.failIf(result.startswith("530"),
+            self.assertFalse(result.startswith("530"),
                             "%s - Response start with 530: %r"
                             % (command, result,))
 
@@ -939,7 +939,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         def checkError(failure):
             failure.trap(ftp.CommandFailed)
             self.assertEqual(
-                ['550 foo: is a directory'], failure.value.message)
+                ['550 foo: is a directory'], failure.value.args[0])
             current_errors = self.flushLoggedErrors()
             self.assertEqual(
                 0, len(current_errors),
@@ -1309,16 +1309,17 @@ class FTPFileListingTests(unittest.TestCase):
         # This example line taken from the docstring for FTPFileListProtocol
         line = '-rw-r--r--   1 root     other        531 Jan 29 03:26 README'
         def check(((file,), other)):
-            self.failIf(other, 'unexpect unparsable lines: %s' % repr(other))
-            self.failUnless(file['filetype'] == '-', 'misparsed fileitem')
-            self.failUnless(file['perms'] == 'rw-r--r--', 'misparsed perms')
-            self.failUnless(file['owner'] == 'root', 'misparsed fileitem')
-            self.failUnless(file['group'] == 'other', 'misparsed fileitem')
-            self.failUnless(file['size'] == 531, 'misparsed fileitem')
-            self.failUnless(file['date'] == 'Jan 29 03:26', 'misparsed fileitem')
-            self.failUnless(file['filename'] == 'README', 'misparsed fileitem')
-            self.failUnless(file['nlinks'] == 1, 'misparsed nlinks')
-            self.failIf(file['linktarget'], 'misparsed linktarget')
+            self.assertFalse(other,
+                             'unexpect unparsable lines: %s' % (repr(other),))
+            self.assertTrue(file['filetype'] == '-', 'misparsed fileitem')
+            self.assertTrue(file['perms'] == 'rw-r--r--', 'misparsed perms')
+            self.assertTrue(file['owner'] == 'root', 'misparsed fileitem')
+            self.assertTrue(file['group'] == 'other', 'misparsed fileitem')
+            self.assertTrue(file['size'] == 531, 'misparsed fileitem')
+            self.assertTrue(file['date'] == 'Jan 29 03:26','misparsed fileitem')
+            self.assertTrue(file['filename'] == 'README', 'misparsed fileitem')
+            self.assertTrue(file['nlinks'] == 1, 'misparsed nlinks')
+            self.assertFalse(file['linktarget'], 'misparsed linktarget')
         return self.getFilesForLines([line]).addCallback(check)
 
     def testVariantLines(self):
@@ -1326,33 +1327,33 @@ class FTPFileListingTests(unittest.TestCase):
         line2 = 'lrw-r--r--   1 root     other          1 Jan 29 03:26 B -> A'
         line3 = 'woohoo! '
         def check(((file1, file2), (other,))):
-            self.failUnless(other == 'woohoo! \r', 'incorrect other line')
+            self.assertTrue(other == 'woohoo! \r', 'incorrect other line')
             # file 1
-            self.failUnless(file1['filetype'] == 'd', 'misparsed fileitem')
-            self.failUnless(file1['perms'] == 'rw-r--r--', 'misparsed perms')
-            self.failUnless(file1['owner'] == 'root', 'misparsed owner')
-            self.failUnless(file1['group'] == 'other', 'misparsed group')
-            self.failUnless(file1['size'] == 531, 'misparsed size')
-            self.failUnless(file1['date'] == 'Jan  9  2003', 'misparsed date')
-            self.failUnless(file1['filename'] == 'A', 'misparsed filename')
-            self.failUnless(file1['nlinks'] == 2, 'misparsed nlinks')
-            self.failIf(file1['linktarget'], 'misparsed linktarget')
+            self.assertTrue(file1['filetype'] == 'd', 'misparsed fileitem')
+            self.assertTrue(file1['perms'] == 'rw-r--r--', 'misparsed perms')
+            self.assertTrue(file1['owner'] == 'root', 'misparsed owner')
+            self.assertTrue(file1['group'] == 'other', 'misparsed group')
+            self.assertTrue(file1['size'] == 531, 'misparsed size')
+            self.assertTrue(file1['date'] == 'Jan  9  2003', 'misparsed date')
+            self.assertTrue(file1['filename'] == 'A', 'misparsed filename')
+            self.assertTrue(file1['nlinks'] == 2, 'misparsed nlinks')
+            self.assertFalse(file1['linktarget'], 'misparsed linktarget')
             # file 2
-            self.failUnless(file2['filetype'] == 'l', 'misparsed fileitem')
-            self.failUnless(file2['perms'] == 'rw-r--r--', 'misparsed perms')
-            self.failUnless(file2['owner'] == 'root', 'misparsed owner')
-            self.failUnless(file2['group'] == 'other', 'misparsed group')
-            self.failUnless(file2['size'] == 1, 'misparsed size')
-            self.failUnless(file2['date'] == 'Jan 29 03:26', 'misparsed date')
-            self.failUnless(file2['filename'] == 'B', 'misparsed filename')
-            self.failUnless(file2['nlinks'] == 1, 'misparsed nlinks')
-            self.failUnless(file2['linktarget'] == 'A', 'misparsed linktarget')
+            self.assertTrue(file2['filetype'] == 'l', 'misparsed fileitem')
+            self.assertTrue(file2['perms'] == 'rw-r--r--', 'misparsed perms')
+            self.assertTrue(file2['owner'] == 'root', 'misparsed owner')
+            self.assertTrue(file2['group'] == 'other', 'misparsed group')
+            self.assertTrue(file2['size'] == 1, 'misparsed size')
+            self.assertTrue(file2['date'] == 'Jan 29 03:26', 'misparsed date')
+            self.assertTrue(file2['filename'] == 'B', 'misparsed filename')
+            self.assertTrue(file2['nlinks'] == 1, 'misparsed nlinks')
+            self.assertTrue(file2['linktarget'] == 'A', 'misparsed linktarget')
         return self.getFilesForLines([line1, line2, line3]).addCallback(check)
 
     def testUnknownLine(self):
         def check((files, others)):
-            self.failIf(files, 'unexpected file entries')
-            self.failUnless(others == ['ABC\r', 'not a file\r'],
+            self.assertFalse(files, 'unexpected file entries')
+            self.assertTrue(others == ['ABC\r', 'not a file\r'],
                             'incorrect unparsable lines: %s' % repr(others))
         return self.getFilesForLines(['ABC', 'not a file']).addCallback(check)
 
@@ -1410,9 +1411,9 @@ class FTPFileListingTests(unittest.TestCase):
 
         def check(ignored):
             file = fileList.files[0]
-            self.failUnless(file['size'] == 531, 'misparsed fileitem')
-            self.failUnless(file['date'] == 'Jan 29 2003', 'misparsed fileitem')
-            self.failUnless(file['filename'] == 'README', 'misparsed fileitem')
+            self.assertTrue(file['size'] == 531, 'misparsed fileitem')
+            self.assertTrue(file['date'] == 'Jan 29 2003', 'misparsed fileitem')
+            self.assertTrue(file['filename'] == 'README', 'misparsed fileitem')
 
         d = loopback.loopbackAsync(PrintLine(), fileList)
         return d.addCallback(check)
@@ -1467,7 +1468,7 @@ class FTPClientFailedRETRAndErrbacksUponDisconnectTests(unittest.TestCase):
         d.addErrback(_eb)
         from twisted.internet.main import CONNECTION_LOST
         ftpClient.connectionLost(failure.Failure(CONNECTION_LOST))
-        self.failUnless(m, m)
+        self.assertTrue(m, m)
         return d
 
 
@@ -3532,4 +3533,3 @@ class FTPResponseCodeTests(unittest.TestCase):
                     value, seenValues,
                     "Duplicate code %r with value %r" % (key, value))
                 seenValues.add(value)
-

@@ -98,7 +98,7 @@ class TestFailureTests(pyunit.TestCase):
         """
         result = pyunit.TestResult()
         self.suite.run(result)
-        self.failIf(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(result.errors, [])
         self.assertEqual(len(result.failures), 1)
         self.assertEqual(result.failures[0][0], self.test)
@@ -367,7 +367,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
 
     def test_failUnlessRaises_expected(self):
         x = self.failUnlessRaises(ValueError, self._raiseError, ValueError)
-        self.failUnless(isinstance(x, ValueError),
+        self.assertTrue(isinstance(x, ValueError),
                         "Expect failUnlessRaises to return instance of raised "
                         "exception.")
 
@@ -398,7 +398,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
     def test_failUnlessRaises_failureException(self):
         x = self.failUnlessRaises(self.failureException, self._raiseError,
                                   self.failureException)
-        self.failUnless(isinstance(x, self.failureException),
+        self.assertTrue(isinstance(x, self.failureException),
                         "Expected %r instance to be returned"
                         % (self.failureException,))
         try:
@@ -1200,11 +1200,11 @@ class AssertionNamesTests(unittest.SynchronousTestCase):
             if not callable(value):
                 continue
             if name.endswith('Equal'):
-                self.failUnless(hasattr(self, name+'s'),
+                self.assertTrue(hasattr(self, name+'s'),
                                 "%s but no %ss" % (name, name))
                 self.assertEqual(value, getattr(self, name+'s'))
             if name.endswith('Equals'):
-                self.failUnless(hasattr(self, name[:-1]),
+                self.assertTrue(hasattr(self, name[:-1]),
                                 "%s but no %s" % (name, name[:-1]))
                 self.assertEqual(value, getattr(self, name[:-1]))
 

@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 HTML rendering for twisted.web.
 
@@ -19,6 +18,8 @@ HTML rendering for twisted.web.
     L{AttributeError}.
 """
 
+from __future__ import division, absolute_import
+
 __all__ = [
     'TEMPLATE_NAMESPACE', 'VALID_HTML_TAG_NAMES', 'Element', 'TagLoader',
     'XMLString', 'XMLFile', 'renderer', 'flatten', 'flattenString', 'tags',
@@ -26,18 +27,20 @@ __all__ = [
     ]
 
 import warnings
-from zope.interface import implements
 
-from cStringIO import StringIO
+from collections import OrderedDict
+
+from zope.interface import implementer
+
 from xml.sax import make_parser, handler
 
-from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
+from twisted.python import log
+from twisted.python.compat import NativeStringIO, items
 from twisted.python.filepath import FilePath
+from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
+from twisted.web.iweb import ITemplateLoader
 
 TEMPLATE_NAMESPACE = 'http://twistedmatrix.com/ns/twisted.web.template/0.1'
-
-from twisted.web.iweb import ITemplateLoader
-from twisted.python import log
 
 # Go read the definition of NOT_DONE_YET. For lulz. This is totally
 # equivalent. And this turns out to be necessary, because trying to import
@@ -48,6 +51,7 @@ from twisted.python import log
 #
 # See http://twistedmatrix.com/trac/ticket/5557 for progress on fixing this.
 NOT_DONE_YET = 1
+
 
 class _NSContext(object):
     """
@@ -61,7 +65,7 @@ class _NSContext(object):
         """
         self.parent = parent
         if parent is not None:
-            self.nss = dict(parent.nss)
+            self.nss = OrderedDict(parent.nss)
         else:
             self.nss = {'http://www.w3.org/XML/1998/namespace':'xml'}
 
@@ -204,8 +208,8 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         render = None
 
-        attrs = dict(attrs)
-        for k, v in attrs.items():
+        attrs = OrderedDict(attrs)
+        for k, v in items(attrs):
             attrNS, justTheName = k
             if attrNS != TEMPLATE_NAMESPACE:
                 continue
@@ -220,8 +224,8 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # specified as having a namespace in the template) or prefix:name,
         # preserving the xml namespace prefix given in the document.
 
-        nonTemplateAttrs = {}
-        for (attrNs, attrName), v in attrs.items():
+        nonTemplateAttrs = OrderedDict()
+        for (attrNs, attrName), v in items(attrs):
             nsPrefix = self.prefixMap.get(attrNs)
             if nsPrefix is None:
                 attrKey = attrName
@@ -247,7 +251,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         # Apply any xmlns attributes
         if self.xmlnsAttrs:
-            nonTemplateAttrs.update(dict(self.xmlnsAttrs))
+            nonTemplateAttrs.update(OrderedDict(self.xmlnsAttrs))
             self.xmlnsAttrs = []
 
         # Add the prefix that was used in the parsed template for non-template
@@ -257,7 +261,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             if prefix is not None:
                 name = '%s:%s' % (self.prefixMap[ns],name)
         el = Tag(
-            name, attributes=dict(nonTemplateAttrs), render=render,
+            name, attributes=OrderedDict(nonTemplateAttrs), render=render,
             filename=filename, lineNumber=lineNumber,
             columnNumber=columnNumber)
         self.stack.append(el)
@@ -353,6 +357,7 @@ def _flatsaxParse(fl):
     return s.document
 
 
+@implementer(ITemplateLoader)
 class TagLoader(object):
     """
     An L{ITemplateLoader} that loads existing L{IRenderable} providers.
@@ -360,7 +365,6 @@ class TagLoader(object):
     @ivar tag: The object which will be loaded.
     @type tag: An L{IRenderable} provider.
     """
-    implements(ITemplateLoader)
 
     def __init__(self, tag):
         """
@@ -375,6 +379,7 @@ class TagLoader(object):
 
 
 
+@implementer(ITemplateLoader)
 class XMLString(object):
     """
     An L{ITemplateLoader} that loads and parses XML from a string.
@@ -382,16 +387,18 @@ class XMLString(object):
     @ivar _loadedTemplate: The loaded document.
     @type _loadedTemplate: a C{list} of Stan objects.
     """
-    implements(ITemplateLoader)
 
     def __init__(self, s):
         """
-        Run the parser on a StringIO copy of the string.
+        Run the parser on a L{NativeStringIO} copy of the string.
 
         @param s: The string from which to load the XML.
-        @type s: C{str}
+        @type s: C{str}, or a UTF-8 encoded L{bytes}.
         """
-        self._loadedTemplate = _flatsaxParse(StringIO(s))
+        if not isinstance(s, str):
+            s = s.decode('utf8')
+
+        self._loadedTemplate = _flatsaxParse(NativeStringIO(s))
 
 
     def load(self):
@@ -405,6 +412,7 @@ class XMLString(object):
 
 
 
+@implementer(ITemplateLoader)
 class XMLFile(object):
     """
     An L{ITemplateLoader} that loads and parses XML from a file.
@@ -415,7 +423,6 @@ class XMLFile(object):
     @ivar _path: The L{FilePath}, file object, or filename that is being
         loaded from.
     """
-    implements(ITemplateLoader)
 
     def __init__(self, path):
         """
@@ -520,13 +527,13 @@ tags = _TagFactory()
 
 
 def renderElement(request, element,
-                  doctype='<!DOCTYPE html>', _failElement=None):
+                  doctype=b'<!DOCTYPE html>', _failElement=None):
     """
     Render an element or other C{IRenderable}.
 
     @param request: The C{Request} being rendered to.
     @param element: An C{IRenderable} which will be rendered.
-    @param doctype: A C{str} which will be written as the first line of
+    @param doctype: A C{bytes} which will be written as the first line of
         the request, or C{None} to disable writing of a doctype.  The C{string}
         should not include a trailing newline and will default to the HTML5
         doctype C{'<!DOCTYPE html>'}.
@@ -537,7 +544,7 @@ def renderElement(request, element,
     """
     if doctype is not None:
         request.write(doctype)
-        request.write('\n')
+        request.write(b'\n')
 
     if _failElement is None:
         _failElement = twisted.web.util.FailureElement
@@ -547,13 +554,14 @@ def renderElement(request, element,
     def eb(failure):
         log.err(failure, "An error occurred while rendering the response.")
         if request.site.displayTracebacks:
-            return flatten(request, _failElement(failure), request.write)
+            return flatten(request, _failElement(failure),
+                           request.write).encode('utf8')
         else:
             request.write(
-                ('<div style="font-size:800%;'
-                 'background-color:#FFF;'
-                 'color:#F00'
-                 '">An error occurred while rendering the response.</div>'))
+                (b'<div style="font-size:800%;'
+                 b'background-color:#FFF;'
+                 b'color:#F00'
+                 b'">An error occurred while rendering the response.</div>'))
 
     d.addErrback(eb)
     d.addBoth(lambda _: request.finish())

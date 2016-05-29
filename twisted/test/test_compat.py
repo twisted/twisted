@@ -15,7 +15,7 @@ from twisted.trial import unittest
 from twisted.python.compat import (
     reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
     unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType
+    iterbytes, intToBytes, ioType, bytesEnviron, iteritems
 )
 from twisted.python.filepath import FilePath
 
@@ -30,28 +30,28 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         An L{io.StringIO} accepts and returns text.
         """
-        self.assertEquals(ioType(io.StringIO()), unicodeCompat)
+        self.assertEqual(ioType(io.StringIO()), unicodeCompat)
 
 
     def test_3BytesIO(self):
         """
         An L{io.BytesIO} accepts and returns bytes.
         """
-        self.assertEquals(ioType(io.BytesIO()), bytes)
+        self.assertEqual(ioType(io.BytesIO()), bytes)
 
 
     def test_3openTextMode(self):
         """
         A file opened via 'io.open' in text mode accepts and returns text.
         """
-        self.assertEquals(ioType(io.open(self.mktemp(), "w")), unicodeCompat)
+        self.assertEqual(ioType(io.open(self.mktemp(), "w")), unicodeCompat)
 
 
     def test_3openBinaryMode(self):
         """
         A file opened via 'io.open' in binary mode accepts and returns bytes.
         """
-        self.assertEquals(ioType(io.open(self.mktemp(), "wb")), bytes)
+        self.assertEqual(ioType(io.open(self.mktemp(), "wb")), bytes)
 
 
     def test_2openTextMode(self):
@@ -71,7 +71,7 @@ class IOTypeTests(unittest.SynchronousTestCase):
             """
             encoding = 'utf-8'
 
-        self.assertEquals(ioType(VerySpecificLie(self.mktemp(), "wb")),
+        self.assertEqual(ioType(VerySpecificLie(self.mktemp(), "wb")),
                           basestring)
 
 
@@ -81,15 +81,15 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         from cStringIO import StringIO as cStringIO
         from StringIO import StringIO
-        self.assertEquals(ioType(StringIO()), bytes)
-        self.assertEquals(ioType(cStringIO()), bytes)
+        self.assertEqual(ioType(StringIO()), bytes)
+        self.assertEqual(ioType(cStringIO()), bytes)
 
 
     def test_2openBinaryMode(self):
         """
         The normal 'open' builtin in Python 2 will always result in bytes I/O.
         """
-        self.assertEquals(ioType(open(self.mktemp(), "w")), bytes)
+        self.assertEqual(ioType(open(self.mktemp(), "w")), bytes)
 
     if _PY3:
         test_2openTextMode.skip = "The 'file' type is no longer available."
@@ -103,7 +103,7 @@ class IOTypeTests(unittest.SynchronousTestCase):
         The L{codecs} module, oddly, returns a file-like object which returns
         bytes when not passed an 'encoding' argument.
         """
-        self.assertEquals(ioType(codecs.open(self.mktemp(), 'wb')),
+        self.assertEqual(ioType(codecs.open(self.mktemp(), 'wb')),
                           bytes)
 
 
@@ -111,7 +111,7 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         When passed an encoding, however, the L{codecs} module returns unicode.
         """
-        self.assertEquals(ioType(codecs.open(self.mktemp(), 'wb',
+        self.assertEqual(ioType(codecs.open(self.mktemp(), 'wb',
                                              encoding='utf-8')),
                           unicodeCompat)
 
@@ -121,7 +121,7 @@ class IOTypeTests(unittest.SynchronousTestCase):
         When passed an object about which no sensible decision can be made, err
         on the side of unicode.
         """
-        self.assertEquals(ioType(object()), unicodeCompat)
+        self.assertEqual(ioType(object()), unicodeCompat)
 
 
 
@@ -730,3 +730,45 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         """
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data, 2, 3)), data[2:5])
+
+
+
+class BytesEnvironTests(unittest.TestCase):
+    """
+    Tests for L{BytesEnviron}.
+    """
+    def test_alwaysBytes(self):
+        """
+        The output of L{BytesEnviron} should always be a L{dict} with L{bytes}
+        values and L{bytes} keys.
+        """
+        result = bytesEnviron()
+        types = set()
+
+        for key, val in iteritems(result):
+            types.add(type(key))
+            types.add(type(val))
+
+        self.assertEqual(list(types), [bytes])
+
+
+
+class OrderedDictTests(unittest.TestCase):
+    """
+    Tests for L{twisted.python.compat.OrderedDict}.
+    """
+    def test_deprecated(self):
+        """
+        L{twisted.python.compat.OrderedDict} is deprecated.
+        """
+        from twisted.python.compat import OrderedDict
+        OrderedDict # Shh pyflakes
+
+        currentWarnings = self.flushWarnings(offendingFunctions=[
+            self.test_deprecated])
+        self.assertEqual(
+            currentWarnings[0]['message'],
+            "twisted.python.compat.OrderedDict was deprecated in Twisted "
+            "15.5.0: Use collections.OrderedDict instead.")
+        self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(currentWarnings), 1)

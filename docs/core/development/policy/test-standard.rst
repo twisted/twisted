@@ -120,8 +120,8 @@ failing tests, they will not be happy and may decide to *hunt you down* .
 Since this is a geographically dispersed team, the person who can help
 you get your code working probably isn't in the room with you.  You may want
 to share your work in progress over the network, but you want to leave the
-main Subversion tree in good working order.
-So `use a branch <http://svnbook.red-bean.com/en/1.0/ch04.html>`_ ,
+main Git tree in good working order.
+So `use a branch <https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging>`_ ,
 and merge your changes back in only after your problem is solved and all the
 unit tests pass again.
 
@@ -234,45 +234,79 @@ Here is an example:
 Real I/O
 ~~~~~~~~
 
+Most unit tests should avoid performing real, platform-implemented I/O operations.
+Real I/O is slow, unreliable, and unwieldy.
 
-    
-Most unit tests should avoid performing real, platform-implemented I/O
-operations.  Real I/O is slow, unreliable, and unwieldy.  When implementing
-a protocol, ``twisted.test.proto_helpers.StringTransport`` can be
-used instead of a real TCP transport.  ``StringTransport`` is fast,
-deterministic, and can easily be used to exercise all possible network
-behaviors.
+When implementing a protocol, :api:`twisted.test.proto_helpers.StringTransport` can be used instead of a real TCP transport.
+``StringTransport`` is fast, deterministic, and can easily be used to exercise all possible network behaviors.
 
-    
-
+If you need pair a client to a server and have them talk to each other, use :api:`twisted.test.iosim.connect` with :api:`twisted.test.iosim.FakeTransport` transports.
 
 
 Real Time
 ~~~~~~~~~
 
+Most unit tests should also avoid waiting for real time to pass.
+Unit tests which construct and advance a :api:`twisted.internet.task.Clock <twisted.internet.task.Clock>` are fast and deterministic.
 
-    
-Most unit tests should also avoid waiting for real time to pass.  Unit
-tests which construct and advance
-a :api:`twisted.internet.task.Clock <twisted.internet.task.Clock>` are fast and
-deterministic.
+When designing your code allow for the reactor to be injected during tests.
 
-    
+.. code-block:: python
 
+    from twisted.internet.task import Clock
+
+    def test_timeBasedFeature(self):
+        """
+        In this test a Clock scheduler is used.
+        """
+        clock = Clock()
+        yourThing = SomeThing()
+        yourThing._reactor = clock
+
+        state = yourThing.getState()
+
+        clock.advance(10)
+
+        # Get state after 10 seconds.
+        state = yourThing.getState()
+
+
+Test Data
+~~~~~~~~~
+
+Keeping test data in the source tree should be avoided where possible.
+
+In some cases it can not be avoided, but where it's obvious how to do so, do it.
+Test data can be generated at run time or stored inside the test modules as constants.
+
+When file system access is required, dumping data into a temporary path during the test run opens up more testing opportunities.
+Inside the temporary path you can control various path properties or permissions.
+
+You should design your code so that data can be read from arbitrary input streams.
+
+Tests should be able to run even if they are run inside an installed copy of Twisted.
+
+.. code-block:: python
+
+    publicRSA_openssh = ("ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tf"
+    "vLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTT"
+    "h5KmRpslkYHRivcJSkbh/C+BR3utDS555mV comment")
+
+    def test_loadOpenSSHRSAPublic(self):
+        """
+        L{keys.Key.fromStrea} can load RSA keys serialized in OpenSSH format.
+        """
+        keys.Key.fromStream(StringIO(publicRSA_openssh))
 
 
 The Global Reactor
 ~~~~~~~~~~~~~~~~~~
 
-
-    
-Since unit tests are avoiding real I/O and real time, they can usually
-avoid using a real reactor.  The only exceptions to this are unit tests for
-a real reactor implementation.  Unit tests for protocol implementations or
-other application code should not use a reactor.  Unit tests for real
-reactor implementations should not use the global reactor, but should
-instead use ``twisted.internet.test.reactormixins.ReactorBuilder`` 
-so they can be applied to all of the reactor implementations automatically.
+Since unit tests are avoiding real I/O and real time, they can usually avoid using a real reactor.
+The only exceptions to this are unit tests for a real reactor implementation.
+Unit tests for protocol implementations or other application code should not use a reactor.
+Unit tests for real reactor implementations should not use the global reactor, but should
+instead use :api:`twisted.internet.test.reactormixins.ReactorBuilder` so they can be applied to all of the reactor implementations automatically.
 In no case should new unit tests use the global reactor.
 
 
@@ -493,7 +527,7 @@ or
 This format is understood by emacs to mark "File Variables" . The
 intention is to accept ``test-case-name`` anywhere emacs would on
 the first or second line of the file (but not in the ``File Variables:`` block that emacs accepts at the end of the file). If you
-need to define other emacs file variables, you can either put them in the``File Variables:`` block or use a semicolon-separated list of
+need to define other emacs file variables, you can either put them in the ``File Variables:`` block or use a semicolon-separated list of
 variable definitions:
 
 
@@ -546,8 +580,8 @@ Links
 
 
 
-- A chapter on `Unit Testing <http://diveintopython.org/unit_testing/index.html>`_ 
-  in Mark Pilgrim's `Dive Into      Python <http://diveintopython.org>`_ .
+- A chapter on `Unit Testing <http://www.diveintopython3.net/unit-testing.html>`_ 
+  in Mark Pilgrim's `Dive Into      Python <http://www.diveintopython3.net/>`_ .
 - `unittest <http://docs.python.org/library/unittest.html>`_ module documentation, in the `Python Library      Reference <http://docs.python.org/library>`_ .
 - `UnitTest <http://c2.com/cgi/wiki?UnitTest>`__ on
   the `PortlandPatternRepository      Wiki <http://c2.com/cgi/wiki>`_ , where all the cool `ExtremeProgramming <http://c2.com/cgi/wiki?ExtremeProgramming>`_ kids hang out.
@@ -555,7 +589,7 @@ Links
 - Ron Jeffries expounds on the importance of `Unit      Tests at 100% <http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm>`_ .
 - Ron Jeffries writes about the `Unit      Test <http://www.xprogramming.com/Practices/PracUnitTest.html>`_ in the `Extreme      Programming practices of C3 <http://www.xprogramming.com/Practices/xpractices.htm>`_ .
 - `PyUnit's homepage <http://pyunit.sourceforge.net>`_ .
-- The top-level tests directory, `twisted/test <http://twistedmatrix.com/trac/browser/trunk/twisted/test>`_ , in Subversion.
+- The top-level tests directory, `twisted/test <https://github.com/twisted/twisted/tree/trunk/twisted/test>`_.
 
 
   

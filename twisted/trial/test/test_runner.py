@@ -4,8 +4,12 @@
 # Maintainer: Jonathan Lange
 # Author: Robert Collins
 
+from __future__ import absolute_import, division
 
-import StringIO, os, pdb, sys
+import os
+import pdb
+import sys
+
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
@@ -15,6 +19,7 @@ from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator
 from twisted.python import failure, log, reflect
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
+from twisted.python.compat import NativeStringIO
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
@@ -136,7 +141,7 @@ class TrialRunnerTestsMixin:
         self.runner.run(self.test)
         self.runner.run(self.test)
         self.assertEqual(len(l), 2)
-        self.failIf(l[0] is l[1], "Should have created a new file observer")
+        self.assertFalse(l[0] is l[1], "Should have created a new file observer")
 
 
     def test_logFileGetsClosed(self):
@@ -151,7 +156,7 @@ class TrialRunnerTestsMixin:
         self.runner._setUpLogFile = setUpLogFile
         self.runner.run(self.test)
         self.assertEqual(len(l), 1)
-        self.failUnless(l[0].closed)
+        self.assertTrue(l[0].closed)
 
 
 
@@ -161,7 +166,7 @@ class TrialRunnerTests(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
     into warnings disabled.
     """
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
         self.test = TrialRunnerTests('test_empty')
 
@@ -184,7 +189,7 @@ class TrialRunnerWithUncleanWarningsReporterTests(TrialRunnerTestsMixin,
     """
 
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream,
                                          uncleanWarnings=True)
         self.test = TrialRunnerTests('test_empty')
@@ -199,7 +204,7 @@ class DryRunMixin(object):
 
     def setUp(self):
         self.log = []
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.runner = runner.TrialRunner(CapturingReporter,
                                          runner.TrialRunner.DRY_RUN,
                                          stream=self.stream)
@@ -328,7 +333,7 @@ class RunnerTests(unittest.SynchronousTestCase):
 
     def getRunner(self):
         r = trial._makeRunner(self.config)
-        r.stream = StringIO.StringIO()
+        r.stream = NativeStringIO()
         # XXX The runner should always take care of cleaning this up itself.
         # It's not clear why this is necessary.  The runner always tears down
         # its log file.
@@ -598,7 +603,7 @@ class UntilFailureTests(unittest.SynchronousTestCase):
     def setUp(self):
         UntilFailureTests.FailAfter.count = []
         self.test = UntilFailureTests.FailAfter('test_foo')
-        self.stream = StringIO.StringIO()
+        self.stream = NativeStringIO()
         self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream)
 
 
@@ -609,7 +614,7 @@ class UntilFailureTests(unittest.SynchronousTestCase):
         """
         result = self.runner.runUntilFailure(self.test)
         self.assertEqual(result.testsRun, 1)
-        self.failIf(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(self._getFailures(result), 1)
 
 
@@ -721,7 +726,7 @@ class LoggedErrorsTests(unittest.SynchronousTestCase):
         suite.run(result)
         self.assertEqual(len(result.errors), 1)
         self.assertEqual(result.errors[0][0].id(), runner.NOT_IN_TEST)
-        self.failUnless(result.errors[0][1].check(RuntimeError))
+        self.assertTrue(result.errors[0][1].check(RuntimeError))
 
 
 
@@ -896,12 +901,12 @@ class MalformedMethodTests(unittest.SynchronousTestCase):
         """
         Wrapper for one of the test method of L{ContainMalformed}.
         """
-        stream = StringIO.StringIO()
+        stream = NativeStringIO()
         trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
         test = MalformedMethodTests.ContainMalformed(method)
         result = trialRunner.run(test)
         self.assertEqual(result.testsRun, 1)
-        self.failIf(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(len(result.errors), 1)
 
     def test_extraArg(self):
@@ -1033,19 +1038,20 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
 
 
 
-class DryRunVisitorDeprecationTests(unittest.TestCase):
+class QualifiedNameWalkerTests(unittest.SynchronousTestCase):
     """
-    Test for L{DryRunVisitor}
+    Tests for L{twisted.trial.runner._qualNameWalker}.
     """
 
-    def test_deprecated(self):
+    def test_walksDownPath(self):
         """
-        L{DryRunVisitor} is deprecated.
+        C{_qualNameWalker} is a generator that, when given a Python qualified
+        name, yields that name, and then the parent of that name, and so forth,
+        along with a list of the tried components, in a 2-tuple.
         """
-        runner.DryRunVisitor
-        warningsShown = self.flushWarnings([self.test_deprecated])
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-                "twisted.trial.runner.DryRunVisitor was deprecated in "
-                "Twisted 13.0.0: Trial no longer has support for visitors",
-                warningsShown[0]['message'])
+        walkerResults = list(runner._qualNameWalker("walker.texas.ranger"))
+
+        self.assertEqual(walkerResults,
+                         [("walker.texas.ranger", []),
+                          ("walker.texas", ["ranger"]),
+                          ("walker", ["texas", "ranger"])])

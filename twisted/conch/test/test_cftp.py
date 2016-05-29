@@ -10,10 +10,18 @@ import locale
 import time, sys, os, operator, getpass, struct
 from StringIO import StringIO
 
-from twisted.conch.test.test_ssh import Crypto, pyasn1
+from zope.interface import implementer
+try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
+try:
+    import cryptography
+except ImportError:
+    cryptography = None
 
 _reason = None
-if Crypto and pyasn1:
+if cryptography and pyasn1:
     try:
         from twisted.conch import unix
         from twisted.conch.scripts import cftp
@@ -30,9 +38,11 @@ from twisted.python.fakepwd import UserDatabase
 from twisted.trial.unittest import TestCase
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
-from twisted.internet.utils import getProcessOutputAndValue
+from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.conch import ls
+from twisted.conch.interfaces import ISFTPFile
+from twisted.conch.ssh import filetransfer
 from twisted.test.proto_helpers import StringTransport
 from twisted.internet.task import Clock
 
@@ -179,7 +189,7 @@ class ListingTests(TestCase):
             self._lsInTimezone('Pacific/Auckland', stat),
             '!---------    0 0        0               0 Aug 29 09:33 foo')
 
-    # if alternate locale is not available, the previous test will be
+    # If alternate locale is not available, the previous test will be
     # skipped, please install this locale for it to run
     currentLocale = locale.getlocale()
     try:
@@ -211,6 +221,140 @@ class ListingTests(TestCase):
 
 
 
+class InMemorySSHChannel(StringTransport, object):
+    """
+    Minimal implementation of a L{SSHChannel} like class which only reads and
+    writes data from memory.
+    """
+
+    def __init__(self, conn):
+        """
+        @param conn: The SSH connection associated with this channel.
+        @type conn: L{SSHConnection}
+        """
+        self.conn = conn
+        self.localClosed = 0
+        super(InMemorySSHChannel, self).__init__()
+
+
+
+class FilesystemAccessExpectations(object):
+    """
+    A test helper used to support expected filesytem access.
+    """
+
+    def __init__(self):
+        self._cache = {}
+
+
+    def put(self, path, flags, stream):
+        """
+
+        @param path: Path at which the stream is requested.
+        @type path: C{str}
+
+        @param path: Flags with which the stream is requested.
+        @type path: C{str}
+
+        @param stream: A stream.
+        @type stream: C{File}
+        """
+        self._cache[(path, flags)] = stream
+
+
+    def pop(self, path, flags):
+        """
+        Remove a stream from the memory.
+
+        @param path: Path at which the stream is requested.
+        @type path: C{str}
+
+        @param path: Flags with which the stream is requested.
+        @type path: C{str}
+
+        @return: A stream.
+        @rtype: C{File}
+        """
+        return self._cache.pop((path, flags))
+
+
+
+class InMemorySFTPClient(object):
+    """
+    A L{filetransfer.FileTransferClient} which does filesystem operations in
+    memory, without touching the local disc or the network interface.
+
+    @ivar _availableFiles: File like objects which are available to the SFTP
+        client.
+    @type _availableFiles: L{FilesystemRegister}
+    """
+
+    def __init__(self, availableFiles):
+        self.transport = InMemorySSHChannel(self)
+        self.options = {
+            'requests': 1,
+            'buffersize': 10,
+            }
+        self._availableFiles = availableFiles
+
+
+    def openFile(self, filename, flags, attrs):
+        """
+        @see: L{filetransfer.FileTransferClient.openFile}.
+
+        Retrieve and remove cached file based on flags.
+        """
+        return self._availableFiles.pop(filename, flags)
+
+
+
+@implementer(ISFTPFile)
+class InMemoryRemoteFile(StringIO):
+    """
+    An L{ISFTPFile} which handles all data in memory.
+    """
+
+    def __init__(self, name):
+        """
+        @param name: Name of this file.
+        @type name: C{str}
+        """
+        self.name = name
+        StringIO.__init__(self)
+
+
+    def writeChunk(self, start, data):
+        """
+        @see: L{ISFTPFile.writeChunk}
+        """
+        self.seek(start)
+        self.write(data)
+        return defer.succeed(self)
+
+
+    def close(self):
+        """
+        @see: L{ISFTPFile.writeChunk}
+
+        Keeps data after file was closed to help with testing.
+        """
+        if not self.closed:
+            self.closed = True
+
+
+    def getvalue(self):
+        """
+        Get current data of file.
+
+        Allow reading data event when file is closed.
+        """
+        if self.buflist:
+            self.buf += ''.join(self.buflist)
+            self.buflist = []
+        return self.buf
+
+
+
 class StdioClientTests(TestCase):
     """
     Tests for L{cftp.StdioClient}.
@@ -220,19 +364,19 @@ class StdioClientTests(TestCase):
         Create a L{cftp.StdioClient} hooked up to dummy transport and a fake
         user database.
         """
-        class Connection:
-            pass
-
-        conn = Connection()
-        conn.transport = StringTransport()
-        conn.transport.localClosed = False
-
-        self.client = cftp.StdioClient(conn)
+        self.fakeFilesystem = FilesystemAccessExpectations()
+        sftpClient = InMemorySFTPClient(self.fakeFilesystem )
+        self.client = cftp.StdioClient(sftpClient)
+        self.client.currentDirectory = '/'
         self.database = self.client._pwd = UserDatabase()
-
+        # Use a fixed width for all tests so that we get the same results when
+        # running these tests from different terminals.
+        # Run tests in a wide console so that all items are delimited by at
+        # least one space character.
+        self.setKnownConsoleSize(500, 24)
         # Intentionally bypassing makeConnection - that triggers some code
         # which uses features not provided by our dumb Connection fake.
-        self.client.transport = StringTransport()
+        self.client.transport = self.client.client.transport
 
 
     def test_exec(self):
@@ -285,7 +429,8 @@ class StdioClientTests(TestCase):
         @param height: the height in characters
         @type height: C{int}
         """
-        import tty # local import to avoid win32 issues
+        # Local import to avoid win32 issues.
+        import tty
         class FakeFcntl(object):
             def ioctl(self, fd, opt, mutate):
                 if opt != tty.TIOCGWINSZ:
@@ -294,15 +439,15 @@ class StdioClientTests(TestCase):
         self.patch(cftp, "fcntl", FakeFcntl())
 
 
-    def test_progressReporting(self):
+    def test_printProgressBarReporting(self):
         """
         L{StdioClient._printProgressBar} prints a progress description,
         including percent done, amount transferred, transfer rate, and time
         remaining, all based the given start time, the given L{FileWrapper}'s
         progress information and the reactor's current time.
         """
-        # Use a short, known console width because this simple test doesn't need
-        # to test the console padding.
+        # Use a short, known console width because this simple test doesn't
+        # need to test the console padding.
         self.setKnownConsoleSize(10, 34)
         clock = self.client.reactor = Clock()
         wrapped = StringIO("x")
@@ -312,12 +457,14 @@ class StdioClientTests(TestCase):
         startTime = clock.seconds()
         clock.advance(2.0)
         wrapper.total += 4096
+
         self.client._printProgressBar(wrapper, startTime)
+
         self.assertEqual(self.client.transport.value(),
                           "\rsample 40% 4.0kB 2.0kBps 00:03 ")
 
 
-    def test_reportNoProgress(self):
+    def test_printProgressBarNoProgress(self):
         """
         L{StdioClient._printProgressBar} prints a progress description that
         indicates 0 bytes transferred if no bytes have been transferred and no
@@ -329,9 +476,283 @@ class StdioClientTests(TestCase):
         wrapped.name = "sample"
         wrapper = cftp.FileWrapper(wrapped)
         startTime = clock.seconds()
+
         self.client._printProgressBar(wrapper, startTime)
+
         self.assertEqual(self.client.transport.value(),
                           "\rsample  0% 0.0B 0.0Bps 00:00 ")
+
+
+    def test_printProgressBarEmptyFile(self):
+        """
+        Print the progress for empty files.
+        """
+        self.setKnownConsoleSize(10, 34)
+        wrapped = StringIO()
+        wrapped.name = 'empty-file'
+        wrapper = cftp.FileWrapper(wrapped)
+
+        self.client._printProgressBar(wrapper, 0)
+
+        self.assertEqual(
+            '\rempty-file100% 0.0B 0.0Bps 00:00 ',
+            self.client.transport.value(),
+            )
+
+
+    def test_getFilenameEmpty(self):
+        """
+        Returns empty value for both filename and remaining data.
+        """
+        result = self.client._getFilename('  ')
+
+        self.assertEqual(('', ''), result)
+
+
+    def test_getFilenameOnlyLocal(self):
+        """
+        Returns empty value for remaining data when line contains
+        only a filename.
+        """
+        result = self.client._getFilename('only-local')
+
+        self.assertEqual(('only-local', ''), result)
+
+
+    def test_getFilenameNotQuoted(self):
+        """
+        Returns filename and remaining data striped of leading and trailing
+        spaces.
+        """
+        result = self.client._getFilename(' local  remote file  ')
+
+        self.assertEqual(('local', 'remote file'), result)
+
+
+    def test_getFilenameQuoted(self):
+        """
+        Returns filename and remaining data not striped of leading and trailing
+        spaces when quoted paths are requested.
+        """
+        result = self.client._getFilename(' " local file "  " remote  file " ')
+
+        self.assertEqual((' local file ', '" remote  file "'), result)
+
+
+    def makeFile(self, path=None, content=b''):
+        """
+        Create a local file and return its path.
+
+        When `path` is C{None}, it will create a new temporary file.
+
+        @param path: Optional path for the new file.
+        @type path: C{str}
+
+        @param content: Content to be written in the new file.
+        @type content: C{bytes}
+
+        @return: Path to the newly create file.
+        """
+        if path is None:
+            path = self.mktemp()
+        file = open(path, 'w')
+        file.write(content)
+        file.close()
+        return path
+
+
+    def checkPutMessage(self, transfers, randomOrder=False):
+        """
+        Check output of cftp client for a put request.
+
+
+        @param transfers: List with tuple of (local, remote, progress).
+        @param randomOrder: When set to C{True}, it will ignore the order
+            in which put reposes are received
+
+        """
+        output = self.client.transport.value().split('\n\r')
+
+        expectedOutput = []
+        actualOutput = []
+
+        for local, remote, expected in transfers:
+            # For each transfer we have a list of reported progress which
+            # ends with the final message informing that file was transferred.
+            expectedTransfer = []
+            for line in expected:
+                expectedTransfer.append('%s %s' % (local, line))
+            expectedTransfer.append('Transferred %s to %s' % (local, remote))
+            expectedOutput.append(expectedTransfer)
+
+            progressParts = output.pop(0).strip('\r').split('\r')
+            actual = progressParts[:-1]
+
+            last = progressParts[-1].strip('\n').split('\n')
+            actual.extend(last)
+
+            actualTransfer = []
+            # Each transferred file is on a line with summary on the last
+            # line. Summary is copying at the end.
+            for line in actual[:-1]:
+                # Output line is in the format
+                # NAME PROGRESS_PERCENTAGE PROGRESS_BYTES SPEED ETA.
+                # For testing we only care about the
+                # PROGRESS_PERCENTAGE and PROGRESS values.
+
+                # Ignore SPPED and ETA.
+                line = line.strip().rsplit(' ', 2)[0]
+                # NAME can be followed by a lot of spaces so we need to
+                # reduce them to single space.
+                line = line.strip().split(' ', 1)
+                actualTransfer.append('%s %s' % (line[0], line[1].strip()))
+            actualTransfer.append(actual[-1])
+            actualOutput.append(actualTransfer)
+
+        if randomOrder:
+            self.assertEqual(sorted(expectedOutput), sorted(actualOutput))
+        else:
+            self.assertEqual(expectedOutput, actualOutput)
+
+        self.assertEqual(
+            0, len(output),
+            'There are still put responses which were not checked.',
+            )
+
+
+    def test_cmd_PUTSingleNoRemotePath(self):
+        """
+        A name based on local path is used when remote path is not
+        provided.
+
+        The progress is updated while chunks are transferred.
+        """
+        content = 'Test\r\nContent'
+        localPath = self.makeFile(content=content)
+        flags = (
+            filetransfer.FXF_WRITE |
+            filetransfer.FXF_CREAT |
+            filetransfer.FXF_TRUNC
+            )
+        remoteName = os.path.join('/', os.path.basename(localPath))
+        remoteFile = InMemoryRemoteFile(remoteName)
+        self.fakeFilesystem.put(remoteName, flags, defer.succeed(remoteFile))
+        self.client.client.options['buffersize'] = 10
+
+        deferred = self.client.cmd_PUT(localPath)
+        self.successResultOf(deferred)
+
+        self.assertEqual(content, remoteFile.getvalue())
+        self.assertTrue(remoteFile.closed)
+        self.checkPutMessage(
+            [(localPath, remoteName,
+                ['76% 10.0B', '100% 13.0B', '100% 13.0B'])])
+
+
+    def test_cmd_PUTSingleRemotePath(self):
+        """
+        Remote path is extracted from first filename after local file.
+
+        Any other data in the line is ignored.
+        """
+        localPath = self.makeFile()
+        flags = (
+            filetransfer.FXF_WRITE |
+            filetransfer.FXF_CREAT |
+            filetransfer.FXF_TRUNC
+            )
+        remoteName = '/remote-path'
+        remoteFile = InMemoryRemoteFile(remoteName)
+        self.fakeFilesystem.put(remoteName, flags, defer.succeed(remoteFile))
+
+        deferred = self.client.cmd_PUT(
+            '%s %s ignored' % (localPath, remoteName))
+        self.successResultOf(deferred)
+
+        self.checkPutMessage([(localPath, remoteName, ['100% 0.0B'])])
+        self.assertTrue(remoteFile.closed)
+        self.assertEqual('', remoteFile.getvalue())
+
+
+    def test_cmd_PUTMultipleNoRemotePath(self):
+        """
+        When a gobbing expression is used local files are transfered with
+        remote file names based on local names.
+        """
+        first = self.makeFile()
+        firstName = os.path.basename(first)
+        secondName = 'second-name'
+        parent = os.path.dirname(first)
+        second = self.makeFile(path=os.path.join(parent, secondName))
+        flags = (
+            filetransfer.FXF_WRITE |
+            filetransfer.FXF_CREAT |
+            filetransfer.FXF_TRUNC
+            )
+        firstRemotePath = '/%s' % (firstName,)
+        secondRemotePath = '/%s' % (secondName,)
+        firstRemoteFile = InMemoryRemoteFile(firstRemotePath)
+        secondRemoteFile = InMemoryRemoteFile(secondRemotePath)
+        self.fakeFilesystem.put(
+            firstRemotePath, flags, defer.succeed(firstRemoteFile))
+        self.fakeFilesystem.put(
+            secondRemotePath, flags, defer.succeed(secondRemoteFile))
+
+        deferred = self.client.cmd_PUT(os.path.join(parent, '*'))
+        self.successResultOf(deferred)
+
+        self.assertTrue(firstRemoteFile.closed)
+        self.assertEqual('', firstRemoteFile.getvalue())
+        self.assertTrue(secondRemoteFile.closed)
+        self.assertEqual('', secondRemoteFile.getvalue())
+        self.checkPutMessage([
+            (first, firstRemotePath, ['100% 0.0B']),
+            (second, secondRemotePath, ['100% 0.0B']),
+            ],
+            randomOrder=True,
+            )
+
+
+    def test_cmd_PUTMultipleWithRemotePath(self):
+        """
+        When a gobbing expression is used local files are transfered with
+        remote file names based on local names.
+        when a remote folder is requested remote paths are composed from
+        remote path and local filename.
+        """
+        first = self.makeFile()
+        firstName = os.path.basename(first)
+        secondName = 'second-name'
+        parent = os.path.dirname(first)
+        second = self.makeFile(path=os.path.join(parent, secondName))
+        flags = (
+            filetransfer.FXF_WRITE |
+            filetransfer.FXF_CREAT |
+            filetransfer.FXF_TRUNC
+            )
+        firstRemoteFile = InMemoryRemoteFile(firstName)
+        secondRemoteFile = InMemoryRemoteFile(secondName)
+        firstRemotePath = '/remote/%s' % (firstName,)
+        secondRemotePath = '/remote/%s' % (secondName,)
+        self.fakeFilesystem.put(
+            firstRemotePath, flags, defer.succeed(firstRemoteFile))
+        self.fakeFilesystem.put(
+            secondRemotePath, flags, defer.succeed(secondRemoteFile))
+
+        deferred = self.client.cmd_PUT(
+            '%s remote' % (os.path.join(parent, '*'),))
+        self.successResultOf(deferred)
+
+        self.assertTrue(firstRemoteFile.closed)
+        self.assertEqual('', firstRemoteFile.getvalue())
+        self.assertTrue(secondRemoteFile.closed)
+        self.assertEqual('', secondRemoteFile.getvalue())
+        self.checkPutMessage([
+            (first, firstName, ['100% 0.0B']),
+            (second, secondName, ['100% 0.0B']),
+            ],
+            randomOrder=True,
+            )
 
 
 
@@ -510,6 +931,13 @@ class CFTPClientTestBase(SFTPTestBase):
 
 
 class OurServerCmdLineClientTests(CFTPClientTestBase):
+    """
+    Functional tests which launch a SFTP server over TCP on localhost and check
+    cftp command line interface using a spawned process.
+
+    Due to the spawned process you can not add a debugger breakpoint for the
+    client code.
+    """
 
     def setUp(self):
         CFTPClientTestBase.setUp(self)
@@ -842,6 +1270,11 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
 
 
 class OurServerBatchFileTests(CFTPClientTestBase):
+    """
+    Functional tests which launch a SFTP server over localhost and checks csftp
+    in batch interface.
+    """
+
     def setUp(self):
         CFTPClientTestBase.setUp(self)
         self.startServer()
@@ -952,7 +1385,8 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         L{filetransfer.FILEXFER_ATTR_EXTENDED} has the correct value.
         """
         fn = self.mktemp()
-        open(fn, 'w').write("ls .\nexit")
+        with open(fn, 'w') as f:
+            f.write("ls .\nexit")
         port = self.server.getHost().port
 
         oldGetAttr = FileTransferForTestAvatar._getAttrs
@@ -962,25 +1396,44 @@ class OurServerSftpClientTests(CFTPClientTestBase):
             return attrs
 
         self.patch(FileTransferForTestAvatar, "_getAttrs", _getAttrs)
-
         self.server.factory.expectedLoseConnection = True
-        cmds = ('-o', 'IdentityFile=dsa_test',
-                '-o', 'UserKnownHostsFile=kh_test',
-                '-o', 'HostKeyAlgorithms=ssh-rsa',
-                '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
-        d = getProcessOutputAndValue("sftp", cmds)
+
+        # PubkeyAcceptedKeyTypes does not exist prior to OpenSSH 7.0 so we
+        # first need to check if we can set it. If we can, -V will just print
+        # the version without doing anything else; if we can't, we will get a
+        # configuration error.
+        d = getProcessValue(
+            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+        def hasPAKT(status):
+            if status == 0:
+                args = ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss')
+            else:
+                args = ()
+            # Pass -F /dev/null to avoid the user's configuration file from
+            # being loaded, as it may contain settings that cause our tests to
+            # fail or hang.
+            args += ('-F', '/dev/null',
+                     '-o', 'IdentityFile=dsa_test',
+                     '-o', 'UserKnownHostsFile=kh_test',
+                     '-o', 'HostKeyAlgorithms=ssh-rsa',
+                     '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
+            return args
+
         def check(result):
             self.assertEqual(result[2], 0)
             for i in ['testDirectory', 'testRemoveFile',
                       'testRenameFile', 'testfile1']:
                 self.assertIn(i, result[0])
+        d.addCallback(hasPAKT)
+        d.addCallback(lambda args: getProcessOutputAndValue('sftp', args))
         return d.addCallback(check)
 
 
 
-if unix is None or Crypto is None or pyasn1 is None or interfaces.IReactorProcess(reactor, None) is None:
+if None in (unix, cryptography, pyasn1,
+            interfaces.IReactorProcess(reactor, None)):
     if _reason is None:
-        _reason = "don't run w/o spawnProcess or PyCrypto or pyasn1"
+        _reason = "don't run w/o spawnProcess or cryptography or pyasn1"
     OurServerCmdLineClientTests.skip = _reason
     OurServerBatchFileTests.skip = _reason
     OurServerSftpClientTests.skip = _reason

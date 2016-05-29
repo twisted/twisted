@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
 """
 The parent class for all the SSH Channels.  Currently implemented channels
 are session. direct-tcp, and forwarded-tcp.
@@ -14,6 +13,7 @@ from zope.interface import implementer
 
 from twisted.python import log
 from twisted.internet import interfaces
+
 
 
 @implementer(interfaces.ITransport)
@@ -72,14 +72,17 @@ class SSHChannel(log.Logger):
         self.remoteClosed = 0
         self.id = None # gets set later by SSHConnection
 
+
     def __str__(self):
         return '<SSHChannel %s (lw %i rw %i)>' % (self.name,
                 self.localWindowLeft, self.remoteWindowLeft)
+
 
     def logPrefix(self):
         id = (self.id is not None and str(self.id)) or "unknown"
         return "SSHChannel %s (%s) on %s" % (self.name, id,
                 self.conn.logPrefix())
+
 
     def channelOpen(self, specificData):
         """
@@ -90,6 +93,7 @@ class SSHChannel(log.Logger):
         """
         log.msg('channel open')
 
+
     def openFailed(self, reason):
         """
         Called when the open failed for some reason.
@@ -98,6 +102,7 @@ class SSHChannel(log.Logger):
         @type reason: L{error.ConchError}
         """
         log.msg('other side refused open\nreason: %s'% reason)
+
 
     def addWindowBytes(self, bytes):
         """
@@ -120,6 +125,7 @@ class SSHChannel(log.Logger):
             for (type, data) in b:
                 self.writeExtended(type, data)
 
+
     def requestReceived(self, requestType, data):
         """
         Called when a request is sent to this channel.  By default it delegates
@@ -138,6 +144,7 @@ class SSHChannel(log.Logger):
         log.msg('unhandled request for %s'%requestType)
         return 0
 
+
     def dataReceived(self, data):
         """
         Called when we receive data.
@@ -145,6 +152,7 @@ class SSHChannel(log.Logger):
         @type data: C{str}
         """
         log.msg('got data %s'%repr(data))
+
 
     def extReceived(self, dataType, data):
         """
@@ -155,11 +163,13 @@ class SSHChannel(log.Logger):
         """
         log.msg('got extended data %s %s'%(dataType, repr(data)))
 
+
     def eofReceived(self):
         """
         Called when the other side will send no more data.
         """
         log.msg('remote eof')
+
 
     def closeReceived(self):
         """
@@ -168,6 +178,7 @@ class SSHChannel(log.Logger):
         log.msg('remote close')
         self.loseConnection()
 
+
     def closed(self):
         """
         Called when the channel is closed.  This means that both our side and
@@ -175,7 +186,7 @@ class SSHChannel(log.Logger):
         """
         log.msg('closed')
 
-    # transport stuff
+
     def write(self, data):
         """
         Write some data to the channel.  If there is not enough remote window
@@ -202,6 +213,7 @@ class SSHChannel(log.Logger):
         self.remoteWindowLeft -= top
         if self.closing and not self.buf:
             self.loseConnection() # try again
+
 
     def writeExtended(self, dataType, data):
         """
@@ -234,6 +246,7 @@ class SSHChannel(log.Logger):
         if self.closing:
             self.loseConnection() # try again
 
+
     def writeSequence(self, data):
         """
         Part of the Transport interface.  Write a list of strings to the
@@ -242,6 +255,7 @@ class SSHChannel(log.Logger):
         @type data: C{list} of C{str}
         """
         self.write(''.join(data))
+
 
     def loseConnection(self):
         """
@@ -252,27 +266,33 @@ class SSHChannel(log.Logger):
         if not self.buf and not self.extBuf:
             self.conn.sendClose(self)
 
+
     def getPeer(self):
         """
-        Return a tuple describing the other side of the connection.
+        See: L{ITransport.getPeer}
 
-        @rtype: C{tuple}
+        @return: The remote address of this connection.
+        @rtype: L{SSHTransportAddress}.
         """
-        return('SSH', )+self.conn.transport.getPeer()
+        return self.conn.transport.getPeer()
+
 
     def getHost(self):
         """
-        Return a tuple describing our side of the connection.
+        See: L{ITransport.getHost}
 
-        @rtype: C{tuple}
+        @return: An address describing this side of the connection.
+        @rtype: L{SSHTransportAddress}.
         """
-        return('SSH', )+self.conn.transport.getHost()
+        return self.conn.transport.getHost()
+
 
     def stopWriting(self):
         """
         Called when the remote buffer is full, as a hint to stop writing.
         This can be ignored, but it can be helpful.
         """
+
 
     def startWriting(self):
         """

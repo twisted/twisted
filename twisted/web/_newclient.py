@@ -919,6 +919,14 @@ def makeStatefulDispatcher(name, template):
 
 
 
+# This proxy class is used only in the private constructor of the Response
+# class below, in order to prevent users relying on any property of the
+# concrete request object: they can only use what is provided by
+# IClientRequest.
+_ClientRequestProxy = proxyForInterface(IClientRequest)
+
+
+
 @implementer(IResponse)
 class Response:
     """
@@ -1012,7 +1020,7 @@ class Response:
         @return: L{Response} instance.
         """
         response = Response(version, code, phrase, headers, _transport)
-        response.request = proxyForInterface(IClientRequest)(request)
+        response.request = _ClientRequestProxy(request)
         return response
 
 

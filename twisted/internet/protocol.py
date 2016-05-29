@@ -16,6 +16,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
+from twisted.logger import _loggerFor
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
@@ -68,7 +69,8 @@ class Factory:
         """
         if not self.numPorts:
             if self.noisy:
-                log.msg("Starting factory %r" % self)
+                _loggerFor(self).info("Starting factory {factory!r}",
+                                      factory=self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
 
@@ -84,7 +86,8 @@ class Factory:
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
-                log.msg("Stopping factory %r" % self)
+                _loggerFor(self).info("Stopping factory {factory!r}",
+                                      factory=self)
             self.stopFactory()
 
     def startFactory(self):
@@ -826,11 +829,13 @@ class FileWrapper:
             self.handleException()
 
     def getPeer(self):
-        # XXX: According to ITransport, this should return an IAddress!
+        # FIXME: https://twistedmatrix.com/trac/ticket/7820
+        # According to ITransport, this should return an IAddress!
         return 'file', 'file'
 
     def getHost(self):
-        # XXX: According to ITransport, this should return an IAddress!
+        # FIXME: https://twistedmatrix.com/trac/ticket/7820
+        # According to ITransport, this should return an IAddress!
         return 'file'
 
     def handleException(self):

@@ -261,7 +261,7 @@ class IRC(protocol.Protocol):
 
     def sendLine(self, line):
         if self.encoding is not None:
-            if isinstance(line, unicode):
+            if not isinstance(line, bytes):
                 line = line.encode(self.encoding)
         self.transport.write("%s%s%s" % (line, CR, LF))
 
@@ -273,6 +273,10 @@ class IRC(protocol.Protocol):
         First argument is the command, all subsequent arguments are parameters
         to that command.  If a prefix is desired, it may be specified with the
         keyword argument 'prefix'.
+
+        The L{sendCommand} method is generally preferred over this one.
+        Notably, this method does not support sending message tags, while the
+        L{sendCommand} method does.
         """
         if not command:
             raise ValueError("IRC message requires a command.")
@@ -291,6 +295,108 @@ class IRC(protocol.Protocol):
         if len(parameter_list) > 15:
             log.msg("Message has %d parameters (RFC allows 15):\n%s" %
                     (len(parameter_list), line))
+
+
+    def sendCommand(self, command, parameters, prefix=None, tags=None):
+        """
+        Send to the remote peer a line formatted as an IRC message.
+
+        @param command: The command or numeric to send.
+        @type command: L{unicode}
+
+        @param parameters: The parameters to send with the command.
+        @type parameters: A L{tuple} or L{list} of L{unicode} parameters
+
+        @param prefix: The prefix to send with the command.  If not
+            given, no prefix is sent.
+        @type prefix: L{unicode}
+
+        @param tags: A dict of message tags.  If not given, no message
+            tags are sent.  The dict key should be the name of the tag
+            to send as a string; the value should be the unescaped value
+            to send with the tag, or either None or "" if no value is to
+            be sent with the tag.
+        @type tags: L{dict} of tags (L{unicode}) => values (L{unicode})
+        @see: U{https://ircv3.net/specs/core/message-tags-3.2.html}
+        """
+        if not command:
+            raise ValueError("IRC message requires a command.")
+
+        if " " in command or command[0] == ":":
+            # Not the ONLY way to screw up, but provides a little
+            # sanity checking to catch likely dumb mistakes.
+            raise ValueError('Invalid command: "%s"' % (command,))
+
+        if tags is None:
+            tags = {}
+
+        line = " ".join([command] + list(parameters))
+        if prefix:
+            line = ":%s %s" % (prefix, line)
+        if tags:
+            tagStr = self._stringTags(tags)
+            line = "@%s %s" % (tagStr, line)
+        if self.encoding is None:
+            # Either pass bytes to sendLine, or have sendLine do the translation
+            line = line.encode("utf-8")
+        self.sendLine(line)
+
+        if len(parameters) > 15:
+            log.msg("Message has %d parameters (RFC allows 15):\n%s" %
+                    (len(parameters), line))
+
+
+    def _stringTags(self, tags):
+        """
+        Converts a tag dictionary to a string.
+
+        @param tags: The tag dict passed to sendMsg.
+
+        @rtype: L{unicode}
+        @return: IRCv3-format tag string
+        """
+        self._validateTags(tags)
+        tagStrings = []
+        for tag, value in tags.items():
+            if value:
+                tagStrings.append("%s=%s" % (tag, self._escapeTagValue(value)))
+            else:
+                tagStrings.append(tag)
+        return ";".join(tagStrings)
+
+
+    def _validateTags(self, tags):
+        """
+        Checks the tag dict for errors and raises L{ValueError} if an
+        error is found.
+
+        @param tags: The tag dict passed to sendMsg.
+        """
+        for tag, value in tags.items():
+            if not tag:
+                raise ValueError("A tag name is required.")
+            for char in tag:
+                if not char.isalnum() and char not in ("-", "/", "."):
+                    raise ValueError("Tag contains invalid characters.")
+
+
+    def _escapeTagValue(self, value):
+        """
+        Escape the given tag value according to U{escaping rules in IRCv3
+        <https://ircv3.net/specs/core/message-tags-3.2.html>}.
+
+        @param value: The string value to escape.
+        @type value: L{str}
+
+        @return: The escaped string for sending as a message value
+        @rtype: L{str}
+        """
+        return (value.replace("\\", "\\\\")
+            .replace(";", "\\:")
+            .replace(" ", "\\s")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+            )
 
 
     def dataReceived(self, data):
@@ -367,7 +473,7 @@ class IRC(protocol.Protocol):
         @type message: C{str} or C{unicode}
         @param message: The message being sent.
         """
-        self.sendLine(":%s PRIVMSG %s :%s" % (sender, recip, lowQuote(message)))
+        self.sendCommand("PRIVMSG", (recip, ":%s" % (lowQuote(message),)), sender)
 
 
     def notice(self, sender, recip, message):
@@ -389,7 +495,7 @@ class IRC(protocol.Protocol):
         @type message: C{str} or C{unicode}
         @param message: The message being sent.
         """
-        self.sendLine(":%s NOTICE %s :%s" % (sender, recip, message))
+        self.sendCommand("NOTICE", (recip, ":%s" % (message,)), sender)
 
 
     def action(self, sender, recip, message):
@@ -2171,18 +2277,18 @@ class IRCClient(basic.LineReceiver):
         """
         A master index of what CTCP tags this client knows.
 
-        If no arguments are provided, respond with a list of known tags.
+        If no arguments are provided, respond with a list of known tags, sorted
+        in alphabetical order.
         If an argument is provided, provide human-readable help on
         the usage of that tag.
         """
-
         nick = user.split('!')[0]
         if not data:
             # XXX: prefixedMethodNames gets methods from my *class*,
             # but it's entirely possible that this *instance* has more
             # methods.
-            names = reflect.prefixedMethodNames(self.__class__,
-                                                'ctcpQuery_')
+            names = sorted(reflect.prefixedMethodNames(self.__class__,
+                                                       'ctcpQuery_'))
 
             self.ctcpMakeReply(nick, [('CLIENTINFO', ' '.join(names))])
         else:
@@ -2440,8 +2546,8 @@ class IRCClient(basic.LineReceiver):
     def ctcpReply_PING(self, user, channel, data):
         nick = user.split('!', 1)[0]
         if (not self._pings) or (not self._pings.has_key((nick, data))):
-            raise IRCBadMessage,\
-                  "Bogus PING response from %s: %s" % (user, data)
+            raise IRCBadMessage(
+                "Bogus PING response from %s: %s" % (user, data))
 
         t0 = self._pings[(nick, data)]
         self.pong(user, time.time() - t0)
@@ -2597,8 +2703,7 @@ def dccParseAddress(address):
         try:
             address = long(address)
         except ValueError:
-            raise IRCBadMessage,\
-                  "Indecipherable address %r" % (address,)
+            raise IRCBadMessage("Indecipherable address %r" % (address,))
         else:
             address = (
                 (address >> 24) & 0xFF,

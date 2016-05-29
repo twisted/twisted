@@ -1,11 +1,14 @@
+from __future__ import division, absolute_import
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.trial.itrial import IReporter
 from twisted.plugin import IPlugin
 
+
+
+@implementer(IPlugin, IReporter)
 class _Reporter(object):
-    implements(IPlugin, IReporter)
 
     def __init__(self, name, module, description, longOpt, shortOpt, klass):
         self.name = name

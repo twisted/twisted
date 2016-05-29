@@ -5,9 +5,10 @@
 Test cases for twisted.words.xish.utility
 """
 
+from collections import OrderedDict
+
 from twisted.trial import unittest
 
-from twisted.python.util import OrderedDict
 from twisted.words.xish import utility
 from twisted.words.xish.domish import Element
 from twisted.words.xish.utility import EventDispatcher

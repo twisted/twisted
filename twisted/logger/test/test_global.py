@@ -11,6 +11,7 @@ import io
 
 from twisted.trial import unittest
 
+from .._file import textFileLogObserver
 from .._observer import LogPublisher
 from .._logger import Logger
 from .._global import LogBeginner
@@ -160,12 +161,14 @@ class LogBeginnerTests(unittest.TestCase):
         """
         events1 = []
         events2 = []
+        fileHandle = io.StringIO()
+        textObserver = textFileLogObserver(fileHandle)
         self.publisher(dict(event="prebuffer"))
         firstFilename, firstLine = nextLine()
-        self.beginner.beginLoggingTo([events1.append])
+        self.beginner.beginLoggingTo([events1.append, textObserver])
         self.publisher(dict(event="postbuffer"))
         secondFilename, secondLine = nextLine()
-        self.beginner.beginLoggingTo([events2.append])
+        self.beginner.beginLoggingTo([events2.append, textObserver])
         self.publisher(dict(event="postwarn"))
         warning = dict(
             log_format=MORE_THAN_ONCE_WARNING,
@@ -184,6 +187,12 @@ class LogBeginnerTests(unittest.TestCase):
             ]
         )
         compareEvents(self, events2, [warning, dict(event="postwarn")])
+
+        output = fileHandle.getvalue()
+        self.assertIn('<{0}:{1}>'.format(firstFilename, firstLine),
+                      output)
+        self.assertIn('<{0}:{1}>'.format(secondFilename, secondLine),
+                      output)
 
 
     def test_criticalLogging(self):

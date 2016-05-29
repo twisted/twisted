@@ -8,13 +8,15 @@ the code in C{twisted/__init__.py}.
 
 from __future__ import division, absolute_import
 
-import re
 import sys
+import twisted
+
 from types import ModuleType, FunctionType
 
 from twisted import _checkRequirements
 from twisted.python.compat import _PY3
-from twisted.trial.unittest import TestCase
+from twisted.python import reflect
+from twisted.trial.unittest import TestCase, SkipTest
 
 
 # This is somewhat generally useful and should probably be part of a public API
@@ -53,44 +55,6 @@ class SetAsideModule(object):
     def __exit__(self, excType, excValue, traceback):
         self._unimport(self.name)
         sys.modules.update(self.modules)
-
-
-
-# Copied from 2.7 stdlib.  Delete after Python 2.6 is no longer a
-# requirement.  See #5976.
-class _AssertRaisesContext(object):
-    """A context manager used to implement TestCase.assertRaises* methods."""
-
-    def __init__(self, expected, test_case, expected_regexp=None):
-        self.expected = expected
-        self.failureException = test_case.failureException
-        self.expected_regexp = expected_regexp
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, tb):
-        if exc_type is None:
-            try:
-                exc_name = self.expected.__name__
-            except AttributeError:
-                exc_name = str(self.expected)
-            raise self.failureException(
-                "{0} not raised".format(exc_name))
-        if not issubclass(exc_type, self.expected):
-            # let unexpected exceptions pass through
-            return False
-        self.exception = exc_value # store for later retrieval
-        if self.expected_regexp is None:
-            return True
-
-        expected_regexp = self.expected_regexp
-        if isinstance(expected_regexp, basestring):
-            expected_regexp = re.compile(expected_regexp)
-        if not expected_regexp.search(str(exc_value)):
-            raise self.failureException('"%s" does not match "%s"' %
-                     (expected_regexp.pattern, str(exc_value)))
-        return True
 
 
 
@@ -186,48 +150,27 @@ class RequirementsTests(TestCase):
         supported by Twisted.
     @type supportedPythonVersion: C{tuple}
 
-    @ivar supportedZopeInterfaceVersion: The oldest version of C{zope.interface}
-        which is supported by Twisted.
+    @ivar Py3unsupportedPythonVersion: The newest version of Python 3.x which
+        is not supported by Twisted.
+    @type Py3unsupportedPythonVersion: C{tuple}
+
+    @ivar Py3supportedPythonVersion: The oldest version of Python 3.x which is
+        supported by Twisted.
+    @type supportedPythonVersion: C{tuple}
+
+    @ivar Py3supportedZopeInterfaceVersion: The oldest version of
+        C{zope.interface} which is supported by Twisted.
     @type supportedZopeInterfaceVersion: C{tuple}
     """
-    unsupportedPythonVersion = (2, 5)
-    supportedPythonVersion = (2, 6)
+    unsupportedPythonVersion = (2, 6)
+    supportedPythonVersion = (2, 7)
+    Py3unsupportedPythonVersion = (3, 2)
+    Py3supportedPythonVersion = (3, 3)
 
     if _PY3:
         supportedZopeInterfaceVersion = (4, 0, 0)
     else:
         supportedZopeInterfaceVersion = (3, 6, 0)
-
-    # Copied from 2.7 stdlib.  Delete after Python 2.6 is no longer a
-    # requirement.  See #5976.
-    def assertRaises(self, excClass, callableObj=None, *args, **kwargs):
-        """Fail unless an exception of class excClass is thrown
-           by callableObj when invoked with arguments args and keyword
-           arguments kwargs. If a different type of exception is
-           thrown, it will not be caught, and the test case will be
-           deemed to have suffered an error, exactly as for an
-           unexpected exception.
-
-           If called with callableObj omitted or None, will return a
-           context object used like this::
-
-                with self.assertRaises(SomeException):
-                    do_something()
-
-           The context manager keeps a reference to the exception as
-           the 'exception' attribute. This allows you to inspect the
-           exception after the assertion::
-
-               with self.assertRaises(SomeException) as cm:
-                   do_something()
-               the_exception = cm.exception
-               self.assertEqual(the_exception.error_code, 3)
-        """
-        context = _AssertRaisesContext(excClass, self)
-        if callableObj is None:
-            return context
-        with context:
-            callableObj(*args, **kwargs)
 
 
     def setUp(self):
@@ -253,9 +196,9 @@ class RequirementsTests(TestCase):
         sys.version_info = self.unsupportedPythonVersion
         with self.assertRaises(ImportError) as raised:
             _checkRequirements()
-        self.assertEqual(
-            "Twisted requires Python %d.%d or later." % self.supportedPythonVersion,
-            str(raised.exception))
+        self.assertEqual("Twisted requires Python %d.%d or later."
+                         % self.supportedPythonVersion,
+                         str(raised.exception))
 
 
     def test_newPython(self):
@@ -264,6 +207,28 @@ class RequirementsTests(TestCase):
         that is sufficiently new.
         """
         sys.version_info = self.supportedPythonVersion
+        self.assertEqual(None, _checkRequirements())
+
+
+    def test_oldPythonPy3(self):
+        """
+        L{_checkRequirements} raises L{ImportError} when run on a version of
+        Python that is too old.
+        """
+        sys.version_info = self.Py3unsupportedPythonVersion
+        with self.assertRaises(ImportError) as raised:
+            _checkRequirements()
+        self.assertEqual("Twisted on Python 3 requires Python %d.%d or later."
+                         % self.Py3supportedPythonVersion,
+                         str(raised.exception))
+
+
+    def test_newPythonPy3(self):
+        """
+        L{_checkRequirements} returns C{None} when run on a version of Python
+        that is sufficiently new.
+        """
+        sys.version_info = self.Py3supportedPythonVersion
         self.assertEqual(None, _checkRequirements())
 
 
@@ -634,13 +599,6 @@ class FakeZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
         _install(self.versions[version])
 
 
-# Python 2.6 stdlib unittest does not support skipping.  Use trial's
-# SynchronousTestCase instead.  When Python 2.6 support is dropped, this can
-# switch back to using the stdlib TestCase with its skip support.
-if sys.version_info[:2] == (2, 6):
-    from twisted.trial.unittest import SkipTest, SynchronousTestCase as TestCase
-else:
-    from unittest import SkipTest
 
 class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
     """
@@ -679,3 +637,66 @@ class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
                 pass
             else:
                 raise SkipTest("Mismatched system version of zope.interface")
+
+
+
+class OldSubprojectDeprecationBase(TestCase):
+    """
+    Base L{TestCase} for verifying each former subproject has a deprecated
+    C{__version__} and a removed C{_version.py}.
+    """
+    subproject = None
+
+    def test_deprecated(self):
+        """
+        The C{__version__} attribute of former subprojects is deprecated.
+        """
+        module = reflect.namedAny("twisted.{}".format(self.subproject))
+        self.assertEqual(module.__version__, twisted.__version__)
+
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "twisted.{}.__version__ was deprecated in Twisted 16.0.0: "
+            "Use twisted.__version__ instead.".format(self.subproject),
+            warningsShown[0]['message'])
+
+
+    def test_noversionpy(self):
+        """
+        Former subprojects no longer have an importable C{_version.py}.
+        """
+        with self.assertRaises(AttributeError):
+            reflect.namedAny(
+                "twisted.{}._version".format(self.subproject))
+
+
+if _PY3:
+    subprojects = ["conch", "web", "names"]
+else:
+    subprojects = ["mail", "conch", "runner", "web", "words", "names", "news",
+                   "pair"]
+
+for subproject in subprojects:
+
+    class SubprojectTestCase(OldSubprojectDeprecationBase):
+        """
+        See L{OldSubprojectDeprecationBase}.
+        """
+        subproject = subproject
+
+    newName = subproject.title() + "VersionDeprecationTests"
+
+    SubprojectTestCase.__name__ = newName
+    if _PY3:
+        SubprojectTestCase.__qualname__= ".".join(
+            OldSubprojectDeprecationBase.__qualname__.split()[0:-1] +
+            [newName])
+
+    globals().update({subproject.title() +
+                      "VersionDeprecationTests": SubprojectTestCase})
+
+    del SubprojectTestCase
+    del newName
+
+del OldSubprojectDeprecationBase

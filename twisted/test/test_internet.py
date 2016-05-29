@@ -786,7 +786,7 @@ class TimeTests(unittest.TestCase):
     def testCallLaterTime(self):
         d = reactor.callLater(10, lambda: None)
         try:
-            self.failUnless(d.getTime() - (time.time() + 10) < 1)
+            self.assertTrue(d.getTime() - (time.time() + 10) < 1)
         finally:
             d.cancel()
 
@@ -895,7 +895,8 @@ class DelayedTests(unittest.TestCase):
                 missing.append(dc)
         if missing:
             self.finished = 1
-        self.failIf(missing, "Should have been missing no calls, instead was missing " + repr(missing))
+        self.assertFalse(missing, "Should have been missing no calls, instead "
+                         + "was missing " + repr(missing))
 
     def callback(self, tag):
         del self.timers[tag]
@@ -1371,27 +1372,3 @@ class PortStringificationTests(unittest.TestCase):
 
         if _PY3:
             testSSL.skip = ("Re-enable once the Python 3 SSL port is done.")
-
-
-
-class IStreamClientEndpointStringParserTests(unittest.TestCase):
-    """
-    Tests for L{twisted.internet.interfaces.IStreamClientEndpointStringParser}.
-    """
-    def test_deprecated(self):
-        """
-        Accessing L{IStreamClientEndpointStringParser} via the
-        I{IStreamClientEndpointStringParser} attribute of
-        L{twisted.internet.interfaces} results in a deprecation warning being
-        emitted.
-        """
-        interfaces.IStreamClientEndpointStringParser
-
-        warnings = self.flushWarnings([self.test_deprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "twisted.internet.interfaces.IStreamClientEndpointStringParser "
-            "was deprecated in Twisted 14.0.0: This interface has been "
-            "superseded by IStreamClientEndpointStringParserWithReactor.")
-        self.assertEqual(len(warnings), 1)

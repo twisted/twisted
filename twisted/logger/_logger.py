@@ -256,3 +256,8 @@ class Logger(object):
             later execution.
         """
         self.emit(LogLevel.critical, format, **kwargs)
+
+
+
+_log = Logger()
+_loggerFor = lambda obj:_log.__get__(obj, obj.__class__)

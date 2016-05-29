@@ -130,7 +130,7 @@ class MicroDOMTests(TestCase):
             """
         d = microdom.parseString(s, beExtremelyLenient=1)
         n = domhelpers.gatherTextNodes(d)
-        self.assertNotEquals(n.find('>'), -1)
+        self.assertNotEqual(n.find('>'), -1)
 
     def testEmptyError(self):
         self.assertRaises(sux.ParseError, microdom.parseString, "")
@@ -227,7 +227,7 @@ alert("I hate you");
         self.assert_(d2.isEqualToDocument(d3), "%r != %r" % (d2.toxml(), d3.toxml()))
         # caseInsensitive=0 on the left, NOT perserveCase=1 on the right
         ## XXX THIS TEST IS TURNED OFF UNTIL SOMEONE WHO CARES ABOUT FIXING IT DOES
-        #self.failIf(d3.isEqualToDocument(d2), "%r == %r" % (d3.toxml(), d2.toxml()))
+        #self.assertFalse(d3.isEqualToDocument(d2), "%r == %r" % (d3.toxml(), d2.toxml()))
         self.assert_(d3.isEqualToDocument(d4), "%r != %r" % (d3.toxml(), d4.toxml()))
         self.assert_(d4.isEqualToDocument(d5), "%r != %r" % (d4.toxml(), d5.toxml()))
 
@@ -400,8 +400,8 @@ alert("I hate you");
         self.assertEqual(d.doctype,
                           'foo PUBLIC "baz" "http://www.example.com/example.dtd"')
         self.assertEqual(d.toxml(), s)
-        self.failIf(d.isEqualToDocument(d2))
-        self.failUnless(d.documentElement.isEqualToNode(d2.documentElement))
+        self.assertFalse(d.isEqualToDocument(d2))
+        self.assertTrue(d.documentElement.isEqualToNode(d2.documentElement))
 
     samples = [("<img/>", "<img />"),
                ("<foo A='b'>x</foo>", '<foo A="b">x</foo>'),
@@ -437,19 +437,19 @@ alert("I hate you");
         self.assertRaises(microdom.MismatchedTags, microdom.parseString,
             s, caseInsensitive=0)
         self.assertEqual(out, s2)
-        self.failUnless(d.isEqualToDocument(d2))
-        self.failUnless(d.isEqualToDocument(d3))
-        self.failUnless(d4.documentElement.hasAttribute('a'))
-        self.failIf(d6.documentElement.hasAttribute('a'))
+        self.assertTrue(d.isEqualToDocument(d2))
+        self.assertTrue(d.isEqualToDocument(d3))
+        self.assertTrue(d4.documentElement.hasAttribute('a'))
+        self.assertFalse(d6.documentElement.hasAttribute('a'))
         self.assertEqual(d4.documentElement.toxml(), '<foo A="b">x</foo>')
         self.assertEqual(d5.documentElement.toxml(), '<foo a="b">x</foo>')
     def testEatingWhitespace(self):
         s = """<hello>
         </hello>"""
         d = microdom.parseString(s)
-        self.failUnless(not d.documentElement.hasChildNodes(),
+        self.assertTrue(not d.documentElement.hasChildNodes(),
                         d.documentElement.childNodes)
-        self.failUnless(d.isEqualToDocument(microdom.parseString('<hello></hello>')))
+        self.assertTrue(d.isEqualToDocument(microdom.parseString('<hello></hello>')))
 
     def testLenientAmpersand(self):
         prefix = "<?xml version='1.0'?>"
@@ -575,8 +575,8 @@ alert("I hate you");
         self.assertEqual(len(node.childNodes), len(clone.childNodes))
         self.assertEqual(s, clone.toxml())
 
-        self.failUnless(clone.isEqualToDocument(node))
-        self.failUnless(node.isEqualToDocument(clone))
+        self.assertTrue(clone.isEqualToDocument(node))
+        self.assertTrue(node.isEqualToDocument(clone))
 
 
     def testLMX(self):
@@ -787,7 +787,7 @@ class BrokenHTMLTests(TestCase):
         The important thing is that it doesn't raise an exception.
         """
         input = '<body><h1><div al!\n ign="center">Foo</div></h1></body>'
-        expected = ('<body><h1><div ign="center" al="True">'
+        expected = ('<body><h1><div al="True" ign="center">'
                     'Foo</div></h1></body>')
         self.checkParsed(input, expected)
 

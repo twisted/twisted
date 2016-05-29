@@ -1,14 +1,14 @@
+# -*- test-case-name: twisted.runner.test.test_inetdconf -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
 """
 Parser for inetd.conf files
-
-Maintainer: Andrew Bennetts
-
-Future Plans: xinetd configuration file support?
 """
+
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
+
 
 # Various exceptions
 class InvalidConfError(Exception):
@@ -23,8 +23,16 @@ class InvalidServicesConfError(InvalidConfError):
     """Invalid services file"""
 
 
+
 class InvalidRPCServicesConfError(InvalidConfError):
-    """Invalid rpc services file"""
+    """
+    DEPRECATED. Invalid rpc services file
+    """
+    deprecatedModuleAttribute(
+        Version("Twisted", 16, 2, 0),
+        "The RPC service configuration is no longer maintained.",
+        __name__, "InvalidRPCServicesConfError")
+
 
 
 class UnknownService(Exception):
@@ -76,7 +84,7 @@ class SimpleConfFile:
         try:
             self.parseFields(*line.split())
         except ValueError:
-            raise InvalidInetdConfError, 'Invalid line: ' + repr(line)
+            raise InvalidInetdConfError('Invalid line: ' + repr(line))
     
     def parseFields(self, *fields):
         """Override this."""
@@ -138,8 +146,8 @@ class InetdConf(SimpleConfFile):
                 port = int(serviceName)
                 serviceName = 'unknown'
             except:
-                raise UnknownService, "Unknown service: %s (%s)" \
-                      % (serviceName, protocol)
+                raise UnknownService("Unknown service: %s (%s)" % (
+                    serviceName, protocol))
 
         self.services.append(InetdService(serviceName, port, socketType,
                                           protocol, wait, user, group, program,
@@ -162,31 +170,38 @@ class ServicesConf(SimpleConfFile):
             port, protocol = portAndProtocol.split('/')
             port = long(port)
         except:
-            raise InvalidServicesConfError, 'Invalid port/protocol:' + \
-                                            repr(portAndProtocol)
+            raise InvalidServicesConfError(
+                'Invalid port/protocol: %s' % (repr(portAndProtocol),))
 
         self.services[(name, protocol)] = port
         for alias in aliases:
             self.services[(alias, protocol)] = port
 
 
+
 class RPCServicesConf(SimpleConfFile):
-    """/etc/rpc parser
+    """
+    DEPRECATED. /etc/rpc parser
 
     @ivar self.services: dict mapping rpc service names to rpc ports.
     """
+    deprecatedModuleAttribute(
+        Version("Twisted", 16, 2, 0),
+        "The RPC service configuration is no longer maintained.",
+        __name__, "RPCServicesConf")
 
     defaultFilename = '/etc/rpc'
 
     def __init__(self):
         self.services = {}
-    
+
     def parseFields(self, name, port, *aliases):
         try:
             port = long(port)
         except:
-            raise InvalidRPCServicesConfError, 'Invalid port:' + repr(port)
-                        
+            raise InvalidRPCServicesConfError(
+                'Invalid port: %s' % (repr(port),))
+
         self.services[name] = port
         for alias in aliases:
             self.services[alias] = port

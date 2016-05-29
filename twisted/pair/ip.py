@@ -40,9 +40,9 @@ class IPProtocol(protocol.AbstractDatagramProtocol):
     def addProto(self, num, proto):
         proto = raw.IRawDatagramProtocol(proto)
         if num < 0:
-            raise TypeError, 'Added protocol must be positive or zero'
+            raise TypeError('Added protocol must be positive or zero')
         if num >= MAX_SIZE:
-            raise TypeError, 'Added protocol must fit in 32 bits'
+            raise TypeError('Added protocol must fit in 32 bits')
         if num not in self.ipProtos:
             self.ipProtos[num] = []
         self.ipProtos[num].append(proto)

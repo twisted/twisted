@@ -8,24 +8,27 @@ Tests for L{twisted.web.wsgi}.
 __metaclass__ = type
 
 from sys import exc_info
-from urllib import quote
-from thread import get_ident
-import StringIO, cStringIO, tempfile
+import tempfile
+import traceback
+import warnings
 
 from zope.interface.verify import verifyObject
 
+from twisted.python.compat import intToBytes, urlquote, _PY3
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
+from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet import reactor
 from twisted.internet.error import ConnectionLost
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SkipTest
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
 from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
+
 
 
 class SynchronousThreadPool:
@@ -96,11 +99,11 @@ class WSGIResourceTests(TestCase):
         self.assertRaises(
             RuntimeError,
             self.resource.getChildWithDefault,
-            "foo", Request(DummyChannel(), False))
+            b"foo", Request(DummyChannel(), False))
         self.assertRaises(
             RuntimeError,
             self.resource.putChild,
-            "foo", Resource())
+            b"foo", Resource())
 
 
 class WSGITestsMixin:
@@ -146,28 +149,40 @@ class WSGITestsMixin:
             object for this configuration and request (ie, the environment and
             start_response callable).
         """
+        def _toByteString(string):
+            # Twisted's HTTP implementation prefers byte strings. As a
+            # convenience for tests, string arguments are encoded to an
+            # ISO-8859-1 byte string (if not already) before being passed on.
+            if isinstance(string, bytes):
+                return string
+            else:
+                return string.encode('iso-8859-1')
+
         root = WSGIResource(
             self.reactor, self.threadpool, applicationFactory())
         resourceSegments.reverse()
         for seg in resourceSegments:
             tmp = Resource()
-            tmp.putChild(seg, root)
+            tmp.putChild(_toByteString(seg), root)
             root = tmp
 
         channel = channelFactory()
         channel.site = Site(root)
         request = requestFactory(channel, False)
         for k, v in headers:
-            request.requestHeaders.addRawHeader(k, v)
+            request.requestHeaders.addRawHeader(
+                _toByteString(k), _toByteString(v))
         request.gotLength(0)
         if body:
             request.content.write(body)
             request.content.seek(0)
-        uri = '/' + '/'.join([quote(seg, safe) for seg in requestSegments])
+        uri = '/' + '/'.join([urlquote(seg, safe) for seg in requestSegments])
         if query is not None:
-            uri += '?' + '&'.join(['='.join([quote(k, safe), quote(v, safe)])
+            uri += '?' + '&'.join(['='.join([urlquote(k, safe), urlquote(v, safe)])
                                    for (k, v) in query])
-        request.requestReceived(method, uri, 'HTTP/' + version)
+        request.requestReceived(
+            _toByteString(method), _toByteString(uri),
+            b'HTTP/' + _toByteString(version))
         return request
 
 
@@ -199,7 +214,66 @@ class WSGITestsMixin:
 
 
     def getContentFromResponse(self, response):
-        return response.split('\r\n\r\n', 1)[1]
+        return response.split(b'\r\n\r\n', 1)[1]
+
+
+    def prepareRequest(self, application=None):
+        """
+        Prepare a L{Request} which, when a request is received, captures the
+        C{environ} and C{start_response} callable passed to a WSGI app.
+
+        @param application: An optional WSGI application callable that accepts
+            the familiar C{environ} and C{start_response} args and returns an
+            iterable of body content. If not supplied, C{start_response} will
+            be called with a "200 OK" status and no headers, and no content
+            will be yielded.
+
+        @return: A two-tuple of (C{request}, C{deferred}). The former is a
+            Twisted L{Request}. The latter is a L{Deferred} which will be
+            called back with a two-tuple of the arguments passed to a WSGI
+            application (i.e. the C{environ} and C{start_response} callable),
+            or will errback with any error arising within the WSGI app.
+        """
+        result = Deferred()
+
+        def outerApplication(environ, startResponse):
+            try:
+                if application is None:
+                    startResponse('200 OK', [])
+                    content = iter(())  # No content.
+                else:
+                    content = application(environ, startResponse)
+            except:
+                result.errback()
+                startResponse('500 Error', [])
+                return iter(())
+            else:
+                result.callback((environ, startResponse))
+                return content
+
+        resource = WSGIResource(
+            self.reactor, self.threadpool, outerApplication)
+
+        root = Resource()
+        root.putChild(b"res", resource)
+
+        channel = self.channelFactory()
+        channel.site = Site(root)
+
+        class CannedRequest(Request):
+            """
+            Convenient L{Request} derivative which has canned values for all
+            of C{requestReceived}'s arguments.
+            """
+            def requestReceived(
+                    self, command=b"GET", path=b"/res", version=b"1.1"):
+                return Request.requestReceived(
+                    self, command=command, path=path, version=version)
+
+        request = CannedRequest(channel, queued=False)
+        request.gotLength(0)  # Initialize buffer for request body.
+
+        return request, result
 
 
 
@@ -209,8 +283,10 @@ class EnvironTests(WSGITestsMixin, TestCase):
     object by L{twisted.web.wsgi.WSGIResource}.
     """
     def environKeyEqual(self, key, value):
-        def assertEnvironKeyEqual((environ, startResponse)):
+        def assertEnvironKeyEqual(result):
+            environ, startResponse = result
             self.assertEqual(environ[key], value)
+            return value
         return assertEnvironKeyEqual
 
 
@@ -220,8 +296,12 @@ class EnvironTests(WSGITestsMixin, TestCase):
         parameter which is exactly of type C{dict}.
         """
         d = self.render('GET', '1.1', [], [''])
-        def cbRendered((environ, startResponse)):
+        def cbRendered(result):
+            environ, startResponse = result
             self.assertIdentical(type(environ), dict)
+            # Environment keys are always native strings.
+            for name in environ:
+                self.assertIsInstance(name, str)
         d.addCallback(cbRendered)
         return d
 
@@ -241,6 +321,18 @@ class EnvironTests(WSGITestsMixin, TestCase):
         post.addCallback(self.environKeyEqual('REQUEST_METHOD', 'POST'))
 
         return gatherResults([get, post])
+
+
+    def test_requestMethodIsNativeString(self):
+        """
+        The C{'REQUEST_METHOD'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        for method in b"GET", u"GET":
+            request, result = self.prepareRequest()
+            request.requestReceived(method)
+            result.addCallback(self.environKeyEqual('REQUEST_METHOD', 'GET'))
+            self.assertIsInstance(self.successResultOf(result), str)
 
 
     def test_scriptName(self):
@@ -265,7 +357,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         internal.addCallback(self.environKeyEqual('SCRIPT_NAME', '/foo'))
 
         unencoded = self.render(
-            'GET', '1.1', ['foo', '/', 'bar\xff'], ['foo', '/', 'bar\xff'])
+            'GET', '1.1', ['foo', '/', b'bar\xff'], ['foo', '/', b'bar\xff'])
         # The RFC says "(not URL-encoded)", even though that makes
         # interpretation of SCRIPT_NAME ambiguous.
         unencoded.addCallback(
@@ -273,6 +365,28 @@ class EnvironTests(WSGITestsMixin, TestCase):
 
         return gatherResults([
                 root, emptyChild, leaf, container, internal, unencoded])
+
+
+    def test_scriptNameIsNativeString(self):
+        """
+        The C{'SCRIPT_NAME'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        request, result = self.prepareRequest()
+        request.requestReceived(path=b"/res")
+        result.addCallback(self.environKeyEqual('SCRIPT_NAME', '/res'))
+        self.assertIsInstance(self.successResultOf(result), str)
+
+        if _PY3:
+            # Native strings are rejected by Request.requestReceived() before
+            # t.w.wsgi has any say in the matter.
+            request, result = self.prepareRequest()
+            self.assertRaises(TypeError, request.requestReceived, path=u"/res")
+        else:
+            request, result = self.prepareRequest()
+            request.requestReceived(path=u"/res")
+            result.addCallback(self.environKeyEqual('SCRIPT_NAME', '/res'))
+            self.assertIsInstance(self.successResultOf(result), str)
 
 
     def test_pathInfo(self):
@@ -302,13 +416,36 @@ class EnvironTests(WSGITestsMixin, TestCase):
         internalContainer = self.render('GET', '1.1', ['foo'], ['foo', ''])
         internalContainer.addCallback(self.environKeyEqual('PATH_INFO', '/'))
 
-        unencoded = self.render('GET', '1.1', [], ['foo', '/', 'bar\xff'])
+        unencoded = self.render('GET', '1.1', [], ['foo', '/', b'bar\xff'])
         unencoded.addCallback(
             self.environKeyEqual('PATH_INFO', '/foo///bar\xff'))
 
         return gatherResults([
                 root, leaf, container, internalLeaf,
                 internalContainer, unencoded])
+
+
+    def test_pathInfoIsNativeString(self):
+        """
+        The C{'PATH_INFO'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        request, result = self.prepareRequest()
+        request.requestReceived(path=b"/res/foo/bar")
+        result.addCallback(self.environKeyEqual('PATH_INFO', '/foo/bar'))
+        self.assertIsInstance(self.successResultOf(result), str)
+
+        if _PY3:
+            # Native strings are rejected by Request.requestReceived() before
+            # t.w.wsgi has any say in the matter.
+            request, result = self.prepareRequest()
+            self.assertRaises(
+                TypeError, request.requestReceived, path=u"/res/foo/bar")
+        else:
+            request, result = self.prepareRequest()
+            request.requestReceived(path=u"/res/foo/bar")
+            result.addCallback(self.environKeyEqual('PATH_INFO', '/foo/bar'))
+            self.assertIsInstance(self.successResultOf(result), str)
 
 
     def test_queryString(self):
@@ -341,6 +478,29 @@ class EnvironTests(WSGITestsMixin, TestCase):
             missing, empty, present, unencoded, doubleQuestion])
 
 
+    def test_queryStringIsNativeString(self):
+        """
+        The C{'QUERY_STRING'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        request, result = self.prepareRequest()
+        request.requestReceived(path=b"/res?foo=bar")
+        result.addCallback(self.environKeyEqual('QUERY_STRING', 'foo=bar'))
+        self.assertIsInstance(self.successResultOf(result), str)
+
+        if _PY3:
+            # Native strings are rejected by Request.requestReceived() before
+            # t.w.wsgi has any say in the matter.
+            request, result = self.prepareRequest()
+            self.assertRaises(
+                TypeError, request.requestReceived, path=u"/res?foo=bar")
+        else:
+            request, result = self.prepareRequest()
+            request.requestReceived(path=u"/res?foo=bar")
+            result.addCallback(self.environKeyEqual('QUERY_STRING', 'foo=bar'))
+            self.assertIsInstance(self.successResultOf(result), str)
+
+
     def test_contentType(self):
         """
         The C{'CONTENT_TYPE'} key of the C{environ} C{dict} passed to the
@@ -357,6 +517,19 @@ class EnvironTests(WSGITestsMixin, TestCase):
         return gatherResults([missing, present])
 
 
+    def test_contentTypeIsNativeString(self):
+        """
+        The C{'CONTENT_TYPE'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        for contentType in b"x-foo/bar", u"x-foo/bar":
+            request, result = self.prepareRequest()
+            request.requestHeaders.addRawHeader(b"Content-Type", contentType)
+            request.requestReceived()
+            result.addCallback(self.environKeyEqual('CONTENT_TYPE', 'x-foo/bar'))
+            self.assertIsInstance(self.successResultOf(result), str)
+
+
     def test_contentLength(self):
         """
         The C{'CONTENT_LENGTH'} key of the C{environ} C{dict} passed to the
@@ -371,6 +544,19 @@ class EnvironTests(WSGITestsMixin, TestCase):
         present.addCallback(self.environKeyEqual('CONTENT_LENGTH', '1234'))
 
         return gatherResults([missing, present])
+
+
+    def test_contentLengthIsNativeString(self):
+        """
+        The C{'CONTENT_LENGTH'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        for contentLength in b"1234", u"1234":
+            request, result = self.prepareRequest()
+            request.requestHeaders.addRawHeader(b"Content-Length", contentLength)
+            request.requestReceived()
+            result.addCallback(self.environKeyEqual('CONTENT_LENGTH', '1234'))
+            self.assertIsInstance(self.successResultOf(result), str)
 
 
     def test_serverName(self):
@@ -393,6 +579,22 @@ class EnvironTests(WSGITestsMixin, TestCase):
         return gatherResults([missing, present])
 
 
+    def test_serverNameIsNativeString(self):
+        """
+        The C{'SERVER_NAME'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        for serverName in b"host.example.com", u"host.example.com":
+            request, result = self.prepareRequest()
+            # This is kind of a cheat; getRequestHostname() breaks in Python 3
+            # when the "Host" request header is set to a native string because
+            # it tries to split around b":", so we patch the method.
+            request.getRequestHostname = lambda: serverName
+            request.requestReceived()
+            result.addCallback(self.environKeyEqual('SERVER_NAME', 'host.example.com'))
+            self.assertIsInstance(self.successResultOf(result), str)
+
+
     def test_serverPort(self):
         """
         The C{'SERVER_PORT'} key of the C{environ} C{dict} passed to the
@@ -412,6 +614,17 @@ class EnvironTests(WSGITestsMixin, TestCase):
         return d
 
 
+    def test_serverPortIsNativeString(self):
+        """
+        The C{'SERVER_PORT'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        request, result = self.prepareRequest()
+        request.requestReceived()
+        result.addCallback(self.environKeyEqual('SERVER_PORT', '80'))
+        self.assertIsInstance(self.successResultOf(result), str)
+
+
     def test_serverProtocol(self):
         """
         The C{'SERVER_PROTOCOL'} key of the C{environ} C{dict} passed to the
@@ -425,6 +638,22 @@ class EnvironTests(WSGITestsMixin, TestCase):
         new.addCallback(self.environKeyEqual('SERVER_PROTOCOL', 'HTTP/1.1'))
 
         return gatherResults([old, new])
+
+
+    def test_serverProtocolIsNativeString(self):
+        """
+        The C{'SERVER_PROTOCOL'} key of the C{environ} C{dict} passed to the
+        application is always a native string.
+        """
+        for serverProtocol in b"1.1", u"1.1":
+            request, result = self.prepareRequest()
+            # In Python 3, native strings can be rejected by Request.write()
+            # which will cause a crash after the bit we're trying to test, so
+            # we patch write() out here to do nothing.
+            request.write = lambda data: None
+            request.requestReceived(version=b"1.1")
+            result.addCallback(self.environKeyEqual('SERVER_PROTOCOL', '1.1'))
+            self.assertIsInstance(self.successResultOf(result), str)
 
 
     def test_remoteAddr(self):
@@ -444,7 +673,8 @@ class EnvironTests(WSGITestsMixin, TestCase):
         """
         singleValue = self.render(
             'GET', '1.1', [], [''], None, [('foo', 'bar'), ('baz', 'quux')])
-        def cbRendered((environ, startResponse)):
+        def cbRendered(result):
+            environ, startResponse = result
             self.assertEqual(environ['HTTP_FOO'], 'bar')
             self.assertEqual(environ['HTTP_BAZ'], 'quux')
         singleValue.addCallback(cbRendered)
@@ -541,7 +771,8 @@ class EnvironTests(WSGITestsMixin, TestCase):
         self.addCleanup(removeObserver, events.append)
 
         errors = self.render('GET', '1.1', [], [''])
-        def cbErrors((environ, startApplication)):
+        def cbErrors(result):
+            environ, startApplication = result
             errors = environ['wsgi.errors']
             errors.write('some message\n')
             errors.writelines(['another\nmessage\n'])
@@ -555,6 +786,51 @@ class EnvironTests(WSGITestsMixin, TestCase):
             self.assertEqual(len(events), 2)
         errors.addCallback(cbErrors)
         return errors
+
+
+    def test_wsgiErrorsExpectsOnlyNativeStringsInPython2(self):
+        """
+        The C{'wsgi.errors'} file-like object from the C{environ} C{dict}
+        expects writes of only native strings in Python 2. Some existing WSGI
+        applications may write non-native (i.e. C{unicode}) strings so, for
+        compatibility, these elicit only a warning in Python 2.
+        """
+        if _PY3:
+            raise SkipTest("Not relevant in Python 3")
+
+        request, result = self.prepareRequest()
+        request.requestReceived()
+        environ, _ = self.successResultOf(result)
+        errors = environ["wsgi.errors"]
+
+        with warnings.catch_warnings(record=True) as caught:
+            errors.write(u"fred")
+        self.assertEqual(1, len(caught))
+        self.assertEqual(UnicodeWarning, caught[0].category)
+        self.assertEqual(
+            "write() argument should be str, not u'fred' (unicode)",
+            str(caught[0].message))
+
+
+    def test_wsgiErrorsAcceptsOnlyNativeStringsInPython3(self):
+        """
+        The C{'wsgi.errors'} file-like object from the C{environ} C{dict}
+        permits writes of only native strings in Python 3, and raises
+        C{TypeError} for writes of non-native strings.
+        """
+        if not _PY3:
+            raise SkipTest("Relevant only in Python 3")
+
+        request, result = self.prepareRequest()
+        request.requestReceived()
+        environ, _ = self.successResultOf(result)
+        errors = environ["wsgi.errors"]
+
+        error = self.assertRaises(TypeError, errors.write, b"fred")
+        self.assertEqual(
+            "write() argument must be str, not b'fred' (bytes)",
+            str(error))
+
 
 
 class InputStreamTestMixin(WSGITestsMixin):
@@ -600,7 +876,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.read} with no arguments returns the entire input
         stream.
         """
-        bytes = "some bytes are here"
+        bytes = b"some bytes are here"
         d = self._renderAndReturnReaderResult(lambda input: input.read(), bytes)
         d.addCallback(self.assertEqual, bytes)
         return d
@@ -612,9 +888,9 @@ class InputStreamTestMixin(WSGITestsMixin):
         from the input stream, as long as it is less than or equal to the total
         number of bytes available.
         """
-        bytes = "hello, world."
+        bytes = b"hello, world."
         d = self._renderAndReturnReaderResult(lambda input: input.read(3), bytes)
-        d.addCallback(self.assertEqual, "hel")
+        d.addCallback(self.assertEqual, b"hel")
         return d
 
 
@@ -624,7 +900,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         total number of bytes in the input stream returns all bytes in the
         input stream.
         """
-        bytes = "some bytes are here"
+        bytes = b"some bytes are here"
         d = self._renderAndReturnReaderResult(
             lambda input: input.read(len(bytes) + 3), bytes)
         d.addCallback(self.assertEqual, bytes)
@@ -636,7 +912,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.read} a second time returns bytes starting from
         the position after the last byte returned by the previous read.
         """
-        bytes = "some bytes, hello"
+        bytes = b"some bytes, hello"
         def read(input):
             input.read(3)
             return input.read()
@@ -650,7 +926,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.read} with C{None} as an argument returns all
         bytes in the input stream.
         """
-        bytes = "the entire stream"
+        bytes = b"the entire stream"
         d = self._renderAndReturnReaderResult(
             lambda input: input.read(None), bytes)
         d.addCallback(self.assertEqual, bytes)
@@ -662,7 +938,7 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.read} with a negative integer as an argument
         returns all bytes in the input stream.
         """
-        bytes = "all of the input"
+        bytes = b"all of the input"
         d = self._renderAndReturnReaderResult(
             lambda input: input.read(-1), bytes)
         d.addCallback(self.assertEqual, bytes)
@@ -674,10 +950,10 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.readline} with no argument returns one line from
         the input stream.
         """
-        bytes = "hello\nworld"
+        bytes = b"hello\nworld"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(), bytes)
-        d.addCallback(self.assertEqual, "hello\n")
+        d.addCallback(self.assertEqual, b"hello\n")
         return d
 
 
@@ -692,10 +968,10 @@ class InputStreamTestMixin(WSGITestsMixin):
         supports readline with a size argument. If you use it, be aware your
         application may not be portable to other conformant WSGI servers.
         """
-        bytes = "goodbye\nworld"
+        bytes = b"goodbye\nworld"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(3), bytes)
-        d.addCallback(self.assertEqual, "goo")
+        d.addCallback(self.assertEqual, b"goo")
         return d
 
 
@@ -704,10 +980,10 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.readline} with an integer which is greater than
         the number of bytes in the next line returns only the next line.
         """
-        bytes = "some lines\nof text"
+        bytes = b"some lines\nof text"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(20), bytes)
-        d.addCallback(self.assertEqual, "some lines\n")
+        d.addCallback(self.assertEqual, b"some lines\n")
         return d
 
 
@@ -716,12 +992,12 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.readline} a second time returns the line
         following the line returned by the first call.
         """
-        bytes = "first line\nsecond line\nlast line"
+        bytes = b"first line\nsecond line\nlast line"
         def readline(input):
             input.readline()
             return input.readline()
         d = self._renderAndReturnReaderResult(readline, bytes)
-        d.addCallback(self.assertEqual, "second line\n")
+        d.addCallback(self.assertEqual, b"second line\n")
         return d
 
 
@@ -730,10 +1006,10 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.readline} with C{None} as an argument returns
         one line from the input stream.
         """
-        bytes = "this is one line\nthis is another line"
+        bytes = b"this is one line\nthis is another line"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(None), bytes)
-        d.addCallback(self.assertEqual, "this is one line\n")
+        d.addCallback(self.assertEqual, b"this is one line\n")
         return d
 
 
@@ -742,10 +1018,10 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.readline} with a negative integer as an argument
         returns one line from the input stream.
         """
-        bytes = "input stream line one\nline two"
+        bytes = b"input stream line one\nline two"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readline(-1), bytes)
-        d.addCallback(self.assertEqual, "input stream line one\n")
+        d.addCallback(self.assertEqual, b"input stream line one\n")
         return d
 
 
@@ -754,10 +1030,10 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.readlines} with no arguments returns a list of
         all lines from the input stream.
         """
-        bytes = "alice\nbob\ncarol"
+        bytes = b"alice\nbob\ncarol"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(), bytes)
-        d.addCallback(self.assertEqual, ["alice\n", "bob\n", "carol"])
+        d.addCallback(self.assertEqual, [b"alice\n", b"bob\n", b"carol"])
         return d
 
 
@@ -767,13 +1043,13 @@ class InputStreamTestMixin(WSGITestsMixin):
         returns a list of lines from the input stream with the argument serving
         as an approximate bound on the total number of bytes to read.
         """
-        bytes = "123\n456\n789\n0"
+        bytes = b"123\n456\n789\n0"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(5), bytes)
         def cbLines(lines):
             # Make sure we got enough lines to make 5 bytes.  Anything beyond
             # that is fine too.
-            self.assertEqual(lines[:2], ["123\n", "456\n"])
+            self.assertEqual(lines[:2], [b"123\n", b"456\n"])
         d.addCallback(cbLines)
         return d
 
@@ -784,12 +1060,12 @@ class InputStreamTestMixin(WSGITestsMixin):
         the total number of bytes in the input stream returns a list of all
         lines from the input.
         """
-        bytes = "one potato\ntwo potato\nthree potato"
+        bytes = b"one potato\ntwo potato\nthree potato"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(100), bytes)
         d.addCallback(
             self.assertEqual,
-            ["one potato\n", "two potato\n", "three potato"])
+            [b"one potato\n", b"two potato\n", b"three potato"])
         return d
 
 
@@ -799,12 +1075,12 @@ class InputStreamTestMixin(WSGITestsMixin):
         returns lines starting at the byte after the last byte returned by the
         C{read} call.
         """
-        bytes = "hello\nworld\nfoo"
+        bytes = b"hello\nworld\nfoo"
         def readlines(input):
             input.read(7)
             return input.readlines()
         d = self._renderAndReturnReaderResult(readlines, bytes)
-        d.addCallback(self.assertEqual, ["orld\n", "foo"])
+        d.addCallback(self.assertEqual, [b"orld\n", b"foo"])
         return d
 
 
@@ -813,10 +1089,10 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.readlines} with C{None} as an argument returns
         all lines from the input.
         """
-        bytes = "one fish\ntwo fish\n"
+        bytes = b"one fish\ntwo fish\n"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(None), bytes)
-        d.addCallback(self.assertEqual, ["one fish\n", "two fish\n"])
+        d.addCallback(self.assertEqual, [b"one fish\n", b"two fish\n"])
         return d
 
 
@@ -825,10 +1101,10 @@ class InputStreamTestMixin(WSGITestsMixin):
         Calling L{_InputStream.readlines} with a negative integer as an
         argument returns a list of all lines from the input.
         """
-        bytes = "red fish\nblue fish\n"
+        bytes = b"red fish\nblue fish\n"
         d = self._renderAndReturnReaderResult(
             lambda input: input.readlines(-1), bytes)
-        d.addCallback(self.assertEqual, ["red fish\n", "blue fish\n"])
+        d.addCallback(self.assertEqual, [b"red fish\n", b"blue fish\n"])
         return d
 
 
@@ -836,9 +1112,9 @@ class InputStreamTestMixin(WSGITestsMixin):
         """
         Iterating over L{_InputStream} produces lines from the input stream.
         """
-        bytes = "green eggs\nand ham\n"
+        bytes = b"green eggs\nand ham\n"
         d = self._renderAndReturnReaderResult(lambda input: list(input), bytes)
-        d.addCallback(self.assertEqual, ["green eggs\n", "and ham\n"])
+        d.addCallback(self.assertEqual, [b"green eggs\n", b"and ham\n"])
         return d
 
 
@@ -848,22 +1124,30 @@ class InputStreamTestMixin(WSGITestsMixin):
         produces lines from the input stream starting from the first byte after
         the last byte returned by the C{read} call.
         """
-        bytes = "green eggs\nand ham\n"
+        bytes = b"green eggs\nand ham\n"
         def iterate(input):
             input.read(3)
             return list(input)
         d = self._renderAndReturnReaderResult(iterate, bytes)
-        d.addCallback(self.assertEqual, ["en eggs\n", "and ham\n"])
+        d.addCallback(self.assertEqual, [b"en eggs\n", b"and ham\n"])
         return d
 
 
 
 class InputStreamStringIOTests(InputStreamTestMixin, TestCase):
     """
-    Tests for L{_InputStream} when it is wrapped around a L{StringIO.StringIO}.
+    Tests for L{_InputStream} when it is wrapped around a
+    L{StringIO.StringIO}.
+
+    This is only available in Python 2.
     """
     def getFileType(self):
-        return StringIO.StringIO
+        try:
+            from StringIO import StringIO
+        except ImportError:
+            raise SkipTest("StringIO.StringIO is not available.")
+        else:
+            return StringIO
 
 
 
@@ -871,9 +1155,26 @@ class InputStreamCStringIOTests(InputStreamTestMixin, TestCase):
     """
     Tests for L{_InputStream} when it is wrapped around a
     L{cStringIO.StringIO}.
+
+    This is only available in Python 2.
     """
     def getFileType(self):
-        return cStringIO.StringIO
+        try:
+            from cStringIO import StringIO
+        except ImportError:
+            raise SkipTest("cStringIO.StringIO is not available.")
+        else:
+            return StringIO
+
+
+
+class InputStreamBytesIOTests(InputStreamTestMixin, TestCase):
+    """
+    Tests for L{_InputStream} when it is wrapped around an L{io.BytesIO}.
+    """
+    def getFileType(self):
+        from io import BytesIO
+        return BytesIO
 
 
 
@@ -908,7 +1209,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def cbRendered(ignored):
             self.assertTrue(
                 channel.transport.written.getvalue().startswith(
-                    'HTTP/1.1 107 Strange message'))
+                    b'HTTP/1.1 107 Strange message'))
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -916,6 +1217,31 @@ class StartResponseTests(WSGITestsMixin, TestCase):
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
         return d
+
+
+    def test_statusMustBeNativeString(self):
+        """
+        The response status passed to the I{start_response} callable MUST be a
+        native string in Python 2 and Python 3.
+        """
+        status = b"200 OK" if _PY3 else u"200 OK"
+
+        def application(environ, startResponse):
+            startResponse(status, [])
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+        request.requestReceived()
+
+        def checkMessage(error):
+            if _PY3:
+                self.assertEqual(
+                    "status must be str, not b'200 OK' (bytes)", str(error))
+            else:
+                self.assertEqual(
+                    "status must be str, not u'200 OK' (unicode)", str(error))
+
+        return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
 
     def _headersTest(self, appHeaders, expectedHeaders):
@@ -939,13 +1265,13 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
             response = channel.transport.written.getvalue()
-            headers, rest = response.split('\r\n\r\n', 1)
-            headerLines = headers.split('\r\n')[1:]
+            headers, rest = response.split(b'\r\n\r\n', 1)
+            headerLines = headers.split(b'\r\n')[1:]
             headerLines.sort()
             allExpectedHeaders = expectedHeaders + [
-                'Date: Tuesday',
-                'Server: ' + version,
-                'Transfer-Encoding: chunked']
+                b'Date: Tuesday',
+                b'Server: ' + version,
+                b'Transfer-Encoding: chunked']
             allExpectedHeaders.sort()
             self.assertEqual(headerLines, allExpectedHeaders)
 
@@ -965,7 +1291,171 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         """
         return self._headersTest(
             [('foo', 'bar'), ('baz', 'quux')],
-            ['Baz: quux', 'Foo: bar'])
+            [b'Baz: quux', b'Foo: bar'])
+
+
+    def test_headersMustBeSequence(self):
+        """
+        The headers passed to the I{start_response} callable MUST be a
+        sequence.
+        """
+        headers = [("key", "value")]
+
+        def application(environ, startResponse):
+            startResponse("200 OK", iter(headers))
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+        request.requestReceived()
+
+        def checkMessage(error):
+            self.assertRegexpMatches(
+                str(error), "headers must be a list, not "
+                "<list_?iterator .+> [(]list_?iterator[)]")
+
+        return self.assertFailure(result, TypeError).addCallback(checkMessage)
+
+
+    def test_headersShouldBePlainList(self):
+        """
+        According to PEP-3333, the headers passed to the I{start_response}
+        callable MUST be a plain list:
+
+          The response_headers argument ... must be a Python list; i.e.
+          type(response_headers) is ListType
+
+        However, for bug-compatiblity, any sequence is accepted. In both
+        Python 2 and Python 3, only a warning is issued when a sequence other
+        than a list is encountered.
+        """
+        def application(environ, startResponse):
+            startResponse("200 OK", (("not", "list"),))
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+
+        with warnings.catch_warnings(record=True) as caught:
+            request.requestReceived()
+            result = self.successResultOf(result)
+        self.assertEqual(1, len(caught))
+        self.assertEqual(RuntimeWarning, caught[0].category)
+        self.assertEqual(
+            "headers should be a list, not (('not', 'list'),) (tuple)",
+            str(caught[0].message))
+
+
+    def test_headersMustEachBeSequence(self):
+        """
+        Each header passed to the I{start_response} callable MUST be a
+        sequence.
+        """
+        header = ("key", "value")
+
+        def application(environ, startResponse):
+            startResponse("200 OK", [iter(header)])
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+        request.requestReceived()
+
+        def checkMessage(error):
+            self.assertRegexpMatches(
+                str(error), "header must be a [(]str, str[)] tuple, not "
+                "<tuple_?iterator .+> [(]tuple_?iterator[)]")
+
+        return self.assertFailure(result, TypeError).addCallback(checkMessage)
+
+
+    def test_headersShouldEachBeTuple(self):
+        """
+        According to PEP-3333, each header passed to the I{start_response}
+        callable should be a tuple:
+
+          The response_headers argument is a list of (header_name,
+          header_value) tuples
+
+        However, for bug-compatiblity, any 2 element sequence is also
+        accepted. In both Python 2 and Python 3, only a warning is issued when
+        a sequence other than a tuple is encountered.
+        """
+        def application(environ, startResponse):
+            startResponse("200 OK", [["not", "tuple"]])
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+
+        with warnings.catch_warnings(record=True) as caught:
+            request.requestReceived()
+            result = self.successResultOf(result)
+        self.assertEqual(1, len(caught))
+        self.assertEqual(RuntimeWarning, caught[0].category)
+        self.assertEqual(
+            "header should be a (str, str) tuple, not ['not', 'tuple'] (list)",
+            str(caught[0].message))
+
+
+    def test_headersShouldEachHaveKeyAndValue(self):
+        """
+        Each header passed to the I{start_response} callable MUST hold a key
+        and a value, and ONLY a key and a value.
+        """
+        def application(environ, startResponse):
+            startResponse("200 OK", [("too", "many", "cooks")])
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+        request.requestReceived()
+
+        def checkMessage(error):
+            self.assertEqual(
+                "header must be a (str, str) tuple, not "
+                "('too', 'many', 'cooks')", str(error))
+
+        return self.assertFailure(result, TypeError).addCallback(checkMessage)
+
+
+    def test_headerKeyMustBeNativeString(self):
+        """
+        Each header key passed to the I{start_response} callable MUST be at
+        native string in Python 2 and Python 3.
+        """
+        key = b"key" if _PY3 else u"key"
+
+        def application(environ, startResponse):
+            startResponse("200 OK", [(key, "value")])
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+        request.requestReceived()
+
+        def checkMessage(error):
+            self.assertEqual(
+                "header must be (str, str) tuple, not (%r, 'value')" % (key,),
+                str(error))
+
+        return self.assertFailure(result, TypeError).addCallback(checkMessage)
+
+
+    def test_headerValueMustBeNativeString(self):
+        """
+        Each header value passed to the I{start_response} callable MUST be at
+        native string in Python 2 and Python 3.
+        """
+        value = b"value" if _PY3 else u"value"
+
+        def application(environ, startResponse):
+            startResponse("200 OK", [("key", value)])
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+        request.requestReceived()
+
+        def checkMessage(error):
+            self.assertEqual(
+                "header must be (str, str) tuple, not ('key', %r)" % (value,),
+                str(error))
+
+        return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
 
     def test_applicationProvidedContentType(self):
@@ -976,7 +1466,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         """
         return self._headersTest(
             [('content-type', 'monkeys are great')],
-            ['Content-Type: monkeys are great'])
+            [b'Content-Type: monkeys are great'])
 
 
     def test_applicationProvidedServerAndDate(self):
@@ -1006,13 +1496,13 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [('foo', 'bar'), ('baz', 'quux')])
-                yield ''
+                yield b''
                 record()
             return application
 
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
-            self.assertEqual(intermediateValues, [''])
+            self.assertEqual(intermediateValues, [b''])
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1038,9 +1528,9 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [('foo', 'bar')])
-                yield ''
+                yield b''
                 record()
-                yield 'foo'
+                yield b'foo'
                 record()
             return application
 
@@ -1071,9 +1561,9 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [('content-length', '6')])
-                yield 'foo'
+                yield b'foo'
                 record()
-                yield 'bar'
+                yield b'bar'
                 record()
             return application
 
@@ -1081,10 +1571,10 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def cbRendered(ignored):
             self.assertEqual(
                 self.getContentFromResponse(intermediateValues[0]),
-                'foo')
+                b'foo')
             self.assertEqual(
                 self.getContentFromResponse(intermediateValues[1]),
-                'foobar')
+                b'foobar')
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1113,7 +1603,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def cbRendered(ignored):
             self.assertTrue(
                 channel.transport.written.getvalue().startswith(
-                    'HTTP/1.1 200 Bar\r\n'))
+                    b'HTTP/1.1 200 Bar\r\n'))
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1141,7 +1631,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def cbRendered(ignored):
             self.assertTrue(
                 channel.transport.written.getvalue().startswith(
-                    'HTTP/1.1 100 Foo\r\n'))
+                    b'HTTP/1.1 100 Foo\r\n'))
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1173,7 +1663,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [])
-                yield 'foo'
+                yield b'foo'
                 try:
                     startResponse('500 ERR', [], excInfo)
                 except:
@@ -1184,10 +1674,19 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def cbRendered(ignored):
             self.assertTrue(
                 channel.transport.written.getvalue().startswith(
-                    'HTTP/1.1 200 OK\r\n'))
+                    b'HTTP/1.1 200 OK\r\n'))
             self.assertEqual(reraised[0][0], excInfo[0])
             self.assertEqual(reraised[0][1], excInfo[1])
-            self.assertEqual(reraised[0][2].tb_next, excInfo[2])
+
+            # Show that the tracebacks end with the same stack frames.
+            tb1 = reraised[0][2].tb_next
+            tb2 = excInfo[2]
+            self.assertEqual(
+                # On Python 2 (str is bytes) we need to move back only one
+                # stack frame to skip. On Python 3 we need to move two frames.
+                traceback.extract_tb(tb1)[1 if str is bytes else 2],
+                traceback.extract_tb(tb2)[0]
+            )
 
         d.addCallback(cbRendered)
 
@@ -1212,9 +1711,9 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def applicationFactory():
             def application(environ, startResponse):
                 write = startResponse('100 Foo', [('content-length', '6')])
-                write('foo')
+                write(b'foo')
                 record()
-                write('bar')
+                write(b'bar')
                 record()
                 return iter(())
             return application
@@ -1223,10 +1722,10 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def cbRendered(ignored):
             self.assertEqual(
                 self.getContentFromResponse(intermediateValues[0]),
-                'foo')
+                b'foo')
             self.assertEqual(
                 self.getContentFromResponse(intermediateValues[1]),
-                'foobar')
+                b'foobar')
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1234,6 +1733,32 @@ class StartResponseTests(WSGITestsMixin, TestCase):
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
         return d
+
+
+    def test_writeAcceptsOnlyByteStrings(self):
+        """
+        The C{write} callable returned from C{start_response} only accepts
+        byte strings.
+        """
+        def application(environ, startResponse):
+            write = startResponse("200 OK", [])
+            write(u"bogus")
+            return iter(())
+
+        request, result = self.prepareRequest(application)
+        request.requestReceived()
+
+        def checkMessage(error):
+            if _PY3:
+                self.assertEqual(
+                    "Can only write bytes to a transport, not 'bogus'",
+                    str(error))
+            else:
+                self.assertEqual(
+                    "Can only write bytes to a transport, not u'bogus'",
+                    str(error))
+
+        return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
 
 
@@ -1263,7 +1788,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             def __iter__(self):
                 for i in range(3):
                     if self.open:
-                        yield str(i)
+                        yield intToBytes(i)
 
             def close(self):
                 self.open = False
@@ -1280,7 +1805,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             self.assertEqual(
                 self.getContentFromResponse(
                     channel.transport.written.getvalue()),
-                '012')
+                b'012')
             self.assertFalse(result.open)
         d.addCallback(cbRendered)
 
@@ -1303,16 +1828,16 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             def application(environ, startResponse):
                 def result():
                     for i in range(3):
-                        invoked.append(get_ident())
-                        yield str(i)
-                invoked.append(get_ident())
+                        invoked.append(getThreadID())
+                        yield intToBytes(i)
+                invoked.append(getThreadID())
                 startResponse('200 OK', [('content-length', '3')])
                 return result()
             return application
 
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
-            self.assertNotIn(get_ident(), invoked)
+            self.assertNotIn(getThreadID(), invoked)
             self.assertEqual(len(set(invoked)), 1)
         d.addCallback(cbRendered)
 
@@ -1333,19 +1858,19 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         class ThreadVerifier(Request):
             def write(self, bytes):
-                invoked.append(get_ident())
+                invoked.append(getThreadID())
                 return Request.write(self, bytes)
 
         def applicationFactory():
             def application(environ, startResponse):
                 write = startResponse('200 OK', [])
-                write('foo')
+                write(b'foo')
                 return iter(())
             return application
 
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([get_ident()]))
+            self.assertEqual(set(invoked), set([getThreadID()]))
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1365,18 +1890,18 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         class ThreadVerifier(Request):
             def write(self, bytes):
-                invoked.append(get_ident())
+                invoked.append(getThreadID())
                 return Request.write(self, bytes)
 
         def applicationFactory():
             def application(environ, startResponse):
                 startResponse('200 OK', [])
-                yield 'foo'
+                yield b'foo'
             return application
 
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([get_ident()]))
+            self.assertEqual(set(invoked), set([getThreadID()]))
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1395,7 +1920,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         class ThreadVerifier(Request):
             def setResponseCode(self, code, message):
-                invoked.append(get_ident())
+                invoked.append(getThreadID())
                 return Request.setResponseCode(self, code, message)
 
         def applicationFactory():
@@ -1406,7 +1931,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([get_ident()]))
+            self.assertEqual(set(invoked), set([getThreadID()]))
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1431,7 +1956,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
         self.badIter = False
         def appIter():
-            yield "foo"
+            yield b"foo"
             self.badIter = True
             raise Exception("Should not have gotten here")
 
@@ -1466,7 +1991,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
 
             self.assertTrue(
                 channel.transport.written.getvalue().startswith(
-                    'HTTP/1.1 500 Internal Server Error'))
+                    b'HTTP/1.1 500 Internal Server Error'))
         d.addCallback(cbRendered)
 
         self.lowLevelRender(
@@ -1517,7 +2042,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             self.assertEqual(len(errors), 1)
 
             response = channel.transport.written.getvalue()
-            self.assertTrue(response.startswith('HTTP/1.1 200 OK'))
+            self.assertTrue(response.startswith(b'HTTP/1.1 200 OK'))
             # Chunked transfer-encoding makes this a little messy.
             self.assertIn(responseContent, response)
         d.addErrback(ebRendered)
@@ -1541,7 +2066,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         logged.
         """
         responseContent = (
-            'Some bytes, triggering the server to start sending the response')
+            b'Some bytes, triggering the server to start sending the response')
 
         def application(environ, startResponse):
             startResponse('200 OK', [])
@@ -1556,7 +2081,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         raises an exception when called then the connection is still closed and
         the exception is logged.
         """
-        responseContent = 'foo'
+        responseContent = b'foo'
 
         class Application(object):
             def __init__(self, environ, startResponse):

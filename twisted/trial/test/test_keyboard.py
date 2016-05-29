@@ -5,7 +5,9 @@
 Tests for interrupting tests with Control-C.
 """
 
-import StringIO
+from __future__ import absolute_import, division
+
+from twisted.python.compat import NativeStringIO
 
 from twisted.trial import unittest
 from twisted.trial import reporter, runner
@@ -13,7 +15,7 @@ from twisted.trial import reporter, runner
 
 class TrialTest(unittest.SynchronousTestCase):
     def setUp(self):
-        self.output = StringIO.StringIO()
+        self.output = NativeStringIO()
         self.reporter = reporter.TestResult()
         self.loader = runner.TestLoader()
 
@@ -37,13 +39,13 @@ class InterruptInTestTests(TrialTest):
     def test_setUpOK(self):
         self.assertEqual(3, self.suite.countTestCases())
         self.assertEqual(0, self.reporter.testsRun)
-        self.failIf(self.reporter.shouldStop)
+        self.assertFalse(self.reporter.shouldStop)
 
     def test_interruptInTest(self):
         runner.TrialSuite([self.suite]).run(self.reporter)
-        self.failUnless(self.reporter.shouldStop)
+        self.assertTrue(self.reporter.shouldStop)
         self.assertEqual(2, self.reporter.testsRun)
-        self.failIf(InterruptInTestTests.test_03_doNothing_run,
+        self.assertFalse(InterruptInTestTests.test_03_doNothing_run,
                     "test_03_doNothing ran.")
 
 
@@ -73,13 +75,13 @@ class InterruptInSetUpTests(TrialTest):
         self.assertEqual(0, InterruptInSetUpTests.testsRun)
         self.assertEqual(2, self.suite.countTestCases())
         self.assertEqual(0, self.reporter.testsRun)
-        self.failIf(self.reporter.shouldStop)
+        self.assertFalse(self.reporter.shouldStop)
 
     def test_interruptInSetUp(self):
         runner.TrialSuite([self.suite]).run(self.reporter)
-        self.failUnless(self.reporter.shouldStop)
+        self.assertTrue(self.reporter.shouldStop)
         self.assertEqual(2, self.reporter.testsRun)
-        self.failIf(InterruptInSetUpTests.test_02_run,
+        self.assertFalse(InterruptInSetUpTests.test_02_run,
                     "test_02 ran")
 
 
@@ -109,11 +111,11 @@ class InterruptInTearDownTests(TrialTest):
         self.assertEqual(0, InterruptInTearDownTests.testsRun)
         self.assertEqual(2, self.suite.countTestCases())
         self.assertEqual(0, self.reporter.testsRun)
-        self.failIf(self.reporter.shouldStop)
+        self.assertFalse(self.reporter.shouldStop)
 
     def test_interruptInTearDown(self):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.assertEqual(1, self.reporter.testsRun)
-        self.failUnless(self.reporter.shouldStop)
-        self.failIf(InterruptInTearDownTests.test_02_run,
+        self.assertTrue(self.reporter.shouldStop)
+        self.assertFalse(InterruptInTearDownTests.test_02_run,
                     "test_02 ran")

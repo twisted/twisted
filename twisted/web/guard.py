@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.web.test.test_httpauth -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -5,6 +6,8 @@
 Resource traversal integration with L{twisted.cred} to allow for
 authentication and authorization of HTTP requests.
 """
+
+from __future__ import division, absolute_import
 
 # Expose HTTP authentication classes here.
 from twisted.web._auth.wrapper import HTTPAuthSessionWrapper

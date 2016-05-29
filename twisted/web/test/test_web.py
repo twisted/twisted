@@ -11,6 +11,7 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+from twisted.python import reflect, failure
 from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
@@ -59,6 +60,22 @@ class SiteTest(unittest.TestCase):
     Unit tests for L{server.Site}.
     """
 
+    def getAutoExpiringSession(self, site):
+        """
+        Create a new session which auto expires at cleanup.
+
+        @param site: The site on which the session is created.
+        @type site: L{server.Site}
+
+        @return: A newly created session.
+        @rtype: L{server.Session}
+        """
+        session = site.makeSession()
+        # Clean delayed calls from session expiration.
+        self.addCleanup(session.expire)
+        return session
+
+
     def test_simplestSite(self):
         """
         L{Site.getResourceFor} returns the C{b""} child of the root resource it
@@ -106,6 +123,39 @@ class SiteTest(unittest.TestCase):
         self.assertIs(site, channel.site)
         self.assertIs(site.requestFactory, channel.requestFactory)
 
+
+    def test_makeSession(self):
+        """
+        L{site.getSession} generates a new C{Session} instance with an uid of
+        type L{bytes}.
+        """
+        site = server.Site(resource.Resource())
+        session = self.getAutoExpiringSession(site)
+
+        self.assertIsInstance(session, server.Session)
+        self.assertIsInstance(session.uid, bytes)
+
+
+    def test_getSessionExistent(self):
+        """
+        L{site.getSession} gets a previously generated session, by its unique
+        ID.
+        """
+        site = server.Site(resource.Resource())
+        createdSession = self.getAutoExpiringSession(site)
+
+        retrievedSession = site.getSession(createdSession.uid)
+
+        self.assertIs(createdSession, retrievedSession)
+
+
+    def test_getSessionNonExistent(self):
+        """
+        L{site.getSession} raises a L{KeyError} if the session is not found.
+        """
+        site = server.Site(resource.Resource())
+
+        self.assertRaises(KeyError, site.getSession, b'no-such-uid')
 
 
 class SessionTests(unittest.TestCase):
@@ -270,7 +320,7 @@ class ConditionalTests(unittest.TestCase):
         else:
             validator = b"If-Not-Match: " + etag
         for line in [b"GET / HTTP/1.1", validator, b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.OK)
         self.assertEqual(httpBody(result), b"correct")
@@ -296,7 +346,7 @@ class ConditionalTests(unittest.TestCase):
         """
         for line in [b"GET / HTTP/1.1",
                      b"If-Modified-Since: " + http.datetimeToString(100), b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
         self.assertEqual(httpBody(result), b"")
@@ -364,7 +414,7 @@ class ConditionalTests(unittest.TestCase):
         with an empty response body.
         """
         for line in [b"GET / HTTP/1.1", b"If-None-Match: MatchingTag", b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpHeader(result, b"ETag"), b"MatchingTag")
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
@@ -382,7 +432,7 @@ class ConditionalTests(unittest.TestCase):
         """
         for line in [b"GET /with-content-type HTTP/1.1",
                      b"If-None-Match: MatchingTag", b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
         self.assertEqual(httpBody(result), b"")
@@ -489,6 +539,68 @@ class RequestTests(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
+
+
+    def test_processingFailedNoTraceback(self):
+        """
+        L{Request.processingFailed} when the site has C{displayTracebacks} set
+        to C{False} does not write out the failure, but give a generic error
+        message.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        request.site.displayTracebacks = False
+        fail = failure.Failure(Exception("Oh no!"))
+        request.processingFailed(fail)
+
+        self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
+        self.assertIn(
+            b"Processing Failed", request.transport.written.getvalue()
+        )
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
+        self.assertEqual(1, len(self.flushLoggedErrors()))
+
+
+    def test_processingFailedDisplayTraceback(self):
+        """
+        L{Request.processingFailed} when the site has C{displayTracebacks} set
+        to C{True} writes out the failure.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        request.site.displayTracebacks = True
+        fail = failure.Failure(Exception("Oh no!"))
+        request.processingFailed(fail)
+
+        self.assertIn(b"Oh no!", request.transport.written.getvalue())
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
+        self.assertEqual(1, len(self.flushLoggedErrors()))
+
+
+    def test_processingFailedDisplayTracebackHandlesUnicode(self):
+        """
+        L{Request.processingFailed} when the site has C{displayTracebacks} set
+        to C{True} writes out the failure, making UTF-8 items into HTML
+        entities.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.site = server.Site(resource.Resource())
+        request.site.displayTracebacks = True
+        fail = failure.Failure(Exception(u"\u2603"))
+        request.processingFailed(fail)
+
+        self.assertIn(b"&#9731;", request.transport.written.getvalue())
+
+        # Since we didn't "handle" the exception, flush it to prevent a test
+        # failure
+        self.assertEqual(1, len(self.flushLoggedErrors()))
 
 
 
@@ -713,11 +825,15 @@ class NewRenderTests(unittest.TestCase):
     def testGoodMethods(self):
         req = self._getReq()
         req.requestReceived(b'GET', b'/newrender', b'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'hi hi')
+        self.assertEqual(
+            req.transport.written.getvalue().splitlines()[-1], b'hi hi'
+        )
 
         req = self._getReq()
         req.requestReceived(b'HEH', b'/newrender', b'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'ho ho')
+        self.assertEqual(
+            req.transport.written.getvalue().splitlines()[-1], b'ho ho'
+        )
 
     def testBadMethods(self):
         req = self._getReq()
@@ -745,7 +861,9 @@ class NewRenderTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'HEAD', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 200)
-        self.assertEqual(-1, req.transport.getvalue().find(b'hi hi'))
+        self.assertEqual(
+            -1, req.transport.written.getvalue().find(b'hi hi')
+        )
 
 
     def test_unsupportedHead(self):
@@ -756,9 +874,45 @@ class NewRenderTests(unittest.TestCase):
         resource = HeadlessResource()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
-        headers, body = req.transport.getvalue().split(b'\r\n\r\n')
+        headers, body = req.transport.written.getvalue().split(b'\r\n\r\n')
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b'')
+
+
+    def test_noBytesResult(self):
+        """
+        When implemented C{render} method does not return bytes an internal
+        server error is returned.
+        """
+        class RiggedRepr(object):
+            def __repr__(self):
+                return 'my>repr'
+
+        result = RiggedRepr()
+        no_bytes_resource = resource.Resource()
+        no_bytes_resource.render = lambda request: result
+        request = self._getReq(no_bytes_resource)
+
+        request.requestReceived(b"GET", b"/newrender", b"HTTP/1.0")
+
+        headers, body = request.transport.written.getvalue().split(b'\r\n\r\n')
+        self.assertEqual(request.code, 500)
+        expected = [
+            '',
+            '<html>',
+            '  <head><title>500 - Request did not return bytes</title></head>',
+            '  <body>',
+            '    <h1>Request did not return bytes</h1>',
+            '    <p>Request: <pre>&lt;%s&gt;</pre><br />'
+                'Resource: <pre>&lt;%s&gt;</pre><br />'
+                'Value: <pre>my&gt;repr</pre></p>' % (
+                    reflect.safe_repr(request)[1:-1],
+                    reflect.safe_repr(no_bytes_resource)[1:-1],
+                    ),
+            '  </body>',
+            '</html>',
+            '']
+        self.assertEqual('\n'.join(expected).encode('ascii'), body)
 
 
 
@@ -842,7 +996,7 @@ class AllowedMethodsTests(unittest.TestCase):
         req.requestReceived(b'POST', b'/gettableresource?'
                             b'value=<script>bad', b'HTTP/1.0')
         self.assertEqual(req.code, 405)
-        renderedPage = req.transport.getvalue()
+        renderedPage = req.transport.written.getvalue()
         self.assertNotIn(b"<script>bad", renderedPage)
         self.assertIn(b'&lt;script&gt;bad', renderedPage)
 
@@ -857,7 +1011,7 @@ class AllowedMethodsTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'<style>bad', b'/gettableresource', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
-        renderedPage = req.transport.getvalue()
+        renderedPage = req.transport.written.getvalue()
         self.assertNotIn(b"<style>bad", renderedPage)
         self.assertIn(b'&lt;style&gt;bad', renderedPage)
 
@@ -899,8 +1053,7 @@ class AccessLogTestsMixin(object):
         reactor.advance(1234567890)
 
         logPath = self.mktemp()
-        factory = self.factory(logPath=logPath)
-        factory._reactor = reactor
+        factory = self.factory(logPath=logPath, reactor=reactor)
         factory.startFactory()
 
         try:
@@ -1001,12 +1154,12 @@ class CombinedLogFormatterTests(unittest.TestCase):
         reactor.advance(1234567890)
 
         timestamp = http.datetimeToLogString(reactor.seconds())
-        request = DummyRequestForLogTest(http.HTTPFactory())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
         request.client = IPv4Address("TCP", b"evil x-forwarded-for \x80", 12345)
         request.method = b"POS\x81"
         request.protocol = b"HTTP/1.\x82"
-        request.headers[b"referer"] = b"evil \x83"
-        request.headers[b"user-agent"] = b"evil \x84"
+        request.requestHeaders.addRawHeader(b"referer", b"evil \x83")
+        request.requestHeaders.addRawHeader(b"user-agent", b"evil \x84")
 
         line = http.combinedLogFormatter(timestamp, request)
         self.assertEqual(
@@ -1042,7 +1195,7 @@ class ProxiedLogFormatterTests(unittest.TestCase):
         reactor.advance(1234567890)
 
         timestamp = http.datetimeToLogString(reactor.seconds())
-        request = DummyRequestForLogTest(http.HTTPFactory())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
         expected = http.combinedLogFormatter(timestamp, request).replace(
             u"1.2.3.4", u"172.16.1.2")
         request.requestHeaders.setRawHeaders(b"x-forwarded-for", [header])
@@ -1149,7 +1302,8 @@ class LogEscapingTests(unittest.TestCase):
         """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.headers[b'referer'] = (
+        self.request.requestHeaders.addRawHeader(
+            b'referer',
             b'http://malicious" ".website.invalid')
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
@@ -1164,7 +1318,8 @@ class LogEscapingTests(unittest.TestCase):
         """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.headers[b'user-agent'] = b'Malicious Web" Evil'
+        self.request.requestHeaders.addRawHeader(b'user-agent',
+                                                 b'Malicious Web" Evil')
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
             b'"GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')
@@ -1209,3 +1364,29 @@ class ServerAttributesTests(unittest.TestCase):
             warnings[0]['message'],
             ("twisted.web.server.string_date_time was deprecated in Twisted "
              "12.1.0: Please use twisted.web.http.stringToDatetime instead"))
+
+
+
+class ExplicitHTTPFactoryReactor(unittest.TestCase):
+    """
+    L{http.HTTPFactory} accepts explicit reactor selection.
+    """
+
+    def test_explicitReactor(self):
+        """
+        L{http.HTTPFactory.__init__} accepts a reactor argument which is set on
+        L{http.HTTPFactory._reactor}.
+        """
+        reactor = "I am a reactor!"
+        factory = http.HTTPFactory(reactor=reactor)
+        self.assertIs(factory._reactor, reactor)
+
+
+    def test_defaultReactor(self):
+        """
+        Giving no reactor argument to L{http.HTTPFactory.__init__} means it
+        will select the global reactor.
+        """
+        from twisted.internet import reactor
+        factory = http.HTTPFactory()
+        self.assertIs(factory._reactor, reactor)

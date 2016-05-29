@@ -12,7 +12,7 @@ import os, sys
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, NativeStringIO
+from twisted.python.compat import NativeStringIO
 from twisted.python import filepath
 from twisted.internet.interfaces import IProcessTransport
 from twisted.internet import defer
@@ -24,7 +24,6 @@ from twisted.trial import util
 from twisted.trial.util import (
     DirtyReactorAggregateError, _Janitor, excInfoOrFailureToExcInfo,
     acquireAttribute)
-from twisted.trial.test import suppression
 
 
 
@@ -68,31 +67,6 @@ class MktempTests(SynchronousTestCase):
         """
         path = os.path.abspath(self.mktemp())
         self.assertTrue(path.startswith(os.getcwd()))
-
-
-
-class IntrospectionTests(SynchronousTestCase):
-    def test_containers(self):
-        """
-        When passed a test case, L{util.getPythonContainers} returns a list
-        including the test case and the module the test case is defined in.
-        """
-        parents = util.getPythonContainers(
-            suppression.SynchronousTestSuppression2.testSuppressModule)
-        expected = [suppression.SynchronousTestSuppression2, suppression]
-        for a, b in zip(parents, expected):
-            self.assertEqual(a, b)
-        # Also, the function is deprecated.
-        warnings = self.flushWarnings([self.test_containers])
-        self.assertEqual(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(
-            "twisted.trial.util.getPythonContainers was deprecated in "
-            "Twisted 12.3.0: This function never worked correctly.  "
-            "Implement lookup on your own.",
-            warnings[0]['message'])
-        self.assertEqual(1, len(warnings))
-    if _PY3:
-        test_containers.skip = "getPythonContainers is unsupported on Python 3."
 
 
 

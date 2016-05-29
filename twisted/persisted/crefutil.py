@@ -8,9 +8,10 @@
 Utility classes for dealing with circular references.
 """
 
-import types
+from __future__ import division, absolute_import
 
 from twisted.python import log, reflect
+from twisted.python.compat import xrange, _constructMethod
 
 
 class NotKnown:
@@ -29,8 +30,7 @@ class NotKnown:
         self.resolvedObject = newObject
         for mut, key in self.dependants:
             mut[key] = newObject
-            if isinstance(newObject, NotKnown):
-                newObject.addDependant(mut, key)
+
 
     def __hash__(self):
         assert 0, "I am not to be used as a dictionary key."
@@ -53,7 +53,7 @@ class _Container(NotKnown):
         NotKnown.__init__(self)
         self.containerType = containerType
         self.l = l
-        self.locs = range(len(l))
+        self.locs = list(xrange(len(l)))
         for idx in xrange(len(l)):
             if not isinstance(l[idx], NotKnown):
                 self.locs.remove(idx)
@@ -96,7 +96,7 @@ class _InstanceMethod(NotKnown):
         NotKnown.__init__(self)
         self.my_class = im_class
         self.name = im_name
-        # im_self _must_ be a
+        # im_self _must_ be a NotKnown
         im_self.addDependant(self, 0)
 
     def __call__(self, *args, **kw):
@@ -109,8 +109,7 @@ class _InstanceMethod(NotKnown):
     def __setitem__(self, n, obj):
         assert n == 0, "only zero index allowed"
         if not isinstance(obj, NotKnown):
-            method = types.MethodType(self.my_class.__dict__[self.name],
-                                      obj, self.my_class)
+            method = _constructMethod(self.my_class, self.name, obj)
             self.resolveDependants(method)
 
 class _DictKeyAndValue:
@@ -133,11 +132,8 @@ class _Dereference(NotKnown):
         self.id = id
 
 
-from twisted.internet.defer import Deferred
 
-class _Catcher:
-    def catch(self, value):
-        self.value = value
+from twisted.internet.defer import Deferred
 
 class _Defer(Deferred, NotKnown):
     def __init__(self):

@@ -994,7 +994,7 @@ class ReactorBase(object):
 
         def callInThread(self, _callable, *args, **kwargs):
             """
-            See L{twisted.internet.interfaces.IReactorThreads.callInThread}.
+            See L{twisted.internet.interfaces.IReactorInThreads.callInThread}.
             """
             self.getThreadPool().callInThread(_callable, *args, **kwargs)
 

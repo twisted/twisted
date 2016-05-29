@@ -1,0 +1,14 @@
+[run]
+branch = True
+parallel = True
+source = twisted
+
+[paths]
+source=
+   twisted
+   build/*/lib/python*/site-packages/twisted
+   build/pypy*/site-packages/twisted
+
+[report]
+precision = 2
+ignore_errors = True

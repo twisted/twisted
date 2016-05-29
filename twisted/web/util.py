@@ -10,23 +10,31 @@ from __future__ import division, absolute_import
 
 import linecache
 
-from twisted.python.compat import _PY3, unicode, nativeString
+from twisted.python import urlpath
+from twisted.python.compat import _PY3, unicode, nativeString, escape
 from twisted.python.reflect import fullyQualifiedName
-from twisted.python.modules import getModule
 
 from twisted.web import resource
 
-if not _PY3:
-    # TODO: Remove when twisted.web.template and _flatten is ported
-    # https://tm.tl/#7811
-    from twisted.web.template import (
-        TagLoader, XMLFile, Element, renderer, flattenString)
-    # TODO: Remove when twisted.python.urlpath is ported
-    # https://tm.tl/#7831
-    from twisted.python import urlpath
-else:
-    Element = object
-    renderer = XMLFile = lambda a: a
+from twisted.web.template import TagLoader, XMLString, Element, renderer
+from twisted.web.template import flattenString
+
+
+
+def _PRE(text):
+    """
+    Wraps <pre> tags around some text and HTML-escape it.
+
+    This is here since once twisted.web.html was deprecated it was hard to
+    migrate the html.PRE from current code to twisted.web.template.
+
+    For new code consider using twisted.web.template.
+
+    @return: Escaped text wrapped in <pre> tags.
+    @rtype: C{str}
+    """
+    return '<pre>%s</pre>' % (escape(text),)
+
 
 
 def redirectTo(URL, request):
@@ -137,7 +145,6 @@ class DeferredResource(resource.Resource):
 
     def _ebChild(self, reason, request):
         request.processingFailed(reason)
-        return reason
 
 
 
@@ -303,7 +310,80 @@ class FailureElement(Element):
 
     @since: 12.1
     """
-    loader = XMLFile(getModule(__name__).filePath.sibling("failure.xhtml"))
+    loader = XMLString("""
+<div xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">
+  <style type="text/css">
+    div.error {
+      color: red;
+      font-family: Verdana, Arial, helvetica, sans-serif;
+      font-weight: bold;
+    }
+
+    div {
+      font-family: Verdana, Arial, helvetica, sans-serif;
+    }
+
+    div.stackTrace {
+    }
+
+    div.frame {
+      padding: 1em;
+      background: white;
+      border-bottom: thin black dashed;
+    }
+
+    div.frame:first-child {
+      padding: 1em;
+      background: white;
+      border-top: thin black dashed;
+      border-bottom: thin black dashed;
+    }
+
+    div.location {
+    }
+
+    span.function {
+      font-weight: bold;
+      font-family: "Courier New", courier, monospace;
+    }
+
+    div.snippet {
+      margin-bottom: 0.5em;
+      margin-left: 1em;
+      background: #FFFFDD;
+    }
+
+    div.snippetHighlightLine {
+      color: red;
+    }
+
+    span.code {
+      font-family: "Courier New", courier, monospace;
+    }
+  </style>
+
+  <div class="error">
+    <span t:render="type" />: <span t:render="value" />
+  </div>
+  <div class="stackTrace" t:render="traceback">
+    <div class="frame" t:render="frames">
+      <div class="location">
+        <span t:render="filename" />:<span t:render="lineNumber" /> in
+        <span class="function" t:render="function" />
+      </div>
+      <div class="snippet" t:render="source">
+        <div t:render="sourceLines">
+          <span class="lineno" t:render="lineNumber" />
+          <code class="code" t:render="sourceLine" />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="error">
+    <span t:render="type" />: <span t:render="value" />
+  </div>
+</div>
+""")
 
     def __init__(self, failure, loader=None):
         Element.__init__(self, loader)
@@ -323,7 +403,7 @@ class FailureElement(Element):
         """
         Render the exception value as a child of C{tag}.
         """
-        return tag(str(self.failure.value))
+        return tag(unicode(self.failure.value).encode('utf8'))
 
 
     @renderer
@@ -345,12 +425,12 @@ def formatFailure(myFailure):
 
     @type myFailure: L{Failure<twisted.python.failure.Failure>}
 
-    @rtype: C{str}
+    @rtype: C{bytes}
     @return: A string containing the HTML representation of the given failure.
     """
     result = []
     flattenString(None, FailureElement(myFailure)).addBoth(result.append)
-    if isinstance(result[0], str):
+    if isinstance(result[0], bytes):
         # Ensure the result string is all ASCII, for compatibility with the
         # default encoding expected by browsers.
         return result[0].decode('utf-8').encode('ascii', 'xmlcharrefreplace')
@@ -361,11 +441,3 @@ def formatFailure(myFailure):
 __all__ = [
     "redirectTo", "Redirect", "ChildRedirector", "ParentRedirect",
     "DeferredResource", "FailureElement", "formatFailure"]
-
-if _PY3:
-    __all3__ = ["redirectTo", "Redirect"]
-    for name in __all__[:]:
-        if name not in __all3__:
-            __all__.remove(name)
-            del globals()[name]
-    del name, __all3__

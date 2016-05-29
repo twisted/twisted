@@ -31,7 +31,7 @@ class SecureRandomTestCaseBase(object):
             s2 = source(nbytes)
             self.assertEqual(len(s2), nbytes)
             # This is crude but hey
-            self.assertNotEquals(s2, s)
+            self.assertNotEqual(s2, s)
 
 
 

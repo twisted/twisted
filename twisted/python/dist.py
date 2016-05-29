@@ -26,14 +26,14 @@ Maintainer: Christopher Armstrong
     as setuptools version specifiers, used to populate L{_EXTRAS_REQUIRE}.
 """
 
-from distutils.command import build_scripts, install_data, build_ext
-from distutils.errors import CompileError
-from distutils import core
-from distutils.core import Extension
-import fnmatch
 import os
 import platform
 import sys
+
+from distutils.command import build_scripts, build_ext
+from distutils.errors import CompileError
+from setuptools import setup as _setup
+from setuptools import Extension
 
 from twisted import copyright
 from twisted.python.compat import execfile
@@ -53,30 +53,30 @@ An extensible framework for Python programming, with special focus
 on event-based network programming and multiprotocol integration.
 """,
     classifiers=[
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
         ],
     )
 
 
-twisted_subprojects = ["conch", "mail", "names", "news", "pair", "runner",
-                       "web", "words"]
 
 _EXTRA_OPTIONS = dict(
-    dev=['twistedchecker >= 0.2.0',
-         'pyflakes >= 0.8.1',
+    dev=['twistedchecker >= 0.4.0',
+         'pyflakes >= 1.0.0',
          'twisted-dev-tools >= 0.0.2',
          'python-subunit',
-         'sphinx >= 1.2.2',
-         'pydoctor >= 0.5'],
-    tls=['pyopenssl >= 0.11',
+         'sphinx >= 1.3.1',
+         'pydoctor >= 15.0.0'],
+    tls=['pyopenssl >= 0.13',
          'service_identity',
          'idna >= 0.6'],
     conch=['gmpy',
            'pyasn1',
-           'pycrypto'],
+           'cryptography >= 0.9.1',
+           'appdirs >= 1.4.0',
+           ],
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],
@@ -127,46 +127,15 @@ def setup(**kw):
     An alternative to distutils' setup() which is specially designed
     for Twisted subprojects.
 
-    Pass twisted_subproject=projname if you want package and data
-    files to automatically be found for you.
-
     @param conditionalExtensions: Extensions to optionally build.
     @type conditionalExtensions: C{list} of L{ConditionalExtension}
     """
-    return core.setup(**get_setup_args(**kw))
+    return _setup(**get_setup_args(**kw))
 
 
 def get_setup_args(**kw):
-    if 'twisted_subproject' in kw:
-        if 'twisted' not in os.listdir('.'):
-            raise RuntimeError("Sorry, you need to run setup.py from the "
-                               "toplevel source directory.")
-        projname = kw['twisted_subproject']
-        projdir = os.path.join('twisted', projname)
-
-        kw['packages'] = getPackages(projdir, parent='twisted')
-        kw['version'] = getVersion(projname)
-
-        plugin = "twisted/plugins/twisted_" + projname + ".py"
-        if os.path.exists(plugin):
-            kw.setdefault('py_modules', []).append(
-                plugin.replace("/", ".")[:-3])
-
-        kw['data_files'] = getDataFiles(projdir, parent='twisted')
-
-        del kw['twisted_subproject']
-    else:
-        if 'plugins' in kw:
-            py_modules = []
-            for plg in kw['plugins']:
-                py_modules.append("twisted.plugins." + plg)
-            kw.setdefault('py_modules', []).extend(py_modules)
-            del kw['plugins']
-
     if 'cmdclass' not in kw:
-        kw['cmdclass'] = {
-            'install_data': install_data_twisted,
-            'build_scripts': build_scripts_twisted}
+        kw['cmdclass'] = {'build_scripts': build_scripts_twisted}
 
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
@@ -189,177 +158,58 @@ def get_setup_args(**kw):
     return kw
 
 
-def getVersion(proj, base="twisted"):
+def getVersion(base):
     """
-    Extract the version number for a given project.
-
-    @param proj: the name of the project. Examples are "core",
-    "conch", "words", "mail".
+    Extract the version number.
 
     @rtype: str
     @returns: The version number of the project, as a string like
     "2.0.0".
     """
-    if proj == 'core':
-        vfile = os.path.join(base, '_version.py')
-    else:
-        vfile = os.path.join(base, proj, '_version.py')
+    vfile = os.path.join(base, '_version.py')
     ns = {'__name__': 'Nothing to see here'}
     execfile(vfile, ns)
     return ns['version'].base()
 
 
-# Names that are excluded from globbing results:
-EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
-                 "RCS", "SCCS", ".svn"]
-EXCLUDE_PATTERNS = ["*.py[cdo]", "*.s[ol]", ".#*", "*~", "*.py"]
-
-
-def _filterNames(names):
-    """
-    Given a list of file names, return those names that should be copied.
-    """
-    names = [n for n in names
-             if n not in EXCLUDE_NAMES]
-    # This is needed when building a distro from a working
-    # copy (likely a checkout) rather than a pristine export:
-    for pattern in EXCLUDE_PATTERNS:
-        names = [n for n in names
-                 if (not fnmatch.fnmatch(n, pattern))
-                 and (not n.endswith('.py'))]
-    return names
-
-
-def relativeTo(base, relativee):
-    """
-    Gets 'relativee' relative to 'basepath'.
-
-    i.e.,
-
-    >>> relativeTo('/home/', '/home/radix/')
-    'radix'
-    >>> relativeTo('.', '/home/radix/Projects/Twisted') # curdir is /home/radix
-    'Projects/Twisted'
-
-    The 'relativee' must be a child of 'basepath'.
-    """
-    basepath = os.path.abspath(base)
-    relativee = os.path.abspath(relativee)
-    if relativee.startswith(basepath):
-        relative = relativee[len(basepath):]
-        if relative.startswith(os.sep):
-            relative = relative[1:]
-        return os.path.join(base, relative)
-    raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
-
-
-def getDataFiles(dname, ignore=None, parent=None):
-    """
-    Get all the data files that should be included in this distutils Project.
-
-    'dname' should be the path to the package that you're distributing.
-
-    'ignore' is a list of sub-packages to ignore.  This facilitates
-    disparate package hierarchies.  That's a fancy way of saying that
-    the 'twisted' package doesn't want to include the 'twisted.conch'
-    package, so it will pass ['conch'] as the value.
-
-    'parent' is necessary if you're distributing a subpackage like
-    twisted.conch.  'dname' should point to 'twisted/conch' and 'parent'
-    should point to 'twisted'.  This ensures that your data_files are
-    generated correctly, only using relative paths for the first element
-    of the tuple ('twisted/conch/*').
-    The default 'parent' is the current working directory.
-    """
-    parent = parent or "."
-    ignore = ignore or []
-    result = []
-    for directory, subdirectories, filenames in os.walk(dname):
-        resultfiles = []
-        for exname in EXCLUDE_NAMES:
-            if exname in subdirectories:
-                subdirectories.remove(exname)
-        for ig in ignore:
-            if ig in subdirectories:
-                subdirectories.remove(ig)
-        for filename in _filterNames(filenames):
-            resultfiles.append(filename)
-        if resultfiles:
-            result.append((relativeTo(parent, directory),
-                           [relativeTo(parent,
-                                       os.path.join(directory, filename))
-                            for filename in resultfiles]))
-    return result
-
 
 def getExtensions():
     """
-    Get all extensions from core and all subprojects.
+    Get the C extensions used for Twisted.
     """
-    extensions = []
+    extensions = [
+        ConditionalExtension(
+            "twisted.test.raiser",
+            ["twisted/test/raiser.c"],
+            condition=lambda _: _isCPython),
 
-    if not sys.platform.startswith('java'):
-        for dir in os.listdir("twisted") + [""]:
-            topfiles = os.path.join("twisted", dir, "topfiles")
-            if os.path.isdir(topfiles):
-                ns = {}
-                setup_py = os.path.join(topfiles, "setup.py")
-                execfile(setup_py, ns, ns)
-                if "extensions" in ns:
-                    extensions.extend(ns["extensions"])
+        ConditionalExtension(
+            "twisted.internet.iocpreactor.iocpsupport",
+            ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
+             "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
+            libraries=["ws2_32"],
+            condition=lambda _: _isCPython and sys.platform == "win32"),
+
+        ConditionalExtension(
+            "twisted.python._sendmsg",
+            sources=["twisted/python/_sendmsg.c"],
+            condition=lambda _: sys.platform != "win32"),
+
+        ConditionalExtension(
+            "twisted.runner.portmap",
+            ["twisted/runner/portmap.c"],
+            condition=lambda builder: builder._check_header("rpc/rpc.h")),
+    ]
 
     return extensions
 
 
-def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
+
+def getScripts(basedir=''):
     """
-    Get all packages which are under dname. This is necessary for
-    Python 2.2's distutils. Pretty similar arguments to getDataFiles,
-    including 'parent'.
+    Returns a list of scripts for Twisted.
     """
-    parent = parent or ""
-    prefix = []
-    if parent:
-        prefix = [parent]
-    bname = os.path.basename(dname)
-    ignore = ignore or []
-    if bname in ignore:
-        return []
-    if results is None:
-        results = []
-    if pkgname is None:
-        pkgname = []
-    subfiles = os.listdir(dname)
-    abssubfiles = [os.path.join(dname, x) for x in subfiles]
-    if '__init__.py' in subfiles:
-        results.append(prefix + pkgname + [bname])
-        for subdir in filter(os.path.isdir, abssubfiles):
-            getPackages(subdir, pkgname=pkgname + [bname],
-                        results=results, ignore=ignore,
-                        parent=parent)
-    res = ['.'.join(result) for result in results]
-    return res
-
-
-
-def getAllScripts():
-    # "" is included because core scripts are directly in bin/
-    projects = [''] + [x for x in os.listdir('bin')
-                       if os.path.isdir(os.path.join("bin", x))
-                       and x in twisted_subprojects]
-    scripts = []
-    for i in projects:
-        scripts.extend(getScripts(i))
-    return scripts
-
-
-
-def getScripts(projname, basedir=''):
-    """
-    Returns a list of scripts for a Twisted subproject; this works in
-    any of an SVN checkout, a project-specific tarball.
-    """
-    scriptdir = os.path.join(basedir, 'bin', projname)
+    scriptdir = os.path.join(basedir, 'bin')
     if not os.path.isdir(scriptdir):
         # Probably a project-specific tarball, in which case only this
         # project's bins are included in 'bin'
@@ -367,11 +217,11 @@ def getScripts(projname, basedir=''):
         if not os.path.isdir(scriptdir):
             return []
     thingies = os.listdir(scriptdir)
-    for specialExclusion in ['.svn', '_preamble.py', '_preamble.pyc']:
+    for specialExclusion in ['_preamble.py', '_preamble.pyc']:
         if specialExclusion in thingies:
             thingies.remove(specialExclusion)
-    return filter(os.path.isfile,
-                  [os.path.join(scriptdir, x) for x in thingies])
+    return list(filter(os.path.isfile,
+                       [os.path.join(scriptdir, x) for x in thingies]))
 
 
 ## Helpers and distutil tweaks
@@ -391,18 +241,6 @@ class build_scripts_twisted(build_scripts.build_scripts):
                 if os.path.exists(pypath):
                     os.unlink(pypath)
                 os.rename(fpath, pypath)
-
-
-
-class install_data_twisted(install_data.install_data):
-    """
-    I make sure data files are installed in the package directory.
-    """
-    def finalize_options(self):
-        self.set_undefined_options('install',
-            ('install_lib', 'install_dir')
-        )
-        install_data.install_data.finalize_options(self)
 
 
 

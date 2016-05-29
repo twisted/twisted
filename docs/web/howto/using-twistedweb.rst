@@ -504,7 +504,7 @@ Here is an example of a simple but complete web proxy:
 
 
 
-With this proxy running, you can configure your web browser to use``localhost:8080`` as a proxy. After doing so, when browsing the web
+With this proxy running, you can configure your web browser to use ``localhost:8080`` as a proxy. After doing so, when browsing the web
 all requests will go through this proxy.
 
 

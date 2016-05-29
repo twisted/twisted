@@ -6,9 +6,9 @@ Tests for L{twisted.conch.tap}.
 """
 
 try:
-    import Crypto.Cipher.DES3
-except:
-    Crypto = None
+    import cryptography
+except ImportError:
+    cryptography = None
 
 try:
     import pyasn1
@@ -20,16 +20,14 @@ try:
 except ImportError:
     unix = None
 
-if Crypto and pyasn1 and unix:
+if cryptography and pyasn1 and unix:
     from twisted.conch import tap
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
-from twisted.cred.credentials import IPluggableAuthenticationModules
 from twisted.cred.credentials import ISSHPrivateKey
 from twisted.cred.credentials import IUsernamePassword, UsernamePassword
-from twisted.python.reflect import requireModule
 
 from twisted.trial.unittest import TestCase
 
@@ -40,8 +38,8 @@ class MakeServiceTests(TestCase):
     Tests for L{tap.makeService}.
     """
 
-    if not Crypto:
-        skip = "can't run w/o PyCrypto"
+    if not cryptography:
+        skip = "can't run without cryptography"
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"
@@ -78,16 +76,9 @@ class MakeServiceTests(TestCase):
     def test_defaultAuths(self):
         """
         Make sure that if the C{--auth} command-line option is not passed,
-        the default checkers are (for backwards compatibility): SSH, UNIX, and
-        PAM if available
+        the default checkers are (for backwards compatibility): SSH and UNIX
         """
         numCheckers = 2
-
-        if requireModule('twisted.cred.pamauth'):
-            self.assertIn(IPluggableAuthenticationModules,
-                self.options['credInterfaces'],
-                "PAM should be one of the modules")
-            numCheckers += 1
 
         self.assertIn(ISSHPrivateKey, self.options['credInterfaces'],
             "SSH should be one of the default checkers")
@@ -148,32 +139,12 @@ class MakeServiceTests(TestCase):
         return d.addCallback(checkSuccess)
 
 
-    def test_checkersPamAuth(self):
-        """
-        The L{OpenSSHFactory} built by L{tap.makeService} has a portal with
-        L{IPluggableAuthenticationModules}, L{ISSHPrivateKey} and
-        L{IUsernamePassword} interfaces registered as checkers if C{pamauth} is
-        available.
-        """
-        # Fake the presence of pamauth, even if PyPAM is not installed
-        self.patch(tap, "pamauth", object())
-        config = tap.Options()
-        service = tap.makeService(config)
-        portal = service.factory.portal
-        self.assertEqual(
-            set(portal.checkers.keys()),
-            set([IPluggableAuthenticationModules, ISSHPrivateKey,
-                 IUsernamePassword]))
-
-
-    def test_checkersWithoutPamAuth(self):
+    def test_checkers(self):
         """
         The L{OpenSSHFactory} built by L{tap.makeService} has a portal with
         L{ISSHPrivateKey} and L{IUsernamePassword} interfaces registered as
-        checkers if C{pamauth} is not available.
+        checkers.
         """
-        # Fake the absence of pamauth, even if PyPAM is installed
-        self.patch(tap, "pamauth", None)
         config = tap.Options()
         service = tap.makeService(config)
         portal = service.factory.portal

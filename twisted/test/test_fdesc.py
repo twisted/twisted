@@ -106,7 +106,7 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         with its return value are seen by L{fdesc.readFromFD}.
         """
         n = self.write(b"hello")
-        self.failUnless(n > 0)
+        self.assertTrue(n > 0)
         s = self.read()
         self.assertEqual(len(s), n)
         self.assertEqual(b"hello"[:n], s)
@@ -119,7 +119,7 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         """
         orig = b"0123456879" * 10000
         written = self.write(orig)
-        self.failUnless(written > 0)
+        self.assertTrue(written > 0)
         result = []
         resultlength = 0
         i = 0

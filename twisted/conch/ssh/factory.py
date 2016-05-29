@@ -12,6 +12,7 @@ from twisted.internet import protocol
 from twisted.python import log
 
 from twisted.conch import error
+from twisted.conch.ssh import _kex
 import transport, userauth, connection
 
 import random
@@ -54,11 +55,11 @@ class SSHFactory(protocol.Factory):
         t = protocol.Factory.buildProtocol(self, addr)
         t.supportedPublicKeys = self.privateKeys.keys()
         if not self.primes:
-            log.msg('disabling diffie-hellman-group-exchange because we '
-                    'cannot find moduli file')
-            ske = t.supportedKeyExchanges[:]
-            ske.remove('diffie-hellman-group-exchange-sha1')
-            t.supportedKeyExchanges = ske
+            log.msg('disabling non-fixed-group key exchange algorithms '
+                    'because we cannot find moduli file')
+            t.supportedKeyExchanges = [
+                kexAlgorithm for kexAlgorithm in t.supportedKeyExchanges
+                if _kex.isFixedGroup(kexAlgorithm)]
         return t
 
 
@@ -77,7 +78,7 @@ class SSHFactory(protocol.Factory):
         """
         Called when the factory is started to get the  private portions of the
         servers host keys.  Returns a dictionary mapping SSH key types to
-        C{Crypto.PublicKey.pubkey.pubkey} objects.
+        L{twisted.conch.ssh.keys.Key} objects.
 
         @rtype: C{dict}
         """

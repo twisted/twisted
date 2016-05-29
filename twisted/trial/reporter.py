@@ -16,17 +16,17 @@ import time
 import warnings
 import unittest as pyunit
 
+from collections import OrderedDict
+
 from zope.interface import implementer
 
 from twisted.python import reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
-try:
-    from collections import OrderedDict
-except ImportError:
-    from twisted.python.util import OrderedDict
+from twisted.python.compat import _PY3, items
 from twisted.trial import itrial, util
+from twisted.trial.unittest import makeTodo
 
 try:
     from subunit import TestProtocolClient
@@ -65,6 +65,9 @@ class TestResult(pyunit.TestResult, object):
     @ivar successes: count the number of successes achieved by the test run.
     @type successes: C{int}
     """
+
+    # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
+    _DEFAULT_TODO = 'Test expected to fail'
 
     def __init__(self):
         super(TestResult, self).__init__()
@@ -150,7 +153,7 @@ class TestResult(pyunit.TestResult, object):
         self.skips.append((test, reason))
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         Report that the given test succeeded against expectations.
 
@@ -159,13 +162,15 @@ class TestResult(pyunit.TestResult, object):
         call this method to report the unexpected success.
 
         @type test: L{pyunit.TestCase}
-        @type todo: L{unittest.Todo}
+        @type todo: L{unittest.Todo}, or C{None}, in which case a default todo
+            message is provided.
         """
-        # XXX - 'todo' should just be a string
+        if todo is None:
+            todo = makeTodo(self._DEFAULT_TODO)
         self.unexpectedSuccesses.append((test, todo))
 
 
-    def addExpectedFailure(self, test, error, todo):
+    def addExpectedFailure(self, test, error, todo=None):
         """
         Report that the given test failed, and was expected to do so.
 
@@ -174,9 +179,11 @@ class TestResult(pyunit.TestResult, object):
 
         @type test: L{pyunit.TestCase}
         @type error: L{Failure}
-        @type todo: L{unittest.Todo}
+        @type todo: L{unittest.Todo}, or C{None}, in which case a default todo
+            message is provided.
         """
-        # XXX - 'todo' should just be a string
+        if todo is None:
+            todo = makeTodo(self._DEFAULT_TODO)
         self.expectedFailures.append((test, error, todo))
 
 
@@ -287,9 +294,18 @@ class _AdaptedReporter(TestResultDecorator):
         return self._originalReporter.addError(test, error)
 
 
-    def addExpectedFailure(self, test, failure, todo):
+    def addExpectedFailure(self, test, failure, todo=None):
         """
         See L{itrial.IReporter}.
+
+        @type test: A L{pyunit.TestCase}.
+        @type failure: A L{failure.Failure} or L{exceptions.AssertionError}
+        @type todo: A L{unittest.Todo} or None
+
+        When C{todo} is C{None} a generic C{unittest.Todo} is built.
+
+        L{pyunit.TestCase}'s C{run()} calls this with 3 positional arguments
+        (without C{todo}).
         """
         return self._originalReporter.addExpectedFailure(
             self.testAdapter(test), failure, todo)
@@ -311,9 +327,17 @@ class _AdaptedReporter(TestResultDecorator):
         return self._originalReporter.addSkip(test, skip)
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         See L{itrial.IReporter}.
+
+        @type test: A L{pyunit.TestCase}.
+        @type todo: A L{unittest.Todo} or None
+
+        When C{todo} is C{None} a generic C{unittest.Todo} is built.
+
+        L{pyunit.TestCase}'s C{run()} calls this with 2 positional arguments
+        (without C{todo}).
         """
         test = self.testAdapter(test)
         return self._originalReporter.addUnexpectedSuccess(test, todo)
@@ -536,6 +560,15 @@ class Reporter(TestResult):
                      ("runWithWarningsSuppressed", "utils"))
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
+
+        if _PY3:
+            # On PY3, we have an extra frame which is reraising the exception
+            for frame in newFrames:
+                frameFile = os.path.splitext(os.path.basename(frame[1]))[0]
+                if frameFile == "compat" and frame[0] == "reraise":
+                    # If it's in the compat module and is reraise, BLAM IT
+                    newFrames.pop(newFrames.index(frame))
+
         if twoFrames == syncCase:
             newFrames = newFrames[2:]
         elif twoFrames == asyncCase:
@@ -590,7 +623,7 @@ class Reporter(TestResult):
             outcome = content[1:]
             key = formatter(*outcome)
             groups.setdefault(key, []).append(case)
-        return groups.items()
+        return items(groups)
 
 
     def _printResults(self, flavor, errors, formatter):
@@ -1087,7 +1120,7 @@ class SubunitReporter(object):
             addExpectedFailure(test, failure)
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         Record an unexpected success.
 

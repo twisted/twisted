@@ -20,6 +20,12 @@ from twisted.trial.unittest import SkipTest, SynchronousTestCase as TestCase
 
 from zope.interface.verify import verifyObject
 
+if not platform._supportsSymlinks():
+    symlinkSkip = "Platform does not support symlinks"
+else:
+    symlinkSkip = None
+
+
 
 class BytesTestCase(TestCase):
     """
@@ -136,13 +142,13 @@ class AbstractFilePathTests(BytesTestCase):
         file, not as a symlink, and be listable.
         """
         sub1 = self.path.child(b'sub1')
-        self.failUnless(sub1.exists(),
+        self.assertTrue(sub1.exists(),
                         "This directory does exist.")
-        self.failUnless(sub1.isdir(),
+        self.assertTrue(sub1.isdir(),
                         "It's a directory.")
-        self.failUnless(not sub1.isfile(),
+        self.assertTrue(not sub1.isfile(),
                         "It's a directory.")
-        self.failUnless(not sub1.islink(),
+        self.assertTrue(not sub1.islink(),
                         "It's a directory.")
         self.assertEqual(sub1.listdir(),
                              [b'file2'])
@@ -153,7 +159,7 @@ class AbstractFilePathTests(BytesTestCase):
         Verify that a subdirectory that doesn't exist is reported as such.
         """
         sub2 = self.path.child(b'sub2')
-        self.failIf(sub2.exists(),
+        self.assertFalse(sub2.exists(),
                     "This directory does not exist.")
 
     def test_validFiles(self):
@@ -608,9 +614,8 @@ class FilePathTests(AbstractFilePathTests):
         @raise SkipTest: raised if symbolic links are not supported on the
             host platform.
         """
-        if getattr(os, 'symlink', None) is None:
-            raise SkipTest(
-                "Platform does not support symbolic links.")
+        if symlinkSkip:
+            raise SkipTest(symlinkSkip)
         os.symlink(target, name)
 
 
@@ -764,23 +769,22 @@ class FilePathTests(AbstractFilePathTests):
                           self.path.child(b'sub1').child(b'file2'))
 
 
-    if not getattr(os, "symlink", None):
-        skipMsg = "Your platform does not support symbolic links."
-        test_symbolicLink.skip = skipMsg
-        test_linkTo.skip = skipMsg
-        test_linkToErrors.skip = skipMsg
+    if symlinkSkip:
+        test_symbolicLink.skip = symlinkSkip
+        test_linkTo.skip = symlinkSkip
+        test_linkToErrors.skip = symlinkSkip
 
 
     def testMultiExt(self):
         f3 = self.path.child(b'sub3').child(b'file3')
         exts = b'.foo', b'.bar', b'ext1', b'ext2', b'ext3'
-        self.failIf(f3.siblingExtensionSearch(*exts))
+        self.assertFalse(f3.siblingExtensionSearch(*exts))
         f3e = f3.siblingExtension(b".foo")
         f3e.touch()
-        self.failIf(not f3.siblingExtensionSearch(*exts).exists())
-        self.failIf(not f3.siblingExtensionSearch(b'*').exists())
+        self.assertFalse(not f3.siblingExtensionSearch(*exts).exists())
+        self.assertFalse(not f3.siblingExtensionSearch(b'*').exists())
         f3e.remove()
-        self.failIf(f3.siblingExtensionSearch(*exts))
+        self.assertFalse(f3.siblingExtensionSearch(*exts))
 
     def testPreauthChild(self):
         fp = filepath.FilePath(b'.')
@@ -842,24 +846,24 @@ class FilePathTests(AbstractFilePathTests):
     def testComparison(self):
         self.assertEqual(filepath.FilePath(b'a'),
                           filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'z') >
+        self.assertTrue(filepath.FilePath(b'z') >
                         filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'z') >=
+        self.assertTrue(filepath.FilePath(b'z') >=
                         filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'a') >=
+        self.assertTrue(filepath.FilePath(b'a') >=
                         filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'a') <=
+        self.assertTrue(filepath.FilePath(b'a') <=
                         filepath.FilePath(b'a'))
-        self.failUnless(filepath.FilePath(b'a') <
+        self.assertTrue(filepath.FilePath(b'a') <
                         filepath.FilePath(b'z'))
-        self.failUnless(filepath.FilePath(b'a') <=
+        self.assertTrue(filepath.FilePath(b'a') <=
                         filepath.FilePath(b'z'))
-        self.failUnless(filepath.FilePath(b'a') !=
+        self.assertTrue(filepath.FilePath(b'a') !=
                         filepath.FilePath(b'z'))
-        self.failUnless(filepath.FilePath(b'z') !=
+        self.assertTrue(filepath.FilePath(b'z') !=
                         filepath.FilePath(b'a'))
 
-        self.failIf(filepath.FilePath(b'z') !=
+        self.assertFalse(filepath.FilePath(b'z') !=
                     filepath.FilePath(b'z'))
 
 
@@ -907,7 +911,7 @@ class FilePathTests(AbstractFilePathTests):
         recursively delete its contents.
         """
         self.path.remove()
-        self.failIf(self.path.exists())
+        self.assertFalse(self.path.exists())
 
 
     def test_removeWithSymlink(self):
@@ -1189,7 +1193,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         path = filepath.FilePath(self.mktemp())
         f = path.create()
-        self.failUnless("b" in f.mode)
+        self.assertTrue("b" in f.mode)
         f.write(b"\n")
         f.close()
         read = open(path.path, "rb").read()
@@ -1330,6 +1334,95 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(fp.exists(), True)
 
 
+    def test_makedirsMakesDirectoriesRecursively(self):
+        """
+        C{FilePath.makedirs} creates a directory at C{path}}, including
+        recursively creating all parent directories leading up to the path.
+        """
+        fp = filepath.FilePath(os.path.join(
+            self.mktemp(), b"foo", b"bar", b"baz"))
+        self.assertFalse(fp.exists())
+
+        fp.makedirs()
+
+        self.assertTrue(fp.exists())
+        self.assertTrue(fp.isdir())
+
+
+    def test_makedirsMakesDirectoriesWithIgnoreExistingDirectory(self):
+        """
+        Calling C{FilePath.makedirs} with C{ignoreExistingDirectory} set to
+        C{True} has no effect if directory does not exist.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        self.assertFalse(fp.exists())
+
+        fp.makedirs(ignoreExistingDirectory=True)
+
+        self.assertTrue(fp.exists())
+        self.assertTrue(fp.isdir())
+
+
+    def test_makedirsThrowsWithExistentDirectory(self):
+        """
+        C{FilePath.makedirs} throws an C{OSError} exception
+        when called on a directory that already exists.
+        """
+        fp = filepath.FilePath(os.path.join(self.mktemp()))
+        fp.makedirs()
+
+        exception = self.assertRaises(OSError, fp.makedirs)
+
+        self.assertEqual(exception.errno, errno.EEXIST)
+
+
+    def test_makedirsAcceptsIgnoreExistingDirectory(self):
+        """
+        C{FilePath.makedirs} succeeds when called on a directory that already
+        exists and the c{ignoreExistingDirectory} argument is set to C{True}.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.makedirs()
+        self.assertTrue(fp.exists())
+
+        fp.makedirs(ignoreExistingDirectory=True)
+
+        self.assertTrue(fp.exists())
+
+
+    def test_makedirsIgnoreExistingDirectoryExistAlreadyAFile(self):
+        """
+        When C{FilePath.makedirs} is called with C{ignoreExistingDirectory} set
+        to C{True} it throws an C{OSError} exceptions if path is a file.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.create()
+        self.assertTrue(fp.isfile())
+
+        exception = self.assertRaises(
+            OSError, fp.makedirs, ignoreExistingDirectory=True)
+
+        self.assertEqual(exception.errno, errno.EEXIST)
+
+
+    def test_makedirsRaisesNonEexistErrorsIgnoreExistingDirectory(self):
+        """
+        When C{FilePath.makedirs} is called with C{ignoreExistingDirectory} set
+        to C{True} it raises an C{OSError} exception if exception errno is not
+        EEXIST.
+        """
+        def faultyMakedirs(path):
+            raise OSError(errno.EACCES, 'Permission Denied')
+
+        self.patch(os, 'makedirs', faultyMakedirs)
+        fp = filepath.FilePath(self.mktemp())
+
+        exception = self.assertRaises(
+            OSError, fp.makedirs, ignoreExistingDirectory=True)
+
+        self.assertEqual(exception.errno, errno.EACCES)
+
+
     def test_changed(self):
         """
         L{FilePath.changed} indicates that the L{FilePath} has changed, but does
@@ -1378,9 +1471,9 @@ class FilePathTests(AbstractFilePathTests):
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo
         warningInfo = self.flushWarnings([self.test_deprecateStatinfoGetter])
-        self.assertEquals(len(warningInfo), 1)
-        self.assertEquals(warningInfo[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warningInfo[0]['message'],
             "twisted.python.filepath.FilePath.statinfo was deprecated in "
             "Twisted 15.0.0; please use other FilePath methods such as "
@@ -1394,9 +1487,9 @@ class FilePathTests(AbstractFilePathTests):
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo = None
         warningInfo = self.flushWarnings([self.test_deprecateStatinfoSetter])
-        self.assertEquals(len(warningInfo), 1)
-        self.assertEquals(warningInfo[0]['category'], DeprecationWarning)
-        self.assertEquals(
+        self.assertEqual(len(warningInfo), 1)
+        self.assertEqual(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEqual(
             warningInfo[0]['message'],
             "twisted.python.filepath.FilePath.statinfo was deprecated in "
             "Twisted 15.0.0; please use other FilePath methods such as "
@@ -1410,7 +1503,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo = None
-        self.assertEquals(fp.statinfo, None)
+        self.assertEqual(fp.statinfo, None)
 
 
     def test_filePathNotDeprecated(self):
@@ -1420,7 +1513,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         filepath.FilePath(self.mktemp())
         warningInfo = self.flushWarnings([self.test_filePathNotDeprecated])
-        self.assertEquals(warningInfo, [])
+        self.assertEqual(warningInfo, [])
 
 
     def test_getPermissions_Windows(self):
@@ -1729,20 +1822,6 @@ class UnicodeFilePathTests(TestCase):
             self.assertEqual("FilePath(u'/mon\\u20acy')", reprOutput)
 
 
-    def test_unicodereprOnBrokenPy26(self):
-        """
-        The repr of a L{unicode} L{FilePath} shouldn't burst into flames. This
-        test case is for Pythons prior to 2.6.5 which has a broken abspath which
-        coerces some Unicode paths to bytes.
-        """
-        fp = filepath.FilePath(u"/")
-        reprOutput = repr(fp)
-        if _PY3:
-            self.assertEqual("FilePath('/')", reprOutput)
-        else:
-            self.assertEqual("FilePath(u'/')", reprOutput)
-
-
     def test_bytesrepr(self):
         """
         The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
@@ -1783,7 +1862,6 @@ class UnicodeFilePathTests(TestCase):
 
     if platform.isWindows():
         test_unicoderepr.skip = "Test will not work on Windows"
-        test_unicodereprOnBrokenPy26.skip = "Test will not work on Windows"
         test_bytesrepr.skip = "Test will not work on Windows"
     else:
         test_unicodereprWindows.skip = "Test only works on Windows"

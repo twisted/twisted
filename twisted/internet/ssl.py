@@ -82,7 +82,7 @@ class DefaultOpenSSLContextFactory(ContextFactory):
     handshakes and the subsequent connection.
 
     @ivar _contextFactory: A callable which will be used to create new
-        context objects.  This is typically L{SSL.Context}.
+        context objects.  This is typically L{OpenSSL.SSL.Context}.
     """
     _context = None
 
@@ -227,7 +227,9 @@ from twisted.internet._sslverify import (
     OpenSSLCertificateOptions as CertificateOptions,
     OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
     platformTrust, OpenSSLDefaultPaths, VerificationError,
-    optionsForClientTLS,
+    optionsForClientTLS, ProtocolNegotiationSupport,
+    protocolNegotiationMechanisms,
+    trustRootFromCertificates,
 )
 
 __all__ = [
@@ -240,4 +242,6 @@ __all__ = [
     'platformTrust', 'OpenSSLDefaultPaths',
 
     'VerificationError', 'optionsForClientTLS',
+    'ProtocolNegotiationSupport', 'protocolNegotiationMechanisms',
+    'trustRootFromCertificates',
 ]

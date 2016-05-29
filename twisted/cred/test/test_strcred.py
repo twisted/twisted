@@ -5,17 +5,23 @@
 Tests for L{twisted.cred.strcred}.
 """
 
+from __future__ import absolute_import, division
+
 import os
-import StringIO
 
 from twisted import plugin
 from twisted.trial import unittest
 from twisted.cred import credentials, checkers, error, strcred
 from twisted.plugins import cred_file, cred_anonymous
-from twisted.python import usage
+from twisted.python import usage, compat
 from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.reflect import requireModule
+
+if compat._PY3:
+    from io import StringIO
+else:
+    from io import BytesIO as StringIO
 
 try:
     import crypt
@@ -265,12 +271,12 @@ class FileDBCheckerTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self.admin = credentials.UsernamePassword('admin', 'asdf')
-        self.alice = credentials.UsernamePassword('alice', 'foo')
-        self.badPass = credentials.UsernamePassword('alice', 'foobar')
-        self.badUser = credentials.UsernamePassword('x', 'yz')
+        self.admin = credentials.UsernamePassword(b'admin', b'asdf')
+        self.alice = credentials.UsernamePassword(b'alice', b'foo')
+        self.badPass = credentials.UsernamePassword(b'alice', b'foobar')
+        self.badUser = credentials.UsernamePassword(b'x', b'yz')
         self.filename = self.mktemp()
-        FilePath(self.filename).setContent('admin:asdf\nalice:foo\n')
+        FilePath(self.filename).setContent(b'admin:asdf\nalice:foo\n')
         self.checker = strcred.makeChecker('file:' + self.filename)
 
 
@@ -332,7 +338,7 @@ class FileDBCheckerTests(unittest.TestCase):
         should produce a warning.
         """
         oldOutput = cred_file.theFileCheckerFactory.errorOutput
-        newOutput = StringIO.StringIO()
+        newOutput = StringIO()
         cred_file.theFileCheckerFactory.errorOutput = newOutput
         strcred.makeChecker('file:' + self._fakeFilename())
         cred_file.theFileCheckerFactory.errorOutput = oldOutput
@@ -349,8 +355,8 @@ class SSHCheckerTests(unittest.TestCase):
 
     skip = None
 
-    if requireModule('Crypto') is None:
-        skip = 'PyCrypto is not available'
+    if requireModule('cryptography') is None:
+        skip = 'cryptography is not available'
 
     if requireModule('pyasn1') is None:
         skip = 'pyasn1 is not available'
@@ -456,7 +462,7 @@ class CheckerOptionsTests(unittest.TestCase):
         Test that the --help-auth argument correctly displays all
         available authentication plugins, then exits.
         """
-        newStdout = StringIO.StringIO()
+        newStdout = StringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions, ['--help-auth'])
@@ -469,7 +475,7 @@ class CheckerOptionsTests(unittest.TestCase):
         Test that the --help-auth-for argument will correctly display
         the help file for a particular authentication plugin.
         """
-        newStdout = StringIO.StringIO()
+        newStdout = StringIO()
         options = DummyOptions()
         options.authOutput = newStdout
         self.assertRaises(
@@ -531,7 +537,8 @@ class LimitingInterfacesTests(unittest.TestCase):
 
     def setUp(self):
         self.filename = self.mktemp()
-        file(self.filename, 'w').write('admin:asdf\nalice:foo\n')
+        with open(self.filename, 'wb') as f:
+            f.write(b'admin:asdf\nalice:foo\n')
         self.goodChecker = checkers.FilePasswordDB(self.filename)
         self.badChecker = checkers.FilePasswordDB(
             self.filename, hash=self._hash)
@@ -653,8 +660,15 @@ class LimitingInterfacesTests(unittest.TestCase):
                 break
         self.assertNotIdentical(invalidFactory, None)
         # Capture output and make sure the warning is there
-        newStdout = StringIO.StringIO()
+        newStdout = StringIO()
         options.authOutput = newStdout
         self.assertRaises(SystemExit, options.parseOptions,
                           ['--help-auth-type', 'anonymous'])
         self.assertIn(strcred.notSupportedWarning, newStdout.getvalue())
+
+
+__all__ = [
+    "CheckerOptionsTests", "FileDBCheckerTests", "LimitingInterfacesTests",
+    "SSHCheckerTests", "UnixCheckerTests", "AnonymousCheckerTests",
+    "MemoryCheckerTests", "StrcredFunctionsTests", "PublicAPITests"
+]

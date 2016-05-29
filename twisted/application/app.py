@@ -2,7 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import sys
 import os
@@ -10,15 +10,16 @@ import pdb
 import getpass
 import traceback
 import signal
+import warnings
+
 from operator import attrgetter
 
-from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.python.reflect import qual, namedAny
-from twisted.python.log import ILogObserver
-from twisted.persisted import sob
+from twisted import copyright, plugin, logger
 from twisted.application import service, reactors
 from twisted.internet import defer
-from twisted import copyright, plugin
+from twisted.persisted import sob
+from twisted.python import runtime, log, usage, failure, util, logfile
+from twisted.python.reflect import qual, namedAny
 
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
@@ -85,47 +86,6 @@ class ProfileRunner(_BasicProfiler):
 
 
 
-class HotshotRunner(_BasicProfiler):
-    """
-    Runner for the hotshot profile module.
-    """
-
-    def run(self, reactor):
-        """
-        Run reactor under the hotshot profiler.
-        """
-        try:
-            import hotshot.stats
-        except (ImportError, SystemExit) as e:
-            # Certain versions of Debian (and Debian derivatives) raise
-            # SystemExit when importing hotshot if the "non-free" profiler
-            # module is not installed.  Someone eventually recognized this
-            # as a bug and changed the Debian packaged Python to raise
-            # ImportError instead.  Handle both exception types here in
-            # order to support the versions of Debian which have this
-            # behavior.  The bug report which prompted the introduction of
-            # this highly undesirable behavior should be available online at
-            # <http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=334067>.
-            # There seems to be no corresponding bug report which resulted
-            # in the behavior being removed. -exarkun
-            self._reportImportError("hotshot", e)
-
-        # this writes stats straight out
-        p = hotshot.Profile(self.profileOutput)
-        p.runcall(reactor.run)
-        if self.saveStats:
-            # stats are automatically written to file, nothing to do
-            return
-        else:
-            s = hotshot.stats.load(self.profileOutput)
-            s.strip_dirs()
-            s.sort_stats(-1)
-            s.stream = open(self.profileOutput, 'w')
-            s.print_stats()
-            s.stream.close()
-
-
-
 class CProfileRunner(_BasicProfiler):
     """
     Runner for the cProfile module.
@@ -163,13 +123,12 @@ class AppProfiler(object):
     @ivar profiler: the name of the selected profiler.
     @type profiler: C{str}
     """
-    profilers = {"profile": ProfileRunner, "hotshot": HotshotRunner,
-                 "cprofile": CProfileRunner}
+    profilers = {"profile": ProfileRunner, "cprofile": CProfileRunner}
 
     def __init__(self, options):
         saveStats = options.get("savestats", False)
         profileOutput = options.get("profile", None)
-        self.profiler = options.get("profiler", "hotshot").lower()
+        self.profiler = options.get("profiler", "cprofile").lower()
         if self.profiler in self.profilers:
             profiler = self.profilers[self.profiler](profileOutput, saveStats)
             self.run = profiler.run
@@ -182,7 +141,8 @@ class AppProfiler(object):
 class AppLogger(object):
     """
     An L{AppLogger} attaches the configured log observer specified on the
-    commandline to a L{ServerOptions} object or the custom L{ILogObserver}.
+    commandline to a L{ServerOptions} object, a custom L{logger.ILogObserver},
+    or a legacy custom {log.ILogObserver}.
 
     @ivar _logfilename: The name of the file to which to log, if other than the
         default.
@@ -192,7 +152,8 @@ class AppLogger(object):
         None.
 
     @ivar _observer: log observer added at C{start} and removed at C{stop}.
-    @type _observer: C{callable}
+    @type _observer: a callable that implements L{logger.ILogObserver} or
+        L{log.ILogObserver}.
     """
     _observer = None
 
@@ -209,24 +170,46 @@ class AppLogger(object):
         Initialize the global logging system for the given application.
 
         If a custom logger was specified on the command line it will be used.
-        If not, and an L{ILogObserver} component has been set on
-        C{application}, then it will be used as the log observer.  Otherwise a
-        log observer will be created based on the command-line options for
-        built-in loggers (e.g.  C{--logfile}).
+        If not, and an L{logger.ILogObserver} or legacy L{log.ILogObserver}
+        component has been set on C{application}, then it will be used as the
+        log observer. Otherwise a log observer will be created based on the
+        command line options for built-in loggers (e.g. C{--logfile}).
 
         @param application: The application on which to check for an
-            L{ILogObserver}.
+            L{logger.ILogObserver} or legacy L{log.ILogObserver}.
         @type application: L{twisted.python.components.Componentized}
         """
         if self._observerFactory is not None:
             observer = self._observerFactory()
         else:
-            observer = application.getComponent(ILogObserver, None)
+            observer = application.getComponent(logger.ILogObserver, None)
+            if observer is None:
+                # If there's no new ILogObserver, try the legacy one
+                observer = application.getComponent(log.ILogObserver, None)
 
         if observer is None:
             observer = self._getLogObserver()
         self._observer = observer
-        log.startLoggingWithObserver(self._observer)
+
+        if logger.ILogObserver.providedBy(self._observer):
+            observers = [self._observer]
+        elif log.ILogObserver.providedBy(self._observer):
+            observers = [logger.LegacyLogObserverWrapper(self._observer)]
+        else:
+            warnings.warn(
+                ("Passing a logger factory which makes log observers which do "
+                 "not implement twisted.logger.ILogObserver or "
+                 "twisted.python.log.ILogObserver to "
+                 "twisted.application.app.AppLogger was deprecated in "
+                 "Twisted 16.2. Please use a factory that produces "
+                 "twisted.logger.ILogObserver (or the legacy "
+                 "twisted.python.log.ILogObserver) implementing objects "
+                 "instead."),
+                DeprecationWarning,
+                stacklevel=2)
+            observers = [logger.LegacyLogObserverWrapper(self._observer)]
+
+        logger.globalLogBeginner.beginLoggingTo(observers)
         self._initialLog()
 
 
@@ -235,10 +218,12 @@ class AppLogger(object):
         Print twistd start log message.
         """
         from twisted.internet import reactor
-        log.msg("twistd %s (%s %s) starting up." % (
-            copyright.version, sys.executable, runtime.shortPythonVersion())
-        )
-        log.msg('reactor class: %s.' % (qual(reactor.__class__),))
+        logger._loggerFor(self).info(
+            "twistd {version} ({exe} {pyVersion}) starting up.",
+            version=copyright.version, exe=sys.executable,
+            pyVersion=runtime.shortPythonVersion())
+        logger._loggerFor(self).info('reactor class: {reactor}.',
+                                     reactor=qual(reactor.__class__))
 
 
     def _getLogObserver(self):
@@ -250,16 +235,16 @@ class AppLogger(object):
             logFile = sys.stdout
         else:
             logFile = logfile.LogFile.fromFullPath(self._logfilename)
-        return log.FileLogObserver(logFile).emit
+        return logger.textFileLogObserver(logFile)
 
 
     def stop(self):
         """
         Remove all log observers previously set up by L{AppLogger.start}.
         """
-        log.msg("Server Shut Down.")
+        logger._loggerFor(self).info("Server Shut Down.")
         if self._observer is not None:
-            log.removeObserver(self._observer)
+            logger.globalLogPublisher.removeObserver(self._observer)
             self._observer = None
 
 
@@ -562,7 +547,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                      ['profile', 'p', None,
                       "Run in profile mode, dumping results to specified "
                       "file."],
-                     ['profiler', None, "hotshot",
+                     ['profiler', None, "cprofile",
                       "Name of the profiler to use (%s)." %
                       ", ".join(AppProfiler.profilers)],
                      ['file', 'f', 'twistd.tap',
@@ -604,7 +589,8 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
     def opt_spew(self):
         """
         Print an insanely verbose log of everything that happens.
-        Useful when debugging freezes or locks in complex code."""
+        Useful when debugging freezes or locks in complex code.
+        """
         sys.settrace(util.spewer)
         try:
             import threading

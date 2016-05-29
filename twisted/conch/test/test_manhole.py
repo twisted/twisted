@@ -11,7 +11,8 @@ import traceback
 from twisted.trial import unittest
 from twisted.internet import error, defer
 from twisted.test.proto_helpers import StringTransport
-from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin, stdio, ssh
+from twisted.conch.test.test_recvline import (
+    _TelnetMixin, _SSHMixin, _StdioMixin, stdio, ssh)
 from twisted.conch import manhole
 from twisted.conch.insults import insults
 
@@ -96,11 +97,14 @@ class WriterTests(unittest.TestCase):
         manhole.lastColorizedLine("class foo:")
 
 
+
 class ManholeLoopbackMixin:
     serverProtocol = manhole.ColoredManhole
 
+
     def wfd(self, d):
         return defer.waitForDeferred(d)
+
 
     def testSimpleExpression(self):
         done = self.recvlineClient.expect("done")
@@ -117,6 +121,7 @@ class ManholeLoopbackMixin:
 
         return done.addCallback(finished)
 
+
     def testTripleQuoteLineContinuation(self):
         done = self.recvlineClient.expect("done")
 
@@ -132,6 +137,7 @@ class ManholeLoopbackMixin:
                  ">>> done"])
 
         return done.addCallback(finished)
+
 
     def testFunctionDefinition(self):
         done = self.recvlineClient.expect("done")
@@ -152,6 +158,7 @@ class ManholeLoopbackMixin:
                  ">>> done"])
 
         return done.addCallback(finished)
+
 
     def testClassDefinition(self):
         done = self.recvlineClient.expect("done")
@@ -175,6 +182,7 @@ class ManholeLoopbackMixin:
 
         return done.addCallback(finished)
 
+
     def testException(self):
         done = self.recvlineClient.expect("done")
 
@@ -191,6 +199,7 @@ class ManholeLoopbackMixin:
                  ">>> done"])
 
         return done.addCallback(finished)
+
 
     def testControlC(self):
         done = self.recvlineClient.expect("done")
@@ -253,7 +262,8 @@ class ManholeLoopbackMixin:
             self._assertBuffer(
                 [""])
 
-        return partialLine.addCallback(gotPartialLine).addCallback(gotClearedLine)
+        return partialLine.addCallback(gotPartialLine).addCallback(
+            gotClearedLine)
 
 
     @defer.inlineCallbacks
@@ -349,15 +359,33 @@ class ManholeLoopbackMixin:
              "Deferred #0 called back: 'Hi!'",
              ">>> "])
 
-class ManholeLoopbackTelnetTests(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixin):
+
+
+class ManholeLoopbackTelnetTests(_TelnetMixin, unittest.TestCase,
+                                 ManholeLoopbackMixin):
+    """
+    Test manhole loopback over Telnet.
+    """
     pass
 
-class ManholeLoopbackSSHTests(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
-    if ssh is None:
-        skip = "Crypto requirements missing, can't run manhole tests over ssh"
 
-class ManholeLoopbackStdioTests(_StdioMixin, unittest.TestCase, ManholeLoopbackMixin):
+
+class ManholeLoopbackSSHTests(_SSHMixin, unittest.TestCase,
+                              ManholeLoopbackMixin):
+    """
+    Test manhole loopback over SSH.
+    """
+    if ssh is None:
+        skip = "cryptography requirements missing"
+
+
+
+class ManholeLoopbackStdioTests(_StdioMixin, unittest.TestCase,
+                                ManholeLoopbackMixin):
+    """
+    Test manhole loopback over standard IO.
+    """
     if stdio is None:
-        skip = "Terminal requirements missing, can't run manhole tests over stdio"
+        skip = "Terminal requirements missing"
     else:
         serverProtocol = stdio.ConsoleManhole

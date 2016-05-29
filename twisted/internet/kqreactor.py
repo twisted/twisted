@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_kqueuereactor -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -13,28 +14,33 @@ connections, listeners or connectors are added)::
 
    from twisted.internet import kqreactor
    kqreactor.install()
-
-This implementation depends on Python 2.6 or higher which has kqueue support
-built in the select module.
-
-Note, that you should use Python 2.6.5 or higher, since previous implementations
-of select.kqueue had U{http://bugs.python.org/issue5910} not yet fixed.
 """
 
 from __future__ import division, absolute_import
 
 import errno
+import select
 
-from zope.interface import implementer
-
-from select import kqueue, kevent
 from select import KQ_FILTER_READ, KQ_FILTER_WRITE
 from select import KQ_EV_DELETE, KQ_EV_ADD, KQ_EV_EOF
 
-from twisted.internet.interfaces import IReactorFDSet, IReactorDaemonize
+from zope.interface import implementer, declarations, Interface, Attribute
 
-from twisted.python import log, failure
 from twisted.internet import main, posixbase
+from twisted.internet.interfaces import IReactorFDSet, IReactorDaemonize
+from twisted.python import log, failure
+
+
+
+class _IKQueue(Interface):
+    """
+    An interface for KQueue implementations.
+    """
+    kqueue = Attribute("An implementation of kqueue(2).")
+    kevent = Attribute("An implementation of kevent(2).")
+
+declarations.directlyProvides(select, _IKQueue)
+
 
 
 @implementer(IReactorFDSet, IReactorDaemonize)
@@ -43,7 +49,9 @@ class KQueueReactor(posixbase.PosixReactorBase):
     A reactor that uses kqueue(2)/kevent(2) and relies on Python 2.6 or higher
     which has built in support for kqueue in the select module.
 
-    @ivar _kq: A L{kqueue} which will be used to check for I/O readiness.
+    @ivar _kq: A C{kqueue} which will be used to check for I/O readiness.
+
+    @ivar _impl: The implementation of L{_IKQueue} to use.
 
     @ivar _selectables: A dictionary mapping integer file descriptors to
         instances of L{FileDescriptor} which have been registered with the
@@ -62,17 +70,21 @@ class KQueueReactor(posixbase.PosixReactorBase):
         instances in C{_selectables}.
     """
 
-    def __init__(self):
+    def __init__(self, _kqueueImpl=select):
         """
-        Initialize kqueue object, file descriptor tracking dictionaries, and the
-        base class.
+        Initialize kqueue object, file descriptor tracking dictionaries, and
+        the base class.
 
         See:
             - http://docs.python.org/library/select.html
             - www.freebsd.org/cgi/man.cgi?query=kqueue
             - people.freebsd.org/~jlemon/papers/kqueue.pdf
+
+        @param _kqueueImpl: The implementation of L{_IKQueue} to use. A
+            hook for testing.
         """
-        self._kq = kqueue()
+        self._impl = _kqueueImpl
+        self._kq = self._impl.kqueue()
         self._reads = set()
         self._writes = set()
         self._selectables = {}
@@ -85,7 +97,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         filtering for events given filter/op. This will never block and
         returns nothing.
         """
-        self._kq.control([kevent(fd, filter, op)], 0, 0)
+        self._kq.control([self._impl.kevent(fd, filter, op)], 0, 0)
 
 
     def beforeDaemonize(self):
@@ -113,7 +125,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         # after daemonization and recreates the kqueue() and any readers/writers
         # that were added before. Note that you MUST NOT call any reactor methods
         # in between beforeDaemonize() and afterDaemonize()!
-        self._kq = kqueue()
+        self._kq = self._impl.kqueue()
         for fd in self._reads:
             self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_ADD)
         for fd in self._writes:
@@ -235,15 +247,18 @@ class KQueueReactor(posixbase.PosixReactorBase):
             timeout = 1
 
         try:
-            l = self._kq.control([], len(self._selectables), timeout)
+            events = self._kq.control([], len(self._selectables), timeout)
         except OSError as e:
-            if e[0] == errno.EINTR:
+            # Since this command blocks for potentially a while, it's possible
+            # EINTR can be raised for various reasons (for example, if the user
+            # hits ^C).
+            if e.errno == errno.EINTR:
                 return
             else:
                 raise
 
         _drdw = self._doWriteOrRead
-        for event in l:
+        for event in events:
             fd = event.ident
             try:
                 selectable = self._selectables[fd]
@@ -273,12 +288,12 @@ class KQueueReactor(posixbase.PosixReactorBase):
                     inRead = False
                     why = posixbase._NO_FILEDESC
                 else:
-                   if filter == KQ_FILTER_READ:
-                       inRead = True
-                       why = selectable.doRead()
-                   if filter == KQ_FILTER_WRITE:
-                       inRead = False
-                       why = selectable.doWrite()
+                    if filter == KQ_FILTER_READ:
+                        inRead = True
+                        why = selectable.doRead()
+                    if filter == KQ_FILTER_WRITE:
+                        inRead = False
+                        why = selectable.doWrite()
             except:
                 # Any exception from application code gets logged and will
                 # cause us to disconnect the selectable.
@@ -290,6 +305,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
             self._disconnectSelectable(selectable, why, inRead)
 
     doIteration = doKEvent
+
 
 
 def install():

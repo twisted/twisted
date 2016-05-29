@@ -23,7 +23,7 @@ class DeferredSetUpOK(unittest.TestCase):
         self._setUpCalled = True
 
     def test_ok(self):
-        self.failUnless(self._setUpCalled)
+        self.assertTrue(self._setUpCalled)
 
 
 class DeferredSetUpFail(unittest.TestCase):

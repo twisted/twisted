@@ -12,40 +12,47 @@ Only Linux is supported by this code.  It should not be used by any tools
 which must run on multiple platforms (eg the setup.py script).
 """
 
-import textwrap
-from datetime import date
+import os
 import re
 import sys
-import os
-from tempfile import mkdtemp
-import tarfile
+import textwrap
 
+from zope.interface import Interface, implementer
+
+from datetime import date
 from subprocess import PIPE, STDOUT, Popen
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
-from twisted.python.dist import twisted_subprojects
 from twisted.python.compat import execfile
 from twisted.python.usage import Options, UsageError
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
 
+intersphinxURLs = [
+    "https://docs.python.org/2/objects.inv",
+    "https://pyopenssl.readthedocs.org/en/stable/objects.inv",
+]
 
-def runCommand(args):
+
+def runCommand(args, cwd=None):
     """
     Execute a vector of arguments.
 
-    @type args: C{list} of C{str}
+    @type args: L{list} of L{bytes}
     @param args: A list of arguments, the first of which will be used as the
         executable to run.
 
-    @rtype: C{str}
+    @type cwd: L{bytes}
+    @param: The current working directory that the command should run with.
+
+    @rtype: L{bytes}
     @return: All of the standard output.
 
     @raise CommandFailed: when the program exited with a non-0 exit code.
     """
-    process = Popen(args, stdout=PIPE, stderr=STDOUT)
+    process = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=cwd)
     stdout = process.stdout.read()
     exitCode = process.wait()
     if exitCode < 0:
@@ -74,6 +81,146 @@ class CommandFailed(Exception):
         self.exitStatus = exitStatus
         self.exitSignal = exitSignal
         self.output = output
+
+
+
+class IVCSCommand(Interface):
+    """
+    An interface for VCS commands.
+    """
+    def ensureIsWorkingDirectory(path):
+        """
+        Ensure that C{path} is a working directory of this VCS.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to check.
+        """
+
+
+    def isStatusClean(path):
+        """
+        Return the Git status of the files in the specified path.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to get the status from (can be a directory or a
+            file.)
+        """
+
+
+    def remove(path):
+        """
+        Remove the specified path from a the VCS.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to remove from the repository.
+        """
+
+
+    def exportTo(fromDir, exportDir):
+        """
+        Export the content of the VCSrepository to the specified directory.
+
+        @type fromDir: L{twisted.python.filepath.FilePath}
+        @param fromDir: The path to the VCS repository to export.
+
+        @type exportDir: L{twisted.python.filepath.FilePath}
+        @param exportDir: The directory to export the content of the
+            repository to. This directory doesn't have to exist prior to
+            exporting the repository.
+        """
+
+
+
+@implementer(IVCSCommand)
+class GitCommand(object):
+    """
+    Subset of Git commands to release Twisted from a Git repository.
+    """
+    @staticmethod
+    def ensureIsWorkingDirectory(path):
+        """
+        Ensure that C{path} is a Git working directory.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to check.
+        """
+        try:
+            runCommand(["git", "rev-parse"], cwd=path.path)
+        except (CommandFailed, OSError):
+            raise NotWorkingDirectory(
+                "%s does not appear to be a Git repository."
+                % (path.path,))
+
+
+    @staticmethod
+    def isStatusClean(path):
+        """
+        Return the Git status of the files in the specified path.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to get the status from (can be a directory or a
+            file.)
+        """
+        status = runCommand(
+            ["git", "-C", path.path, "status", "--short"]).strip()
+        return status == ''
+
+
+    @staticmethod
+    def remove(path):
+        """
+        Remove the specified path from a Git repository.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The path to remove from the repository.
+        """
+        runCommand(["git", "-C", path.dirname(), "rm", path.path])
+
+
+    @staticmethod
+    def exportTo(fromDir, exportDir):
+        """
+        Export the content of a Git repository to the specified directory.
+
+        @type fromDir: L{twisted.python.filepath.FilePath}
+        @param fromDir: The path to the Git repository to export.
+
+        @type exportDir: L{twisted.python.filepath.FilePath}
+        @param exportDir: The directory to export the content of the
+            repository to. This directory doesn't have to exist prior to
+            exporting the repository.
+        """
+        runCommand(["git", "-C", fromDir.path,
+                    "checkout-index", "--all", "--force",
+                    # prefix has to end up with a "/" so that files get copied
+                    # to a directory whose name is the prefix.
+                    "--prefix", exportDir.path + "/"])
+
+
+
+def getRepositoryCommand(directory):
+    """
+    Detect the VCS used in the specified directory and return a L{GitCommand}
+    if the directory is a Git repository. If the directory is not git, it
+    raises a L{NotWorkingDirectory} exception.
+
+    @type directory: L{FilePath}
+    @param directory: The directory to detect the VCS used from.
+
+    @rtype: L{GitCommand}
+
+    @raise NotWorkingDirectory: if no supported VCS can be found from the
+        specified directory.
+    """
+    try:
+        GitCommand.ensureIsWorkingDirectory(directory)
+        return GitCommand
+    except (NotWorkingDirectory, OSError):
+        # It's not Git, but that's okay, eat the error
+        pass
+
+    raise NotWorkingDirectory("No supported VCS can be found in %s" %
+                              (directory.path,))
 
 
 
@@ -132,10 +279,7 @@ def getNextVersion(version, prerelease, patch, today):
 
 def changeAllProjectVersions(root, prerelease, patch, today=None):
     """
-    Change the version of all projects (including core and all subprojects).
-
-    If the current version of a project is pre-release, then also change the
-    versions in the current NEWS entries for that project.
+    Change the version of the project.
 
     @type root: L{FilePath}
     @param root: The root of the Twisted source tree.
@@ -152,31 +296,33 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
     if not today:
         today = date.today()
     formattedToday = today.strftime('%Y-%m-%d')
-    for project in findTwistedProjects(root):
-        if project.directory.basename() == "twisted":
-            packageName = "twisted"
-        else:
-            packageName = "twisted." + project.directory.basename()
-        oldVersion = project.getVersion()
-        newVersion = getNextVersion(oldVersion, prerelease, patch, today)
-        if oldVersion.prerelease:
-            builder = NewsBuilder()
-            builder._changeNewsVersion(
-                root.child("NEWS"), builder._getNewsName(project),
-                oldVersion, newVersion, formattedToday)
+
+    twistedProject = Project(root.child("twisted"))
+    oldVersion = twistedProject.getVersion()
+    newVersion = getNextVersion(oldVersion, prerelease, patch, today)
+
+    def _makeNews(project, underTopfiles=True):
+        builder = NewsBuilder()
+        builder._changeNewsVersion(
+            root.child("NEWS"), builder._getNewsName(project),
+            oldVersion, newVersion, formattedToday)
+        if underTopfiles:
             builder._changeNewsVersion(
                 project.directory.child("topfiles").child("NEWS"),
                 builder._getNewsName(project), oldVersion, newVersion,
                 formattedToday)
 
-        # The placement of the top-level README with respect to other files (eg
-        # _version.py) is sufficiently different from the others that we just
-        # have to handle it specially.
-        if packageName == "twisted":
-            _changeVersionInFile(
-                oldVersion, newVersion, root.child('README').path)
+    if oldVersion.prerelease:
+        _makeNews(twistedProject, underTopfiles=False)
 
-        project.updateVersion(newVersion)
+    for project in findTwistedProjects(root):
+        if oldVersion.prerelease:
+            _makeNews(project)
+        project.updateREADME(newVersion)
+
+    # Then change the global version.
+    twistedProject.updateVersion(newVersion)
+    _changeVersionInFile(oldVersion, newVersion, root.child('README.rst').path)
 
 
 
@@ -205,7 +351,14 @@ class Project(object):
         based on live python modules.
         """
         namespace = {}
-        execfile(self.directory.child("_version.py").path, namespace)
+        directory = self.directory
+        while not namespace:
+            if directory.path == "/":
+                raise Exception("Not inside a Twisted project.")
+            elif not directory.basename() == "twisted":
+                directory = directory.parent()
+            else:
+                execfile(directory.child("_version.py").path, namespace)
         return namespace["version"]
 
 
@@ -213,10 +366,28 @@ class Project(object):
         """
         Replace the existing version numbers in _version.py and README files
         with the specified version.
+
+        @param version: The version to update to.
         """
+        if not self.directory.basename() == "twisted":
+            raise Exception("Can't change the version of subprojects.")
+
         oldVersion = self.getVersion()
         replaceProjectVersion(self.directory.child("_version.py").path,
                               version)
+        _changeVersionInFile(
+            oldVersion, version,
+            self.directory.child("topfiles").child("README").path)
+
+
+    def updateREADME(self, version):
+        """
+        Replace the existing version numbers in the README file with the
+        specified version.
+
+        @param version: The version to update to.
+        """
+        oldVersion = self.getVersion()
         _changeVersionInFile(
             oldVersion, version,
             self.directory.child("topfiles").child("README").path)
@@ -236,7 +407,6 @@ def findTwistedProjects(baseDirectory):
             projectDirectory = filePath.parent()
             projects.append(Project(projectDirectory))
     return projects
-
 
 
 
@@ -342,6 +512,12 @@ class APIBuilder(object):
         @param outputPath: An existing directory to which the generated API
             documentation will be written.
         """
+        intersphinxes = []
+
+        for intersphinx in intersphinxURLs:
+            intersphinxes.append("--intersphinx")
+            intersphinxes.append(intersphinx)
+
         from pydoctor.driver import main
         main(
             ["--project-name", projectName,
@@ -351,7 +527,8 @@ class APIBuilder(object):
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
-             "--html-write-function-pages", "--quiet", "--make-html"])
+             "--html-write-function-pages", "--quiet", "--make-html",
+            ] + intersphinxes)
 
 
 
@@ -525,7 +702,8 @@ class NewsBuilder(object):
         @param header: The top-level header to use when writing the news.
         @type header: L{str}
 
-        @raise NotWorkingDirectory: If the C{path} is not an SVN checkout.
+        @raise NotWorkingDirectory: If the C{path} is not a supported VCS
+            repository.
         """
         changes = []
         for part in (self._FEATURE, self._BUGFIX, self._DOC, self._REMOVAL):
@@ -557,18 +735,19 @@ class NewsBuilder(object):
     def _deleteFragments(self, path):
         """
         Delete the change information, to clean up the repository  once the
-        NEWS files have been built. It requires C{path} to be in a SVN
-        directory.
+        NEWS files have been built. It requires C{path} to be in a supported
+        VCS repository.
 
         @param path: A directory (probably a I{topfiles} directory) containing
             change information in the form of <ticket>.<change type> files.
         @type path: L{FilePath}
         """
+        cmd = getRepositoryCommand(path)
         ticketTypes = self._headings.keys()
         for child in path.children():
             base, ext = os.path.splitext(child.basename())
             if ext in ticketTypes:
-                runCommand(["svn", "rm", child.path])
+                cmd.remove(child)
 
 
     def _getNewsName(self, project):
@@ -626,12 +805,8 @@ class NewsBuilder(object):
             beneath which to find Twisted projects for which to generate
             news (see L{findTwistedProjects}).
         """
-        try:
-            runCommand(["svn", "info", baseDirectory.path])
-        except CommandFailed:
-            raise NotWorkingDirectory(
-                "%s does not appear to be an SVN working directory."
-                % (baseDirectory.path,))
+        cmd = getRepositoryCommand(baseDirectory)
+        cmd.ensureIsWorkingDirectory(baseDirectory)
 
         today = self._today()
         for topfiles, name, version in self._iterProjects(baseDirectory):
@@ -715,7 +890,10 @@ class SphinxBuilder(object):
             Additional arguments will be ignored for compatibility with legacy
             build infrastructure.
         """
-        self.build(FilePath(args[0]).child("docs"))
+        output = self.build(FilePath(args[0]).child("docs"))
+        if output:
+            sys.stdout.write("Unclean build:\n{}\n".format(output))
+            raise sys.exit(1)
 
 
     def build(self, docDir, buildDir=None, version=''):
@@ -733,15 +911,21 @@ class SphinxBuilder(object):
 
         @param version: The version of Twisted to set in the docs.
         @type version: C{str}
+
+        @return: the output produced by running the command
+        @rtype: L{str}
         """
         if buildDir is None:
             buildDir = docDir.parent().child('doc')
 
         doctreeDir = buildDir.child('doctrees')
 
-        runCommand(['sphinx-build', '-b', 'html',
-                    '-d', doctreeDir.path, docDir.path,
-                    buildDir.path])
+        output = runCommand(['sphinx-build', '-q', '-b', 'html',
+                             '-d', doctreeDir.path, docDir.path,
+                             buildDir.path])
+
+        # Delete the doctrees, as we don't want them after the docs are built
+        doctreeDir.remove()
 
         for path in docDir.walk():
             if path.basename() == "man":
@@ -752,6 +936,7 @@ class SphinxBuilder(object):
                 if not dest.parent().isdir():
                     dest.parent().makedirs()
                 path.copyTo(dest)
+        return output
 
 
 
@@ -784,270 +969,11 @@ def filePathDelta(origin, destination):
 
 
 
-class DistributionBuilder(object):
-    """
-    A builder of Twisted distributions.
-
-    This knows how to build tarballs for Twisted and all of its subprojects.
-    """
-    subprojects = twisted_subprojects
-
-    def __init__(self, rootDirectory, outputDirectory, templatePath=None):
-        """
-        Create a distribution builder.
-
-        @param rootDirectory: root of a Twisted export which will populate
-            subsequent tarballs.
-        @type rootDirectory: L{FilePath}.
-
-        @param outputDirectory: The directory in which to create the tarballs.
-        @type outputDirectory: L{FilePath}
-
-        @param templatePath: Path to the template file that is used for the
-            howto documentation.
-        @type templatePath: L{FilePath}
-        """
-        self.rootDirectory = rootDirectory
-        self.outputDirectory = outputDirectory
-        self.templatePath = templatePath
-
-
-    def buildTwisted(self, version):
-        """
-        Build the main Twisted distribution in C{Twisted-<version>.tar.bz2}.
-
-        bin/admin is excluded.
-
-        @type version: C{str}
-        @param version: The version of Twisted to build.
-
-        @return: The tarball file.
-        @rtype: L{FilePath}.
-        """
-        releaseName = "Twisted-%s" % (version,)
-        buildPath = lambda *args: '/'.join((releaseName,) + args)
-
-        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
-        tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
-
-        docPath = self.rootDirectory.child("docs")
-
-        # Generate docs!
-        if docPath.isdir():
-            SphinxBuilder().build(docPath)
-
-        for binthing in self.rootDirectory.child("bin").children():
-            # bin/admin should not be included.
-            if binthing.basename() != "admin":
-                tarball.add(binthing.path,
-                            buildPath("bin", binthing.basename()))
-
-        for submodule in self.rootDirectory.child("twisted").children():
-            if submodule.basename() == "plugins":
-                for plugin in submodule.children():
-                    tarball.add(plugin.path, buildPath("twisted", "plugins",
-                                                       plugin.basename()))
-            else:
-                tarball.add(submodule.path, buildPath("twisted",
-                                                      submodule.basename()))
-
-        for docDir in self.rootDirectory.child("doc").children():
-            if docDir.basename() != "historic":
-                tarball.add(docDir.path, buildPath("doc", docDir.basename()))
-
-        for toplevel in self.rootDirectory.children():
-            if not toplevel.isdir():
-                tarball.add(toplevel.path, buildPath(toplevel.basename()))
-
-        tarball.close()
-
-        return outputFile
-
-
-    def buildCore(self, version):
-        """
-        Build a core distribution in C{TwistedCore-<version>.tar.bz2}.
-
-        This is very similar to L{buildSubProject}, but core tarballs and the
-        input are laid out slightly differently.
-
-         - scripts are in the top level of the C{bin} directory.
-         - code is included directly from the C{twisted} directory, excluding
-           subprojects.
-         - all plugins except the subproject plugins are included.
-
-        @type version: C{str}
-        @param version: The version of Twisted to build.
-
-        @return: The tarball file.
-        @rtype: L{FilePath}.
-        """
-        releaseName = "TwistedCore-%s" % (version,)
-        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
-        buildPath = lambda *args: '/'.join((releaseName,) + args)
-        tarball = self._createBasicSubprojectTarball(
-            "core", version, outputFile)
-
-        # Include the bin directory for the subproject.
-        for path in self.rootDirectory.child("bin").children():
-            if not path.isdir():
-                tarball.add(path.path, buildPath("bin", path.basename()))
-
-        # Include all files within twisted/ that aren't part of a subproject.
-        for path in self.rootDirectory.child("twisted").children():
-            if path.basename() == "plugins":
-                for plugin in path.children():
-                    for subproject in self.subprojects:
-                        if (plugin.basename() ==
-                                "twisted_%s.py" % (subproject,)):
-                            break
-                    else:
-                        tarball.add(plugin.path,
-                                    buildPath("twisted", "plugins",
-                                              plugin.basename()))
-            elif not path.basename() in self.subprojects + ["topfiles"]:
-                tarball.add(path.path, buildPath("twisted", path.basename()))
-
-        tarball.add(self.rootDirectory.child("twisted").child("topfiles").path,
-                    releaseName)
-        tarball.close()
-
-        return outputFile
-
-
-    def buildSubProject(self, projectName, version):
-        """
-        Build a subproject distribution in
-        C{Twisted<Projectname>-<version>.tar.bz2}.
-
-        @type projectName: C{str}
-        @param projectName: The lowercase name of the subproject to build.
-        @type version: C{str}
-        @param version: The version of Twisted to build.
-
-        @return: The tarball file.
-        @rtype: L{FilePath}.
-        """
-        releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
-        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
-        buildPath = lambda *args: '/'.join((releaseName,) + args)
-        subProjectDir = self.rootDirectory.child("twisted").child(projectName)
-
-        tarball = self._createBasicSubprojectTarball(projectName, version,
-                                                     outputFile)
-
-        tarball.add(subProjectDir.child("topfiles").path, releaseName)
-
-        # Include all files in the subproject package except for topfiles.
-        for child in subProjectDir.children():
-            name = child.basename()
-            if name != "topfiles":
-                tarball.add(
-                    child.path,
-                    buildPath("twisted", projectName, name))
-
-        pluginsDir = self.rootDirectory.child("twisted").child("plugins")
-        # Include the plugin for the subproject.
-        pluginFileName = "twisted_%s.py" % (projectName,)
-        pluginFile = pluginsDir.child(pluginFileName)
-        if pluginFile.exists():
-            tarball.add(pluginFile.path,
-                        buildPath("twisted", "plugins", pluginFileName))
-
-        # Include the bin directory for the subproject.
-        binPath = self.rootDirectory.child("bin").child(projectName)
-        if binPath.isdir():
-            tarball.add(binPath.path, buildPath("bin"))
-        tarball.close()
-
-        return outputFile
-
-
-    def _createBasicSubprojectTarball(self, projectName, version, outputFile):
-        """
-        Helper method to create and fill a tarball with things common between
-        subprojects and core.
-
-        @param projectName: The subproject's name.
-        @type projectName: C{str}
-        @param version: The version of the release.
-        @type version: C{str}
-        @param outputFile: The location of the tar file to create.
-        @type outputFile: L{FilePath}
-        """
-        releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
-        buildPath = lambda *args: '/'.join((releaseName,) + args)
-
-        tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
-
-        tarball.add(self.rootDirectory.child("LICENSE").path,
-                    buildPath("LICENSE"))
-        return tarball
-
-
-
-class UncleanWorkingDirectory(Exception):
-    """
-    Raised when the working directory of an SVN checkout is unclean.
-    """
-
-
-
 class NotWorkingDirectory(Exception):
     """
-    Raised when a directory does not appear to be an SVN working directory.
+    Raised when a directory does not appear to be a repository directory of a
+    supported VCS.
     """
-
-
-
-def buildAllTarballs(checkout, destination, templatePath=None):
-    """
-    Build complete tarballs (including documentation) for Twisted and all
-    subprojects.
-
-    This should be called after the version numbers have been updated and
-    NEWS files created.
-
-    @type checkout: L{FilePath}
-    @param checkout: The SVN working copy from which a pristine source tree
-        will be exported.
-    @type destination: L{FilePath}
-    @param destination: The directory in which tarballs will be placed.
-    @type templatePath: L{FilePath}
-    @param templatePath: Location of the template file that is used for the
-        howto documentation.
-
-    @raise UncleanWorkingDirectory: If there are modifications to the
-        working directory of C{checkout}.
-    @raise NotWorkingDirectory: If the C{checkout} path is not an SVN checkout.
-    """
-    if not checkout.child(".svn").exists():
-        raise NotWorkingDirectory(
-            "%s does not appear to be an SVN working directory."
-            % (checkout.path,))
-    if runCommand(["svn", "st", checkout.path]).strip():
-        raise UncleanWorkingDirectory(
-            "There are local modifications to the SVN checkout in %s."
-            % (checkout.path,))
-
-    workPath = FilePath(mkdtemp())
-    export = workPath.child("export")
-    runCommand(["svn", "export", checkout.path, export.path])
-    twistedPath = export.child("twisted")
-    version = Project(twistedPath).getVersion()
-    versionString = version.base()
-
-    if not destination.exists():
-        destination.createDirectory()
-    db = DistributionBuilder(export, destination, templatePath=templatePath)
-
-    db.buildCore(versionString)
-    for subproject in twisted_subprojects:
-        if twistedPath.child(subproject).exists():
-            db.buildSubProject(subproject, versionString)
-
-    db.buildTwisted(versionString)
-    workPath.remove()
 
 
 
@@ -1084,36 +1010,6 @@ class ChangeVersionsScript(object):
 
         self.changeAllProjectVersions(FilePath("."), options["prerelease"],
                                       options["patch"])
-
-
-
-class BuildTarballsScript(object):
-    """
-    A thing for building release tarballs. See L{main}.
-    """
-    buildAllTarballs = staticmethod(buildAllTarballs)
-
-    def main(self, args):
-        """
-        Build all release tarballs.
-
-        @type args: list of C{str}
-        @param args: The command line arguments to process.  This must contain
-            at least two strings: the checkout directory and the destination
-            directory. An optional third string can be specified for the
-            website template file, used for building the howto documentation.
-            If this string isn't specified, the default template included in
-            twisted will be used.
-        """
-        if len(args) < 2 or len(args) > 3:
-            sys.exit("Must specify at least two arguments: "
-                     "Twisted checkout and destination path. The optional "
-                     "third argument is the website template path.")
-        if len(args) == 2:
-            self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]))
-        elif len(args) == 3:
-            self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]),
-                                  FilePath(args[2]))
 
 
 

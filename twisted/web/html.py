@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.web.test.test_html -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -10,12 +10,19 @@ from cgi import escape
 
 from twisted.python import log
 from twisted.python.compat import NativeStringIO as StringIO
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 
 
+
+@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def PRE(text):
     "Wrap <pre> tags around some text and HTML-escape it."
     return "<pre>"+escape(text)+"</pre>"
 
+
+
+@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def UL(lst):
     io = StringIO()
     io.write("<ul>\n")
@@ -24,6 +31,9 @@ def UL(lst):
     io.write("</ul>")
     return io.getvalue()
 
+
+
+@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def linkList(lst):
     io = StringIO()
     io.write("<ul>\n")
@@ -32,6 +42,9 @@ def linkList(lst):
     io.write("</ul>")
     return io.getvalue()
 
+
+
+@deprecated(Version('Twisted', 15, 3, 0), replacement='twisted.web.template')
 def output(func, *args, **kw):
     """output(func, *args, **kw) -> html string
     Either return the result of a function (which presumably returns an

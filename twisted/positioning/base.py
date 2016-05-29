@@ -6,6 +6,9 @@ Generic positioning base classes.
 
 @since: 14.0
 """
+
+from __future__ import absolute_import, division
+
 from functools import partial
 from operator import attrgetter
 from zope.interface import implementer
@@ -117,7 +120,7 @@ class InvalidChecksum(Exception):
 
 
 
-class Angle(object, FancyEqMixin):
+class Angle(FancyEqMixin, object):
     """
     An object representing an angle.
 
@@ -424,7 +427,7 @@ class Coordinate(Angle):
 
 
 
-class Altitude(object, FancyEqMixin):
+class Altitude(FancyEqMixin, object):
     """
     An altitude.
 
@@ -490,7 +493,7 @@ class Altitude(object, FancyEqMixin):
 
 
 
-class _BaseSpeed(object, FancyEqMixin):
+class _BaseSpeed(FancyEqMixin, object):
     """
     An object representing the abstract concept of the speed (rate of
     movement) of a mobile object.
@@ -598,7 +601,7 @@ class Climb(_BaseSpeed):
 
 
 
-class PositionError(object, FancyEqMixin):
+class PositionError(FancyEqMixin, object):
     """
     Position error information.
 

@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.application.test.test_service -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -13,12 +14,14 @@ a sibling).
 Maintainer: Moshe Zadka
 """
 
+from __future__ import absolute_import, division
+
 from zope.interface import implementer, Interface, Attribute
 
+from twisted.persisted import sob
 from twisted.python.reflect import namedAny
 from twisted.python import components
 from twisted.internet import defer
-from twisted.persisted import sob
 from twisted.plugin import IPlugin
 
 
@@ -153,7 +156,7 @@ class IService(Interface):
 
 
 @implementer(IService)
-class Service:
+class Service(object):
     """
     Base class for services.
 
@@ -369,6 +372,7 @@ class Process:
         self.gid = gid
 
 
+
 def Application(name, uid=None, gid=None):
     """
     Return a compound class.
@@ -379,7 +383,10 @@ def Application(name, uid=None, gid=None):
     one of the interfaces.
     """
     ret = components.Componentized()
-    for comp in (MultiService(), sob.Persistent(ret, name), Process(uid, gid)):
+    availableComponents = [MultiService(), Process(uid, gid),
+                           sob.Persistent(ret, name)]
+
+    for comp in availableComponents:
         ret.addComponent(comp, ignoreClass=1)
     IService(ret).setName(name)
     return ret
@@ -400,7 +407,8 @@ def loadApplication(filename, kind, passphrase=None):
     @type passphrase: C{str}
     """
     if kind == 'python':
-        application = sob.loadValueFromFile(filename, 'application', passphrase)
+        application = sob.loadValueFromFile(filename, 'application',
+                                            passphrase)
     else:
         application = sob.load(filename, kind, passphrase)
     return application

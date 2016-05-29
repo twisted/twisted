@@ -8,15 +8,16 @@ All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
 
-
 import glob
 import operator
 import os
 import sys
 import textwrap
-from StringIO import StringIO
-import tarfile
+import tempfile
+import shutil
+
 from datetime import date
+from io import BytesIO as StringIO
 
 from twisted.trial.unittest import TestCase
 
@@ -26,14 +27,14 @@ from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 
-from twisted.web.microdom import parseXMLString
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
     changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
-    DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
-    runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
-    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, SphinxBuilder)
+    APIBuilder, BuildAPIDocsScript,
+    runCommand, NotWorkingDirectory,
+    ChangeVersionsScript, NewsBuilder, SphinxBuilder,
+    GitCommand, getRepositoryCommand, IVCSCommand)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -55,17 +56,52 @@ else:
         pydoctorSkip = skip
 
 
-if which("sphinx-build"):
+if not skip and which("sphinx-build"):
     sphinxSkip = None
 else:
     sphinxSkip = "Sphinx not available."
 
 
+if not skip and which("git"):
+    gitVersion = runCommand(["git", "--version"]).split(" ")[2].split(".")
 
-if which("svn") and which("svnadmin"):
-    svnSkip = skip
+    # We want git 2.0 or above.
+    if int(gitVersion[0]) >= 2:
+        gitSkip = skip
+    else:
+        gitSkip = "old git is present"
 else:
-    svnSkip = "svn or svnadmin is not present."
+    gitSkip = "git is not present."
+
+
+
+class ExternalTempdirTestCase(TestCase):
+    """
+    A test case which has mkdir make directories outside of the usual spot, so
+    that Git commands don't interfere with the Twisted checkout.
+    """
+    def mktemp(self):
+        """
+        Make our own directory.
+        """
+        newDir = tempfile.mkdtemp(dir="/tmp/")
+        self.addCleanup(shutil.rmtree, newDir)
+        return newDir
+
+
+
+def _gitInit(path):
+    """
+    Run a git init, and set some config that git requires. This isn't needed in
+    real usage.
+    """
+    runCommand(["git", "init", path.path])
+    runCommand(["git", "config",
+                "--file", path.child(".git").child("config").path,
+                "user.name", '"someone"'])
+    runCommand(["git", "config",
+                "--file", path.child(".git").child("config").path,
+                "user.email", '"someone@someplace.com"'])
 
 
 
@@ -143,27 +179,8 @@ class StructureAssertingMixin(object):
                       % (root.path, children))
 
 
-    def assertExtractedStructure(self, outputFile, dirDict):
-        """
-        Assert that a tarfile content is equivalent to one described by a dict.
 
-        @param outputFile: The tar file built by L{DistributionBuilder}.
-        @type outputFile: L{FilePath}.
-        @param dirDict: The dict that should describe the contents of the
-            directory. It should be the same structure as the C{dirDict}
-            parameter to L{createStructure}.
-        @type dirDict: C{dict}
-        """
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.children()[0], dirDict)
-
-
-
-class ChangeVersionTests(TestCase, StructureAssertingMixin):
+class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
     """
     Twisted has the ability to change versions.
     """
@@ -179,7 +196,6 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         baseDirectory = FilePath(self.mktemp())
         directory, filename = os.path.split(relativePath)
         directory = baseDirectory.preauthChild(directory)
-        directory.makedirs()
         file = directory.child(filename)
         directory.child(filename).setContent(content)
         return file
@@ -305,35 +321,29 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
 
     def test_changeAllProjectVersions(self):
         """
-        L{changeAllProjectVersions} changes all version numbers in _version.py
-        and README files for all projects as well as in the top-level
-        README file.
+        L{changeAllProjectVersions} changes the version numbers in the
+        _version.py
+        and README file.
         """
         root = FilePath(self.mktemp())
-        root.createDirectory()
         structure = {
-            "README": "Hi this is 1.0.0.",
+            "README.rst": "Hi this is 1.0.0.",
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 1.0.0"},
-                "_version.py": genVersion("twisted", 1, 0, 0),
-                "web": {
-                    "topfiles": {
-                        "README": "Hi this is 1.0.0"},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
+                "_version.py": genVersion("twisted", 1, 0, 0)
+                }
+            }
         self.createStructure(root, structure)
         releaseDate = date(2010, 1, 1)
         changeAllProjectVersions(root, False, False, releaseDate)
         outStructure = {
-            "README": "Hi this is 10.0.0.",
+            "README.rst": "Hi this is 10.0.0.",
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 10.0.0"},
                 "_version.py": genVersion("twisted", 10, 0, 0),
-                "web": {
-                    "topfiles": {
-                        "README": "Hi this is 10.0.0"},
-                    "_version.py": genVersion("twisted.web", 10, 0, 0)}}}
+            }}
         self.assertStructure(root, outStructure)
 
 
@@ -345,15 +355,37 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
         version in NEWS files as well.
         """
         root = FilePath(self.mktemp())
-        root.createDirectory()
-        coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
+
+        coreNews = ("Twisted Core 1.0.0pre1 (2009-12-25)\n"
                     "===============================\n"
                     "\n")
         webNews = ("Twisted Web 1.0.0pre1 (2009-12-25)\n"
                    "==================================\n"
                    "\n")
         structure = {
-            "README": "Hi this is 1.0.0.",
+            "README.rst": "Hi this is 1.0.0pre1.",
+            "NEWS": coreNews + webNews,
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 1.0.0pre1",
+                    "NEWS": coreNews},
+                "_version.py": genVersion("twisted", 1, 0, 0, 1),
+                "web": {
+                    "topfiles": {
+                        "README": "Hi this is 1.0.0pre1",
+                        "NEWS": webNews}
+                }}}
+        self.createStructure(root, structure)
+        releaseDate = date(2010, 1, 1)
+        changeAllProjectVersions(root, False, False, releaseDate)
+        coreNews = ("Twisted Core 1.0.0 (2010-01-01)\n"
+                    "===============================\n"
+                    "\n")
+        webNews = ("Twisted Web 1.0.0 (2010-01-01)\n"
+                   "==============================\n"
+                   "\n")
+        outStructure = {
+            "README.rst": "Hi this is 1.0.0.",
             "NEWS": coreNews + webNews,
             "twisted": {
                 "topfiles": {
@@ -362,36 +394,14 @@ class ChangeVersionTests(TestCase, StructureAssertingMixin):
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0pre1",
-                        "NEWS": webNews},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0, 1)}}}
-        self.createStructure(root, structure)
-        releaseDate = date(2010, 1, 1)
-        changeAllProjectVersions(root, False, False, releaseDate)
-        coreNews = ("Twisted Core 1.0.0 (2009-12-25)\n"
-                    "===============================\n"
-                    "\n")
-        webNews = ("Twisted Web 1.0.0 (2010-01-01)\n"
-                   "==============================\n"
-                   "\n")
-        outStructure = {
-            "README": "Hi this is 10.0.0.",
-            "NEWS": coreNews + webNews,
-            "twisted": {
-                "topfiles": {
-                    "README": "Hi this is 10.0.0",
-                    "NEWS": coreNews},
-                "_version.py": genVersion("twisted", 10, 0, 0),
-                "web": {
-                    "topfiles": {
                         "README": "Hi this is 1.0.0",
-                        "NEWS": webNews},
-                    "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
+                        "NEWS": webNews}
+                }}}
         self.assertStructure(root, outStructure)
 
 
 
-class ProjectTests(TestCase):
+class ProjectTests(ExternalTempdirTestCase):
     """
     There is a first-class representation of a project.
     """
@@ -420,7 +430,6 @@ class ProjectTests(TestCase):
         """
         if baseDirectory is None:
             baseDirectory = FilePath(self.mktemp())
-            baseDirectory.createDirectory()
         segments = version.package.split('.')
         directory = baseDirectory
         for segment in segments:
@@ -442,7 +451,6 @@ class ProjectTests(TestCase):
         @return: A L{FilePath} for the base directory.
         """
         baseDirectory = FilePath(self.mktemp())
-        baseDirectory.createDirectory()
         for version in versions:
             self.makeProject(version, baseDirectory)
         return baseDirectory
@@ -452,7 +460,7 @@ class ProjectTests(TestCase):
         """
         Project objects know their version.
         """
-        version = Version('foo', 2, 1, 0)
+        version = Version('twisted', 2, 1, 0)
         project = self.makeProject(version)
         self.assertEqual(project.getVersion(), version)
 
@@ -462,8 +470,8 @@ class ProjectTests(TestCase):
         Project objects know how to update the version numbers in those
         projects.
         """
-        project = self.makeProject(Version("bar", 2, 1, 0))
-        newVersion = Version("bar", 3, 2, 9)
+        project = self.makeProject(Version("twisted", 2, 1, 0))
+        newVersion = Version("twisted", 3, 2, 9)
         project.updateVersion(newVersion)
         self.assertEqual(project.getVersion(), newVersion)
         self.assertEqual(
@@ -496,7 +504,7 @@ class ProjectTests(TestCase):
 
 
 
-class UtilityTests(TestCase):
+class UtilityTests(ExternalTempdirTestCase):
     """
     Tests for various utility functions for releasing.
     """
@@ -542,7 +550,7 @@ class UtilityTests(TestCase):
 
 
 
-class VersionWritingTests(TestCase):
+class VersionWritingTests(ExternalTempdirTestCase):
     """
     Tests for L{replaceProjectVersion}.
     """
@@ -574,7 +582,7 @@ class VersionWritingTests(TestCase):
 
 
 
-class APIBuilderTests(TestCase):
+class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
@@ -604,13 +612,13 @@ class APIBuilderTests(TestCase):
             "    '%s'" % (docstring, privateDocstring))
 
         outputPath = FilePath(self.mktemp())
-        outputPath.makedirs()
 
         builder = APIBuilder()
         builder.build(projectName, projectURL, sourceURL, inputPath,
                       outputPath)
 
         indexPath = outputPath.child("index.html")
+
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
@@ -630,7 +638,7 @@ class APIBuilderTests(TestCase):
             '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
             quuxPath.getContent())
         self.assertIn(
-            '<a href="%s/%s/__init__.py#L1" class="functionSourceLink">' % (
+            '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">' % (
                 sourceURL, packageName),
             quuxPath.getContent())
         self.assertIn(privateDocstring, quuxPath.getContent())
@@ -759,11 +767,10 @@ class FilePathDeltaTests(TestCase):
 
 
 
-class NewsBuilderTests(TestCase, StructureAssertingMixin):
+class NewsBuilderMixin(StructureAssertingMixin):
     """
-    Tests for L{NewsBuilder}.
+    Tests for L{NewsBuilder} using Git.
     """
-    skip = svnSkip
 
     def setUp(self):
         """
@@ -772,7 +779,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         self.builder = NewsBuilder()
         self.project = FilePath(self.mktemp())
-        self.project.createDirectory()
 
         self.existingText = 'Here is stuff which was present previously.\n'
         self.createStructure(
@@ -794,24 +800,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
                 '35.misc': '',
                 '40.doc': 'foo.bar.Baz.quux',
                 '41.doc': 'writing Foo servers'})
-
-
-    def svnCommit(self, project=None):
-        """
-        Make the C{project} directory a valid subversion directory with all
-        files committed.
-        """
-        if project is None:
-            project = self.project
-        repositoryPath = self.mktemp()
-        repository = FilePath(repositoryPath)
-
-        runCommand(["svnadmin", "create", repository.path])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    project.path])
-
-        runCommand(["svn", "add"] + glob.glob(project.path + "/*"))
-        runCommand(["svn", "commit", project.path, "-m", "yay"])
 
 
     def test_today(self):
@@ -1187,19 +1175,19 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             path, output, header))
         builder._today = lambda: '2009-12-01'
 
-        project = self.createFakeTwistedProject()
-        self.svnCommit(project)
-        builder.buildAll(project)
+        self.project = self.createFakeTwistedProject()
+        self._commit(self.project)
+        builder.buildAll(self.project)
 
-        coreTopfiles = project.child("topfiles")
+        coreTopfiles = self.project.child("topfiles")
         coreNews = coreTopfiles.child("NEWS")
         coreHeader = "Twisted Core 1.2.3 (2009-12-01)"
 
-        conchTopfiles = project.child("conch").child("topfiles")
+        conchTopfiles = self.project.child("conch").child("topfiles")
         conchNews = conchTopfiles.child("NEWS")
-        conchHeader = "Twisted Conch 3.4.5 (2009-12-01)"
+        conchHeader = "Twisted Conch 1.2.3 (2009-12-01)"
 
-        aggregateNews = project.child("NEWS")
+        aggregateNews = self.project.child("NEWS")
 
         self.assertEqual(
             builds,
@@ -1216,7 +1204,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         """
         builder = NewsBuilder()
         project = self.createFakeTwistedProject()
-        self.svnCommit(project)
+        self._commit(project)
         builder.buildAll(project)
 
         aggregateNews = project.child("NEWS")
@@ -1235,7 +1223,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         builder = NewsBuilder()
         builder._today = lambda: '2009-12-01'
         project = self.createFakeTwistedProject()
-        self.svnCommit(project)
+        self._commit(project)
         builder.buildAll(project)
         newVersion = Version('TEMPLATE', 7, 7, 14)
         coreNews = project.child('topfiles').child('NEWS')
@@ -1261,27 +1249,50 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
     def test_removeNEWSfragments(self):
         """
         L{NewsBuilder.buildALL} removes all the NEWS fragments after the build
-        process, using the C{svn} C{rm} command.
+        process, using the VCS's C{rm} command.
         """
         builder = NewsBuilder()
         project = self.createFakeTwistedProject()
-        self.svnCommit(project)
+        self._commit(project)
         builder.buildAll(project)
 
         self.assertEqual(5, len(project.children()))
-        output = runCommand(["svn", "status", project.path])
+        output = self._getStatus(project)
         removed = [line for line in output.splitlines()
                    if line.startswith("D ")]
         self.assertEqual(3, len(removed))
 
 
-    def test_checkSVN(self):
+    def test_checkRepo(self):
         """
         L{NewsBuilder.buildAll} raises L{NotWorkingDirectory} when the given
-        path is not a SVN checkout.
+        path is not a supported repository.
         """
         self.assertRaises(
             NotWorkingDirectory, self.builder.buildAll, self.project)
+
+
+class NewsBuilderGitTests(NewsBuilderMixin, ExternalTempdirTestCase):
+    """
+    Tests for L{NewsBuilder} using Git.
+    """
+    skip = gitSkip
+
+    def _commit(self, project=None):
+        """
+        Make the C{project} directory a valid Git repository with all
+        files committed.
+        """
+        if project is None:
+            project = self.project
+
+        _gitInit(project)
+        runCommand(["git", "-C", project.path, "add"] + glob.glob(
+            project.path + "/*"))
+        runCommand(["git", "-C", project.path, "commit", "-m", "yay"])
+
+    def _getStatus(self, project):
+        return runCommand(["git", "-C", project.path, "status", "--short"])
 
 
 
@@ -1351,9 +1362,8 @@ class SphinxBuilderTests(TestCase):
 
     def verifyFileExists(self, fileDir, fileName):
         """
-        Helper which verifies that C{fileName} exists in C{fileDir}, has some
-        content, and that the content is parseable by L{parseXMLString} if the
-        file extension indicates that it should be html.
+        Helper which verifies that C{fileName} exists in C{fileDir} and it has
+        some content.
 
         @param fileDir: A path to a directory.
         @type fileDir: L{FilePath}
@@ -1370,8 +1380,7 @@ class SphinxBuilderTests(TestCase):
                 2. Is empty.
 
                 3. In the case where it's a path to a C{.html} file, the
-                   contents at least look enough like HTML to parse according
-                   to microdom's generous criteria.
+                   content looks like an HTML file.
 
         @return: C{None}
         """
@@ -1386,7 +1395,7 @@ class SphinxBuilderTests(TestCase):
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
         if fpath.path.endswith('.html'):
-            parseXMLString(fcontents)
+            self.assertIn("<body", fcontents)
 
 
     def test_build(self):
@@ -1407,6 +1416,25 @@ class SphinxBuilderTests(TestCase):
         self.verifyBuilt()
 
 
+    def test_warningsAreErrors(self):
+        """
+        Creates and builds a fake Sphinx project as if via the command line,
+        failing if there are any warnings.
+        """
+        output = StringIO()
+        self.patch(sys, "stdout", output)
+        self.createFakeSphinxProject()
+        with self.sphinxDir.child("index.rst").open("a") as f:
+            f.write("\n.. _malformed-link-target\n")
+        exception = self.assertRaises(
+            SystemExit,
+            self.builder.main, [self.sphinxDir.parent().path]
+        )
+        self.assertEqual(exception.code, 1)
+        self.assertIn("malformed hyperlink target", output.getvalue())
+        self.verifyBuilt()
+
+
     def verifyBuilt(self):
         """
         Verify that a sphinx project has been built.
@@ -1414,7 +1442,7 @@ class SphinxBuilderTests(TestCase):
         htmlDir = self.sphinxDir.sibling('doc')
         self.assertTrue(htmlDir.isdir())
         doctreeDir = htmlDir.child("doctrees")
-        self.assertTrue(doctreeDir.isdir())
+        self.assertFalse(doctreeDir.exists())
 
         self.verifyFileExists(htmlDir, 'index.html')
         self.verifyFileExists(htmlDir, 'genindex.html')
@@ -1435,396 +1463,7 @@ class SphinxBuilderTests(TestCase):
 
 
 
-class DistributionBuilderTestBase(StructureAssertingMixin, TestCase):
-    """
-    Base for tests of L{DistributionBuilder}.
-    """
-
-    def setUp(self):
-        self.rootDir = FilePath(self.mktemp())
-        self.rootDir.createDirectory()
-
-        self.outputDir = FilePath(self.mktemp())
-        self.outputDir.createDirectory()
-        self.builder = DistributionBuilder(self.rootDir, self.outputDir)
-
-
-
-class DistributionBuilderTests(DistributionBuilderTestBase):
-
-    def test_twistedDistribution(self):
-        """
-        The Twisted tarball contains everything in the source checkout, with
-        built documentation.
-        """
-        manInput1 = "pretend there's some troff in here or something"
-        structure = {
-            "README": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"web": {"websetroot": "SET ROOT"},
-                    "twistd": "TWISTD"},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}},
-                "words": {"__init__.py": "import WORDS"},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG"}},
-            "docs": {
-                "conf.py": testingSphinxConf,
-                "index.rst": "",
-                "core": {"man": {"twistd.1": manInput1}}
-            }
-        }
-
-        def hasManpagesAndSphinx(path):
-            self.assertTrue(path.isdir())
-            self.assertEqual(
-                path.child("core").child("man").child("twistd.1").getContent(),
-                manInput1
-            )
-            return True
-
-        outStructure = {
-            "README": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"web": {"websetroot": "SET ROOT"},
-                    "twistd": "TWISTD"},
-            "twisted": {
-                "web": {"__init__.py": "import WEB",
-                        "topfiles": {"setup.py": "import WEBINSTALL",
-                                     "README": "WEB!"}},
-                "words": {"__init__.py": "import WORDS"},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG"}},
-            "doc": hasManpagesAndSphinx,
-        }
-
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildTwisted("10.0.0")
-
-        self.assertExtractedStructure(outputFile, outStructure)
-
-    test_twistedDistribution.skip = sphinxSkip
-
-
-    def test_excluded(self):
-        """
-        bin/admin and doc/historic are excluded from the Twisted tarball.
-        """
-        structure = {
-            "bin": {"admin": {"blah": "ADMIN"},
-                    "twistd": "TWISTD"},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
-            "doc": {"historic": {"hello": "there"},
-                    "other": "contents"}}
-
-        outStructure = {
-            "bin": {"twistd": "TWISTD"},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
-            "doc": {"other": "contents"}}
-
-        self.createStructure(self.rootDir, structure)
-        outputFile = self.builder.buildTwisted("10.0.0")
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
-    def test_subProjectLayout(self):
-        """
-        The subproject tarball includes files like so:
-
-        1. twisted/<subproject>/topfiles defines the files that will be in the
-           top level in the tarball, except LICENSE, which comes from the real
-           top-level directory.
-        2. twisted/<subproject> is included, but without the topfiles entry
-           in that directory. No other twisted subpackages are included.
-        3. twisted/plugins/twisted_<subproject>.py is included, but nothing
-           else in plugins is.
-        """
-        structure = {
-            "README": "HI!@",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"web": {"websetroot": "SET ROOT"},
-                    "words": {"im": "#!im"}},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}},
-                "words": {"__init__.py": "import WORDS"},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG"}}}
-
-        outStructure = {
-            "README": "WEB!",
-            "LICENSE": "copyright!",
-            "setup.py": "import WEBINSTALL",
-            "bin": {"websetroot": "SET ROOT"},
-            "twisted": {"web": {"__init__.py": "import WEB"},
-                        "plugins": {"twisted_web.py": "import WEBPLUG"}}}
-
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildSubProject("web", "0.3.0")
-
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
-    def test_minimalSubProjectLayout(self):
-        """
-        buildSubProject should work with minimal subprojects.
-        """
-        structure = {
-            "LICENSE": "copyright!",
-            "bin": {},
-            "twisted": {
-                "web": {"__init__.py": "import WEB",
-                        "topfiles": {"setup.py": "import WEBINSTALL"}},
-                "plugins": {}}}
-
-        outStructure = {
-            "setup.py": "import WEBINSTALL",
-            "LICENSE": "copyright!",
-            "twisted": {"web": {"__init__.py": "import WEB"}}}
-
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildSubProject("web", "0.3.0")
-
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
-    def test_coreProjectLayout(self):
-        """
-        The core tarball looks a lot like a subproject tarball, except it
-        doesn't include:
-
-        - Python packages from other subprojects
-        - plugins from other subprojects
-        - scripts from other subprojects
-        """
-        structure = {
-            "LICENSE": "copyright!",
-            "twisted": {"__init__.py": "twisted",
-                        "python": {"__init__.py": "python",
-                                   "roots.py": "roots!"},
-                        "conch": {"__init__.py": "conch",
-                                  "unrelated.py": "import conch"},
-                        "plugin.py": "plugin",
-                        "plugins": {"twisted_web.py": "webplug",
-                                    "twisted_whatever.py": "include!",
-                                    "cred.py": "include!"},
-                        "topfiles": {"setup.py": "import CORE",
-                                     "README": "core readme"}},
-            "bin": {"twistd": "TWISTD",
-                    "web": {"websetroot": "websetroot"}}}
-
-        outStructure = {
-            "LICENSE": "copyright!",
-            "setup.py": "import CORE",
-            "README": "core readme",
-            "twisted": {"__init__.py": "twisted",
-                        "python": {"__init__.py": "python",
-                                   "roots.py": "roots!"},
-                        "plugin.py": "plugin",
-                        "plugins": {"twisted_whatever.py": "include!",
-                                    "cred.py": "include!"}},
-            "bin": {"twistd": "TWISTD"}}
-
-        self.createStructure(self.rootDir, structure)
-        outputFile = self.builder.buildCore("8.0.0")
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
-    def test_setup3(self):
-        """
-        setup3.py is included in the release tarball.
-        """
-        structure = {
-            "setup3.py": "install python 3 version",
-            "bin": {"twistd": "TWISTD"},
-            "twisted": {
-                "web": {
-                    "__init__.py": "import WEB",
-                    "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
-            "doc": {"web": {"howto": {"index.html": "hello"}}},
-            }
-
-        self.createStructure(self.rootDir, structure)
-        outputFile = self.builder.buildTwisted("13.2.0")
-        self.assertExtractedStructure(outputFile, structure)
-
-
-
-class BuildAllTarballsTests(DistributionBuilderTestBase):
-    """
-    Tests for L{DistributionBuilder.buildAllTarballs}.
-    """
-    skip = svnSkip or sphinxSkip
-
-    def test_buildAllTarballs(self):
-        """
-        L{buildAllTarballs} builds tarballs for Twisted and all of its
-        subprojects based on an SVN checkout; the resulting tarballs contain
-        no SVN metadata.  This involves building documentation, which it will
-        build with the correct API documentation reference base URL.
-        """
-        repositoryPath = self.mktemp()
-        repository = FilePath(repositoryPath)
-        checkoutPath = self.mktemp()
-        checkout = FilePath(checkoutPath)
-        self.outputDir.remove()
-
-        runCommand(["svnadmin", "create", repositoryPath])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-
-        structure = {
-            "README": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"words": {"im": "import im"},
-                    "twistd": "TWISTD"},
-            "twisted": {
-                "topfiles": {"setup.py": "import TOPINSTALL",
-                             "README": "CORE!"},
-                "_version.py": genVersion("twisted", 1, 2, 0),
-                "words": {"__init__.py": "import WORDS",
-                          "_version.py": genVersion("twisted.words", 1, 2, 0),
-                          "topfiles": {"setup.py": "import WORDSINSTALL",
-                                       "README": "WORDS!"}},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG",
-                            "twisted_yay.py": "import YAY"}},
-            "docs": {
-                "conf.py": testingSphinxConf,
-                "index.rst": "",
-            }
-        }
-
-        def smellsLikeSphinxOutput(actual):
-            self.assertTrue(actual.isdir())
-            self.assertIn("index.html", actual.listdir())
-            self.assertIn("objects.inv", actual.listdir())
-            return True
-
-        twistedStructure = {
-            "README": "Twisted",
-            "unrelated": "x",
-            "LICENSE": "copyright!",
-            "setup.py": "import toplevel",
-            "bin": {"twistd": "TWISTD",
-                    "words": {"im": "import im"}},
-            "twisted": {
-                "topfiles": {"setup.py": "import TOPINSTALL",
-                             "README": "CORE!"},
-                "_version.py": genVersion("twisted", 1, 2, 0),
-                "words": {"__init__.py": "import WORDS",
-                          "_version.py": genVersion("twisted.words", 1, 2, 0),
-                          "topfiles": {"setup.py": "import WORDSINSTALL",
-                                       "README": "WORDS!"}},
-                "plugins": {"twisted_web.py": "import WEBPLUG",
-                            "twisted_words.py": "import WORDPLUG",
-                            "twisted_yay.py": "import YAY"}},
-            "doc": smellsLikeSphinxOutput}
-
-        coreStructure = {
-            "setup.py": "import TOPINSTALL",
-            "README": "CORE!",
-            "LICENSE": "copyright!",
-            "bin": {"twistd": "TWISTD"},
-            "twisted": {
-                "_version.py": genVersion("twisted", 1, 2, 0),
-                "plugins": {"twisted_yay.py": "import YAY"}},
-        }
-
-        wordsStructure = {
-            "README": "WORDS!",
-            "LICENSE": "copyright!",
-            "setup.py": "import WORDSINSTALL",
-            "bin": {"im": "import im"},
-            "twisted": {
-                "words": {"__init__.py": "import WORDS",
-                          "_version.py": genVersion("twisted.words", 1, 2, 0)},
-                "plugins": {"twisted_words.py": "import WORDPLUG"}}}
-
-        self.createStructure(checkout, structure)
-        childs = [x.path for x in checkout.children()]
-        runCommand(["svn", "add"] + childs)
-        runCommand(["svn", "commit", checkout.path, "-m", "yay"])
-
-        buildAllTarballs(checkout, self.outputDir)
-        self.assertEqual(
-            set(self.outputDir.children()),
-            set([self.outputDir.child("Twisted-1.2.0.tar.bz2"),
-                 self.outputDir.child("TwistedCore-1.2.0.tar.bz2"),
-                 self.outputDir.child("TwistedWords-1.2.0.tar.bz2")]))
-
-        self.assertExtractedStructure(
-            self.outputDir.child("Twisted-1.2.0.tar.bz2"),
-            twistedStructure)
-        self.assertExtractedStructure(
-            self.outputDir.child("TwistedCore-1.2.0.tar.bz2"),
-            coreStructure)
-        self.assertExtractedStructure(
-            self.outputDir.child("TwistedWords-1.2.0.tar.bz2"),
-            wordsStructure)
-
-
-    def test_buildAllTarballsEnsuresCleanCheckout(self):
-        """
-        L{UncleanWorkingDirectory} is raised by L{buildAllTarballs} when the
-        SVN checkout provided has uncommitted changes.
-        """
-        repositoryPath = self.mktemp()
-        repository = FilePath(repositoryPath)
-        checkoutPath = self.mktemp()
-        checkout = FilePath(checkoutPath)
-
-        runCommand(["svnadmin", "create", repositoryPath])
-        runCommand(["svn", "checkout", "file://" + repository.path,
-                    checkout.path])
-
-        checkout.child("foo").setContent("whatever")
-        self.assertRaises(UncleanWorkingDirectory,
-                          buildAllTarballs, checkout, FilePath(self.mktemp()))
-
-
-    def test_buildAllTarballsEnsuresExistingCheckout(self):
-        """
-        L{NotWorkingDirectory} is raised by L{buildAllTarballs} when the
-        checkout passed does not exist or is not an SVN checkout.
-        """
-        checkout = FilePath(self.mktemp())
-        self.assertRaises(NotWorkingDirectory,
-                          buildAllTarballs,
-                          checkout, FilePath(self.mktemp()))
-        checkout.createDirectory()
-        self.assertRaises(NotWorkingDirectory,
-                          buildAllTarballs,
-                          checkout, FilePath(self.mktemp()))
-
-
-
-class ScriptTests(StructureAssertingMixin, TestCase):
+class ScriptTests(StructureAssertingMixin, ExternalTempdirTestCase):
     """
     Tests for the release script functionality.
     """
@@ -1914,52 +1553,6 @@ class ScriptTests(StructureAssertingMixin, TestCase):
                           ["my united.states.of prewhatever"])
 
 
-    def test_buildTarballsScript(self):
-        """
-        L{BuildTarballsScript.main} invokes L{buildAllTarballs} with
-        2 or 3 L{FilePath} instances representing the paths passed to it.
-        """
-        builds = []
-
-        def myBuilder(checkout, destination, template=None):
-            builds.append((checkout, destination, template))
-
-        tarballBuilder = BuildTarballsScript()
-        tarballBuilder.buildAllTarballs = myBuilder
-
-        tarballBuilder.main(["checkoutDir", "destinationDir"])
-        self.assertEqual(
-            builds,
-            [(FilePath("checkoutDir"), FilePath("destinationDir"), None)])
-
-        builds = []
-        tarballBuilder.main(["checkoutDir", "destinationDir", "templatePath"])
-        self.assertEqual(
-            builds,
-            [(FilePath("checkoutDir"), FilePath("destinationDir"),
-              FilePath("templatePath"))])
-
-
-    def test_defaultBuildTarballsScriptBuilder(self):
-        """
-        The default implementation of L{BuildTarballsScript.buildAllTarballs}
-        is L{buildAllTarballs}.
-        """
-        tarballBuilder = BuildTarballsScript()
-        self.assertEqual(tarballBuilder.buildAllTarballs, buildAllTarballs)
-
-
-    def test_badNumberOfArgumentsToBuildTarballs(self):
-        """
-        L{BuildTarballsScript.main} raises SystemExit when the wrong number of
-        arguments are passed.
-        """
-        tarballBuilder = BuildTarballsScript()
-        self.assertRaises(SystemExit, tarballBuilder.main, [])
-        self.assertRaises(SystemExit, tarballBuilder.main,
-                          ["a", "b", "c", "d"])
-
-
     def test_badNumberOfArgumentsToBuildNews(self):
         """
         L{NewsBuilder.main} raises L{SystemExit} when other than 1 argument is
@@ -1980,3 +1573,168 @@ class ScriptTests(StructureAssertingMixin, TestCase):
         newsBuilder.buildAll = builds.append
         newsBuilder.main(["/foo/bar/baz"])
         self.assertEqual(builds, [FilePath("/foo/bar/baz")])
+
+
+
+class CommandsTestMixin(StructureAssertingMixin):
+    """
+    Test mixin for the VCS commands used by the release scripts.
+    """
+    def setUp(self):
+        self.tmpDir = FilePath(self.mktemp())
+
+
+    def test_ensureIsWorkingDirectoryWithWorkingDirectory(self):
+        """
+        Calling the C{ensureIsWorkingDirectory} VCS command's method on a valid
+        working directory doesn't produce any error.
+        """
+        reposDir = self.makeRepository(self.tmpDir)
+        self.assertEqual(None,
+                         self.createCommand.ensureIsWorkingDirectory(reposDir))
+
+
+    def test_ensureIsWorkingDirectoryWithNonWorkingDirectory(self):
+        """
+        Calling the C{ensureIsWorkingDirectory} VCS command's method on an
+        invalid working directory raises a L{NotWorkingDirectory} exception.
+        """
+        self.assertRaises(NotWorkingDirectory,
+                          self.createCommand.ensureIsWorkingDirectory,
+                          self.tmpDir)
+
+
+    def test_statusClean(self):
+        """
+        Calling the C{isStatusClean} VCS command's method on a repository with
+        no pending modifications returns C{True}.
+        """
+        reposDir = self.makeRepository(self.tmpDir)
+        self.assertTrue(self.createCommand.isStatusClean(reposDir))
+
+
+    def test_statusNotClean(self):
+        """
+        Calling the C{isStatusClean} VCS command's method on a repository with
+        no pending modifications returns C{False}.
+        """
+        reposDir = self.makeRepository(self.tmpDir)
+        reposDir.child('some-file').setContent("something")
+        self.assertFalse(self.createCommand.isStatusClean(reposDir))
+
+
+    def test_remove(self):
+        """
+        Calling the C{remove} VCS command's method remove the specified path
+        from the directory.
+        """
+        reposDir = self.makeRepository(self.tmpDir)
+        testFile = reposDir.child('some-file')
+        testFile.setContent("something")
+        self.commitRepository(reposDir)
+        self.assertTrue(testFile.exists())
+
+        self.createCommand.remove(testFile)
+        testFile.restat(False) # Refresh the file information
+        self.assertFalse(testFile.exists(), "File still exists")
+
+
+    def test_export(self):
+        """
+        The C{exportTo} VCS command's method export the content of the
+        repository as identical in a specified directory.
+        """
+        structure = {
+            "README.rst": "Hi this is 1.0.0.",
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 1.0.0"},
+                "_version.py": genVersion("twisted", 1, 0, 0),
+                "web": {
+                    "topfiles": {
+                        "README": "Hi this is 1.0.0"},
+                    "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
+        reposDir = self.makeRepository(self.tmpDir)
+        self.createStructure(reposDir, structure)
+        self.commitRepository(reposDir)
+
+        exportDir = FilePath(self.mktemp()).child("export")
+        self.createCommand.exportTo(reposDir, exportDir)
+        self.assertStructure(exportDir, structure)
+
+
+
+class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
+    """
+    Specific L{CommandsTestMixin} related to Git repositories through
+    L{GitCommand}.
+    """
+    createCommand = GitCommand
+    skip = gitSkip
+
+
+    def makeRepository(self, root):
+        """
+        Create a Git repository in the specified path.
+
+        @type root: L{FilePath}
+        @params root: The directory to create the Git repository into.
+
+        @return: The path to the repository just created.
+        @rtype: L{FilePath}
+        """
+        _gitInit(root)
+        return root
+
+
+    def commitRepository(self, repository):
+        """
+        Add and commit all the files from the Git repository specified.
+
+        @type repository: L{FilePath}
+        @params repository: The Git repository to commit into.
+        """
+        runCommand(["git", "-C", repository.path, "add"] +
+                   glob.glob(repository.path + "/*"))
+        runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
+
+
+class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
+    """
+    Test the L{getRepositoryCommand} to access the right set of VCS commands
+    depending on the repository manipulated.
+    """
+    skip = gitSkip
+
+    def setUp(self):
+        self.repos = FilePath(self.mktemp())
+
+
+    def test_git(self):
+        """
+        L{getRepositoryCommand} from a Git repository returns L{GitCommand}.
+        """
+        _gitInit(self.repos)
+        cmd = getRepositoryCommand(self.repos)
+        self.assertIs(cmd, GitCommand)
+
+
+    def test_unknownRepository(self):
+        """
+        L{getRepositoryCommand} from a directory which doesn't look like a Git
+        repository produces a L{NotWorkingDirectory} exception.
+        """
+        self.assertRaises(NotWorkingDirectory, getRepositoryCommand,
+                          self.repos)
+
+
+
+class VCSCommandInterfaceTests(TestCase):
+    """
+    Test that the VCS command classes implement their interface.
+    """
+    def test_git(self):
+        """
+        L{GitCommand} implements L{IVCSCommand}.
+        """
+        self.assertTrue(IVCSCommand.implementedBy(GitCommand))

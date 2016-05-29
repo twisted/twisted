@@ -60,7 +60,7 @@ class DistReporter(proxyForInterface(IReporter)):
                                         test, reason))
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         Queue adding an unexpected success.
         """
@@ -68,7 +68,7 @@ class DistReporter(proxyForInterface(IReporter)):
                                         test, todo))
 
 
-    def addExpectedFailure(self, test, error, todo):
+    def addExpectedFailure(self, test, error, todo=None):
         """
         Queue adding an unexpected failure.
         """

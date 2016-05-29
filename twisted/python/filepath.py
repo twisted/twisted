@@ -14,7 +14,6 @@ import errno
 import base64
 
 from hashlib import sha1
-from warnings import warn
 
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname, join as joinpath
@@ -728,12 +727,6 @@ class FilePath(AbstractFilePath):
         self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
 
-        if type(self.path) != type(path):
-            warn("os.path.abspath is broken on Python versions below 2.6.5 and"
-                 " coerces Unicode paths to bytes. Please update your Python.",
-                 DeprecationWarning)
-            self.path = self._getPathAsSameTypeAs(path)
-
 
     def __getstate__(self):
         """
@@ -1411,14 +1404,25 @@ class FilePath(AbstractFilePath):
         self.changed()
 
 
-    def makedirs(self):
+    def makedirs(self, ignoreExistingDirectory=False):
         """
         Create all directories not yet existing in C{path} segments, using
         L{os.makedirs}.
 
+        @param ignoreExistingDirectory: Don't raise L{OSError} if directory
+            already exists.
+        @type ignoreExistingDirectory: L{bool}
+
         @return: C{None}
         """
-        return os.makedirs(self.path)
+        try:
+            return os.makedirs(self.path)
+        except OSError as e:
+            if not (
+                e.errno == errno.EEXIST and
+                ignoreExistingDirectory and
+                    self.isdir()):
+                raise
 
 
     def globChildren(self, pattern):

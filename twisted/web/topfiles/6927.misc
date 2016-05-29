@@ -1,1 +1,0 @@
-twisted.web.http.HTTPChannel now limit the total headers size, including first command line, to 16KB.

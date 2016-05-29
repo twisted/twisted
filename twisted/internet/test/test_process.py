@@ -3,6 +3,9 @@
 
 """
 Tests for implementations of L{IReactorProcess}.
+
+@var properEnv: A copy of L{os.environ} which has L{bytes} keys/values on POSIX
+    platforms and native L{str} keys/values on Windows.
 """
 
 from __future__ import division, absolute_import, print_function
@@ -13,13 +16,15 @@ import signal
 import sys
 import threading
 import twisted
+import subprocess
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import networkString, _PY3, xrange, items
+from twisted.python.compat import (networkString, _PY3, xrange, items,
+                                   bytesEnviron)
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
@@ -36,11 +41,18 @@ if platform.isWindows():
     resource = None
     process = None
     _uidgidSkip = "Cannot change UID/GID on Windows"
+
+    properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 else:
     import resource
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
+
+    properEnv = bytesEnviron()
+    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+        sys.getfilesystemencoding())
 
 
 
@@ -344,21 +356,26 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                os.popen(u'%s -c "import time; time.sleep(0.1)"' %
-                    (pyExe.decode('ascii'),))
-                f2 = os.popen(u'%s -c "import time; time.sleep(0.5);'
-                              'print(\'Foo\')"' %
-                              (pyExe.decode('ascii'),))
+                if platform.isWindows():
+                    exe = pyExe.decode('mbcs')
+                else:
+                    exe = pyExe.decode('ascii')
+
+                subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
+                f2 = subprocess.Popen([exe, "-c",
+                                       ("import time; time.sleep(0.5);"
+                                        "print(\'Foo\')")],
+                                      stdout=subprocess.PIPE)
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                result.append(f2.read())
+                result.append(f2.stdout.read())
             finally:
                 reactor.stop()
 
         reactor.callWhenRunning(f)
         self.runReactor(reactor)
-        self.assertEqual(result, ["Foo\n"])
+        self.assertEqual(result, [b"Foo" + os.linesep.encode('ascii')])
 
 
     @onlyOnPOSIX
@@ -591,7 +608,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
     """
     usePTY = False
 
-    keepStdioOpenProgram = FilePath(__file__).sibling(b'process_helper.py').path
+    keepStdioOpenProgram = b'twisted.internet.test.process_helper'
     if platform.isWindows():
         keepStdioOpenArg = b"windows"
     else:
@@ -616,12 +633,12 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             def childConnectionLost(self, childFD):
                 lost[childFD].callback(None)
 
-        target = FilePath(__file__).sibling(b"process_loseconnection.py")
+        target = b"twisted.internet.test.process_loseconnection"
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
             reactor.spawnProcess, Closer(), pyExe,
-            [pyExe, target.path], usePTY=self.usePTY)
+            [pyExe, b"-m", target], env=properEnv, usePTY=self.usePTY)
 
         def cbConnected(transport):
             transport.write(b'2\n')
@@ -674,9 +691,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         reactor = self.buildReactor()
         reactor.callWhenRunning(
             reactor.spawnProcess, Ender(), pyExe,
-            [pyExe, self.keepStdioOpenProgram, b"child",
+            [pyExe, b"-m", self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
-            usePTY=self.usePTY)
+            env=properEnv, usePTY=self.usePTY)
 
         def cbEnded(args):
             failure, = args
@@ -722,9 +739,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         reactor = self.buildReactor()
         reactor.callWhenRunning(
             reactor.spawnProcess, Waiter(), pyExe,
-            [pyExe, self.keepStdioOpenProgram, b"child",
+            [pyExe, b"-u", b"-m", self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
-            usePTY=self.usePTY)
+            env=properEnv, usePTY=self.usePTY)
 
         def cbExited(args):
             failure, = args
@@ -798,7 +815,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         Arguments given to spawnProcess are passed to the child process as
         originally intended.
         """
-        us = FilePath(__file__).sibling(b"process_cli.py")
+        us = b"twisted.internet.test.process_cli"
 
         args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
@@ -823,7 +840,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def spawnChild():
             d = succeed(None)
             d.addCallback(lambda dummy: utils.getProcessOutputAndValue(
-                pyExe, [us.path] + args, reactor=reactor))
+                pyExe, [b"-m", us] + args, env=properEnv,
+                reactor=reactor))
             d.addCallback(processFinished)
             d.addBoth(shutdown)
 
@@ -871,3 +889,21 @@ class PotentialZombieWarningTests(TestCase):
             "Twisted 10.0.0: There is no longer any potential for zombie "
             "process.")
         self.assertEqual(len(warnings), 1)
+
+
+
+class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
+    """
+    Tests to ensure that L{twisted.internet.process} is unimportable on
+    platforms where it does not work (namely Windows).
+    """
+    def test_unimportableOnWindows(self):
+        """
+        L{twisted.internet.process} is unimportable on Windows.
+        """
+        with self.assertRaises(ImportError):
+            import twisted.internet.process
+            twisted.internet.process # shh pyflakes
+
+    if not platform.isWindows():
+        test_unimportableOnWindows.skip = "Only relevant on Windows."

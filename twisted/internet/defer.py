@@ -1390,13 +1390,13 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
     If you are looking into this as a means of limiting parallelism, you might
     find L{twisted.internet.task.Cooperator} more useful.
 
-    @ivar tokens: At most this many users may acquire this semaphore at
+    @ivar limit: At most this many users may acquire this semaphore at
         once.
-    @type tokens: C{int}
-
-    @ivar limit: The difference between C{tokens} and the number of users
-        which have currently acquired this semaphore.
     @type limit: C{int}
+
+    @ivar tokens: The difference between C{limit} and the number of users
+        which have currently acquired this semaphore.
+    @type tokens: C{int}
     """
 
     def __init__(self, tokens):

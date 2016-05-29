@@ -215,7 +215,7 @@ class PygtkCompatibilityTests(TestCase):
         # Pass in a PYTHONPATH that is the test runner's os.path, to make sure
         # we're running from a checkout
         reactor.spawnProcess(Stdout(), pyExe, [pyExe, path],
-                             env={"PYTHONPATH": ":".join(os.path)})
+                             env={"PYTHONPATH": ":".join(sys.path)})
         result.addCallback(self.assertEqual, b"success")
         return result
 

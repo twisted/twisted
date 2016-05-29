@@ -9,7 +9,7 @@ from __future__ import division, absolute_import
 
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, intToBytes
+from twisted.python.compat import intToBytes
 from twisted.trial import unittest
 from twisted.protocols import basic, loopback
 from twisted.internet import defer
@@ -129,7 +129,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
 
         def connected(transport):
             host = getattr(transport, get)()
-            self.failUnless(IAddress.providedBy(host))
+            self.assertTrue(IAddress.providedBy(host))
 
         return d.addCallback(connected)
 
@@ -426,5 +426,3 @@ class LoopbackUNIXTests(LoopbackTestCaseMixin, unittest.TestCase):
 
     if interfaces.IReactorUNIX(reactor, None) is None:
         skip = "Current reactor does not support UNIX sockets"
-    elif _PY3:
-        skip = "UNIX sockets not supported on Python 3.  See #6136"
