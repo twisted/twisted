@@ -1,0 +1,1 @@
+twisted.web.client._AgentBase as well as all Agent's inheriting from it, will now bracket IPv6 addresses in the host header they send.
