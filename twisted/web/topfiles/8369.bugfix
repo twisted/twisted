@@ -1,1 +1,2 @@
-twisted.web.client._AgentBase as well as all Agent's inheriting from it, will now bracket IPv6 addresses in the host header they send.
+twisted.web.client.Agent and twisted.web.client.ProxyAgent now add brackets
+to IPv6 literal addresses in the host header they send.
