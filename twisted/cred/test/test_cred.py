@@ -241,12 +241,8 @@ class OnDiskDatabaseTests(unittest.TestCase):
 
     def testRequestAvatarId_hashed(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
-        creds = [
-            self.callDeprecated(
-                versions.Version("Twisted", 16, 3, 0),
-                credentials.UsernameHashedPassword, username, password)
-            for (username, password) in self.users
-        ]
+        creds = [credentials.UsernameHashedPassword(u, p)
+                 for u, p in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEqual, [u for u, p in self.users])
@@ -304,19 +300,8 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
 
     def testHashedCredentials(self):
-        """
-        L{twisted.cred.credentials.UsernameHashedPassword} does not, in fact,
-        do any hashing, and we cannot login with crypt'd passwords.
-        """
-        hashedCreds = [
-            self.callDeprecated(
-                versions.Version("Twisted", 16, 3, 0),
-                credentials.UsernameHashedPassword,
-                username,
-                self.hash(None, password, username[:2])
-            )
-            for (username, password) in self.users
-        ]
+        hashedCreds = [credentials.UsernameHashedPassword(
+            u, self.hash(None, p, u[:2])) for u, p in self.users]
         d = defer.DeferredList([self.port.login(c, None, ITestable)
                                 for c in hashedCreds], consumeErrors=True)
         d.addCallback(self._assertFailures, error.UnhandledCredentials)
@@ -458,3 +443,17 @@ class NetworkHashedFilePasswordDBCheckerTests(NetworkHashedFilePasswordDBMixin,
                                               CheckersMixin,
                                               unittest.TestCase):
     pass
+
+
+
+class UsernameHashedPasswordTests(unittest.TestCase):
+
+    def test_deprecation(self):
+        credentials.UsernameHashedPassword
+        warningsShown = self.flushWarnings([self.test_deprecation])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.cred.credentials.UsernameHashedPassword was deprecated in '
+            'Twisted 16.3.0: Use twisted.cred.credentials.UsernamePassword instead.')

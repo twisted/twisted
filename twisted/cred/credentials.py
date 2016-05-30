@@ -22,9 +22,11 @@ import warnings
 from binascii import hexlify
 from hashlib import md5
 
+from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
 from twisted.python.compat import networkString, nativeString
 from twisted.python.compat import intToBytes, unicode
+from twisted.python.versions import Version
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
 
@@ -448,14 +450,14 @@ class CramMD5Credentials(object):
 @implementer(IUsernameHashedPassword)
 class UsernameHashedPassword:
 
+    deprecatedModuleAttribute(
+        Version("Twisted", 16, 3, 0),
+        "Use twisted.cred.credentials.UsernamePassword instead.",
+        "twisted.cred.credentials", "UsernameHashedPassword")
+
     def __init__(self, username, hashed):
         self.username = username
         self.hashed = hashed
-        warnings.warn(
-            "twisted.cred.credentials.UsernameHashedPassword was deprecated "
-            "in Twisted 16.3.0",
-            category=DeprecationWarning,
-            stacklevel=2)
 
     def checkPassword(self, password):
         return self.hashed == password
