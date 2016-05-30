@@ -82,7 +82,7 @@ class DefaultOpenSSLContextFactory(ContextFactory):
     handshakes and the subsequent connection.
 
     @ivar _contextFactory: A callable which will be used to create new
-        context objects.  This is typically L{SSL.Context}.
+        context objects.  This is typically L{OpenSSL.SSL.Context}.
     """
     _context = None
 

@@ -1403,7 +1403,7 @@ class WebClientContextFactoryTests(TestCase):
 
     def test_returnsContext(self):
         """
-        If SSL is present, C{getContext} returns a L{SSL.Context}.
+        If SSL is present, C{getContext} returns a L{OpenSSL.SSL.Context}.
         """
         ctx = self.webClientContextFactory().getContext('example.com', 443)
         self.assertIsInstance(ctx, ssl.SSL.Context)

@@ -31,7 +31,7 @@ from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
     changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
-    APIBuilder, BuildAPIDocsScript,
+    APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
     ChangeVersionsScript, NewsBuilder, SphinxBuilder,
     GitCommand, getRepositoryCommand, IVCSCommand)
@@ -90,18 +90,33 @@ class ExternalTempdirTestCase(TestCase):
 
 
 
-def _gitInit(path):
+def _gitConfig(path):
     """
-    Run a git init, and set some config that git requires. This isn't needed in
-    real usage.
+    Set some config in the repo that Git requires to make commits. This isn't
+    needed in real usage, just for tests.
+
+    @param path: The path to the Git repository.
+    @type path: L{FilePath}
     """
-    runCommand(["git", "init", path.path])
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
                 "user.name", '"someone"'])
     runCommand(["git", "config",
                 "--file", path.child(".git").child("config").path,
                 "user.email", '"someone@someplace.com"'])
+
+
+
+def _gitInit(path):
+    """
+    Run a git init, and set some config that git requires. This isn't needed in
+    real usage.
+
+    @param path: The path to where the Git repo will be created.
+    @type path: L{FilePath}
+    """
+    runCommand(["git", "init", path.path])
+    _gitConfig(path)
 
 
 
@@ -1699,6 +1714,7 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
         runCommand(["git", "-C", repository.path, "commit", "-m", "hop"])
 
 
+
 class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     """
     Test the L{getRepositoryCommand} to access the right set of VCS commands
@@ -1738,3 +1754,202 @@ class VCSCommandInterfaceTests(TestCase):
         L{GitCommand} implements L{IVCSCommand}.
         """
         self.assertTrue(IVCSCommand.implementedBy(GitCommand))
+
+
+
+class CheckTopfileScriptTests(ExternalTempdirTestCase):
+    """
+    Tests for L{CheckTopfileScript}.
+    """
+    skip = gitSkip
+
+    def setUp(self):
+        self.origin = FilePath(self.mktemp())
+        _gitInit(self.origin)
+        runCommand(["git", "checkout", "-b", "trunk"],
+                   cwd=self.origin.path)
+        self.origin.child("test").setContent(b"test!")
+        runCommand(["git", "add", self.origin.child("test").path],
+                   cwd=self.origin.path)
+        runCommand(["git", "commit", "-m", "initial"],
+                   cwd=self.origin.path)
+
+        self.repo = FilePath(self.mktemp())
+
+        runCommand(["git", "clone", self.origin.path, self.repo.path])
+        _gitConfig(self.repo)
+
+
+    def test_noArgs(self):
+        """
+        Too few arguments returns a failure.
+        """
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([])
+
+        self.assertEqual(e.exception.args,
+                         ("Must specify one argument: the Twisted checkout",))
+
+
+    def test_nothing(self):
+        """
+        No topfiles means a failure.
+        """
+        runCommand(["git", "checkout", "-b", "mypatch"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+
+
+    def test_trunk(self):
+        """
+        Running it on trunk always gives green.
+        """
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "On trunk, no need to look at this.")
+
+
+    def test_release(self):
+        """
+        Running it on a release branch returns green if there is no topfiles.
+        """
+        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1],
+                         "Release branch with no topfiles, all good.")
+
+
+    def test_releaseWithTopfiles(self):
+        """
+        Running it on a release branch returns red if there are new topfiles.
+        """
+        runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "fragment"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1],
+                         "No topfiles should be on the release branch.")
+
+
+    def test_onlyQuotes(self):
+        """
+        Running it on a branch with only a quotefile change gives green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        fun = self.repo.child("docs").child("fun")
+        fun.makedirs()
+        quotes = fun.child("Twisted.Quotes")
+        quotes.setContent(b"Beep boop")
+
+        runCommand(["git", "add", quotes.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "quotes"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1],
+                         "Quotes change only; no topfile needed.")
+
+
+    def test_topfileAdded(self):
+        """
+        Running it on a branch with a fragment added returns green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")
+
+
+    def test_topfileButNotFragmentAdded(self):
+        """
+        Running it on a branch with a non-fragment in the topfiles dir does not
+        return green.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        notFragment = topfiles.child("1234.txt")
+        notFragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", notFragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "not topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
