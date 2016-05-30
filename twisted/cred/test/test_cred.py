@@ -14,7 +14,6 @@ from binascii import hexlify, unhexlify
 from twisted.trial import unittest
 from twisted.python.compat import nativeString, networkString
 from twisted.python import components
-from twisted.python import versions
 from twisted.internet import defer
 from twisted.cred import checkers, credentials, portal, error
 
@@ -447,13 +446,21 @@ class NetworkHashedFilePasswordDBCheckerTests(NetworkHashedFilePasswordDBMixin,
 
 
 class UsernameHashedPasswordTests(unittest.TestCase):
+    """
+    UsernameHashedPassword is a deprecated class that is functionally
+    equivalent to UsernamePassword.
+    """
 
     def test_deprecation(self):
+        """
+        Tests that UsernameHashedPassword is deprecated.
+        """
         credentials.UsernameHashedPassword
         warningsShown = self.flushWarnings([self.test_deprecation])
         self.assertEqual(len(warningsShown), 1)
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
-            'twisted.cred.credentials.UsernameHashedPassword was deprecated in '
-            'Twisted 16.3.0: Use twisted.cred.credentials.UsernamePassword instead.')
+            'twisted.cred.credentials.UsernameHashedPassword was deprecated'
+            ' in Twisted 16.3.0: Use twisted.cred.credentials.UsernamePassword'
+            ' instead.')
