@@ -35,6 +35,7 @@ TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
     "https://docs.python.org/2/objects.inv",
     "https://pyopenssl.readthedocs.org/en/stable/objects.inv",
+    "https://twisted.github.io/constantly/docs/objects.inv",
 ]
 
 
