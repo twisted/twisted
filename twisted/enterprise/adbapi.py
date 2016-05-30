@@ -10,7 +10,7 @@ An asynchronous mapping to U{DB-API
 import sys
 
 from twisted.internet import threads
-from twisted.python import reflect, log
+from twisted.python import reflect, log, compat
 
 
 class ConnectionLost(Exception):
@@ -304,7 +304,7 @@ class ConnectionPool:
                 conn.rollback()
             except:
                 log.err(None, "Rollback failed")
-            raise excType, excValue, excTraceback
+            compat.reraise(excValue, excTraceback)
 
 
     def runInteraction(self, interaction, *args, **kw):
@@ -474,7 +474,7 @@ class ConnectionPool:
                 conn.rollback()
             except:
                 log.err(None, "Rollback failed")
-            raise excType, excValue, excTraceback
+            compat.reraise(excValue, excTraceback)
 
 
     def _runQuery(self, trans, *args, **kw):
