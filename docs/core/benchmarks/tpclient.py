@@ -42,7 +42,7 @@ def start():
 
 def shutdown(success):
     if not success:
-        raise SystemExit, "failure or something"
+        raise SystemExit("failure or something")
     passed = time.time() - started
     print "Throughput (send): %s kbytes/sec" % ((toReceive / passed) / 1024)
     reactor.stop()

@@ -586,8 +586,8 @@ else:
         def parse(self, buffer):
             try:
                 self.dataReceived(buffer)
-            except sux.ParseError, e:
-                raise ParserError, str(e)
+            except sux.ParseError as e:
+                raise ParserError(str(e))
 
 
         def findUri(self, prefix):
@@ -690,7 +690,7 @@ else:
             # Ensure the document hasn't already ended
             if self.rootElem is None:
                 # XXX: Write more legible explanation
-                raise ParserError, "Element closed after end of document."
+                raise ParserError("Element closed after end of document.")
 
             # Fix up name
             prefix, name = _splitPrefix(name)
@@ -703,7 +703,7 @@ else:
             if self.currElem is None:
                 # Ensure element name and uri matches
                 if self.rootElem.name != name or self.rootElem.uri != uri:
-                    raise ParserError, "Mismatched root elements"
+                    raise ParserError("Mismatched root elements")
                 self.DocumentEndEvent()
                 self.rootElem = None
 
@@ -713,7 +713,7 @@ else:
                 # element
                 if self.currElem.name != name or self.currElem.uri != uri:
                     # XXX: Write more legible explanation
-                    raise ParserError, "Malformed element close"
+                    raise ParserError("Malformed element close")
 
                 # Pop prefix and default NS stack
                 self.prefixStack.pop()
@@ -752,8 +752,8 @@ class ExpatElementStream:
     def parse(self, buffer):
         try:
             self.parser.Parse(buffer)
-        except self.error, e:
-            raise ParserError, str(e)
+        except self.error as e:
+            raise ParserError(str(e))
 
     def _onStartElement(self, name, attrs):
         # Generate a qname tuple from the provided name.  See

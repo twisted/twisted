@@ -104,7 +104,7 @@ def run():
     options = ClientOptions()
     try:
         options.parseOptions(args)
-    except usage.UsageError, u:
+    except usage.UsageError as u:
         print 'ERROR: %s' % u
         options.opt_help()
         sys.exit(1)
@@ -209,7 +209,7 @@ def onConnect():
         for i in range(3):
             try:
                 os.close(i)
-            except OSError, e:
+            except OSError as e:
                 import errno
                 if e.errno != errno.EBADF:
                     raise
