@@ -6,6 +6,8 @@ addons:
     - libssl-dev
     - libssl1.0.0
 
+sudo: false
+
 python:
   - "2.7"
   - "3.3"
