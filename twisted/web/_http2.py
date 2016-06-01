@@ -902,13 +902,13 @@ class H2Stream(object):
         Called by the consumer to write headers to the stream.
 
         @param version: The HTTP version.
-        @type version: L{str}
+        @type version: L{bytes}
 
         @param code: The status code.
         @type code: L{int}
 
         @param reason: The reason phrase. Ignored in HTTP/2.
-        @type reason: L{str}
+        @type reason: L{bytes}
 
         @param headers: The HTTP response headers.
         @type: Any iterable of two-tuples of L{bytes}, representing header
