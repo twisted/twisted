@@ -369,23 +369,23 @@ class HTTP2ServerTests(unittest.TestCase):
 
 
     getRequestHeaders = [
-        (':method', 'GET'),
-        (':authority', 'localhost'),
-        (':path', '/'),
-        (':scheme', 'https'),
-        ('user-agent', 'twisted-test-code'),
-        ('custom-header', '1'),
-        ('custom-header', '2'),
+        (b':method', b'GET'),
+        (b':authority', b'localhost'),
+        (b':path', b'/'),
+        (b':scheme', b'https'),
+        (b'user-agent', b'twisted-test-code'),
+        (b'custom-header', b'1'),
+        (b'custom-header', b'2'),
     ]
 
 
     postRequestHeaders = [
-        (':method', 'POST'),
-        (':authority', 'localhost'),
-        (':path', '/post_endpoint'),
-        (':scheme', 'https'),
-        ('user-agent', 'twisted-test-code'),
-        ('content-length', '25'),
+        (b':method', b'POST'),
+        (b':authority', b'localhost'),
+        (b':path', b'/post_endpoint'),
+        (b':scheme', b'https'),
+        (b'user-agent', b'twisted-test-code'),
+        (b'content-length', b'25'),
     ]
 
 
@@ -393,11 +393,11 @@ class HTTP2ServerTests(unittest.TestCase):
 
 
     getResponseHeaders = [
-        (':status', '200'),
-        ('request', '/'),
-        ('command', 'GET'),
-        ('version', 'HTTP/2'),
-        ('content-length', '13'),
+        (b':status', b'200'),
+        (b'request', b'/'),
+        (b'command', b'GET'),
+        (b'version', b'HTTP/2'),
+        (b'content-length', b'13'),
     ]
 
 
@@ -405,11 +405,11 @@ class HTTP2ServerTests(unittest.TestCase):
 
 
     postResponseHeaders = [
-        (':status', '200'),
-        ('request', '/post_endpoint'),
-        ('command', 'POST'),
-        ('version', 'HTTP/2'),
-        ('content-length', '36'),
+        (b':status', b'200'),
+        (b'request', b'/post_endpoint'),
+        (b'command', b'POST'),
+        (b'version', b'HTTP/2'),
+        (b'content-length', b'36'),
     ]
 
 
