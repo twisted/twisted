@@ -111,9 +111,9 @@ class TypedTests(unittest.TestCase):
         argV = []
         self.usage.parseOptions(argV)
         self.assertEqual(self.usage.opts['fooint'], 392)
-        self.assert_(isinstance(self.usage.opts['fooint'], int))
+        self.assertTrue(isinstance(self.usage.opts['fooint'], int))
         self.assertEqual(self.usage.opts['foofloat'], 4.23)
-        self.assert_(isinstance(self.usage.opts['foofloat'], float))
+        self.assertTrue(isinstance(self.usage.opts['foofloat'], float))
         self.assertEqual(self.usage.opts['eggint'], None)
         self.assertEqual(self.usage.opts['eggfloat'], None)
 
@@ -126,13 +126,13 @@ class TypedTests(unittest.TestCase):
                 "--eggint 32 --eggfloat 21").split()
         self.usage.parseOptions(argV)
         self.assertEqual(self.usage.opts['fooint'], 912)
-        self.assert_(isinstance(self.usage.opts['fooint'], int))
+        self.assertTrue(isinstance(self.usage.opts['fooint'], int))
         self.assertEqual(self.usage.opts['foofloat'], -823.1)
-        self.assert_(isinstance(self.usage.opts['foofloat'], float))
+        self.assertTrue(isinstance(self.usage.opts['foofloat'], float))
         self.assertEqual(self.usage.opts['eggint'], 32)
-        self.assert_(isinstance(self.usage.opts['eggint'], int))
+        self.assertTrue(isinstance(self.usage.opts['eggint'], int))
         self.assertEqual(self.usage.opts['eggfloat'], 21.)
-        self.assert_(isinstance(self.usage.opts['eggfloat'], float))
+        self.assertTrue(isinstance(self.usage.opts['eggfloat'], float))
 
 
     def test_underscoreOption(self):

@@ -273,7 +273,7 @@ class ExceptionFromStanzaTests(unittest.TestCase):
         uc['feature'] = 'retrieve-subscriptions'
 
         result = error.exceptionFromStanza(stanza)
-        self.assert_(isinstance(result, error.StanzaError))
+        self.assertTrue(isinstance(result, error.StanzaError))
         self.assertEqual('feature-not-implemented', result.condition)
         self.assertEqual('cancel', result.type)
         self.assertEqual(uc, result.appCondition)
@@ -301,7 +301,7 @@ class ExceptionFromStanzaTests(unittest.TestCase):
         e['code'] = '502'
 
         result = error.exceptionFromStanza(stanza)
-        self.assert_(isinstance(result, error.StanzaError))
+        self.assertTrue(isinstance(result, error.StanzaError))
         self.assertEqual('service-unavailable', result.condition)
         self.assertEqual('wait', result.type)
         self.assertEqual('Unable to resolve hostname.', result.text)
@@ -326,5 +326,5 @@ class ExceptionFromStreamErrorTests(unittest.TestCase):
         e.addElement((NS_XMPP_STREAMS, 'xml-not-well-formed'))
 
         result = error.exceptionFromStreamError(e)
-        self.assert_(isinstance(result, error.StreamError))
+        self.assertTrue(isinstance(result, error.StreamError))
         self.assertEqual('xml-not-well-formed', result.condition)

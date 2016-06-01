@@ -347,7 +347,7 @@ class DatagramUnixSocketTests(unittest.TestCase):
         addr = self.mktemp()
         p = ServerProto()
         s = reactor.listenUNIXDatagram(addr, p)
-        self.failUnlessRaises(error.CannotListenError, reactor.listenUNIXDatagram, addr, p)
+        self.assertRaises(error.CannotListenError, reactor.listenUNIXDatagram, addr, p)
         s.stopListening()
         os.unlink(addr)
 

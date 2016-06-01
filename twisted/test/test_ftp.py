@@ -1751,7 +1751,7 @@ class FTPClientTests(unittest.TestCase):
         self.client.lineReceived('200 PORT OK')
         self.assertEqual(self.transport.value(), 'RETR spam\r\n')
 
-        self.assert_(l)
+        self.assertTrue(l)
         l[0].loseConnection()
         self.transport.loseConnection()
         self.assertFailure(d, ftp.ConnectionLost)
