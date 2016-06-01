@@ -151,7 +151,6 @@ class H2Connection(Protocol):
             return
 
         for event in events:
-            # TODO: Consider replacing with dictionary-dispatch.
             if isinstance(event, h2.events.RequestReceived):
                 self._requestReceived(event)
             elif isinstance(event, h2.events.DataReceived):
@@ -280,7 +279,7 @@ class H2Connection(Protocol):
         exhausted, the function will place a deferred onto the L{H2Connection}
         object and wait until it is called to resume executing.
         """
-        # If producing has stopped, we're done. Don't reschedule ourselves.
+        # If producing has stopped, we're done. Don't reschedule ourselves
         if not self._stillProducing:
             return
 
