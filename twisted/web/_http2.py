@@ -116,9 +116,10 @@ class H2Connection(Protocol):
         self._sendingDeferred = None
         self._outboundStreamQueues = {}
         self._streamCleanupCallbacks = {}
+        self._stillProducing = True
 
         # Start the data sending function.
-        self._sender = reactor.callLater(0, self._sendPrioritisedData)
+        reactor.callLater(0, self._sendPrioritisedData)
 
 
     # Implementation of IProtocol
@@ -179,10 +180,7 @@ class H2Connection(Protocol):
         Informs all outstanding response handlers that the connection has been
         lost, and cleans up all internal state.
         """
-        try:
-            self._sender.stop()
-        except Exception:
-            pass
+        self._stillProducing = False
 
         for stream in self.streams.values():
             stream.connectionLost(reason)
@@ -282,6 +280,10 @@ class H2Connection(Protocol):
         exhausted, the function will place a deferred onto the L{H2Connection}
         object and wait until it is called to resume executing.
         """
+        # If producing has stopped, we're done. Don't reschedule ourselves.
+        if not self._stillProducing:
+            return
+
         stream = None
 
         while stream is None:
