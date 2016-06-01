@@ -24,5 +24,9 @@ env:
 install:
   - pip install tox tox-travis
 
+before_script:
+  - git remote set-branches --add origin trunk
+  - git fetch origin trunk
+
 script:
   - tox
