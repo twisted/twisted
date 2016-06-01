@@ -21,7 +21,7 @@ from twisted.web.test.test_http import DummyHTTPHandler
 skipH2 = None
 
 try:
-    from twisted.web.http2 import H2Connection
+    from twisted.web._http2 import H2Connection
 
     # These third-party imports are guaranteed to be present if HTTP/2 support
     # is compiled in. We do not use them in the main code: only in the tests.
