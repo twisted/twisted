@@ -767,7 +767,7 @@ class LimitTotalConnectionsFactoryTests(unittest.TestCase):
 
         # Make a connection
         p = factory.buildProtocol(None)
-        self.assertNotEqual(None, p)
+        self.assertIsNotNone(p)
         self.assertEqual(1, factory.connectionCount)
 
         # Try to make a second connection, which will exceed the connection

@@ -492,7 +492,7 @@ class FailureTests(SynchronousTestCase):
         expected = traceback.extract_tb(f.getTracebackObject())
         f.cleanFailure()
         observed = traceback.extract_tb(f.getTracebackObject())
-        self.assertNotEqual(None, expected)
+        self.assertIsNotNone(expected)
         self.assertEqual(expected, observed)
 
 
@@ -540,7 +540,7 @@ class FailureTests(SynchronousTestCase):
         the exception to C{None} in Python 3.
         """
         f = getDivisionFailure()
-        self.assertNotEqual(f.tb, None)
+        self.assertIsNotNone(f.tb, None)
         self.assertIdentical(f.value.__traceback__, f.tb)
         f.cleanFailure()
         self.assertIdentical(f.value.__traceback__, None)
