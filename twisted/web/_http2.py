@@ -1003,7 +1003,7 @@ class H2Stream(object):
         @returns: L{True} if this channel is secure.
         @rtype: L{bool}
         """
-        return self._conn.isSecure()
+        return self._conn._isSecure()
 
 
     # Implementation: IConsumer
