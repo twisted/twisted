@@ -143,7 +143,7 @@ class CredTests(unittest.TestCase):
 
         # greybox
         self.assertTrue(impl.original.loggedIn)
-        self.assertTrue(not impl.original.loggedOut)
+        self.assertFalse(impl.original.loggedOut)
         logout()
         self.assertTrue(impl.original.loggedOut)
 
@@ -164,7 +164,7 @@ class CredTests(unittest.TestCase):
 
         # greybox
         self.assertTrue(impl.original.loggedIn)
-        self.assertTrue(not impl.original.loggedOut)
+        self.assertFalse(impl.original.loggedOut)
         logout()
         self.assertTrue(impl.original.loggedOut)
 

@@ -304,7 +304,7 @@ alert("I hate you");
         self.assertEqual(node.getAttribute("a"), "b")
         self.assertEqual(node.getAttribute("c"), None)
         self.assertTrue(node.hasAttribute("a"))
-        self.assertTrue(not node.hasAttribute("c"))
+        self.assertFalse(node.hasAttribute("c"))
         a = node.getAttributeNode("a")
         self.assertEqual(a.value, "b")
 
@@ -318,7 +318,7 @@ alert("I hate you");
         self.assertEqual(d.lastChild().nodeName, "bax")
         self.assertEqual(d.firstChild().nodeName, "bar")
         self.assertTrue(d.hasChildNodes())
-        self.assertTrue(not d.firstChild().hasChildNodes())
+        self.assertFalse(d.firstChild().hasChildNodes())
 
     def testMutate(self):
         s = "<foo />"
@@ -447,7 +447,7 @@ alert("I hate you");
         s = """<hello>
         </hello>"""
         d = microdom.parseString(s)
-        self.assertTrue(not d.documentElement.hasChildNodes(),
+        self.assertFalse(d.documentElement.hasChildNodes(),
                         d.documentElement.childNodes)
         self.assertTrue(d.isEqualToDocument(microdom.parseString('<hello></hello>')))
 

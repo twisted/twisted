@@ -146,9 +146,9 @@ class AbstractFilePathTests(BytesTestCase):
                         "This directory does exist.")
         self.assertTrue(sub1.isdir(),
                         "It's a directory.")
-        self.assertTrue(not sub1.isfile(),
+        self.assertFalse(sub1.isfile(),
                         "It's a directory.")
-        self.assertTrue(not sub1.islink(),
+        self.assertFalse(sub1.islink(),
                         "It's a directory.")
         self.assertEqual(sub1.listdir(),
                              [b'file2'])

@@ -110,7 +110,7 @@ class ConnectTests(unittest.TestCase):
         self.assertEqual(sent,
                          struct.pack('!BBH', 0, 90, 34)
                          + socket.inet_aton('1.2.3.4'))
-        self.assertTrue(not self.sock.transport.stringTCPTransport_closing)
+        self.assertFalse(self.sock.transport.stringTCPTransport_closing)
         self.assertTrue(self.sock.driver_outgoing is not None)
 
         # pass some data through
@@ -279,7 +279,7 @@ class BindTests(unittest.TestCase):
         self.assertEqual(sent,
                          struct.pack('!BBH', 0, 90, 1234)
                          + socket.inet_aton('6.7.8.9'))
-        self.assertTrue(not self.sock.transport.stringTCPTransport_closing)
+        self.assertFalse(self.sock.transport.stringTCPTransport_closing)
         self.assertTrue(self.sock.driver_listen is not None)
 
         # connect
@@ -294,7 +294,7 @@ class BindTests(unittest.TestCase):
         self.assertEqual(sent,
                          struct.pack('!BBH', 0, 90, 0)
                          + socket.inet_aton('0.0.0.0'))
-        self.assertTrue(not self.sock.transport.stringTCPTransport_closing)
+        self.assertFalse(self.sock.transport.stringTCPTransport_closing)
 
         # pass some data through
         self.sock.dataReceived('hello, world')
@@ -431,7 +431,7 @@ class BindTests(unittest.TestCase):
         self.assertEqual(sent,
                          struct.pack('!BBH', 0, 90, 0)
                          + socket.inet_aton('0.0.0.0'))
-        self.assertTrue(not self.sock.transport.stringTCPTransport_closing)
+        self.assertFalse(self.sock.transport.stringTCPTransport_closing)
 
         # pass some data through
         self.sock.dataReceived('hello, world')
@@ -463,7 +463,7 @@ class BindTests(unittest.TestCase):
         self.assertEqual(sent,
                          struct.pack('!BBH', 0, 90, 0)
                          + socket.inet_aton('0.0.0.0'))
-        self.assertTrue(not self.sock.transport.stringTCPTransport_closing)
+        self.assertFalse(self.sock.transport.stringTCPTransport_closing)
 
         # pass some data through
         self.sock.dataReceived('hello, world')

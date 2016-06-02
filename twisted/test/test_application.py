@@ -85,24 +85,24 @@ class ServiceTests(unittest.TestCase):
 
     def testRunning(self):
         s = service.Service()
-        self.assertTrue(not s.running)
+        self.assertFalse(s.running)
         s.startService()
         self.assertTrue(s.running)
         s.stopService()
-        self.assertTrue(not s.running)
+        self.assertFalse(s.running)
 
     def testRunningChildren1(self):
         s = service.Service()
         p = service.MultiService()
         s.setServiceParent(p)
-        self.assertTrue(not s.running)
-        self.assertTrue(not p.running)
+        self.assertFalse(s.running)
+        self.assertFalse(p.running)
         p.startService()
         self.assertTrue(s.running)
         self.assertTrue(p.running)
         p.stopService()
-        self.assertTrue(not s.running)
-        self.assertTrue(not p.running)
+        self.assertFalse(s.running)
+        self.assertFalse(p.running)
 
     def testRunningChildren2(self):
         s = service.Service()
@@ -121,11 +121,11 @@ class ServiceTests(unittest.TestCase):
         p = service.MultiService()
         p.startService()
         s = service.Service()
-        self.assertTrue(not s.running)
+        self.assertFalse(s.running)
         s.setServiceParent(p)
         self.assertTrue(s.running)
         s.disownServiceParent()
-        self.assertTrue(not s.running)
+        self.assertFalse(s.running)
 
     def testPrivileged(self):
         s = service.Service()
@@ -143,7 +143,7 @@ class ServiceTests(unittest.TestCase):
         s = service.Service()
         s.startService()
         s1 = copy.copy(s)
-        self.assertTrue(not s1.running)
+        self.assertFalse(s1.running)
         self.assertTrue(s.running)
 
 
