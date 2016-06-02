@@ -2347,7 +2347,7 @@ class ClientTests(TestCase):
         self.assertEqual(
             lastLine, 'NICK %s' % (self.protocol.erroneousNickFallback,))
         self.protocol.irc_RPL_WELCOME('prefix', ['param'])
-        self.assertEqual(self.protocol._registered, True)
+        self.assertTrue(self.protocol._registered)
         self.protocol.setNick(self.protocol.erroneousNickFallback)
         self.assertEqual(
             self.protocol.nickname, self.protocol.erroneousNickFallback)

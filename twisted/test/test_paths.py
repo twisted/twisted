@@ -798,12 +798,12 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(abs(p.getmtime() - time.time()) // 20, 0)
         self.assertEqual(abs(p.getctime() - time.time()) // 20, 0)
         self.assertEqual(abs(p.getatime() - time.time()) // 20, 0)
-        self.assertEqual(p.exists(), True)
-        self.assertEqual(p.exists(), True)
+        self.assertTrue(p.exists())
+        self.assertTrue(p.exists())
         # OOB removal: FilePath.remove() will automatically restat
         os.remove(p.path)
         # test caching
-        self.assertEqual(p.exists(), True)
+        self.assertTrue(p.exists())
         p.restat(reraise=False)
         self.assertEqual(p.exists(), False)
         self.assertEqual(p.islink(), False)
@@ -1049,12 +1049,12 @@ class FilePathTests(AbstractFilePathTests):
         # Both a sanity check (make sure the file status looks right) and an
         # enticement for stat-caching logic to kick in and remember that these
         # exist / don't exist.
-        self.assertEqual(fp.exists(), True)
+        self.assertTrue(fp.exists())
         self.assertEqual(fp2.exists(), False)
 
         fp.moveTo(fp2)
         self.assertEqual(fp.exists(), False)
-        self.assertEqual(fp2.exists(), True)
+        self.assertTrue(fp2.exists())
 
 
     def test_moveToExistsCacheCrossMount(self):
@@ -1331,7 +1331,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(fp.exists(), False)
 
         fp.makedirs()
-        self.assertEqual(fp.exists(), True)
+        self.assertTrue(fp.exists())
 
 
     def test_makedirsMakesDirectoriesRecursively(self):

@@ -129,7 +129,7 @@ class ReconnectingFactoryTests(TestCase):
         self.assertIsNone(unserialized._callID)
         self.assertEqual(unserialized.retries, 0)
         self.assertEqual(unserialized.delay, factory.initialDelay)
-        self.assertEqual(unserialized.continueTrying, True)
+        self.assertTrue(unserialized.continueTrying)
 
 
     def test_parametrizedClock(self):

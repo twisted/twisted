@@ -264,7 +264,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = twistd.ServerOptions()
         config.subCommand = 'ueoa'
         config.postOptions()
-        self.assertEqual(config['no_save'], True)
+        self.assertTrue(config['no_save'])
 
 
     def test_postOptionsNoSubCommandSavesAsUsual(self):

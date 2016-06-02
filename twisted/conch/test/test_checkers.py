@@ -419,7 +419,7 @@ class SSHProtocolCheckerTests(TestCase):
         """
         The default L{SSHProcotolChecker.areDone} should simply return True.
         """
-        self.assertEqual(checkers.SSHProtocolChecker().areDone(None), True)
+        self.assertTrue(checkers.SSHProtocolChecker().areDone(None))
 
 
 

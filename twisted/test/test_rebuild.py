@@ -158,7 +158,7 @@ class RebuildTests(unittest.TestCase):
             unhashableObject = None
         self.addCleanup(_cleanup)
         rebuild.rebuild(rebuild)
-        self.assertEqual(unhashableObject.hashCalled, True)
+        self.assertTrue(unhashableObject.hashCalled)
 
 
 

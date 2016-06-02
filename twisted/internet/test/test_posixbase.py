@@ -313,4 +313,4 @@ class ConnectedDatagramPortTests(TestCase):
         port = unix.ConnectedDatagramPort(None, ClientProto())
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
-        self.assertEqual(self.called, True)
+        self.assertTrue(self.called)

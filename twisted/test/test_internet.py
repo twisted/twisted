@@ -945,7 +945,7 @@ class DelayedTests(unittest.TestCase):
         L{IDelayedCall.active} returns False once the call has run.
         """
         dcall = reactor.callLater(0.01, self.deferred.callback, True)
-        self.assertEqual(dcall.active(), True)
+        self.assertTrue(dcall.active())
 
         def checkDeferredCall(success):
             self.assertEqual(dcall.active(), False)

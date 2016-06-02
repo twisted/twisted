@@ -400,7 +400,7 @@ class WrappingFactoryTests(unittest.TestCase):
         hcp = TestHalfCloseableProtocol()
         p = endpoints._WrappingProtocol(None, hcp)
         p.readConnectionLost()
-        self.assertEqual(hcp.readLost, True)
+        self.assertTrue(hcp.readLost)
 
 
     def test_wrappedProtocolWriteConnectionLost(self):
@@ -411,7 +411,7 @@ class WrappingFactoryTests(unittest.TestCase):
         hcp = TestHalfCloseableProtocol()
         p = endpoints._WrappingProtocol(None, hcp)
         p.writeConnectionLost()
-        self.assertEqual(hcp.writeLost, True)
+        self.assertTrue(hcp.writeLost)
 
 
 
@@ -869,7 +869,7 @@ class ProcessEndpointsTests(unittest.TestCase):
         self.assertEqual(ep._path, b'/runProcessHere/')
         self.assertEqual(ep._uid, 1)
         self.assertEqual(ep._gid, 2)
-        self.assertEqual(ep._usePTY, True)
+        self.assertTrue(ep._usePTY)
         self.assertEqual(ep._childFDs, {3: 'w', 4: 'r', 5: 'r'})
         self.assertEqual(ep._errFlag, StandardErrorBehavior.DROP)
 
@@ -2630,7 +2630,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(endpoint._address, "/var/foo/bar")
         self.assertEqual(endpoint._backlog, 7)
         self.assertEqual(endpoint._mode, 0o123)
-        self.assertEqual(endpoint._wantPID, True)
+        self.assertTrue(endpoint._wantPID)
 
 
     def test_implicitDefaultNotAllowed(self):
@@ -2803,7 +2803,7 @@ class ClientStringTests(unittest.TestCase):
         self.assertIs(client._reactor, reactor)
         self.assertEqual(client._path, "/var/foo/bar")
         self.assertEqual(client._timeout, 9)
-        self.assertEqual(client._checkPID, True)
+        self.assertTrue(client._checkPID)
 
 
     def test_unixDefaults(self):
@@ -2831,7 +2831,7 @@ class ClientStringTests(unittest.TestCase):
         self.assertIs(client._reactor, reactor)
         self.assertEqual(client._path, "/var/foo/bar")
         self.assertEqual(client._timeout, 9)
-        self.assertEqual(client._checkPID, True)
+        self.assertTrue(client._checkPID)
 
 
     def test_typeFromPlugin(self):

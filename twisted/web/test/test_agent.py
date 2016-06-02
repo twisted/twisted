@@ -445,7 +445,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
 
         # Advance past 240 seconds, connection will be closed:
         self.fakeReactor.advance(1.1)
-        self.assertEqual(protocol.transport.disconnecting, True)
+        self.assertTrue(protocol.transport.disconnecting)
         self.assertNotIn(protocol,
                          self.pool._connections[("http", b"example.com", 80)])
         self.assertNotIn(protocol, self.pool._timeouts)
@@ -479,7 +479,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         self.assertEqual(newCached, [origCached[1], newProtocol])
         self.assertEqual([p.transport.disconnecting for p in newCached],
                          [False, False])
-        self.assertEqual(origCached[0].transport.disconnecting, True)
+        self.assertTrue(origCached[0].transport.disconnecting)
         self.assertTrue(timeouts[origCached[0]].cancelled)
         self.assertNotIn(origCached[0], pool._timeouts)
 
@@ -661,11 +661,11 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
 
         # Connections have begun disconnecting:
         for p in persistent:
-            self.assertEqual(p.transport.disconnecting, True)
+            self.assertTrue(p.transport.disconnecting)
         self.assertEqual(self.pool._connections, {})
         # All timeouts were cancelled and removed:
         for dc in self.fakeReactor.getDelayedCalls():
-            self.assertEqual(dc.cancelled, True)
+            self.assertTrue(dc.cancelled)
         self.assertEqual(self.pool._timeouts, {})
 
         # Returned Deferred fires when all connections have been closed:
@@ -768,7 +768,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         agent = client.Agent(self.reactor, pool=pool)
         agent._getEndpoint = lambda *args: self
         agent.request(b"GET", b"http://127.0.0.1")
-        self.assertEqual(self.protocol.requests[0][0].persistent, True)
+        self.assertTrue(self.protocol.requests[0][0].persistent)
 
 
     def test_nonPersistent(self):
@@ -822,7 +822,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         bodyProducer = object()
         agent.request(b'GET', b'http://foo/',
                       bodyProducer=bodyProducer, headers=headers)
-        self.assertEqual(agent._pool.connected, True)
+        self.assertTrue(agent._pool.connected)
 
 
     def test_unsupportedScheme(self):
@@ -2371,7 +2371,7 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertIs(pool, agent._pool)
 
         agent.request(b'GET', b'http://foo/')
-        self.assertEqual(agent._pool.connected, True)
+        self.assertTrue(agent._pool.connected)
 
 
 

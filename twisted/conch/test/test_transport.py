@@ -1786,7 +1786,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         def _cbTestKEXDH_REPLY(value):
             self.assertIsNone(value)
-            self.assertEqual(self.calledVerifyHostKey, True)
+            self.assertTrue(self.calledVerifyHostKey)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
         signature = self.privObj.sign(exchangeHash)
@@ -1964,7 +1964,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
 
         def _cbTestKEX_DH_GEX_REPLY(value):
             self.assertIsNone(value)
-            self.assertEqual(self.calledVerifyHostKey, True)
+            self.assertTrue(self.calledVerifyHostKey)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
         signature = self.privObj.sign(exchangeHash)

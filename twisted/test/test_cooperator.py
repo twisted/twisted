@@ -278,7 +278,7 @@ class CooperatorTests(unittest.TestCase):
 
         # Remove second task; scheduled call should be cancelled:
         task2.stop()
-        self.assertEqual(calls[0].cancelled, True)
+        self.assertTrue(calls[0].cancelled)
         self.assertIsNone(coop._delayedCall)
 
         # Add another task; scheduled call will be recreated:

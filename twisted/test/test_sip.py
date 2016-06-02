@@ -300,7 +300,7 @@ class ViaTests(unittest.TestCase):
         self.assertIsNone(v.ttl)
         self.assertIsNone(v.maddr)
         self.assertIsNone(v.branch)
-        self.assertEqual(v.hidden, True)
+        self.assertTrue(v.hidden)
         self.assertEqual(v.toString(),
                           "SIP/2.0/UDP example.com:5060;hidden")
         self.checkRoundtrip(v)
@@ -328,8 +328,8 @@ class ViaTests(unittest.TestCase):
             DeprecationWarning)
 
         self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport")
-        self.assertEqual(v.rport, True)
-        self.assertEqual(v.rportRequested, True)
+        self.assertTrue(v.rport)
+        self.assertTrue(v.rportRequested)
         self.assertIsNone(v.rportValue)
 
 
@@ -339,7 +339,7 @@ class ViaTests(unittest.TestCase):
         """
         v = sip.Via("foo.bar", rport=None)
         self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport")
-        self.assertEqual(v.rportRequested, True)
+        self.assertTrue(v.rportRequested)
         self.assertIsNone(v.rportValue)
 
 

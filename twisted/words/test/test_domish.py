@@ -148,11 +148,11 @@ class DomishStreamTestsMixin:
     def testHarness(self):
         xml = "<root><child/><child2/></root>"
         self.stream.parse(xml)
-        self.assertEqual(self.doc_started, True)
+        self.assertTrue(self.doc_started)
         self.assertEqual(self.root.name, 'root')
         self.assertEqual(self.elements[0].name, 'child')
         self.assertEqual(self.elements[1].name, 'child2')
-        self.assertEqual(self.doc_ended, True)
+        self.assertTrue(self.doc_ended)
 
     def testBasic(self):
         xml = "<stream:stream xmlns:stream='etherx' xmlns='jabber'>\n" + \

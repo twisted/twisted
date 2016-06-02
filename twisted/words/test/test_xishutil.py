@@ -185,7 +185,7 @@ class EventDispatcherTests(unittest.TestCase):
         self.assertEqual(False, result)
 
         result = d.dispatch(pres)
-        self.assertEqual(True, result)
+        self.assertTrue(result)
 
 
     def testOrderedXPathDispatch(self):

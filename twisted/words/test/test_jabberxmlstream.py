@@ -1142,7 +1142,7 @@ class StreamManagerTests(unittest.TestCase):
         handler = FailureReasonXMPPHandler()
         handler.setHandlerParent(sm)
         sm._disconnected(failure.Failure(Exception("no reason")))
-        self.assertEqual(True, handler.gotFailureReason)
+        self.assertTrue(handler.gotFailureReason)
 
 
     def test_addHandler(self):

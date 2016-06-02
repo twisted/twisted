@@ -2569,7 +2569,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.dnssecOK} can be overridden in the
         constructor.
         """
-        self.assertEqual(dns._OPTHeader(dnssecOK=True).dnssecOK, True)
+        self.assertTrue(dns._OPTHeader(dnssecOK=True).dnssecOK)
 
 
     def test_options(self):

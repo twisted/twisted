@@ -77,7 +77,7 @@ class ClientCreatorTests(TestCase):
             address, factory, timeout, checkPID = reactor.unixClients.pop()
             self.assertEqual(address, '/foo/bar')
             self.assertEqual(timeout, 123)
-            self.assertEqual(checkPID, True)
+            self.assertTrue(checkPID)
             return factory
         self._basicConnectTest(check)
 

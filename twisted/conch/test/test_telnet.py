@@ -432,7 +432,7 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x42')
         self.assertEqual(s.him.state, 'no')
         self.assertEqual(s.us.state, 'no')
-        self.assertEqual(s.him.negotiating, True)
+        self.assertTrue(s.him.negotiating)
         self.assertEqual(s.us.negotiating, False)
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + b'\x42')
@@ -463,7 +463,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.assertEqual(s.him.state, 'no')
         self.assertEqual(s.us.state, 'no')
         self.assertEqual(s.him.negotiating, False)
-        self.assertEqual(s.us.negotiating, True)
+        self.assertTrue(s.us.negotiating)
 
         self.p.dataReceived(telnet.IAC + telnet.DONT + b'\x42')
 

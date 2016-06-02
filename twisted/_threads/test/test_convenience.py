@@ -32,7 +32,7 @@ class QuitTests(SynchronousTestCase):
         """
         quit = Quit()
         quit.set()
-        self.assertEqual(quit.isSet, True)
+        self.assertTrue(quit.isSet)
 
 
     def test_checkDoesNothing(self):

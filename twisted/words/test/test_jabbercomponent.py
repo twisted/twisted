@@ -85,7 +85,7 @@ class ComponentAuthTests(unittest.TestCase):
 
         xs.dataReceived("<handshake/>")
 
-        self.assertEqual(self.authComplete, True)
+        self.assertTrue(self.authComplete)
 
 
 class JabberServiceHarness(component.Service):
@@ -123,19 +123,19 @@ class JabberServiceManagerTests(unittest.TestCase):
         xs.connectionMade()
 
         # Ensure the test service harness got notified
-        self.assertEqual(True, svc.transportConnectedFlag)
+        self.assertTrue(svc.transportConnectedFlag)
 
         # Jump ahead and pretend like the stream got auth'd
         xs.dispatch(xs, xmlstream.STREAM_AUTHD_EVENT)
 
         # Ensure the test service harness got notified
-        self.assertEqual(True, svc.componentConnectedFlag)
+        self.assertTrue(svc.componentConnectedFlag)
 
         # Pretend to drop the connection
         xs.connectionLost(None)
 
         # Ensure the test service harness got notified
-        self.assertEqual(True, svc.componentDisconnectedFlag)
+        self.assertTrue(svc.componentDisconnectedFlag)
 
 
 

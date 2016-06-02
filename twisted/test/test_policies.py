@@ -787,7 +787,7 @@ class LimitTotalConnectionsFactoryTests(unittest.TestCase):
         # count.
         op = factory.buildProtocol(None)
         op.makeConnection(None) # to trigger connectionMade
-        self.assertEqual(True, factory.overflowed)
+        self.assertTrue(factory.overflowed)
         self.assertEqual(2, factory.connectionCount)
 
         # Close the connections.

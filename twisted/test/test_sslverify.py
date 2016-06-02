@@ -1059,15 +1059,15 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.assertEqual(opts.privateKey, self.sKey)
         self.assertEqual(opts.certificate, self.sCert)
         self.assertEqual(opts.method, SSL.SSLv23_METHOD)
-        self.assertEqual(opts.verify, True)
+        self.assertTrue(opts.verify)
         self.assertEqual(opts.caCerts, [self.sCert])
         self.assertEqual(opts.verifyDepth, 2)
         self.assertEqual(opts.requireCertificate, False)
         self.assertEqual(opts.verifyOnce, False)
         self.assertEqual(opts.enableSingleUseKeys, False)
         self.assertEqual(opts.enableSessions, False)
-        self.assertEqual(opts.fixBrokenPeers, True)
-        self.assertEqual(opts.enableSessionTickets, True)
+        self.assertTrue(opts.fixBrokenPeers)
+        self.assertTrue(opts.enableSessionTickets)
 
     test_certificateOptionsSerialization.suppress = [
         util.suppress(category = DeprecationWarning,

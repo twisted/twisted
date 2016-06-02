@@ -407,7 +407,7 @@ class ParsingTests(unittest.TestCase):
         else.
         """
         b = amp.Boolean()
-        self.assertEqual(b.fromString(b"True"), True)
+        self.assertTrue(b.fromString(b"True"))
         self.assertEqual(b.fromString(b"False"), False)
         self.assertRaises(TypeError, b.fromString, b"ninja")
         self.assertRaises(TypeError, b.fromString, b"true")

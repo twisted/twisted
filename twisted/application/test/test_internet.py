@@ -220,7 +220,7 @@ class EndpointServiceTests(TestCase):
         """
         self.svc.startService()
         self.assertIs(self.factory, self.fakeServer.factory)
-        self.assertEqual(self.svc.running, True)
+        self.assertTrue(self.svc.running)
 
 
     def test_startServiceStarted(self):
@@ -231,7 +231,7 @@ class EndpointServiceTests(TestCase):
         self.test_privilegedStartService()
         self.svc.startService()
         self.assertEqual(self.fakeServer.listenAttempts, 1)
-        self.assertEqual(self.svc.running, True)
+        self.assertTrue(self.svc.running)
 
 
     def test_stopService(self):
@@ -359,7 +359,7 @@ class TimerServiceTests(TestCase):
         self.timer.startService()
         d = self.timer.stopService()
         self.assertNoResult(d)
-        self.assertEqual(True, self.timer.running)
+        self.assertTrue(self.timer.running)
         self.deferred.callback(object())
         self.assertIsNone(self.successResultOf(d))
 
@@ -597,7 +597,7 @@ class ClientServiceTests(SynchronousTestCase):
         d = service.stopService()
         self.assertNoResult(d)
         protocol = cq.constructedProtocols[0]
-        self.assertEqual(protocol.transport.disconnecting, True)
+        self.assertTrue(protocol.transport.disconnecting)
         protocol.connectionLost(Failure(Exception()))
         self.successResultOf(d)
 
@@ -619,7 +619,7 @@ class ClientServiceTests(SynchronousTestCase):
         service.startService()
         self.assertNoResult(nextProtocol)
         self.assertNoResult(stopped)
-        self.assertEqual(first.transport.disconnecting, True)
+        self.assertTrue(first.transport.disconnecting)
         cq.connectQueue[1].callback(None)
         self.assertEqual(len(cq.constructedProtocols), 2)
         self.assertIs(self.successResultOf(nextProtocol),

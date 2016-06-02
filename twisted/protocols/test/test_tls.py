@@ -758,7 +758,7 @@ class TLSMemoryBIOTests(TestCase):
         # should be told to close, but the user protocol should not yet be
         # notified:
         tlsProtocol._tlsShutdownFinished(None)
-        self.assertEqual(transport.disconnecting, True)
+        self.assertTrue(transport.disconnecting)
         self.assertIsNone(protocol.disconnected)
 
         # Now close the underlying connection; the user protocol should be
@@ -785,7 +785,7 @@ class TLSMemoryBIOTests(TestCase):
         tlsClient._shutdownTLS = _shutdownTLS
         tlsClient.write(b'x')
         tlsClient.loseConnection()
-        self.assertEqual(tlsClient.disconnecting, True)
+        self.assertTrue(tlsClient.disconnecting)
         self.assertEqual(calls, [1])
 
         # Make sure _shutdownTLS isn't called a second time:
@@ -881,7 +881,7 @@ class TLSProducerTests(TestCase):
         clientProtocol, tlsProtocol = buildTLSProtocol(transport=transport)
         producer = HistoryStringTransport()
         clientProtocol.transport.registerProducer(producer, True)
-        self.assertEqual(tlsProtocol.transport.streaming, True)
+        self.assertTrue(tlsProtocol.transport.streaming)
         return clientProtocol, tlsProtocol, producer
 
 
@@ -918,7 +918,7 @@ class TLSProducerTests(TestCase):
         tlsProtocol.transport.producer.pauseProducing()
         self.assertEqual(producer.producerState, 'paused')
         self.assertEqual(producer.producerHistory, ['pause'])
-        self.assertEqual(tlsProtocol._producer._producerPaused, True)
+        self.assertTrue(tlsProtocol._producer._producerPaused)
 
 
     def test_streamingProducerResumedInNormalMode(self):
@@ -953,7 +953,7 @@ class TLSProducerTests(TestCase):
         clientProtocol.transport.write(b"hello")
         self.assertEqual(producer.producerState, 'paused')
         self.assertEqual(producer.producerHistory, ['pause'])
-        self.assertEqual(tlsProtocol._producer._producerPaused, True)
+        self.assertTrue(tlsProtocol._producer._producerPaused)
 
 
     def test_streamingProducerResumedInWriteBlockedOnReadMode(self):
@@ -1045,7 +1045,7 @@ class TLSProducerTests(TestCase):
 
         # Finish TLS close handshake:
         self.flushTwoTLSProtocols(tlsProtocol, serverTLSProtocol)
-        self.assertEqual(tlsProtocol.transport.disconnecting, True)
+        self.assertTrue(tlsProtocol.transport.disconnecting)
 
         # Bytes made it through, as long as they were written before producer
         # was unregistered:
@@ -1160,7 +1160,7 @@ class TLSProducerTests(TestCase):
         self.assertIsInstance(streamingProducer, _PullToPush)
         self.assertEqual(streamingProducer._producer, producer)
         self.assertEqual(streamingProducer._consumer, clientProtocol.transport)
-        self.assertEqual(tlsProtocol.transport.streaming, True)
+        self.assertTrue(tlsProtocol.transport.streaming)
 
         # Verify the streaming producer was started, and ran until the end:
         def done(ignore):
@@ -1169,7 +1169,7 @@ class TLSProducerTests(TestCase):
             # The producer has been unregistered:
             self.assertIsNone(tlsProtocol.transport.producer)
             # The streaming producer wrapper knows it's done:
-            self.assertEqual(streamingProducer._finished, True)
+            self.assertTrue(streamingProducer._finished)
         producer.result.addCallback(done)
 
         serverProtocol, serverTLSProtocol = buildTLSProtocol(server=True)
@@ -1211,7 +1211,7 @@ class TLSProducerTests(TestCase):
         producer = Producer()
         tlsProtocol.registerProducer(producer, False)
         self.assertIsNone(tlsProtocol.transport.producer)
-        self.assertEqual(producer.stopped, True)
+        self.assertTrue(producer.stopped)
 
 
     def test_streamingProducerAfterConnectionLost(self):
@@ -1303,7 +1303,7 @@ class NonStreamingProducerTests(TestCase):
             self.assertEqual(consumer.value(), b"0123456789")
             self.assertIsNone(consumer.producer)
             # And the streaming wrapper stopped:
-            self.assertEqual(streamingProducer._finished, True)
+            self.assertTrue(streamingProducer._finished)
         done.addCallback(doneStreaming)
 
         # Now, start streaming:
@@ -1408,9 +1408,9 @@ class NonStreamingProducerTests(TestCase):
         def doneStreaming(_):
             # Not all data was streamed, and the producer was stopped:
             self.assertEqual(consumer.value(), b"012")
-            self.assertEqual(nsProducer.stopped, True)
+            self.assertTrue(nsProducer.stopped)
             # And the streaming wrapper stopped:
-            self.assertEqual(streamingProducer._finished, True)
+            self.assertTrue(streamingProducer._finished)
         done.addCallback(doneStreaming)
 
         # Now, start streaming:
@@ -1461,7 +1461,7 @@ class NonStreamingProducerTests(TestCase):
                 self.assertTrue(f.check(expected))
                 self.assertIn(msg, logMsg['why'])
             # And the streaming wrapper stopped:
-            self.assertEqual(streamingProducer._finished, True)
+            self.assertTrue(streamingProducer._finished)
         done.addCallback(stopped)
         return done
 
@@ -1511,7 +1511,7 @@ class NonStreamingProducerTests(TestCase):
         streamingProducer.startStreaming()
         streamingProducer.stopStreaming()
         streamingProducer.stopStreaming()
-        self.assertEqual(streamingProducer._finished, True)
+        self.assertTrue(streamingProducer._finished)
 
 
     def test_interface(self):

@@ -44,7 +44,7 @@ class FileEntryMixin:
         fileEntry = self.getFileEntry('')
         self.assertEqual(fileEntry.closed, False)
         fileEntry.close()
-        self.assertEqual(fileEntry.closed, True)
+        self.assertTrue(fileEntry.closed)
 
 
     def test_readline(self):

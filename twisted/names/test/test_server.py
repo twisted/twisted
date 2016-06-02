@@ -360,7 +360,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.__init__} accepts a C{verbose} argument which
         overrides L{server.DNSServerFactory.verbose}.
         """
-        self.assertEqual(server.DNSServerFactory(verbose=True).verbose, True)
+        self.assertTrue(server.DNSServerFactory(verbose=True).verbose)
 
 
     def test_interface(self):

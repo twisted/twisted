@@ -741,8 +741,8 @@ class TLSTests(unittest.TestCase, LoopbackMixin):
         server = DummyESMTP(contextFactory=serverCTX)
 
         def check(ignored):
-            self.assertEqual(client.tls, True)
-            self.assertEqual(server.startedTLS, True)
+            self.assertTrue(client.tls)
+            self.assertTrue(server.startedTLS)
 
         return self.loopback(server, client).addCallback(check)
 
@@ -1842,8 +1842,8 @@ class SendmailTests(unittest.TestCase):
                       password="bar", requireTransportSecurity=True,
                       requireAuthentication=True)
         factory = reactor.tcpClients[0][2]
-        self.assertEqual(factory._requireTransportSecurity, True)
-        self.assertEqual(factory._requireAuthentication, True)
+        self.assertTrue(factory._requireTransportSecurity)
+        self.assertTrue(factory._requireAuthentication)
         self.assertEqual(factory.username, "foo")
         self.assertEqual(factory.password, "bar")
 
@@ -1898,7 +1898,7 @@ class SendmailTests(unittest.TestCase):
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
                           "message", reactor=reactor)
         d.cancel()
-        self.assertEqual(reactor.connectors[0]._disconnected, True)
+        self.assertTrue(reactor.connectors[0]._disconnected)
         failure = self.failureResultOf(d)
         failure.trap(defer.CancelledError)
 
@@ -1917,7 +1917,7 @@ class SendmailTests(unittest.TestCase):
         p = factory.buildProtocol(None)
         p.makeConnection(transport)
         d.cancel()
-        self.assertEqual(transport.aborting, True)
-        self.assertEqual(transport.disconnecting, True)
+        self.assertTrue(transport.aborting)
+        self.assertTrue(transport.disconnecting)
         failure = self.failureResultOf(d)
         failure.trap(defer.CancelledError)

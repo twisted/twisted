@@ -510,7 +510,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         # This will timeout if processExited isn't called:
         self.runReactor(reactor, timeout=30)
-        self.assertEqual(protocol.exited, True)
+        self.assertTrue(protocol.exited)
 
 
     def _changeIDTest(self, which):

@@ -73,7 +73,7 @@ class ServiceTests(TestCase):
 
         # See twisted.application.test.test_internet.EndpointServiceTests.
         # test_synchronousRaiseRaisesSynchronously
-        self.assertEqual(svc._raiseSynchronously, True)
+        self.assertTrue(svc._raiseSynchronously)
         self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
         # Maybe we should implement equality for endpoints.
         self.assertEqual(svc.endpoint._port, aGoodPort)

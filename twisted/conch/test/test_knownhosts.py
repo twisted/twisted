@@ -118,8 +118,7 @@ class EntryTestsMixin:
         L{IKnownHostEntry.matchesHost} checks to see if an entry matches a
         given hostname.
         """
-        self.assertEqual(True, self.entry.matchesHost(
-                "www.twistedmatrix.com"))
+        self.assertTrue(self.entry.matchesHost("www.twistedmatrix.com"))
         self.assertEqual(False, self.entry.matchesHost(
                 "www.divmod.com"))
 
@@ -144,7 +143,7 @@ class PlainEntryTests(EntryTestsMixin, TestCase):
         A "hostname,ip" formatted line will match both the host and the IP.
         """
         self.entry = PlainEntry.fromString(self.hostIPLine)
-        self.assertEqual(True, self.entry.matchesHost("198.49.126.131"))
+        self.assertTrue(self.entry.matchesHost("198.49.126.131"))
         self.test_matchesHost()
 
 
@@ -515,7 +514,7 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile((sampleHashedLine))
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], HashedEntry)
-        self.assertEqual(True, entries[0].matchesHost("www.twistedmatrix.com"))
+        self.assertTrue(entries[0].matchesHost("www.twistedmatrix.com"))
         self.assertEqual(1, len(entries))
 
 
@@ -528,7 +527,7 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile((otherSamplePlaintextLine))
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], PlainEntry)
-        self.assertEqual(True, entries[0].matchesHost("divmod.com"))
+        self.assertTrue(entries[0].matchesHost("divmod.com"))
         self.assertEqual(1, len(entries))
 
 
@@ -593,7 +592,7 @@ class KnownHostsDatabaseTests(TestCase):
         self.assertEqual([], entries)
         self.assertEqual(False, FilePath(pn).exists())
         knownHostsFile.save()
-        self.assertEqual(True, FilePath(pn).exists())
+        self.assertTrue(FilePath(pn).exists())
 
 
     def test_loadNonExistentParent(self):
@@ -607,7 +606,7 @@ class KnownHostsDatabaseTests(TestCase):
         knownHostsFile = KnownHostsFile.fromPath(knownHostsPath)
         knownHostsFile.save()
         knownHostsPath.restat(False)
-        self.assertEqual(True, knownHostsPath.exists())
+        self.assertTrue(knownHostsPath.exists())
 
 
     def test_savingAddsEntry(self):
@@ -687,7 +686,7 @@ class KnownHostsDatabaseTests(TestCase):
         hostname is present and matches the expected key.
         """
         hostsFile = self.loadSampleHostsFile()
-        self.assertEqual(True, hostsFile.hasHostKey(
+        self.assertTrue(hostsFile.hasHostKey(
                 "www.twistedmatrix.com", Key.fromString(sampleKey)))
 
 
@@ -1006,7 +1005,7 @@ class ConsoleUITests(TestCase):
             self.ui.prompt("Hello, world!").addCallback(l.append)
             self.assertEqual(["Hello, world!"], self.fakeFile.outchunks)
             self.assertEqual([True], l)
-            self.assertEqual(True, self.fakeFile.closed)
+            self.assertTrue(self.fakeFile.closed)
 
 
     def test_promptNo(self):
@@ -1021,7 +1020,7 @@ class ConsoleUITests(TestCase):
             self.ui.prompt("Goodbye, world!").addCallback(l.append)
             self.assertEqual(["Goodbye, world!"], self.fakeFile.outchunks)
             self.assertEqual([False], l)
-            self.assertEqual(True, self.fakeFile.closed)
+            self.assertTrue(self.fakeFile.closed)
 
 
     def test_promptRepeatedly(self):
@@ -1038,7 +1037,7 @@ class ConsoleUITests(TestCase):
         self.assertEqual(self.fakeFile.outchunks,
                          ["Please say something useful."] +
                          ["Please type 'yes' or 'no': "] * 3)
-        self.assertEqual(True, self.fakeFile.closed)
+        self.assertTrue(self.fakeFile.closed)
         self.newFile(['blah', 'stuff', 'feh', 'no'])
         l = []
         self.ui.prompt("Please say something negative.").addCallback(l.append)
@@ -1046,7 +1045,7 @@ class ConsoleUITests(TestCase):
         self.assertEqual(self.fakeFile.outchunks,
                          ["Please say something negative."] +
                          ["Please type 'yes' or 'no': "] * 3)
-        self.assertEqual(True, self.fakeFile.closed)
+        self.assertTrue(self.fakeFile.closed)
 
 
     def test_promptOpenFailed(self):
@@ -1067,7 +1066,7 @@ class ConsoleUITests(TestCase):
         """
         self.ui.warn("Test message.")
         self.assertEqual(["Test message."], self.fakeFile.outchunks)
-        self.assertEqual(True, self.fakeFile.closed)
+        self.assertTrue(self.fakeFile.closed)
 
 
     def test_warnOpenFailed(self):
@@ -1227,7 +1226,7 @@ class DefaultAPITests(TestCase):
             self.fakeFile.outchunks)
         self.assertEqual([1], l)
         knownHostsFile = KnownHostsFile.fromPath(FilePath(self.hostsOption))
-        self.assertEqual(True, knownHostsFile.hasHostKey("8.7.6.5",
+        self.assertTrue(knownHostsFile.hasHostKey("8.7.6.5",
                                              Key.fromString(sampleKey)))
 
 

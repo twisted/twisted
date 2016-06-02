@@ -559,7 +559,7 @@ class SkipTests(unittest.SynchronousTestCase):
 
     def test_success(self):
         self.result.addSkip(self.test, 'some reason')
-        self.assertEqual(True, self.result.wasSuccessful())
+        self.assertTrue(self.result.wasSuccessful())
 
 
     def test_summary(self):
@@ -687,7 +687,7 @@ class TodoTests(unittest.SynchronousTestCase):
         """
         self.result.addExpectedFailure(self.test, Failure(Exception()),
                                        makeTodo('todo!'))
-        self.assertEqual(True, self.result.wasSuccessful())
+        self.assertTrue(self.result.wasSuccessful())
 
 
     def test_unexpectedSuccess(self):
@@ -697,7 +697,7 @@ class TodoTests(unittest.SynchronousTestCase):
         when this happens.
         """
         self.result.addUnexpectedSuccess(self.test, makeTodo("Heya!"))
-        self.assertEqual(True, self.result.wasSuccessful())
+        self.assertTrue(self.result.wasSuccessful())
         self.assertEqual(len(self._getUnexpectedSuccesses(self.result)), 1)
 
 
@@ -989,14 +989,14 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
         shouldStop becomes True soon as someone calls stop().
         """
         self.result.stop()
-        self.assertEqual(True, self.result.shouldStop)
+        self.assertTrue(self.result.shouldStop)
 
 
     def test_wasSuccessfulInitiallyTrue(self):
         """
         wasSuccessful() is True when there have been no results reported.
         """
-        self.assertEqual(True, self.result.wasSuccessful())
+        self.assertTrue(self.result.wasSuccessful())
 
 
     def test_wasSuccessfulTrueAfterSuccesses(self):
@@ -1005,7 +1005,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
         otherwise.
         """
         self.result.addSuccess(self.test)
-        self.assertEqual(True, self.result.wasSuccessful())
+        self.assertTrue(self.result.wasSuccessful())
 
 
     def test_wasSuccessfulFalseAfterErrors(self):
@@ -1052,7 +1052,7 @@ class ReporterTests(ReporterInterfaceTests):
         self.result.stopTest(self.test)
         self.assertTrue(self.result._lastTime > 0)
         self.assertEqual(self.result.testsRun, 1)
-        self.assertEqual(self.result.wasSuccessful(), True)
+        self.assertTrue(self.result.wasSuccessful())
 
 
     def test_brokenStream(self):

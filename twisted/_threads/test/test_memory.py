@@ -29,9 +29,9 @@ class MemoryWorkerTests(SynchronousTestCase):
         worker.do(lambda: done.append(3))
         worker.do(lambda: done.append(4))
         self.assertEqual(done, [])
-        self.assertEqual(performer(), True)
+        self.assertTrue(performer())
         self.assertEqual(done, [3])
-        self.assertEqual(performer(), True)
+        self.assertTrue(performer())
         self.assertEqual(done, [3, 4])
 
 

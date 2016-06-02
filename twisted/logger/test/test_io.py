@@ -123,7 +123,7 @@ class LoggingFileTests(unittest.TestCase):
         f = LoggingFile(self.logger)
         f.close()
 
-        self.assertEqual(f.closed, True)
+        self.assertTrue(f.closed)
         self.assertRaises(ValueError, f.write, "Hello")
 
 

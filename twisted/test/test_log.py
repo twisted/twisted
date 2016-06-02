@@ -127,7 +127,7 @@ class LogTests(unittest.SynchronousTestCase):
         log.msg("test", testShouldCatch=True)
         i = catcher.pop()
         self.assertEqual(i["message"][0], "test")
-        self.assertEqual(i["testShouldCatch"], True)
+        self.assertTrue(i["testShouldCatch"])
         self.assertIn("time", i)
         self.assertEqual(len(catcher), 0)
 
@@ -1023,7 +1023,7 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         stdio = log.StdioOnnaStick()
         stdio.write("hello\n")
         self.assertEqual(self.resultLogs[0]['isError'], False)
-        self.assertEqual(self.resultLogs[0]['printed'], True)
+        self.assertTrue(self.resultLogs[0]['printed'])
 
 
     def test_writeLines(self):
@@ -1053,7 +1053,7 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         """
         stdio = log.StdioOnnaStick(isError=True)
         stdio.write("log 1\n")
-        self.assertEqual(self.resultLogs[0]['isError'], True)
+        self.assertTrue(self.resultLogs[0]['isError'])
 
 
     def test_unicode(self):

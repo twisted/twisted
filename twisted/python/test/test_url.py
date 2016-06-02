@@ -277,7 +277,7 @@ class TestURL(TestCase):
         path segment.
         """
         childURL = URL(host=u"www.foo.com").child(u"c")
-        self.assertEqual(childURL.rooted, True)
+        self.assertTrue(childURL.rooted)
         self.assertEqual("http://www.foo.com/c", childURL.asText())
 
 
