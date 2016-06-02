@@ -196,8 +196,8 @@ class AbstractFilePathTests(BytesTestCase):
         dictoid[f1prime] = 4
         self.assertEqual(dictoid[f1], 4)
         self.assertEqual(list(dictoid.keys()), [f1])
-        self.assertTrue(list(dictoid.keys())[0] is f1)
-        self.assertFalse(list(dictoid.keys())[0] is f1prime) # sanity check
+        self.assertIs(list(dictoid.keys())[0], f1)
+        self.assertIsNot(list(dictoid.keys())[0], f1prime) # sanity check
         dictoid[f2] = 5
         self.assertEqual(dictoid[f2], 5)
         self.assertEqual(len(dictoid), 2)

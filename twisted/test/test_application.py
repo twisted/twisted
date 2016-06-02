@@ -212,7 +212,7 @@ class ApplicationTests(unittest.TestCase):
 
     def testServiceComponent(self):
         a = service.Application("hello")
-        self.assertTrue(service.IService(a) is service.IServiceCollection(a))
+        self.assertIs(service.IService(a), service.IServiceCollection(a))
         self.assertEqual(service.IService(a).name, "hello")
         self.assertEqual(service.IService(a).parent, None)
 
@@ -221,7 +221,7 @@ class ApplicationTests(unittest.TestCase):
         p = sob.IPersistable(a)
         self.assertEqual(p.style, 'pickle')
         self.assertEqual(p.name, 'hello')
-        self.assertTrue(p.original is a)
+        self.assertIs(p.original, a)
 
 class LoadingTests(unittest.TestCase):
 

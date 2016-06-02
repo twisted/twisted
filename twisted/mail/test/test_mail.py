@@ -236,8 +236,8 @@ class MailServiceTests(unittest.TestCase):
         self.service.portals['domain'] = o1
         self.service.portals[''] = o2
 
-        self.assertTrue(self.service.lookupPortal('domain') is o1)
-        self.assertTrue(self.service.defaultPortal() is o2)
+        self.assertIs(self.service.lookupPortal('domain'), o1)
+        self.assertIs(self.service.defaultPortal(), o2)
 
 
 class StringListMailboxTests(unittest.TestCase):
@@ -659,7 +659,7 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
 
         t = self.D.requestAvatar('user', None, pop3.IMailbox)
         self.assertEqual(len(t), 3)
-        self.assertTrue(t[0] is pop3.IMailbox)
+        self.assertIs(t[0], pop3.IMailbox)
         self.assertTrue(pop3.IMailbox.providedBy(t[1]))
 
         t[2]()
@@ -809,15 +809,15 @@ class ServiceDomainTests(unittest.TestCase):
     def testValidateFrom(self):
         helo = ('hostname', '127.0.0.1')
         origin = smtp.Address('<user@hostname>')
-        self.assertTrue(self.D.validateFrom(helo, origin) is origin)
+        self.assertIs(self.D.validateFrom(helo, origin), origin)
 
         helo = ('hostname', '1.2.3.4')
         origin = smtp.Address('<user@hostname>')
-        self.assertTrue(self.D.validateFrom(helo, origin) is origin)
+        self.assertIs(self.D.validateFrom(helo, origin), origin)
 
         helo = ('hostname', '1.2.3.4')
         origin = smtp.Address('<>')
-        self.assertTrue(self.D.validateFrom(helo, origin) is origin)
+        self.assertIs(self.D.validateFrom(helo, origin), origin)
 
         self.assertRaises(
             smtp.SMTPBadSender,

@@ -599,7 +599,7 @@ class ExcInfoTests(SynchronousTestCase):
         passed a tuple like the one returned by L{sys.exc_info}.
         """
         info = (ValueError, ValueError("foo"), None)
-        self.assertTrue(info is excInfoOrFailureToExcInfo(info))
+        self.assertIs(info, excInfoOrFailureToExcInfo(info))
 
 
     def test_failure(self):
@@ -627,7 +627,7 @@ class AcquireAttributeTests(SynchronousTestCase):
         attribute.
         """
         self.value = value = object()
-        self.assertTrue(value is acquireAttribute([self, object()], "value"))
+        self.assertIs(value, acquireAttribute([self, object()], "value"))
 
 
     def test_foundOnLaterObject(self):
@@ -636,7 +636,7 @@ class AcquireAttributeTests(SynchronousTestCase):
         element in the object list has the attribute and the first does not.
         """
         self.value = value = object()
-        self.assertTrue(value is acquireAttribute([object(), self], "value"))
+        self.assertIs(value, acquireAttribute([object(), self], "value"))
 
 
     def test_notFoundException(self):
@@ -654,7 +654,7 @@ class AcquireAttributeTests(SynchronousTestCase):
         is returned.
         """
         default = object()
-        self.assertTrue(default is acquireAttribute([object()], "foo", default))
+        self.assertIs(default, acquireAttribute([object()], "foo", default))
 
 
 
