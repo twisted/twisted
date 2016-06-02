@@ -15,7 +15,7 @@ from twisted.trial import unittest
 from twisted.python.compat import (
     reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
     unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType, bytesEnviron, iteritems
+    iterbytes, intToBytes, ioType, bytesEnviron, iteritems, _coercedUnicode
 )
 from twisted.python.filepath import FilePath
 
@@ -772,3 +772,91 @@ class OrderedDictTests(unittest.TestCase):
             "15.5.0: Use collections.OrderedDict instead.")
         self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
         self.assertEqual(len(currentWarnings), 1)
+
+
+
+class CoercedUnicodeTests(unittest.TestCase):
+    """
+    Tests for L{twisted.python.compat._coercedUnicode}.
+    """
+
+    def test_unicodeASCII(self):
+        """
+        Unicode strings with ASCII code points are unchanged.
+        """
+        result = _coercedUnicode(u'text', 'class.attribute')
+        self.assertEqual(result, u'text')
+
+        if _PY3:
+            expected = str
+        else:
+            expected = unicode
+
+        self.assertIsInstance(result, expected)
+
+
+    def test_unicodeNonASCII(self):
+        """
+        Unicode strings with non-ASCII code points are unchanged.
+        """
+        result = _coercedUnicode(u'\N{SNOWMAN}', 'class.attribute')
+        self.assertEqual(result, u'\N{SNOWMAN}')
+
+        if _PY3:
+            expected = str
+        else:
+            expected = unicode
+
+        self.assertIsInstance(result, expected)
+
+
+    def test_bytesASCII(self):
+        """
+        Byte strings with ASCII code points are decoded and raise warning.
+        """
+        if _PY3:
+            exc = self.assertRaises(TypeError, _coercedUnicode,
+                                               b'bytes', 'class.attribute')
+            self.assertEqual(str(exc), "class.attribute must be str not "
+                                       "b'bytes' (bytes)")
+            currentWarnings = self.flushWarnings(offendingFunctions=[
+                self.test_bytesASCII])
+            self.assertEqual(len(currentWarnings), 0)
+        else:
+            result = _coercedUnicode(b'bytes', 'class.attribute')
+            self.assertEquals(result, u'bytes')
+            self.assertIsInstance(result, unicode)
+            currentWarnings = self.flushWarnings(offendingFunctions=[
+                self.test_bytesASCII])
+            self.assertEqual(len(currentWarnings), 1)
+            self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                currentWarnings[0]['message'],
+                "The use of byte strings for 'class.attribute' "
+                "was deprecated in Twisted 16.3.0: "
+                "use unicode strings instead")
+
+
+
+    def test_bytesNonASCII(self):
+        """
+        Byte strings with non-ASCII code points raise an exception.
+        """
+        if _PY3:
+            self.assertRaises(TypeError, _coercedUnicode, b'\xe2\x98\x83',
+                                                         'class.attribute')
+            currentWarnings = self.flushWarnings(offendingFunctions=[
+                self.test_bytesNonASCII])
+            self.assertEqual(len(currentWarnings), 0)
+        else:
+            self.assertRaises(UnicodeError, _coercedUnicode, b'\xe2\x98\x83',
+                                                            'class.attribute')
+            currentWarnings = self.flushWarnings(offendingFunctions=[
+                self.assertRaises])
+            self.assertEqual(len(currentWarnings), 1)
+            self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                currentWarnings[0]['message'],
+                "The use of byte strings for 'class.attribute' "
+                "was deprecated in Twisted 16.3.0: "
+                "use unicode strings instead")
