@@ -299,6 +299,7 @@ class H2Connection(Protocol):
         # Wait behind the transport.
         if self._consumerBlocked is not None:
             self._consumerBlocked.addCallback(self._sendPrioritisedData)
+            return
 
         remainingWindow = self.conn.local_flow_control_window(stream)
         frameData = self._outboundStreamQueues[stream].popleft()
