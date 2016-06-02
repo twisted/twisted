@@ -85,7 +85,7 @@ class ComponentAuthTests(unittest.TestCase):
 
         xs.dataReceived("<handshake/>")
 
-        self.assertEqual(self.authComplete, True)
+        self.assertTrue(self.authComplete)
 
 
 class JabberServiceHarness(component.Service):
@@ -123,19 +123,19 @@ class JabberServiceManagerTests(unittest.TestCase):
         xs.connectionMade()
 
         # Ensure the test service harness got notified
-        self.assertEqual(True, svc.transportConnectedFlag)
+        self.assertTrue(svc.transportConnectedFlag)
 
         # Jump ahead and pretend like the stream got auth'd
         xs.dispatch(xs, xmlstream.STREAM_AUTHD_EVENT)
 
         # Ensure the test service harness got notified
-        self.assertEqual(True, svc.componentConnectedFlag)
+        self.assertTrue(svc.componentConnectedFlag)
 
         # Pretend to drop the connection
         xs.connectionLost(None)
 
         # Ensure the test service harness got notified
-        self.assertEqual(True, svc.componentDisconnectedFlag)
+        self.assertTrue(svc.componentDisconnectedFlag)
 
 
 
@@ -238,14 +238,14 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         xs.addOnetimeObserver = addOnetimeObserver
 
         xs.makeConnection(self)
-        self.assertIdentical(None, xs.sid)
+        self.assertIsNone(xs.sid)
         self.assertFalse(xs._headerSent)
 
         xs.dataReceived("<stream:stream xmlns='jabber:component:accept' "
                          "xmlns:stream='http://etherx.jabber.org/streams' "
                          "to='component.example.org'>")
         self.assertEqual((0, 0), xs.version)
-        self.assertNotIdentical(None, xs.sid)
+        self.assertIsNotNone(xs.sid)
         self.assertTrue(xs._headerSent)
         self.assertEqual(('/*', xs.authenticator.onElement), observers[-1])
 
@@ -373,8 +373,8 @@ class XMPPComponentServerFactoryTests(unittest.TestCase):
                                 xmlstream.STREAM_CONNECTED_EVENT)
         self.assertEqual(0, self.xmlstream.serial)
         self.assertEqual(1, self.factory.serial)
-        self.assertIdentical(None, self.xmlstream.rawDataInFn)
-        self.assertIdentical(None, self.xmlstream.rawDataOutFn)
+        self.assertIsNone(self.xmlstream.rawDataInFn)
+        self.assertIsNone(self.xmlstream.rawDataOutFn)
 
 
     def test_makeConnectionLogTraffic(self):
@@ -384,8 +384,8 @@ class XMPPComponentServerFactoryTests(unittest.TestCase):
         self.factory.logTraffic = True
         self.xmlstream.dispatch(self.xmlstream,
                                 xmlstream.STREAM_CONNECTED_EVENT)
-        self.assertNotIdentical(None, self.xmlstream.rawDataInFn)
-        self.assertNotIdentical(None, self.xmlstream.rawDataOutFn)
+        self.assertIsNotNone(self.xmlstream.rawDataInFn)
+        self.assertIsNotNone(self.xmlstream.rawDataOutFn)
 
 
     def test_onError(self):
@@ -409,7 +409,7 @@ class XMPPComponentServerFactoryTests(unittest.TestCase):
         """
         self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
         self.assertIn('component.example.org', self.router.routes)
-        self.assertIdentical(self.xmlstream,
+        self.assertIs(self.xmlstream,
                              self.router.routes['component.example.org'])
 
 

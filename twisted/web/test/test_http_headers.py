@@ -71,7 +71,7 @@ class BytesHeadersTests(TestCase):
         """
         h = Headers()
         default = object()
-        self.assertIdentical(h.getRawHeaders(b"test", default), default)
+        self.assertIs(h.getRawHeaders(b"test", default), default)
 
 
     def test_getRawHeaders(self):
@@ -370,7 +370,7 @@ class UnicodeHeadersTests(TestCase):
         """
         h = Headers()
         default = object()
-        self.assertIdentical(h.getRawHeaders(u"test", default), default)
+        self.assertIs(h.getRawHeaders(u"test", default), default)
 
 
     def test_getRawHeaders(self):

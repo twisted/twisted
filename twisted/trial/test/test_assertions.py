@@ -152,7 +152,7 @@ class AssertFalseTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failIf} returns its argument if its argument is
         not considered true.
         """
-        self._assertFalseFalse(self.failIf)
+        self._assertFalseFalse(self.assertFalse)
 
 
     def test_assertFalseFalse(self):
@@ -169,7 +169,7 @@ class AssertFalseTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} if its argument is considered
         true.
         """
-        self._assertFalseTrue(self.failIf)
+        self._assertFalseTrue(self.assertFalse)
 
 
     def test_assertFalseTrue(self):
@@ -239,7 +239,7 @@ class AssertTrueTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} if its argument is not
         considered true.
         """
-        self._assertTrueFalse(self.failUnless)
+        self._assertTrueFalse(self.assertTrue)
 
 
     def test_assertTrueTrue(self):
@@ -255,7 +255,7 @@ class AssertTrueTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failUnless} returns its argument if its argument
         is considered true.
         """
-        self._assertTrueTrue(self.failUnless)
+        self._assertTrueTrue(self.assertTrue)
 
 
 
@@ -366,14 +366,14 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
 
 
     def test_failUnlessRaises_expected(self):
-        x = self.failUnlessRaises(ValueError, self._raiseError, ValueError)
-        self.assertTrue(isinstance(x, ValueError),
+        x = self.assertRaises(ValueError, self._raiseError, ValueError)
+        self.assertIsInstance(x, ValueError,
                         "Expect failUnlessRaises to return instance of raised "
                         "exception.")
 
     def test_failUnlessRaises_unexpected(self):
         try:
-            self.failUnlessRaises(ValueError, self._raiseError, TypeError)
+            self.assertRaises(ValueError, self._raiseError, TypeError)
         except TypeError:
             self.fail("failUnlessRaises shouldn't re-raise unexpected "
                       "exceptions")
@@ -387,7 +387,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
     def test_failUnlessRaises_noException(self):
         returnValue = 3
         try:
-            self.failUnlessRaises(ValueError, lambda : returnValue)
+            self.assertRaises(ValueError, lambda : returnValue)
         except self.failureException as e:
             self.assertEqual(str(e),
                                  'ValueError not raised (3 returned)')
@@ -396,13 +396,13 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
 
 
     def test_failUnlessRaises_failureException(self):
-        x = self.failUnlessRaises(self.failureException, self._raiseError,
+        x = self.assertRaises(self.failureException, self._raiseError,
                                   self.failureException)
-        self.assertTrue(isinstance(x, self.failureException),
+        self.assertIsInstance(x, self.failureException,
                         "Expected %r instance to be returned"
                         % (self.failureException,))
         try:
-            x = self.failUnlessRaises(self.failureException, self._raiseError,
+            x = self.assertRaises(self.failureException, self._raiseError,
                                       ValueError)
         except self.failureException:
             # what we expect
@@ -497,25 +497,25 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
 
     def test_failIfEqual_basic(self):
         x, y, z = [1], [2], [1]
-        ret = self.failIfEqual(x, y)
+        ret = self.assertNotEqual(x, y)
         self.assertEqual(ret, x,
                              "failIfEqual should return first parameter")
-        self.failUnlessRaises(self.failureException,
-                              self.failIfEqual, x, x)
-        self.failUnlessRaises(self.failureException,
-                              self.failIfEqual, x, z)
+        self.assertRaises(self.failureException,
+                              self.assertNotEqual, x, x)
+        self.assertRaises(self.failureException,
+                              self.assertNotEqual, x, z)
 
 
     def test_failIfEqual_customEq(self):
         x = MockEquality('first')
         y = MockEquality('second')
         z = MockEquality('fecund')
-        ret = self.failIfEqual(x, y)
+        ret = self.assertNotEqual(x, y)
         self.assertEqual(ret, x,
                              "failIfEqual should return first parameter")
-        self.failUnlessRaises(self.failureException,
-                              self.failIfEqual, x, x)
-        self.failIfEqual(x, z, "__ne__ should make these not equal")
+        self.assertRaises(self.failureException,
+                              self.assertNotEqual, x, x)
+        self.assertNotEqual(x, z, "__ne__ should make these not equal")
 
 
     def test_failIfIdenticalPositive(self):
@@ -535,7 +535,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         arguments are the same object.
         """
         x = object()
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failIfIdentical, x, x)
 
 
@@ -545,9 +545,9 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         self.assertEqual(ret, x,
                              'failUnlessIdentical should return first '
                              'parameter')
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failUnlessIdentical, x, y)
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failUnlessIdentical, x, z)
 
     def test_failUnlessApproximates(self):
@@ -556,9 +556,9 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         ret = self.failUnlessApproximates(x, y, 0.2)
         self.assertEqual(ret, x, "failUnlessApproximates should return "
                              "first parameter")
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failUnlessApproximates, x, z, 0.1)
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failUnlessApproximates, x, y, 0.1)
 
 
@@ -567,12 +567,12 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         x = 8.000001
         y = 8.00001
         z = 8.000002
-        self.failUnlessAlmostEqual(x, x, precision)
-        ret = self.failUnlessAlmostEqual(x, z, precision)
+        self.assertAlmostEqual(x, x, precision)
+        ret = self.assertAlmostEqual(x, z, precision)
         self.assertEqual(ret, x, "failUnlessAlmostEqual should return "
                              "first parameter (%r, %r)" % (ret, x))
-        self.failUnlessRaises(self.failureException,
-                              self.failUnlessAlmostEqual, x, y, precision)
+        self.assertRaises(self.failureException,
+                              self.assertAlmostEqual, x, y, precision)
 
 
     def test_failIfAlmostEqual(self):
@@ -580,13 +580,13 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         x = 8.000001
         y = 8.00001
         z = 8.000002
-        ret = self.failIfAlmostEqual(x, y, precision)
+        ret = self.assertNotAlmostEqual(x, y, precision)
         self.assertEqual(ret, x, "failIfAlmostEqual should return "
                              "first parameter (%r, %r)" % (ret, x))
-        self.failUnlessRaises(self.failureException,
-                              self.failIfAlmostEqual, x, x, precision)
-        self.failUnlessRaises(self.failureException,
-                              self.failIfAlmostEqual, x, z, precision)
+        self.assertRaises(self.failureException,
+                              self.assertNotAlmostEqual, x, x, precision)
+        self.assertRaises(self.failureException,
+                              self.assertNotAlmostEqual, x, z, precision)
 
 
     def test_failUnlessSubstring(self):
@@ -596,9 +596,9 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         self.failUnlessSubstring(x, x)
         ret = self.failUnlessSubstring(x, z)
         self.assertEqual(ret, x, 'should return first parameter')
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failUnlessSubstring, x, y)
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failUnlessSubstring, z, x)
 
 
@@ -609,9 +609,9 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         self.failIfSubstring(z, x)
         ret = self.failIfSubstring(x, y)
         self.assertEqual(ret, x, 'should return first parameter')
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failIfSubstring, x, x)
-        self.failUnlessRaises(self.failureException,
+        self.assertRaises(self.failureException,
                               self.failIfSubstring, x, z)
 
 
@@ -854,10 +854,10 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
                 warnings.warn("Do not call me", category=RuntimeWarning)
         r = self.assertWarns(RuntimeWarning, "Do not call me", __file__,
             Warn)
-        self.assertTrue(isinstance(r, Warn))
+        self.assertIsInstance(r, Warn)
         r = self.assertWarns(RuntimeWarning, "Do not call me", __file__,
             Warn)
-        self.assertTrue(isinstance(r, Warn))
+        self.assertIsInstance(r, Warn)
 
 
     def test_assertWarnsOnMethod(self):
@@ -1067,7 +1067,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         before C{addCallback} returns), L{SynchronousTestCase.successResultOf}
         returns that result.
         """
-        self.assertIdentical(
+        self.assertIs(
             self.result, self.successResultOf(succeed(self.result)))
 
 
@@ -1078,7 +1078,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
         returns that L{Failure} if that L{Failure}'s type is expected.
         """
-        self.assertIdentical(
+        self.assertIs(
             self.failure,
             self.failureResultOf(fail(self.failure), self.failure.type,
                                  KeyError))
@@ -1091,7 +1091,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
         returns that L{Failure}.
         """
-        self.assertIdentical(
+        self.assertIs(
             self.failure, self.failureResultOf(fail(self.failure)))
 
 
@@ -1157,7 +1157,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             self.assertNoResult(d)
         except self.failureException:
             pass
-        self.assertEqual(None, self.successResultOf(d))
+        self.assertIsNone(self.successResultOf(d))
 
 
 

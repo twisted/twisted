@@ -130,7 +130,7 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testServerGreeting(self):
         p, t = setUp(greet=False)
         p.dataReceived("+OK lalala this has no challenge\r\n")
-        self.assertEqual(p.serverChallenge, None)
+        self.assertIsNone(p.serverChallenge)
 
     def testServerGreetingWithChallenge(self):
         p, t = setUp(greet=False)
@@ -208,7 +208,7 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived("5 3\r\n6 2\r\n7 1\r\n")
         self.assertEqual(c.data, {0: [3], 1: [2], 2: [1], 4: [3], 5: [2], 6: [1]})
         p.dataReceived(".\r\n")
-        return d.addCallback(self.assertIdentical, f)
+        return d.addCallback(self.assertIs, f)
 
     def testFailedListSize(self):
         p, t = setUp()
@@ -237,7 +237,7 @@ class POP3ClientListTests(unittest.TestCase):
         p.dataReceived("1 xyz\r\n2 abc\r\n5 mno\r\n")
         self.assertEqual(c.data, {0: ["xyz"], 1: ["abc"], 4: ["mno"]})
         p.dataReceived(".\r\n")
-        return d.addCallback(self.assertIdentical, f)
+        return d.addCallback(self.assertIs, f)
 
     def testFailedListUID(self):
         p, t = setUp()
@@ -274,7 +274,7 @@ class POP3ClientMessageTests(unittest.TestCase):
         return d.addCallback(self._cbTestRetrieveWithConsumer, f, c)
 
     def _cbTestRetrieveWithConsumer(self, result, f, c):
-        self.assertIdentical(result, f)
+        self.assertIs(result, f)
         self.assertEqual(c.data, ["La la la here is message text",
                                    ".Further message text"])
 
@@ -304,7 +304,7 @@ class POP3ClientMessageTests(unittest.TestCase):
         return d.addCallback(self._cbTestPartialRetrieveWithConsumer, f, c)
 
     def _cbTestPartialRetrieveWithConsumer(self, result, f, c):
-        self.assertIdentical(result, f)
+        self.assertIs(result, f)
         self.assertEqual(c.data, ["Line the first!  Woop",
                                    "Line the last!  Bye"])
 

@@ -185,7 +185,7 @@ class FileBodyProducerTests(TestCase):
             self._scheduled.pop(0)()
         self.assertEqual([], self._scheduled)
         self.assertEqual(expectedResult, output.getvalue())
-        self.assertEqual(None, self.successResultOf(complete))
+        self.assertIsNone(self.successResultOf(complete))
 
 
     def test_inputClosedAtEOF(self):
@@ -432,20 +432,20 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         self.pool._putConnection(("http", b"example.com", 80), protocol)
 
         # Connection is in pool, still not closed:
-        self.assertEqual(protocol.transport.disconnecting, False)
+        self.assertFalse(protocol.transport.disconnecting)
         self.assertIn(protocol,
                       self.pool._connections[("http", b"example.com", 80)])
 
         # Advance 239 seconds, still not closed:
         self.fakeReactor.advance(239)
-        self.assertEqual(protocol.transport.disconnecting, False)
+        self.assertFalse(protocol.transport.disconnecting)
         self.assertIn(protocol,
                       self.pool._connections[("http", b"example.com", 80)])
         self.assertIn(protocol, self.pool._timeouts)
 
         # Advance past 240 seconds, connection will be closed:
         self.fakeReactor.advance(1.1)
-        self.assertEqual(protocol.transport.disconnecting, True)
+        self.assertTrue(protocol.transport.disconnecting)
         self.assertNotIn(protocol,
                          self.pool._connections[("http", b"example.com", 80)])
         self.assertNotIn(protocol, self.pool._timeouts)
@@ -479,7 +479,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         self.assertEqual(newCached, [origCached[1], newProtocol])
         self.assertEqual([p.transport.disconnecting for p in newCached],
                          [False, False])
-        self.assertEqual(origCached[0].transport.disconnecting, True)
+        self.assertTrue(origCached[0].transport.disconnecting)
         self.assertTrue(timeouts[origCached[0]].cancelled)
         self.assertNotIn(origCached[0], pool._timeouts)
 
@@ -520,12 +520,12 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
 
         def gotConnection(conn):
             # We got the cached connection:
-            self.assertIdentical(protocol, conn)
+            self.assertIs(protocol, conn)
             self.assertNotIn(
                 conn, self.pool._connections[("http", b"example.com", 80)])
             # And the timeout was cancelled:
             self.fakeReactor.advance(241)
-            self.assertEqual(conn.transport.disconnecting, False)
+            self.assertFalse(conn.transport.disconnecting)
             self.assertNotIn(conn, self.pool._timeouts)
 
         return self.pool.getConnection(("http", b"example.com", 80),
@@ -545,7 +545,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
 
         def gotConnection(newConnection):
             # We got a new connection:
-            self.assertNotIdentical(protocol, newConnection)
+            self.assertIsNot(protocol, newConnection)
             # And the old connection is still there:
             self.assertIn(protocol, self.pool._connections[key])
             # While the new connection is not:
@@ -577,7 +577,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         result = []
         self.pool.getConnection(key,
                                 BadEndpoint()).addCallback(result.append)
-        self.assertIdentical(result[0], origCached[1])
+        self.assertIs(result[0], origCached[1])
 
         # And both the disconnected and removed connections should be out of
         # the cache:
@@ -600,7 +600,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         self.assertEqual(
             exc.value.args[0],
             "BUG: Non-quiescent protocol added to connection pool.")
-        self.assertIdentical(None, self.pool._connections.get(
+        self.assertIsNone(self.pool._connections.get(
                 ("http", b"example.com", 80)))
 
 
@@ -640,7 +640,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         pool.getConnection(
             key, StringEndpoint()).addCallback(
             result2.append)
-        self.assertIdentical(result2[0], protocol)
+        self.assertIs(result2[0], protocol)
 
 
     def test_closeCachedConnections(self):
@@ -661,11 +661,11 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
 
         # Connections have begun disconnecting:
         for p in persistent:
-            self.assertEqual(p.transport.disconnecting, True)
+            self.assertTrue(p.transport.disconnecting)
         self.assertEqual(self.pool._connections, {})
         # All timeouts were cancelled and removed:
         for dc in self.fakeReactor.getDelayedCalls():
-            self.assertEqual(dc.cancelled, True)
+            self.assertTrue(dc.cancelled)
         self.assertEqual(self.pool._timeouts, {})
 
         # Returned Deferred fires when all connections have been closed:
@@ -754,8 +754,8 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         """
         agent = client.Agent(self.reactor)
         self.assertIsInstance(agent._pool, HTTPConnectionPool)
-        self.assertEqual(agent._pool.persistent, False)
-        self.assertIdentical(agent._reactor, agent._pool._reactor)
+        self.assertFalse(agent._pool.persistent)
+        self.assertIs(agent._reactor, agent._pool._reactor)
 
 
     def test_persistent(self):
@@ -768,7 +768,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         agent = client.Agent(self.reactor, pool=pool)
         agent._getEndpoint = lambda *args: self
         agent.request(b"GET", b"http://127.0.0.1")
-        self.assertEqual(self.protocol.requests[0][0].persistent, True)
+        self.assertTrue(self.protocol.requests[0][0].persistent)
 
 
     def test_nonPersistent(self):
@@ -786,7 +786,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         agent = client.Agent(self.reactor, pool=pool)
         agent._getEndpoint = lambda *args: self
         agent.request(b"GET", b"http://127.0.0.1")
-        self.assertEqual(self.protocol.requests[0][0].persistent, False)
+        self.assertFalse(self.protocol.requests[0][0].persistent)
 
 
     def test_connectUsesConnectionPool(self):
@@ -815,14 +815,14 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
 
         pool = DummyPool()
         agent = MyAgent(self.reactor, pool=pool)
-        self.assertIdentical(pool, agent._pool)
+        self.assertIs(pool, agent._pool)
 
         headers = http_headers.Headers()
         headers.addRawHeader(b"host", b"foo")
         bodyProducer = object()
         agent.request(b'GET', b'http://foo/',
                       bodyProducer=bodyProducer, headers=headers)
-        self.assertEqual(agent._pool.connected, True)
+        self.assertTrue(agent._pool.connected)
 
 
     def test_unsupportedScheme(self):
@@ -1038,7 +1038,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
             req.headers,
             http_headers.Headers({b'foo': [b'bar'],
                                   b'host': [b'example.com:1234']}))
-        self.assertIdentical(req.bodyProducer, body)
+        self.assertIs(req.bodyProducer, body)
 
 
     def test_connectTimeout(self):
@@ -1136,7 +1136,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         L{Request.absoluteURI} is C{None} if L{Request._parsedURI} is C{None}.
         """
         request = client.Request(b'FOO', b'/', client.Headers(), None)
-        self.assertIdentical(request.absoluteURI, None)
+        self.assertIsNone(request.absoluteURI)
 
 
     def test_endpointFactory(self):
@@ -1536,7 +1536,7 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
         def gotConnection(connection):
             self.assertIsInstance(connection,
                                   client._RetryingHTTP11ClientProtocol)
-            self.assertIdentical(connection._clientProtocol, protocol)
+            self.assertIs(connection._clientProtocol, protocol)
         return d.addCallback(gotConnection)
 
 
@@ -1551,7 +1551,7 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
         def gotConnection(connection):
             # Don't want to use isinstance since potentially the wrapper might
             # subclass it at some point:
-            self.assertIdentical(connection.__class__, HTTP11ClientProtocol)
+            self.assertIs(connection.__class__, HTTP11ClientProtocol)
         return d.addCallback(gotConnection)
 
 
@@ -1574,7 +1574,7 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
 
         def _shouldRetry(m, e, bp):
             self.assertEqual(m, b"FOO")
-            self.assertIdentical(bp, bodyProducer)
+            self.assertIs(bp, bodyProducer)
             self.assertIsInstance(e, (RequestNotSent, ResponseNeverReceived))
             return willWeRetry
         retrier._shouldRetry = _shouldRetry
@@ -1600,7 +1600,7 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
         self.assertEqual(len(protocols), 2)
         response = object()
         protocols[1].requests[0][1].callback(response)
-        return d.addCallback(self.assertIdentical, response)
+        return d.addCallback(self.assertIs, response)
 
 
     def test_dontRetryIfShouldRetryReturnsFalse(self):
@@ -1660,7 +1660,7 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
         d = pool.getConnection(123, DummyEndpoint())
 
         def gotConnection(connection):
-            self.assertIdentical(connection, protocol)
+            self.assertIs(connection, protocol)
         return d.addCallback(gotConnection)
 
 
@@ -1693,14 +1693,14 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
         def gotConnection(connection):
             self.assertIsInstance(connection,
                                   client._RetryingHTTP11ClientProtocol)
-            self.assertIdentical(connection._clientProtocol, protocol)
+            self.assertIs(connection._clientProtocol, protocol)
             # Verify that the _newConnection method on retrying connection
             # calls _newConnection on the pool:
             self.assertEqual(newConnections, [])
             connection._newConnection()
             self.assertEqual(len(newConnections), 1)
             self.assertEqual(newConnections[0][0], key)
-            self.assertIdentical(newConnections[0][1], endpoint)
+            self.assertIs(newConnections[0][1], endpoint)
         return d.addCallback(gotConnection)
 
 
@@ -1767,7 +1767,7 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         self.assertEqual(cookie.value, '2')
         self.assertEqual(cookie.path, '/')
         self.assertEqual(cookie.comment, 'goodbye')
-        self.assertIdentical(cookie.get_nonstandard_attr('cow'), None)
+        self.assertIsNone(cookie.get_nonstandard_attr('cow'))
 
 
     def test_sendCookie(self):
@@ -1777,7 +1777,7 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         """
         jar, (request, response) = self.makeCookieJar()
 
-        self.assertIdentical(
+        self.assertIs(
             request.get_header('Cookie', None),
             None)
 
@@ -1830,7 +1830,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         d.addCallback(_checkCookie)
 
         req, res = self.protocol.requests.pop()
-        self.assertIdentical(req.headers.getRawHeaders(b'cookie'), None)
+        self.assertIsNone(req.headers.getRawHeaders(b'cookie'))
 
         resp = client.Response(
             (b'HTTP', 1, 1),
@@ -1901,7 +1901,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
         cookieAgent.request(b'GET', uri)
 
         req, res = self.protocol.requests.pop()
-        self.assertIdentical(None, req.headers.getRawHeaders(b'cookie'))
+        self.assertIsNone(req.headers.getRawHeaders(b'cookie'))
 
 
     def test_portCookie(self):
@@ -2028,7 +2028,7 @@ class ContentDecoderAgentTests(TestCase, FakeReactorAndConnectMixin,
                             None)
         res.callback(response)
 
-        return deferred.addCallback(self.assertIdentical, response)
+        return deferred.addCallback(self.assertIs, response)
 
 
     def test_unsupportedEncoding(self):
@@ -2047,7 +2047,7 @@ class ContentDecoderAgentTests(TestCase, FakeReactorAndConnectMixin,
         response = Response((b'HTTP', 1, 1), 200, b'OK', headers, None)
         res.callback(response)
 
-        return deferred.addCallback(self.assertIdentical, response)
+        return deferred.addCallback(self.assertIs, response)
 
 
     def test_unknownEncoding(self):
@@ -2068,7 +2068,7 @@ class ContentDecoderAgentTests(TestCase, FakeReactorAndConnectMixin,
         res.callback(response)
 
         def check(result):
-            self.assertNotIdentical(response, result)
+            self.assertIsNot(response, result)
             self.assertIsInstance(result, Decoder2)
             self.assertEqual([b'decoder1,fizz'],
                              result.headers.getRawHeaders(b'content-encoding'))
@@ -2142,7 +2142,7 @@ class ContentDecoderAgentWithGzipTests(TestCase,
                 compressor.flush())
 
         def checkResponse(result):
-            self.assertNotIdentical(result, response)
+            self.assertIsNot(result, response)
             self.assertEqual(result.version, (b'HTTP', 1, 1))
             self.assertEqual(result.code, 200)
             self.assertEqual(result.phrase, b'OK')
@@ -2349,14 +2349,14 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
             req.headers,
             http_headers.Headers({b'foo': [b'bar'],
                                   b'host': [b'example.com:1234']}))
-        self.assertIdentical(req.bodyProducer, body)
+        self.assertIs(req.bodyProducer, body)
 
 
     def test_nonPersistent(self):
         """
         C{ProxyAgent} connections are not persistent by default.
         """
-        self.assertEqual(self.agent._pool.persistent, False)
+        self.assertFalse(self.agent._pool.persistent)
 
 
     def test_connectUsesConnectionPool(self):
@@ -2371,7 +2371,7 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
             persistent = False
             def getConnection(this, key, ep):
                 this.connected = True
-                self.assertIdentical(ep, endpoint)
+                self.assertIs(ep, endpoint)
                 # The key is *not* tied to the final destination, but only to
                 # the address of the proxy, since that's where *we* are
                 # connecting:
@@ -2380,10 +2380,10 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
 
         pool = DummyPool()
         agent = client.ProxyAgent(endpoint, self.reactor, pool=pool)
-        self.assertIdentical(pool, agent._pool)
+        self.assertIs(pool, agent._pool)
 
         agent.request(b'GET', b'http://foo/')
-        self.assertEqual(agent._pool.connected, True)
+        self.assertTrue(agent._pool.connected)
 
 
 
@@ -2407,8 +2407,8 @@ class _RedirectAgentTestsMixin(object):
 
         self.assertEqual(0, len(self.protocol.requests))
         result = self.successResultOf(deferred)
-        self.assertIdentical(response, result)
-        self.assertIdentical(result.previousResponse, None)
+        self.assertIs(response, result)
+        self.assertIsNone(result.previousResponse)
 
 
     def _testRedirectDefault(self, code):
@@ -2671,8 +2671,8 @@ class _RedirectAgentTestsMixin(object):
         res.callback(response)
 
         finalResponse = self.successResultOf(deferred)
-        self.assertIdentical(finalResponse.previousResponse, redirectResponse)
-        self.assertIdentical(redirectResponse.previousResponse, None)
+        self.assertIs(finalResponse.previousResponse, redirectResponse)
+        self.assertIsNone(redirectResponse.previousResponse)
 
 
 

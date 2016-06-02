@@ -43,7 +43,7 @@ class RealmTests(unittest.TestCase):
 
         # Getting that user again should return the same object
         newp = self.successResultOf(get(u"new" + kind.lower()))
-        self.assertIdentical(p, newp)
+        self.assertIs(p, newp)
 
         # Getting a non-existent user should fail if createUserOnRequest is False
         setattr(realm, flag, False)
@@ -66,11 +66,11 @@ class RealmTests(unittest.TestCase):
 
         # Make sure getting the user returns the same object
         retrieved = self.successResultOf(realm.getUser(u"testuser"))
-        self.assertIdentical(user, retrieved)
+        self.assertIs(user, retrieved)
 
         # Make sure looking up the user also returns the same object
         lookedUp = self.successResultOf(realm.lookupUser(u"testuser"))
-        self.assertIdentical(retrieved, lookedUp)
+        self.assertIs(retrieved, lookedUp)
 
         # Make sure looking up a user who does not exist fails
         (self.failureResultOf(realm.lookupUser(u"nosuchuser"))
@@ -83,15 +83,15 @@ class RealmTests(unittest.TestCase):
         # Create and manually add a user to the realm
         p = service.User("testuser")
         user = self.successResultOf(realm.addUser(p))
-        self.assertIdentical(p, user)
+        self.assertIs(p, user)
 
         # Make sure getting that user returns the same object
         retrieved = self.successResultOf(realm.getUser(u"testuser"))
-        self.assertIdentical(user, retrieved)
+        self.assertIs(user, retrieved)
 
         # Make sure looking up that user returns the same object
         lookedUp = self.successResultOf(realm.lookupUser(u"testuser"))
-        self.assertIdentical(retrieved, lookedUp)
+        self.assertIs(retrieved, lookedUp)
 
 
     def testGroupRetrieval(self):
@@ -101,7 +101,7 @@ class RealmTests(unittest.TestCase):
 
         retrieved = self.successResultOf(realm.getGroup(u"testgroup"))
 
-        self.assertIdentical(group, retrieved)
+        self.assertIs(group, retrieved)
 
         (self.failureResultOf(realm.getGroup(u"nosuchgroup"))
              .trap(ewords.NoSuchGroup))
@@ -113,7 +113,7 @@ class RealmTests(unittest.TestCase):
         p = service.Group("testgroup")
         self.successResultOf(realm.addGroup(p))
         group = self.successResultOf(realm.getGroup(u"testGroup"))
-        self.assertIdentical(p, group)
+        self.assertIs(p, group)
 
 
     def testGroupUsernameCollision(self):
@@ -639,7 +639,7 @@ class IRCProtocolTests(unittest.TestCase):
             (myname, group, theirname, theirhost, theirserver, theirnick, flag, extra) = stuff
             self.assertEqual(myname, 'userone')
             self.assertEqual(group, '#groupname')
-            self.assertTrue(theirname in wantusers)
+            self.assertIn(theirname, wantusers)
             self.assertEqual(theirhost, 'realmname')
             self.assertEqual(theirserver, 'realmname')
             wantusers.remove(theirnick)

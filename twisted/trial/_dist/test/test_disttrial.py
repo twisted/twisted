@@ -324,7 +324,7 @@ class DistTrialRunnerTests(TestCase):
             self.assertEqual(1, fakeReactor.stopCount)
             # We don't wait for the process deferreds here, so nothing is
             # returned by the function before shutdown
-            self.assertIdentical(None, functions[0]())
+            self.assertIsNone(functions[0]())
 
         return deferLater(reactor, 0, check)
 

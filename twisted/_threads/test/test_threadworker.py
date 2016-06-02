@@ -154,14 +154,14 @@ class ThreadWorkerTests(SynchronousTestCase):
         target pulls work from that queue.
         """
         self.assertEqual(len(self.fakeThreads), 1)
-        self.assertEqual(self.fakeThreads[0].started, True)
+        self.assertTrue(self.fakeThreads[0].started)
         def doIt():
             doIt.done = True
         doIt.done = False
         self.worker.do(doIt)
-        self.assertEqual(doIt.done, False)
+        self.assertFalse(doIt.done)
         self.assertRaises(FakeQueueEmpty, self.fakeThreads[0].target)
-        self.assertEqual(doIt.done, True)
+        self.assertTrue(doIt.done)
 
 
     def test_quitPreventsFutureCalls(self):
@@ -198,7 +198,7 @@ class LockWorkerTests(SynchronousTestCase):
         lock = FakeLock()
         self.assertRaises(ThreadError, lock.release)
         lock.acquire()
-        self.assertEqual(None, lock.release())
+        self.assertIsNone(lock.release())
         self.assertRaises(ThreadError, lock.release)
 
 
@@ -215,9 +215,9 @@ class LockWorkerTests(SynchronousTestCase):
             work.acquired = lock.acquired
         work.done = False
         worker.do(work)
-        self.assertEqual(work.done, True)
-        self.assertEqual(work.acquired, True)
-        self.assertEqual(lock.acquired, False)
+        self.assertTrue(work.done)
+        self.assertTrue(work.acquired)
+        self.assertFalse(lock.acquired)
 
 
     def test_doUnwindsReentrancy(self):
@@ -251,10 +251,10 @@ class LockWorkerTests(SynchronousTestCase):
         ref = weakref.ref(lock)
         worker = LockWorker(lock, local())
         lock = None
-        self.assertIsNot(ref(), None)
+        self.assertIsNotNone(ref())
         worker.quit()
         gc.collect()
-        self.assertIs(ref(), None)
+        self.assertIsNone(ref())
         self.assertRaises(AlreadyQuit, worker.quit)
         self.assertRaises(AlreadyQuit, worker.do, list)
 
@@ -280,12 +280,12 @@ class LockWorkerTests(SynchronousTestCase):
             phase2.acquired = lock.acquired
         phase2.complete = False
         worker.do(phase1)
-        self.assertEqual(phase1.complete, True)
-        self.assertEqual(phase2.complete, True)
-        self.assertEqual(lock.acquired, False)
+        self.assertTrue(phase1.complete)
+        self.assertTrue(phase2.complete)
+        self.assertFalse(lock.acquired)
         lock = None
         gc.collect()
-        self.assertIs(ref(), None)
+        self.assertIsNone(ref())
 
 
     def test_quitWhileGettingLock(self):

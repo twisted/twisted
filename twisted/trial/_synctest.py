@@ -613,7 +613,7 @@ class _Assertions(pyunit.TestCase, object):
                 != (first.message, first.category)):
                 self.fail("Can't handle different warnings")
         self.assertEqual(first.message, message)
-        self.assertIdentical(first.category, category)
+        self.assertIs(first.category, category)
 
         # Use starts with because of .pyc/.pyo issues.
         self.assertTrue(

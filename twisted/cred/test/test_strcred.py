@@ -91,7 +91,7 @@ class StrcredFunctionsTests(unittest.TestCase):
         Test that findCheckerFactory returns the first plugin
         available for a given authentication type.
         """
-        self.assertIdentical(strcred.findCheckerFactory('file'),
+        self.assertIs(strcred.findCheckerFactory('file'),
                              cred_file.theFileCheckerFactory)
 
 
@@ -172,7 +172,7 @@ class AnonymousCheckerTests(unittest.TestCase):
         checker = strcred.makeChecker('anonymous')
         request = checker.requestAvatarId(credentials.Anonymous())
         def _gotAvatar(avatar):
-            self.assertIdentical(checkers.ANONYMOUS, avatar)
+            self.assertIs(checkers.ANONYMOUS, avatar)
         return request.addCallback(_gotAvatar)
 
 
@@ -599,9 +599,9 @@ class LimitingInterfacesTests(unittest.TestCase):
         options.addChecker(self.goodChecker)
         iface = options.supportedInterfaces[0]
         # Test that we did get IUsernamePassword
-        self.assertIdentical(
+        self.assertIs(
             options['credInterfaces'][iface][0], self.goodChecker)
-        self.assertIdentical(options['credCheckers'][0], self.goodChecker)
+        self.assertIs(options['credCheckers'][0], self.goodChecker)
         # Test that we didn't get IUsernameHashedPassword
         self.assertEqual(len(options['credInterfaces'][iface]), 1)
         self.assertEqual(len(options['credCheckers']), 1)
@@ -658,7 +658,7 @@ class LimitingInterfacesTests(unittest.TestCase):
             if not options.supportsCheckerFactory(factory):
                 invalidFactory = factory
                 break
-        self.assertNotIdentical(invalidFactory, None)
+        self.assertIsNotNone(invalidFactory)
         # Capture output and make sure the warning is there
         newStdout = StringIO()
         options.authOutput = newStdout

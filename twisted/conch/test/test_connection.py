@@ -382,7 +382,7 @@ class ConnectionTests(unittest.TestCase):
         self.conn.ssh_CHANNEL_OPEN_FAILURE('\x00\x00\x00\x00\x00\x00\x00'
                 '\x01' + common.NS('failure!'))
         self.assertEqual(channel.openFailureReason.args, ('failure!', 1))
-        self.assertEqual(self.conn.channels.get(channel), None)
+        self.assertIsNone(self.conn.channels.get(channel))
 
 
     def test_CHANNEL_WINDOW_ADJUST(self):

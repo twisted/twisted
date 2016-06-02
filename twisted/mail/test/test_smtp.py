@@ -329,7 +329,7 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
             )
 
         # Sanity check - a pull producer should be registered now.
-        self.assertNotIdentical(transport.producer, None)
+        self.assertIsNotNone(transport.producer)
         self.assertFalse(transport.streaming)
 
         # Now stop the producer prematurely, meaning the message was not sent.
@@ -741,8 +741,8 @@ class TLSTests(unittest.TestCase, LoopbackMixin):
         server = DummyESMTP(contextFactory=serverCTX)
 
         def check(ignored):
-            self.assertEqual(client.tls, True)
-            self.assertEqual(server.startedTLS, True)
+            self.assertTrue(client.tls)
+            self.assertTrue(server.startedTLS)
 
         return self.loopback(server, client).addCallback(check)
 
@@ -870,7 +870,7 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         # resumeProducing is called on the producer, the timeout should be
         # extended.  First, a sanity check.  This test is only written to
         # handle pull producers.
-        self.assertNotIdentical(transport.producer, None)
+        self.assertIsNotNone(transport.producer)
         self.assertFalse(transport.streaming)
 
         # Now, allow 2 seconds (1 less than the timeout of 3 seconds) to
@@ -943,7 +943,7 @@ class SMTPSenderFactoryTests(unittest.TestCase):
         clientFactory.buildProtocol(None)
         clientFactory.clientConnectionLost(connector,
                                            error.ConnectionDone("Bye."))
-        self.assertEqual(clientFactory.currentProtocol, None)
+        self.assertIsNone(clientFactory.currentProtocol)
 
 
     def test_removeCurrentProtocolWhenClientConnectionFailed(self):
@@ -960,7 +960,7 @@ class SMTPSenderFactoryTests(unittest.TestCase):
         clientFactory.buildProtocol(None)
         clientFactory.clientConnectionFailed(connector,
                                              error.ConnectionDone("Bye."))
-        self.assertEqual(clientFactory.currentProtocol, None)
+        self.assertIsNone(clientFactory.currentProtocol)
 
 
 
@@ -1764,7 +1764,7 @@ class SSLTestCase(unittest.TestCase):
         warningsShown = self.flushWarnings(
             offendingFunctions=[self.test_esmtpClientTlsModeDeprecationGet])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(
+        self.assertIs(
             warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
@@ -1789,7 +1789,7 @@ class SSLTestCase(unittest.TestCase):
         warningsShown = self.flushWarnings(
             offendingFunctions=[self.test_esmtpClientTlsModeDeprecationSet])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(
+        self.assertIs(
             warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
@@ -1842,8 +1842,8 @@ class SendmailTests(unittest.TestCase):
                       password="bar", requireTransportSecurity=True,
                       requireAuthentication=True)
         factory = reactor.tcpClients[0][2]
-        self.assertEqual(factory._requireTransportSecurity, True)
-        self.assertEqual(factory._requireAuthentication, True)
+        self.assertTrue(factory._requireTransportSecurity)
+        self.assertTrue(factory._requireAuthentication)
         self.assertEqual(factory.username, "foo")
         self.assertEqual(factory.password, "bar")
 
@@ -1898,7 +1898,7 @@ class SendmailTests(unittest.TestCase):
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
                           "message", reactor=reactor)
         d.cancel()
-        self.assertEqual(reactor.connectors[0]._disconnected, True)
+        self.assertTrue(reactor.connectors[0]._disconnected)
         failure = self.failureResultOf(d)
         failure.trap(defer.CancelledError)
 
@@ -1917,7 +1917,7 @@ class SendmailTests(unittest.TestCase):
         p = factory.buildProtocol(None)
         p.makeConnection(transport)
         d.cancel()
-        self.assertEqual(transport.aborting, True)
-        self.assertEqual(transport.disconnecting, True)
+        self.assertTrue(transport.aborting)
+        self.assertTrue(transport.disconnecting)
         failure = self.failureResultOf(d)
         failure.trap(defer.CancelledError)

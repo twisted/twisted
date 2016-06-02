@@ -687,7 +687,7 @@ class StaticMakeProducerTests(TestCase):
             # response and the boundary used to separate the parts.
             self.assertIn(b'content-type', contentHeaders)
             contentType = contentHeaders[b'content-type']
-            self.assertNotIdentical(
+            self.assertIsNot(
                 None, re.match(
                     b'multipart/byteranges; boundary="[^"]*"\Z', contentType))
             # Content-encoding is not set in the response to a multiple range
@@ -785,7 +785,7 @@ class StaticProducerTests(TestCase):
         fileObject = StringIO()
         producer = static.StaticProducer(DummyRequest([]), fileObject)
         producer.stopProducing()
-        self.assertIdentical(None, producer.request)
+        self.assertIsNone(producer.request)
 
 
 
@@ -1688,7 +1688,7 @@ class LoadMimeTypesTests(TestCase):
         By default, C{None} is passed to C{mimetypes.init}.
         """
         static.loadMimeTypes(init=self._fakeInit)
-        self.assertIdentical(self.paths, None)
+        self.assertIsNone(self.paths)
 
 
     def test_extraLocationsWork(self):
@@ -1697,7 +1697,7 @@ class LoadMimeTypesTests(TestCase):
         """
         paths = ["x", "y", "z"]
         static.loadMimeTypes(paths, init=self._fakeInit)
-        self.assertIdentical(self.paths, paths)
+        self.assertIs(self.paths, paths)
 
 
     def test_usesGlobalInitFunction(self):
@@ -1709,7 +1709,7 @@ class LoadMimeTypesTests(TestCase):
         # mutable state :)
         args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
         defaultInit = defaults[args.index("init")]
-        self.assertIdentical(defaultInit, mimetypes.init)
+        self.assertIs(defaultInit, mimetypes.init)
 
 
 class StaticDeprecationTests(TestCase):

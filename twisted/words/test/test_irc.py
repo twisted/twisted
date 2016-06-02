@@ -584,9 +584,9 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         L{_intOrDefault} converts values to C{int} if possible, otherwise
         returns a default value.
         """
-        self.assertEqual(irc._intOrDefault(None), None)
-        self.assertEqual(irc._intOrDefault([]), None)
-        self.assertEqual(irc._intOrDefault(''), None)
+        self.assertIsNone(irc._intOrDefault(None))
+        self.assertIsNone(irc._intOrDefault([]))
+        self.assertIsNone(irc._intOrDefault(''))
         self.assertEqual(irc._intOrDefault('hello', 5), 5)
         self.assertEqual(irc._intOrDefault('123'), 123)
         self.assertEqual(irc._intOrDefault(123), 123)
@@ -654,7 +654,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         C{ValueError} if the prefix parameter is malformed.
         """
         _parsePrefixParam = irc.ServerSupportedFeatures._parsePrefixParam
-        self.assertEqual(_parsePrefixParam(''), None)
+        self.assertIsNone(_parsePrefixParam(''))
         self.assertRaises(ValueError, _parsePrefixParam, 'hello')
         self.assertEqual(_parsePrefixParam('(ov)@+'),
                           {'o': ('@', 0),
@@ -1347,7 +1347,7 @@ class ClientImplementationTests(unittest.TestCase):
 
         # After the motd is delivered, the tracking variable should be
         # reset.
-        self.assertIdentical(self.client.motd, None)
+        self.assertIsNone(self.client.motd)
 
 
     def test_withoutMOTDSTART(self):
@@ -1417,8 +1417,7 @@ class ClientImplementationTests(unittest.TestCase):
             msg = "are available on this server"
             self._serverTestImpl(
                 '005', msg, 'isupport', args=name, options=[name])
-            self.assertIdentical(
-                self.client.supported.getFeature(name), None)
+            self.assertIsNone(self.client.supported.getFeature(name))
             self.client.calls = []
 
         # Remove CHANMODES feature, causing getFeature('CHANMODES') to return
@@ -1436,7 +1435,7 @@ class ClientImplementationTests(unittest.TestCase):
 
         # Restore ISUPPORT features.
         self._sendISUPPORT()
-        self.assertNotIdentical(
+        self.assertIsNot(
             self.client.supported.getFeature('PREFIX'), None)
 
 
@@ -1595,9 +1594,9 @@ class ClientImplementationTests(unittest.TestCase):
         self._originalCreateHeartbeat = self.client._createHeartbeat
         self.patch(self.client, '_createHeartbeat', _createHeartbeat)
 
-        self.assertIdentical(self.client._heartbeat, None)
+        self.assertIsNone(self.client._heartbeat)
         self.client.irc_RPL_WELCOME('foo', [])
-        self.assertNotIdentical(self.client._heartbeat, None)
+        self.assertIsNotNone(self.client._heartbeat)
         self.assertEqual(self.client.hostname, 'foo')
 
         # Pump the clock enough to trigger one LoopingCall.
@@ -1610,7 +1609,7 @@ class ClientImplementationTests(unittest.TestCase):
         self.client.connectionLost(None)
         self.assertEqual(
             len(self.clock.getDelayedCalls()), 0)
-        self.assertIdentical(self.client._heartbeat, None)
+        self.assertIsNone(self.client._heartbeat)
 
 
     def test_heartbeatDisabled(self):
@@ -1618,10 +1617,10 @@ class ClientImplementationTests(unittest.TestCase):
         If L{irc.IRCClient.heartbeatInterval} is set to C{None} then no
         heartbeat is created.
         """
-        self.assertIdentical(self.client._heartbeat, None)
+        self.assertIsNone(self.client._heartbeat)
         self.client.heartbeatInterval = None
         self.client.irc_RPL_WELCOME('foo', [])
-        self.assertIdentical(self.client._heartbeat, None)
+        self.assertIsNone(self.client._heartbeat)
 
 
 
@@ -2340,14 +2339,14 @@ class ClientTests(TestCase):
         """
         # Registration case: change illegal nickname to erroneousNickFallback
         badnick = 'foo'
-        self.assertEqual(self.protocol._registered, False)
+        self.assertFalse(self.protocol._registered)
         self.protocol.register(badnick)
         self.protocol.irc_ERR_ERRONEUSNICKNAME('prefix', ['param'])
         lastLine = self.getLastLine(self.transport)
         self.assertEqual(
             lastLine, 'NICK %s' % (self.protocol.erroneousNickFallback,))
         self.protocol.irc_RPL_WELCOME('prefix', ['param'])
-        self.assertEqual(self.protocol._registered, True)
+        self.assertTrue(self.protocol._registered)
         self.protocol.setNick(self.protocol.erroneousNickFallback)
         self.assertEqual(
             self.protocol.nickname, self.protocol.erroneousNickFallback)

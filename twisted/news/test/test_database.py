@@ -132,7 +132,7 @@ Body of the message is such.
             self.assertEqual(self._email[0][2], [moderator])
             self._checkModeratorMessage(
                 self._email[0][3], sender, moderator, group, message)
-            self.assertEqual(self._email[0][4], None)
+            self.assertIsNone(self._email[0][4])
             self.assertEqual(self._email[0][5], 25)
             exists = storage.articleExistsRequest(articleID)
             exists.addCallback(self.assertFalse)

@@ -154,7 +154,7 @@ class EndpointServiceTests(TestCase):
         endpoint's C{listen} method with its factory.
         """
         self.svc.privilegedStartService()
-        self.assertIdentical(self.factory, self.fakeServer.factory)
+        self.assertIs(self.factory, self.fakeServer.factory)
 
 
     def test_synchronousRaiseRaisesSynchronously(self, thunk=None):
@@ -219,8 +219,8 @@ class EndpointServiceTests(TestCase):
         has not yet been started.
         """
         self.svc.startService()
-        self.assertIdentical(self.factory, self.fakeServer.factory)
-        self.assertEqual(self.svc.running, True)
+        self.assertIs(self.factory, self.fakeServer.factory)
+        self.assertTrue(self.svc.running)
 
 
     def test_startServiceStarted(self):
@@ -231,7 +231,7 @@ class EndpointServiceTests(TestCase):
         self.test_privilegedStartService()
         self.svc.startService()
         self.assertEqual(self.fakeServer.listenAttempts, 1)
-        self.assertEqual(self.svc.running, True)
+        self.assertTrue(self.svc.running)
 
 
     def test_stopService(self):
@@ -322,7 +322,7 @@ class TimerServiceTests(TestCase):
         self.timer.startService()
         self.assertTrue(self.timer.running, "Service is started")
         self.assertIsInstance(self.timer._loop, task.LoopingCall)
-        self.assertIdentical(self.clock, self.timer._loop.clock)
+        self.assertIs(self.clock, self.timer._loop.clock)
         self.assertTrue(self.timer._loop.running, "LoopingCall is started")
 
 
@@ -348,7 +348,7 @@ class TimerServiceTests(TestCase):
             return otherClock
         self.patch(internet, "_maybeGlobalReactor", getOtherClock)
         self.timer.startService()
-        self.assertIdentical(otherClock, self.timer._loop.clock)
+        self.assertIs(otherClock, self.timer._loop.clock)
 
 
     def test_stopServiceWaits(self):
@@ -359,9 +359,9 @@ class TimerServiceTests(TestCase):
         self.timer.startService()
         d = self.timer.stopService()
         self.assertNoResult(d)
-        self.assertEqual(True, self.timer.running)
+        self.assertTrue(self.timer.running)
         self.deferred.callback(object())
-        self.assertIdentical(self.successResultOf(d), None)
+        self.assertIsNone(self.successResultOf(d))
 
 
     def test_stopServiceImmediately(self):
@@ -372,7 +372,7 @@ class TimerServiceTests(TestCase):
         self.timer.startService()
         self.deferred.callback(object())
         d = self.timer.stopService()
-        self.assertIdentical(self.successResultOf(d), None)
+        self.assertIsNone(self.successResultOf(d))
 
 
     def test_failedCallLogsError(self):
@@ -385,7 +385,7 @@ class TimerServiceTests(TestCase):
         errors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(1, len(errors))
         d = self.timer.stopService()
-        self.assertIdentical(self.successResultOf(d), None)
+        self.assertIsNone(self.successResultOf(d))
 
 
     def test_pickleTimerServiceNotPickleLoop(self):
@@ -402,7 +402,7 @@ class TimerServiceTests(TestCase):
         loadedTimer = pickle.loads(dumpedTimer)
         nothing = object()
         value = getattr(loadedTimer, "_loop", nothing)
-        self.assertIdentical(nothing, value)
+        self.assertIs(nothing, value)
 
 
     def test_pickleTimerServiceNotPickleLoopFinished(self):
@@ -419,7 +419,7 @@ class TimerServiceTests(TestCase):
         loadedTimer = pickle.loads(dumpedTimer)
         nothing = object()
         value = getattr(loadedTimer, "_loopFinished", nothing)
-        self.assertIdentical(nothing, value)
+        self.assertIs(nothing, value)
 
 
 
@@ -597,7 +597,7 @@ class ClientServiceTests(SynchronousTestCase):
         d = service.stopService()
         self.assertNoResult(d)
         protocol = cq.constructedProtocols[0]
-        self.assertEqual(protocol.transport.disconnecting, True)
+        self.assertTrue(protocol.transport.disconnecting)
         protocol.connectionLost(Failure(Exception()))
         self.successResultOf(d)
 
@@ -619,10 +619,10 @@ class ClientServiceTests(SynchronousTestCase):
         service.startService()
         self.assertNoResult(nextProtocol)
         self.assertNoResult(stopped)
-        self.assertEqual(first.transport.disconnecting, True)
+        self.assertTrue(first.transport.disconnecting)
         cq.connectQueue[1].callback(None)
         self.assertEqual(len(cq.constructedProtocols), 2)
-        self.assertIdentical(self.successResultOf(nextProtocol),
+        self.assertIs(self.successResultOf(nextProtocol),
                              cq.applicationProtocols[1])
         secondStopped = service.stopService()
         first.connectionLost(Failure(Exception()))
@@ -643,7 +643,7 @@ class ClientServiceTests(SynchronousTestCase):
         self.failureResultOf(service.whenConnected(), CancelledError)
         service.startService()
         cq.connectQueue[-1].callback(None)
-        self.assertIdentical(cq.applicationProtocols[-1],
+        self.assertIs(cq.applicationProtocols[-1],
                              self.successResultOf(service.whenConnected()))
 
 
@@ -702,7 +702,7 @@ class ClientServiceTests(SynchronousTestCase):
         cq, service = self.makeReconnector(clock=clock)
         awaitingProtocol = service.whenConnected()
         self.assertEqual(clock.getDelayedCalls(), [])
-        self.assertIdentical(self.successResultOf(awaitingProtocol),
+        self.assertIs(self.successResultOf(awaitingProtocol),
                              cq.applicationProtocols[0])
 
 
@@ -732,16 +732,16 @@ class ClientServiceTests(SynchronousTestCase):
         """
         clock = Clock()
         cq, service = self.makeReconnector(clock=clock, fireImmediately=False)
-        self.assertEquals(len(cq.connectQueue), 1)
+        self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].callback(None)
-        self.assertEquals(len(cq.connectQueue), 1)
-        self.assertIdentical(self.successResultOf(service.whenConnected()),
+        self.assertEqual(len(cq.connectQueue), 1)
+        self.assertIs(self.successResultOf(service.whenConnected()),
                              cq.applicationProtocols[0])
         cq.constructedProtocols[0].connectionLost(Failure(Exception()))
         clock.advance(AT_LEAST_ONE_ATTEMPT)
-        self.assertEquals(len(cq.connectQueue), 2)
+        self.assertEqual(len(cq.connectQueue), 2)
         cq.connectQueue[1].callback(None)
-        self.assertIdentical(self.successResultOf(service.whenConnected()),
+        self.assertIs(self.successResultOf(service.whenConnected()),
                              cq.applicationProtocols[1])
 
 
@@ -790,8 +790,8 @@ class ClientServiceTests(SynchronousTestCase):
         cq.connectQueue[0].callback(None)
         resultA = self.successResultOf(a)
         resultB = self.successResultOf(b)
-        self.assertIdentical(resultA, resultB)
-        self.assertIdentical(resultA, cq.applicationProtocols[0])
+        self.assertIs(resultA, resultB)
+        self.assertIs(resultA, cq.applicationProtocols[0])
 
 
     def test_whenConnectedStopService(self):

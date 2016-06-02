@@ -276,7 +276,7 @@ class INotifyTests(unittest.TestCase):
             def _eb():
                 # second call, we have just removed the subdir
                 try:
-                    self.assertTrue(not self.inotify._isWatched(subdir))
+                    self.assertFalse(self.inotify._isWatched(subdir))
                     d.callback(None)
                 except Exception:
                     d.errback()

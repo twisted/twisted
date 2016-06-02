@@ -23,7 +23,7 @@ class BaseErrorTests(unittest.TestCase):
         """
         e = error.BaseError('feature-not-implemented')
         element = e.getElement()
-        self.assertIdentical(element.uri, None)
+        self.assertIsNone(element.uri)
         self.assertEqual(len(element.children), 1)
 
     def test_getElementText(self):
@@ -34,7 +34,7 @@ class BaseErrorTests(unittest.TestCase):
         element = e.getElement()
         self.assertEqual(len(element.children), 2)
         self.assertEqual(unicode(element.text), 'text')
-        self.assertEqual(element.text.getAttribute((NS_XML, 'lang')), None)
+        self.assertIsNone(element.text.getAttribute((NS_XML, 'lang')))
 
     def test_getElementTextLang(self):
         """
@@ -105,7 +105,7 @@ class StanzaErrorTests(unittest.TestCase):
         """
         e = error.StanzaError('feature-not-implemented')
         element = e.getElement()
-        self.assertEqual(element.uri, None)
+        self.assertIsNone(element.uri)
         self.assertEqual(element['type'], 'cancel')
         self.assertEqual(element['code'], '501')
 
@@ -116,7 +116,7 @@ class StanzaErrorTests(unittest.TestCase):
         """
         e = error.StanzaError('feature-not-implemented', 'auth')
         element = e.getElement()
-        self.assertEqual(element.uri, None)
+        self.assertIsNone(element.uri)
         self.assertEqual(element['type'], 'auth')
         self.assertEqual(element['code'], '501')
 
@@ -153,7 +153,7 @@ class StanzaErrorTests(unittest.TestCase):
         stanza['from'] = 'user2@example.com/resource'
         e = error.StanzaError('service-unavailable')
         response = e.toResponse(stanza)
-        self.assertNotIdentical(response, stanza)
+        self.assertIsNot(response, stanza)
         self.assertEqual(response['from'], 'user1@example.com')
         self.assertEqual(response['to'], 'user2@example.com/resource')
         self.assertEqual(response['type'], 'error')
@@ -273,7 +273,7 @@ class ExceptionFromStanzaTests(unittest.TestCase):
         uc['feature'] = 'retrieve-subscriptions'
 
         result = error.exceptionFromStanza(stanza)
-        self.assert_(isinstance(result, error.StanzaError))
+        self.assertIsInstance(result, error.StanzaError)
         self.assertEqual('feature-not-implemented', result.condition)
         self.assertEqual('cancel', result.type)
         self.assertEqual(uc, result.appCondition)
@@ -301,7 +301,7 @@ class ExceptionFromStanzaTests(unittest.TestCase):
         e['code'] = '502'
 
         result = error.exceptionFromStanza(stanza)
-        self.assert_(isinstance(result, error.StanzaError))
+        self.assertIsInstance(result, error.StanzaError)
         self.assertEqual('service-unavailable', result.condition)
         self.assertEqual('wait', result.type)
         self.assertEqual('Unable to resolve hostname.', result.text)
@@ -326,5 +326,5 @@ class ExceptionFromStreamErrorTests(unittest.TestCase):
         e.addElement((NS_XMPP_STREAMS, 'xml-not-well-formed'))
 
         result = error.exceptionFromStreamError(e)
-        self.assert_(isinstance(result, error.StreamError))
+        self.assertIsInstance(result, error.StreamError)
         self.assertEqual('xml-not-well-formed', result.condition)

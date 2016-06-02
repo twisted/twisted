@@ -449,7 +449,7 @@ class UserDirectoryTests(unittest.TestCase):
         L{pwd} module as its password database.
         """
         directory = distrib.UserDirectory()
-        self.assertIdentical(directory._pwd, pwd)
+        self.assertIs(directory._pwd, pwd)
     if pwd is None:
         test_passwordDatabase.skip = "pwd module required"
 

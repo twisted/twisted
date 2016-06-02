@@ -176,7 +176,7 @@ class MessageProducerTests(unittest.TestCase):
         d = p.beginProducing(c)
 
         def cbProduced(result):
-            self.assertIdentical(result, p)
+            self.assertIs(result, p)
             self.assertEqual(
                 ''.join(c.buffer),
 
@@ -602,7 +602,7 @@ class IMAP4HelperTests(unittest.TestCase):
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), 1)
-            self.assertTrue(isinstance(p.result[0], getattr(p, outp)))
+            self.assertIsInstance(p.result[0], getattr(p, outp))
 
 
     def test_fetchParserMacros(self):
@@ -628,103 +628,103 @@ class IMAP4HelperTests(unittest.TestCase):
         p = P()
         p.parseString('BODY')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, False)
-        self.assertEqual(p.result[0].header, None)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertFalse(p.result[0].peek)
+        self.assertIsNone(p.result[0].header)
         self.assertEqual(str(p.result[0]), 'BODY')
 
         p = P()
         p.parseString('BODY.PEEK')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, True)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertTrue(p.result[0].peek)
         self.assertEqual(str(p.result[0]), 'BODY')
 
         p = P()
         p.parseString('BODY[]')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].empty, True)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertTrue(p.result[0].empty)
         self.assertEqual(str(p.result[0]), 'BODY[]')
 
         p = P()
         p.parseString('BODY[HEADER]')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, False)
-        self.assertTrue(isinstance(p.result[0].header, p.Header))
-        self.assertEqual(p.result[0].header.negate, True)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertFalse(p.result[0].peek)
+        self.assertIsInstance(p.result[0].header, p.Header)
+        self.assertTrue(p.result[0].header.negate)
         self.assertEqual(p.result[0].header.fields, ())
-        self.assertEqual(p.result[0].empty, False)
+        self.assertFalse(p.result[0].empty)
         self.assertEqual(str(p.result[0]), 'BODY[HEADER]')
 
         p = P()
         p.parseString('BODY.PEEK[HEADER]')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, True)
-        self.assertTrue(isinstance(p.result[0].header, p.Header))
-        self.assertEqual(p.result[0].header.negate, True)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertTrue(p.result[0].peek)
+        self.assertIsInstance(p.result[0].header, p.Header)
+        self.assertTrue(p.result[0].header.negate)
         self.assertEqual(p.result[0].header.fields, ())
-        self.assertEqual(p.result[0].empty, False)
+        self.assertFalse(p.result[0].empty)
         self.assertEqual(str(p.result[0]), 'BODY[HEADER]')
 
         p = P()
         p.parseString('BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, False)
-        self.assertTrue(isinstance(p.result[0].header, p.Header))
-        self.assertEqual(p.result[0].header.negate, False)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertFalse(p.result[0].peek)
+        self.assertIsInstance(p.result[0].header, p.Header)
+        self.assertFalse(p.result[0].header.negate)
         self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
-        self.assertEqual(p.result[0].empty, False)
+        self.assertFalse(p.result[0].empty)
         self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
 
         p = P()
         p.parseString('BODY.PEEK[HEADER.FIELDS (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, True)
-        self.assertTrue(isinstance(p.result[0].header, p.Header))
-        self.assertEqual(p.result[0].header.negate, False)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertTrue(p.result[0].peek)
+        self.assertIsInstance(p.result[0].header, p.Header)
+        self.assertFalse(p.result[0].header.negate)
         self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
-        self.assertEqual(p.result[0].empty, False)
+        self.assertFalse(p.result[0].empty)
         self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS (Subject Cc Message-Id)]')
 
         p = P()
         p.parseString('BODY.PEEK[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, True)
-        self.assertTrue(isinstance(p.result[0].header, p.Header))
-        self.assertEqual(p.result[0].header.negate, True)
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertTrue(p.result[0].peek)
+        self.assertIsInstance(p.result[0].header, p.Header)
+        self.assertTrue(p.result[0].header.negate)
         self.assertEqual(p.result[0].header.fields, ['SUBJECT', 'CC', 'MESSAGE-ID'])
-        self.assertEqual(p.result[0].empty, False)
+        self.assertFalse(p.result[0].empty)
         self.assertEqual(str(p.result[0]), 'BODY[HEADER.FIELDS.NOT (Subject Cc Message-Id)]')
 
         p = P()
         p.parseString('BODY[1.MIME]<10.50>')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, False)
-        self.assertTrue(isinstance(p.result[0].mime, p.MIME))
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertFalse(p.result[0].peek)
+        self.assertIsInstance(p.result[0].mime, p.MIME)
         self.assertEqual(p.result[0].part, (0,))
         self.assertEqual(p.result[0].partialBegin, 10)
         self.assertEqual(p.result[0].partialLength, 50)
-        self.assertEqual(p.result[0].empty, False)
+        self.assertFalse(p.result[0].empty)
         self.assertEqual(str(p.result[0]), 'BODY[1.MIME]<10.50>')
 
         p = P()
         p.parseString('BODY.PEEK[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
         self.assertEqual(len(p.result), 1)
-        self.assertTrue(isinstance(p.result[0], p.Body))
-        self.assertEqual(p.result[0].peek, True)
-        self.assertTrue(isinstance(p.result[0].header, p.Header))
+        self.assertIsInstance(p.result[0], p.Body)
+        self.assertTrue(p.result[0].peek)
+        self.assertIsInstance(p.result[0].header, p.Header)
         self.assertEqual(p.result[0].part, (0, 2, 8, 10))
         self.assertEqual(p.result[0].header.fields, ['MESSAGE-ID', 'DATE'])
         self.assertEqual(p.result[0].partialBegin, 103)
         self.assertEqual(p.result[0].partialLength, 69)
-        self.assertEqual(p.result[0].empty, False)
+        self.assertFalse(p.result[0].empty)
         self.assertEqual(str(p.result[0]), 'BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
 
 
@@ -1216,7 +1216,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         return d.addCallback(self._cbTestFailedLogin)
 
     def _cbTestFailedLogin(self, ignored):
-        self.assertEqual(self.server.account, None)
+        self.assertIsNone(self.server.account)
         self.assertEqual(self.server.state, 'unauth')
 
 
@@ -1389,8 +1389,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
-        d.addCallback(lambda _: self.assertTrue(isinstance(self.stashed,
-                                                           failure.Failure)))
+        d.addCallback(lambda _: self.assertIsInstance(self.stashed,
+                                                           failure.Failure))
         return d
 
 
@@ -1470,7 +1470,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
         d.addCallback(lambda _:
-                      self.assertTrue(isinstance(self.stashed, failure.Failure)))
+                      self.assertIsInstance(self.stashed, failure.Failure))
         return d
 
     def testHierarchicalRename(self):
@@ -1948,7 +1948,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestFailedCramMD5(self, ignored):
         self.assertEqual(self.authenticated, -1)
-        self.assertEqual(self.server.account, None)
+        self.assertIsNone(self.server.account)
 
     def testLOGIN(self):
         self.server.challengers['LOGIN'] = imap4.LOGINCredentials
@@ -1990,7 +1990,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestFailedLOGIN(self, ignored):
         self.assertEqual(self.authenticated, -1)
-        self.assertEqual(self.server.account, None)
+        self.assertIsNone(self.server.account)
 
     def testPLAIN(self):
         self.server.challengers['PLAIN'] = imap4.PLAINCredentials
@@ -2032,7 +2032,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestFailedPLAIN(self, ignored):
         self.assertEqual(self.authenticated, -1)
-        self.assertEqual(self.server.account, None)
+        self.assertIsNone(self.server.account)
 
 
 
@@ -4625,7 +4625,7 @@ class CopyWorkerTests(unittest.TestCase):
 
             for (status, result) in results:
                 self.assertTrue(status)
-                self.assertEqual(result, None)
+                self.assertIsNone(result)
 
         return d.addCallback(cbCopy)
 
@@ -4654,7 +4654,7 @@ class CopyWorkerTests(unittest.TestCase):
 
             for (status, result) in results:
                 self.assertTrue(status)
-                self.assertEqual(result, None)
+                self.assertIsNone(result)
 
         return d.addCallback(cbCopy)
 
@@ -4671,7 +4671,7 @@ class CopyWorkerTests(unittest.TestCase):
         def cbCopy(results):
             self.assertEqual(results, zip([1] * 10, range(1, 11)))
             for (orig, new) in zip(msgs, m.msgs):
-                self.assertIdentical(orig, new)
+                self.assertIs(orig, new)
 
         return d.addCallback(cbCopy)
 
@@ -4708,8 +4708,8 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
         map(self.connected.addCallback, map(strip, methods))
         self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
         def check(ignored):
-            self.assertEqual(self.server.startedTLS, True)
-            self.assertEqual(self.client.startedTLS, True)
+            self.assertTrue(self.server.startedTLS)
+            self.assertTrue(self.client.startedTLS)
             self.assertEqual(len(called), len(methods))
         d = self.loopback()
         d.addCallback(check)
@@ -4767,7 +4767,7 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
 
         def check(ignored):
             self.assertTrue(failures)
-            self.assertIdentical(failures[0], imap4.IMAP4Exception)
+            self.assertIs(failures[0], imap4.IMAP4Exception)
         return self.loopback().addCallback(check)
 
 

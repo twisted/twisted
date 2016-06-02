@@ -199,7 +199,7 @@ class GenericXmlStreamFactoryTestsMixin(BootstrapMixinTests):
         The protocol factory is saved in the protocol.
         """
         xs = self.factory.buildProtocol(None)
-        self.assertIdentical(self.factory, xs.factory)
+        self.assertIs(self.factory, xs.factory)
 
 
 

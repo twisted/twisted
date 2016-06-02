@@ -93,7 +93,7 @@ class ElementTests(TestCase):
         """
         element = Element()
         err = self.assertRaises(MissingTemplateLoader, element.render, None)
-        self.assertIdentical(err.element, element)
+        self.assertIs(err.element, element)
 
 
     def test_missingTemplateLoaderRepr(self):
@@ -115,7 +115,7 @@ class ElementTests(TestCase):
         element = Element()
         err = self.assertRaises(
             MissingRenderMethod, element.lookupRenderMethod, "foo")
-        self.assertIdentical(err.element, element)
+        self.assertIs(err.element, element)
         self.assertEqual(err.renderName, "foo")
 
 
@@ -710,7 +710,7 @@ class RenderElementTests(TestCase):
 
         d.addCallback(check)
 
-        self.assertIdentical(NOT_DONE_YET, renderElement(self.request, element))
+        self.assertIs(NOT_DONE_YET, renderElement(self.request, element))
 
         return d
 
@@ -738,7 +738,7 @@ class RenderElementTests(TestCase):
 
         d.addCallback(check)
 
-        self.assertIdentical(NOT_DONE_YET, renderElement(self.request, element))
+        self.assertIs(NOT_DONE_YET, renderElement(self.request, element))
 
         return d
 

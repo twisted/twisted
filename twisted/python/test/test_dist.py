@@ -381,7 +381,7 @@ class BuildScriptsTests(TestCase):
         self.patch(os, "name", "twisted")
         built = self.buildScripts()
         for name in ['script1', 'script2.py', 'shell.sh']:
-            self.assertTrue(name in built)
+            self.assertIn(name, built)
 
 
     def test_windows(self):
@@ -392,7 +392,7 @@ class BuildScriptsTests(TestCase):
         self.patch(os, "name", "nt")
         built = self.buildScripts()
         for name in ['script1.py', 'script2.py', 'shell.sh.py']:
-            self.assertTrue(name in built)
+            self.assertIn(name, built)
 
 
 

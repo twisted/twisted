@@ -147,7 +147,7 @@ class ServiceTests(TestCase):
         serverFactory = makePersonalServerFactory(site)
         self.assertIsInstance(serverFactory, PBServerFactory)
         self.assertIsInstance(serverFactory.root, ResourcePublisher)
-        self.assertIdentical(serverFactory.root.site, site)
+        self.assertIs(serverFactory.root.site, site)
 
 
     def test_personalServer(self):
@@ -218,9 +218,9 @@ class ServiceTests(TestCase):
         options.parseOptions(['--wsgi', __name__ + '.application'])
         root = options['root']
         self.assertTrue(root, WSGIResource)
-        self.assertIdentical(root._reactor, reactor)
-        self.assertTrue(isinstance(root._threadpool, ThreadPool))
-        self.assertIdentical(root._application, application)
+        self.assertIs(root._reactor, reactor)
+        self.assertIsInstance(root._threadpool, ThreadPool)
+        self.assertIs(root._application, application)
 
         # The threadpool should start and stop with the reactor.
         self.assertFalse(root._threadpool.started)

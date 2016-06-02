@@ -172,7 +172,7 @@ class ReactorThreadsTests(unittest.TestCase):
         def reactorFunc():
             return defer.fail(RuntimeError("bar"))
         def cb(res):
-            self.assert_(isinstance(res[1][0], RuntimeError))
+            self.assertIsInstance(res[1][0], RuntimeError)
             self.assertEqual(res[1][0].args[0], "bar")
 
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
@@ -187,7 +187,7 @@ class ReactorThreadsTests(unittest.TestCase):
             reactor.callLater(0.1, d.errback, RuntimeError("spam"))
             return d
         def cb(res):
-            self.assert_(isinstance(res[1][0], RuntimeError))
+            self.assertIsInstance(res[1][0], RuntimeError)
             self.assertEqual(res[1][0].args[0], "spam")
 
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)

@@ -29,12 +29,12 @@ class CodeToMessageTests(unittest.TestCase):
 
     def test_invalidCode(self):
         m = error._codeToMessage(b"987")
-        self.assertEqual(m, None)
+        self.assertIsNone(m)
 
 
     def test_nonintegerCode(self):
         m = error._codeToMessage(b"InvalidCode")
-        self.assertEqual(m, None)
+        self.assertIsNone(m)
 
 
 
@@ -58,7 +58,7 @@ class ErrorTests(unittest.TestCase):
         C{code} isn't a valid HTTP status code, C{message} stays C{None}.
         """
         e = error.Error(b"InvalidCode")
-        self.assertEqual(e.message, None)
+        self.assertIsNone(e.message)
 
 
     def test_messageExists(self):
@@ -116,7 +116,7 @@ class PageRedirectTests(unittest.TestCase):
         and C{code} isn't a valid HTTP status code, C{message} stays C{None}.
         """
         e = error.PageRedirect(b"InvalidCode", location=b"/foo")
-        self.assertEqual(e.message, None)
+        self.assertIsNone(e.message)
 
 
     def test_messageExistsLocationExists(self):
@@ -173,7 +173,7 @@ class InfiniteRedirectionTests(unittest.TestCase):
         C{None}.
         """
         e = error.InfiniteRedirection(b"InvalidCode", location=b"/foo")
-        self.assertEqual(e.message, None)
+        self.assertIsNone(e.message)
 
 
     def test_messageExistsLocationExists(self):

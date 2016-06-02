@@ -79,18 +79,18 @@ class FinderTests(packages.PackageTest):
         test_findObject.skip = _Py3SkipMsg
 
     def test_findNonModule(self):
-        self.failUnlessRaises(AttributeError,
+        self.assertRaises(AttributeError,
                               self.loader.findByName,
                               'twisted.trial.test.nonexistent')
 
     def test_findNonPackage(self):
-        self.failUnlessRaises(ValueError,
+        self.assertRaises(ValueError,
                               self.loader.findByName,
                               'nonextant')
 
     def test_findNonFile(self):
         path = util.sibpath(__file__, 'nonexistent.py')
-        self.failUnlessRaises(ValueError, self.loader.findByName, path)
+        self.assertRaises(ValueError, self.loader.findByName, path)
 
 
 
@@ -196,7 +196,7 @@ class FileTests(packages.SysPathManglingTest):
         """
         filename = filepath.FilePath(self.parent).child('notpython')
         filename.setContent(b"This isn't python")
-        self.failUnlessRaises(
+        self.assertRaises(
             SyntaxError, runner.filenameToModule, filename.path)
 
 
@@ -225,9 +225,9 @@ class FileTests(packages.SysPathManglingTest):
 
         try:
             module = runner.filenameToModule(goodDir.path)
-            self.assert_(module.__name__.endswith('goodDirectory'))
+            self.assertTrue(module.__name__.endswith('goodDirectory'))
             module = runner.filenameToModule(goodDir.path + os.path.sep)
-            self.assert_(module.__name__.endswith('goodDirectory'))
+            self.assertTrue(module.__name__.endswith('goodDirectory'))
         finally:
             goodDir.remove()
 
@@ -287,11 +287,11 @@ class LoaderTests(packages.SysPathManglingTest):
 
     def test_loadNonMethod(self):
         from twisted.trial.test import sample
-        self.failUnlessRaises(TypeError, self.loader.loadMethod, sample)
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError, self.loader.loadMethod, sample)
+        self.assertRaises(TypeError,
                               self.loader.loadMethod, sample.FooTest)
-        self.failUnlessRaises(TypeError, self.loader.loadMethod, "string")
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError, self.loader.loadMethod, "string")
+        self.assertRaises(TypeError,
                               self.loader.loadMethod, ('foo', 'bar'))
 
 
@@ -349,17 +349,17 @@ class LoaderTests(packages.SysPathManglingTest):
 
     def test_loadNonClass(self):
         from twisted.trial.test import sample
-        self.failUnlessRaises(TypeError, self.loader.loadClass, sample)
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError, self.loader.loadClass, sample)
+        self.assertRaises(TypeError,
                               self.loader.loadClass, sample.FooTest.test_foo)
-        self.failUnlessRaises(TypeError, self.loader.loadClass, "string")
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError, self.loader.loadClass, "string")
+        self.assertRaises(TypeError,
                               self.loader.loadClass, ('foo', 'bar'))
 
 
     def test_loadNonTestCase(self):
         from twisted.trial.test import sample
-        self.failUnlessRaises(ValueError, self.loader.loadClass,
+        self.assertRaises(ValueError, self.loader.loadClass,
                               sample.NotATest)
 
 
@@ -371,12 +371,12 @@ class LoaderTests(packages.SysPathManglingTest):
 
     def test_loadNonModule(self):
         from twisted.trial.test import sample
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError,
                               self.loader.loadModule, sample.FooTest)
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError,
                               self.loader.loadModule, sample.FooTest.test_foo)
-        self.failUnlessRaises(TypeError, self.loader.loadModule, "string")
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError, self.loader.loadModule, "string")
+        self.assertRaises(TypeError,
                               self.loader.loadModule, ('foo', 'bar'))
 
 
@@ -388,19 +388,19 @@ class LoaderTests(packages.SysPathManglingTest):
 
     def test_loadNonPackage(self):
         from twisted.trial.test import sample
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError,
                               self.loader.loadPackage, sample.FooTest)
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError,
                               self.loader.loadPackage, sample.FooTest.test_foo)
-        self.failUnlessRaises(TypeError, self.loader.loadPackage, "string")
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError, self.loader.loadPackage, "string")
+        self.assertRaises(TypeError,
                               self.loader.loadPackage, ('foo', 'bar'))
 
 
     def test_loadModuleAsPackage(self):
         from twisted.trial.test import sample
         ## XXX -- should this instead raise a ValueError? -- jml
-        self.failUnlessRaises(TypeError, self.loader.loadPackage, sample)
+        self.assertRaises(TypeError, self.loader.loadPackage, sample)
 
 
     def test_loadPackageRecursive(self):
@@ -431,21 +431,21 @@ class LoaderTests(packages.SysPathManglingTest):
     def test_loadAnythingOnPackage(self):
         import goodpackage
         suite = self.loader.loadAnything(goodpackage)
-        self.assertTrue(isinstance(suite, self.loader.suiteFactory))
+        self.assertIsInstance(suite, self.loader.suiteFactory)
         self.assertEqual(7, suite.countTestCases())
 
 
     def test_loadAnythingOnPackageRecursive(self):
         import goodpackage
         suite = self.loader.loadAnything(goodpackage, recurse=True)
-        self.assertTrue(isinstance(suite, self.loader.suiteFactory))
+        self.assertIsInstance(suite, self.loader.suiteFactory)
         self.assertEqual(14, suite.countTestCases())
 
 
     def test_loadAnythingOnString(self):
         # the important thing about this test is not the string-iness
         # but the non-handledness.
-        self.failUnlessRaises(TypeError,
+        self.assertRaises(TypeError,
                               self.loader.loadAnything, "goodpackage")
 
 
@@ -454,7 +454,7 @@ class LoaderTests(packages.SysPathManglingTest):
         suite = self.loader.loadPackage(package, recurse=True)
         result = reporter.Reporter()
         suite.run(result)
-        self.assertEqual(False, result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(2, len(result.errors))
         errors = [test.id() for test, error in result.errors]
         errors.sort()

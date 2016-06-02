@@ -508,7 +508,7 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(
             protocol.response.headers,
             Headers({b'x-foo': [b'bar']}))
-        self.assertIdentical(protocol.response.length, UNKNOWN_LENGTH)
+        self.assertIs(protocol.response.length, UNKNOWN_LENGTH)
 
 
     def test_connectionHeaders(self):
@@ -692,7 +692,7 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(body, [])
 
         # Cannot predict the length of a chunked encoded response body.
-        self.assertIdentical(protocol.response.length, UNKNOWN_LENGTH)
+        self.assertIs(protocol.response.length, UNKNOWN_LENGTH)
 
         # Deliver some chunks and make sure the data arrives
         protocol.dataReceived(b'3\r\na')
@@ -1302,10 +1302,10 @@ class HTTP11ClientProtocolTests(TestCase):
         requestDeferred = self.protocol.request(Request(b'GET', b'/',
             _boringHeaders, None))
         transport = self.protocol._parser.transport
-        self.assertIdentical(transport._producer, self.transport)
+        self.assertIs(transport._producer, self.transport)
         self.protocol._disconnectParser(
             Failure(ConnectionDone(u"connection done")))
-        self.assertIdentical(transport._producer, None)
+        self.assertIsNone(transport._producer)
         return assertResponseFailed(self, requestDeferred, [ConnectionDone])
 
 
@@ -1476,11 +1476,11 @@ class HTTP11ClientProtocolTests(TestCase):
         self.assertEqual(quiescentResult, [protocol, u"response done"])
 
         # Make sure everything was cleaned up:
-        self.assertEqual(protocol._parser, None)
-        self.assertEqual(protocol._finishedRequest, None)
-        self.assertEqual(protocol._currentRequest, None)
-        self.assertEqual(protocol._transportProxy, None)
-        self.assertEqual(protocol._responseDeferred, None)
+        self.assertIsNone(protocol._parser)
+        self.assertIsNone(protocol._finishedRequest)
+        self.assertIsNone(protocol._currentRequest)
+        self.assertIsNone(protocol._transportProxy)
+        self.assertIsNone(protocol._responseDeferred)
 
 
     def test_transportProducingWhenQuiescentAfterFullBody(self):
@@ -1552,7 +1552,7 @@ class HTTP11ClientProtocolTests(TestCase):
             b"\r\n")
 
         self.assertEqual(len(quiescentResult), 2)
-        self.assertIdentical(quiescentResult[0], protocol)
+        self.assertIs(quiescentResult[0], protocol)
         self.assertIsInstance(quiescentResult[1], Response)
 
 
@@ -1827,8 +1827,8 @@ class RequestTests(TestCase):
         request = Request(b'POST', b'/bar', _boringHeaders, producer)
         request.writeTo(self.transport)
 
-        self.assertNotIdentical(producer.consumer, None)
-        self.assertIdentical(self.transport.producer, producer)
+        self.assertIsNotNone(producer.consumer)
+        self.assertIs(self.transport.producer, producer)
         self.assertTrue(self.transport.streaming)
 
         self.assertEqual(
@@ -1843,7 +1843,7 @@ class RequestTests(TestCase):
         producer.consumer.write(b'x' * 3)
         producer.consumer.write(b'y' * 15)
         producer.finished.callback(None)
-        self.assertIdentical(self.transport.producer, None)
+        self.assertIsNone(self.transport.producer)
         self.assertEqual(
             self.transport.value(),
             b"3\r\n"
@@ -1870,7 +1870,7 @@ class RequestTests(TestCase):
         producer.finished.errback(ArbitraryException())
         def cbFailed(ignored):
             self.assertEqual(self.transport.value(), b"")
-            self.assertIdentical(self.transport.producer, None)
+            self.assertIsNone(self.transport.producer)
         d = self.assertFailure(writeDeferred, ArbitraryException)
         d.addCallback(cbFailed)
         return d
@@ -1886,8 +1886,8 @@ class RequestTests(TestCase):
         request = Request(b'POST', b'/bar', _boringHeaders, producer)
         request.writeTo(self.transport)
 
-        self.assertNotIdentical(producer.consumer, None)
-        self.assertIdentical(self.transport.producer, producer)
+        self.assertIsNotNone(producer.consumer)
+        self.assertIs(self.transport.producer, producer)
         self.assertTrue(self.transport.streaming)
 
         self.assertEqual(
@@ -1901,7 +1901,7 @@ class RequestTests(TestCase):
 
         producer.consumer.write(b'abc')
         producer.finished.callback(None)
-        self.assertIdentical(self.transport.producer, None)
+        self.assertIsNone(self.transport.producer)
         self.assertEqual(self.transport.value(), b"abc")
 
 
@@ -1917,7 +1917,7 @@ class RequestTests(TestCase):
         writeDeferred = request.writeTo(self.transport)
         producer.consumer.write(b'ab')
         producer.finished.callback(None)
-        self.assertIdentical(self.transport.producer, None)
+        self.assertIsNone(self.transport.producer)
         return self.assertFailure(writeDeferred, WrongBodyLength)
 
 
@@ -1951,7 +1951,7 @@ class RequestTests(TestCase):
 
         # The transport should have had the producer unregistered from it as
         # well.
-        self.assertIdentical(self.transport.producer, None)
+        self.assertIsNone(self.transport.producer)
 
         def cbFailed(exc):
             # The "cd" should not have been written to the transport because
@@ -2048,7 +2048,7 @@ class RequestTests(TestCase):
 
         producer.consumer.write(b'ab')
         finisher(producer)
-        self.assertIdentical(self.transport.producer, None)
+        self.assertIsNone(self.transport.producer)
         self.transport.clear()
         self.assertRaises(ExcessWrite, producer.consumer.write, b'cd')
         self.assertEqual(self.transport.value(), b"")
@@ -2126,7 +2126,7 @@ class RequestTests(TestCase):
 
         # Sanity check - the producer should be registered with the underlying
         # transport.
-        self.assertIdentical(self.transport.producer, producer)
+        self.assertIs(self.transport.producer, producer)
         self.assertTrue(self.transport.streaming)
 
         producer.consumer.write(b'ab')
@@ -2147,7 +2147,7 @@ class RequestTests(TestCase):
         self.assertFalse(self.transport.disconnecting)
 
         # Oh.  Except it should unregister the producer that it registered.
-        self.assertIdentical(self.transport.producer, None)
+        self.assertIsNone(self.transport.producer)
 
         return self.assertFailure(writeDeferred, ArbitraryException)
 
@@ -2278,7 +2278,7 @@ class LengthEnforcingConsumerTests(TestCase):
         the correct number of bytes have been written it returns C{None}.
         """
         self.enforcer.write(b'x' * 10)
-        self.assertIdentical(self.enforcer._noMoreWritesExpected(), None)
+        self.assertIsNone(self.enforcer._noMoreWritesExpected())
 
 
     def test_stopProducingRaises(self):
@@ -2342,10 +2342,10 @@ class RequestBodyConsumerTests(TestCase):
         producer = object()
         encoder = ChunkedEncoder(transport)
         encoder.registerProducer(producer, True)
-        self.assertIdentical(transport.producer, producer)
+        self.assertIs(transport.producer, producer)
         self.assertTrue(transport.streaming)
         encoder.unregisterProducer()
-        self.assertIdentical(transport.producer, None)
+        self.assertIsNone(transport.producer)
         self.assertEqual(transport.value(), b'0\r\n\r\n')
 
 
@@ -2370,9 +2370,9 @@ class TransportProxyProducerTests(TestCase):
         """
         transport = StringTransport()
         proxy = TransportProxyProducer(transport)
-        self.assertIdentical(proxy._producer, transport)
+        self.assertIs(proxy._producer, transport)
         proxy._stopProxying()
-        self.assertIdentical(proxy._producer, None)
+        self.assertIsNone(proxy._producer)
 
 
     def test_resumeProducing(self):
@@ -2519,7 +2519,7 @@ class ResponseTests(TestCase):
 
         # The protocol reference should be dropped, too, to facilitate GC or
         # whatever.
-        self.assertIdentical(response._bodyProtocol, None)
+        self.assertIsNone(response._bodyProtocol)
 
 
     def test_bufferEarlyData(self):
@@ -2542,7 +2542,7 @@ class ResponseTests(TestCase):
         self.assertEqual(bytes, [b'foo', b'bar', b'baz'])
         # Make sure the implementation-detail-byte-buffer is cleared because
         # not clearing it wastes memory.
-        self.assertIdentical(response._bodyBuffer, None)
+        self.assertIsNone(response._bodyBuffer)
 
 
     def test_multipleStartProducingFails(self):

@@ -137,7 +137,7 @@ class FlushWarningsTests(SynchronousTestCase):
         case.run(result)
         warningsShown = self.flushWarnings([Mask.MockTests.test_unflushed])
         self.assertEqual(warningsShown[0]['message'], 'some warning text')
-        self.assertIdentical(warningsShown[0]['category'], UserWarning)
+        self.assertIs(warningsShown[0]['category'], UserWarning)
 
         where = type(case).test_unflushed.__code__
         filename = where.co_filename
@@ -183,7 +183,7 @@ class FlushWarningsTests(SynchronousTestCase):
             warnings.simplefilter('error')
             case.run(result)
             self.assertEqual(len(result.errors), 1)
-            self.assertIdentical(result.errors[0][0], case)
+            self.assertIs(result.errors[0][0], case)
             self.assertTrue(
                 # Different python versions differ in whether they report the
                 # fully qualified class name or just the class name.
@@ -417,7 +417,7 @@ class CollectWarningsTests(SynchronousTestCase):
 
         result = _collectWarnings(lambda x: None, f, 1, 'a', b=2, c='d')
         self.assertEqual(arguments, [((1, 'a'), {'b': 2, 'c': 'd'})])
-        self.assertIdentical(result, value)
+        self.assertIs(result, value)
 
 
     def test_duplicateWarningCollected(self):

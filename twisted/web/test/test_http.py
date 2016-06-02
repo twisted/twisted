@@ -772,8 +772,8 @@ class IdentityTransferEncodingTests(TestCase):
         Check the decoder's data and finish callbacks and make sure they are
         None in order to help avoid references cycles.
         """
-        self.assertIdentical(decoder.dataCallback, None)
-        self.assertIdentical(decoder.finishCallback, None)
+        self.assertIsNone(decoder.dataCallback)
+        self.assertIsNone(decoder.finishCallback)
 
 
     def test_earlyConnectionLose(self):
@@ -1774,7 +1774,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request header which is not present.
         """
         req = http.Request(DummyChannel(), False)
-        self.assertEqual(req.getHeader(b"test"), None)
+        self.assertIsNone(req.getHeader(b"test"))
 
 
     def test_getAllHeaders(self):
@@ -2265,7 +2265,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # Then something goes wrong and content should get closed.
         req.connectionLost(Failure(ConnectionLost("Finished")))
         self.assertTrue(content.closed)
-        self.assertIdentical(req.channel, None)
+        self.assertIsNone(req.channel)
 
 
     def test_registerProducerTwiceFails(self):
@@ -2312,7 +2312,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request = http.Request(d, True)
         finished = request.notifyFinish()
         request.connectionLost(Failure(ConnectionLost("Connection done")))
-        self.assertIdentical(request.channel, None)
+        self.assertIsNone(request.channel)
         return self.assertFailure(finished, ConnectionLost)
 
 
@@ -2505,7 +2505,7 @@ class MultilineHeadersTests(unittest.TestCase):
 
         c.lineReceived(b'HTTP/1.0 201')
         c.lineReceived(b'Content-Length: 10')
-        self.assertIdentical(c.length, None)
+        self.assertIsNone(c.length)
         self.assertFalse(self.handleHeaderCalled)
         self.assertFalse(self.handleEndHeadersCalled)
 

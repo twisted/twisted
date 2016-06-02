@@ -229,9 +229,9 @@ class UnauthorizedResourceTests(unittest.TestCase):
         An L{UnauthorizedResource} is every child of itself.
         """
         resource = UnauthorizedResource([])
-        self.assertIdentical(
+        self.assertIs(
             resource.getChildWithDefault("foo", None), resource)
-        self.assertIdentical(
+        self.assertIs(
             resource.getChildWithDefault("bar", None), resource)
 
 

@@ -30,7 +30,7 @@ class ErrorPageTests(TestCase):
         called on.
         """
         page = self.errorPage(321, "foo", "bar")
-        self.assertIdentical(page.getChild(b"name", object()), page)
+        self.assertIs(page.getChild(b"name", object()), page)
 
 
     def _pageRenderingTest(self, page, code, brief, detail):
@@ -157,7 +157,7 @@ class ResourceTests(TestCase):
         sibling = Resource()
         resource.putChild(b"foo", child)
         resource.putChild(b"bar", sibling)
-        self.assertIdentical(
+        self.assertIs(
             child, resource.getChildWithDefault(b"foo", DummyRequest([])))
 
 
@@ -172,7 +172,7 @@ class ResourceTests(TestCase):
         child = resource.getChildWithDefault(path, request)
         self.assertIsInstance(child, DynamicChild)
         self.assertEqual(child.path, path)
-        self.assertIdentical(child.request, request)
+        self.assertIs(child.request, request)
 
 
     def test_defaultHEAD(self):
@@ -232,7 +232,7 @@ class GetChildForRequestTests(TestCase):
         request = DummyRequest([])
         resource = Resource()
         result = getChildForRequest(resource, request)
-        self.assertIdentical(resource, result)
+        self.assertIs(resource, result)
 
 
     def test_leafResource(self):
@@ -244,7 +244,7 @@ class GetChildForRequestTests(TestCase):
         resource = Resource()
         resource.isLeaf = True
         result = getChildForRequest(resource, request)
-        self.assertIdentical(resource, result)
+        self.assertIs(resource, result)
 
 
     def test_postPathToPrePath(self):
@@ -257,6 +257,6 @@ class GetChildForRequestTests(TestCase):
         child = Resource()
         child.isLeaf = True
         root.putChild(b"foo", child)
-        self.assertIdentical(child, getChildForRequest(root, request))
+        self.assertIs(child, getChildForRequest(root, request))
         self.assertEqual(request.prepath, [b"foo"])
         self.assertEqual(request.postpath, [b"bar"])

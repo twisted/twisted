@@ -270,7 +270,7 @@ class LocalWorkerAMPTests(TestCase):
 
         d = self.managerAMP.run(self.testCase, StopTestResult())
         self.assertEqual([self.testCase], stopped)
-        return d.addCallback(self.assertIdentical, result)
+        return d.addCallback(self.assertIs, result)
 
 
 
@@ -433,7 +433,7 @@ class LocalWorkerTests(TestCase):
         localWorker._outLog = FakeStream()
         localWorker.processEnded(Failure(CONNECTION_DONE))
         self.assertEqual(localWorker._outLog.callNumber, 1)
-        self.assertIdentical(None, protocol.transport)
+        self.assertIsNone(protocol.transport)
         return self.assertFailure(localWorker.endDeferred, ConnectionDone)
 
     def test_addresses(self):

@@ -85,7 +85,7 @@ class SiteTest(unittest.TestCase):
         sres2 = SimpleResource()
         sres1.putChild(b"",sres2)
         site = server.Site(sres1)
-        self.assertIdentical(
+        self.assertIs(
             site.getResourceFor(DummyRequest([b''])),
             sres2, "Got the wrong resource.")
 
@@ -180,7 +180,7 @@ class SessionTests(unittest.TestCase):
         reactor is used.
         """
         session = server.Session(server.Site(resource.Resource()), b'123')
-        self.assertIdentical(session._reactor, reactor)
+        self.assertIs(session._reactor, reactor)
 
 
     def test_startCheckingExpiration(self):
@@ -353,7 +353,7 @@ class ConditionalTests(unittest.TestCase):
         # Since there SHOULD NOT (RFC 2616, section 10.3.5) be any
         # entity-headers, the Content-Type is not set if the application does
         # not explicitly set it.
-        self.assertEqual(httpHeader(result, b"Content-Type"), None)
+        self.assertIsNone(httpHeader(result, b"Content-Type"))
 
 
     def test_invalidTimestamp(self):

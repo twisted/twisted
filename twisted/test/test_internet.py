@@ -851,7 +851,7 @@ class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
 
     def _callFromThreadCallback2(self, d):
         try:
-            self.assert_(self.stopped)
+            self.assertTrue(self.stopped)
         except:
             # Send the error to the deferred
             d.errback()
@@ -945,10 +945,10 @@ class DelayedTests(unittest.TestCase):
         L{IDelayedCall.active} returns False once the call has run.
         """
         dcall = reactor.callLater(0.01, self.deferred.callback, True)
-        self.assertEqual(dcall.active(), True)
+        self.assertTrue(dcall.active())
 
         def checkDeferredCall(success):
-            self.assertEqual(dcall.active(), False)
+            self.assertFalse(dcall.active())
             return success
 
         self.deferred.addCallback(checkDeferredCall)
@@ -1130,7 +1130,7 @@ class ProtocolTests(unittest.TestCase):
         factory = MyFactory()
         protocol = factory.buildProtocol(None)
         self.assertEqual(protocol.factory, factory)
-        self.assert_( isinstance(protocol, factory.protocol) )
+        self.assertIsInstance(protocol, factory.protocol)
 
 
 class DummyProducer(object):

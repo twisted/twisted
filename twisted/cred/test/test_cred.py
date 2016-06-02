@@ -143,7 +143,7 @@ class CredTests(unittest.TestCase):
 
         # greybox
         self.assertTrue(impl.original.loggedIn)
-        self.assertTrue(not impl.original.loggedOut)
+        self.assertFalse(impl.original.loggedOut)
         logout()
         self.assertTrue(impl.original.loggedOut)
 
@@ -164,7 +164,7 @@ class CredTests(unittest.TestCase):
 
         # greybox
         self.assertTrue(impl.original.loggedIn)
-        self.assertTrue(not impl.original.loggedOut)
+        self.assertFalse(impl.original.loggedOut)
         logout()
         self.assertTrue(impl.original.loggedOut)
 
@@ -213,13 +213,13 @@ class OnDiskDatabaseTests(unittest.TestCase):
         """
         self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
 
-        self.failUnlessRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
+        self.assertRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
 
 
     def testUserLookup(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
         for (u, p) in self.users:
-            self.failUnlessRaises(KeyError, self.db.getUser, u.upper())
+            self.assertRaises(KeyError, self.db.getUser, u.upper())
             self.assertEqual(self.db.getUser(u), (u, p))
 
 

@@ -485,10 +485,10 @@ class AuthenticatorTests(unittest.TestCase):
                          "from='example.org' to='example.com' id='12345' "
                          "version='1.0'>")
         self.assertEqual((1, 0), xs.version)
-        self.assertIdentical(None, xs.sid)
+        self.assertIsNone(xs.sid)
         self.assertEqual('invalid', xs.namespace)
-        self.assertIdentical(None, xs.otherEntity)
-        self.assertEqual(None, xs.thisEntity)
+        self.assertIsNone(xs.otherEntity)
+        self.assertIsNone(xs.thisEntity)
 
 
     def test_streamStartLegacy(self):
@@ -580,7 +580,7 @@ class ConnectAuthenticatorTests(unittest.TestCase):
         self.authenticator.initializeStream()
         self.assertEqual([init], self.xmlstream.initializers)
         self.assertFalse(self.gotAuthenticated)
-        self.assertNotIdentical(None, self.initFailure)
+        self.assertIsNotNone(self.initFailure)
         self.assertTrue(self.initFailure.check(TestError))
 
 
@@ -600,7 +600,7 @@ class ConnectAuthenticatorTests(unittest.TestCase):
         self.assertEqual('12345', xs.sid)
         self.assertEqual('testns', xs.namespace)
         self.assertEqual('example.com', xs.otherEntity.host)
-        self.assertIdentical(None, xs.thisEntity)
+        self.assertIsNone(xs.thisEntity)
         self.assertNot(self.gotAuthenticated)
         xs.dataReceived("<stream:features>"
                           "<test xmlns='testns'/>"
@@ -627,16 +627,16 @@ class ListenAuthenticatorTests(unittest.TestCase):
         """
         xs = self.xmlstream
         xs.makeConnection(proto_helpers.StringTransport())
-        self.assertIdentical(None, xs.sid)
+        self.assertIsNone(xs.sid)
         xs.dataReceived("<stream:stream xmlns='jabber:client' "
                          "xmlns:stream='http://etherx.jabber.org/streams' "
                          "from='example.org' to='example.com' id='12345' "
                          "version='1.0'>")
         self.assertEqual((1, 0), xs.version)
-        self.assertNotIdentical(None, xs.sid)
+        self.assertIsNotNone(xs.sid)
         self.assertNotEqual('12345', xs.sid)
         self.assertEqual('jabber:client', xs.namespace)
-        self.assertIdentical(None, xs.otherEntity)
+        self.assertIsNone(xs.otherEntity)
         self.assertEqual('example.com', xs.thisEntity.host)
 
 
@@ -810,7 +810,7 @@ class BaseFeatureInitiatingInitializerTests(unittest.TestCase):
         initializer, the initializer silently succeeds.
         """
         self.init.required = False
-        self.assertIdentical(None, self.init.initialize())
+        self.assertIsNone(self.init.initialize())
 
 
 
@@ -826,7 +826,7 @@ class ToResponseTests(unittest.TestCase):
         stanza['from'] = 'user2@example.com/resource'
         stanza['id'] = 'stanza1'
         response = xmlstream.toResponse(stanza, 'result')
-        self.assertNotIdentical(stanza, response)
+        self.assertIsNot(stanza, response)
         self.assertEqual(response['from'], 'user1@example.com')
         self.assertEqual(response['to'], 'user2@example.com/resource')
         self.assertEqual(response['type'], 'result')
@@ -981,7 +981,7 @@ class XMPPHandlerTests(unittest.TestCase):
         xs = xmlstream.XmlStream(xmlstream.Authenticator())
         handler.makeConnection(xs)
         self.assertTrue(handler.doneMade)
-        self.assertIdentical(xs, handler.xmlstream)
+        self.assertIs(xs, handler.xmlstream)
 
 
     def test_connectionLost(self):
@@ -992,7 +992,7 @@ class XMPPHandlerTests(unittest.TestCase):
         xs = xmlstream.XmlStream(xmlstream.Authenticator())
         handler.makeConnection(xs)
         handler.connectionLost(Exception())
-        self.assertIdentical(None, handler.xmlstream)
+        self.assertIsNone(handler.xmlstream)
 
 
 
@@ -1019,7 +1019,7 @@ class XMPPHandlerCollectionTests(unittest.TestCase):
         handler = DummyXMPPHandler()
         handler.setHandlerParent(self.collection)
         self.assertIn(handler, self.collection)
-        self.assertIdentical(self.collection, handler.parent)
+        self.assertIs(self.collection, handler.parent)
 
 
     def test_removeHandler(self):
@@ -1030,7 +1030,7 @@ class XMPPHandlerCollectionTests(unittest.TestCase):
         handler.setHandlerParent(self.collection)
         handler.disownHandlerParent(self.collection)
         self.assertNotIn(handler, self.collection)
-        self.assertIdentical(None, handler.parent)
+        self.assertIsNone(handler.parent)
 
 
 
@@ -1049,7 +1049,7 @@ class StreamManagerTests(unittest.TestCase):
         Test correct initialization and setup of factory observers.
         """
         sm = self.streamManager
-        self.assertIdentical(None, sm.xmlstream)
+        self.assertIsNone(sm.xmlstream)
         self.assertEqual([], sm.handlers)
         self.assertEqual(sm._connected,
                           sm.factory.callbacks['//event/stream/connected'])
@@ -1085,8 +1085,8 @@ class StreamManagerTests(unittest.TestCase):
         handler.setHandlerParent(sm)
         xs = xmlstream.XmlStream(xmlstream.Authenticator())
         sm._connected(xs)
-        self.assertIdentical(None, xs.rawDataInFn)
-        self.assertIdentical(None, xs.rawDataOutFn)
+        self.assertIsNone(xs.rawDataInFn)
+        self.assertIsNone(xs.rawDataOutFn)
 
 
     def test_connectedLogTrafficTrue(self):
@@ -1099,8 +1099,8 @@ class StreamManagerTests(unittest.TestCase):
         handler.setHandlerParent(sm)
         xs = xmlstream.XmlStream(xmlstream.Authenticator())
         sm._connected(xs)
-        self.assertNotIdentical(None, xs.rawDataInFn)
-        self.assertNotIdentical(None, xs.rawDataOutFn)
+        self.assertIsNotNone(xs.rawDataInFn)
+        self.assertIsNotNone(xs.rawDataOutFn)
 
 
     def test_authd(self):
@@ -1142,7 +1142,7 @@ class StreamManagerTests(unittest.TestCase):
         handler = FailureReasonXMPPHandler()
         handler.setHandlerParent(sm)
         sm._disconnected(failure.Failure(Exception("no reason")))
-        self.assertEqual(True, handler.gotFailureReason)
+        self.assertTrue(handler.gotFailureReason)
 
 
     def test_addHandler(self):
@@ -1329,5 +1329,5 @@ class XmlStreamServerFactoryTests(GenericXmlStreamFactoryTestsMixin):
         """
         xs1 = self.factory.buildProtocol(None)
         xs2 = self.factory.buildProtocol(None)
-        self.assertNotIdentical(xs1, xs2)
-        self.assertNotIdentical(xs1.authenticator, xs2.authenticator)
+        self.assertIsNot(xs1, xs2)
+        self.assertIsNot(xs1.authenticator, xs2.authenticator)

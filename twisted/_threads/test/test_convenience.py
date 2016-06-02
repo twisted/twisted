@@ -23,7 +23,7 @@ class QuitTests(SynchronousTestCase):
         L{Quit.isSet} starts as L{False}.
         """
         quit = Quit()
-        self.assertEqual(quit.isSet, False)
+        self.assertFalse(quit.isSet)
 
 
     def test_setSetsSet(self):
@@ -32,7 +32,7 @@ class QuitTests(SynchronousTestCase):
         """
         quit = Quit()
         quit.set()
-        self.assertEqual(quit.isSet, True)
+        self.assertTrue(quit.isSet)
 
 
     def test_checkDoesNothing(self):
@@ -40,7 +40,7 @@ class QuitTests(SynchronousTestCase):
         L{Quit.check} initially does nothing and returns L{None}.
         """
         quit = Quit()
-        self.assertIs(quit.check(), None)
+        self.assertIsNone(quit.check())
 
 
     def test_checkAfterSetRaises(self):

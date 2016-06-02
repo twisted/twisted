@@ -269,7 +269,7 @@ class PyUnitResultTests(SynchronousTestCase):
         test.run(result)
         self.assertEqual(len(result.failures), 1)
         test2, reason = result.failures[0]
-        self.assertIdentical(test, test2)
+        self.assertIs(test, test2)
         self.assertIn("UnsupportedTrialFeature", reason)
 
     if sys.version_info[:2] < (2, 7):

@@ -110,7 +110,7 @@ class XPathTests(unittest.TestCase):
         Test finding childs of foo.
         """
         xp = XPathQuery("/foo/*")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
         self.assertEqual(xp.queryForNodes(self.e), [self.bar1, self.bar2,
                                                      self.bar4, self.bar5,
                                                      self.bar6, self.bar7])
@@ -120,14 +120,14 @@ class XPathTests(unittest.TestCase):
         Test matching foo with attribute.
         """
         xp = XPathQuery("/foo[@attrib1]")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
 
     def test_attributeWithValueAny(self):
         """
         Test find nodes with attribute having value.
         """
         xp = XPathQuery("/foo/*[@attrib2='value2']")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
         self.assertEqual(xp.queryForNodes(self.e), [self.bar2])
 
     def test_namespaceFound(self):
@@ -174,21 +174,21 @@ class XPathTests(unittest.TestCase):
         Test matching a node with given text.
         """
         xp = XPathQuery("/foo[text() = 'somecontent']")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
 
     def test_textNotOperator(self):
         """
         Test for not operator.
         """
         xp = XPathQuery("/foo[not(@nosuchattrib)]")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
 
     def test_anyLocationAndText(self):
         """
         Test finding any nodes named gar and getting their text contents.
         """
         xp = XPathQuery("//gar")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
         self.assertEqual(xp.queryForNodes(self.e), [self.gar1, self.gar2,
                                                      self.gar3, self.gar4])
         self.assertEqual(xp.queryForStringList(self.e), ["DEF", "ABC",
@@ -199,7 +199,7 @@ class XPathTests(unittest.TestCase):
         Test finding any nodes named bar.
         """
         xp = XPathQuery("//bar")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
         self.assertEqual(xp.queryForNodes(self.e), [self.bar1, self.bar2,
                                                      self.bar3, self.bar4,
                                                      self.bar5, self.bar6,
@@ -218,7 +218,7 @@ class XPathTests(unittest.TestCase):
         Test boolean and operator in condition.
         """
         xp = XPathQuery("//bar[@attrib4='value4' and @attrib5='value5']")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
         self.assertEqual(xp.queryForNodes(self.e), [self.bar5])
 
     def test_orOperator(self):
@@ -226,7 +226,7 @@ class XPathTests(unittest.TestCase):
         Test boolean or operator in condition.
         """
         xp = XPathQuery("//bar[@attrib5='value4' or @attrib5='value5']")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
         self.assertEqual(xp.queryForNodes(self.e), [self.bar5, self.bar6])
 
     def test_booleanOperatorsParens(self):
@@ -235,7 +235,7 @@ class XPathTests(unittest.TestCase):
         """
         xp = XPathQuery("""//bar[@attrib4='value4' and
                                  (@attrib5='value4' or @attrib5='value6')]""")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
         self.assertEqual(xp.queryForNodes(self.e), [self.bar6, self.bar7])
 
     def test_booleanOperatorsNoParens(self):
@@ -245,5 +245,5 @@ class XPathTests(unittest.TestCase):
         xp = XPathQuery("""//bar[@attrib5='value4' or
                                  @attrib5='value5' or
                                  @attrib5='value6']""")
-        self.assertEqual(xp.matches(self.e), True)
+        self.assertTrue(xp.matches(self.e))
         self.assertEqual(xp.queryForNodes(self.e), [self.bar5, self.bar6, self.bar7])

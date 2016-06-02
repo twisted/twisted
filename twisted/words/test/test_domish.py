@@ -23,21 +23,21 @@ class DomishTests(unittest.TestCase):
     def testElementInit(self):
         e = domish.Element((None, "foo"))
         self.assertEqual(e.name, "foo")
-        self.assertEqual(e.uri, None)
-        self.assertEqual(e.defaultUri, None)
-        self.assertEqual(e.parent, None)
+        self.assertIsNone(e.uri)
+        self.assertIsNone(e.defaultUri)
+        self.assertIsNone(e.parent)
 
         e = domish.Element(("", "foo"))
         self.assertEqual(e.name, "foo")
         self.assertEqual(e.uri, "")
         self.assertEqual(e.defaultUri, "")
-        self.assertEqual(e.parent, None)
+        self.assertIsNone(e.parent)
 
         e = domish.Element(("testns", "foo"))
         self.assertEqual(e.name, "foo")
         self.assertEqual(e.uri, "testns")
         self.assertEqual(e.defaultUri, "testns")
-        self.assertEqual(e.parent, None)
+        self.assertIsNone(e.parent)
 
         e = domish.Element(("testns", "foo"), "test2ns")
         self.assertEqual(e.name, "foo")
@@ -148,11 +148,11 @@ class DomishStreamTestsMixin:
     def testHarness(self):
         xml = "<root><child/><child2/></root>"
         self.stream.parse(xml)
-        self.assertEqual(self.doc_started, True)
+        self.assertTrue(self.doc_started)
         self.assertEqual(self.root.name, 'root')
         self.assertEqual(self.elements[0].name, 'child')
         self.assertEqual(self.elements[1].name, 'child2')
-        self.assertEqual(self.doc_ended, True)
+        self.assertTrue(self.doc_ended)
 
     def testBasic(self):
         xml = "<stream:stream xmlns:stream='etherx' xmlns='jabber'>\n" + \
@@ -387,7 +387,7 @@ class SerializerTests(unittest.TestCase):
     def testLocalPrefixesWithChild(self):
         e = domish.Element(('testns', 'foo'), localPrefixes={'bar': 'testns'})
         e.addElement('baz')
-        self.assertIdentical(e.baz.defaultUri, None)
+        self.assertIsNone(e.baz.defaultUri)
         self.assertEqual(e.toXml(), "<bar:foo xmlns:bar='testns'><baz/></bar:foo>")
 
     def test_prefixesReuse(self):
@@ -403,7 +403,7 @@ class SerializerTests(unittest.TestCase):
 
         # test passing of dictionary
         s = domish.SerializerClass(prefixes=prefixes)
-        self.assertNotIdentical(prefixes, s.prefixes)
+        self.assertIsNot(prefixes, s.prefixes)
 
         # test proper serialization on prefixes reuse
         e = domish.Element(('testns2', 'foo'),

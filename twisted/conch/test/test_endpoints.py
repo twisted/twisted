@@ -467,7 +467,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
 
     def test_dataReceived(self):
@@ -1106,7 +1106,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             self.factory, self.reactor.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
 
     def test_skipPasswordAuthentication(self):
@@ -1172,7 +1172,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             pump.pump()
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
         # Ensure the connection with the agent is cleaned up after the
         # connection with the server is lost.

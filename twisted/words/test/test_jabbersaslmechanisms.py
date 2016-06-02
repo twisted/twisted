@@ -28,7 +28,7 @@ class AnonymousTests(unittest.TestCase):
         Test the initial response to be empty.
         """
         m = sasl_mechanisms.Anonymous()
-        self.assertEqual(m.getInitialResponse(), None)
+        self.assertIsNone(m.getInitialResponse())
 
 
 
@@ -42,7 +42,7 @@ class DigestMD5Tests(unittest.TestCase):
         """
         Test that no initial response is generated.
         """
-        self.assertIdentical(self.mechanism.getInitialResponse(), None)
+        self.assertIsNone(self.mechanism.getInitialResponse())
 
 
     def test_getResponse(self):

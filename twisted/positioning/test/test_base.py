@@ -62,8 +62,8 @@ class HeadingTests(TestCase):
         h = base.Heading(1.)
         self.assertEqual(h.inDecimalDegrees, 1.)
         self.assertEqual(float(h), 1.)
-        self.assertEqual(h.variation, None)
-        self.assertEqual(h.correctedHeading, None)
+        self.assertIsNone(h.variation)
+        self.assertIsNone(h.correctedHeading)
 
 
     def test_headingWithoutVariationRepr(self):
@@ -248,7 +248,7 @@ class HeadingTests(TestCase):
         C{ValueError}.
         """
         h = base.Heading.fromFloats(1.)
-        self.assertIdentical(None, h.variation.inDecimalDegrees)
+        self.assertIsNone(h.variation.inDecimalDegrees)
         self.assertRaises(ValueError, h.setSign, 1)
 
 
@@ -474,7 +474,7 @@ class CoordinateTests(TestCase):
         minutes, seconds is also C{None}.
         """
         c = base.Coordinate(None, None)
-        self.assertEqual(c.inDegreesMinutesSeconds, None)
+        self.assertIsNone(c.inDegreesMinutesSeconds)
 
 
 
@@ -639,9 +639,9 @@ class PositionErrorTests(TestCase):
         dilutions of positions are C{None}.
         """
         positionError = base.PositionError()
-        self.assertEqual(positionError.pdop, None)
-        self.assertEqual(positionError.hdop, None)
-        self.assertEqual(positionError.vdop, None)
+        self.assertIsNone(positionError.pdop)
+        self.assertIsNone(positionError.hdop)
+        self.assertIsNone(positionError.vdop)
 
 
     def test_allUnsetWithInvariant(self):
@@ -650,9 +650,9 @@ class PositionErrorTests(TestCase):
         dilutions of positions are C{None}.
         """
         positionError = base.PositionError(testInvariant=True)
-        self.assertEqual(positionError.pdop, None)
-        self.assertEqual(positionError.hdop, None)
-        self.assertEqual(positionError.vdop, None)
+        self.assertIsNone(positionError.pdop)
+        self.assertIsNone(positionError.hdop)
+        self.assertIsNone(positionError.vdop)
 
 
     def test_withoutInvariant(self):
@@ -890,9 +890,9 @@ class SatelliteTests(TestCase):
         """
         s = base.Satellite(1)
         self.assertEqual(s.identifier, 1)
-        self.assertEqual(s.azimuth, None)
-        self.assertEqual(s.elevation, None)
-        self.assertEqual(s.signalToNoiseRatio, None)
+        self.assertIsNone(s.azimuth)
+        self.assertIsNone(s.elevation)
+        self.assertIsNone(s.signalToNoiseRatio)
         self.assertEqual(repr(s), "<Satellite (1), azimuth: None, "
                                    "elevation: None, snr: None>")
 
