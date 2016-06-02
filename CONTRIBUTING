@@ -13,11 +13,10 @@ Extensive contribution guidelines are available online at:
 
 https://twistedmatrix.com/trac/wiki/ContributingToTwistedLabs
 
+**Warning: When submitting a patch: please follow the instructions at:
+https://twistedmatrix.com/trac/wiki/TwistedDevelopment#SubmittingaPatch
+
+Patches submitted without tickets will be ignored!
+
 Twisted has a Code of Conduct, available at code_of_conduct.md.
 
-**Warning: pull requests are ignored!** File a ticket at:
-
-https://twistedmatrix.com/trac/newticket
-
-Twisted uses Trac to keep track of bugs, feature requests, and associated
-patches because GitHub doesn't provide adequate tooling for its community.
