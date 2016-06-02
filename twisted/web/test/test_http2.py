@@ -1180,6 +1180,57 @@ class HTTP2ServerTests(unittest.TestCase):
         a.streams[1].abortConnection()
 
 
+    def test_writeSequenceForChannels(self):
+        """
+        L{H2Stream} objects can send a series of frames via C{writeSequence}.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DelayedHTTPHandler
+
+        # Send the request.
+        requestBytes = f.preamble()
+        requestBytes += buildRequestBytes(
+            self.getRequestHeaders, [], f
+        )
+        a.makeConnection(b)
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        stream = a.streams[1]
+        request = stream._request
+
+        request.setResponseCode(200)
+        stream.writeSequence([b'Hello', b',', b'world!'])
+        request.finish()
+
+        completionDeferred = a._streamCleanupCallbacks[1]
+
+        def validate(streamID):
+            buffer = FrameBuffer()
+            buffer.receiveData(b.value())
+            frames = list(buffer)
+
+            # Check that the stream is correctly terminated.
+            self.assertTrue('END_STREAM' in frames[-1].flags)
+
+            # Grab the data from the frames.
+            dataChunks = [
+                f.data for f in frames
+                if isinstance(f, hyperframe.frame.DataFrame)
+            ]
+            self.assertEqual(
+                dataChunks,
+                [
+                    b"Hello", b",", b"world!", b""
+                ]
+            )
+
+        return completionDeferred.addCallback(validate)
+
+
 
 class H2FlowControlTests(unittest.TestCase):
     """
@@ -1785,3 +1836,101 @@ class H2FlowControlTests(unittest.TestCase):
         self.assertTrue(
             isinstance(frames[-1], hyperframe.frame.RstStreamFrame)
         )
+
+
+
+class HTTP2TransportChecking(unittest.TestCase):
+    if skipH2:
+        skip = skipH2
+
+
+    getRequestHeaders = [
+        (b':method', b'GET'),
+        (b':authority', b'localhost'),
+        (b':path', b'/'),
+        (b':scheme', b'https'),
+        (b'user-agent', b'twisted-test-code'),
+        (b'custom-header', b'1'),
+        (b'custom-header', b'2'),
+    ]
+
+
+    def test_registerProducerWithTransport(self):
+        """
+        L{H2Connection} can be registered with the transport as a producer.
+        """
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DummyHTTPHandler
+
+        b.registerProducer(a, True)
+        self.assertTrue(b.producer is a)
+
+
+    def test_pausingProducerPreventsDataSend(self):
+        """
+        L{H2Connection} can be paused by its consumer. When paused it stops
+        sending data to the transport.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DummyHTTPHandler
+
+        # Send the request.
+        frames = buildRequestFrames(self.getRequestHeaders, [], f)
+        requestBytes = f.preamble()
+        requestBytes += b''.join(f.serialize() for f in frames)
+        a.makeConnection(b)
+        b.registerProducer(a, True)
+
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        # The headers will be sent immediately, but the body will be waiting
+        # until the reactor gets to spin. Before it does we'll pause
+        # production.
+        a.pauseProducing()
+
+        # Now we want to build up a whole chain of Deferreds. We want to
+        # 1. deferLater for a moment to let the sending loop run, which should
+        #    block.
+        # 2. After that deferred fires, we want to validate that no data has
+        #    been sent yet.
+        # 3. Then we want to resume the production.
+        # 4. Then, we want to wait for the stream completion deferred.
+        # 5. Validate that the data is correct.
+        cleanupCallback = a._streamCleanupCallbacks[1]
+
+        def validateNotSent(*args):
+            buffer = FrameBuffer()
+            buffer.receiveData(b.value())
+            frames = list(buffer)
+
+            self.assertEqual(len(frames), 2)
+            self.assertFalse(
+                isinstance(frames[-1], hyperframe.frame.DataFrame)
+            )
+            a.resumeProducing()
+
+            # Resume producing is a no-op, so let's call it a bunch more times.
+            a.resumeProducing()
+            a.resumeProducing()
+            a.resumeProducing()
+            a.resumeProducing()
+            return cleanupCallback
+
+        def validateComplete(*args):
+            buffer = FrameBuffer()
+            buffer.receiveData(b.value())
+            frames = list(buffer)
+
+            # Check that the stream is correctly terminated.
+            self.assertEqual(len(frames), 4)
+            self.assertTrue('END_STREAM' in frames[-1].flags)
+
+        d = task.deferLater(reactor, 0.01, validateNotSent)
+        d.addCallback(validateComplete)
+
+        return d
