@@ -1417,8 +1417,7 @@ class ClientImplementationTests(unittest.TestCase):
             msg = "are available on this server"
             self._serverTestImpl(
                 '005', msg, 'isupport', args=name, options=[name])
-            self.assertIs(
-                self.client.supported.getFeature(name), None)
+            self.assertIsNone(self.client.supported.getFeature(name))
             self.client.calls = []
 
         # Remove CHANMODES feature, causing getFeature('CHANMODES') to return
