@@ -15,7 +15,7 @@ from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
 from twisted.python import failure
-from twisted.python.compat import unicode
+from twisted.python.compat import nativeString, unicode
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector, IReactorTCP, IReactorSSL,
     IReactorUNIX, IReactorSocket, IListeningPort, IReactorFDSet
@@ -498,6 +498,7 @@ class MemoryReactor(object):
         Fake L{reactor.connectTCP}, that logs the call and returns an
         L{IConnector}.
         """
+        host = nativeString(host)
         self.tcpClients.append((host, port, factory, timeout, bindAddress))
         if isIPv6Address(host):
             conn = _FakeConnector(IPv6Address('TCP', host, port))

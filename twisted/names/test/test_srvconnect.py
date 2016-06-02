@@ -5,6 +5,8 @@
 Test cases for L{twisted.names.srvconnect}.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.internet import defer, protocol
 from twisted.names import client, dns, srvconnect
 from twisted.names.common import ResolverBase
@@ -30,11 +32,13 @@ class FakeResolver(ResolverBase):
     def __init__(self, results=None, failure=None):
         self.results = results
         self.failure = failure
+        self.lookups = []
 
     def _lookup(self, name, cls, qtype, timeout):
         """
         Return the result or failure on lookup.
         """
+        self.lookups.append((name, cls, qtype, timeout))
         if self.results is not None:
             return defer.succeed((self.results, [], []))
         else:
@@ -157,7 +161,7 @@ class SRVConnectorTests(unittest.TestCase):
         """
         Test that connecting fails when no service is present.
         """
-        payload = dns.Record_SRV(port=5269, target='.', ttl=60)
+        payload = dns.Record_SRV(port=5269, target=b'.', ttl=60)
         client.theResolver.results = [dns.RRHeader(name='example.org',
                                                    type=dns.SRV,
                                                    cls=dns.IN, ttl=60,
@@ -167,6 +171,17 @@ class SRVConnectorTests(unittest.TestCase):
         self.assertIsNot(None, self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
         self.assertEqual(self.reactor.tcpClients, [])
+
+
+    def test_SRVLookupName(self):
+        """
+        The lookup name is a byte string from service, protocol and domain.
+        """
+        client.theResolver.results = []
+        self.connector.connect()
+
+        name = client.theResolver.lookups[-1][0]
+        self.assertEqual(b'_xmpp-server._tcp.example.org', name)
 
 
     def test_unicodeDomain(self):

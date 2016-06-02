@@ -1530,6 +1530,16 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
         return hash((self.priority, self.weight, self.port, self.target))
 
 
+    def __lt__(self, other):
+        if not isinstance(other, Record_SRV):
+            return NotImplemented
+
+        if self.priority != other.priority:
+            return self.weight < other.weight
+        else:
+            return self.priority < other.priority
+
+
 
 @implementer(IEncodable, IRecord)
 class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
