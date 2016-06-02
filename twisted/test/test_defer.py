@@ -511,12 +511,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         l = []
         d = defer.Deferred().addCallback(lambda _: 1 // 0).addErrback(l.append)
         d.callback(1)
-        self.assertTrue(isinstance(l[0].value, ZeroDivisionError))
+        self.assertIsInstance(l[0].value, ZeroDivisionError)
         l = []
         d = defer.Deferred().addCallback(
             lambda _: failure.Failure(ZeroDivisionError())).addErrback(l.append)
         d.callback(1)
-        self.assertTrue(isinstance(l[0].value, ZeroDivisionError))
+        self.assertIsInstance(l[0].value, ZeroDivisionError)
 
     def testUnpauseBeforeCallback(self):
         d = defer.Deferred()
@@ -586,7 +586,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         dl = [defer.succeed(1), defer.fail(ValueError())]
         defer.gatherResults(dl).addErrback(l.append)
         self.assertEqual(len(l), 1)
-        self.assertTrue(isinstance(l[0], failure.Failure))
+        self.assertIsInstance(l[0], failure.Failure)
         # get rid of error
         dl[1].addErrback(lambda e: 1)
 

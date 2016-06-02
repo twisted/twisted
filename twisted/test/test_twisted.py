@@ -389,8 +389,8 @@ class MakePackagesTests(TestCase):
         """
         modules = {}
         _makePackages(None, dict(twisted=dict(version='123')), modules)
-        self.assertTrue(isinstance(modules, dict))
-        self.assertTrue(isinstance(modules['twisted'], ModuleType))
+        self.assertIsInstance(modules, dict)
+        self.assertIsInstance(modules['twisted'], ModuleType)
         self.assertEqual('twisted', modules['twisted'].__name__)
         self.assertEqual('123', modules['twisted'].version)
 
@@ -402,10 +402,10 @@ class MakePackagesTests(TestCase):
         """
         modules = {}
         _makePackages(None, dict(twisted=dict(web=dict(version='321'))), modules)
-        self.assertTrue(isinstance(modules, dict))
-        self.assertTrue(isinstance(modules['twisted'], ModuleType))
+        self.assertIsInstance(modules, dict)
+        self.assertIsInstance(modules['twisted'], ModuleType)
         self.assertEqual('twisted', modules['twisted'].__name__)
-        self.assertTrue(isinstance(modules['twisted'].web, ModuleType))
+        self.assertIsInstance(modules['twisted'].web, ModuleType)
         self.assertEqual('twisted.web', modules['twisted'].web.__name__)
         self.assertEqual('321', modules['twisted'].web.version)
 

@@ -219,7 +219,7 @@ class ServiceTests(TestCase):
         root = options['root']
         self.assertTrue(root, WSGIResource)
         self.assertIdentical(root._reactor, reactor)
-        self.assertTrue(isinstance(root._threadpool, ThreadPool))
+        self.assertIsInstance(root._threadpool, ThreadPool)
         self.assertIdentical(root._application, application)
 
         # The threadpool should start and stop with the reactor.

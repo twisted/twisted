@@ -367,7 +367,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
 
     def test_failUnlessRaises_expected(self):
         x = self.assertRaises(ValueError, self._raiseError, ValueError)
-        self.assertTrue(isinstance(x, ValueError),
+        self.assertIsInstance(x, ValueError,
                         "Expect failUnlessRaises to return instance of raised "
                         "exception.")
 
@@ -398,7 +398,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
     def test_failUnlessRaises_failureException(self):
         x = self.assertRaises(self.failureException, self._raiseError,
                                   self.failureException)
-        self.assertTrue(isinstance(x, self.failureException),
+        self.assertIsInstance(x, self.failureException,
                         "Expected %r instance to be returned"
                         % (self.failureException,))
         try:
@@ -854,10 +854,10 @@ class WarningAssertionTests(unittest.SynchronousTestCase):
                 warnings.warn("Do not call me", category=RuntimeWarning)
         r = self.assertWarns(RuntimeWarning, "Do not call me", __file__,
             Warn)
-        self.assertTrue(isinstance(r, Warn))
+        self.assertIsInstance(r, Warn)
         r = self.assertWarns(RuntimeWarning, "Do not call me", __file__,
             Warn)
-        self.assertTrue(isinstance(r, Warn))
+        self.assertIsInstance(r, Warn)
 
 
     def test_assertWarnsOnMethod(self):

@@ -261,7 +261,7 @@ class PBFailureTests(PBConnTestCase):
         def failureJelly(fail):
             fail.trap(JellyError)
             self.assertFalse(isinstance(fail.type, str))
-            self.assertTrue(isinstance(fail.value, fail.type))
+            self.assertIsInstance(fail.value, fail.type)
             return 43
         return self._testImpl('jelly', 43, failureJelly)
 
@@ -274,7 +274,7 @@ class PBFailureTests(PBConnTestCase):
         def failureDeferredJelly(fail):
             fail.trap(JellyError)
             self.assertFalse(isinstance(fail.type, str))
-            self.assertTrue(isinstance(fail.value, fail.type))
+            self.assertIsInstance(fail.value, fail.type)
             return 430
         return self._testImpl('deferredJelly', 430, failureDeferredJelly)
 
@@ -313,7 +313,7 @@ class PBFailureTests(PBConnTestCase):
         def failureSecurity(fail):
             fail.trap(SecurityError)
             self.assertFalse(isinstance(fail.type, str))
-            self.assertTrue(isinstance(fail.value, fail.type))
+            self.assertIsInstance(fail.value, fail.type)
             return 4300
         return self._testImpl('security', 4300, failureSecurity)
 
@@ -327,7 +327,7 @@ class PBFailureTests(PBConnTestCase):
         def failureDeferredSecurity(fail):
             fail.trap(SecurityError)
             self.assertFalse(isinstance(fail.type, str))
-            self.assertTrue(isinstance(fail.value, fail.type))
+            self.assertIsInstance(fail.value, fail.type)
             return 43000
         return self._testImpl('deferredSecurity', 43000, failureDeferredSecurity)
 

@@ -255,7 +255,7 @@ alert("I hate you");
         e = d.documentElement
         self.assertEqual(e.nodeName, "bar")
         c = e.childNodes[0]
-        self.assertTrue(isinstance(c, microdom.Comment))
+        self.assertIsInstance(c, microdom.Comment)
         self.assertEqual(c.value, "<foo />")
         c2 = c.cloneNode()
         self.assertIsNot(c, c2)
@@ -264,7 +264,7 @@ alert("I hate you");
     def testText(self):
         d = microdom.parseString("<bar>xxxx</bar>").documentElement
         text = d.childNodes[0]
-        self.assertTrue(isinstance(text, microdom.Text))
+        self.assertIsInstance(text, microdom.Text)
         self.assertEqual(text.value, "xxxx")
         clone = text.cloneNode()
         self.assertIsNot(clone, text)
@@ -277,12 +277,12 @@ alert("I hate you");
         self.assertEqual(nodes[1].data, "&#12AB;")
         self.assertEqual(nodes[0].cloneNode().toxml(), "&amp;")
         for n in nodes:
-            self.assertTrue(isinstance(n, microdom.EntityReference))
+            self.assertIsInstance(n, microdom.EntityReference)
 
     def testCData(self):
         s = '<x><![CDATA[</x>\r\n & foo]]></x>'
         cdata = microdom.parseString(s).documentElement.childNodes[0]
-        self.assertTrue(isinstance(cdata, microdom.CDATASection))
+        self.assertIsInstance(cdata, microdom.CDATASection)
         self.assertEqual(cdata.data, "</x>\r\n & foo")
         self.assertEqual(cdata.cloneNode().toxml(), "<![CDATA[</x>\r\n & foo]]>")
 
@@ -293,7 +293,7 @@ alert("I hate you");
         nodes2 = microdom.parseString(s2).documentElement.childNodes
         self.assertEqual(len(nodes), 3)
         for (n, n2) in zip(nodes, nodes2):
-            self.assertTrue(isinstance(n, microdom.Element))
+            self.assertIsInstance(n, microdom.Element)
             self.assertEqual(n.nodeName, "b")
             self.assertTrue(n.isEqualToNode(n2))
 

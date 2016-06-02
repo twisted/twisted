@@ -111,9 +111,9 @@ class TypedTests(unittest.TestCase):
         argV = []
         self.usage.parseOptions(argV)
         self.assertEqual(self.usage.opts['fooint'], 392)
-        self.assertTrue(isinstance(self.usage.opts['fooint'], int))
+        self.assertIsInstance(self.usage.opts['fooint'], int)
         self.assertEqual(self.usage.opts['foofloat'], 4.23)
-        self.assertTrue(isinstance(self.usage.opts['foofloat'], float))
+        self.assertIsInstance(self.usage.opts['foofloat'], float)
         self.assertEqual(self.usage.opts['eggint'], None)
         self.assertEqual(self.usage.opts['eggfloat'], None)
 
@@ -126,13 +126,13 @@ class TypedTests(unittest.TestCase):
                 "--eggint 32 --eggfloat 21").split()
         self.usage.parseOptions(argV)
         self.assertEqual(self.usage.opts['fooint'], 912)
-        self.assertTrue(isinstance(self.usage.opts['fooint'], int))
+        self.assertIsInstance(self.usage.opts['fooint'], int)
         self.assertEqual(self.usage.opts['foofloat'], -823.1)
-        self.assertTrue(isinstance(self.usage.opts['foofloat'], float))
+        self.assertIsInstance(self.usage.opts['foofloat'], float)
         self.assertEqual(self.usage.opts['eggint'], 32)
-        self.assertTrue(isinstance(self.usage.opts['eggint'], int))
+        self.assertIsInstance(self.usage.opts['eggint'], int)
         self.assertEqual(self.usage.opts['eggfloat'], 21.)
-        self.assertTrue(isinstance(self.usage.opts['eggfloat'], float))
+        self.assertIsInstance(self.usage.opts['eggfloat'], float)
 
 
     def test_underscoreOption(self):
@@ -267,7 +267,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['--europian-swallow', 'inquisition'])
         self.assertEqual(o['europian-swallow'], True)
         self.assertEqual(o.subCommand, 'inquisition')
-        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
+        self.assertIsInstance(o.subOptions, InquisitionOptions)
         self.assertEqual(o.subOptions['expect'], False)
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
@@ -279,7 +279,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['inquisition', '--expect', '--torture-device=feather'])
         self.assertEqual(o['europian-swallow'], False)
         self.assertEqual(o.subCommand, 'inquisition')
-        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
+        self.assertIsInstance(o.subOptions, InquisitionOptions)
         self.assertEqual(o.subOptions['expect'], True)
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
@@ -291,7 +291,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['inquest', '--expect', '--torture-device=feather'])
         self.assertEqual(o['europian-swallow'], False)
         self.assertEqual(o.subCommand, 'inquisition')
-        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
+        self.assertIsInstance(o.subOptions, InquisitionOptions)
         self.assertEqual(o.subOptions['expect'], True)
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
@@ -303,7 +303,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['holyquest', '--for-grail'])
         self.assertEqual(o['europian-swallow'], False)
         self.assertEqual(o.subCommand, 'holyquest')
-        self.assertTrue(isinstance(o.subOptions, HolyQuestOptions))
+        self.assertIsInstance(o.subOptions, HolyQuestOptions)
         self.assertEqual(o.subOptions['horseback'], False)
         self.assertEqual(o.subOptions['for-grail'], True)
 
@@ -327,7 +327,7 @@ class SubCommandTests(unittest.TestCase):
         o.parseOptions(['--europian-swallow'])
         self.assertEqual(o['europian-swallow'], True)
         self.assertEqual(o.subCommand, 'inquisition')
-        self.assertTrue(isinstance(o.subOptions, InquisitionOptions))
+        self.assertIsInstance(o.subOptions, InquisitionOptions)
         self.assertEqual(o.subOptions['expect'], False)
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 

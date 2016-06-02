@@ -913,7 +913,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self._throwIntoGenerator(f, g)
 
         self.assertEqual(stuff[0][0], ZeroDivisionError)
-        self.assertTrue(isinstance(stuff[0][1], ZeroDivisionError))
+        self.assertIsInstance(stuff[0][1], ZeroDivisionError)
 
         self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1/0")
 

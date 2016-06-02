@@ -1130,7 +1130,7 @@ class ProtocolTests(unittest.TestCase):
         factory = MyFactory()
         protocol = factory.buildProtocol(None)
         self.assertEqual(protocol.factory, factory)
-        self.assertTrue( isinstance(protocol, factory.protocol) )
+        self.assertIsInstance(protocol, factory.protocol)
 
 
 class DummyProducer(object):

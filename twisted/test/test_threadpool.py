@@ -367,7 +367,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             tp.stop()
 
         self.assertFalse(results[0])
-        self.assertTrue(isinstance(results[1], failure.Failure))
+        self.assertIsInstance(results[1], failure.Failure)
         self.assertTrue(issubclass(results[1].type, NewError))
 
 

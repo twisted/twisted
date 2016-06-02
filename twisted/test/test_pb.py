@@ -406,7 +406,7 @@ class NewStyleTests(unittest.TestCase):
         orig = NewStyleCopy("value")
         d = self.ref.callRemote("echo", orig)
         def cb(res):
-            self.assertTrue(isinstance(res, NewStyleCopy))
+            self.assertIsInstance(res, NewStyleCopy)
             self.assertEqual(res.s, "value")
             self.assertFalse(res is orig) # no cheating :)
         d.addCallback(cb)
@@ -422,7 +422,7 @@ class NewStyleTests(unittest.TestCase):
         d = self.ref.callRemote("echo", orig)
         def cb(res):
             # receiving the response creates a third one on the way back
-            self.assertTrue(isinstance(res, NewStyleCopy2))
+            self.assertIsInstance(res, NewStyleCopy2)
             self.assertEqual(res.value, 2)
             self.assertEqual(NewStyleCopy2.allocated, 3)
             self.assertEqual(NewStyleCopy2.initialized, 1)
@@ -1768,7 +1768,7 @@ class SpreadUtilTests(unittest.TestCase):
         o = LocalRemoteTest()
         d = o.callRemote("fail")
         def eb(f):
-            self.assertTrue(isinstance(f, failure.Failure))
+            self.assertIsInstance(f, failure.Failure)
             f.trap(RuntimeError)
         d.addCallbacks(lambda res: self.fail("supposed to fail"), eb)
         return d

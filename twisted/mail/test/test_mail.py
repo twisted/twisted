@@ -219,15 +219,15 @@ class MailServiceTests(unittest.TestCase):
 
     def testFactories(self):
         f = self.service.getPOP3Factory()
-        self.assertTrue(isinstance(f, protocol.ServerFactory))
+        self.assertIsInstance(f, protocol.ServerFactory)
         self.assertTrue(f.buildProtocol(('127.0.0.1', 12345)), pop3.POP3)
 
         f = self.service.getSMTPFactory()
-        self.assertTrue(isinstance(f, protocol.ServerFactory))
+        self.assertIsInstance(f, protocol.ServerFactory)
         self.assertTrue(f.buildProtocol(('127.0.0.1', 12345)), smtp.SMTP)
 
         f = self.service.getESMTPFactory()
-        self.assertTrue(isinstance(f, protocol.ServerFactory))
+        self.assertIsInstance(f, protocol.ServerFactory)
         self.assertTrue(f.buildProtocol(('127.0.0.1', 12345)), smtp.ESMTP)
 
     def testPortals(self):

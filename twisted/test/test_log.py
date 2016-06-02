@@ -364,7 +364,7 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.assertTrue(isinstance(chunk, str),
+            self.assertIsInstance(chunk, str,
                             "%r was not a string" % (chunk,))
 
         if self._origEncoding is not None:

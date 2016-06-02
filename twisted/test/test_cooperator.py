@@ -509,7 +509,7 @@ class RunStateTests(unittest.TestCase):
         self.deferNext()
         self.scheduler.pump()
         self.assertEqual(len(self.work), 1)
-        self.assertTrue(isinstance(self.work[0], defer.Deferred))
+        self.assertIsInstance(self.work[0], defer.Deferred)
         self.scheduler.pump()
         self.assertEqual(len(self.work), 1)
         self.task.pause()
