@@ -704,7 +704,7 @@ def _bytesChr(i):
 
 try:
     from sys import intern
-except:
+except ImportError:
     intern = intern
 
 
@@ -742,4 +742,5 @@ __all__ = [
     "_b64encodebytes",
     "_b64decodebytes",
     "_bytesChr",
+    "intern",
 ]
