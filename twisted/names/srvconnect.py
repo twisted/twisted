@@ -11,7 +11,7 @@ from zope.interface import implementer
 from twisted.internet import error, interfaces
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import unicode, xrange
+from twisted.python.compat import nativeString, unicode, xrange
 
 
 class _SRVConnector_ClientFactoryWrapper:
@@ -82,10 +82,10 @@ class SRVConnector:
             if self.domain is None:
                 self.connectionFailed(error.DNSLookupError("Domain is not defined."))
                 return
-            d = client.lookupService(b'_%s._%s.%s' %
-                    (self.service.encode('ascii'),
-                     self.protocol.encode('ascii'),
-                     self.domain))
+            d = client.lookupService('_%s._%s.%s' %
+                    (nativeString(self.service),
+                     nativeString(self.protocol),
+                     nativeString(self.domain)))
             d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
             if self._defaultPort:

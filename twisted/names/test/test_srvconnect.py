@@ -7,12 +7,14 @@ Test cases for L{twisted.names.srvconnect}.
 
 from __future__ import absolute_import, division
 
+from twisted.trial import unittest
+
 from twisted.internet import defer, protocol
+from twisted.internet.error import DNSLookupError, ServiceNameUnknownError
 from twisted.names import client, dns, srvconnect
 from twisted.names.common import ResolverBase
 from twisted.names.error import DNSNameError
-from twisted.internet.error import DNSLookupError, ServiceNameUnknownError
-from twisted.trial import unittest
+from twisted.python.compat import nativeString
 from twisted.test.proto_helpers import MemoryReactor
 
 
@@ -181,7 +183,7 @@ class SRVConnectorTests(unittest.TestCase):
         self.connector.connect()
 
         name = client.theResolver.lookups[-1][0]
-        self.assertEqual(b'_xmpp-server._tcp.example.org', name)
+        self.assertEqual(nativeString('_xmpp-server._tcp.example.org'), name)
 
 
     def test_unicodeDomain(self):
