@@ -765,7 +765,7 @@ class TodoTests(unittest.SynchronousTestCase):
                                        makeTodo("todo!"))
         self.result.done()
         output = '\n'.join(self.stream.getvalue().splitlines()[3:]).strip()
-        self.assertTrue(str(error) in output)
+        self.assertIn(str(error), output)
 
 
     def test_standardLibraryCompatibilityFailure(self):

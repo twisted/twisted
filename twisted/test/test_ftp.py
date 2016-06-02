@@ -494,10 +494,10 @@ class BasicFTPServerTests(FTPServerTestCase):
         d = self.client.queueStringCommand('FEAT')
         def gotResponse(responseLines):
             self.assertEqual('211-Features:', responseLines[0])
-            self.assertTrue(' MDTM' in responseLines)
-            self.assertTrue(' PASV' in responseLines)
-            self.assertTrue(' TYPE A;I' in responseLines)
-            self.assertTrue(' SIZE' in responseLines)
+            self.assertIn(' MDTM', responseLines)
+            self.assertIn(' PASV', responseLines)
+            self.assertIn(' TYPE A;I', responseLines)
+            self.assertIn(' SIZE', responseLines)
             self.assertEqual('211 End', responseLines[-1])
         return d.addCallback(gotResponse)
 

@@ -84,7 +84,7 @@ class DomainWithDefaultsTests(unittest.TestCase):
         for x in range(10):
             self.assertEqual(d[x], x + 10)
             self.assertEqual(d.get(x), x + 10)
-            self.assertTrue(x in d)
+            self.assertIn(x, d)
             self.assertTrue(d.has_key(x))
 
         del d[2], d[4], d[6]
@@ -623,7 +623,7 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
             self.D.addUser(u, p)
 
         for (u, p) in toAdd:
-            self.assertTrue(u in self.D.dbm)
+            self.assertIn(u, self.D.dbm)
             self.assertEqual(self.D.dbm[u], p)
             self.assertTrue(os.path.exists(os.path.join(self.P, u)))
 
@@ -637,7 +637,7 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
 
         self.assertEqual(len(creds), 1)
         self.assertTrue(cred.checkers.ICredentialsChecker.providedBy(creds[0]))
-        self.assertTrue(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
+        self.assertIn(cred.credentials.IUsernamePassword, creds[0].credentialInterfaces)
 
 
     def test_requestAvatar(self):
@@ -1508,7 +1508,7 @@ class MXTests(unittest.TestCase):
             )
 
     def _cbManyRecordsSuccessfulLookup(self, mx):
-        self.assertTrue(str(mx.name).split('.', 1)[0] in ('mx1', 'mx2', 'mx3'))
+        self.assertIn(str(mx.name).split('.', 1)[0], ('mx1', 'mx2', 'mx3'))
         self.mx.markBad(str(mx.name))
         return self.mx.getMX('test.domain'
             ).addCallback(self._cbManyRecordsDifferentResult, mx

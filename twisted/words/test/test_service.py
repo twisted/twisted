@@ -639,7 +639,7 @@ class IRCProtocolTests(unittest.TestCase):
             (myname, group, theirname, theirhost, theirserver, theirnick, flag, extra) = stuff
             self.assertEqual(myname, 'userone')
             self.assertEqual(group, '#groupname')
-            self.assertTrue(theirname in wantusers)
+            self.assertIn(theirname, wantusers)
             self.assertEqual(theirhost, 'realmname')
             self.assertEqual(theirserver, 'realmname')
             wantusers.remove(theirnick)

@@ -405,7 +405,7 @@ class ProcmonTests(unittest.TestCase):
         self.pm.startService()
         # advance the reactor to start the process
         self.reactor.advance(0)
-        self.assertTrue("foo" in self.pm.protocols)
+        self.assertIn("foo", self.pm.protocols)
 
 
     def test_stopService(self):

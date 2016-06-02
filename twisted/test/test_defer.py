@@ -1643,7 +1643,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
 
     def tearDown(self):
         # Sanity check that the canceller was called at most once.
-        self.assertTrue(self.cancellerCallCount in (0, 1))
+        self.assertIn(self.cancellerCallCount, (0, 1))
 
 
     def _callback(self, data):

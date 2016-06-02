@@ -1193,7 +1193,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         path = filepath.FilePath(self.mktemp())
         f = path.create()
-        self.assertTrue("b" in f.mode)
+        self.assertIn("b", f.mode)
         f.write(b"\n")
         f.close()
         read = open(path.path, "rb").read()

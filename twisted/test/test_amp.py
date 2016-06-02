@@ -1346,7 +1346,7 @@ class AMPTests(unittest.TestCase):
         self.assertEqual(type(repr(amp._SwitchBox('a'))), str)
         self.assertEqual(type(repr(amp.QuitBox())), str)
         self.assertEqual(type(repr(amp.AmpBox())), str)
-        self.assertTrue("AmpBox" in repr(amp.AmpBox()))
+        self.assertIn("AmpBox", repr(amp.AmpBox()))
 
 
     def test_innerProtocolInRepr(self):
@@ -1411,9 +1411,9 @@ class AMPTests(unittest.TestCase):
         self.assertTrue(tl.isLocal)
         self.assertEqual(tl.keyName, b'hello')
         self.failUnlessIdentical(tl.value, x)
-        self.assertTrue(str(len(x)) in repr(tl))
-        self.assertTrue("value" in repr(tl))
-        self.assertTrue('hello' in repr(tl))
+        self.assertIn(str(len(x)), repr(tl))
+        self.assertIn("value", repr(tl))
+        self.assertIn('hello', repr(tl))
 
 
     def test_helloWorldCommand(self):
