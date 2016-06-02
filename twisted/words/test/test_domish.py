@@ -9,7 +9,7 @@ from __future__ import absolute_import, division
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import unicode
+from twisted.python.compat import _PY3, unicode
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.words.xish import domish
@@ -62,21 +62,21 @@ class ElementTests(unittest.TestCase):
 
     def testChildOps(self):
         e = domish.Element(("testns", "foo"))
-        e.addContent("somecontent")
+        e.addContent(u"somecontent")
         b2 = e.addElement(("testns2", "bar2"))
         e["attrib1"] = "value1"
         e[("testns2", "attrib2")] = "value2"
         e.addElement("bar")
         e.addElement("bar")
-        e.addContent("abc")
-        e.addContent("123")
+        e.addContent(u"abc")
+        e.addContent(u"123")
 
         # Check content merging
         self.assertEqual(e.children[-1], "abc123")
 
         # Check direct child accessor
         self.assertEqual(e.bar2, b2)
-        e.bar2.addContent("subcontent")
+        e.bar2.addContent(u"subcontent")
         e.bar2["bar2value"] = "somevalue"
 
         # Check child ops
@@ -108,7 +108,7 @@ class ElementTests(unittest.TestCase):
         Extract ascii character data using L{str}.
         """
         element = domish.Element((u"testns", u"foo"))
-        element.addContent("somecontent")
+        element.addContent(u"somecontent")
 
         text = str(element)
         self.assertEqual("somecontent", text)
@@ -148,6 +148,47 @@ class ElementTests(unittest.TestCase):
         element.addElement("bar")
         element.addChild(u"def")
         self.assertEqual(u"abc", unicode(element))
+
+
+    def test_addContentBytes(self):
+        """
+        Text passed to addContent as bytes is decoded from utf-8.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        if _PY3:
+            self.assertRaises(TypeError, element.addContent, b'bytes')
+        else:
+            element.addContent(b'bytes')
+            self.assertEqual(u"bytes", unicode(element))
+            currentWarnings = self.flushWarnings(offendingFunctions=[
+                element.addContent])
+            self.assertEqual(len(currentWarnings), 1)
+            self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                currentWarnings[0]['message'],
+                "The use of byte strings for 'text' "
+                "was deprecated in Twisted 16.3.0: "
+                "use unicode strings instead")
+
+
+    def test_addContentBytesNonASCII(self):
+        """
+        Text passed to addContent as bytes is decoded from utf-8.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        if _PY3:
+            self.assertRaises(TypeError, element.addContent, b'\xc3\xa1')
+        else:
+            self.assertRaises(UnicodeError, element.addContent, b'\xc3\xa1')
+            currentWarnings = self.flushWarnings(offendingFunctions=[
+                element.addContent])
+            self.assertEqual(len(currentWarnings), 1)
+            self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                currentWarnings[0]['message'],
+                "The use of byte strings for 'text' "
+                "was deprecated in Twisted 16.3.0: "
+                "use unicode strings instead")
 
 
     def test_addElementContent(self):

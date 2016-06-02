@@ -14,8 +14,8 @@ from __future__ import absolute_import, division
 
 from zope.interface import implementer, Interface, Attribute
 
-from twisted.python.compat import (_PY3, StringType, iteritems, itervalues,
-                                   unicode)
+from twisted.python.compat import (_PY3, StringType, _coercedUnicode, iteritems,
+                                   itervalues, unicode)
 
 def _splitPrefix(name):
     """ Internal method for splitting a prefixed Element name into its
@@ -305,7 +305,7 @@ class IElement(Interface):
         child.
 
         @param text: The character data to be added to this element.
-        @type node: L{unicode}
+        @type text: L{unicode}
         """
 
 
@@ -513,7 +513,7 @@ class Element(object):
 
     def addContent(self, text):
         """ Add some text data to this Element. """
-        text = unicode(text)
+        text = _coercedUnicode(text, 'text')
         c = self.children
         if len(c) > 0 and isinstance(c[-1], unicode):
             c[-1] = c[-1] + text
@@ -700,10 +700,14 @@ else:
 
         def gotText(self, data):
             if self.currElem != None:
+                if isinstance(data, bytes):
+                    data = data.decode('ascii')
                 self.currElem.addContent(data)
 
         def gotCData(self, data):
             if self.currElem != None:
+                if isinstance(data, bytes):
+                    data = data.decode('ascii')
                 self.currElem.addContent(data)
 
         def gotComment(self, data):
@@ -720,7 +724,10 @@ else:
             # If this is an entity we know about, add it as content
             # to the current element
             if entityRef in SuxElementStream.entities:
-                self.currElem.addContent(SuxElementStream.entities[entityRef])
+                data = SuxElementStream.entities[entityRef]
+                if isinstance(data, bytes):
+                    data = data.decode('ascii')
+                self.currElem.addContent(data)
 
         def gotTagEnd(self, name):
             # Ensure the document hasn't already ended
