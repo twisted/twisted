@@ -148,7 +148,7 @@ class LoggingFileTests(unittest.TestCase):
         L{LoggingFile.isatty} returns C{False}.
         """
         f = LoggingFile(self.logger)
-        self.assertEqual(f.isatty(), False)
+        self.assertFalse(f.isatty())
 
 
     def test_writeBuffering(self):

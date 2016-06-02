@@ -23,7 +23,7 @@ class QuitTests(SynchronousTestCase):
         L{Quit.isSet} starts as L{False}.
         """
         quit = Quit()
-        self.assertEqual(quit.isSet, False)
+        self.assertFalse(quit.isSet)
 
 
     def test_setSetsSet(self):

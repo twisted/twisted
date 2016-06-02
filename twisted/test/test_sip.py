@@ -275,7 +275,7 @@ class ViaTests(unittest.TestCase):
         self.assertEqual(v.port, 4000)
         self.assertIsNone(v.rport)
         self.assertIsNone(v.rportValue)
-        self.assertEqual(v.rportRequested, False)
+        self.assertFalse(v.rportRequested)
         self.assertEqual(v.ttl, 16)
         self.assertEqual(v.maddr, "224.2.0.1")
         self.assertEqual(v.branch, "a7c6a8dlze")
@@ -296,7 +296,7 @@ class ViaTests(unittest.TestCase):
         self.assertEqual(v.port, 5060)
         self.assertIsNone(v.rport)
         self.assertIsNone(v.rportValue)
-        self.assertEqual(v.rportRequested, False)
+        self.assertFalse(v.rportRequested)
         self.assertIsNone(v.ttl)
         self.assertIsNone(v.maddr)
         self.assertIsNone(v.branch)
@@ -350,7 +350,7 @@ class ViaTests(unittest.TestCase):
         """
         v = sip.Via("foo.bar", rport=1)
         self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport=1")
-        self.assertEqual(v.rportRequested, False)
+        self.assertFalse(v.rportRequested)
         self.assertEqual(v.rportValue, 1)
         self.assertEqual(v.rport, 1)
 

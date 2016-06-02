@@ -862,7 +862,7 @@ class DebugModeTests(SynchronousTestCase):
             typ, exc, tb = sys.exc_info()
             f = failure.Failure()
         self.assertEqual(self.result, [tb])
-        self.assertEqual(f.captureVars, False)
+        self.assertFalse(f.captureVars)
 
 
     def test_captureVars(self):

@@ -948,7 +948,7 @@ class DelayedTests(unittest.TestCase):
         self.assertTrue(dcall.active())
 
         def checkDeferredCall(success):
-            self.assertEqual(dcall.active(), False)
+            self.assertFalse(dcall.active())
             return success
 
         self.deferred.addCallback(checkDeferredCall)

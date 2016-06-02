@@ -25,7 +25,7 @@ class DeprecationTests(unittest.TestCase):
             "deprecated in Twisted 13.1.0: crippled is always False",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
-        self.assertEqual(crippled, False)
+        self.assertFalse(crippled)
 
 
 

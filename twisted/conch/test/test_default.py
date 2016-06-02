@@ -134,7 +134,7 @@ class SSHUserAuthClientTests(TestCase):
         client.getPublicKey()
 
         def _cbGetPrivateKey(key):
-            self.assertEqual(key.isPublic(), False)
+            self.assertFalse(key.isPublic())
             self.assertEqual(key, rsaPrivate)
 
         return client.getPrivateKey().addCallback(_cbGetPrivateKey)
@@ -162,7 +162,7 @@ class SSHUserAuthClientTests(TestCase):
             return passphrase
 
         def _cbGetPrivateKey(key):
-            self.assertEqual(key.isPublic(), False)
+            self.assertFalse(key.isPublic())
             self.assertEqual(key, rsaPrivate)
 
         self.patch(client, '_getPassword', _getPassword)

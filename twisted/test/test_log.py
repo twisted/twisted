@@ -1022,7 +1022,7 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         """
         stdio = log.StdioOnnaStick()
         stdio.write("hello\n")
-        self.assertEqual(self.resultLogs[0]['isError'], False)
+        self.assertFalse(self.resultLogs[0]['isError'])
         self.assertTrue(self.resultLogs[0]['printed'])
 
 

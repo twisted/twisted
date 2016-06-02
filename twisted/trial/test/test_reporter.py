@@ -981,7 +981,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
         """
         shouldStop is False to begin with.
         """
-        self.assertEqual(False, self.result.shouldStop)
+        self.assertFalse(self.result.shouldStop)
 
 
     def test_shouldStopTrueAfterStop(self):
@@ -1016,7 +1016,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
             1 / 0
         except ZeroDivisionError:
             self.result.addError(self.test, sys.exc_info())
-        self.assertEqual(False, self.result.wasSuccessful())
+        self.assertFalse(self.result.wasSuccessful())
 
 
     def test_wasSuccessfulFalseAfterFailures(self):
@@ -1027,7 +1027,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
             self.fail("foo")
         except self.failureException:
             self.result.addFailure(self.test, sys.exc_info())
-        self.assertEqual(False, self.result.wasSuccessful())
+        self.assertFalse(self.result.wasSuccessful())
 
 
 

@@ -159,7 +159,7 @@ class ThreadWorkerTests(SynchronousTestCase):
             doIt.done = True
         doIt.done = False
         self.worker.do(doIt)
-        self.assertEqual(doIt.done, False)
+        self.assertFalse(doIt.done)
         self.assertRaises(FakeQueueEmpty, self.fakeThreads[0].target)
         self.assertTrue(doIt.done)
 
@@ -217,7 +217,7 @@ class LockWorkerTests(SynchronousTestCase):
         worker.do(work)
         self.assertTrue(work.done)
         self.assertTrue(work.acquired)
-        self.assertEqual(lock.acquired, False)
+        self.assertFalse(lock.acquired)
 
 
     def test_doUnwindsReentrancy(self):
@@ -282,7 +282,7 @@ class LockWorkerTests(SynchronousTestCase):
         worker.do(phase1)
         self.assertTrue(phase1.complete)
         self.assertTrue(phase2.complete)
-        self.assertEqual(lock.acquired, False)
+        self.assertFalse(lock.acquired)
         lock = None
         gc.collect()
         self.assertIsNone(ref())

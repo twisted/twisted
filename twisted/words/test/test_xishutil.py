@@ -182,7 +182,7 @@ class EventDispatcherTests(unittest.TestCase):
 
         d.addObserver("/presence", cb.call)
         result = d.dispatch(msg)
-        self.assertEqual(False, result)
+        self.assertFalse(result)
 
         result = d.dispatch(pres)
         self.assertTrue(result)

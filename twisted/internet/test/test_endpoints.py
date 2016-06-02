@@ -1092,7 +1092,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         instance returns a call to the process transport's loseConnection.
         """
         self.endpointTransport.loseConnection()
-        self.assertEqual(self.process.connected, False)
+        self.assertFalse(self.process.connected)
 
 
     def test_getHost(self):
@@ -2814,7 +2814,7 @@ class ClientStringTests(unittest.TestCase):
         client = endpoints.clientFromString(
             object(), "unix:path=/var/foo/bar")
         self.assertEqual(client._timeout, 30)
-        self.assertEqual(client._checkPID, False)
+        self.assertFalse(client._checkPID)
 
 
     def test_unixPathPositionalArg(self):
@@ -3012,7 +3012,7 @@ class SSLClientStringTests(unittest.TestCase):
             reactor, "ssl:host=simple.example.org:port=4321")
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
-        self.assertEqual(certOptions.verify, False)
+        self.assertFalse(certOptions.verify)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
 

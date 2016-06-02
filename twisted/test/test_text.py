@@ -187,7 +187,7 @@ class StrFileTests(unittest.TestCase):
         pass
 
     def test_1_f(self):
-        self.assertEqual(False, text.strFile("x", self.io))
+        self.assertFalse(text.strFile("x", self.io))
 
     def test_1_1(self):
         self.assertTrue(text.strFile("t", self.io))
@@ -220,7 +220,7 @@ class StrFileTests(unittest.TestCase):
         self.assertTrue(text.strFile("ing", self.io))
 
     def test_3_f(self):
-        self.assertEqual(False, text.strFile("bla", self.io))
+        self.assertFalse(text.strFile("bla", self.io))
 
     def test_large_1(self):
         self.assertTrue(text.strFile("this is a test", self.io))
@@ -229,10 +229,10 @@ class StrFileTests(unittest.TestCase):
         self.assertTrue(text.strFile("is a test string", self.io))
 
     def test_large_f(self):
-        self.assertEqual(False, text.strFile("ds jhfsa k fdas", self.io))
+        self.assertFalse(text.strFile("ds jhfsa k fdas", self.io))
 
     def test_overlarge_f(self):
-        self.assertEqual(False, text.strFile("djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew", self.io))
+        self.assertFalse(text.strFile("djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew", self.io))
 
     def test_self(self):
         self.assertTrue(text.strFile("this is a test string", self.io))

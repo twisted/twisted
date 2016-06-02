@@ -33,7 +33,7 @@ class FileEntryMixin:
         """
         zip files should not be ttys, so isatty() should be false
         """
-        self.assertEqual(self.getFileEntry('').isatty(), False)
+        self.assertFalse(self.getFileEntry('').isatty())
 
 
     def test_closed(self):
@@ -42,7 +42,7 @@ class FileEntryMixin:
         called.
         """
         fileEntry = self.getFileEntry('')
-        self.assertEqual(fileEntry.closed, False)
+        self.assertFalse(fileEntry.closed)
         fileEntry.close()
         self.assertTrue(fileEntry.closed)
 

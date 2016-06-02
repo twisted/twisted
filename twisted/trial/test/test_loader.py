@@ -454,7 +454,7 @@ class LoaderTests(packages.SysPathManglingTest):
         suite = self.loader.loadPackage(package, recurse=True)
         result = reporter.Reporter()
         suite.run(result)
-        self.assertEqual(False, result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(2, len(result.errors))
         errors = [test.id() for test, error in result.errors]
         errors.sort()

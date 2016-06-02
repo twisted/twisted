@@ -273,7 +273,7 @@ class ServerOptionsTests(unittest.TestCase):
         """
         config = twistd.ServerOptions()
         config.postOptions()
-        self.assertEqual(config['no_save'], False)
+        self.assertFalse(config['no_save'])
 
 
     def test_listAllProfilers(self):

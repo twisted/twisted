@@ -119,8 +119,7 @@ class EntryTestsMixin:
         given hostname.
         """
         self.assertTrue(self.entry.matchesHost("www.twistedmatrix.com"))
-        self.assertEqual(False, self.entry.matchesHost(
-                "www.divmod.com"))
+        self.assertFalse(self.entry.matchesHost("www.divmod.com"))
 
 
 
@@ -282,14 +281,14 @@ class UnparsedEntryTests(TestCase, EntryTestsMixin):
         """
         An unparsed entry can't match any hosts.
         """
-        self.assertEqual(False, self.entry.matchesHost("www.twistedmatrix.com"))
+        self.assertFalse(self.entry.matchesHost("www.twistedmatrix.com"))
 
 
     def test_matchesKey(self):
         """
         An unparsed entry can't match any keys.
         """
-        self.assertEqual(False, self.entry.matchesKey(Key.fromString(sampleKey)))
+        self.assertFalse(self.entry.matchesKey(Key.fromString(sampleKey)))
 
 
     def test_toString(self):
@@ -590,7 +589,7 @@ class KnownHostsDatabaseTests(TestCase):
         knownHostsFile = KnownHostsFile.fromPath(FilePath(pn))
         entries = list(knownHostsFile.iterentries())
         self.assertEqual([], entries)
-        self.assertEqual(False, FilePath(pn).exists())
+        self.assertFalse(FilePath(pn).exists())
         knownHostsFile.save()
         self.assertTrue(FilePath(pn).exists())
 
@@ -696,7 +695,7 @@ class KnownHostsDatabaseTests(TestCase):
         hostname is not present.
         """
         hostsFile = self.loadSampleHostsFile()
-        self.assertEqual(False, hostsFile.hasHostKey(
+        self.assertFalse(hostsFile.hasHostKey(
                 "non-existent.example.com", Key.fromString(sampleKey)))
 
 

@@ -2561,7 +2561,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         L{dns._OPTHeader.dnssecOK} defaults to False.
         """
-        self.assertEqual(dns._OPTHeader().dnssecOK, False)
+        self.assertFalse(dns._OPTHeader().dnssecOK)
 
 
     def test_dnssecOKOverride(self):

@@ -805,10 +805,10 @@ class FilePathTests(AbstractFilePathTests):
         # test caching
         self.assertTrue(p.exists())
         p.restat(reraise=False)
-        self.assertEqual(p.exists(), False)
-        self.assertEqual(p.islink(), False)
-        self.assertEqual(p.isdir(), False)
-        self.assertEqual(p.isfile(), False)
+        self.assertFalse(p.exists())
+        self.assertFalse(p.islink())
+        self.assertFalse(p.isdir())
+        self.assertFalse(p.isfile())
 
     def testPersist(self):
         newpath = pickle.loads(pickle.dumps(self.path))
@@ -1050,10 +1050,10 @@ class FilePathTests(AbstractFilePathTests):
         # enticement for stat-caching logic to kick in and remember that these
         # exist / don't exist.
         self.assertTrue(fp.exists())
-        self.assertEqual(fp2.exists(), False)
+        self.assertFalse(fp2.exists())
 
         fp.moveTo(fp2)
-        self.assertEqual(fp.exists(), False)
+        self.assertFalse(fp.exists())
         self.assertTrue(fp2.exists())
 
 
@@ -1328,7 +1328,7 @@ class FilePathTests(AbstractFilePathTests):
         an operation has occurred in the mean time.
         """
         fp = filepath.FilePath(self.mktemp())
-        self.assertEqual(fp.exists(), False)
+        self.assertFalse(fp.exists())
 
         fp.makedirs()
         self.assertTrue(fp.exists())

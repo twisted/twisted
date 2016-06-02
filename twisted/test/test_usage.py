@@ -268,7 +268,7 @@ class SubCommandTests(unittest.TestCase):
         self.assertTrue(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'inquisition')
         self.assertIsInstance(o.subOptions, InquisitionOptions)
-        self.assertEqual(o.subOptions['expect'], False)
+        self.assertFalse(o.subOptions['expect'])
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
     def test_subcommandWithFlagsAndOptions(self):
@@ -277,7 +277,7 @@ class SubCommandTests(unittest.TestCase):
         """
         o = SubCommandOptions()
         o.parseOptions(['inquisition', '--expect', '--torture-device=feather'])
-        self.assertEqual(o['europian-swallow'], False)
+        self.assertFalse(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'inquisition')
         self.assertIsInstance(o.subOptions, InquisitionOptions)
         self.assertTrue(o.subOptions['expect'])
@@ -289,7 +289,7 @@ class SubCommandTests(unittest.TestCase):
         """
         o = SubCommandOptions()
         o.parseOptions(['inquest', '--expect', '--torture-device=feather'])
-        self.assertEqual(o['europian-swallow'], False)
+        self.assertFalse(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'inquisition')
         self.assertIsInstance(o.subOptions, InquisitionOptions)
         self.assertTrue(o.subOptions['expect'])
@@ -301,10 +301,10 @@ class SubCommandTests(unittest.TestCase):
         """
         o = SubCommandOptions()
         o.parseOptions(['holyquest', '--for-grail'])
-        self.assertEqual(o['europian-swallow'], False)
+        self.assertFalse(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'holyquest')
         self.assertIsInstance(o.subOptions, HolyQuestOptions)
-        self.assertEqual(o.subOptions['horseback'], False)
+        self.assertFalse(o.subOptions['horseback'])
         self.assertTrue(o.subOptions['for-grail'])
 
     def test_noSubcommand(self):
@@ -328,7 +328,7 @@ class SubCommandTests(unittest.TestCase):
         self.assertTrue(o['europian-swallow'])
         self.assertEqual(o.subCommand, 'inquisition')
         self.assertIsInstance(o.subOptions, InquisitionOptions)
-        self.assertEqual(o.subOptions['expect'], False)
+        self.assertFalse(o.subOptions['expect'])
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
     def test_subCommandParseOptionsHasParent(self):

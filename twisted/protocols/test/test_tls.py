@@ -935,7 +935,7 @@ class TLSProducerTests(TestCase):
         tlsProtocol.transport.producer.resumeProducing()
         self.assertEqual(producer.producerState, 'producing')
         self.assertEqual(producer.producerHistory, ['pause', 'resume'])
-        self.assertEqual(tlsProtocol._producer._producerPaused, False)
+        self.assertFalse(tlsProtocol._producer._producerPaused)
 
 
     def test_streamingProducerPausedInWriteBlockedOnReadMode(self):
@@ -974,10 +974,10 @@ class TLSProducerTests(TestCase):
         serverProtocol, serverTLSProtocol = buildTLSProtocol(server=True)
         self.flushTwoTLSProtocols(tlsProtocol, serverTLSProtocol)
         self.assertEqual(producer.producerHistory, ['pause', 'resume'])
-        self.assertEqual(tlsProtocol._producer._producerPaused, False)
+        self.assertFalse(tlsProtocol._producer._producerPaused)
 
         # Make sure we haven't disconnected for some reason:
-        self.assertEqual(tlsProtocol.transport.disconnecting, False)
+        self.assertFalse(tlsProtocol.transport.disconnecting)
         self.assertEqual(producer.producerState, 'producing')
 
 
@@ -1026,7 +1026,7 @@ class TLSProducerTests(TestCase):
 
         # Underlying transport should not have loseConnection called yet, nor
         # should producer be stopped:
-        self.assertEqual(tlsProtocol.transport.disconnecting, False)
+        self.assertFalse(tlsProtocol.transport.disconnecting)
         self.assertFalse("stop" in producer.producerHistory)
 
         # Writes from client to server should continue to go through, since we
@@ -1037,7 +1037,7 @@ class TLSProducerTests(TestCase):
         # Unregister producer; this should trigger TLS shutdown:
         clientProtocol.transport.unregisterProducer()
         self.assertNotEqual(tlsProtocol.transport.value(), b"")
-        self.assertEqual(tlsProtocol.transport.disconnecting, False)
+        self.assertFalse(tlsProtocol.transport.disconnecting)
 
         # Additional writes should not go through:
         clientProtocol.transport.write(b"won't")

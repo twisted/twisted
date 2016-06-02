@@ -2340,7 +2340,7 @@ class ClientTests(TestCase):
         """
         # Registration case: change illegal nickname to erroneousNickFallback
         badnick = 'foo'
-        self.assertEqual(self.protocol._registered, False)
+        self.assertFalse(self.protocol._registered)
         self.protocol.register(badnick)
         self.protocol.irc_ERR_ERRONEUSNICKNAME('prefix', ['param'])
         lastLine = self.getLastLine(self.transport)

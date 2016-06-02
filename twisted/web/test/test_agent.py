@@ -432,13 +432,13 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         self.pool._putConnection(("http", b"example.com", 80), protocol)
 
         # Connection is in pool, still not closed:
-        self.assertEqual(protocol.transport.disconnecting, False)
+        self.assertFalse(protocol.transport.disconnecting)
         self.assertIn(protocol,
                       self.pool._connections[("http", b"example.com", 80)])
 
         # Advance 239 seconds, still not closed:
         self.fakeReactor.advance(239)
-        self.assertEqual(protocol.transport.disconnecting, False)
+        self.assertFalse(protocol.transport.disconnecting)
         self.assertIn(protocol,
                       self.pool._connections[("http", b"example.com", 80)])
         self.assertIn(protocol, self.pool._timeouts)
@@ -525,7 +525,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
                 conn, self.pool._connections[("http", b"example.com", 80)])
             # And the timeout was cancelled:
             self.fakeReactor.advance(241)
-            self.assertEqual(conn.transport.disconnecting, False)
+            self.assertFalse(conn.transport.disconnecting)
             self.assertNotIn(conn, self.pool._timeouts)
 
         return self.pool.getConnection(("http", b"example.com", 80),
@@ -754,7 +754,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         """
         agent = client.Agent(self.reactor)
         self.assertIsInstance(agent._pool, HTTPConnectionPool)
-        self.assertEqual(agent._pool.persistent, False)
+        self.assertFalse(agent._pool.persistent)
         self.assertIs(agent._reactor, agent._pool._reactor)
 
 
@@ -786,7 +786,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         agent = client.Agent(self.reactor, pool=pool)
         agent._getEndpoint = lambda *args: self
         agent.request(b"GET", b"http://127.0.0.1")
-        self.assertEqual(self.protocol.requests[0][0].persistent, False)
+        self.assertFalse(self.protocol.requests[0][0].persistent)
 
 
     def test_connectUsesConnectionPool(self):
@@ -2344,7 +2344,7 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         """
         C{ProxyAgent} connections are not persistent by default.
         """
-        self.assertEqual(self.agent._pool.persistent, False)
+        self.assertFalse(self.agent._pool.persistent)
 
 
     def test_connectUsesConnectionPool(self):

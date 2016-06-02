@@ -1516,9 +1516,9 @@ class HalfCloseTests(unittest.TestCase):
             t.loseWriteConnection()
             return loopUntil(lambda :t._writeDisconnected)
         def check(ignored):
-            self.assertEqual(client.closed, False)
+            self.assertFalse(client.closed)
             self.assertTrue(client.writeHalfClosed)
-            self.assertEqual(client.readHalfClosed, False)
+            self.assertFalse(client.readHalfClosed)
             return loopUntil(lambda :f.protocol.readHalfClosed)
         def write(ignored):
             w = client.transport.write
@@ -1526,7 +1526,7 @@ class HalfCloseTests(unittest.TestCase):
             w(b"lalala fooled you")
             self.assertEqual(0, len(client.transport._tempDataBuffer))
             self.assertEqual(f.protocol.data, b"hello")
-            self.assertEqual(f.protocol.closed, False)
+            self.assertFalse(f.protocol.closed)
             self.assertTrue(f.protocol.readHalfClosed)
         return d.addCallback(loseWrite).addCallback(check).addCallback(write)
 
