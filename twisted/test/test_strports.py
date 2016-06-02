@@ -77,8 +77,8 @@ class ServiceTests(TestCase):
         self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
         # Maybe we should implement equality for endpoints.
         self.assertEqual(svc.endpoint._port, aGoodPort)
-        self.assertIdentical(svc.factory, aFactory)
-        self.assertIdentical(svc.endpoint._reactor, reactor)
+        self.assertIs(svc.factory, aFactory)
+        self.assertIs(svc.endpoint._reactor, reactor)
 
 
     def test_serviceDefaultReactor(self):
@@ -88,7 +88,7 @@ class ServiceTests(TestCase):
         """
         from twisted.internet import reactor as globalReactor
         aService = strports.service("tcp:80", None)
-        self.assertIdentical(aService.endpoint._reactor, globalReactor)
+        self.assertIs(aService.endpoint._reactor, globalReactor)
 
 
     def test_serviceDeprecatedDefault(self):

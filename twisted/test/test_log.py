@@ -71,7 +71,7 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
         """
         eventDict = dict(message=(), isError=0)
         text = log.textFromEventDict(eventDict)
-        self.assertIdentical(text, None)
+        self.assertIsNone(text)
 
 
 
@@ -700,7 +700,7 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         self.assertIsInstance(sys.stdout, LoggingFile)
         fakeStdout = sys.stdout
         observer = log.startLogging(sys.stdout)
-        self.assertIdentical(sys.stdout, fakeStdout)
+        self.assertIs(sys.stdout, fakeStdout)
 
 
     def test_startLoggingOverridesWarning(self):

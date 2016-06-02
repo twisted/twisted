@@ -156,7 +156,7 @@ class ConnectTests(unittest.TestCase):
             sent,
             struct.pack('!BBH', 0, 90, 34) + socket.inet_aton('127.0.0.1'))
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
-        self.assertNotIdentical(self.sock.driver_outgoing, None)
+        self.assertIsNotNone(self.sock.driver_outgoing)
 
         # Pass some data through and verify it is forwarded to the outgoing
         # connection.
@@ -198,7 +198,7 @@ class ConnectTests(unittest.TestCase):
 
         # A failed resolution causes the transport to drop the connection.
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
-        self.assertIdentical(self.sock.driver_outgoing, None)
+        self.assertIsNone(self.sock.driver_outgoing)
 
 
     def test_accessDenied(self):
@@ -212,7 +212,7 @@ class ConnectTests(unittest.TestCase):
                          struct.pack('!BBH', 0, 91, 0)
                          + socket.inet_aton('0.0.0.0'))
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
-        self.assertIdentical(self.sock.driver_outgoing, None)
+        self.assertIsNone(self.sock.driver_outgoing)
 
 
     def test_eofRemote(self):
@@ -284,7 +284,7 @@ class BindTests(unittest.TestCase):
 
         # connect
         incoming = self.sock.driver_listen.buildProtocol(('1.2.3.4', 5345))
-        self.assertNotIdentical(incoming, None)
+        self.assertIsNotNone(incoming)
         incoming.transport = StringTCPTransport()
         incoming.connectionMade()
 
@@ -339,11 +339,11 @@ class BindTests(unittest.TestCase):
             sent,
             struct.pack('!BBH', 0, 90, 1234) + socket.inet_aton('6.7.8.9'))
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
-        self.assertNotIdentical(self.sock.driver_listen, None)
+        self.assertIsNotNone(self.sock.driver_listen)
 
         # connect
         incoming = self.sock.driver_listen.buildProtocol(('127.0.0.1', 5345))
-        self.assertNotIdentical(incoming, None)
+        self.assertIsNotNone(incoming)
         incoming.transport = StringTCPTransport()
         incoming.connectionMade()
 
@@ -353,7 +353,7 @@ class BindTests(unittest.TestCase):
         self.assertEqual(sent,
                          struct.pack('!BBH', 0, 90, 0)
                          + socket.inet_aton('0.0.0.0'))
-        self.assertNotIdentical(
+        self.assertIsNot(
             self.sock.transport.stringTCPTransport_closing, None)
 
         # Deliver some data from the output connection and verify it is
@@ -394,7 +394,7 @@ class BindTests(unittest.TestCase):
 
         # A failed resolution causes the transport to drop the connection.
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
-        self.assertIdentical(self.sock.driver_outgoing, None)
+        self.assertIsNone(self.sock.driver_outgoing)
 
 
     def test_accessDenied(self):
@@ -408,7 +408,7 @@ class BindTests(unittest.TestCase):
                          struct.pack('!BBH', 0, 91, 0)
                          + socket.inet_aton('0.0.0.0'))
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
-        self.assertIdentical(self.sock.driver_listen, None)
+        self.assertIsNone(self.sock.driver_listen)
 
     def test_eofRemote(self):
         self.sock.dataReceived(
@@ -421,7 +421,7 @@ class BindTests(unittest.TestCase):
 
         # connect
         incoming = self.sock.driver_listen.buildProtocol(('1.2.3.4', 5345))
-        self.assertNotIdentical(incoming, None)
+        self.assertIsNotNone(incoming)
         incoming.transport = StringTCPTransport()
         incoming.connectionMade()
 
@@ -453,7 +453,7 @@ class BindTests(unittest.TestCase):
 
         # connect
         incoming = self.sock.driver_listen.buildProtocol(('1.2.3.4', 5345))
-        self.assertNotIdentical(incoming, None)
+        self.assertIsNotNone(incoming)
         incoming.transport = StringTCPTransport()
         incoming.connectionMade()
 
@@ -484,7 +484,7 @@ class BindTests(unittest.TestCase):
 
         # connect from WRONG address
         incoming = self.sock.driver_listen.buildProtocol(('1.6.6.6', 666))
-        self.assertIdentical(incoming, None)
+        self.assertIsNone(incoming)
 
         # Now we should have the second reply packet and it should
         # be a failure. The connection should be closing.

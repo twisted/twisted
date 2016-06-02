@@ -1457,16 +1457,16 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.ssh_NEWKEYS(b'')
         self.assertIs(self.proto.currentEncryptions,
                       self.proto.nextEncryptions)
-        self.assertIs(self.proto.outgoingCompression, None)
-        self.assertIs(self.proto.incomingCompression, None)
+        self.assertIsNone(self.proto.outgoingCompression)
+        self.assertIsNone(self.proto.incomingCompression)
         self.proto.outgoingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'CD')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.outgoingCompression, None)
+        self.assertIsNotNone(self.proto.outgoingCompression)
         self.proto.incomingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'EF')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.incomingCompression, None)
+        self.assertIsNotNone(self.proto.incomingCompression)
 
 
     def test_SERVICE_REQUEST(self):
@@ -1785,7 +1785,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         exchangeHash = h.digest()
 
         def _cbTestKEXDH_REPLY(value):
-            self.assertIs(value, None)
+            self.assertIsNone(value)
             self.assertEqual(self.calledVerifyHostKey, True)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
@@ -1835,19 +1835,19 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.nextEncryptions = MockCipher()
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIs(self.proto.outgoingCompression, None)
-        self.assertIs(self.proto.incomingCompression, None)
+        self.assertIsNone(self.proto.outgoingCompression)
+        self.assertIsNone(self.proto.incomingCompression)
         self.assertIs(self.proto.currentEncryptions,
                       self.proto.nextEncryptions)
         self.assertTrue(secure[0])
         self.proto.outgoingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'GH')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.outgoingCompression, None)
+        self.assertIsNotNone(self.proto.outgoingCompression)
         self.proto.incomingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'IJ')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.incomingCompression, None)
+        self.assertIsNotNone(self.proto.incomingCompression)
 
 
     def test_SERVICE_ACCEPT(self):
@@ -1963,7 +1963,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         exchangeHash = h.digest()
 
         def _cbTestKEX_DH_GEX_REPLY(value):
-            self.assertIs(value, None)
+            self.assertIsNone(value)
             self.assertEqual(self.calledVerifyHostKey, True)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 

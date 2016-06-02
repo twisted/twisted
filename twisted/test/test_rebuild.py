@@ -190,7 +190,7 @@ class NewStyleTests(unittest.TestCase):
         exec classDefinition in self.m.__dict__
         rebuild.updateInstance(inst)
         self.assertEqual(inst.a, 7)
-        self.assertIdentical(type(inst), self.m.SlottedClass)
+        self.assertIs(type(inst), self.m.SlottedClass)
 
     if sys.version_info < (2, 6):
         test_slots.skip = "__class__ assignment for class with slots is only available starting Python 2.6"
@@ -228,7 +228,7 @@ class NewStyleTests(unittest.TestCase):
         exec classDefinition in self.m.__dict__
         rebuild.updateInstance(inst)
         self.assertEqual(inst[0], 2)
-        self.assertIdentical(type(inst), self.m.ListSubclass)
+        self.assertIs(type(inst), self.m.ListSubclass)
 
 
     def test_instanceSlots(self):

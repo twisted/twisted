@@ -2340,7 +2340,7 @@ class Win32ProcessTests(unittest.TestCase):
         proc = reactor.spawnProcess(p, pyExe, pyArgs)
 
         def cbConnected(transport):
-            self.assertIdentical(transport, proc)
+            self.assertIs(transport, proc)
             # perform a basic validity test on the handles
             win32api.GetHandleInformation(proc.hProcess)
             win32api.GetHandleInformation(proc.hThread)
@@ -2351,9 +2351,9 @@ class Win32ProcessTests(unittest.TestCase):
 
         def checkTerminated(ignored):
             # The attributes on the process object must be reset...
-            self.assertIdentical(proc.pid, None)
-            self.assertIdentical(proc.hProcess, None)
-            self.assertIdentical(proc.hThread, None)
+            self.assertIsNone(proc.pid)
+            self.assertIsNone(proc.hProcess)
+            self.assertIsNone(proc.hThread)
             # ...and the handles must be closed.
             self.assertRaises(win32api.error,
                               win32api.GetHandleInformation, self.hProcess)

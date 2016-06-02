@@ -1155,7 +1155,7 @@ class DTPFactoryTests(unittest.TestCase):
         self.assertIsInstance(protocol, ftp.DTP)
 
         # A subsequent call returns None.
-        self.assertIdentical(self.factory.buildProtocol(None), None)
+        self.assertIsNone(self.factory.buildProtocol(None))
 
 
     def test_timeoutAfterConnection(self):
@@ -1184,7 +1184,7 @@ class DTPFactoryTests(unittest.TestCase):
         self.reactor.advance(10)
 
         # Try to get a protocol - we should not be able to.
-        self.assertIdentical(self.factory.buildProtocol(None), None)
+        self.assertIsNone(self.factory.buildProtocol(None))
 
         # Make sure the Deferred is doing the right thing.
         return d

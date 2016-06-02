@@ -387,7 +387,7 @@ class SerializerTests(unittest.TestCase):
     def testLocalPrefixesWithChild(self):
         e = domish.Element(('testns', 'foo'), localPrefixes={'bar': 'testns'})
         e.addElement('baz')
-        self.assertIdentical(e.baz.defaultUri, None)
+        self.assertIsNone(e.baz.defaultUri)
         self.assertEqual(e.toXml(), "<bar:foo xmlns:bar='testns'><baz/></bar:foo>")
 
     def test_prefixesReuse(self):
@@ -403,7 +403,7 @@ class SerializerTests(unittest.TestCase):
 
         # test passing of dictionary
         s = domish.SerializerClass(prefixes=prefixes)
-        self.assertNotIdentical(prefixes, s.prefixes)
+        self.assertIsNot(prefixes, s.prefixes)
 
         # test proper serialization on prefixes reuse
         e = domish.Element(('testns2', 'foo'),

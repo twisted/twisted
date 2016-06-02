@@ -561,8 +561,8 @@ class RunStateTests(unittest.TestCase):
         self.assertEqual(len(results1), 1)
         self.assertEqual(len(results2), 1)
 
-        self.assertIdentical(results1[0], self.task._iterator)
-        self.assertIdentical(results2[0], self.task._iterator)
+        self.assertIs(results1[0], self.task._iterator)
+        self.assertIs(results2[0], self.task._iterator)
 
         self.assertEqual(final1, [1])
         self.assertEqual(final2, [2])

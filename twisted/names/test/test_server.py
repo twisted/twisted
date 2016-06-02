@@ -316,7 +316,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         L{server.DNSServerFactory.cache} is L{None} by default.
         """
-        self.assertIs(server.DNSServerFactory().cache, None)
+        self.assertIsNone(server.DNSServerFactory().cache)
 
 
     def test_cacheOverride(self):

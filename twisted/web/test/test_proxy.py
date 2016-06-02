@@ -85,7 +85,7 @@ class ReverseProxyResourceTests(TestCase):
         self.assertEqual(child.path, b"/path/foo")
         self.assertEqual(child.port, 1234)
         self.assertEqual(child.host, u"127.0.0.1")
-        self.assertIdentical(child.reactor, resource.reactor)
+        self.assertIs(child.reactor, resource.reactor)
 
 
     def test_getChildWithSpecial(self):

@@ -1067,7 +1067,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         before C{addCallback} returns), L{SynchronousTestCase.successResultOf}
         returns that result.
         """
-        self.assertIdentical(
+        self.assertIs(
             self.result, self.successResultOf(succeed(self.result)))
 
 
@@ -1078,7 +1078,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
         returns that L{Failure} if that L{Failure}'s type is expected.
         """
-        self.assertIdentical(
+        self.assertIs(
             self.failure,
             self.failureResultOf(fail(self.failure), self.failure.type,
                                  KeyError))
@@ -1091,7 +1091,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
         before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
         returns that L{Failure}.
         """
-        self.assertIdentical(
+        self.assertIs(
             self.failure, self.failureResultOf(fail(self.failure)))
 
 

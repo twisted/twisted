@@ -248,7 +248,7 @@ class HeadingTests(TestCase):
         C{ValueError}.
         """
         h = base.Heading.fromFloats(1.)
-        self.assertIdentical(None, h.variation.inDecimalDegrees)
+        self.assertIsNone(h.variation.inDecimalDegrees)
         self.assertRaises(ValueError, h.setSign, 1)
 
 

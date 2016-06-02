@@ -81,8 +81,8 @@ class FileEntryMixin:
         C{__iter__()} and C{xreadlines()} should return C{self}.
         """
         fileEntry = self.getFileEntry('')
-        self.assertIdentical(iter(fileEntry), fileEntry)
-        self.assertIdentical(fileEntry.xreadlines(), fileEntry)
+        self.assertIs(iter(fileEntry), fileEntry)
+        self.assertIs(fileEntry.xreadlines(), fileEntry)
 
 
     def test_readWhole(self):

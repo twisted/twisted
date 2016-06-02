@@ -133,7 +133,7 @@ class WrapperTests(unittest.TestCase):
         f = Server()
         wf = policies.WrappingFactory(f)
         p = wf.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 35))
-        self.assertIdentical(p.wrappedProtocol.factory, f)
+        self.assertIs(p.wrappedProtocol.factory, f)
 
 
     def test_transportInterfaces(self):
@@ -256,7 +256,7 @@ class WrapperTests(unittest.TestCase):
         wrapper = self._getWrapper()
         producer = object()
         wrapper.registerProducer(producer, True)
-        self.assertIdentical(wrapper.transport.producer, producer)
+        self.assertIs(wrapper.transport.producer, producer)
         self.assertTrue(wrapper.transport.streaming)
 
 
@@ -269,8 +269,8 @@ class WrapperTests(unittest.TestCase):
         producer = object()
         wrapper.registerProducer(producer, True)
         wrapper.unregisterProducer()
-        self.assertIdentical(wrapper.transport.producer, None)
-        self.assertIdentical(wrapper.transport.streaming, None)
+        self.assertIsNone(wrapper.transport.producer)
+        self.assertIsNone(wrapper.transport.streaming)
 
 
     def test_stopConsuming(self):

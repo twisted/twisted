@@ -28,7 +28,7 @@ class TagTests(TestCase):
         L{Tag.fillSlots} returns self.
         """
         tag = proto()
-        self.assertIdentical(tag, tag.fillSlots(test='test'))
+        self.assertIs(tag, tag.fillSlots(test='test'))
 
 
     def test_cloneShallow(self):
@@ -46,12 +46,12 @@ class TagTests(TestCase):
         tag.columnNumber = 12
         clone = tag.clone(deep=False)
         self.assertEqual(clone.attributes['hello'], 'world')
-        self.assertNotIdentical(clone.attributes, tag.attributes)
+        self.assertIsNot(clone.attributes, tag.attributes)
         self.assertEqual(clone.children, ["How are you", innerList])
-        self.assertNotIdentical(clone.children, tag.children)
-        self.assertIdentical(clone.children[1], innerList)
+        self.assertIsNot(clone.children, tag.children)
+        self.assertIs(clone.children[1], innerList)
         self.assertEqual(tag.slotData, clone.slotData)
-        self.assertNotIdentical(tag.slotData, clone.slotData)
+        self.assertIsNot(tag.slotData, clone.slotData)
         self.assertEqual(clone.filename, "foo/bar")
         self.assertEqual(clone.lineNumber, 6)
         self.assertEqual(clone.columnNumber, 12)
@@ -74,18 +74,18 @@ class TagTests(TestCase):
         tag.columnNumber = 12
         clone = tag.clone()
         self.assertEqual(clone.attributes['hello'], 'world')
-        self.assertNotIdentical(clone.attributes, tag.attributes)
-        self.assertNotIdentical(clone.children, tag.children)
+        self.assertIsNot(clone.attributes, tag.attributes)
+        self.assertIsNot(clone.children, tag.children)
         # sanity check
-        self.assertIdentical(tag.children[1], innerTag)
+        self.assertIs(tag.children[1], innerTag)
         # clone should have sub-clone
-        self.assertNotIdentical(clone.children[1], innerTag)
+        self.assertIsNot(clone.children[1], innerTag)
         # sanity check
-        self.assertIdentical(tag.children[2], innerList)
+        self.assertIs(tag.children[2], innerList)
         # clone should have sub-clone
-        self.assertNotIdentical(clone.children[2], innerList)
+        self.assertIsNot(clone.children[2], innerList)
         self.assertEqual(tag.slotData, clone.slotData)
-        self.assertNotIdentical(tag.slotData, clone.slotData)
+        self.assertIsNot(tag.slotData, clone.slotData)
         self.assertEqual(clone.filename, "foo/bar")
         self.assertEqual(clone.lineNumber, 6)
         self.assertEqual(clone.columnNumber, 12)

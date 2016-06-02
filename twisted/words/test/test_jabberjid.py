@@ -125,14 +125,14 @@ class JIDTests(unittest.TestCase):
         """
         j1 = jid.JID("user@host/resource")
         j2 = jid.internJID("user@host")
-        self.assertIdentical(j2, j1.userhostJID())
+        self.assertIs(j2, j1.userhostJID())
 
     def test_userhostJIDNoResource(self):
         """
         Test getting a JID object of the bare JID when there was no resource.
         """
         j = jid.JID("user@host")
-        self.assertIdentical(j, j.userhostJID())
+        self.assertIs(j, j.userhostJID())
 
     def test_fullHost(self):
         """
@@ -168,7 +168,7 @@ class JIDTests(unittest.TestCase):
         """
         j1 = jid.JID("user@host/resource")
         j2 = jid.JID("user@host/resource")
-        self.assertNotIdentical(j1, j2)
+        self.assertIsNot(j1, j2)
         self.assertEqual(j1, j2)
 
     def test_equalityWithNonJIDs(self):
@@ -222,4 +222,4 @@ class InternJIDTests(unittest.TestCase):
         """
         j1 = jid.internJID("user@host")
         j2 = jid.internJID("user@host")
-        self.assertIdentical(j1, j2)
+        self.assertIs(j1, j2)

@@ -177,7 +177,7 @@ class TrialRunnerTests(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
         L{twisted.python.log} as the value for the C{publisher} parameter.
         """
         result = self.runner._makeResult()
-        self.assertIdentical(result._publisher, log)
+        self.assertIs(result._publisher, log)
 
 
 
@@ -751,7 +751,7 @@ class TestHolderTests(unittest.SynchronousTestCase):
         """
         L{runner.TestHolder} implements L{ITestCase}.
         """
-        self.assertIdentical(self.holder, ITestCase(self.holder))
+        self.assertIs(self.holder, ITestCase(self.holder))
         self.assertTrue(
             verifyObject(ITestCase, self.holder),
             "%r claims to provide %r but does not do so correctly."

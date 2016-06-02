@@ -127,7 +127,7 @@ class SuccessMixin(object):
         self.assertSuccessful(test, self.result)
         del test
         gc.collect()
-        self.assertIdentical(ref(), None)
+        self.assertIsNone(ref())
 
 
 class SynchronousSuccessTests(SuccessMixin, unittest.SynchronousTestCase):
@@ -1041,9 +1041,9 @@ class TestDecoratorMixin(object):
                          "Different class")
         observedOriginal = getattr(observed, '_originalTest', None)
         expectedOriginal = getattr(expected, '_originalTest', None)
-        self.assertIdentical(observedOriginal, expectedOriginal)
+        self.assertIs(observedOriginal, expectedOriginal)
         if observedOriginal is expectedOriginal is None:
-            self.assertIdentical(observed, expected)
+            self.assertIs(observed, expected)
 
     def assertSuitesEqual(self, observed, expected):
         """

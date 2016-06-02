@@ -251,10 +251,10 @@ class LockWorkerTests(SynchronousTestCase):
         ref = weakref.ref(lock)
         worker = LockWorker(lock, local())
         lock = None
-        self.assertIsNot(ref(), None)
+        self.assertIsNotNone(ref())
         worker.quit()
         gc.collect()
-        self.assertIs(ref(), None)
+        self.assertIsNone(ref())
         self.assertRaises(AlreadyQuit, worker.quit)
         self.assertRaises(AlreadyQuit, worker.do, list)
 
@@ -285,7 +285,7 @@ class LockWorkerTests(SynchronousTestCase):
         self.assertEqual(lock.acquired, False)
         lock = None
         gc.collect()
-        self.assertIs(ref(), None)
+        self.assertIsNone(ref())
 
 
     def test_quitWhileGettingLock(self):

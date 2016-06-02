@@ -438,9 +438,9 @@ class InternetTests(unittest.TestCase):
         t.startService()
         self.failIfIdentical(t._port, None)
         t1 = copy.copy(t)
-        self.assertIdentical(t1._port, None)
+        self.assertIsNone(t1._port)
         t.stopService()
-        self.assertIdentical(t._port, None)
+        self.assertIsNone(t._port)
         self.assertFalse(t.running)
 
         factory = protocol.ClientFactory()
@@ -449,9 +449,9 @@ class InternetTests(unittest.TestCase):
         t.startService()
         self.failIfIdentical(t._connection, None)
         t1 = copy.copy(t)
-        self.assertIdentical(t1._connection, None)
+        self.assertIsNone(t1._connection)
         t.stopService()
-        self.assertIdentical(t._connection, None)
+        self.assertIsNone(t._connection)
         self.assertFalse(t.running)
 
     def testStoppingServer(self):
@@ -774,7 +774,7 @@ class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
         description = 'description'
         self.pluginResults = [FakeReactor(install, name, package, description)]
         installed = reactors.installReactor(name)
-        self.assertIdentical(installed, reactor)
+        self.assertIs(installed, reactor)
 
 
     def test_installReactorMultiplePlugins(self):

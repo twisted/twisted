@@ -150,7 +150,7 @@ class DOMHelpersTestsMixin:
         self.assertEqual(actual, expected.toxml())
 
         node=domhelpers.getIfExists(doc1, "pzork")
-        self.assertIdentical(node, None)
+        self.assertIsNone(node)
 
 
     def test_getAndClear(self):

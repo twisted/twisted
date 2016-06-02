@@ -698,7 +698,7 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
                          os.path.join(self.D.root, 'user'))
 
         self.D.postmaster = False
-        self.assertIdentical(self.D.userDirectory('nouser'), None)
+        self.assertIsNone(self.D.userDirectory('nouser'))
 
         self.D.postmaster = True
         self.assertEqual(self.D.userDirectory('nouser'),
@@ -771,7 +771,7 @@ class ServiceDomainTests(unittest.TestCase):
         domain = StubAliasableDomain()
         self.S.aliases = aliases
         self.S.addDomain('example.com', domain)
-        self.assertIdentical(domain.aliasGroup, aliases)
+        self.assertIs(domain.aliasGroup, aliases)
 
 
     def testReceivedHeader(self):
@@ -1153,7 +1153,7 @@ class MXTests(unittest.TestCase):
         """
         L{MXCalculator}'s default clock is C{twisted.internet.reactor}.
         """
-        self.assertIdentical(
+        self.assertIs(
             mail.relaymanager.MXCalculator(self.resolver).clock,
             reactor)
 
@@ -2197,7 +2197,7 @@ class SSLContextFactoryTests(unittest.TestCase):
         mail.protocols.SSLContextFactory
         warningsShown = self.flushWarnings([self.test_deprecation])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             'twisted.mail.protocols.SSLContextFactory was deprecated in '

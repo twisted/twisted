@@ -78,7 +78,7 @@ class SRVConnectorTests(unittest.TestCase):
                                                    payload=payload)]
         self.connector.connect()
 
-        self.assertIs(None, self.factory.reason)
+        self.assertIsNone(self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('host.example.org', 6269))
 
@@ -90,7 +90,7 @@ class SRVConnectorTests(unittest.TestCase):
         client.theResolver.failure = DNSNameError('example.org')
         self.connector.connect()
 
-        self.assertIs(None, self.factory.reason)
+        self.assertIsNone(self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
 
@@ -102,7 +102,7 @@ class SRVConnectorTests(unittest.TestCase):
         client.theResolver.results = []
         self.connector.connect()
 
-        self.assertIs(None, self.factory.reason)
+        self.assertIsNone(self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
 
@@ -119,7 +119,7 @@ class SRVConnectorTests(unittest.TestCase):
         client.theResolver.failure = ServiceNameUnknownError()
         self.connector.connect()
 
-        self.assertIs(None, self.factory.reason)
+        self.assertIsNone(self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 5222))
 
@@ -148,7 +148,7 @@ class SRVConnectorTests(unittest.TestCase):
                                                    payload=None)]
         self.connector.connect()
 
-        self.assertIs(None, self.factory.reason)
+        self.assertIsNone(self.factory.reason)
         self.assertEqual(
             self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
 
@@ -164,7 +164,7 @@ class SRVConnectorTests(unittest.TestCase):
                                                    payload=payload)]
         self.connector.connect()
 
-        self.assertIsNot(None, self.factory.reason)
+        self.assertIsNotNone(self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
         self.assertEqual(self.reactor.tcpClients, [])
 

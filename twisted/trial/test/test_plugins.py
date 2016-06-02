@@ -42,5 +42,5 @@ class PluginsTests(unittest.SynchronousTestCase):
         self.assertEqual('Subunit Reporter', subunitPlugin.name)
         self.assertEqual('twisted.trial.reporter', subunitPlugin.module)
         self.assertEqual('subunit', subunitPlugin.longOpt)
-        self.assertIdentical(None, subunitPlugin.shortOpt)
+        self.assertIsNone(subunitPlugin.shortOpt)
         self.assertEqual('SubunitReporter', subunitPlugin.klass)

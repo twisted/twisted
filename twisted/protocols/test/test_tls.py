@@ -278,9 +278,9 @@ class TLSMemoryBIOTests(TestCase):
         transport = StringTransport()
         sslProtocol.makeConnection(transport)
 
-        self.assertNotIdentical(clientProtocol.transport, None)
-        self.assertNotIdentical(clientProtocol.transport, transport)
-        self.assertIdentical(clientProtocol.transport, sslProtocol)
+        self.assertIsNotNone(clientProtocol.transport)
+        self.assertIsNot(clientProtocol.transport, transport)
+        self.assertIs(clientProtocol.transport, sslProtocol)
 
 
     def handshakeProtocols(self):
@@ -990,7 +990,7 @@ class TLSProducerTests(TestCase):
         producer2 = object()
         self.assertRaises(RuntimeError,
             clientProtocol.transport.registerProducer, producer2, True)
-        self.assertIdentical(tlsProtocol._producer, originalProducer)
+        self.assertIs(tlsProtocol._producer, originalProducer)
 
 
     def test_streamingProducerUnregister(self):
@@ -1210,7 +1210,7 @@ class TLSProducerTests(TestCase):
         # stopProducing will:
         producer = Producer()
         tlsProtocol.registerProducer(producer, False)
-        self.assertIdentical(tlsProtocol.transport.producer, None)
+        self.assertIsNone(tlsProtocol.transport.producer)
         self.assertEqual(producer.stopped, True)
 
 

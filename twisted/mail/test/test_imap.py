@@ -176,7 +176,7 @@ class MessageProducerTests(unittest.TestCase):
         d = p.beginProducing(c)
 
         def cbProduced(result):
-            self.assertIdentical(result, p)
+            self.assertIs(result, p)
             self.assertEqual(
                 ''.join(c.buffer),
 
@@ -4671,7 +4671,7 @@ class CopyWorkerTests(unittest.TestCase):
         def cbCopy(results):
             self.assertEqual(results, zip([1] * 10, range(1, 11)))
             for (orig, new) in zip(msgs, m.msgs):
-                self.assertIdentical(orig, new)
+                self.assertIs(orig, new)
 
         return d.addCallback(cbCopy)
 
@@ -4767,7 +4767,7 @@ class TLSTests(IMAP4HelperMixin, unittest.TestCase):
 
         def check(ignored):
             self.assertTrue(failures)
-            self.assertIdentical(failures[0], imap4.IMAP4Exception)
+            self.assertIs(failures[0], imap4.IMAP4Exception)
         return self.loopback().addCallback(check)
 
 

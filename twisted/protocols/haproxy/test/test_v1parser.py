@@ -98,8 +98,8 @@ class V1ParserTests(unittest.TestCase):
         info = _v1parser.V1Parser.parse(
             b'PROXY UNKNOWN anything could go here',
         )
-        self.assertIs(info.source, None)
-        self.assertIs(info.destination, None)
+        self.assertIsNone(info.source)
+        self.assertIsNone(info.destination)
 
 
     def test_feedParsing(self):

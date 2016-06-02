@@ -890,9 +890,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         results = []
         first.addCallback(results.append)
-        self.assertIdentical(results[0], None)
+        self.assertIsNone(results[0])
         second.addCallback(results.append)
-        self.assertIdentical(results[1], result)
+        self.assertIs(results[1], result)
 
 
     def test_asynchronousImplicitChain(self):
@@ -935,7 +935,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.callback(None)
         firstResult = []
         first.addCallback(firstResult.append)
-        self.assertIdentical(firstResult[0], None)
+        self.assertIsNone(firstResult[0])
         self.assertImmediateFailure(second, RuntimeError)
 
 
@@ -1132,7 +1132,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         a = defer.Deferred()
         b = defer.Deferred()
         b.chainDeferred(a)
-        self.assertIdentical(a._chainedTo, b)
+        self.assertIs(a._chainedTo, b)
 
 
     def test_explicitChainClearedWhenResolved(self):
@@ -1148,7 +1148,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         b = defer.Deferred()
         b.chainDeferred(a)
         b.callback(None)
-        self.assertIdentical(a._chainedTo, None)
+        self.assertIsNone(a._chainedTo)
 
 
     def test_chainDeferredRecordsImplicitChain(self):
@@ -1161,7 +1161,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         b = defer.Deferred()
         a.addCallback(lambda ignored: b)
         a.callback(None)
-        self.assertIdentical(a._chainedTo, b)
+        self.assertIs(a._chainedTo, b)
 
 
     def test_circularChainWarning(self):
@@ -1720,7 +1720,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         d.callback(None)
         # Cancel should have no effect.
         d.cancel()
-        self.assertIdentical(currentFailure, self.errbackResults)
+        self.assertIs(currentFailure, self.errbackResults)
 
 
     def test_noCancellerMultipleCancelsAfterCancelAndErrback(self):
@@ -1738,7 +1738,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         # I.e., we should still have a CancelledError.
         self.assertEqual(self.errbackResults.type, defer.CancelledError)
         d.cancel()
-        self.assertIdentical(currentFailure, self.errbackResults)
+        self.assertIs(currentFailure, self.errbackResults)
 
 
     def test_noCancellerMultipleCancel(self):
@@ -1753,7 +1753,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         self.assertEqual(self.errbackResults.type, defer.CancelledError)
         currentFailure = self.errbackResults
         d.cancel()
-        self.assertIdentical(currentFailure, self.errbackResults)
+        self.assertIs(currentFailure, self.errbackResults)
 
 
     def test_cancellerMultipleCancel(self):
@@ -1773,7 +1773,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         self.assertEqual(self.errbackResults.type, defer.CancelledError)
         currentFailure = self.errbackResults
         d.cancel()
-        self.assertIdentical(currentFailure, self.errbackResults)
+        self.assertIs(currentFailure, self.errbackResults)
         self.assertEqual(self.cancellerCallCount, 1)
 
 
@@ -1802,7 +1802,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         Verify that a canceller is given the correct deferred argument.
         """
         def cancel(d1):
-            self.assertIdentical(d1, d)
+            self.assertIs(d1, d)
         d = defer.Deferred(canceller=cancel)
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
@@ -2308,7 +2308,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             # If the deferred is still linked with the deferred queue, it will
             # fail with an AlreadyCalledError
             queue.put(None)
-            return queue.get().addCallback(self.assertIdentical, None)
+            return queue.get().addCallback(self.assertIs, None)
         d.addCallback(cb)
         done = []
         d.addCallback(done.append)

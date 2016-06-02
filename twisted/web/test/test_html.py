@@ -21,7 +21,7 @@ class WebHtmlTests(unittest.TestCase):
             """
             warningsShown = self.flushWarnings([self.test_deprecation])
             self.assertEqual(len(warningsShown), 1)
-            self.assertIdentical(
+            self.assertIs(
                 warningsShown[0]['category'], DeprecationWarning)
             self.assertEqual(
                 warningsShown[0]['message'],

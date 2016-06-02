@@ -236,7 +236,7 @@ class WrappingFactoryTests(unittest.TestCase):
         # Discard the failure this Deferred will get
         wrappingFactory._onConnection.addErrback(lambda reason: None)
 
-        self.assertIs(None, wrappingFactory.buildProtocol(None))
+        self.assertIsNone(wrappingFactory.buildProtocol(None))
 
 
     def test_logPrefixPassthrough(self):
@@ -698,7 +698,7 @@ class StandardIOEndpointsTests(unittest.TestCase):
         """
         self.reactor = object()
         endpoint = endpoints.StandardIOEndpoint(self.reactor)
-        self.assertIdentical(endpoint._stdio, stdio.StandardIO)
+        self.assertIs(endpoint._stdio, stdio.StandardIO)
 
         endpoint._stdio = FakeStdio
         self.specificProtocol = Protocol()
@@ -714,7 +714,7 @@ class StandardIOEndpointsTests(unittest.TestCase):
         of a L{stdio.StandardIO} like object that was passed the result of
         L{SpecificFactory.buildProtocol} which was passed a L{PipeAddress}.
         """
-        self.assertIdentical(self.fakeStdio.protocolInstance,
+        self.assertIs(self.fakeStdio.protocolInstance,
                              self.specificProtocol)
         self.assertIsInstance(self.fakeStdio.protocolInstance.passedAddress,
                               PipeAddress)
@@ -725,7 +725,7 @@ class StandardIOEndpointsTests(unittest.TestCase):
         L{StandardIOEndpoint} passes its C{reactor} argument to the constructor
         of its L{stdio.StandardIO} like object.
         """
-        self.assertIdentical(self.fakeStdio.reactor, self.reactor)
+        self.assertIs(self.fakeStdio.reactor, self.reactor)
 
 
 
@@ -1003,7 +1003,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         The L{_ProcessEndpointTransport} instance stores the process passed to
         it.
         """
-        self.assertIdentical(self.endpointTransport._process, self.process)
+        self.assertIs(self.endpointTransport._process, self.process)
 
 
     def test_registerProducer(self):
@@ -1016,7 +1016,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
             pass
         aProducer = AProducer()
         self.endpointTransport.registerProducer(aProducer, False)
-        self.assertIdentical(self.process.producer, aProducer)
+        self.assertIs(self.process.producer, aProducer)
 
 
     def test_pauseProducing(self):
@@ -1053,7 +1053,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         """
         self.test_registerProducer()
         self.endpointTransport.unregisterProducer()
-        self.assertIdentical(self.process.producer, None)
+        self.assertIsNone(self.process.producer)
 
 
     def test_extraneousAttributes(self):
@@ -3501,7 +3501,7 @@ class WrapperClientEndpointTests(unittest.TestCase):
         connecting = self.wrapper.connect(self.factory)
         pump = self.completer.succeedOnce()
         proto = self.successResultOf(connecting)
-        self.assertIdentical(
+        self.assertIs(
             proto.transport.transport, pump.clientIO)
 
 

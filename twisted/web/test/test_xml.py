@@ -107,7 +107,7 @@ class MicroDOMTests(TestCase):
         # Spare the rod, ruin the child.
         s = "<br/><br/>"
         d = microdom.parseString(s, beExtremelyLenient=1)
-        self.assertIdentical(d.documentElement,
+        self.assertIs(d.documentElement,
                              d.documentElement.firstChild().parentNode)
 
 
@@ -118,7 +118,7 @@ class MicroDOMTests(TestCase):
         """
         s = "Hello"
         d = microdom.parseString(s, beExtremelyLenient=1)
-        self.assertIdentical(d.documentElement,
+        self.assertIs(d.documentElement,
                              d.documentElement.firstChild().parentNode)
 
 

@@ -298,7 +298,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         d = self.render('GET', '1.1', [], [''])
         def cbRendered(result):
             environ, startResponse = result
-            self.assertIdentical(type(environ), dict)
+            self.assertIs(type(environ), dict)
             # Environment keys are always native strings.
             for name in environ:
                 self.assertIsInstance(name, str)

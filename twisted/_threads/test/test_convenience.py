@@ -40,7 +40,7 @@ class QuitTests(SynchronousTestCase):
         L{Quit.check} initially does nothing and returns L{None}.
         """
         quit = Quit()
-        self.assertIs(quit.check(), None)
+        self.assertIsNone(quit.check())
 
 
     def test_checkAfterSetRaises(self):

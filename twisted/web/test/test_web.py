@@ -85,7 +85,7 @@ class SiteTest(unittest.TestCase):
         sres2 = SimpleResource()
         sres1.putChild(b"",sres2)
         site = server.Site(sres1)
-        self.assertIdentical(
+        self.assertIs(
             site.getResourceFor(DummyRequest([b''])),
             sres2, "Got the wrong resource.")
 
@@ -180,7 +180,7 @@ class SessionTests(unittest.TestCase):
         reactor is used.
         """
         session = server.Session(server.Site(resource.Resource()), b'123')
-        self.assertIdentical(session._reactor, reactor)
+        self.assertIs(session._reactor, reactor)
 
 
     def test_startCheckingExpiration(self):

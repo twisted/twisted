@@ -419,13 +419,13 @@ class FailureJellyingTests(unittest.TestCase):
         same way as the original L{CopyableFailure}'s check method.
         """
         original = pb.CopyableFailure(ZeroDivisionError())
-        self.assertIdentical(
+        self.assertIs(
             original.check(ZeroDivisionError), ZeroDivisionError)
-        self.assertIdentical(original.check(ArithmeticError), ArithmeticError)
+        self.assertIs(original.check(ArithmeticError), ArithmeticError)
         copied = jelly.unjelly(jelly.jelly(original, invoker=DummyInvoker()))
-        self.assertIdentical(
+        self.assertIs(
             copied.check(ZeroDivisionError), ZeroDivisionError)
-        self.assertIdentical(copied.check(ArithmeticError), ArithmeticError)
+        self.assertIs(copied.check(ArithmeticError), ArithmeticError)
 
 
     def test_twiceUnjelliedFailureCheck(self):
@@ -437,17 +437,17 @@ class FailureJellyingTests(unittest.TestCase):
         check method.
         """
         original = pb.CopyableFailure(ZeroDivisionError())
-        self.assertIdentical(
+        self.assertIs(
             original.check(ZeroDivisionError), ZeroDivisionError)
-        self.assertIdentical(original.check(ArithmeticError), ArithmeticError)
+        self.assertIs(original.check(ArithmeticError), ArithmeticError)
         copiedOnce = jelly.unjelly(
             jelly.jelly(original, invoker=DummyInvoker()))
         derivative = pb.CopyableFailure(copiedOnce)
         copiedTwice = jelly.unjelly(
             jelly.jelly(derivative, invoker=DummyInvoker()))
-        self.assertIdentical(
+        self.assertIs(
             copiedTwice.check(ZeroDivisionError), ZeroDivisionError)
-        self.assertIdentical(
+        self.assertIs(
             copiedTwice.check(ArithmeticError), ArithmeticError)
 
 

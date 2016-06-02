@@ -329,7 +329,7 @@ class SMTPClientTests(unittest.TestCase, LoopbackMixin):
             )
 
         # Sanity check - a pull producer should be registered now.
-        self.assertNotIdentical(transport.producer, None)
+        self.assertIsNotNone(transport.producer)
         self.assertFalse(transport.streaming)
 
         # Now stop the producer prematurely, meaning the message was not sent.
@@ -870,7 +870,7 @@ class TimeoutTests(unittest.TestCase, LoopbackMixin):
         # resumeProducing is called on the producer, the timeout should be
         # extended.  First, a sanity check.  This test is only written to
         # handle pull producers.
-        self.assertNotIdentical(transport.producer, None)
+        self.assertIsNotNone(transport.producer)
         self.assertFalse(transport.streaming)
 
         # Now, allow 2 seconds (1 less than the timeout of 3 seconds) to
@@ -1764,7 +1764,7 @@ class SSLTestCase(unittest.TestCase):
         warningsShown = self.flushWarnings(
             offendingFunctions=[self.test_esmtpClientTlsModeDeprecationGet])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(
+        self.assertIs(
             warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
@@ -1789,7 +1789,7 @@ class SSLTestCase(unittest.TestCase):
         warningsShown = self.flushWarnings(
             offendingFunctions=[self.test_esmtpClientTlsModeDeprecationSet])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(
+        self.assertIs(
             warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],

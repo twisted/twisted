@@ -153,7 +153,7 @@ class StanzaErrorTests(unittest.TestCase):
         stanza['from'] = 'user2@example.com/resource'
         e = error.StanzaError('service-unavailable')
         response = e.toResponse(stanza)
-        self.assertNotIdentical(response, stanza)
+        self.assertIsNot(response, stanza)
         self.assertEqual(response['from'], 'user1@example.com')
         self.assertEqual(response['to'], 'user2@example.com/resource')
         self.assertEqual(response['type'], 'error')

@@ -1347,7 +1347,7 @@ class ClientImplementationTests(unittest.TestCase):
 
         # After the motd is delivered, the tracking variable should be
         # reset.
-        self.assertIdentical(self.client.motd, None)
+        self.assertIsNone(self.client.motd)
 
 
     def test_withoutMOTDSTART(self):
@@ -1417,7 +1417,7 @@ class ClientImplementationTests(unittest.TestCase):
             msg = "are available on this server"
             self._serverTestImpl(
                 '005', msg, 'isupport', args=name, options=[name])
-            self.assertIdentical(
+            self.assertIs(
                 self.client.supported.getFeature(name), None)
             self.client.calls = []
 
@@ -1436,7 +1436,7 @@ class ClientImplementationTests(unittest.TestCase):
 
         # Restore ISUPPORT features.
         self._sendISUPPORT()
-        self.assertNotIdentical(
+        self.assertIsNot(
             self.client.supported.getFeature('PREFIX'), None)
 
 
@@ -1595,9 +1595,9 @@ class ClientImplementationTests(unittest.TestCase):
         self._originalCreateHeartbeat = self.client._createHeartbeat
         self.patch(self.client, '_createHeartbeat', _createHeartbeat)
 
-        self.assertIdentical(self.client._heartbeat, None)
+        self.assertIsNone(self.client._heartbeat)
         self.client.irc_RPL_WELCOME('foo', [])
-        self.assertNotIdentical(self.client._heartbeat, None)
+        self.assertIsNotNone(self.client._heartbeat)
         self.assertEqual(self.client.hostname, 'foo')
 
         # Pump the clock enough to trigger one LoopingCall.
@@ -1610,7 +1610,7 @@ class ClientImplementationTests(unittest.TestCase):
         self.client.connectionLost(None)
         self.assertEqual(
             len(self.clock.getDelayedCalls()), 0)
-        self.assertIdentical(self.client._heartbeat, None)
+        self.assertIsNone(self.client._heartbeat)
 
 
     def test_heartbeatDisabled(self):
@@ -1618,10 +1618,10 @@ class ClientImplementationTests(unittest.TestCase):
         If L{irc.IRCClient.heartbeatInterval} is set to C{None} then no
         heartbeat is created.
         """
-        self.assertIdentical(self.client._heartbeat, None)
+        self.assertIsNone(self.client._heartbeat)
         self.client.heartbeatInterval = None
         self.client.irc_RPL_WELCOME('foo', [])
-        self.assertIdentical(self.client._heartbeat, None)
+        self.assertIsNone(self.client._heartbeat)
 
 
 

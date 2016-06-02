@@ -71,7 +71,7 @@ class FailureTests(SynchronousTestCase):
         except:
             f = failure.Failure()
         untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIdentical(f, untrapped)
+        self.assertIs(f, untrapped)
 
 
     if _PY3:
@@ -93,7 +93,7 @@ class FailureTests(SynchronousTestCase):
             f = failure.Failure()
 
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
-        self.assertIdentical(exception, untrapped)
+        self.assertIs(exception, untrapped)
 
 
     if not _PY3:
@@ -111,7 +111,7 @@ class FailureTests(SynchronousTestCase):
         exception = ValueError()
         f1 = failure.Failure(exception)
         f2 = failure.Failure(f1)
-        self.assertIdentical(f2.value, exception)
+        self.assertIs(f2.value, exception)
 
 
     def test_failureValueFromFoundFailure(self):
@@ -128,7 +128,7 @@ class FailureTests(SynchronousTestCase):
         except:
             f2 = failure.Failure()
 
-        self.assertIdentical(f2.value, exception)
+        self.assertIs(f2.value, exception)
 
 
     def assertStartsWith(self, s, prefix):
@@ -531,7 +531,7 @@ class FailureTests(SynchronousTestCase):
         except:
             klass, exception, tb = sys.exc_info()
         f = failure.Failure(exception)
-        self.assertIdentical(f.tb, tb)
+        self.assertIs(f.tb, tb)
 
 
     def test_cleanFailureRemovesTracebackInPython3(self):
@@ -541,7 +541,7 @@ class FailureTests(SynchronousTestCase):
         """
         f = getDivisionFailure()
         self.assertIsNotNone(f.tb, None)
-        self.assertIdentical(f.value.__traceback__, f.tb)
+        self.assertIs(f.value.__traceback__, f.tb)
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
 
