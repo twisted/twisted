@@ -140,7 +140,7 @@ class XPathTests(unittest.TestCase):
 
     def test_locationWithValueUnicode(self):
         """
-        Test matching foo with child bar.
+        Nodes' attributes can be matched with non-ASCII values.
         """
         xp = XPathQuery(u"/foo/*[@attrib6='á']")
         self.assertEqual(xp.matches(self.e), True)
