@@ -112,6 +112,7 @@ class ElementTests(unittest.TestCase):
 
         text = str(element)
         self.assertEqual("somecontent", text)
+        self.assertIsInstance(text, str)
 
 
     def test_characterDataUnicode(self):
