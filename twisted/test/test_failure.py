@@ -540,7 +540,7 @@ class FailureTests(SynchronousTestCase):
         the exception to C{None} in Python 3.
         """
         f = getDivisionFailure()
-        self.assertIsNotNone(f.tb, None)
+        self.assertIsNotNone(f.tb)
         self.assertIs(f.value.__traceback__, f.tb)
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
