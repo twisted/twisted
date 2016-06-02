@@ -16,7 +16,7 @@ from twisted.test.proto_helpers import StringTransport
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.web import http
-from twisted.web.test.test_http import DummyHTTPHandler
+from twisted.web.test.test_http import DummyHTTPHandler, DelayedHTTPHandler
 
 skipH2 = None
 
@@ -1722,3 +1722,42 @@ class H2FlowControlTests(unittest.TestCase):
             self.assertEqual(self.postResponseData, actualResponseData)
 
         return a._streamCleanupCallbacks[1].addCallback(validate)
+
+
+    def test_windowUpdateAfterTerminate(self):
+        """
+        When a WindowUpdate frame is received for a stream that has been
+        aborted it is ignored.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DelayedHTTPHandler
+
+        # Send the request.
+        frames = buildRequestFrames(
+            self.postRequestHeaders, self.postRequestData, f
+        )
+        requestBytes = f.preamble()
+        requestBytes += b''.join(f.serialize() for f in frames)
+        a.makeConnection(b)
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        # Abort the connection.
+        a.streams[1].abortConnection()
+
+        # Send a WindowUpdate
+        windowUpdateFrame = f.buildWindowUpdateFrame(streamID=1, increment=5)
+        a.dataReceived(windowUpdateFrame.serialize())
+
+        # Give the sending loop a chance to catch up!
+        buffer = FrameBuffer()
+        buffer.receiveData(b.value())
+        frames = list(buffer)
+
+        # Check that the stream is terminated.
+        self.assertTrue(
+            isinstance(frames[-1], hyperframe.frame.RstStreamFrame)
+        )
