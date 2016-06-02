@@ -111,7 +111,7 @@ class ConnectTests(unittest.TestCase):
                          struct.pack('!BBH', 0, 90, 34)
                          + socket.inet_aton('1.2.3.4'))
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
-        self.assertTrue(self.sock.driver_outgoing is not None)
+        self.assertIsNotNone(self.sock.driver_outgoing)
 
         # pass some data through
         self.sock.dataReceived('hello, world')
@@ -280,7 +280,7 @@ class BindTests(unittest.TestCase):
                          struct.pack('!BBH', 0, 90, 1234)
                          + socket.inet_aton('6.7.8.9'))
         self.assertFalse(self.sock.transport.stringTCPTransport_closing)
-        self.assertTrue(self.sock.driver_listen is not None)
+        self.assertIsNotNone(self.sock.driver_listen)
 
         # connect
         incoming = self.sock.driver_listen.buildProtocol(('1.2.3.4', 5345))
