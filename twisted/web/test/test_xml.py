@@ -258,7 +258,7 @@ alert("I hate you");
         self.assertTrue(isinstance(c, microdom.Comment))
         self.assertEqual(c.value, "<foo />")
         c2 = c.cloneNode()
-        self.assertTrue(c is not c2)
+        self.assertIsNot(c, c2)
         self.assertEqual(c2.toxml(), "<!--<foo />-->")
 
     def testText(self):
@@ -267,7 +267,7 @@ alert("I hate you");
         self.assertTrue(isinstance(text, microdom.Text))
         self.assertEqual(text.value, "xxxx")
         clone = text.cloneNode()
-        self.assertTrue(clone is not text)
+        self.assertIsNot(clone, text)
         self.assertEqual(clone.toxml(), "xxxx")
 
     def testEntities(self):
