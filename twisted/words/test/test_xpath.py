@@ -293,4 +293,6 @@ class XPathTests(unittest.TestCase):
         This test excercises the most common failure mode.
         """
         exc = self.assertRaises(SyntaxError, XPathQuery, """//bar[@attrib1""")
-        self.assertTrue(exc.msg.startswith("Trying to find one of"))
+        self.assertTrue(exc.msg.startswith("Trying to find one of"),
+                        ("SyntaxError message '%s' doesn't start with "
+                         "'Trying to find one of'") % exc.msg)
