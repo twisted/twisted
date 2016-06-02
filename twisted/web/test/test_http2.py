@@ -1156,6 +1156,30 @@ class HTTP2ServerTests(unittest.TestCase):
         return a._streamCleanupCallbacks[1].addCallback(validate)
 
 
+    def test_isSecureWorksProperly(self):
+        """
+        L{Request} objects can correctly ask isSecure on HTTP/2.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DelayedHTTPHandler
+
+        # Send the request.
+        requestBytes = f.preamble()
+        requestBytes += buildRequestBytes(
+            self.getRequestHeaders, [], f
+        )
+        a.makeConnection(b)
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        request = a.streams[1]._request
+        self.assertFalse(request.isSecure())
+        a.streams[1].abortConnection()
+
+
 
 class H2FlowControlTests(unittest.TestCase):
     """
