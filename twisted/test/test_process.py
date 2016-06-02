@@ -537,7 +537,7 @@ class ProcessTests(unittest.TestCase):
         self.assertTrue(procTrans.pid)
 
         def afterProcessEnd(ignored):
-            self.assertEqual(procTrans.pid, None)
+            self.assertIsNone(procTrans.pid)
 
         p.transport.closeStdin()
         return finished.addCallback(afterProcessEnd)
@@ -560,7 +560,7 @@ class ProcessTests(unittest.TestCase):
             f.trap(error.ProcessTerminated)
             self.assertEqual(f.value.exitCode, 23)
             # would .signal be available on non-posix?
-            # self.assertEqual(f.value.signal, None)
+            # self.assertIsNone(f.value.signal)
             self.assertRaises(
                 error.ProcessExitedAlready, p.transport.signalProcess, 'INT')
             try:
@@ -1056,7 +1056,7 @@ class PosixProcessBase(object):
         def check(ignored):
             p.reason.trap(error.ProcessDone)
             self.assertEqual(p.reason.value.exitCode, 0)
-            self.assertEqual(p.reason.value.signal, None)
+            self.assertIsNone(p.reason.value.signal)
         d.addCallback(check)
         return d
 
@@ -1076,7 +1076,7 @@ class PosixProcessBase(object):
         def check(ignored):
             p.reason.trap(error.ProcessTerminated)
             self.assertEqual(p.reason.value.exitCode, 1)
-            self.assertEqual(p.reason.value.signal, None)
+            self.assertIsNone(p.reason.value.signal)
         d.addCallback(check)
         return d
 
@@ -2421,7 +2421,7 @@ class Dumbwin32procPidTests(unittest.TestCase):
         self.assertEqual("<Process pid=42>", repr(p))
 
         def pidCompleteCb(result):
-            self.assertEqual(None, p.pid)
+            self.assertIsNone(p.pid)
         return d.addCallback(pidCompleteCb)
 
 

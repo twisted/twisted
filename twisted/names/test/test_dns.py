@@ -4475,7 +4475,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         ednsMessage = dns._EDNSMessage()
         ednsMessage.fromStr(m.toStr())
 
-        self.assertEqual(ednsMessage.ednsVersion, None)
+        self.assertIsNone(ednsMessage.ednsVersion)
 
 
     def test_fromMessageCopiesSections(self):

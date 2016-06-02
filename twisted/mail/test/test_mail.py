@@ -96,7 +96,7 @@ class DomainWithDefaultsTests(unittest.TestCase):
 
         d.update({'a': None, 'b': (), 'c': '*'})
         self.assertEqual(len(d), 10)
-        self.assertEqual(d['a'], None)
+        self.assertIsNone(d['a'])
         self.assertEqual(d['b'], ())
         self.assertEqual(d['c'], '*')
 
@@ -959,20 +959,20 @@ class RelayerTests(unittest.TestCase):
         for i in range(10):
             self.assertEqual(self.R.getMailFrom(), 'from-%d' % (i,))
             self.R.sentMail(250, None, None, None, None)
-        self.assertEqual(self.R.getMailFrom(), None)
+        self.assertIsNone(self.R.getMailFrom())
 
     def testMailTo(self):
         for i in range(10):
             self.assertEqual(self.R.getMailTo(), ['to-%d' % (i,)])
             self.R.sentMail(250, None, None, None, None)
-        self.assertEqual(self.R.getMailTo(), None)
+        self.assertIsNone(self.R.getMailTo())
 
     def testMailData(self):
         for i in range(10):
             name = os.path.join(self.tmpdir, 'body-%d' % (i,))
             self.assertEqual(self.R.getMailData().read(), name)
             self.R.sentMail(250, None, None, None, None)
-        self.assertEqual(self.R.getMailData(), None)
+        self.assertIsNone(self.R.getMailData())
 
 class Manager:
     def __init__(self):
@@ -1835,7 +1835,7 @@ class AddressAliasTests(unittest.TestCase):
         L{resolve} will look for additional aliases when an C{aliasmap}
         dictionary is passed, and returns C{None} if none were found.
         """
-        self.assertEqual(self.alias.resolve({self.address: 'bar'}), None)
+        self.assertIsNone(self.alias.resolve({self.address: 'bar'}))
 
 
     def test_resolveWithoutAliasmap(self):
@@ -1843,7 +1843,7 @@ class AddressAliasTests(unittest.TestCase):
         L{resolve} returns C{None} when the alias could not be found in the
         C{aliasmap} and no L{mail.smtp.User} with this alias exists either.
         """
-        self.assertEqual(self.alias.resolve({}), None)
+        self.assertIsNone(self.alias.resolve({}))
 
 
 

@@ -69,7 +69,7 @@ class SSHUserAuthClientTests(TestCase):
         key = agent.getPublicKey()
         self.assertEqual(key.isPublic(), True)
         self.assertEqual(key, self.rsaPublic)
-        self.assertEqual(agent.getPublicKey(), None)
+        self.assertIsNone(agent.getPublicKey())
 
 
     def test_getPublicKeyFromFile(self):

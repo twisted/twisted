@@ -622,7 +622,7 @@ class LoopTests(unittest.TestCase):
         for (a, b, c, d) in L:
             self.assertEqual(a, "a")
             self.assertEqual(b, "b")
-            self.assertEqual(c, None)
+            self.assertIsNone(c)
             self.assertEqual(d, "d")
 
         lc.stop()

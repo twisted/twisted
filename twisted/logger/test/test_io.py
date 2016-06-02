@@ -102,7 +102,7 @@ class LoggingFileTests(unittest.TestCase):
         The C{newlines} attribute is C{None}.
         """
         f = LoggingFile(self.logger)
-        self.assertEqual(f.newlines, None)
+        self.assertIsNone(f.newlines)
 
 
     def test_name(self):

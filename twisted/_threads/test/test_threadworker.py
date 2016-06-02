@@ -198,7 +198,7 @@ class LockWorkerTests(SynchronousTestCase):
         lock = FakeLock()
         self.assertRaises(ThreadError, lock.release)
         lock.acquire()
-        self.assertEqual(None, lock.release())
+        self.assertIsNone(lock.release())
         self.assertRaises(ThreadError, lock.release)
 
 

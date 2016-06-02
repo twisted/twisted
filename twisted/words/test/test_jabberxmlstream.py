@@ -485,10 +485,10 @@ class AuthenticatorTests(unittest.TestCase):
                          "from='example.org' to='example.com' id='12345' "
                          "version='1.0'>")
         self.assertEqual((1, 0), xs.version)
-        self.assertIdentical(None, xs.sid)
+        self.assertIsNone(xs.sid)
         self.assertEqual('invalid', xs.namespace)
-        self.assertIdentical(None, xs.otherEntity)
-        self.assertEqual(None, xs.thisEntity)
+        self.assertIsNone(xs.otherEntity)
+        self.assertIsNone(xs.thisEntity)
 
 
     def test_streamStartLegacy(self):

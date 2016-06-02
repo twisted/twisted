@@ -81,7 +81,7 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(s.parent, p)
         s.disownServiceParent()
         self.assertEqual(list(p), [])
-        self.assertEqual(s.parent, None)
+        self.assertIsNone(s.parent)
 
     def testRunning(self):
         s = service.Service()
@@ -164,17 +164,17 @@ class ProcessTests(unittest.TestCase):
     def testDefaults(self):
         p = service.Process(5)
         self.assertEqual(p.uid, 5)
-        self.assertEqual(p.gid, None)
+        self.assertIsNone(p.gid)
         p = service.Process(gid=5)
-        self.assertEqual(p.uid, None)
+        self.assertIsNone(p.uid)
         self.assertEqual(p.gid, 5)
         p = service.Process()
-        self.assertEqual(p.uid, None)
-        self.assertEqual(p.gid, None)
+        self.assertIsNone(p.uid)
+        self.assertIsNone(p.gid)
 
     def testProcessName(self):
         p = service.Process()
-        self.assertEqual(p.processName, None)
+        self.assertIsNone(p.processName)
         p.processName = 'hello'
         self.assertEqual(p.processName, 'hello')
 
@@ -201,11 +201,11 @@ class ApplicationTests(unittest.TestCase):
 
     def testProcessComponent(self):
         a = service.Application("hello")
-        self.assertEqual(service.IProcess(a).uid, None)
-        self.assertEqual(service.IProcess(a).gid, None)
+        self.assertIsNone(service.IProcess(a).uid)
+        self.assertIsNone(service.IProcess(a).gid)
         a = service.Application("hello", 5)
         self.assertEqual(service.IProcess(a).uid, 5)
-        self.assertEqual(service.IProcess(a).gid, None)
+        self.assertIsNone(service.IProcess(a).gid)
         a = service.Application("hello", 5, 6)
         self.assertEqual(service.IProcess(a).uid, 5)
         self.assertEqual(service.IProcess(a).gid, 6)
@@ -214,7 +214,7 @@ class ApplicationTests(unittest.TestCase):
         a = service.Application("hello")
         self.assertIs(service.IService(a), service.IServiceCollection(a))
         self.assertEqual(service.IService(a).name, "hello")
-        self.assertEqual(service.IService(a).parent, None)
+        self.assertIsNone(service.IService(a).parent)
 
     def testPersistableComponent(self):
         a = service.Application("hello")
@@ -247,7 +247,7 @@ class LoadingTests(unittest.TestCase):
 class AppSupportTests(unittest.TestCase):
 
     def testPassphrase(self):
-        self.assertEqual(app.getPassphrase(0), None)
+        self.assertIsNone(app.getPassphrase(0))
 
     def testLoadApplication(self):
         """

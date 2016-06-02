@@ -766,8 +766,8 @@ class KnownHostsDatabaseTests(TestCase):
             HostKeyChanged, hostsFile.hasHostKey,
             "www.example.com", Key.fromString(thirdSampleKey))
         self.assertEqual(exception.offendingEntry, entry)
-        self.assertEqual(exception.lineno, None)
-        self.assertEqual(exception.path, None)
+        self.assertIsNone(exception.lineno)
+        self.assertIsNone(exception.path)
 
 
     def test_addHostKey(self):

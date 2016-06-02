@@ -207,7 +207,7 @@ class RequirementsTests(TestCase):
         that is sufficiently new.
         """
         sys.version_info = self.supportedPythonVersion
-        self.assertEqual(None, _checkRequirements())
+        self.assertIsNone(_checkRequirements())
 
 
     def test_oldPythonPy3(self):
@@ -229,7 +229,7 @@ class RequirementsTests(TestCase):
         that is sufficiently new.
         """
         sys.version_info = self.Py3supportedPythonVersion
-        self.assertEqual(None, _checkRequirements())
+        self.assertIsNone(_checkRequirements())
 
 
     def test_missingZopeNamespace(self):
@@ -334,7 +334,7 @@ class RequirementsTests(TestCase):
             """
             with SetAsideModule("zope"):
                 _install(_zope40)
-                self.assertEqual(None, _checkRequirements())
+                self.assertIsNone(_checkRequirements())
 
     else:
         # Python 2 only requires a version that supports the class decorator
@@ -362,7 +362,7 @@ class RequirementsTests(TestCase):
             """
             with SetAsideModule("zope"):
                 _install(_zope36)
-                self.assertEqual(None, _checkRequirements())
+                self.assertIsNone(_checkRequirements())
 
 
 

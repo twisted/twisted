@@ -28,7 +28,7 @@ class AnonymousTests(unittest.TestCase):
         Test the initial response to be empty.
         """
         m = sasl_mechanisms.Anonymous()
-        self.assertEqual(m.getInitialResponse(), None)
+        self.assertIsNone(m.getInitialResponse())
 
 
 

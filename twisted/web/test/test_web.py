@@ -353,7 +353,7 @@ class ConditionalTests(unittest.TestCase):
         # Since there SHOULD NOT (RFC 2616, section 10.3.5) be any
         # entity-headers, the Content-Type is not set if the application does
         # not explicitly set it.
-        self.assertEqual(httpHeader(result, b"Content-Type"), None)
+        self.assertIsNone(httpHeader(result, b"Content-Type"))
 
 
     def test_invalidTimestamp(self):

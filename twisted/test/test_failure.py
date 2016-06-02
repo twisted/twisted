@@ -297,7 +297,7 @@ class FailureTests(SynchronousTestCase):
             "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack))
 
         if captureVars:
-            self.assertEqual(None, re.search('exampleLocalVar.*abcde', tb))
+            self.assertIsNone(re.search('exampleLocalVar.*abcde', tb))
 
 
     def assertDefaultTraceback(self, captureVars=False):
@@ -346,7 +346,7 @@ class FailureTests(SynchronousTestCase):
             reflect.qual(f.type), reflect.safe_str(f.value)))
 
         if captureVars:
-            self.assertEqual(None, re.search('exampleLocalVar.*xyzzy', tb))
+            self.assertIsNone(re.search('exampleLocalVar.*xyzzy', tb))
 
 
     def test_printDetailedTraceback(self):
@@ -517,7 +517,7 @@ class FailureTests(SynchronousTestCase):
         None is a good value, because traceback.extract_tb(None) -> [].
         """
         f = failure.Failure(Exception("some error"))
-        self.assertEqual(f.getTracebackObject(), None)
+        self.assertIsNone(f.getTracebackObject())
 
 
     def test_tracebackFromExceptionInPython3(self):
@@ -543,7 +543,7 @@ class FailureTests(SynchronousTestCase):
         self.assertIsNotNone(f.tb, None)
         self.assertIdentical(f.value.__traceback__, f.tb)
         f.cleanFailure()
-        self.assertIdentical(f.value.__traceback__, None)
+        self.assertIsNone(f.value.__traceback__)
 
     if not _PY3:
         test_tracebackFromExceptionInPython3.skip = "Python 3 only."
@@ -686,7 +686,7 @@ class FindFailureTests(SynchronousTestCase):
         try:
             1/0
         except:
-            self.assertEqual(failure.Failure._findFailure(), None)
+            self.assertIsNone(failure.Failure._findFailure())
         else:
             self.fail("No exception raised from 1/0!?")
 
@@ -695,8 +695,8 @@ class FindFailureTests(SynchronousTestCase):
         """
         Outside of an exception handler, _findFailure should return None.
         """
-        self.assertEqual(sys.exc_info()[-1], None) #environment sanity check
-        self.assertEqual(failure.Failure._findFailure(), None)
+        self.assertIsNone(sys.exc_info()[-1]) #environment sanity check
+        self.assertIsNone(failure.Failure._findFailure())
 
 
     def test_findFailure(self):

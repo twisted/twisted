@@ -943,7 +943,7 @@ class SMTPSenderFactoryTests(unittest.TestCase):
         clientFactory.buildProtocol(None)
         clientFactory.clientConnectionLost(connector,
                                            error.ConnectionDone("Bye."))
-        self.assertEqual(clientFactory.currentProtocol, None)
+        self.assertIsNone(clientFactory.currentProtocol)
 
 
     def test_removeCurrentProtocolWhenClientConnectionFailed(self):
@@ -960,7 +960,7 @@ class SMTPSenderFactoryTests(unittest.TestCase):
         clientFactory.buildProtocol(None)
         clientFactory.clientConnectionFailed(connector,
                                              error.ConnectionDone("Bye."))
-        self.assertEqual(clientFactory.currentProtocol, None)
+        self.assertIsNone(clientFactory.currentProtocol)
 
 
 

@@ -23,7 +23,7 @@ class BaseErrorTests(unittest.TestCase):
         """
         e = error.BaseError('feature-not-implemented')
         element = e.getElement()
-        self.assertIdentical(element.uri, None)
+        self.assertIsNone(element.uri)
         self.assertEqual(len(element.children), 1)
 
     def test_getElementText(self):
@@ -34,7 +34,7 @@ class BaseErrorTests(unittest.TestCase):
         element = e.getElement()
         self.assertEqual(len(element.children), 2)
         self.assertEqual(unicode(element.text), 'text')
-        self.assertEqual(element.text.getAttribute((NS_XML, 'lang')), None)
+        self.assertIsNone(element.text.getAttribute((NS_XML, 'lang')))
 
     def test_getElementTextLang(self):
         """
@@ -105,7 +105,7 @@ class StanzaErrorTests(unittest.TestCase):
         """
         e = error.StanzaError('feature-not-implemented')
         element = e.getElement()
-        self.assertEqual(element.uri, None)
+        self.assertIsNone(element.uri)
         self.assertEqual(element['type'], 'cancel')
         self.assertEqual(element['code'], '501')
 
@@ -116,7 +116,7 @@ class StanzaErrorTests(unittest.TestCase):
         """
         e = error.StanzaError('feature-not-implemented', 'auth')
         element = e.getElement()
-        self.assertEqual(element.uri, None)
+        self.assertIsNone(element.uri)
         self.assertEqual(element['type'], 'auth')
         self.assertEqual(element['code'], '501')
 

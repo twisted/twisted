@@ -1157,7 +1157,7 @@ class ResultOfAssertionsTests(unittest.SynchronousTestCase):
             self.assertNoResult(d)
         except self.failureException:
             pass
-        self.assertEqual(None, self.successResultOf(d))
+        self.assertIsNone(self.successResultOf(d))
 
 
 

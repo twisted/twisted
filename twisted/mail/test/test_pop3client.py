@@ -130,7 +130,7 @@ class POP3ClientLoginTests(unittest.TestCase):
     def testServerGreeting(self):
         p, t = setUp(greet=False)
         p.dataReceived("+OK lalala this has no challenge\r\n")
-        self.assertEqual(p.serverChallenge, None)
+        self.assertIsNone(p.serverChallenge)
 
     def testServerGreetingWithChallenge(self):
         p, t = setUp(greet=False)

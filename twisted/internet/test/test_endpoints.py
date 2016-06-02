@@ -843,11 +843,11 @@ class ProcessEndpointsTests(unittest.TestCase):
         self.assertEqual(self.ep._executable, b'/bin/executable')
         self.assertEqual(self.ep._args, ())
         self.assertEqual(self.ep._env, {})
-        self.assertEqual(self.ep._path, None)
-        self.assertEqual(self.ep._uid, None)
-        self.assertEqual(self.ep._gid, None)
+        self.assertIsNone(self.ep._path)
+        self.assertIsNone(self.ep._uid)
+        self.assertIsNone(self.ep._gid)
         self.assertEqual(self.ep._usePTY, 0)
-        self.assertEqual(self.ep._childFDs, None)
+        self.assertIsNone(self.ep._childFDs)
         self.assertEqual(self.ep._errFlag, StandardErrorBehavior.LOG)
 
 
@@ -1190,7 +1190,7 @@ class WrappedIProtocolTests(unittest.TestCase):
         self.addCleanup(log.removeObserver, self._stdLog)
 
         wpp.childDataReceived(2, b'stderr2')
-        self.assertEqual(self.eventLog, None)
+        self.assertIsNone(self.eventLog)
 
 
     def test_stdout(self):
@@ -2786,7 +2786,7 @@ class ClientStringTests(unittest.TestCase):
             reactor,
             "tcp:host=example.com:port=1234")
         self.assertEqual(client._timeout, 30)
-        self.assertEqual(client._bindAddress, None)
+        self.assertIsNone(client._bindAddress)
 
 
     def test_unix(self):
@@ -2975,8 +2975,8 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._port, 4321)
         certOptions = client._sslContextFactory
         self.assertEqual(certOptions.method, SSLv23_METHOD)
-        self.assertEqual(certOptions.certificate, None)
-        self.assertEqual(certOptions.privateKey, None)
+        self.assertIsNone(certOptions.certificate)
+        self.assertIsNone(certOptions.privateKey)
 
 
     def test_unreadableCertificate(self):

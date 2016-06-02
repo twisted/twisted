@@ -56,7 +56,7 @@ class ContinuousPollingTests(TestCase):
         C{LoopingCall}.
         """
         poller = _ContinuousPolling(Clock())
-        self.assertEqual(poller._loop, None)
+        self.assertIsNone(poller._loop)
         reader = object()
         self.assertFalse(poller.isReading(reader))
         poller.addReader(reader)
@@ -72,7 +72,7 @@ class ContinuousPollingTests(TestCase):
         C{LoopingCall}.
         """
         poller = _ContinuousPolling(Clock())
-        self.assertEqual(poller._loop, None)
+        self.assertIsNone(poller._loop)
         writer = object()
         self.assertFalse(poller.isWriting(writer))
         poller.addWriter(writer)
@@ -90,7 +90,7 @@ class ContinuousPollingTests(TestCase):
         reader = object()
         poller.addReader(reader)
         poller.removeReader(reader)
-        self.assertEqual(poller._loop, None)
+        self.assertIsNone(poller._loop)
         self.assertEqual(poller._reactor.getDelayedCalls(), [])
         self.assertFalse(poller.isReading(reader))
 
@@ -103,7 +103,7 @@ class ContinuousPollingTests(TestCase):
         writer = object()
         poller.addWriter(writer)
         poller.removeWriter(writer)
-        self.assertEqual(poller._loop, None)
+        self.assertIsNone(poller._loop)
         self.assertEqual(poller._reactor.getDelayedCalls(), [])
         self.assertFalse(poller.isWriting(writer))
 

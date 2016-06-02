@@ -772,8 +772,8 @@ class IdentityTransferEncodingTests(TestCase):
         Check the decoder's data and finish callbacks and make sure they are
         None in order to help avoid references cycles.
         """
-        self.assertIdentical(decoder.dataCallback, None)
-        self.assertIdentical(decoder.finishCallback, None)
+        self.assertIsNone(decoder.dataCallback)
+        self.assertIsNone(decoder.finishCallback)
 
 
     def test_earlyConnectionLose(self):
@@ -1774,7 +1774,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request header which is not present.
         """
         req = http.Request(DummyChannel(), False)
-        self.assertEqual(req.getHeader(b"test"), None)
+        self.assertIsNone(req.getHeader(b"test"))
 
 
     def test_getAllHeaders(self):

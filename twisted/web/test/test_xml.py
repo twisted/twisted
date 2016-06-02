@@ -302,7 +302,7 @@ alert("I hate you");
         node = microdom.parseString(s).documentElement
 
         self.assertEqual(node.getAttribute("a"), "b")
-        self.assertEqual(node.getAttribute("c"), None)
+        self.assertIsNone(node.getAttribute("c"))
         self.assertTrue(node.hasAttribute("a"))
         self.assertFalse(node.hasAttribute("c"))
         a = node.getAttributeNode("a")
@@ -331,7 +331,7 @@ alert("I hate you");
         d.appendChild(d.cloneNode())
         d.setAttribute("a", "b")
         child = d.childNodes[0]
-        self.assertEqual(child.getAttribute("a"), None)
+        self.assertIsNone(child.getAttribute("a"))
         self.assertEqual(child.nodeName, "foo")
 
         d.insertBefore(microdom.Element("bar"), child)

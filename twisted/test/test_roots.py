@@ -49,7 +49,7 @@ class RootsTests(unittest.TestCase):
             def nameConstraint(self, name):
                 return (name == 'x')
         c = const()
-        self.assertEqual(c.putEntity('x', 'test'), None)
+        self.assertIsNone(c.putEntity('x', 'test'))
         self.assertRaises(roots.ConstraintViolation,
                               c.putEntity, 'y', 'test')
 

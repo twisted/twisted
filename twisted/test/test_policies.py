@@ -715,7 +715,7 @@ class TimeoutMixinTests(unittest.TestCase):
         self.proto.makeConnection(StringTransport())
 
         self.proto.setTimeout(None)
-        self.assertEqual(self.proto.timeOut, None)
+        self.assertIsNone(self.proto.timeOut)
 
         self.clock.pump([0, 5, 5, 5])
         self.assertFalse(self.proto.timedOut)
@@ -729,7 +729,7 @@ class TimeoutMixinTests(unittest.TestCase):
 
         self.assertEqual(self.proto.setTimeout(10), 5)
         self.assertEqual(self.proto.setTimeout(None), 10)
-        self.assertEqual(self.proto.setTimeout(1), None)
+        self.assertIsNone(self.proto.setTimeout(1))
         self.assertEqual(self.proto.timeOut, 1)
 
         # Clean up the DelayedCall
@@ -772,7 +772,7 @@ class LimitTotalConnectionsFactoryTests(unittest.TestCase):
 
         # Try to make a second connection, which will exceed the connection
         # limit.  This should return None, because overflowProtocol is None.
-        self.assertEqual(None, factory.buildProtocol(None))
+        self.assertIsNone(factory.buildProtocol(None))
         self.assertEqual(1, factory.connectionCount)
 
         # Define an overflow protocol

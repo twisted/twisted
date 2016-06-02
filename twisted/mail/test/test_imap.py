@@ -630,7 +630,7 @@ class IMAP4HelperTests(unittest.TestCase):
         self.assertEqual(len(p.result), 1)
         self.assertIsInstance(p.result[0], p.Body)
         self.assertEqual(p.result[0].peek, False)
-        self.assertEqual(p.result[0].header, None)
+        self.assertIsNone(p.result[0].header)
         self.assertEqual(str(p.result[0]), 'BODY')
 
         p = P()
@@ -1216,7 +1216,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         return d.addCallback(self._cbTestFailedLogin)
 
     def _cbTestFailedLogin(self, ignored):
-        self.assertEqual(self.server.account, None)
+        self.assertIsNone(self.server.account)
         self.assertEqual(self.server.state, 'unauth')
 
 
@@ -1948,7 +1948,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestFailedCramMD5(self, ignored):
         self.assertEqual(self.authenticated, -1)
-        self.assertEqual(self.server.account, None)
+        self.assertIsNone(self.server.account)
 
     def testLOGIN(self):
         self.server.challengers['LOGIN'] = imap4.LOGINCredentials
@@ -1990,7 +1990,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestFailedLOGIN(self, ignored):
         self.assertEqual(self.authenticated, -1)
-        self.assertEqual(self.server.account, None)
+        self.assertIsNone(self.server.account)
 
     def testPLAIN(self):
         self.server.challengers['PLAIN'] = imap4.PLAINCredentials
@@ -2032,7 +2032,7 @@ class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
 
     def _cbTestFailedPLAIN(self, ignored):
         self.assertEqual(self.authenticated, -1)
-        self.assertEqual(self.server.account, None)
+        self.assertIsNone(self.server.account)
 
 
 
@@ -4625,7 +4625,7 @@ class CopyWorkerTests(unittest.TestCase):
 
             for (status, result) in results:
                 self.assertTrue(status)
-                self.assertEqual(result, None)
+                self.assertIsNone(result)
 
         return d.addCallback(cbCopy)
 
@@ -4654,7 +4654,7 @@ class CopyWorkerTests(unittest.TestCase):
 
             for (status, result) in results:
                 self.assertTrue(status)
-                self.assertEqual(result, None)
+                self.assertIsNone(result)
 
         return d.addCallback(cbCopy)
 

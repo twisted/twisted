@@ -1899,7 +1899,7 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=protocols,
         )
         self.assertEqual(negotiatedProtocol, b'h2')
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNDifferent(self):
@@ -1914,7 +1914,7 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=serverProtocols,
         )
         self.assertEqual(negotiatedProtocol, b'http/1.1')
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNNoAdvertise(self):
@@ -1927,8 +1927,8 @@ class NPNOrALPNTests(unittest.TestCase):
             clientProtocols=protocols,
             serverProtocols=[],
         )
-        self.assertEqual(negotiatedProtocol, None)
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(negotiatedProtocol)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNNoOverlap(self):
@@ -1942,7 +1942,7 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=clientProtocols,
             clientProtocols=serverProtocols,
         )
-        self.assertEqual(negotiatedProtocol, None)
+        self.assertIsNone(negotiatedProtocol)
         self.assertEqual(lostReason.type, SSL.Error)
 
 
@@ -1958,7 +1958,7 @@ class NPNOrALPNTests(unittest.TestCase):
             clientOptions=NPNOnlyOptions
         )
         self.assertEqual(negotiatedProtocol, b'h2')
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(lostReason)
 
 
 
@@ -2002,7 +2002,7 @@ class ALPNTests(unittest.TestCase):
             clientOptions=ALPNOnlyOptions
         )
         self.assertEqual(negotiatedProtocol, b'http/1.1')
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(lostReason)
 
 
 
@@ -2054,8 +2054,8 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
             clientProtocols=clientProtocols,
             serverProtocols=serverProtocols,
         )
-        self.assertEqual(negotiatedProtocol, None)
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(negotiatedProtocol)
+        self.assertIsNone(lostReason)
 
 
 
@@ -2189,7 +2189,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # This connection should succeed
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootSelfSignedServerCertificate(self):
@@ -2214,7 +2214,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
             serverCertificate=selfSigned.original,
         )
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootCertificateAuthorityTrustsConnection(self):
@@ -2235,7 +2235,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
             serverCertificate=serverCert.original,
         )
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootFromCertificatesUntrusted(self):

@@ -759,7 +759,7 @@ class TLSMemoryBIOTests(TestCase):
         # notified:
         tlsProtocol._tlsShutdownFinished(None)
         self.assertEqual(transport.disconnecting, True)
-        self.assertEqual(protocol.disconnected, None)
+        self.assertIsNone(protocol.disconnected)
 
         # Now close the underlying connection; the user protocol should be
         # notified with the given reason (since TLS closed cleanly):
@@ -999,8 +999,8 @@ class TLSProducerTests(TestCase):
         """
         clientProtocol, tlsProtocol, producer = self.setupStreamingProducer()
         clientProtocol.transport.unregisterProducer()
-        self.assertEqual(tlsProtocol._producer, None)
-        self.assertEqual(tlsProtocol.transport.producer, None)
+        self.assertIsNone(tlsProtocol._producer)
+        self.assertIsNone(tlsProtocol.transport.producer)
 
 
     def loseConnectionWithProducer(self, writeBlockedOnRead):
@@ -1165,9 +1165,9 @@ class TLSProducerTests(TestCase):
         # Verify the streaming producer was started, and ran until the end:
         def done(ignore):
             # Our own producer is done:
-            self.assertEqual(producer.consumer, None)
+            self.assertIsNone(producer.consumer)
             # The producer has been unregistered:
-            self.assertEqual(tlsProtocol.transport.producer, None)
+            self.assertIsNone(tlsProtocol.transport.producer)
             # The streaming producer wrapper knows it's done:
             self.assertEqual(streamingProducer._finished, True)
         producer.result.addCallback(done)
@@ -1301,7 +1301,7 @@ class NonStreamingProducerTests(TestCase):
         def doneStreaming(_):
             # All data was streamed, and the producer unregistered itself:
             self.assertEqual(consumer.value(), b"0123456789")
-            self.assertEqual(consumer.producer, None)
+            self.assertIsNone(consumer.producer)
             # And the streaming wrapper stopped:
             self.assertEqual(streamingProducer._finished, True)
         done.addCallback(doneStreaming)
@@ -1478,7 +1478,7 @@ class NonStreamingProducerTests(TestCase):
             [(ZeroDivisionError, "failed, producing will be stopped")])
         def cleanShutdown(ignore):
             # Producer was unregistered from consumer:
-            self.assertEqual(consumer.producer, None)
+            self.assertIsNone(consumer.producer)
         done.addCallback(cleanShutdown)
         return done
 

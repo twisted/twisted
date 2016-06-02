@@ -23,21 +23,21 @@ class DomishTests(unittest.TestCase):
     def testElementInit(self):
         e = domish.Element((None, "foo"))
         self.assertEqual(e.name, "foo")
-        self.assertEqual(e.uri, None)
-        self.assertEqual(e.defaultUri, None)
-        self.assertEqual(e.parent, None)
+        self.assertIsNone(e.uri)
+        self.assertIsNone(e.defaultUri)
+        self.assertIsNone(e.parent)
 
         e = domish.Element(("", "foo"))
         self.assertEqual(e.name, "foo")
         self.assertEqual(e.uri, "")
         self.assertEqual(e.defaultUri, "")
-        self.assertEqual(e.parent, None)
+        self.assertIsNone(e.parent)
 
         e = domish.Element(("testns", "foo"))
         self.assertEqual(e.name, "foo")
         self.assertEqual(e.uri, "testns")
         self.assertEqual(e.defaultUri, "testns")
-        self.assertEqual(e.parent, None)
+        self.assertIsNone(e.parent)
 
         e = domish.Element(("testns", "foo"), "test2ns")
         self.assertEqual(e.name, "foo")

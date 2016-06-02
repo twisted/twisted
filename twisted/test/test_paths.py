@@ -1444,7 +1444,7 @@ class FilePathTests(AbstractFilePathTests):
 
         # This path should look like we don't know what status it's in, not that
         # we know that it didn't exist when last we checked.
-        self.assertEqual(fp.statinfo, None)
+        self.assertIsNone(fp.statinfo)
         self.assertEqual(fp.getsize(), 8)
 
 
@@ -1503,7 +1503,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo = None
-        self.assertEqual(fp.statinfo, None)
+        self.assertIsNone(fp.statinfo)
 
 
     def test_filePathNotDeprecated(self):

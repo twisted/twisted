@@ -1209,7 +1209,7 @@ class NewCredLeakTests(unittest.TestCase):
         # to a weakref to the mind; this object should be gc'd, and thus
         # the ref should return None
         gc.collect()
-        self.assertEqual(self.mindRef(), None)
+        self.assertIsNone(self.mindRef())
 
 
 

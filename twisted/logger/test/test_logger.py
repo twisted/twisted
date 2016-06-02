@@ -147,7 +147,7 @@ class LoggerTests(unittest.TestCase):
             self.assertEqual(log.event["log_format"], format)
             self.assertEqual(log.event["log_level"], level)
             self.assertEqual(log.event["log_namespace"], __name__)
-            self.assertEqual(log.event["log_source"], None)
+            self.assertIsNone(log.event["log_source"])
             self.assertEqual(log.event["junk"], message)
 
             self.assertEqual(formatEvent(log.event), message)
@@ -185,7 +185,7 @@ class LoggerTests(unittest.TestCase):
         C{log_source} event key is C{None}.
         """
         def observer(event):
-            self.assertEqual(event["log_source"], None)
+            self.assertIsNone(event["log_source"])
 
         log = TestLogger(observer=observer)
         log.info()
@@ -225,7 +225,7 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(log.event["log_format"], u"*")
         self.assertEqual(log.event["log_level"], LogLevel.warn)
         self.assertEqual(log.event["log_namespace"], log.namespace)
-        self.assertEqual(log.event["log_source"], None)
+        self.assertIsNone(log.event["log_source"])
 
 
     def test_logInvalidLogLevel(self):

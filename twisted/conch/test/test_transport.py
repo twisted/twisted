@@ -574,7 +574,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.sendPacket(ord('A'), b'BCD')
         value = self.transport.value()
         proto.buf = value[:MockCipher.decBlockSize]
-        self.assertEqual(proto.getPacket(), None)
+        self.assertIsNone(proto.getPacket())
         self.assertTrue(testCipher.usedDecrypt)
         self.assertEqual(proto.first, b'\x00\x00\x00\x0e\x09A')
         proto.buf += value[MockCipher.decBlockSize:]
@@ -1024,7 +1024,7 @@ here's some other stuff
         def testBad(packet, error=transport.DISCONNECT_PROTOCOL_ERROR):
             self.packets = []
             self.proto.buf = packet
-            self.assertEqual(self.proto.getPacket(), None)
+            self.assertIsNone(self.proto.getPacket())
             self.assertEqual(len(self.packets), 1)
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
             self.assertEqual(self.packets[0][1][3], chr(error))

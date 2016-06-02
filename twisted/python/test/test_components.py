@@ -235,7 +235,7 @@ class AdapterTests(unittest.SynchronousTestCase):
         o = object()
         a = Adept(o)
         self.assertRaises(components.CannotAdapt, ITest, a)
-        self.assertEqual(ITest(a, None), None)
+        self.assertIsNone(ITest(a, None))
 
 
 

@@ -210,7 +210,7 @@ class ServerOptionsTests(unittest.TestCase):
         for subCommand, expectedCommand in zip(subCommands, expectedOrder):
             name, shortcut, parserClass, documentation = subCommand
             self.assertEqual(name, expectedCommand.tapname)
-            self.assertEqual(shortcut, None)
+            self.assertIsNone(shortcut)
             self.assertEqual(parserClass(), expectedCommand._options),
             self.assertEqual(documentation, expectedCommand.description)
 
@@ -292,7 +292,7 @@ class ServerOptionsTests(unittest.TestCase):
         The default value for the C{umask} option is C{None}.
         """
         config = twistd.ServerOptions()
-        self.assertEqual(config['umask'], None)
+        self.assertIsNone(config['umask'])
 
 
     def test_umask(self):

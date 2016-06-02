@@ -1476,11 +1476,11 @@ class HTTP11ClientProtocolTests(TestCase):
         self.assertEqual(quiescentResult, [protocol, u"response done"])
 
         # Make sure everything was cleaned up:
-        self.assertEqual(protocol._parser, None)
-        self.assertEqual(protocol._finishedRequest, None)
-        self.assertEqual(protocol._currentRequest, None)
-        self.assertEqual(protocol._transportProxy, None)
-        self.assertEqual(protocol._responseDeferred, None)
+        self.assertIsNone(protocol._parser)
+        self.assertIsNone(protocol._finishedRequest)
+        self.assertIsNone(protocol._currentRequest)
+        self.assertIsNone(protocol._transportProxy)
+        self.assertIsNone(protocol._responseDeferred)
 
 
     def test_transportProducingWhenQuiescentAfterFullBody(self):

@@ -139,21 +139,21 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
         deferred.callback("hello")
-        self.assertEqual(self.errbackResults, None)
+        self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults, (('hello',), {}))
 
     def testCallbackWithArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, "world")
         deferred.callback("hello")
-        self.assertEqual(self.errbackResults, None)
+        self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults, (('hello', 'world'), {}))
 
     def testCallbackWithKwArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, world="world")
         deferred.callback("hello")
-        self.assertEqual(self.errbackResults, None)
+        self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults,
                              (('hello',), {'world': 'world'}))
 
@@ -162,7 +162,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferred.addCallback(self._callback)
         deferred.addCallback(self._callback2)
         deferred.callback("hello")
-        self.assertEqual(self.errbackResults, None)
+        self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults,
                              (('hello',), {}))
         self.assertEqual(self.callback2Results,
@@ -1668,7 +1668,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         d.addCallbacks(self._callback, self._errback)
         d.cancel()
         self.assertEqual(self.errbackResults.type, defer.CancelledError)
-        self.assertEqual(self.callbackResults, None)
+        self.assertIsNone(self.callbackResults)
 
 
     def test_raisesAfterCancelAndCallback(self):
@@ -1821,7 +1821,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         d.callback('biff!')
         d.cancel()
         self.assertEqual(self.cancellerCallCount, 0)
-        self.assertEqual(self.errbackResults, None)
+        self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults, 'biff!')
 
 
@@ -1839,7 +1839,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         d.cancel()
         self.assertEqual(self.cancellerCallCount, 0)
         self.assertEqual(self.errbackResults.type, GenericError)
-        self.assertEqual(self.callbackResults, None)
+        self.assertIsNone(self.callbackResults)
 
 
     def test_cancellerThatErrbacks(self):
@@ -1868,7 +1868,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         d.cancel()
         self.assertEqual(self.cancellerCallCount, 1)
         self.assertEqual(self.callbackResults, 'hello!')
-        self.assertEqual(self.errbackResults, None)
+        self.assertIsNone(self.errbackResults)
 
 
     def test_cancelNestedDeferred(self):
@@ -2175,7 +2175,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(results, [])
         self.assertEqual(self.arg, uniqueObject)
         controlDeferred.callback(None)
-        self.assertEqual(results.pop(), None)
+        self.assertIsNone(results.pop())
         self.assertEqual(self.counter, 1)
 
         self.counter = 0
@@ -2429,7 +2429,7 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         tryLockCall = self.lock._tryLockCall
         deferred.cancel()
         self.assertFalse(tryLockCall.active())
-        self.assertEqual(self.lock._tryLockCall, None)
+        self.assertIsNone(self.lock._tryLockCall)
         self.failureResultOf(deferred, defer.CancelledError)
 
 
@@ -2444,5 +2444,5 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         timeoutCall = self.lock._timeoutCall
         deferred.cancel()
         self.assertFalse(timeoutCall.active())
-        self.assertEqual(self.lock._timeoutCall, None)
+        self.assertIsNone(self.lock._timeoutCall)
         self.failureResultOf(deferred, defer.CancelledError)

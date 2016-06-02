@@ -114,8 +114,8 @@ class TypedTests(unittest.TestCase):
         self.assertIsInstance(self.usage.opts['fooint'], int)
         self.assertEqual(self.usage.opts['foofloat'], 4.23)
         self.assertIsInstance(self.usage.opts['foofloat'], float)
-        self.assertEqual(self.usage.opts['eggint'], None)
-        self.assertEqual(self.usage.opts['eggfloat'], None)
+        self.assertIsNone(self.usage.opts['eggint'])
+        self.assertIsNone(self.usage.opts['eggfloat'])
 
 
     def test_parsingValues(self):
@@ -315,7 +315,7 @@ class SubCommandTests(unittest.TestCase):
         o = SubCommandOptions()
         o.parseOptions(['--europian-swallow'])
         self.assertEqual(o['europian-swallow'], True)
-        self.assertEqual(o.subCommand, None)
+        self.assertIsNone(o.subCommand)
         self.assertFalse(hasattr(o, 'subOptions'))
 
     def test_defaultSubcommand(self):

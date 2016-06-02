@@ -185,7 +185,7 @@ class FileBodyProducerTests(TestCase):
             self._scheduled.pop(0)()
         self.assertEqual([], self._scheduled)
         self.assertEqual(expectedResult, output.getvalue())
-        self.assertEqual(None, self.successResultOf(complete))
+        self.assertIsNone(self.successResultOf(complete))
 
 
     def test_inputClosedAtEOF(self):

@@ -584,9 +584,9 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         L{_intOrDefault} converts values to C{int} if possible, otherwise
         returns a default value.
         """
-        self.assertEqual(irc._intOrDefault(None), None)
-        self.assertEqual(irc._intOrDefault([]), None)
-        self.assertEqual(irc._intOrDefault(''), None)
+        self.assertIsNone(irc._intOrDefault(None))
+        self.assertIsNone(irc._intOrDefault([]))
+        self.assertIsNone(irc._intOrDefault(''))
         self.assertEqual(irc._intOrDefault('hello', 5), 5)
         self.assertEqual(irc._intOrDefault('123'), 123)
         self.assertEqual(irc._intOrDefault(123), 123)
@@ -654,7 +654,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         C{ValueError} if the prefix parameter is malformed.
         """
         _parsePrefixParam = irc.ServerSupportedFeatures._parsePrefixParam
-        self.assertEqual(_parsePrefixParam(''), None)
+        self.assertIsNone(_parsePrefixParam(''))
         self.assertRaises(ValueError, _parsePrefixParam, 'hello')
         self.assertEqual(_parsePrefixParam('(ov)@+'),
                           {'o': ('@', 0),
