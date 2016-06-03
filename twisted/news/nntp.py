@@ -28,6 +28,8 @@ Other desired features:
    - A control protocol
 """
 
+from __future__ import print_function
+
 import time
 
 from twisted.protocols import basic
@@ -579,7 +581,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errList(self, failure):
-        print 'LIST failed: ', failure
+        print('LIST failed: ', failure)
         self.sendLine('503 program fault - command not performed')
 
 
@@ -591,7 +593,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errSubscription(self, failure):
-        print 'SUBSCRIPTIONS failed: ', failure
+        print('SUBSCRIPTIONS failed: ', failure)
         self.sendLine('503 program fault - comand not performed')
 
 
@@ -603,7 +605,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errOverview(self, failure):
-        print 'LIST OVERVIEW.FMT failed: ', failure
+        print('LIST OVERVIEW.FMT failed: ', failure)
         self.sendLine('503 program fault - command not performed')
 
 
@@ -630,7 +632,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errListGroup(self, failure):
-        print 'LISTGROUP failed: ', failure
+        print('LISTGROUP failed: ', failure)
         self.sendLine('502 no permission')
 
 
@@ -651,7 +653,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errXOver(self, failure):
-        print 'XOVER failed: ', failure
+        print('XOVER failed: ', failure)
         self.sendLine('420 No article(s) selected')
 
 
@@ -688,7 +690,7 @@ class NNTPServer(basic.LineReceiver):
         self.sendLine('.')
 
     def _errXHDR(self, failure):
-        print 'XHDR failed: ', failure
+        print('XHDR failed: ', failure)
         self.sendLine('502 no permission')
 
 
@@ -715,7 +717,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errPost(self, failure):
-        print 'POST failed: ', failure
+        print('POST failed: ', failure)
         self.sendLine('441 posting failed')
 
 
@@ -732,7 +734,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errCheck(self, failure):
-        print 'CHECK failed: ', failure
+        print('CHECK failed: ', failure)
         self.sendLine('431 try sending it again later')
 
 
@@ -757,7 +759,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errTakeThis(self, failure):
-        print 'TAKETHIS failed: ', failure
+        print('TAKETHIS failed: ', failure)
         self.sendLine('439 article transfer failed')
 
 
@@ -773,7 +775,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errGroup(self, failure):
-        print 'GROUP failed: ', failure
+        print('GROUP failed: ', failure)
         self.sendLine('411 no such group')
 
 
@@ -822,7 +824,7 @@ class NNTPServer(basic.LineReceiver):
     ##
 
     def _errArticle(self, failure):
-        print 'ARTICLE failed: ', failure
+        print('ARTICLE failed: ', failure)
         self.sendLine('423 bad article number')
 
 
@@ -838,7 +840,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errStat(self, failure):
-        print 'STAT failed: ', failure
+        print('STAT failed: ', failure)
         self.sendLine('423 bad article number')
 
 
@@ -856,7 +858,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errHead(self, failure):
-        print 'HEAD failed: ', failure
+        print('HEAD failed: ', failure)
         self.sendLine('423 no such article number in this group')
 
 
@@ -875,7 +877,7 @@ class NNTPServer(basic.LineReceiver):
         d.addCallback(self.finishedFileTransfer)
 
     def _errBody(self, failure):
-        print 'BODY failed: ', failure
+        print('BODY failed: ', failure)
         self.sendLine('423 no such article number in this group')
 
 
@@ -975,7 +977,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errIHAVE(self, failure):
-        print 'IHAVE failed: ', failure
+        print('IHAVE failed: ', failure)
         self.sendLine('436 transfer failed - try again later')
 
 

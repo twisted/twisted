@@ -2,6 +2,8 @@
 # See LICENSE for details.
 
 
+from __future__ import print_function
+
 from twisted.news import news, database
 from twisted.application import strports
 from twisted.python import usage, log
@@ -129,7 +131,7 @@ def makeService(config):
         else:
             db.addGroup(g, 'y')
     for s in config.subscriptions:
-        print s
+        print(s)
         db.addSubscription(s)
     s = config['port']
     if config['interface']:
