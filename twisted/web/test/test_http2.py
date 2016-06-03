@@ -2044,3 +2044,39 @@ class HTTP2TransportChecking(unittest.TestCase):
         d.addCallback(validateComplete)
 
         return d
+
+
+    def test_stopProducing(self):
+        """
+        L{H2Connection} can be stopped by its producer. That causes it to lose
+        its transport.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DummyHTTPHandler
+
+        # Send the request.
+        frames = buildRequestFrames(self.getRequestHeaders, [], f)
+        requestBytes = f.preamble()
+        requestBytes += b''.join(f.serialize() for f in frames)
+        a.makeConnection(b)
+        b.registerProducer(a, True)
+
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        # The headers will be sent immediately, but the body will be waiting
+        # until the reactor gets to spin. Before it does we'll stop production.
+        a.stopProducing()
+
+        buffer = FrameBuffer()
+        buffer.receiveData(b.value())
+        frames = list(buffer)
+
+        self.assertEqual(len(frames), 2)
+        self.assertFalse(
+            isinstance(frames[-1], hyperframe.frame.DataFrame)
+        )
+        self.assertFalse(a._stillProducing)
