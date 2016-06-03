@@ -1180,6 +1180,42 @@ class HTTP2ServerTests(unittest.TestCase):
         a.streams[1].abortConnection()
 
 
+    def test_lateCompletionWorks(self):
+        """
+        L{H2Connection} correctly unblocks when a stream is ended.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DelayedHTTPHandler
+
+        # Send the request.
+        requestBytes = f.preamble()
+        requestBytes += buildRequestBytes(
+            self.getRequestHeaders, [], f
+        )
+        a.makeConnection(b)
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        # Delay a call to end request, forcing the connection to block because
+        # it has no data to send.
+        request = a.streams[1]._request
+        reactor.callLater(0.01, request.finish)
+
+        def validateComplete(*args):
+            buffer = FrameBuffer()
+            buffer.receiveData(b.value())
+            frames = list(buffer)
+
+            # Check that the stream is correctly terminated.
+            self.assertEqual(len(frames), 3)
+            self.assertTrue('END_STREAM' in frames[-1].flags)
+
+        return a._streamCleanupCallbacks[1].addCallback(validateComplete)
+
+
     def test_writeSequenceForChannels(self):
         """
         L{H2Stream} objects can send a series of frames via C{writeSequence}.
@@ -1229,6 +1265,80 @@ class HTTP2ServerTests(unittest.TestCase):
             )
 
         return completionDeferred.addCallback(validate)
+
+
+    def test_delayWrites(self):
+        """
+        Delaying writes from L{Request} causes the L{H2Connection} to block on
+        sending until data is available. However, data is *not* sent if there's
+        no room in the flow control window.
+        """
+        # Here we again want to use the DummyProducerHandler because it doesn't
+        # close the connection on its own.
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DelayedHTTPHandler
+
+        requestBytes = f.preamble()
+        requestBytes += f.buildSettingsFrame(
+            {h2.settings.INITIAL_WINDOW_SIZE: 5}
+        ).serialize()
+        requestBytes += buildRequestBytes(
+            self.getRequestHeaders, [], f
+        )
+        a.makeConnection(b)
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        # Grab the request.
+        stream = a.streams[1]
+        request = stream._request
+
+        # Write the first 5 bytes.
+        request.write(b'fiver')
+        dataChunks = [b'here', b'are', b'some', b'writes']
+
+        def write_chunks():
+            # Send in some writes.
+            for chunk in dataChunks:
+                request.write(chunk)
+            request.finish()
+
+        d = task.deferLater(reactor, 0.01, write_chunks)
+        d.addCallback(
+            lambda *args: a.dataReceived(
+                f.buildWindowUpdateFrame(streamID=1, increment=50).serialize()
+            )
+        )
+
+        # Check that the data was all written out correctly and that the stream
+        # state is cleaned up.
+        def validate(streamID):
+            buffer = FrameBuffer()
+            buffer.receiveData(b.value())
+            frames = list(buffer)
+
+            # 2 Settings, Headers, 7 Data frames.
+            self.assertEqual(len(frames), 9)
+            self.assertTrue(all(f.stream_id == 1 for f in frames[2:]))
+
+            self.assertTrue(
+                isinstance(frames[2], hyperframe.frame.HeadersFrame)
+            )
+            self.assertTrue('END_STREAM' in frames[-1].flags)
+
+            receivedDataChunks = [
+                f.data for f in frames
+                if isinstance(f, hyperframe.frame.DataFrame)
+            ]
+            self.assertEqual(
+                receivedDataChunks,
+                [b"fiver"] + dataChunks + [b""],
+            )
+
+        return a._streamCleanupCallbacks[1].addCallback(validate)
 
 
 
