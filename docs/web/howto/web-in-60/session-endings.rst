@@ -98,7 +98,7 @@ trivial example which prints a message whenever a session expires:
             return ""
     
         def _expired(self, uid):
-            print "Session", uid, "has expired."
+            print("Session", uid, "has expired.")
             self.sessions.remove(uid)
 
 
@@ -139,7 +139,7 @@ session expires, and uses sessions which last for 5 seconds:
             return ""
     
         def _expired(self, uid):
-            print "Session", uid, "has expired."
+            print("Session", uid, "has expired.")
             self.sessions.remove(uid)
     
     rootResource = Resource()

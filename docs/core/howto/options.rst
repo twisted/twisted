@@ -91,7 +91,8 @@ option was seen, 0 otherwise. Here is an example for usage:
 
 .. code-block:: python
 
-    
+    from __future__ import print_function
+
     class Options(usage.Options):
     
         optFlags = [
@@ -106,16 +107,16 @@ option was seen, 0 otherwise. Here is an example for usage:
     try:
         options.parseOptions(command_line)
     except usage.UsageError, errortext:
-        print '%s: %s' % (sys.argv[0], errortext)
-        print '%s: Try --help for usage details.' % (sys.argv[0])
+        print('%s: %s' % (sys.argv[0], errortext))
+        print('%s: Try --help for usage details.' % (sys.argv[0]))
         sys.exit(1)
     if options['fast']:
-        print "fast",
+        print("fast", end=' ')
     if options['good']:
-        print "good",
+        print("good", end=' ')
     if options['cheap']:
-        print "cheap",
-    print
+        print("cheap", end=' ')
+    print()
 
 
 
@@ -185,6 +186,7 @@ Here is an example:
 .. code-block:: python
 
     
+    from __future__ import print_function
     from twisted.python import usage
     
     class Options(usage.Options):
@@ -200,20 +202,20 @@ Here is an example:
     try:
         config.parseOptions() # When given no argument, parses sys.argv[1:]
     except usage.UsageError, errortext:
-        print '%s: %s' % (sys.argv[0], errortext)
-        print '%s: Try --help for usage details.' % (sys.argv[0])
+        print('%s: %s' % (sys.argv[0], errortext))
+        print('%s: Try --help for usage details.' % (sys.argv[0]))
         sys.exit(1)
     
     if config['user'] is not None:
-        print "Hello", config['user']
+        print("Hello", config['user'])
     print "So, you want it:"
     
     if config['fast']:
-        print "fast",
+        print("fast", end=' ')
     if config['good']:
-        print "good",
+        print("good", end=' ')
     if config['cheap']:
-        print "cheap",
+        print("cheap", end=' ')
     print
 
 

@@ -49,11 +49,11 @@
     def _cbMailExchange(results):
         # Callback for MX query
         answers = results[0]
-        print 'Mail Exchange is: ', answers
+        print('Mail Exchange is: ', answers)
 
     def _ebMailExchange(failure):
         # Error callback for MX query
-        print 'Lookup failed:'
+        print('Lookup failed:')
         failure.printTraceback()
 
     from twisted.names import client

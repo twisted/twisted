@@ -4,6 +4,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.internet.protocol import Factory
 from twisted.protocols import basic
 from twisted.internet import reactor
@@ -227,7 +229,7 @@ slow - Wait 20 seconds after the connection is made to return a Server Greeting
 """
 
 def printMessage(msg):
-    print "Server Starting in %s mode" % msg
+    print("Server Starting in %s mode" % msg)
 
 def processArg(arg):
 
@@ -288,11 +290,11 @@ def processArg(arg):
         printMessage("Slow Greeting")
 
     elif arg.lower() == '--help':
-        print usage
+        print(usage)
         sys.exit()
 
     else:
-        print usage
+        print(usage)
         sys.exit()
 
 def main():

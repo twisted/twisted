@@ -8,6 +8,8 @@
 
 #""" Implementation module for the `conch` command.
 #"""
+from __future__ import print_function
+
 from twisted.conch.client import connect, default, options
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import connection, common
@@ -105,7 +107,7 @@ def run():
     try:
         options.parseOptions(args)
     except usage.UsageError as u:
-        print 'ERROR: %s' % u
+        print('ERROR: %s' % u)
         options.opt_help()
         sys.exit(1)
     if options['log']:
@@ -141,7 +143,7 @@ def run():
         if (options['command'] and options['tty']) or not options['notty']:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
     if sys.stdout.isatty() and not options['command']:
-        print 'Connection to %s closed.' % options['host']
+        print('Connection to %s closed.' % options['host'])
     sys.exit(exitStatus)
 
 def handleError():
