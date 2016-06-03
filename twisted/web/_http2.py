@@ -323,8 +323,11 @@ class H2Connection(Protocol):
 
             # There's deliberately no error handling here, because this just
             # absolutely should not happen.
-            self.conn.send_data(stream, frameData)
-            self.transport.write(self.conn.data_to_send())
+            # If for whatever reason the max frame length is zero and so we
+            # have no frame data to send, don't send any.
+            if frameData:
+                self.conn.send_data(stream, frameData)
+                self.transport.write(self.conn.data_to_send())
 
             # If there's no data left, this stream is now blocked.
             if not self._outboundStreamQueues[stream]:
