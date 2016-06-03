@@ -2561,7 +2561,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         L{dns._OPTHeader.dnssecOK} defaults to False.
         """
-        self.assertEqual(dns._OPTHeader().dnssecOK, False)
+        self.assertFalse(dns._OPTHeader().dnssecOK)
 
 
     def test_dnssecOKOverride(self):
@@ -2569,7 +2569,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.dnssecOK} can be overridden in the
         constructor.
         """
-        self.assertEqual(dns._OPTHeader(dnssecOK=True).dnssecOK, True)
+        self.assertTrue(dns._OPTHeader(dnssecOK=True).dnssecOK)
 
 
     def test_options(self):
@@ -4475,7 +4475,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         ednsMessage = dns._EDNSMessage()
         ednsMessage.fromStr(m.toStr())
 
-        self.assertEqual(ednsMessage.ednsVersion, None)
+        self.assertIsNone(ednsMessage.ednsVersion)
 
 
     def test_fromMessageCopiesSections(self):
