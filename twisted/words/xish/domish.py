@@ -513,7 +513,7 @@ class Element(object):
 
     def addContent(self, text):
         """ Add some text data to this Element. """
-        text = _coercedUnicode(text, 'text')
+        text = _coercedUnicode(text)
         c = self.children
         if len(c) > 0 and isinstance(c[-1], unicode):
             c[-1] = c[-1] + text

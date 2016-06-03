@@ -150,45 +150,44 @@ class ElementTests(unittest.TestCase):
         self.assertEqual(u"abc", unicode(element))
 
 
-    def test_addContentBytes(self):
+    def test_addContent(self):
         """
-        Text passed to addContent as bytes is decoded from utf-8.
+        Unicode strings passed to C{addContent} become the character data.
         """
         element = domish.Element((u"testns", u"foo"))
-        if _PY3:
-            self.assertRaises(TypeError, element.addContent, b'bytes')
-        else:
-            element.addContent(b'bytes')
-            self.assertEqual(u"bytes", unicode(element))
-            currentWarnings = self.flushWarnings(offendingFunctions=[
-                element.addContent])
-            self.assertEqual(len(currentWarnings), 1)
-            self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
-            self.assertEqual(
-                currentWarnings[0]['message'],
-                "The use of byte strings for 'text' "
-                "was deprecated in Twisted 16.3.0: "
-                "use unicode strings instead")
+        element.addContent(u'bytes')
+        self.assertEqual(u"bytes", unicode(element))
+
+
+    def test_addContentNativeStringASCII(self):
+        """
+        ASCII native strings passed to C{addContent} become the character data.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        element.addContent('bytes')
+        self.assertEqual(u"bytes", unicode(element))
+
+
+    def test_addContentBytes(self):
+        """
+        Byte strings passed to C{addContent} are not acceptable on Python 3.
+        """
+        element = domish.Element((u"testns", u"foo"))
+        self.assertRaises(TypeError, element.addContent, b'bytes')
+    if not _PY3:
+        test_addContentBytes.skip = (
+            "Bytes behavior of addContent only provided on Python 2.")
 
 
     def test_addContentBytesNonASCII(self):
         """
-        Text passed to addContent as bytes is decoded from utf-8.
+        Non-ASCII byte strings passed to C{addContent} yield L{UnicodeError}.
         """
         element = domish.Element((u"testns", u"foo"))
-        if _PY3:
-            self.assertRaises(TypeError, element.addContent, b'\xc3\xa1')
-        else:
-            self.assertRaises(UnicodeError, element.addContent, b'\xc3\xa1')
-            currentWarnings = self.flushWarnings(offendingFunctions=[
-                element.addContent])
-            self.assertEqual(len(currentWarnings), 1)
-            self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
-            self.assertEqual(
-                currentWarnings[0]['message'],
-                "The use of byte strings for 'text' "
-                "was deprecated in Twisted 16.3.0: "
-                "use unicode strings instead")
+        self.assertRaises(UnicodeError, element.addContent, b'\xe2\x98\x83')
+    if _PY3:
+        test_addContentBytesNonASCII.skip = (
+            "Bytes behavior of addContent only provided on Python 2.")
 
 
     def test_addElementContent(self):

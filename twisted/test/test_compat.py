@@ -784,7 +784,7 @@ class CoercedUnicodeTests(unittest.TestCase):
         """
         Unicode strings with ASCII code points are unchanged.
         """
-        result = _coercedUnicode(u'text', 'class.attribute')
+        result = _coercedUnicode(u'text')
         self.assertEqual(result, u'text')
 
         if _PY3:
@@ -799,7 +799,7 @@ class CoercedUnicodeTests(unittest.TestCase):
         """
         Unicode strings with non-ASCII code points are unchanged.
         """
-        result = _coercedUnicode(u'\N{SNOWMAN}', 'class.attribute')
+        result = _coercedUnicode(u'\N{SNOWMAN}')
         self.assertEqual(result, u'\N{SNOWMAN}')
 
         if _PY3:
@@ -815,26 +815,12 @@ class CoercedUnicodeTests(unittest.TestCase):
         Byte strings with ASCII code points are decoded and raise warning.
         """
         if _PY3:
-            exc = self.assertRaises(TypeError, _coercedUnicode,
-                                               b'bytes', 'class.attribute')
-            self.assertEqual(str(exc), "class.attribute must be str not "
-                                       "b'bytes' (bytes)")
-            currentWarnings = self.flushWarnings(offendingFunctions=[
-                self.test_bytesASCII])
-            self.assertEqual(len(currentWarnings), 0)
+            exc = self.assertRaises(TypeError, _coercedUnicode, b'bytes')
+            self.assertEqual(str(exc), "Expected str not b'bytes' (bytes)")
         else:
-            result = _coercedUnicode(b'bytes', 'class.attribute')
+            result = _coercedUnicode(b'bytes')
             self.assertEquals(result, u'bytes')
             self.assertIsInstance(result, unicode)
-            currentWarnings = self.flushWarnings(offendingFunctions=[
-                self.test_bytesASCII])
-            self.assertEqual(len(currentWarnings), 1)
-            self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
-            self.assertEqual(
-                currentWarnings[0]['message'],
-                "The use of byte strings for 'class.attribute' "
-                "was deprecated in Twisted 16.3.0: "
-                "use unicode strings instead")
 
 
 
@@ -843,20 +829,6 @@ class CoercedUnicodeTests(unittest.TestCase):
         Byte strings with non-ASCII code points raise an exception.
         """
         if _PY3:
-            self.assertRaises(TypeError, _coercedUnicode, b'\xe2\x98\x83',
-                                                         'class.attribute')
-            currentWarnings = self.flushWarnings(offendingFunctions=[
-                self.test_bytesNonASCII])
-            self.assertEqual(len(currentWarnings), 0)
+            self.assertRaises(TypeError, _coercedUnicode, b'\xe2\x98\x83')
         else:
-            self.assertRaises(UnicodeError, _coercedUnicode, b'\xe2\x98\x83',
-                                                            'class.attribute')
-            currentWarnings = self.flushWarnings(offendingFunctions=[
-                self.assertRaises])
-            self.assertEqual(len(currentWarnings), 1)
-            self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
-            self.assertEqual(
-                currentWarnings[0]['message'],
-                "The use of byte strings for 'class.attribute' "
-                "was deprecated in Twisted 16.3.0: "
-                "use unicode strings instead")
+            self.assertRaises(UnicodeError, _coercedUnicode, b'\xe2\x98\x83')

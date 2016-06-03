@@ -710,35 +710,23 @@ except ImportError:
 
 
 
-def _coercedUnicode(s, where):
+def _coercedUnicode(s):
     """
     Coerce ASCII-only byte strings into unicode for Python 2.
 
     In Python 2 C{unicode(b'bytes')} returns a unicode string C{'bytes'}. In
     Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
-    instead. This function mimics the behavior for Python 2, while deprecating
-    its usage. It will decode the string as ASCII and emit a
-    L{DeprecationWarning} to gradually remove this usage of allowing ASCII-only
-    byte strings where unicode strings are expected. In Python 3 it simply
-    raises a L{TypeError} when passing a byte string.
-
-    @param where: Attribute or parameter name to use in exception or warning
-        messages to point to where the use of ASCII-only byte strings
-        occurred.
-    @type where: L{str}
+    instead. This function mimics the behavior for Python 2. It will decode the
+    byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
+    passing a byte string. Unicode strings are return as-is.
 
     @raise UnicodeError: The input L{bytes} is not ASCII decodable.
     @raise TypeError: The input is L{bytes} on Python 3.
-    @raise DeprecationWarning: The input is a ASCII-only L{bytes} on Python 2.
     """
     if isinstance(s, bytes):
         if _PY3:
-            raise TypeError("%s must be str not %r (bytes)" % (where, s))
+            raise TypeError("Expected str not %r (bytes)" % s)
         else:
-            warnings.warn(("The use of byte strings for '%s' was deprecated in "
-                           "Twisted 16.3.0: use unicode strings instead") %
-                               where,
-                          category=DeprecationWarning, stacklevel=2)
             return s.decode('ascii')
     else:
         return s
