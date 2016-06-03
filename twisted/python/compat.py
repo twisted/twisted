@@ -720,6 +720,9 @@ def _coercedUnicode(s):
     byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
     passing a byte string. Unicode strings are return as-is.
 
+    @param s: The string to coerce.
+    @type s: L{bytes} or L{unicode}
+
     @raise UnicodeError: The input L{bytes} is not ASCII decodable.
     @raise TypeError: The input is L{bytes} on Python 3.
     """

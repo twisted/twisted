@@ -823,7 +823,6 @@ class CoercedUnicodeTests(unittest.TestCase):
             self.assertIsInstance(result, unicode)
 
 
-
     def test_bytesNonASCII(self):
         """
         Byte strings with non-ASCII code points raise an exception.
