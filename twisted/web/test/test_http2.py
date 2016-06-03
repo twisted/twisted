@@ -503,6 +503,66 @@ class HTTP2ServerTests(unittest.TestCase):
         return a._streamCleanupCallbacks[1].addCallback(validate)
 
 
+    def test_postRequestNoLength(self):
+        """
+        Send a POST request without length and confirm that the data is safely
+        transferred.
+        """
+        postResponseHeaders = [
+            (b':status', b'200'),
+            (b'request', b'/post_endpoint'),
+            (b'command', b'POST'),
+            (b'version', b'HTTP/2'),
+            (b'content-length', b'38'),
+        ]
+        postResponseData = b"'''\nNone\nhello world, it's http/2!'''\n"
+
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DummyHTTPHandler
+
+        # Strip the content-length header.
+        postRequestHeaders = [
+            (x, y) for x, y in self.postRequestHeaders
+            if x != b'content-length'
+        ]
+
+        requestBytes = f.preamble()
+        requestBytes += buildRequestBytes(
+            postRequestHeaders, self.postRequestData, f
+        )
+        a.makeConnection(b)
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        def validate(streamID):
+            buffer = FrameBuffer()
+            buffer.receiveData(b.value())
+            frames = list(buffer)
+
+            # One Settings frame, 8 WindowUpdate frames, one Headers frame,
+            # and two Data frames
+            self.assertEqual(len(frames), 12)
+            self.assertTrue(all(f.stream_id == 1 for f in frames[-3:]))
+
+            self.assertTrue(
+                isinstance(frames[-3], hyperframe.frame.HeadersFrame)
+            )
+            self.assertTrue(isinstance(frames[-2], hyperframe.frame.DataFrame))
+            self.assertTrue(isinstance(frames[-1], hyperframe.frame.DataFrame))
+
+            self.assertEqual(
+                dict(frames[-3].data), dict(postResponseHeaders)
+            )
+            self.assertEqual(frames[-2].data, postResponseData)
+            self.assertEqual(frames[-1].data, b'')
+            self.assertTrue('END_STREAM' in frames[-1].flags)
+
+        return a._streamCleanupCallbacks[1].addCallback(validate)
+
+
     def test_interleavedRequests(self):
         """
         Many interleaved POST requests all get received and responded to
