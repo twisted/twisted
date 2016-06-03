@@ -728,7 +728,7 @@ def _coercedUnicode(s):
     """
     if isinstance(s, bytes):
         if _PY3:
-            raise TypeError("Expected str not %r (bytes)" % s)
+            raise TypeError("Expected str not %r (bytes)" % (s,))
         else:
             return s.decode('ascii')
     else:
