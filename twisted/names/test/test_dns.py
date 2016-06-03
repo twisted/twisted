@@ -14,6 +14,7 @@ import struct
 
 from zope.interface.verify import verifyClass
 
+from twisted.python.compat import _PY3
 from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.internet import address, task
@@ -2188,6 +2189,43 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.UnknownRecord('foo', ttl=10),
             dns.UnknownRecord('foo', ttl=10),
             dns.UnknownRecord('foo', ttl=100))
+
+
+
+class OrderingTests(unittest.TestCase):
+    """
+    Tests for the ordering behavior of record classes.
+    """
+
+    def test_srvSomethingElse(self):
+        """
+        Comparison with something else than a Record_SRV is not supported.
+
+        Note that __lt__ returns NotImplemented. Python 2 defines total
+        ordering, but Python 3 raises TypeError.
+        """
+        record = dns.Record_SRV(10, 10, 5222, 'host1.example.org')
+        if _PY3:
+            self.assertRaises(TypeError, lambda : record < "")
+        else:
+            self.assertLess(record, "")
+
+    def test_srvSamePriorities(self):
+        """
+        Two records with equal priorities compare on weight.
+        """
+        record1 = dns.Record_SRV(10, 10, 5222, 'host1.example.org')
+        record2 = dns.Record_SRV(10, 20, 5222, 'host2.example.org')
+        self.assertLess(record1, record2)
+
+
+    def test_srvDifferentPriorities(self):
+        """
+        Two records with differing priorities compare on priority.
+        """
+        record1 = dns.Record_SRV(10, 0, 5222, 'host1.example.org')
+        record2 = dns.Record_SRV(20, 0, 5222, 'host2.example.org')
+        self.assertLess(record1, record2)
 
 
 

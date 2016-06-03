@@ -1534,7 +1534,7 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
         if not isinstance(other, Record_SRV):
             return NotImplemented
 
-        if self.priority != other.priority:
+        if self.priority == other.priority:
             return self.weight < other.weight
         else:
             return self.priority < other.priority
