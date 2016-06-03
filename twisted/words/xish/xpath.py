@@ -279,6 +279,7 @@ class _AnyLocation:
 class XPathQuery:
     def __init__(self, queryStr):
         self.queryStr = queryStr
+        # Prevent a circular import issue, as xpathparser imports this module.
         from twisted.words.xish.xpathparser import (XPathParser,
                                                     XPathParserScanner)
         parser = XPathParser(XPathParserScanner(queryStr))
