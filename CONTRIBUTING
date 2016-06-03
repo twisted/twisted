@@ -15,7 +15,7 @@ https://twistedmatrix.com/trac/wiki/ContributingToTwistedLabs
 
 Twisted has a Code of Conduct, available at code_of_conduct.md.
 
-**Warning: pull requests are ignored** unless that have an associated ticket.
+**Warning: pull requests are ignored** unless they have an associated ticket in trac.
 
 File a ticket at:
 
@@ -25,3 +25,4 @@ Twisted uses Trac to keep track of bugs, feature requests, and associated
 patches because GitHub doesn't provide adequate tooling for its community.
 
 For a PR to be accepted it needs to have at least all Travis CI tests passing.
+The Travis CI tests currently represent only a subset of the all the platforms Twisted supports, so the buildbot tests are still the actual gate for PR acceptance.
