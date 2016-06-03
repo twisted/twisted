@@ -406,7 +406,7 @@ class NewStyleTests(unittest.TestCase):
         orig = NewStyleCopy("value")
         d = self.ref.callRemote("echo", orig)
         def cb(res):
-            self.assertTrue(isinstance(res, NewStyleCopy))
+            self.assertIsInstance(res, NewStyleCopy)
             self.assertEqual(res.s, "value")
             self.assertFalse(res is orig) # no cheating :)
         d.addCallback(cb)
@@ -422,7 +422,7 @@ class NewStyleTests(unittest.TestCase):
         d = self.ref.callRemote("echo", orig)
         def cb(res):
             # receiving the response creates a third one on the way back
-            self.assertTrue(isinstance(res, NewStyleCopy2))
+            self.assertIsInstance(res, NewStyleCopy2)
             self.assertEqual(res.value, 2)
             self.assertEqual(NewStyleCopy2.allocated, 3)
             self.assertEqual(NewStyleCopy2.initialized, 1)
@@ -506,7 +506,7 @@ class NewStyleCachedTests(unittest.TestCase):
             self.assertIsInstance(res, NewStyleCacheCopy)
             self.assertEqual("value", res.s)
             # no cheating :)
-            self.assertNotIdentical(self.orig, res)
+            self.assertIsNot(self.orig, res)
 
             if again:
                 # Save a reference so it stays alive for the rest of this test
@@ -561,7 +561,7 @@ class BrokerTests(unittest.TestCase):
         pump.pump()
         pump.pump()
         pump.pump()
-        self.assertIdentical(x.caught, z, "X should have caught Z")
+        self.assertIs(x.caught, z, "X should have caught Z")
 
         # make sure references to remote methods are equals
         self.assertEqual(y.remoteMethod('throw'), y.remoteMethod('throw'))
@@ -634,7 +634,7 @@ class BrokerTests(unittest.TestCase):
         a.notify(10)
         pump.pump()
         pump.pump()
-        self.assertNotIdentical(b.obj, None, "didn't notify")
+        self.assertIsNotNone(b.obj, "didn't notify")
         self.assertEqual(b.obj, 1, 'notified too much')
 
     def test_defer(self):
@@ -708,9 +708,9 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(complex[0].foo, 4)
         self.assertEqual(len(coll), 2)
         cp = coll[0][0]
-        self.assertIdentical(cp.checkMethod().im_self, cp,
+        self.assertIs(cp.checkMethod().im_self, cp,
                              "potential refcounting issue")
-        self.assertIdentical(cp.checkSelf(), cp,
+        self.assertIs(cp.checkSelf(), cp,
                              "other potential refcounting issue")
         col2 = []
         o2.callRemote('putCache',cp).addCallback(col2.append)
@@ -748,7 +748,7 @@ class BrokerTests(unittest.TestCase):
                          "Server still had complex after GC")
         self.assertNotIn(baroqueLuid, c.locallyCachedObjects,
                          "Client still had complex after GC")
-        self.assertIdentical(vcc.observer, None, "observer was not removed")
+        self.assertIsNone(vcc.observer, "observer was not removed")
 
     def test_publishable(self):
         try:
@@ -1209,7 +1209,7 @@ class NewCredLeakTests(unittest.TestCase):
         # to a weakref to the mind; this object should be gc'd, and thus
         # the ref should return None
         gc.collect()
-        self.assertEqual(self.mindRef(), None)
+        self.assertIsNone(self.mindRef())
 
 
 
@@ -1768,7 +1768,7 @@ class SpreadUtilTests(unittest.TestCase):
         o = LocalRemoteTest()
         d = o.callRemote("fail")
         def eb(f):
-            self.assertTrue(isinstance(f, failure.Failure))
+            self.assertIsInstance(f, failure.Failure)
             f.trap(RuntimeError)
         d.addCallbacks(lambda res: self.fail("supposed to fail"), eb)
         return d
@@ -1811,7 +1811,7 @@ class PBWithSecurityOptionsTests(unittest.TestCase):
         """
         factory = pb.PBClientFactory()
         broker = factory.buildProtocol(None)
-        self.assertIdentical(broker.security, jelly.globalSecurity)
+        self.assertIs(broker.security, jelly.globalSecurity)
 
 
     def test_serverDefaultSecurityOptions(self):
@@ -1821,7 +1821,7 @@ class PBWithSecurityOptionsTests(unittest.TestCase):
         """
         factory = pb.PBServerFactory(Echoer())
         broker = factory.buildProtocol(None)
-        self.assertIdentical(broker.security, jelly.globalSecurity)
+        self.assertIs(broker.security, jelly.globalSecurity)
 
 
     def test_clientSecurityCustomization(self):
@@ -1832,7 +1832,7 @@ class PBWithSecurityOptionsTests(unittest.TestCase):
         security = jelly.SecurityOptions()
         factory = pb.PBClientFactory(security=security)
         broker = factory.buildProtocol(None)
-        self.assertIdentical(broker.security, security)
+        self.assertIs(broker.security, security)
 
 
     def test_serverSecurityCustomization(self):
@@ -1843,4 +1843,4 @@ class PBWithSecurityOptionsTests(unittest.TestCase):
         security = jelly.SecurityOptions()
         factory = pb.PBServerFactory(Echoer(), security=security)
         broker = factory.buildProtocol(None)
-        self.assertIdentical(broker.security, security)
+        self.assertIs(broker.security, security)
