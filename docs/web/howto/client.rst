@@ -381,8 +381,8 @@ an *HTTPS* URL with no certificate verification.
             return ClientContextFactory.getContext(self)
     
     def display(response):
-        print "Received response"
-        print response
+        print("Received response")
+        print(response)
     
     def main():
         contextFactory = WebClientContextFactory()
@@ -478,7 +478,7 @@ Here's an example which sends requests over a persistent connection:
     
     
     def cbRequest(response):
-        print 'Response code:', response.code
+        print('Response code:', response.code)
         finished = Deferred()
         response.deliverBody(IgnoreBody(finished))
         return finished
@@ -608,8 +608,8 @@ The following example shows how to have a redirect-enabled agent.
     from twisted.internet import reactor
     
     def display(response):
-        print "Received response"
-        print response
+        print("Received response")
+        print(response)
     
     def main():
         agent = RedirectAgent(Agent(reactor))
@@ -679,8 +679,8 @@ localhost:8000.
     from twisted.internet.endpoints import TCP4ClientEndpoint
     
     def display(response):
-        print "Received response"
-        print response
+        print("Received response")
+        print(response)
     
     def main():
         endpoint = TCP4ClientEndpoint(reactor, "localhost", 8000)
