@@ -27,16 +27,27 @@ class ElementTests(unittest.TestCase):
         verifyObject(domish.IElement, domish.Element((None, u"foo")))
 
 
-    def testEscaping(self):
+    def test_escaping(self):
+        """
+        The built-in entity references are properly encoded.
+        """
         s = "&<>'\""
         self.assertEqual(domish.escapeToXml(s), "&amp;&lt;&gt;'\"")
         self.assertEqual(domish.escapeToXml(s, 1), "&amp;&lt;&gt;&apos;&quot;")
 
-    def testNamespaceObject(self):
+
+    def test_namespace(self):
+        """
+        An attribute on L{domish.Namespace} yields a qualified name.
+        """
         ns = domish.Namespace("testns")
         self.assertEqual(ns.foo, ("testns", "foo"))
 
-    def testElementInit(self):
+
+    def test_elementInit(self):
+        """
+        Basic L{domish.Element} initialization tests.
+        """
         e = domish.Element((None, "foo"))
         self.assertEqual(e.name, "foo")
         self.assertEqual(e.uri, None)
@@ -60,7 +71,11 @@ class ElementTests(unittest.TestCase):
         self.assertEqual(e.uri, "testns")
         self.assertEqual(e.defaultUri, "test2ns")
 
-    def testChildOps(self):
+
+    def test_childOps(self):
+        """
+        Basic L{domish.Element} child tests.
+        """
         e = domish.Element(("testns", "foo"))
         e.addContent(u"somecontent")
         b2 = e.addElement(("testns2", "bar2"))
