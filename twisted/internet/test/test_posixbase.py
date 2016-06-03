@@ -187,7 +187,7 @@ class IterationTimeoutTests(TestCase):
         """
         reactor = TimeoutReportReactor()
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEqual(timeout, None)
+        self.assertIsNone(timeout)
 
 
     def test_delayedCall(self):
@@ -267,7 +267,7 @@ class IterationTimeoutTests(TestCase):
         call = reactor.callLater(50, lambda: None)
         call.cancel()
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEqual(timeout, None)
+        self.assertIsNone(timeout)
 
 
 
@@ -313,4 +313,4 @@ class ConnectedDatagramPortTests(TestCase):
         port = unix.ConnectedDatagramPort(None, ClientProto())
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
-        self.assertEqual(self.called, True)
+        self.assertTrue(self.called)
