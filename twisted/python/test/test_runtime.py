@@ -90,7 +90,7 @@ class PlatformTests(SynchronousTestCase):
         isWinNT = platform.isWinNT()
         self.assertIn(isWinNT, (False, True))
         if platform.getType() != "win32":
-            self.assertEqual(isWinNT, False)
+            self.assertFalse(isWinNT)
 
     test_isWinNT.suppress = [SUPRESS(category=DeprecationWarning,
          message=isWinNTDeprecationMessage)]
