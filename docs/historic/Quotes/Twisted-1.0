@@ -1861,7 +1861,7 @@ again :)
 <itamar> you're kidding, I hope
 <shapr> itamar: see, YOU'RE NOT SURE
 %
-<ameoba> print "\n".join(["".join([(lambda n, f=lambda c : "\033[%dm#"%c: f(n=='0' and 30 or n=='1' and 33 or n=='2' and 35 or n=='3' and 31 or n=='4' and 34 or n=='5' and 32 or n=='6' and 37))(char) for char in line]) for line in ["%06d"%x for x in [1002,31502,314233,314251,131152,314214,411531,234562,152212]]])
+<ameoba> print("\n".join(["".join([(lambda n, f=lambda c : "\033[%dm#"%c: f(n=='0' and 30 or n=='1' and 33 or n=='2' and 35 or n=='3' and 31 or n=='4' and 34 or n=='5' and 32 or n=='6' and 37))(char) for char in line]) for line in ["%06d"%x for x in [1002,31502,314233,314251,131152,314214,411531,234562,152212]]]))
 <ameoba> ex : it's a diagram of a crack-attack board +)
 <ameoba> 'cuz I can't dcc shit to shapr while he's behind that firewall +)
 %
