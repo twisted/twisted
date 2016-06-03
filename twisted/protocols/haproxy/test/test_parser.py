@@ -106,7 +106,7 @@ class HAProxyServerParserTests(TestCase):
         endpoint = serverFromString(reactor, description)
         self.assertIsInstance(endpoint, _WrapperServerEndpoint)
         self.assertIsInstance(endpoint._wrappedEndpoint, expectedClass)
-        self.assertIdentical(endpoint._wrapperFactory, HAProxyWrappingFactory)
+        self.assertIs(endpoint._wrapperFactory, HAProxyWrappingFactory)
         return endpoint
 
 
