@@ -2199,16 +2199,17 @@ class OrderingTests(unittest.TestCase):
 
     def test_srvSomethingElse(self):
         """
-        Comparison with something else than a Record_SRV is not supported.
+        Comparison with something else than L{dns.Record_SRV} is not supported.
 
-        Note that __lt__ returns NotImplemented. Python 2 defines total
-        ordering, but Python 3 raises TypeError.
+        Note that L{dns.Record_SRV.__lt__} returns L{NotImplemented}. Python 2
+        defines total ordering, but Python 3 raises L{TypeError}.
         """
         record = dns.Record_SRV(10, 10, 5222, 'host1.example.org')
         if _PY3:
             self.assertRaises(TypeError, lambda : record < "")
         else:
             self.assertLess(record, "")
+
 
     def test_srvSamePriorities(self):
         """

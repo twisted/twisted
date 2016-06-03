@@ -7,10 +7,13 @@ Test cases for L{twisted.names.srvconnect}.
 
 from __future__ import absolute_import, division
 
+from zope.interface.verify import verifyObject
+
 from twisted.trial import unittest
 
 from twisted.internet import defer, protocol
 from twisted.internet.error import DNSLookupError, ServiceNameUnknownError
+from twisted.internet.interfaces import IConnector
 from twisted.names import client, dns, srvconnect
 from twisted.names.common import ResolverBase
 from twisted.names.error import DNSNameError
@@ -71,6 +74,13 @@ class SRVConnectorTests(unittest.TestCase):
         self.factory = DummyFactory()
         self.connector = srvconnect.SRVConnector(self.reactor, 'xmpp-server',
                                                  'example.org', self.factory)
+
+
+    def test_interface(self):
+        """
+        L{srvconnect.SRVConnector} implements L{IConnector}.
+        """
+        verifyObject(IConnector, self.connector)
 
 
     def test_SRVPresent(self):

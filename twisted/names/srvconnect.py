@@ -33,10 +33,9 @@ class _SRVConnector_ClientFactoryWrapper:
 
 
 
-implementer(interfaces.IConnector)
+@implementer(interfaces.IConnector)
 class SRVConnector:
     """A connector that looks up DNS SRV records. See RFC2782."""
-
 
     stopAfterDNS=0
 
@@ -153,7 +152,7 @@ class SRVConnector:
         assert self.servers
 
         self.servers.sort()
-        minPriority=self.servers[0].priority
+        minPriority = self.servers[0].priority
 
         weightIndex = list(zip(xrange(len(self.servers)),
                                [x.weight for x in self.servers
