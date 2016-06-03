@@ -1351,11 +1351,11 @@ class H2FlowControlTests(unittest.TestCase):
 
 
     getRequestHeaders = [
-        (':method', 'GET'),
-        (':authority', 'localhost'),
-        (':path', '/'),
-        (':scheme', 'https'),
-        ('user-agent', 'twisted-test-code'),
+        (b':method', b'GET'),
+        (b':authority', b'localhost'),
+        (b':path', b'/'),
+        (b':scheme', b'https'),
+        (b'user-agent', b'twisted-test-code'),
     ]
 
 
@@ -1363,12 +1363,12 @@ class H2FlowControlTests(unittest.TestCase):
 
 
     postRequestHeaders = [
-        (':method', 'POST'),
-        (':authority', 'localhost'),
-        (':path', '/post_endpoint'),
-        (':scheme', 'https'),
-        ('user-agent', 'twisted-test-code'),
-        ('content-length', '25'),
+        (b':method', b'POST'),
+        (b':authority', b'localhost'),
+        (b':path', b'/post_endpoint'),
+        (b':scheme', b'https'),
+        (b'user-agent', b'twisted-test-code'),
+        (b'content-length', b'25'),
     ]
 
 
