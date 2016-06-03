@@ -29,7 +29,6 @@ import socket
 import string
 import struct
 import sys
-import warnings
 from types import MethodType as _MethodType
 
 from io import TextIOBase, IOBase
