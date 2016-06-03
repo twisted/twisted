@@ -315,7 +315,9 @@ class DomishStreamTestsMixin:
         self.assertEqual(self.elements[0].uri, 'testns')
 
     def testEmptyChildNS(self):
-        xml = b"<root xmlns='testns'><child1><child2 xmlns=''/></child1></root>"
+        xml = b"""<root xmlns='testns'>
+                    <child1><child2 xmlns=''/></child1>
+                  </root>"""
 
         self.stream.parse(xml)
         self.assertEqual(self.elements[0].child2.uri, '')

@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.words.test.test_xpath -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -5,7 +6,8 @@
 #
 # It is generated from xpathparser.g using Yapps. Make needed changes there.
 # This also means that the generated Python may not conform to Twisted's coding
-# standards.
+# standards, so it is wrapped in exec to prevent automated checkers from
+# complaining.
 
 # HOWTO Generate me:
 #
@@ -25,6 +27,7 @@
 #     imports:
 #
 #         sed -e '/^# Begin/,${/^[^ ].*mport/d}' -e 's/runtime\.//g' \
+#             -e "s/^\(from __future\)/exec(r'''\n\1/" -e"\$a''')"
 #             xpathparser.py.proto > xpathparser.py
 
 """
