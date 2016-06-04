@@ -24,6 +24,7 @@ from twisted.logger import (
     LogLevel,  # InvalidLogLevelError,
     Logger,
 )
+from twisted.internet import reactor as defaultReactor
 from ._exit import exit, ExitStatus
 
 
@@ -154,7 +155,8 @@ class Runner(object):
         """
         reactor = self.options.get(RunnerOptions.reactor)
         if reactor is None:
-            from twisted.internet import reactor
+            reactor = defaultReactor
+            reactor.install()
             self.options[RunnerOptions.reactor] = reactor
 
         reactor.callWhenRunning(self.whenRunning)

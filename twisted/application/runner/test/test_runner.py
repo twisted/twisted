@@ -163,9 +163,15 @@ class CommandTests(twisted.trial.unittest.TestCase):
         L{Runner.startReactor} without L{RunnerOptions.reactor} runs the default
         reactor.
         """
-        raise NotImplementedError()
+        # Patch defaultReactor
+        reactor = MemoryReactor()
+        self.patch(_runner, "defaultReactor", reactor)
 
-    test_startReactorWithoutReactor.todo = "unimplemented"
+        runner = Runner({})
+        runner.startReactor()
+
+        self.assertTrue(reactor.hasInstalled)
+        self.assertTrue(reactor.hasRun)
 
 
     def test_startReactorWithReactor(self):

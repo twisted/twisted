@@ -422,6 +422,8 @@ class MemoryReactor(object):
         """
         Initialize the tracking lists.
         """
+        self.hasInstalled = False
+
         self.running = False
         self.hasRun = True
         self.hasStopped = True
@@ -441,6 +443,13 @@ class MemoryReactor(object):
 
         self.readers = set()
         self.writers = set()
+
+
+    def install(self):
+        """
+        Fake install callable to emulate reactor module installation.
+        """
+        self.hasInstalled = True
 
 
     def resolve(self, name, timeout=10):
