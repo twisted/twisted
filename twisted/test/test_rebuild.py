@@ -121,7 +121,7 @@ class RebuildTests(unittest.TestCase):
 
         # Test that a duplicate registerAdapter is not allowed
         from twisted.python import components
-        self.failUnlessRaises(ValueError, components.registerAdapter,
+        self.assertRaises(ValueError, components.registerAdapter,
                               crash_test_dummy.XA, crash_test_dummy.X,
                               crash_test_dummy.IX)
 
