@@ -55,6 +55,7 @@ class Runner(object):
             self.startReactor()
             self.reactorExited()
             self.removePIDFile()
+        Additional steps may be added over time, but the order won't change.
         """
         self.killIfRequested()
         self.writePIDFile()
