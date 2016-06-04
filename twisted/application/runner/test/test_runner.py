@@ -8,7 +8,7 @@ Tests for L{twisted.application.runner._runner}.
 from signal import SIGTERM
 from io import BytesIO
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python.filepath import IFilePath
 from twisted.logger import LogPublisher, LogBeginner
@@ -281,7 +281,7 @@ class DummyKill(object):
 
 
 
-@implements(IFilePath)
+@implementer(IFilePath)
 class DummyFilePath(object):
     """
     Stub for L{twisted.python.filepath.FilePath} which returns a stream
