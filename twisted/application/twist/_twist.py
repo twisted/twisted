@@ -61,10 +61,7 @@ class Twist(object):
 
             cls.log.info("Waiting...")
 
-        runnerOptions.update({
-            RunnerOptions.logFile: sys.stdout,
-            RunnerOptions.whenRunning: whenRunning,
-        })
+        runnerOptions[RunnerOptions.whenRunning] = whenRunning
 
         ################# END DELETE THIS #################
 
