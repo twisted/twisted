@@ -27,12 +27,17 @@ class OptionsTests(twisted.trial.unittest.TestCase):
     """
 
     def patchExit(self):
-        # Patch exit so we can capture usage and prevent actual exits.
+        """
+        Patch L{_twist.exit} so we can capture usage and prevent actual exits.
+        """
         self.exit = DummyExit()
         self.patch(_options, "exit", self.exit)
 
 
     def patchOpen(self):
+        """
+        Patch L{_options.open} so we can capture usage and prevent actual opens.
+        """
         self.opened = []
 
         def fakeOpen(name, mode=None):
@@ -43,6 +48,10 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
 
     def patchInstallReactor(self):
+        """
+        Patch C{_options.installReactor} so we can capture usage and prevent
+        actual installs.
+        """
         self.installedReactors = {}
 
         def installReactor(name):
@@ -122,6 +131,12 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
 
     def _testLogFile(self, name, expectedStream):
+        """
+        Set log file name and check the selected output stream.
+
+        @param name: The name of the file.
+        @param expectedStream: The expected stream.
+        """
         options = TwistOptions()
         options.opt_log_file(name)
 
@@ -155,6 +170,12 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
 
     def _testLogFormat(self, format, expectedObserver):
+        """
+        Set log file format and check the selected observer.
+
+        @param format: The format of the file.
+        @param expectedObserver: The expected observer.
+        """
         options = TwistOptions()
         options.opt_log_format(format)
 

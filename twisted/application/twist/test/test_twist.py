@@ -30,12 +30,18 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
 
     def patchExit(self):
-        # Patch exit so we can capture usage and prevent actual exits.
+        """
+        Patch L{_twist.exit} so we can capture usage and prevent actual exits.
+        """
         self.exit = DummyExit()
         self.patch(_twist, "exit", self.exit)
 
 
     def patchInstallReactor(self):
+        """
+        Patch C{_options.installReactor} so we can capture usage and prevent
+        actual installs.
+        """
         self.installedReactors = {}
 
         def installReactor(name):
@@ -47,6 +53,10 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
 
     def patchStartService(self):
+        """
+        Patch L{MultiService.startService} so we can capture usage and prevent
+        actual starts.
+        """
         self.serviceStarts = []
 
         def startService(service):
@@ -142,7 +152,9 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         optionsSeen = []
 
-        self.patch(Runner, "run", lambda self: optionsSeen.append(self.options))
+        self.patch(
+            Runner, "run", lambda self: optionsSeen.append(self.options)
+        )
 
         runner.run()
 

@@ -387,34 +387,54 @@ class MemoryReactor(object):
     much that's useful yet.  It accepts TCP connection setup attempts, but
     they will never succeed.
 
-    @ivar tcpClients: a list that keeps track of connection attempts (ie, calls
-        to C{connectTCP}).
-    @type tcpClients: C{list}
+    @ivar hasInstalled: Keeps track of whether this reactor has been installed.
+    @type hasInstalled: L{bool}
 
-    @ivar tcpServers: a list that keeps track of server listen attempts (ie,
-        calls to C{listenTCP}).
-    @type tcpServers: C{list}
+    @ivar running: Keeps track of whether this reactor is running.
+    @type running: L{bool}
 
-    @ivar sslClients: a list that keeps track of connection attempts (ie,
-        calls to C{connectSSL}).
-    @type sslClients: C{list}
+    @ivar hasStopped: Keeps track of whether this reactor has been stopped.
+    @type hasStopped: L{bool}
 
-    @ivar sslServers: a list that keeps track of server listen attempts (ie,
-        calls to C{listenSSL}).
-    @type sslServers: C{list}
+    @ivar hasCrashed: Keeps track of whether this reactor has crashed.
+    @type hasCrashed: L{bool}
 
-    @ivar unixClients: a list that keeps track of connection attempts (ie,
-        calls to C{connectUNIX}).
-    @type unixClients: C{list}
+    @ivar whenRunningHooks: Keeps track of hooks registered with
+        C{callWhenRunning}.
+    @type whenRunningHooks: L{list}
 
-    @ivar unixServers: a list that keeps track of server listen attempts (ie,
-        calls to C{listenUNIX}).
-    @type unixServers: C{list}
+    @ivar triggers: Keeps track of hooks registered with
+        C{addSystemEventTrigger}.
+    @type triggers: L{dict}
 
-    @ivar adoptedPorts: a list that keeps track of server listen attempts (ie,
-        calls to C{adoptStreamPort}).
+    @ivar tcpClients: Keeps track of connection attempts (ie, calls to
+        C{connectTCP}).
+    @type tcpClients: L{list}
 
-    @ivar adoptedStreamConnections: a list that keeps track of stream-oriented
+    @ivar tcpServers: Keeps track of server listen attempts (ie, calls to
+        C{listenTCP}).
+    @type tcpServers: L{list}
+
+    @ivar sslClients: Keeps track of connection attempts (ie, calls to
+        C{connectSSL}).
+    @type sslClients: L{list}
+
+    @ivar sslServers: Keeps track of server listen attempts (ie, calls to
+        C{listenSSL}).
+    @type sslServers: L{list}
+
+    @ivar unixClients: Keeps track of connection attempts (ie, calls to
+        C{connectUNIX}).
+    @type unixClients: L{list}
+
+    @ivar unixServers: Keeps track of server listen attempts (ie, calls to
+        C{listenUNIX}).
+    @type unixServers: L{list}
+
+    @ivar adoptedPorts: Keeps track of server listen attempts (ie, calls to
+        C{adoptStreamPort}).
+
+    @ivar adoptedStreamConnections: Keeps track of stream-oriented
         connections added using C{adoptStreamConnection}.
     """
 
@@ -561,8 +581,9 @@ class MemoryReactor(object):
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
         """
-        self.adoptedStreamConnections.append((
-                fileDescriptor, addressFamily, factory))
+        self.adoptedStreamConnections.append(
+            (fileDescriptor, addressFamily, factory)
+        )
 
 
     def adoptDatagramPort(self, fileno, addressFamily, protocol,
