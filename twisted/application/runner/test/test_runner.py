@@ -8,13 +8,10 @@ Tests for L{twisted.application.runner._runner}.
 from signal import SIGTERM
 from io import BytesIO
 
-from zope.interface import implementer
-
-from twisted.python.filepath import IFilePath
+from twisted.python.filepath import FilePath
 from twisted.logger import (
     LogLevel, LogPublisher, LogBeginner,
-    jsonFileLogObserver, FileLogObserver,
-    FilteringLogObserver, LogLevelFilterPredicate,
+    FileLogObserver, FilteringLogObserver, LogLevelFilterPredicate,
 )
 from twisted.test.proto_helpers import MemoryReactor
 
@@ -353,8 +350,7 @@ class DummyKill(object):
 
 
 
-@implementer(IFilePath)
-class DummyFilePath(object):
+class DummyFilePath(FilePath):
     """
     Stub for L{twisted.python.filepath.FilePath} which returns a stream
     containing the given data when opened.
