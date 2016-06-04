@@ -9,6 +9,7 @@ from sys import stdout
 
 from operator import attrgetter
 
+from twisted.copyright import version
 from twisted.python.usage import Options
 from ..reactors import installReactor, NoSuchReactor, getReactorTypes
 from ..runner import exit, ExitStatus
@@ -24,6 +25,13 @@ class TwistOptions(Options):
         Options.__init__(self)
 
         self["reactorName"] = "default"
+
+
+    def opt_version(self):
+        """
+        Print version and exit.
+        """
+        exit(ExitStatus.EX_OK, "{}".format(version))
 
 
     def opt_reactor(self, name):
