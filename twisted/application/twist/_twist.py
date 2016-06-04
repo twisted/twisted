@@ -84,16 +84,16 @@ class Twist(object):
 
     @classmethod
     def main(cls, argv=sys.argv):
-        twistOptions = cls.options(argv)
+        options = cls.options(argv)
 
-        reactor = twistOptions["reactor"]
+        reactor = options["reactor"]
         service = cls.service(
-            plugin=twistOptions.plugins[twistOptions.subCommand],
-            options=twistOptions.subOptions,
+            plugin=options.plugins[options.subCommand],
+            options=options.subOptions,
         )
 
         cls.startService(reactor, service)
-        cls.run(cls.runnerOptions(twistOptions))
+        cls.run(cls.runnerOptions(options))
 
 
 
