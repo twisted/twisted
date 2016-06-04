@@ -206,12 +206,9 @@ class LogBeginner(object):
                 filename=filename, lineno=lineno,
             )
         else:
-            if sys.version_info < (2, 6):
-                self._oldshowwarning(message, category, filename, lineno, file)
-            else:
-                self._oldshowwarning(
-                    message, category, filename, lineno, file, line
-                )
+            self._oldshowwarning(
+                message, category, filename, lineno, file, line
+            )
 
 
 
