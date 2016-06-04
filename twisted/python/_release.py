@@ -1081,12 +1081,14 @@ class CheckTopfileScript(object):
         branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
                             cwd=location).strip()
 
-        if branch == "trunk":
-            self._print("On trunk, no need to look at this.")
+        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
+                       cwd=location).strip()
+
+        if not r:
+            self._print(
+                "On trunk or no diffs from trunk; no need to look at this.")
             sys.exit(0)
 
-        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location)
         files = r.strip().split(os.linesep)
 
         self._print("Looking at these files:")
