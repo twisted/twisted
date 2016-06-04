@@ -49,7 +49,7 @@ class Twist(object):
     @staticmethod
     def startService(reactor, service):
         # Start the service
-        service.privilegedStartService()
+        service.startService()
 
         # Ask the reactor to stop the service before shutting down
         reactor.addSystemEventTrigger(
