@@ -9,7 +9,7 @@ from sys import stdout
 
 from twisted.logger import LogLevel, textFileLogObserver
 from twisted.test.proto_helpers import MemoryReactor
-from ...service import IService
+from ...service import IService, MultiService
 from ...runner import ExitStatus, Runner, RunnerOptions
 from ...runner.test.test_runner import DummyExit
 from ...twist import _options, _twist
@@ -44,6 +44,15 @@ class TwistTests(twisted.trial.unittest.TestCase):
             return reactor
 
         self.patch(_options, "installReactor", installReactor)
+
+
+    def patchStartService(self):
+        self.serviceStarts = 0
+
+        def startService(service):
+            self.serviceStarts += 1
+
+        self.patch(MultiService, "startService", startService)
 
 
     def test_optionsValidArguments(self):
@@ -93,13 +102,11 @@ class TwistTests(twisted.trial.unittest.TestCase):
             options=options.subOptions,
         )
 
-        # Patch service.startService
-        starts = []
-        service.startService = lambda: starts.append(True)
+        self.patchStartService()
 
         Twist.startService(reactor, service)
 
-        self.assertEqual(starts, [True])
+        self.assertEqual(self.serviceStarts, 1)
         self.assertEqual(
             reactor.triggers["before"]["shutdown"],
             [(service.stopService, (), {})]
