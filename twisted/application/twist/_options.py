@@ -137,12 +137,13 @@ class TwistOptions(Options):
         Set the L{fileLogObserverFactory} to the default appropriate for the
         chosen L{logFile}.
         """
-        logFile = self["logFile"]
+        if "fileLogObserverFactory" not in self:
+            logFile = self["logFile"]
 
-        if hasattr(logFile, "fileno") and isatty(logFile.fileno()):
-            self["fileLogObserverFactory"] = textFileLogObserver
-        else:
-            self["fileLogObserverFactory"] = jsonFileLogObserver
+            if hasattr(logFile, "fileno") and isatty(logFile.fileno()):
+                self["fileLogObserverFactory"] = textFileLogObserver
+            else:
+                self["fileLogObserverFactory"] = jsonFileLogObserver
 
 
     def parseArgs(self):
