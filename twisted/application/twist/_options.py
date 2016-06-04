@@ -22,6 +22,8 @@ from ..reactors import installReactor, NoSuchReactor, getReactorTypes
 from ..runner import exit, ExitStatus
 from ..service import IServiceMaker
 
+openFile = open
+
 
 
 class TwistOptions(Options):
@@ -109,7 +111,7 @@ class TwistOptions(Options):
             return
 
         try:
-            self["logFile"] = open(fileName, "a")
+            self["logFile"] = openFile(fileName, "a")
         except EnvironmentError as e:
             exit(
                 ExitStatus.EX_CANTCREAT,
@@ -146,8 +148,10 @@ class TwistOptions(Options):
 
             if hasattr(logFile, "fileno") and isatty(logFile.fileno()):
                 self["fileLogObserverFactory"] = textFileLogObserver
+                self["logFormat"] = "text"
             else:
                 self["fileLogObserverFactory"] = jsonFileLogObserver
+                self["logFormat"] = "json"
 
 
     def parseOptions(self, options=None):
