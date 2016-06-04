@@ -44,13 +44,15 @@ class Runner(object):
     def run(self):
         """
         Run this command.
-        Equivalent to:
+        Equivalent to::
+
             self.killIfRequested()
             self.writePIDFile()
             self.startLogging()
             self.startReactor()
             self.reactorExited()
             self.removePIDFile()
+
         Additional steps may be added over time, but the order won't change.
         """
         self.killIfRequested()
