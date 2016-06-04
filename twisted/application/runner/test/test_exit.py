@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for L{ims.tx.usage._exit}.
+Tests for L{twisted.application.runner._exit}.
 """
 
 import sys
@@ -19,13 +19,8 @@ class ExitTests(twisted.trial.unittest.TestCase):
     """
 
     def setUp(self):
+        self.exit = DummyExit()
         self.patch(sys, "exit", self.exit)
-        self.exitStatus = None
-
-
-    def exit(self, status):
-        assert self.exitStatus is None
-        self.exitStatus = status
 
 
     def test_exitStatusInt(self):
@@ -34,7 +29,7 @@ class ExitTests(twisted.trial.unittest.TestCase):
         """
         status = 1234
         exit(status)
-        self.assertEqual(self.exitStatus, status)
+        self.assertEqual(self.exit.arg, status)
 
 
     def test_exitStatusStringNotInt(self):
@@ -51,7 +46,7 @@ class ExitTests(twisted.trial.unittest.TestCase):
         corresponding L{int} to L{sys.exit}.
         """
         exit("1234")
-        self.assertEqual(self.exitStatus, 1234)
+        self.assertEqual(self.exit.arg, 1234)
 
 
     def test_exitConstant(self):
@@ -61,4 +56,21 @@ class ExitTests(twisted.trial.unittest.TestCase):
         """
         status = ExitStatus.EX_CONFIG
         exit(status)
-        self.assertEqual(self.exitStatus, status.value)
+        self.assertEqual(self.exit.arg, status.value)
+
+
+
+class DummyExit(object):
+    """
+    Mock for L{sys.exit} that remembers whether it's been called and, if it has,
+    what argument it was given.
+    """
+    def __init__(self):
+        self.exited = False
+
+
+    def __call__(self, arg=None):
+        assert not self.exited
+
+        self.arg    = arg
+        self.exited = True
