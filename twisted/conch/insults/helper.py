@@ -108,7 +108,7 @@ class TerminalBuffer(protocol.Protocol):
                   'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
                   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
                   'F10', 'F11', 'F12'):
-        exec '%s = object()' % (keyID,)
+        exec('%s = object()' % (keyID,))
 
     TAB = '\t'
     BACKSPACE = '\x7f'
