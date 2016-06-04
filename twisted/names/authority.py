@@ -6,7 +6,7 @@
 Authoritative resolvers.
 """
 
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, print_function
 
 import os
 import time
@@ -88,7 +88,7 @@ class FileAuthority(common.ResolverBase):
 
     def __setstate__(self, state):
         self.__dict__ = state
-#        print 'setstate ', self.soa
+#        print('setstate ', self.soa)
 
 
     def _additionalRecords(self, answer, authority, ttl):
@@ -370,41 +370,41 @@ class BindAuthority(FileAuthority):
         if line[0] == '@':
             line = line[1:]
             owner = origin
-#            print 'default owner'
+#            print('default owner')
         elif not line[0].isdigit() and line[0] not in MARKERS:
             owner = line[0]
             line = line[1:]
-#            print 'owner is ', owner
+#            print('owner is ', owner)
 
         if line[0].isdigit() or line[0] in MARKERS:
             domain = owner
             owner = origin
-#            print 'woops, owner is ', owner, ' domain is ', domain
+#            print('woops, owner is ', owner, ' domain is ', domain)
         else:
             domain = line[0]
             line = line[1:]
-#            print 'domain is ', domain
+#            print('domain is ', domain)
 
         if line[0] in dns.QUERY_CLASSES.values():
             cls = line[0]
             line = line[1:]
-#            print 'cls is ', cls
+#            print('cls is ', cls)
             if line[0].isdigit():
                 ttl = int(line[0])
                 line = line[1:]
-#                print 'ttl is ', ttl
+#                print('ttl is ', ttl)
         elif line[0].isdigit():
             ttl = int(line[0])
             line = line[1:]
-#            print 'ttl is ', ttl
+#            print('ttl is ', ttl)
             if line[0] in dns.QUERY_CLASSES.values():
                 cls = line[0]
                 line = line[1:]
-#                print 'cls is ', cls
+#                print('cls is ', cls)
 
         type = line[0]
-#        print 'type is ', type
+#        print('type is ', type)
         rdata = line[1:]
-#        print 'rdata is ', rdata
+#        print('rdata is ', rdata)
 
         self.addRecord(owner, ttl, type, domain, cls, rdata)
