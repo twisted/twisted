@@ -9,6 +9,7 @@ from operator import attrgetter
 
 from twisted.copyright import version
 from twisted.python.usage import Options
+from twisted.python.filepath import FilePath
 from ..reactors import installReactor, NoSuchReactor, getReactorTypes
 from ..runner import exit, ExitStatus
 
@@ -61,6 +62,13 @@ class TwistOptions(Options):
             self["reactor"] = installReactor(name)
         except NoSuchReactor:
             exit(ExitStatus.EX_CONFIG, "Unknown reactor: {}".format(name))
+
+
+    def opt_pidfile(self, path):
+        """
+        The path to the PID file.
+        """
+        self["pidFilePath"] = FilePath(path)
 
 
     def parseArgs(self):

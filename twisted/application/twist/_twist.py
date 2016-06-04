@@ -24,25 +24,64 @@ class Twist(object):
 
     @classmethod
     def main(cls, argv=sys.argv):
-        options = TwistOptions()
+        twistOptions = TwistOptions()
 
         try:
-            options.parseOptions(argv[1:])
+            twistOptions.parseOptions(argv[1:])
         except UsageError as e:
-            exit(ExitStatus.EX_USAGE, "Error: {}\n\n{}".format(e, options))
+            exit(ExitStatus.EX_USAGE, "Error: {}\n\n{}".format(e, twistOptions))
+
+        runnerOptions = {
+            RunnerOptions.reactor: twistOptions["reactor"],
+        }
+
+        ################# START DELETE THIS #################
 
         def whenRunning(options):
             from twisted.internet import reactor
 
-            cls.log.info("Reactor is running: {}".format(reactor))
-            cls.log.info("Stopping reactor...")
-            reactor.stop()
+            cls.log.info(
+                "Reactor is running: {reactor}",
+                reactor=reactor,
+            )
 
-        runner = Runner({
-            RunnerOptions.reactor: options["reactor"],
+            try:
+                cls.log.info(
+                    "PID file: {fp.path}",
+                    fp=options[RunnerOptions.pidFilePath],
+                )
+            except KeyError:
+                pass
+
+            def stop():
+                cls.log.info("Stopping reactor...")
+                reactor.stop()
+
+            reactor.callLater(4.0, stop)
+
+            cls.log.info("Waiting...")
+
+        ################# END DELETE THIS #################
+
+        runnerOptions = {
+            RunnerOptions.reactor: twistOptions["reactor"],
+
             RunnerOptions.logFile: sys.stdout,
             RunnerOptions.whenRunning: whenRunning,
-        })
+        }
+
+        pidFilePath = twistOptions.get("pidFilePath")
+        if pidFilePath is not None:
+            runnerOptions[RunnerOptions.pidFilePath] = pidFilePath
+
+        # RunnerOptions.kill
+        # RunnerOptions.defaultLogLevel
+        # RunnerOptions.logFile
+        # RunnerOptions.fileLogObserverFactory
+        # RunnerOptions.whenRunning
+        # RunnerOptions.reactorExited
+
+        runner = Runner(runnerOptions)
 
         runner.run()
 
