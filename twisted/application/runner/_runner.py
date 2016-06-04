@@ -24,7 +24,7 @@ from twisted.logger import (
     LogLevel,  # InvalidLogLevelError,
     Logger,
 )
-from twisted.internet import reactor as defaultReactor
+from twisted.internet import default as defaultReactor
 from ._exit import exit, ExitStatus
 
 
