@@ -40,18 +40,18 @@ class Twist(object):
         def whenRunning(options):
             from twisted.internet import reactor
 
-            cls.log.info(
+            cls.log.debug(
                 "Reactor is running: {reactor}",
                 reactor=reactor,
             )
 
-            try:
-                cls.log.info(
-                    "PID file: {fp.path}",
-                    fp=options[RunnerOptions.pidFilePath],
-                )
-            except KeyError:
-                pass
+            # try:
+            #     cls.log.info(
+            #         "PID file: {fp.path}",
+            #         fp=options[RunnerOptions.pidFilePath],
+            #     )
+            # except KeyError:
+            #     pass
 
             def stop():
                 cls.log.info("Stopping reactor...")
@@ -61,20 +61,16 @@ class Twist(object):
 
             cls.log.info("Waiting...")
 
-        ################# END DELETE THIS #################
-
-        runnerOptions = {
-            RunnerOptions.reactor: twistOptions["reactor"],
-
+        runnerOptions.update({
             RunnerOptions.logFile: sys.stdout,
             RunnerOptions.whenRunning: whenRunning,
-        }
+        })
 
-        pidFilePath = twistOptions.get("pidFilePath")
-        if pidFilePath is not None:
-            runnerOptions[RunnerOptions.pidFilePath] = pidFilePath
+        ################# END DELETE THIS #################
 
-        # RunnerOptions.kill
+        runnerOptions[RunnerOptions.defaultLogLevel] = twistOptions["logLevel"]
+
+
         # RunnerOptions.defaultLogLevel
         # RunnerOptions.logFile
         # RunnerOptions.fileLogObserverFactory

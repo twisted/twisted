@@ -5,11 +5,11 @@
 Command line options for C{twist}.
 """
 
-from operator import attrgetter
+from textwrap import dedent
 
 from twisted.copyright import version
 from twisted.python.usage import Options
-from twisted.python.filepath import FilePath
+from twisted.logger import LogLevel, InvalidLogLevelError
 from ..reactors import installReactor, NoSuchReactor, getReactorTypes
 from ..runner import exit, ExitStatus
 
@@ -20,10 +20,14 @@ class TwistOptions(Options):
     Command line options for C{twist}.
     """
 
+    defaultLogLevel = LogLevel.info
+
+
     def __init__(self):
         Options.__init__(self)
 
         self["reactorName"] = "default"
+        self["logLevel"]    = self.defaultLogLevel
 
 
     def opt_version(self):
@@ -36,24 +40,13 @@ class TwistOptions(Options):
     def opt_reactor(self, name):
         """
         The name of the reactor to use.
+        (options: {options})
         """
         self["reactorName"] = name
 
-
-    def opt_list_reactors(self):
-        """
-        List available reactors.
-        """
-        reactorTypes = sorted(getReactorTypes(), key=attrgetter("shortName"))
-
-        info = ["Available reactors:"]
-
-        for reactorType in reactorTypes:
-            info.append(
-                "    {rt.shortName:10} {rt.description}"
-                .format(rt=reactorType)
-            )
-        exit(ExitStatus.EX_OK, "\n".join(info))
+    opt_reactor.__doc__ = dedent(opt_reactor.__doc__).format(
+        options=", ".join(rt.shortName for rt in getReactorTypes()),
+    )
 
 
     def installReactor(self):
@@ -64,11 +57,23 @@ class TwistOptions(Options):
             exit(ExitStatus.EX_CONFIG, "Unknown reactor: {}".format(name))
 
 
-    def opt_pidfile(self, path):
+    def opt_log_level(self, levelName):
         """
-        The path to the PID file.
+        Set default log level.
+        (options: {options}; default: {default})
         """
-        self["pidFilePath"] = FilePath(path)
+        try:
+            self["logLevel"] = LogLevel.levelWithName(levelName)
+        except InvalidLogLevelError:
+            exit(
+                ExitStatus.EX_USAGE,
+                "Invalid log level: {}".format(levelName)
+            )
+
+    opt_log_level.__doc__ = dedent(opt_log_level.__doc__).format(
+        options=", ".join(l.name for l in LogLevel.iterconstants()),
+        default=defaultLogLevel.name,
+    )
 
 
     def parseArgs(self):
