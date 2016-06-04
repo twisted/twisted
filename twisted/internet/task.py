@@ -940,6 +940,8 @@ def react(main, argv=(), _reactor=None):
 class TimedOutError(Exception):
     """
     Exception that gets raised when a L{defer.Deferred} times out.
+
+    @since: 16.3
     """
     def __init__(self, timeout, deferredDescription):
         super(TimedOutError, self).__init__(
@@ -958,6 +960,8 @@ def cancelledToTimedOutError(value, timeout):
     @type timeout: C{int}
 
     @rtype: Anything
+
+    @since: 16.3
     """
     if isinstance(value, Failure):
         value.trap(defer.CancelledError)
@@ -995,6 +999,8 @@ def timeoutDeferred(deferred, timeout, clock, translateCancellation=None):
     @type translateCancellation: L{callable}
 
     @rtype: C{None}
+
+    @since: 16.3
     """
     timedOut = [False]
 
