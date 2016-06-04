@@ -47,10 +47,10 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
 
     def patchStartService(self):
-        self.serviceStarts = 0
+        self.serviceStarts = []
 
         def startService(service):
-            self.serviceStarts += 1
+            self.serviceStarts.append(service)
 
         self.patch(MultiService, "startService", startService)
 
@@ -106,7 +106,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         Twist.startService(reactor, service)
 
-        self.assertEqual(self.serviceStarts, 1)
+        self.assertEqual(self.serviceStarts, [service])
         self.assertEqual(
             reactor.triggers["before"]["shutdown"],
             [(service.stopService, (), {})]
@@ -133,7 +133,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
     def test_run(self):
         """
-        L{Twist.run} run the runner with the given options.
+        L{Twist.run} runs the runner with the given options.
         """
         options = TwistOptions()
         runner = Runner(options)
@@ -148,6 +148,37 @@ class TwistTests(twisted.trial.unittest.TestCase):
         self.assertIdentical(optionsSeen[0], options)
 
 
-    def test_mainRunner(self):
-        raise NotImplementedError()
-    test_mainRunner.todo = "unimplemented"
+    def test_main(self):
+        """
+        L{Twist.run} runs the runner with options corresponding to the given
+        arguments.
+        """
+        self.patchStartService()
+
+        runners = []
+
+        class Runner(object):
+            def __init__(self, options):
+                self.options = options
+                self.runs = 0
+                runners.append(self)
+
+            def run(self):
+                self.runs += 1
+
+        self.patch(_twist, "Runner", Runner)
+
+        Twist.main(["twist", "--reactor", "default", "web"])
+
+        self.assertEqual(len(self.serviceStarts), 1)
+        self.assertEqual(len(runners), 1)
+        self.assertEqual(
+            runners[0].options,
+            {
+                RunnerOptions.reactor: self.installedReactors["default"],
+                RunnerOptions.defaultLogLevel: LogLevel.info,
+                RunnerOptions.logFile: stdout,
+                RunnerOptions.fileLogObserverFactory: textFileLogObserver,
+            }
+        )
+        self.assertEqual(runners[0].runs, 1)
