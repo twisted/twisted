@@ -939,7 +939,7 @@ def react(main, argv=(), _reactor=None):
 
 class TimedOutError(Exception):
     """
-    Exception that gets raised by timeoutDeferred
+    Exception that gets raised when a L{defer.Deferred} times out.
     """
     def __init__(self, timeout, deferredDescription):
         super(TimedOutError, self).__init__(
@@ -947,14 +947,36 @@ class TimedOutError(Exception):
                 desc=deferredDescription, timeout=timeout))
 
 
-def timeoutDeferred(deferred, timeout, clock, deferredDescription=None):
+def cancelledToTimedOutError(value, timeout):
+    """
+    A translation function that translate L{Failure}'s that are L{defer.CancelledError} to L{TimedOutError}.
+
+    @param value: Anything
+    @type value: Anything
+
+    @param timeout: The timeout
+    @type timeout: C{int}
+
+    @rtype: Anything
+    """
+    if isinstance(value, Failure):
+        value.trap(defer.CancelledError)
+        raise TimedOutError(timeout, "Deferred")
+    return value
+
+
+def timeoutDeferred(deferred, timeout, clock, translateCancellation=None):
     """
     Timeout a L{defer.Deferred} by scheduling it to be cancelled after C{timeout} seconds.
 
     If it gets timed out, it errbacks with a L{TimedOutError}, unless a
     cancelable function is passed to the C{deferred}'s initialization and it
-    callbacks or errbacks with something else when cancelled.
-    (see the documentation for L{defer.Deferred} for more details)
+    callbacks or errbacks with something else when cancelled, in which case
+    the caller should provide their own translation function that knows how
+    to handle the cancelled error.
+
+    (see the documentation for L{defer.Deferred} for more details about
+    cancellation functions.)
 
     @param deferred: The L{defer.Deferred} to time out (cancel)
     @type deferred: L{defer.Deferred}
@@ -965,9 +987,12 @@ def timeoutDeferred(deferred, timeout, clock, deferredDescription=None):
     @param clock: The object which will be used to schedule the timeout.
     @type clock: L{IReactorTime}
 
-    @param deferredDescription: A description of C{deferred} to be provided
-        to L{TimedOutError} for a pretty C{Exception} string.  Defaults to the C{repr} of C{deferred} if not provided.
-    @type deferredDescription: C{string}
+    @param translateCancellation: A callable takes a L{Failure} and the
+        timeout, and knows how to handle timeout cancellations.  By default, a
+        callable is used that knows how to translate L{defer.CancelledError}
+        to L{TimedOutError}.  This will only be called if C{deferred} was timed
+        out, and not if it was cancelled early.
+    @type translateCancellation: L{callable}
 
     @rtype: C{None}
     """
@@ -979,15 +1004,15 @@ def timeoutDeferred(deferred, timeout, clock, deferredDescription=None):
 
     delayedCall = clock.callLater(timeout, timeItOut)
 
-    def convertCancelled(f):
-        # if the failure is CancelledError, and we timed it out, convert it
-        # to a TimedOutError.  Otherwise, propagate it.
+    def convertCancelled(value):
+        # if C{deferred} was timed out, call the translation function,
+        # if provdied, otherwise just use L{cancelledToTimedOutError}
         if timedOut[0]:
-            f.trap(defer.CancelledError)
-            raise TimedOutError(timeout, deferredDescription)
-        return f
+            toCall = translateCancellation or cancelledToTimedOutError
+            return toCall(value, timeout)
+        return value
 
-    deferred.addErrback(convertCancelled)
+    deferred.addBoth(convertCancelled)
 
     def cancelTimeout(result):
         # stop the pending call to cancel the deferred if it's been fired
@@ -1005,4 +1030,4 @@ __all__ = [
 
     'SchedulerStopped', 'Cooperator', 'coiterate',
 
-    'deferLater', 'react']
+    'deferLater', 'react', 'timeoutDeferred', 'TimedOutError']
