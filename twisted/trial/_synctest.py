@@ -792,6 +792,20 @@ class _Assertions(pyunit.TestCase, object):
 
 
 
+    def assertRegex(self, text, regex, msg=None):
+        """
+        Fail the test if a C{regexp} search of C{text} fails.
+
+        """
+        if sys.version_info[:2] > (2, 7):
+            super(_Assertions, self).assertRegex(text, regex, msg)
+        else:
+            # Python 2.7 has unittest.assertRegexpMatches() which was
+            # renamed to unittest.assertRegex() in Python 3.2
+            super(_Assertions, self).assertRegexpMatches(text, regex, msg)
+
+
+
 class _LogObserver(object):
     """
     Observes the Twisted logs and catches any errors.
