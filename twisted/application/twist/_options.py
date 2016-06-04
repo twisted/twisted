@@ -10,7 +10,10 @@ from textwrap import dedent
 
 from twisted.copyright import version
 from twisted.python.usage import Options
-from twisted.logger import LogLevel, InvalidLogLevelError
+from twisted.logger import (
+    LogLevel, InvalidLogLevelError,
+    textFileLogObserver, jsonFileLogObserver,
+)
 from ..reactors import installReactor, NoSuchReactor, getReactorTypes
 from ..runner import exit, ExitStatus
 
@@ -29,6 +32,7 @@ class TwistOptions(Options):
 
         self["reactorName"] = "default"
         self["logLevel"] = self.defaultLogLevel
+        self["logFile"] = stdout
 
 
     def opt_version(self):
@@ -100,6 +104,26 @@ class TwistOptions(Options):
                 ExitStatus.EX_CANTCREAT,
                 "Unable to open log file {!r}: {}".format(fileName, e)
             )
+
+
+    def opt_log_format(self, format):
+        """
+        Set log file format to one of: (text, json).
+
+        (default: text for stdout/stderr, otherwise json)
+        """
+        format = format.lower()
+
+        if format == "text":
+            self["fileLogObserverFactory"] = textFileLogObserver
+        elif format == "json":
+            self["fileLogObserverFactory"] = jsonFileLogObserver
+        else:
+            exit(
+                ExitStatus.EX_USAGE,
+                "Invalid log format: {}".format(format)
+            )
+        self["logFormat"] = format
 
 
     def parseArgs(self):

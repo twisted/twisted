@@ -68,10 +68,13 @@ class Twist(object):
 
         ################# END DELETE THIS #################
 
-        runnerOptions[RunnerOptions.defaultLogLevel] = twistOptions["logLevel"]
-        runnerOptions[RunnerOptions.logFile] = twistOptions["logFile"]
+        for runnerOpt, twistOpt in (
+            (RunnerOptions.defaultLogLevel, "logLevel"),
+            (RunnerOptions.logFile, "logFile"),
+            (RunnerOptions.fileLogObserverFactory, "fileLogObserverFactory"),
+        ):
+            runnerOptions[runnerOpt] = twistOptions[twistOpt]
 
-        # RunnerOptions.fileLogObserverFactory
         # RunnerOptions.whenRunning
         # RunnerOptions.reactorExited
 
