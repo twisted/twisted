@@ -215,6 +215,13 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         L{TwistOptions.selectDefaultLogObserver} will not override an already
         selected observer.
         """
+        class TTYFile(object):
+            def isatty(self):
+                return True
+
+        # stdout may not be a tty, so let's make sure it thinks it is
+        self.patch(_options, "stdout", TTYFile())
+
         options = TwistOptions()
         options.opt_log_file("-")  # stdout, a tty
         options.selectDefaultLogObserver()

@@ -145,7 +145,7 @@ class TwistOptions(Options):
         if "fileLogObserverFactory" not in self:
             logFile = self["logFile"]
 
-            if hasattr(logFile, "fileno") and isatty(logFile.fileno()):
+            if hasattr(logFile, "isatty") and logFile.isatty():
                 self["fileLogObserverFactory"] = textFileLogObserver
                 self["logFormat"] = "text"
             else:
