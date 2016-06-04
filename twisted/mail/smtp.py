@@ -318,7 +318,7 @@ def messageid(uniq=None, N=idGenerator().next):
     """
     datetime = time.strftime('%Y%m%d%H%M%S', time.gmtime())
     pid = os.getpid()
-    rand = random.randrange(2**31L-1)
+    rand = random.randrange(2**31-1)
     if uniq is None:
         uniq = ''
     else:
