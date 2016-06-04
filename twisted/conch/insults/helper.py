@@ -8,6 +8,8 @@ Partial in-memory terminal emulator
 @author: Jp Calderone
 """
 
+from __future__ import print_function
+
 import re, string
 
 from zope.interface import implementer
@@ -393,7 +395,7 @@ class TerminalBuffer(protocol.Protocol):
         self.eraseDisplay()
 
     def unhandledControlSequence(self, buf):
-        print 'Could not handle', repr(buf)
+        print('Could not handle', repr(buf))
 
     def __str__(self):
         lines = []
