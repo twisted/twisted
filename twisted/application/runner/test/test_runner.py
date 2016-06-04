@@ -128,16 +128,6 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.assertIdentical(self.exit.message, None)
 
 
-    def test_writePIDFileWithoutPIDFile(self):
-        """
-        L{Runner.writePIDFile} without L{RunnerOptions.pidFilePath} doesn't
-        write a PID file.
-        """
-        raise NotImplementedError()
-
-    test_writePIDFileWithoutPIDFile.todo = "?"
-
-
     def test_writePIDFileWithPIDFile(self):
         """
         L{Runner.writePIDFile} with L{RunnerOptions.pidFilePath} writes a PID
@@ -150,16 +140,6 @@ class CommandTests(twisted.trial.unittest.TestCase):
         runner.writePIDFile()
 
         self.assertEqual(pidFilePath.getContent(), self.pidFileContent)
-
-
-    def test_removePIDFileWithoutPIDFile(self):
-        """
-        L{Runner.removePIDFile} without L{RunnerOptions.pidFilePath} doesn't
-        remove the PID file.
-        """
-        raise NotImplementedError()
-
-    test_removePIDFileWithoutPIDFile.todo = "?"
 
 
     def test_removePIDFileWithPIDFile(self):
