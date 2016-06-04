@@ -146,14 +146,8 @@ class TwistOptions(Options):
                 self["fileLogObserverFactory"] = jsonFileLogObserver
 
 
-    def parseArgs(self):
-        try:
-            self.installReactor()
-            self.selectDefaultLogObserver()
-        except Exception as e:
-            exit(
-                ExitStatus.EX_SOFTWARE,
-                "Unexpected error parsing arguments: {}".format(e)
-            )
+    def postOptions(self):
+        self.installReactor()
+        self.selectDefaultLogObserver()
 
-        Options.parseArgs(self)
+
