@@ -77,8 +77,8 @@ class Twist(object):
 
 
     @staticmethod
-    def run(options):
-        runner = Runner(options)
+    def run(runnerOptions):
+        runner = Runner(runnerOptions)
         runner.run()
 
 
