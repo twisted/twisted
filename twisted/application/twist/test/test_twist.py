@@ -75,16 +75,35 @@ class TwistTests(twisted.trial.unittest.TestCase):
         """
         L{Twist.service} returns an L{IService}.
         """
-        options = TwistOptions()
-        options.parseOptions(["web"])  # web should exist
-
+        options = Twist.options(["twist", "web"])  # web should exist
         service = Twist.service(options.plugins["web"], options.subOptions)
         self.assertTrue(IService.providedBy(service))
 
 
     def test_startService(self):
-        raise NotImplementedError()
-    test_startService.todo = "unimplemented"
+        """
+        L{Twist.startService} starts the service and registers a trigger to
+        stop the service when the reactor shuts down.
+        """
+        options = Twist.options(["twist", "web"])
+
+        reactor = options["reactor"]
+        service = Twist.service(
+            plugin=options.plugins[options.subCommand],
+            options=options.subOptions,
+        )
+
+        # Patch service.startService
+        starts = []
+        service.startService = lambda: starts.append(True)
+
+        Twist.startService(reactor, service)
+
+        self.assertEqual(starts, [True])
+        self.assertEqual(
+            reactor.triggers["before"]["shutdown"],
+            [(service.stopService, (), {})]
+        )
 
 
     def test_runnerOptions(self):
@@ -92,11 +111,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
         L{Twist.runnerOptions} translates L{TwistOptions} to a L{RunnerOptions}
         map.
         """
-        options = Twist.options([
-            "twist",
-            "--reactor", "default",
-            "web"
-        ])
+        options = Twist.options(["twist", "--reactor", "default", "web"])
 
         self.assertEqual(
             Twist.runnerOptions(options),
