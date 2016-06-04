@@ -23,6 +23,12 @@ class Twist(object):
     def options(argv):
         """
         Parse command line options.
+
+        @param argv: Command line arguments.
+        @type argv: L{list}
+
+        @return: The parsed options.
+        @rtype: L{TwistOptions}
         """
         options = TwistOptions()
 
@@ -38,6 +44,16 @@ class Twist(object):
     def service(plugin, options):
         """
         Create the application service.
+
+        @param plugin: The name of the plugin that implements the service
+            application to run.
+        @type plugin: L{str}
+
+        @param options: Options to pass to the application.
+        @type options: L{twisted.python.usage.Options}
+
+        @return: The created application service.
+        @rtype: L{IService}
         """
         service = plugin.makeService(options)
         application = Application(plugin.tapname)
@@ -48,7 +64,15 @@ class Twist(object):
 
     @staticmethod
     def startService(reactor, service):
-        # Start the service
+        """
+        Start the application service.
+
+        @param reactor: The reactor to run the service with.
+        @type reactor: L{twisted.internet.interfaces.IReactorCore}
+
+        @param service: The application service to run.
+        @type service: L{IService}
+        """
         service.startService()
 
         # Ask the reactor to stop the service before shutting down
@@ -62,6 +86,12 @@ class Twist(object):
         """
         Take options obtained from command line and configure options for the
         application runner.
+
+        @param twistOptions: Command line options to convert to runner options.
+        @type twistOptions: L{TwistOptions}
+
+        @return: The corresponding runner options.
+        @rtype: L{RunnerOptions}
         """
         runnerOptions = {}
 
@@ -78,12 +108,25 @@ class Twist(object):
 
     @staticmethod
     def run(runnerOptions):
+        """
+        Run the application service.
+
+        @param runnerOptions: Options to pass to the runner.
+        @type runnerOptions: L{RunnerOptions}
+        """
         runner = Runner(runnerOptions)
         runner.run()
 
 
     @classmethod
     def main(cls, argv=sys.argv):
+        """
+        Executable entry point for L{Twist}.
+        Processes options and run a twisted reactor with a service.
+
+        @param argv: Command line arguments.
+        @type argv: L{list}
+        """
         options = cls.options(argv)
 
         reactor = options["reactor"]
