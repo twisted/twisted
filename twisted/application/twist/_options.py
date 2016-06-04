@@ -11,7 +11,7 @@ from operator import attrgetter
 from textwrap import dedent
 
 from twisted.copyright import version
-from twisted.python.usage import Options
+from twisted.python.usage import Options, UsageError
 from twisted.logger import (
     LogLevel, InvalidLogLevelError,
     textFileLogObserver, jsonFileLogObserver,
@@ -75,7 +75,7 @@ class TwistOptions(Options):
         try:
             self["reactor"] = installReactor(name)
         except NoSuchReactor:
-            exit(ExitStatus.EX_CONFIG, "Unknown reactor: {}".format(name))
+            raise UsageError("Unknown reactor: {}".format(name))
 
 
     def opt_log_level(self, levelName):
@@ -86,10 +86,7 @@ class TwistOptions(Options):
         try:
             self["logLevel"] = LogLevel.levelWithName(levelName)
         except InvalidLogLevelError:
-            exit(
-                ExitStatus.EX_CONFIG,
-                "Invalid log level: {}".format(levelName)
-            )
+            raise UsageError("Invalid log level: {}".format(levelName))
 
     opt_log_level.__doc__ = dedent(opt_log_level.__doc__).format(
         options=", ".join(
@@ -133,10 +130,7 @@ class TwistOptions(Options):
         elif format == "json":
             self["fileLogObserverFactory"] = jsonFileLogObserver
         else:
-            exit(
-                ExitStatus.EX_CONFIG,
-                "Invalid log format: {}".format(format)
-            )
+            raise UsageError("Invalid log format: {}".format(format))
         self["logFormat"] = format
 
     opt_log_format.__doc__ = dedent(opt_log_format.__doc__)
@@ -184,4 +178,4 @@ class TwistOptions(Options):
         Options.postOptions(self)
 
         if self.subCommand is None:
-            exit(ExitStatus.EX_USAGE, "No plugin specified.")
+            raise UsageError("No plugin specified.")
