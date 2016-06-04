@@ -6,7 +6,6 @@ Command line options for C{twist}.
 """
 
 from sys import stdout, stderr
-from os import isatty
 from textwrap import dedent
 
 from twisted.copyright import version
