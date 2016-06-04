@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.application.runner._runner}.
+Tests for L{twisted.application.twist._options}.
 """
 
 from sys import stdout, stderr
@@ -10,6 +10,7 @@ from sys import stdout, stderr
 from twisted.copyright import version
 from twisted.python.usage import UsageError
 from twisted.logger import LogLevel, textFileLogObserver, jsonFileLogObserver
+from twisted.test.proto_helpers import MemoryReactor
 from ...service import ServiceMaker
 from ...runner import ExitStatus
 from ...runner.test.test_runner import DummyExit
@@ -39,6 +40,17 @@ class OptionsTests(twisted.trial.unittest.TestCase):
             return NotImplemented
 
         self.patch(_options, "openFile", fakeOpen)
+
+
+    def patchInstallReactor(self):
+        self.installedReactors = {}
+
+        def installReactor(name):
+            reactor = MemoryReactor()
+            self.installedReactors[name] = reactor
+            return reactor
+
+        self.patch(_options, "installReactor", installReactor)
 
 
     def test_synopsis(self):
@@ -80,17 +92,13 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         L{TwistOptions.installReactor} installs the chosen reactor.
         """
-        # Patch installReactor so we can capture usage and prevent installation.
-        installed = []
-        self.patch(
-            _options, "installReactor", lambda name: installed.append(name)
-        )
+        self.patchInstallReactor()
 
         options = TwistOptions()
         options.opt_reactor("fusion")
         options.installReactor()
 
-        self.assertEqual(installed, ["fusion"])
+        self.assertEqual(set(self.installedReactors), set(["fusion"]))
 
 
     def test_logLevelValid(self):
