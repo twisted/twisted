@@ -57,10 +57,12 @@ from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
     ISystemHandle, INegotiated, IPushProducer, ILoggingContext,
     IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
+    IProtocolNegotiationFactory
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
+from twisted.internet._sslverify import _setUpNextProtocolMechanisms
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
@@ -827,6 +829,26 @@ class TLSMemoryBIOFactory(WrappingFactory):
         return "%s (TLS)" % (logPrefix,)
 
 
+    def _applyProtocolNegotiation(self, connection):
+        """
+        Applies ALPN/NPN protocol neogitation to the connection, if the factory
+        supports it.
+
+        @param connection: The OpenSSL connection object to have ALPN/NPN added
+            to it.
+        @type connection: L{OpenSSL.SSL.Connection}
+
+        @return: Nothing
+        @rtype: L{None}
+        """
+        if IProtocolNegotiationFactory.providedBy(self.wrappedFactory):
+            protocols = self.wrappedFactory.acceptableProtocols()
+            context = connection.get_context()
+            _setUpNextProtocolMechanisms(context, protocols)
+
+        return
+
+
     def _createConnection(self, tlsProtocol):
         """
         Create an OpenSSL connection and set it up good.
@@ -840,9 +862,11 @@ class TLSMemoryBIOFactory(WrappingFactory):
         connectionCreator = self._connectionCreator
         if self._creatorInterface is IOpenSSLClientConnectionCreator:
             connection = connectionCreator.clientConnectionForTLS(tlsProtocol)
+            self._applyProtocolNegotiation(connection)
             connection.set_connect_state()
         else:
             connection = connectionCreator.serverConnectionForTLS(tlsProtocol)
+            self._applyProtocolNegotiation(connection)
             connection.set_accept_state()
         return connection
 
