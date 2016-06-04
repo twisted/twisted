@@ -70,6 +70,54 @@ except ImportError:
 class ExitStatus(Values):
     """
     Standard exit status codes for system programs.
+
+    @cvar EX_OK: Successful termination.
+    @type EX_OK: L{ValueConstant}
+
+    @cvar EX_USAGE: Command line usage error.
+    @type EX_USAGE: L{ValueConstant}
+
+    @cvar EX_DATAERR: Data format error.
+    @type EX_DATAERR: L{ValueConstant}
+
+    @cvar EX_NOINPUT: Cannot open input.
+    @type EX_NOINPUT: L{ValueConstant}
+
+    @cvar EX_NOUSER: Addressee unknown.
+    @type EX_NOUSER: L{ValueConstant}
+
+    @cvar EX_NOHOST: Host name unknown.
+    @type EX_NOHOST: L{ValueConstant}
+
+    @cvar EX_UNAVAILABLE: Service unavailable.
+    @type EX_UNAVAILABLE: L{ValueConstant}
+
+    @cvar EX_SOFTWARE: Internal software error.
+    @type EX_SOFTWARE: L{ValueConstant}
+
+    @cvar EX_OSERR: System error (e.g., can't fork).
+    @type EX_OSERR: L{ValueConstant}
+
+    @cvar EX_OSFILE: Critical OS file missing.
+    @type EX_OSFILE: L{ValueConstant}
+
+    @cvar EX_CANTCREAT: Can't create (user) output file.
+    @type EX_CANTCREAT: L{ValueConstant}
+
+    @cvar EX_IOERR: Input/output error.
+    @type EX_IOERR: L{ValueConstant}
+
+    @cvar EX_TEMPFAIL: Temporary failure; the user is invited to retry.
+    @type EX_TEMPFAIL: L{ValueConstant}
+
+    @cvar EX_PROTOCOL: Remote error in protocol.
+    @type EX_PROTOCOL: L{ValueConstant}
+
+    @cvar EX_NOPERM: Permission denied.
+    @type EX_NOPERM: L{ValueConstant}
+
+    @cvar EX_CONFIG: Configuration error.
+    @type EX_CONFIG: L{ValueConstant}
     """
 
     EX_OK          = ValueConstant(Status.EX_OK)
