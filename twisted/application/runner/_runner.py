@@ -67,7 +67,7 @@ class Runner(object):
     def killIfRequested(self):
         """
         Kill a running instance of this application if L{RunnerOptions.kill} is
-        specified and L{True} in L{self.options}.
+        specified and L{True} in C{self.options}.
         This requires that L{RunnerOptions.pidFilePath} also be specified;
         exit with L{ExitStatus.EX_USAGE} if kill is requested with no PID file.
         """
@@ -103,7 +103,7 @@ class Runner(object):
     def writePIDFile(self):
         """
         Write a PID file for this application if L{RunnerOptions.pidFilePath}
-        is specified in L{self.options}.
+        is specified in C{self.options}.
         """
         pidFilePath = self.options.get(RunnerOptions.pidFilePath)
         if pidFilePath is not None:
@@ -114,7 +114,7 @@ class Runner(object):
     def removePIDFile(self):
         """
         Remove the PID file for this application if L{RunnerOptions.pidFilePath}
-        is specified in L{self.options}.
+        is specified in C{self.options}.
         """
         pidFilePath = self.options.get(RunnerOptions.pidFilePath)
         if pidFilePath is not None:
@@ -123,7 +123,7 @@ class Runner(object):
 
     def startLogging(self):
         """
-        Start the L{twisted.logging} system.
+        Start the L{twisted.logger} logging system.
         """
         logFile = self.options.get(RunnerOptions.logFile, stderr)
 
@@ -148,9 +148,9 @@ class Runner(object):
 
     def startReactor(self):
         """
-        Register L{self.whenRunning} with the reactor so that it is called once
+        Register C{self.whenRunning} with the reactor so that it is called once
         the reactor is running and start the reactor.
-        If L{RunnerOptions.reactor} is specified in L{self.options}, use that
+        If L{RunnerOptions.reactor} is specified in C{self.options}, use that
         reactor; otherwise use the default reactor.
         """
         reactor = self.options.get(RunnerOptions.reactor)
@@ -167,7 +167,7 @@ class Runner(object):
 
     def whenRunning(self):
         """
-        If L{RunnerOptions.whenRunning} is specified in L{self.options}, call
+        If L{RunnerOptions.whenRunning} is specified in C{self.options}, call
         it.
 
         @note: This method is called when the reactor is running.
@@ -179,7 +179,7 @@ class Runner(object):
 
     def reactorExited(self):
         """
-        If L{RunnerOptions.reactorExited} is specified in L{self.options}, call
+        If L{RunnerOptions.reactorExited} is specified in C{self.options}, call
         it.
 
         @note: This method is called after the reactor has exited.
@@ -198,40 +198,40 @@ class RunnerOptions(Names):
 
     @cvar reactor: The reactor to start.
         Corresponding value: L{IReactorCore}.
-    @ctype reactor: L{NamedConstant}
+    @type reactor: L{NamedConstant}
 
     @cvar pidFilePath: The path to the PID file.
         Corresponding value: L{IFilePath}.
-    @ctype pidFilePath: L{NamedConstant}
+    @type pidFilePath: L{NamedConstant}
 
     @cvar kill: Whether this runner should kill an existing running instance.
         Corresponding value: L{bool}.
-    @ctype kill: L{NamedConstant}
+    @type kill: L{NamedConstant}
 
     @cvar defaultLogLevel: The default log level to start the logging system
         with.
         Corresponding value: L{NamedConstant} from L{LogLevel}.
-    @ctype defaultLogLevel: L{NamedConstant}
+    @type defaultLogLevel: L{NamedConstant}
 
     @cvar logFile: A file stream to write logging output to.
         Corresponding value: writable file like object.
-    @ctype logFile: L{NamedConstant}
+    @type logFile: L{NamedConstant}
 
     @cvar fileLogObserverFactory: What file log observer to use when starting
         the logging system.
         Corresponding value: callable that returns a
         L{twisted.logger.FileLogObserver}
-    @ctype fileLogObserverFactory: L{NamedConstant}
+    @type fileLogObserverFactory: L{NamedConstant}
 
     @cvar whenRunning: Hook to call when the reactor is running.
         This can be considered the Twisted equivalent to C{main()}.
         Corresponding value: callable that takes the options mapping given to
         the runner as an argument.
-    @ctype whenRunning: L{NamedConstant}
+    @type whenRunning: L{NamedConstant}
 
     @cvar reactorExited: Hook to call when the reactor has exited.
         Corresponding value: callable that takes an empty arguments list
-    @ctype reactorExited: L{NamedConstant}
+    @type reactorExited: L{NamedConstant}
     """
 
     reactor                = NamedConstant()

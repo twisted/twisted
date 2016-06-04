@@ -139,8 +139,8 @@ class TwistOptions(Options):
 
     def selectDefaultLogObserver(self):
         """
-        Set the L{fileLogObserverFactory} to the default appropriate for the
-        chosen L{logFile}.
+        Set C{fileLogObserverFactory} to the default appropriate for the
+        chosen C{logFile}.
         """
         if "fileLogObserverFactory" not in self:
             logFile = self["logFile"]

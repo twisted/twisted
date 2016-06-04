@@ -483,10 +483,10 @@ class MemoryReactor(object):
     def run(self):
         """
         Fake L{IReactorCore.run}.
-        Sets L{self.running} to L{True}, runs all of the hooks passed to
-        L{self.callWhenRunning}, then calls L{self.stop} to simulate a request
+        Sets C{self.running} to L{True}, runs all of the hooks passed to
+        C{self.callWhenRunning}, then calls C{self.stop} to simulate a request
         to stop the reactor.
-        Sets L{self.hasRun} to L{True}.
+        Sets C{self.hasRun} to L{True}.
         """
         assert self.running is False
         self.running = True
@@ -502,8 +502,8 @@ class MemoryReactor(object):
     def stop(self):
         """
         Fake L{IReactorCore.run}.
-        Sets L{self.running} to L{False}.
-        Sets L{self.hasStopped} to L{True}.
+        Sets C{self.running} to L{False}.
+        Sets C{self.hasStopped} to L{True}.
         """
         self.running = False
         self.hasStopped = True
@@ -512,8 +512,8 @@ class MemoryReactor(object):
     def crash(self):
         """
         Fake L{IReactorCore.crash}.
-        Sets L{self.running} to L{None}, because that feels crashy.
-        Sets L{self.hasCrashed} to L{True}.
+        Sets C{self.running} to L{None}, because that feels crashy.
+        Sets C{self.hasCrashed} to L{True}.
         """
         self.running = None
         self.hasCrashed = True
@@ -554,7 +554,7 @@ class MemoryReactor(object):
     def callWhenRunning(self, callable, *args, **kw):
         """
         Fake L{IReactorCore.callWhenRunning}.
-        Keeps a list of invocations to make in L{self.whenRunningHooks}.
+        Keeps a list of invocations to make in C{self.whenRunningHooks}.
         """
         self.whenRunningHooks.append((callable, args, kw))
 
