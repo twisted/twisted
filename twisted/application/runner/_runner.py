@@ -191,14 +191,51 @@ class Runner(object):
 class RunnerOptions(Names):
     """
     Names for options recognized by L{Runner}.
+    These are meant to be used as keys in the options given to L{Runner}, with
+    corresponding values as noted below.
+
+    @cvar reactor: The reactor to start.
+        Corresponding value: L{IReactorCore}.
+    @ctype reactor: L{NamedConstant}
+
+    @cvar pidFilePath: The path to the PID file.
+        Corresponding value: L{IFilePath}.
+    @ctype pidFilePath: L{NamedConstant}
+
+    @cvar kill: Whether this runner should kill an existing running instance.
+        Corresponding value: L{bool}.
+    @ctype kill: L{NamedConstant}
+
+    @cvar defaultLogLevel: The default log level to start the logging system
+        with.
+        Corresponding value: L{NamedConstant} from L{LogLevel}.
+    @ctype defaultLogLevel: L{NamedConstant}
+
+    @cvar logFile: A file stream to write logging output to.
+        Corresponding value: writable file like object.
+    @ctype logFile: L{NamedConstant}
+
+    @cvar fileLogObserverFactory: What file log observer to use when starting
+        the logging system.
+        Corresponding value: callable that returns a
+        L{twisted.logger.FileLogObserver}
+    @ctype fileLogObserverFactory: L{NamedConstant}
+
+    @cvar whenRunning: Hook to call when the reactor is running.
+        This can be considered the Twisted equivalent to C{main()}.
+        Corresponding value: callable that takes an empty arguments list
+    @ctype whenRunning: L{NamedConstant}
+
+    @cvar reactorExited: Hook to call when the reactor has exited.
+        Corresponding value: callable that takes an empty arguments list
+    @ctype reactorExited: L{NamedConstant}
     """
 
     reactor                = NamedConstant()
     pidFilePath            = NamedConstant()
     kill                   = NamedConstant()
-    logFile                = NamedConstant()
-    logFileFormat          = NamedConstant()
     defaultLogLevel        = NamedConstant()
+    logFile                = NamedConstant()
     fileLogObserverFactory = NamedConstant()
     whenRunning            = NamedConstant()
     reactorExited          = NamedConstant()
