@@ -15,14 +15,10 @@ from signal import SIGTERM
 from os import getpid, kill
 
 from twisted.python.constants import Names, NamedConstant
-# from twisted.python.constants import Values, ValueConstant
-# from twisted.python.usage import Options, UsageError
-# from twisted.python.filepath import FilePath
 from twisted.logger import (
-    globalLogBeginner, textFileLogObserver,  # jsonFileLogObserver,
+    globalLogBeginner, textFileLogObserver,
     FilteringLogObserver, LogLevelFilterPredicate,
-    LogLevel,  # InvalidLogLevelError,
-    Logger,
+    LogLevel, Logger,
 )
 from twisted.internet import default as defaultReactor
 from ._exit import exit, ExitStatus
