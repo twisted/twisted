@@ -27,7 +27,7 @@ class TwistOptions(Options):
         Options.__init__(self)
 
         self["reactorName"] = "default"
-        self["logLevel"]    = self.defaultLogLevel
+        self["logLevel"] = self.defaultLogLevel
 
 
     def opt_version(self):
@@ -45,7 +45,9 @@ class TwistOptions(Options):
         self["reactorName"] = name
 
     opt_reactor.__doc__ = dedent(opt_reactor.__doc__).format(
-        options=", ".join(rt.shortName for rt in getReactorTypes()),
+        options=", ".join(
+            '"{}"'.format(rt.shortName) for rt in getReactorTypes()
+        ),
     )
 
 
@@ -60,7 +62,7 @@ class TwistOptions(Options):
     def opt_log_level(self, levelName):
         """
         Set default log level.
-        (options: {options}; default: {default})
+        (options: {options}; default: "{default}")
         """
         try:
             self["logLevel"] = LogLevel.levelWithName(levelName)
@@ -71,7 +73,9 @@ class TwistOptions(Options):
             )
 
     opt_log_level.__doc__ = dedent(opt_log_level.__doc__).format(
-        options=", ".join(l.name for l in LogLevel.iterconstants()),
+        options=", ".join(
+            '"{}"'.format(l.name) for l in LogLevel.iterconstants()
+        ),
         default=defaultLogLevel.name,
     )
 
