@@ -225,7 +225,8 @@ class RunnerOptions(Names):
 
     @cvar whenRunning: Hook to call when the reactor is running.
         This can be considered the Twisted equivalent to C{main()}.
-        Corresponding value: callable that takes an empty arguments list
+        Corresponding value: callable that takes the options mapping given to
+        the runner as an argument.
     @ctype whenRunning: L{NamedConstant}
 
     @cvar reactorExited: Hook to call when the reactor has exited.

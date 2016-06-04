@@ -185,14 +185,62 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.assertTrue(reactor.hasRun)
 
 
-    def test_whenRunning(self):
-        raise NotImplementedError()
-    test_whenRunning.todo = "unimplemented"
+    def test_startReactorWithWhenRunning(self):
+        """
+        L{Runner.startReactor} with L{RunnerOptions.whenRunning} ensures that
+        the given callable is called with the runner's options when the reactor
+        is running.
+        """
+        optionsSeen = []
+
+        def txmain(options):
+            optionsSeen.append(options)
+
+        options = {
+            RunnerOptions.reactor: MemoryReactor(),
+            RunnerOptions.whenRunning: txmain,
+        }
+        runner = Runner(options)
+        runner.startReactor()
+
+        self.assertEqual(len(optionsSeen), 1)
+        self.assertIdentical(optionsSeen[0], options)
 
 
-    def test_reactorExited(self):
-        raise NotImplementedError()
-    test_reactorExited.todo = "unimplemented"
+    def test_whenRunningWithWhenRunning(self):
+        """
+        L{Runner.whenRunning} with L{RunnerOptions.whenRunning} calls the given
+        callable with the runner's options.
+        """
+        optionsSeen = []
+
+        def txmain(options):
+            optionsSeen.append(options)
+
+        options = {RunnerOptions.whenRunning: txmain}
+        runner = Runner(options)
+        runner.whenRunning()
+
+        self.assertEqual(len(optionsSeen), 1)
+        self.assertIdentical(optionsSeen[0], options)
+
+
+    def test_reactorExitedWithReactorExited(self):
+        """
+        L{Runner.reactorExited} with L{RunnerOptions.reactorExited} calls the
+        given callable with the runner's options.
+        """
+        optionsSeen = []
+
+        def exited(options):
+            optionsSeen.append(options)
+
+        options = {RunnerOptions.reactorExited: exited}
+        runner = Runner(options)
+        runner.reactorExited()
+
+        self.assertEqual(len(optionsSeen), 1)
+        self.assertIdentical(optionsSeen[0], options)
 
 
 
