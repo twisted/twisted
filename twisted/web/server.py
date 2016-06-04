@@ -32,7 +32,7 @@ if _PY3:
         """
 else:
     from twisted.spread.pb import Copyable, ViewPoint
-from twisted.internet import address
+from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
 from twisted.python import log, reflect, failure, components
@@ -615,6 +615,8 @@ class Session(components.Componentized):
 version = networkString("TwistedWeb/%s" % (copyright.version,))
 
 
+
+@implementer(interfaces.IProtocolNegotiationFactory)
 class Site(http.HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
@@ -737,3 +739,15 @@ class Site(http.HTTPFactory):
         # servers and disconnected sites.
         request.sitepath = copy.copy(request.prepath)
         return resource.getChildForRequest(self.resource, request)
+
+    # IProtocolNegotiationFactory
+    def acceptableProtocols(self):
+        """
+        Protocols this server can speak.
+        """
+        baseProtocols = [b'http/1.1']
+
+        if http.HTTP2_ENABLED:
+            baseProtocols.insert(0, b'h2')
+
+        return baseProtocols
