@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# pylint: disable=W9401,W9402
+
 # DO NOT EDIT xpathparser.py!
 #
 # It is generated from xpathparser.g using Yapps. Make needed changes there.
