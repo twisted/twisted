@@ -6,6 +6,8 @@
 L{twisted.words} support for Instance Messenger.
 """
 
+from __future__ import print_function
+
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.python import log
@@ -44,7 +46,7 @@ class TwistedWordsPerson(basesupport.AbstractPerson):
             return self.account.client.perspective.callRemote('directMessage',self.name, text)
 
     def metadataFailed(self, result, text):
-        print "result:",result,"text:",text
+        print("result:",result,"text:",text)
         return self.account.client.perspective.directMessage(self.name, text)
 
     def setStatus(self, status):
@@ -77,7 +79,7 @@ class TwistedWordsGroup(basesupport.AbstractGroup):
             self.name)
 
     def metadataFailed(self, result, text):
-        print "result:",result,"text:",text
+        print("result:",result,"text:",text)
         return self.account.client.perspective.callRemote('groupMessage',
                                                           self.name, text)
 
@@ -101,7 +103,7 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
                  _logonDeferred=None):
         self.accountName = "%s (%s:%s)" % (acct.accountName, serviceName, perspectiveName)
         self.name = perspectiveName
-        print "HELLO I AM A PB SERVICE", serviceName, perspectiveName
+        print("HELLO I AM A PB SERVICE", serviceName, perspectiveName)
         self.chat = chatui
         self.account = acct
         self._logonDeferred = _logonDeferred
@@ -119,19 +121,19 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
         self.perspective.callRemote('addContact', name)
 
     def remote_receiveGroupMembers(self, names, group):
-        print 'received group members:', names, group
+        print('received group members:', names, group)
         self.getGroupConversation(group).setGroupMembers(names)
 
     def remote_receiveGroupMessage(self, sender, group, message, metadata=None):
-        print 'received a group message', sender, group, message, metadata
+        print('received a group message', sender, group, message, metadata)
         self.getGroupConversation(group).showGroupMessage(sender, message, metadata)
 
     def remote_memberJoined(self, member, group):
-        print 'member joined', member, group
+        print('member joined', member, group)
         self.getGroupConversation(group).memberJoined(member)
 
     def remote_memberLeft(self, member, group):
-        print 'member left'
+        print('member left')
         self.getGroupConversation(group).memberLeft(member)
 
     def remote_notifyStatusChanged(self, name, status):
@@ -162,12 +164,12 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
         self.perspective.callRemote('getGroupMembers', name)
 
     def _cbGroupLeft(self, result, name):
-        print 'left',name
+        print('left',name)
         groupConv = self.chat.getGroupConversation(self.getGroup(name), 1)
         groupConv.showGroupMessage("sys", "you left")
 
     def connected(self, perspective):
-        print 'Connected Words Client!', perspective
+        print('Connected Words Client!', perspective)
         if self._logonDeferred is not None:
             self._logonDeferred.callback(self)
         self.perspective = perspective
@@ -227,15 +229,15 @@ class PBAccount(basesupport.AbstractAccount):
 
 
     def _startLogOn(self, chatui):
-        print 'Connecting...',
+        print('Connecting...', end=' ')
         d = pb.getObjectAt(self.host, self.port)
         d.addCallbacks(self._cbConnected, self._ebConnected,
                        callbackArgs=(chatui,))
         return d
 
     def _cbConnected(self, root, chatui):
-        print 'Connected!'
-        print 'Identifying...',
+        print('Connected!')
+        print('Identifying...', end=' ')
         d = pb.authIdentity(root, self.username, self.password)
         d.addCallbacks(self._cbIdent, self._ebConnected,
                        callbackArgs=(chatui,))
@@ -243,9 +245,9 @@ class PBAccount(basesupport.AbstractAccount):
 
     def _cbIdent(self, ident, chatui):
         if not ident:
-            print 'falsely identified.'
+            print('falsely identified.')
             return self._ebConnected(Failure(Exception("username or password incorrect")))
-        print 'Identified!'
+        print('Identified!')
         dl = []
         for handlerClass, sname, pname in self.services:
             d = defer.Deferred()
@@ -255,6 +257,6 @@ class PBAccount(basesupport.AbstractAccount):
         return defer.DeferredList(dl)
 
     def _ebConnected(self, error):
-        print 'Not connected.'
+        print('Not connected.')
         return error
 
