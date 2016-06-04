@@ -11,7 +11,11 @@ from io import BytesIO
 from zope.interface import implementer
 
 from twisted.python.filepath import IFilePath
-from twisted.logger import LogPublisher, LogBeginner
+from twisted.logger import (
+    LogLevel, LogPublisher, LogBeginner,
+    jsonFileLogObserver, FileLogObserver,
+    FilteringLogObserver, LogLevelFilterPredicate,
+)
 from twisted.test.proto_helpers import MemoryReactor
 
 from ...runner import _runner
@@ -157,8 +161,76 @@ class CommandTests(twisted.trial.unittest.TestCase):
 
 
     def test_startLogging(self):
-        raise NotImplementedError()
-    test_startLogging.todo = "unimplemented"
+        """
+        L{Runner.startLogging} sets up a filtering observer with a log level
+        predicate set to the given log level that contains a file observer of
+        the given type which writes to the given file.
+        """
+        logFile = object()
+
+        # Patch the log beginner so that we don't try to start the already
+        # running (started by trial) logging system.
+
+        class LogBeginner(object):
+            def beginLoggingTo(self, observers):
+                LogBeginner.observers = observers
+
+        self.patch(_runner, "globalLogBeginner", LogBeginner())
+
+        # Patch FilteringLogObserver so we can capture its arguments
+
+        class MockFilteringLogObserver(FilteringLogObserver):
+            def __init__(
+                self, observer, predicates,
+                negativeObserver=lambda event: None
+            ):
+                MockFilteringLogObserver.observer = observer
+                MockFilteringLogObserver.predicates = predicates
+                FilteringLogObserver.__init__(
+                    self, observer, predicates, negativeObserver
+                )
+
+        self.patch(_runner, "FilteringLogObserver", MockFilteringLogObserver)
+
+        # Patch FileLogObserver so we can capture its arguments
+
+        class MockFileLogObserver(FileLogObserver):
+            def __init__(self, outFile):
+                MockFileLogObserver.outFile = outFile
+                FileLogObserver.__init__(self, outFile, str)
+
+        # Start logging
+        runner = Runner({
+            RunnerOptions.logFile: logFile,
+            RunnerOptions.fileLogObserverFactory: MockFileLogObserver,
+            RunnerOptions.defaultLogLevel: LogLevel.critical,
+        })
+        runner.startLogging()
+
+        # Check for a filtering observer
+        self.assertEqual(len(LogBeginner.observers), 1)
+        self.assertIsInstance(LogBeginner.observers[0], FilteringLogObserver)
+
+        # Check log level predicate with the correct default log level
+        self.assertEqual(len(MockFilteringLogObserver.predicates), 1)
+        self.assertIsInstance(
+            MockFilteringLogObserver.predicates[0],
+            LogLevelFilterPredicate
+        )
+        self.assertIdentical(
+            MockFilteringLogObserver.predicates[0].defaultLogLevel,
+            LogLevel.critical
+        )
+
+        # Check for a file observer attached to the filtering observer
+        self.assertIsInstance(
+            MockFilteringLogObserver.observer, MockFileLogObserver
+        )
+
+        # Check for the file we gave it
+        self.assertIdentical(
+            MockFilteringLogObserver.observer.outFile, logFile
+        )
 
 
     def test_startReactorWithoutReactor(self):
