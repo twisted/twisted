@@ -430,6 +430,7 @@ class MemoryReactor(object):
         self.hasCrashed = True
 
         self.whenRunningHooks = []
+        self.triggers = {}
 
         self.tcpClients = []
         self.tcpServers = []
@@ -514,9 +515,13 @@ class MemoryReactor(object):
 
     def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
         """
-        Not implemented; raises L{NotImplementedError}.
+        Fake L{IReactorCore.run}.
+        Keep track of trigger by appending it to
+        self.triggers[phase][eventType].
         """
-        raise NotImplementedError()
+        phaseTriggers = self.triggers.setdefault(phase, {})
+        eventTypeTriggers = phaseTriggers.setdefault(eventType, [])
+        eventTypeTriggers.append((callable, args, kw))
 
 
     def removeSystemEventTrigger(self, triggerID):
