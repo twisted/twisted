@@ -59,9 +59,9 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.patch(_runner, "globalLogBeginner", self.globalLogBeginner)
 
 
-    def test_execute(self):
+    def test_run(self):
         """
-        L{Runner.execute} calls the documented methods in order.
+        L{Runner.run} calls the documented methods in order.
         """
         called = []
 
@@ -80,7 +80,7 @@ class CommandTests(twisted.trial.unittest.TestCase):
             )
 
         runner = Runner({})
-        runner.execute()
+        runner.run()
 
         self.assertEqual(called, methodNames)
 

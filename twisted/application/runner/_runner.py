@@ -45,9 +45,9 @@ class Runner(object):
         self.options = options
 
 
-    def execute(self):
+    def run(self):
         """
-        Execute this command.
+        Run this command.
         Equivalent to:
             self.killIfRequested()
             self.writePIDFile()
