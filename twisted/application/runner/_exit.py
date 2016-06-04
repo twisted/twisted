@@ -5,7 +5,7 @@
 System exit support.
 """
 
-import sys
+from sys import stdout, stderr, exit as sysexit
 
 from twisted.python.constants import Values, ValueConstant
 
@@ -25,13 +25,13 @@ def exit(status, message=None):
 
     if message:
         if code == 0:
-            out = sys.stdout
+            out = stdout
         else:
-            out = sys.stderr
+            out = stderr
         out.write(message)
         out.write("\n")
 
-    sys.exit(code)
+    sysexit(code)
 
 
 

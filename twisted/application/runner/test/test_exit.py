@@ -5,8 +5,7 @@
 Tests for L{twisted.application.runner._exit}.
 """
 
-import sys
-
+from ...runner import _exit
 from .._exit import exit, ExitStatus
 
 import twisted.trial.unittest
@@ -20,7 +19,7 @@ class ExitTests(twisted.trial.unittest.TestCase):
 
     def setUp(self):
         self.exit = DummyExit()
-        self.patch(sys, "exit", self.exit)
+        self.patch(_exit, "sysexit", self.exit)
 
 
     def test_exitStatusInt(self):
