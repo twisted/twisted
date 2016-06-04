@@ -1199,3 +1199,120 @@ class ReactTests(unittest.SynchronousTestCase):
         exitError = self.assertRaises(
             SystemExit, task.react, main, [], _reactor=r)
         self.assertEqual(0, exitError.code)
+
+
+class _DummyException(Exception):
+    """
+    Exception type to be used in testing.
+    """
+
+
+class TimeoutDeferredTests(unittest.SynchronousTestCase):
+    """
+    Tests for the function L{task.timeoutDeferred}
+    """
+    def test_propagatesResultIfSuccessBeforeTimeout(self):
+        """
+        The L{defer.Deferred} callbacks with the result if it succeeds before
+        the timeout (e.g. timing out the L{defer.Deferred} does not obscure
+        the callback value).
+        """
+        clock = Clock()
+        d = defer.Deferred()
+        task.timeoutDeferred(d, 10, clock)
+        d.callback("Result")
+        self.assertEqual(self.successResultOf(d), "Result")
+
+        # the timeout never happens - no errback occurs
+        clock.advance(15)
+        self.assertIsNone(self.successResultOf(d))
+
+    def test_propagatesFailureIfFailedBeforeTimeout(self):
+        """
+        The L{defer.Deferred} errbacks with the failure if it fails before the
+        timeout (e.g. timing out the L{defer.Deferred} does not obscure the
+        errback failure).
+        """
+        clock = Clock()
+        d = defer.Deferred()
+        task.timeoutDeferred(d, 10, clock)
+        d.errback(_DummyException("fail"))
+        self.failureResultOf(d, _DummyException)
+
+        # the timeout never happens - no further errback occurs
+        clock.advance(15)
+        self.assertIsNone(self.successResultOf(d))
+
+    def test_timesOutIfPastTimeout(self):
+        """
+        The L{defer.Deferred} errbacks with a L{task.TimedOutError} if the
+        timeout occurs before it either callbacks or errbacks.
+        """
+        clock = Clock()
+        d = defer.Deferred()
+        task.timeoutDeferred(d, 10, clock)
+        self.assertNoResult(d)
+
+        clock.advance(15)
+
+        self.failureResultOf(d, task.TimedOutError)
+
+    def test_preservesCancellationFunctionCallback(self):
+        """
+        If a cancellation function that callbacks is provided to the
+        L{defer.Deferred} being cancelled, its effects will not be overriden with a L{task.TimedOutError}.
+        """
+        clock = Clock()
+        d = defer.Deferred(lambda c: c.callback('I was cancelled!'))
+        task.timeoutDeferred(d, 10, clock)
+        self.assertNoResult(d)
+
+        clock.advance(15)
+
+        self.assertEqual(self.successResultOf(d), 'I was cancelled!')
+
+    def test_preservesCancellationFunctionErrback(self):
+        """
+        If a cancellation function that errbacks (with a
+        non-L{defer.CancelledError}) is provided to the L{defer.Deferred}
+        being cancelled, this other error will not be converted to a
+        L{task.TimedOutError}.
+        """
+        clock = Clock()
+        d = defer.Deferred(lambda c: c.errback(_DummyException('what!')))
+        task.timeoutDeferred(d, 10, clock)
+        self.assertNoResult(d)
+
+        clock.advance(15)
+
+        self.failureResultOf(d, _DummyException)
+
+    def test_preservesEarlyCancellationError(self):
+        """
+        If the L{defer.Deferred} is manually cancelled before the timeout, it
+        is not re-cancelled (no L{defer.AlreadyCancelled} error), and the
+        L{defer.CancelledError} is not obscured.
+        """
+        clock = Clock()
+        d = defer.Deferred()
+        task.timeoutDeferred(d, 10, clock)
+        self.assertNoResult(d)
+
+        d.cancel()
+        self.failureResultOf(d, defer.CancelledError)
+
+        clock.advance(15)
+        # no AlreadyCancelledError raised?  Good.
+
+    def test_deferredDescriptionPassedToTimedOutError(self):
+        """
+        If a C{deferredDescription} is passed, the L{task.TimedOutError} will
+        have that string as part of it's string representation.
+        """
+        clock = Clock()
+        d = defer.Deferred()
+        task.timeoutDeferred(d, 5.3, clock, deferredDescription="It's ME!")
+        clock.advance(6)
+
+        f = self.failureResultOf(d, task.TimedOutError)
+        self.assertIn("It's ME! timed out after 5.3 seconds", str(f))

@@ -937,6 +937,67 @@ def react(main, argv=(), _reactor=None):
     sys.exit(codes[0])
 
 
+class TimedOutError(Exception):
+    """
+    Exception that gets raised by timeoutDeferred
+    """
+    def __init__(self, timeout, deferredDescription):
+        super(TimedOutError, self).__init__(
+            "{desc} timed out after {timeout} seconds.".format(
+                desc=deferredDescription, timeout=timeout))
+
+
+def timeoutDeferred(deferred, timeout, clock, deferredDescription=None):
+    """
+    Timeout a L{defer.Deferred} by scheduling it to be cancelled after C{timeout} seconds.
+
+    If it gets timed out, it errbacks with a L{TimedOutError}, unless a
+    cancelable function is passed to the C{deferred}'s initialization and it
+    callbacks or errbacks with something else when cancelled.
+    (see the documentation for L{defer.Deferred} for more details)
+
+    @param deferred: The L{defer.Deferred} to time out (cancel)
+    @type deferred: L{defer.Deferred}
+
+    @param timeout: number of seconds to wait before timing out the deferred
+    @type timeout: C{int}
+
+    @param clock: The object which will be used to schedule the timeout.
+    @type clock: L{IReactorTime}
+
+    @param deferredDescription: A description of C{deferred} to be provided
+        to L{TimedOutError} for a pretty C{Exception} string.  Defaults to the C{repr} of C{deferred} if not provided.
+    @type deferredDescription: C{string}
+
+    @rtype: C{None}
+    """
+    timedOut = [False]
+
+    def timeItOut():
+        timedOut[0] = True
+        deferred.cancel()
+
+    delayedCall = clock.callLater(timeout, timeItOut)
+
+    def convertCancelled(f):
+        # if the failure is CancelledError, and we timed it out, convert it
+        # to a TimedOutError.  Otherwise, propagate it.
+        if timedOut[0]:
+            f.trap(defer.CancelledError)
+            raise TimedOutError(timeout, deferredDescription)
+        return f
+
+    deferred.addErrback(convertCancelled)
+
+    def cancelTimeout(result):
+        # stop the pending call to cancel the deferred if it's been fired
+        if delayedCall.active():
+            delayedCall.cancel()
+        return result
+
+    deferred.addBoth(cancelTimeout)
+
+
 __all__ = [
     'LoopingCall',
 
