@@ -61,7 +61,7 @@ class ExitTests(twisted.trial.unittest.TestCase):
 
 class DummyExit(object):
     """
-    Mock for L{sys.exit} that remembers whether it's been called and, if it has,
+    Stub for L{sys.exit} that remembers whether it's been called and, if it has,
     what argument it was given.
     """
     def __init__(self):
