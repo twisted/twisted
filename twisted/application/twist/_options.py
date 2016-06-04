@@ -77,7 +77,7 @@ class TwistOptions(Options):
             self["logLevel"] = LogLevel.levelWithName(levelName)
         except InvalidLogLevelError:
             exit(
-                ExitStatus.EX_USAGE,
+                ExitStatus.EX_CONFIG,
                 "Invalid log level: {}".format(levelName)
             )
 
@@ -124,7 +124,7 @@ class TwistOptions(Options):
             self["fileLogObserverFactory"] = jsonFileLogObserver
         else:
             exit(
-                ExitStatus.EX_USAGE,
+                ExitStatus.EX_CONFIG,
                 "Invalid log format: {}".format(format)
             )
         self["logFormat"] = format
