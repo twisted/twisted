@@ -17,8 +17,9 @@ from zope.interface.verify import verifyClass
 from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.internet.interfaces import (
-    ITransport, IConsumer, IPushProducer, IConnector, IReactorTCP, IReactorSSL,
-    IReactorUNIX, IReactorSocket, IListeningPort, IReactorFDSet
+    ITransport, IConsumer, IPushProducer, IConnector,
+    IReactorCore, IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket,
+    IListeningPort, IReactorFDSet,
 )
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
@@ -377,6 +378,7 @@ class _FakeConnector(object):
 
 
 @implementer(
+    IReactorCore,
     IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorFDSet
 )
 class MemoryReactor(object):
@@ -389,8 +391,8 @@ class MemoryReactor(object):
         to C{connectTCP}).
     @type tcpClients: C{list}
 
-    @ivar tcpServers: a list that keeps track of server listen attempts (ie, calls
-        to C{listenTCP}).
+    @ivar tcpServers: a list that keeps track of server listen attempts (ie,
+        calls to C{listenTCP}).
     @type tcpServers: C{list}
 
     @ivar sslClients: a list that keeps track of connection attempts (ie,
@@ -420,6 +422,13 @@ class MemoryReactor(object):
         """
         Initialize the tracking lists.
         """
+        self.running = False
+        self.hasRun = True
+        self.hasStopped = True
+        self.hasCrashed = True
+
+        self.whenRunningHooks = []
+
         self.tcpClients = []
         self.tcpServers = []
         self.sslClients = []
@@ -432,6 +441,88 @@ class MemoryReactor(object):
 
         self.readers = set()
         self.writers = set()
+
+
+    def resolve(self, name, timeout=10):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def run(self):
+        """
+        Fake L{IReactorCore.run}.
+        Sets L{self.running} to L{True}, runs all of the hooks passed to
+        L{self.callWhenRunning}, then calls L{self.stop} to simulate a request
+        to stop the reactor.
+        Sets L{self.hasRun} to L{True}.
+        """
+        assert self.running is False
+        self.running = True
+        self.hasRun = True
+
+        for f, args, kwargs in self.whenRunningHooks:
+            f(*args, **kwargs)
+
+        self.stop()
+        # That we stopped means we can return, phew.
+
+
+    def stop(self):
+        """
+        Fake L{IReactorCore.run}.
+        Sets L{self.running} to L{False}.
+        Sets L{self.hasStopped} to L{True}.
+        """
+        self.running = False
+        self.hasStopped = True
+
+
+    def crash(self):
+        """
+        Fake L{IReactorCore.crash}.
+        Sets L{self.running} to L{None}, because that feels crashy.
+        Sets L{self.hasCrashed} to L{True}.
+        """
+        self.running = None
+        self.hasCrashed = True
+
+
+    def iterate(self, delay=0):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def fireSystemEvent(self, eventType):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def removeSystemEventTrigger(self, triggerID):
+        """
+        Not implemented; raises L{NotImplementedError}.
+        """
+        raise NotImplementedError()
+
+
+    def callWhenRunning(self, callable, *args, **kw):
+        """
+        Fake L{IReactorCore.callWhenRunning}.
+        Keeps a list of invocations to make in L{self.whenRunningHooks}.
+        """
+        self.whenRunningHooks.append((callable, args, kw))
 
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
