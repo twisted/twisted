@@ -2492,6 +2492,21 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._interface, "10.0.0.1")
 
 
+    def test_unicode(self):
+        """
+        When passed a TCP strports description in unicode form,
+        L{endpoints.serverFromString} returns the correct L{TCP4ServerEndpoint}
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor, u"tcp:1234:backlog=12:interface=10.0.0.1")
+        self.assertIsInstance(server, endpoints.TCP4ServerEndpoint)
+        self.assertIs(server._reactor, reactor)
+        self.assertEqual(server._port, 1234)
+        self.assertEqual(server._backlog, 12)
+        self.assertEqual(server._interface, "10.0.0.1")
+
+
     def test_ssl(self):
         """
         When passed an SSL strports description, L{endpoints.serverFromString}

@@ -1432,7 +1432,7 @@ def _serverFromStringLegacy(reactor, description, default):
     deprecated 'default' argument to anything but L{strports.service}.
     """
     nameOrPlugin, args, kw = _parseServer(description, None, default)
-    if type(nameOrPlugin) is not str:
+    if type(nameOrPlugin) not in (str, unicode):
         plugin = nameOrPlugin
         return plugin.parseStreamServer(reactor, *args, **kw)
     else:
@@ -2049,6 +2049,3 @@ class _TLSClientEndpointParser(object):
         @rtype: L{IStreamClientEndpoint}
         """
         return _parseClientTLS(reactor, *args, **kwargs)
-
-
-
