@@ -206,3 +206,37 @@ class SRVConnectorTests(unittest.TestCase):
             self.factory)
         self.assertIsInstance(self.connector.domain, bytes)
         self.assertEqual(b'xn--chec-9oa.example.org', self.connector.domain)
+
+
+    def test_pickServerSamePriorities(self):
+        """
+        Two records with equal priorities compare on weight.
+        """
+        record1 = dns.Record_SRV(10, 10, 5222, 'host1.example.org')
+        record2 = dns.Record_SRV(10, 20, 5222, 'host2.example.org')
+
+        self.connector.orderedServers = [record2, record1]
+        self.connector.servers = []
+
+        self.assertEqual((b'host2.example.org', 5222),
+                         self.connector.pickServer())
+
+        self.assertEqual((b'host1.example.org', 5222),
+                         self.connector.pickServer())
+
+
+    def test_srvDifferentPriorities(self):
+        """
+        Two records with differing priorities compare on priority.
+        """
+        record1 = dns.Record_SRV(10, 0, 5222, 'host1.example.org')
+        record2 = dns.Record_SRV(20, 0, 5222, 'host2.example.org')
+
+        self.connector.orderedServers = [record2, record1]
+        self.connector.servers = []
+
+        self.assertEqual((b'host1.example.org', 5222),
+                         self.connector.pickServer())
+
+        self.assertEqual((b'host2.example.org', 5222),
+                         self.connector.pickServer())

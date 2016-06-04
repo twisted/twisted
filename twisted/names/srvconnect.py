@@ -151,7 +151,7 @@ class SRVConnector:
 
         assert self.servers
 
-        self.servers.sort()
+        self.servers.sort(key=lambda record: (record.priority, record.weight))
         minPriority = self.servers[0].priority
 
         weightIndex = list(zip(xrange(len(self.servers)),
