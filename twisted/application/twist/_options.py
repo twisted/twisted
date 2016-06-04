@@ -5,6 +5,7 @@
 Command line options for C{twist}.
 """
 
+from sys import stdout, stderr
 from textwrap import dedent
 
 from twisted.copyright import version
@@ -78,6 +79,27 @@ class TwistOptions(Options):
         ),
         default=defaultLogLevel.name,
     )
+
+
+    def opt_log_file(self, fileName):
+        """
+        Log to file. ("-" for stdout, "+" for stderr; default: "-")
+        """
+        if fileName == "-":
+            self["logFile"] = stdout
+            return
+
+        if fileName == "+":
+            self["logFile"] = stderr
+            return
+
+        try:
+            self["logFile"] = open(fileName, "a")
+        except EnvironmentError as e:
+            exit(
+                ExitStatus.EX_CANTCREAT,
+                "Unable to open log file {!r}: {}".format(fileName, e)
+            )
 
 
     def parseArgs(self):
