@@ -88,7 +88,7 @@ class Twist(object):
 
         reactor = twistOptions["reactor"]
         service = cls.service(
-            plugin=twistOptions.loadedPlugins[twistOptions.subCommand],
+            plugin=twistOptions["loadedPlugins"][twistOptions.subCommand],
             options=twistOptions.subOptions,
         )
 

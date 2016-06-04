@@ -164,9 +164,9 @@ class TwistOptions(Options):
     @property
     def subCommands(self):
         plugins = sorted(getPlugins(IServiceMaker), key=attrgetter("tapname"))
-        self.loadedPlugins = {}
+        self["loadedPlugins"] = {}
         for plugin in plugins:
-            self.loadedPlugins[plugin.tapname] = plugin
+            self["loadedPlugins"][plugin.tapname] = plugin
             yield (
                 plugin.tapname,
                 None,
