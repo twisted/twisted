@@ -9,6 +9,7 @@ from signal import SIGTERM
 from io import BytesIO
 
 from twisted.logger import LogPublisher, LogBeginner
+from twisted.test.proto_helpers import MemoryReactor
 
 from ...runner import _runner
 from .._exit import ExitStatus
@@ -134,9 +135,7 @@ class CommandTests(twisted.trial.unittest.TestCase):
         file.
         """
         pidFilePath = DummyFilePath()
-        runner = Runner({
-            RunnerOptions.pidFilePath: pidFilePath,
-        })
+        runner = Runner({RunnerOptions.pidFilePath: pidFilePath})
         runner.writePIDFile()
 
         self.assertEqual(pidFilePath.getContent(), self.pidFileContent)
@@ -148,9 +147,7 @@ class CommandTests(twisted.trial.unittest.TestCase):
         PID file.
         """
         pidFilePath = DummyFilePath()
-        runner = Runner({
-            RunnerOptions.pidFilePath: pidFilePath,
-        })
+        runner = Runner({RunnerOptions.pidFilePath: pidFilePath})
         runner.removePIDFile()
 
         self.assertFalse(pidFilePath.exists())
@@ -161,9 +158,25 @@ class CommandTests(twisted.trial.unittest.TestCase):
     test_startLogging.todo = "unimplemented"
 
 
-    def test_startReactor(self):
+    def test_startReactorWithoutReactor(self):
+        """
+        L{Runner.startReactor} without L{RunnerOptions.reactor} runs the default
+        reactor.
+        """
         raise NotImplementedError()
-    test_startReactor.todo = "unimplemented"
+
+    test_startReactorWithoutReactor.todo = "unimplemented"
+
+
+    def test_startReactorWithReactor(self):
+        """
+        L{Runner.startReactor} with L{RunnerOptions.reactor} runs that reactor.
+        """
+        reactor = MemoryReactor()
+        runner = Runner({RunnerOptions.reactor: reactor})
+        runner.startReactor()
+
+        self.assertTrue(reactor.hasRun)
 
 
     def test_whenRunning(self):
