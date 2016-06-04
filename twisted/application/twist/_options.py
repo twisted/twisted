@@ -5,8 +5,6 @@
 Command line options for C{twist}.
 """
 
-from sys import stdout
-
 from operator import attrgetter
 
 from twisted.copyright import version
@@ -46,13 +44,15 @@ class TwistOptions(Options):
         List available reactors.
         """
         reactorTypes = sorted(getReactorTypes(), key=attrgetter("shortName"))
-        stdout.write("Available reactors:\n")
+
+        info = ["Available reactors:"]
+
         for reactorType in reactorTypes:
-            stdout.write(
-                "    {rt.shortName:10} {rt.description}\n"
+            info.append(
+                "    {rt.shortName:10} {rt.description}"
                 .format(rt=reactorType)
             )
-        exit(ExitStatus.EX_OK)
+        exit(ExitStatus.EX_OK, "\n".join(info))
 
 
     def installReactor(self):
