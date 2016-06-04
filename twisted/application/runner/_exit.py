@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.application.runner.test.test_exit -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -17,6 +18,9 @@ def exit(status, message=None):
 
     @param status: An exit status.
     @type status: L{int} or L{ValueConstant} from L{ExitStatus}.
+
+    @param message: An options message to print.
+    @type status: L{str}
     """
     if isinstance(status, ValueConstant):
         code = status.value
@@ -36,9 +40,9 @@ def exit(status, message=None):
 
 
 try:
-    import posix as status
+    import posix as Status
 except ImportError:
-    class status(object):
+    class Status(object):
         """
         Object to hang C{EX_*} values off of as a substitute for L{posix}.
         """
@@ -68,19 +72,19 @@ class ExitStatus(Values):
     Standard exit status codes for system programs.
     """
 
-    EX_OK          = ValueConstant(status.EX_OK)
-    EX_USAGE       = ValueConstant(status.EX_USAGE)
-    EX_DATAERR     = ValueConstant(status.EX_DATAERR)
-    EX_NOINPUT     = ValueConstant(status.EX_NOINPUT)
-    EX_NOUSER      = ValueConstant(status.EX_NOUSER)
-    EX_NOHOST      = ValueConstant(status.EX_NOHOST)
-    EX_UNAVAILABLE = ValueConstant(status.EX_UNAVAILABLE)
-    EX_SOFTWARE    = ValueConstant(status.EX_SOFTWARE)
-    EX_OSERR       = ValueConstant(status.EX_OSERR)
-    EX_OSFILE      = ValueConstant(status.EX_OSFILE)
-    EX_CANTCREAT   = ValueConstant(status.EX_CANTCREAT)
-    EX_IOERR       = ValueConstant(status.EX_IOERR)
-    EX_TEMPFAIL    = ValueConstant(status.EX_TEMPFAIL)
-    EX_PROTOCOL    = ValueConstant(status.EX_PROTOCOL)
-    EX_NOPERM      = ValueConstant(status.EX_NOPERM)
-    EX_CONFIG      = ValueConstant(status.EX_CONFIG)
+    EX_OK          = ValueConstant(Status.EX_OK)
+    EX_USAGE       = ValueConstant(Status.EX_USAGE)
+    EX_DATAERR     = ValueConstant(Status.EX_DATAERR)
+    EX_NOINPUT     = ValueConstant(Status.EX_NOINPUT)
+    EX_NOUSER      = ValueConstant(Status.EX_NOUSER)
+    EX_NOHOST      = ValueConstant(Status.EX_NOHOST)
+    EX_UNAVAILABLE = ValueConstant(Status.EX_UNAVAILABLE)
+    EX_SOFTWARE    = ValueConstant(Status.EX_SOFTWARE)
+    EX_OSERR       = ValueConstant(Status.EX_OSERR)
+    EX_OSFILE      = ValueConstant(Status.EX_OSFILE)
+    EX_CANTCREAT   = ValueConstant(Status.EX_CANTCREAT)
+    EX_IOERR       = ValueConstant(Status.EX_IOERR)
+    EX_TEMPFAIL    = ValueConstant(Status.EX_TEMPFAIL)
+    EX_PROTOCOL    = ValueConstant(Status.EX_PROTOCOL)
+    EX_NOPERM      = ValueConstant(Status.EX_NOPERM)
+    EX_CONFIG      = ValueConstant(Status.EX_CONFIG)

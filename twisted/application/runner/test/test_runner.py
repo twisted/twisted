@@ -8,6 +8,9 @@ Tests for L{twisted.application.runner._runner}.
 from signal import SIGTERM
 from io import BytesIO
 
+from zope.interface import implements
+
+from twisted.python.filepath import IFilePath
 from twisted.logger import LogPublisher, LogBeginner
 from twisted.test.proto_helpers import MemoryReactor
 
@@ -278,6 +281,7 @@ class DummyKill(object):
 
 
 
+@implements(IFilePath)
 class DummyFilePath(object):
     """
     Stub for L{twisted.python.filepath.FilePath} which returns a stream
@@ -327,4 +331,10 @@ class DummyWarningsModule(object):
     """
 
     def showwarning(*args, **kwargs):
+        """
+        Do nothing.
+
+        @param args: ignored.
+        @param kwargs: ignored.
+        """
         pass

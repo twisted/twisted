@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.application.runner.test.test_runner -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
