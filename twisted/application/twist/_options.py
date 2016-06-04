@@ -162,11 +162,21 @@ class TwistOptions(Options):
 
 
     @property
+    def plugins(self):
+        if "plugins" not in self:
+            plugins = {}
+            for plugin in getPlugins(IServiceMaker):
+                plugins[plugin.tapname] = plugin
+            self["plugins"] = plugins
+
+        return self["plugins"]
+
+
+    @property
     def subCommands(self):
-        plugins = sorted(getPlugins(IServiceMaker), key=attrgetter("tapname"))
-        self["loadedPlugins"] = {}
-        for plugin in plugins:
-            self["loadedPlugins"][plugin.tapname] = plugin
+        plugins = self.plugins
+        for name in sorted(plugins):
+            plugin = plugins[name]
             yield (
                 plugin.tapname,
                 None,

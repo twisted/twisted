@@ -88,12 +88,11 @@ class Twist(object):
 
         reactor = twistOptions["reactor"]
         service = cls.service(
-            plugin=twistOptions["loadedPlugins"][twistOptions.subCommand],
+            plugin=twistOptions.plugins[twistOptions.subCommand],
             options=twistOptions.subOptions,
         )
 
         cls.startService(reactor, service)
-
         cls.run(cls.runnerOptions(twistOptions))
 
 
