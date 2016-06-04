@@ -8,7 +8,7 @@ C{twist} command line tool.
 import sys
 
 from twisted.python.usage import UsageError
-from twisted.logger import Logger
+from ..service import Application, IService
 from ..runner import Runner, RunnerOptions, exit, ExitStatus
 from ._options import TwistOptions
 
@@ -19,11 +19,11 @@ class Twist(object):
     C{twist} command line tool.
     """
 
-    log = Logger()
-
-
     @classmethod
     def main(cls, argv=sys.argv):
+
+        # Parse command line
+
         twistOptions = TwistOptions()
 
         try:
@@ -31,39 +31,13 @@ class Twist(object):
         except UsageError as e:
             exit(ExitStatus.EX_USAGE, "Error: {}\n\n{}".format(e, twistOptions))
 
+        # Configure the runner based on the command line options
+
+        reactor = twistOptions["reactor"]
+
         runnerOptions = {
-            RunnerOptions.reactor: twistOptions["reactor"],
+            RunnerOptions.reactor: reactor,
         }
-
-        ################# START DELETE THIS #################
-
-        def whenRunning(options):
-            from twisted.internet import reactor
-
-            cls.log.debug(
-                "Reactor is running: {reactor}",
-                reactor=reactor,
-            )
-
-            # try:
-            #     cls.log.info(
-            #         "PID file: {fp.path}",
-            #         fp=options[RunnerOptions.pidFilePath],
-            #     )
-            # except KeyError:
-            #     pass
-
-            def stop():
-                cls.log.info("Stopping reactor...")
-                reactor.stop()
-
-            reactor.callLater(4.0, stop)
-
-            cls.log.info("Waiting...")
-
-        runnerOptions[RunnerOptions.whenRunning] = whenRunning
-
-        ################# END DELETE THIS #################
 
         for runnerOpt, twistOpt in (
             (RunnerOptions.defaultLogLevel, "logLevel"),
@@ -72,11 +46,26 @@ class Twist(object):
         ):
             runnerOptions[runnerOpt] = twistOptions[twistOpt]
 
-        # RunnerOptions.whenRunning
-        # RunnerOptions.reactorExited
+        # Set up application service
+
+        plugin = twistOptions.loadedPlugins[twistOptions.subCommand]
+        service = plugin.makeService(twistOptions.subOptions)
+        application = Application(plugin.tapname)
+        service.setServiceParent(application)
+
+        # Start the service
+
+        IService(application).privilegedStartService()
+
+        # Ask the reactor to stop the service before shutting down
+
+        reactor.addSystemEventTrigger(
+            "before", "shutdown", IService(application).stopService
+        )
+
+        # Instantiate and run the runner
 
         runner = Runner(runnerOptions)
-
         runner.run()
 
 

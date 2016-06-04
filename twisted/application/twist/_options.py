@@ -7,6 +7,7 @@ Command line options for C{twist}.
 
 from sys import stdout, stderr
 from os import isatty
+from operator import attrgetter
 from textwrap import dedent
 
 from twisted.copyright import version
@@ -15,8 +16,11 @@ from twisted.logger import (
     LogLevel, InvalidLogLevelError,
     textFileLogObserver, jsonFileLogObserver,
 )
+from twisted.plugin import getPlugins
+
 from ..reactors import installReactor, NoSuchReactor, getReactorTypes
 from ..runner import exit, ExitStatus
+from ..service import IServiceMaker
 
 
 
@@ -34,6 +38,12 @@ class TwistOptions(Options):
         self["reactorName"] = "default"
         self["logLevel"] = self.defaultLogLevel
         self["logFile"] = stdout
+
+
+    def getSynopsis(self):
+        return "{} plugin [plugin_options]".format(
+            Options.getSynopsis(self)
+        )
 
 
     def opt_version(self):
@@ -146,8 +156,32 @@ class TwistOptions(Options):
                 self["fileLogObserverFactory"] = jsonFileLogObserver
 
 
-    def postOptions(self):
+    def parseOptions(self, options=None):
         self.installReactor()
         self.selectDefaultLogObserver()
 
+        Options.parseOptions(self, options=options)
 
+
+    @property
+    def subCommands(self):
+        plugins = sorted(getPlugins(IServiceMaker), key=attrgetter("tapname"))
+        self.loadedPlugins = {}
+        for plugin in plugins:
+            self.loadedPlugins[plugin.tapname] = plugin
+            yield (
+                plugin.tapname,
+                None,
+                # Avoid resolving the options attribute right away, in case
+                # it's a property with a non-trivial getter (eg, one which
+                # imports modules).
+                lambda plugin=plugin: plugin.options(),
+                plugin.description,
+            )
+
+
+    def postOptions(self):
+        Options.postOptions(self)
+
+        if self.subCommand is None:
+            exit(ExitStatus.EX_USAGE, "No plugin specified.")
