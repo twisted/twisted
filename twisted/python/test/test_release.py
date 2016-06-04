@@ -1792,7 +1792,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         self.assertEqual(e.exception.args,
                          ("Must specify one argument: the Twisted checkout",))
 
-    def test_diff_from_from_trunk_no_topfiles(self):
+    def test_diffFromTrunkNoTopfiles(self):
         """
         If there are changes from trunk, then there should also be a topfile.
         """
@@ -1815,7 +1815,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
 
 
-    def test_no_change_from_trunk(self):
+    def test_noChangeFromTrunk(self):
         """
         If there are no changes from trunk, then no need to check the topfiles
         """
