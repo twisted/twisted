@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-C{twist} command line tool.
+Run a Twisted application.
 """
 
 import sys
@@ -16,7 +16,7 @@ from ._options import TwistOptions
 
 class Twist(object):
     """
-    C{twist} command line tool.
+    Run a Twisted application.
     """
 
     @classmethod
