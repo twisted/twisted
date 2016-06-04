@@ -1201,10 +1201,12 @@ class ReactTests(unittest.SynchronousTestCase):
         self.assertEqual(0, exitError.code)
 
 
+
 class _DummyException(Exception):
     """
     Exception type to be used in testing.
     """
+
 
 
 class TimeoutDeferredTests(unittest.SynchronousTestCase):
@@ -1223,7 +1225,7 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
         d.callback("Result")
         self.assertEqual(self.successResultOf(d), "Result")
 
-        # the timeout never happens - no errback occurs
+        # The timeout never happens - no errback occurs
         clock.advance(15)
         self.assertIsNone(self.successResultOf(d))
 
@@ -1240,7 +1242,7 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
         d.callback("Result")
         self.assertEqual(self.successResultOf(d), "Result")
 
-        # the timeout never happens - the overridden result never happens
+        # The timeout never happens - the overridden result never happens
         clock.advance(15)
         self.assertIsNone(self.successResultOf(d))
 
@@ -1256,7 +1258,7 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
         d.errback(_DummyException("fail"))
         self.failureResultOf(d, _DummyException)
 
-        # the timeout never happens - no further errback occurs
+        # The timeout never happens - no further errback occurs
         clock.advance(15)
         self.assertIsNone(self.successResultOf(d))
 
@@ -1273,7 +1275,7 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
         d.errback(_DummyException("fail"))
         self.failureResultOf(d, _DummyException)
 
-        # the timeout never happens - no further errback occurs
+        # The timeout never happens - no further errback occurs
         clock.advance(15)
         self.assertIsNone(self.successResultOf(d))
 
@@ -1356,7 +1358,7 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
         self.failureResultOf(d, defer.CancelledError)
 
         clock.advance(15)
-        # no AlreadyCancelledError raised?  Good.
+        # No AlreadyCancelledError raised?  Good.
 
     def test_customTranslationNotCalledForEarlyCancellation(self):
         """
@@ -1375,7 +1377,7 @@ class TimeoutDeferredTests(unittest.SynchronousTestCase):
         self.failureResultOf(d, defer.CancelledError)
 
         clock.advance(15)
-        # no AlreadyCancelledError raised?  Good.
+        # No AlreadyCancelledError raised?  Good.
 
     def test_customCancellationCustomTranslation(self):
         """
