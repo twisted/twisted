@@ -218,10 +218,10 @@ class SRVConnectorTests(unittest.TestCase):
         self.connector.orderedServers = [record2, record1]
         self.connector.servers = []
 
-        self.assertEqual((b'host2.example.org', 5222),
+        self.assertEqual(('host2.example.org', 5222),
                          self.connector.pickServer())
 
-        self.assertEqual((b'host1.example.org', 5222),
+        self.assertEqual(('host1.example.org', 5222),
                          self.connector.pickServer())
 
 
@@ -235,8 +235,8 @@ class SRVConnectorTests(unittest.TestCase):
         self.connector.orderedServers = [record2, record1]
         self.connector.servers = []
 
-        self.assertEqual((b'host1.example.org', 5222),
+        self.assertEqual(('host1.example.org', 5222),
                          self.connector.pickServer())
 
-        self.assertEqual((b'host2.example.org', 5222),
+        self.assertEqual(('host2.example.org', 5222),
                          self.connector.pickServer())
