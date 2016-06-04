@@ -239,11 +239,7 @@ class PyUnitResultAdapter(object):
         """
         Report the skip as a failure.
         """
-        # pyunit in Python 2.6 doesn't support skipping information:
-        if sys.version_info[:2] > (2, 6):
-            self.original.addSkip(test, reason)
-        else:
-            self._unsupported(test, 'skip', reason)
+        self.original.addSkip(test, reason)
 
 
     def addUnexpectedSuccess(self, test, todo=None):
