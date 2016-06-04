@@ -6,6 +6,7 @@ Command line options for C{twist}.
 """
 
 from sys import stdout, stderr
+from os import isatty
 from textwrap import dedent
 
 from twisted.copyright import version
@@ -57,6 +58,9 @@ class TwistOptions(Options):
 
 
     def installReactor(self):
+        """
+        Install the reactor.
+        """
         name = self["reactorName"]
         try:
             self["reactor"] = installReactor(name)
@@ -108,9 +112,9 @@ class TwistOptions(Options):
 
     def opt_log_format(self, format):
         """
-        Set log file format to one of: (text, json).
-
-        (default: text for stdout/stderr, otherwise json)
+        Log file format.
+        (options: "text", "json"; default: "text" if the log file is a tty,
+        otherwise "json")
         """
         format = format.lower()
 
@@ -125,8 +129,30 @@ class TwistOptions(Options):
             )
         self["logFormat"] = format
 
+    opt_log_format.__doc__ = dedent(opt_log_format.__doc__)
+
+
+    def selectDefaultLogObserver(self):
+        """
+        Set the L{fileLogObserverFactory} to the default appropriate for the
+        chosen L{logFile}.
+        """
+        logFile = self["logFile"]
+
+        if hasattr(logFile, "fileno") and isatty(logFile.fileno()):
+            self["fileLogObserverFactory"] = textFileLogObserver
+        else:
+            self["fileLogObserverFactory"] = jsonFileLogObserver
+
 
     def parseArgs(self):
-        self.installReactor()
+        try:
+            self.installReactor()
+            self.selectDefaultLogObserver()
+        except Exception as e:
+            exit(
+                ExitStatus.EX_SOFTWARE,
+                "Unexpected error parsing arguments: {}".format(e)
+            )
 
         Options.parseArgs(self)
