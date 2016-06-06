@@ -506,7 +506,7 @@ class _WSGIResponse:
             def wsgiError(started, type, value, traceback):
                 err(Failure(value, type, traceback), "WSGI application error")
                 if started:
-                    self.request.transport.loseConnection()
+                    self.request.loseConnection()
                 else:
                     self.request.setResponseCode(INTERNAL_SERVER_ERROR)
                     self.request.finish()

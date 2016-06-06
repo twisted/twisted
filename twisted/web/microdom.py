@@ -521,7 +521,7 @@ class Element(Node):
 
     def getAttributeNS(self, ns, name, default=None):
         nsk = (ns, name)
-        if self.attributes.has_key(nsk):
+        if nsk in self.attributes:
             return self.attributes[nsk]
         if ns == self.namespace:
             return self.attributes.get(name, default)
@@ -626,7 +626,7 @@ class Element(Node):
         for attr, val in sorted(self.attributes.items()):
             if isinstance(attr, tuple):
                 ns, key = attr
-                if nsprefixes.has_key(ns):
+                if ns in nsprefixes:
                     prefix = nsprefixes[ns]
                 else:
                     prefix = genprefix()
