@@ -6,9 +6,12 @@ Tests for L{twisted.words.protocols.jabber.component}
 """
 from hashlib import sha1
 
+from zope.interface.verify import verifyObject
+
 from twisted.python import failure
+from twisted.python.compat import unicode
 from twisted.trial import unittest
-from twisted.words.protocols.jabber import component, xmlstream
+from twisted.words.protocols.jabber import component, ijabber, xmlstream
 from twisted.words.protocols.jabber.jid import JID
 from twisted.words.xish import domish
 from twisted.words.xish.utility import XmlPipe
@@ -25,7 +28,7 @@ class ComponentInitiatingInitializerTests(unittest.TestCase):
         self.output = []
 
         self.authenticator = xmlstream.Authenticator()
-        self.authenticator.password = 'secret'
+        self.authenticator.password = u'secret'
         self.xmlstream = xmlstream.XmlStream(self.authenticator)
         self.xmlstream.namespace = 'test:component'
         self.xmlstream.send = self.output.append
@@ -49,8 +52,8 @@ class ComponentInitiatingInitializerTests(unittest.TestCase):
         handshake = self.output[-1]
         self.assertEqual('handshake', handshake.name)
         self.assertEqual('test:component', handshake.uri)
-        self.assertEqual(sha1("%s%s" % ('12345', 'secret')).hexdigest(),
-                          unicode(handshake))
+        self.assertEqual(sha1(b"%s%s" % (b'12345', b'secret')).hexdigest(),
+                         unicode(handshake))
 
         # successful authentication
 
@@ -67,7 +70,7 @@ class ComponentAuthTests(unittest.TestCase):
         self.authComplete = False
         outlist = []
 
-        ca = component.ConnectComponentAuthenticator("cjid", "secret")
+        ca = component.ConnectComponentAuthenticator("cjid", u"secret")
         xs = xmlstream.XmlStream(ca)
         xs.transport = DummyTransport(outlist)
 
@@ -79,13 +82,28 @@ class ComponentAuthTests(unittest.TestCase):
         xs.dataReceived("<stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='cjid' id='12345'>")
 
         # Calculate what we expect the handshake value to be
-        hv = sha1("%s%s" % ("12345", "secret")).hexdigest()
+        hv = sha1(b"%s%s" % (b"12345", b"secret")).hexdigest().encode('ascii')
 
-        self.assertEqual(outlist[1], "<handshake>%s</handshake>" % (hv))
+        self.assertEqual(outlist[1], b"<handshake>%s</handshake>" % (hv))
 
         xs.dataReceived("<handshake/>")
 
         self.assertEqual(self.authComplete, True)
+
+
+
+class ServiceTests(unittest.TestCase):
+    """
+    Tests for L{component.Service}.
+    """
+
+    def test_interface(self):
+        """
+        L{component.Service} implements L{ijabber.IService}.
+        """
+        service = component.Service()
+        verifyObject(ijabber.IService, service)
+
 
 
 class JabberServiceHarness(component.Service):
@@ -291,7 +309,7 @@ class ListenComponentAuthenticatorTests(unittest.TestCase):
         xs.authenticator.onHandshake = handshakes.append
 
         handshake = domish.Element(('jabber:component:accept', 'handshake'))
-        handshake.addContent('1234')
+        handshake.addContent(u'1234')
         xs.authenticator.onElement(handshake)
         self.assertEqual('1234', handshakes[-1])
 
