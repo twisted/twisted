@@ -409,7 +409,9 @@ class DomishSuxStreamTests(DomishStreamTestsMixin, unittest.TestCase):
     """
     streamClass = domish.SuxElementStream
 
-    if domish.SuxElementStream is None:
+    if _PY3:
+        skip = "twisted.web.sux has not been ported to Python 3, yet."
+    elif domish.SuxElementStream is None:
         skip = "twisted.web is required for SuxElementStream tests."
 
 
