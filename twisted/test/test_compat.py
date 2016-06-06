@@ -829,3 +829,16 @@ class CoercedUnicodeTests(unittest.TestCase):
     if _PY3:
         test_bytesNonASCII.skip = (
             "Bytes behavior of _coercedUnicode only provided on Python 2.")
+
+
+
+class UnichrTests(unittest.TestCase):
+    """
+    Tests for L{unichr}.
+    """
+
+    def test_unichr(self):
+        """
+        unichar exists and returns a unicode string with the given code point.
+        """
+        self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")
