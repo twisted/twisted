@@ -69,7 +69,7 @@ _EXTRA_OPTIONS = dict(
          'python-subunit',
          'sphinx >= 1.3.1',
          'pydoctor >= 15.0.0'],
-    tls=['pyopenssl >= 0.13',
+    tls=['pyopenssl >= 16.0.0',
          'service_identity',
          'idna >= 0.6'],
     conch=['gmpy',
