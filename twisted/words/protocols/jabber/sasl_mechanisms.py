@@ -7,10 +7,14 @@
 Protocol agnostic implementations of SASL authentication mechanisms.
 """
 
+from __future__ import absolute_import, division
+
 import binascii, random, time, os
 from hashlib import md5
 
 from zope.interface import Interface, Attribute, implementer
+
+from twisted.python.compat import iteritems
 
 
 class ISASLMechanism(Interface):
@@ -61,15 +65,26 @@ class Plain(object):
     name = 'PLAIN'
 
     def __init__(self, authzid, authcid, password):
-        self.authzid = authzid or ''
-        self.authcid = authcid or ''
-        self.password = password or ''
+        """
+        @param authzid: The authorization identity.
+        @type authzid: L{unicode}
+
+        @param authcid; The authentication identity.
+        @type authcid: L{unicode}
+
+        @param password: The plain-text password.
+        @type password: L{unicode}
+        """
+
+        self.authzid = authzid or u''
+        self.authcid = authcid or u''
+        self.password = password or u''
 
 
     def getInitialResponse(self):
-        return "%s\x00%s\x00%s" % (self.authzid.encode('utf-8'),
-                                   self.authcid.encode('utf-8'),
-                                   self.password.encode('utf-8'))
+        return b"%s\x00%s\x00%s" % (self.authzid.encode('utf-8'),
+                                    self.authcid.encode('utf-8'),
+                                    self.password.encode('utf-8'))
 
 
 
@@ -121,17 +136,19 @@ class DigestMD5(object):
 
         # Compat for implementations that do not send this along with
         # a succesful authentication.
-        if 'rspauth' in directives:
-            return ''
+        if b'rspauth' in directives:
+            return b''
+
+        charset = directives[b'charset'].decode('ascii')
 
         try:
-            realm = directives['realm']
+            realm = directives[b'realm']
         except KeyError:
-            realm = self.defaultRealm.encode(directives['charset'])
+            realm = self.defaultRealm.encode(charset)
 
-        return self._genResponse(directives['charset'],
+        return self._genResponse(charset,
                                  realm,
-                                 directives['nonce'])
+                                 directives[b'nonce'])
 
 
     def _parse(self, challenge):
@@ -152,18 +169,18 @@ class DigestMD5(object):
             # be some commas inside (quoted) param values, e.g.:
             # qop="auth,auth-int"
 
-            middle = s.index("=", cur)
+            middle = s.index(b"=", cur)
             name = s[cur:middle].lstrip()
             middle += 1
-            if s[middle] == '"':
+            if s[middle:middle+1] == b'"':
                 middle += 1
-                end = s.index('"', middle)
+                end = s.index(b'"', middle)
                 value = s[middle:end]
-                cur = s.find(',', end) + 1
+                cur = s.find(b',', end) + 1
                 if cur == 0:
                     remainingParams = False
             else:
-                end = s.find(',', middle)
+                end = s.find(b',', middle)
                 if end == -1:
                     value = s[middle:].rstrip()
                     remainingParams = False
@@ -172,9 +189,9 @@ class DigestMD5(object):
                 cur = end + 1
             paramDict[name] = value
 
-        for param in ('qop', 'cipher'):
+        for param in (b'qop', b'cipher'):
             if param in paramDict:
-                paramDict[param] = paramDict[param].split(',')
+                paramDict[param] = paramDict[param].split(b',')
 
         return paramDict
 
@@ -191,16 +208,16 @@ class DigestMD5(object):
         """
 
         directive_list = []
-        for name, value in directives.iteritems():
-            if name in ('username', 'realm', 'cnonce',
-                        'nonce', 'digest-uri', 'authzid', 'cipher'):
-                directive = '%s="%s"' % (name, value)
+        for name, value in iteritems(directives):
+            if name in (b'username', b'realm', b'cnonce',
+                        b'nonce', b'digest-uri', b'authzid', b'cipher'):
+                directive = b'%s="%s"' % (name, value)
             else:
-                directive = '%s=%s' % (name, value)
+                directive = b'%s=%s' % (name, value)
 
             directive_list.append(directive)
 
-        return ','.join(directive_list)
+        return b','.join(directive_list)
 
 
     def _calculateResponse(self, cnonce, nc, nonce,
@@ -219,14 +236,14 @@ class DigestMD5(object):
             return binascii.b2a_hex(n)
 
         def KD(k, s):
-            return H('%s:%s' % (k, s))
+            return H(b'%s:%s' % (k, s))
 
-        a1 = "%s:%s:%s" % (
-            H("%s:%s:%s" % (username, realm, password)), nonce, cnonce)
-        a2 = "AUTHENTICATE:%s" % (uri,)
+        a1 = b"%s:%s:%s" % (
+            H(b"%s:%s:%s" % (username, realm, password)), nonce, cnonce)
+        a2 = b"AUTHENTICATE:%s" % (uri,)
 
-        response = HEX(KD(HEX(H(a1)), "%s:%s:%s:%s:%s" % (
-                    nonce, nc, cnonce, "auth", HEX(H(a2)))))
+        response = HEX(KD(HEX(H(a1)), b"%s:%s:%s:%s:%s" % (
+                    nonce, nc, cnonce, b"auth", HEX(H(a2)))))
         return response
 
 
@@ -246,29 +263,29 @@ class DigestMD5(object):
             # TODO - add error checking
             raise
 
-        nc = '%08x' % (1,) # TODO: support subsequent auth.
+        nc = b'%08x' % (1,) # TODO: support subsequent auth.
         cnonce = self._gen_nonce()
-        qop = 'auth'
+        qop = b'auth'
 
         # TODO - add support for authzid
         response = self._calculateResponse(cnonce, nc, nonce,
                                            username, password, realm,
                                            digest_uri)
 
-        directives = {'username': username,
-                      'realm' : realm,
-                      'nonce' : nonce,
-                      'cnonce' : cnonce,
-                      'nc' : nc,
-                      'qop' : qop,
-                      'digest-uri': digest_uri,
-                      'response': response,
-                      'charset': charset}
+        directives = {b'username': username,
+                      b'realm' : realm,
+                      b'nonce' : nonce,
+                      b'cnonce' : cnonce,
+                      b'nc' : nc,
+                      b'qop' : qop,
+                      b'digest-uri': digest_uri,
+                      b'response': response,
+                      b'charset': charset.encode('ascii')}
 
         return self._unparse(directives)
 
 
     def _gen_nonce(self):
-        return md5("%s:%s:%s" % (random.random(),
-                                 time.gmtime(),
-                                 os.getpid())).hexdigest()
+        return md5(b"%f:%f:%d" % (random.random(),
+                                  time.time(),
+                                  os.getpid())).hexdigest().encode('ascii')
