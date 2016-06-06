@@ -3,9 +3,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.words.xish import domish, xpath, utility
+from __future__ import absolute_import, division
+
+from twisted.python.compat import _coercedUnicode, unicode
+from twisted.python.reflect import qual
 from twisted.words.protocols.jabber import xmlstream, sasl, error
 from twisted.words.protocols.jabber.jid import JID
+from twisted.words.xish import domish, xpath, utility
 
 NS_XMPP_STREAMS = 'urn:ietf:params:xml:ns:xmpp-streams'
 NS_XMPP_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'
@@ -105,7 +109,7 @@ class IQAuthInitializer(object):
 
     def _cbAuthQuery(self, iq):
         jid = self.xmlstream.authenticator.jid
-        password = self.xmlstream.authenticator.password
+        password = _coercedUnicode(self.xmlstream.authenticator.password)
 
         # Construct auth request
         reply = xmlstream.IQ(self.xmlstream, "set")
@@ -115,8 +119,8 @@ class IQAuthInitializer(object):
 
         # Prefer digest over plaintext
         if DigestAuthQry.matches(iq):
-            digest = xmlstream.hashPassword(self.xmlstream.sid, unicode(password))
-            reply.query.addElement("digest", content = digest)
+            digest = xmlstream.hashPassword(self.xmlstream.sid, password)
+            reply.query.addElement("digest", content=unicode(digest))
         else:
             reply.query.addElement("password", content = password)
 
@@ -293,7 +297,7 @@ def XMPPClientFactory(jid, password):
     @param jid: Jabber ID to connect with.
     @type jid: L{jid.JID}
     @param password: password to authenticate with.
-    @type password: C{unicode}
+    @type password: L{unicode}
     @return: XML stream factory.
     @rtype: L{xmlstream.XmlStreamFactory}
     """
@@ -333,7 +337,7 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
                variable.
     @type jid: L{jid.JID}
     @ivar password: password to be used during SASL authentication.
-    @type password: C{unicode}
+    @type password: L{unicode}
     """
 
     namespace = 'jabber:client'
