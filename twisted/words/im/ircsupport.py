@@ -12,7 +12,7 @@ from twisted.words.im.locals import ONLINE
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
 from twisted.words.im import basesupport, interfaces, locals
-from zope.interface import implements
+from zope.interface import implementer
 
 
 class IRCPerson(basesupport.AbstractPerson):
@@ -44,10 +44,8 @@ class IRCPerson(basesupport.AbstractPerson):
                 self.account.client.msg(self.name, line)
         return succeed(text)
 
+@implementer(interfaces.IGroup)
 class IRCGroup(basesupport.AbstractGroup):
-
-    implements(interfaces.IGroup)
-
     def imgroup_testAction(self):
         pass
 
@@ -241,8 +239,8 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         self.join(name)
         self.getGroupConversation(name)
 
+@implementer(interfaces.IAccount)
 class IRCAccount(basesupport.AbstractAccount):
-    implements(interfaces.IAccount)
     gatewayType = "IRC"
 
     _groupFactory = IRCGroup
