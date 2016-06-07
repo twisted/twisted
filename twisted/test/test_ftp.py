@@ -10,7 +10,7 @@ import errno
 from StringIO import StringIO
 import getpass
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
 from twisted.trial import unittest
@@ -3288,6 +3288,7 @@ class FTPShellTests(unittest.TestCase, IFTPShellTestsMixin):
 
 
 
+@implementer(IConsumer)
 class TestConsumer(object):
     """
     A simple consumer for tests. It only works with non-streaming producers.
@@ -3296,7 +3297,6 @@ class TestConsumer(object):
         L{twisted.internet.interfaces.IPullProducer}.
     """
 
-    implements(IConsumer)
     producer = None
 
     def registerProducer(self, producer, streaming):
@@ -3453,8 +3453,8 @@ class FTPReadWriteTests(unittest.TestCase, IReadWriteTestsMixin):
 
 
 
+@implementer(ftp.IWriteFile)
 class CloseTestWriter:
-    implements(ftp.IWriteFile)
     closeStarted = False
     def receive(self):
         self.s = StringIO()

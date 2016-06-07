@@ -14,7 +14,7 @@ only specific tests for old API.
 import sys, os, time, gc, weakref
 
 from cStringIO import StringIO
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
 from twisted.spread import pb, util, publish, jelly
@@ -44,9 +44,8 @@ class DummyPerspective(pb.Avatar):
 
 
 
+@implementer(portal.IRealm)
 class DummyRealm(object):
-    implements(portal.IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         for iface in interfaces:
             if iface is pb.IPerspective:
@@ -1062,6 +1061,7 @@ class LocalRemoteTest(util.LocalAsRemote):
 
 
 
+@implementer(pb.IPerspective)
 class MyPerspective(pb.Avatar):
     """
     @ivar loggedIn: set to C{True} when the avatar is logged in.
@@ -1070,8 +1070,6 @@ class MyPerspective(pb.Avatar):
     @ivar loggedOut: set to C{True} when the avatar is logged out.
     @type loggedOut: C{bool}
     """
-    implements(pb.IPerspective)
-
     loggedIn = loggedOut = False
 
     def __init__(self, avatarId):
@@ -1630,9 +1628,8 @@ class NewCredTests(unittest.TestCase):
 
 
 
+@implementer(pb.IPerspective)
 class NonSubclassingPerspective:
-    implements(pb.IPerspective)
-
     def __init__(self, avatarId):
         pass
 
@@ -1703,6 +1700,7 @@ class IForwarded(Interface):
         """
 
 
+@implementer(IForwarded)
 class Forwarded:
     """
     Test implementation of L{IForwarded}.
@@ -1712,7 +1710,6 @@ class Forwarded:
     @ivar unforwarded: set if C{dontForwardMe} is called.
     @type unforwarded: C{bool}
     """
-    implements(IForwarded)
     forwarded = False
     unforwarded = False
 
