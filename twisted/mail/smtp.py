@@ -26,6 +26,7 @@ from twisted.python import util
 
 from twisted import cred
 from twisted.python.runtime import platform
+from twisted.python import compat
 
 try:
     from cStringIO import StringIO
@@ -318,7 +319,7 @@ def messageid(uniq=None, N=idGenerator().next):
     """
     datetime = time.strftime('%Y%m%d%H%M%S', time.gmtime())
     pid = os.getpid()
-    rand = random.randrange(2**31L-1)
+    rand = random.randrange(2**compat.long(31)-1)
     if uniq is None:
         uniq = ''
     else:

@@ -15,6 +15,7 @@ from twisted.conch.ssh import channel, filetransfer
 from twisted.protocols import basic
 from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
+from twisted.python import compat
 
 class ClientOptions(options.ConchOptions):
 
@@ -764,11 +765,11 @@ version                         Print the SFTP version.
     def _abbrevSize(self, size):
         # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
         _abbrevs = [
-            (1<<50L, 'PB'),
-            (1<<40L, 'TB'),
-            (1<<30L, 'GB'),
-            (1<<20L, 'MB'),
-            (1<<10L, 'kB'),
+            (1<<compat.long(50), 'PB'),
+            (1<<compat.long(40), 'TB'),
+            (1<<compat.long(30), 'GB'),
+            (1<<compat.long(20), 'MB'),
+            (1<<compat.long(10), 'kB'),
             (1, 'B')
             ]
 

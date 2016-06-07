@@ -9,6 +9,7 @@ from zope.interface import implements
 from twisted.spread import pb
 from twisted.internet import reactor
 from twisted.cred.portal import IRealm
+from twisted.python import compat
 
 class PBBenchPerspective(pb.Avatar):
     callsPerSec = 0
@@ -25,7 +26,7 @@ class PBBenchPerspective(pb.Avatar):
         reactor.callLater(1, self.printCallsPerSec)
 
     def perspective_complexTypes(self):
-        return ['a', 1, 1l, 1.0, [], ()]
+        return ['a', 1, compat.long(1), 1.0, [], ()]
 
 
 class SimpleRealm:
