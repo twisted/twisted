@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
 import os, sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python.log import startLogging
 from twisted.python.filepath import FilePath
@@ -32,8 +32,8 @@ from twisted.protocols.basic import LineOnlyReceiver
 from twisted.internet.endpoints import UNIXClientEndpoint
 from twisted.internet import reactor
 
+@implementer(IFileDescriptorReceiver)
 class ReceiveFDProtocol(LineOnlyReceiver):
-    implements(IFileDescriptorReceiver)
 
     descriptor = None
 
