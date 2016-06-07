@@ -21,10 +21,11 @@ from twisted.cred.error import UnauthorizedLogin
 
 from twisted.mail import relay
 
-from zope.interface import implements
+from zope.interface import implementer
 
 
 
+@implementer(smtp.IMessageDelivery)
 class DomainDeliveryBase:
     """
     A base class for message delivery using the domains of a mail service.
@@ -37,8 +38,6 @@ class DomainDeliveryBase:
     @ivar protocolName: The protocol being used to deliver the mail.
         Sub-classes should set this appropriately.
     """
-    implements(smtp.IMessageDelivery)
-
     service = None
     protocolName = None
 

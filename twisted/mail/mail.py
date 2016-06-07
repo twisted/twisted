@@ -19,7 +19,7 @@ from twisted.mail import protocols, smtp
 
 # System imports
 import os
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 
 class DomainWithDefaultDict:
@@ -432,14 +432,13 @@ class IAliasableDomain(IDomain):
 
 
 
+@implementer(IDomain)
 class BounceDomain:
     """
     A domain with no users.
 
     This can be used to block off a domain.
     """
-    implements(IDomain)
-
     def exists(self, user):
         """
         Raise an exception to indicate that the user does not exist in this
@@ -494,6 +493,7 @@ class BounceDomain:
 
 
 
+@implementer(smtp.IMessage)
 class FileMessage:
     """
     A message receiver which delivers a message to a file.
@@ -502,8 +502,6 @@ class FileMessage:
     @ivar name: See L{__init__}.
     @ivar finalName: See L{__init__}.
     """
-    implements(smtp.IMessage)
-
     def __init__(self, fp, name, finalName):
         """
         @type fp: file-like object
