@@ -4,7 +4,7 @@
 
 from functools import reduce
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import error, interfaces
 from twisted.names import client, dns
@@ -31,11 +31,9 @@ class _SRVConnector_ClientFactoryWrapper:
 
 
 
+@implementer(interfaces.IConnector)
 class SRVConnector:
     """A connector that looks up DNS SRV records. See RFC2782."""
-
-    implements(interfaces.IConnector)
-
     stopAfterDNS=0
 
     def __init__(self, reactor, service, domain, factory,
