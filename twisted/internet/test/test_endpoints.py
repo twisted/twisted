@@ -9,6 +9,7 @@ L{twisted.internet.endpoints}.
 from __future__ import division, absolute_import
 
 import socket
+import os
 
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
@@ -2492,19 +2493,16 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._interface, "10.0.0.1")
 
 
-    def test_unicode(self):
+    def test_tcpUnicode(self):
         """
-        When passed a TCP strports description in unicode form,
-        L{endpoints.serverFromString} returns the correct L{TCP4ServerEndpoint}
+        When passed a TCP strports description in unicdoe form,
+        L{endpoints.serverFromString} returns the correct L{TCP4ServerEndpoint}.
         """
         reactor = object()
         server = endpoints.serverFromString(
-            reactor, u"tcp:1234:backlog=12:interface=10.0.0.1")
+            reactor, u"tcp:1234:backlog=12:interface=unic\xf6de.interface.name")
         self.assertIsInstance(server, endpoints.TCP4ServerEndpoint)
-        self.assertIs(server._reactor, reactor)
-        self.assertEqual(server._port, 1234)
-        self.assertEqual(server._backlog, 12)
-        self.assertEqual(server._interface, "10.0.0.1")
+        self.assertEqual(server._interface, u"unic\xf6de.interface.name")
 
 
     def test_ssl(self):
@@ -2524,6 +2522,25 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
+        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        ctx = server._sslContextFactory.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+
+    def test_sslUnicode(self):
+        """
+        When passed a strports description in unicode form,
+        L{endpoints.serverFromString} returns the correct L{SSL4ServerEndpoint}
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            u"ssl:1234:backlog=12:privateKey=%s:"
+            u"certKey=%s:sslmethod=TLSv1_METHOD:"
+            u"interface=unic\xf6de.interface.name"
+            % (escapedPEMPathName, escapedPEMPathName))
+        self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
+        self.assertEqual(server._interface, u"unic\xf6de.interface.name")
         self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
@@ -2628,11 +2645,12 @@ class ServerStringTests(unittest.TestCase):
         test_sslChainLoads.skip = skipSSL
         test_sslChainFileMustContainCert.skip = skipSSL
         test_sslDHparameters.skip = skipSSL
+        test_sslUnicode.skip = skipSSL
 
 
     def test_unix(self):
         """
-        When passed a UNIX strports description, L{endpoint.serverFromString}
+        When passed a UNIX strports description, L{endpoints.serverFromString}
         returns a L{UNIXServerEndpoint} instance initialized with the values
         from the string.
         """
@@ -2646,6 +2664,41 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(endpoint._backlog, 7)
         self.assertEqual(endpoint._mode, 0o123)
         self.assertEqual(endpoint._wantPID, True)
+
+
+    def test_unixUnicode(self):
+        """
+        When passed a UNIX strports description in unicode form,
+        L{endpoints.serverFromString} returns the correct L{UNIXServerEndpoint}
+        """
+
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            u"unix:/var/foo/jalepe\xf1o:backlog=7:mode=0123:lockfile=1")
+        self.assertIsInstance(server, endpoints.UNIXServerEndpoint)
+        self.assertEqual(server._address, u"/var/foo/jalepe\xf1o")
+
+
+
+    def test_unicdodeWithNonUTFLocale(self):
+        """
+        When passed a unicode strports description in a non-UTF locale, ensure
+        that L{endpoints.serverFromString} still returns the correct endpoints.
+        """
+        tests = [self.test_unixUnicode, self.test_tcpUnicode]
+        if not skipSSL:
+            tests.append(self.test_sslUnicode)
+        prev = os.environ.get("LANG")
+        os.environ["LANG"] = "C"
+        try:
+            for tst in tests:
+                tst()
+        finally:
+            if prev is None:
+                del os.environ["LANG"]
+            else:
+                os.environ["LANG"] = prev
 
 
     def test_implicitDefaultNotAllowed(self):
