@@ -3,7 +3,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.spread import pb
 from twisted.cred import checkers, portal
@@ -15,8 +15,8 @@ class MyPerspective(pb.Avatar):
     def perspective_foo(self, arg):
         print "I am", self.name, "perspective_foo(",arg,") called on", self
 
+@implementer(portal.IRealm)
 class MyRealm:
-    implements(portal.IRealm)
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective not in interfaces:
             raise NotImplementedError

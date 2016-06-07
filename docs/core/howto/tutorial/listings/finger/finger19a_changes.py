@@ -6,10 +6,8 @@ class IFingerSetterService(Interface):
 
 # Advantages of latest version
 
+@implementer(IFingerService, IFingerSetterService)
 class MemoryFingerService(service.Service):
-
-    implements([IFingerService, IFingerSetterService])
-
     def __init__(self, **kwargs):
         self.users = kwargs
 
