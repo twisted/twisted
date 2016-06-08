@@ -67,32 +67,15 @@ import types
 import warnings
 import decimal
 from functools import reduce
-from types import StringType
-from types import IntType
-from types import TupleType
-from types import ListType
-from types import LongType
-from types import FloatType
-from types import FunctionType
-from types import MethodType
-from types import ModuleType
-from types import DictionaryType
-from types import InstanceType
-from types import NoneType
-from types import ClassType
+
 import copy
 
 import datetime
-from types import BooleanType
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", category=DeprecationWarning)
-    import sets as _sets
 
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode
+from twisted.python.compat import unicode, long, _PY3, _range
 from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -103,29 +86,34 @@ from twisted.spread.interfaces import IJellyable, IUnjellyable
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 
-DictTypes = (DictionaryType,)
+if not _PY3:
+    from types import ClassType, InstanceType
 
-None_atom = "None"                  # N
+from types import MethodType, ModuleType, FunctionType
+
+DictTypes = (dict,)
+
+None_atom = b"None"                  # N
 # code
-class_atom = "class"                # c
-module_atom = "module"              # m
-function_atom = "function"          # f
+class_atom = b"class"                # c
+module_atom = b"module"              # m
+function_atom = b"function"          # f
 
 # references
-dereference_atom = 'dereference'    # D
-persistent_atom = 'persistent'      # p
-reference_atom = 'reference'        # r
+dereference_atom = b'dereference'    # D
+persistent_atom = b'persistent'      # p
+reference_atom = b'reference'        # r
 
 # mutable collections
-dictionary_atom = "dictionary"      # d
-list_atom = 'list'                  # l
-set_atom = 'set'
+dictionary_atom = b"dictionary"      # d
+list_atom = b'list'                  # l
+set_atom = b'set'
 
 # immutable collections
 #   (assignment to __dict__ and __class__ still might go away!)
-tuple_atom = "tuple"                # t
-instance_atom = 'instance'          # i
-frozenset_atom = 'frozenset'
+tuple_atom = b"tuple"                # t
+instance_atom = b'instance'          # i
+frozenset_atom = b'frozenset'
 
 
 deprecatedModuleAttribute(
@@ -134,7 +122,7 @@ deprecatedModuleAttribute(
     "twisted.spread.jelly", "instance_atom")
 
 # errors
-unpersistable_atom = "unpersistable"# u
+unpersistable_atom = b"unpersistable"# u
 unjellyableRegistry = {}
 unjellyableFactoryRegistry = {}
 
@@ -150,7 +138,7 @@ def _newInstance(cls, state=_NO_STATE):
 
     @return: A new instance of C{cls}.
     """
-    if not isinstance(cls, types.ClassType):
+    if _PY3 or not isinstance(cls, types.ClassType):
         # new-style
         inst = cls.__new__(cls)
 
@@ -169,11 +157,17 @@ def _maybeClass(classnamep):
     try:
         object
     except NameError:
-        isObject = 0
+        isObject = False
     else:
         isObject = isinstance(classnamep, type)
-    if isinstance(classnamep, ClassType) or isObject:
-        return qual(classnamep)
+
+    if not _PY3:
+        if isinstance(classnamep, ClassType) or isObject:
+            return qual(classnamep)
+    else:
+        if isObject:
+            return qual(classnamep)
+
     return classnamep
 
 
@@ -257,7 +251,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
 
     for i in dir(module):
         i_ = getattr(module, i)
-        if type(i_) == types.ClassType:
+        if type(i_) == type:
             if issubclass(i_, baseClass):
                 setUnjellyableForClass('%s%s' % (prefix, i), i_)
 
@@ -445,8 +439,8 @@ class _Jellier:
             self.preserved[id(object)] = sexp
         return sexp
 
-    constantTypes = {types.StringType : 1, types.IntType : 1,
-                     types.FloatType : 1, types.LongType : 1}
+    constantTypes = {bytes: 1, unicode: 1, int: 1,
+                     float: 1, long: 1}
 
 
     def _checkMutable(self,obj):
@@ -467,50 +461,51 @@ class _Jellier:
         objType = type(obj)
         if self.taster.isTypeAllowed(qual(objType)):
             # "Immutable" Types
-            if ((objType is StringType) or
-                (objType is IntType) or
-                (objType is LongType) or
-                (objType is FloatType)):
+            if ((objType is str) or
+                (objType is bytes) or
+                (objType is int) or
+                (objType is long) or
+                (objType is float)):
                 return obj
             elif objType is MethodType:
-                return ["method",
+                return [b"method",
                         obj.im_func.__name__,
                         self.jelly(obj.im_self),
                         self.jelly(obj.im_class)]
 
             elif objType is unicode:
-                return ['unicode', obj.encode('UTF-8')]
-            elif objType is NoneType:
-                return ['None']
+                return [b'unicode', obj.encode('UTF-8')]
+            elif objType is None:
+                return [b'None']
             elif objType is FunctionType:
                 name = obj.__name__
-                return ['function', str(pickle.whichmodule(obj, obj.__name__))
+                return [b'function', str(pickle.whichmodule(obj, obj.__name__))
                         + '.' +
                         name]
             elif objType is ModuleType:
-                return ['module', obj.__name__]
-            elif objType is BooleanType:
-                return ['boolean', obj and 'true' or 'false']
+                return [b'module', obj.__name__]
+            elif objType is bool:
+                return [b'boolean', obj and 'true' or 'false']
             elif objType is datetime.datetime:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return ['datetime', '%s %s %s %s %s %s %s' % (
+                return [b'datetime', '%s %s %s %s %s %s %s' % (
                     obj.year, obj.month, obj.day, obj.hour,
                     obj.minute, obj.second, obj.microsecond)]
             elif objType is datetime.time:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return ['time', '%s %s %s %s' % (obj.hour, obj.minute,
+                return [b'time', '%s %s %s %s' % (obj.hour, obj.minute,
                                                  obj.second, obj.microsecond)]
             elif objType is datetime.date:
-                return ['date', '%s %s %s' % (obj.year, obj.month, obj.day)]
+                return [b'date', '%s %s %s' % (obj.year, obj.month, obj.day)]
             elif objType is datetime.timedelta:
-                return ['timedelta', '%s %s %s' % (obj.days, obj.seconds,
+                return [b'timedelta', '%s %s %s' % (obj.days, obj.seconds,
                                                    obj.microseconds)]
-            elif objType is ClassType or issubclass(objType, type):
-                return ['class', qual(obj)]
+            elif  issubclass(objType, type) or (not _PY3 and objType is ClassType):
+                return ['bclass', qual(obj)]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
             else:
@@ -519,17 +514,17 @@ class _Jellier:
                     return preRef
                 # "Mutable" Types
                 sxp = self.prepare(obj)
-                if objType is ListType:
+                if objType is list:
                     sxp.extend(self._jellyIterable(list_atom, obj))
-                elif objType is TupleType:
+                elif objType is tuple:
                     sxp.extend(self._jellyIterable(tuple_atom, obj))
-                elif objType in DictTypes:
+                elif objType is dict:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or objType is _sets.Set:
+                elif objType is set or not _PY3 and objType is _sets.Set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset or objType is _sets.ImmutableSet:
+                elif objType is frozenset or  not _PY3 and  robjType is _sets.ImmutableSet:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
@@ -591,7 +586,7 @@ class _Jellier:
         value = reduce(lambda left, right: left * 10 + right, guts)
         if sign:
             value = -value
-        return ['decimal', value, exponent]
+        return [b'decimal', value, exponent]
 
 
     def unpersistable(self, reason, sxp=None):
@@ -625,14 +620,20 @@ class _Unjellier:
 
 
     def unjelly(self, obj):
-        if type(obj) is not types.ListType:
+        print('unjelly', obj)
+
+        if type(obj) is not list:
             return obj
         jelType = obj[0]
+
+        if not isinstance(jelType, str):
+            jelType = jelType.decode('utf8')
+
         if not self.taster.isTypeAllowed(jelType):
             raise InsecureJelly(jelType)
         regClass = unjellyableRegistry.get(jelType)
         if regClass is not None:
-            if isinstance(regClass, ClassType):
+            if not _PY3 and isinstance(regClass, ClassType):
                 inst = _Dummy() # XXX chomp, chomp
                 inst.__class__ = regClass
                 method = inst.unjellyFor
@@ -642,6 +643,7 @@ class _Unjellier:
                 method = inst.unjellyFor
             else:
                 method = regClass # this is how it ought to be done
+            print(method)
             val = method(self, obj)
             if hasattr(val, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
@@ -649,12 +651,19 @@ class _Unjellier:
         regFactory = unjellyableFactoryRegistry.get(jelType)
         if regFactory is not None:
             state = self.unjelly(obj[1])
+
+            if _PY3:
+                # Make the state keys str again
+                state = {x.decode('utf8'):y for x,y in state.items()}
+
             inst = regFactory(state)
             if hasattr(inst, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
             return inst
-        thunk = getattr(self, '_unjelly_%s'%jelType, None)
+
+        thunk = getattr(self, '_unjelly_%s' % jelType, None)
         if thunk is not None:
+            print("THUNK!", obj)
             ret = thunk(obj[1:])
         else:
             nameSplit = jelType.split('.')
@@ -668,9 +677,18 @@ class _Unjellier:
             if hasattr(clz, "__setstate__"):
                 ret = _newInstance(clz)
                 state = self.unjelly(obj[1])
+
+                if _PY3:
+                    # Make the state keys str again
+                    state = {x.decode('utf8'):y for x,y in state.items()}
+
                 ret.__setstate__(state)
             else:
                 state = self.unjelly(obj[1])
+
+                if _PY3:
+                    # Make the state keys str again
+                    state = {x.decode('utf8'):y for x,y in state.items()}
                 ret = _newInstance(clz, state)
             if hasattr(clz, 'postUnjelly'):
                 self.postCallbacks.append(ret.postUnjelly)
@@ -700,9 +718,9 @@ class _Unjellier:
 
 
     def _unjelly_boolean(self, exp):
-        if BooleanType:
-            assert exp[0] in ('true', 'false')
-            return exp[0] == 'true'
+        if bool:
+            assert exp[0] in (b'true', b'false')
+            return exp[0] == b'true'
         else:
             return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
 
@@ -759,7 +777,7 @@ class _Unjellier:
 
 
     def _unjelly_tuple(self, lst):
-        l = range(len(lst))
+        l = _range(len(lst))
         finished = 1
         for elem in l:
             if isinstance(self.unjellyInto(l, elem, lst[elem]), NotKnown):
@@ -771,7 +789,7 @@ class _Unjellier:
 
 
     def _unjelly_list(self, lst):
-        l = range(len(lst))
+        l = _range(len(lst))
         for elem in l:
             self.unjellyInto(l, elem, lst[elem])
         return l
@@ -786,7 +804,7 @@ class _Unjellier:
 
         @param containerType: the type of C{set} to use.
         """
-        l = range(len(lst))
+        l = _range(len(lst))
         finished = True
         for elem in l:
             data = self.unjellyInto(l, elem, lst[elem])
@@ -823,7 +841,7 @@ class _Unjellier:
 
     def _unjelly_module(self, rest):
         moduleName = rest[0]
-        if type(moduleName) != types.StringType:
+        if type(moduleName) != str:
             raise InsecureJelly(
                 "Attempted to unjelly a module with a non-string name.")
         if not self.taster.isModuleAllowed(moduleName):

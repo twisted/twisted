@@ -16,6 +16,8 @@ but may have a small impact on users who subclass and override methods.
 @author: Glyph Lefkowitz
 """
 
+from __future__ import absolute_import, division
+
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to
 # be serialized by Jelly, but they ought to be accessible through other
@@ -27,11 +29,12 @@ from zope.interface import implementer, Interface
 
 # twisted imports
 from twisted.python import log, reflect
+from twisted.python.compat import _PY3
 
 # sibling imports
-from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
-from jelly import Jellyable, Unjellyable, _newDummyLike
-from jelly import setInstanceState, getInstanceState
+from .jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
+from .jelly import Jellyable, Unjellyable, _newDummyLike
+from .jelly import setInstanceState, getInstanceState
 
 # compatibility
 setCopierForClass = setUnjellyableForClass
@@ -107,6 +110,10 @@ class Referenceable(Serializable):
         """
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
+
+        if not isinstance(message, str):
+            message = message.decode('utf8')
+
         method = getattr(self, "remote_%s" % message, None)
         if method is None:
             raise NoSuchMethod("No such method: remote_%s" % (message,))
@@ -381,7 +388,9 @@ class RemoteCopy(Unjellyable):
         object's dictionary (or a filtered approximation of it depending
         on my peer's perspective).
         """
-
+        if _PY3:
+            # Make the state keys str again
+            state = {x.decode('utf8'):y for x,y in state.items()}
         self.__dict__ = state
 
     def unjellyFor(self, unjellier, jellyList):
@@ -411,6 +420,8 @@ class RemoteCache(RemoteCopy, Serializable):
         The default implementation is to dispatch to a method called
         'C{observe_messagename}' and call it on my  with the same arguments.
         """
+        if not isinstance(message, str):
+            message = message.decode('utf8')
 
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
@@ -580,7 +591,7 @@ class RemoteCacheObserver:
             from pb import ProtocolError
             raise ProtocolError("You can't call a cached method when the "
                                 "object hasn't been given to the peer yet.")
-        return self.broker._sendMessage('cache', self.perspective, cacheID,
+        return self.broker._sendMessage(b'cache', self.perspective, cacheID,
                                         _name, args, kw)
 
     def remoteMethod(self, key):

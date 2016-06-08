@@ -720,6 +720,12 @@ def _bytesChr(i):
         return chr(i)
 
 
+from twisted.python.util import _replaceIf
+
+@_replaceIf(not _PY3, range)
+def _range(*args, **kwargs):
+    return list(range(*args, **kwargs))
+
 
 __all__ = [
     "reraise",
