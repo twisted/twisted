@@ -218,7 +218,7 @@ class INotify(FileDescriptor, object):
         if self._fd >= 0:
             try:
                 os.close(self._fd)
-            except OSError, e:
+            except OSError as e:
                 log.err(e, "Couldn't close INotify file descriptor.")
 
 

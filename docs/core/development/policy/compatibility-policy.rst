@@ -13,6 +13,7 @@ Each of these applications is developed against a particular version of Twisted.
 The most important compatibility to preserve is at the Python API level.
 Python does not provide us with a strict way to partition **public** and **private** objects (methods, classes, modules), so it is unfortunately quite likely that many of those applications are using arbitrary parts of Twisted.
 Our compatibility strategy needs to take this into account, and be comprehensive across our entire codebase.
+
 Exceptions can be made for modules aggressively marked **unstable** or **experimental**, but even experimental modules will start being used in production code if they have been around for long enough.
 
 The purpose of this document is to to lay out rules for Twisted application developers who wish to weather the changes when Twisted upgrades, and procedures for Twisted engine developers - both contributors and core team members - to follow when who want to make changes which may be incompatible to Twisted itself.
@@ -35,6 +36,27 @@ not changes to functionality.
 
 ..  note::
     Ultimately we want to make the user happy but we cannot put every possible thing that will make every possible user happy into this policy.
+
+
+Brief notes for developers
+--------------------------
+
+Here is a summary of the things that need to be done for deprecating code.
+This is not an exhaustive read and beside this list you should continue reading the rest of this document:
+
+* Do not change the function's behavior as part of the deprecation process.
+
+* Cause imports or usage of the class/function/method to emit a DeprecationWarning either call warnings.warn or use one of the helper APIs
+
+* The warning text must include the version of Twisted in which the function is first deprecated (which will always be a version in the future)
+
+* The warning text should recommend a replacement, if one exists.
+
+* The warning must "point to" the code which called the function. For example, in the normal case, this means stacklevel=2 passed to warnings.warn.
+
+* There must be a unit test which verifies the deprecation warning.
+
+* A .removal news fragment must be added to announce the deprecation.
 
 
 Procedure for Incompatible Changes

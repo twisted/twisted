@@ -102,7 +102,7 @@ class SendmailOptions(Options):
                 "Must specify a message file to send with --message")
         try:
             self['message'] = file(self['message'])
-        except Exception, e:
+        except Exception as e:
             raise UsageError(e)
 
 
@@ -136,7 +136,7 @@ def main(args=None):
     o = SendmailOptions()
     try:
         o.parseOptions(args)
-    except UsageError, e:
+    except UsageError as e:
         raise SystemExit(e)
     else:
         from twisted.python import log

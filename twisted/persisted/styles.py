@@ -298,9 +298,6 @@ def _aybabtu(c):
     Get all of the parent classes of C{c}, not including C{c} itself, which are
     strict subclasses of L{Versioned}.
 
-    The name comes from "all your base are belong to us", from the deprecated
-    L{twisted.python.reflect.allYourBase} function.
-
     @param c: a class
     @returns: list of classes
     """

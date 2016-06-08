@@ -1,18 +1,16 @@
-Twisted 16.1.1
+Twisted 16.2.0
 ==============
 
 |pypi|
 |coverage|
+|travis|
 
 .. code::
 
-    <kenaan> new core task https://tm.tl/#8224 by hawkowl: We should actively discourage the use of versions of Twisted older than 14.0
-    <idnar> "actively discourage"
-    <idnar> that brings up some amusing mental imagery :D
-    * idnar imagines hawkowl crashing in through somebody's window to yell at them for using ancient software
+    <lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
 
 
-For information on what's new in Twisted 16.1.1, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.2.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -106,3 +104,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
+
+.. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
+.. _travis https://travis-ci.org/twisted/twisted

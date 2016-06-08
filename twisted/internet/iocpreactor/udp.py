@@ -109,7 +109,7 @@ class Port(abstract.FileHandle):
         try:
             skt = self.createSocket()
             skt.bind((self.interface, self.port))
-        except socket.error, le:
+        except socket.error as le:
             raise error.CannotListenError(self.interface, self.port, le)
 
         # Make sure that if we listened on port 0, we update that to
@@ -176,7 +176,7 @@ class Port(abstract.FileHandle):
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
-            except socket.error, se:
+            except socket.error as se:
                 no = se.args[0]
                 if no == errno.WSAEINTR:
                     return self.write(datagram)
@@ -202,7 +202,7 @@ class Port(abstract.FileHandle):
                     addr[0], "IPv4 port write() called with IPv6 address")
             try:
                 return self.socket.sendto(datagram, addr)
-            except socket.error, se:
+            except socket.error as se:
                 no = se.args[0]
                 if no == errno.WSAEINTR:
                     return self.write(datagram, addr)
@@ -394,7 +394,7 @@ class MulticastMixin:
             cmd = socket.IP_DROP_MEMBERSHIP
         try:
             self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except socket.error, e:
+        except socket.error as e:
             return failure.Failure(error.MulticastJoinError(addr, interface,
                                                             *e.args))
 

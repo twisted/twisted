@@ -192,7 +192,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         code = parts[0]
         if code != '+OK':
             print parts
-            raise AssertionError, 'code is ' + code
+            raise AssertionError('code is ' + code)
         self.lines = []
         self.retr(1)
 
@@ -205,7 +205,7 @@ class MyPOP3Downloader(pop3.POP3Client):
 
     def handle_QUIT(self, line):
         if line[:3] != '+OK':
-            raise AssertionError, 'code is ' + line
+            raise AssertionError('code is ' + line)
 
 
 class POP3Tests(unittest.TestCase):

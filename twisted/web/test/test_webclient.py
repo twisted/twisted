@@ -90,6 +90,20 @@ class ForeverTakingResource(resource.Resource):
         return server.NOT_DONE_YET
 
 
+class ForeverTakingNoReadingResource(resource.Resource):
+    """
+    L{ForeverTakingNoReadingResource} is a resource that never finishes
+    responding and that removes itself from the read loop.
+    """
+    def __init__(self):
+        resource.Resource.__init__(self)
+
+    def render(self, request):
+        # Stop the producing.
+        request.transport.pauseProducing()
+        return server.NOT_DONE_YET
+
+
 class CookieMirrorResource(resource.Resource):
     def render(self, request):
         l = []
@@ -291,6 +305,7 @@ class WebClientTests(unittest.TestCase):
         r.putChild(b"infiniteRedirect", self.infiniteRedirectResource)
         r.putChild(b"wait", ForeverTakingResource())
         r.putChild(b"write-then-wait", ForeverTakingResource(write=True))
+        r.putChild(b"never-read", ForeverTakingNoReadingResource())
         r.putChild(b"error", ErrorResource())
         r.putChild(b"nolength", NoLengthResource())
         r.putChild(b"host", HostHeaderResource())
@@ -723,6 +738,25 @@ class WebClientTests(unittest.TestCase):
         return defer.gatherResults([
             self.assertFailure(first, defer.TimeoutError),
             self.assertFailure(second, defer.TimeoutError)])
+
+
+    def test_downloadTimeoutsWorkWithoutReading(self):
+        """
+        If the timeout indicated by the C{timeout} parameter to
+        L{client.HTTPDownloader.__init__} elapses without the complete response
+        being received, the L{defer.Deferred} returned by
+        L{client.downloadPage} fires with a L{Failure} wrapping a
+        L{defer.TimeoutError}, even if the remote peer isn't reading data from
+        the socket.
+        """
+        self.cleanupServerConnections = 1
+
+        # The timeout here needs to be slightly longer to give the resource a
+        # change to stop the reading.
+        d = client.downloadPage(
+            self.getURL("never-read"),
+            self.mktemp(), timeout=0.05)
+        return self.assertFailure(d, defer.TimeoutError)
 
 
     def test_downloadHeaders(self):

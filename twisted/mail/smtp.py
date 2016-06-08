@@ -389,7 +389,7 @@ class Address:
         while atl:
             if atl[0] == '<':
                 if atl[-1] != '>':
-                    raise AddressError, "Unbalanced <>"
+                    raise AddressError("Unbalanced <>")
                 atl = atl[1:-1]
             elif atl[0] == '@':
                 atl = atl[1:]
@@ -399,15 +399,15 @@ class Address:
                         # remove it
                         atl = atl[1:]
                     if not atl:
-                        raise AddressError, "Malformed source route"
+                        raise AddressError("Malformed source route")
                     atl = atl[1:] # remove :
                 elif domain:
-                    raise AddressError, "Too many @"
+                    raise AddressError("Too many @")
                 else:
                     # Now in domain
                     domain = ['']
             elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] !=  '.':
-                raise AddressError, "Parse error at %r of %r" % (atl[0], (addr, atl))
+                raise AddressError("Parse error at %r of %r" % (atl[0], (addr, atl)))
             else:
                 if not domain:
                     local.append(atl[0])
@@ -642,7 +642,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         try:
             addr = Address(m.group('path'), self.host)
-        except AddressError, e:
+        except AddressError as e:
             self.sendCode(553, str(e))
             return
 
@@ -680,7 +680,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         try:
             user = User(m.group('path'), self._helo, self, self._from)
-        except AddressError, e:
+        except AddressError as e:
             self.sendCode(553, str(e))
             return
 
@@ -735,7 +735,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 if rcvdhdr:
                     msg.lineReceived(rcvdhdr)
                 msgs.append(msg)
-            except SMTPServerError, e:
+            except SMTPServerError as e:
                 self.sendCode(e.code, e.resp)
                 self.mode = COMMAND
                 self._disconnect(msgs)
@@ -819,7 +819,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
             for message in self.__messages:
                 message.lineReceived(line)
-        except SMTPServerError, e:
+        except SMTPServerError as e:
             self.datafailed = e
             for message in self.__messages:
                 message.connectionLost()

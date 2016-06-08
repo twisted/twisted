@@ -37,6 +37,7 @@ from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
+from twisted.internet.abstract import isIPv6Address
 from twisted.internet.interfaces import IProtocol
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python.util import InsensitiveDict
@@ -246,7 +247,7 @@ class HTTPPageGetter(http.HTTPClient):
 
     def timeout(self):
         self.quietLoss = True
-        self.transport.loseConnection()
+        self.transport.abortConnection()
         self.factory.noPage(defer.TimeoutError("Getting %s took longer than %s seconds." % (self.factory.url, self.factory.timeout)))
 
 
@@ -1352,6 +1353,8 @@ class _AgentBase(object):
         Compute the string to use for the value of the I{Host} header, based on
         the given scheme, host name, and port number.
         """
+        if (isIPv6Address(nativeString(host))):
+            host = b'[' + host + b']'
         if (scheme, port) in ((b'http', 80), (b'https', 443)):
             return host
         return host + b":" + intToBytes(port)

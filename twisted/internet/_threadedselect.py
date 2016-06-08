@@ -164,7 +164,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 # result) was passed
                 log.err()
                 self._preenDescriptorsInThread()
-            except (select.error, IOError), se:
+            except (select.error, IOError) as se:
                 # select(2) encountered an error
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list
