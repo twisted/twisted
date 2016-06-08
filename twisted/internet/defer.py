@@ -733,6 +733,11 @@ def deferredCoroutine(f):
     return wrapped
 
 
+def ensureDeferred(coro):
+
+    return _inlineCallbacks(None, coro, Deferred())
+
+
 
 class DebugInfo:
     """

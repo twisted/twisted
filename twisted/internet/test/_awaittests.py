@@ -7,25 +7,41 @@ Tests for C{await} support in Deferreds.
 These tests can only work and be imported on Python 3.5!
 """
 
-from twisted.internet.defer import Deferred, deferredCoroutine
+from twisted.internet.defer import Deferred, deferredCoroutine, ensureDeferred
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import Clock
 
 
 class AwaitTests(TestCase):
 
+    def test_ensureDeferred(self):
+
+        async def run():
+            res = await run2()
+            return res
+
+        async def run2():
+            d = Deferred()
+            d.callback("foo")
+            res = await d
+            return res
+
+        d = ensureDeferred(run())
+        res = self.successResultOf(d)
+        self.assertEqual(res, "foo")
+
+
     def test_basic(self):
         """
         L{deferredCoroutine} allows a function to C{await} on a L{Deferred}.
         """
-        @deferredCoroutine
         async def run():
             d = Deferred()
             d.callback("foo")
             res = await d
             return res
 
-        d = run()
+        d = ensureDeferred(run())
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
@@ -35,14 +51,13 @@ class AwaitTests(TestCase):
         An exception in a function wrapped with L{deferredCoroutine} will cause
         the returned L{Deferred} to fire with a failure.
         """
-        @deferredCoroutine
         async def run():
             d = Deferred()
             d.callback("foo")
             res = await d
             raise ValueError("Oh no!")
 
-        d = run()
+        d = ensureDeferred(run())
         res = self.failureResultOf(d)
         self.assertEqual(type(res.value), ValueError)
         self.assertEqual(res.value.args, ("Oh no!",))
@@ -56,7 +71,6 @@ class AwaitTests(TestCase):
         reactor = Clock()
         sections = []
 
-        @deferredCoroutine
         async def runone():
             sections.append(2)
             d = Deferred()
@@ -66,7 +80,6 @@ class AwaitTests(TestCase):
             return "Yay!"
 
 
-        @deferredCoroutine
         async def run():
             sections.append(1)
             result = await runone()
@@ -77,7 +90,7 @@ class AwaitTests(TestCase):
             sections.append(5)
             return result
 
-        d = run()
+        d = ensureDeferred(run())
 
         reactor.advance(0.9)
         self.assertEqual(sections, [1, 2])
