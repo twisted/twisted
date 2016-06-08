@@ -764,11 +764,11 @@ version                         Print the SFTP version.
     def _abbrevSize(self, size):
         # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
         _abbrevs = [
-            (1<<50L, 'PB'),
-            (1<<40L, 'TB'),
-            (1<<30L, 'GB'),
-            (1<<20L, 'MB'),
-            (1<<10L, 'kB'),
+            (1<<50, 'PB'),
+            (1<<40, 'TB'),
+            (1<<30, 'GB'),
+            (1<<20, 'MB'),
+            (1<<10, 'kB'),
             (1, 'B')
             ]
 
