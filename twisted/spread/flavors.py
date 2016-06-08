@@ -42,10 +42,10 @@ setCopierForClassTree = setUnjellyableForClassTree
 setFactoryForClass = setUnjellyableFactoryForClass
 copyTags = unjellyableRegistry
 
-copy_atom = "copy"
-cache_atom = "cache"
-cached_atom = "cached"
-remote_atom = "remote"
+copy_atom = b"copy"
+cache_atom = b"cache"
+cached_atom = b"cached"
+remote_atom = b"remote"
 
 
 class NoSuchMethod(AttributeError):
@@ -133,7 +133,7 @@ class Referenceable(Serializable):
         serialize this to a peer.
         """
 
-        return ["remote", jellier.invoker.registerReference(self)]
+        return [b"remote", jellier.invoker.registerReference(self)]
 
 
 @implementer(IPBRoot)
@@ -396,7 +396,7 @@ class RemoteCopy(Unjellyable):
         """
         if _PY3:
             # Make the state keys str again
-            state = {x.decode('utf8'):y for x,y in state.items()}
+            state = {x.decode('utf8') if isinstance(x, bytes) else x:y for x,y in state.items()}
         self.__dict__ = state
 
     def unjellyFor(self, unjellier, jellyList):
@@ -545,7 +545,7 @@ class RemoteCacheMethod:
         if cacheID is None:
             from pb import ProtocolError
             raise ProtocolError("You can't call a cached method when the object hasn't been given to the peer yet.")
-        return self.broker._sendMessage('cache', self.perspective, cacheID, self.name, args, kw)
+        return self.broker._sendMessage(b'cache', self.perspective, cacheID, self.name, args, kw)
 
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's L{RemoteCache}.

@@ -906,6 +906,9 @@ class Broker(banana.Banana):
         Look up message based on object, unserialize the arguments, and
         invoke it with args, and send an 'answer' or 'error' response.
         """
+        if not isinstance(message, str):
+            message = message.decode('utf8')
+
         try:
             object = findObjMethod(objectID)
             if object is None:

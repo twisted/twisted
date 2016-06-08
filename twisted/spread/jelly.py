@@ -648,11 +648,6 @@ class _Unjellier:
         regFactory = unjellyableFactoryRegistry.get(jelType)
         if regFactory is not None:
             state = self.unjelly(obj[1])
-
-            if _PY3:
-                # Make the state keys str again
-                state = {x.decode('utf8'):y for x,y in state.items()}
-
             inst = regFactory(state)
             if hasattr(inst, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
@@ -715,8 +710,9 @@ class _Unjellier:
 
     def _unjelly_boolean(self, exp):
         if bool:
-            assert exp[0] in (b'true', b'false')
-            return exp[0] == b'true'
+            print(exp)
+            assert exp[0] in ('true', 'false')
+            return exp[0] == 'true'
         else:
             return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
 

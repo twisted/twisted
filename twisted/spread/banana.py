@@ -69,6 +69,8 @@ LONGINT  = chr(0x85)
 LONGNEG  = chr(0x86)
 # really optional; this is part of the 'pb' vocabulary
 VOCAB    = chr(0x87)
+# more delimiter characters
+UNICODE  = chr(0x88)
 
 HIGH_BIT_SET = chr(0x80)
 
@@ -210,6 +212,15 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     gotItem(rest[:num])
                 else:
                     return
+            elif typebyte == UNICODE:
+                num = b1282int(num)
+                if num > SIZE_LIMIT:
+                    raise BananaError("Security precaution: String too long.")
+                if len(rest) >= num:
+                    buffer = rest[num:]
+                    gotItem(rest[:num].decode('utf8'))
+                else:
+                    return
             elif typebyte == INT:
                 buffer = rest
                 num = b1282int(num)
@@ -349,10 +360,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         elif isinstance(obj, float):
             write(FLOAT)
             write(struct.pack("!d", obj))
-        elif isinstance(obj, (bytes, unicode)):
-
-            if isinstance(obj, unicode):
-                obj = obj.encode('utf8')
+        elif isinstance(obj, bytes):
 
             # TODO: an API for extending banana...
             if self.currentDialect == "pb" and obj in self.outgoingSymbols:
@@ -365,6 +373,19 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                         "string is too long to send (%d)" % (len(obj),))
                 int2b128(len(obj), write)
                 write(STRING)
+                write(obj)
+        elif isinstance(obj, unicode):
+
+            if obj.encode('ascii') in self.outgoingSymbols:
+                raise ValueError("Probably want this to be a bytes symbol: %s" % (obj,))
+            else:
+                obj = obj.encode('utf8')
+
+                if len(obj) > SIZE_LIMIT:
+                    raise BananaError(
+                        "string is too long to send (%d)" % (len(obj),))
+                int2b128(len(obj), write)
+                write(UNICODE)
                 write(obj)
         else:
             raise BananaError("Banana cannot send {0} objects: {1!r}".format(

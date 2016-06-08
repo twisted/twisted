@@ -371,6 +371,7 @@ class Echoer(pb.Root):
 
 class CachedReturner(pb.Root):
     def __init__(self, cache):
+        print("CACHE", cache)
         self.cache = cache
     def remote_giveMeCache(self, st):
         return self.cache
@@ -836,7 +837,7 @@ class FilePagerizer(pb.Referenceable):
         self.callback, self.args, self.kw = callback, args, kw
 
     def remote_getPages(self, collector):
-        self.pager = util.FilePager(collector, open(self.filename),
+        self.pager = util.FilePager(collector, open(self.filename, 'rb'),
                                     self.callback, *self.args, **self.kw)
         self.args = self.kw = None
 
@@ -1569,7 +1570,7 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(checkers.AllowAnonymousAccess())
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
         factory = pb.PBClientFactory()
         d = factory.login(credentials.Anonymous(), "BRAINS!")
 
@@ -1593,10 +1594,10 @@ class NewCredTests(unittest.TestCase):
         """
         self.portal.registerChecker(checkers.AllowAnonymousAccess())
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
         factory = pb.PBClientFactory()
         d = factory.login(
-            credentials.UsernamePassword('user', 'pass'), "BRAINS!")
+            credentials.UsernamePassword(b'user', b'pass'), "BRAINS!")
 
         def cbLogin(perspective):
             return perspective.callRemote('add', 100, 23)
@@ -1617,10 +1618,10 @@ class NewCredTests(unittest.TestCase):
         cred.
         """
         self.portal.registerChecker(
-            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user=b'pass'))
         factory = pb.PBClientFactory()
         d = factory.login(
-            credentials.UsernamePassword("user", "pass"), "BRAINS!")
+            credentials.UsernamePassword(b"user", b"pass"), "BRAINS!")
 
         def cbLogin(perspective):
             return perspective.callRemote("getViewPoint")
@@ -1682,7 +1683,7 @@ class NSPTests(unittest.TestCase):
         L{Avatar} can expose remote methods for the client to call.
         """
         factory = pb.PBClientFactory()
-        d = factory.login(credentials.UsernamePassword('user', 'pass'),
+        d = factory.login(credentials.UsernamePassword(b'user', b'pass'),
                           "BRAINS!")
         reactor.connectTCP('127.0.0.1', self.portno, factory)
         d.addCallback(lambda p: p.callRemote('ANYTHING', 'here', bar='baz'))
