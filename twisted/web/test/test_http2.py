@@ -195,7 +195,7 @@ class FrameBuffer(object):
         self._data = self._data[9+length:]
 
         if isinstance(frame, hyperframe.frame.HeadersFrame):
-            frame.data = self.decoder.decode(frame.data)
+            frame.data = self.decoder.decode(frame.data, raw=True)
 
         return frame
 
