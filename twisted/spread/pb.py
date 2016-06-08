@@ -143,6 +143,12 @@ class RemoteMethod:
         self.obj = obj
         self.name = name
 
+    def __eq__(self, other):
+        if type(self) != type(other):
+            raise NotImplemented
+
+        return (self.obj, self.name) == (other.obj, other.name)
+
 
     def __cmp__(self, other):
         return cmp((self.obj, self.name), other)
@@ -351,7 +357,6 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def remoteMethod(self, key):
         """Get a L{RemoteMethod} for this key.
         """
-        print(key)
         return RemoteMethod(self, key)
 
     def __cmp__(self,other):
@@ -716,7 +721,6 @@ class Broker(banana.Banana):
         Store a persistent reference to a local object and map its id()
         to a generated, session-unique ID and return that ID.
         """
-
         assert object is not None
         puid = object.processUniqueID()
         luid = self.luids.get(puid)
@@ -762,7 +766,6 @@ class Broker(banana.Banana):
     def cachedRemotelyAs(self, instance, incref=0):
         """Returns an ID that says what this instance is cached as remotely, or C{None} if it's not.
         """
-
         puid = instance.processUniqueID()
         luid = self.remotelyCachedLUIDs.get(puid)
         if (luid is not None) and (incref):
@@ -889,7 +892,6 @@ class Broker(banana.Banana):
                 rval.addCallbacks(pbc, pbe)
         else:
             rval = None
-        print(prefix + b"message", requestID, objectID, message, answerRequired, netArgs, netKw)
         self.sendCall(prefix + b"message", requestID, objectID, message, answerRequired, netArgs, netKw)
         return rval
 
@@ -1012,6 +1014,10 @@ class Broker(banana.Banana):
         If the reference count is zero, it will free the reference to this
         object.
         """
+        if isinstance(objectID, unicode):
+            objectID = objectID.encode('utf8')
+
+
         refs = self.localObjects[objectID].decref()
         if refs == 0:
             puid = self.localObjects[objectID].object.processUniqueID()

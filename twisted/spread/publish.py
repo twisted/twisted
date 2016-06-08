@@ -10,10 +10,13 @@ Maintainer: Glyph Lefkowitz
 Future Plans: None known.
 """
 
+from __future__ import absolute_import, division
+
 import time
 
 from twisted.internet import defer
 from twisted.spread import banana, jelly, flavors
+from twisted.python.compat import _PY3
 
 
 class Publishable(flavors.Cacheable):
@@ -68,6 +71,11 @@ class RemotePublished(flavors.RemoteCache):
                 (self.service, self.perspective, str(self.publishedID), ext))
 
     def setCopyableState(self, state):
+
+        if _PY3:
+            # Make the state keys str again
+            state = {x.decode('utf8'):y for x,y in state.items()}
+
         self.__dict__.update(state)
         self._activationListeners = []
         try:
@@ -103,9 +111,8 @@ class RemotePublished(flavors.RemoteCache):
             listener(self)
         self._activationListeners = []
         self.activated()
-        dataFile = file(self.getFileName(), "wb")
-        dataFile.write(banana.encode(jelly.jelly(self)))
-        dataFile.close()
+        with open(self.getFileName(), "wb") as f:
+            f.write(banana.encode(jelly.jelly(self)))
 
 
     def activated(self):

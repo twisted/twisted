@@ -29,7 +29,7 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
-from twisted.python.compat import iterbytes, xrange
+from twisted.python.compat import iterbytes, xrange, _PY3
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
 
@@ -706,8 +706,6 @@ class BrokerTests(unittest.TestCase):
         o3.callRemote("getCache").addCallback(complex.append)
         pump.flush()
 
-        print(complex[0])
-
         # `worst things first'
         self.assertEqual(complex[0].x, 1)
         self.assertEqual(complex[0].y, 2)
@@ -718,18 +716,20 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(complex[0].foo, 4)
         self.assertEqual(len(coll), 2)
         cp = coll[0][0]
-        self.assertIdentical(cp.checkMethod().im_self, cp,
-                             "potential refcounting issue")
+        if not _PY3:
+            self.assertIdentical(cp.checkMethod().im_self, cp,
+                                "potential refcounting issue")
         self.assertIdentical(cp.checkSelf(), cp,
                              "other potential refcounting issue")
         col2 = []
-        o2.callRemote('putCache',cp).addCallback(col2.append)
+        o2.callRemote('putCache', cp).addCallback(col2.append)
         pump.flush()
         # The objects were the same (testing lcache identity)
         self.assertTrue(col2[0])
+
         # test equality of references to methods
         self.assertEqual(o2.remoteMethod("getCache"),
-                          o2.remoteMethod("getCache"))
+                         o2.remoteMethod("getCache"))
 
         # now, refcounting (similiar to testRefCount)
         luid = cp.luid

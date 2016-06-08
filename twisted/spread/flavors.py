@@ -89,6 +89,8 @@ class Serializable(Jellyable):
 
         return id(self)
 
+
+
 class Referenceable(Serializable):
     perspective = None
     """I am an object sent remotely as a direct reference.
@@ -214,6 +216,10 @@ class ViewPoint(Referenceable):
         """
         args = broker.unserialize(args, self.perspective)
         kw = broker.unserialize(kw, self.perspective)
+
+        if not isinstance(message, str):
+            message = message.decode('utf8')
+
         method = getattr(self.object, "view_%s" % message)
         try:
             state = method(*(self.perspective,)+args, **kw)

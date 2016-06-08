@@ -620,8 +620,6 @@ class _Unjellier:
 
 
     def unjelly(self, obj):
-        print('unjelly', obj)
-
         if type(obj) is not list:
             return obj
         jelType = obj[0]
@@ -643,7 +641,6 @@ class _Unjellier:
                 method = inst.unjellyFor
             else:
                 method = regClass # this is how it ought to be done
-            print(method)
             val = method(self, obj)
             if hasattr(val, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
@@ -663,7 +660,6 @@ class _Unjellier:
 
         thunk = getattr(self, '_unjelly_%s' % jelType, None)
         if thunk is not None:
-            print("THUNK!", obj)
             ret = thunk(obj[1:])
         else:
             nameSplit = jelType.split('.')
