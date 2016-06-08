@@ -105,7 +105,7 @@ from twisted.web.iweb import (
 from twisted.web.http_headers import Headers
 
 try:
-    from twisted.web.http2 import H2Connection
+    from twisted.web._http2 import H2Connection
     H2_ENABLED = True
 except ImportError:
     H2Connection = None
@@ -2299,7 +2299,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 negotiatedProtocol = b'http/1.1'
 
             if negotiatedProtocol == b'h2':
-                assert H2_ENABLED, "Cannot negotiate HTTP/2 without support."
                 transport = self._channel.transport
                 self._channel = H2Connection()
                 self._channel.requestFactory = self._requestFactory
