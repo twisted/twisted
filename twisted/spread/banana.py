@@ -376,9 +376,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(obj)
         elif isinstance(obj, unicode):
 
-            if obj.encode('ascii') in self.outgoingSymbols:
-                raise ValueError("Probably want this to be a bytes symbol: %s" % (obj,))
-            else:
+            if True:
                 obj = obj.encode('utf8')
 
                 if len(obj) > SIZE_LIMIT:
@@ -395,7 +393,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 # For use from the interactive interpreter
 _i = Banana()
 _i.connectionMade()
-_i._selectDialect("none")
+_i._selectDialect(b"none")
 
 
 def encode(lst):

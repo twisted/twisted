@@ -326,9 +326,9 @@ class RemoteReference(Serializable, styles.Ephemeral):
         """
         if jellier.invoker:
             assert self.broker == jellier.invoker, "Can't send references to brokers other than their own."
-            return "local", self.luid
+            return b"local", self.luid
         else:
-            return "unpersistable", "References cannot be serialized"
+            return b"unpersistable", "References cannot be serialized"
 
     def unjellyFor(self, unjellier, unjellyList):
         self.__init__(unjellier.invoker.unserializingPerspective, unjellier.invoker, unjellyList[1], 1)

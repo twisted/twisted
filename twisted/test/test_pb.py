@@ -371,7 +371,6 @@ class Echoer(pb.Root):
 
 class CachedReturner(pb.Root):
     def __init__(self, cache):
-        print("CACHE", cache)
         self.cache = cache
     def remote_giveMeCache(self, st):
         return self.cache
@@ -1669,7 +1668,7 @@ class NSPTests(unittest.TestCase):
         self.realm.perspectiveFactory = NonSubclassingPerspective
         self.portal = portal.Portal(self.realm)
         self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        self.checker.addUser("user", "pass")
+        self.checker.addUser(b"user", b"pass")
         self.portal.registerChecker(self.checker)
         self.factory = WrappingFactory(pb.PBServerFactory(self.portal))
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")

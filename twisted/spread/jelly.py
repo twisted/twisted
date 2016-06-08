@@ -668,18 +668,9 @@ class _Unjellier:
             if hasattr(clz, "__setstate__"):
                 ret = _newInstance(clz)
                 state = self.unjelly(obj[1])
-
-                if _PY3:
-                    # Make the state keys str again
-                    state = {x.decode('utf8'):y for x,y in state.items()}
-
                 ret.__setstate__(state)
             else:
                 state = self.unjelly(obj[1])
-
-                if _PY3:
-                    # Make the state keys str again
-                    state = {x.decode('utf8'):y for x,y in state.items()}
                 ret = _newInstance(clz, state)
             if hasattr(clz, 'postUnjelly'):
                 self.postCallbacks.append(ret.postUnjelly)

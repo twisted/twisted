@@ -72,10 +72,6 @@ class RemotePublished(flavors.RemoteCache):
 
     def setCopyableState(self, state):
 
-        if _PY3:
-            # Make the state keys str again
-            state = {x.decode('utf8'):y for x,y in state.items()}
-
         self.__dict__.update(state)
         self._activationListeners = []
         try:

@@ -445,7 +445,7 @@ class RemoteCache(RemoteCopy, Serializable):
         if jellier.invoker is None:
             return getInstanceState(self, jellier)
         assert jellier.invoker is self.broker, "You cannot exchange cached proxies between brokers."
-        return 'lcache', self.luid
+        return b'lcache', self.luid
 
 
     def unjellyFor(self, unjellier, jellyList):
