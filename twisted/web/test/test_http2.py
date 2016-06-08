@@ -2140,3 +2140,30 @@ class HTTP2TransportChecking(unittest.TestCase):
             isinstance(frames[-1], hyperframe.frame.DataFrame)
         )
         self.assertFalse(a._stillProducing)
+
+
+class HTTP2SchedulingTests(unittest.TestCase):
+    """
+    The H2Connection object schedules certain events (mostly its data sending
+    loop) using callbacks from the reactor. These tests validate that the calls
+    are scheduled correctly.
+    """
+    def test_initiallySchedulesOneDataCall(self):
+        """
+        When a H2Connection is established it schedules one call to be run as
+        soon as the reactor has time.
+        """
+        reactor = task.Clock()
+        a = H2Connection(reactor)
+
+        calls = reactor.getDelayedCalls()
+        self.assertEqual(len(calls), 1)
+        call = calls[0]
+
+        # Validate that the call is scheduled for right now, but hasn't run,
+        # and that it's correct.
+        self.assertTrue(call.active())
+        self.assertEqual(call.time, 0)
+        self.assertEqual(call.func, a._sendPrioritisedData)
+        self.assertEqual(call.args, ())
+        self.assertEqual(call.kw, {})

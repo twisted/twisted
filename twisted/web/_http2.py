@@ -29,7 +29,6 @@ import h2.connection
 import h2.events
 import h2.exceptions
 
-from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
@@ -105,7 +104,7 @@ class H2Connection(Protocol):
     factory = None
     site = None
 
-    def __init__(self):
+    def __init__(self, reactor=None):
         self.conn = h2.connection.H2Connection(
             client_side=False, header_encoding=None
         )
@@ -118,8 +117,12 @@ class H2Connection(Protocol):
         self._streamCleanupCallbacks = {}
         self._stillProducing = True
 
+        if reactor is None:
+            from twisted.internet import reactor
+        self._reactor = reactor
+
         # Start the data sending function.
-        reactor.callLater(0, self._sendPrioritisedData)
+        self._reactor.callLater(0, self._sendPrioritisedData)
 
 
     # Implementation of IProtocol
@@ -338,7 +341,7 @@ class H2Connection(Protocol):
             if self.remainingOutboundWindow(stream) <= 0:
                 self.streams[stream].flowControlBlocked()
 
-        reactor.callLater(0, self._sendPrioritisedData)
+        self._reactor.callLater(0, self._sendPrioritisedData)
 
 
     # Internal functions.
