@@ -85,7 +85,6 @@ class DomainWithDefaultsTests(unittest.TestCase):
             self.assertEqual(d[x], x + 10)
             self.assertEqual(d.get(x), x + 10)
             self.assertTrue(x in d)
-            self.assertTrue(d.has_key(x))
 
         del d[2], d[4], d[6]
 
