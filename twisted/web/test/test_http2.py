@@ -1031,8 +1031,9 @@ class HTTP2ServerTests(unittest.TestCase):
 
     def test_respondWith400(self):
         """
-        Triggering the call to _respondToBadRequestAndDisconnect leads to a
-        400 error being sent automatically and the stream being torn down.
+        Triggering the call to L{H2Stream._respondToBadRequestAndDisconnect}
+        leads to a 400 error being sent automatically and the stream being torn
+        down.
         """
         # The only "natural" way to trigger this in the current codebase is to
         # send a multipart/form-data request that the cgi module doesn't like.
