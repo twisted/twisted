@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_banana -*-
+# -*- test-case-name: twisted.spread.test.test_banana -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

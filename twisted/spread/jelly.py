@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_jelly -*-
+# -*- test-case-name: twisted.spread.test.test_jelly -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
