@@ -75,7 +75,7 @@ import datetime
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, long, _PY3, _range
+from twisted.python.compat import unicode, long, _PY3, _range, _EXPECT_NEWSTYLE
 from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -88,9 +88,15 @@ from twisted.python.versions import Version
 
 if not _PY3:
     from types import ClassType, InstanceType
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=DeprecationWarning)
+        import sets as _sets
+else:
+    ClassType = type
 
 from types import MethodType, ModuleType, FunctionType
 
+NoneType = type(None)
 DictTypes = (dict,)
 
 None_atom = b"None"                  # N
@@ -249,9 +255,15 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
     if prefix:
         prefix = "%s." % prefix
 
+    if _EXPECT_NEWSTYLE:
+        compared = type
+    else:
+        compared = types.ClassType
+
+
     for i in dir(module):
         i_ = getattr(module, i)
-        if type(i_) == type:
+        if type(i_) == compared:
             if issubclass(i_, baseClass):
                 setUnjellyableForClass('%s%s' % (prefix, i), i_)
 
@@ -461,13 +473,15 @@ class _Jellier:
         objType = type(obj)
         if self.taster.isTypeAllowed(qual(objType)):
             # "Immutable" Types
-            if ((objType is str) or
-                (objType is bytes) or
+            if ((objType is bytes) or
                 (objType is int) or
                 (objType is long) or
                 (objType is float)):
                 return obj
             elif objType is MethodType:
+                if _PY3:
+                    raise ValueError("Can't jelly methods on Python 3")
+
                 return [b"method",
                         obj.im_func.__name__,
                         self.jelly(obj.im_self),
@@ -475,7 +489,7 @@ class _Jellier:
 
             elif objType is unicode:
                 return [b'unicode', obj.encode('UTF-8')]
-            elif objType is None:
+            elif objType is NoneType:
                 return [b'None']
             elif objType is FunctionType:
                 name = obj.__name__
@@ -504,8 +518,8 @@ class _Jellier:
             elif objType is datetime.timedelta:
                 return [b'timedelta', '%s %s %s' % (obj.days, obj.seconds,
                                                    obj.microseconds)]
-            elif  issubclass(objType, type) or (not _PY3 and objType is ClassType):
-                return ['bclass', qual(obj)]
+            elif issubclass(objType, type) or (not _PY3 and objType is ClassType):
+                return [b'class', qual(obj)]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
             else:
@@ -522,9 +536,10 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set:
+                elif objType is set or not _PY3 and objType is _sets.Set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset:
+                elif (objType is frozenset or
+                      not _PY3 and objType is _sets.ImmutableSet):
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
@@ -836,7 +851,7 @@ class _Unjellier:
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(rest[0])
         objType = type(klaus)
-        if objType not in (types.ClassType, types.TypeType):
+        if objType not in (ClassType, type):
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
                     rest[0], klaus))
@@ -879,7 +894,7 @@ class _Unjellier:
             category=DeprecationWarning, filename="", lineno=0)
 
         clz = self.unjelly(rest[0])
-        if type(clz) is not types.ClassType:
+        if not _PY3 and type(clz) is not types.ClassType:
             raise InsecureJelly("Instance found with non-class class.")
         if hasattr(clz, "__setstate__"):
             inst = _newInstance(clz, {})
