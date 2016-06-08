@@ -527,7 +527,7 @@ class APIBuilder(object):
             intersphinxes.append(intersphinx)
 
         from pydoctor.driver import main
-        args = [
+        main([
              "--project-name", projectName,
              "--project-url", projectURL,
              "--system-class", "pydoctor.twistedmodel.TwistedSystem",
