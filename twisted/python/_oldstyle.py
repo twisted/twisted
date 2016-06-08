@@ -11,6 +11,8 @@ from __future__ import absolute_import, division
 import os
 import types
 
+from functools import wraps
+
 from twisted.python.compat import _shouldEnableNewStyle, _PY3
 from twisted.python.util import _replaceIf
 
@@ -47,9 +49,10 @@ def _ensureOldClass(cls, **kwargs):
     return cls
 
 
-@_replaceIf(_PY3, passthru)
-@_replaceIf(not _shouldEnableNewStyle(), _ensureOldClass)
-def _oldStyle(cls, bases=(object,)):
+
+@_replaceIf(_PY3, lambda **k: passthru)
+@_replaceIf(not _shouldEnableNewStyle(), lambda **k: _ensureOldClass)
+def _oldStyle(bases=(object,)):
     """
     A decorator which conditionally converts old-style classes to new-style
     classes. If it is Python 3, or if the C{TWISTED_NEWSTYLE} environment
@@ -59,16 +62,12 @@ def _oldStyle(cls, bases=(object,)):
     @param cls: An old-style class to convert to new-style.
     @type cls: L{types.ClassType}
 
-    @return: A new-style version of C{cls}.
-    """
-    _ensureOldClass(cls)
-    return type(cls.__name__, bases, cls.__dict__)
-
-
-def _oldStyleWithBases(bases=(object,)):
-    """
+    @return: A new-style version of C{cls}, with the bases C{bases} if
+        upgraded.
     """
     def _old(cls):
-        return _oldStyle(cls, bases=bases)
+
+        _ensureOldClass(cls)
+        return type(cls.__name__, bases, cls.__dict__)
 
     return _old
