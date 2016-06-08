@@ -522,7 +522,7 @@ class APIBuilder(object):
         """
         intersphinxes = []
 
-        for intersphinx in intersphinxURLs:
+        for intersphinx in _INTERSPHINX_TARGETS:
             intersphinxes.append("--intersphinx")
             intersphinxes.append(intersphinx)
 
