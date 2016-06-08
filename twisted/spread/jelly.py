@@ -522,9 +522,9 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or not _PY3 and objType is _sets.Set:
+                elif objType is set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset or  not _PY3 and  robjType is _sets.ImmutableSet:
+                elif objType is frozenset:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)

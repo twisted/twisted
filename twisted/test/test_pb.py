@@ -1470,13 +1470,13 @@ class NewCredTests(unittest.TestCase):
         secondLogin = factory.login(
             credentials.UsernamePassword(b'baz', b'quux'), "BRAINS!")
         d = gatherResults([firstLogin, secondLogin])
-        def cbLoggedIn():
+        def cbLoggedIn(x):
             first, second = x
             return gatherResults([
                     first.callRemote('getAvatarId'),
                     second.callRemote('getAvatarId')])
         d.addCallback(cbLoggedIn)
-        def cbAvatarIds():
+        def cbAvatarIds(x):
             first, second = x
             self.assertEqual(first, b'foo')
             self.assertEqual(second, b'baz')
