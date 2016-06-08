@@ -1,23 +1,26 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import StringIO
+from __future__ import absolute_import, division
+
 import sys
+
+from io import BytesIO
 from functools import partial
 
-# Twisted Imports
 from twisted.trial import unittest
 from twisted.spread import banana
 from twisted.python import failure
+from twisted.python.compat import long, iterbytes, _bytesChr as chr
 from twisted.internet import protocol, main
 from twisted.test.proto_helpers import StringTransport
 
 
 class MathTests(unittest.TestCase):
     def test_int2b128(self):
-        funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10l]
+        funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **long(10)]
         for i in funkylist:
-            x = StringIO.StringIO()
+            x = BytesIO()
             banana.int2b128(i, x.write)
             v = x.getvalue()
             y = banana.b1282int(v)
@@ -72,7 +75,7 @@ class BananaTestBase(unittest.TestCase):
     encClass = banana.Banana
 
     def setUp(self):
-        self.io = StringIO.StringIO()
+        self.io = BytesIO()
         self.enc = self.encClass()
         self.enc.makeConnection(protocol.FileWrapper(self.io))
         selectDialect(self.enc, b"none")
@@ -157,7 +160,7 @@ class BananaTests(BananaTestBase):
         banana without changing value and should come out represented
         as an C{int} (regardless of the type which was encoded).
         """
-        for value in (10151, 10151L):
+        for value in (10151, long(10151)):
             self.enc.sendEncoded(value)
             self.enc.dataReceived(self.io.getvalue())
             self.assertEqual(self.result, 10151)
@@ -249,34 +252,34 @@ class BananaTests(BananaTestBase):
 
 
     def test_negativeLong(self):
-        self.enc.sendEncoded(-1015l)
+        self.enc.sendEncoded(long(-1015))
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == -1015l, "should be -1015l, got %s" % self.result
+        self.assertEqual(self.result, long(-1015))
 
 
     def test_integer(self):
         self.enc.sendEncoded(1015)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == 1015, "should be 1015, got %s" % self.result
+        self.assertEqual(self.result, 1015)
 
 
     def test_negative(self):
         self.enc.sendEncoded(-1015)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == -1015, "should be -1015, got %s" % self.result
+        self.assertEqual(self.result, -1015)
 
 
     def test_float(self):
         self.enc.sendEncoded(1015.)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == 1015.
+        self.assertEqual(self.result, 1015.0)
 
 
     def test_list(self):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10], []]
         self.enc.sendEncoded(foo)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
+        self.assertEqual(self.result, foo)
 
 
     def test_partial(self):
@@ -287,10 +290,10 @@ class BananaTests(BananaTestBase):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5,
                ["six", "seven", ["eight", 9]], [10],
                # TODO: currently the C implementation's a bit buggy...
-               sys.maxint * 3l, sys.maxint * 2l, sys.maxint * -2l]
+               sys.maxint * long(3), sys.maxint * long(2), sys.maxint * long(-2)]
         self.enc.sendEncoded(foo)
         self.feed(self.io.getvalue())
-        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
+        self.assertEqual(self.result, foo)
 
 
     def feed(self, data):
@@ -300,24 +303,24 @@ class BananaTests(BananaTestBase):
         @param data: The bytes to deliver.
         @type data: L{bytes}
         """
-        for byte in data:
+        for byte in iterbytes(data):
             self.enc.dataReceived(byte)
 
 
     def test_oversizedList(self):
-        data = '\x02\x01\x01\x01\x01\x80'
+        data = b'\x02\x01\x01\x01\x01\x80'
         # list(size=0x0101010102, about 4.3e9)
         self.failUnlessRaises(banana.BananaError, self.feed, data)
 
 
     def test_oversizedString(self):
-        data = '\x02\x01\x01\x01\x01\x82'
+        data = b'\x02\x01\x01\x01\x01\x82'
         # string(size=0x0101010102, about 4.3e9)
         self.failUnlessRaises(banana.BananaError, self.feed, data)
 
 
     def test_crashString(self):
-        crashString = '\x00\x00\x00\x00\x04\x80'
+        crashString = b'\x00\x00\x00\x00\x04\x80'
         # string(size=0x0400000000, about 17.2e9)
 
         #  cBanana would fold that into a 32-bit 'int', then try to allocate
@@ -345,7 +348,7 @@ class BananaTests(BananaTestBase):
         # (assuming 32-bit longs)
         self.enc.sendEncoded(-2147483648)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == -2147483648, "should be -2147483648, got %s" % self.result
+        self.assertEqual(self.result, -2147483648)
 
 
     def test_sizedIntegerTypes(self):
@@ -357,25 +360,25 @@ class BananaTests(BananaTestBase):
         baseIntIn = +2147483647
         baseNegIn = -2147483648
 
-        baseIntOut = '\x7f\x7f\x7f\x07\x81'
-        self.assertEqual(self.encode(baseIntIn - 2), '\x7d' + baseIntOut)
-        self.assertEqual(self.encode(baseIntIn - 1), '\x7e' + baseIntOut)
-        self.assertEqual(self.encode(baseIntIn - 0), '\x7f' + baseIntOut)
+        baseIntOut = b'\x7f\x7f\x7f\x07\x81'
+        self.assertEqual(self.encode(baseIntIn - 2), b'\x7d' + baseIntOut)
+        self.assertEqual(self.encode(baseIntIn - 1), b'\x7e' + baseIntOut)
+        self.assertEqual(self.encode(baseIntIn - 0), b'\x7f' + baseIntOut)
 
-        baseLongIntOut = '\x00\x00\x00\x08\x85'
-        self.assertEqual(self.encode(baseIntIn + 1), '\x00' + baseLongIntOut)
-        self.assertEqual(self.encode(baseIntIn + 2), '\x01' + baseLongIntOut)
-        self.assertEqual(self.encode(baseIntIn + 3), '\x02' + baseLongIntOut)
+        baseLongIntOut = b'\x00\x00\x00\x08\x85'
+        self.assertEqual(self.encode(baseIntIn + 1), b'\x00' + baseLongIntOut)
+        self.assertEqual(self.encode(baseIntIn + 2), b'\x01' + baseLongIntOut)
+        self.assertEqual(self.encode(baseIntIn + 3), b'\x02' + baseLongIntOut)
 
-        baseNegOut = '\x7f\x7f\x7f\x07\x83'
-        self.assertEqual(self.encode(baseNegIn + 2), '\x7e' + baseNegOut)
-        self.assertEqual(self.encode(baseNegIn + 1), '\x7f' + baseNegOut)
-        self.assertEqual(self.encode(baseNegIn + 0), '\x00\x00\x00\x00\x08\x83')
+        baseNegOut = b'\x7f\x7f\x7f\x07\x83'
+        self.assertEqual(self.encode(baseNegIn + 2), b'\x7e' + baseNegOut)
+        self.assertEqual(self.encode(baseNegIn + 1), b'\x7f' + baseNegOut)
+        self.assertEqual(self.encode(baseNegIn + 0), b'\x00\x00\x00\x00\x08\x83')
 
-        baseLongNegOut = '\x00\x00\x00\x08\x86'
-        self.assertEqual(self.encode(baseNegIn - 1), '\x01' + baseLongNegOut)
-        self.assertEqual(self.encode(baseNegIn - 2), '\x02' + baseLongNegOut)
-        self.assertEqual(self.encode(baseNegIn - 3), '\x03' + baseLongNegOut)
+        baseLongNegOut = b'\x00\x00\x00\x08\x86'
+        self.assertEqual(self.encode(baseNegIn - 1), b'\x01' + baseLongNegOut)
+        self.assertEqual(self.encode(baseNegIn - 2), b'\x02' + baseLongNegOut)
+        self.assertEqual(self.encode(baseNegIn - 3), b'\x03' + baseLongNegOut)
 
 
 
