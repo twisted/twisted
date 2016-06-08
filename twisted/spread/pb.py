@@ -372,6 +372,14 @@ class RemoteReference(Serializable, styles.Ephemeral):
         """
         return self.luid
 
+
+    def __eq__(self, other):
+        if not type(self) == type(other):
+            raise NotImplemented
+
+        return self.luid == other.luid
+
+
     def __del__(self):
         """Do distributed reference counting on finalization.
         """

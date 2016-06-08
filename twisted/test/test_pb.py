@@ -331,7 +331,7 @@ class Observer(pb.Referenceable):
     def remote_notify(self, other, obj):
         self.obj = obj
         self.notified = self.notified + 1
-        other.callRemote('unobserve',self)
+        other.callRemote('unobserve', self)
 
 
 class NewStyleCopy(pb.Copyable, pb.RemoteCopy, object):

@@ -575,10 +575,19 @@ class RemoteCacheObserver:
         return "<RemoteCacheObserver(%s, %s, %s) at %s>" % (
             self.broker, self.cached, self.perspective, id(self))
 
-    def __hash__(self):
-        """Generate a hash unique to all L{RemoteCacheObserver}s for this broker/perspective/cached triplet
-        """
+    def __eq__(self, other):
+        if not type(self) == type(other):
+            raise NotImplemented
 
+        o = (other.broker, other.perspective, other.cached)
+        s = (self.broker, self.perspective, self.cached)
+        return s == o
+
+    def __hash__(self):
+        """
+        Generate a hash unique to all L{RemoteCacheObserver}s for this
+        broker/perspective/cached triplet.
+        """
         return (  (hash(self.broker) % 2**10)
                 + (hash(self.perspective) % 2**10)
                 + (hash(self.cached) % 2**10))
