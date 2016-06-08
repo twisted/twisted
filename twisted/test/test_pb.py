@@ -132,7 +132,7 @@ def connectedServerAndClient(realm=None):
     """
     realm = realm or DummyRealm()
     clientBroker = pb.Broker()
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest='guest')
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest=b'guest')
     factory = pb.PBServerFactory(portal.Portal(realm, [checker]))
     serverBroker = factory.buildProtocol(('127.0.0.1',))
 

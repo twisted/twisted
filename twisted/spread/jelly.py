@@ -709,13 +709,8 @@ class _Unjellier:
 
 
     def _unjelly_boolean(self, exp):
-        if bool:
-            print(exp)
-            assert exp[0] in ('true', 'false')
-            return exp[0] == 'true'
-        else:
-            return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
-
+        assert exp[0] in ('true', 'false')
+        return exp[0] == 'true'
 
     def _unjelly_datetime(self, exp):
         return datetime.datetime(*map(int, exp[0].split()))
