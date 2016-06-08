@@ -11,10 +11,15 @@ only specific tests for old API.
 # issue1195 TODOs: replace pump.pump() with something involving Deferreds.
 # Clean up warning suppression.
 
-import sys, os, time, gc, weakref
+from __future__ import absolute_import, division
 
-from cStringIO import StringIO
-from zope.interface import implements, Interface
+import sys
+import os
+import time
+import gc
+import weakref
+
+from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
 from twisted.spread import pb, util, publish, jelly
@@ -53,7 +58,7 @@ class DummyRealm(object):
                 return iface, DummyPerspective(avatarId), lambda: None
 
 
-class IOPump:
+class IOPump(object):
     """
     Utility to pump data between clients and servers for protocol testing.
 
@@ -1190,7 +1195,8 @@ class NewCredLeakTests(unittest.TestCase):
         connectionBroken = []
         root = clientBroker.remoteForName("root")
         d = root.callRemote("login", 'guest')
-        def cbResponse((challenge, challenger)):
+        def cbResponse(x):
+            challenge, challenger = x
             mind = SimpleRemote()
             return challenger.callRemote("respond",
                     pb.respond(challenge, 'guest'), mind)
@@ -1462,12 +1468,14 @@ class NewCredTests(unittest.TestCase):
         secondLogin = factory.login(
             credentials.UsernamePassword('baz', 'quux'), "BRAINS!")
         d = gatherResults([firstLogin, secondLogin])
-        def cbLoggedIn((first, second)):
+        def cbLoggedIn():
+            first, second = x
             return gatherResults([
                     first.callRemote('getAvatarId'),
                     second.callRemote('getAvatarId')])
         d.addCallback(cbLoggedIn)
-        def cbAvatarIds((first, second)):
+        def cbAvatarIds():
+            first, second = x
             self.assertEqual(first, 'foo')
             self.assertEqual(second, 'baz')
         d.addCallback(cbAvatarIds)
