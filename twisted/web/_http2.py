@@ -49,7 +49,7 @@ _END_STREAM_SENTINEL = object()
 # to import.
 if sys.version_info < (2, 7, 4):
     warnings.warn(
-        "HTTP/2 cannot be enabled because this version of Python %s is too "
+        "HTTP/2 cannot be enabled because this version of Python is too "
         "old, and does not fully support memoryview objects.",
         UserWarning,
         stacklevel=2,
