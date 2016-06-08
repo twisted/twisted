@@ -22,6 +22,9 @@ def passthru(arg, **kwargs):
     Return C{arg}. Do nothing.
 
     @param arg: The arg to return.
+
+    @param kwargs: Ignored keyword arguments.
+
     @return: C{arg}
     """
     return arg
@@ -33,6 +36,8 @@ def _ensureOldClass(cls, **kwargs):
     Ensure that C{cls} is an old-style class.
 
     @param cls: The class to check.
+
+    @param kwargs: Ignored keyword arguments.
 
     @return: The class, if it is an old-style class.
     @raises: L{ValueError} if it is a new-style class.
@@ -61,6 +66,9 @@ def _oldStyle(bases=(object,)):
 
     @param cls: An old-style class to convert to new-style.
     @type cls: L{types.ClassType}
+
+    @param bases: The bases that the converted class will use.
+    @type bases: L{tuple}
 
     @return: A new-style version of C{cls}, with the bases C{bases} if
         upgraded.

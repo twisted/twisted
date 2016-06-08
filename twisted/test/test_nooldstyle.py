@@ -120,6 +120,31 @@ class OldStyleDecoratorTests(unittest.TestCase):
         self.assertNotIn("__mro__", f.__dict__.keys())
 
 
+    def test_withBasesEitherWay(self):
+        """
+        The bases in the decorator are chosen when it is upgraded,
+        """
+        class Foo(object):
+            pass
+
+        class Bar:
+            pass
+
+        @_oldstyle._oldStyle(bases=(Foo,))
+        class FooDescend(Bar):
+            pass
+
+        f = FooDescend()
+
+        if _shouldEnableNewStyle():
+            self.assertIsInstance(f, Foo)
+            self.assertEqual(FooDescend.__mro__, (FooDescend,) + Foo.__mro__)
+            self.assertEqual(FooDescend.__bases__, (Foo,))
+        else:
+            self.assertIsInstance(f, Bar)
+            self.assertEqual(FooDescend.__bases__, (Bar,))
+
+
     def test_noOpByDefault(self):
         """
         On Python 3 or on Py2 when C{TWISTED_NEWSTYLE} is not set,
@@ -139,8 +164,9 @@ class OldStyleDecoratorTests(unittest.TestCase):
     else:
         test_noOpByDefault.skip = ("Only relevant when not running under "
                                    "TWISTED_NEWSTYLE=1")
-        test_withoutBasesWhenUpgraded.skip = ("Only relevant when not running under "
-                                    "TWISTED_NEWSTYLE=1")
+        test_withoutBasesWhenUpgraded.skip = ("Only relevant when not "
+                                              "running under "
+                                              "TWISTED_NEWSTYLE=1")
 
 
 
