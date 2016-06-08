@@ -1183,7 +1183,7 @@ class RegisterProxy(Proxy):
             self.register(message, host, port)
         else:
             # There is a portal.  Check for credentials.
-            if not message.headers.has_key("authorization"):
+            if "authorization" not in message.headers:
                 return self.unauthorized(message, host, port)
             else:
                 return self.login(message, host, port)
@@ -1233,7 +1233,7 @@ class RegisterProxy(Proxy):
         """Allow all users to register"""
         name, toURL, params = parseAddress(message.headers["to"][0], clean=1)
         contact = None
-        if message.headers.has_key("contact"):
+        if "contact" in message.headers:
             contact = message.headers["contact"][0]
 
         if message.headers.get("expires", [None])[0] == "0":
@@ -1311,7 +1311,7 @@ class InMemoryRegistry:
     def getRegistrationInfo(self, userURI):
         if userURI.host != self.domain:
             return defer.fail(LookupError("unknown domain"))
-        if self.users.has_key(userURI.username):
+        if userURI.username in self.users:
             dc, url = self.users[userURI.username]
             return defer.succeed(Registration(int(dc.getTime() - time.time()), url))
         else:
