@@ -6,9 +6,9 @@
 Implementation module for the I{mailmail} command.
 """
 
+import email.utils
 import os
 import sys
-import rfc822
 import getpass
 from ConfigParser import ConfigParser
 
@@ -146,12 +146,12 @@ def parseOptions(argv):
         hdr = hdrs[0].lower()
         if o.recipientsFromHeaders and hdr in ('to', 'cc', 'bcc'):
             o.to.extend([
-                a[1] for a in rfc822.AddressList(hdrs[1]).addresslist
+                a[1] for a in email.utils.parseaddr(hdrs[1])
             ])
             if hdr == 'bcc':
                 write = 0
         elif hdr == 'from':
-            o.sender = rfc822.parseaddr(hdrs[1])[1]
+            o.sender = email.utils.parseaddr(hdrs[1])[1]
 
         if hdr in requiredHeaders:
             requiredHeaders[hdr].append(hdrs[1])
