@@ -164,6 +164,7 @@ class DomainWithDefaultsTests(unittest.TestCase):
         self.assertEqual(message, warnings[0]['message'])
 
 
+
 class BounceTests(unittest.TestCase):
     def setUp(self):
         self.domain = mail.mail.BounceDomain()
