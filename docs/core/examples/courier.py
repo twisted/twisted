@@ -66,7 +66,6 @@ class MailProcessor(basic.LineReceiver):
     messageFilename = None
     delimiter = '\n'
 
-
     def connectionMade(self):
         log.msg('Connection from %r' % self.transport)
         self.state = 'connected'
@@ -94,7 +93,7 @@ class MailProcessor(basic.LineReceiver):
         """
         try:
             emailParser = email.parser.Parser()
-            m = emailParser.parse(open(self.messageFilename))
+            emailParser.parse(open(self.messageFilename))
             self.sendLine('200 Ok')
         except:
             trace_dump()
@@ -112,7 +111,7 @@ def main():
     reactor.callLater(0, os.close, 3)
 
     # When stdin is closed, it's time to exit.
-    s = stdio.StandardIO(DieWhenLost())
+    stdio.StandardIO(DieWhenLost())
 
     # Go!
     reactor.run()
