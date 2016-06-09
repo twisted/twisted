@@ -1432,7 +1432,7 @@ def _serverFromStringLegacy(reactor, description, default):
     deprecated 'default' argument to anything but L{strports.service}.
     """
     nameOrPlugin, args, kw = _parseServer(description, None, default)
-    if type(nameOrPlugin) not in (str, unicode):
+    if not isinstance(nameOrPlugin, (str, unicode)):
         plugin = nameOrPlugin
         return plugin.parseStreamServer(reactor, *args, **kw)
     else:
