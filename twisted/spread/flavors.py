@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_pb -*-
+# -*- test-case-name: twisted.spread.test.test_pb -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -23,18 +23,16 @@ from __future__ import absolute_import, division
 # be serialized by Jelly, but they ought to be accessible through other
 # mechanisms (like XMLRPC)
 
-# system imports
 import sys
+
 from zope.interface import implementer, Interface
 
-# twisted imports
 from twisted.python import log, reflect
 from twisted.python.compat import _PY3
-
-# sibling imports
-from .jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
-from .jelly import Jellyable, Unjellyable, _newDummyLike
-from .jelly import setInstanceState, getInstanceState
+from twisted.spread.jelly import (
+    setUnjellyableForClass, setUnjellyableForClassTree,
+    setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
+    _newDummyLike, setInstanceState, getInstanceState)
 
 # compatibility
 setCopierForClass = setUnjellyableForClass
