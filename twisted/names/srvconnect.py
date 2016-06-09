@@ -63,17 +63,18 @@ class SRVConnector:
         @param domain: The domain to connect to.  If passed as a unicode
             string, it will be encoded using C{idna} encoding.
         @type domain: L{bytes} or L{unicode}
+
         @param defaultPort: Optional default port number to be used when SRV
             lookup fails and the service name is unknown. This should be the
             port number associated with the service name as defined by the IANA
             registry.
-        @type defaultPort: C{int}
+        @type defaultPort: L{int}
         """
         self.reactor = reactor
         self.service = service
         if isinstance(domain, unicode):
             domain = domain.encode('idna')
-        self.domain = domain
+        self.domain = nativeString(domain)
         self.factory = factory
 
         self.protocol = protocol
@@ -98,7 +99,7 @@ class SRVConnector:
             d = client.lookupService('_%s._%s.%s' %
                     (nativeString(self.service),
                      nativeString(self.protocol),
-                     nativeString(self.domain)))
+                     self.domain))
             d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
             if self._defaultPort:

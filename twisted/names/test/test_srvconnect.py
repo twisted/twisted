@@ -213,8 +213,7 @@ class SRVConnectorTests(unittest.TestCase):
         self.connector = srvconnect.SRVConnector(
             self.reactor, 'xmpp-client', u'\u00e9chec.example.org',
             self.factory)
-        self.assertIsInstance(self.connector.domain, bytes)
-        self.assertEqual(b'xn--chec-9oa.example.org', self.connector.domain)
+        self.assertEqual('xn--chec-9oa.example.org', self.connector.domain)
 
 
     def test_pickServerWeights(self):
