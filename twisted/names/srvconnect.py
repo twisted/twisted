@@ -161,7 +161,7 @@ class SRVConnector:
 
         At the beginning of a round, L{servers} is populated with
         L{orderedServers}, and the latter is made empty. L{servers}
-        is the list of candidates, and L{orderServers} is the list of servers
+        is the list of candidates, and L{orderedServers} is the list of servers
         that have already been tried.
 
         First, all records are ordered by priority and weight in ascending
