@@ -3,8 +3,6 @@
 
 from __future__ import absolute_import, division
 
-import sys
-
 from io import BytesIO
 from functools import partial
 
@@ -15,6 +13,11 @@ from twisted.python.compat import long, iterbytes, _bytesChr as chr, _PY3, _rang
 from twisted.internet import protocol, main
 from twisted.test.proto_helpers import StringTransport
 
+if _PY3:
+    _maxint = 9223372036854775807
+else:
+    from sys import maxint as _maxint
+
 
 class MathTests(unittest.TestCase):
     def test_int2b128(self):
@@ -24,7 +27,7 @@ class MathTests(unittest.TestCase):
             banana.int2b128(i, x.write)
             v = x.getvalue()
             y = banana.b1282int(v)
-            assert y == i, "y = %s; i = %s" % (y,i)
+            self.assertEqual(y, i)
 
 
 
@@ -105,9 +108,9 @@ class BananaTests(BananaTestBase):
     """
 
     def test_string(self):
-        self.enc.sendEncoded("hello")
+        self.enc.sendEncoded(b"hello")
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == 'hello'
+        assert self.result == b'hello'
 
 
     def test_unsupportedBuiltinType(self):
@@ -175,7 +178,7 @@ class BananaTests(BananaTestBase):
                 for n in (m, -m-1):
                     self.enc.dataReceived(self.encode(n))
                     self.assertEqual(self.result, n)
-                    if n > sys.maxint or n < -sys.maxint - 1:
+                    if n > _maxint or n < -_maxint - 1:
                         self.assertIsInstance(self.result, long)
                     else:
                         self.assertIsInstance(self.result, int)
@@ -271,7 +274,8 @@ class BananaTests(BananaTestBase):
 
 
     def test_list(self):
-        foo = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10], []]
+        foo = [1, 2, [3, 4], [30.5, 40.2], 5,
+               ["six", "seven", ["eight", 9]], [10], []]
         self.enc.sendEncoded(foo)
         self.enc.dataReceived(self.io.getvalue())
         self.assertEqual(self.result, foo)
@@ -285,7 +289,7 @@ class BananaTests(BananaTestBase):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5,
                ["six", "seven", ["eight", 9]], [10],
                # TODO: currently the C implementation's a bit buggy...
-               sys.maxint * long(3), sys.maxint * long(2), sys.maxint * long(-2)]
+               _maxint * long(3), _maxint * long(2), _maxint * long(-2)]
         self.enc.sendEncoded(foo)
         self.feed(self.io.getvalue())
         self.assertEqual(self.result, foo)

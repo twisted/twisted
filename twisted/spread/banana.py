@@ -61,16 +61,16 @@ def b1282int(st):
 # delimiter characters.
 LIST     = chr(0x80)
 INT      = chr(0x81)
-STRING   = chr(0x82)
+BYTES    = chr(0x82)
+STRING   = BYTES # (backwards compat)
 NEG      = chr(0x83)
 FLOAT    = chr(0x84)
+UNICODE  = chr(0x88) # UTF-8
 # "optional" -- these might be refused by a low-level implementation.
 LONGINT  = chr(0x85)
 LONGNEG  = chr(0x86)
 # really optional; this is part of the 'pb' vocabulary
 VOCAB    = chr(0x87)
-# more delimiter characters
-UNICODE  = chr(0x88)
 
 HIGH_BIT_SET = chr(0x80)
 
@@ -203,10 +203,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     raise BananaError("Security precaution: List too long.")
                 listStack.append((num, []))
                 buffer = rest
-            elif typebyte == STRING:
+            elif typebyte == BYTES:
                 num = b1282int(num)
                 if num > SIZE_LIMIT:
-                    raise BananaError("Security precaution: String too long.")
+                    raise BananaError(
+                        "Security precaution: Bytestring too long.")
                 if len(rest) >= num:
                     buffer = rest[num:]
                     gotItem(rest[:num])
@@ -363,7 +364,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         elif isinstance(obj, bytes):
 
             # TODO: an API for extending banana...
-            if self.currentDialect == "pb" and obj in self.outgoingSymbols:
+            if self.currentDialect == b"pb" and obj in self.outgoingSymbols:
                 symbolID = self.outgoingSymbols[obj]
                 int2b128(symbolID, write)
                 write(VOCAB)
@@ -372,18 +373,20 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     raise BananaError(
                         "string is too long to send (%d)" % (len(obj),))
                 int2b128(len(obj), write)
-                write(STRING)
+                write(BYTES)
                 write(obj)
         elif isinstance(obj, unicode):
-            if True:
-                obj = obj.encode('utf8')
+            obj = obj.encode('utf8')
 
-                if len(obj) > SIZE_LIMIT:
-                    raise BananaError(
-                        "string is too long to send (%d)" % (len(obj),))
-                int2b128(len(obj), write)
-                write(UNICODE)
-                write(obj)
+            if self.currentDialect == b"pb" and obj in self.outgoingSymbols:
+                raise ValueError("This should be bytes.")
+
+            if len(obj) > SIZE_LIMIT:
+                raise BananaError(
+                    "string is too long to send (%d)" % (len(obj),))
+            int2b128(len(obj), write)
+            write(UNICODE)
+            write(obj)
         else:
             raise BananaError("Banana cannot send {0} objects: {1!r}".format(
                 fullyQualifiedName(type(obj)), obj))
