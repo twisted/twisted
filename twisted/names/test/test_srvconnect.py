@@ -7,6 +7,8 @@ Test cases for L{twisted.names.srvconnect}.
 
 from __future__ import absolute_import, division
 
+import random
+
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
@@ -74,6 +76,13 @@ class SRVConnectorTests(unittest.TestCase):
         self.factory = DummyFactory()
         self.connector = srvconnect.SRVConnector(self.reactor, 'xmpp-server',
                                                  'example.org', self.factory)
+        self.randIntArgs = []
+        self.randIntResults = []
+
+
+    def _randint(self, min, max):
+        self.randIntArgs.append((min, max))
+        return self.randIntResults.pop(0)
 
 
     def test_interface(self):
@@ -187,7 +196,7 @@ class SRVConnectorTests(unittest.TestCase):
 
     def test_SRVLookupName(self):
         """
-        The lookup name is a byte string from service, protocol and domain.
+        The lookup name is a native string from service, protocol and domain.
         """
         client.theResolver.results = []
         self.connector.connect()
@@ -208,32 +217,70 @@ class SRVConnectorTests(unittest.TestCase):
         self.assertEqual(b'xn--chec-9oa.example.org', self.connector.domain)
 
 
+    def test_pickServerWeights(self):
+        """
+        pickServer calculates running sum of weights and calls randint.
+
+        This excercises the server selection algorithm specified in RFC 2782 by
+        preparing fake L{random.randint} results and checking the values it was
+        called with.
+        """
+        record1 = dns.Record_SRV(10, 10, 5222, 'host1.example.org')
+        record2 = dns.Record_SRV(10, 20, 5222, 'host2.example.org')
+
+        self.connector.orderedServers = [record1, record2]
+        self.connector.servers = []
+        self.patch(random, 'randint', self._randint)
+
+        # 1st round
+        self.randIntResults = [11, 0]
+
+        self.connector.pickServer()
+        self.assertEquals(self.randIntArgs[0], (0, 30))
+
+        self.connector.pickServer()
+        self.assertEquals(self.randIntArgs[1], (0, 10))
+
+        # 2nd round
+        self.randIntResults = [10, 0]
+
+        self.connector.pickServer()
+        self.assertEquals(self.randIntArgs[2], (0, 30))
+
+        self.connector.pickServer()
+        self.assertEquals(self.randIntArgs[3], (0, 20))
+
+
     def test_pickServerSamePriorities(self):
         """
-        Two records with equal priorities compare on weight.
+        Two records with equal priorities compare on weight (ascending).
         """
         record1 = dns.Record_SRV(10, 10, 5222, 'host1.example.org')
         record2 = dns.Record_SRV(10, 20, 5222, 'host2.example.org')
 
         self.connector.orderedServers = [record2, record1]
         self.connector.servers = []
-
-        self.assertEqual(('host2.example.org', 5222),
-                         self.connector.pickServer())
+        self.patch(random, 'randint', self._randint)
+        self.randIntResults = [0, 0]
 
         self.assertEqual(('host1.example.org', 5222),
+                         self.connector.pickServer())
+
+        self.assertEqual(('host2.example.org', 5222),
                          self.connector.pickServer())
 
 
     def test_srvDifferentPriorities(self):
         """
-        Two records with differing priorities compare on priority.
+        Two records with differing priorities compare on priority (ascending).
         """
         record1 = dns.Record_SRV(10, 0, 5222, 'host1.example.org')
         record2 = dns.Record_SRV(20, 0, 5222, 'host2.example.org')
 
         self.connector.orderedServers = [record2, record1]
         self.connector.servers = []
+        self.patch(random, 'randint', self._randint)
+        self.randIntResults = [0, 0]
 
         self.assertEqual(('host1.example.org', 5222),
                          self.connector.pickServer())

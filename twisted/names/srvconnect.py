@@ -4,14 +4,14 @@
 
 from __future__ import absolute_import, division
 
-from functools import reduce
+import random
 
 from zope.interface import implementer
 
 from twisted.internet import error, interfaces
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import nativeString, unicode, xrange
+from twisted.python.compat import nativeString, unicode
 
 
 class _SRVConnector_ClientFactoryWrapper:
@@ -35,7 +35,21 @@ class _SRVConnector_ClientFactoryWrapper:
 
 @implementer(interfaces.IConnector)
 class SRVConnector:
-    """A connector that looks up DNS SRV records. See RFC2782."""
+    """
+    A connector that looks up DNS SRV records.
+
+    RFC 2782 details how SRV records should be interpreted and selected
+    for subsequent connection attempts. The algorithm for using the records'
+    priority and weight is implemented in L{pickServer}.
+
+    @ivar servers: List of candidate server records for future connection
+        attempts.
+    @type servers: L{list} of L{dns.Record_SRV}
+
+    @ivar orderedServers: List of server records that have already been tried
+        in this round of connection attempts.
+    @type orderedServers: L{list} of L{dns.Record_SRV}
+    """
 
     stopAfterDNS=0
 
@@ -137,6 +151,25 @@ class SRVConnector:
         self.connect()
 
     def pickServer(self):
+        """
+        Pick the next server.
+
+        This selects the next server from the list of SRV records according
+        to their priority and weight values, as set out by the default
+        algorithm specified in RFC 2782.
+
+        At the beginning of a round, L{servers} is populated with
+        L{orderedServers}, and the latter is made empty. L{servers}
+        is the list of candidates, and L{orderServers} is the list of servers
+        that have already been tried.
+
+        First, all records are ordered by priority and weight in ascending
+        order. Then for each priority level, a running sum is calculated
+        over the sorted list of records for that priority. Then a random value
+        between 0 and the final sum is compared to each record in order. The
+        first record that is greater than or equal to that random value is
+        chosen and removed from the list of candidates for this round.
+        """
         assert self.servers is not None
         assert self.orderedServers is not None
 
@@ -154,16 +187,18 @@ class SRVConnector:
         self.servers.sort(key=lambda record: (record.priority, record.weight))
         minPriority = self.servers[0].priority
 
-        weightIndex = list(zip(xrange(len(self.servers)),
-                               [x.weight for x in self.servers
-                                         if x.priority == minPriority]))
-        weightSum = reduce(lambda x, y: (None, x[1] + y[1]),
-                           weightIndex,
-                           (None, 0))[1]
+        index = 0
+        weightSum = 0
+        weightIndex = []
+        for x in self.servers:
+            if x.priority == minPriority:
+                weightSum += x.weight
+                weightIndex.append((index, weightSum))
+                index += 1
 
+        rand = random.randint(0, weightSum)
         for index, weight in weightIndex:
-            weightSum -= weight
-            if weightSum <= 0:
+            if weight >= rand:
                 chosen = self.servers[index]
                 del self.servers[index]
                 self.orderedServers.append(chosen)
@@ -213,4 +248,3 @@ class SRVConnector:
     def connectionLost(self, reason):
         self.factory.clientConnectionLost(self, reason)
         self.factory.doStop()
-
