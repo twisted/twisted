@@ -81,6 +81,12 @@ class SRVConnectorTests(unittest.TestCase):
 
 
     def _randint(self, min, max):
+        """
+        Fake randint.
+
+        Returns the first element of L{randIntResults} and records the
+        arguments passed to it in L{randIntArgs}.
+        """
         self.randIntArgs.append((min, max))
         return self.randIntResults.pop(0)
 
