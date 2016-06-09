@@ -24,9 +24,10 @@ FILTERS='/var/lib/courier/filters'
 ALLFILTERS='/var/lib/courier/allfilters'
 FILTERNAME='twistedfilter'
 
+import email.parser
+import email.message
 import os, os.path
 from syslog import syslog, openlog, LOG_MAIL
-from rfc822 import Message
 
 def trace_dump():
     t,v,tb = sys.exc_info()
@@ -92,7 +93,8 @@ class MailProcessor(basic.LineReceiver):
         A trivial example is included.
         """
         try:
-            m = Message(open(self.messageFilename))
+            emailParser = email.parser.Parser()
+            m = emailParser.parse(open(self.messageFilename))
             self.sendLine('200 Ok')
         except:
             trace_dump()
