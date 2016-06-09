@@ -86,6 +86,15 @@ class SRVConnectorTests(unittest.TestCase):
 
         Returns the first element of L{randIntResults} and records the
         arguments passed to it in L{randIntArgs}.
+
+        @param min: Lower bound of the random number.
+        @type min: L{int}
+
+        @param max: Higher bound of the random number.
+        @type max: L{int}
+
+        @return: Fake random number from L{randIntResults}.
+        @rtype: L{int}
         """
         self.randIntArgs.append((min, max))
         return self.randIntResults.pop(0)
