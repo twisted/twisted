@@ -375,7 +375,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(STRING)
                 write(obj)
         elif isinstance(obj, unicode):
-
             if True:
                 obj = obj.encode('utf8')
 

@@ -11,14 +11,14 @@ from functools import partial
 from twisted.trial import unittest
 from twisted.spread import banana
 from twisted.python import failure
-from twisted.python.compat import long, iterbytes, _bytesChr as chr
+from twisted.python.compat import long, iterbytes, _bytesChr as chr, _PY3, _range
 from twisted.internet import protocol, main
 from twisted.test.proto_helpers import StringTransport
 
 
 class MathTests(unittest.TestCase):
     def test_int2b128(self):
-        funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **long(10)]
+        funkylist = _range(0,100) + _range(1000,1100) + _range(1000000,1000100) + [1024 **long(10)]
         for i in funkylist:
             x = BytesIO()
             banana.int2b128(i, x.write)
@@ -110,14 +110,6 @@ class BananaTests(BananaTestBase):
         assert self.result == 'hello'
 
 
-    def test_unsupportedUnicode(self):
-        """
-        Banana does not support unicode.  ``Banana.sendEncoded`` raises
-        ``BananaError`` if called with an instance of ``unicode``.
-        """
-        self._unsupportedTypeTest(u"hello", "__builtin__.unicode")
-
-
     def test_unsupportedBuiltinType(self):
         """
         Banana does not support arbitrary builtin types like L{type}.
@@ -125,7 +117,10 @@ class BananaTests(BananaTestBase):
         with an instance of L{type}.
         """
         # type is an instance of type
-        self._unsupportedTypeTest(type, "__builtin__.type")
+        if _PY3:
+            self._unsupportedTypeTest(type, "builtins.type")
+        else:
+            self._unsupportedTypeTest(type, "__builtin__.type")
 
 
     def test_unsupportedUserType(self):
