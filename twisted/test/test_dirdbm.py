@@ -51,7 +51,7 @@ class DirDbmTests(unittest.TestCase):
 
         # check they exist
         for k, v in self.items:
-            assert d.has_key(k), "has_key() failed"
+            assert k in d, "key not in database"
             assert d[k] == v, "database has wrong value"
 
         # check non existent key
@@ -91,7 +91,7 @@ class DirDbmTests(unittest.TestCase):
         # delete items
         for k, v in self.items:
             del d[k]
-            assert not d.has_key(k), "has_key() even though we deleted it"
+            assert k not in d, "key is still in database, even though we deleted it"
         assert len(d.keys()) == 0, "database has keys"
         assert len(d.values()) == 0, "database has values"
         assert len(d.items()) == 0, "database has items"
