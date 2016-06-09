@@ -74,7 +74,7 @@ later.
     from twisted.cred.portal import IRealm
     from twisted.web.static import File
     
-    implementer(IRealm)
+    @implementer(IRealm)
     class PublicHTMLRealm(object):
 
 
