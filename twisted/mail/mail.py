@@ -52,6 +52,7 @@ class DomainWithDefaultDict:
         """
         self.default = domain
 
+
     def has_key(self, name):
         """
         Test for the presence of a domain name in this dictionary.
