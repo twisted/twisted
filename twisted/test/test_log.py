@@ -256,18 +256,18 @@ class LogTests(unittest.SynchronousTestCase):
             output.getvalue(),
             warnings.formatwarning(message, category, filename, lineno))
 
-        # In Python 2.6 and higher, warnings.showwarning accepts
-        # a "line" argument which gives the source line the warning
-        # message is to include.
-        line = "hello world"
-        output = StringIO()
-        log.showwarning(message, category, filename, lineno, file=output,
-                        line=line)
+        # In Python 2.6, warnings.showwarning accepts a "line" argument which
+        # gives the source line the warning message is to include.
+        if sys.version_info >= (2, 6):
+            line = "hello world"
+            output = StringIO()
+            log.showwarning(message, category, filename, lineno, file=output,
+                            line=line)
 
-        self.assertEqual(
-            output.getvalue(),
-            warnings.formatwarning(message, category, filename, lineno,
-                                   line))
+            self.assertEqual(
+                output.getvalue(),
+                warnings.formatwarning(message, category, filename, lineno,
+                                       line))
 
 
     def test_publisherReportsBrokenObserversPrivately(self):

@@ -24,8 +24,16 @@ from twisted.trial import itrial, util
 
 import unittest as pyunit
 
-# Python 2.7 and higher has skip support built-in
-SkipTest = pyunit.SkipTest
+# Python > 2.6 has skip support built-in:
+if getattr(pyunit, "SkipTest", None):
+    SkipTest = pyunit.SkipTest
+else:
+    class SkipTest(Exception):
+        """
+        Raise this (with a reason) to skip the current test. You may also set
+        method.skip to a reason string to skip it, or set class.skip to skip the
+        entire TestCase.
+        """
 
 
 
@@ -231,7 +239,11 @@ class PyUnitResultAdapter(object):
         """
         Report the skip as a failure.
         """
-        self.original.addSkip(test, reason)
+        # pyunit in Python 2.6 doesn't support skipping information:
+        if sys.version_info[:2] > (2, 6):
+            self.original.addSkip(test, reason)
+        else:
+            self._unsupported(test, 'skip', reason)
 
 
     def addUnexpectedSuccess(self, test, todo=None):

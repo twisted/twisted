@@ -146,10 +146,13 @@ class FlatFormattingTests(unittest.TestCase):
         try:
             self.assertEqual(keyFromFormat("{}"), "!:")
         except ValueError:
-            # In python 2.6, an empty field name causes Formatter.parse to
-            # raise ValueError.
-            # In Python 2.7, it's allowed, so this exception is unexpected.
-            raise
+            if sys.version_info[:2] == (2, 6):
+                # In python 2.6, an empty field name causes Formatter.parse to
+                # raise ValueError.
+                pass
+            else:
+                # In Python 2.7, it's allowed, so this exception is unexpected.
+                raise
 
         # Just a name
         self.assertEqual(keyFromFormat("{foo}"), "foo!:")
