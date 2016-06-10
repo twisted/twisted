@@ -12,7 +12,6 @@ from __future__ import absolute_import, division
 from functools import partial
 from operator import attrgetter
 from zope.interface import implementer
-
 from constantly import Names, NamedConstant
 
 from twisted.python.util import FancyEqMixin

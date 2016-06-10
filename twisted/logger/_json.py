@@ -7,9 +7,10 @@ Tools for saving and loading log events in a structured format.
 """
 
 import types
+
+from constantly import NamedConstant
 from json import dumps, loads
 from uuid import UUID
-from constantly import NamedConstant
 
 from ._flatten import flattenEvent
 from ._file import FileLogObserver

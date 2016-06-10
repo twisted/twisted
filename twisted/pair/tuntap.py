@@ -13,11 +13,10 @@ import fcntl
 import errno
 import struct
 import warnings
+
 from collections import namedtuple
-
-from zope.interface import Attribute, Interface, implementer
-
 from constantly import Flags, FlagConstant
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.python.versions import Version

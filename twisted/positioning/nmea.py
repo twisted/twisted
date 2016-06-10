@@ -23,8 +23,8 @@ from __future__ import absolute_import, division
 
 import operator
 import datetime
-from zope.interface import implementer
 
+from zope.interface import implementer
 from constantly import Values, ValueConstant
 
 from twisted.positioning import base, ipositioning, _sentence
