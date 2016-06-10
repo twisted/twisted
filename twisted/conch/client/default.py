@@ -11,6 +11,8 @@ you are sitting at an interactive terminal.  For example, to programmatically
 interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 """
 
+from __future__ import print_function
+
 from twisted.python import log
 from twisted.python.filepath import FilePath
 
@@ -90,7 +92,7 @@ def isInKnownHosts(host, pubKey, options):
     retVal = 0
 
     if not options['known-hosts'] and not os.path.exists(os.path.expanduser('~/.ssh/')):
-        print 'Creating ~/.ssh directory...'
+        print('Creating ~/.ssh directory...')
         os.mkdir(os.path.expanduser('~/.ssh'))
     kh_file = options['known-hosts'] or _KNOWN_HOSTS
     try:
@@ -160,7 +162,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             sys.stdout,sys.stdin=oldout,oldin
             return p
         except (KeyboardInterrupt, IOError):
-            print
+            print()
             raise ConchError('PEBKAC')
 
     def getPassword(self, prompt = None):
@@ -237,7 +239,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                 return defer.fail(ConchError('bad password'))
             raise
         except KeyboardInterrupt:
-            print
+            print()
             reactor.stop()
 
 
@@ -247,9 +249,9 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             oldout, oldin = sys.stdout, sys.stdin
             sys.stdin = sys.stdout = open('/dev/tty','r+')
             if name:
-                print name
+                print(name)
             if instruction:
-                print instruction
+                print(instruction)
             for prompt, echo in prompts:
                 if echo:
                     responses.append(raw_input(prompt))

@@ -72,7 +72,7 @@ testData = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
 bench.runTests(testData)
 testData = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
 bench.runTests(testData)
-testData = [1l, 2l, 3l, 4l, 5l, 6l, 7l, 8l, 9l, 10l]
+testData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 bench.runTests(testData)
 testData = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10], []]
 bench.runTests(testData)

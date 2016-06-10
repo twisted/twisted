@@ -246,7 +246,7 @@ class PySourceAuthority(FileAuthority):
     def loadFile(self, filename):
         g, l = self.setupConfigNamespace(), {}
         execfile(filename, g, l)
-        if not l.has_key('zone'):
+        if 'zone' not in l:
             raise ValueError("No zone defined in " + filename)
 
         self.records = {}
