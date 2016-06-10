@@ -1247,7 +1247,7 @@ class SynchronousTestCase(_Assertions):
         Return the reason to use for skipping a test method.
 
         @param method: The method which produced the skip.
-        @param skip: A L{SkipTest} instance raised by C{method}.
+        @param skip: A L{unittest.SkipTest} instance raised by C{method}.
         """
         if len(skip.args) > 0:
             return skip.args[0]

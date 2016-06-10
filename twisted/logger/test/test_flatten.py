@@ -5,7 +5,6 @@
 Test cases for L{twisted.logger._format}.
 """
 
-import sys
 from itertools import count
 import json
 
