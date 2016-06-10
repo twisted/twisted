@@ -1115,12 +1115,12 @@ class DigestAuthorizer:
 
 
     def generateNonce(self):
-        c = tuple([random.randrange(sys.maxint) for _ in range(3)])
+        c = tuple([random.randrange(sys.maxsize) for _ in range(3)])
         c = '%d%d%d' % c
         return c
 
     def generateOpaque(self):
-        return str(random.randrange(sys.maxint))
+        return str(random.randrange(sys.maxsize))
 
     def getChallenge(self, peer):
         c = self.generateNonce()
