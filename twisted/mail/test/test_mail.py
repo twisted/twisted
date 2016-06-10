@@ -1587,7 +1587,7 @@ class LiveFireExerciseTests(unittest.TestCase):
         def finished(ign):
             mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
             msg = mbox.getMessage(0).read()
-            self.failIfEqual(msg.find('This is the message'), -1)
+            self.assertNotEqual(msg.find('This is the message'), -1)
 
             return self.smtpServer.stopListening()
         done.addCallback(finished)
@@ -1656,7 +1656,7 @@ class LiveFireExerciseTests(unittest.TestCase):
             def delivered(ign):
                 mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
                 msg = mbox.getMessage(0).read()
-                self.failIfEqual(msg.find('This is the message'), -1)
+                self.assertNotEqual(msg.find('This is the message'), -1)
 
                 self.insServer.stopListening()
                 self.destServer.stopListening()
@@ -1732,20 +1732,20 @@ class AliasTests(unittest.TestCase):
         group = result['testuser']
         s = str(group)
         for a in ('address1', 'address2', 'address3', 'continuation@address', '/bin/process/this'):
-            self.failIfEqual(s.find(a), -1)
+            self.assertNotEqual(s.find(a), -1)
         self.assertEqual(len(group), 5)
 
         group = result['usertwo']
         s = str(group)
         for a in ('thisaddress', 'thataddress', 'lastaddress'):
-            self.failIfEqual(s.find(a), -1)
+            self.assertNotEqual(s.find(a), -1)
         self.assertEqual(len(group), 3)
 
         group = result['lastuser']
         s = str(group)
         self.assertEqual(s.find('/includable'), -1)
         for a in ('/filename', 'program', 'address'):
-            self.failIfEqual(s.find(a), -1, '%s not found' % a)
+            self.assertNotEqual(s.find(a), -1, '%s not found' % a)
         self.assertEqual(len(group), 3)
 
     def testMultiWrapper(self):
