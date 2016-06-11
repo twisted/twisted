@@ -3,6 +3,7 @@
 # See LICENSE for details.
 
 
+from __future__ import print_function
 
 import sys
 from zope.interface import implements, Interface
@@ -30,7 +31,7 @@ class AnonymousUser:
         return [1, 2, 3]
 
     def logout(self):
-        print "Cleaning up anonymous user resources"
+        print("Cleaning up anonymous user resources")
 
 class RegularUser:
     implements(IProtocolUser)
@@ -39,7 +40,7 @@ class RegularUser:
         return [1, 2, 3, 5, 6]
 
     def logout(self):
-        print "Cleaning up regular user resources"
+        print("Cleaning up regular user resources")
 
 class Administrator:
     implements(IProtocolUser)
@@ -48,7 +49,7 @@ class Administrator:
         return range(50)
 
     def logout(self):
-        print "Cleaning up administrator resources"
+        print("Cleaning up administrator resources")
 
 class Protocol(basic.LineReceiver):
     user = None

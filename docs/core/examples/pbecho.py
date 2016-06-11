@@ -1,5 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import print_function
 
 if __name__ == '__main__':
     # Avoid using any names defined in the "__main__" module.
@@ -18,14 +19,14 @@ class DefinedError(pb.Error):
 class SimplePerspective(pb.Avatar):
 
     def perspective_echo(self, text):
-        print 'echoing',text
+        print('echoing',text)
         return text
 
     def perspective_error(self):
         raise DefinedError("exception!")
 
     def logout(self):
-        print self, "logged out"
+        print(self, "logged out")
 
 
 class SimpleRealm:
