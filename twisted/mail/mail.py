@@ -6,6 +6,7 @@
 """
 Mail service support.
 """
+import warnings
 
 # Twisted imports
 from twisted.internet import defer
@@ -66,6 +67,12 @@ class DomainWithDefaultDict:
         @return: C{True} to indicate that the domain name is in this
             dictionary.
         """
+        warnings.warn(
+            'twisted.mail.mail.DomainWithDefaultDict.has_key was deprecated '
+            'in Twisted 16.3.0. '
+            'Use the `in` keyword instead.',
+            category=DeprecationWarning,
+            stacklevel=2)
         return 1
 
 

@@ -85,7 +85,6 @@ class DomainWithDefaultsTests(unittest.TestCase):
             self.assertEqual(d[x], x + 10)
             self.assertEqual(d.get(x), x + 10)
             self.assertTrue(x in d)
-            self.assertTrue(d.has_key(x))
 
         del d[2], d[4], d[6]
 
@@ -144,6 +143,25 @@ class DomainWithDefaultsTests(unittest.TestCase):
         the class name and the domain mapping held by the instance.
         """
         self._stringificationTest(repr)
+
+
+    def test_has_keyDeprecation(self):
+        """
+        has_key is now deprecated.
+        """
+        sut = mail.mail.DomainWithDefaultDict({}, 'Default')
+
+        sut.has_key('anything')
+
+        message = (
+            'twisted.mail.mail.DomainWithDefaultDict.has_key was deprecated '
+            'in Twisted 16.3.0. Use the `in` keyword instead.'
+            )
+        warnings = self.flushWarnings(
+            [self.test_has_keyDeprecation])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
 
 
 
