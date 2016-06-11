@@ -1,0 +1,2 @@
+twisted.web.client.Agent and twisted.web.client.ProxyAgent now add brackets
+to IPv6 literal addresses in the host header they send.

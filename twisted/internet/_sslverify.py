@@ -1169,7 +1169,7 @@ class ClientTLSOptions(object):
     L{optionsForClientTLS} API.
 
     @ivar _ctx: The context to use for new connections.
-    @type _ctx: L{SSL.Context}
+    @type _ctx: L{OpenSSL.SSL.Context}
 
     @ivar _hostname: The hostname to verify, as specified by the application,
         as some human-readable text.
@@ -1196,8 +1196,8 @@ class ClientTLSOptions(object):
         @param hostname: The hostname to verify as input by a human.
         @type hostname: L{unicode}
 
-        @param ctx: an L{SSL.Context} to use for new connections.
-        @type ctx: L{SSL.Context}.
+        @param ctx: an L{OpenSSL.SSL.Context} to use for new connections.
+        @type ctx: L{OpenSSL.SSL.Context}.
         """
         self._ctx = ctx
         self._hostname = hostname

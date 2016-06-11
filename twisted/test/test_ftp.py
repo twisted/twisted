@@ -881,7 +881,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         return self._listTestHelper(
             "LIST",
             (u'my resum\xe9', (
-                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
+                0, 1, filepath.Permissions(0o777), 0, 0, 'user', 'group')),
             'drwxrwxrwx   0 user      group                   '
             '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
@@ -894,7 +894,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         return self._listTestHelper(
             "LIST",
             ('my resum\xc3\xa9', (
-                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
+                0, 1, filepath.Permissions(0o777), 0, 0, 'user', 'group')),
             'drwxrwxrwx   0 user      group                   '
             '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
@@ -991,7 +991,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         return self._listTestHelper(
             "NLST",
             (u'my resum\xe9', (
-                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
+                0, 1, filepath.Permissions(0o777), 0, 0, 'user', 'group')),
             'my resum\xc3\xa9\r\n')
 
 
@@ -1002,7 +1002,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         return self._listTestHelper(
             "NLST",
             ('my resum\xc3\xa9', (
-                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
+                0, 1, filepath.Permissions(0o777), 0, 0, 'user', 'group')),
             'my resum\xc3\xa9\r\n')
 
 

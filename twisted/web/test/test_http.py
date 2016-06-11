@@ -369,6 +369,92 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
 
 
 
+class ShutdownTests(unittest.TestCase):
+    """
+    Tests that connections can be shut down by L{http.Request} objects.
+    """
+    class ShutdownHTTPHandler(http.Request):
+        """
+        A HTTP handler that just immediately calls loseConnection.
+        """
+        def process(self):
+            self.loseConnection()
+
+
+    request = (
+        b"POST / HTTP/1.1\r\n"
+        b"Content-Length: 10\r\n"
+        b"\r\n"
+        b"0123456789"
+    )
+
+
+    def test_losingConnection(self):
+        """
+        Calling L{http.Request.loseConnection} causes the transport to be
+        disconnected.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = self.ShutdownHTTPHandler
+        a.makeConnection(b)
+        a.dataReceived(self.request)
+
+        # The transport should have been shut down.
+        self.assertTrue(b.disconnecting)
+
+        # No response should have been written.
+        value = b.value()
+        self.assertEqual(value, b'')
+
+
+
+class SecurityTests(unittest.TestCase):
+    """
+    Tests that L{http.Request.isSecure} correctly takes the transport into
+    account.
+    """
+    def test_isSecure(self):
+        """
+        Calling L{http.Request.isSecure} when the channel is backed with a
+        secure transport will return L{True}.
+        """
+        b = DummyChannel.SSL()
+        a = http.HTTPChannel()
+        a.makeConnection(b)
+        req = http.Request(a)
+        self.assertTrue(req.isSecure())
+
+
+    def test_notSecure(self):
+        """
+        Calling L{http.Request.isSecure} when the channel is not backed with a
+        secure transport will return L{False}.
+        """
+        b = DummyChannel.TCP()
+        a = http.HTTPChannel()
+        a.makeConnection(b)
+        req = http.Request(a)
+        self.assertFalse(req.isSecure())
+
+
+    def test_notSecureAfterFinish(self):
+        """
+        After a request is finished, calling L{http.Request.isSecure} will
+        always return L{False}.
+        """
+        b = DummyChannel.SSL()
+        a = http.HTTPChannel()
+        a.makeConnection(b)
+        req = http.Request(a)
+        a.requests.append(req)
+
+        req.setResponseCode(200)
+        req.finish()
+        self.assertFalse(req.isSecure())
+
+
+
 class GenericHTTPChannelTests(unittest.TestCase):
     """
     Tests for L{http._genericHTTPChannelProtocol}, a L{HTTPChannel}-alike which
@@ -860,7 +946,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
 
 
 
-class ChunkingTests(unittest.TestCase):
+class ChunkingTests(unittest.TestCase, ResponseTestMixin):
 
     strings = [b"abcv", b"", b"fdfsd423", b"Ffasfas\r\n",
                b"523523\n\rfsdf", b"4234"]
@@ -883,6 +969,29 @@ class ChunkingTests(unittest.TestCase):
             except ValueError:
                 pass
         self.assertEqual(result, self.strings)
+
+    def test_chunkedResponses(self):
+        """
+        Test that the L{HTTPChannel} correctly chunks responses when needed.
+        """
+        channel = http.HTTPChannel()
+        req = http.Request(channel, False)
+        trans = StringTransport()
+
+        channel.transport = trans
+
+        req.setResponseCode(200)
+        req.clientproto = b"HTTP/1.1"
+        req.responseHeaders.setRawHeaders(b"test", [b"lemur"])
+        req.write(b'Hello')
+        req.write(b'World!')
+
+        self.assertResponseEquals(
+            trans.value(),
+            [(b"HTTP/1.1 200 OK",
+              b"Test: lemur",
+              b"Transfer-Encoding: chunked",
+              b"5\r\nHello\r\n6\r\nWorld!\r\n")])
 
 
 
@@ -1915,10 +2024,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
         Response-Line and whatever response headers are set.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
+        req = http.Request(channel, False)
         trans = StringTransport()
 
-        req.transport = trans
+        channel.transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
@@ -1937,10 +2047,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} casts non-bytes header value to bytes
         transparently.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
+        req = http.Request(channel, False)
         trans = StringTransport()
 
-        req.transport = trans
+        channel.transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
@@ -1969,10 +2080,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         Response-Line, whatever response headers are set, and uses chunked
         encoding for the response body.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
+        req = http.Request(channel, False)
         trans = StringTransport()
 
-        req.transport = trans
+        channel.transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.1"
@@ -1994,10 +2106,11 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} sends an HTTP Response-Line, whatever response
         headers are set, and a last-modified header with that time.
         """
-        req = http.Request(DummyChannel(), False)
+        channel = DummyChannel()
+        req = http.Request(channel, False)
         trans = StringTransport()
 
-        req.transport = trans
+        channel.transport = trans
 
         req.setResponseCode(200)
         req.clientproto = b"HTTP/1.0"
