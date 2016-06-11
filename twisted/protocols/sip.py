@@ -1,31 +1,25 @@
 # -*- test-case-name: twisted.test.test_sip -*-
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Session Initialization Protocol.
+"""
+Session Initialization Protocol.
 
 Documented in RFC 2543.
 [Superseded by 3261]
 """
 
-# system imports
-import socket, time, sys, random, warnings
-from hashlib import md5
+import socket
+import time
+import warnings
+
 from zope.interface import implements, Interface
 from collections import OrderedDict
 
-# twisted imports
-from twisted.python import log
-from twisted.internet import protocol, defer, reactor
-
 from twisted import cred
-from twisted.cred.credentials import UsernameHashedPassword, UsernamePassword
-
-
-# sibling imports
+from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
+from twisted.python import log
 
 PORT = 5060
 

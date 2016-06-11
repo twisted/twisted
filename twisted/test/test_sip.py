@@ -2,17 +2,14 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Session Initialization Protocol tests."""
-
-from twisted.trial import unittest, util
-from twisted.protocols import sip
-from twisted.internet import defer, reactor, utils
-from twisted.python.versions import Version
-
-from twisted.test import proto_helpers
+"""
+Session Initialization Protocol tests.
+"""
 
 from twisted.cred import portal, checkers
+from twisted.internet import defer, reactor
+from twisted.protocols import sip
+from twisted.trial import unittest
 
 from zope.interface import implements
 
