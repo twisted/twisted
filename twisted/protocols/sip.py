@@ -711,8 +711,9 @@ class Base(protocol.DatagramProtocol):
                 self.handle_response(m, addr)
         self.messages[:] = []
 
-    def _fixupNAT(self, message, (srcHost, srcPort)):
+    def _fixupNAT(self, message, sourcePeer):
         # RFC 2543 6.40.2,
+        (srcHost, srcPort) = sourcePeer
         senderVia = parseViaHeader(message.headers["via"][0])
         if senderVia.host != srcHost:
             senderVia.received = srcHost
@@ -854,7 +855,7 @@ class Proxy(Base):
                     self.deliverResponse(self.responseFromRequest(e.code, message))
                 )
 
-    def handle_request_default(self, message, (srcHost, srcPort)):
+    def handle_request_default(self, message, sourcePeer):
         """Default request handler.
 
         Default behaviour for OPTIONS and unknown methods for proxies
@@ -863,6 +864,7 @@ class Proxy(Base):
         Since at the moment we are stateless proxy, that's basically
         everything.
         """
+        (srcHost, srcPort) = sourcePeer
         def _mungContactHeader(uri, message):
             message.headers['contact'][0] = uri.toString()
             return self.sendMessage(uri, message)
@@ -960,19 +962,21 @@ class RegisterProxy(Proxy):
         Proxy.__init__(self, *args, **kw)
         self.liveChallenges = {}
 
-    def handle_ACK_request(self, message, (host, port)):
+    def handle_ACK_request(self, message, host_port):
         # XXX
         # ACKs are a client's way of indicating they got the last message
         # Responding to them is not a good idea.
         # However, we should keep track of terminal messages and re-transmit
         # if no ACK is received.
+        (host, port) = host_port
         pass
 
-    def handle_REGISTER_request(self, message, (host, port)):
+    def handle_REGISTER_request(self, message, host_port):
         """Handle a registration request.
 
         Currently registration is not proxied.
         """
+        (host, port) = host_port
         if self.portal is None:
             # There is no portal.  Let anyone in.
             self.register(message, host, port)
@@ -1016,8 +1020,9 @@ class RegisterProxy(Proxy):
         else:
             self.deliverResponse(self.responseFromRequest(501, message))
 
-    def _cbLogin(self, (i, a, l), message, host, port):
+    def _cbLogin(self, i_a_l, message, host, port):
         # It's stateless, matey.  What a joke.
+        (i, a, l) = i_a_l
         self.register(message, host, port)
 
     def _ebLogin(self, failure, message, host, port):
