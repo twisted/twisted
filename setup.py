@@ -31,7 +31,10 @@ def main(args):
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
-    requirements = ["zope.interface >= 3.6.0"]
+    if sys.version_info[0] >= 3:
+        requirements = ["zope.interface >= 4.0.2"]
+    else:
+        requirements = ["zope.interface >= 3.6.0"]
 
     from twisted.python.dist import (
         STATIC_PACKAGE_METADATA, getExtensions, getScripts,
