@@ -527,10 +527,6 @@ class ProxyTests(unittest.TestCase):
         self.assertEqual(m.code, 404)
         self.assertEqual(m.headers["via"], ["SIP/2.0/UDP 1.2.3.4:5060"])
 
-    def testCantForwardResponse(self):
-        pass
-
-    #testCantForwardResponse.skip = "not implemented yet"
 
 
 class RegistrationTests(unittest.TestCase):
