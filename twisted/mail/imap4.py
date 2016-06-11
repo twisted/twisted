@@ -2923,6 +2923,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         See RFC 3501, section 6.3.1.
         """
         (lines, tagline) = result
+        # In the absence of specification, we are free to assume:
+        #   READ-WRITE access
         datum = {'READ-WRITE': rw}
         lines.append(parseNestedParens(tagline))
         for split in lines:
