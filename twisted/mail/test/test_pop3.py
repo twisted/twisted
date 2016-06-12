@@ -193,8 +193,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         parts = line.split()
         code = parts[0]
         if code != '+OK':
-            print(parts)
-            raise AssertionError('code is ' + code)
+            raise AssertionError('code is: %s , parts is: %s ' % (code, parts))
         self.lines = []
         self.retr(1)
 
