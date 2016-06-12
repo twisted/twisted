@@ -1022,7 +1022,7 @@ class HTTP2ServerTests(unittest.TestCase):
                 isinstance(frames[1], hyperframe.frame.HeadersFrame)
             )
             self.assertEqual(
-                frames[1].data, [(':status', '100')]
+                frames[1].data, [(b':status', b'100')]
             )
             self.assertTrue('END_STREAM' in frames[-1].flags)
 
