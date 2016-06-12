@@ -21,12 +21,12 @@ def deepFailure%d_%d():
     %s
     deepFailure%d_%d()
 """ % (nLocals, i, makeLocals(nLocals), nLocals, i + 1)
-    exec s
+    exec(s)
 
-    exec """
+    exec("""
 def deepFailure%d_%d():
     1 / 0
-""" % (nLocals, DEPTH)
+""" % (nLocals, DEPTH))
 
 R = range(5000)
 def fail(n):

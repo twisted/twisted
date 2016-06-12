@@ -17,7 +17,7 @@ __all__ = [
 
 import sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.posixbase import PosixReactorBase, _Waker
@@ -72,6 +72,7 @@ class _WakerPlus(_Waker):
 
 
 
+@implementer(IReactorFDSet)
 class CFReactor(PosixReactorBase):
     """
     The CoreFoundation reactor.
@@ -109,9 +110,6 @@ class CFReactor(PosixReactorBase):
         run loop to run Twisted callLater calls, this is a reference to it.
         Otherwise, it is C{None}
     """
-
-    implements(IReactorFDSet)
-
     def __init__(self, runLoop=None, runner=None):
         self._fdmap = {}
         self._idmap = {}

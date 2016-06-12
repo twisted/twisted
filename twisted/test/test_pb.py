@@ -1190,7 +1190,8 @@ class NewCredLeakTests(unittest.TestCase):
         connectionBroken = []
         root = clientBroker.remoteForName("root")
         d = root.callRemote("login", 'guest')
-        def cbResponse((challenge, challenger)):
+        def cbResponse(result):
+            (challenge, challenger) = result
             mind = SimpleRemote()
             return challenger.callRemote("respond",
                     pb.respond(challenge, 'guest'), mind)
@@ -1462,12 +1463,14 @@ class NewCredTests(unittest.TestCase):
         secondLogin = factory.login(
             credentials.UsernamePassword('baz', 'quux'), "BRAINS!")
         d = gatherResults([firstLogin, secondLogin])
-        def cbLoggedIn((first, second)):
+        def cbLoggedIn(result):
+            (first, second) = result
             return gatherResults([
                     first.callRemote('getAvatarId'),
                     second.callRemote('getAvatarId')])
         d.addCallback(cbLoggedIn)
-        def cbAvatarIds((first, second)):
+        def cbAvatarIds(result):
+            (first, second) = result
             self.assertEqual(first, 'foo')
             self.assertEqual(second, 'baz')
         d.addCallback(cbAvatarIds)
