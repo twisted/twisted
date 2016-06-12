@@ -2149,6 +2149,9 @@ class HTTP2SchedulingTests(unittest.TestCase):
     loop) using callbacks from the reactor. These tests validate that the calls
     are scheduled correctly.
     """
+    if skipH2:
+        skip = skipH2
+
     def test_initiallySchedulesOneDataCall(self):
         """
         When a H2Connection is established it schedules one call to be run as
