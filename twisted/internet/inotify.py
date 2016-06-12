@@ -28,7 +28,9 @@ at some point)::
 
 @since: 10.1
 """
+
 from __future__ import print_function
+
 import os
 import struct
 
