@@ -449,7 +449,7 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
     @return: If they do match, return factories for the client and server that
         should connect; otherwise return L{None}, indicating they shouldn't be
         connected.
-    @rtype: L{types.NoneType} or 2-L{tuple} of (L{ClientFactory},
+    @rtype: C{type(None)} or 2-L{tuple} of (L{ClientFactory},
         L{IProtocolFactory})
     """
     (clientHost, clientPort, clientFactory, clientTimeout,
