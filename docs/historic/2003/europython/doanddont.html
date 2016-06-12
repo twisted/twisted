@@ -440,9 +440,9 @@ r = (1
 <pre class="python">
 class Foo:
     def __init__(self, i):
-        if type(i) is types.StringType:
+        if type(i) is str:
             self.content = open(i).readlines()
-        elif type(i) is types.ListType:
+        elif type(i) is list:
             self.content = i
 </pre>
 <ul><li>(inspired from a question on #python)</li>
