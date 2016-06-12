@@ -2299,6 +2299,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 negotiatedProtocol = b'http/1.1'
 
             if negotiatedProtocol == b'h2':
+                if not H2_ENABLED:
+                    raise ValueError("Neogitated HTTP/2 without support.")
+
                 transport = self._channel.transport
                 self._channel = H2Connection()
                 self._channel.requestFactory = self._requestFactory

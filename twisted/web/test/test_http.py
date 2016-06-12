@@ -537,7 +537,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         b = StringTransport()
         b.negotiatedProtocol = b'h2'
         self.assertRaises(
-            AssertionError,
+            ValueError,
             self._negotiatedProtocolForTransportInstance,
             b,
         )

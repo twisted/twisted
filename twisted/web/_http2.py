@@ -129,8 +129,8 @@ class H2Connection(Protocol):
     def connectionMade(self):
         """
         Called by the reactor when a connection is received. May also be called
-        by the L{twisted.web.http._GenericHTTPChannel} during upgrade to
-        HTTP/2.
+        by the L{twisted.web.http._GenericHTTPChannelProtocol} during upgrade
+        to HTTP/2.
         """
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())
@@ -271,7 +271,7 @@ class H2Connection(Protocol):
     def _sendPrioritisedData(self, *args):
         """
         The data sending loop. This function repeatedly calls itself, either
-        from L{Deferred}s or from L{callLater}.
+        from L{Deferred}s or from L{twisted.internet.reactor.callLater}.
 
         This function sends data on streams according to the rules of HTTP/2
         priority. It ensures that the data from each stream is interleved
@@ -750,7 +750,7 @@ class H2Stream(object):
         @type connection: L{H2Connection}
 
         @param headers: The HTTP/2 request headers.
-        @type headers: A L{list} of L{tuples} of header name and header value,
+        @type headers: A L{list} of L{tuple}s of header name and header value,
             both as L{bytes}.
 
         @param requestFactory: A function that builds appropriate request

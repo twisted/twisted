@@ -2143,12 +2143,16 @@ class HTTP2TransportChecking(unittest.TestCase):
         self.assertFalse(a._stillProducing)
 
 
+
 class HTTP2SchedulingTests(unittest.TestCase):
     """
     The H2Connection object schedules certain events (mostly its data sending
     loop) using callbacks from the reactor. These tests validate that the calls
     are scheduled correctly.
     """
+    if skipH2:
+        skip = skipH2
+
     def test_initiallySchedulesOneDataCall(self):
         """
         When a H2Connection is established it schedules one call to be run as

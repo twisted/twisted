@@ -256,7 +256,7 @@ modules = [
     "twisted.web.demo",
     "twisted.web.error",
     "twisted.web.guard",
-    "twisted.web.http2",
+    "twisted.web._http2",
     "twisted.web.http_headers",
     "twisted.web.proxy",
     "twisted.web.resource",
