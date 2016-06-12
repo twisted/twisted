@@ -998,7 +998,7 @@ class HTTP2ServerTests(unittest.TestCase):
         a.requestFactory = DummyHTTPHandler
 
         # Add Expect: 100-continue for this request.
-        headers = self.getRequestHeaders + [('expect', '100-continue')]
+        headers = self.getRequestHeaders + [(b'expect', b'100-continue')]
 
         requestBytes = f.preamble()
         requestBytes += buildRequestBytes(headers, [], f)
@@ -1076,7 +1076,7 @@ class HTTP2ServerTests(unittest.TestCase):
                 isinstance(frames[1], hyperframe.frame.HeadersFrame)
             )
             self.assertEqual(
-                frames[1].data, [(':status', '400')]
+                frames[1].data, [(b':status', b'400')]
             )
             self.assertTrue('END_STREAM' in frames[-1].flags)
 
