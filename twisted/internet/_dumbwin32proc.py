@@ -6,6 +6,8 @@
 http://isometri.cc/strips/gates_in_the_head
 """
 
+from __future__ import print_function
+
 import os
 
 # Win32 imports
@@ -35,7 +37,7 @@ from twisted.internet._baseprocess import BaseProcess
 
 def debug(msg):
     import sys
-    print msg
+    print(msg)
     sys.stdout.flush()
 
 class _Reaper(_pollingfile._PollableResource):
