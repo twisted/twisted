@@ -8,10 +8,7 @@ Utilities to assist in the "flag day" new-style object transition.
 
 from __future__ import absolute_import, division
 
-import os
 import types
-
-from functools import wraps
 
 from twisted.python.compat import _shouldEnableNewStyle, _PY3
 from twisted.python.util import _replaceIf
