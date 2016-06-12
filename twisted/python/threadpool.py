@@ -100,7 +100,7 @@ class ThreadPool:
         expressed by a list the length of that number.
 
         @return: the number of workers currently processing a work item.
-        @rtype: L{list} of L{types.NoneType}
+        @rtype: L{list} of C{type(None)}
         """
         return [None] * self._team.statistics().busyWorkerCount
 
@@ -113,7 +113,7 @@ class ThreadPool:
 
         @return: the number of workers currently alive (with an allocated
             thread) but waiting for new work.
-        @rtype: L{list} of L{types.NoneType}
+        @rtype: L{list} of C{type(None)}
         """
         return [None] * self._team.statistics().idleWorkerCount
 
