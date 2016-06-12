@@ -9,13 +9,13 @@ Component architecture for Twisted, based on Zope3 components.
 Using the Zope3 API directly is strongly recommended. Everything
 you need is in the top-level of the zope.interface package, e.g.::
 
-   from zope.interface import Interface, implements
+   from zope.interface import Interface, implementer
 
    class IFoo(Interface):
        pass
 
+   @implementer(IFoo)
    class Foo:
-       implements(IFoo)
 
    print IFoo.implementedBy(Foo) # True
    print IFoo.providedBy(Foo()) # True

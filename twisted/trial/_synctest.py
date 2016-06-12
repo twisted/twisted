@@ -24,16 +24,8 @@ from twisted.trial import itrial, util
 
 import unittest as pyunit
 
-# Python > 2.6 has skip support built-in:
-if getattr(pyunit, "SkipTest", None):
-    SkipTest = pyunit.SkipTest
-else:
-    class SkipTest(Exception):
-        """
-        Raise this (with a reason) to skip the current test. You may also set
-        method.skip to a reason string to skip it, or set class.skip to skip the
-        entire TestCase.
-        """
+# Python 2.7 and higher has skip support built-in
+SkipTest = pyunit.SkipTest
 
 
 
@@ -239,11 +231,7 @@ class PyUnitResultAdapter(object):
         """
         Report the skip as a failure.
         """
-        # pyunit in Python 2.6 doesn't support skipping information:
-        if sys.version_info[:2] > (2, 6):
-            self.original.addSkip(test, reason)
-        else:
-            self._unsupported(test, 'skip', reason)
+        self.original.addSkip(test, reason)
 
 
     def addUnexpectedSuccess(self, test, todo=None):
@@ -792,6 +780,29 @@ class _Assertions(pyunit.TestCase, object):
 
 
 
+    def assertRegex(self, text, regex, msg=None):
+        """
+        Fail the test if a C{regexp} search of C{text} fails.
+
+        @param text: Text which is under test.
+        @type text: L{str}
+
+        @param regex: A regular expression object or a string containing a
+            regular expression suitable for use by re.search().
+        @type regex: L{str} or L{re.RegexObject}
+
+        @param msg: Text used as the error message on failure.
+        @type msg: L{str}
+        """
+        if sys.version_info[:2] > (2, 7):
+            super(_Assertions, self).assertRegex(text, regex, msg)
+        else:
+            # Python 2.7 has unittest.assertRegexpMatches() which was
+            # renamed to unittest.assertRegex() in Python 3.2
+            super(_Assertions, self).assertRegexpMatches(text, regex, msg)
+
+
+
 class _LogObserver(object):
     """
     Observes the Twisted logs and catches any errors.
@@ -1259,7 +1270,7 @@ class SynchronousTestCase(_Assertions):
         Return the reason to use for skipping a test method.
 
         @param method: The method which produced the skip.
-        @param skip: A L{SkipTest} instance raised by C{method}.
+        @param skip: A L{unittest.SkipTest} instance raised by C{method}.
         """
         if len(skip.args) > 0:
             return skip.args[0]
