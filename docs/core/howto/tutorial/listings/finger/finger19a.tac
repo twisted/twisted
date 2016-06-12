@@ -191,7 +191,7 @@ class UserStatusXR(xmlrpc.XMLRPC):
     def xmlrpc_getUser(self, user):
         return self.service.getUser(user)
 
-@implementer([IFingerService, IFingerSetterService])
+@implementer(IFingerService, IFingerSetterService)
 class MemoryFingerService(service.Service):
     def __init__(self, **kwargs):
         self.users = kwargs
