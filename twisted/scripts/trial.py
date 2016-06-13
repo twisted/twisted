@@ -527,13 +527,12 @@ def _wrappedPdb():
         namedModule('readline')
     except ImportError:
         print("readline module not available")
-        sys.exc_clear()
     for path in ('.pdbrc', 'pdbrc'):
         if os.path.exists(path):
             try:
                 rcFile = file(path, 'r')
             except IOError:
-                sys.exc_clear()
+                pass
             else:
                 dbg.rcLines.extend(rcFile.readlines())
     return dbg
