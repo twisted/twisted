@@ -1940,6 +1940,13 @@ def _setUpNextProtocolMechanisms(context, acceptableProtocols):
         else:
             return b''
 
+    # If we don't actually have protocols to negotiate, don't set anything up.
+    # Depending on OpenSSL version, failing some of the selection callbacks can
+    # cause the handshake to fail, which is presumably not what was intended
+    # here.
+    if not acceptableProtocols:
+        return
+
     supported = protocolNegotiationMechanisms()
 
     if supported & ProtocolNegotiationSupport.NPN:
