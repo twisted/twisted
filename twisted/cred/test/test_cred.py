@@ -238,16 +238,6 @@ class OnDiskDatabaseTests(unittest.TestCase):
         return d
 
 
-    def testRequestAvatarId_hashed(self):
-        self.db = checkers.FilePasswordDB(self.dbfile)
-        creds = [credentials.UsernameHashedPassword(u, p)
-                 for u, p in self.users]
-        d = defer.gatherResults(
-            [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
-        d.addCallback(self.assertEqual, [u for u, p in self.users])
-        return d
-
-
 
 class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
     users = [
@@ -295,15 +285,6 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         d = defer.DeferredList([self.port.login(c, None, ITestable)
                                 for c in badCreds], consumeErrors=True)
         d.addCallback(self._assertFailures, error.UnauthorizedLogin)
-        return d
-
-
-    def testHashedCredentials(self):
-        hashedCreds = [credentials.UsernameHashedPassword(
-            u, self.hash(None, p, u[:2])) for u, p in self.users]
-        d = defer.DeferredList([self.port.login(c, None, ITestable)
-                                for c in hashedCreds], consumeErrors=True)
-        d.addCallback(self._assertFailures, error.UnhandledCredentials)
         return d
 
 
@@ -419,9 +400,9 @@ class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
     networkHash = staticmethod(lambda x: hexlify(x))
 
-    class credClass(credentials.UsernameHashedPassword):
+    class credClass(credentials.UsernamePassword):
         def checkPassword(self, password):
-            return unhexlify(self.hashed) == password
+            return unhexlify(self.password) == password
 
 
 

@@ -27,7 +27,7 @@ from twisted.python.versions import Version
 from twisted.internet import protocol, defer, reactor
 
 from twisted import cred
-from twisted.cred.credentials import UsernameHashedPassword, UsernamePassword
+from twisted.cred.credentials import UsernamePassword
 
 
 # sibling imports
@@ -1059,7 +1059,7 @@ class BasicAuthorizer:
 
 
 
-class DigestedCredentials(UsernameHashedPassword):
+class DigestedCredentials(UsenamePassword):
     """Yet Another Simple Digest-MD5 authentication scheme"""
 
     def __init__(self, username, fields, challenges):
