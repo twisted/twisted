@@ -1620,6 +1620,8 @@ class TestIProtocolNegotiationFactory(TestCase):
         @rtype: A L{tuple} of (L{Protocol}, L{Protocol}, L{Deferred},
             L{Deferred})
         """
+        bytes = b'some bytes'
+
         class NotifyingSender(Protocol):
             def __init__(self, notifier):
                 self.notifier = notifier
