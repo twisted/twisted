@@ -170,6 +170,10 @@ class SRVConnector:
         between 0 and the final sum is compared to each record in order. The
         first record that is greater than or equal to that random value is
         chosen and removed from the list of candidates for this round.
+
+        @return: A tuple of target hostname and port from the chosen DNS SRV
+            record.
+        @rtype: L{tuple} of native L{str} and L{int}
         """
         assert self.servers is not None
         assert self.orderedServers is not None
