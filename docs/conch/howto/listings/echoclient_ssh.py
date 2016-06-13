@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import print_function
 
 if __name__ == '__main__':
     import sys
@@ -57,7 +58,7 @@ class NoiseProtocol(Protocol):
 
 
     def dataReceived(self, data):
-        print "Server says:", data
+        print("Server says:", data)
         self.sendNoise()
 
 

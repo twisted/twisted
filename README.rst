@@ -3,6 +3,7 @@ Twisted 16.2.0
 
 |pypi|
 |coverage|
+|travis|
 
 .. code::
 
@@ -103,3 +104,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
+
+.. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
+.. _travis https://travis-ci.org/twisted/twisted

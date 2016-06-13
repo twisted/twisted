@@ -6,6 +6,8 @@
 Implementation module for the I{mailmail} command.
 """
 
+from __future__ import print_function
+
 import os
 import sys
 import rfc822
@@ -70,7 +72,7 @@ def parseOptions(argv):
 
     # Add a non-standard option for querying the version of this tool.
     if '--version' in argv:
-        print 'mailmail version:', version
+        print('mailmail version:', version)
         raise SystemExit()
 
     # -bp lists queue information.  Screw that.

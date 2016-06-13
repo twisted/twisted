@@ -920,6 +920,18 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertEqual(req.headers.getRawHeaders(b'host'), [b'example.com'])
 
 
+    def test_hostIPv6Bracketed(self):
+        """
+        If an IPv6 address is used in the C{uri} passed to L{Agent.request},
+        the computed I{Host} header needs to be bracketed.
+        """
+        self.agent._getEndpoint = lambda *args: self
+        self.agent.request(b'GET', b'http://[::1]/')
+
+        req, res = self.protocol.requests.pop()
+        self.assertEqual(req.headers.getRawHeaders(b'host'), [b'[::1]'])
+
+
     def test_hostOverride(self):
         """
         If the headers passed to L{Agent.request} includes a value for the

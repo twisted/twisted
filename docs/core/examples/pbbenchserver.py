@@ -3,6 +3,7 @@
 
 
 """Server for PB benchmark."""
+from __future__ import print_function
 
 from zope.interface import implements
 
@@ -20,12 +21,12 @@ class PBBenchPerspective(pb.Avatar):
         return None
 
     def printCallsPerSec(self):
-        print '(s) cps:', self.callsPerSec
+        print('(s) cps:', self.callsPerSec)
         self.callsPerSec = 0
         reactor.callLater(1, self.printCallsPerSec)
 
     def perspective_complexTypes(self):
-        return ['a', 1, 1l, 1.0, [], ()]
+        return ['a', 1, 1, 1.0, [], ()]
 
 
 class SimpleRealm:

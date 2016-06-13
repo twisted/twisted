@@ -60,7 +60,7 @@ class TransportSequence(object):
                   'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
                   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
                   'F10', 'F11', 'F12'):
-        exec '%s = object()' % (keyID,)
+        exec('%s = object()' % (keyID,))
 
     TAB = '\t'
     BACKSPACE = '\x7f'
@@ -70,12 +70,12 @@ class TransportSequence(object):
         self.transports = transports
 
     for method in insults.ITerminalTransport:
-        exec """\
+        exec("""\
 def %s(self, *a, **kw):
     for tpt in self.transports:
         result = tpt.%s(*a, **kw)
     return result
-""" % (method, method)
+""" % (method, method))
 
 class LocalTerminalBufferMixin(object):
     """A mixin for RecvLine subclasses which records the state of the terminal.
