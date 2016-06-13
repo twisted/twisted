@@ -747,7 +747,7 @@ class Site(http.HTTPFactory):
         """
         baseProtocols = [b'http/1.1']
 
-        if http.HTTP2_ENABLED:
+        if http.H2_ENABLED:
             baseProtocols.insert(0, b'h2')
 
         return baseProtocols
