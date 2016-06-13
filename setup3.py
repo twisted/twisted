@@ -12,7 +12,7 @@ from __future__ import division, absolute_import
 import sys
 import os
 
-from setuptools import setup, find_packages
+from setuptools import find_packages
 from setuptools.command.build_py import build_py
 from distutils.command.build_scripts import build_scripts
 
@@ -52,7 +52,8 @@ def main():
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
-    from twisted.python.dist import STATIC_PACKAGE_METADATA, getScripts
+    from twisted.python.dist import (STATIC_PACKAGE_METADATA, getScripts,
+                                     setup)
 
     args = STATIC_PACKAGE_METADATA.copy()
     args.update(dict(
