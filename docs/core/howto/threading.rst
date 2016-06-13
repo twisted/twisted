@@ -121,9 +121,9 @@ Similarly, you want some code running in a non-reactor thread wants to invoke so
             result = threads.blockingCallFromThread(
                 reactor, getPage, "http://twistedmatrix.com/")
         except Error, exc:
-            print exc
+            print(exc)
         else:
-            print result
+            print(result)
         reactor.callFromThread(reactor.stop)
 
     reactor.callInThread(inThread)

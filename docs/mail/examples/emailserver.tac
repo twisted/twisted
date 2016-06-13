@@ -8,7 +8,7 @@
 A toy email server.
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import defer
 from twisted.mail import smtp
@@ -20,9 +20,8 @@ from twisted.cred.portal import Portal
 
 
 
+@implementer(smtp.IMessageDelivery)
 class ConsoleMessageDelivery:
-    implements(smtp.IMessageDelivery)
-    
     def receivedHeader(self, helo, origin, recipients):
         return "Received: ConsoleMessageDelivery"
 
@@ -40,9 +39,8 @@ class ConsoleMessageDelivery:
 
 
 
+@implementer(smtp.IMessage)
 class ConsoleMessage:
-    implements(smtp.IMessage)
-    
     def __init__(self):
         self.lines = []
 
@@ -80,9 +78,8 @@ class ConsoleSMTPFactory(smtp.SMTPFactory):
 
 
 
+@implementer(IRealm)
 class SimpleRealm:
-    implements(IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         if smtp.IMessageDelivery in interfaces:
             return smtp.IMessageDelivery, ConsoleMessageDelivery(), lambda: None

@@ -377,7 +377,7 @@ class Versioned:
             highestVersion = 0
             highestBase = None
             for base in bases:
-                if not base.__dict__.has_key('persistenceVersion'):
+                if 'persistenceVersion' not in base.__dict__:
                     continue
                 if base.persistenceVersion > highestVersion:
                     highestBase = base
