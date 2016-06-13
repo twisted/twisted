@@ -786,13 +786,7 @@ class CoercedUnicodeTests(unittest.TestCase):
         """
         result = _coercedUnicode(u'text')
         self.assertEqual(result, u'text')
-
-        if _PY3:
-            expected = str
-        else:
-            expected = unicode
-
-        self.assertIsInstance(result, expected)
+        self.assertIsInstance(result, unicodeCompat)
 
 
     def test_unicodeNonASCII(self):
@@ -801,33 +795,37 @@ class CoercedUnicodeTests(unittest.TestCase):
         """
         result = _coercedUnicode(u'\N{SNOWMAN}')
         self.assertEqual(result, u'\N{SNOWMAN}')
-
-        if _PY3:
-            expected = str
-        else:
-            expected = unicode
-
-        self.assertIsInstance(result, expected)
+        self.assertIsInstance(result, unicodeCompat)
 
 
-    def test_bytesASCII(self):
+    def test_nativeASCII(self):
         """
-        Byte strings with ASCII code points are decoded and raise warning.
+        Native strings with ASCII code points are unchanged.
+
+        On Python 2, this verifies that ASCII-only byte strings are accepted,
+        whereas for Python 3 it is identical to L{test_unicodeASCII}.
         """
-        if _PY3:
-            exc = self.assertRaises(TypeError, _coercedUnicode, b'bytes')
-            self.assertEqual(str(exc), "Expected str not b'bytes' (bytes)")
-        else:
-            result = _coercedUnicode(b'bytes')
-            self.assertEquals(result, u'bytes')
-            self.assertIsInstance(result, unicode)
+        result = _coercedUnicode('text')
+        self.assertEqual(result, u'text')
+        self.assertIsInstance(result, unicodeCompat)
+
+
+    def test_bytesPy3(self):
+        """
+        Byte strings are not accceptable in Python 3.
+        """
+        exc = self.assertRaises(TypeError, _coercedUnicode, b'bytes')
+        self.assertEqual(str(exc), "Expected str not b'bytes' (bytes)")
+    if not _PY3:
+        test_bytesPy3.skip = (
+            "Bytes behavior of _coercedUnicode only provided on Python 2.")
 
 
     def test_bytesNonASCII(self):
         """
         Byte strings with non-ASCII code points raise an exception.
         """
-        if _PY3:
-            self.assertRaises(TypeError, _coercedUnicode, b'\xe2\x98\x83')
-        else:
-            self.assertRaises(UnicodeError, _coercedUnicode, b'\xe2\x98\x83')
+        self.assertRaises(UnicodeError, _coercedUnicode, b'\xe2\x98\x83')
+    if _PY3:
+        test_bytesNonASCII.skip = (
+            "Bytes behavior of _coercedUnicode only provided on Python 2.")

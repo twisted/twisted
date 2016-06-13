@@ -170,8 +170,8 @@ class ElementTests(unittest.TestCase):
         Unicode strings passed to C{addContent} become the character data.
         """
         element = domish.Element((u"testns", u"foo"))
-        element.addContent(u'bytes')
-        self.assertEqual(u"bytes", unicode(element))
+        element.addContent(u'unicode')
+        self.assertEqual(u"unicode", unicode(element))
 
 
     def test_addContentNativeStringASCII(self):
@@ -179,8 +179,8 @@ class ElementTests(unittest.TestCase):
         ASCII native strings passed to C{addContent} become the character data.
         """
         element = domish.Element((u"testns", u"foo"))
-        element.addContent('bytes')
-        self.assertEqual(u"bytes", unicode(element))
+        element.addContent('native')
+        self.assertEqual(u"native", unicode(element))
 
 
     def test_addContentBytes(self):
