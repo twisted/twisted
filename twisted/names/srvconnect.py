@@ -2,14 +2,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from functools import reduce
+from __future__ import absolute_import, division
 
-from zope.interface import implements
+import random
+
+from zope.interface import implementer
 
 from twisted.internet import error, interfaces
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import unicode
+from twisted.python.compat import nativeString, unicode
 
 
 class _SRVConnector_ClientFactoryWrapper:
@@ -31,10 +33,23 @@ class _SRVConnector_ClientFactoryWrapper:
 
 
 
+@implementer(interfaces.IConnector)
 class SRVConnector:
-    """A connector that looks up DNS SRV records. See RFC2782."""
+    """
+    A connector that looks up DNS SRV records.
 
-    implements(interfaces.IConnector)
+    RFC 2782 details how SRV records should be interpreted and selected
+    for subsequent connection attempts. The algorithm for using the records'
+    priority and weight is implemented in L{pickServer}.
+
+    @ivar servers: List of candidate server records for future connection
+        attempts.
+    @type servers: L{list} of L{dns.Record_SRV}
+
+    @ivar orderedServers: List of server records that have already been tried
+        in this round of connection attempts.
+    @type orderedServers: L{list} of L{dns.Record_SRV}
+    """
 
     stopAfterDNS=0
 
@@ -48,17 +63,18 @@ class SRVConnector:
         @param domain: The domain to connect to.  If passed as a unicode
             string, it will be encoded using C{idna} encoding.
         @type domain: L{bytes} or L{unicode}
+
         @param defaultPort: Optional default port number to be used when SRV
             lookup fails and the service name is unknown. This should be the
             port number associated with the service name as defined by the IANA
             registry.
-        @type defaultPort: C{int}
+        @type defaultPort: L{int}
         """
         self.reactor = reactor
         self.service = service
         if isinstance(domain, unicode):
             domain = domain.encode('idna')
-        self.domain = domain
+        self.domain = nativeString(domain)
         self.factory = factory
 
         self.protocol = protocol
@@ -80,9 +96,10 @@ class SRVConnector:
             if self.domain is None:
                 self.connectionFailed(error.DNSLookupError("Domain is not defined."))
                 return
-            d = client.lookupService('_%s._%s.%s' % (self.service,
-                                                     self.protocol,
-                                                     self.domain))
+            d = client.lookupService('_%s._%s.%s' %
+                    (nativeString(self.service),
+                     nativeString(self.protocol),
+                     self.domain))
             d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
             if self._defaultPort:
@@ -104,10 +121,10 @@ class SRVConnector:
         self.orderedServers = []
 
     def _cbGotServers(self, result):
-        (answers, auth, add) = result
+        answers, auth, add = result
         if len(answers) == 1 and answers[0].type == dns.SRV \
                              and answers[0].payload \
-                             and answers[0].payload.target == dns.Name('.'):
+                             and answers[0].payload.target == dns.Name(b'.'):
             # decidedly not available
             raise error.DNSLookupError("Service %s not available for domain %s."
                                        % (repr(self.service), repr(self.domain)))
@@ -118,8 +135,7 @@ class SRVConnector:
             if a.type != dns.SRV or not a.payload:
                 continue
 
-            self.orderedServers.append((a.payload.priority, a.payload.weight,
-                                        str(a.payload.target), a.payload.port))
+            self.orderedServers.append(a.payload)
 
     def _ebServiceUnknown(self, failure):
         """
@@ -131,17 +147,34 @@ class SRVConnector:
         default port.
         """
         failure.trap(error.ServiceNameUnknownError)
-        self.servers = [(0, 0, self.domain, self._defaultPort)]
+        self.servers = [dns.Record_SRV(0, 0, self._defaultPort, self.domain)]
         self.orderedServers = []
         self.connect()
 
-    def _serverCmp(self, a, b):
-        if a[0]!=b[0]:
-            return cmp(a[0], b[0])
-        else:
-            return cmp(a[1], b[1])
-
     def pickServer(self):
+        """
+        Pick the next server.
+
+        This selects the next server from the list of SRV records according
+        to their priority and weight values, as set out by the default
+        algorithm specified in RFC 2782.
+
+        At the beginning of a round, L{servers} is populated with
+        L{orderedServers}, and the latter is made empty. L{servers}
+        is the list of candidates, and L{orderedServers} is the list of servers
+        that have already been tried.
+
+        First, all records are ordered by priority and weight in ascending
+        order. Then for each priority level, a running sum is calculated
+        over the sorted list of records for that priority. Then a random value
+        between 0 and the final sum is compared to each record in order. The
+        first record that is greater than or equal to that random value is
+        chosen and removed from the list of candidates for this round.
+
+        @return: A tuple of target hostname and port from the chosen DNS SRV
+            record.
+        @rtype: L{tuple} of native L{str} and L{int}
+        """
         assert self.servers is not None
         assert self.orderedServers is not None
 
@@ -156,22 +189,26 @@ class SRVConnector:
 
         assert self.servers
 
-        self.servers.sort(self._serverCmp)
-        minPriority=self.servers[0][0]
+        self.servers.sort(key=lambda record: (record.priority, record.weight))
+        minPriority = self.servers[0].priority
 
-        weightIndex = zip(xrange(len(self.servers)), [x[1] for x in self.servers
-                                                      if x[0]==minPriority])
-        weightSum = reduce(lambda x, y: (None, x[1]+y[1]), weightIndex, (None, 0))[1]
+        index = 0
+        weightSum = 0
+        weightIndex = []
+        for x in self.servers:
+            if x.priority == minPriority:
+                weightSum += x.weight
+                weightIndex.append((index, weightSum))
+                index += 1
 
+        rand = random.randint(0, weightSum)
         for index, weight in weightIndex:
-            weightSum -= weight
-            if weightSum <= 0:
+            if weight >= rand:
                 chosen = self.servers[index]
                 del self.servers[index]
                 self.orderedServers.append(chosen)
 
-                p, w, host, port = chosen
-                return host, port
+                return str(chosen.target), chosen.port
 
         raise RuntimeError(
             'Impossible %s pickServer result.' % (self.__class__.__name__,))
@@ -216,4 +253,3 @@ class SRVConnector:
     def connectionLost(self, reason):
         self.factory.clientConnectionLost(self, reason)
         self.factory.doStop()
-
