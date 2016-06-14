@@ -4,6 +4,8 @@ Demonstrate sending mail via SMTP while employing TLS and performing
 authentication.
 """
 
+from __future__ import print_function
+
 import sys
 
 from OpenSSL.SSL import SSLv3_METHOD
@@ -113,7 +115,7 @@ def cbSentMessage(result):
 
     Report success to the user and then stop the reactor.
     """
-    print "Message sent"
+    print("Message sent")
     reactor.stop()
 
 
