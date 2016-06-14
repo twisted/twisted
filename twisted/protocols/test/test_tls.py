@@ -1586,7 +1586,7 @@ class ServerNegotiationFactory(ServerFactory):
 
 
 
-class TestIProtocolNegotiationFactory(TestCase):
+class IProtocolNegotiationFactoryTests(TestCase):
     """
     Tests for L{IProtocolNegotiationFactory} inside L{TLSMemoryBIOFactory}.
 
