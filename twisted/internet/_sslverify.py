@@ -1668,7 +1668,7 @@ class OpenSSLCertificateOptions(object):
         if self._acceptableProtocols:
             # Try to set NPN and ALPN. _acceptableProtocols cannot be set by
             # the constructor unless at least one mechanism is supported.
-            _setUpNextProtocolMechanisms(ctx, self._acceptableProtocols)
+            _setAcceptableProtocols(ctx, self._acceptableProtocols)
 
         return ctx
 
@@ -1903,7 +1903,7 @@ class OpenSSLDiffieHellmanParameters(object):
         return cls(filePath)
 
 
-def _setUpNextProtocolMechanisms(context, acceptableProtocols):
+def _setAcceptableProtocols(context, acceptableProtocols):
     """
     Called to set up the L{OpenSSL.SSL.Context} for doing NPN and/or ALPN
     negotiation.

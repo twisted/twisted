@@ -62,7 +62,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
-from twisted.internet._sslverify import _setUpNextProtocolMechanisms
+from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
@@ -844,7 +844,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
         if IProtocolNegotiationFactory.providedBy(self.wrappedFactory):
             protocols = self.wrappedFactory.acceptableProtocols()
             context = connection.get_context()
-            _setUpNextProtocolMechanisms(context, protocols)
+            _setAcceptableProtocols(context, protocols)
 
         return
 
