@@ -12,3 +12,5 @@ glyph: ::holds mic close:: "Nooooo."
 %
 <dstufft> future maintainers should hate me just as much as I hate the past maintainers
 %
+<lukasa> But this is why the API is private and opt-in
+<lukasa> So that users can hit the weirdo edge cases that I can't replicate by just thinking really hard.
