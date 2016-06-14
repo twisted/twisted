@@ -383,35 +383,6 @@ class WritingProtocol(protocol.Protocol):
 
 
 
-if not skipSSL:
-    class ALPNOnlyOptions(sslverify.OpenSSLCertificateOptions):
-        """
-        An OpenSSLCertificateOptions subclass that only sets ALPN.
-        """
-        def _setUpNextProtocolMechanisms(self, ctx):
-            """
-            Only set up ALPN.
-            """
-            ctx.set_alpn_select_callback(self._protoSelectCallback)
-            ctx.set_alpn_protos(self._acceptableProtocols)
-
-
-    class NPNOnlyOptions(sslverify.OpenSSLCertificateOptions):
-        """
-        An OpenSSLCertificateOptions subclass that only sets NPN.
-        """
-        def _setUpNextProtocolMechanisms(self, ctx):
-            """
-            Only set NPN.
-            """
-            def npnAdvertiseCallback(conn):
-                return self._acceptableProtocols
-
-            ctx.set_npn_advertise_callback(npnAdvertiseCallback)
-            ctx.set_npn_select_callback(self._protoSelectCallback)
-
-
-
 class FakeContext(object):
     """
     Introspectable fake of an C{OpenSSL.SSL.Context}.
@@ -1946,21 +1917,6 @@ class NPNOrALPNTests(unittest.TestCase):
         self.assertEqual(lostReason.type, SSL.Error)
 
 
-    def test_NPNRespectsClientPreference(self):
-        """
-        When NPN is used, the client's protocol preference is preferred.
-        """
-        serverProtocols = [b'http/1.1', b'h2']
-        clientProtocols = [b'h2', b'http/1.1']
-        negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=clientProtocols,
-            serverProtocols=serverProtocols,
-            clientOptions=NPNOnlyOptions
-        )
-        self.assertEqual(negotiatedProtocol, b'h2')
-        self.assertEqual(lostReason, None)
-
-
 
 class ALPNTests(unittest.TestCase):
     """
@@ -1988,21 +1944,6 @@ class ALPNTests(unittest.TestCase):
             sslverify.ProtocolNegotiationSupport.ALPN in
             supportedProtocols
         )
-
-
-    def test_ALPNRespectsServerPreference(self):
-        """
-        When ALPN is used, the server's protocol preference is preferred.
-        """
-        serverProtocols = [b'http/1.1', b'h2']
-        clientProtocols = [b'h2', b'http/1.1']
-        negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=clientProtocols,
-            serverProtocols=serverProtocols,
-            clientOptions=ALPNOnlyOptions
-        )
-        self.assertEqual(negotiatedProtocol, b'http/1.1')
-        self.assertEqual(lostReason, None)
 
 
 
