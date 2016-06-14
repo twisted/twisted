@@ -1694,8 +1694,8 @@ class TestIProtocolNegotiationFactory(TestCase):
         )
 
         def checkNegotiatedProtocol(ignored):
-            self.assertEqual(client.actualProtocol, b'h2')
-            self.assertEqual(server.actualProtocol, b'h2')
+            self.assertEqual(client.negotiatedProtocol, b'h2')
+            self.assertEqual(server.negotiatedProtocol, b'h2')
 
         clientDataReceived.addCallback(lambda ignored: serverDataReceived)
         serverDataReceived.addCallback(checkNegotiatedProtocol)
