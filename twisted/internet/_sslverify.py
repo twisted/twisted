@@ -1284,8 +1284,7 @@ def _handshakeCompletionInfoCallback(connection, where, ret):
     # Is that going to be a problem? Investigate.
     if where & SSL_CB_HANDSHAKE_DONE:
         transport = connection.get_app_data()
-        if IHandshakeListener.providedBy(transport):
-            transport.handshakeCompleted()
+        transport.handshakeCompleted()
 
 
 

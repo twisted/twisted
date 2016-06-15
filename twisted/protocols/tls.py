@@ -214,7 +214,7 @@ class _ProducerMembrane(object):
 
 
 
-@implementer(ISystemHandle, INegotiated, IHandshakeListener)
+@implementer(ISystemHandle, INegotiated)
 class TLSMemoryBIOProtocol(ProtocolWrapper):
     """
     L{TLSMemoryBIOProtocol} is a protocol wrapper which uses OpenSSL via a
