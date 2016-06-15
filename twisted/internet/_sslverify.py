@@ -209,7 +209,8 @@ from zope.interface import Interface, implementer
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IHandshakeListener
 )
 
 from twisted.python import reflect, util
@@ -1255,6 +1256,23 @@ class ClientTLSOptions(object):
                 f = Failure()
                 transport = connection.get_app_data()
                 transport.failVerification(f)
+
+
+
+def _handshakeCompletionInfoCallback(connection, where, ret):
+    """
+    U{info_callback
+    <http://pythonhosted.org/pyOpenSSL/api/ssl.html#OpenSSL.SSL.Context.set_info_callback>
+    } for pyOpenSSL that notifies the transport on handshake completion if
+    the transport implements L{IHandshakeListener}.
+    """
+    # TODO: Are we at any risk dispatching this callback from inside the
+    # OpenSSL info callback? For example, what if this triggers a write?
+    # Is that going to be a problem? Investigate.
+    if where & SSL_CB_HANDSHAKE_DONE:
+        transport = connection.get_app_data()
+        if IHandshakeListener.providedBy(transport):
+            transport.handshakeCompleted()
 
 
 
