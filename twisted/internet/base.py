@@ -443,6 +443,13 @@ class ReactorBase(object):
         and C{reactor.stop}.  This should be replaced with an explicit state
         machine.
 
+    @type _lastSignal: None|C{int}|C{bool}
+    @ivar _lastSignal: Indicates the latest fatal signal that has been received
+        from the user/OS.  This helps us determine an appropriate exit code
+        when the shutdown is complete.  If None, there has not been a fatal
+        signal received.  On Posix systems, it is an int telling us the signal.
+        On non-Posix systems, it is True.
+
     @type _justStopped: C{bool}
     @ivar _justStopped: A flag which is true between the time C{reactor.stop}
         is called and the time the shutdown system event is fired.  This is
