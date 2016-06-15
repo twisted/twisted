@@ -11,8 +11,6 @@ Maintainer: Paul Swartz
 
 from __future__ import absolute_import, division
 
-import struct
-
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, transport, service
 from twisted.conch.ssh.common import NS, getNS
@@ -341,7 +339,7 @@ class SSHUserAuthClient(service.SSHService):
     """
 
     name = 'ssh-userauth'
-    preferredOrder = [b'publickey', b'password', b'keyboard-interactive']
+    preferredOrder = [b'publickey', b'password']
 
 
     def __init__(self, user, instance):
@@ -513,26 +511,6 @@ class SSHUserAuthClient(service.SSHService):
         d.addCallbacks(self._setNewPass, self._ebAuth)
 
 
-    def ssh_USERAUTH_PK_OK_keyboard_interactive(self, packet):
-        """
-        This is MSG_USERAUTH_INFO_RESPONSE.  The server has sent us the
-        questions it wants us to answer, so we ask the user and sent the
-        responses.
-        """
-        name, instruction, lang, data = getNS(packet, 3)
-        numPrompts = struct.unpack('!L', data[:4])[0]
-        data = data[4:]
-        prompts = []
-        for i in range(numPrompts):
-            prompt, data = getNS(data)
-            echo = bool(ord(data[0]))
-            data = data[1:]
-            prompts.append((prompt, echo))
-        d = self.getGenericAnswers(name, instruction, prompts)
-        d.addCallback(self._cbGenericAnswers)
-        d.addErrback(self._ebAuth)
-
-
     def _cbSignedData(self, signedData):
         """
         Called back out of self.signData with the signed data.  Send the
@@ -568,21 +546,6 @@ class SSHUserAuthClient(service.SSHService):
         op = self._oldPass
         self._oldPass = None
         self.askForAuth(b'password', b'\xff' + NS(op) + NS(np))
-
-
-    def _cbGenericAnswers(self, responses):
-        """
-        Called back when we are finished answering keyboard-interactive
-        questions.  Send the info back to the server in a
-        MSG_USERAUTH_INFO_RESPONSE.
-
-        @param responses: a list of C{bytes} responses
-        @type responses: C{list}
-        """
-        data = struct.pack('!L', len(responses))
-        for r in responses:
-            data += NS(r.encode('UTF8'))
-        self.transport.sendPacket(MSG_USERAUTH_INFO_RESPONSE, data)
 
 
     def auth_publickey(self):
@@ -626,18 +589,6 @@ class SSHUserAuthClient(service.SSHService):
             return True
         else: # returned None, don't do password auth
             return False
-
-
-    def auth_keyboard_interactive(self):
-        """
-        Try to authenticate with keyboard-interactive authentication.  Send
-        the request to the server and return True.
-
-        @rtype: C{bool}
-        """
-        log.msg('authing with keyboard-interactive')
-        self.askForAuth(b'keyboard-interactive', NS(b'') + NS(b''))
-        return True
 
 
     def _cbPassword(self, password):
