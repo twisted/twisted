@@ -466,6 +466,7 @@ class ReactorBase(object):
     _registerAsIOThread = True
 
     _stopped = True
+    _lastSignal = None
     installed = False
     usingThreads = False
     resolver = BlockingResolver()
@@ -601,18 +602,33 @@ class ReactorBase(object):
         """Handle a SIGINT interrupt.
         """
         log.msg("Received SIGINT, shutting down.")
+        try:
+            import signal
+            self._lastSignal = signal.SIGINT
+        except ImportError:
+            self._lastSignal = True
         self.callFromThread(self.stop)
 
     def sigBreak(self, *args):
         """Handle a SIGBREAK interrupt.
         """
         log.msg("Received SIGBREAK, shutting down.")
+        try:
+            import signal
+            self._lastSignal = signal.SIGBREAK
+        except ImportError:
+            self._lastSignal = True
         self.callFromThread(self.stop)
 
     def sigTerm(self, *args):
         """Handle a SIGTERM interrupt.
         """
         log.msg("Received SIGTERM, shutting down.")
+        try:
+            import signal
+            self._lastSignal = signal.SIGTERM
+        except ImportError:
+            self._lastSignal = True
         self.callFromThread(self.stop)
 
     def disconnectAll(self):
@@ -1208,8 +1224,18 @@ class _SignalReactorMixin(object):
                 log.msg("Unexpected error in main loop.")
                 log.err()
             else:
+                if self._lastSignal is not None:
+                    if self._lastSignal is True:
+                        # This OS doesn't support the signal library, or it is not installed
+                        sig = "(unknown)"
+                        code = 15 # Emulate SIGTERM. Why not.
+                    else:
+                        # We know what signal killed us
+                        sig = self._lastSignal
+                        code = self._lastSignal
+                    log.msg('Main loop terminated by signal {}'.format(sig))
+                    # Advertise the fatal signal to the OS and any parent processes
+                    exit(128 + code)
                 log.msg('Main loop terminated.')
-
-
 
 __all__ = []
