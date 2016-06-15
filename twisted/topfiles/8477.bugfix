@@ -1,0 +1,1 @@
+twisted.internet.base now exits with an appropriate fatal signal status code if a fatal signal is received
