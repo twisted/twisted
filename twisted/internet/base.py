@@ -443,12 +443,11 @@ class ReactorBase(object):
         and C{reactor.stop}.  This should be replaced with an explicit state
         machine.
 
-    @type _lastSignal: None|C{int}|C{bool}
+    @type _lastSignal: C{int}
     @ivar _lastSignal: Indicates the latest fatal signal that has been received
         from the user/OS.  This helps us determine an appropriate exit code
-        when the shutdown is complete.  If None, there has not been a fatal
-        signal received.  On Posix systems, it is an int telling us the signal.
-        On non-Posix systems, it is True.
+        when the shutdown is complete.  If 0, there has not been a fatal
+        signal received.  Otherwise it is the number of the signal received.
 
     @type _justStopped: C{bool}
     @ivar _justStopped: A flag which is true between the time C{reactor.stop}
@@ -473,7 +472,7 @@ class ReactorBase(object):
     _registerAsIOThread = True
 
     _stopped = True
-    _lastSignal = None
+    _lastSignal = 0
     installed = False
     usingThreads = False
     resolver = BlockingResolver()
@@ -609,33 +608,21 @@ class ReactorBase(object):
         """Handle a SIGINT interrupt.
         """
         log.msg("Received SIGINT, shutting down.")
-        try:
-            import signal
-            self._lastSignal = signal.SIGINT
-        except ImportError:
-            self._lastSignal = True
+        self._lastSignal = 2 # SIGINT
         self.callFromThread(self.stop)
 
     def sigBreak(self, *args):
         """Handle a SIGBREAK interrupt.
         """
         log.msg("Received SIGBREAK, shutting down.")
-        try:
-            import signal
-            self._lastSignal = signal.SIGBREAK
-        except ImportError:
-            self._lastSignal = True
+        self._lastSignal = 21 # SIGBREAK
         self.callFromThread(self.stop)
 
     def sigTerm(self, *args):
         """Handle a SIGTERM interrupt.
         """
         log.msg("Received SIGTERM, shutting down.")
-        try:
-            import signal
-            self._lastSignal = signal.SIGTERM
-        except ImportError:
-            self._lastSignal = True
+        self._lastSignal = 15 # SIGTERM
         self.callFromThread(self.stop)
 
     def disconnectAll(self):
@@ -1231,18 +1218,10 @@ class _SignalReactorMixin(object):
                 log.msg("Unexpected error in main loop.")
                 log.err()
             else:
-                if self._lastSignal is not None:
-                    if self._lastSignal is True:
-                        # This OS doesn't support the signal library, or it is not installed
-                        sig = "(unknown)"
-                        code = 15 # Emulate SIGTERM. Why not.
-                    else:
-                        # We know what signal killed us
-                        sig = self._lastSignal
-                        code = self._lastSignal
-                    log.msg('Main loop terminated by signal {}'.format(sig))
+                if self._lastSignal != 0:
+                    log.msg('Main loop terminated by signal {}'.format(self._lastSignal))
                     # Advertise the fatal signal to the OS and any parent processes
-                    exit(128 + code)
+                    exit(128 + self._lastSignal)
                 log.msg('Main loop terminated.')
 
 
