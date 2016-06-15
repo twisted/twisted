@@ -25,7 +25,10 @@ from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
+from twisted.python.compat import (items, _bytesChr as chr, networkString,
+                                   iterbytes, nativeString)
 
+from twisted.conch.error import ConchError
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
     NS, getNS, MP, getMP, _MPpow, ffs, int_from_bytes
@@ -642,8 +645,9 @@ class SSHTransportBase(protocol.Protocol):
             del self.first
         packetLen, paddingLen = struct.unpack('!LB', first[:5])
         if packetLen > 1048576: # 1024 ** 2
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
-                                b'bad packet length %s' % (packetLen,))
+            self.sendDisconnect(
+                DISCONNECT_PROTOCOL_ERROR,
+                networkString('bad packet length %s' % (packetLen,)))
             return
         if len(self.buf) < packetLen + 4 + ms:
             # Not enough data for a packet
@@ -652,8 +656,9 @@ class SSHTransportBase(protocol.Protocol):
         if (packetLen + 4) % bs != 0:
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                b'bad packet mod (%i%%%i == %i)' % (packetLen + 4, bs,
-                                                   (packetLen + 4) % bs))
+                networkString(
+                    'bad packet mod (%i%%%i == %i)' % (packetLen + 4, bs,
+                    (packetLen + 4) % bs)))
             return
         encData, self.buf = self.buf[:4 + packetLen], self.buf[4 + packetLen:]
         packet = first + self.currentEncryptions.decrypt(encData[bs:])
@@ -720,7 +725,7 @@ class SSHTransportBase(protocol.Protocol):
                     self.buf = b'\n'.join(lines[i + 1:])
         packet = self.getPacket()
         while packet:
-            messageNum = ord(packet[0])
+            messageNum = ord(packet[0:1])
             self.dispatchMessage(messageNum, packet[1:])
             packet = self.getPacket()
 
@@ -789,12 +794,13 @@ class SSHTransportBase(protocol.Protocol):
     def kexAlg(self, value):
         """
         Set the key exchange algorithm name.
-
-        @raises ConchError: if the key exchange algorithm is not found.
         """
-        # Check for supportedness.
-        _kex.getKex(value)
-        self._kexAlg = value
+        try:
+            # Check for supportedness.
+            _kex.getKex(value)
+            self._kexAlg = value
+        except ConchError:
+            self._kexAlg = None
 
     # Client-initiated rekeying looks like this:
     #
@@ -839,6 +845,7 @@ class SSHTransportBase(protocol.Protocol):
         algorithms, and unhandled data, or C{None} if something went wrong.
         """
         self.otherKexInitPayload = chr(MSG_KEXINIT) + packet
+
         # This is useless to us:
         # cookie = packet[: 16]
         k = getNS(packet[16:], 10)
@@ -848,23 +855,30 @@ class SSHTransportBase(protocol.Protocol):
         # These are the server directions
         outs = [encSC, macSC, compSC]
         ins = [encCS, macSC, compCS]
+
         if self.isClient:
             outs, ins = ins, outs # Switch directions
+
         server = (self.supportedKeyExchanges, self.supportedPublicKeys,
-                self.supportedCiphers, self.supportedCiphers,
-                self.supportedMACs, self.supportedMACs,
-                self.supportedCompressions, self.supportedCompressions)
+                  self.supportedCiphers, self.supportedCiphers,
+                  self.supportedMACs, self.supportedMACs,
+                  self.supportedCompressions, self.supportedCompressions)
+
         client = (kexAlgs, keyAlgs, outs[0], ins[0], outs[1], ins[1],
                 outs[2], ins[2])
+
         if self.isClient:
             server, client = client, server
+
         self.kexAlg = ffs(client[0], server[0])
         self.keyAlg = ffs(client[1], server[1])
+
         self.nextEncryptions = SSHCiphers(
             ffs(client[2], server[2]),
             ffs(client[3], server[3]),
             ffs(client[4], server[4]),
             ffs(client[5], server[5]))
+
         self.outgoingCompressionType = ffs(client[6], server[6])
         self.incomingCompressionType = ffs(client[7], server[7])
         if None in (self.kexAlg, self.keyAlg, self.outgoingCompressionType,
@@ -1224,7 +1238,7 @@ class SSHServerTransport(SSHTransportBase):
             return
         else:
             kexAlgs, keyAlgs, rest = retval
-        if ord(rest[0]): # Flag first_kex_packet_follows?
+        if ord(rest[0:1]): # Flag first_kex_packet_follows?
             if (kexAlgs[0] != self.supportedKeyExchanges[0] or
                 keyAlgs[0] != self.supportedPublicKeys[0]):
                 self.ignoreNextPacket = True # Guess was wrong
@@ -1404,7 +1418,7 @@ class SSHServerTransport(SSHTransportBase):
         @param packet: The message data.
         """
         service, rest = getNS(packet)
-        cls = self.factory.getService(self, service)
+        cls = self.factory.getService(self, nativeString(service))
         if not cls:
             self.sendDisconnect(DISCONNECT_SERVICE_NOT_AVAILABLE,
                                 b"don't have service " + service)
@@ -1527,7 +1541,7 @@ class SSHClientTransport(SSHTransportBase):
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
         fingerprint = b':'.join([binascii.hexlify(ch) for ch in
-                                 md5(pubKey).digest()])
+                                 iterbytes(md5(pubKey).digest())])
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueKEXDH_REPLY, pubKey, f, signature)
         d.addErrback(
@@ -1611,8 +1625,9 @@ class SSHClientTransport(SSHTransportBase):
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
-        fingerprint = ':'.join(map(lambda c: '%02x' % (ord(c),),
-            md5(pubKey).digest()))
+        fingerprint = networkString(
+            ':'.join(map(lambda c: '%02x' % (ord(c),),
+                         iterbytes(md5(pubKey).digest()))))
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
         d.addErrback(
@@ -1719,7 +1734,7 @@ class SSHClientTransport(SSHTransportBase):
         @type instance: subclass of L{twisted.conch.ssh.service.SSHService}
         @param instance: The service to run.
         """
-        self.sendPacket(MSG_SERVICE_REQUEST, NS(instance.name))
+        self.sendPacket(MSG_SERVICE_REQUEST, NS(networkString(instance.name)))
         self.instance = instance
 
     # Client methods
@@ -1846,7 +1861,7 @@ DISCONNECT_ILLEGAL_USER_NAME = 15
 
 
 messages = {}
-for name, value in globals().items():
+for name, value in items(globals()):
     # Avoid legacy messages which overlap with never ones
     if name.startswith('MSG_') and not name.startswith('MSG_KEXDH_'):
         messages[value] = name

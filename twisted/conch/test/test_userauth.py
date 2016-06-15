@@ -20,6 +20,7 @@ from twisted.conch.error import ConchError, ValidPublicKey
 from twisted.internet import defer, task
 from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
+from twisted.python.compat import _bytesChr as chr
 from twisted.trial import unittest
 
 if requireModule('cryptography') and requireModule('pyasn1'):

@@ -6,11 +6,14 @@
 SSH key exchange handling.
 """
 
+from __future__ import absolute_import, division
+
 from hashlib import sha1, sha256
 
 from zope.interface import Attribute, implementer, Interface
 
 from twisted.conch import error
+from twisted.python.compat import long
 
 
 class _IKexAlgorithm(Interface):
@@ -95,7 +98,7 @@ class _DHGroup1SHA1(object):
         '44236841971802161585193689478337958649255415021805654859805036464405'
         '48199239100050792877003355816639229553136239076508735759914822574862'
         '57500742530207744771258955095793777842444242661733472762929938766870'
-        '9205606050270810842907692932019128194467627007L')
+        '9205606050270810842907692932019128194467627007')
     generator = 2
 
 
@@ -119,17 +122,17 @@ class _DHGroup14SHA1(object):
         '00977202194168647225871031411336429319536193471636533209717077448227'
         '98858856536920864529663607725026895550592836275112117409697299806841'
         '05543595848665832916421362182310789909994486524682624169720359118525'
-        '07045361090559L')
+        '07045361090559')
     generator = 2
 
 
 
 _kexAlgorithms = {
-    "diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
-    "diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
-    "diffie-hellman-group1-sha1": _DHGroup1SHA1(),
-    "diffie-hellman-group14-sha1": _DHGroup14SHA1(),
-    }
+    b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
+    b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
+    b"diffie-hellman-group1-sha1": _DHGroup1SHA1(),
+    b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
+}
 
 
 

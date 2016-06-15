@@ -630,7 +630,7 @@ for name, value in locals().copy().items():
         messages[value] = name # doesn't handle doubles
 
 import string
-alphanums = string.letters + string.digits
+alphanums = string.ascii_letters + string.digits
 TRANSLATE_TABLE = ''.join([chr(i) in alphanums and chr(i) or '_'
     for i in range(256)])
 SSHConnection.protocolMessages = messages
