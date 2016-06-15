@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb, jelly
 from twisted.python import log
 from twisted.internet import reactor
@@ -17,20 +19,20 @@ class Sender:
         d.addCallback(self.ok).addErrback(self.notOk)
 
     def ok(self, response):
-        print "pond arrived", response
+        print("pond arrived", response)
         reactor.stop()
     def notOk(self, failure):
-        print "error during takePond:"
+        print("error during takePond:")
         if failure.type == jelly.InsecureJelly:
-            print " InsecureJelly"
+            print(" InsecureJelly")
         else:
-            print failure
+            print(failure)
         reactor.stop()
         return None
 
 def main():
     pond = SenderPond(3, 4)
-    print "count %d" % pond.count()
+    print("count %d" % pond.count())
 
     sender = Sender(pond)
     factory = pb.PBClientFactory()
