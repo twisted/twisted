@@ -51,9 +51,9 @@ example:
     >>> registerAdapter(Counter, Session, ICounter)
     >>> ses = Session(None, None)
     >>> data = ICounter(ses)
-    >>> print data
+    >>> print(data)
     <__main__.Counter object at 0x8d535ec>
-    >>> print data is ICounter(ses)
+    >>> print(data is ICounter(ses))
     True
     >>>
 
