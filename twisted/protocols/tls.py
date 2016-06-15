@@ -57,7 +57,7 @@ from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
     ISystemHandle, INegotiated, IPushProducer, ILoggingContext,
     IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
-    IProtocolNegotiationFactory
+    IProtocolNegotiationFactory, IHandshakeListener
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
@@ -212,7 +212,7 @@ class _ProducerMembrane(object):
 
 
 
-@implementer(ISystemHandle, INegotiated)
+@implementer(ISystemHandle, INegotiated, IHandshakeListener)
 class TLSMemoryBIOProtocol(ProtocolWrapper):
     """
     L{TLSMemoryBIOProtocol} is a protocol wrapper which uses OpenSSL via a
@@ -629,6 +629,22 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             return protocolName
 
         return None
+
+
+    def handshakeCompleted(self):
+        """
+        Notification of the TLS handshake being completed.
+
+        This notification fires when OpenSSL has completed the TLS handshake.
+        At this point the TLS connection is established, and the protocol can
+        interrogate its transport (usually an L{ISSLTransport}) for details of
+        the TLS connection.
+
+        For L{TLSMemoryBIOProtocol}, the notification is simply proxied through
+        to the wrapped L{Protocol}.
+        """
+        if IHandshakeListener.providedBy(self.wrappedProtocol):
+            self.wrappedProtocol.handshakeCompleted()
 
 
     def registerProducer(self, producer, streaming):
