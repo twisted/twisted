@@ -62,7 +62,9 @@ from twisted.internet.interfaces import (
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
-from twisted.internet._sslverify import _setAcceptableProtocols
+from twisted.internet._sslverify import (
+    _setAcceptableProtocols, _tolerateErrors, _handshakeCompletionInfoCallback
+)
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
@@ -721,7 +723,12 @@ class _ContextFactoryToConnectionFactory(object):
         @rtype: L{OpenSSL.SSL.Connection}
         """
         context = self._oldStyleContextFactory.getContext()
-        return Connection(context, None)
+        context.set_info_callback(
+            _tolerateErrors(_handshakeCompletionInfoCallback)
+        )
+        connection = Connection(context, None)
+        connection.set_app_data(protocol)
+        return connection
 
 
     def serverConnectionForTLS(self, protocol):
