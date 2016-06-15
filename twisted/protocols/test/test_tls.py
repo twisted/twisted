@@ -33,6 +33,7 @@ from twisted.python import log
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
 from twisted.internet.interfaces import IPushProducer
 from twisted.internet.interfaces import IProtocolNegotiationFactory
+from twisted.internet.interfaces import IHandshakeListener
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
@@ -43,7 +44,7 @@ from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.test.proto_helpers import StringTransport
 
 
-class HandshakeCallbackContextFactory:
+class BasicContextFactory:
     """
     L{HandshakeCallbackContextFactory} is a factory for SSL contexts which
     allows applications to get notification when the SSL handshake completes.
@@ -51,44 +52,24 @@ class HandshakeCallbackContextFactory:
     @ivar _finished: A L{Deferred} which will be called back when the handshake
         is done.
     """
-    # pyOpenSSL needs to expose this.
-    # https://bugs.launchpad.net/pyopenssl/+bug/372832
-    SSL_CB_HANDSHAKE_DONE = 0x20
-
-    def __init__(self):
-        self._finished = Deferred()
-
-
-    def factoryAndDeferred(cls):
-        """
-        Create a new L{HandshakeCallbackContextFactory} and return a two-tuple
-        of it and a L{Deferred} which will fire when a connection created with
-        it completes a TLS handshake.
-        """
-        contextFactory = cls()
-        return contextFactory, contextFactory._finished
-    factoryAndDeferred = classmethod(factoryAndDeferred)
-
-
-    def _info(self, connection, where, ret):
-        """
-        This is the "info callback" on the context.  It will be called
-        periodically by pyOpenSSL with information about the state of a
-        connection.  When it indicates the handshake is complete, it will fire
-        C{self._finished}.
-        """
-        if where & self.SSL_CB_HANDSHAKE_DONE:
-            self._finished.callback(None)
-
 
     def getContext(self):
         """
         Create and return an SSL context configured to use L{self._info} as the
         info callback.
         """
-        context = Context(TLSv1_METHOD)
-        context.set_info_callback(self._info)
-        return context
+        return Context(TLSv1_METHOD)
+
+
+
+@implementer(IHandshakeListener)
+class HandshakeDeferredProtocol(Protocol):
+    """
+    A L{Protocol} class that implements L{IHandshakeListener}, and will fire a
+    L{Deferred} when the TLS handshake is complete.
+    """
+    def handshakeCompleted(self):
+        self.handshakeDeferred.callback(None)
 
 
 
@@ -289,10 +270,12 @@ class TLSMemoryBIOTests(TestCase):
         Start handshake between TLS client and server.
         """
         clientFactory = ClientFactory()
-        clientFactory.protocol = Protocol
+        clientFactory.protocol = HandshakeDeferredProtocol
 
-        clientContextFactory, handshakeDeferred = (
-            HandshakeCallbackContextFactory.factoryAndDeferred())
+        handshakeDeferred = Deferred()
+        clientFactory.protocol.handshakeDeferred = handshakeDeferred
+
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -334,7 +317,7 @@ class TLSMemoryBIOTests(TestCase):
             lambda: ConnectionLostNotifyingProtocol(
                 clientConnectionLost))
 
-        clientContextFactory = HandshakeCallbackContextFactory()
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -380,10 +363,11 @@ class TLSMemoryBIOTests(TestCase):
         """
         # Set up a client and server so there's a certificate to grab.
         clientFactory = ClientFactory()
-        clientFactory.protocol = Protocol
+        clientFactory.protocol = HandshakeDeferredProtocol
+        handshakeDeferred = Deferred()
+        clientFactory.protocol.handshakeDeferred = handshakeDeferred
 
-        clientContextFactory, handshakeDeferred = (
-            HandshakeCallbackContextFactory.factoryAndDeferred())
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -419,12 +403,13 @@ class TLSMemoryBIOTests(TestCase):
         """
         bytes = b"some bytes"
 
-        clientProtocol = Protocol()
+        handshakeDeferred = Deferred()
+        clientProtocol = HandshakeDeferredProtocol()
+        clientProtocol.handshakeDeferred = handshakeDeferred
         clientFactory = ClientFactory()
         clientFactory.protocol = lambda: clientProtocol
 
-        clientContextFactory, handshakeDeferred = (
-            HandshakeCallbackContextFactory.factoryAndDeferred())
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -465,8 +450,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = sendingProtocol
 
-        clientContextFactory, handshakeDeferred = (
-            HandshakeCallbackContextFactory.factoryAndDeferred())
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -567,7 +551,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = SimpleSendingProtocol
 
-        clientContextFactory = HandshakeCallbackContextFactory()
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -606,7 +590,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = SimpleSendingProtocol
 
-        clientContextFactory = HandshakeCallbackContextFactory()
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -641,7 +625,7 @@ class TLSMemoryBIOTests(TestCase):
             lambda: ConnectionLostNotifyingProtocol(
                 clientConnectionLost))
 
-        clientContextFactory = HandshakeCallbackContextFactory()
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -667,28 +651,37 @@ class TLSMemoryBIOTests(TestCase):
         shuts down the underlying connection cleanly on both sides, after
         transmitting all buffered data.
         """
+        @implementer(IHandshakeListener)
         class NotifyingProtocol(ConnectionLostNotifyingProtocol):
-            def __init__(self, onConnectionLost):
+            def __init__(self, onConnectionLost, deferred):
                 ConnectionLostNotifyingProtocol.__init__(self,
                                                          onConnectionLost)
                 self.data = []
+                self.handshakeDeferred = deferred
 
             def dataReceived(self, bytes):
                 self.data.append(bytes)
 
+            def handshakeCompleted(self):
+                self.handshakeDeferred.callback(None)
+
         clientConnectionLost = Deferred()
+        handshakeDeferred = Deferred()
         clientFactory = ClientFactory()
-        clientProtocol = NotifyingProtocol(clientConnectionLost)
+        clientProtocol = NotifyingProtocol(
+            clientConnectionLost, handshakeDeferred
+        )
         clientFactory.protocol = lambda: clientProtocol
 
-        clientContextFactory, handshakeDeferred = (
-            HandshakeCallbackContextFactory.factoryAndDeferred())
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
         serverConnectionLost = Deferred()
-        serverProtocol = NotifyingProtocol(serverConnectionLost)
+        serverProtocol = NotifyingProtocol(
+            serverConnectionLost, Deferred()
+        )
         serverFactory = ServerFactory()
         serverFactory.protocol = lambda: serverProtocol
 
@@ -1622,9 +1615,10 @@ class IProtocolNegotiationFactoryTests(TestCase):
         """
         bytes = b'some bytes'
 
-        class NotifyingSender(Protocol):
-            def __init__(self, notifier):
+        class NotifyingSender(HandshakeDeferredProtocol):
+            def __init__(self, notifier, deferred):
                 self.notifier = notifier
+                self.handshakeDeferred = deferred
 
             def connectionMade(self):
                 self.transport.writeSequence(list(iterbytes(bytes)))
@@ -1635,14 +1629,14 @@ class IProtocolNegotiationFactoryTests(TestCase):
                     self.notifier = None
 
 
+        handshakeDeferred = Deferred()
         clientDataReceived = Deferred()
         clientFactory = ClientNegotiationFactory(clientProtocols)
         clientFactory.protocol = lambda: NotifyingSender(
-            clientDataReceived
+            clientDataReceived, handshakeDeferred
         )
 
-        clientContextFactory, _ = (
-            HandshakeCallbackContextFactory.factoryAndDeferred())
+        clientContextFactory = BasicContextFactory()
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -1650,7 +1644,7 @@ class IProtocolNegotiationFactoryTests(TestCase):
         serverDataReceived = Deferred()
         serverFactory = ServerNegotiationFactory(serverProtocols)
         serverFactory.protocol = lambda: NotifyingSender(
-            serverDataReceived
+            serverDataReceived, Deferred()
         )
 
         serverContextFactory = ServerTLSContext()
