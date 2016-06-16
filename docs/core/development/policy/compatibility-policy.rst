@@ -444,6 +444,15 @@ Testing Deprecation Code
 ------------------------
 
 Like all changes in Twisted, deprecations must come with associated automated tested.
+
+Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_), unhandled deprecation warnings will not cause test failures or show in test results.
+
+While the Trial bug is not fixed, to trigger test failures on unhandled deprecation warnings use:
+
+.. code-block:: console
+
+    python -Werror::DeprecationWarning ./bin/trial twisted.conch
+
 There are several options for checking that a code is deprecated and that using it raises a ``DeprecationWarning``.
 
 In order of decreasing preference:
@@ -452,19 +461,23 @@ In order of decreasing preference:
 * :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>`
 * :api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`
 
+When code is deprecated, all previous tests in which the code is called and tested will now raise ``DeprecationWarning``\ s.
+Making calls to the deprecated code without raising these warnings can be done using the :api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>` helper.
 
 .. code-block:: python
 
     from twisted.trial import unittest
 
 
-    class DeprecationTests(unittest.TestCase):
+    class IdentityTests(unittest.TestCase):
         """
-        Tests for deprecated code.
+        Tests for our Identity behavior.
+
+        It include both test dedicated to the deprecation itself and test for
+        the behavior of the deprecated test.
         """
 
-
-        def test_deprecationUsingFlushWarnings(self):
+        def test_getUserDeprecationUsingFlushWarnings(self):
             """
             flushWarnings() is the recommended way of checking for deprecations.
             Make sure you only flushWarning from the targeted code, and not all
@@ -483,7 +496,7 @@ In order of decreasing preference:
             self.assertEqual(message, warnings[0]['message'])
 
 
-        def test_deprecationUsingAssertWarns(self):
+        def test_getUserDeprecationUsingAssertWarns(self):
             """
             assertWarns() is designed as a general helper to check any
             type of warnings and can be used for DeprecationsWarnings.
@@ -496,7 +509,7 @@ In order of decreasing preference:
                 db.getUser, 'some-user')
 
 
-        def test_deprecationUsingCallDeprecated(self):
+        def test_getUserDeprecationUsingCallDeprecated(self):
             """
             Avoid using self.callDeprecated() just to check the deprecation
             call.
@@ -504,19 +517,6 @@ In order of decreasing preference:
             self.callDeprecated(
                 Version("Twisted", 1, 2, 0), db.getUser, 'some-user')
 
-
-When code is deprecated, all previous tests in which the code is called and tested will now raise ``DeprecationWarning``\ s.
-Making calls to the deprecated code without raising these warnings can be done using the :api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>` helper.
-
-.. code-block:: python
-
-    from twisted.trial import unittest
-
-
-    class IdentityTests(unittest.TestCase):
-        """
-        Tests for our Identity behavior.
-        """
 
         def test_getUserHomePath(self):
             """
@@ -530,10 +530,80 @@ Making calls to the deprecated code without raising these warnings can be done u
             self.assertEqual('some-value', user.homePath)
 
 
-Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_), unhandled deprecation warnings will not cause test failures or show in test results.
+        def test_getUserNonexistentDatabase(self):
+            """
+            The nesting of callDeprecated, with assertRaises can result to
+            ugly code.
+            """
+            self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
 
-While the Trial bug is not fixed, to trigger test failures on unhandled deprecation warnings use:
+            self.assertRaises(
+                error.UnauthorizedLogin,
+                self.callDeprecated,
+                    Version("Twisted", 1, 2, 0),
+                    self.db.getUser, 'user',
+                )
 
-.. code-block:: console
+Deprecated classes are a special case since they will raise the warning when the are accessed from their module.
+This can trigger the warnings at important time.
 
-    python -Werror::DeprecationWarning ./bin/trial twisted.conch
+Here is an example of a deprecated class which we assume it it defined in `twisted/cred/credentials.py`.
+
+.. code-block:: python
+
+    @implementer(IUsernameHashedPassword)
+    class UsernameHashedPassword:
+        """
+        We don't care about how this is implemented.
+        """
+
+        deprecatedModuleAttribute(
+            Version("Twisted", 16, 3, 0),
+            "Use twisted.cred.credentials.UsernamePassword instead.",
+            "twisted.cred.credentials", "UsernameHashedPassword")
+
+And we have the following test code in `twisted/cred/test/test_credentials.py`
+
+.. code-block:: python
+
+    # Instead of the direct import which will trigger the warning like this:
+    # from twisted.cred.credentials import UsernameHashedPassword
+    # We have:
+    from twisted.cred import credentials
+
+
+    class UsernameHashedPasswordTests(TestCase):
+        """
+        Tests for the now deprecated UsernameHashedPassword.
+        """
+
+        def test_RequestAvatarId_hashed(self):
+            """
+            Existing tests can make use of C{callDeprecated} to handle the
+            warnings.
+            """
+            self.db = checkers.FilePasswordDB(self.dbfile)
+
+            credentials = self.callDeprecated(
+                Version("Twisted", 1, 2, 0),
+                credentials.UsernameHashedPassword, self.user)
+
+            self.assertEqual(self.user, credentials)
+
+
+        def test_deprecation(self):
+            """
+            Accessing the class will trigger a deprecation warning and we can
+            have a dedicated test.
+            """
+            credentials.UsernameHashedPassword
+
+            warningsShown = self.flushWarnings([self.test_deprecation])
+            self.assertEqual(len(warningsShown), 1)
+            self.assertIdentical(
+                warningsShown[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                warningsShown[0]['message'],
+                'twisted.cred.credentials.UsernameHashedPassword was '
+                'deprecated in Twisted 16.3.0: Use '
+                'twisted.cred.credentials.UsernamePassword instead.')
