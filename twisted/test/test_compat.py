@@ -15,7 +15,8 @@ from twisted.trial import unittest
 from twisted.python.compat import (
     reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
     unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType, bytesEnviron, iteritems, _coercedUnicode
+    iterbytes, intToBytes, ioType, bytesEnviron, iteritems, _coercedUnicode,
+    unichr,
 )
 from twisted.python.filepath import FilePath
 
