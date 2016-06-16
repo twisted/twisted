@@ -1,0 +1,1 @@
+The new interface IHandshakeListener that can be implemented by any Protocol provides a callback that is called when the TLS handshake has been completed, allowing Protocols to make decisions about the TLS configuration before application data is sent.

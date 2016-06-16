@@ -57,12 +57,14 @@ from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
     ISystemHandle, INegotiated, IPushProducer, ILoggingContext,
     IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
-    IProtocolNegotiationFactory
+    IProtocolNegotiationFactory, IHandshakeListener
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
-from twisted.internet._sslverify import _setAcceptableProtocols
+from twisted.internet._sslverify import (
+    _setAcceptableProtocols, _tolerateErrors, _handshakeCompletionInfoCallback
+)
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
@@ -631,6 +633,22 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         return None
 
 
+    def handshakeCompleted(self):
+        """
+        Notification of the TLS handshake being completed.
+
+        This notification fires when OpenSSL has completed the TLS handshake.
+        At this point the TLS connection is established, and the protocol can
+        interrogate its transport (usually an L{ISSLTransport}) for details of
+        the TLS connection.
+
+        For L{TLSMemoryBIOProtocol}, the notification is simply proxied through
+        to the wrapped L{Protocol}.
+        """
+        if IHandshakeListener.providedBy(self.wrappedProtocol):
+            self.wrappedProtocol.handshakeCompleted()
+
+
     def registerProducer(self, producer, streaming):
         # If we've already disconnected, nothing to do here:
         if self._lostTLSConnection:
@@ -705,7 +723,12 @@ class _ContextFactoryToConnectionFactory(object):
         @rtype: L{OpenSSL.SSL.Connection}
         """
         context = self._oldStyleContextFactory.getContext()
-        return Connection(context, None)
+        context.set_info_callback(
+            _tolerateErrors(_handshakeCompletionInfoCallback)
+        )
+        connection = Connection(context, None)
+        connection.set_app_data(protocol)
+        return connection
 
 
     def serverConnectionForTLS(self, protocol):
