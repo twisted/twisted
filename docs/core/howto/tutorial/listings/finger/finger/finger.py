@@ -1,6 +1,6 @@
 # finger.py module
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from twisted.application import internet, service
 from twisted.internet import protocol, reactor, defer
@@ -61,8 +61,8 @@ class IFingerFactory(Interface):
         """
 
 
+@implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ServerFactory):
-    implements(IFingerFactory)
 
     protocol = FingerProtocol
 
@@ -103,9 +103,8 @@ class IFingerSetterFactory(Interface):
         """
 
 
+@implementer(IFingerSetterFactory)
 class FingerSetterFactoryFromService(protocol.ServerFactory):
-
-    implements(IFingerSetterFactory)
 
     protocol = FingerSetterProtocol
 
@@ -153,9 +152,8 @@ class IIRCClientFactory(Interface):
         """
 
 
+@implementer(IIRCClientFactory)
 class IRCClientFactoryFromService(protocol.ClientFactory):
-
-    implements(IIRCClientFactory)
 
     protocol = IRCReplyBot
     nickname = None
@@ -263,9 +261,8 @@ class IPerspectiveFinger(Interface):
         """
 
 
+@implementer(IPerspectiveFinger)
 class PerspectiveFingerFromService(pb.Root):
-
-    implements(IPerspectiveFinger)
 
     def __init__(self, service):
         self.service = service
@@ -281,9 +278,8 @@ components.registerAdapter(PerspectiveFingerFromService,
                            IPerspectiveFinger)
 
 
+@implementer(IFingerService)
 class FingerService(service.Service):
-
-    implements(IFingerService)
 
     def __init__(self, filename):
         self.filename = filename

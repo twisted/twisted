@@ -5,10 +5,8 @@ import os
 
 # Yet another back-end
 
+@implementer(IFingerService)
 class LocalFingerService(service.Service):
-
-    implements(IFingerService)
-
     def getUser(self, user):
         user = user.strip()
         try:

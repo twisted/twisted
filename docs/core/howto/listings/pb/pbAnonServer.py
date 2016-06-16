@@ -17,7 +17,7 @@ from __future__ import print_function
 
 from sys import stdout
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python.log import startLogging
 from twisted.cred.checkers import ANONYMOUS, AllowAnonymousAccess
@@ -53,13 +53,12 @@ class MyPerspective(Avatar):
 
 
 
+@implementer(IRealm)
 class MyRealm(object):
     """
     Trivial realm which supports anonymous and named users by creating
     avatars which are instances of MyPerspective for either.
     """
-    implements(IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IPerspective not in interfaces:
             raise NotImplementedError("MyRealm only handles IPerspective")

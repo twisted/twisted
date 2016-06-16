@@ -3,7 +3,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.cred import portal, checkers
 from twisted.spread import pb
@@ -19,8 +19,8 @@ class ChatServer:
         self.groups[groupname].addUser(user)
         return self.groups[groupname]
 
+@implementer(portal.IRealm)
 class ChatRealm:
-    implements(portal.IRealm)
     def requestAvatar(self, avatarID, mind, *interfaces):
         assert pb.IPerspective in interfaces
         avatar = User(avatarID)
