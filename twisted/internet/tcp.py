@@ -962,6 +962,8 @@ class Port(base.BasePort, _SocketCloser):
         s = base.BasePort.createInternetSocket(self)
         if platformType == "posix" and sys.platform != "cygwin":
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if self.addressFamily == socket.AF_INET6 and hasattr(socket, "IPV6_V6ONLY"):
+            s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
         return s
 
 
