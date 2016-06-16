@@ -272,7 +272,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     _lostTLSConnection = False
     _producer = None
     _aborted = False
-    _shuttingDown = False
 
     def __init__(self, factory, wrappedProtocol, _connectWrapped=True):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
@@ -435,7 +434,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         Initiate, or reply to, the shutdown handshake of the TLS layer.
         """
-        self._shuttingDown = True
         try:
             shutdownSuccess = self._tlsConnection.shutdown()
         except Error:
