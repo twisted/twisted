@@ -2242,6 +2242,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     _requestFactory = Request
     _factory = None
     _site = None
+    _timeOut = None
 
 
     @property
@@ -2283,6 +2284,17 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._channel.site = value
 
 
+    @property
+    def timeOut(self):
+        return self._channel.timeOut
+
+
+    @timeOut.setter
+    def timeOut(self, value):
+        self._timeOut = value
+        self._channel.timeOut = value
+
+
     def dataReceived(self, data):
         """
         A override of L{IProtocol.dataReceived} that checks what protocol we're
@@ -2307,6 +2319,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.requestFactory = self._requestFactory
                 self._channel.site = self._site
                 self._channel.factory = self._factory
+                self._channel.timeOut = self._timeOut
                 self._channel.makeConnection(transport)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
