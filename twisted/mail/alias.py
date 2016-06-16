@@ -19,7 +19,7 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.python import log
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 
 def handle(result, line, filename, lineNo):
@@ -187,6 +187,7 @@ class AliasBase:
 
 
 
+@implementer(IAlias)
 class AddressAlias(AliasBase):
     """
     An alias which translates one email address into another.
@@ -194,8 +195,6 @@ class AddressAlias(AliasBase):
     @type alias : L{Address}
     @ivar alias: The destination address.
     """
-    implements(IAlias)
-
     def __init__(self, alias, *args):
         """
         @type alias: L{Address}, L{User}, L{bytes} or object which can be
@@ -262,6 +261,7 @@ class AddressAlias(AliasBase):
 
 
 
+@implementer(smtp.IMessage)
 class FileWrapper:
     """
     A message receiver which delivers a message to a file.
@@ -273,8 +273,6 @@ class FileWrapper:
     @ivar finalname: The name of the file in which the message should be
         stored.
     """
-    implements(smtp.IMessage)
-
     def __init__(self, filename):
         """
         @type filename: L{bytes}
@@ -337,14 +335,13 @@ class FileWrapper:
 
 
 
+@implementer(IAlias)
 class FileAlias(AliasBase):
     """
     An alias which translates an address to a file.
 
     @ivar filename: See L{__init__}.
     """
-    implements(IAlias)
-
     def __init__(self, filename, *args):
         """
         @type filename: L{bytes}
@@ -387,6 +384,7 @@ class ProcessAliasTimeout(Exception):
 
 
 
+@implementer(smtp.IMessage)
 class MessageWrapper:
     """
     A message receiver which delivers a message to a child process.
@@ -417,8 +415,6 @@ class MessageWrapper:
     @ivar completion: The deferred which will be triggered by the protocol
         when the child process exits.
     """
-    implements(smtp.IMessage)
-
     done = False
 
     completionTimeout = 60
@@ -553,6 +549,7 @@ class ProcessAliasProtocol(protocol.ProcessProtocol):
 
 
 
+@implementer(IAlias)
 class ProcessAlias(AliasBase):
     """
     An alias which is handled by the execution of a program.
@@ -570,8 +567,6 @@ class ProcessAlias(AliasBase):
     @ivar reactor: A reactor which will be used to create and timeout the
         child process.
     """
-    implements(IAlias)
-
     reactor = reactor
 
     def __init__(self, path, *args):
@@ -642,6 +637,7 @@ class ProcessAlias(AliasBase):
 
 
 
+@implementer(smtp.IMessage)
 class MultiWrapper:
     """
     A message receiver which delivers a single message to multiple other
@@ -649,8 +645,6 @@ class MultiWrapper:
 
     @ivar objs: See L{__init__}.
     """
-    implements(smtp.IMessage)
-
     def __init__(self, objs):
         """
         @type objs: L{list} of L{IMessage <smtp.IMessage>} provider
@@ -704,6 +698,7 @@ class MultiWrapper:
 
 
 
+@implementer(IAlias)
 class AliasGroup(AliasBase):
     """
     An alias which points to multiple destination aliases.
@@ -715,8 +710,6 @@ class AliasGroup(AliasBase):
     @type aliases: L{list} of L{AliasBase} which implements L{IAlias}
     @ivar aliases: The destination aliases.
     """
-    implements(IAlias)
-
     processAliasFactory = ProcessAlias
 
     def __init__(self, items, *args):

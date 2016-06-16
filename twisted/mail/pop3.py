@@ -16,7 +16,7 @@ import binascii
 import warnings
 from hashlib import md5
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.mail import smtp
 from twisted.protocols import basic
@@ -31,6 +31,7 @@ from twisted import cred
 ##
 ## Authentication
 ##
+@implementer(cred.credentials.IUsernamePassword)
 class APOPCredentials:
     """
     Credentials for use in APOP authentication.
@@ -39,8 +40,6 @@ class APOPCredentials:
     @ivar username: See L{__init__}
     @ivar digest: See L{__init__}
     """
-    implements(cred.credentials.IUsernamePassword)
-
     def __init__(self, magic, username, digest):
         """
         @type magic: L{bytes}
@@ -394,6 +393,7 @@ def formatUIDListResponse(msgs, getUidl):
 
 
 
+@implementer(interfaces.IProducer)
 class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     """
     A POP3 server protocol.
@@ -449,8 +449,6 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         <cred.credentials.IUsernameHashedPassword>} provider
     @ivar _auth: Authorization credentials.
     """
-    implements(interfaces.IProducer)
-
     magic = None
     _userIs = None
     _onLogout = None
@@ -1498,12 +1496,11 @@ class IMailbox(Interface):
 
 
 
+@implementer(IMailbox)
 class Mailbox:
     """
     A base class for mailboxes.
     """
-    implements(IMailbox)
-
     def listMessages(self, i=None):
         """
         Retrieve the size of a message, or, if none is specified, the size of

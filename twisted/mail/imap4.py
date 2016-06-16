@@ -34,7 +34,7 @@ try:
 except:
     import StringIO
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -469,6 +469,7 @@ _nonAtomChars = r'(){%*"\]' + _SP + _CTL
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
 _atomChars = ''.join(chr(ch) for ch in range(0x100) if chr(ch) not in _nonAtomChars)
 
+@implementer(IMailboxListener)
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     """
     Protocol implementation for an IMAP4rev1 server.
@@ -479,8 +480,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         - Selected
         - Logout
     """
-    implements(IMailboxListener)
-
     # Identifier for this server software
     IDENT = 'Twisted IMAP4rev1 Ready'
 
@@ -2209,14 +2208,13 @@ class IllegalServerResponse(IMAP4Exception): pass
 
 TIMEOUT_ERROR = error.TimeoutError()
 
+@implementer(IMailboxListener)
 class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     """IMAP4 client protocol implementation
 
     @ivar state: A string representing the state the connection is currently
     in.
     """
-    implements(IMailboxListener)
-
     tags = None
     waiting = None
     queued = None
@@ -4448,9 +4446,8 @@ class IClientAuthentication(Interface):
 
 
 
+@implementer(IClientAuthentication)
 class CramMD5ClientAuthenticator:
-    implements(IClientAuthentication)
-
     def __init__(self, user):
         self.user = user
 
@@ -4463,9 +4460,8 @@ class CramMD5ClientAuthenticator:
 
 
 
+@implementer(IClientAuthentication)
 class LOGINAuthenticator:
-    implements(IClientAuthentication)
-
     def __init__(self, user):
         self.user = user
         self.challengeResponse = self.challengeUsername
@@ -4482,9 +4478,8 @@ class LOGINAuthenticator:
         # Respond to something like "Password:"
         return secret
 
+@implementer(IClientAuthentication)
 class PLAINAuthenticator:
-    implements(IClientAuthentication)
-
     def __init__(self, user):
         self.user = user
 
@@ -4702,9 +4697,8 @@ class INamespacePresenter(Interface):
         """
 
 
+@implementer(IAccount, INamespacePresenter)
 class MemoryAccount(object):
-    implements(IAccount, INamespacePresenter)
-
     mailboxes = None
     subscriptions = None
     top_id = 0
