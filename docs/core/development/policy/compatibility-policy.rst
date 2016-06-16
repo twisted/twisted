@@ -544,7 +544,7 @@ Making calls to the deprecated code without raising these warnings can be done u
                     self.db.getUser, 'user',
                 )
 
-Deprecated classes are a special case since they will raise the warning when the are accessed from their module.
+Deprecated classes or module attributes are a special case since they will raise the warning when the are accessed from their module.
 This can trigger the warnings at important time.
 
 Here is an example of a deprecated class which we assume it it defined in `twisted/cred/credentials.py`.
