@@ -414,9 +414,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         if not self._handshakeDone:
             self._checkHandshakeStatus()
 
-        # If the handshake still isn't finished, then we've nothing left to do.
-        if not self._handshakeDone:
-            return
+            # If the handshake still isn't finished, then we've nothing left to
+            # do.
+            if not self._handshakeDone:
+                return
 
         # If we've any pending writes, this read may have un-blocked them, so
         # attempt to unbuffer them into the OpenSSL layer.
