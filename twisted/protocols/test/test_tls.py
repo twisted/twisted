@@ -122,7 +122,7 @@ class AccumulatingProtocol(Protocol):
 
 
 
-def buildTLSProtocol(server=False, transport=None):
+def buildTLSProtocol(server=False, transport=None, fakeConnection=None):
     """
     Create a protocol hooked up to a TLS transport hooked up to a
     StringTransport.
@@ -132,10 +132,20 @@ def buildTLSProtocol(server=False, transport=None):
     clientFactory = ClientFactory()
     clientFactory.protocol = lambda: clientProtocol
 
-    if server:
-        contextFactory = ServerTLSContext()
+    if fakeConnection:
+        @implementer(IOpenSSLServerConnectionCreator,
+                     IOpenSSLClientConnectionCreator)
+        class HardCodedConnection(object):
+            def clientConnectionForTLS(self, tlsProtocol):
+                return fakeConnection
+            def serverConnectionForTLS(self, tlsProtocol):
+                return fakeConnection
+        contextFactory = HardCodedConnection()
     else:
-        contextFactory = ClientTLSContext()
+        if server:
+            contextFactory = ServerTLSContext()
+        else:
+            contextFactory = ClientTLSContext()
     wrapperFactory = TLSMemoryBIOFactory(
         contextFactory, not server, clientFactory)
     sslProtocol = wrapperFactory.buildProtocol(None)
@@ -861,7 +871,7 @@ class TLSProducerTests(TestCase):
     The TLS transport must support the IConsumer interface.
     """
 
-    def setupStreamingProducer(self, transport=None):
+    def setupStreamingProducer(self, transport=None, fakeConnection=None):
         class HistoryStringTransport(StringTransport):
             def __init__(self):
                 StringTransport.__init__(self)
@@ -879,7 +889,8 @@ class TLSProducerTests(TestCase):
                 self.producerHistory.append("stop")
                 StringTransport.stopProducing(self)
 
-        clientProtocol, tlsProtocol = buildTLSProtocol(transport=transport)
+        clientProtocol, tlsProtocol = buildTLSProtocol(
+            transport=transport, fakeConnection=fakeConnection)
         producer = HistoryStringTransport()
         clientProtocol.transport.registerProducer(producer, True)
         self.assertEqual(tlsProtocol.transport.streaming, True)
@@ -1102,6 +1113,12 @@ class TLSProducerTests(TestCase):
                 self.l.append(bytes)
                 return len(bytes)
 
+            def set_connect_state(self):
+                pass
+
+            def do_handshake(self):
+                pass
+
             def bio_write(self, data):
                 pass
 
@@ -1113,7 +1130,7 @@ class TLSProducerTests(TestCase):
 
         transport = PausingStringTransport()
         clientProtocol, tlsProtocol, producer = self.setupStreamingProducer(
-            transport)
+            transport, fakeConnection=TLSConnection())
         self.assertEqual(producer.producerState, 'producing')
 
         # Shove in fake TLSConnection that will raise WantReadError the second
@@ -1121,7 +1138,6 @@ class TLSProducerTests(TestCase):
         # to the PausingStringTransport, so it will pause the producer. Then,
         # WantReadError will be thrown, triggering the TLS transport's
         # producer code path.
-        tlsProtocol._tlsConnection = TLSConnection()
         clientProtocol.transport.write(b"hello")
         self.assertEqual(producer.producerState, 'paused')
         self.assertEqual(producer.producerHistory, ['pause'])
