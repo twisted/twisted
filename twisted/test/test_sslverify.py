@@ -4,16 +4,6 @@
 
 """
 Tests for L{twisted.internet._sslverify}.
-
-@var CA_UNKNOWN_MAGIC_STRING: OpenSSL makes it exceedingly difficult to
-    maintain a stable error-reporting interface to callers.  Learning why the
-    connection failed in a reliable way that remains persistent across versions
-    is almost impossible.  This constant is a detail of the implementation
-    strategy we presently use to complete the TLS handshake on the versions we
-    presently support; it is checked in certain tests to ensure that we don't
-    I{inadvertently} change the implementation such that something else is
-    happening, but it should not be treated as part of the public interface and
-    may be changed if the underlying library behavior shifts.
 """
 
 from __future__ import division, absolute_import
@@ -124,8 +114,6 @@ A_PEER_CERTIFICATE_PEM = """
 
 A_KEYPAIR = getModule(__name__).filePath.sibling('server.pem').getContent()
 
-CA_UNKNOWN_MAGIC_STRING = 'ssl handshake failure'
-
 
 
 class DummyOpenSSL(object):
@@ -213,8 +201,7 @@ def certificatesForAuthorityAndServer(commonName=b'example.com'):
 
 
 
-def _loopbackTLSConnection(serverOpts, clientOpts, serverProtocolFactory=None,
-                           clientProtocolFactory=None):
+def _loopbackTLSConnection(serverOpts, clientOpts):
     """
     Common implementation code for both L{loopbackTLSConnection} and
     L{loopbackTLSConnectionInMemory}. Creates a loopback TLS connection
@@ -1382,8 +1369,9 @@ class TrustRootTests(unittest.TestCase):
         # It was an L{SSL.Error}.
         self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
 
+        # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
         err = cProto.wrappedProtocol.lostReason.value
-        self.assertEqual(err.args[0][0][2], CA_UNKNOWN_MAGIC_STRING)
+        self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 
     def test_trustRootSpecificCertificate(self):
@@ -2222,8 +2210,9 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
         # It was an L{SSL.Error}.
         self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
 
+        # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
         err = cProto.wrappedProtocol.lostReason.value
-        self.assertEqual(err.args[0][0][2], CA_UNKNOWN_MAGIC_STRING)
+        self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 
     def test_trustRootFromCertificatesOpenSSLObjects(self):
