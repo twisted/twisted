@@ -389,7 +389,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 # shared ciphers, because a certificate failed to verify, etc).
                 # TLS can no longer proceed.
                 failure = Failure()
-                self._flushSendBIO()
                 self._tlsShutdownFinished(failure)
             else:
                 if not self._aborted:
@@ -472,6 +471,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         if self._reason is None:
             self._reason = reason
         self._lostTLSConnection = True
+        # We may need to send a TLS alert regarding the nature of the shutdown
+        # here (for example, why a handshake failed), so always flush our send
+        # buffer before telling our lower-level transport to go away.
+        self._flushSendBIO()
         # Using loseConnection causes the application protocol's
         # connectionLost method to be invoked non-reentrantly, which is always
         # a nice feature. However, for error cases (reason != None) we might
