@@ -23,22 +23,29 @@ else:
     from OpenSSL.crypto import X509Type
     from OpenSSL.SSL import (TLSv1_METHOD, Error, Context, ConnectionType,
                              WantReadError)
-    from twisted.internet.ssl import PrivateCertificate
+    from twisted.internet.ssl import PrivateCertificate, optionsForClientTLS
     from twisted.test.ssl_helpers import (ClientTLSContext, ServerTLSContext,
                                           certPath)
+    from twisted.test.test_sslverify import certificatesForAuthorityAndServer
+
+from twisted.test.iosim import connectedServerAndClient
 
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.internet.interfaces import ISystemHandle, ISSLTransport
-from twisted.internet.interfaces import IPushProducer
-from twisted.internet.interfaces import IProtocolNegotiationFactory
+
+from twisted.internet.interfaces import (
+    ISystemHandle, ISSLTransport,
+    IPushProducer, IProtocolNegotiationFactory, IHandshakeListener,
+    IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator
+)
+
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
 from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.test.proto_helpers import StringTransport
 
@@ -205,6 +212,58 @@ class TLSMemoryBIOFactoryTests(TestCase):
         contextFactory = ServerTLSContext()
         factory = TLSMemoryBIOFactory(contextFactory, False, NoFactory())
         self.assertEqual("NoFactory (TLS)", factory.logPrefix())
+
+
+
+class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
+    """
+    Test for the implementation of L{ISSLTransport} which runs over another
+    transport.
+
+    @note: Prefer to add test cases to this suite, in this style, using
+        L{connectedServerAndClient}, rather than returning L{Deferred}s.
+    """
+
+    def test_handshakeNotification(self):
+        """
+        The completion of the TLS handshake calls C{handshakeCompleted} on
+        L{Protocol} objects that provide L{IHandshakeListener}.
+        """
+        authCert, serverCert = certificatesForAuthorityAndServer()
+        @ClientFactory.forProtocol
+        @implementer(IHandshakeListener)
+        class Client(Protocol, object):
+            handshook = False
+            peerAfterHandshake = None
+            def handshakeCompleted(self):
+                self.handshook = True
+                self.peerAfterHandshake = self.transport.getPeerCertificate()
+
+        @ServerFactory.forProtocol
+        @implementer(IHandshakeListener)
+        class Server(Protocol, object):
+            handshaked = False
+            def handshakeCompleted(self):
+                self.handshaked = True
+        clientF = TLSMemoryBIOFactory(
+            optionsForClientTLS(u"example.com", trustRoot=authCert),
+            isClient=True,
+            wrappedFactory=Client
+        )
+        serverF = TLSMemoryBIOFactory(
+            serverCert.options(), isClient=False, wrappedFactory=Server
+        )
+        client, server, pump = connectedServerAndClient(
+            lambda: serverF.buildProtocol(None),
+            lambda: clientF.buildProtocol(None),
+            greet=False,
+        )
+        self.assertEqual(client.wrappedProtocol.handshook, False)
+        self.assertEqual(server.wrappedProtocol.handshaked, False)
+        pump.flush()
+        self.assertEqual(client.wrappedProtocol.handshook, True)
+        self.assertEqual(server.wrappedProtocol.handshaked, True)
+        self.assertIsNot(client.wrappedProtocol.peerAfterHandshake, None)
 
 
 
