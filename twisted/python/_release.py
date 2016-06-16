@@ -35,6 +35,8 @@ TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
     "https://docs.python.org/2/objects.inv",
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
+    "https://python-hyper.org/h2/en/stable/objects.inv",
+    "https://python-hyper.org/priority/en/stable/objects.inv",
 ]
 
 
@@ -653,7 +655,8 @@ class NewsBuilder(object):
         for description in reverse:
             reverse[description].sort()
         reverse = reverse.items()
-        reverse.sort(key=lambda (descr, tickets): tickets[0])
+        # result is a tuple of (descr, tickets)
+        reverse.sort(key=lambda result: result[1][0])
 
         fileObj.write(header + '\n' + '-' * len(header) + '\n')
         for (description, relatedTickets) in reverse:

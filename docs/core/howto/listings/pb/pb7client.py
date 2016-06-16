@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb
 from twisted.internet import reactor
 
@@ -14,8 +16,8 @@ def one(port, user, pw, service, perspective, number):
     def1.addCallback(connected, number)
 
 def connected(perspective, number):
-    print "got perspective ref:", perspective
-    print "asking it to foo(%d)" % number
+    print("got perspective ref:", perspective)
+    print("asking it to foo(%d)" % number)
     perspective.callRemote("foo", number)
 
 def main():

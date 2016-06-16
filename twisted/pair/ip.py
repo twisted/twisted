@@ -29,7 +29,7 @@ class IPHeader:
         self.dont_fragment = (frag_off & 0x4000 != 0)
         self.more_fragments = (frag_off & 0x2000 != 0)
 
-MAX_SIZE = 2L**32
+MAX_SIZE = 2**32
 
 class IPProtocol(protocol.AbstractDatagramProtocol):
     implements(raw.IRawPacketProtocol)

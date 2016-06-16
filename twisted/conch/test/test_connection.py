@@ -354,7 +354,7 @@ class ConnectionTests(unittest.TestCase):
         Like L{test_lookupChannelError}, but for the case where the failure code
         is represented as a C{long} instead of a C{int}.
         """
-        self._lookupChannelErrorTest(123L)
+        self._lookupChannelErrorTest(123)
 
 
     def test_CHANNEL_OPEN_CONFIRMATION(self):

@@ -386,10 +386,12 @@ class Canvas(Widget):
         if self.y >= height:
             self.y = height - 1
 
-    def __getitem__(self, (x, y)):
+    def __getitem__(self, index):
+        (x, y) = index
         return self.contents[(self._width * y) + x]
 
-    def __setitem__(self, (x, y), value):
+    def __setitem__(self, index, value):
+        (x, y) = index
         self.contents[(self._width * y) + x] = value
 
     def clear(self):
@@ -409,33 +411,43 @@ class Canvas(Widget):
 def horizontalLine(terminal, y, left, right):
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
     terminal.cursorPosition(left, y)
-    terminal.write(chr(0161) * (right - left))
+    terminal.write(chr(0o161) * (right - left))
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 
 def verticalLine(terminal, x, top, bottom):
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
     for n in xrange(top, bottom):
         terminal.cursorPosition(x, n)
-        terminal.write(chr(0170))
+        terminal.write(chr(0o170))
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 
 
-def rectangle(terminal, (top, left), (width, height)):
+def rectangle(terminal, position, dimension):
+    """
+    Draw a rectangle
+
+    @type position: C{tuple}
+    @param position: A tuple of the (top, left) coordinates of the rectangle.
+    @type dimension: C{tuple}
+    @param dimension: A tuple of the (width, height) size of the rectangle.
+    """
+    (top, left) = position
+    (width, height) = dimension
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
 
     terminal.cursorPosition(top, left)
-    terminal.write(chr(0154))
-    terminal.write(chr(0161) * (width - 2))
-    terminal.write(chr(0153))
+    terminal.write(chr(0o154))
+    terminal.write(chr(0o161) * (width - 2))
+    terminal.write(chr(0o153))
     for n in range(height - 2):
         terminal.cursorPosition(left, top + n + 1)
-        terminal.write(chr(0170))
+        terminal.write(chr(0o170))
         terminal.cursorForward(width - 2)
-        terminal.write(chr(0170))
+        terminal.write(chr(0o170))
     terminal.cursorPosition(0, top + height - 1)
-    terminal.write(chr(0155))
-    terminal.write(chr(0161) * (width - 2))
-    terminal.write(chr(0152))
+    terminal.write(chr(0o155))
+    terminal.write(chr(0o161) * (width - 2))
+    terminal.write(chr(0o152))
 
     terminal.selectCharacterSet(insults.CS_US, insults.G0)
 

@@ -382,7 +382,8 @@ class IRCUser(irc.IRC):
          ":End of /MOTD command.")
         ]
 
-    def _cbLogin(self, (iface, avatar, logout)):
+    def _cbLogin(self, result):
+        (iface, avatar, logout) = result
         assert iface is iwords.IUser, "Realm is buggy, got %r" % (iface,)
 
         # Let them send messages to the world
