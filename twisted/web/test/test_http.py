@@ -2446,6 +2446,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         message.
         """
         factory = http.HTTPFactory()
+        factory.timeOut = None
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
