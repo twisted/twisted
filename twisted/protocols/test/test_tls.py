@@ -215,6 +215,65 @@ class TLSMemoryBIOFactoryTests(TestCase):
 
 
 
+def handshakingClientAndServer(clientGreetingData=None,
+                               clientAbortAfterHandshake=False):
+    """
+    Construct a client and server L{TLSMemoryBIOProtocol} connected by an IO
+    pump.
+
+    @param greetingData: The data which should be written in L{connectionMade}.
+    @type greetingData: L{bytes}
+
+    @return: 3-tuple of client, server, L{twisted.test.iosim.IOPump}
+    """
+    authCert, serverCert = certificatesForAuthorityAndServer()
+    @ClientFactory.forProtocol
+    @implementer(IHandshakeListener)
+    class Client(Protocol, object):
+        handshook = False
+        peerAfterHandshake = None
+
+        def connectionMade(self):
+            if clientGreetingData is not None:
+                self.transport.write(clientGreetingData)
+
+        def dataReceived(self, data):
+            self.applicationData.append(data)
+
+        def handshakeCompleted(self):
+            self.handshook = True
+            self.peerAfterHandshake = self.transport.getPeerCertificate()
+            if clientAbortAfterHandshake:
+                self.transport.abortConnection()
+
+    @ServerFactory.forProtocol
+    @implementer(IHandshakeListener)
+    class Server(Protocol, object):
+        handshaked = False
+        applicationData = []
+        def handshakeCompleted(self):
+            self.handshaked = True
+
+        def dataReceived(self, data):
+            self.applicationData.append(data)
+
+    clientF = TLSMemoryBIOFactory(
+        optionsForClientTLS(u"example.com", trustRoot=authCert),
+        isClient=True,
+        wrappedFactory=Client
+    )
+    serverF = TLSMemoryBIOFactory(
+        serverCert.options(), isClient=False, wrappedFactory=Server
+    )
+    client, server, pump = connectedServerAndClient(
+        lambda: serverF.buildProtocol(None),
+        lambda: clientF.buildProtocol(None),
+        greet=False,
+    )
+    return client, server, pump
+
+
+
 class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
     """
     Test for the implementation of L{ISSLTransport} which runs over another
@@ -227,43 +286,30 @@ class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
     def test_handshakeNotification(self):
         """
         The completion of the TLS handshake calls C{handshakeCompleted} on
-        L{Protocol} objects that provide L{IHandshakeListener}.
+        L{Protocol} objects that provide L{IHandshakeListener}.  At the time
+        C{handshakeCompleted} is invoked, the transport's peer certificate will
+        have been initialized.
         """
-        authCert, serverCert = certificatesForAuthorityAndServer()
-        @ClientFactory.forProtocol
-        @implementer(IHandshakeListener)
-        class Client(Protocol, object):
-            handshook = False
-            peerAfterHandshake = None
-            def handshakeCompleted(self):
-                self.handshook = True
-                self.peerAfterHandshake = self.transport.getPeerCertificate()
-
-        @ServerFactory.forProtocol
-        @implementer(IHandshakeListener)
-        class Server(Protocol, object):
-            handshaked = False
-            def handshakeCompleted(self):
-                self.handshaked = True
-        clientF = TLSMemoryBIOFactory(
-            optionsForClientTLS(u"example.com", trustRoot=authCert),
-            isClient=True,
-            wrappedFactory=Client
-        )
-        serverF = TLSMemoryBIOFactory(
-            serverCert.options(), isClient=False, wrappedFactory=Server
-        )
-        client, server, pump = connectedServerAndClient(
-            lambda: serverF.buildProtocol(None),
-            lambda: clientF.buildProtocol(None),
-            greet=False,
-        )
+        client, server, pump = handshakingClientAndServer()
         self.assertEqual(client.wrappedProtocol.handshook, False)
         self.assertEqual(server.wrappedProtocol.handshaked, False)
         pump.flush()
         self.assertEqual(client.wrappedProtocol.handshook, True)
         self.assertEqual(server.wrappedProtocol.handshaked, True)
         self.assertIsNot(client.wrappedProtocol.peerAfterHandshake, None)
+
+
+    def test_handshakeStopWriting(self):
+        """
+        If some data is written to the transport in C{connectionMade}, but
+        C{handshakeDone} doesn't like something it sees about the handshake, it
+        can use C{abortConnection} to ensure that the application never
+        receives that data.
+        """
+        client, server, pump = handshakingClientAndServer(b"untrustworthy",
+                                                          True)
+        pump.flush()
+        self.assertEqual(server.wrappedProtocol.applicationData, [])
 
 
 
