@@ -15,19 +15,18 @@ from __future__ import print_function
 from sys import stdout
 from random import randrange
 
-from zope.interface import implements
+from zope.interface import implementer
 from twisted.python.log import startLogging
 from twisted.internet import interfaces, reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 
 
+@implementer(interfaces.IPushProducer)
 class Producer(object):
     """
     Send back the requested number of random integers to the client.
     """
-
-    implements(interfaces.IPushProducer)
 
     def __init__(self, proto, count):
         self._proto = proto
