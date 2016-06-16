@@ -30,6 +30,7 @@ class EthernetHeader:
                     = struct.unpack("!6s6sH", data[:6+6+2])
 
 
+
 @implementer(IEthernetProtocol)
 class EthernetProtocol(protocol.AbstractDatagramProtocol):
     def __init__(self):
