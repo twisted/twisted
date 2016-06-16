@@ -20,6 +20,8 @@ Serializing a formatting structure is done with L{flatten}.
 @see: L{twisted.words.protocols.irc._CharacterAttributes}
 """
 
+from __future__ import print_function
+
 from twisted.python.util import FancyEqMixin
 
 
@@ -287,10 +289,10 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
 
         from twisted.conch.insults.text import flatten, attributes as A
         from twisted.conch.insults.helper import CharacterAttribute
-        print flatten(
+        print(flatten(
             A.normal[A.bold[A.fg.red['He'], A.fg.green['ll'], A.fg.magenta['o'], ' ',
                             A.fg.yellow['Wo'], A.fg.blue['rl'], A.fg.cyan['d!']]],
-            CharacterAttribute())
+            CharacterAttribute()))
 
     @param output: Object returned by accessing attributes of the
         module-level attributes object.

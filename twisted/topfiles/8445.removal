@@ -1,0 +1,1 @@
+twisted.protocols.sip.DigestAuthorizer, BasicAuthorizer, and related functions have been removed.

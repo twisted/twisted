@@ -1,5 +1,5 @@
 import os
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.application import service
 
@@ -12,9 +12,8 @@ smtpServerFactory = protocol.ServerFactory()
 
 from twisted.mail import smtp
 
+@implementer(smtp.IMessage)
 class FileMessage(object):
-    implements(smtp.IMessage)
-
     def __init__(self, fileObj):
         self.fileObj = fileObj
 
