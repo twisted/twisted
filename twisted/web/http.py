@@ -2237,6 +2237,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @ivar _factory: A reference to the creating L{HTTPFactory} object.
     @type _factory: L{HTTPFactory}
+
+    @ivar _timeOut: A timeout value to pass to the backing channel.
+    @type _timeOut: L{int} or L{None}
     """
     _negotiatedProtocol = None
     _requestFactory = Request
