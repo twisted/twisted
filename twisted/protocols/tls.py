@@ -609,10 +609,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         if self._lostTLSConnection:
             return
 
-        if not self._handshakeDone:
-            self._bufferedWrite(bytes)
-            return
-
         # A TLS payload is 16kB max
         bufferSize = 2 ** 16
 
