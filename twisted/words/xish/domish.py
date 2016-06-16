@@ -12,7 +12,7 @@ for use in streaming XML applications.
 
 import types
 
-from zope.interface import implements, Interface, Attribute
+from zope.interface import implementer, Interface, Attribute
 
 def _splitPrefix(name):
     """ Internal method for splitting a prefixed Element name into its
@@ -284,6 +284,7 @@ class IElement(Interface):
         @type node: C{unicode} or object implementing L{IElement}
         """
 
+@implementer(IElement)
 class Element(object):
     """ Represents an XML element node.
 
@@ -382,9 +383,6 @@ class Element(object):
                          element. The key is the prefix to bind the
                          namespace uri to.
     """
-
-    implements(IElement)
-
     _idCounter = 0
 
     def __init__(self, qname, defaultUri=None, attribs=None,
