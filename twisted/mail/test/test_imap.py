@@ -19,7 +19,7 @@ import types
 
 from collections import OrderedDict
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
@@ -972,9 +972,8 @@ class IMAP4HelperTests(unittest.TestCase):
                 self.assertEqual(L, expected,
                                   "len(%r) = %r != %r" % (input, L, expected))
 
+@implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
-    implements(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
-
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
     messages = []
     mUID = 0
@@ -3391,9 +3390,8 @@ class FakeyServer(imap4.IMAP4Server):
     def sendServerGreeting(self):
         pass
 
+@implementer(imap4.IMessage)
 class FakeyMessage(util.FancyStrMixin):
-    implements(imap4.IMessage)
-
     showAttributes = ('headers', 'flags', 'date', 'body', 'uid')
 
     def __init__(self, headers, flags, date, body, uid, subpart):
@@ -4417,9 +4415,8 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
+@implementer(imap4.ISearchableMailbox)
 class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
-    implements(imap4.ISearchableMailbox)
-
     def setUp(self):
         self.expected = self.result = None
         self.server_received_query = None
@@ -4578,9 +4575,8 @@ class FakeMailbox:
         self.args.append((body, flags, date))
         return defer.succeed(None)
 
+@implementer(imap4.IMessageFile)
 class FeaturefulMessage:
-    implements(imap4.IMessageFile)
-
     def getFlags(self):
         return 'flags'
 
@@ -4590,9 +4586,8 @@ class FeaturefulMessage:
     def open(self):
         return StringIO("open")
 
+@implementer(imap4.IMessageCopier)
 class MessageCopierMailbox:
-    implements(imap4.IMessageCopier)
-
     def __init__(self):
         self.msgs = []
 

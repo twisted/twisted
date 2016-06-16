@@ -17,7 +17,7 @@ import time
 from hashlib import md5
 
 from zope.interface.verify import verifyClass
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from twisted.trial import unittest
 from twisted.mail import smtp
@@ -724,12 +724,11 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
 
 
 
+@implementer(mail.mail.IAliasableDomain)
 class StubAliasableDomain(object):
     """
     Minimal testable implementation of IAliasableDomain.
     """
-    implements(mail.mail.IAliasableDomain)
-
     def exists(self, user):
         """
         No test coverage for invocations of this method on domain objects,
