@@ -6,7 +6,6 @@
 from __future__ import absolute_import, division
 
 from twisted.python.compat import _coercedUnicode, unicode
-from twisted.python.reflect import qual
 from twisted.words.protocols.jabber import xmlstream, sasl, error
 from twisted.words.protocols.jabber.jid import JID
 from twisted.words.xish import domish, xpath, utility
