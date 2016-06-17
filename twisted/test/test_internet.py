@@ -685,6 +685,7 @@ class TimeTests(unittest.TestCase):
             self.assertEqual(call.getTime(), 105)
         finally:
             reactor.seconds = oseconds
+        call.cancel()
 
 
     def test_callLaterUsesReactorSecondsAsDelayedCallSecondsFactory(self):
@@ -699,6 +700,7 @@ class TimeTests(unittest.TestCase):
             self.assertEqual(call.seconds(), 100)
         finally:
             reactor.seconds = oseconds
+        call.cancel()
 
 
     def test_callLater(self):
@@ -826,6 +828,7 @@ class TimeTests(unittest.TestCase):
         self.assertEqual(dc.getTime(), 5)
         dc.reset(3)
         self.assertEqual(dc.getTime(), 13)
+
 
 
 class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
