@@ -9,6 +9,7 @@ from asyncio import get_event_loop, new_event_loop
 
 from zope.interface import implementer
 
+from twisted.logger import Logger
 from twisted.internet.base import DelayedCall
 from twisted.internet.posixbase import PosixReactorBase, _NO_FILEDESC
 from twisted.python.log import callWithLogger
@@ -33,6 +34,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
     Reactor running on top of an asyncio SelectorEventLoop.
     """
     _asyncClosed = False
+    _log = Logger()
 
     def __init__(self, eventloop=None):
 
@@ -43,14 +45,13 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._writers = {}
         self._readers = {}
         self._delayedCalls = set()
-        PosixReactorBase.__init__(self)
+        super().__init__()
 
 
     def _read_or_write(self, selectable, read):
         method = selectable.doRead if read else selectable.doWrite
 
         if selectable.fileno() == -1:
-
             self._disconnectSelectable(selectable, _NO_FILEDESC, read)
             return
 
@@ -58,6 +59,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
             why = method()
         except Exception as e:
             why = e
+            self._log.failure(None)
         if why:
             self._disconnectSelectable(selectable, why, read)
 
@@ -140,12 +142,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def stop(self):
-        PosixReactorBase.stop(self)
+        super().stop()
         self.callLater(0, self.fireSystemEvent, "shutdown")
 
 
     def crash(self):
-        PosixReactorBase.crash(self)
+        super().crash()
         self._asyncioEventloop.stop()
 
 
