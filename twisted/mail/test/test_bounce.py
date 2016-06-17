@@ -30,6 +30,7 @@ Subject: test
         self.assertEqual(mess['To'], 'moshez@example.com')
         self.assertEqual(mess['From'], 'postmaster@example.org')
         self.assertEqual(mess['subject'], 'Returned Mail: see transcript for details')
+        self.assertRegex(s, "Final-Recipient: RFC822; nonexistent@example.org")
 
     def testBounceMIME(self):
         pass
