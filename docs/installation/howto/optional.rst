@@ -5,7 +5,9 @@
 Installing Optional Dependencies
 ================================
 
-.. warning::  At the moment, installing optional dependencies functions only on python2. This is being addressed as part of the efforts to port the project to python3.
+.. warning::  At the moment, installing optional dependencies functions only on python2.
+              This is being addressed as part of the efforts to port the project to python3.
+              `Ticket #7807`_ has been created to fix this issue.
 
 This document describes the optional dependencies that Twisted supports.
 The dependencies are python packages that Twisted's developers have found useful either for developing Twisted itself or for developing Twisted applications.
@@ -64,3 +66,4 @@ The following optional dependencies are supported:
 .. _`setuptools documentation`: https://pythonhosted.org/setuptools/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 .. _`python packaging tutorial`: https://packaging.python.org/en/latest/installing.html#examples
 .. _idna: https://pypi.python.org/pypi/idna
+.. _`Ticket #7807`: https://twistedmatrix.com/trac/ticket/7807
