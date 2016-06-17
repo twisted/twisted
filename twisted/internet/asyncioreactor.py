@@ -10,7 +10,7 @@ from asyncio import get_event_loop, new_event_loop
 from zope.interface import implementer
 
 from twisted.internet.base import DelayedCall
-from twisted.internet.posixbase import PosixReactorBase
+from twisted.internet.posixbase import PosixReactorBase, _NO_FILEDESC
 from twisted.python.log import callWithLogger
 from twisted.internet.interfaces import IReactorFDSet
 
@@ -34,7 +34,11 @@ class AsyncioSelectorReactor(PosixReactorBase):
     """
     _asyncClosed = False
 
-    def __init__(self, eventloop):
+    def __init__(self, eventloop=None):
+
+        if eventloop is None:
+            eventloop = get_event_loop()
+
         self._asyncioEventloop = eventloop
         self._writers = set()
         self._readers = set()
@@ -44,6 +48,11 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def _read_or_write(self, selectable, read):
         method = selectable.doRead if read else selectable.doWrite
+
+        if selectable.fileno() == -1:
+            self._disconnectSelectable(selectable, _NO_FILEDESC, read)
+            return
+
         try:
             why = method()
         except Exception as e:
@@ -55,15 +64,23 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def addReader(self, reader):
         self._readers.add(reader)
         fd = reader.fileno()
-        self._asyncioEventloop.add_reader(fd, callWithLogger, reader,
-                                          self._read_or_write, reader, True)
+        try:
+            self._asyncioEventloop.add_reader(fd, callWithLogger, reader,
+                                              self._read_or_write, reader,
+                                              True)
+        except BrokenPipeError:
+            pass
 
 
     def addWriter(self, writer):
         self._writers.add(writer)
         fd = writer.fileno()
-        self._asyncioEventloop.add_writer(fd, callWithLogger, writer,
-                                          self._read_or_write, writer, False)
+        try:
+            self._asyncioEventloop.add_writer(fd, callWithLogger, writer,
+                                              self._read_or_write, writer,
+                                              False)
+        except BrokenPipeError:
+            pass
 
 
     def removeReader(self, reader):
@@ -165,10 +182,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 def install(eventloop=None):
     """
-    Install a tulip-based reactor.
+    Install an asyncio-based reactor.
     """
-    if eventloop is None:
-        eventloop = get_event_loop()
-    reactor = AsyncioSelectorReactor(eventloop)
+    reactor = AsyncioSelectorReactor()
     from twisted.internet.main import installReactor
     installReactor(reactor)
