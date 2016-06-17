@@ -196,7 +196,7 @@ class _WrappingFactory(ClientFactory):
             L{_WrappingFactory}'s L{Deferred <defer.Deferred>} is returned to
             C{connect()}'s caller.
 
-        @return: C{None}
+        @return: L{None}
         """
         deferred.errback(
             error.ConnectingCancelledError(
@@ -222,9 +222,9 @@ class _WrappingFactory(ClientFactory):
         """
         Proxy C{buildProtocol} to our C{self._wrappedFactory} or errback the
         C{self._onConnection} L{Deferred} if the wrapped factory raises an
-        exception or returns C{None}.
+        exception or returns L{None}.
 
-        @return: An instance of L{_WrappingProtocol} or C{None}
+        @return: An instance of L{_WrappingProtocol} or L{None}
         """
         try:
             proto = self._wrappedFactory.buildProtocol(addr)
@@ -1028,7 +1028,7 @@ def _parseTCP(factory, port, interface="", backlog=50):
     Internal parser function for L{_parseServer} to convert the string
     arguments for a TCP(IPv4) stream endpoint into the structured arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
 
@@ -1056,7 +1056,7 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
     arguments for a UNIX (AF_UNIX/SOCK_STREAM) stream endpoint into the
     structured arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
 
@@ -1090,7 +1090,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
     arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
     @type factory: L{IProtocolFactory} or C{NoneType}
@@ -1646,7 +1646,7 @@ def _parseTrustRootPath(pathName):
 def _privateCertFromPaths(certificatePath, keyPath):
     """
     Parse a certificate path and key path, either or both of which might be
-    C{None}, into a certificate object.
+    L{None}, into a certificate object.
 
     @param certificatePath: the certificate path
     @type certificatePath: L{bytes} or L{unicode} or L{None}

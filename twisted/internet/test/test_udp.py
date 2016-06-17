@@ -249,8 +249,8 @@ class UDPPortTestsMixin(object):
             """
             Stop the reactor after a datagram is received.
 
-            @param ignored: C{None}, which is ignored
-            @returns: C{None}
+            @param ignored: L{None}, which is ignored
+            @returns: L{None}
             """
             reactor.stop()
 
@@ -297,8 +297,8 @@ class UDPPortTestsMixin(object):
             """
             Stop the reactor after a datagram is received.
 
-            @param ignored: C{None}, which is ignored
-            @returns: C{None}
+            @param ignored: L{None}, which is ignored
+            @returns: L{None}
             """
 
             reactor.stop()

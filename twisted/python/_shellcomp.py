@@ -162,7 +162,7 @@ class ZshBuilder(object):
     def write(self, genSubs=True):
         """
         Generate the completion function and write it to the output file
-        @return: C{None}
+        @return: L{None}
 
         @type genSubs: C{bool}
         @param genSubs: Flag indicating whether or not completions for the list
@@ -203,7 +203,7 @@ class ZshSubcommandBuilder(ZshBuilder):
     def write(self):
         """
         Generate the completion function and write it to the output file
-        @return: C{None}
+        @return: L{None}
         """
         gen = ZshArgumentsGenerator(self.options, self.cmdName, self.file)
         gen.extraActions.insert(0, SubcommandAction())
@@ -337,7 +337,7 @@ class ZshArgumentsGenerator(object):
     def write(self):
         """
         Write the zsh completion code to the file given to __init__
-        @return: C{None}
+        @return: L{None}
         """
         self.writeHeader()
         self.writeExtras()
@@ -348,7 +348,7 @@ class ZshArgumentsGenerator(object):
     def writeHeader(self):
         """
         This is the start of the code that calls _arguments
-        @return: C{None}
+        @return: L{None}
         """
         self.file.write('#compdef %s\n\n'
                         '_arguments -s -A "-*" \\\n' % (self.cmdName,))
@@ -357,7 +357,7 @@ class ZshArgumentsGenerator(object):
     def writeOptions(self):
         """
         Write out zsh code for each option in this command
-        @return: C{None}
+        @return: L{None}
         """
         optNames = self.allOptionsNameToDefinition.keys()
         optNames.sort()
@@ -372,7 +372,7 @@ class ZshArgumentsGenerator(object):
         with a named option. That is, the stuff that gets passed to
         Options.parseArgs().
 
-        @return: C{None}
+        @return: L{None}
 
         @raises: ValueError: if C{Completer} with C{repeat=True} is found and
             is not the last item in the C{extraActions} list.
@@ -389,7 +389,7 @@ class ZshArgumentsGenerator(object):
     def writeFooter(self):
         """
         Write the last bit of code that finishes the call to _arguments
-        @return: C{None}
+        @return: L{None}
         """
         self.file.write('&& return 0\n')
 
@@ -397,7 +397,7 @@ class ZshArgumentsGenerator(object):
     def verifyZshNames(self):
         """
         Ensure that none of the option names given in the metadata are typoed
-        @return: C{None}
+        @return: L{None}
         @raise ValueError: Raised if unknown option names have been found.
         """
         def err(name):
@@ -495,7 +495,7 @@ class ZshArgumentsGenerator(object):
         @type longname: C{str}
         @param longname: The long option name (e.g. "verbose" instead of "v")
 
-        @return: C{None}
+        @return: L{None}
         """
         if longname in self.flagNameToDefinition:
             # It's a flag option. Not one that takes a parameter.
@@ -586,7 +586,7 @@ class ZshArgumentsGenerator(object):
     def getShortOption(self, longname):
         """
         Return the short option letter or None
-        @return: C{str} or C{None}
+        @return: C{str} or L{None}
         """
         optList = self.allOptionsNameToDefinition[longname]
         return optList[0] or None
@@ -596,7 +596,7 @@ class ZshArgumentsGenerator(object):
         """
         Add additional options to the optFlags and optParams lists.
         These will be defined by 'opt_foo' methods of the Options subclass
-        @return: C{None}
+        @return: L{None}
         """
         methodsDict = {}
         reflect.accumulateMethods(self.options, methodsDict, 'opt_')

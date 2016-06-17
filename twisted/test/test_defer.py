@@ -595,7 +595,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         If a L{Deferred} in the list passed to L{gatherResults} fires with a
         failure and C{consumerErrors} is C{True}, the failure is converted to a
-        C{None} result on that L{Deferred}.
+        L{None} result on that L{Deferred}.
         """
         # test successful list of deferreds
         dgood = defer.succeed(1)
@@ -880,7 +880,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         If a first L{Deferred} with a result is returned from a callback on a
         second L{Deferred}, the result of the second L{Deferred} becomes the
         result of the first L{Deferred} and the result of the first L{Deferred}
-        becomes C{None}.
+        becomes L{None}.
         """
         result = object()
         first = defer.succeed(result)
@@ -900,7 +900,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         If a first L{Deferred} without a result is returned from a callback on
         a second L{Deferred}, the result of the second L{Deferred} becomes the
         result of the first L{Deferred} as soon as the first L{Deferred} has
-        one and the result of the first L{Deferred} becomes C{None}.
+        one and the result of the first L{Deferred} becomes L{None}.
         """
         first = defer.Deferred()
         second = defer.Deferred()
@@ -945,7 +945,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         If C{a} has no result and is returned from a callback on C{b} then when
         C{a} fails, C{b}'s result becomes the L{Failure} that was C{a}'s result,
-        the result of C{a} becomes C{None} so that no unhandled error is logged
+        the result of C{a} becomes L{None} so that no unhandled error is logged
         when it is garbage collected.
         """
         first = defer.Deferred()

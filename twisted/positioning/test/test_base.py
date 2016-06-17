@@ -57,7 +57,7 @@ class HeadingTests(TestCase):
         """
         Tests that a simple heading has a value in decimal degrees, which is
         also its value when converted to a float. Its variation, and by
-        consequence its corrected heading, is C{None}.
+        consequence its corrected heading, is L{None}.
         """
         h = base.Heading(1.)
         self.assertEqual(h.inDecimalDegrees, 1.)
@@ -470,8 +470,8 @@ class CoordinateTests(TestCase):
 
     def test_unknownAngleInDegreesMinutesSeconds(self):
         """
-        If the vaue of a coordinate is C{None}, its values in degrees,
-        minutes, seconds is also C{None}.
+        If the vaue of a coordinate is L{None}, its values in degrees,
+        minutes, seconds is also L{None}.
         """
         c = base.Coordinate(None, None)
         self.assertEqual(c.inDegreesMinutesSeconds, None)
@@ -636,7 +636,7 @@ class PositionErrorTests(TestCase):
     def test_allUnset(self):
         """
         In an empty L{base.PositionError} with no invariant testing, all
-        dilutions of positions are C{None}.
+        dilutions of positions are L{None}.
         """
         positionError = base.PositionError()
         self.assertEqual(positionError.pdop, None)
@@ -647,7 +647,7 @@ class PositionErrorTests(TestCase):
     def test_allUnsetWithInvariant(self):
         """
         In an empty L{base.PositionError} with invariant testing, all
-        dilutions of positions are C{None}.
+        dilutions of positions are L{None}.
         """
         positionError = base.PositionError(testInvariant=True)
         self.assertEqual(positionError.pdop, None)
@@ -886,7 +886,7 @@ class SatelliteTests(TestCase):
         Tests a minimal satellite that only has a known PRN.
 
         Tests that the azimuth, elevation and signal to noise ratios
-        are C{None} and verifies the repr.
+        are L{None} and verifies the repr.
         """
         s = base.Satellite(1)
         self.assertEqual(s.identifier, 1)

@@ -537,7 +537,7 @@ class FailureTests(SynchronousTestCase):
     def test_cleanFailureRemovesTracebackInPython3(self):
         """
         L{failure.Failure.cleanFailure} sets the C{__traceback__} attribute of
-        the exception to C{None} in Python 3.
+        the exception to L{None} in Python 3.
         """
         f = getDivisionFailure()
         self.assertNotEqual(f.tb, None)
@@ -680,7 +680,7 @@ class FindFailureTests(SynchronousTestCase):
     def test_findNoFailureInExceptionHandler(self):
         """
         Within an exception handler, _findFailure should return
-        C{None} in case no Failure is associated with the current
+        L{None} in case no Failure is associated with the current
         exception.
         """
         try:

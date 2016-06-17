@@ -289,7 +289,7 @@ class ServerOptionsTests(unittest.TestCase):
 
     def test_defaultUmask(self):
         """
-        The default value for the C{umask} option is C{None}.
+        The default value for the C{umask} option is L{None}.
         """
         config = twistd.ServerOptions()
         self.assertEqual(config['umask'], None)
@@ -643,7 +643,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     def test_chroot(self):
         """
         L{UnixApplicationRunner.setupEnvironment} changes the root of the
-        filesystem if passed a non-C{None} value for the C{chroot} parameter.
+        filesystem if passed a non-L{None} value for the C{chroot} parameter.
         """
         self.runner.setupEnvironment("/foo/bar", ".", True, None, None)
         self.assertEqual(self.root, "/foo/bar")
@@ -652,7 +652,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     def test_noChroot(self):
         """
         L{UnixApplicationRunner.setupEnvironment} does not change the root of
-        the filesystem if passed C{None} for the C{chroot} parameter.
+        the filesystem if passed L{None} for the C{chroot} parameter.
         """
         self.runner.setupEnvironment(None, ".", True, None, None)
         self.assertIdentical(self.root, self.unset)
@@ -725,7 +725,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     def test_noDaemonizeNoUmask(self):
         """
         L{UnixApplicationRunner.setupEnvironment} doesn't change the process
-        umask if C{None} is passed for the C{umask} parameter and C{True} is
+        umask if L{None} is passed for the C{umask} parameter and C{True} is
         passed for the C{nodaemon} parameter.
         """
         self.runner.setupEnvironment(None, ".", True, None, None)
@@ -735,7 +735,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
     def test_daemonizedNoUmask(self):
         """
         L{UnixApplicationRunner.setupEnvironment} changes the process umask to
-        C{0077} if C{None} is passed for the C{umask} parameter and C{False} is
+        C{0077} if L{None} is passed for the C{umask} parameter and C{False} is
         passed for the C{nodaemon} parameter.
         """
         with AlternateReactor(FakeDaemonizingReactor()):

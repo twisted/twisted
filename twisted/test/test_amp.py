@@ -630,7 +630,7 @@ class CommandDispatchTests(unittest.TestCase):
 
     def _localCallbackErrorLoggingTest(self, callResult):
         """
-        Verify that C{callResult} completes with a C{None} result and that an
+        Verify that C{callResult} completes with a L{None} result and that an
         unhandled error has been logged.
         """
         finalResult = []
@@ -1253,7 +1253,7 @@ class AMPTests(unittest.TestCase):
 
     def test_callRemoteStringRequiresAnswerFalse(self):
         """
-        L{BoxDispatcher.callRemoteString} returns C{None} if C{requiresAnswer}
+        L{BoxDispatcher.callRemoteString} returns L{None} if C{requiresAnswer}
         is C{False}.
         """
         c, s, p = connectedServerAndClient()
@@ -2982,7 +2982,7 @@ class ListOfOptionalTests(unittest.TestCase):
     """
     def test_requiredArgumentWithNoneValueRaisesTypeError(self):
         """
-        L{ListOf.toBox} raises C{TypeError} when passed a value of C{None}
+        L{ListOf.toBox} raises C{TypeError} when passed a value of L{None}
         for the argument.
         """
         stringList = amp.ListOf(amp.Integer())
@@ -2994,7 +2994,7 @@ class ListOfOptionalTests(unittest.TestCase):
     def test_optionalArgumentWithNoneValueOmitted(self):
         """
         L{ListOf.toBox} silently omits serializing any argument with a
-        value of C{None} that is designated as optional for the protocol.
+        value of L{None} that is designated as optional for the protocol.
         """
         stringList = amp.ListOf(amp.Integer(), optional=True)
         strings = amp.AmpBox()

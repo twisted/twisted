@@ -402,7 +402,7 @@ class MaildirAppendStringTests(unittest.TestCase, _AppendTestMixin):
         Change the behavior of future C{rename}, C{write}, or C{open} calls made
         by the mailbox C{mbox}.
 
-        @param rename: If not C{None}, a new value for the C{_renamestate}
+        @param rename: If not L{None}, a new value for the C{_renamestate}
             attribute of the mailbox's append factory.  The original value will
             be restored at the end of the test.
 
@@ -1850,14 +1850,14 @@ class AddressAliasTests(unittest.TestCase):
     def test_resolve(self):
         """
         L{resolve} will look for additional aliases when an C{aliasmap}
-        dictionary is passed, and returns C{None} if none were found.
+        dictionary is passed, and returns L{None} if none were found.
         """
         self.assertEqual(self.alias.resolve({self.address: 'bar'}), None)
 
 
     def test_resolveWithoutAliasmap(self):
         """
-        L{resolve} returns C{None} when the alias could not be found in the
+        L{resolve} returns L{None} when the alias could not be found in the
         C{aliasmap} and no L{mail.smtp.User} with this alias exists either.
         """
         self.assertEqual(self.alias.resolve({}), None)
@@ -2341,7 +2341,7 @@ class _AttemptManagerTests(unittest.TestCase):
     @type reactor: L{MemoryReactorClock}
     @ivar reactor: The reactor used for test purposes.
 
-    @type eventLog: C{None} or L{dict} of L{bytes} -> L{object}
+    @type eventLog: L{None} or L{dict} of L{bytes} -> L{object}
     @ivar eventLog: Information about the last informational log message
         generated or none if no log message has been generated.
 

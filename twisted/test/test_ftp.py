@@ -1173,7 +1173,7 @@ class DTPFactoryTests(unittest.TestCase):
     def test_connectionAfterTimeout(self):
         """
         If L{ftp.DTPFactory.buildProtocol} is called after the timeout
-        specified by L{ftp.DTPFactory.setTimeout} has elapsed, C{None} is
+        specified by L{ftp.DTPFactory.setTimeout} has elapsed, L{None} is
         returned.
         """
         # Handle the error so it doesn't get logged.

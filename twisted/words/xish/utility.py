@@ -285,7 +285,7 @@ class EventDispatcher:
         """
         Dispatch an event.
 
-        When C{event} is C{None}, an XPath type event is triggered, and
+        When C{event} is L{None}, an XPath type event is triggered, and
         C{obj} is assumed to be an instance of
         L{Element<twisted.words.xish.domish.Element>}. Otherwise, C{event}
         holds the name of the named event being triggered. In the latter case,

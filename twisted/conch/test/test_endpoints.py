@@ -1424,7 +1424,7 @@ class NewConnectionHelperTests(TestCase):
 
     def test_defaultConsoleUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to
+        If L{None} is passed for the C{ui} parameter to
         L{_NewConnectionHelper}, a L{ConsoleUI} is used.
         """
         helper = _NewConnectionHelper(
@@ -1434,7 +1434,7 @@ class NewConnectionHelperTests(TestCase):
 
     def test_ttyConsoleUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        If L{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
         and /dev/tty is available, the L{ConsoleUI} used is associated with
         /dev/tty.
         """
@@ -1447,7 +1447,7 @@ class NewConnectionHelperTests(TestCase):
 
     def test_nottyUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        If L{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
         and /dev/tty is not available, the L{ConsoleUI} used is associated with
         some file which always produces a C{b"no"} response.
         """

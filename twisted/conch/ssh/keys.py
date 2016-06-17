@@ -75,12 +75,12 @@ class Key(object):
 
         @param filename: The path to load key data from.
 
-        @type type: L{str} or C{None}
+        @type type: L{str} or L{None}
         @param type: A string describing the format the key data is in, or
-        C{None} to attempt detection of the type.
+        L{None} to attempt detection of the type.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if there is no encryption.
 
         @rtype: L{Key}
@@ -102,12 +102,12 @@ class Key(object):
         @type data: L{bytes}
         @param data: The key data.
 
-        @type type: L{str} or C{None}
+        @type type: L{str} or L{None}
         @param type: A string describing the format the key data is in, or
-        C{None} to attempt detection of the type.
+        L{None} to attempt detection of the type.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if there is no encryption.
 
         @rtype: L{Key}
@@ -256,8 +256,8 @@ class Key(object):
         @type data: L{bytes}
         @param data: The key data.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if it is not encrypted.
 
         @return: A new key.
@@ -524,16 +524,16 @@ class Key(object):
         @type e: L{int}
         @param e: The 'e' RSA variable.
 
-        @type d: L{int} or C{None}
+        @type d: L{int} or L{None}
         @param d: The 'd' RSA variable (optional for a public key).
 
-        @type p: L{int} or C{None}
+        @type p: L{int} or L{None}
         @param p: The 'p' RSA variable (optional for a public key).
 
-        @type q: L{int} or C{None}
+        @type q: L{int} or L{None}
         @param q: The 'q' RSA variable (optional for a public key).
 
-        @type u: L{int} or C{None}
+        @type u: L{int} or L{None}
         @param u: The 'u' RSA variable. Ignored, as its value is determined by
         p and q.
 
@@ -576,7 +576,7 @@ class Key(object):
         @type g: L{int}
         @param g: The 'g' DSA variable.
 
-        @type x: L{int} or C{None}
+        @type x: L{int} or L{None}
         @param x: The 'x' DSA variable (optional for a public key)
 
         @rtype: L{Key}

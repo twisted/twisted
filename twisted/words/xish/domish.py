@@ -336,14 +336,14 @@ class Element(object):
       u"<root xmlns='myns'><child>test</child></root>"
 
     For partial serialization, needed for streaming XML, a special value for
-    namespace URIs can be used: C{None}.
+    namespace URIs can be used: L{None}.
 
-    Using C{None} as the value for C{uri} means: this element is in whatever
+    Using L{None} as the value for C{uri} means: this element is in whatever
     namespace inherited by the closest logical ancestor when the complete XML
     document has been serialized. The serialized start tag will have a
     non-prefixed name, and no xmlns declaration will be generated.
 
-    Similarly, C{None} for C{defaultUri} means: the default namespace for my
+    Similarly, L{None} for C{defaultUri} means: the default namespace for my
     child elements is inherited from the logical ancestors of this element,
     when the complete XML document has been serialized.
 
@@ -367,7 +367,7 @@ class Element(object):
 
     As, you can see, this XML snippet has no xmlns declaration. When sent
     off, it inherits the C{jabber:client} namespace from the root element.
-    Note that this renders the same as using C{''} instead of C{None}:
+    Note that this renders the same as using C{''} instead of L{None}:
 
       >>> presence = domish.Element(('', 'presence'))
       >>> presence.toXml()
@@ -493,7 +493,7 @@ class Element(object):
     def compareAttribute(self, attrib, value):
         """ Safely compare the value of an attribute against a provided value.
 
-        C{None}-safe.
+        L{None}-safe.
         """
         return self.attributes.get(self._dqa(attrib), None) == value
 

@@ -263,7 +263,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         C{connectionLost} method.
 
     @ivar _producer: The current producer registered via C{registerProducer},
-        or C{None} if no producer has been registered or a previous one was
+        or L{None} if no producer has been registered or a previous one was
         unregistered.
 
     @ivar _aborted: C{abortConnection} has been called.  No further data will

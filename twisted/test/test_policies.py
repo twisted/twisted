@@ -709,7 +709,7 @@ class TimeoutMixinTests(unittest.TestCase):
 
     def test_cancelTimeout(self):
         """
-        Setting the timeout to C{None} cancel any timeout operations.
+        Setting the timeout to L{None} cancel any timeout operations.
         """
         self.proto.timeOut = 5
         self.proto.makeConnection(StringTransport())

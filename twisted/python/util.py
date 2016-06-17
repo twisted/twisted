@@ -606,11 +606,11 @@ def switchUID(uid, gid, euid=False):
 
     @type uid: C{int} or C{NoneType}
     @param uid: the UID (or EUID) to switch the current process to. This
-                parameter will be ignored if the value is C{None}.
+                parameter will be ignored if the value is L{None}.
 
     @type gid: C{int} or C{NoneType}
     @param gid: the GID (or EGID) to switch the current process to. This
-                parameter will be ignored if the value is C{None}.
+                parameter will be ignored if the value is L{None}.
 
     @type euid: C{bool}
     @param euid: if True, set only effective user-id rather than real user-id.

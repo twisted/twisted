@@ -118,7 +118,7 @@ class HelperTests(TestCase):
 
     def test_pwdGetByNameWithoutPwd(self):
         """
-        If the C{pwd} module isn't present, L{_pwdGetByName} returns C{None}.
+        If the C{pwd} module isn't present, L{_pwdGetByName} returns L{None}.
         """
         self.patch(checkers, 'pwd', None)
         self.assertIs(checkers._pwdGetByName('alice'), None)
@@ -145,7 +145,7 @@ class HelperTests(TestCase):
 
     def test_shadowGetByNameWithoutSpwd(self):
         """
-        L{_shadowGetByName} returns C{None} if C{spwd} is not present.
+        L{_shadowGetByName} returns L{None} if C{spwd} is not present.
         """
         self.patch(checkers, 'spwd', None)
 

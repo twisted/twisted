@@ -660,7 +660,7 @@ class Request:
         This method is not intended for users.
 
         @param length: The length of the request body, as indicated by the
-            request headers.  C{None} if the request headers do not indicate a
+            request headers.  L{None} if the request headers do not indicate a
             length.
         """
         if length is not None and length < 100000:
@@ -824,7 +824,7 @@ class Request:
         @param key: The name of the header to get the value of.
 
         @rtype: C{bytes} or C{NoneType}
-        @return: The value of the specified header, or C{None} if that header
+        @return: The value of the specified header, or L{None} if that header
             was not present in the request.
         """
         value = self.requestHeaders.getRawHeaders(key)
@@ -846,7 +846,7 @@ class Request:
         @rtype: L{Deferred}
 
         @return: A L{Deferred} which will be triggered when the request is
-            finished -- with a C{None} value if the request finishes
+            finished -- with a L{None} value if the request finishes
             successfully or with an error if the request is interrupted by an
             error (for example, the client closing the connection prematurely).
         """
@@ -1451,7 +1451,7 @@ class _IdentityTransferDecoder(object):
         @raise _DataLoss: If the content length is known and fewer than that
             many bytes have been delivered.
 
-        @return: C{None}
+        @return: L{None}
         """
         finishCallback = self.finishCallback
         self.dataCallback = self.finishCallback = None
@@ -1624,7 +1624,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     @ivar MAX_LENGTH: Maximum length for initial request line and each line
         from the header.
 
-    @ivar _transferDecoder: C{None} or a decoder instance if the request body
+    @ivar _transferDecoder: L{None} or a decoder instance if the request body
         uses the I{chunked} Transfer-Encoding.
     @type _transferDecoder: L{_ChunkedTransferDecoder}
 
@@ -1998,7 +1998,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param data: The data chunk to write to the stream.
         @type data: L{bytes}
 
-        @return: C{None}
+        @return: L{None}
         """
         self.transport.write(data)
 
@@ -2010,7 +2010,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @param iovec: A list of byte strings to write to the stream.
         @type data: L{list} of L{bytes}
 
-        @return: C{None}
+        @return: L{None}
         """
         self.transport.writeSequence(iovec)
 
@@ -2039,7 +2039,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         on the network, but if this response has not yet been written to the
         network will not write anything.
 
-        @return: C{None}
+        @return: L{None}
         """
         return self.transport.loseConnection()
 
@@ -2069,7 +2069,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @raise RuntimeError: If a producer is already registered.
 
-        @return: C{None}
+        @return: L{None}
         """
         return self.transport.registerProducer(producer, streaming)
 
@@ -2078,7 +2078,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         Stop consuming data from a producer, without disconnecting.
 
-        @return: C{None}
+        @return: L{None}
         """
         return self.transport.unregisterProducer()
 
@@ -2220,7 +2220,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     @ivar _negotiatedProtocol: The protocol negotiated with ALPN or NPN, if
         any.
     @type _negotiatedProtocol: Either a bytestring containing the ALPN token
-        for the negotiated protocol, or C{None} if no protocol has yet been
+        for the negotiated protocol, or L{None} if no protocol has yet been
         negotiated.
 
     @ivar _channel: The object capable of behaving like a L{HTTPChannel} that
