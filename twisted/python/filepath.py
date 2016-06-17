@@ -713,7 +713,7 @@ class FilePath(AbstractFilePath):
         attribute.  Instead, use the methods on L{FilePath} which give you
         information about it, like C{getsize()}, C{isdir()},
         C{getModificationTime()}, and so on.
-    @type statinfo: L{int} or L{types.NoneType} or L{os.stat_result}
+    @type statinfo: L{int} or C{None} or L{os.stat_result}
     """
     _statinfo = None
     path = None
@@ -882,7 +882,7 @@ class FilePath(AbstractFilePath):
         If no appropriately-named children exist, this will return C{None}.
 
         @return: C{None} or the child path.
-        @rtype: L{types.NoneType} or L{FilePath}
+        @rtype: C{None} or L{FilePath}
         """
         for child in paths:
             p = self._getPathAsSameTypeAs(child)

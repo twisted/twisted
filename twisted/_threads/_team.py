@@ -133,7 +133,7 @@ class Team(object):
 
         @param n: The number of idle workers to shut down, or C{None} (or
             unspecified) to shut down all workers.
-        @type n: L{int} or L{types.NoneType}
+        @type n: L{int} or C{None}
         """
         self._quit.check()
         self._coordinator.do(lambda: self._quitIdlers(n))
