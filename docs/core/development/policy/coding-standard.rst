@@ -281,7 +281,15 @@ For example:
 
 
 Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_.
-Please note that pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
+
+Built-in types should always be referenced using the link markup.
+This is done as a structural markup, rather than for formating.
+This of it as a poor man's semantic markup.
+Pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``). Standared types should
+
+For the API doc `C{something}` means "I made up a new word, and I want it to be monospaced, like it's an identifier in code and not an English noun"
+
+`L{something}` means "I am referring to the previously-defined concept/package/module/class/function/method/attribute identified as `something`"
 
 Additionally, to accommodate emacs users, single quotes of the type of the docstring's triple-quote should be escaped.
 This will prevent font-lock from accidentally fontifying large portions of the file as a string.
