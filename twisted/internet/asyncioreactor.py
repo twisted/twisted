@@ -157,7 +157,9 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._asyncioEventloop.call_soon_threadsafe(g)
 
 
-    callFromThread = callWhenRunning
+    def callFromThread(self, f, *args, **kwargs):
+        g = lambda: self.callLater(0, f, *args, **kwargs)
+        self._asyncioEventloop.call_soon_threadsafe(g)
 
 
 
