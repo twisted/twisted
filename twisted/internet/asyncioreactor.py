@@ -40,8 +40,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
             eventloop = get_event_loop()
 
         self._asyncioEventloop = eventloop
-        self._writers = set()
-        self._readers = set()
+        self._writers = {}
+        self._readers = {}
         self._delayedCalls = set()
         PosixReactorBase.__init__(self)
 
@@ -50,6 +50,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         method = selectable.doRead if read else selectable.doWrite
 
         if selectable.fileno() == -1:
+
             self._disconnectSelectable(selectable, _NO_FILEDESC, read)
             return
 
@@ -62,8 +63,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def addReader(self, reader):
-        self._readers.add(reader)
         fd = reader.fileno()
+        self._readers[reader] = fd
         try:
             self._asyncioEventloop.add_reader(fd, callWithLogger, reader,
                                               self._read_or_write, reader,
@@ -73,8 +74,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def addWriter(self, writer):
-        self._writers.add(writer)
         fd = writer.fileno()
+        self._writers[writer] = fd
         try:
             self._asyncioEventloop.add_writer(fd, callWithLogger, writer,
                                               self._read_or_write, writer,
@@ -84,29 +85,33 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def removeReader(self, reader):
+        fd = reader.fileno()
         try:
-            self._readers.remove(reader)
+            if fd == -1:
+                fd = self._readers.pop(reader)
+            else:
+                self._readers.pop(reader)
+
+            self._asyncioEventloop.remove_reader(fd)
         except KeyError:
             pass
-        fd = reader.fileno()
-        if fd == -1:
-            return
-        self._asyncioEventloop.remove_reader(fd)
 
 
     def removeWriter(self, writer):
+        fd = writer.fileno()
         try:
-            self._writers.remove(writer)
+            if fd == -1:
+                fd = self._writers.pop(writer)
+            else:
+                self._writers.pop(writer)
+
+            self._asyncioEventloop.remove_writer(fd)
         except KeyError:
             pass
-        fd = writer.fileno()
-        if fd == -1:
-            return
-        self._asyncioEventloop.remove_writer(fd)
 
 
     def removeAll(self):
-        return self._removeAll(self._readers, self._writers)
+        return self._removeAll(self._readers.keys(), self._writers.keys())
 
 
     def getReaders(self):
