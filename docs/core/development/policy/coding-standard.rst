@@ -282,10 +282,11 @@ For example:
 
 Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_.
 
-Built-in types should always be referenced using the link markup.
-This is done as a structural markup, rather than for formating.
-This of it as a poor man's semantic markup.
-Pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``). Standared types should
+When you are referring to a type, you should use `L{}`, whether it's in the stdlib , in Twisted or somewhere else.
+
+`NoneType` is an exception and we are referring it just as `L{None}`.
+
+Pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
 
 For the API doc `C{something}` means "I made up a new word, and I want it to be monospaced, like it's an identifier in code and not an English noun"
 
