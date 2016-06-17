@@ -134,8 +134,8 @@ objects providing the ``IMaterial`` interface:
 
     
     def displayMaterial(m):
-        print 'A material with yield stress %s at 500 K' % (m.yieldStress(500),)
-        print 'Also a dielectric constant of %s.' % (m.dielectricConstant,)
+        print('A material with yield stress %s at 500 K' % (m.yieldStress(500),))
+        print('Also a dielectric constant of %s.' % (m.dielectricConstant,))
 
 
 

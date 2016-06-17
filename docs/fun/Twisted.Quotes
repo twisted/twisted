@@ -10,3 +10,7 @@ glyph: ::holds mic close:: "Nooooo."
 <tomprince> They are.
 <tomprince> It would have been no fun to come up with nonsense, when there is perfectly good existing abstract nonsense to choose from.
 %
+<dstufft> future maintainers should hate me just as much as I hate the past maintainers
+%
+<lukasa> But this is why the API is private and opt-in
+<lukasa> So that users can hit the weirdo edge cases that I can't replicate by just thinking really hard.

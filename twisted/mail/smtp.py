@@ -318,7 +318,7 @@ def messageid(uniq=None, N=idGenerator().next):
     """
     datetime = time.strftime('%Y%m%d%H%M%S', time.gmtime())
     pid = os.getpid()
-    rand = random.randrange(2**31L-1)
+    rand = random.randrange(2**31-1)
     if uniq is None:
         uniq = ''
     else:
@@ -841,10 +841,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.sendCode(250, 'Delivery in progress')
 
 
-    def _cbAnonymousAuthentication(self, (iface, avatar, logout)):
+    def _cbAnonymousAuthentication(self, result):
         """
         Save the state resulting from a successful anonymous cred login.
         """
+        (iface, avatar, logout) = result
         if issubclass(iface, IMessageDeliveryFactory):
             self.deliveryFactory = avatar
             self.delivery = None

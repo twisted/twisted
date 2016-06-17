@@ -11,7 +11,8 @@ class MyProtocol(protocol.DatagramProtocol):
     def __init__(self, expecting):
         self.expecting = list(expecting)
 
-    def datagramReceived(self, data, (host, port)):
+    def datagramReceived(self, data, peer):
+        (host, port) = peer
         assert self.expecting, 'Got a packet when not expecting anymore.'
         expectData, expectHost, expectPort = self.expecting.pop(0)
 

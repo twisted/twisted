@@ -1169,7 +1169,7 @@ class ClientTLSOptions(object):
     L{optionsForClientTLS} API.
 
     @ivar _ctx: The context to use for new connections.
-    @type _ctx: L{SSL.Context}
+    @type _ctx: L{OpenSSL.SSL.Context}
 
     @ivar _hostname: The hostname to verify, as specified by the application,
         as some human-readable text.
@@ -1196,8 +1196,8 @@ class ClientTLSOptions(object):
         @param hostname: The hostname to verify as input by a human.
         @type hostname: L{unicode}
 
-        @param ctx: an L{SSL.Context} to use for new connections.
-        @type ctx: L{SSL.Context}.
+        @param ctx: an L{OpenSSL.SSL.Context} to use for new connections.
+        @type ctx: L{OpenSSL.SSL.Context}.
         """
         self._ctx = ctx
         self._hostname = hostname
@@ -1668,51 +1668,10 @@ class OpenSSLCertificateOptions(object):
         if self._acceptableProtocols:
             # Try to set NPN and ALPN. _acceptableProtocols cannot be set by
             # the constructor unless at least one mechanism is supported.
-            self._setUpNextProtocolMechanisms(ctx)
+            _setAcceptableProtocols(ctx, self._acceptableProtocols)
 
         return ctx
 
-
-    def _setUpNextProtocolMechanisms(self, ctx):
-        """
-        Called to set up the C{ctx} for doing NPN and/or ALPN negotiation.
-
-        @param ctx: The context which is set up.
-        @type ctx: L{OpenSSL.SSL.Context}
-        """
-        supported = protocolNegotiationMechanisms()
-
-        if supported & ProtocolNegotiationSupport.NPN:
-            def npnAdvertiseCallback(conn):
-                return self._acceptableProtocols
-
-            ctx.set_npn_advertise_callback(npnAdvertiseCallback)
-            ctx.set_npn_select_callback(self._protoSelectCallback)
-
-        if supported & ProtocolNegotiationSupport.ALPN:
-            ctx.set_alpn_select_callback(self._protoSelectCallback)
-            ctx.set_alpn_protos(self._acceptableProtocols)
-
-
-    def _protoSelectCallback(self, conn, protocols):
-        """
-        NPN client-side and ALPN server-side callback used to select
-        the next protocol. Prefers protocols found earlier in
-        C{_acceptableProtocols}.
-
-        @param conn: The context which is set up.
-        @type conn: L{OpenSSL.SSL.Connection}
-
-        @param conn: Protocols advertised by the other side.
-        @type conn: C{list} of C{bytes}
-        """
-        overlap = set(protocols) & set(self._acceptableProtocols)
-
-        for p in self._acceptableProtocols:
-            if p in overlap:
-                return p
-        else:
-            return b''
 
 OpenSSLCertificateOptions.__getstate__ = deprecated(
         Version("Twisted", 15, 0, 0),
@@ -1942,3 +1901,61 @@ class OpenSSLDiffieHellmanParameters(object):
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """
         return cls(filePath)
+
+
+def _setAcceptableProtocols(context, acceptableProtocols):
+    """
+    Called to set up the L{OpenSSL.SSL.Context} for doing NPN and/or ALPN
+    negotiation.
+
+    @param context: The context which is set up.
+    @type context: L{OpenSSL.SSL.Context}
+
+    @param acceptableProtocols: The protocols this peer is willing to speak
+        after the TLS negotation has completed, advertised over both ALPN and
+        NPN. If this argument is specified, and no overlap can be found with
+        the other peer, the connection will fail to be established. If the
+        remote peer does not offer NPN or ALPN, the connection will be
+        established, but no protocol wil be negotiated. Protocols earlier in
+        the list are preferred over those later in the list.
+    @type acceptableProtocols: C{list} of C{bytes}
+    """
+    def protoSelectCallback(conn, protocols):
+        """
+        NPN client-side and ALPN server-side callback used to select
+        the next protocol. Prefers protocols found earlier in
+        C{_acceptableProtocols}.
+
+        @param conn: The context which is set up.
+        @type conn: L{OpenSSL.SSL.Connection}
+
+        @param conn: Protocols advertised by the other side.
+        @type conn: C{list} of C{bytes}
+        """
+        overlap = set(protocols) & set(acceptableProtocols)
+
+        for p in acceptableProtocols:
+            if p in overlap:
+                return p
+        else:
+            return b''
+
+    # If we don't actually have protocols to negotiate, don't set anything up.
+    # Depending on OpenSSL version, failing some of the selection callbacks can
+    # cause the handshake to fail, which is presumably not what was intended
+    # here.
+    if not acceptableProtocols:
+        return
+
+    supported = protocolNegotiationMechanisms()
+
+    if supported & ProtocolNegotiationSupport.NPN:
+        def npnAdvertiseCallback(conn):
+            return acceptableProtocols
+
+        context.set_npn_advertise_callback(npnAdvertiseCallback)
+        context.set_npn_select_callback(protoSelectCallback)
+
+    if supported & ProtocolNegotiationSupport.ALPN:
+        context.set_alpn_select_callback(protoSelectCallback)
+        context.set_alpn_protos(acceptableProtocols)

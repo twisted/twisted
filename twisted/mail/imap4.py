@@ -666,7 +666,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             handler(*args)
 
-    def __cbDispatch(self, (arg, rest), tag, fn, args, parseargs, uid):
+    def __cbDispatch(self, result, tag, fn, args, parseargs, uid):
+        (arg, rest) = result
         args.append(arg)
         self.__doCommand(tag, fn, args, parseargs, rest, uid)
 
@@ -1006,7 +1007,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 (tag,), None, (tag,), None
             )
 
-    def __cbAuthResp(self, (iface, avatar, logout), tag):
+    def __cbAuthResp(self, result, tag):
+        (iface, avatar, logout) = result
         assert iface is IAccount, "IAccount is the only supported interface"
         self.account = avatar
         self.state = 'auth'
@@ -1076,7 +1078,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             )
         raise UnauthorizedLogin()
 
-    def __cbLogin(self, (iface, avatar, logout), tag):
+    def __cbLogin(self, result, tag):
+        (iface, avatar, logout) = result
         if iface is not IAccount:
             self.sendBadResponse(tag, 'Server error: login returned unexpected value')
             log.err("__cbLogin called with %r, IAccount expected" % (iface,))
@@ -1668,7 +1671,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def search_NEW(self, query, id, msg):
         return '\\Recent' in msg.getFlags() and '\\Seen' not in msg.getFlags()
 
-    def search_NOT(self, query, id, msg, (lastSequenceId, lastMessageId)):
+    def search_NOT(self, query, id, msg, lastIDs):
         """
         Returns C{True} if the message does not match the query.
 
@@ -1681,13 +1684,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastSequenceId: C{int}
-        @param lastSequenceId: The highest sequence number of a message in the
-            mailbox.
-
-        @type lastMessageId: C{int}
-        @param lastMessageId: The highest UID of a message in the mailbox.
+        @type lastIDs: C{tuple}
+        @param lastIDs: A tuple of (last sequence id, last message id).
+        The I{last sequence id} is an C{int} containing the highest sequence
+        number of a message in the mailbox.  The I{last message id} is an
+        C{int} containing the highest UID of a message in the mailbox.
         """
+        (lastSequenceId, lastMessageId) = lastIDs
         return not self._singleSearchStep(query, id, msg,
                                           lastSequenceId, lastMessageId)
 
@@ -1698,7 +1701,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         date = parseTime(query.pop(0))
         return rfc822.parsedate(msg.getInternalDate()) == date
 
-    def search_OR(self, query, id, msg, (lastSequenceId, lastMessageId)):
+    def search_OR(self, query, id, msg, lastIDs):
         """
         Returns C{True} if the message matches any of the first two query
         items.
@@ -1712,13 +1715,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastSequenceId: C{int}
-        @param lastSequenceId: The highest sequence number of a message in the
-                               mailbox.
-
-        @type lastMessageId: C{int}
-        @param lastMessageId: The highest UID of a message in the mailbox.
+        @type lastIDs: C{tuple}
+        @param lastIDs: A tuple of (last sequence id, last message id).
+        The I{last sequence id} is an C{int} containing the highest sequence
+        number of a message in the mailbox.  The I{last message id} is an
+        C{int} containing the highest UID of a message in the mailbox.
         """
+        (lastSequenceId, lastMessageId) = lastIDs
         a = self._singleSearchStep(query, id, msg,
                                    lastSequenceId, lastMessageId)
         b = self._singleSearchStep(query, id, msg,
@@ -1799,7 +1802,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         to = msg.getHeaders(False, 'to').get('to', '')
         return to.lower().find(query.pop(0).lower()) != -1
 
-    def search_UID(self, query, id, msg, (lastSequenceId, lastMessageId)):
+    def search_UID(self, query, id, msg, lastIDs):
         """
         Returns C{True} if the message UID is in the range defined by the
         search query.
@@ -1815,13 +1818,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         @param msg: The message being checked.
 
-        @type lastSequenceId: C{int}
-        @param lastSequenceId: The highest sequence number of a message in the
-            mailbox.
-
-        @type lastMessageId: C{int}
-        @param lastMessageId: The highest UID of a message in the mailbox.
+        @type lastIDs: C{tuple}
+        @param lastIDs: A tuple of (last sequence id, last message id).
+        The I{last sequence id} is an C{int} containing the highest sequence
+        number of a message in the mailbox.  The I{last message id} is an
+        C{int} containing the highest UID of a message in the mailbox.
         """
+        (lastSequenceId, lastMessageId) = lastIDs
         c = query.pop(0)
         m = parseIdList(c, lastMessageId)
         return msg.getUID() in m
@@ -2544,7 +2547,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbCapabilities)
         return d
 
-    def __cbCapabilities(self, (lines, tagline)):
+    def __cbCapabilities(self, result):
+        (lines, tagline) = result
         caps = {}
         for rest in lines:
             for cap in rest[1:]:
@@ -2577,7 +2581,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbLogout)
         return d
 
-    def __cbLogout(self, (lines, tagline)):
+    def __cbLogout(self, result):
+        (lines, tagline) = result
         self.transport.loseConnection()
         # We don't particularly care what the server said
         return None
@@ -2596,9 +2601,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbNoop)
         return d
 
-    def __cbNoop(self, (lines, tagline)):
+    def __cbNoop(self, result):
         # Conceivable, this is elidable.
         # It is, afterall, a no-op.
+        (lines, tagline) = result
         return lines
 
     def startTLS(self, contextFactory=None):
@@ -2810,7 +2816,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbNamespace)
         return d
 
-    def __cbNamespace(self, (lines, last)):
+    def __cbNamespace(self, result):
+        (lines, last) = result
         for parts in lines:
             if len(parts) == 4 and parts[0] == 'NAMESPACE':
                 return [e or [] for e in parts[1:]]
@@ -2909,12 +2916,13 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             raise IllegalServerResponse(phrase)
 
 
-    def __cbSelect(self, (lines, tagline), rw):
+    def __cbSelect(self, result, rw):
         """
         Handle lines received in response to a SELECT or EXAMINE command.
 
         See RFC 3501, section 6.3.1.
         """
+        (lines, tagline) = result
         # In the absence of specification, we are free to assume:
         #   READ-WRITE access
         datum = {'READ-WRITE': rw}
@@ -3080,7 +3088,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbList, 'LSUB')
         return d
 
-    def __cbList(self, (lines, last), command):
+    def __cbList(self, result, command):
+        (lines, last) = result
         results = []
         for parts in lines:
             if len(parts) == 4 and parts[0] == command:
@@ -3116,7 +3125,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbStatus)
         return d
 
-    def __cbStatus(self, (lines, last)):
+    def __cbStatus(self, result):
+        (lines, last) = result
         status = {}
         for parts in lines:
             if parts[0] == 'STATUS':
@@ -3228,7 +3238,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
 
-    def __cbExpunge(self, (lines, last)):
+    def __cbExpunge(self, result):
+        (lines, last) = result
         ids = []
         for parts in lines:
             if len(parts) == 2 and parts[1] == 'EXPUNGE':
@@ -3263,7 +3274,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
 
-    def __cbSearch(self, (lines, end)):
+    def __cbSearch(self, result):
+        (lines, end) = result
         ids = []
         for parts in lines:
             if len(parts) > 0 and parts[0] == 'SEARCH':
@@ -3684,7 +3696,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return values
 
 
-    def _cbFetch(self, (lines, last), requestedParts, structured):
+    def _cbFetch(self, result, requestedParts, structured):
+        (lines, last) = result
         info = {}
         for parts in lines:
             if len(parts) == 3 and parts[1] == 'FETCH':

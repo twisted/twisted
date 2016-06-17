@@ -187,12 +187,13 @@ class SSHUserAuthServer(service.SSHService):
         return d
 
 
-    def _cbFinishedAuth(self, (interface, avatar, logout)):
+    def _cbFinishedAuth(self, result):
         """
         The callback when user has successfully been authenticated.  For a
         description of the arguments, see L{twisted.cred.portal.Portal.login}.
         We start the service requested by the user.
         """
+        (interface, avatar, logout) = result
         self.transport.avatar = avatar
         self.transport.logoutFunction = logout
         service = self.transport.factory.getService(self.transport,
