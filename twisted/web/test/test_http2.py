@@ -26,6 +26,7 @@ try:
     # These third-party imports are guaranteed to be present if HTTP/2 support
     # is compiled in. We do not use them in the main code: only in the tests.
     import h2
+    import h2.errors
     import hyperframe
     from hpack.hpack import Encoder, Decoder
 except ImportError:
@@ -2172,3 +2173,206 @@ class HTTP2SchedulingTests(unittest.TestCase):
         self.assertEqual(call.func, a._sendPrioritisedData)
         self.assertEqual(call.args, ())
         self.assertEqual(call.kw, {})
+
+
+
+class HTTP2TimeoutTests(unittest.TestCase):
+    """
+    The L{H2Connection} object times out idle connections.
+    """
+    if skipH2:
+        skip = skipH2
+
+
+    getRequestHeaders = [
+        (b':method', b'GET'),
+        (b':authority', b'localhost'),
+        (b':path', b'/'),
+        (b':scheme', b'https'),
+        (b'user-agent', b'twisted-test-code'),
+        (b'custom-header', b'1'),
+        (b'custom-header', b'2'),
+    ]
+
+
+    def test_timeoutAfterInactivity(self):
+        """
+        When a L{H2Connection} does not receive any data for more than the
+        time out interval, it closes the connection cleanly.
+        """
+        reactor = task.Clock()
+        conn = H2Connection(reactor)
+        conn.timeOut = 100
+
+        # This monkeypatch is needed because TimeoutMixin doesn't accept being
+        # passed a reactor.
+        conn.callLater = reactor.callLater
+
+        f = FrameFactory()
+        b = StringTransport()
+        conn.requestFactory = DummyHTTPHandler
+
+        # Send the preamble with no request.
+        conn.makeConnection(b)
+
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(f.preamble()):
+            conn.dataReceived(byte)
+
+        # Save the preamble.
+        preamble = b.value()
+
+        # Advance the clock.
+        reactor.advance(99)
+
+        # Everything is fine, no extra data got sent.
+        self.assertEqual(preamble, b.value())
+        self.assertFalse(b.disconnecting)
+
+        # Advance the clock.
+        reactor.advance(2)
+
+        # We disconnected after sending a GoAway frame.
+        self.assertTrue(b.disconnecting)
+
+        buffer = FrameBuffer()
+        buffer.receiveData(b.value())
+        frames = list(buffer)
+
+        self.assertEqual(len(frames), 2)
+        self.assertTrue(
+            isinstance(frames[-1], hyperframe.frame.GoAwayFrame)
+        )
+        self.assertEqual(frames[-1].error_code, h2.errors.NO_ERROR)
+        self.assertEqual(frames[-1].last_stream_id, 0)
+
+
+    def test_timeoutResetByData(self):
+        """
+        When a L{H2Connection} receives data, the timeout is reset.
+        """
+        reactor = task.Clock()
+        conn = H2Connection(reactor)
+        conn.timeOut = 100
+
+        # This monkeypatch is needed because TimeoutMixin doesn't accept being
+        # passed a reactor.
+        conn.callLater = reactor.callLater
+
+        f = FrameFactory()
+        b = StringTransport()
+        conn.requestFactory = DummyHTTPHandler
+        conn.makeConnection(b)
+
+        # Send one byte of the preamble.
+        for byte in iterbytes(f.preamble()):
+            conn.dataReceived(byte)
+
+            # Advance the clock.
+            reactor.advance(99)
+
+            # Everything is fine.
+            self.assertFalse(b.disconnecting)
+
+        # Advance the clock.
+        reactor.advance(2)
+
+        # We disconnected after sending a GoAway frame.
+        self.assertTrue(b.disconnecting)
+
+        buffer = FrameBuffer()
+        buffer.receiveData(b.value())
+        frames = list(buffer)
+
+        self.assertEqual(len(frames), 2)
+        self.assertTrue(
+            isinstance(frames[-1], hyperframe.frame.GoAwayFrame)
+        )
+        self.assertEqual(frames[-1].error_code, h2.errors.NO_ERROR)
+        self.assertEqual(frames[-1].last_stream_id, 0)
+
+
+    def test_timeoutWithProtocolErrorIfStreamsOpen(self):
+        """
+        When a L{H2Connection} times out with active streams, the error code
+        returned is L{h2.errors.PROTOCOL_ERROR}.
+        """
+        reactor = task.Clock()
+        conn = H2Connection(reactor)
+        conn.timeOut = 100
+
+        # This monkeypatch is needed because TimeoutMixin doesn't accept being
+        # passed a reactor.
+        conn.callLater = reactor.callLater
+
+        f = FrameFactory()
+        b = StringTransport()
+        conn.requestFactory = DummyProducerHandler
+        frames = buildRequestFrames(self.getRequestHeaders, [], f)
+        requestBytes = f.preamble()
+        requestBytes += b''.join(f.serialize() for f in frames)
+
+        # Send the preamble with no request.
+        conn.makeConnection(b)
+
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            conn.dataReceived(byte)
+
+        # Advance the clock to time out the request.
+        reactor.advance(101)
+
+        # We disconnected after sending a GoAway frame.
+        self.assertTrue(b.disconnecting)
+
+        buffer = FrameBuffer()
+        buffer.receiveData(b.value())
+        frames = list(buffer)
+
+        self.assertEqual(len(frames), 2)
+        self.assertTrue(
+            isinstance(frames[-1], hyperframe.frame.GoAwayFrame)
+        )
+        self.assertEqual(frames[-1].error_code, h2.errors.PROTOCOL_ERROR)
+        self.assertEqual(frames[-1].last_stream_id, 1)
+
+
+    def test_noTimeoutIfConnectionLost(self):
+        """
+        When a L{H2Connection} loses its connection it cancels its timeout.
+        """
+        reactor = task.Clock()
+        conn = H2Connection(reactor)
+        conn.timeOut = 100
+
+        # This monkeypatch is needed because TimeoutMixin doesn't accept being
+        # passed a reactor.
+        conn.callLater = reactor.callLater
+
+        f = FrameFactory()
+        b = StringTransport()
+        conn.requestFactory = DummyProducerHandler
+        frames = buildRequestFrames(self.getRequestHeaders, [], f)
+        requestBytes = f.preamble()
+        requestBytes += b''.join(f.serialize() for f in frames)
+
+        # Send the preamble with no request.
+        conn.makeConnection(b)
+
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            conn.dataReceived(byte)
+
+        sentData = b.value()
+        oldCallCount = len(reactor.getDelayedCalls())
+
+        # Now lose the connection.
+        conn.connectionLost("reason")
+
+        # There should be one fewer call than there was.
+        currentCallCount = len(reactor.getDelayedCalls())
+        self.assertEqual(oldCallCount - 1, currentCallCount)
+
+        # Advancing the clock should do nothing.
+        reactor.advance(101)
+        self.assertEqual(b.value(), sentData)
