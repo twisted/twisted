@@ -1,10 +1,11 @@
-
 :LastChangedDate: $LastChangedDate$
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
 Installing Optional Dependencies
 ================================
+
+.. warning::  At the moment, installing optional dependencies functions only on python2. This is being addressed as part of the efforts to port the project to python3.
 
 This document describes the optional dependencies that Twisted supports.
 The dependencies are python packages that Twisted's developers have found useful either for developing Twisted itself or for developing Twisted applications.
