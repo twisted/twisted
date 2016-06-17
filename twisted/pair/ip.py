@@ -12,7 +12,7 @@ import socket
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from zope.interface import implements
+from zope.interface import implementer
 
 
 class IPHeader:
@@ -31,9 +31,8 @@ class IPHeader:
 
 MAX_SIZE = 2**32
 
+@implementer(raw.IRawPacketProtocol)
 class IPProtocol(protocol.AbstractDatagramProtocol):
-    implements(raw.IRawPacketProtocol)
-
     def __init__(self):
         self.ipProtos = {}
 

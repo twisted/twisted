@@ -133,6 +133,7 @@ modules = [
     "twisted.names.error",
     "twisted.names.hosts",
     "twisted.names.server",
+    "twisted.names.srvconnect",
     "twisted.names.resolve",
     "twisted.names.test.__init__",
     "twisted.persisted.__init__",
@@ -256,6 +257,7 @@ modules = [
     "twisted.web.demo",
     "twisted.web.error",
     "twisted.web.guard",
+    "twisted.web._http2",
     "twisted.web.http_headers",
     "twisted.web.proxy",
     "twisted.web.resource",
@@ -269,6 +271,11 @@ modules = [
     "twisted.web.vhost",
     "twisted.web.wsgi",
     "twisted.web.xmlrpc",
+    "twisted.words.xish.domish",
+    "twisted.words.xish.utility",
+    "twisted.words.xish.xmlstream",
+    "twisted.words.xish.xpath",
+    "twisted.words.xish.xpathparser",
 ]
 
 
@@ -333,6 +340,7 @@ testModules = [
     "twisted.names.test.test_hosts",
     "twisted.names.test.test_rfc1982",
     "twisted.names.test.test_server",
+    "twisted.names.test.test_srvconnect",
     "twisted.names.test.test_util",
     "twisted.names.test.test_names",
     "twisted.names.test.test_examples",
@@ -430,6 +438,7 @@ testModules = [
     "twisted.web.test.test_error",
     # The downloadPage tests weren't ported:
     "twisted.web.test.test_http",
+    "twisted.web.test.test_http2",
     "twisted.web.test.test_flatten",
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_httpauth",
@@ -448,6 +457,10 @@ testModules = [
     "twisted.web.test.test_vhost",
     "twisted.web.test.test_wsgi",
     "twisted.web.test.test_xmlrpc",
+    "twisted.words.test.test_domish",
+    "twisted.words.test.test_xishutil",
+    "twisted.words.test.test_xmlstream",
+    "twisted.words.test.test_xpath",
 ]
 
 

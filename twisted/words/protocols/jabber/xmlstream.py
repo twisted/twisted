@@ -12,7 +12,7 @@ Stanzas.
 """
 
 from hashlib import sha1
-from zope.interface import directlyProvides, implements
+from zope.interface import directlyProvides, implementer
 
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
@@ -291,6 +291,7 @@ class FeatureNotAdvertized(Exception):
 
 
 
+@implementer(ijabber.IInitiatingInitializer)
 class BaseFeatureInitiatingInitializer(object):
     """
     Base class for initializers with a stream feature.
@@ -304,8 +305,6 @@ class BaseFeatureInitiatingInitializer(object):
                     by the receiving entity.
     @type required: C{bool}
     """
-
-    implements(ijabber.IInitiatingInitializer)
 
     feature = None
     required = False
@@ -863,6 +862,7 @@ def toResponse(stanza, stanzaType=None):
 
 
 
+@implementer(ijabber.IXMPPHandler)
 class XMPPHandler(object):
     """
     XMPP protocol handler.
@@ -870,8 +870,6 @@ class XMPPHandler(object):
     Classes derived from this class implement (part of) one or more XMPP
     extension protocols, and are referred to as a subprotocol implementation.
     """
-
-    implements(ijabber.IXMPPHandler)
 
     def __init__(self):
         self.parent = None
@@ -939,6 +937,7 @@ class XMPPHandler(object):
 
 
 
+@implementer(ijabber.IXMPPHandlerCollection)
 class XMPPHandlerCollection(object):
     """
     Collection of XMPP subprotocol handlers.
@@ -950,9 +949,6 @@ class XMPPHandlerCollection(object):
     @type handlers: C{list} of objects providing
                       L{IXMPPHandler}
     """
-
-    implements(ijabber.IXMPPHandlerCollection)
-
     def __init__(self):
         self.handlers = []
 

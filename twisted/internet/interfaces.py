@@ -2207,6 +2207,28 @@ class IOpenSSLClientConnectionCreator(Interface):
 
 
 
+class IProtocolNegotiationFactory(Interface):
+    """
+    A provider of L{IProtocolNegotiationFactory} can provide information about
+    the various protocols that the factory can create implementations of. This
+    can be used, for example, to provide protocol names for Next Protocol
+    Negotation and Application Layer Protocol Negotiation.
+
+    @see: L{twisted.internet.ssl}
+    """
+
+    def acceptableProtocols():
+        """
+        Returns a list of protocols that can be spoken by the connection
+        factory in the form of ALPN tokens, as laid out in the IANA registry
+        for ALPN tokens.
+
+        @return: a list of ALPN tokens in order of preference.
+        @rtype: L{list} of L{bytes}
+        """
+
+
+
 class ITLSTransport(ITCPTransport):
     """
     A TCP transport that supports switching to TLS midstream.

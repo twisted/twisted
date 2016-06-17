@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import math, time
 
 from twisted.protocols import basic
@@ -25,10 +27,10 @@ def benchmark(chunkSize, lineLength, numLines):
 
     assert bytes.splitlines() == p.lines, (bytes.splitlines(), p.lines)
 
-    print 'chunkSize:', chunkSize,
-    print 'lineLength:', lineLength,
-    print 'numLines:', numLines,
-    print 'CPU Time: ', after - before
+    print('chunkSize:', chunkSize, end=' ')
+    print('lineLength:', lineLength, end=' ')
+    print('numLines:', numLines, end=' ')
+    print('CPU Time: ', after - before)
 
 
 

@@ -11,7 +11,7 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 # System Imports
 import sys
@@ -324,11 +324,11 @@ class Failure:
 
             def _ebFoo(self, failure):
                 r = failure.trap(Spam, Eggs)
-                print 'The Failure is due to either Spam or Eggs!'
+                print('The Failure is due to either Spam or Eggs!')
                 if r == Spam:
-                    print 'Spam did it!'
+                    print('Spam did it!')
                 elif r == Eggs:
-                    print 'Eggs did it!'
+                    print('Eggs did it!')
 
         If the failure is not a Spam or an Eggs, then the Failure will be
         'passed on' to the next errback. In Python 2 the Failure will be

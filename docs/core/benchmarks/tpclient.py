@@ -1,4 +1,5 @@
 """Throughput test."""
+from __future__ import print_function
 
 import time, sys
 from twisted.internet import reactor, protocol
@@ -44,7 +45,7 @@ def shutdown(success):
     if not success:
         raise SystemExit("failure or something")
     passed = time.time() - started
-    print "Throughput (send): %s kbytes/sec" % ((toReceive / passed) / 1024)
+    print("Throughput (send): %s kbytes/sec" % ((toReceive / passed) / 1024))
     reactor.stop()
 
 
