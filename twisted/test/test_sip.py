@@ -11,7 +11,7 @@ from twisted.internet import defer, reactor
 from twisted.protocols import sip
 from twisted.trial import unittest
 
-from zope.interface import implements
+from zope.interface import implementer
 
 
 # request, prefixed by random CRLFs
@@ -416,13 +416,13 @@ class ParseTests(unittest.TestCase):
             self.assertEqual(gparams, params)
 
 
+@implementer(sip.ILocator)
 class DummyLocator:
-    implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.succeed(sip.URL("server.com", port=5060))
 
+@implementer(sip.ILocator)
 class FailingLocator:
-    implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.fail(LookupError())
 

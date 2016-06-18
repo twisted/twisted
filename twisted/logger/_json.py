@@ -80,6 +80,8 @@ def failureFromJSON(failureDict):
     @return: L{Failure}
     @rtype: L{Failure}
     """
+    # InstanceType() is only available in Python 2 and lower.
+    # __new__ is only available in Python 3 and higher.
     newFailure = getattr(Failure, "__new__", None)
     if newFailure is None:
         failureDict = asBytes(failureDict)

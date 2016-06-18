@@ -18,7 +18,7 @@ ServiceManager connects to the Jabber server and is responsible for the
 corresponding XML stream.
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.application import service
 from twisted.internet import defer
@@ -195,12 +195,11 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
 
 
 
+@implementer(ijabber.IService)
 class Service(service.Service):
     """
     External server-side component service.
     """
-
-    implements(ijabber.IService)
 
     def componentConnected(self, xs):
         pass

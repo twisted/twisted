@@ -11,7 +11,7 @@ import binascii
 import warnings
 from email.base64MIME import encode as encode_base64
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.copyright import longversion
 from twisted.protocols import basic
@@ -1988,9 +1988,8 @@ class LOGINCredentials(_lcredentials):
 
 
 
+@implementer(IClientAuthentication)
 class PLAINAuthenticator:
-    implements(IClientAuthentication)
-
     def __init__(self, user):
         self.user = user
 

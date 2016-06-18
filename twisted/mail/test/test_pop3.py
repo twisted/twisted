@@ -14,7 +14,7 @@ import itertools
 
 from collections import OrderedDict
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import defer
 
@@ -417,9 +417,8 @@ class AnotherPOP3Tests(unittest.TestCase):
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
 
+@implementer(pop3.IServerFactory)
 class TestServerFactory:
-    implements(pop3.IServerFactory)
-
     def cap_IMPLEMENTATION(self):
         return "Test Implementation String"
 
