@@ -181,8 +181,12 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         threadPoolRef = ref(reactor.getThreadPool())
         reactor.fireSystemEvent("shutdown")
-        gc.collect()
-        self.assertIs(threadPoolRef(), None)
+
+        if reactor.__class__.__name__ == "AsyncioSelectorReactor":
+            self.assertIs(reactor.threadpool, None)
+        else:
+            gc.collect()
+            self.assertIs(threadPoolRef(), None)
 
 
     def test_isInIOThread(self):
