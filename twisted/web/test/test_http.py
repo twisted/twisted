@@ -2446,6 +2446,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         message.
         """
         factory = http.HTTPFactory()
+        factory.timeOut = None
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
@@ -2468,6 +2469,30 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # A log message should be written out
         self.assertIn('sometime "GET /path HTTP/1.1"',
                       factory.logFile.getvalue())
+
+
+    def test_requestBodyTimeoutFromFactory(self):
+        """
+        L{HTTPChannel} timeouts whenever data from a request body is not
+        delivered to it in time, even when it gets built from a L{HTTPFactory}.
+        """
+        clock = Clock()
+        factory = http.HTTPFactory(timeout=100, reactor=clock)
+        factory.startFactory()
+        protocol = factory.buildProtocol(None)
+        transport = StringTransport()
+
+        # This is a terrible violation of the abstraction later of
+        # _genericHTTPChannelProtocol, but we need to do it because
+        # policies.TimeoutMixin doesn't accept a reactor on the object.
+        # Maybe we should fix this?
+        protocol._channel.callLater = clock.callLater
+        protocol.makeConnection(transport)
+        protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        clock.advance(99)
+        self.assertFalse(transport.disconnecting)
+        clock.advance(2)
+        self.assertTrue(transport.disconnecting)
 
 
 
