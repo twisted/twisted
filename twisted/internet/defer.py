@@ -21,7 +21,7 @@ from __future__ import division, absolute_import
 import traceback
 import types
 import warnings
-from sys import exc_info
+from sys import exc_info, version_info
 from functools import wraps
 
 # Twisted imports
@@ -691,50 +691,34 @@ class _MakeDeferredAwaitable(object):
 
 
 
-def deferredCoroutine(f):
+def ensureDeferred(coro):
     """
-    A decorator for supporting coroutine-style programming using L{Deferred}s.
-    It implements the awaitable protocol from PEP-0492.
+    Transform a coroutine that uses L{Deferred}s into a L{Deferred} itself.
 
-    When using this decorator, the wrapped function may use the C{await}
-    keyword to suspend execution until the awaited L{Deferred} has fired. For
-    example::
+    Coroutine functions return a coroutine object, similar to how generators
+    work. This function turns that coroutine into a Deferred, meaning that it
+    can be used in regular Twisted code. For example::
 
         import treq
-        from twisted.internet.defer import deferredCoroutine
+        from twisted.internet.defer import ensureDeferred
         from twisted.internet.task import react
 
-        def main(reactor):
-            pages = [
-                "https://google.com/",
-                "https://twistedmatrix.com",
-            ]
-            d = crawl(pages)
-            d.addCallback(print)
-            return d
-
-        @deferredCoroutine
         async def crawl(pages):
             results = {}
-
             for page in pages:
                 results[page] = await treq.content(await treq.get(page))
             return results
 
+        def main(reactor):
+            pages = [
+                "http://localhost:8080"
+            ]
+            d = ensureDeferred(crawl(pages))
+            d.addCallback(print)
+            return d
+
         react(main)
-
-    In the above example, L{treq.get} and L{treq.content} return L{Deferreds},
-    and the decorated function returns a L{Deferred} itself.
     """
-    def wrapped(*args, **kwargs):
-        coro = f(*args, **kwargs)
-        return _inlineCallbacks(None, coro, Deferred())
-
-    return wrapped
-
-
-def ensureDeferred(coro):
-
     return _inlineCallbacks(None, coro, Deferred())
 
 
@@ -1727,7 +1711,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred", "deferredCoroutine",
+           "maybeDeferred", "ensureDeferred",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
            "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",

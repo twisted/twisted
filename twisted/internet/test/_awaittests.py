@@ -4,19 +4,29 @@
 """
 Tests for C{await} support in Deferreds.
 
-These tests can only work and be imported on Python 3.5!
+These tests can only work and be imported on Python 3.5+!
 """
 
-from twisted.internet.defer import Deferred, deferredCoroutine, ensureDeferred
+import types
+
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import Clock
 
 
 class AwaitTests(TestCase):
+    """
+    Tests for using Deferreds in conjunction with PEP-492.
+    """
 
     def test_ensureDeferred(self):
-
+        """
+        L{ensureDeferred} will turn a coroutine into a L{Deferred}.
+        """
         async def run():
+            d = Deferred()
+            d.callback("bar")
+            await d
             res = await run2()
             return res
 
@@ -26,14 +36,22 @@ class AwaitTests(TestCase):
             res = await d
             return res
 
-        d = ensureDeferred(run())
+        # It's a coroutine...
+        r = run()
+        self.assertIsInstance(r, types.CoroutineType)
+
+        # Now it's a Deferred.
+        d = ensureDeferred(r)
+        self.assertIsInstance(d, Deferred)
+
+        # The Deferred has the result we want.
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
 
     def test_basic(self):
         """
-        L{deferredCoroutine} allows a function to C{await} on a L{Deferred}.
+        L{ensureDeferred} allows a function to C{await} on a L{Deferred}.
         """
         async def run():
             d = Deferred()
@@ -48,7 +66,7 @@ class AwaitTests(TestCase):
 
     def test_exception(self):
         """
-        An exception in a function wrapped with L{deferredCoroutine} will cause
+        An exception in a coroutine wrapped with L{ensureDeferred} will cause
         the returned L{Deferred} to fire with a failure.
         """
         async def run():
@@ -65,7 +83,7 @@ class AwaitTests(TestCase):
 
     def test_twoDeep(self):
         """
-        An exception in a function wrapped with L{deferredCoroutine} will cause
+        An exception in a coroutine wrapped with L{ensureDeferred} will cause
         the returned L{Deferred} to fire with a failure.
         """
         reactor = Clock()

@@ -397,32 +397,58 @@ Coroutines with async/await
 
     Only available on Python 3.5 and higher.
 
-    .. versionadded:: 16.3
+    .. versionadded:: 16.4
 
-On Python 3.5 and higher, the :pep:`492` ("Coroutines with async and await syntax") "await" functionality can be used with Deferreds.
-It is similar to ``inlineCallbacks``, except that it uses the ``await`` keyword instead of ``yield``, the ``return`` keyword instead of ``returnValue``, and is cleaner internally.
+On Python 3.5 and higher, the :pep:`492` ("Coroutines with async and await syntax") "await" functionality can be used with Deferreds by the use of :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>`.
+It is similar to ``inlineCallbacks``, except that it uses the ``await`` keyword instead of ``yield``, the ``return`` keyword instead of ``returnValue``, and is a function rather than a decorator.
 
-Wrapping a coroutine function (that is, a function defined by ``async def funcname():``) with :api:`twisted.internet.defer.deferredCoroutine <deferredCoroutine>` will allow you to "await" on Deferreds inside it.
-Calling the wrapped coroutine will return a Deferred; you can mix and match code which uses regular Deferreds, ``inlineCallbacks``, and ``deferredCoroutine`` freely.
+Calling a coroutine (that is, the result of a function defined by ``async def funcname():``) with :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` will allow you to "await" on Deferreds inside it, and will return a standard Deferred.
+You can mix and match code which uses regular Deferreds, ``inlineCallbacks``, and ``ensureDeferred`` freely.
 
 Awaiting on a Deferred which fires with a Failure will raise the exception inside your coroutine as if it were regular Python.
-If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``deferredCoroutine`` returns for you.
-Calling ``return`` will cause the Deferred that ``deferredCoroutine`` returned for you to fire with a result.
+If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``ensureDeferred`` returns for you.
+Calling ``return`` will cause the Deferred that ``ensureDeferred`` returned for you to fire with a result.
 
 .. code-block:: python3
 
    import json
-   from twisted.internet.defer import deferredCoroutine
+   from twisted.internet.defer import ensureDeferred
    from twisted.logger import Logger
    log = Logger()
 
-   @deferredCoroutine
    async def getUsers():
        try:
            return json.loads(await makeRequest("GET", "/users"))
        except ConnectionError:
            log.failure("makeRequest failed due to connection error")
            return []
+
+   def do():
+       d = ensureDeferred(getUsers())
+       d.addCallback(print)
+       return d
+
+
+When writing coroutines, you do not need to use :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` when you are writing a coroutine which calls other coroutines which await on Deferreds; you can just ``await`` on it directly.
+For example:
+
+.. code-block:: python3
+
+    async def foo():
+        res = await someFunctionThatReturnsADeferred()
+        return res
+
+    async def bar():
+        baz = await someOtherDeferredFunction()
+        fooResult = await foo()
+        return baz + fooResult
+
+    def myDeferredReturningFunction():
+        coro = bar()
+        return ensureDeferred(coro)
+
+
+Even though Deferreds were used in both coroutines, only ``bar`` had to be wrapped in :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` to return a Deferred.
 
 
 Conclusion
