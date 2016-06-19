@@ -9,7 +9,7 @@ from __future__ import absolute_import, division
 
 import errno
 
-from asyncio import get_event_loop, new_event_loop
+from asyncio import new_event_loop
 
 from zope.interface import implementer
 
