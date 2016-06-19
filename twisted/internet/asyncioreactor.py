@@ -5,7 +5,9 @@
 asyncio-based reactor implementation.
 """
 
-from asyncio import get_event_loop, new_event_loop
+from __future__ import absolute_import, division
+
+from asyncio import get_event_loop
 
 from zope.interface import implementer
 
@@ -22,6 +24,7 @@ class _DCHandle(object):
     """
     def __init__(self, handle):
         self.handle = handle
+
 
     def cancel(self):
         self.handle.cancel()
@@ -190,7 +193,10 @@ class AsyncioSelectorReactor(PosixReactorBase):
 def install(eventloop=None):
     """
     Install an asyncio-based reactor.
+
+    @param eventloop: The asyncio eventloop to wrap. If default, the global one
+        is selected.
     """
-    reactor = AsyncioSelectorReactor()
+    reactor = AsyncioSelectorReactor(eventloop)
     from twisted.internet.main import installReactor
     installReactor(reactor)

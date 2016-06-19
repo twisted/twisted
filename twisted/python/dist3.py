@@ -73,6 +73,7 @@ modules = [
     "twisted.internet._win32serialport",
     "twisted.internet.abstract",
     "twisted.internet.address",
+    "twisted.internet.asyncioreactor",
     "twisted.internet.base",
     "twisted.internet.default",
     "twisted.internet.defer",
