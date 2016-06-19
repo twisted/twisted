@@ -13,7 +13,8 @@ from zope.interface import implementer
 
 from twisted.logger import Logger
 from twisted.internet.base import DelayedCall
-from twisted.internet.posixbase import PosixReactorBase, _NO_FILEDESC
+from twisted.internet.posixbase import (PosixReactorBase, _NO_FILEDESC,
+                                        _ContinuousPolling)
 from twisted.python.log import callWithLogger
 from twisted.internet.interfaces import IReactorFDSet
 
@@ -34,7 +35,7 @@ class _DCHandle(object):
 @implementer(IReactorFDSet)
 class AsyncioSelectorReactor(PosixReactorBase):
     """
-    Reactor running on top of an asyncio SelectorEventLoop.
+    Reactor running on top of L{asyncio.SelectorEventLoop}.
     """
     _asyncClosed = False
     _log = Logger()
@@ -48,6 +49,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._writers = {}
         self._readers = {}
         self._delayedCalls = set()
+        self._continuousPolling = _ContinuousPolling(self)
         super().__init__()
 
 
@@ -76,6 +78,14 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               True)
         except BrokenPipeError:
             pass
+        except IOError:
+            if e.errno == errno.EPERM:
+                # epoll(7) doesn't support certain file descriptors,
+                # e.g. filesystem files, so for those we just poll
+                # continuously:
+                self._continuousPolling.addReader(reader)
+            else:
+                raise
 
 
     def addWriter(self, writer):
@@ -87,9 +97,21 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               False)
         except BrokenPipeError:
             pass
+        except IOError:
+            if e.errno == errno.EPERM:
+                # epoll(7) doesn't support certain file descriptors,
+                # e.g. filesystem files, so for those we just poll
+                # continuously:
+                self._continuousPolling.addWriter(writer)
+            else:
+                raise
 
 
     def removeReader(self, reader):
+        if self._continuousPolling.isReading(reader):
+            self._continuousPolling.removeReader(reader)
+            return
+
         fd = reader.fileno()
         try:
             if fd == -1:
@@ -103,6 +125,10 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def removeWriter(self, writer):
+        if self._continuousPolling.isWriting(writer):
+            self._continuousPolling.removeWriter(writer)
+            return
+
         fd = writer.fileno()
         try:
             if fd == -1:
@@ -116,15 +142,16 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def removeAll(self):
-        return self._removeAll(self._readers.keys(), self._writers.keys())
+        return (self._removeAll(self._readers.keys(), self._writers.keys()) +
+                self._continuousPolling.removeAll())
 
 
     def getReaders(self):
-        return list(self._readers)
+        return (list(self._readers) + self._continuousPolling.getReaders())
 
 
     def getWriters(self):
-        return list(self._writers)
+        return (list(self._writers) + self._continuousPolling.getWriters())
 
 
     def getDelayedCalls(self):
