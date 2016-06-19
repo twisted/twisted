@@ -7,6 +7,8 @@ asyncio-based reactor implementation.
 
 from __future__ import absolute_import, division
 
+import errno
+
 from asyncio import get_event_loop
 
 from zope.interface import implementer
