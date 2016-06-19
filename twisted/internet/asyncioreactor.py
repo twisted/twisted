@@ -9,7 +9,7 @@ from __future__ import absolute_import, division
 
 import errno
 
-from asyncio import get_event_loop
+from asyncio import get_event_loop, new_event_loop
 
 from zope.interface import implementer
 
@@ -45,7 +45,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def __init__(self, eventloop=None):
 
         if eventloop is None:
-            eventloop = get_event_loop()
+            eventloop = new_event_loop()
 
         self._asyncioEventloop = eventloop
         self._writers = {}
@@ -72,6 +72,10 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def addReader(self, reader):
+        if reader in self._readers.keys() or \
+           reader in self._continuousPolling._readers:
+            return
+
         fd = reader.fileno()
         try:
             self._asyncioEventloop.add_reader(fd, callWithLogger, reader,
@@ -91,12 +95,15 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def addWriter(self, writer):
+        if writer in self._writers.keys() or \
+           writer in self._continuousPolling._writers:
+           return
+
         fd = writer.fileno()
         try:
             self._asyncioEventloop.add_writer(fd, callWithLogger, writer,
                                               self._read_or_write, writer,
                                               False)
-
             self._writers[writer] = fd
         except BrokenPipeError:
             pass
@@ -111,37 +118,52 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def removeReader(self, reader):
+
+        # First, see if they're trying to remove a reader that we don't have.
+        if not (reader in self._readers.keys() \
+                or self._continuousPolling.isReading(reader)):
+            # We don't have it, so just return OK.
+            return
+
+        # If it was a cont. polling reader, check there first.
         if self._continuousPolling.isReading(reader):
             self._continuousPolling.removeReader(reader)
             return
 
         fd = reader.fileno()
-        try:
-            if fd == -1:
-                fd = self._readers.pop(reader)
-            else:
-                self._readers.pop(reader)
+        if fd == -1:
+            # If the FD is -1, we want to know what its original FD was, to
+            # remove it.
+            fd = self._readers.pop(reader)
+        else:
+            self._readers.pop(reader)
 
-            self._asyncioEventloop.remove_reader(fd)
-        except KeyError:
-            pass
+        self._asyncioEventloop.remove_reader(fd)
 
 
     def removeWriter(self, writer):
+
+        # First, see if they're trying to remove a writer that we don't have.
+        if not (writer in self._writers.keys() \
+                or self._continuousPolling.isWriting(writer)):
+            # We don't have it, so just return OK.
+            return
+
+        # If it was a cont. polling writer, check there first.
         if self._continuousPolling.isWriting(writer):
             self._continuousPolling.removeWriter(writer)
             return
 
         fd = writer.fileno()
-        try:
-            if fd == -1:
-                fd = self._writers.pop(writer)
-            else:
-                self._writers.pop(writer)
 
-            self._asyncioEventloop.remove_writer(fd)
-        except KeyError:
-            pass
+        if fd == -1:
+            # If the FD is -1, we want to know what its original FD was, to
+            # remove it.
+            fd = self._writers.pop(writer)
+        else:
+            self._writers.pop(writer)
+
+        self._asyncioEventloop.remove_writer(fd)
 
 
     def removeAll(self):
@@ -150,11 +172,13 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def getReaders(self):
-        return (list(self._readers) + self._continuousPolling.getReaders())
+        return (list(self._readers.keys()) +
+                self._continuousPolling.getReaders())
 
 
     def getWriters(self):
-        return (list(self._writers) + self._continuousPolling.getWriters())
+        return (list(self._writers.keys()) +
+                self._continuousPolling.getWriters())
 
 
     def getDelayedCalls(self):
