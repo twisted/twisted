@@ -78,7 +78,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               True)
         except BrokenPipeError:
             pass
-        except IOError:
+        except IOError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -97,7 +97,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               False)
         except BrokenPipeError:
             pass
-        except IOError:
+        except IOError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
