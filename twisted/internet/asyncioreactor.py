@@ -73,11 +73,11 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def addReader(self, reader):
         fd = reader.fileno()
-        self._readers[reader] = fd
         try:
             self._asyncioEventloop.add_reader(fd, callWithLogger, reader,
                                               self._read_or_write, reader,
                                               True)
+            self._readers[reader] = fd
         except BrokenPipeError:
             pass
         except IOError as e:
@@ -92,11 +92,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def addWriter(self, writer):
         fd = writer.fileno()
-        self._writers[writer] = fd
         try:
             self._asyncioEventloop.add_writer(fd, callWithLogger, writer,
                                               self._read_or_write, writer,
                                               False)
+
+            self._writers[writer] = fd
         except BrokenPipeError:
             pass
         except IOError as e:
