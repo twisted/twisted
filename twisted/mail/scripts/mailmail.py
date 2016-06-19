@@ -21,6 +21,7 @@ except:
 
 from twisted.copyright import version
 from twisted.internet import reactor
+from twisted.logger import Logger, textFileLogObserver
 from twisted.mail import smtp
 
 GLOBAL_CFG = "/etc/mailmail"
@@ -37,8 +38,9 @@ Subject: Failed Message Delivery
 The Twisted sendmail application.
 """
 
-def log(message, *args):
-    sys.stderr.write(str(message) % args + '\n')
+logObserver = textFileLogObserver(sys.stderr)
+log = Logger(observer=logObserver)
+
 
 class Options:
     """
@@ -260,7 +262,9 @@ def loadConfig(path):
                         try:
                             id = int(id)
                         except ValueError:
-                            log("Illegal %sID in [%s] section: %s", section[0].upper(), section, id)
+                            log.error(
+                                "Illegal {}ID in [{}] section: {}".format(
+                                section[0].upper(), section, id))
                         else:
                             L.append(id)
             order = p.get(section, 'order')
@@ -274,7 +278,7 @@ def loadConfig(path):
         for (host, up) in p.items('identity'):
             parts = up.split(':', 1)
             if len(parts) != 2:
-                log("Illegal entry in [identity] section: %s", up)
+                log.error("Illegal entry in [identity] section: {}".format(up))
                 continue
             p.identities[host] = parts
 
@@ -344,7 +348,7 @@ def run():
     lConf = loadConfig(LOCAL_CFG)
 
     if deny(gConf) or deny(lConf):
-        log("Permission denied")
+        log.error("Permission denied")
         return
 
     host = lConf.smarthost or gConf.smarthost or SMARTHOST
