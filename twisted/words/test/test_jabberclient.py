@@ -403,10 +403,10 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         # test list of initializers
         version, tls, sasl, bind, session = xs.initializers
 
-        self.assert_(isinstance(tls, xmlstream.TLSInitiatingInitializer))
-        self.assert_(isinstance(sasl, SASLInitiatingInitializer))
-        self.assert_(isinstance(bind, client.BindInitializer))
-        self.assert_(isinstance(session, client.SessionInitializer))
+        self.assertTrue(isinstance(tls, xmlstream.TLSInitiatingInitializer))
+        self.assertTrue(isinstance(sasl, SASLInitiatingInitializer))
+        self.assertTrue(isinstance(bind, client.BindInitializer))
+        self.assertTrue(isinstance(session, client.SessionInitializer))
 
         self.assertFalse(tls.required)
         self.assertTrue(sasl.required)
