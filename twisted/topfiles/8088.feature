@@ -1,1 +1,1 @@
-twisted.internet.defer.deferredCoroutine has been added. Wrapping a coroutine function (defined using async def, available only on Python 3.5+) with it allows you to use the "await" keyword with Deferreds, similar to "yield" when using inlineCallbacks.
+twisted.internet.defer.ensureDeferred has been added, similar to asyncio's ensure_future. Wrapping a coroutine (the result of a function defined using async def, available only on Python 3.5+) with it allows you to use the "await" keyword with Deferreds inside the coroutine, similar to "yield" when using inlineCallbacks.
