@@ -2208,35 +2208,35 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # passed a reactor.
         conn.callLater = reactor.callLater
 
-        f = FrameFactory()
-        b = StringTransport()
+        frameFactory = FrameFactory()
+        transport = StringTransport()
         conn.requestFactory = DummyHTTPHandler
 
         # Send the preamble with no request.
-        conn.makeConnection(b)
+        conn.makeConnection(transport)
 
         # one byte at a time, to stress the implementation.
-        for byte in iterbytes(f.preamble()):
+        for byte in iterbytes(frameFactory.preamble()):
             conn.dataReceived(byte)
 
         # Save the preamble.
-        preamble = b.value()
+        preamble = transport.value()
 
         # Advance the clock.
         reactor.advance(99)
 
         # Everything is fine, no extra data got sent.
-        self.assertEqual(preamble, b.value())
-        self.assertFalse(b.disconnecting)
+        self.assertEqual(preamble, transport.value())
+        self.assertFalse(transport.disconnecting)
 
         # Advance the clock.
         reactor.advance(2)
 
         # We disconnected after sending a GoAway frame.
-        self.assertTrue(b.disconnecting)
+        self.assertTrue(transport.disconnecting)
 
         buffer = FrameBuffer()
-        buffer.receiveData(b.value())
+        buffer.receiveData(transport.value())
         frames = list(buffer)
 
         self.assertEqual(len(frames), 2)
@@ -2259,29 +2259,29 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # passed a reactor.
         conn.callLater = reactor.callLater
 
-        f = FrameFactory()
-        b = StringTransport()
+        frameFactory = FrameFactory()
+        transport = StringTransport()
         conn.requestFactory = DummyHTTPHandler
-        conn.makeConnection(b)
+        conn.makeConnection(transport)
 
         # Send one byte of the preamble.
-        for byte in iterbytes(f.preamble()):
+        for byte in iterbytes(frameFactory.preamble()):
             conn.dataReceived(byte)
 
             # Advance the clock.
             reactor.advance(99)
 
             # Everything is fine.
-            self.assertFalse(b.disconnecting)
+            self.assertFalse(transport.disconnecting)
 
         # Advance the clock.
         reactor.advance(2)
 
         # We disconnected after sending a GoAway frame.
-        self.assertTrue(b.disconnecting)
+        self.assertTrue(transport.disconnecting)
 
         buffer = FrameBuffer()
-        buffer.receiveData(b.value())
+        buffer.receiveData(transport.value())
         frames = list(buffer)
 
         self.assertEqual(len(frames), 2)
@@ -2305,15 +2305,15 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # passed a reactor.
         conn.callLater = reactor.callLater
 
-        f = FrameFactory()
-        b = StringTransport()
+        frameFactory = FrameFactory()
+        transport = StringTransport()
         conn.requestFactory = DummyProducerHandler
-        frames = buildRequestFrames(self.getRequestHeaders, [], f)
-        requestBytes = f.preamble()
+        frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
+        requestBytes = frameFactory.preamble()
         requestBytes += b''.join(f.serialize() for f in frames)
 
         # Send the preamble with no request.
-        conn.makeConnection(b)
+        conn.makeConnection(transport)
 
         # one byte at a time, to stress the implementation.
         for byte in iterbytes(requestBytes):
@@ -2323,10 +2323,10 @@ class HTTP2TimeoutTests(unittest.TestCase):
         reactor.advance(101)
 
         # We disconnected after sending a GoAway frame.
-        self.assertTrue(b.disconnecting)
+        self.assertTrue(transport.disconnecting)
 
         buffer = FrameBuffer()
-        buffer.receiveData(b.value())
+        buffer.receiveData(transport.value())
         frames = list(buffer)
 
         self.assertEqual(len(frames), 2)
@@ -2349,21 +2349,21 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # passed a reactor.
         conn.callLater = reactor.callLater
 
-        f = FrameFactory()
-        b = StringTransport()
+        frameFactory = FrameFactory()
+        transport = StringTransport()
         conn.requestFactory = DummyProducerHandler
-        frames = buildRequestFrames(self.getRequestHeaders, [], f)
-        requestBytes = f.preamble()
+        frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
+        requestBytes = frameFactory.preamble()
         requestBytes += b''.join(f.serialize() for f in frames)
 
         # Send the preamble with no request.
-        conn.makeConnection(b)
+        conn.makeConnection(transport)
 
         # one byte at a time, to stress the implementation.
         for byte in iterbytes(requestBytes):
             conn.dataReceived(byte)
 
-        sentData = b.value()
+        sentData = transport.value()
         oldCallCount = len(reactor.getDelayedCalls())
 
         # Now lose the connection.
@@ -2375,4 +2375,4 @@ class HTTP2TimeoutTests(unittest.TestCase):
 
         # Advancing the clock should do nothing.
         reactor.advance(101)
-        self.assertEqual(b.value(), sentData)
+        self.assertEqual(transport.value(), sentData)
