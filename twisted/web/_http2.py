@@ -35,9 +35,9 @@ from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
 from twisted.internet.protocol import Protocol
+from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
 from twisted.protocols.tls import _PullToPush
-from twisted.python import log
 
 
 # This API is currently considered private.
@@ -45,6 +45,8 @@ __all__ = []
 
 
 _END_STREAM_SENTINEL = object()
+
+log = Logger()
 
 
 # Python versions 2.7.3 and older don't have a memoryview object that plays
@@ -189,7 +191,7 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         # In our override of timeoutConnection we deliberately send a GoAway
         # frame *before* we tear the connection down.
-        log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        log.info("Timing out client {client}", client=self.transport.getPeer())
 
         # Check whether there are open streams. If there are, we're going to
         # want to use the error code PROTOCOL_ERROR. If there aren't, use
