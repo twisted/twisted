@@ -11,10 +11,11 @@ import sys
 from StringIO import StringIO
 
 from twisted.copyright import version
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SkipTest
 from twisted.mail import smtp
 from twisted.mail.scripts import mailmail
 from twisted.mail.scripts.mailmail import parseOptions
+from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import MemoryReactor
 
 
@@ -172,6 +173,9 @@ class OptionsTests(TestCase):
         """
         Test run() method.
         """
+        if platformType == "win32":
+            raise SkipTest("win32 lacks support for getuid()")
+
         self.addCleanup(setattr, sys, 'argv', sys.argv)
         self.addCleanup(setattr, sys, 'stdin', sys.stdin)
         self.patch(sys, 'stderr', self.out)
@@ -184,6 +188,9 @@ class OptionsTests(TestCase):
         """
         Test reading the configuration from a file.
         """
+        if platformType == "win32":
+            raise SkipTest("win32 lacks support for getuid()")
+
         self.addCleanup(setattr, sys, 'stdin', sys.stdin)
         self.addCleanup(setattr, sys, 'argv', sys.argv)
 
