@@ -15,6 +15,7 @@ from twisted.trial.unittest import TestCase
 from twisted.mail import smtp
 from twisted.mail.scripts import mailmail
 from twisted.mail.scripts.mailmail import parseOptions
+from twisted.python.runtime import platformType
 from twisted.test.proto_helpers import MemoryReactor
 
 
@@ -179,6 +180,9 @@ class OptionsTests(TestCase):
         sys.stdin = StringIO('\n')
         mailmail.run()
 
+    if platformType == "win32":
+        test_run.skip = "win32 lacks support for getuid()"
+
 
     def test_readConfig(self):
         """
@@ -219,3 +223,7 @@ class OptionsTests(TestCase):
                          "Illegal GID in \[groupaccess\] section: invalidgid1")
         self.assertRegex(self.out.getvalue(),
                          'Illegal entry in \[identity\] section: funny')
+
+    if platformType == "win32":
+        test_readConfig.skip = "win32 lacks support for getuid()"
+
