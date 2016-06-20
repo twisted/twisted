@@ -104,7 +104,12 @@ from twisted.web.iweb import (
     IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
 from twisted.web.http_headers import Headers
 
-H2_ENABLED = False
+try:
+    from twisted.web._http2 import H2Connection
+    H2_ENABLED = True
+except ImportError:
+    H2Connection = None
+    H2_ENABLED = False
 
 from twisted.web._responses import (
     SWITCHING,
@@ -726,8 +731,8 @@ class Request:
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
-        self.client = self.channel.transport.getPeer()
-        self.host = self.channel.transport.getHost()
+        self.client = self.channel.getPeer()
+        self.host = self.channel.getHost()
 
         # Argument processing
         args = self.args
@@ -754,7 +759,7 @@ class Request:
                         self.args.update(cgiArgs)
                 except:
                     # It was a bad request.
-                    _respondToBadRequestAndDisconnect(self.channel.transport)
+                    self.channel._respondToBadRequestAndDisconnect()
                     return
             self.content.seek(0, 0)
 
@@ -799,13 +804,13 @@ class Request:
 
         self.streamingProducer = streaming
         self.producer = producer
-        self.transport.registerProducer(producer, streaming)
+        self.channel.registerProducer(producer, streaming)
 
     def unregisterProducer(self):
         """
         Unregister the producer.
         """
-        self.transport.unregisterProducer()
+        self.channel.unregisterProducer()
         self.producer = None
 
 
@@ -867,10 +872,11 @@ class Request:
 
         if self.chunked:
             # write last chunk and closing CRLF
-            self.transport.write(b"0\r\n\r\n")
+            self.channel.write(b"0\r\n\r\n")
 
         # log request
-        if hasattr(self.channel, "factory"):
+        if (hasattr(self.channel, "factory") and
+                self.channel.factory is not None):
             self.channel.factory.log(self)
 
         self.finished = 1
@@ -892,11 +898,9 @@ class Request:
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            l = []
-            l.append(
-                version + b" " +
-                intToBytes(self.code) + b" " +
-                self.code_message + b"\r\n")
+            code = intToBytes(self.code)
+            reason = self.code_message
+            headers = []
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
@@ -904,7 +908,7 @@ class Request:
             if ((version == b"HTTP/1.1") and
                 (self.responseHeaders.getRawHeaders(b'content-length') is None) and
                 self.method != b"HEAD" and self.code not in NO_BODY_CODES):
-                l.append(b'Transfer-Encoding: chunked\r\n')
+                headers.append((b'Transfer-Encoding', b'chunked'))
                 self.chunked = 1
 
             if self.lastModified is not None:
@@ -928,14 +932,12 @@ class Request:
                             category=DeprecationWarning, stacklevel=2)
                         # Backward compatible cast for non-bytes values
                         value = networkString('%s' % (value,))
-                    l.extend([name, b": ", value, b"\r\n"])
+                    headers.append((name, value))
 
             for cookie in self.cookies:
-                l.append(b'Set-Cookie: ' + cookie + b'\r\n')
+                headers.append((b'Set-Cookie', cookie))
 
-            l.append(b"\r\n")
-
-            self.transport.writeSequence(l)
+            self.channel.writeHeaders(version, code, reason, headers)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -950,9 +952,9 @@ class Request:
         self.sentLength = self.sentLength + len(data)
         if data:
             if self.chunked:
-                self.transport.writeSequence(toChunk(data))
+                self.channel.writeSequence(toChunk(data))
             else:
-                self.transport.write(data)
+                self.channel.write(data)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None,
                   max_age=None, comment=None, secure=None, httpOnly=False):
@@ -1238,23 +1240,24 @@ class Request:
 
     def isSecure(self):
         """
-        Return True if this request is using a secure transport.
+        Return L{True} if this request is using a secure transport.
 
-        Normally this method returns True if this request's HTTPChannel
-        instance is using a transport that implements ISSLTransport.
+        Normally this method returns L{True} if this request's L{HTTPChannel}
+        instance is using a transport that implements
+        L{interfaces.ISSLTransport}.
 
-        This will also return True if setHost() has been called
-        with ssl=True.
+        This will also return L{True} if L{Request.setHost} has been called
+        with C{ssl=True}.
 
-        @returns: True if this request is secure
+        @returns: L{True} if this request is secure
         @rtype: C{bool}
         """
         if self._forceSSL:
             return True
-        transport = getattr(self, 'transport', None)
-        if interfaces.ISSLTransport(transport, None) is not None:
-            return True
-        return False
+        channel = getattr(self, 'channel', None)
+        if channel is None:
+            return False
+        return channel.isSecure()
 
 
     def _authorize(self):
@@ -1333,6 +1336,14 @@ class Request:
         for d in self.notifications:
             d.errback(reason)
         self.notifications = []
+
+
+    def loseConnection(self):
+        """
+        Pass the loseConnection through to the underlying channel.
+        """
+        self.channel.loseConnection()
+
 
 Request.getClient = deprecated(
     Version("Twisted", 15, 0, 0),
@@ -1605,6 +1616,7 @@ class _NoPushProducer(object):
 
 
 
+@implementer(interfaces.ITransport)
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
@@ -1680,7 +1692,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._receivedHeaderSize += len(line)
         if (self._receivedHeaderSize > self.totalHeadersSize):
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
             return
 
         # If we're currently handling a request, buffer this data. We shouldn't
@@ -1714,13 +1726,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
             parts = line.split()
             if len(parts) != 3:
-                _respondToBadRequestAndDisconnect(self.transport)
+                self._respondToBadRequestAndDisconnect()
                 return
             command, request, version = parts
             try:
                 command.decode("ascii")
             except UnicodeDecodeError:
-                _respondToBadRequestAndDisconnect(self.transport)
+                self._respondToBadRequestAndDisconnect()
                 return
 
             self._command = command
@@ -1772,7 +1784,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         try:
             header, data = line.split(b':', 1)
         except ValueError:
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
             return False
 
         header = header.lower()
@@ -1781,7 +1793,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             try:
                 self.length = int(data)
             except ValueError:
-                _respondToBadRequestAndDisconnect(self.transport)
+                self._respondToBadRequestAndDisconnect()
                 self.length = None
                 return False
             self._transferDecoder = _IdentityTransferDecoder(
@@ -1801,7 +1813,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
             return False
 
         return True
@@ -1845,7 +1857,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
-            _respondToBadRequestAndDisconnect(self.transport)
+            self._respondToBadRequestAndDisconnect()
 
 
     def allHeadersReceived(self):
@@ -1858,7 +1870,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         expectContinue = req.requestHeaders.getRawHeaders(b'expect')
         if (expectContinue and expectContinue[0].lower() == b'100-continue' and
             self._version == b'HTTP/1.1'):
-            req.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
+            self._send100Continue()
 
 
     def checkPersistence(self, request, version):
@@ -1938,20 +1950,160 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             request.connectionLost(reason)
 
 
+    def isSecure(self):
+        """
+        Return L{True} if this channel is using a secure transport.
 
-def _respondToBadRequestAndDisconnect(transport):
-    """
-    This is a quick and dirty way of responding to bad requests.
+        Normally this method returns L{True} if this instance is using a
+        transport that implements L{interfaces.ISSLTransport}.
 
-    As described by HTTP standard we should be patient and accept the
-    whole request from the client before sending a polite bad request
-    response, even in the case when clients send tons of data.
+        @returns: L{True} if this request is secure
+        @rtype: C{bool}
+        """
+        if interfaces.ISSLTransport(self.transport, None) is not None:
+            return True
+        return False
 
-    @param transport: Transport handling connection to the client.
-    @type transport: L{interfaces.ITransport}
-    """
-    transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
-    transport.loseConnection()
+
+    def writeHeaders(self, version, code, reason, headers):
+        """
+        Called by L{Request} objects to write a complete set of HTTP headers to
+        a transport.
+
+        @param version: The HTTP version in use.
+        @type version: L{bytes}
+
+        @param code: The HTTP status code to write.
+        @type code: L{bytes}
+
+        @param reason: The HTTP reason phrase to write.
+        @type reason: L{bytes}
+
+        @param headers: The headers to write to the transport.
+        @type headers: L{twisted.web.http_headers.Headers}
+        """
+        responseLine = version + b" " + code + b" " + reason + b"\r\n"
+        headerSequence = [responseLine]
+        headerSequence.extend(
+            name + b': ' + value + b"\r\n" for name, value in headers
+        )
+        headerSequence.append(b"\r\n")
+        self.transport.writeSequence(headerSequence)
+
+
+    def write(self, data):
+        """
+        Called by L{Request} objects to write response data.
+
+        @param data: The data chunk to write to the stream.
+        @type data: L{bytes}
+
+        @return: C{None}
+        """
+        self.transport.write(data)
+
+
+    def writeSequence(self, iovec):
+        """
+        Write a list of strings to the HTTP response.
+
+        @param iovec: A list of byte strings to write to the stream.
+        @type data: L{list} of L{bytes}
+
+        @return: C{None}
+        """
+        self.transport.writeSequence(iovec)
+
+
+    def getPeer(self):
+        """
+        Get the remote address of this connection.
+
+        @return: An L{IAddress} provider.
+        """
+        return self.transport.getPeer()
+
+
+    def getHost(self):
+        """
+        Get the local address of this connection.
+
+        @return: An L{IAddress} provider.
+        """
+        return self.transport.getHost()
+
+
+    def loseConnection(self):
+        """
+        Closes the connection. Will write any data that is pending to be sent
+        on the network, but if this response has not yet been written to the
+        network will not write anything.
+
+        @return: C{None}
+        """
+        return self.transport.loseConnection()
+
+
+    def registerProducer(self, producer, streaming):
+        """
+        Register to receive data from a producer.
+
+        This sets self to be a consumer for a producer.  When this object runs
+        out of data (as when a send(2) call on a socket succeeds in moving the
+        last data from a userspace buffer into a kernelspace buffer), it will
+        ask the producer to resumeProducing().
+
+        For L{IPullProducer} providers, C{resumeProducing} will be called once
+        each time data is required.
+
+        For L{IPushProducer} providers, C{pauseProducing} will be called
+        whenever the write buffer fills up and C{resumeProducing} will only be
+        called when it empties.
+
+        @type producer: L{IProducer} provider
+        @param producer: The L{IProducer} that will be producing data.
+
+        @type streaming: L{bool}
+        @param streaming: C{True} if C{producer} provides L{IPushProducer},
+        C{False} if C{producer} provides L{IPullProducer}.
+
+        @raise RuntimeError: If a producer is already registered.
+
+        @return: C{None}
+        """
+        return self.transport.registerProducer(producer, streaming)
+
+
+    def unregisterProducer(self):
+        """
+        Stop consuming data from a producer, without disconnecting.
+
+        @return: C{None}
+        """
+        return self.transport.unregisterProducer()
+
+
+    def _send100Continue(self):
+        """
+        Sends a 100 Continue response, used to signal to clients that further
+        processing will be performed.
+        """
+        self.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
+
+
+    def _respondToBadRequestAndDisconnect(self):
+        """
+        This is a quick and dirty way of responding to bad requests.
+
+        As described by HTTP standard we should be patient and accept the
+        whole request from the client before sending a polite bad request
+        response, even in the case when clients send tons of data.
+
+        @param transport: Transport handling connection to the client.
+        @type transport: L{interfaces.ITransport}
+        """
+        self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+        self.transport.loseConnection()
 
 
 
@@ -2082,9 +2234,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @ivar _site: A reference to the creating L{twisted.web.server.Site} object.
     @type _site: L{twisted.web.server.Site}
+
+    @ivar _factory: A reference to the creating L{HTTPFactory} object.
+    @type _factory: L{HTTPFactory}
     """
     _negotiatedProtocol = None
     _requestFactory = Request
+    _factory = None
     _site = None
 
 
@@ -2101,6 +2257,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         """
         @see: L{HTTPChannel.factory}
         """
+        self._factory = value
         self._channel.factory = value
 
 
@@ -2142,7 +2299,15 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 negotiatedProtocol = b'http/1.1'
 
             if negotiatedProtocol == b'h2':
-                assert H2_ENABLED, "Cannot negotiate HTTP/2 without support."
+                if not H2_ENABLED:
+                    raise ValueError("Neogitated HTTP/2 without support.")
+
+                transport = self._channel.transport
+                self._channel = H2Connection()
+                self._channel.requestFactory = self._requestFactory
+                self._channel.site = self._site
+                self._channel.factory = self._factory
+                self._channel.makeConnection(transport)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
                 assert negotiatedProtocol == b'http/1.1', \

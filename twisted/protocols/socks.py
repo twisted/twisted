@@ -150,10 +150,10 @@ class SOCKSv4(protocol.Protocol):
             d.addErrback(lambda result, self = self: self.makeReply(91))
         elif code == 2: # BIND
             d = self.listenClass(0, SOCKSv4IncomingFactory, self, server)
-            d.addCallback(lambda (h, p),
-                          self = self: self.makeReply(90, 0, p, h))
+            d.addCallback(lambda x,
+                          self = self: self.makeReply(90, 0, x[1], x[0]))
         else:
-            raise RuntimeError, "Bad Connect Code: %s" % code
+            raise RuntimeError("Bad Connect Code: %s" % (code,))
         assert self.buf == "", "hmm, still stuff in buffer... %s" % repr(
             self.buf)
 

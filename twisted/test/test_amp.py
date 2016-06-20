@@ -2643,7 +2643,7 @@ class CommandTests(unittest.TestCase):
         error = self.assertRaises(
             TypeError, type, "NewCommand", (amp.Command, ),
             {"commandName": u"FOO"})
-        self.assertRegexpMatches(
+        self.assertRegex(
             str(error), "^Command names must be byte strings, got: u?'FOO'$")
 
 
@@ -2654,7 +2654,7 @@ class CommandTests(unittest.TestCase):
         error = self.assertRaises(
             TypeError, type, "NewCommand", (amp.Command, ),
             {"arguments": [(u"foo", None)]})
-        self.assertRegexpMatches(
+        self.assertRegex(
             str(error), "^Argument names must be byte strings, got: u?'foo'$")
 
 
@@ -2665,7 +2665,7 @@ class CommandTests(unittest.TestCase):
         error = self.assertRaises(
             TypeError, type, "NewCommand", (amp.Command, ),
             {"response": [(u"foo", None)]})
-        self.assertRegexpMatches(
+        self.assertRegex(
             str(error), "^Response names must be byte strings, got: u?'foo'$")
 
 
@@ -2688,7 +2688,7 @@ class CommandTests(unittest.TestCase):
         error = self.assertRaises(
             TypeError, type, "NewCommand", (amp.Command, ),
             {"errors": [(ZeroDivisionError, u"foo")]})
-        self.assertRegexpMatches(
+        self.assertRegex(
             str(error), "^Error names must be byte strings, got: u?'foo'$")
 
 
@@ -2712,7 +2712,7 @@ class CommandTests(unittest.TestCase):
         error = self.assertRaises(
             TypeError, type, "NewCommand", (amp.Command, ),
             {"fatalErrors": [(ZeroDivisionError, u"foo")]})
-        self.assertRegexpMatches(
+        self.assertRegex(
             str(error), "^Fatal error names must be byte strings, "
             "got: u?'foo'$")
 
@@ -3290,7 +3290,7 @@ class RemoteAmpErrorTests(unittest.TestCase):
         failure = Failure(Exception("Something came loose"))
         error = amp.RemoteAmpError(
             b"BROKEN", "Something has broken", local=failure)
-        self.assertRegexpMatches(
+        self.assertRegex(
             str(error), (
                 "^Code<BROKEN> [(]local[)]: Something has broken\n"
                 "Traceback [(]failure with no frames[)]: "

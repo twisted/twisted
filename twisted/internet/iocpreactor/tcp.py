@@ -439,8 +439,8 @@ class Port(_SocketCloser, _LogOwner):
             else:
                 addr = (self.interface, self.port)
             skt.bind(addr)
-        except socket.error, le:
-            raise error.CannotListenError, (self.interface, self.port, le)
+        except socket.error as le:
+            raise error.CannotListenError(self.interface, self.port, le)
 
         self.addrLen = _iocp.maxAddrLen(skt.fileno())
 

@@ -16,7 +16,7 @@ import binascii
 import warnings
 from hashlib import md5
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.mail import smtp
 from twisted.protocols import basic
@@ -31,6 +31,7 @@ from twisted import cred
 ##
 ## Authentication
 ##
+@implementer(cred.credentials.IUsernamePassword)
 class APOPCredentials:
     """
     Credentials for use in APOP authentication.
@@ -39,8 +40,6 @@ class APOPCredentials:
     @ivar username: See L{__init__}
     @ivar digest: See L{__init__}
     """
-    implements(cred.credentials.IUsernamePassword)
-
     def __init__(self, magic, username, digest):
         """
         @type magic: L{bytes}
@@ -394,6 +393,7 @@ def formatUIDListResponse(msgs, getUidl):
 
 
 
+@implementer(interfaces.IProducer)
 class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     """
     A POP3 server protocol.
@@ -449,8 +449,6 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         <cred.credentials.IUsernameHashedPassword>} provider
     @ivar _auth: Authorization credentials.
     """
-    implements(interfaces.IProducer)
-
     magic = None
     _userIs = None
     _onLogout = None
@@ -574,7 +572,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         try:
             return self.processCommand(*line.split(' '))
-        except (ValueError, AttributeError, POP3Error, TypeError), e:
+        except (ValueError, AttributeError, POP3Error, TypeError) as e:
             log.err()
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
 
@@ -776,26 +774,26 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         ).addErrback(self._ebUnexpected)
 
 
-    def _cbMailbox(self, (interface, avatar, logout), user):
+    def _cbMailbox(self, result, user):
         """
         Complete successful authentication.
 
         Save the mailbox and logout function for the authenticated user and
         send a successful response to the client.
 
-        @type interface: C{zope.interface.Interface}
-        @param interface: The interface supported by the avatar.
-
-        @type avatar: L{IMailbox} provider
-        @param avatar: The mailbox for the authenticated user.
-
-        @type logout: no-argument callable
-        @param logout: The function to be invoked when the session is
+        @type result: C{tuple}
+        @param interface_avatar_logout: The first item of the tuple is a
+            C{zope.interface.Interface} which is the interface
+            supported by the avatar.  The second item of the tuple is a
+            L{IMailbox} provider which is the mailbox for the
+            authenticated user.  The third item of the tuple is a no-argument
+            callable which is a function to be invoked when the session is
             terminated.
 
         @type user: L{bytes}
         @param user: The user being authenticated.
         """
+        (interface, avatar, logout) = result
         if interface is not IMailbox:
             self.failResponse('Authentication failed')
             log.err("_cbMailbox() called with an interface other than IMailbox")
@@ -1498,12 +1496,11 @@ class IMailbox(Interface):
 
 
 
+@implementer(IMailbox)
 class Mailbox:
     """
     A base class for mailboxes.
     """
-    implements(IMailbox)
-
     def listMessages(self, i=None):
         """
         Retrieve the size of a message, or, if none is specified, the size of

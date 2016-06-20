@@ -1,0 +1,41 @@
+language: python
+sudo: false
+
+branches:
+  only:
+    - trunk
+
+addons:
+  apt:
+    packages:
+    - libssl-dev
+    - libssl1.0.0
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+
+env:
+  global:
+    - TRIAL_REPORTER=text
+
+install:
+  - pip install tox tox-travis
+
+
+# FIXME: https://twistedmatrix.com/trac/ticket/8373
+# By default, Travis only clones one branch.
+# Some tests require the presence of the `trunk` branch so here we are, also
+# fetching `trunk` for each test.
+before_script:
+  - git remote set-branches --add origin trunk
+  - git fetch origin trunk
+
+script:
+  - tox

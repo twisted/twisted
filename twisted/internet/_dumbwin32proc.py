@@ -6,6 +6,8 @@
 http://isometri.cc/strips/gates_in_the_head
 """
 
+from __future__ import print_function
+
 import os
 
 # Win32 imports
@@ -35,7 +37,7 @@ from twisted.internet._baseprocess import BaseProcess
 
 def debug(msg):
     import sys
-    print msg
+    print(msg)
     sys.stdout.flush()
 
 class _Reaper(_pollingfile._PollableResource):
@@ -177,7 +179,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         try:
             try:
                 doCreate()
-            except TypeError, e:
+            except TypeError as e:
                 # win32process.CreateProcess cannot deal with mixed
                 # str/unicode environment, so we make it all Unicode
                 if e.args != ('All dictionary items must be strings, or '
@@ -188,7 +190,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                     newenv[unicode(key)] = unicode(value)
                 env = newenv
                 doCreate()
-        except pywintypes.error, pwte:
+        except pywintypes.error as pwte:
             if not _invalidWin32App(pwte):
                 # This behavior isn't _really_ documented, but let's make it
                 # consistent with the behavior that is documented.
@@ -210,7 +212,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                     try:
                         # Let's try again.
                         doCreate()
-                    except pywintypes.error, pwte2:
+                    except pywintypes.error as pwte2:
                         # d'oh, failed again!
                         if _invalidWin32App(pwte2):
                             raise OSError(

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from twisted.python import log
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
@@ -13,13 +15,13 @@ class BeginningPrinter(Protocol):
     def dataReceived(self, bytes):
         if self.remaining:
             display = bytes[:self.remaining]
-            print 'Some data received:'
-            print display
+            print('Some data received:')
+            print(display)
             self.remaining -= len(display)
 
 
     def connectionLost(self, reason):
-        print 'Finished receiving body:', reason.type, reason.value
+        print('Finished receiving body:', reason.type, reason.value)
         self.finished.callback(None)
 
 

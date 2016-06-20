@@ -292,6 +292,29 @@ class NameTests(unittest.TestCase):
         self.assertRaises(ValueError, name.decode, stream)
 
 
+    def test_equality(self):
+        """
+        L{Name} instances are equal as long as they have the same value for
+        L{Name.name}, regardless of the case.
+        """
+        name1 = dns.Name(b"foo.bar")
+        name2 = dns.Name(b"foo.bar")
+        self.assertEqual(name1, name2)
+
+        name3 = dns.Name(b"fOO.bar")
+        self.assertEqual(name1, name3)
+
+
+    def test_inequality(self):
+        """
+        L{Name} instances are not equal as long as they have different
+        L{Name.name} attributes.
+        """
+        name1 = dns.Name(b"foo.bar")
+        name2 = dns.Name(b"bar.foo")
+        self.assertNotEqual(name1, name2)
+
+
 
 class RoundtripDNSTests(unittest.TestCase):
     """

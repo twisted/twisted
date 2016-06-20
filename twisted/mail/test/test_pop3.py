@@ -5,6 +5,8 @@
 Test cases for Ltwisted.mail.pop3} module.
 """
 
+from __future__ import print_function
+
 import StringIO
 import hmac
 import base64
@@ -12,7 +14,7 @@ import itertools
 
 from collections import OrderedDict
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import defer
 
@@ -191,8 +193,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         parts = line.split()
         code = parts[0]
         if code != '+OK':
-            print parts
-            raise AssertionError, 'code is ' + code
+            raise AssertionError('code is: %s , parts is: %s ' % (code, parts))
         self.lines = []
         self.retr(1)
 
@@ -205,7 +206,7 @@ class MyPOP3Downloader(pop3.POP3Client):
 
     def handle_QUIT(self, line):
         if line[:3] != '+OK':
-            raise AssertionError, 'code is ' + line
+            raise AssertionError('code is ' + line)
 
 
 class POP3Tests(unittest.TestCase):
@@ -416,9 +417,8 @@ class AnotherPOP3Tests(unittest.TestCase):
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
 
+@implementer(pop3.IServerFactory)
 class TestServerFactory:
-    implements(pop3.IServerFactory)
-
     def cap_IMPLEMENTATION(self):
         return "Test Implementation String"
 

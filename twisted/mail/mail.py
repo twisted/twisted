@@ -6,6 +6,7 @@
 """
 Mail service support.
 """
+import warnings
 
 # Twisted imports
 from twisted.internet import defer
@@ -19,7 +20,7 @@ from twisted.mail import protocols, smtp
 
 # System imports
 import os
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 
 class DomainWithDefaultDict:
@@ -66,6 +67,12 @@ class DomainWithDefaultDict:
         @return: C{True} to indicate that the domain name is in this
             dictionary.
         """
+        warnings.warn(
+            'twisted.mail.mail.DomainWithDefaultDict.has_key was deprecated '
+            'in Twisted 16.3.0. '
+            'Use the `in` keyword instead.',
+            category=DeprecationWarning,
+            stacklevel=2)
         return 1
 
 
@@ -432,14 +439,13 @@ class IAliasableDomain(IDomain):
 
 
 
+@implementer(IDomain)
 class BounceDomain:
     """
     A domain with no users.
 
     This can be used to block off a domain.
     """
-    implements(IDomain)
-
     def exists(self, user):
         """
         Raise an exception to indicate that the user does not exist in this
@@ -494,6 +500,7 @@ class BounceDomain:
 
 
 
+@implementer(smtp.IMessage)
 class FileMessage:
     """
     A message receiver which delivers a message to a file.
@@ -502,8 +509,6 @@ class FileMessage:
     @ivar name: See L{__init__}.
     @ivar finalName: See L{__init__}.
     """
-    implements(smtp.IMessage)
-
     def __init__(self, fp, name, finalName):
         """
         @type fp: file-like object

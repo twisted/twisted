@@ -4,7 +4,7 @@
 
 
 from twisted.python import components
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 def foo():
     return 2
@@ -24,9 +24,8 @@ class XComponent(components.Componentized):
 class IX(Interface):
     pass
 
+@implementer(IX)
 class XA(components.Adapter):
-    implements(IX)
-
     def method(self):
         # Kick start :(
         pass

@@ -163,13 +163,12 @@ AMP conversations consist of an exchange of messages called *boxes* .  A *box* c
 
 .. code-block:: python
 
-    from zope.interface import implements
+    from zope.interface import implementer
     
     from twisted.protocols.amp import IBoxReceiver
     
+    @implementer(IBoxReceiver)
     class BoxReflector(object):
-        implements(IBoxReceiver)
-    
         def startReceivingBoxes(self, boxSender):
             self.boxSender = boxSender
     

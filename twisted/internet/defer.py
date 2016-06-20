@@ -16,7 +16,7 @@ Maintainer: Glyph Lefkowitz
     at the Deferred which is chained to the Deferred which has this marker.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import traceback
 import types
@@ -1092,7 +1092,7 @@ def deferredGenerator(f):
             thing = waitForDeferred(makeSomeRequestResultingInDeferred())
             yield thing
             thing = thing.getResult()
-            print thing #the result! hoorj!
+            print(thing) #the result! hoorj!
 
     L{waitForDeferred} returns something that you should immediately yield; when
     your generator is resumed, calling C{thing.getResult()} will either give you
