@@ -511,12 +511,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         l = []
         d = defer.Deferred().addCallback(lambda _: 1 // 0).addErrback(l.append)
         d.callback(1)
-        self.assert_(isinstance(l[0].value, ZeroDivisionError))
+        self.assertTrue(isinstance(l[0].value, ZeroDivisionError))
         l = []
         d = defer.Deferred().addCallback(
             lambda _: failure.Failure(ZeroDivisionError())).addErrback(l.append)
         d.callback(1)
-        self.assert_(isinstance(l[0].value, ZeroDivisionError))
+        self.assertTrue(isinstance(l[0].value, ZeroDivisionError))
 
     def testUnpauseBeforeCallback(self):
         d = defer.Deferred()
@@ -586,7 +586,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         dl = [defer.succeed(1), defer.fail(ValueError())]
         defer.gatherResults(dl).addErrback(l.append)
         self.assertEqual(len(l), 1)
-        self.assert_(isinstance(l[0], failure.Failure))
+        self.assertTrue(isinstance(l[0], failure.Failure))
         # get rid of error
         dl[1].addErrback(lambda e: 1)
 
@@ -1516,25 +1516,25 @@ class AlreadyCalledTests(unittest.SynchronousTestCase):
         d = defer.Deferred()
         d.addCallbacks(self._callback, self._errback)
         self._call_1(d)
-        self.failUnlessRaises(defer.AlreadyCalledError, self._call_2, d)
+        self.assertRaises(defer.AlreadyCalledError, self._call_2, d)
 
     def testAlreadyCalled_CE(self):
         d = defer.Deferred()
         d.addCallbacks(self._callback, self._errback)
         self._call_1(d)
-        self.failUnlessRaises(defer.AlreadyCalledError, self._err_2, d)
+        self.assertRaises(defer.AlreadyCalledError, self._err_2, d)
 
     def testAlreadyCalled_EE(self):
         d = defer.Deferred()
         d.addCallbacks(self._callback, self._errback)
         self._err_1(d)
-        self.failUnlessRaises(defer.AlreadyCalledError, self._err_2, d)
+        self.assertRaises(defer.AlreadyCalledError, self._err_2, d)
 
     def testAlreadyCalled_EC(self):
         d = defer.Deferred()
         d.addCallbacks(self._callback, self._errback)
         self._err_1(d)
-        self.failUnlessRaises(defer.AlreadyCalledError, self._call_2, d)
+        self.assertRaises(defer.AlreadyCalledError, self._call_2, d)
 
 
     def _count(self, linetype, func, lines, expected):
@@ -1880,7 +1880,7 @@ class DeferredCancellerTests(unittest.SynchronousTestCase):
         def innerCancel(d):
             self.cancellerCallCount += 1
         def cancel(d):
-            self.assert_(False)
+            self.assertTrue(False)
 
         b = defer.Deferred(canceller=innerCancel)
         a = defer.Deferred(canceller=cancel)

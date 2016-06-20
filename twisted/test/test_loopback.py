@@ -103,8 +103,8 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         server = TestProtocol()
         client = TestProtocol()
         loopback.loopbackAsync(server, client)
-        self.failIfEqual(client.transport, None)
-        self.failIfEqual(server.transport, None)
+        self.assertNotEqual(client.transport, None)
+        self.assertNotEqual(server.transport, None)
 
 
     def _hostpeertest(self, get, testServer):

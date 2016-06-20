@@ -851,7 +851,7 @@ class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
 
     def _callFromThreadCallback2(self, d):
         try:
-            self.assert_(self.stopped)
+            self.assertTrue(self.stopped)
         except:
             # Send the error to the deferred
             d.errback()
@@ -1130,7 +1130,7 @@ class ProtocolTests(unittest.TestCase):
         factory = MyFactory()
         protocol = factory.buildProtocol(None)
         self.assertEqual(protocol.factory, factory)
-        self.assert_( isinstance(protocol, factory.protocol) )
+        self.assertTrue( isinstance(protocol, factory.protocol) )
 
 
 class DummyProducer(object):

@@ -1751,7 +1751,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
         else:
@@ -1923,7 +1923,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
             # Check that fd have been closed
@@ -1949,7 +1949,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False, uid=8080)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions,
                 [('fork', False), ('setuid', 0), ('setgid', 0),
