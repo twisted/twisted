@@ -44,6 +44,7 @@ class OptionsTests(TestCase):
 
         self.patch(mailmail, 'sendmail', sendmail)
 
+
     def test_unspecifiedRecipients(self):
         """
         If no recipients are given in the argument list and there is no
