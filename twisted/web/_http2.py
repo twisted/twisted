@@ -26,6 +26,7 @@ from zope.interface import implementer
 
 import priority
 import h2.connection
+import h2.errors
 import h2.events
 import h2.exceptions
 
@@ -34,6 +35,8 @@ from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
 from twisted.internet.protocol import Protocol
+from twisted.logger import Logger
+from twisted.protocols.policies import TimeoutMixin
 from twisted.protocols.tls import _PullToPush
 
 
@@ -42,6 +45,8 @@ __all__ = []
 
 
 _END_STREAM_SENTINEL = object()
+
+log = Logger()
 
 
 # Python versions 2.7.3 and older don't have a memoryview object that plays
@@ -59,7 +64,7 @@ if sys.version_info < (2, 7, 4):
 
 
 @implementer(IProtocol, IPushProducer)
-class H2Connection(Protocol):
+class H2Connection(Protocol, TimeoutMixin):
     """
     A class representing a single HTTP/2 connection.
 
@@ -132,6 +137,7 @@ class H2Connection(Protocol):
         by the L{twisted.web.http._GenericHTTPChannelProtocol} during upgrade
         to HTTP/2.
         """
+        self.setTimeout(self.timeOut)
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())
 
@@ -143,6 +149,8 @@ class H2Connection(Protocol):
         @param data: The data received from the transport.
         @type data: L{bytes}
         """
+        self.resetTimeout()
+
         try:
             events = self.conn.receive_data(data)
         except h2.exceptions.ProtocolError:
@@ -175,6 +183,34 @@ class H2Connection(Protocol):
             self.transport.write(dataToSend)
 
 
+    def timeoutConnection(self):
+        """
+        Called when the connection has been inactive for C{self.timeOut}
+        seconds. Cleanly tears the connection down, attempting to notify the
+        peer if needed.
+        """
+        # In our override of timeoutConnection we deliberately send a GoAway
+        # frame *before* we tear the connection down.
+        log.info("Timing out client {client}", client=self.transport.getPeer())
+
+        # Check whether there are open streams. If there are, we're going to
+        # want to use the error code PROTOCOL_ERROR. If there aren't, use
+        # NO_ERROR.
+        if (self.conn.open_outbound_streams > 0 or
+                self.conn.open_inbound_streams > 0):
+            error_code = h2.errors.PROTOCOL_ERROR
+        else:
+            error_code = h2.errors.NO_ERROR
+
+        # TODO: We should probably aim to keep track of what the highest
+        # numbered connection ID is that we've processed.
+        self.conn.close_connection(error_code=error_code)
+        self.transport.write(self.conn.data_to_send())
+
+        # We're done, throw the connection away.
+        self.transport.loseConnection()
+
+
     def connectionLost(self, reason):
         """
         Called when the transport connection is lost.
@@ -183,6 +219,7 @@ class H2Connection(Protocol):
         lost, and cleans up all internal state.
         """
         self._stillProducing = False
+        self.setTimeout(None)
 
         for stream in self.streams.values():
             stream.connectionLost(reason)
