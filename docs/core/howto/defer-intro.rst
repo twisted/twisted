@@ -464,6 +464,7 @@ You have been introduced to asynchronous code and have seen how to use :api:`twi
 - Wrap multiple asynchronous operations with one error handler
 - Do something after an asynchronous operation, regardless of whether it succeeded or failed
 - Write code without callbacks using ``inlineCallbacks``
+- Write coroutines that interact with Deferreds using ``ensureDeferred``
 
 These are very basic uses of :api:`twisted.internet.defer.Deferred <Deferred>`.
 For detailed information about how they work, how to combine multiple Deferreds, and how to write code that mixes synchronous and asynchronous APIs, see the :doc:`Deferred reference <defer>`.
