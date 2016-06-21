@@ -1516,9 +1516,9 @@ class HalfCloseTests(unittest.TestCase):
             t.loseWriteConnection()
             return loopUntil(lambda :t._writeDisconnected)
         def check(ignored):
-            self.assertEqual(client.closed, False)
-            self.assertEqual(client.writeHalfClosed, True)
-            self.assertEqual(client.readHalfClosed, False)
+            self.assertFalse(client.closed)
+            self.assertTrue(client.writeHalfClosed)
+            self.assertFalse(client.readHalfClosed)
             return loopUntil(lambda :f.protocol.readHalfClosed)
         def write(ignored):
             w = client.transport.write
@@ -1526,8 +1526,8 @@ class HalfCloseTests(unittest.TestCase):
             w(b"lalala fooled you")
             self.assertEqual(0, len(client.transport._tempDataBuffer))
             self.assertEqual(f.protocol.data, b"hello")
-            self.assertEqual(f.protocol.closed, False)
-            self.assertEqual(f.protocol.readHalfClosed, True)
+            self.assertFalse(f.protocol.closed)
+            self.assertTrue(f.protocol.readHalfClosed)
         return d.addCallback(loseWrite).addCallback(check).addCallback(write)
 
     def testWriteCloseNotification(self):
@@ -1579,7 +1579,7 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
                       self.assertEqual(self.f.protocol.data, b'hello'))
-        d.addCallback(lambda x: self.assertEqual(self.f.protocol.closed, True))
+        d.addCallback(lambda x: self.assertTrue(self.f.protocol.closed))
         return defer.gatherResults([d, d2])
 
     def testShutdownException(self):
@@ -1593,7 +1593,7 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         self.f.protocol.closedDeferred = d = defer.Deferred()
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
-                      self.assertEqual(self.f.protocol.closed, True))
+                      self.assertTrue(self.f.protocol.closed))
         return defer.gatherResults([d, d2])
 
 

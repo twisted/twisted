@@ -210,7 +210,7 @@ class ServerOptionsTests(unittest.TestCase):
         for subCommand, expectedCommand in zip(subCommands, expectedOrder):
             name, shortcut, parserClass, documentation = subCommand
             self.assertEqual(name, expectedCommand.tapname)
-            self.assertEqual(shortcut, None)
+            self.assertIsNone(shortcut)
             self.assertEqual(parserClass(), expectedCommand._options),
             self.assertEqual(documentation, expectedCommand.description)
 
@@ -264,7 +264,7 @@ class ServerOptionsTests(unittest.TestCase):
         config = twistd.ServerOptions()
         config.subCommand = 'ueoa'
         config.postOptions()
-        self.assertEqual(config['no_save'], True)
+        self.assertTrue(config['no_save'])
 
 
     def test_postOptionsNoSubCommandSavesAsUsual(self):
@@ -273,7 +273,7 @@ class ServerOptionsTests(unittest.TestCase):
         """
         config = twistd.ServerOptions()
         config.postOptions()
-        self.assertEqual(config['no_save'], False)
+        self.assertFalse(config['no_save'])
 
 
     def test_listAllProfilers(self):
@@ -292,7 +292,7 @@ class ServerOptionsTests(unittest.TestCase):
         The default value for the C{umask} option is C{None}.
         """
         config = twistd.ServerOptions()
-        self.assertEqual(config['umask'], None)
+        self.assertIsNone(config['umask'])
 
 
     def test_umask(self):
@@ -456,11 +456,11 @@ class ApplicationRunnerTests(unittest.TestCase):
         arunner = CrippledApplicationRunner(self.config)
         arunner.run()
 
-        self.assertIdentical(
+        self.assertIs(
             self.serviceMaker.options, self.config.subOptions,
             "ServiceMaker.makeService needs to be passed the correct "
             "sub Command object.")
-        self.assertIdentical(
+        self.assertIs(
             self.serviceMaker.service,
             service.IService(arunner.application).services[0],
             "ServiceMaker.makeService's result needs to be set as a child "
@@ -655,7 +655,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         the filesystem if passed C{None} for the C{chroot} parameter.
         """
         self.runner.setupEnvironment(None, ".", True, None, None)
-        self.assertIdentical(self.root, self.unset)
+        self.assertIs(self.root, self.unset)
 
 
     def test_changeWorkingDirectory(self):
@@ -729,7 +729,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         passed for the C{nodaemon} parameter.
         """
         self.runner.setupEnvironment(None, ".", True, None, None)
-        self.assertIdentical(self.mask, self.unset)
+        self.assertIs(self.mask, self.unset)
 
 
     def test_daemonizedNoUmask(self):
@@ -992,7 +992,7 @@ class AppProfilingTests(unittest.TestCase):
 
         oldStdout = sys.stdout
         self.assertRaises(RuntimeError, profiler.run, reactor)
-        self.assertIdentical(sys.stdout, oldStdout)
+        self.assertIs(sys.stdout, oldStdout)
 
     if profile is None:
         test_profilePrintStatsError.skip = "profile module not available"
@@ -1337,13 +1337,13 @@ class AppLoggerTests(unittest.TestCase):
         logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
-        self.assertIdentical(logFiles[0], sys.stdout)
+        self.assertIs(logFiles[0], sys.stdout)
 
         logger = app.AppLogger({"logfile": ""})
         logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 2)
-        self.assertIdentical(logFiles[1], sys.stdout)
+        self.assertIs(logFiles[1], sys.stdout)
 
 
     def test_getLogObserverFile(self):
@@ -1381,7 +1381,7 @@ class AppLoggerTests(unittest.TestCase):
         self.assertEqual(removed, [observer])
         logger.stop()
         self.assertEqual(removed, [observer])
-        self.assertIdentical(logger._observer, None)
+        self.assertIsNone(logger._observer)
 
 
     def test_legacyObservers(self):
@@ -1475,12 +1475,12 @@ class UnixAppLoggerTests(unittest.TestCase):
         logger = UnixAppLogger({"logfile": "-", "nodaemon": True})
         logger._getLogObserver()
         self.assertEqual(len(logFiles), 1)
-        self.assertIdentical(logFiles[0], sys.stdout)
+        self.assertIs(logFiles[0], sys.stdout)
 
         logger = UnixAppLogger({"logfile": "", "nodaemon": True})
         logger._getLogObserver()
         self.assertEqual(len(logFiles), 2)
-        self.assertIdentical(logFiles[1], sys.stdout)
+        self.assertIs(logFiles[1], sys.stdout)
 
 
     def test_getLogObserverStdoutDaemon(self):

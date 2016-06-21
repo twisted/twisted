@@ -170,7 +170,7 @@ class StringificationTests(unittest.SynchronousTestCase):
         """
         address = object()
         e = error.ConnectingCancelledError(address)
-        self.assertIdentical(e.address, address)
+        self.assertIs(e.address, address)
 
 
 

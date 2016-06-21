@@ -121,7 +121,7 @@ class HelperTests(TestCase):
         If the C{pwd} module isn't present, L{_pwdGetByName} returns C{None}.
         """
         self.patch(checkers, 'pwd', None)
-        self.assertIs(checkers._pwdGetByName('alice'), None)
+        self.assertIsNone(checkers._pwdGetByName('alice'))
 
 
     def test_shadowGetByName(self):
@@ -149,7 +149,7 @@ class HelperTests(TestCase):
         """
         self.patch(checkers, 'spwd', None)
 
-        self.assertIs(checkers._shadowGetByName('bob'), None)
+        self.assertIsNone(checkers._shadowGetByName('bob'))
         self.assertEqual(self.mockos.seteuidCalls, [])
         self.assertEqual(self.mockos.setegidCalls, [])
 
@@ -419,7 +419,7 @@ class SSHProtocolCheckerTests(TestCase):
         """
         The default L{SSHProcotolChecker.areDone} should simply return True.
         """
-        self.assertEqual(checkers.SSHProtocolChecker().areDone(None), True)
+        self.assertTrue(checkers.SSHProtocolChecker().areDone(None))
 
 
 

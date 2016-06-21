@@ -146,9 +146,9 @@ class AbstractFilePathTests(BytesTestCase):
                         "This directory does exist.")
         self.assertTrue(sub1.isdir(),
                         "It's a directory.")
-        self.assertTrue(not sub1.isfile(),
+        self.assertFalse(sub1.isfile(),
                         "It's a directory.")
-        self.assertTrue(not sub1.islink(),
+        self.assertFalse(sub1.islink(),
                         "It's a directory.")
         self.assertEqual(sub1.listdir(),
                              [b'file2'])
@@ -196,8 +196,8 @@ class AbstractFilePathTests(BytesTestCase):
         dictoid[f1prime] = 4
         self.assertEqual(dictoid[f1], 4)
         self.assertEqual(list(dictoid.keys()), [f1])
-        self.assertTrue(list(dictoid.keys())[0] is f1)
-        self.assertFalse(list(dictoid.keys())[0] is f1prime) # sanity check
+        self.assertIs(list(dictoid.keys())[0], f1)
+        self.assertIsNot(list(dictoid.keys())[0], f1prime) # sanity check
         dictoid[f2] = 5
         self.assertEqual(dictoid[f2], 5)
         self.assertEqual(len(dictoid), 2)
@@ -798,17 +798,17 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(abs(p.getmtime() - time.time()) // 20, 0)
         self.assertEqual(abs(p.getctime() - time.time()) // 20, 0)
         self.assertEqual(abs(p.getatime() - time.time()) // 20, 0)
-        self.assertEqual(p.exists(), True)
-        self.assertEqual(p.exists(), True)
+        self.assertTrue(p.exists())
+        self.assertTrue(p.exists())
         # OOB removal: FilePath.remove() will automatically restat
         os.remove(p.path)
         # test caching
-        self.assertEqual(p.exists(), True)
+        self.assertTrue(p.exists())
         p.restat(reraise=False)
-        self.assertEqual(p.exists(), False)
-        self.assertEqual(p.islink(), False)
-        self.assertEqual(p.isdir(), False)
-        self.assertEqual(p.isfile(), False)
+        self.assertFalse(p.exists())
+        self.assertFalse(p.islink())
+        self.assertFalse(p.isdir())
+        self.assertFalse(p.isfile())
 
     def testPersist(self):
         newpath = pickle.loads(pickle.dumps(self.path))
@@ -1049,12 +1049,12 @@ class FilePathTests(AbstractFilePathTests):
         # Both a sanity check (make sure the file status looks right) and an
         # enticement for stat-caching logic to kick in and remember that these
         # exist / don't exist.
-        self.assertEqual(fp.exists(), True)
-        self.assertEqual(fp2.exists(), False)
+        self.assertTrue(fp.exists())
+        self.assertFalse(fp2.exists())
 
         fp.moveTo(fp2)
-        self.assertEqual(fp.exists(), False)
-        self.assertEqual(fp2.exists(), True)
+        self.assertFalse(fp.exists())
+        self.assertTrue(fp2.exists())
 
 
     def test_moveToExistsCacheCrossMount(self):
@@ -1193,7 +1193,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         path = filepath.FilePath(self.mktemp())
         f = path.create()
-        self.assertTrue("b" in f.mode)
+        self.assertIn("b", f.mode)
         f.write(b"\n")
         f.close()
         read = open(path.path, "rb").read()
@@ -1328,10 +1328,10 @@ class FilePathTests(AbstractFilePathTests):
         an operation has occurred in the mean time.
         """
         fp = filepath.FilePath(self.mktemp())
-        self.assertEqual(fp.exists(), False)
+        self.assertFalse(fp.exists())
 
         fp.makedirs()
-        self.assertEqual(fp.exists(), True)
+        self.assertTrue(fp.exists())
 
 
     def test_makedirsMakesDirectoriesRecursively(self):
@@ -1444,7 +1444,7 @@ class FilePathTests(AbstractFilePathTests):
 
         # This path should look like we don't know what status it's in, not that
         # we know that it didn't exist when last we checked.
-        self.assertEqual(fp.statinfo, None)
+        self.assertIsNone(fp.statinfo)
         self.assertEqual(fp.getsize(), 8)
 
 
@@ -1503,7 +1503,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo = None
-        self.assertEqual(fp.statinfo, None)
+        self.assertIsNone(fp.statinfo)
 
 
     def test_filePathNotDeprecated(self):
