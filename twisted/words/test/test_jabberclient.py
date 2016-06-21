@@ -404,7 +404,7 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         version, tls, sasl, bind, session = xs.initializers
 
         self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
-        self.assertIsInstanc(sasl, SASLInitiatingInitializer)
+        self.assertIsInstance(sasl, SASLInitiatingInitializer)
         self.assertIsInstance(bind, client.BindInitializer)
         self.assertIsInstance(session, client.SessionInitializer)
 
