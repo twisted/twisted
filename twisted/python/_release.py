@@ -34,7 +34,9 @@ VERSION_OFFSET = 2000
 TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
     "https://docs.python.org/2/objects.inv",
-    "https://pyopenssl.readthedocs.org/en/stable/objects.inv",
+    "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
+    "https://python-hyper.org/h2/en/stable/objects.inv",
+    "https://python-hyper.org/priority/en/stable/objects.inv",
 ]
 
 
@@ -653,7 +655,8 @@ class NewsBuilder(object):
         for description in reverse:
             reverse[description].sort()
         reverse = reverse.items()
-        reverse.sort(key=lambda (descr, tickets): tickets[0])
+        # result is a tuple of (descr, tickets)
+        reverse.sort(key=lambda result: result[1][0])
 
         fileObj.write(header + '\n' + '-' * len(header) + '\n')
         for (description, relatedTickets) in reverse:
@@ -1081,12 +1084,14 @@ class CheckTopfileScript(object):
         branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
                             cwd=location).strip()
 
-        if branch == "trunk":
-            self._print("On trunk, no need to look at this.")
+        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
+                       cwd=location).strip()
+
+        if not r:
+            self._print(
+                "On trunk or no diffs from trunk; no need to look at this.")
             sys.exit(0)
 
-        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
-                       cwd=location)
         files = r.strip().split(os.linesep)
 
         self._print("Looking at these files:")

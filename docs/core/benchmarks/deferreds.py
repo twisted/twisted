@@ -7,6 +7,7 @@ See how fast deferreds are.
 This is mainly useful to compare cdefer.Deferred to defer.Deferred
 """
 
+from __future__ import print_function
 
 from twisted.internet import defer
 from timer import timeit
@@ -137,9 +138,9 @@ def benchmark():
     """
     Run all of the benchmarks registered in the benchmarkFuncs list
     """
-    print defer.Deferred.__module__
+    print(defer.Deferred.__module__)
     for func, args, iter in benchmarkFuncs:
-        print func.__name__, args, timeit(func, iter, *args)
+        print(func.__name__, args, timeit(func, iter, *args))
 
 if __name__ == '__main__':
     benchmark()

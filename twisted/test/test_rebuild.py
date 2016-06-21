@@ -121,7 +121,7 @@ class RebuildTests(unittest.TestCase):
 
         # Test that a duplicate registerAdapter is not allowed
         from twisted.python import components
-        self.failUnlessRaises(ValueError, components.registerAdapter,
+        self.assertRaises(ValueError, components.registerAdapter,
                               crash_test_dummy.XA, crash_test_dummy.X,
                               crash_test_dummy.IX)
 
@@ -158,7 +158,7 @@ class RebuildTests(unittest.TestCase):
             unhashableObject = None
         self.addCleanup(_cleanup)
         rebuild.rebuild(rebuild)
-        self.assertEqual(unhashableObject.hashCalled, True)
+        self.assertTrue(unhashableObject.hashCalled)
 
 
 
@@ -184,34 +184,13 @@ class NewStyleTests(unittest.TestCase):
             "class SlottedClass(object):\n"
             "    __slots__ = ['a']\n")
 
-        exec classDefinition in self.m.__dict__
+        exec(classDefinition, self.m.__dict__)
         inst = self.m.SlottedClass()
         inst.a = 7
-        exec classDefinition in self.m.__dict__
+        exec(classDefinition, self.m.__dict__)
         rebuild.updateInstance(inst)
         self.assertEqual(inst.a, 7)
-        self.assertIdentical(type(inst), self.m.SlottedClass)
-
-    if sys.version_info < (2, 6):
-        test_slots.skip = "__class__ assignment for class with slots is only available starting Python 2.6"
-
-
-    def test_errorSlots(self):
-        """
-        Try to rebuild a new style class with slots defined: this should fail.
-        """
-        classDefinition = (
-            "class SlottedClass(object):\n"
-            "    __slots__ = ['a']\n")
-
-        exec classDefinition in self.m.__dict__
-        inst = self.m.SlottedClass()
-        inst.a = 7
-        exec classDefinition in self.m.__dict__
-        self.assertRaises(rebuild.RebuildError, rebuild.updateInstance, inst)
-
-    if sys.version_info >= (2, 6):
-        test_errorSlots.skip = "__class__ assignment for class with slots should work starting Python 2.6"
+        self.assertIs(type(inst), self.m.SlottedClass)
 
 
     def test_typeSubclass(self):
@@ -222,13 +201,13 @@ class NewStyleTests(unittest.TestCase):
             "class ListSubclass(list):\n"
             "    pass\n")
 
-        exec classDefinition in self.m.__dict__
+        exec(classDefinition, self.m.__dict__)
         inst = self.m.ListSubclass()
         inst.append(2)
-        exec classDefinition in self.m.__dict__
+        exec(classDefinition, self.m.__dict__)
         rebuild.updateInstance(inst)
         self.assertEqual(inst[0], 2)
-        self.assertIdentical(type(inst), self.m.ListSubclass)
+        self.assertIs(type(inst), self.m.ListSubclass)
 
 
     def test_instanceSlots(self):
@@ -240,13 +219,12 @@ class NewStyleTests(unittest.TestCase):
             "class NotSlottedClass(object):\n"
             "    pass\n")
 
-        exec classDefinition in self.m.__dict__
+        exec(classDefinition, self.m.__dict__)
         inst = self.m.NotSlottedClass()
         inst.__slots__ = ['a']
         classDefinition = (
             "class NotSlottedClass:\n"
             "    pass\n")
-        exec classDefinition in self.m.__dict__
+        exec(classDefinition, self.m.__dict__)
         # Moving from new-style class to old-style should fail.
         self.assertRaises(TypeError, rebuild.updateInstance, inst)
-

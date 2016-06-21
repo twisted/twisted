@@ -49,8 +49,8 @@ class RootsTests(unittest.TestCase):
             def nameConstraint(self, name):
                 return (name == 'x')
         c = const()
-        self.assertEqual(c.putEntity('x', 'test'), None)
-        self.failUnlessRaises(roots.ConstraintViolation,
+        self.assertIsNone(c.putEntity('x', 'test'))
+        self.assertRaises(roots.ConstraintViolation,
                               c.putEntity, 'y', 'test')
 
 
@@ -59,5 +59,5 @@ class RootsTests(unittest.TestCase):
         h.entityType = int
         h.putEntity('a', 1)
         self.assertEqual(h.getStaticEntity('a'),1 )
-        self.failUnlessRaises(roots.ConstraintViolation,
+        self.assertRaises(roots.ConstraintViolation,
                               h.putEntity, 'x', 'y')

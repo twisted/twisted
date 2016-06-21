@@ -536,8 +536,8 @@ class SessionInterfaceTests(unittest.TestCase):
         s = session.SSHSession(avatar=object) # use object because it doesn't
                                               # have an adapter
         self.assertEqual(s.buf, '')
-        self.assertIs(s.client, None)
-        self.assertIs(s.session, None)
+        self.assertIsNone(s.client)
+        self.assertIsNone(s.session)
 
 
     def test_client_dataReceived(self):
@@ -594,7 +594,7 @@ class SessionInterfaceTests(unittest.TestCase):
         ret = self.session.requestReceived(
             'subsystem', common.NS('BadSubsystem'))
         self.assertFalse(ret)
-        self.assertIs(self.session.client, None)
+        self.assertIsNone(self.session.client)
 
 
     def test_lookupSubsystem(self):
@@ -623,8 +623,8 @@ class SessionInterfaceTests(unittest.TestCase):
         ret = s.request_subsystem(
             common.NS('subsystem') + 'data')
         self.assertTrue(ret)
-        self.assertIsNot(s.client, None)
-        self.assertIs(s.conn.closes.get(s), None)
+        self.assertIsNotNone(s.client)
+        self.assertIsNone(s.conn.closes.get(s))
         s.eofReceived()
         self.assertTrue(s.conn.closes.get(s))
         # these should not raise errors
@@ -725,7 +725,7 @@ class SessionInterfaceTests(unittest.TestCase):
                                            common.NS('failure'))
         self.assertFalse(ret)
         self.assertRequestRaisedRuntimeError()
-        self.assertIs(self.session.client, None)
+        self.assertIsNone(self.session.client)
 
         self.assertTrue(self.session.requestReceived('exec',
                                                      common.NS('success')))
@@ -812,7 +812,7 @@ class SessionInterfaceTests(unittest.TestCase):
         When a close is received, the session should send a close message.
         """
         ret = self.session.closeReceived()
-        self.assertIs(ret, None)
+        self.assertIsNone(ret)
         self.assertTrue(self.session.conn.closes[self.session])
 
 
@@ -839,7 +839,7 @@ class SessionWithNoAvatarTests(unittest.TestCase):
     def setUp(self):
         self.session = session.SSHSession()
         self.session.avatar = StubAvatar()
-        self.assertIs(self.session.session, None)
+        self.assertIsNone(self.session.session)
 
 
     def assertSessionProvidesISession(self):

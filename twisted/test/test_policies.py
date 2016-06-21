@@ -133,7 +133,7 @@ class WrapperTests(unittest.TestCase):
         f = Server()
         wf = policies.WrappingFactory(f)
         p = wf.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 35))
-        self.assertIdentical(p.wrappedProtocol.factory, f)
+        self.assertIs(p.wrappedProtocol.factory, f)
 
 
     def test_transportInterfaces(self):
@@ -256,7 +256,7 @@ class WrapperTests(unittest.TestCase):
         wrapper = self._getWrapper()
         producer = object()
         wrapper.registerProducer(producer, True)
-        self.assertIdentical(wrapper.transport.producer, producer)
+        self.assertIs(wrapper.transport.producer, producer)
         self.assertTrue(wrapper.transport.streaming)
 
 
@@ -269,8 +269,8 @@ class WrapperTests(unittest.TestCase):
         producer = object()
         wrapper.registerProducer(producer, True)
         wrapper.unregisterProducer()
-        self.assertIdentical(wrapper.transport.producer, None)
-        self.assertIdentical(wrapper.transport.streaming, None)
+        self.assertIsNone(wrapper.transport.producer)
+        self.assertIsNone(wrapper.transport.streaming)
 
 
     def test_stopConsuming(self):
@@ -715,7 +715,7 @@ class TimeoutMixinTests(unittest.TestCase):
         self.proto.makeConnection(StringTransport())
 
         self.proto.setTimeout(None)
-        self.assertEqual(self.proto.timeOut, None)
+        self.assertIsNone(self.proto.timeOut)
 
         self.clock.pump([0, 5, 5, 5])
         self.assertFalse(self.proto.timedOut)
@@ -729,7 +729,7 @@ class TimeoutMixinTests(unittest.TestCase):
 
         self.assertEqual(self.proto.setTimeout(10), 5)
         self.assertEqual(self.proto.setTimeout(None), 10)
-        self.assertEqual(self.proto.setTimeout(1), None)
+        self.assertIsNone(self.proto.setTimeout(1))
         self.assertEqual(self.proto.timeOut, 1)
 
         # Clean up the DelayedCall
@@ -767,12 +767,12 @@ class LimitTotalConnectionsFactoryTests(unittest.TestCase):
 
         # Make a connection
         p = factory.buildProtocol(None)
-        self.assertNotEqual(None, p)
+        self.assertIsNotNone(p)
         self.assertEqual(1, factory.connectionCount)
 
         # Try to make a second connection, which will exceed the connection
         # limit.  This should return None, because overflowProtocol is None.
-        self.assertEqual(None, factory.buildProtocol(None))
+        self.assertIsNone(factory.buildProtocol(None))
         self.assertEqual(1, factory.connectionCount)
 
         # Define an overflow protocol
@@ -787,7 +787,7 @@ class LimitTotalConnectionsFactoryTests(unittest.TestCase):
         # count.
         op = factory.buildProtocol(None)
         op.makeConnection(None) # to trigger connectionMade
-        self.assertEqual(True, factory.overflowed)
+        self.assertTrue(factory.overflowed)
         self.assertEqual(2, factory.connectionCount)
 
         # Close the connections.
