@@ -141,7 +141,7 @@ class ReadWriteTests(unittest.SynchronousTestCase):
         l = []
         result = fdesc.readFromFD(self.r, l.append)
         self.assertEqual(l, [])
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
 
 
     def test_readFromCleanClose(self):
