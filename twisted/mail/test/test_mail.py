@@ -2341,7 +2341,7 @@ class _AttemptManagerTests(unittest.TestCase):
     @type reactor: L{MemoryReactorClock}
     @ivar reactor: The reactor used for test purposes.
 
-    @type eventLog: L{types.NoneType} or L{dict} of L{bytes} -> L{object}
+    @type eventLog: C{None} or L{dict} of L{bytes} -> L{object}
     @ivar eventLog: Information about the last informational log message
         generated or none if no log message has been generated.
 

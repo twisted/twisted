@@ -291,7 +291,7 @@ class _UserAuth(SSHUserAuthClient):
         @return: The public part of a key pair that could be used to
             authenticate with the server, or C{None} if there are no more public
             keys to try.
-        @rtype: L{twisted.conch.ssh.keys.Key} or L{types.NoneType}
+        @rtype: L{twisted.conch.ssh.keys.Key} or C{None}
         """
         if self.agent is not None:
             return self.agent.getPublicKey()
@@ -570,7 +570,7 @@ class SSHCommandClientEndpoint(object):
         @param password: The password with which to authenticate to the SSH
             server, if password authentication is to be attempted (otherwise
             C{None}).
-        @type password: L{bytes} or L{types.NoneType}
+        @type password: L{bytes} or C{None}
 
         @param agentEndpoint: An L{IStreamClientEndpoint} provider which may be
             used to connect to an SSH agent, if one is to be used to help with
