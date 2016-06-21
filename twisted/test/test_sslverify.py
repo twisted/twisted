@@ -1946,24 +1946,6 @@ class ALPNTests(unittest.TestCase):
         )
 
 
-<<<<<<< HEAD
-=======
-    def test_ALPNRespectsServerPreference(self):
-        """
-        When ALPN is used, the server's protocol preference is preferred.
-        """
-        serverProtocols = [b'http/1.1', b'h2']
-        clientProtocols = [b'h2', b'http/1.1']
-        negotiatedProtocol, lostReason = negotiateProtocol(
-            clientProtocols=clientProtocols,
-            serverProtocols=serverProtocols,
-            clientOptions=ALPNOnlyOptions
-        )
-        self.assertEqual(negotiatedProtocol, b'http/1.1')
-        self.assertIsNone(lostReason)
-
-
->>>>>>> assertfns-8391
 
 class NPNAndALPNAbsentTests(unittest.TestCase):
     """
