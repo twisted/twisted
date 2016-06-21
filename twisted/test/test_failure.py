@@ -458,6 +458,8 @@ class FailureTests(SynchronousTestCase):
         current interpreter exception state.  If no such state exists, creating
         the Failure should raise a synchronous exception.
         """
+        if sys.version_info < (3, 0):
+            sys.exc_clear()
         self.assertRaises(failure.NoCurrentExceptionError, failure.Failure)
 
 
@@ -695,6 +697,8 @@ class FindFailureTests(SynchronousTestCase):
         """
         Outside of an exception handler, _findFailure should return None.
         """
+        if sys.version_info < (3, 0):
+            sys.exc_clear()
         self.assertIsNone(sys.exc_info()[-1]) #environment sanity check
         self.assertIsNone(failure.Failure._findFailure())
 
