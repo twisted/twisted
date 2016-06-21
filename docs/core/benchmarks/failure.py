@@ -1,6 +1,8 @@
 
 """See how slow failure creation is"""
 
+from __future__ import print_function
+
 import random
 from twisted.python import failure
 
@@ -21,12 +23,12 @@ def deepFailure%d_%d():
     %s
     deepFailure%d_%d()
 """ % (nLocals, i, makeLocals(nLocals), nLocals, i + 1)
-    exec s
+    exec(s)
 
-    exec """
+    exec("""
 def deepFailure%d_%d():
     1 / 0
-""" % (nLocals, DEPTH)
+""" % (nLocals, DEPTH))
 
 R = range(5000)
 def fail(n):
@@ -57,10 +59,10 @@ from timer import timeit
 #     timeit(fail, 1, i)
 
 # for i in O:
-#     print 'easy failing', i, timeit(fail_easy, 1, i)
+#     print('easy failing', i, timeit(fail_easy, 1, i))
 
 for i in O:
-    print 'failing', i, timeit(fail, 1, i)
+    print('failing', i, timeit(fail, 1, i))
 
 # for i in O:
-#     print 'string failing', i, timeit(fail_str, 1, i)
+#     print('string failing', i, timeit(fail_str, 1, i))

@@ -207,7 +207,7 @@ class RequirementsTests(TestCase):
         that is sufficiently new.
         """
         sys.version_info = self.supportedPythonVersion
-        self.assertEqual(None, _checkRequirements())
+        self.assertIsNone(_checkRequirements())
 
 
     def test_oldPythonPy3(self):
@@ -229,7 +229,7 @@ class RequirementsTests(TestCase):
         that is sufficiently new.
         """
         sys.version_info = self.Py3supportedPythonVersion
-        self.assertEqual(None, _checkRequirements())
+        self.assertIsNone(_checkRequirements())
 
 
     def test_missingZopeNamespace(self):
@@ -334,7 +334,7 @@ class RequirementsTests(TestCase):
             """
             with SetAsideModule("zope"):
                 _install(_zope40)
-                self.assertEqual(None, _checkRequirements())
+                self.assertIsNone(_checkRequirements())
 
     else:
         # Python 2 only requires a version that supports the class decorator
@@ -362,7 +362,7 @@ class RequirementsTests(TestCase):
             """
             with SetAsideModule("zope"):
                 _install(_zope36)
-                self.assertEqual(None, _checkRequirements())
+                self.assertIsNone(_checkRequirements())
 
 
 
@@ -389,8 +389,8 @@ class MakePackagesTests(TestCase):
         """
         modules = {}
         _makePackages(None, dict(twisted=dict(version='123')), modules)
-        self.assertTrue(isinstance(modules, dict))
-        self.assertTrue(isinstance(modules['twisted'], ModuleType))
+        self.assertIsInstance(modules, dict)
+        self.assertIsInstance(modules['twisted'], ModuleType)
         self.assertEqual('twisted', modules['twisted'].__name__)
         self.assertEqual('123', modules['twisted'].version)
 
@@ -402,10 +402,10 @@ class MakePackagesTests(TestCase):
         """
         modules = {}
         _makePackages(None, dict(twisted=dict(web=dict(version='321'))), modules)
-        self.assertTrue(isinstance(modules, dict))
-        self.assertTrue(isinstance(modules['twisted'], ModuleType))
+        self.assertIsInstance(modules, dict)
+        self.assertIsInstance(modules['twisted'], ModuleType)
         self.assertEqual('twisted', modules['twisted'].__name__)
-        self.assertTrue(isinstance(modules['twisted'].web, ModuleType))
+        self.assertIsInstance(modules['twisted'].web, ModuleType)
         self.assertEqual('twisted.web', modules['twisted'].web.__name__)
         self.assertEqual('321', modules['twisted'].web.version)
 

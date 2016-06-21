@@ -18,6 +18,8 @@ HTTP is supported.  HTTPS is not supported.
 See also proxy.py for a simpler proxy example.
 """
 
+from __future__ import print_function
+
 from twisted.internet import reactor
 from twisted.web import proxy, http
 
@@ -27,12 +29,12 @@ class LoggingProxyRequest(proxy.ProxyRequest):
         It's normal to see a blank HTTPS page. As the proxy only works
         with the HTTP protocol.
         """
-        print "Request from %s for %s" % (
-            self.getClientIP(), self.getAllHeaders()['host'])
+        print("Request from %s for %s" % (
+            self.getClientIP(), self.getAllHeaders()['host']))
         try:
             proxy.ProxyRequest.process(self)
         except KeyError:
-            print "HTTPS is not supported at the moment!"
+            print("HTTPS is not supported at the moment!")
 
 class LoggingProxy(proxy.Proxy):
     requestFactory = LoggingProxyRequest

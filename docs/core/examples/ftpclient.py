@@ -6,6 +6,7 @@
 """
 An example of using the FTP client
 """
+from __future__ import print_function
 
 # Twisted imports
 from twisted.protocols.ftp import FTPClient, FTPFileListProtocol
@@ -33,29 +34,29 @@ class BufferingProtocol(Protocol):
 # Define some callbacks
 
 def success(response):
-    print 'Success!  Got response:'
-    print '---'
+    print('Success!  Got response:')
+    print('---')
     if response is None:
-        print None
+        print(None)
     else:
-        print string.join(response, '\n')
-    print '---'
+        print(string.join(response, '\n'))
+    print('---')
 
 
 def fail(error):
-    print 'Failed.  Error was:'
-    print error
+    print('Failed.  Error was:')
+    print(error)
 
 def showFiles(result, fileListProtocol):
-    print 'Processed file listing:'
+    print('Processed file listing:')
     for file in fileListProtocol.files:
-        print '    %s: %d bytes, %s' \
-              % (file['filename'], file['size'], file['date'])
-    print 'Total: %d files' % (len(fileListProtocol.files))
+        print('    %s: %d bytes, %s' \
+              % (file['filename'], file['size'], file['date']))
+    print('Total: %d files' % (len(fileListProtocol.files)))
 
 def showBuffer(result, bufferProtocol):
-    print 'Got data:'
-    print bufferProtocol.buffer.getvalue()
+    print('Got data:')
+    print(bufferProtocol.buffer.getvalue())
 
 
 class Options(usage.Options):
@@ -83,7 +84,7 @@ def run():
     reactor.run()
 
 def connectionFailed(f):
-    print "Connection Failed:", f
+    print("Connection Failed:", f)
     reactor.stop()
 
 def connectionMade(ftpClient):

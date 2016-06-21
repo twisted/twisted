@@ -5,7 +5,7 @@
 """
 Implementation module for the I{cftp} command.
 """
-from __future__ import division
+from __future__ import division, print_function
 import os, sys, getpass, struct, tty, fcntl, stat
 import fnmatch, pwd, glob
 
@@ -58,7 +58,7 @@ def run():
     try:
         options.parseOptions(args)
     except usage.UsageError as u:
-        print 'ERROR: %s' % u
+        print('ERROR: %s' % u)
         sys.exit(1)
     if options['log']:
         realout = sys.stdout
@@ -105,7 +105,7 @@ def _ebExit(f):
         s = f.value.value
     else:
         s = str(f)
-    print s
+    print(s)
     #exitStatus = "conch: exiting with error %s" % f
     try:
         reactor.stop()
@@ -764,11 +764,11 @@ version                         Print the SFTP version.
     def _abbrevSize(self, size):
         # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
         _abbrevs = [
-            (1<<50L, 'PB'),
-            (1<<40L, 'TB'),
-            (1<<30L, 'GB'),
-            (1<<20L, 'MB'),
-            (1<<10L, 'kB'),
+            (1<<50, 'PB'),
+            (1<<40, 'TB'),
+            (1<<30, 'GB'),
+            (1<<20, 'MB'),
+            (1<<10, 'kB'),
             (1, 'B')
             ]
 

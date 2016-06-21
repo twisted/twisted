@@ -137,7 +137,7 @@ class BasicTests(TwistedModulesTestCase):
                                   sysPathHooks={},
                                   moduleDict={'test_package': None})
         self.assertEqual(shouldNotLoad, [])
-        self.assertEqual(path['test_package'].isLoaded(), False)
+        self.assertFalse(path['test_package'].isLoaded())
 
 
     def test_unimportablePackageWalkModules(self):
@@ -154,7 +154,7 @@ class BasicTests(TwistedModulesTestCase):
         walked = list(modules.walkModules())
         self.assertEqual([m.name for m in walked],
                           ["test_package"])
-        self.assertEqual(walked[0].isLoaded(), False)
+        self.assertFalse(walked[0].isLoaded())
 
 
     def test_nonexistentPaths(self):

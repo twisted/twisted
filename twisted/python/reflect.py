@@ -501,7 +501,7 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
       accumulateClassDict(Lunch, \"properties\", dct)
 
-      print dct
+      print(dct)
 
     {\"taste\": \"bland\", \"colour\": \"green\", \"vegan\": 1}
     """

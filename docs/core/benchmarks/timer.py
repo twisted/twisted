@@ -4,10 +4,11 @@
 """
 Helper stuff for benchmarks.
 """
+from __future__ import print_function
 
 import gc
 gc.disable()
-print 'Disabled GC'
+print('Disabled GC')
 
 def timeit(func, iter = 1000, *args, **kwargs):
     """

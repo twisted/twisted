@@ -1,4 +1,5 @@
 """Non-twisted throughput client."""
+from __future__ import print_function
 
 import socket, time, sys
 
@@ -15,7 +16,7 @@ def main():
         i += 1
         s.sendall(S)
     passed = time.time() - start
-    print "Throughput: %s kbytes/sec" % ((sent / passed) / 1024)
+    print("Throughput: %s kbytes/sec" % ((sent / passed) / 1024))
     s.close()
 
 if __name__ == '__main__':
