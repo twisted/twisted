@@ -80,11 +80,11 @@ def loadAliasFile(domains, filename=None, fp=None):
     @type domains: L{dict} mapping L{bytes} to L{IDomain} provider
     @param domains: A mapping of domain name to domain object.
 
-    @type filename: L{bytes} or L{NoneType <types.NoneType>}
+    @type filename: L{bytes} or C{type(None)}
     @param filename: The full or relative path to a file from which to load
         aliases. If omitted, the C{fp} parameter must be specified.
 
-    @type fp: file-like object or L{NoneType <types.NoneType>}
+    @type fp: file-like object or C{type(None)}
     @param fp: The file from which to load aliases. If specified,
         the C{filename} parameter is ignored.
 
@@ -169,12 +169,12 @@ class AliasBase:
         @type aliasmap: L{dict} mapping L{bytes} to L{AliasBase}
         @param aliasmap: A mapping of username to alias or group of aliases.
 
-        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @type memo: C{type(None)} or L{dict} of L{AliasBase}
         @param memo: A record of the aliases already considered in the
             resolution process.  If provided, C{memo} is modified to include
             this alias.
 
-        @rtype: L{IMessage <smtp.IMessage>} or L{NoneType <types.NoneType>}
+        @rtype: L{IMessage <smtp.IMessage>} or L{type(None)}
         @return: A message receiver for the ultimate destination or None for
             an invalid destination.
         """
@@ -237,12 +237,12 @@ class AddressAlias(AliasBase):
         @type aliasmap: L{dict} mapping L{bytes} to L{AliasBase}
         @param aliasmap: A mapping of username to alias or group of aliases.
 
-        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @type memo: C{type(None)} or L{dict} of L{AliasBase}
         @param memo: A record of the aliases already considered in the
             resolution process.  If provided, C{memo} is modified to include
             this alias.
 
-        @rtype: L{IMessage <smtp.IMessage>} or L{NoneType <types.NoneType>}
+        @rtype: L{IMessage <smtp.IMessage>} or C{type(None)}
         @return: A message receiver for the ultimate destination or None for
             an invalid destination.
         """
@@ -393,7 +393,7 @@ class MessageWrapper:
     @ivar completionTimeout: The number of seconds to wait for the child
         process to exit before reporting the delivery as a failure.
 
-    @type _timeoutCallID: L{NoneType <types.NoneType>} or
+    @type _timeoutCallID: C{type(None)} or
         L{IDelayedCall <twisted.internet.interfaces.IDelayedCall>} provider
     @ivar _timeoutCallID: The call used to time out delivery, started when the
         connection to the child process is closed.
@@ -408,7 +408,7 @@ class MessageWrapper:
 
     @ivar protocol: See L{__init__}.
 
-    @type processName: L{bytes} or L{NoneType <types.NoneType>}
+    @type processName: L{bytes} or C{type(None)}
     @ivar processName: The process name.
 
     @type completion: L{Deferred <defer.Deferred>}
@@ -427,10 +427,10 @@ class MessageWrapper:
         @type protocol: L{ProcessAliasProtocol}
         @param protocol: The protocol associated with the child process.
 
-        @type process: L{bytes} or L{NoneType <types.NoneType>}
+        @type process: L{bytes} or C{type(None)}
         @param process: The process name.
 
-        @type reactor: L{NoneType <types.NoneType>} or L{IReactorTime
+        @type reactor: C{type(None)} or L{IReactorTime
             <twisted.internet.interfaces.IReactorTime>} provider
         @param reactor: A reactor which will be used to schedule timeouts.
         """
@@ -451,7 +451,7 @@ class MessageWrapper:
         @type result: L{Failure <failure.Failure>}
         @param result: The reason the child process terminated.
 
-        @rtype: L{NoneType <types.NoneType>} or
+        @rtype: C{type(None)} or
             L{Failure <failure.Failure>}
         @return: None, if the process end is expected, or the reason the child
             process terminated, if the process end is unexpected.
@@ -532,7 +532,7 @@ class ProcessAliasProtocol(protocol.ProcessProtocol):
     A process protocol which errbacks a deferred when the associated
     process ends.
 
-    @type onEnd: L{NoneType <types.NoneType>} or L{Deferred <defer.Deferred>}
+    @type onEnd: C{type(None)} or L{Deferred <defer.Deferred>}
     @ivar onEnd: If set, a deferred on which to errback when the process ends.
     """
     onEnd = None
@@ -670,7 +670,7 @@ class MultiWrapper:
         Pass the end of message along to the message receivers.
 
         @rtype: L{DeferredList <defer.DeferredList>} whose successful results
-            are L{bytes} or L{NoneType <types.NoneType>}
+            are L{bytes} or C{type(None)}
         @return: A deferred list which triggers when all of the message
             receivers have finished handling their end of message.
         """
@@ -789,7 +789,7 @@ class AliasGroup(AliasBase):
         @type aliasmap: L{dict} mapping L{bytes} to L{AliasBase}
         @param aliasmap: A mapping of username to alias or group of aliases.
 
-        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @type memo: C{type(None)} or L{dict} of L{AliasBase}
         @param memo: A record of the aliases already considered in the
             resolution process.  If provided, C{memo} is modified to include
             this alias.

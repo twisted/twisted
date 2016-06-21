@@ -87,7 +87,7 @@ class MessageSet(object):
         if start is self._empty:
             return
 
-        if isinstance(start, types.ListType):
+        if isinstance(start, list):
             self.ranges = start[:]
             self.clean()
         else:
@@ -372,7 +372,7 @@ class Command:
             N = len(names)
             if (N >= 1 and names[0] in self._1_RESPONSES or
                 N >= 2 and names[1] in self._2_RESPONSES or
-                N >= 2 and names[0] == 'OK' and isinstance(names[1], types.ListType) and names[1][0] in self._OK_RESPONSES):
+                N >= 2 and names[0] == 'OK' and isinstance(names[1], list) and names[1][0] in self._OK_RESPONSES):
                 send.append(names)
             else:
                 unuse.append(names)
@@ -4284,9 +4284,9 @@ def collapseStrings(results):
     """
     copy = []
     begun = None
-    listsList = [isinstance(s, types.ListType) for s in results]
+    listsList = [isinstance(s, list) for s in results]
 
-    pred = lambda e: isinstance(e, types.TupleType)
+    pred = lambda e: isinstance(e, tuple)
     tran = {
         0: lambda e: splitQuoted(''.join(e)),
         1: lambda e: [''.join([i[0] for i in e])]
@@ -4421,7 +4421,7 @@ def collapseNestedLists(items):
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, (DontQuoteMe, int, long)):
             pieces.extend([' ', str(i)])
-        elif isinstance(i, types.StringTypes):
+        elif isinstance(i, str):
             if _needsLiteral(i):
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
             else:
