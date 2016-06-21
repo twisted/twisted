@@ -852,7 +852,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
             privateKey=self.sKey,
             certificate=self.sCert,
         )
-        self.assertIs(None, opts._ecCurve)
+        self.assertIsNone(opts._ecCurve)
 
 
     def test_ecNeverBreaksGetContext(self):
@@ -1020,8 +1020,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
             fixBrokenPeers=True,
             enableSessionTickets=True)
         context = firstOpts.getContext()
-        self.assertIdentical(context, firstOpts._context)
-        self.assertNotIdentical(context, None)
+        self.assertIs(context, firstOpts._context)
+        self.assertIsNotNone(context)
         state = firstOpts.__getstate__()
         self.assertNotIn("_context", state)
 
@@ -1030,15 +1030,15 @@ class OpenSSLOptionsTests(unittest.TestCase):
         self.assertEqual(opts.privateKey, self.sKey)
         self.assertEqual(opts.certificate, self.sCert)
         self.assertEqual(opts.method, SSL.SSLv23_METHOD)
-        self.assertEqual(opts.verify, True)
+        self.assertTrue(opts.verify)
         self.assertEqual(opts.caCerts, [self.sCert])
         self.assertEqual(opts.verifyDepth, 2)
-        self.assertEqual(opts.requireCertificate, False)
-        self.assertEqual(opts.verifyOnce, False)
-        self.assertEqual(opts.enableSingleUseKeys, False)
-        self.assertEqual(opts.enableSessions, False)
-        self.assertEqual(opts.fixBrokenPeers, True)
-        self.assertEqual(opts.enableSessionTickets, True)
+        self.assertFalse(opts.requireCertificate)
+        self.assertFalse(opts.verifyOnce)
+        self.assertFalse(opts.enableSingleUseKeys)
+        self.assertFalse(opts.enableSessions)
+        self.assertTrue(opts.fixBrokenPeers)
+        self.assertTrue(opts.enableSessionTickets)
 
     test_certificateOptionsSerialization.suppress = [
         util.suppress(category = DeprecationWarning,
@@ -1387,7 +1387,7 @@ class TrustRootTests(unittest.TestCase):
             chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
-        self.assertIs(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
 
@@ -1584,8 +1584,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_validHostnameInvalidCertificate(self):
@@ -1647,8 +1647,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_clientPresentsCertificate(self):
@@ -1670,8 +1670,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_clientPresentsBadCertificate(self):
@@ -1743,8 +1743,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
     if skipSNI is not None:
         test_hostnameEncoding.skip = skipSNI
@@ -1769,7 +1769,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 cert.get_subject().commonName = name
                 return cert
         conn = Connection()
-        self.assertIdentical(
+        self.assertIs(
             sslverify.simpleVerifyHostname(conn, u'something.example.com'),
             None
         )
@@ -1870,7 +1870,7 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=protocols,
         )
         self.assertEqual(negotiatedProtocol, b'h2')
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNDifferent(self):
@@ -1885,7 +1885,7 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=serverProtocols,
         )
         self.assertEqual(negotiatedProtocol, b'http/1.1')
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNNoAdvertise(self):
@@ -1898,8 +1898,8 @@ class NPNOrALPNTests(unittest.TestCase):
             clientProtocols=protocols,
             serverProtocols=[],
         )
-        self.assertEqual(negotiatedProtocol, None)
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(negotiatedProtocol)
+        self.assertIsNone(lostReason)
 
 
     def test_NPNAndALPNNoOverlap(self):
@@ -1913,7 +1913,7 @@ class NPNOrALPNTests(unittest.TestCase):
             serverProtocols=clientProtocols,
             clientProtocols=serverProtocols,
         )
-        self.assertEqual(negotiatedProtocol, None)
+        self.assertIsNone(negotiatedProtocol)
         self.assertEqual(lostReason.type, SSL.Error)
 
 
@@ -1995,8 +1995,8 @@ class NPNAndALPNAbsentTests(unittest.TestCase):
             clientProtocols=clientProtocols,
             serverProtocols=serverProtocols,
         )
-        self.assertEqual(negotiatedProtocol, None)
-        self.assertEqual(lostReason, None)
+        self.assertIsNone(negotiatedProtocol)
+        self.assertIsNone(lostReason)
 
 
 
@@ -2130,7 +2130,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
 
         # This connection should succeed
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootSelfSignedServerCertificate(self):
@@ -2155,7 +2155,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
             serverCertificate=selfSigned.original,
         )
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootCertificateAuthorityTrustsConnection(self):
@@ -2176,7 +2176,7 @@ class MultipleCertificateTrustRootTests(unittest.TestCase):
             serverCertificate=serverCert.original,
         )
         self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
-        self.assertEqual(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
 
 
     def test_trustRootFromCertificatesUntrusted(self):

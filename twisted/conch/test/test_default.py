@@ -67,9 +67,9 @@ class SSHUserAuthClientTests(TestCase):
         agent = SSHAgentClient()
         agent.blobs = [self.rsaPublic.blob()]
         key = agent.getPublicKey()
-        self.assertEqual(key.isPublic(), True)
+        self.assertTrue(key.isPublic())
         self.assertEqual(key, self.rsaPublic)
-        self.assertEqual(agent.getPublicKey(), None)
+        self.assertIsNone(agent.getPublicKey())
 
 
     def test_getPublicKeyFromFile(self):
@@ -82,7 +82,7 @@ class SSHUserAuthClientTests(TestCase):
         options.identitys = [self.rsaFile.path]
         client = SSHUserAuthClient("user",  options, None)
         key = client.getPublicKey()
-        self.assertEqual(key.isPublic(), True)
+        self.assertTrue(key.isPublic())
         self.assertEqual(key, self.rsaPublic)
 
 
@@ -97,7 +97,7 @@ class SSHUserAuthClientTests(TestCase):
         client = SSHUserAuthClient("user",  options, None)
         client.keyAgent = agent
         key = client.getPublicKey()
-        self.assertEqual(key.isPublic(), True)
+        self.assertTrue(key.isPublic())
         self.assertEqual(key, self.rsaPublic)
 
 
@@ -115,7 +115,7 @@ class SSHUserAuthClientTests(TestCase):
         self.tmpdir.child('id_rsa.pub').setContent('not a key!')
         client = SSHUserAuthClient("user",  options, None)
         key = client.getPublicKey()
-        self.assertEqual(key.isPublic(), True)
+        self.assertTrue(key.isPublic())
         self.assertEqual(key, Key.fromString(keydata.publicDSA_openssh))
         self.assertEqual(client.usedFiles, [self.rsaFile.path, dsaFile.path])
 
@@ -134,7 +134,7 @@ class SSHUserAuthClientTests(TestCase):
         client.getPublicKey()
 
         def _cbGetPrivateKey(key):
-            self.assertEqual(key.isPublic(), False)
+            self.assertFalse(key.isPublic())
             self.assertEqual(key, rsaPrivate)
 
         return client.getPrivateKey().addCallback(_cbGetPrivateKey)
@@ -162,7 +162,7 @@ class SSHUserAuthClientTests(TestCase):
             return passphrase
 
         def _cbGetPrivateKey(key):
-            self.assertEqual(key.isPublic(), False)
+            self.assertFalse(key.isPublic())
             self.assertEqual(key, rsaPrivate)
 
         self.patch(client, '_getPassword', _getPassword)
