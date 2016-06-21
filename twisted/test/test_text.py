@@ -231,8 +231,12 @@ class StrFileTests(unittest.TestCase):
     def test_large_f(self):
         self.assertFalse(text.strFile("ds jhfsa k fdas", self.io))
 
+
     def test_overlarge_f(self):
-        self.assertFalse(text.strFile("djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew", self.io))
+        self.assertFalse(text.strFile(
+                         "djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew",
+                         self.io))
+
 
     def test_self(self):
         self.assertTrue(text.strFile("this is a test string", self.io))

@@ -186,7 +186,8 @@ class InterfacesTests(unittest.TestCase):
 
     def testMultiService(self):
         self.assertTrue(service.IService.providedBy(service.MultiService()))
-        self.assertTrue(service.IServiceCollection.providedBy(service.MultiService()))
+        self.assertTrue(service.IServiceCollection.providedBy(
+                        service.MultiService()))
 
     def testProcess(self):
         self.assertTrue(service.IProcess.providedBy(service.Process()))
