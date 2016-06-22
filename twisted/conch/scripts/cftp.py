@@ -408,7 +408,7 @@ class StdioClient(basic.LineReceiver):
         @param rest: Requested command line for the PUT command.
         @type rest: C{str}
 
-        @return: A deferred which fires with C{None} when transfer is done.
+        @return: A deferred which fires with L{None} when transfer is done.
         @rtype: L{defer.Deferred}
         """
         local, rest = self._getFilename(rest)

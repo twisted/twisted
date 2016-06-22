@@ -49,7 +49,7 @@ class NMEATestReceiver(object):
     def clear(self):
         """
         Forgets the received sentence (if any), by setting
-        C{self.receivedSentence} to C{None}.
+        C{self.receivedSentence} to L{None}.
         """
         self.receivedSentence = None
 
@@ -589,7 +589,7 @@ class FixerTestMixin:
         @type sentenceData: C{dict} mapping C{str} to C{str}
 
         @param expected: The expected state of the adapter.
-        @type expected: C{dict} or C{None}
+        @type expected: C{dict} or L{None}
 
         @param exceptionClass: The exception to be raised by the adapter.
         @type exceptionClass: subclass of C{Exception}

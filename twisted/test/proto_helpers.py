@@ -121,17 +121,17 @@ class StringTransport:
         called, then C{True}.
 
     @ivar producer: If a producer is currently registered, C{producer} is a
-        reference to it.  Otherwise, C{None}.
+        reference to it.  Otherwise, L{None}.
 
     @ivar streaming: If a producer is currently registered, C{streaming} refers
         to the value of the second parameter passed to C{registerProducer}.
 
-    @ivar hostAddr: C{None} or an object which will be returned as the host
-        address of this transport.  If C{None}, a nasty tuple will be returned
+    @ivar hostAddr: L{None} or an object which will be returned as the host
+        address of this transport.  If L{None}, a nasty tuple will be returned
         instead.
 
-    @ivar peerAddr: C{None} or an object which will be returned as the peer
-        address of this transport.  If C{None}, a nasty tuple will be returned
+    @ivar peerAddr: L{None} or an object which will be returned as the peer
+        address of this transport.  If L{None}, a nasty tuple will be returned
         instead.
 
     @ivar producerState: The state of this L{StringTransport} in its capacity

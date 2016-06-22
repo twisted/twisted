@@ -13,7 +13,7 @@ import socket
 import time
 import warnings
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 from collections import OrderedDict
 
 from twisted import cred
@@ -1090,11 +1090,9 @@ class RegisterProxy(Proxy):
         pass
 
 
+@implementer(IRegistry, ILocator)
 class InMemoryRegistry:
     """A simplistic registry for a specific domain."""
-
-    implements(IRegistry, ILocator)
-
     def __init__(self, domain):
         self.domain = domain # the domain we handle registration for
         self.users = {} # map username to (IDelayedCall for expiry, address URI)

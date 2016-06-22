@@ -60,8 +60,8 @@ class SOCKSv4(protocol.Protocol):
     """
     An implementation of the SOCKSv4 protocol.
 
-    @type logging: C{str} or C{None}
-    @ivar logging: If not C{None}, the name of the logfile to which connection
+    @type logging: C{str} or L{None}
+    @ivar logging: If not L{None}, the name of the logfile to which connection
         information will be written.
 
     @type reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
@@ -70,9 +70,9 @@ class SOCKSv4(protocol.Protocol):
     @type buf: C{str}
     @ivar buf: Part of a SOCKSv4 connection request.
 
-    @type otherConn: C{SOCKSv4Incoming}, C{SOCKSv4Outgoing} or C{None}
+    @type otherConn: C{SOCKSv4Incoming}, C{SOCKSv4Outgoing} or L{None}
     @ivar otherConn: Until the connection has been established, C{otherConn} is
-        C{None}. After that, it is the proxy-to-destination protocol instance
+        L{None}. After that, it is the proxy-to-destination protocol instance
         along which the client's connection is being forwarded.
     """
     def __init__(self, logging=None, reactor=reactor):
@@ -150,8 +150,8 @@ class SOCKSv4(protocol.Protocol):
             d.addErrback(lambda result, self = self: self.makeReply(91))
         elif code == 2: # BIND
             d = self.listenClass(0, SOCKSv4IncomingFactory, self, server)
-            d.addCallback(lambda (h, p),
-                          self = self: self.makeReply(90, 0, p, h))
+            d.addCallback(lambda x,
+                          self = self: self.makeReply(90, 0, x[1], x[0]))
         else:
             raise RuntimeError("Bad Connect Code: %s" % (code,))
         assert self.buf == "", "hmm, still stuff in buffer... %s" % repr(

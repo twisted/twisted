@@ -16,7 +16,10 @@ usable. See Twisted Words for Jabber specific protocol support.
 Maintainer: Ralph Meijer
 """
 
+from __future__ import absolute_import, division
+
 from twisted.python import failure
+from twisted.python.compat import intern, unicode
 from twisted.internet import protocol
 from twisted.words.xish import domish, utility
 

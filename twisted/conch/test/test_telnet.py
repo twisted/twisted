@@ -432,15 +432,15 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x42')
         self.assertEqual(s.him.state, 'no')
         self.assertEqual(s.us.state, 'no')
-        self.assertEqual(s.him.negotiating, True)
-        self.assertEqual(s.us.negotiating, False)
+        self.assertTrue(s.him.negotiating)
+        self.assertFalse(s.us.negotiating)
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + b'\x42')
 
         d = self.assertFailure(d, telnet.OptionRefused)
         d.addCallback(lambda ignored: self._enabledHelper(self.p.protocol))
         d.addCallback(
-            lambda ignored: self.assertEqual(s.him.negotiating, False))
+            lambda ignored: self.assertFalse(s.him.negotiating))
         return d
 
 
@@ -462,15 +462,15 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x42')
         self.assertEqual(s.him.state, 'no')
         self.assertEqual(s.us.state, 'no')
-        self.assertEqual(s.him.negotiating, False)
-        self.assertEqual(s.us.negotiating, True)
+        self.assertFalse(s.him.negotiating)
+        self.assertTrue(s.us.negotiating)
 
         self.p.dataReceived(telnet.IAC + telnet.DONT + b'\x42')
 
         d = self.assertFailure(d, telnet.OptionRefused)
         d.addCallback(lambda ignored: self._enabledHelper(self.p.protocol))
         d.addCallback(
-            lambda ignored: self.assertEqual(s.us.negotiating, False))
+            lambda ignored: self.assertFalse(s.us.negotiating))
         return d
 
 

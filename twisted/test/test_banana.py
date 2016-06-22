@@ -177,7 +177,7 @@ class BananaTests(BananaTestBase):
                 for n in (m, -m-1):
                     self.enc.dataReceived(self.encode(n))
                     self.assertEqual(self.result, n)
-                    if n > sys.maxint or n < -sys.maxint - 1:
+                    if n > sys.maxsize or n < -sys.maxsize - 1:
                         self.assertIsInstance(self.result, long)
                     else:
                         self.assertIsInstance(self.result, int)
@@ -307,13 +307,13 @@ class BananaTests(BananaTestBase):
     def test_oversizedList(self):
         data = '\x02\x01\x01\x01\x01\x80'
         # list(size=0x0101010102, about 4.3e9)
-        self.failUnlessRaises(banana.BananaError, self.feed, data)
+        self.assertRaises(banana.BananaError, self.feed, data)
 
 
     def test_oversizedString(self):
         data = '\x02\x01\x01\x01\x01\x82'
         # string(size=0x0101010102, about 4.3e9)
-        self.failUnlessRaises(banana.BananaError, self.feed, data)
+        self.assertRaises(banana.BananaError, self.feed, data)
 
 
     def test_crashString(self):

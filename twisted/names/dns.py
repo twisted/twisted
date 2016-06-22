@@ -316,7 +316,7 @@ class IEncodable(Interface):
         @type strio: File-like object
         @param strio: The stream to which to write bytes
 
-        @type compDict: C{dict} or C{None}
+        @type compDict: C{dict} or L{None}
         @param compDict: A dictionary of backreference addresses that have
         already been written to this stream and that may be used for
         compression.

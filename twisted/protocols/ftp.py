@@ -19,7 +19,7 @@ try:
 except ImportError:
     pwd = grp = None
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 # Twisted Imports
 from twisted import copyright
@@ -394,9 +394,8 @@ _months = [
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
+@implementer(interfaces.IConsumer)
 class DTP(object, protocol.Protocol):
-    implements(interfaces.IConsumer)
-
     isConnected = False
 
     _cons = None
@@ -643,6 +642,7 @@ class ASCIIConsumerWrapper(object):
 
 
 
+@implementer(interfaces.IConsumer)
 class FileConsumer(object):
     """
     A consumer for FTP input that writes data to a file.
@@ -650,9 +650,6 @@ class FileConsumer(object):
     @ivar fObj: a file object opened for writing, used to write data received.
     @type fObj: C{file}
     """
-
-    implements(interfaces.IConsumer)
-
     def __init__(self, fObj):
         self.fObj = fObj
 
@@ -1046,7 +1043,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             @param results: The names of the files in the directory.
 
             @param glob: A shell-style glob through which to filter results (see
-                U{http://docs.python.org/2/library/fnmatch.html}), or C{None}
+                U{http://docs.python.org/2/library/fnmatch.html}), or L{None}
                 for no filtering.
             @type glob: L{str} or L{NoneType}
 
@@ -1793,6 +1790,7 @@ def _testPermissions(uid, gid, spath, mode='r'):
 
 
 
+@implementer(IFTPShell)
 class FTPAnonymousShell(object):
     """
     An anonymous implementation of IFTPShell
@@ -1801,8 +1799,6 @@ class FTPAnonymousShell(object):
     @ivar filesystemRoot: The path which is considered the root of
     this shell.
     """
-    implements(IFTPShell)
-
     def __init__(self, filesystemRoot):
         self.filesystemRoot = filesystemRoot
 
@@ -2057,9 +2053,8 @@ class FTPAnonymousShell(object):
 
 
 
+@implementer(IReadFile)
 class _FileReader(object):
-    implements(IReadFile)
-
     def __init__(self, fObj):
         self.fObj = fObj
         self._send = False
@@ -2168,9 +2163,8 @@ class FTPShell(FTPAnonymousShell):
 
 
 
+@implementer(IWriteFile)
 class _FileWriter(object):
-    implements(IWriteFile)
-
     def __init__(self, fObj):
         self.fObj = fObj
         self._receive = False
@@ -2186,13 +2180,12 @@ class _FileWriter(object):
 
 
 
+@implementer(portal.IRealm)
 class BaseFTPRealm:
     """
     Base class for simple FTP realms which provides an easy hook for specifying
     the home directory for each user.
     """
-    implements(portal.IRealm)
-
     def __init__(self, anonymousRoot):
         self.anonymousRoot = filepath.FilePath(anonymousRoot)
 
@@ -2341,9 +2334,8 @@ class IFinishableConsumer(interfaces.IConsumer):
 
 
 
+@implementer(IFinishableConsumer)
 class SenderProtocol(protocol.Protocol):
-    implements(IFinishableConsumer)
-
     def __init__(self):
         # Fired upon connection
         self.connectedDeferred = defer.Deferred()
@@ -2544,7 +2536,7 @@ class FTPClientBasic(basic.LineReceiver):
         """
         Login: send the username, send the password.
 
-        If the password is C{None}, the PASS command won't be sent.  Also, if
+        If the password is L{None}, the PASS command won't be sent.  Also, if
         the response to the USER command has a response code of 230 (User logged
         in), then PASS won't be sent either.
         """
@@ -3212,7 +3204,7 @@ def parsePWDResponse(response):
 
     For this example, I will return C{'/home/andrew'}.
 
-    If I can't find the path, I return C{None}.
+    If I can't find the path, I return L{None}.
     """
     match = re.search('"(.*)"', response)
     if match:

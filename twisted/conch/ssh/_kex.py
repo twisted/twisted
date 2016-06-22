@@ -37,11 +37,11 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
 
     prime = Attribute(
         "A C{long} giving the prime number used in Diffie-Hellman key "
-        "exchange, or C{None} if not applicable.")
+        "exchange, or L{None} if not applicable.")
 
     generator = Attribute(
         "A C{long} giving the generator number used in Diffie-Hellman key "
-        "exchange, or C{None} if not applicable. (This is not related to "
+        "exchange, or L{None} if not applicable. (This is not related to "
         "Python generator functions.)")
 
 

@@ -10,7 +10,7 @@ Protocol agnostic implementations of SASL authentication mechanisms.
 import binascii, random, time, os
 from hashlib import md5
 
-from zope.interface import Interface, Attribute, implements
+from zope.interface import Interface, Attribute, implementer
 
 
 class ISASLMechanism(Interface):
@@ -37,13 +37,13 @@ class ISASLMechanism(Interface):
 
 
 
+@implementer(ISASLMechanism)
 class Anonymous(object):
     """
     Implements the ANONYMOUS SASL authentication mechanism.
 
     This mechanism is defined in RFC 2245.
     """
-    implements(ISASLMechanism)
     name = 'ANONYMOUS'
 
     def getInitialResponse(self):
@@ -51,14 +51,13 @@ class Anonymous(object):
 
 
 
+@implementer(ISASLMechanism)
 class Plain(object):
     """
     Implements the PLAIN SASL authentication mechanism.
 
     The PLAIN SASL authentication mechanism is defined in RFC 2595.
     """
-    implements(ISASLMechanism)
-
     name = 'PLAIN'
 
     def __init__(self, authzid, authcid, password):
@@ -74,14 +73,13 @@ class Plain(object):
 
 
 
+@implementer(ISASLMechanism)
 class DigestMD5(object):
     """
     Implements the DIGEST-MD5 SASL authentication mechanism.
 
     The DIGEST-MD5 SASL authentication mechanism is defined in RFC 2831.
     """
-    implements(ISASLMechanism)
-
     name = 'DIGEST-MD5'
 
     def __init__(self, serv_type, host, serv_name, username, password):

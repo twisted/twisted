@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb
 from twisted.internet import reactor
 
@@ -22,15 +24,15 @@ class Foo:
         self.oneRef = None
 
     def step1(self, obj):
-        print "got one object:", obj
+        print("got one object:", obj)
         self.oneRef = obj
-        print "asking it to getTwo"
+        print("asking it to getTwo")
         self.oneRef.callRemote("getTwo").addCallback(self.step2)
 
     def step2(self, two):
-        print "got two object:", two
-        print "giving it back to one"
-        print "one is", self.oneRef
+        print("got two object:", two)
+        print("giving it back to one")
+        print("one is", self.oneRef)
         self.oneRef.callRemote("checkTwo", two)
 
 main()

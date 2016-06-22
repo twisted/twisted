@@ -5,7 +5,7 @@ from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 import cgi
 import pwd
 import os
@@ -67,9 +67,8 @@ class IFingerFactory(Interface):
         """
 
 
+@implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ServerFactory):
-
-    implements(IFingerFactory)
 
     protocol = FingerProtocol
 
@@ -110,9 +109,8 @@ class IFingerSetterFactory(Interface):
         """
 
 
+@implementer(IFingerSetterFactory)
 class FingerSetterFactoryFromService(protocol.ServerFactory):
-
-    implements(IFingerSetterFactory)
 
     protocol = FingerSetterProtocol
 
@@ -160,9 +158,8 @@ class IIRCClientFactory(Interface):
         """
 
 
+@implementer(IIRCClientFactory)
 class IRCClientFactoryFromService(protocol.ClientFactory):
-
-    implements(IIRCClientFactory)
 
     protocol = IRCReplyBot
     nickname = None
@@ -178,9 +175,8 @@ components.registerAdapter(IRCClientFactoryFromService,
                            IIRCClientFactory)
 
 
+@implementer(resource.IResource)
 class UserStatusTree(resource.Resource):
-
-    implements(resource.IResource)
 
     def __init__(self, service):
         resource.Resource.__init__(self)
@@ -235,9 +231,8 @@ class UserStatusXR(xmlrpc.XMLRPC):
         return self.service.getUser(user)
 
 
+@implementer(IFingerService)
 class FingerService(service.Service):
-
-    implements(IFingerService)
 
     def __init__(self, filename):
         self.filename = filename
@@ -269,9 +264,8 @@ class FingerService(service.Service):
 
 # Yet another back-end
 
+@implementer(IFingerService)
 class LocalFingerService(service.Service):
-
-    implements(IFingerService)
 
     def getUser(self, user):
         user = user.strip()

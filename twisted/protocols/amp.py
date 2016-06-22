@@ -321,7 +321,7 @@ class IArgumentType(Interface):
             interpreted.  Most likely this is an instance of L{AMP}, but
             this is not guaranteed.
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -349,7 +349,7 @@ class IArgumentType(Interface):
             it is fully populated.  Most likely this is an instance of
             L{AMP}, but this is not guaranteed.
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
