@@ -119,7 +119,7 @@ class SerializationTests(unittest.SynchronousTestCase):
         lockType = type(lock)
         lockPickle = pickle.dumps(lock)
         newLock = pickle.loads(lockPickle)
-        self.assertTrue(isinstance(newLock, lockType))
+        self.assertIsInstance(newLock, lockType)
 
     if threadingSkip is not None:
         testPickling.skip = threadingSkip

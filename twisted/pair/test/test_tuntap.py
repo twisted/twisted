@@ -830,7 +830,7 @@ class TunnelTestsMixin(object):
         """
         Verify that the C{stopListening} method of an L{IListeningPort} removes
         that port from the reactor's "readers" set and also that the
-        L{Deferred} returned by that method fires with C{None}.
+        L{Deferred} returned by that method fires with L{None}.
 
         @param port: The port object to stop.
         @type port: L{IListeningPort} provider

@@ -156,17 +156,17 @@ Here is an example of a simple ``ClientFactory`` that uses the ``Echo`` protocol
 
     class EchoClientFactory(ClientFactory):
         def startedConnecting(self, connector):
-            print 'Started to connect.'
+            print('Started to connect.')
 
         def buildProtocol(self, addr):
-            print 'Connected.'
+            print('Connected.')
             return Echo()
 
         def clientConnectionLost(self, connector, reason):
-            print 'Lost connection.  Reason:', reason
+            print('Lost connection.  Reason:', reason)
 
         def clientConnectionFailed(self, connector, reason):
-            print 'Connection failed. Reason:', reason
+            print('Connection failed. Reason:', reason)
 
 To connect this ``EchoClientFactory`` to a server, you could use
 this code:
@@ -232,20 +232,20 @@ a ``ReconnectingClientFactory`` :
 
     class EchoClientFactory(ReconnectingClientFactory):
         def startedConnecting(self, connector):
-            print 'Started to connect.'
+            print('Started to connect.')
 
         def buildProtocol(self, addr):
-            print 'Connected.'
-            print 'Resetting reconnection delay'
+            print('Connected.')
+            print('Resetting reconnection delay')
             self.resetDelay()
             return Echo()
 
         def clientConnectionLost(self, connector, reason):
-            print 'Lost connection.  Reason:', reason
+            print('Lost connection.  Reason:', reason)
             ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
 
         def clientConnectionFailed(self, connector, reason):
-            print 'Connection failed. Reason:', reason
+            print('Connection failed. Reason:', reason)
             ReconnectingClientFactory.clientConnectionFailed(self, connector,
                                                              reason)
 

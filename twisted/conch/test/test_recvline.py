@@ -599,7 +599,7 @@ class _StdioMixin(_BaseMixin):
             pass
         def trap(failure):
             failure.trap(error.ProcessTerminated)
-            self.assertEqual(failure.value.exitCode, None)
+            self.assertIsNone(failure.value.exitCode)
             self.assertEqual(failure.value.status, 9)
         return self.testTerminal.onDisconnection.addErrback(trap)
 

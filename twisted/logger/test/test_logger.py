@@ -182,7 +182,7 @@ class LoggerTests(unittest.TestCase):
 
     def test_sourceUnbound(self):
         """
-        C{log_source} event key is C{None}.
+        C{log_source} event key is L{None}.
         """
         def observer(event):
             self.assertIsNone(event["log_source"])

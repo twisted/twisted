@@ -12,12 +12,14 @@ To run the script:
 # Originally written by Darryl Vandorp
 # http://randomthoughts.vandorp.ca/
 
+from __future__ import print_function
+
 from twisted.words.protocols.jabber import client, jid
 from twisted.words.xish import domish
 from twisted.internet import reactor
         
 def authd(xmlstream):
-    print "authenticated"
+    print("authenticated")
 
     presence = domish.Element(('jabber:client','presence'))
     xmlstream.send(presence)
@@ -27,8 +29,8 @@ def authd(xmlstream):
     xmlstream.addObserver('/iq',       debug)   
 
 def debug(elem):
-    print elem.toXml().encode('utf-8')
-    print "="*20
+    print(elem.toXml().encode('utf-8'))
+    print("="*20)
     
 myJid = jid.JID('username@server.jabber/twisted_words')
 factory = client.basicClientFactory(myJid, 'password')

@@ -3,7 +3,7 @@ from twisted.application import internet, service
 from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import components
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 
 def catchError(err):
@@ -38,9 +38,8 @@ class FingerProtocol(basic.LineReceiver):
 
 
 
+@implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ClientFactory):
-    
-    implements(IFingerFactory)
 
     protocol = FingerProtocol
     
@@ -88,8 +87,8 @@ def finger(user, host, port=79):
     return f.d
 
 
+@implementer(IFingerService)
 class ProxyFingerService(service.Service):
-    implements(IFingerService)
 
     def getUser(self, user):
         try:
