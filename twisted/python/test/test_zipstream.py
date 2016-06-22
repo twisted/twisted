@@ -33,7 +33,7 @@ class FileEntryMixin:
         """
         zip files should not be ttys, so isatty() should be false
         """
-        self.assertEqual(self.getFileEntry('').isatty(), False)
+        self.assertFalse(self.getFileEntry('').isatty())
 
 
     def test_closed(self):
@@ -42,9 +42,9 @@ class FileEntryMixin:
         called.
         """
         fileEntry = self.getFileEntry('')
-        self.assertEqual(fileEntry.closed, False)
+        self.assertFalse(fileEntry.closed)
         fileEntry.close()
-        self.assertEqual(fileEntry.closed, True)
+        self.assertTrue(fileEntry.closed)
 
 
     def test_readline(self):
@@ -81,8 +81,8 @@ class FileEntryMixin:
         C{__iter__()} and C{xreadlines()} should return C{self}.
         """
         fileEntry = self.getFileEntry('')
-        self.assertIdentical(iter(fileEntry), fileEntry)
-        self.assertIdentical(fileEntry.xreadlines(), fileEntry)
+        self.assertIs(iter(fileEntry), fileEntry)
+        self.assertIs(fileEntry.xreadlines(), fileEntry)
 
 
     def test_readWhole(self):

@@ -96,4 +96,4 @@ class WriteDescriptorTests(SynchronousTestCase):
         """
         descriptor = MemoryFile()
         descriptor.write(b"hello, world")
-        self.assertIs(None, descriptor.doWrite())
+        self.assertIsNone(descriptor.doWrite())
