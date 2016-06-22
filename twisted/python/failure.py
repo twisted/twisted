@@ -185,9 +185,9 @@ class Failure:
         raised by L{raiseException}, then this C{Failure} will act like
         the original C{Failure}.
 
-        For C{exc_tb} only L{traceback} instances or C{None} are allowed.
-        If C{None} is supplied for C{exc_value}, the value of C{exc_tb} is
-        ignored, otherwise if C{exc_tb} is C{None}, it will be found from
+        For C{exc_tb} only L{traceback} instances or L{None} are allowed.
+        If L{None} is supplied for C{exc_value}, the value of C{exc_tb} is
+        ignored, otherwise if C{exc_tb} is L{None}, it will be found from
         execution context (ie, L{sys.exc_info}).
 
         @param captureVars: if set, capture locals and globals of stack
@@ -493,7 +493,7 @@ class Failure:
         Remove references to other objects, replacing them with strings.
 
         On Python 3, this will also set the C{__traceback__} attribute of the
-        exception instance to C{None}.
+        exception instance to L{None}.
         """
         self.__dict__ = self.__getstate__()
         if _PY3:

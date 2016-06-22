@@ -923,7 +923,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def test_readNone(self):
         """
-        Calling L{_InputStream.read} with C{None} as an argument returns all
+        Calling L{_InputStream.read} with L{None} as an argument returns all
         bytes in the input stream.
         """
         bytes = b"the entire stream"
@@ -1003,7 +1003,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def test_readlineNone(self):
         """
-        Calling L{_InputStream.readline} with C{None} as an argument returns
+        Calling L{_InputStream.readline} with L{None} as an argument returns
         one line from the input stream.
         """
         bytes = b"this is one line\nthis is another line"
@@ -1086,7 +1086,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def test_readlinesNone(self):
         """
-        Calling L{_InputStream.readlines} with C{None} as an argument returns
+        Calling L{_InputStream.readlines} with L{None} as an argument returns
         all lines from the input.
         """
         bytes = b"one fish\ntwo fish\n"

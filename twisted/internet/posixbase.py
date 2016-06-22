@@ -265,7 +265,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     """
     A basis for reactors that use file descriptors.
 
-    @ivar _childWaker: C{None} or a reference to the L{_SIGCHLDWaker}
+    @ivar _childWaker: L{None} or a reference to the L{_SIGCHLDWaker}
         which is used to properly notice child process termination.
     """
 

@@ -94,11 +94,11 @@ class LogBeginnerTests(unittest.TestCase):
                 @type lineno: L{int}
 
                 @param file: A file to write the warning message to.  If
-                    C{None}, write to L{sys.stderr}.
+                    L{None}, write to L{sys.stderr}.
                 @type file: file-like object
 
                 @param line: A line of source code to include with the warning
-                    message. If C{None}, attempt to read the line from
+                    message. If L{None}, attempt to read the line from
                     C{filename} and C{lineno}.
                 @type line: L{str}
                 """
