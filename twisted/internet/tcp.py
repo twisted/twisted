@@ -11,7 +11,6 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 from __future__ import division, absolute_import
 
 # System Imports
-import types
 import socket
 import sys
 import operator
@@ -98,7 +97,7 @@ _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
 if _PY3:
     _portNameType = str
 else:
-    _portNameType = types.StringTypes
+    _portNameType = (str, unicode)
 
 
 
