@@ -109,7 +109,7 @@ class DirDbmTests(unittest.TestCase):
         # of this test. Thus we keep the range of acceptability to 3 seconds time.
         # -warner
         self.dbm["k"] = "v"
-        self.assert_(abs(time.time() - self.dbm.getModificationTime("k")) <= 3)
+        self.assertTrue(abs(time.time() - self.dbm.getModificationTime("k")) <= 3)
 
 
     def testRecovery(self):

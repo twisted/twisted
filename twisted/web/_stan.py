@@ -40,22 +40,22 @@ class slot(object):
 
     @type default: anything flattenable, or C{NoneType}
     @ivar default: The default contents of this slot, if it is left unfilled.
-        If this is C{None}, an L{UnfilledSlot} will be raised, rather than
-        C{None} actually being used.
+        If this is L{None}, an L{UnfilledSlot} will be raised, rather than
+        L{None} actually being used.
 
     @type filename: C{str} or C{NoneType}
     @ivar filename: The name of the XML file from which this tag was parsed.
-        If it was not parsed from an XML file, C{None}.
+        If it was not parsed from an XML file, L{None}.
 
     @type lineNumber: C{int} or C{NoneType}
     @ivar lineNumber: The line number on which this tag was encountered in the
         XML file from which it was parsed.  If it was not parsed from an XML
-        file, C{None}.
+        file, L{None}.
 
     @type columnNumber: C{int} or C{NoneType}
     @ivar columnNumber: The column number at which this tag was encountered in
         the XML file from which it was parsed.  If it was not parsed from an
-        XML file, C{None}.
+        XML file, L{None}.
     """
 
     def __init__(self, name, default=None, filename=None, lineNumber=None,
@@ -100,17 +100,17 @@ class Tag(object):
 
     @type filename: C{str} or C{NoneType}
     @ivar filename: The name of the XML file from which this tag was parsed.
-        If it was not parsed from an XML file, C{None}.
+        If it was not parsed from an XML file, L{None}.
 
     @type lineNumber: C{int} or C{NoneType}
     @ivar lineNumber: The line number on which this tag was encountered in the
         XML file from which it was parsed.  If it was not parsed from an XML
-        file, C{None}.
+        file, L{None}.
 
     @type columnNumber: C{int} or C{NoneType}
     @ivar columnNumber: The column number at which this tag was encountered in
         the XML file from which it was parsed.  If it was not parsed from an
-        XML file, C{None}.
+        XML file, L{None}.
 
     @type slotData: C{dict} or C{NoneType}
     @ivar slotData: The data which can fill slots.  If present, a dictionary

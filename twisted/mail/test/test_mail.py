@@ -17,7 +17,7 @@ import time
 from hashlib import md5
 
 from zope.interface.verify import verifyClass
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from twisted.trial import unittest
 from twisted.mail import smtp
@@ -85,7 +85,6 @@ class DomainWithDefaultsTests(unittest.TestCase):
             self.assertEqual(d[x], x + 10)
             self.assertEqual(d.get(x), x + 10)
             self.assertTrue(x in d)
-            self.assertTrue(d.has_key(x))
 
         del d[2], d[4], d[6]
 
@@ -144,6 +143,25 @@ class DomainWithDefaultsTests(unittest.TestCase):
         the class name and the domain mapping held by the instance.
         """
         self._stringificationTest(repr)
+
+
+    def test_has_keyDeprecation(self):
+        """
+        has_key is now deprecated.
+        """
+        sut = mail.mail.DomainWithDefaultDict({}, 'Default')
+
+        sut.has_key('anything')
+
+        message = (
+            'twisted.mail.mail.DomainWithDefaultDict.has_key was deprecated '
+            'in Twisted 16.3.0. Use the `in` keyword instead.'
+            )
+        warnings = self.flushWarnings(
+            [self.test_has_keyDeprecation])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(message, warnings[0]['message'])
 
 
 
@@ -384,7 +402,7 @@ class MaildirAppendStringTests(unittest.TestCase, _AppendTestMixin):
         Change the behavior of future C{rename}, C{write}, or C{open} calls made
         by the mailbox C{mbox}.
 
-        @param rename: If not C{None}, a new value for the C{_renamestate}
+        @param rename: If not L{None}, a new value for the C{_renamestate}
             attribute of the mailbox's append factory.  The original value will
             be restored at the end of the test.
 
@@ -706,12 +724,11 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
 
 
 
+@implementer(mail.mail.IAliasableDomain)
 class StubAliasableDomain(object):
     """
     Minimal testable implementation of IAliasableDomain.
     """
-    implements(mail.mail.IAliasableDomain)
-
     def exists(self, user):
         """
         No test coverage for invocations of this method on domain objects,
@@ -1587,7 +1604,7 @@ class LiveFireExerciseTests(unittest.TestCase):
         def finished(ign):
             mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
             msg = mbox.getMessage(0).read()
-            self.failIfEqual(msg.find('This is the message'), -1)
+            self.assertNotEqual(msg.find('This is the message'), -1)
 
             return self.smtpServer.stopListening()
         done.addCallback(finished)
@@ -1656,7 +1673,7 @@ class LiveFireExerciseTests(unittest.TestCase):
             def delivered(ign):
                 mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
                 msg = mbox.getMessage(0).read()
-                self.failIfEqual(msg.find('This is the message'), -1)
+                self.assertNotEqual(msg.find('This is the message'), -1)
 
                 self.insServer.stopListening()
                 self.destServer.stopListening()
@@ -1732,20 +1749,20 @@ class AliasTests(unittest.TestCase):
         group = result['testuser']
         s = str(group)
         for a in ('address1', 'address2', 'address3', 'continuation@address', '/bin/process/this'):
-            self.failIfEqual(s.find(a), -1)
+            self.assertNotEqual(s.find(a), -1)
         self.assertEqual(len(group), 5)
 
         group = result['usertwo']
         s = str(group)
         for a in ('thisaddress', 'thataddress', 'lastaddress'):
-            self.failIfEqual(s.find(a), -1)
+            self.assertNotEqual(s.find(a), -1)
         self.assertEqual(len(group), 3)
 
         group = result['lastuser']
         s = str(group)
         self.assertEqual(s.find('/includable'), -1)
         for a in ('/filename', 'program', 'address'):
-            self.failIfEqual(s.find(a), -1, '%s not found' % a)
+            self.assertNotEqual(s.find(a), -1, '%s not found' % a)
         self.assertEqual(len(group), 3)
 
     def testMultiWrapper(self):
@@ -1833,14 +1850,14 @@ class AddressAliasTests(unittest.TestCase):
     def test_resolve(self):
         """
         L{resolve} will look for additional aliases when an C{aliasmap}
-        dictionary is passed, and returns C{None} if none were found.
+        dictionary is passed, and returns L{None} if none were found.
         """
         self.assertEqual(self.alias.resolve({self.address: 'bar'}), None)
 
 
     def test_resolveWithoutAliasmap(self):
         """
-        L{resolve} returns C{None} when the alias could not be found in the
+        L{resolve} returns L{None} when the alias could not be found in the
         C{aliasmap} and no L{mail.smtp.User} with this alias exists either.
         """
         self.assertEqual(self.alias.resolve({}), None)
@@ -2324,7 +2341,7 @@ class _AttemptManagerTests(unittest.TestCase):
     @type reactor: L{MemoryReactorClock}
     @ivar reactor: The reactor used for test purposes.
 
-    @type eventLog: L{types.NoneType} or L{dict} of L{bytes} -> L{object}
+    @type eventLog: L{None} or L{dict} of L{bytes} -> L{object}
     @ivar eventLog: Information about the last informational log message
         generated or none if no log message has been generated.
 

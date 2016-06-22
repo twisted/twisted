@@ -86,11 +86,11 @@ class FakeTransport:
             connection, C{False} if it is the connecting side.
         @type isServer: L{bool}
 
-        @param hostAddress: The value to return from C{getHost}.  C{None}
+        @param hostAddress: The value to return from C{getHost}.  L{None}
             results in a new L{FakeAddress} being created to use as the value.
         @type hostAddress: L{IAddress} provider or L{NoneType}
 
-        @param peerAddress: The value to return from C{getPeer}.  C{None}
+        @param peerAddress: The value to return from C{getPeer}.  L{None}
             results in a new L{FakeAddress} being created to use as the value.
         @type peerAddress: L{IAddress} provider or L{NoneType}
         """
@@ -449,7 +449,7 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
     @return: If they do match, return factories for the client and server that
         should connect; otherwise return L{None}, indicating they shouldn't be
         connected.
-    @rtype: L{types.NoneType} or 2-L{tuple} of (L{ClientFactory},
+    @rtype: L{None} or 2-L{tuple} of (L{ClientFactory},
         L{IProtocolFactory})
     """
     (clientHost, clientPort, clientFactory, clientTimeout,

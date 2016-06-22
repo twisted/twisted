@@ -1,7 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import implements
+from zope.interface import implementer
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import sasl, sasl_mechanisms, xmlstream, jid
@@ -9,6 +9,7 @@ from twisted.words.xish import domish
 
 NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
 
+@implementer(sasl_mechanisms.ISASLMechanism)
 class DummySASLMechanism(object):
     """
     Dummy SASL mechanism.
@@ -19,12 +20,9 @@ class DummySASLMechanism(object):
     @ivar challenge: Last received challenge.
     @type challenge: C{unicode}.
     @ivar initialResponse: Initial response to be returned when requested
-                           via C{getInitialResponse} or C{None}.
+                           via C{getInitialResponse} or L{None}.
     @type initialResponse: C{unicode}
     """
-
-    implements(sasl_mechanisms.ISASLMechanism)
-
     challenge = None
     name = "DUMMY"
 
@@ -46,7 +44,7 @@ class DummySASLInitiatingInitializer(sasl.SASLInitiatingInitializer):
     instantiated with the value of C{initialResponse}.
 
     @ivar initialResponse: The initial response to be returned by the
-                           dummy SASL mechanism or C{None}.
+                           dummy SASL mechanism or L{None}.
     @type initialResponse: C{unicode}.
     """
 

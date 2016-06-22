@@ -12,7 +12,7 @@ from unicodedata import ucd_3_2_0 as unicodedata
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 
 crippled = False
@@ -48,19 +48,15 @@ class IMappingTable(Interface):
 
 
 
+@implementer(ILookupTable)
 class LookupTableFromFunction:
-
-    implements(ILookupTable)
-
     def __init__(self, in_table_function):
         self.lookup = in_table_function
 
 
 
+@implementer(ILookupTable)
 class LookupTable:
-
-    implements(ILookupTable)
-
     def __init__(self, table):
         self._table = table
 
@@ -69,19 +65,15 @@ class LookupTable:
 
 
 
+@implementer(IMappingTable)
 class MappingTableFromFunction:
-
-    implements(IMappingTable)
-
     def __init__(self, map_table_function):
         self.map = map_table_function
 
 
 
+@implementer(IMappingTable)
 class EmptyMappingTable:
-
-    implements(IMappingTable)
-
     def __init__(self, in_table_function):
         self._in_table_function = in_table_function
 

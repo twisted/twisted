@@ -53,7 +53,7 @@ class UnpickleMethodTests(unittest.TestCase):
         foo = Foo()
         m = unpickleMethod('method', foo, Foo)
         self.assertEqual(m, foo.method)
-        self.assertNotIdentical(m, foo.method)
+        self.assertIsNot(m, foo.method)
 
 
     def test_instanceBuildingNameNotPresent(self):
@@ -65,7 +65,7 @@ class UnpickleMethodTests(unittest.TestCase):
         foo = Foo()
         m = unpickleMethod('method', foo, Bar)
         self.assertEqual(m, foo.method)
-        self.assertNotIdentical(m, foo.method)
+        self.assertIsNot(m, foo.method)
 
 
     def test_primeDirective(self):

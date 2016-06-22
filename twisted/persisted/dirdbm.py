@@ -22,7 +22,6 @@ Maintainer: Itamar Shtull-Trauring
 
 
 import os
-import types
 import base64
 import glob
 
@@ -119,8 +118,8 @@ class DirDBM:
         @type v: str
         @param v: value to associate with C{k}
         """
-        assert type(k) == types.StringType, "DirDBM key must be a string"
-        assert type(v) == types.StringType, "DirDBM value must be a string"
+        assert type(k) == str, "DirDBM key must be a string"
+        assert type(v) == str, "DirDBM value must be a string"
         k = self._encode(k)
         
         # we create a new file with extension .new, write the data to it, and
@@ -150,7 +149,7 @@ class DirDBM:
         @return: The value associated with C{k}
         @raise KeyError: Raised when there is no such key
         """
-        assert type(k) == types.StringType, "DirDBM key must be a string"
+        assert type(k) == str, "DirDBM key must be a string"
         path = os.path.join(self.dname, self._encode(k))
         try:
             return self._readFile(path)
@@ -167,7 +166,7 @@ class DirDBM:
         
         @raise KeyError: Raised when there is no such key
         """
-        assert type(k) == types.StringType, "DirDBM key must be a string"
+        assert type(k) == str, "DirDBM key must be a string"
         k = self._encode(k)
         try:    os.remove(os.path.join(self.dname, k))
         except (OSError, IOError): raise KeyError(self._decode(k))
@@ -206,7 +205,7 @@ class DirDBM:
         @return: A true value if this dirdbm has the specified key, a faluse
         value otherwise.
         """
-        assert type(key) == types.StringType, "DirDBM key must be a string"
+        assert type(key) == str, "DirDBM key must be a string"
         key = self._encode(key)
         return os.path.isfile(os.path.join(self.dname, key))
 
@@ -247,7 +246,7 @@ class DirDBM:
                 
         @return: A true value if C{self.has_key(key)}, a false value otherwise.
         """
-        assert type(key) == types.StringType, "DirDBM key must be a string"
+        assert type(key) == str, "DirDBM key must be a string"
         key = self._encode(key)
         return os.path.isfile(os.path.join(self.dname, key))
 
@@ -301,7 +300,7 @@ class DirDBM:
         @return: Last modification date (seconds since epoch) of entry C{key}
         @raise KeyError: Raised when there is no such key
         """
-        assert type(key) == types.StringType, "DirDBM key must be a string"
+        assert type(key) == str, "DirDBM key must be a string"
         path = os.path.join(self.dname, self._encode(key))
         if os.path.isfile(path):
             return os.path.getmtime(path)

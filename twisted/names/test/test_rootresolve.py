@@ -517,7 +517,7 @@ class RootResolverResolverFactoryTests(TestCase):
         argument and assigns it to C{self._resolverFactory}.
         """
         r = Resolver(hints=[None], resolverFactory=raisingResolverFactory)
-        self.assertIdentical(r._resolverFactory, raisingResolverFactory)
+        self.assertIs(r._resolverFactory, raisingResolverFactory)
 
 
     def test_resolverFactoryArgumentAbsent(self):
@@ -527,7 +527,7 @@ class RootResolverResolverFactoryTests(TestCase):
         supplied.
         """
         r = Resolver(hints=[None])
-        self.assertIdentical(r._resolverFactory, client.Resolver)
+        self.assertIs(r._resolverFactory, client.Resolver)
 
 
     def test_resolverFactoryOnlyExpectedArguments(self):
@@ -712,7 +712,7 @@ class BootstrapTests(SynchronousTestCase):
         for d in stubResolver.pendingResults:
             d.callback('192.0.2.101')
 
-        self.assertIdentical(
+        self.assertIs(
             deferredResolver._resolverFactory, raisingResolverFactory)
 
 
