@@ -1605,7 +1605,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         working directory doesn't produce any error.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        self.assertEqual(None,
+        self.assertIsNone(
                          self.createCommand.ensureIsWorkingDirectory(reposDir))
 
 
