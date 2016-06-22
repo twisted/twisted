@@ -180,7 +180,7 @@ class Headers(object):
         @type name: L{bytes} or L{unicode}
         @param name: The name of the HTTP header to remove.
 
-        @return: C{None}
+        @return: L{None}
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
@@ -196,7 +196,7 @@ class Headers(object):
         @param values: A list of strings each one being a header value of
             the given name.
 
-        @return: C{None}
+        @return: L{None}
         """
         if not isinstance(values, list):
             raise TypeError("Header entry %r should be list but found "

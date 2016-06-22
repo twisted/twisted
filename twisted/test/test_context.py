@@ -18,7 +18,7 @@ class ContextTests(SynchronousTestCase):
     def test_notPresentIfNotSet(self):
         """
         Arbitrary keys which have not been set in the context have an associated
-        value of C{None}.
+        value of L{None}.
         """
         self.assertIsNone(context.get("x"))
 

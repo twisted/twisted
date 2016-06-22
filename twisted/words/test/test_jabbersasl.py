@@ -20,7 +20,7 @@ class DummySASLMechanism(object):
     @ivar challenge: Last received challenge.
     @type challenge: C{unicode}.
     @ivar initialResponse: Initial response to be returned when requested
-                           via C{getInitialResponse} or C{None}.
+                           via C{getInitialResponse} or L{None}.
     @type initialResponse: C{unicode}
     """
     challenge = None
@@ -44,7 +44,7 @@ class DummySASLInitiatingInitializer(sasl.SASLInitiatingInitializer):
     instantiated with the value of C{initialResponse}.
 
     @ivar initialResponse: The initial response to be returned by the
-                           dummy SASL mechanism or C{None}.
+                           dummy SASL mechanism or L{None}.
     @type initialResponse: C{unicode}.
     """
 

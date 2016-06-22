@@ -91,7 +91,7 @@ class Request(Copyable, http.Request, components.Componentized):
     An HTTP request.
 
     @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
-        value to send in responses if no other value is set.  C{None} disables
+        value to send in responses if no other value is set.  L{None} disables
         the default.
     """
 
@@ -576,7 +576,7 @@ class Session(components.Componentized):
         """
         Start expiration tracking.
 
-        @return: C{None}
+        @return: L{None}
         """
         self._expireCall = self._reactor.callLater(
             self.sessionTimeout, self.expire)

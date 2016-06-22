@@ -126,7 +126,7 @@ class BasicTests(TwistedModulesTestCase):
     def test_unimportablePackageGetItem(self):
         """
         If a package has been explicitly forbidden from importing by setting a
-        C{None} key in sys.modules under its name,
+        L{None} key in sys.modules under its name,
         L{modules.PythonPath.__getitem__} should still be able to retrieve an
         unloaded L{modules.PythonModule} for that package.
         """
@@ -143,7 +143,7 @@ class BasicTests(TwistedModulesTestCase):
     def test_unimportablePackageWalkModules(self):
         """
         If a package has been explicitly forbidden from importing by setting a
-        C{None} key in sys.modules under its name, L{modules.walkModules} should
+        L{None} key in sys.modules under its name, L{modules.walkModules} should
         still be able to retrieve an unloaded L{modules.PythonModule} for that
         package.
         """

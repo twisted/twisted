@@ -417,10 +417,10 @@ class SSHUserAuthClient(service.SSHService):
         @param packet: the L{MSG_USERAUTH_FAILURE} payload.
         @type packet: C{bytes}
 
-        @return: a L{defer.Deferred} that will be callbacked with C{None} as
-            soon as all authentication methods have been tried, or C{None} if no
+        @return: a L{defer.Deferred} that will be callbacked with L{None} as
+            soon as all authentication methods have been tried, or L{None} if no
             more authentication methods are available.
-        @rtype: C{defer.Deferred} or C{None}
+        @rtype: C{defer.Deferred} or L{None}
         """
         canContinue, partial = getNS(packet)
         partial = ord(partial)
@@ -693,9 +693,9 @@ class SSHUserAuthClient(service.SSHService):
     def getPublicKey(self):
         """
         Return a public key for the user.  If no more public keys are
-        available, return C{None}.
+        available, return L{None}.
 
-        This implementation always returns C{None}.  Override it in a
+        This implementation always returns L{None}.  Override it in a
         subclass to actually find and return a public key object.
 
         @rtype: L{Key} or L{NoneType}
@@ -720,7 +720,7 @@ class SSHUserAuthClient(service.SSHService):
         prompt is a string to display for the password, or None for a generic
         'user@hostname's password: '.
 
-        @type prompt: C{bytes}/C{None}
+        @type prompt: C{bytes}/L{None}
         @rtype: L{defer.Deferred}
         """
         return defer.fail(NotImplementedError())

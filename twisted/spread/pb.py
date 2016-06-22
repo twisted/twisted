@@ -685,7 +685,7 @@ class Broker(banana.Banana):
         Get a local object for a locally unique ID.
 
         @return: An object previously stored with L{registerReference} or
-            C{None} if there is no object which corresponds to the given
+            L{None} if there is no object which corresponds to the given
             identifier.
         """
         lob = self.localObjects.get(luid)
@@ -739,7 +739,7 @@ class Broker(banana.Banana):
         return RemoteReference(None, self, name, 0)
 
     def cachedRemotelyAs(self, instance, incref=0):
-        """Returns an ID that says what this instance is cached as remotely, or C{None} if it's not.
+        """Returns an ID that says what this instance is cached as remotely, or L{None} if it's not.
         """
 
         puid = instance.processUniqueID()

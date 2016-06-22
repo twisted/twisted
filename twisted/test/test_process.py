@@ -327,8 +327,8 @@ class SignalProtocol(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         """
-        Callback C{self.deferred} with C{None} if C{reason} is a
-        L{error.ProcessTerminated} failure with C{exitCode} set to C{None},
+        Callback C{self.deferred} with L{None} if C{reason} is a
+        L{error.ProcessTerminated} failure with C{exitCode} set to L{None},
         C{signal} set to C{self.signal}, and C{status} holding the status code
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
@@ -1094,7 +1094,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGHUP signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGHUP}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1105,7 +1105,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGINT signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGINT}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1116,7 +1116,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGKILL signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGKILL}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1127,7 +1127,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGTERM signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGTERM}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1265,7 +1265,7 @@ class MockOS(object):
     @ivar WNOHANG: dumb value faking C{os.WNOHANG}.
     @type WNOHANG: C{int}
 
-    @ivar raiseFork: if not C{None}, subsequent calls to fork will raise this
+    @ivar raiseFork: if not L{None}, subsequent calls to fork will raise this
         object.
     @type raiseFork: C{NoneType} or C{Exception}
 
@@ -1291,10 +1291,10 @@ class MockOS(object):
 
     @ivar raiseWaitPid: if set, subsequent calls to waitpid will raise
         the error specified.
-    @type raiseWaitPid: C{None} or a class
+    @type raiseWaitPid: L{None} or a class
 
     @ivar waitChild: if set, subsequent calls to waitpid will return it.
-    @type waitChild: C{None} or a tuple
+    @type waitChild: L{None} or a tuple
 
     @ivar euid: the uid returned by the fake C{os.geteuid}
     @type euid: C{int}
@@ -1313,7 +1313,7 @@ class MockOS(object):
 
     @ivar raiseKill: if set, subsequent call to kill will raise the error
         specified.
-    @type raiseKill: C{None} or an exception instance.
+    @type raiseKill: L{None} or an exception instance.
 
     @ivar readData: data returned by C{os.read}.
     @type readData: C{str}
@@ -2232,7 +2232,7 @@ class Win32SignalProtocol(SignalProtocol):
 
     def processEnded(self, reason):
         """
-        Callback C{self.deferred} with C{None} if C{reason} is a
+        Callback C{self.deferred} with L{None} if C{reason} is a
         L{error.ProcessTerminated} failure with C{exitCode} set to 1.
         Otherwise, errback with a C{ValueError} describing the problem.
         """

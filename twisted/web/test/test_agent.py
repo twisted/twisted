@@ -908,7 +908,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
 
     def test_hostProvided(self):
         """
-        If C{None} is passed to L{Agent.request} for the C{headers} parameter,
+        If L{None} is passed to L{Agent.request} for the C{headers} parameter,
         a L{Headers} instance is created for the request and a I{Host} header
         added to it.
         """
@@ -1133,7 +1133,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
 
     def test_requestMissingAbsoluteURI(self):
         """
-        L{Request.absoluteURI} is C{None} if L{Request._parsedURI} is C{None}.
+        L{Request.absoluteURI} is L{None} if L{Request._parsedURI} is L{None}.
         """
         request = client.Request(b'FOO', b'/', client.Headers(), None)
         self.assertIdentical(request.absoluteURI, None)
@@ -2651,7 +2651,7 @@ class _RedirectAgentTestsMixin(object):
     def test_responseHistory(self):
         """
         L{Response.response} references the previous L{Response} from
-        a redirect, or C{None} if there was no previous response.
+        a redirect, or L{None} if there was no previous response.
         """
         agent = self.buildAgentForWrapperTest(self.reactor)
         redirectAgent = client.RedirectAgent(agent)
@@ -2787,7 +2787,7 @@ class DummyResponse(object):
 
     def __init__(self, headers=None, transportFactory=AbortableStringTransport):
         """
-        @param headers: The headers for this response.  If C{None}, an empty
+        @param headers: The headers for this response.  If L{None}, an empty
             L{Headers} instance will be used.
         @type headers: L{Headers}
 

@@ -52,7 +52,7 @@ def service(description, factory, default=_DEFAULT, reactor=None):
 
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
 
-    @type default: C{str} or C{None}
+    @type default: C{str} or L{None}
 
     @param default: Do not use this parameter. It has been deprecated since
         Twisted 10.2.0.
@@ -89,7 +89,7 @@ def listen(description, factory, default=None):
 
     @type description: C{str}
     @type factory: L{twisted.internet.interfaces.IProtocolFactory}
-    @type default: C{str} or C{None}
+    @type default: C{str} or L{None}
     @rtype: C{twisted.internet.interfaces.IListeningPort}
     @return: the port corresponding to a description of a reliable
     virtual circuit server.

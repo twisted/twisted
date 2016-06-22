@@ -92,13 +92,13 @@ class MyProtocolFactoryMixin(object):
 
     @type protocolConnectionMade: L{NoneType} or L{defer.Deferred}
     @ivar protocolConnectionMade: When an instance of L{AccumulatingProtocol}
-        is connected, if this is not C{None}, the L{Deferred} will be called
-        back with the protocol instance and the attribute set to C{None}.
+        is connected, if this is not L{None}, the L{Deferred} will be called
+        back with the protocol instance and the attribute set to L{None}.
 
     @type protocolConnectionLost: L{NoneType} or L{defer.Deferred}
     @ivar protocolConnectionLost: When an instance of L{AccumulatingProtocol}
         is created, this will be set as its C{closedDeferred} attribute and
-        then this attribute will be set to C{None} so the L{defer.Deferred} is
+        then this attribute will be set to L{None} so the L{defer.Deferred} is
         not used by more than one protocol.
 
     @ivar protocol: The most recently created L{AccumulatingProtocol} instance
@@ -1071,7 +1071,7 @@ class ConnectionLostNotifyingProtocol(protocol.Protocol):
     @ivar onConnectionLost: The L{Deferred} which will be fired in
         C{connectionLost}.
 
-    @ivar lostConnectionReason: C{None} until the connection is lost, then a
+    @ivar lostConnectionReason: L{None} until the connection is lost, then a
         reference to the reason passed to C{connectionLost}.
     """
     def __init__(self, onConnectionLost):

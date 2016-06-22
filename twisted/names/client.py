@@ -72,7 +72,7 @@ class Resolver(common.ResolverBase):
         round-robin fashion.  If given, C{resolv} is periodically checked
         for modification and re-parsed if it is noticed to have changed.
 
-        @type servers: C{list} of C{(str, int)} or C{None}
+        @type servers: C{list} of C{(str, int)} or L{None}
         @param servers: If not None, interpreted as a list of (host, port)
             pairs specifying addresses of domain name servers to attempt to use
             for this lookup.  Host addresses should be in IPv4 dotted-quad
@@ -548,19 +548,19 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
     """
     Create and return a Resolver.
 
-    @type servers: C{list} of C{(str, int)} or C{None}
+    @type servers: C{list} of C{(str, int)} or L{None}
 
-    @param servers: If not C{None}, interpreted as a list of domain name servers
+    @param servers: If not L{None}, interpreted as a list of domain name servers
     to attempt to use. Each server is a tuple of address in C{str} dotted-quad
     form and C{int} port number.
 
-    @type resolvconf: C{str} or C{None}
-    @param resolvconf: If not C{None}, on posix systems will be interpreted as
+    @type resolvconf: C{str} or L{None}
+    @param resolvconf: If not L{None}, on posix systems will be interpreted as
     an alternate resolv.conf to use. Will do nothing on windows systems. If
-    C{None}, /etc/resolv.conf will be used.
+    L{None}, /etc/resolv.conf will be used.
 
-    @type hosts: C{str} or C{None}
-    @param hosts: If not C{None}, an alternate hosts file to use. If C{None}
+    @type hosts: C{str} or L{None}
+    @param hosts: If not L{None}, an alternate hosts file to use. If L{None}
     on posix systems, /etc/hosts will be used. On windows, C:\windows\hosts
     will be used.
 
@@ -591,7 +591,7 @@ def getResolver():
     """
     Get a Resolver instance.
 
-    Create twisted.names.client.theResolver if it is C{None}, and then return
+    Create twisted.names.client.theResolver if it is L{None}, and then return
     that value.
 
     @rtype: C{IResolver}
