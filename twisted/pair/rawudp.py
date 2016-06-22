@@ -10,7 +10,7 @@ import struct
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from zope.interface import implements
+from zope.interface import implementer
 
 class UDPHeader:
     def __init__(self, data):
@@ -18,8 +18,8 @@ class UDPHeader:
         (self.source, self.dest, self.len, self.check) \
                  = struct.unpack("!HHHH", data[:8])
 
+@implementer(raw.IRawDatagramProtocol)
 class RawUDPProtocol(protocol.AbstractDatagramProtocol):
-    implements(raw.IRawDatagramProtocol)
     def __init__(self):
         self.udpProtos = {}
 

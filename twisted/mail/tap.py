@@ -34,13 +34,13 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     @ivar synopsis: A description of options for use in the usage message.
 
     @type optParameters: L{list} of L{list} of (0) L{bytes}, (1) L{bytes},
-        (2) L{object}, (3) L{bytes}, (4) L{NoneType <types.NoneType>} or
+        (2) L{object}, (3) L{bytes}, (4) L{None} or
         callable which takes L{bytes} and returns L{object}
     @ivar optParameters: Information about supported parameters.  See
         L{Options <twisted.python.usage.Options>} for details.
 
     @type optFlags: L{list} of L{list} of (0) L{bytes}, (1) L{bytes} or
-        L{NoneType <types.NoneType>}, (2) L{bytes}
+        L{None}, (2) L{bytes}
     @ivar optFlags: Information about supported flags.  See
         L{Options <twisted.python.usage.Options>} for details.
 
@@ -57,7 +57,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     @type service: L{MailService}
     @ivar service: The email service.
 
-    @type last_domain: L{IDomain} provider or L{NoneType <types.NoneType>}
+    @type last_domain: L{IDomain} provider or L{None}
     @ivar last_domain: The most recently specified domain.
     """
     synopsis = "[options]"
@@ -147,7 +147,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         @param description: An endpoint description string or a TCP port
             number.
 
-        @type certificate: L{bytes} or L{NoneType <types.NoneType>}
+        @type certificate: L{bytes} or L{None}
         @param certificate: The name of a file containing an SSL certificate.
         """
         self[service].append(
@@ -381,7 +381,7 @@ def _toEndpoint(description, certificate=None):
     @param description: An endpoint description string or a TCP port
         number.
 
-    @type certificate: L{bytes} or L{NoneType <types.NoneType>}
+    @type certificate: L{bytes} or L{None}
     @param certificate: The name of a file containing an SSL certificate.
 
     @rtype: L{IStreamServerEndpoint

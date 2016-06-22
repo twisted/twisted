@@ -388,7 +388,7 @@ class SSHConnection(service.SSHService):
         @type request:      C{str}
         @type data:         C{str}
         @type wantReply:    C{bool}
-        @rtype              C{Deferred}/C{None}
+        @rtype              C{Deferred}/L{None}
         """
         self.transport.sendPacket(MSG_GLOBAL_REQUEST,
                                   common.NS(request)
@@ -424,7 +424,7 @@ class SSHConnection(service.SSHService):
         @type requestType:  C{str}
         @type data:         C{str}
         @type wantReply:    C{bool}
-        @rtype              C{Deferred}/C{None}
+        @rtype              C{Deferred}/L{None}
         """
         if channel.localClosed:
             return

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import print_function
 
 if __name__ == '__main__':
     import sys
@@ -19,11 +20,11 @@ from echoclient_ssh import ConnectionParameters
 
 class PrinterProtocol(Protocol):
     def dataReceived(self, data):
-        print "Got some data:", data,
+        print("Got some data:", data, end=' ')
 
 
     def connectionLost(self, reason):
-        print "Lost my connection"
+        print("Lost my connection")
         self.factory.done.callback(None)
 
 

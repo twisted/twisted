@@ -5,6 +5,8 @@
 
 """HTML pretty-printing for Python source code."""
 
+from __future__ import print_function
+
 __version__ = '$Revision: 1.8 $'[11:-2]
 
 from twisted.python import htmlizer, usage
@@ -46,7 +48,7 @@ def run():
     try:
         options.parseOptions()
     except usage.UsageError as e:
-        print str(e)
+        print(str(e))
         sys.exit(1)
     filename = options['filename']
     if options.get('stylesheet') is not None:

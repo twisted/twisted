@@ -56,7 +56,7 @@ class _BackRelay(protocol.ProcessProtocol):
         and, if C{errortoo} is true, all of stderr as well (mixed together in
         one string).  If C{errortoo} is false and any bytes are received over
         stderr, this will fire with an L{_UnexpectedErrorOutput} instance and
-        the attribute will be set to C{None}.
+        the attribute will be set to L{None}.
 
     @ivar onProcessEnded: If C{errortoo} is false and bytes are received over
         stderr, this attribute will refer to a L{Deferred} which will be called

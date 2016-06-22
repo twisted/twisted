@@ -19,7 +19,7 @@ import types
 
 from collections import OrderedDict
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
@@ -972,9 +972,8 @@ class IMAP4HelperTests(unittest.TestCase):
                 self.assertEqual(L, expected,
                                   "len(%r) = %r != %r" % (input, L, expected))
 
+@implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
-    implements(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
-
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
     messages = []
     mUID = 0
@@ -2205,7 +2204,7 @@ class ClientCapabilityTests(unittest.TestCase):
     def test_simpleAtoms(self):
         """
         A capability response consisting only of atoms without C{'='} in them
-        should result in a dict mapping those atoms to C{None}.
+        should result in a dict mapping those atoms to L{None}.
         """
         capabilitiesResult = self.protocol.getCapabilities(useCache=False)
         self.protocol.dataReceived('* CAPABILITY IMAP4rev1 LOGINDISABLED\r\n')
@@ -2244,7 +2243,7 @@ class ClientCapabilityTests(unittest.TestCase):
     def test_mixedAtoms(self):
         """
         A capability response consisting of both simple and category atoms of
-        the same type should result in a list containing C{None} as well as the
+        the same type should result in a list containing L{None} as well as the
         values for the category.
         """
         capabilitiesResult = self.protocol.getCapabilities(useCache=False)
@@ -3391,9 +3390,8 @@ class FakeyServer(imap4.IMAP4Server):
     def sendServerGreeting(self):
         pass
 
+@implementer(imap4.IMessage)
 class FakeyMessage(util.FancyStrMixin):
-    implements(imap4.IMessage)
-
     showAttributes = ('headers', 'flags', 'date', 'body', 'uid')
 
     def __init__(self, headers, flags, date, body, uid, subpart):
@@ -3565,7 +3563,7 @@ class GetBodyStructureTests(unittest.TestCase):
     def test_singlePartWithMissing(self):
         """
         For fields with no information contained in the message headers,
-        L{imap4.getBodyStructure} fills in C{None} values in its result.
+        L{imap4.getBodyStructure} fills in L{None} values in its result.
         """
         major = 'image'
         minor = 'jpeg'
@@ -4417,9 +4415,8 @@ class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
 
 
 
+@implementer(imap4.ISearchableMailbox)
 class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
-    implements(imap4.ISearchableMailbox)
-
     def setUp(self):
         self.expected = self.result = None
         self.server_received_query = None
@@ -4578,9 +4575,8 @@ class FakeMailbox:
         self.args.append((body, flags, date))
         return defer.succeed(None)
 
+@implementer(imap4.IMessageFile)
 class FeaturefulMessage:
-    implements(imap4.IMessageFile)
-
     def getFlags(self):
         return 'flags'
 
@@ -4590,9 +4586,8 @@ class FeaturefulMessage:
     def open(self):
         return StringIO("open")
 
+@implementer(imap4.IMessageCopier)
 class MessageCopierMailbox:
-    implements(imap4.IMessageCopier)
-
     def __init__(self):
         self.msgs = []
 
