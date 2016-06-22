@@ -660,7 +660,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
         authClient.serviceStarted()
         authClient.tryAuth(b'publickey')
         authClient.transport.packets = []
-        self.assertIs(authClient.ssh_USERAUTH_PK_OK(b''), None)
+        self.assertIsNone(authClient.ssh_USERAUTH_PK_OK(b''))
         self.assertEqual(authClient.transport.packets, [
                 (userauth.MSG_USERAUTH_REQUEST, NS(b'foo') + NS(b'nancy') +
                  NS(b'none'))])
@@ -777,7 +777,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
         """
         authClient = userauth.SSHUserAuthClient(b'foo',
                                                 FakeTransport.Service())
-        self.assertIs(authClient.getPublicKey(), None)
+        self.assertIsNone(authClient.getPublicKey())
         def check(result):
             result.trap(NotImplementedError)
             d = authClient.getPassword()

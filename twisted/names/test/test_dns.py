@@ -4463,7 +4463,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         An L(_EDNSMessage} instance created from a byte string containing
         multiple I{OPT} records will discard all the C{OPT} records.
 
-        C{ednsVersion} will be set to C{None}.
+        C{ednsVersion} will be set to L{None}.
 
         @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
         """

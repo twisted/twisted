@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from twisted.protocols import amp
 
 class Sum(amp.Command):
@@ -16,13 +18,13 @@ class Divide(amp.Command):
 class Math(amp.AMP):
     def sum(self, a, b):
         total = a + b
-        print 'Did a sum: %d + %d = %d' % (a, b, total)
+        print('Did a sum: %d + %d = %d' % (a, b, total))
         return {'total': total}
     Sum.responder(sum)
 
     def divide(self, numerator, denominator):
         result = float(numerator) / denominator
-        print 'Divided: %d / %d = %f' % (numerator, denominator, result)
+        print('Divided: %d / %d = %f' % (numerator, denominator, result))
         return {'result': result}
     Divide.responder(divide)
 
@@ -33,7 +35,7 @@ def main():
     pf = Factory()
     pf.protocol = Math
     reactor.listenTCP(1234, pf)
-    print 'started'
+    print('started')
     reactor.run()
 
 if __name__ == '__main__':

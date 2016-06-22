@@ -184,7 +184,7 @@ def _flattenElement(request, root, write, slotData, renderFactory,
     @param slotData: A C{list} of C{dict} mapping C{str} slot names to data
         with which those slots will be replaced.
 
-    @param renderFactory: If not C{None}, an object that provides
+    @param renderFactory: If not L{None}, an object that provides
         L{IRenderable}.
 
     @param dataEscaper: A 1-argument callable which takes L{bytes} or
@@ -346,7 +346,7 @@ def _writeFlattenedData(state, write, result):
         an exception in a generator passed to C{state} or an errback from a
         L{Deferred} from state occurs.
 
-    @return: C{None}
+    @return: L{None}
     """
     while True:
         try:

@@ -1,6 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
 
 import sys
 import time
@@ -37,7 +38,7 @@ class BananaBench:
             self.enc.sendEncoded(value)
             self.io.truncate(0)
         endtime = time.time()
-        print '    Encode took %s seconds' % (endtime - starttime)
+        print('    Encode took %s seconds' % (endtime - starttime))
         return endtime - starttime
 
     def testDecode(self, value):
@@ -47,7 +48,7 @@ class BananaBench:
         for i in self.r:
             self.enc.dataReceived(encoded)
         endtime = time.time()
-        print '    Decode took %s seconds' % (endtime - starttime)
+        print('    Decode took %s seconds' % (endtime - starttime))
         return endtime - starttime
 
     def performTest(self, method, data, encClass):
@@ -56,14 +57,14 @@ class BananaBench:
         self.tearDown()
 
     def runTests(self, testData):
-        print 'Test data is: %s' % testData
-        print '  Using Pure Python Banana:'
+        print('Test data is: %s' % testData)
+        print('  Using Pure Python Banana:')
         self.performTest(self.testEncode, testData, banana.Banana)
         self.performTest(self.testDecode, testData, banana.Banana)
 
 bench = BananaBench()
-print 'Doing %s iterations of each test.' % iterationCount
-print ''
+print('Doing %s iterations of each test.' % iterationCount)
+print('')
 testData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 bench.runTests(testData)
 testData = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
@@ -72,7 +73,7 @@ testData = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
 bench.runTests(testData)
 testData = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
 bench.runTests(testData)
-testData = [1l, 2l, 3l, 4l, 5l, 6l, 7l, 8l, 9l, 10l]
+testData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 bench.runTests(testData)
 testData = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10], []]
 bench.runTests(testData)

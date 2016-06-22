@@ -244,7 +244,7 @@ class LogFileTests(unittest.TestCase):
         log.write("5" * 11)
         with open("{0}.3".format(self.path)) as fp:
             self.assertEqual(fp.read(), "2" * 11)
-        self.assertTrue(not os.path.exists("{0}.4".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.4".format(self.path)))
 
 
     def test_fromFullPath(self):

@@ -100,7 +100,7 @@ class ThreadPool:
         expressed by a list the length of that number.
 
         @return: the number of workers currently processing a work item.
-        @rtype: L{list} of L{types.NoneType}
+        @rtype: L{list} of L{None}
         """
         return [None] * self._team.statistics().busyWorkerCount
 
@@ -113,7 +113,7 @@ class ThreadPool:
 
         @return: the number of workers currently alive (with an allocated
             thread) but waiting for new work.
-        @rtype: L{list} of L{types.NoneType}
+        @rtype: L{list} of L{None}
         """
         return [None] * self._team.statistics().idleWorkerCount
 
@@ -228,7 +228,7 @@ class ThreadPool:
             callable.  If the callable throws an exception, C{onResult} is
             called with C{(False, failure)}.
 
-            Optionally, C{onResult} may be C{None}, in which case it is not
+            Optionally, C{onResult} may be L{None}, in which case it is not
             called at all.
 
         @param func: callable object to be called in separate thread

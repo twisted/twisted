@@ -942,7 +942,7 @@ class ClientProtocol(protocol.Protocol):
                             ('B', 'Down'),
                             ('C', 'Forward'),
                             ('D', 'Backward')):
-            exec ch + " = _makeSimple(ch, fName)"
+            exec(ch + " = _makeSimple(ch, fName)")
         del _makeSimple
 
         def h(self, proto, handler, buf):

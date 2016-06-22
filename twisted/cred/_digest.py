@@ -48,7 +48,7 @@ def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
 
     @param preHA1: If available this is a str containing a previously
        calculated H(A1) as a hex string.  If this is given then the values for
-       pszUserName, pszRealm, and pszPassword must be C{None} and are ignored.
+       pszUserName, pszRealm, and pszPassword must be L{None} and are ignored.
     """
 
     if (preHA1 and (pszUserName or pszRealm or pszPassword)):
@@ -89,7 +89,7 @@ def calcHA2(algo, pszMethod, pszDigestUri, pszQop, pszHEntity):
     @param pszMethod: The request method.
     @param pszDigestUri: The request URI.
     @param pszQop: The Quality-of-Protection value.
-    @param pszHEntity: The hash of the entity body or C{None} if C{pszQop} is
+    @param pszHEntity: The hash of the entity body or L{None} if C{pszQop} is
         not C{'auth-int'}.
     @return: The hash of the A2 value for the calculation of the response
         digest.

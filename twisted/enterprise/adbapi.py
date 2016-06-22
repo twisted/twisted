@@ -145,7 +145,7 @@ class ConnectionPool:
         L{Transaction}.
     @type transactionFactory: any callable
 
-    @ivar shutdownID: C{None} or a handle on the shutdown event trigger which
+    @ivar shutdownID: L{None} or a handle on the shutdown event trigger which
         will be used to stop the connection pool workers when the reactor
         stops.
 
@@ -364,7 +364,7 @@ class ConnectionPool:
 
     def runOperation(self, *args, **kw):
         """
-        Execute an SQL query and return C{None}.
+        Execute an SQL query and return L{None}.
 
         A DB-API cursor will will be invoked with C{cursor.execute(*args,
         **kw)}. The exact nature of the arguments will depend on the specific
@@ -378,7 +378,7 @@ class ConnectionPool:
         The C{*args} and C{*kw} arguments will be passed to the DB-API cursor's
         'execute' method.
 
-        @return: a L{Deferred} which will fire with C{None} or a
+        @return: a L{Deferred} which will fire with L{None} or a
             L{twisted.python.failure.Failure}.
         """
         return self.runInteraction(self._runOperation, *args, **kw)

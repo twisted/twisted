@@ -420,11 +420,11 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
     @type connectionCount: C{int}
     @ivar connectionCount: number of current connections.
-    @type connectionLimit: C{int} or C{None}
+    @type connectionLimit: C{int} or L{None}
     @cvar connectionLimit: maximum number of connections.
-    @type overflowProtocol: L{Protocol} or C{None}
+    @type overflowProtocol: L{Protocol} or L{None}
     @cvar overflowProtocol: Protocol to use for new connections when
-        connectionLimit is exceeded.  If C{None} (the default value), excess
+        connectionLimit is exceeded.  If L{None} (the default value), excess
         connections will be closed immediately.
     """
     connectionCount = 0
@@ -481,7 +481,7 @@ class TimeoutProtocol(ProtocolWrapper):
 
         This will cancel any existing timeouts.
 
-        @param timeoutPeriod: If not C{None}, change the timeout period.
+        @param timeoutPeriod: If not L{None}, change the timeout period.
             Otherwise, use the existing value.
         """
         self.cancelTimeout()
@@ -708,7 +708,7 @@ class TimeoutMixin:
 
         @type period: C{int} or C{NoneType}
         @param period: The period, in seconds, to change the timeout to, or
-        C{None} to disable the timeout.
+        L{None} to disable the timeout.
         """
         prev = self.timeOut
         self.timeOut = period

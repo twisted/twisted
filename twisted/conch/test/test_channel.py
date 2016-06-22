@@ -131,8 +131,8 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(c.remoteWindowLeft, 0)
         self.assertEqual(c.remoteMaxPacket, 0)
         self.assertEqual(c.conn, self.conn)
-        self.assertEqual(c.data, None)
-        self.assertEqual(c.avatar, None)
+        self.assertIsNone(c.data)
+        self.assertIsNone(c.avatar)
 
         c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)
         self.assertEqual(c2.localWindowSize, 1)
@@ -294,9 +294,9 @@ class ChannelTests(unittest.TestCase):
         self.channel.write('data')
         self.channel.writeExtended(1, 'datadata')
         self.channel.loseConnection()
-        self.assertEqual(self.conn.closes.get(self.channel), None)
+        self.assertIsNone(self.conn.closes.get(self.channel))
         self.channel.addWindowBytes(4) # send regular data
-        self.assertEqual(self.conn.closes.get(self.channel), None)
+        self.assertIsNone(self.conn.closes.get(self.channel))
         self.channel.addWindowBytes(8) # send extended data
         self.assertTrue(self.conn.closes.get(self.channel))
 

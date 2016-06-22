@@ -27,7 +27,7 @@ def parse(jidstring):
     @return: tuple of (user, host, resource), each of type C{unicode} as
              the parsed and stringprep'd parts of the given JID. If the
              given string did not have a user or resource part, the respective
-             field in the tuple will hold C{None}.
+             field in the tuple will hold L{None}.
     @rtype: C{tuple}
     """
     user = None
