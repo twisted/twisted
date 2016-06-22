@@ -74,7 +74,7 @@ def _pwdGetByName(username):
 def _shadowGetByName(username):
     """
     Look up a user in the /etc/shadow database using the spwd module. If it is
-    not available, return C{None}.
+    not available, return L{None}.
 
     @param username: the username of the user to return the shadow database
         information for.

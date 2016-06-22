@@ -9,6 +9,8 @@ Simple IMAP4 client which displays the subjects of all messages in a
 particular mailbox.
 """
 
+from __future__ import print_function
+
 import sys
 
 from twisted.internet import protocol
@@ -213,7 +215,7 @@ def cbFetch(result, proto):
         for k in keys:
             proto.display('%s %s' % (k, result[k][0][2]))
     else:
-        print "Hey, an empty mailbox!"
+        print("Hey, an empty mailbox!")
 
     return proto.logout()
 

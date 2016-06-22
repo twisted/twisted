@@ -30,7 +30,7 @@ class _Constant(object):
         constant is initialized by L{_ConstantsContainer}.
 
     @ivar _container: The L{_ConstantsContainer} subclass this constant belongs
-        to; C{None} until the constant is initialized by that subclass.
+        to; L{None} until the constant is initialized by that subclass.
     """
     def __init__(self):
         self._container = None
@@ -143,7 +143,7 @@ class _ConstantsContainerType(type):
         """
         Create a new constants container class.
 
-        If C{attributes} includes a value of C{None} for the C{"_constantType"}
+        If C{attributes} includes a value of L{None} for the C{"_constantType"}
         key, the new class will not be initialized as a constants container and
         it will behave as a normal class.
 

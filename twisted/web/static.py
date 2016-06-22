@@ -132,7 +132,7 @@ def loadMimeTypes(mimetype_locations=None, init=mimetypes.init):
 
     @param mimetype_locations: Optional. List of paths to C{mime.types} style
         files that should be used.
-    @type mimetype_locations: iterable of paths or C{None}
+    @type mimetype_locations: iterable of paths or L{None}
     @param init: The init function to call. Defaults to the global C{init}
         function of the C{mimetypes} module. For internal use (testing) only.
     @type init: callable
@@ -223,7 +223,7 @@ class File(resource.Resource, filepath.FilePath):
             with a L{File} pointing to C{"foo.bar"}.
 
         @param registry: The registry object being used to handle this
-            request.  If C{None}, one will be created.
+            request.  If L{None}, one will be created.
         @type registry: L{Registry}
 
         @param allowExt: Ignored parameter, only present for backwards
@@ -370,7 +370,7 @@ class File(resource.Resource, filepath.FilePath):
         being served (and so has the value of C{getFileSize()} as an indirect
         input).
 
-        Either but not both of start or end can be C{None}:
+        Either but not both of start or end can be L{None}:
 
          - Omitted start means that the end value is actually a start value
            relative to the end of the resource.
@@ -383,9 +383,9 @@ class File(resource.Resource, filepath.FilePath):
         If this range doesn't overlap with any of this resource, C{(0, 0)} is
         returned, which is not otherwise a value return value.
 
-        @param start: The start value from the header, or C{None} if one was
+        @param start: The start value from the header, or L{None} if one was
             not present.
-        @param end: The end value from the header, or C{None} if one was not
+        @param end: The end value from the header, or L{None} if one was not
             present.
         @return: C{(offset, size)} where offset is how far into this resource
             this resource the range begins and size is how long the range is,
@@ -433,7 +433,7 @@ class File(resource.Resource, filepath.FilePath):
         @param request: The Request object.
         @param startAndEnd: A 2-tuple of start of the byte range as specified by
             the header and the end of the byte range as specified by the header.
-            At most one of the start and end may be C{None}.
+            At most one of the start and end may be L{None}.
         @return: A 2-tuple of the offset and size of the range to return.
             offset == size == 0 indicates that the request is not satisfiable.
         """
@@ -476,7 +476,7 @@ class File(resource.Resource, filepath.FilePath):
         @param request: The Request object.
         @param byteRanges: A list of C{(start, end)} values as specified by
             the header.  For each range, at most one of C{start} and C{end}
-            may be C{None}.
+            may be L{None}.
         @return: See above.
         """
         matchingRangeFound = False
@@ -877,7 +877,7 @@ class DirectoryLister(resource.Resource):
     @type defaultType: C{str}
 
     @ivar dirs: filtered content of C{path}, if the whole content should not be
-        displayed (default to C{None}, which means the actual content of
+        displayed (default to L{None}, which means the actual content of
         C{path} is printed).
     @type dirs: C{NoneType} or C{list}
 

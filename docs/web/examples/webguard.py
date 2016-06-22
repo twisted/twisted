@@ -13,7 +13,7 @@ password. See the code in main() to get the correct username & password!
 
 import sys
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python import log
 from twisted.internet import reactor
@@ -36,13 +36,12 @@ class GuardedResource(resource.Resource):
 
 
 
+@implementer(IRealm)
 class SimpleRealm(object):
     """
     A realm which gives out L{GuardedResource} instances for authenticated
     users.
     """
-    implements(IRealm)
-
     def requestAvatar(self, avatarId, mind, *interfaces):
         if resource.IResource in interfaces:
             return resource.IResource, GuardedResource(), lambda: None

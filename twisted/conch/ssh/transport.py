@@ -455,7 +455,7 @@ class SSHTransportBase(protocol.Protocol):
     ourVersionString = (b'SSH-' + protocolVersion + b'-' + version + b' '
             + comment).strip()
 
-    # C{none} is supported as cipher and hmac. For security they are disabled
+    # L{None} is supported as cipher and hmac. For security they are disabled
     # by default. To enable them, subclass this class and add it, or do:
     # SSHTransportBase.supportedCiphers.append('none')
     # List ordered by preference.
@@ -535,7 +535,7 @@ class SSHTransportBase(protocol.Protocol):
         @raise RuntimeError: If a key exchange has already been started and it
             is not appropriate to send a I{KEXINIT} message at this time.
 
-        @return: C{None}
+        @return: L{None}
         """
         if self._keyExchangeState != self._KEY_EXCHANGE_NONE:
             raise RuntimeError(
@@ -627,7 +627,7 @@ class SSHTransportBase(protocol.Protocol):
         Try to return a decrypted, authenticated, and decompressed packet
         out of the buffer.  If there is not enough data, return None.
 
-        @rtype: C{str} or C{None}
+        @rtype: C{str} or L{None}
         @return: The decoded packet, if any.
         """
         bs = self.currentEncryptions.decBlockSize
@@ -836,7 +836,7 @@ class SSHTransportBase(protocol.Protocol):
         @param packet: The message data.
 
         @return: A L{tuple} of negotiated key exchange algorithms, key
-        algorithms, and unhandled data, or C{None} if something went wrong.
+        algorithms, and unhandled data, or L{None} if something went wrong.
         """
         self.otherKexInitPayload = chr(MSG_KEXINIT) + packet
         # This is useless to us:

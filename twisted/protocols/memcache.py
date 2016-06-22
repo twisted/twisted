@@ -607,7 +607,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         @return: A deferred that will fire with the tuple (flags, value) if
             C{withIdentifier} is C{False}, or (flags, cas identifier, value)
             if C{True}.  If the server indicates there is no value
-            associated with C{key}, the returned value will be C{None} and
+            associated with C{key}, the returned value will be L{None} and
             the returned flags will be C{0}.
         @rtype: L{Deferred}
         """
@@ -632,7 +632,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             of C{keys} as keys and the tuples (flags, value) as values if
             C{withIdentifier} is C{False}, or (flags, cas identifier, value) if
             C{True}.  If the server indicates there is no value associated with
-            C{key}, the returned values will be C{None} and the returned flags
+            C{key}, the returned values will be L{None} and the returned flags
             will be C{0}.
         @rtype: L{Deferred}
 

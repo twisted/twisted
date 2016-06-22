@@ -6,6 +6,8 @@
 Implementation module for the I{mailmail} command.
 """
 
+from __future__ import print_function
+
 import os
 import sys
 import rfc822
@@ -70,7 +72,7 @@ def parseOptions(argv):
 
     # Add a non-standard option for querying the version of this tool.
     if '--version' in argv:
-        print 'mailmail version:', version
+        print('mailmail version:', version)
         raise SystemExit()
 
     # -bp lists queue information.  Screw that.
@@ -201,10 +203,10 @@ class Configuration:
     @ivar identities: A C{dict} mapping hostnames to credentials to use when
     sending mail to that host.
 
-    @ivar smarthost: C{None} or a hostname through which all outgoing mail will
+    @ivar smarthost: L{None} or a hostname through which all outgoing mail will
     be sent.
 
-    @ivar domain: C{None} or the hostname with which to identify ourselves when
+    @ivar domain: L{None} or the hostname with which to identify ourselves when
     connecting to an MTA.
     """
     def __init__(self):
