@@ -11,6 +11,8 @@ Usage:
 Don't forget the http:// when you type the web address!
 """
 
+from __future__ import print_function
+
 import sys
 from pprint import pprint
 
@@ -32,13 +34,13 @@ class WriteToStdout(Protocol):
         """
         Print out the html page received.
         """
-        print 'Got some:', data
+        print('Got some:', data)
 
     def connectionLost(self, reason):
         if not reason.check(ResponseDone):
             reason.printTraceback()
         else:
-            print 'Response done'
+            print('Response done')
         self.onConnLost.callback(None)
 
 
@@ -57,9 +59,9 @@ def main(reactor, url):
         pprint(vars(response))
         proto = WriteToStdout()
         if response.length is not UNKNOWN_LENGTH:
-            print 'The response body will consist of', response.length, 'bytes.'
+            print('The response body will consist of', response.length, 'bytes.')
         else:
-            print 'The response body length is unknown.'
+            print('The response body length is unknown.')
         response.deliverBody(proto)
         return proto.onConnLost
     d.addCallback(cbResponse)

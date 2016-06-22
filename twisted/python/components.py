@@ -9,16 +9,16 @@ Component architecture for Twisted, based on Zope3 components.
 Using the Zope3 API directly is strongly recommended. Everything
 you need is in the top-level of the zope.interface package, e.g.::
 
-   from zope.interface import Interface, implements
+   from zope.interface import Interface, implementer
 
    class IFoo(Interface):
        pass
 
+   @implementer(IFoo)
    class Foo:
-       implements(IFoo)
 
-   print IFoo.implementedBy(Foo) # True
-   print IFoo.providedBy(Foo()) # True
+   print(IFoo.implementedBy(Foo)) # True
+   print(IFoo.providedBy(Foo())) # True
 
 L{twisted.python.components.registerAdapter} from this module may be used to
 add to Twisted's global adapter registry.
@@ -28,7 +28,7 @@ which allow access to only the parts of another class defined by a specified
 interface.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 # zope3 imports
 from zope.interface import interface, declarations

@@ -334,7 +334,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
 
     def test_assertEqualNoneMessage(self):
         """
-        If a message is specified as C{None}, it is not included in the error
+        If a message is specified as L{None}, it is not included in the error
         message of L{assertEqual}.
         """
         exceptionForNone = self.assertRaises(

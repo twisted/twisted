@@ -227,7 +227,7 @@ class ProcmonTests(unittest.TestCase):
         """
         self.pm.addProcess("foo", ["foo"])
         self.pm.startProcess("foo")
-        self.assertIdentical(None, self.pm.startProcess("foo"))
+        self.assertIsNone(self.pm.startProcess("foo"))
 
 
     def test_startProcessUnknownKeyError(self):
@@ -303,7 +303,7 @@ class ProcmonTests(unittest.TestCase):
         rescheduled, but in the meantime, the service is stopped.
         """
         self.pm.addProcess("foo", ["foo"])
-        self.assertIdentical(None, self.pm.stopProcess("foo"))
+        self.assertIsNone(self.pm.stopProcess("foo"))
 
 
     def test_connectionLostLongLivedProcess(self):
@@ -405,7 +405,7 @@ class ProcmonTests(unittest.TestCase):
         self.pm.startService()
         # advance the reactor to start the process
         self.reactor.advance(0)
-        self.assertTrue("foo" in self.pm.protocols)
+        self.assertIn("foo", self.pm.protocols)
 
 
     def test_stopService(self):

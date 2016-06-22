@@ -327,8 +327,8 @@ class SignalProtocol(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         """
-        Callback C{self.deferred} with C{None} if C{reason} is a
-        L{error.ProcessTerminated} failure with C{exitCode} set to C{None},
+        Callback C{self.deferred} with L{None} if C{reason} is a
+        L{error.ProcessTerminated} failure with C{exitCode} set to L{None},
         C{signal} set to C{self.signal}, and C{status} holding the status code
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
@@ -537,7 +537,7 @@ class ProcessTests(unittest.TestCase):
         self.assertTrue(procTrans.pid)
 
         def afterProcessEnd(ignored):
-            self.assertEqual(procTrans.pid, None)
+            self.assertIsNone(procTrans.pid)
 
         p.transport.closeStdin()
         return finished.addCallback(afterProcessEnd)
@@ -560,7 +560,7 @@ class ProcessTests(unittest.TestCase):
             f.trap(error.ProcessTerminated)
             self.assertEqual(f.value.exitCode, 23)
             # would .signal be available on non-posix?
-            # self.assertEqual(f.value.signal, None)
+            # self.assertIsNone(f.value.signal)
             self.assertRaises(
                 error.ProcessExitedAlready, p.transport.signalProcess, 'INT')
             try:
@@ -1056,7 +1056,7 @@ class PosixProcessBase(object):
         def check(ignored):
             p.reason.trap(error.ProcessDone)
             self.assertEqual(p.reason.value.exitCode, 0)
-            self.assertEqual(p.reason.value.signal, None)
+            self.assertIsNone(p.reason.value.signal)
         d.addCallback(check)
         return d
 
@@ -1076,7 +1076,7 @@ class PosixProcessBase(object):
         def check(ignored):
             p.reason.trap(error.ProcessTerminated)
             self.assertEqual(p.reason.value.exitCode, 1)
-            self.assertEqual(p.reason.value.signal, None)
+            self.assertIsNone(p.reason.value.signal)
         d.addCallback(check)
         return d
 
@@ -1094,7 +1094,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGHUP signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGHUP}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1105,7 +1105,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGINT signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGINT}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1116,7 +1116,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGKILL signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGKILL}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1127,7 +1127,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGTERM signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGTERM}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1265,7 +1265,7 @@ class MockOS(object):
     @ivar WNOHANG: dumb value faking C{os.WNOHANG}.
     @type WNOHANG: C{int}
 
-    @ivar raiseFork: if not C{None}, subsequent calls to fork will raise this
+    @ivar raiseFork: if not L{None}, subsequent calls to fork will raise this
         object.
     @type raiseFork: C{NoneType} or C{Exception}
 
@@ -1291,10 +1291,10 @@ class MockOS(object):
 
     @ivar raiseWaitPid: if set, subsequent calls to waitpid will raise
         the error specified.
-    @type raiseWaitPid: C{None} or a class
+    @type raiseWaitPid: L{None} or a class
 
     @ivar waitChild: if set, subsequent calls to waitpid will return it.
-    @type waitChild: C{None} or a tuple
+    @type waitChild: L{None} or a tuple
 
     @ivar euid: the uid returned by the fake C{os.geteuid}
     @type euid: C{int}
@@ -1313,7 +1313,7 @@ class MockOS(object):
 
     @ivar raiseKill: if set, subsequent call to kill will raise the error
         specified.
-    @type raiseKill: C{None} or an exception instance.
+    @type raiseKill: L{None} or an exception instance.
 
     @ivar readData: data returned by C{os.read}.
     @type readData: C{str}
@@ -1751,7 +1751,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
         else:
@@ -1923,7 +1923,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
             # Check that fd have been closed
@@ -1949,7 +1949,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False, uid=8080)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions,
                 [('fork', False), ('setuid', 0), ('setgid', 0),
@@ -2232,7 +2232,7 @@ class Win32SignalProtocol(SignalProtocol):
 
     def processEnded(self, reason):
         """
-        Callback C{self.deferred} with C{None} if C{reason} is a
+        Callback C{self.deferred} with L{None} if C{reason} is a
         L{error.ProcessTerminated} failure with C{exitCode} set to 1.
         Otherwise, errback with a C{ValueError} describing the problem.
         """
@@ -2340,7 +2340,7 @@ class Win32ProcessTests(unittest.TestCase):
         proc = reactor.spawnProcess(p, pyExe, pyArgs)
 
         def cbConnected(transport):
-            self.assertIdentical(transport, proc)
+            self.assertIs(transport, proc)
             # perform a basic validity test on the handles
             win32api.GetHandleInformation(proc.hProcess)
             win32api.GetHandleInformation(proc.hThread)
@@ -2351,9 +2351,9 @@ class Win32ProcessTests(unittest.TestCase):
 
         def checkTerminated(ignored):
             # The attributes on the process object must be reset...
-            self.assertIdentical(proc.pid, None)
-            self.assertIdentical(proc.hProcess, None)
-            self.assertIdentical(proc.hThread, None)
+            self.assertIsNone(proc.pid)
+            self.assertIsNone(proc.hProcess)
+            self.assertIsNone(proc.hThread)
             # ...and the handles must be closed.
             self.assertRaises(win32api.error,
                               win32api.GetHandleInformation, self.hProcess)
@@ -2421,7 +2421,7 @@ class Dumbwin32procPidTests(unittest.TestCase):
         self.assertEqual("<Process pid=42>", repr(p))
 
         def pidCompleteCb(result):
-            self.assertEqual(None, p.pid)
+            self.assertIsNone(p.pid)
         return d.addCallback(pidCompleteCb)
 
 

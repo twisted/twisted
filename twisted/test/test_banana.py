@@ -15,7 +15,7 @@ from twisted.test.proto_helpers import StringTransport
 
 class MathTests(unittest.TestCase):
     def test_int2b128(self):
-        funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10l]
+        funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10]
         for i in funkylist:
             x = StringIO.StringIO()
             banana.int2b128(i, x.write)
@@ -157,7 +157,7 @@ class BananaTests(BananaTestBase):
         banana without changing value and should come out represented
         as an C{int} (regardless of the type which was encoded).
         """
-        for value in (10151, 10151L):
+        for value in (10151, 10151):
             self.enc.sendEncoded(value)
             self.enc.dataReceived(self.io.getvalue())
             self.assertEqual(self.result, 10151)
@@ -177,7 +177,7 @@ class BananaTests(BananaTestBase):
                 for n in (m, -m-1):
                     self.enc.dataReceived(self.encode(n))
                     self.assertEqual(self.result, n)
-                    if n > sys.maxint or n < -sys.maxint - 1:
+                    if n > sys.maxsize or n < -sys.maxsize - 1:
                         self.assertIsInstance(self.result, long)
                     else:
                         self.assertIsInstance(self.result, int)
@@ -249,9 +249,9 @@ class BananaTests(BananaTestBase):
 
 
     def test_negativeLong(self):
-        self.enc.sendEncoded(-1015l)
+        self.enc.sendEncoded(-1015)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == -1015l, "should be -1015l, got %s" % self.result
+        assert self.result == -1015, "should be -1015l, got %s" % self.result
 
 
     def test_integer(self):
@@ -287,7 +287,7 @@ class BananaTests(BananaTestBase):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5,
                ["six", "seven", ["eight", 9]], [10],
                # TODO: currently the C implementation's a bit buggy...
-               sys.maxint * 3l, sys.maxint * 2l, sys.maxint * -2l]
+               sys.maxint * 3, sys.maxint * 2, sys.maxint * -2]
         self.enc.sendEncoded(foo)
         self.feed(self.io.getvalue())
         assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
@@ -307,13 +307,13 @@ class BananaTests(BananaTestBase):
     def test_oversizedList(self):
         data = '\x02\x01\x01\x01\x01\x80'
         # list(size=0x0101010102, about 4.3e9)
-        self.failUnlessRaises(banana.BananaError, self.feed, data)
+        self.assertRaises(banana.BananaError, self.feed, data)
 
 
     def test_oversizedString(self):
         data = '\x02\x01\x01\x01\x01\x82'
         # string(size=0x0101010102, about 4.3e9)
-        self.failUnlessRaises(banana.BananaError, self.feed, data)
+        self.assertRaises(banana.BananaError, self.feed, data)
 
 
     def test_crashString(self):

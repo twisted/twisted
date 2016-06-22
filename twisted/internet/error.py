@@ -339,11 +339,11 @@ class ProcessTerminated(ConnectionLost):
         @param exitCode: The exit status of the process.  This is roughly like
             the value you might pass to L{os.exit}.  This is L{None} if the
             process exited due to a signal.
-        @type exitCode: L{int} or L{types.NoneType}
+        @type exitCode: L{int} or L{None}
 
         @param signal: The exit signal of the process.  This is L{None} if the
             process did not exit due to a signal.
-        @type signal: L{int} or L{types.NoneType}
+        @type signal: L{int} or L{None}
 
         @param status: The exit code of the process.  This is a platform
             specific combination of the exit code and the exit signal.  See
@@ -440,7 +440,7 @@ class ConnectingCancelledError(Exception):
 class NoProtocol(Exception):
     """
     An C{Exception} that will be raised when the factory given to a
-    L{IStreamClientEndpoint} returns C{None} from C{buildProtocol}.
+    L{IStreamClientEndpoint} returns L{None} from C{buildProtocol}.
     """
 
 

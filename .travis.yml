@@ -11,6 +11,10 @@ addons:
     - libssl-dev
     - libssl1.0.0
 
+cache:
+  directories:
+    - $HOME/.cache/pip
+
 python:
   - "2.7"
   - "3.3"

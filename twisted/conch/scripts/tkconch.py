@@ -6,6 +6,8 @@
 Implementation module for the `tkconch` command.
 """
 
+from __future__ import print_function
+
 import Tkinter, tkFileDialog, tkMessageBox
 from twisted.conch import error
 from twisted.conch.ui import tkvt100
@@ -301,7 +303,7 @@ def run():
     try:
         options.parseOptions(args)
     except usage.UsageError as u:
-        print 'ERROR: %s' % u
+        print('ERROR: %s' % u)
         options.opt_help()
         sys.exit(1)
     for k,v in options.items():
@@ -543,7 +545,7 @@ class SSHSession(channel.SSHChannel):
 
     def dataReceived(self, data):
         if options['ansilog']:
-            print repr(data)
+            print(repr(data))
         frame.write(data)
 
     def extReceived(self, t, data):

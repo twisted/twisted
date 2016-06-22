@@ -186,7 +186,7 @@ class RouterTests(unittest.TestCase):
         """
         Test routing of a message using the default route.
 
-        The default route is the one with C{None} as its key in the
+        The default route is the one with L{None} as its key in the
         routing table. It is taken when there is no more specific route
         in the routing table that matches the stanza's destination.
         """

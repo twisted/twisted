@@ -17,6 +17,8 @@ To run the script:
 
 """
 
+from __future__ import print_function
+
 import sys
 from twisted.python import log
 from twisted.cred import credentials
@@ -32,7 +34,7 @@ class DemoMind(service.PBMind):
     unlikely this will ever do anything interesting.
     """
     def remote_receive(self, sender, recipient, message):
-        print 'Woop', sender, recipient, message
+        print('Woop', sender, recipient, message)
 
 def quitServer(ignored):
     """Quit succeeded, shut down the reactor.

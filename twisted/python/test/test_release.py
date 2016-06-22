@@ -1397,7 +1397,7 @@ class SphinxBuilderTests(TestCase):
                 3. In the case where it's a path to a C{.html} file, the
                    content looks like an HTML file.
 
-        @return: C{None}
+        @return: L{None}
         """
         # check that file exists
         fpath = fileDir.child(fileName)
@@ -1792,12 +1792,18 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         self.assertEqual(e.exception.args,
                          ("Must specify one argument: the Twisted checkout",))
 
-
-    def test_nothing(self):
+    def test_diffFromTrunkNoTopfiles(self):
         """
-        No topfiles means a failure.
+        If there are changes from trunk, then there should also be a topfile.
         """
         runCommand(["git", "checkout", "-b", "mypatch"],
+                   cwd=self.repo.path)
+        somefile = self.repo.child("somefile")
+        somefile.setContent(b"change")
+
+        runCommand(["git", "add", somefile.path, somefile.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"],
                    cwd=self.repo.path)
 
         logs = []
@@ -1807,6 +1813,24 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+
+
+    def test_noChangeFromTrunk(self):
+        """
+        If there are no changes from trunk, then no need to check the topfiles
+        """
+        runCommand(["git", "checkout", "-b", "mypatch"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(
+            logs[-1],
+            "On trunk or no diffs from trunk; no need to look at this.")
 
 
     def test_trunk(self):
@@ -1819,14 +1843,25 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
             CheckTopfileScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
-        self.assertEqual(logs[-1], "On trunk, no need to look at this.")
+        self.assertEqual(
+            logs[-1],
+            "On trunk or no diffs from trunk; no need to look at this.")
 
 
     def test_release(self):
         """
-        Running it on a release branch returns green if there is no topfiles.
+        Running it on a release branch returns green if there is no topfiles
+        even if there are changes.
         """
         runCommand(["git", "checkout", "-b", "release-16.11111-9001"],
+                   cwd=self.repo.path)
+
+        somefile = self.repo.child("somefile")
+        somefile.setContent(b"change")
+
+        runCommand(["git", "add", somefile.path, somefile.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"],
                    cwd=self.repo.path)
 
         logs = []
@@ -1898,7 +1933,8 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
     def test_topfileAdded(self):
         """
-        Running it on a branch with a fragment added returns green.
+        Running it on a branch with a fragment in the topfiles dir added
+        returns green.
         """
         runCommand(["git", "checkout", "-b", "quotefile"],
                    cwd=self.repo.path)

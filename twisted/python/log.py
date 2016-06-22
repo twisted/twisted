@@ -115,7 +115,7 @@ def err(_stuff=None, _why=None, **kw):
     to pass.  It is intended that they be supplied with arguments passed
     positionally, not by keyword.
 
-    @param _stuff: The failure to log.  If C{_stuff} is C{None} a new
+    @param _stuff: The failure to log.  If C{_stuff} is L{None} a new
         L{Failure} will be created from the current exception state.  If
         C{_stuff} is an C{Exception} instance it will be wrapped in a
         L{Failure}.
@@ -478,7 +478,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
     Log observer that writes to a file-like object.
 
     @type timeFormat: C{str} or C{NoneType}
-    @ivar timeFormat: If not C{None}, the format string passed to strftime().
+    @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 
     timeFormat = None
