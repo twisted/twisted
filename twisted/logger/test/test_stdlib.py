@@ -143,7 +143,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].pathname, filename)
         self.assertEqual(records[0].lineno, logLine)
-        self.assertEqual(records[0].exc_info, None)
+        self.assertIsNone(records[0].exc_info)
 
         # Attribute "func" is missing from record, which is weird because it's
         # documented.
