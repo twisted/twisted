@@ -316,7 +316,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         L{server.DNSServerFactory.cache} is L{None} by default.
         """
-        self.assertIs(server.DNSServerFactory().cache, None)
+        self.assertIsNone(server.DNSServerFactory().cache)
 
 
     def test_cacheOverride(self):
@@ -336,7 +336,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         server is capable of performing recursive DNS lookups. It defaults to
         L{False}.
         """
-        self.assertEqual(server.DNSServerFactory().canRecurse, False)
+        self.assertFalse(server.DNSServerFactory().canRecurse)
 
 
     def test_canRecurseOverride(self):
@@ -352,7 +352,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         L{server.DNSServerFactory.verbose} defaults to L{False}.
         """
-        self.assertEqual(server.DNSServerFactory().verbose, False)
+        self.assertFalse(server.DNSServerFactory().verbose)
 
 
     def test_verboseOverride(self):
@@ -360,7 +360,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.__init__} accepts a C{verbose} argument which
         overrides L{server.DNSServerFactory.verbose}.
         """
-        self.assertEqual(server.DNSServerFactory(verbose=True).verbose, True)
+        self.assertTrue(server.DNSServerFactory(verbose=True).verbose)
 
 
     def test_interface(self):
