@@ -27,6 +27,8 @@ To run the script:
 """
 
 
+from __future__ import print_function
+
 # twisted imports
 from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol
@@ -144,7 +146,7 @@ class LogBotFactory(protocol.ClientFactory):
         connector.connect()
 
     def clientConnectionFailed(self, connector, reason):
-        print "connection failed:", reason
+        print("connection failed:", reason)
         reactor.stop()
 
 

@@ -7,9 +7,8 @@ from twisted.pair import ip, raw
 from zope import interface
 
 
+@interface.implementer(raw.IRawDatagramProtocol)
 class MyProtocol:
-    interface.implements(raw.IRawDatagramProtocol)
-
     def __init__(self, expecting):
         self.expecting = list(expecting)
 
@@ -392,7 +391,7 @@ class IPTests(unittest.TestCase):
         """Adding a protocol with a number >=2**32 raises an exception."""
         e = ip.IPProtocol()
         try:
-            e.addProto(2L**32, MyProtocol([]))
+            e.addProto(2**32, MyProtocol([]))
         except TypeError as e:
             if e.args == ('Added protocol must fit in 32 bits',):
                 pass
@@ -405,7 +404,7 @@ class IPTests(unittest.TestCase):
         """Adding a protocol with a number >=2**32 raises an exception."""
         e = ip.IPProtocol()
         try:
-            e.addProto(2L**32+1, MyProtocol([]))
+            e.addProto(2**32+1, MyProtocol([]))
         except TypeError as e:
             if e.args == ('Added protocol must fit in 32 bits',):
                 pass

@@ -165,7 +165,7 @@ def loopbackAsync(server, client, pumpPolicy=identityPumpPolicy):
         contains to the given protocol's C{dataReceived} method.  The signature
         of C{pumpPolicy} is C{(queue, protocol)}.  C{queue} is an object with a
         C{get} method which will return the next string written to the
-        transport, or C{None} if the transport has been disconnected, and which
+        transport, or L{None} if the transport has been disconnected, and which
         evaluates to C{True} if and only if there are more items to be
         retrieved via C{get}.
 

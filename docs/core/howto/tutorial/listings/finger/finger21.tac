@@ -6,7 +6,7 @@ from twisted.protocols import basic
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc
 from twisted.spread import pb
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 import cgi
 
 class IFingerService(Interface):
@@ -58,9 +58,8 @@ class IFingerFactory(Interface):
         """
 
 
+@implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ServerFactory):
-
-    implements(IFingerFactory)
 
     protocol = FingerProtocol
 
@@ -101,9 +100,8 @@ class IFingerSetterFactory(Interface):
         """
 
 
+@implementer(IFingerSetterFactory)
 class FingerSetterFactoryFromService(protocol.ServerFactory):
-
-    implements(IFingerSetterFactory)
 
     protocol = FingerSetterProtocol
 
@@ -151,9 +149,8 @@ class IIRCClientFactory(Interface):
         """
 
 
+@implementer(IIRCClientFactory)
 class IRCClientFactoryFromService(protocol.ClientFactory):
-
-    implements(IIRCClientFactory)
 
     protocol = IRCReplyBot
     nickname = None
@@ -253,9 +250,8 @@ class IPerspectiveFinger(Interface):
         """
 
 
+@implementer(IPerspectiveFinger)
 class PerspectiveFingerFromService(pb.Root):
-
-    implements(IPerspectiveFinger)
 
     def __init__(self, service):
         self.service = service
@@ -271,9 +267,8 @@ components.registerAdapter(PerspectiveFingerFromService,
                            IPerspectiveFinger)
 
 
+@implementer(IFingerService)
 class FingerService(service.Service):
-
-    implements(IFingerService)
 
     def __init__(self, filename):
         self.filename = filename

@@ -179,7 +179,7 @@ def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
 
     @param format: A user-provided format to interpolate warning values into, or
         L{DEPRECATION_WARNING_FORMAT
-        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if C{None} is
+        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if L{None} is
         given.
     @type format: C{str}
 
@@ -218,7 +218,7 @@ def getDeprecationWarningString(callableThing, version, format=None,
     @type format: C{str}
     @param format: A user-provided format to interpolate warning values into,
         or L{DEPRECATION_WARNING_FORMAT
-        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if C{None} is
+        <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if L{None} is
         given
 
     @param callableThing: A callable to be deprecated.

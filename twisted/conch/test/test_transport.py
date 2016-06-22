@@ -574,7 +574,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.sendPacket(ord('A'), b'BCD')
         value = self.transport.value()
         proto.buf = value[:MockCipher.decBlockSize]
-        self.assertEqual(proto.getPacket(), None)
+        self.assertIsNone(proto.getPacket())
         self.assertTrue(testCipher.usedDecrypt)
         self.assertEqual(proto.first, b'\x00\x00\x00\x0e\x09A')
         proto.buf += value[MockCipher.decBlockSize:]
@@ -1024,7 +1024,7 @@ here's some other stuff
         def testBad(packet, error=transport.DISCONNECT_PROTOCOL_ERROR):
             self.packets = []
             self.proto.buf = packet
-            self.assertEqual(self.proto.getPacket(), None)
+            self.assertIsNone(self.proto.getPacket())
             self.assertEqual(len(self.packets), 1)
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
             self.assertEqual(self.packets[0][1][3], chr(error))
@@ -1457,16 +1457,16 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.ssh_NEWKEYS(b'')
         self.assertIs(self.proto.currentEncryptions,
                       self.proto.nextEncryptions)
-        self.assertIs(self.proto.outgoingCompression, None)
-        self.assertIs(self.proto.incomingCompression, None)
+        self.assertIsNone(self.proto.outgoingCompression)
+        self.assertIsNone(self.proto.incomingCompression)
         self.proto.outgoingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'CD')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.outgoingCompression, None)
+        self.assertIsNotNone(self.proto.outgoingCompression)
         self.proto.incomingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'EF')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.incomingCompression, None)
+        self.assertIsNotNone(self.proto.incomingCompression)
 
 
     def test_SERVICE_REQUEST(self):
@@ -1785,8 +1785,8 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         exchangeHash = h.digest()
 
         def _cbTestKEXDH_REPLY(value):
-            self.assertIs(value, None)
-            self.assertEqual(self.calledVerifyHostKey, True)
+            self.assertIsNone(value)
+            self.assertTrue(self.calledVerifyHostKey)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
         signature = self.privObj.sign(exchangeHash)
@@ -1835,19 +1835,19 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.nextEncryptions = MockCipher()
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIs(self.proto.outgoingCompression, None)
-        self.assertIs(self.proto.incomingCompression, None)
+        self.assertIsNone(self.proto.outgoingCompression)
+        self.assertIsNone(self.proto.incomingCompression)
         self.assertIs(self.proto.currentEncryptions,
                       self.proto.nextEncryptions)
         self.assertTrue(secure[0])
         self.proto.outgoingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'GH')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.outgoingCompression, None)
+        self.assertIsNotNone(self.proto.outgoingCompression)
         self.proto.incomingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'IJ')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.incomingCompression, None)
+        self.assertIsNotNone(self.proto.incomingCompression)
 
 
     def test_SERVICE_ACCEPT(self):
@@ -1963,8 +1963,8 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         exchangeHash = h.digest()
 
         def _cbTestKEX_DH_GEX_REPLY(value):
-            self.assertIs(value, None)
-            self.assertEqual(self.calledVerifyHostKey, True)
+            self.assertIsNone(value)
+            self.assertTrue(self.calledVerifyHostKey)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
         signature = self.privObj.sign(exchangeHash)

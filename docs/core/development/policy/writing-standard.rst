@@ -7,8 +7,10 @@ Twisted Writing Standard
 ========================
 
 The Twisted writing standard describes the documentation writing
-styles we prefer in our documentation. This standard applies particularly
-to howtos and other descriptive documentation.
+styles we prefer in our narrative documentation.
+
+This standard applies particularly to howtos and other descriptive documentation.
+For writing API documentation, please refer to :doc:`Docstrings section in our coding standard <coding-standard>`.
 
 This document is meant to help Twisted documentation authors produce
 documentation that does not have the following problems:
