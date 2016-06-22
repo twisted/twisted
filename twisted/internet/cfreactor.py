@@ -108,7 +108,7 @@ class CFReactor(PosixReactorBase):
 
     @ivar _currentSimulator: if a CFTimer is currently scheduled with the CF
         run loop to run Twisted callLater calls, this is a reference to it.
-        Otherwise, it is C{None}
+        Otherwise, it is L{None}
     """
     def __init__(self, runLoop=None, runner=None):
         self._fdmap = {}

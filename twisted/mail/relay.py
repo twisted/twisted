@@ -169,10 +169,10 @@ class ESMTPRelayer(RelayerMixin, smtp.ESMTPClient):
         @type messagePaths: L{list} of L{bytes}
         @param messagePaths: The base filename for each message to be relayed.
 
-        @type args: 3-L{tuple} of (0) L{bytes}, (1) L{NoneType
-            <types.NoneType>} or L{ClientContextFactory
-            <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes} or
-            4-L{tuple} of (0) L{bytes}, (1) L{NoneType <types.NoneType>}
+        @type args: 3-L{tuple} of (0) L{bytes}, (1) L{None} or
+            L{ClientContextFactory
+            <twisted.internet.ssl.ClientContextFactory>},
+            (2) L{bytes} or 4-L{tuple} of (0) L{bytes}, (1) L{None}
             or L{ClientContextFactory
             <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes},
             (3) L{int}

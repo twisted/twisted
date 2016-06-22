@@ -44,7 +44,7 @@ class CommandMixin:
 
     def test_emptyGet(self):
         """
-        Test getting a non-available key: it succeeds but return C{None} as
+        Test getting a non-available key: it succeeds but return L{None} as
         value and C{0} as flag.
         """
         return self._test(
@@ -616,7 +616,7 @@ class MemCacheTests(CommandMixin, TestCase):
     def test_emptyGets(self):
         """
         Test getting a non-available key with gets: it succeeds but return
-        C{None} as value, C{0} as flag and an empty cas value.
+        L{None} as value, C{0} as flag and an empty cas value.
         """
         return self._test(
             self.proto.get("foo", True), "gets foo\r\n",
@@ -641,7 +641,7 @@ class MemCacheTests(CommandMixin, TestCase):
         When getting a non-available key with L{MemCacheProtocol.getMultiple}
         when C{withIdentifier} is C{True}, the other keys are retrieved
         correctly, and the non-available key gets a tuple of C{0} as flag,
-        C{None} as value, and an empty cas value.
+        L{None} as value, and an empty cas value.
         """
         return self._test(
             self.proto.getMultiple(["foo", "bar"], True),

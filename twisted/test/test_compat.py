@@ -640,7 +640,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
     def test_reraiseWithNone(self):
         """
         Calling L{reraise} with an exception instance and a traceback of
-        C{None} re-raises it with a new traceback.
+        L{None} re-raises it with a new traceback.
         """
         try:
             1/0
