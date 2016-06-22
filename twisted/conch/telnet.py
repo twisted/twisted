@@ -414,7 +414,7 @@ class Telnet(protocol.Protocol):
 
             @ivar onResult: When negotiation about this option has been
                 initiated by this side of the connection, a L{Deferred}
-                which will fire with the result of the negotiation.  C{None}
+                which will fire with the result of the negotiation.  L{None}
                 at other times.
             """
             state = 'no'

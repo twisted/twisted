@@ -74,7 +74,7 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
         methods.  To collect all method names, do not pass a value for this
         parameter.
 
-    @return: C{None}
+    @return: L{None}
     """
     for base in classObj.__bases__:
         addMethodNamesToDict(base, dict, prefix, baseClass)
@@ -128,7 +128,7 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
         collecting methods.  Collection proceeds up.  To collect all methods
         from C{obj}, do not pass a value for this parameter.
 
-    @return: C{None}
+    @return: L{None}
     """
     if not curClass:
         curClass = obj.__class__

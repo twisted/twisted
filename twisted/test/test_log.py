@@ -67,7 +67,7 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
     def test_noMessageNoFormat(self):
         """
         If C{"format"} is unspecified and C{"message"} is empty, return
-        C{None}.
+        L{None}.
         """
         eventDict = dict(message=(), isError=0)
         text = log.textFromEventDict(eventDict)

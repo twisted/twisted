@@ -1043,7 +1043,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             @param results: The names of the files in the directory.
 
             @param glob: A shell-style glob through which to filter results (see
-                U{http://docs.python.org/2/library/fnmatch.html}), or C{None}
+                U{http://docs.python.org/2/library/fnmatch.html}), or L{None}
                 for no filtering.
             @type glob: L{str} or L{NoneType}
 
@@ -2536,7 +2536,7 @@ class FTPClientBasic(basic.LineReceiver):
         """
         Login: send the username, send the password.
 
-        If the password is C{None}, the PASS command won't be sent.  Also, if
+        If the password is L{None}, the PASS command won't be sent.  Also, if
         the response to the USER command has a response code of 230 (User logged
         in), then PASS won't be sent either.
         """
@@ -3204,7 +3204,7 @@ def parsePWDResponse(response):
 
     For this example, I will return C{'/home/andrew'}.
 
-    If I can't find the path, I return C{None}.
+    If I can't find the path, I return L{None}.
     """
     match = re.search('"(.*)"', response)
     if match:

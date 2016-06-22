@@ -62,7 +62,7 @@ class SSHUserAuthClientTests(TestCase):
         L{SSHUserAuthClient} looks up public keys from the agent using the
         L{SSHAgentClient} class.  That L{SSHAgentClient.getPublicKey} returns a
         L{Key} object with one of the public keys in the agent.  If no more
-        keys are present, it returns C{None}.
+        keys are present, it returns L{None}.
         """
         agent = SSHAgentClient()
         agent.blobs = [self.rsaPublic.blob()]

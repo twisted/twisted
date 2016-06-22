@@ -55,7 +55,7 @@ class ErrorTests(unittest.TestCase):
     def test_noMessageInvalidStatus(self):
         """
         If no C{message} argument is passed to the L{Error} constructor and
-        C{code} isn't a valid HTTP status code, C{message} stays C{None}.
+        C{code} isn't a valid HTTP status code, C{message} stays L{None}.
         """
         e = error.Error(b"InvalidCode")
         self.assertEqual(e.message, None)
@@ -113,7 +113,7 @@ class PageRedirectTests(unittest.TestCase):
     def test_noMessageInvalidStatusLocationExists(self):
         """
         If no C{message} argument is passed to the L{PageRedirect} constructor
-        and C{code} isn't a valid HTTP status code, C{message} stays C{None}.
+        and C{code} isn't a valid HTTP status code, C{message} stays L{None}.
         """
         e = error.PageRedirect(b"InvalidCode", location=b"/foo")
         self.assertEqual(e.message, None)
@@ -170,7 +170,7 @@ class InfiniteRedirectionTests(unittest.TestCase):
         """
         If no C{message} argument is passed to the L{InfiniteRedirection}
         constructor and C{code} isn't a valid HTTP status code, C{message} stays
-        C{None}.
+        L{None}.
         """
         e = error.InfiniteRedirection(b"InvalidCode", location=b"/foo")
         self.assertEqual(e.message, None)

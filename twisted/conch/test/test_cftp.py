@@ -543,7 +543,7 @@ class StdioClientTests(TestCase):
         """
         Create a local file and return its path.
 
-        When `path` is C{None}, it will create a new temporary file.
+        When `path` is L{None}, it will create a new temporary file.
 
         @param path: Optional path for the new file.
         @type path: C{str}

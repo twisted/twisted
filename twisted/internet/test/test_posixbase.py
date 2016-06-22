@@ -183,7 +183,7 @@ class IterationTimeoutTests(TestCase):
     def test_noCalls(self):
         """
         If there are no delayed calls, C{doIteration} is called with a
-        timeout of C{None}.
+        timeout of L{None}.
         """
         reactor = TimeoutReportReactor()
         timeout = self._checkIterationTimeout(reactor)
@@ -260,7 +260,7 @@ class IterationTimeoutTests(TestCase):
 
     def test_cancelDelayedCall(self):
         """
-        If the only delayed call is canceled, C{None} is the timeout passed
+        If the only delayed call is canceled, L{None} is the timeout passed
         to C{doIteration}.
         """
         reactor = TimeoutReportReactor()

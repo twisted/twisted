@@ -359,7 +359,7 @@ class LookupsTests(TestCase):
 
     def test_requireModuleDefaultNone(self):
         """
-        When module import fails it returns C{None} by default.
+        When module import fails it returns L{None} by default.
         """
         result = reflect.requireModule('no.such.module')
 

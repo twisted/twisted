@@ -689,7 +689,7 @@ class IReactorSSL(Interface):
                         connection has failed.
 
         @param bindAddress: a (host, port) tuple of local address to bind to,
-                            or C{None}.
+                            or L{None}.
 
         @return: An object which provides L{IConnector}.
         """
@@ -1048,13 +1048,13 @@ class IReactorProcess(Interface):
                      sequence of strings. The first string should be the
                      executable's name.
 
-        @type env: a C{dict} mapping C{str} to C{str}, or C{None}.
+        @type env: a C{dict} mapping C{str} to C{str}, or L{None}.
         @param env: the environment variables to pass to the child process. The
                     resulting behavior varies between platforms. If
                       - C{env} is not set:
                         - On POSIX: pass an empty environment.
                         - On Windows: pass C{os.environ}.
-                      - C{env} is C{None}:
+                      - C{env} is L{None}:
                         - On POSIX: pass C{os.environ}.
                         - On Windows: pass C{os.environ}.
                       - C{env} is a C{dict}:
@@ -1446,7 +1446,7 @@ class IReactorDaemonize(Interface):
         Hook to be called immediately before daemonization. No reactor methods
         may be called until L{afterDaemonize} is called.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
 
@@ -1455,7 +1455,7 @@ class IReactorDaemonize(Interface):
         Hook to be called immediately after daemonization. This may only be
         called after L{beforeDaemonize} had been called previously.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
 
@@ -1476,7 +1476,7 @@ class IReactorFDSet(Interface):
                        read events until it is removed from the reactor with
                        L{removeReader}.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
     def addWriter(writer):
@@ -1487,21 +1487,21 @@ class IReactorFDSet(Interface):
                        write events until it is removed from the reactor with
                        L{removeWriter}.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
     def removeReader(reader):
         """
         Removes an object previously added with L{addReader}.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
     def removeWriter(writer):
         """
         Removes an object previously added with L{addWriter}.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
     def removeAll():
@@ -1628,7 +1628,7 @@ class IReadDescriptor(IFileDescriptor):
 
         @return: If an error is encountered which causes the descriptor to
             no longer be valid, a L{Failure} should be returned.  Otherwise,
-            C{None}.
+            L{None}.
         """
 
 
@@ -1645,7 +1645,7 @@ class IWriteDescriptor(IFileDescriptor):
 
         @return: If an error is encountered which causes the descriptor to
             no longer be valid, a L{Failure} should be returned.  Otherwise,
-            C{None}.
+            L{None}.
         """
 
 
@@ -1718,7 +1718,7 @@ class IConsumer(Interface):
 
         @raise RuntimeError: If a producer is already registered.
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -1960,7 +1960,7 @@ class IFileDescriptorReceiver(Interface):
         @param descriptor: The descriptor which was received.
         @type descriptor: C{int}
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -2146,7 +2146,7 @@ class IUNIXTransport(ITransport):
             socket, a pipe, or anything else POSIX tries to treat in the same
             way as a file.
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -2277,9 +2277,9 @@ class INegotiated(ISSLTransport):
         The protocol selected to be spoken using ALPN/NPN. The result from ALPN
         is preferred to the result from NPN if both were used. If the remote
         peer does not support ALPN or NPN, or neither NPN or ALPN are available
-        on this machine, will be C{None}. Otherwise, will be the name of the
+        on this machine, will be L{None}. Otherwise, will be the name of the
         selected protocol as C{bytes}. Note that until the handshake has
-        completed this property may incorrectly return C{None}: wait until data
+        completed this property may incorrectly return L{None}: wait until data
         has been received before trusting it (see
         https://twistedmatrix.com/trac/ticket/6024).
         """
@@ -2359,7 +2359,7 @@ class IProcessTransport(ITransport):
         @type data: C{str}
         @param data: The bytes to write.
 
-        @return: C{None}
+        @return: L{None}
 
         @raise KeyError: If C{childFD} is not a file descriptor that was mapped
             in the child when L{IReactorProcess.spawnProcess} was used to create

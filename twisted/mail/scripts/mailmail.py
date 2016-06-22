@@ -203,10 +203,10 @@ class Configuration:
     @ivar identities: A C{dict} mapping hostnames to credentials to use when
     sending mail to that host.
 
-    @ivar smarthost: C{None} or a hostname through which all outgoing mail will
+    @ivar smarthost: L{None} or a hostname through which all outgoing mail will
     be sent.
 
-    @ivar domain: C{None} or the hostname with which to identify ourselves when
+    @ivar domain: L{None} or the hostname with which to identify ourselves when
     connecting to an MTA.
     """
     def __init__(self):
