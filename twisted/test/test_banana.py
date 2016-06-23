@@ -177,7 +177,7 @@ class BananaTests(BananaTestBase):
                 for n in (m, -m-1):
                     self.enc.dataReceived(self.encode(n))
                     self.assertEqual(self.result, n)
-                    if n > sys.maxsize or n < -sys.maxsize - 1:
+                    if n > sys.maxint or n < -sys.maxint - 1:
                         self.assertIsInstance(self.result, long)
                     else:
                         self.assertIsInstance(self.result, int)
