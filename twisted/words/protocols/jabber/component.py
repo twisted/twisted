@@ -360,7 +360,7 @@ class Router(object):
 
         @param destination: Destination of the route to be added as a host name
                             or L{None} for the default route.
-        @type destination: C{str} or C{NoneType}.
+        @type destination: C{str} or L{None}.
         @param xs: XML Stream to register the route for.
         @type xs: L{EventDispatcher<utility.EventDispatcher>}.
         """

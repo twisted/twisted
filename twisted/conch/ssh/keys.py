@@ -976,7 +976,7 @@ class Key(object):
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
             encrypt with.
-        @type extra: L{bytes} or L{NoneType}
+        @type extra: L{bytes} or L{None}
 
         @rtype: L{bytes}
         """

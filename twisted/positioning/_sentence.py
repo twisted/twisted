@@ -44,7 +44,7 @@ class _BaseSentence(object):
         Initializes a sentence with parsed sentence data.
 
         @param sentenceData: The parsed sentence data.
-        @type sentenceData: C{dict} (C{str} -> C{str} or C{NoneType})
+        @type sentenceData: C{dict} (C{str} -> C{str} or L{None})
         """
         self._sentenceData = sentenceData
 

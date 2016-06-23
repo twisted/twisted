@@ -493,7 +493,7 @@ class ISSHPrivateKey(ICredentials):
 
     @ivar signature: The signed data.  This is checked to verify that the user
         owns the private key.
-    @type signature: L{bytes} or C{NoneType}
+    @type signature: L{bytes} or L{None}
     """
 
 
