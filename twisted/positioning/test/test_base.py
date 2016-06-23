@@ -728,11 +728,11 @@ class PositionErrorTests(TestCase):
         @param pe: The position error under test.
         @type pe: C{PositionError}
         @param pdop: The expected position dilution of precision.
-        @type pdop: C{float} or C{NoneType}
+        @type pdop: C{float} or L{None}
         @param hdop: The expected horizontal dilution of precision.
-        @type hdop: C{float} or C{NoneType}
+        @type hdop: C{float} or L{None}
         @param vdop: The expected vertical dilution of precision.
-        @type vdop: C{float} or C{NoneType}
+        @type vdop: C{float} or L{None}
         """
         self.assertEqual(pe.pdop, pdop)
         self.assertEqual(pe.hdop, hdop)

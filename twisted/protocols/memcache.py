@@ -675,7 +675,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             with the I{stats} command.  The interpretation of this value by
             the server is left undefined by the memcache protocol
             specification.
-        @type arg: L{NoneType} or L{str}
+        @type arg: L{None} or L{str}
 
         @return: a deferred that will fire with a C{dict} of the available
             statistics.

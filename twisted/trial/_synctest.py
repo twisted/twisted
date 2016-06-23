@@ -1106,7 +1106,7 @@ class SynchronousTestCase(_Assertions):
             All warnings include a filename and source line number; if these
             parts of a warning point to a source line which is part of a
             function, then the warning I{points} to that function.
-        @type offendingFunctions: C{NoneType} or L{list} of functions or methods.
+        @type offendingFunctions: L{None} or L{list} of functions or methods.
 
         @raise ValueError: If C{offendingFunctions} is not L{None} and includes
             an object which is not a L{types.FunctionType} or

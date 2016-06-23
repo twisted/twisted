@@ -201,7 +201,7 @@ class DummyRequest(object):
         @param name: The name of the request header for which to retrieve the
             value.  Header names are compared case-insensitively.
 
-        @rtype: C{bytes} or L{NoneType}
+        @rtype: C{bytes} or L{None}
         @return: The value of the specified request header.
         """
         return self.requestHeaders.getRawHeaders(name.lower(), [None])[0]

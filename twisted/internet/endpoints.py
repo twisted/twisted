@@ -1032,7 +1032,7 @@ def _parseTCP(factory, port, interface="", backlog=50):
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
 
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param port: the integer port number to bind
     @type port: C{str}
@@ -1060,7 +1060,7 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
 
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param address: the pathname of the unix socket
     @type address: C{str}
@@ -1093,7 +1093,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param port: the integer port number to bind
     @type port: C{str}
@@ -1394,7 +1394,7 @@ def _parseServer(description, factory, default=None):
     @param default: Deprecated argument, specifying the default parser mode to
         use for unqualified description strings (those which do not have a ':'
         and prefix).
-    @type default: C{str} or C{NoneType}
+    @type default: C{str} or L{None}
 
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """

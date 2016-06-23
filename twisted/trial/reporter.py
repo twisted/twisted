@@ -365,7 +365,7 @@ class Reporter(TestResult):
 
     @ivar _startTime: The time when the first test was started. It defaults to
         L{None}, which means that no test was actually launched.
-    @type _startTime: C{float} or C{NoneType}
+    @type _startTime: C{float} or L{None}
 
     @ivar _warningCache: A C{set} of tuples of warning message (file, line,
         text, category) which have already been written to the output stream
