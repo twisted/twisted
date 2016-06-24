@@ -601,13 +601,13 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         attribute is a readonly property.
 
     @ivar type: The DNS record type. This is a fixed value of 41
-        (C{dns.OPT} for OPT Record. This attribute is a readonly
+        C{dns.OPT} for OPT Record. This attribute is a readonly
         property.
 
-    @see: L{_OPTHeader.__init__} for documentation of other public
+    @see: C{_OPTHeader.__init__} for documentation of other public
         instance attributes.
 
-    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+    @see: C{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
     @since: 13.2
     """
@@ -772,10 +772,10 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     A class to represent OPT record variable options.
 
-    @see: L{_OPTVariableOption.__init__} for documentation of public
+    @see: C{_OPTVariableOption.__init__} for documentation of public
         instance attributes.
 
-    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+    @see: C{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
     @since: 13.2
     """
@@ -2455,12 +2455,12 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
                  checkingDisabled=False, maxSize=512,
                  queries=None, answers=None, authority=None, additional=None):
         """
-        Construct a new L{_EDNSMessage}
+        Construct a new C{_EDNSMessage}
 
-        @see U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
-        @see U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
-        @see U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
-        @see U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
+        @see: U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+        @see: U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
+        @see: U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
+        @see: U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
 
         @param id: A 16 bit identifier assigned by the program that generates
             any kind of query.  This identifier is copied the corresponding
@@ -2529,17 +2529,17 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
             the requestor's network stack.
         @type maxSize: L{int}
 
-        @param queries: The L{list} of L{Query} associated with this message.
+        @param queries: The C{list} of C{Query} associated with this message.
         @type queries: L{list} of L{Query}
 
-        @param answers: The L{list} of answers associated with this message.
+        @param answers: The C{list} of answers associated with this message.
         @type answers: L{list} of L{RRHeader}
 
-        @param authority: The L{list} of authority records associated with this
+        @param authority: The C{list} of authority records associated with this
             message.
         @type authority: L{list} of L{RRHeader}
 
-        @param additional: The L{list} of additional records associated with
+        @param additional: The C{list} of additional records associated with
             this message.
         @type additional: L{list} of L{RRHeader}
         """
@@ -2637,23 +2637,23 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
     @classmethod
     def _fromMessage(cls, message):
         """
-        Construct and return a new L(_EDNSMessage} whose attributes and records
-        are derived from the attributes and records of C{message} (a L{Message}
-        instance)
+        Construct and return a new C{_EDNSMessage} whose attributes and records
+        are derived from the attributes and records of C{message} (a C{Message}
+        instance).
 
-        If present, an I{OPT} record will be extracted from the C{additional}
+        If present, an C{OPT} record will be extracted from the C{additional}
         section and its attributes and options will be used to set the EDNS
-        specific attributes C{extendedRCODE}, c{ednsVersion}, c{dnssecOK},
-        c{ednsOptions}.
+        specific attributes C{extendedRCODE}, C{ednsVersion}, C{dnssecOK},
+        C{ednsOptions}.
 
         The C{extendedRCODE} will be combined with C{message.rCode} and assigned
         to C{self.rCode}.
 
-        @param message: The source L{Message}.
-        @type message: L{Message}
+        @param message: The source C{Message}.
+        @type message: C{Message}
 
-        @return: A new L{_EDNSMessage}
-        @rtype: L{_EDNSMessage}
+        @return: A new C{_EDNSMessage}
+        @rtype: C{_EDNSMessage}
         """
         additional = []
         optRecords = []

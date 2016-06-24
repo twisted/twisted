@@ -27,38 +27,38 @@ from twisted.python import log
 
 class DNSServerFactory(protocol.ServerFactory):
     """
-    Server factory and tracker for L{DNSProtocol} connections.  This class also
+    Server factory and tracker for C{DNSProtocol} connections.  This class also
     provides records for responses to DNS queries.
 
-    @ivar cache: A L{Cache<twisted.names.cache.Cache>} instance whose
+    @ivar cache: A C{Cache<twisted.names.cache.Cache>} instance whose
         C{cacheResult} method is called when a response is received from one of
         C{clients}. Defaults to L{None} if no caches are specified. See
-        C{caches} of L{__init__} for more details.
-    @type cache: L{Cache<twisted.names.cache.Cache} or L{None}
+        C{caches} of C{__init__} for more details.
+    @type cache: C{Cache<twisted.names.cache.Cache} or C{None}
 
     @ivar canRecurse: A flag indicating whether this server is capable of
         performing recursive DNS resolution.
-    @type canRecurse: L{bool}
+    @type canRecurse: C{bool}
 
-    @ivar resolver: A L{resolve.ResolverChain} containing an ordered list of
+    @ivar resolver: A C{resolve.ResolverChain} containing an ordered list of
         C{authorities}, C{caches} and C{clients} to which queries will be
         dispatched.
-    @type resolver: L{resolve.ResolverChain}
+    @type resolver: C{resolve.ResolverChain}
 
-    @ivar verbose: See L{__init__}
+    @ivar verbose: See C{__init__}
 
-    @ivar connections: A list of all the connected L{DNSProtocol} instances
+    @ivar connections: A list of all the connected C{DNSProtocol} instances
         using this object as their controller.
     @type connections: C{list} of L{DNSProtocol} instances
 
     @ivar protocol: A callable used for building a DNS stream protocol. Called
-        by L{DNSServerFactory.buildProtocol} and passed the L{DNSServerFactory}
+        by C{DNSServerFactory.buildProtocol} and passed the C{DNSServerFactory}
         instance as the one and only positional argument.  Defaults to
-        L{dns.DNSProtocol}.
-    @type protocol: L{IProtocolFactory} constructor
+        C{dns.DNSProtocol}.
+    @type protocol: C{IProtocolFactory} constructor
 
     @ivar _messageFactory: A response message constructor with an initializer
-         signature matching L{dns.Message.__init__}.
+         signature matching C{dns.Message.__init__}.
     @type _messageFactory: C{callable}
     """
 
@@ -70,22 +70,22 @@ class DNSServerFactory(protocol.ServerFactory):
     def __init__(self, authorities=None, caches=None, clients=None, verbose=0):
         """
         @param authorities: Resolvers which provide authoritative answers.
-        @type authorities: L{list} of L{IResolver} providers
+        @type authorities: C{list} of C{IResolver} providers
 
         @param caches: Resolvers which provide cached non-authoritative
             answers. The first cache instance is assigned to
             C{DNSServerFactory.cache} and its C{cacheResult} method will be
             called when a response is received from one of C{clients}.
-        @type caches: L{list} of L{Cache<twisted.names.cache.Cache} instances
+        @type caches: C{list} of C{Cache<twisted.names.cache.Cache} instances
 
         @param clients: Resolvers which are capable of performing recursive DNS
             lookups.
-        @type clients: L{list} of L{IResolver} providers
+        @type clients: C{list} of C{IResolver} providers
 
         @param verbose: An integer controlling the verbosity of logging of
             queries and responses. Default is C{0} which means no logging. Set
             to C{2} to enable logging of full query and response messages.
-        @param verbose: L{int}
+        @type verbose: C{int}
         """
         resolvers = []
         if authorities is not None:

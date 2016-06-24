@@ -1233,19 +1233,19 @@ def objectType(obj):
 
 def _getPersistentRSAKey(location, keySize=4096):
     """
-    This function returns a persistent L{Key}.
+    This function returns a persistent C{Key}.
 
     The key is loaded from a PEM file in C{location}. If it does not exist, a
     key with the key size of C{keySize} is generated and saved.
 
     @param location: Where the key is stored.
-    @type location: L{twisted.python.filepath.FilePath)
+    @type location: C{twisted.python.filepath.FilePath}
 
     @param keySize: The size of the key, if it needs to be generated.
-    @type keySize: L{int}
+    @type keySize: C{int}
 
     @returns: A persistent key.
-    @rtype: L{Key}
+    @rtype: C{Key}
     """
     location.parent().makedirs(ignoreExistingDirectory=True)
 

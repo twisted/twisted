@@ -103,15 +103,15 @@ copy_reg.pickle(types.MethodType, pickleMethod, unpickleMethod)
 
 def _pickleFunction(f):
     """
-    Reduce, in the sense of L{pickle}'s C{object.__reduce__} special method, a
+    Reduce, in the sense of C{pickle}'s C{object.__reduce__} special method, a
     function object into its constituent parts.
 
     @param f: The function to reduce.
-    @type f: L{types.FunctionType}
+    @type f: C{types.FunctionType}
 
-    @return: a 2-tuple of a reference to L{_unpickleFunction} and a tuple of
+    @return: a 2-tuple of a reference to C{_unpickleFunction} and a tuple of
         its arguments, a 1-tuple of the function's fully qualified name.
-    @rtype: 2-tuple of C{(callable, native string}}
+    @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == '<lambda>':
         return None

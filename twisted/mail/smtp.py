@@ -1415,7 +1415,7 @@ class ESMTPClient(SMTPClient):
         @param auth: The Authentication mechanism to register
         @type auth: L{IClientAuthentication} implementor
 
-        @return L{None}
+        @return: L{None}
         """
         self.authenticators.append(auth)
 

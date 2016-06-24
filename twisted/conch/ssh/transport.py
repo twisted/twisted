@@ -107,8 +107,8 @@ class SSHCiphers:
     to encrypt and authenticate the SSH connection.
 
     @cvar cipherMap: A dictionary mapping SSH encryption names to 3-tuples of
-                     (<cryptography.hazmat.primitives.interfaces.CipherAlgorithm>,
-                      <block size>, <cryptography.hazmat.primitives.interfaces.Mode>)
+        (<cryptography.hazmat.primitives.interfaces.CipherAlgorithm>,
+        <block size>, <cryptography.hazmat.primitives.interfaces.Mode>)
     @cvar macMap: A dictionary mapping SSH MAC names to hash modules.
 
     @ivar outCipType: the string type of the outgoing cipher.
