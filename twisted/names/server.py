@@ -38,7 +38,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
     @ivar canRecurse: A flag indicating whether this server is capable of
         performing recursive DNS resolution.
-    @type canRecurse: C{bool}
+    @type canRecurse: L{bool}
 
     @ivar resolver: A C{resolve.ResolverChain} containing an ordered list of
         C{authorities}, C{caches} and C{clients} to which queries will be

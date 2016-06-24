@@ -1008,17 +1008,17 @@ class IReactorSocket(Interface):
         @type fileDescriptor: C{int}
 
         @param addressFamily: The address family or I{domain} of the socket.
-            For example, C{socket.AF_INET6}.
+            For example, L{socket.AF_INET6}.
         @type addressFamily: C{int}
 
-        @param protocol: A C{DatagramProtocol} instance to connect to
+        @param protocol: A L{DatagramProtocol} instance to connect to
             a UDP transport.
-        @type protocol: C{DatagramProtocol}
+        @type protocol: L{DatagramProtocol}
 
         @param maxPacketSize: The maximum packet size to accept.
         @type maxPacketSize: C{int}
 
-        @return: An object providing C{IListeningPort}.
+        @return: An object providing L{IListeningPort}.
 
         @raise UnsupportedAddressFamily: If the given address family is not
             supported by this reactor, or not supported with the given socket

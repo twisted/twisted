@@ -1059,7 +1059,7 @@ class H2Stream(object):
 
     def unregisterProducer(self):
         """
-        @see: C{IConsumer.unregisterProducer}
+        @see: L{IConsumer.unregisterProducer}
         """
         # When the producer is unregistered, we're done.
         if self.producer is not None and not self.hasStreamingProducer:

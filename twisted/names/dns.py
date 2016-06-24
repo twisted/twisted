@@ -2529,17 +2529,17 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
             the requestor's network stack.
         @type maxSize: L{int}
 
-        @param queries: The C{list} of C{Query} associated with this message.
+        @param queries: The L{list} of L{Query} associated with this message.
         @type queries: L{list} of L{Query}
 
-        @param answers: The C{list} of answers associated with this message.
+        @param answers: The L{list} of answers associated with this message.
         @type answers: L{list} of L{RRHeader}
 
-        @param authority: The C{list} of authority records associated with this
+        @param authority: The L{list} of authority records associated with this
             message.
         @type authority: L{list} of L{RRHeader}
 
-        @param additional: The C{list} of additional records associated with
+        @param additional: The L{list} of additional records associated with
             this message.
         @type additional: L{list} of L{RRHeader}
         """
