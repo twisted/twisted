@@ -243,7 +243,6 @@ modules = [
     "twisted.trial.test.packages",
     "twisted.trial.test.skipping",
     "twisted.trial.test.suppression",
-    "twisted.trial.test.suppression",
     "twisted.trial.unittest",
     "twisted.trial.util",
     "twisted.web.__init__",
