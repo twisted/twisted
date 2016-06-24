@@ -455,11 +455,18 @@ While the Trial bug is not fixed, to trigger test failures on unhandled deprecat
 
 There are several options for checking that a code is deprecated and that using it raises a ``DeprecationWarning``.
 
-In order of decreasing preference:
+There are helper methods available for handling deprecated callables
+(:api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`)
+and deprecated classes or module attributes
+(:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute`).
 
-* :api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <flushWarnings>`
-* :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>`
-* :api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>` and :api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute>`
+If the deprecation warning has a customized message or cannot be caught using these helpers,
+you can use :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>`
+to specify the exact warning you expect.
+
+Lastly, you can use :api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <flushWarnings>`
+after performing any deprecated activity. This is the most precise, but also the most verbose,
+way to assert that you've raised a DeprecationWarning.
 
 
 .. code-block:: python
@@ -471,6 +478,28 @@ In order of decreasing preference:
         """
         Tests for deprecated code.
         """
+
+
+        def test_deprecationUsingCallDeprecated(self):
+            """
+            callDeprecated() assumes that the DeprecationWarning message
+            follows Twisted's standard format.
+            """
+            self.callDeprecated(
+                Version("Twisted", 1, 2, 0), db.getUser, 'some-user')
+
+
+        def test_deprecationUsingAssertWarns(self):
+            """
+            assertWarns() is designed as a general helper to check any
+            type of warnings and can be used for DeprecationsWarnings.
+            """
+            self.assertWarns(
+                DeprecationWarning,
+                'twisted.Identity.getUser was deprecated in Twisted 15.0.0 '
+                'Use twisted.get_user instead.',
+                __file__,
+                db.getUser, 'some-user')
 
 
         def test_deprecationUsingFlushWarnings(self):
@@ -490,28 +519,6 @@ In order of decreasing preference:
             self.assertEqual(1, len(warnings))
             self.assertEqual(DeprecationWarning, warnings[0]['category'])
             self.assertEqual(message, warnings[0]['message'])
-
-
-        def test_deprecationUsingAssertWarns(self):
-            """
-            assertWarns() is designed as a general helper to check any
-            type of warnings and can be used for DeprecationsWarnings.
-            """
-            self.assertWarns(
-                DeprecationWarning,
-                'twisted.Identity.getUser was deprecated in Twisted 15.0.0 '
-                'Use twisted.get_user instead.',
-                __file__,
-                db.getUser, 'some-user')
-
-
-        def test_deprecationUsingCallDeprecated(self):
-            """
-            Avoid using self.callDeprecated() just to check the deprecation
-            call.
-            """
-            self.callDeprecated(
-                Version("Twisted", 1, 2, 0), db.getUser, 'some-user')
 
 
 When code is deprecated, all previous tests in which the code is called and tested will now raise ``DeprecationWarning``\ s.
