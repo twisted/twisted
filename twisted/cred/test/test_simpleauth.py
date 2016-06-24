@@ -9,8 +9,8 @@ from __future__ import division, absolute_import
 
 from twisted.trial.unittest import TestCase
 from twisted.cred.credentials import UsernamePassword, IUsernamePassword
-from twisted.cred.credentials import UsernameHashedPassword
 from twisted.cred.credentials import IUsernameHashedPassword
+from twisted.python.versions import Version
 
 
 class UsernamePasswordTests(TestCase):
@@ -62,6 +62,8 @@ class UsernameHashedPasswordTests(TestCase):
         The initialisation of L{UsernameHashedPassword} will set C{username}
         and C{hashed} on it.
         """
+        UsernameHashedPassword = self.getDeprecatedModuleAttribute(
+            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
         creds = UsernameHashedPassword(b"foo", b"bar")
         self.assertEqual(creds.username, b"foo")
         self.assertEqual(creds.hashed, b"bar")
@@ -72,6 +74,8 @@ class UsernameHashedPasswordTests(TestCase):
         Calling C{checkPassword} on a L{UsernameHashedPassword} will return
         L{True} when the password given is the password on the object.
         """
+        UsernameHashedPassword = self.getDeprecatedModuleAttribute(
+            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
         creds = UsernameHashedPassword(b"user", b"pass")
         self.assertTrue(creds.checkPassword(b"pass"))
 
@@ -81,6 +85,8 @@ class UsernameHashedPasswordTests(TestCase):
         Calling C{checkPassword} on a L{UsernameHashedPassword} will return
         L{False} when the password given is NOT the password on the object.
         """
+        UsernameHashedPassword = self.getDeprecatedModuleAttribute(
+            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
         creds = UsernameHashedPassword(b"user", b"pass")
         self.assertFalse(creds.checkPassword(b"someotherpass"))
 
@@ -89,5 +95,7 @@ class UsernameHashedPasswordTests(TestCase):
         """
         L{UsernameHashedPassword} implements L{IUsernameHashedPassword}.
         """
+        UsernameHashedPassword = self.getDeprecatedModuleAttribute(
+            'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
         self.assertTrue(
             IUsernameHashedPassword.implementedBy(UsernameHashedPassword))

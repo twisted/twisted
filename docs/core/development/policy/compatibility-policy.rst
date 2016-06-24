@@ -443,14 +443,23 @@ There are two other options:
 Testing Deprecation Code
 ------------------------
 
-Like all changes in Twisted, deprecations must come with associated automated tested.
+Like all changes in Twisted, deprecations must come with associated automated tests.
+
+Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_), unhandled deprecation warnings will not cause test failures or show in test results.
+
+While the Trial bug is not fixed, to trigger test failures on unhandled deprecation warnings use:
+
+.. code-block:: console
+
+    python -Werror::DeprecationWarning ./bin/trial twisted.conch
+
 There are several options for checking that a code is deprecated and that using it raises a ``DeprecationWarning``.
 
 In order of decreasing preference:
 
 * :api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <flushWarnings>`
 * :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>`
-* :api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`
+* :api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>` and :api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute>`
 
 
 .. code-block:: python
@@ -530,10 +539,27 @@ Making calls to the deprecated code without raising these warnings can be done u
             self.assertEqual('some-value', user.homePath)
 
 
-Due to a bug in Trial (`#6348 <https://twistedmatrix.com/trac/ticket/6348>`_), unhandled deprecation warnings will not cause test failures or show in test results.
+Tests which need to use deprecated classes should use the
+:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute>` helper.
 
-While the Trial bug is not fixed, to trigger test failures on unhandled deprecation warnings use:
+.. code-block:: python
 
-.. code-block:: console
+    from twisted.trial import unittest
 
-    python -Werror::DeprecationWarning ./bin/trial twisted.conch
+
+    class UsernameHashedPasswordTests(unittest.TestCase):
+        """
+        Tests for L{UsernameHashedPassword}.
+        """
+        def test_initialisation(self):
+            """
+            The initialisation of L{UsernameHashedPassword} will set C{username}
+            and C{hashed} on it.
+            """
+            UsernameHashedPassword = self.getDeprecatedModuleAttribute(
+                'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 16, 3, 0))
+            creds = UsernameHashedPassword(b"foo", b"bar")
+            self.assertEqual(creds.username, b"foo")
+            self.assertEqual(creds.hashed, b"bar")
+
+
