@@ -70,7 +70,7 @@ class ComponentAuthTests(unittest.TestCase):
         self.authComplete = False
         outlist = []
 
-        ca = component.ConnectComponentAuthenticator("cjid", u"secret")
+        ca = component.ConnectComponentAuthenticator(u"cjid", u"secret")
         xs = xmlstream.XmlStream(ca)
         xs.transport = DummyTransport(outlist)
 
@@ -79,7 +79,7 @@ class ComponentAuthTests(unittest.TestCase):
 
         # Go...
         xs.connectionMade()
-        xs.dataReceived("<stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='cjid' id='12345'>")
+        xs.dataReceived(b"<stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='cjid' id='12345'>")
 
         # Calculate what we expect the handshake value to be
         hv = sha1(b"%s%s" % (b"12345", b"secret")).hexdigest().encode('ascii')
