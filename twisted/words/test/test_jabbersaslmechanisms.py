@@ -12,6 +12,9 @@ from twisted.trial import unittest
 from twisted.words.protocols.jabber import sasl_mechanisms
 
 class PlainTests(unittest.TestCase):
+    """
+    Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.Plain}.
+    """
     def test_getInitialResponse(self):
         """
         Test the initial response.
@@ -35,6 +38,9 @@ class AnonymousTests(unittest.TestCase):
 
 
 class DigestMD5Tests(unittest.TestCase):
+    """
+    Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.DigestMD5}.
+    """
     def setUp(self):
         self.mechanism = sasl_mechanisms.DigestMD5(
             u'xmpp', u'example.org', None, u'test', u'secret')
@@ -105,6 +111,16 @@ class DigestMD5Tests(unittest.TestCase):
         directives = self.mechanism._parse(
             self.mechanism.getResponse(challenge))
         self.assertEqual(directives[b'realm'], b'\xc3\xa9chec.example.org')
+
+
+    def test_getResponseRspauth(self):
+        """
+        If the challenge just has a rspauth directive, the response is empty.
+        """
+        challenge = \
+            b'rspauth=cnNwYXV0aD1lYTQwZjYwMzM1YzQyN2I1NTI3Yjg0ZGJhYmNkZmZmZA=='
+        response = self.mechanism.getResponse(challenge)
+        self.assertEqual(b"", response)
 
 
     def test_calculateResponse(self):
