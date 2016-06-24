@@ -1059,7 +1059,7 @@ class H2Stream(object):
 
     def unregisterProducer(self):
         """
-        @see L{IConsumer.unregisterProducer}
+        @see: L{IConsumer.unregisterProducer}
         """
         # When the producer is unregistered, we're done.
         if self.producer is not None and not self.hasStreamingProducer:
@@ -1073,7 +1073,7 @@ class H2Stream(object):
     # Implementation: IPushProducer
     def stopProducing(self):
         """
-        @see L{IProducer.stopProducing}
+        @see: L{IProducer.stopProducing}
         """
         self.producing = False
         self.abortConnection()
@@ -1081,14 +1081,14 @@ class H2Stream(object):
 
     def pauseProducing(self):
         """
-        @see L{IPushProducer.pauseProducing}
+        @see: L{IPushProducer.pauseProducing}
         """
         self.producing = False
 
 
     def resumeProducing(self):
         """
-        @see L{IPushProducer.resumeProducing}
+        @see: L{IPushProducer.resumeProducing}
         """
         self.producing = True
         consumedLength = 0
