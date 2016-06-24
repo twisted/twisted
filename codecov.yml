@@ -1,5 +1,7 @@
 #
-# We want %100 coverage for new patches to make sure we are always increasing
+# For documentation see https://codecov.io/gh/twisted/twisted/settings/yaml
+#
+# We want 100% coverage for new patches to make sure we are always increasing
 # the coverage.
 #
 # For now codecov.io has no way to fail if project overall coverage is
