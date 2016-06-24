@@ -17,7 +17,7 @@ Test running processes.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import gzip
 import os
@@ -1267,7 +1267,7 @@ class MockOS(object):
 
     @ivar raiseFork: if not L{None}, subsequent calls to fork will raise this
         object.
-    @type raiseFork: C{NoneType} or C{Exception}
+    @type raiseFork: L{None} or C{Exception}
 
     @ivar raiseExec: if set, subsequent calls to execvpe will raise an error.
     @type raiseExec: C{bool}

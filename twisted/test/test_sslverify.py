@@ -1426,7 +1426,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @param serverContextSetup: a 1-argument callable invoked with the
             L{OpenSSL.SSL.Context} after it's produced.
         @type serverContextSetup: L{callable} taking L{OpenSSL.SSL.Context}
-            returning L{NoneType}.
+            returning L{None}.
 
         @param validCertificate: Is the server's certificate valid?  L{True} if
             so, L{False} otherwise.

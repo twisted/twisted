@@ -732,7 +732,7 @@ class DatagramProtocol(AbstractDatagramProtocol):
     """
     Protocol for datagram-oriented transport, e.g. UDP.
 
-    @type transport: C{NoneType} or
+    @type transport: L{None} or
         L{IUDPTransport<twisted.internet.interfaces.IUDPTransport>} provider
     @ivar transport: The transport with which this protocol is associated,
         if it is associated with one.

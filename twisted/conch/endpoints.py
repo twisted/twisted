@@ -585,7 +585,7 @@ class SSHCommandClientEndpoint(object):
             whether to accept the server host keys.  If L{None}, a L{ConsoleUI}
             connected to /dev/tty will be used; if /dev/tty is unavailable, an
             object which answers C{b"no"} to all prompts will be used.
-        @type ui: L{NoneType} or L{ConsoleUI}
+        @type ui: L{None} or L{ConsoleUI}
 
         @return: A new instance of C{cls} (probably
             L{SSHCommandClientEndpoint}).

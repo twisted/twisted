@@ -1045,7 +1045,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             @param glob: A shell-style glob through which to filter results (see
                 U{http://docs.python.org/2/library/fnmatch.html}), or L{None}
                 for no filtering.
-            @type glob: L{str} or L{NoneType}
+            @type glob: L{str} or L{None}
 
             @return: A C{tuple} containing the status code for a successful
                 transfer.

@@ -823,7 +823,7 @@ class Request:
         @type key: C{bytes}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{bytes} or C{NoneType}
+        @rtype: C{bytes} or L{None}
         @return: The value of the specified header, or L{None} if that header
             was not present in the request.
         """

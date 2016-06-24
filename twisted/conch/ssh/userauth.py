@@ -698,7 +698,7 @@ class SSHUserAuthClient(service.SSHService):
         This implementation always returns L{None}.  Override it in a
         subclass to actually find and return a public key object.
 
-        @rtype: L{Key} or L{NoneType}
+        @rtype: L{Key} or L{None}
         """
         return None
 

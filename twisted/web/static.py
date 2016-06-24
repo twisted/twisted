@@ -879,7 +879,7 @@ class DirectoryLister(resource.Resource):
     @ivar dirs: filtered content of C{path}, if the whole content should not be
         displayed (default to L{None}, which means the actual content of
         C{path} is printed).
-    @type dirs: C{NoneType} or C{list}
+    @type dirs: L{None} or C{list}
 
     @ivar path: directory which content should be listed.
     @type path: C{str}

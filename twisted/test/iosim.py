@@ -88,11 +88,11 @@ class FakeTransport:
 
         @param hostAddress: The value to return from C{getHost}.  L{None}
             results in a new L{FakeAddress} being created to use as the value.
-        @type hostAddress: L{IAddress} provider or L{NoneType}
+        @type hostAddress: L{IAddress} provider or L{None}
 
         @param peerAddress: The value to return from C{getPeer}.  L{None}
             results in a new L{FakeAddress} being created to use as the value.
-        @type peerAddress: L{IAddress} provider or L{NoneType}
+        @type peerAddress: L{IAddress} provider or L{None}
         """
         self.protocol = protocol
         self.isServer = isServer

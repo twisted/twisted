@@ -56,7 +56,7 @@ class IRequest(Interface):
         @type key: C{str}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{str} or C{NoneType}
+        @rtype: C{str} or L{None}
         @return: The value of the specified header, or L{None} if that header
             was not present in the request.
         """
@@ -104,7 +104,7 @@ class IRequest(Interface):
 
         @returns: the client IP address or L{None} if the request was submitted
             over a transport where IP addresses do not make sense.
-        @rtype: L{str} or C{NoneType}
+        @rtype: L{str} or L{None}
         """
 
 
@@ -115,7 +115,7 @@ class IRequest(Interface):
 
         This method is B{deprecated}.  See L{getClientIP} instead.
 
-        @rtype: C{NoneType} or L{str}
+        @rtype: L{None} or L{str}
         @return: The canonical hostname of the client, as determined by
             performing a name lookup on the IP address of the client.
         """
@@ -482,7 +482,7 @@ class IRenderable(Interface):
         """
         Get the document for this L{IRenderable}.
 
-        @type request: L{IRequest} provider or C{NoneType}
+        @type request: L{IRequest} provider or L{None}
         @param request: The request in response to which this method is being
             invoked.
 
@@ -706,7 +706,7 @@ class IAgent(Interface):
             send no extra headers).  An implementation may add its own headers
             to this (for example for client identification or content
             negotiation).
-        @type headers: L{Headers} or L{NoneType}
+        @type headers: L{Headers} or L{None}
 
         @param bodyProducer: An object which can generate bytes to make up the
             body of this request (for example, the properly encoded contents of

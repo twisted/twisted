@@ -119,7 +119,7 @@ def err(_stuff=None, _why=None, **kw):
         L{Failure} will be created from the current exception state.  If
         C{_stuff} is an C{Exception} instance it will be wrapped in a
         L{Failure}.
-    @type _stuff: C{NoneType}, C{Exception}, or L{Failure}.
+    @type _stuff: L{None}, C{Exception}, or L{Failure}.
 
     @param _why: The source of this failure.  This will be logged along with
         C{_stuff} and should describe the context in which the failure
@@ -477,7 +477,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
     """
     Log observer that writes to a file-like object.
 
-    @type timeFormat: C{str} or C{NoneType}
+    @type timeFormat: C{str} or L{None}
     @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 

@@ -706,7 +706,7 @@ class TimeoutMixin:
         """
         Change the timeout period
 
-        @type period: C{int} or C{NoneType}
+        @type period: C{int} or L{None}
         @param period: The period, in seconds, to change the timeout to, or
         L{None} to disable the timeout.
         """
