@@ -19,6 +19,8 @@ U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 @since: 14.0
 """
 
+SHOULD_TRIGGER_A_PYFLAKES_ERROR
+
 from __future__ import absolute_import, division
 
 import operator
