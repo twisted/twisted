@@ -10,6 +10,7 @@ import zipfile
 from hashlib import md5
 
 from twisted.python import zipstream, filepath
+from twisted.python.compat import xrange
 from twisted.trial import unittest
 
 
