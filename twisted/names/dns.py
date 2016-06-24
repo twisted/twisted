@@ -604,10 +604,10 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         C{dns.OPT} for OPT Record. This attribute is a readonly
         property.
 
-    @see: C{_OPTHeader.__init__} for documentation of other public
+    @see: L{_OPTHeader.__init__} for documentation of other public
         instance attributes.
 
-    @see: C{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+    @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
     @since: 13.2
     """
@@ -772,10 +772,10 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     A class to represent OPT record variable options.
 
-    @see: C{_OPTVariableOption.__init__} for documentation of public
+    @see: L{_OPTVariableOption.__init__} for documentation of public
         instance attributes.
 
-    @see: C{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+    @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
     @since: 13.2
     """
@@ -2455,7 +2455,7 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
                  checkingDisabled=False, maxSize=512,
                  queries=None, answers=None, authority=None, additional=None):
         """
-        Construct a new C{_EDNSMessage}
+        Construct a new L{_EDNSMessage}
 
         @see: U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
         @see: U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
@@ -2637,7 +2637,7 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
     @classmethod
     def _fromMessage(cls, message):
         """
-        Construct and return a new C{_EDNSMessage} whose attributes and records
+        Construct and return a new L{_EDNSMessage} whose attributes and records
         are derived from the attributes and records of C{message} (a C{Message}
         instance).
 
@@ -2649,11 +2649,11 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
         The C{extendedRCODE} will be combined with C{message.rCode} and assigned
         to C{self.rCode}.
 
-        @param message: The source C{Message}.
-        @type message: C{Message}
+        @param message: The source L{Message}.
+        @type message: L{Message}
 
-        @return: A new C{_EDNSMessage}
-        @rtype: C{_EDNSMessage}
+        @return: A new L{_EDNSMessage}
+        @rtype: L{_EDNSMessage}
         """
         additional = []
         optRecords = []

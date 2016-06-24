@@ -1073,7 +1073,7 @@ class H2Stream(object):
     # Implementation: IPushProducer
     def stopProducing(self):
         """
-        @see: C{IProducer.stopProducing}
+        @see: L{IProducer.stopProducing}
         """
         self.producing = False
         self.abortConnection()
@@ -1081,14 +1081,14 @@ class H2Stream(object):
 
     def pauseProducing(self):
         """
-        @see: C{IPushProducer.pauseProducing}
+        @see: L{IPushProducer.pauseProducing}
         """
         self.producing = False
 
 
     def resumeProducing(self):
         """
-        @see: C{IPushProducer.resumeProducing}
+        @see: L{IPushProducer.resumeProducing}
         """
         self.producing = True
         consumedLength = 0
