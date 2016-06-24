@@ -19,7 +19,7 @@ class DummySASLMechanism(object):
     Dummy SASL mechanism.
 
     This just returns the initialResponse passed on creation, stores any
-    challenges and replies with an empty response.
+    challenges and replies with the value of C{response}.
 
     @ivar challenge: Last received challenge.
     @type challenge: C{unicode}.
@@ -30,6 +30,7 @@ class DummySASLMechanism(object):
 
     challenge = None
     name = u"DUMMY"
+    response = b""
 
     def __init__(self, initialResponse):
         self.initialResponse = initialResponse
@@ -39,7 +40,7 @@ class DummySASLMechanism(object):
 
     def getResponse(self, challenge):
         self.challenge = challenge
-        return b""
+        return self.response
 
 
 class DummySASLInitiatingInitializer(sasl.SASLInitiatingInitializer):
@@ -137,6 +138,21 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         challenge.addContent(u'bXkgY2hhbGxlbmdl')
         self.init.onChallenge(challenge)
         self.assertEqual(b'my challenge', self.init.mechanism.challenge)
+        self.init.onSuccess(None)
+        return d
+
+
+    def test_onChallengeResponse(self):
+        """
+        A non-empty response gets encoded and included as character data.
+        """
+        d = self.init.start()
+        challenge = domish.Element((NS_XMPP_SASL, 'challenge'))
+        challenge.addContent(u'bXkgY2hhbGxlbmdl')
+        self.init.mechanism.response = b"response"
+        self.init.onChallenge(challenge)
+        response = self.output[1]
+        self.assertEqual(u'cmVzcG9uc2U=', unicode(response))
         self.init.onSuccess(None)
         return d
 
