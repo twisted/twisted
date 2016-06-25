@@ -396,7 +396,7 @@ class _ProxiedClassMethod(object):
 class _ProxyDescriptor(object):
     """
     A descriptor which will proxy attribute access, mutation, and
-    deletion to the L{original} attribute of the object it is being accessed
+    deletion to the original attribute of the object it is being accessed
     from.
 
     @ivar attributeName: the name of the attribute which this descriptor will
