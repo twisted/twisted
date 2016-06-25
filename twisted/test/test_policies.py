@@ -655,7 +655,7 @@ class TimeoutMixinTests(unittest.TestCase):
     def test_overriddenCallLater(self):
         """
         Test that the callLater of the clock is used instead of
-        C{reactor.callLater}.
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
         """
         self.proto.setTimeout(10)
         self.assertEqual(len(self.clock.calls), 1)

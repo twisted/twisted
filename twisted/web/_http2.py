@@ -271,7 +271,8 @@ class H2Connection(Protocol):
     def _sendPrioritisedData(self, *args):
         """
         The data sending loop. This function repeatedly calls itself, either
-        from L{Deferred}s or from L{twisted.internet.reactor.callLater}.
+        from L{Deferred}s or from
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
 
         This function sends data on streams according to the rules of HTTP/2
         priority. It ensures that the data from each stream is interleved

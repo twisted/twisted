@@ -264,7 +264,9 @@ class ThrottlingFactory(WrappingFactory):
 
     def callLater(self, period, func):
         """
-        Wrapper around L{reactor.callLater} for test purpose.
+        Wrapper around
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        for test purpose.
         """
         from twisted.internet import reactor
         return reactor.callLater(period, func)
@@ -562,7 +564,9 @@ class TimeoutFactory(WrappingFactory):
 
     def callLater(self, period, func):
         """
-        Wrapper around L{reactor.callLater} for test purpose.
+        Wrapper around
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        for test purpose.
         """
         from twisted.internet import reactor
         return reactor.callLater(period, func)
@@ -681,7 +685,9 @@ class TimeoutMixin:
 
     def callLater(self, period, func):
         """
-        Wrapper around L{reactor.callLater} for test purpose.
+        Wrapper around
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        for test purpose.
         """
         from twisted.internet import reactor
         return reactor.callLater(period, func)
