@@ -238,9 +238,9 @@ class ConnectionPool:
 
         # These are optional so import them here
         from twisted.python import threadpool
-        import thread
+        from twisted.python import threadable
 
-        self.threadID = thread.get_ident
+        self.threadID = threadable.getThreadID
         self.threadpool = threadpool.ThreadPool(self.min, self.max)
         self.startID = self._reactor.callWhenRunning(self._start)
 
