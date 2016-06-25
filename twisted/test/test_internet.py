@@ -675,7 +675,8 @@ class TimeTests(unittest.TestCase):
 
     def test_callLaterUsesReactorSecondsInDelayedCall(self):
         """
-        L{reactor.callLater} should use the reactor's seconds factory
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        should use the reactor's seconds factory
         to produce the time at which the DelayedCall will be called.
         """
         oseconds = reactor.seconds
@@ -689,7 +690,8 @@ class TimeTests(unittest.TestCase):
 
     def test_callLaterUsesReactorSecondsAsDelayedCallSecondsFactory(self):
         """
-        L{reactor.callLater} should propagate its own seconds factory
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        should propagate its own seconds factory
         to the DelayedCall to use as its own seconds factory.
         """
         oseconds = reactor.seconds
