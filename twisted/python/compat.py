@@ -25,6 +25,7 @@ from __future__ import absolute_import, division
 
 import inspect
 import os
+import platform
 import socket
 import string
 import struct
@@ -39,6 +40,10 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
+if platform.python_implementation() == 'PyPy':
+    _PYPY = True
+else:
+    _PYPY = False
 
 
 def currentframe(n=0):
