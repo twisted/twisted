@@ -141,7 +141,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
         gc.collect()
-        self.assertIs(threadpool(), None)
+        self.assertIsNone(threadpool())
 
 
     def test_stopThreadPoolWhenStartedAfterReactorRan(self):
@@ -164,7 +164,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(acquireThreadPool)
         self.runReactor(reactor)
         gc.collect()
-        self.assertIs(threadPoolRefs[0](), None)
+        self.assertIsNone(threadPoolRefs[0]())
 
 
     def test_cleanUpThreadPoolEvenBeforeReactorIsRun(self):
@@ -186,7 +186,7 @@ class ThreadTestsBuilder(ReactorBuilder):
             self.assertIs(reactor.threadpool, None)
         else:
             gc.collect()
-            self.assertIs(threadPoolRef(), None)
+            self.assertIsNone(threadPoolRef())
 
 
     def test_isInIOThread(self):

@@ -71,7 +71,7 @@ class ArgumentTests(unittest.TestCase):
         self.assertEqual(arg.coerce("something"), "something")
         self.assertRaises(formmethod.InputError, arg.coerce, None)
         arg2 = formmethod.File("name")
-        self.assertEqual(arg2.coerce(None), None)
+        self.assertIsNone(arg2.coerce(None))
 
 
     def testDate(self):

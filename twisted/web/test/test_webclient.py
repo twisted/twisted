@@ -566,7 +566,7 @@ class WebClientTests(unittest.TestCase):
 
     def _cbFactoryInfo(self, ignoredResult, factory):
         self.assertEqual(factory.status, b'200')
-        self.assert_(factory.version.startswith(b'HTTP/'))
+        self.assertTrue(factory.version.startswith(b'HTTP/'))
         self.assertEqual(factory.message, b'OK')
         self.assertEqual(factory.response_headers[b'content-length'][0], b'10')
 

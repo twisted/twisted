@@ -265,7 +265,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     """
     A basis for reactors that use file descriptors.
 
-    @ivar _childWaker: C{None} or a reference to the L{_SIGCHLDWaker}
+    @ivar _childWaker: L{None} or a reference to the L{_SIGCHLDWaker}
         which is used to properly notice child process termination.
     """
 
@@ -612,7 +612,8 @@ class _PollLikeMixin(object):
 
 
 @implementer(IReactorFDSet)
-class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
+class _ContinuousPolling(posixbase._PollLikeMixin,
+                         posixbase._DisconnectSelectableMixin):
     """
     Schedule reads and writes based on the passage of time, rather than
     notification.
@@ -620,13 +621,13 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
     This is useful for supporting polling filesystem files, which C{epoll(7)}
     does not support.
 
-    The implementation uses L{._PollLikeMixin}, which is a bit hacky,
+    The implementation uses L{posixbase._PollLikeMixin}, which is a bit hacky,
     but re-implementing and testing the relevant code yet again is
     unappealing.
 
     @ivar _reactor: The L{EPollReactor} that is using this instance.
 
-    @ivar _loop: A C{LoopingCall} that drives the polling, or C{None}.
+    @ivar _loop: A C{LoopingCall} that drives the polling, or L{None}.
 
     @ivar _readers: A C{set} of C{FileDescriptor} objects that should be read
         from.

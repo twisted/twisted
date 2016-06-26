@@ -98,7 +98,7 @@ def fail(result=None):
 
     @param result: The same argument that L{Deferred.errback} takes.
 
-    @raise NoCurrentExceptionError: If C{result} is C{None} but there is no
+    @raise NoCurrentExceptionError: If C{result} is L{None} but there is no
         current exception state.
 
     @rtype: L{Deferred}
@@ -235,7 +235,7 @@ class Deferred:
     @type _runningCallbacks: C{bool}
 
     @ivar _chainedTo: If this Deferred is waiting for the result of another
-        Deferred, this is a reference to the other Deferred.  Otherwise, C{None}.
+        Deferred, this is a reference to the other Deferred.  Otherwise, L{None}.
     """
 
     called = False
@@ -417,13 +417,13 @@ class Deferred:
         @param fail: The L{Failure} object which will be passed to the first
             errback added to this L{Deferred} (via L{addErrback}).
             Alternatively, a L{Exception} instance from which a L{Failure} will
-            be constructed (with no traceback) or C{None} to create a L{Failure}
+            be constructed (with no traceback) or L{None} to create a L{Failure}
             instance from the current exception state (with a traceback).
 
         @raise AlreadyCalledError: If L{callback} or L{errback} has already been
             called on this L{Deferred}.
 
-        @raise NoCurrentExceptionError: If C{fail} is C{None} but there is
+        @raise NoCurrentExceptionError: If C{fail} is L{None} but there is
             no current exception state.
         """
         if fail is None:
@@ -816,7 +816,7 @@ class DeferredList(Deferred):
             errbacks added to the individual L{Deferreds} after this
             L{DeferredList} is constructed.  After constructing the
             L{DeferredList}, any errors in the individual L{Deferred}s will be
-            converted to a callback result of C{None}.  This is useful to
+            converted to a callback result of L{None}.  This is useful to
             prevent spurious 'Unhandled error in Deferred' messages from being
             logged.  This does not prevent C{fireOnOneErrback} from working.
         @type consumeErrors: C{bool}
@@ -915,7 +915,7 @@ def gatherResults(deferredList, consumeErrors=False):
         indicating that failures in any of the given L{Deferreds} should not be
         propagated to errbacks added to the individual L{Deferreds} after this
         L{gatherResults} invocation.  Any such errors in the individual
-        L{Deferred}s will be converted to a callback result of C{None}.  This
+        L{Deferred}s will be converted to a callback result of L{None}.  This
         is useful to prevent spurious 'Unhandled error in Deferred' messages
         from being logged.  This parameter is available since 11.1.0.
     @type consumeErrors: C{bool}
@@ -1044,12 +1044,12 @@ def deferredGenerator(f):
     functions and converts it into a function that returns a L{Deferred}. The
     result of the L{Deferred} will be the last value that your generator yielded
     unless the last value is a L{waitForDeferred} instance, in which case the
-    result will be C{None}.  If the function raises an unhandled exception, the
+    result will be L{None}.  If the function raises an unhandled exception, the
     L{Deferred} will errback instead.  Remember that C{return result} won't work;
     use C{yield result; return} in place of that.
 
     Note that not yielding anything from your generator will make the L{Deferred}
-    result in C{None}. Yielding a L{Deferred} from your generator is also an error
+    result in L{None}. Yielding a L{Deferred} from your generator is also an error
     condition; always yield C{waitForDeferred(d)} instead.
 
     The L{Deferred} returned from your deferred generator may also errback if your
@@ -1229,7 +1229,7 @@ def inlineCallbacks(f):
     failure object if your generator raises an unhandled exception). Note that
     you can't use C{return result} to return a value; use C{returnValue(result)}
     instead. Falling off the end of the generator, or simply using C{return}
-    will cause the L{Deferred} to have a result of C{None}.
+    will cause the L{Deferred} to have a result of L{None}.
 
     Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
     If you believe the thing you'd like to return could be a L{Deferred}, do
@@ -1475,11 +1475,11 @@ class DeferredQueue(object):
 
     @ivar size: The maximum number of objects to allow into the queue
     at a time.  When an attempt to add a new object would exceed this
-    limit, L{QueueOverflow} is raised synchronously.  C{None} for no limit.
+    limit, L{QueueOverflow} is raised synchronously.  L{None} for no limit.
 
     @ivar backlog: The maximum number of L{Deferred} gets to allow at
     one time.  When an attempt is made to get an object which would
-    exceed this limit, L{QueueUnderflow} is raised synchronously.  C{None}
+    exceed this limit, L{QueueUnderflow} is raised synchronously.  L{None}
     for no limit.
     """
 
