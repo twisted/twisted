@@ -13,10 +13,10 @@ import socket, sys, traceback, io, codecs
 from twisted.trial import unittest
 
 from twisted.python.compat import (
-    reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
-    unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType, bytesEnviron, iteritems, _coercedUnicode,
-    unichr,
+    reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
+    networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
+    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
+    _coercedUnicode, unichr
 )
 from twisted.python.filepath import FilePath
 
@@ -313,6 +313,22 @@ class PY3Tests(unittest.SynchronousTestCase):
         """
         if sys.version.startswith("3."):
             self.assertTrue(_PY3)
+
+
+
+class PYPYTest(unittest.SynchronousTestCase):
+    """
+    Identification of PyPy.
+    """
+
+    def test_PYPY(self):
+        """
+        On PyPy, L{_PYPY} is True.
+        """
+        if 'PyPy' in sys.version:
+            self.assertTrue(_PYPY)
+        else:
+            self.assertFalse(_PYPY)
 
 
 

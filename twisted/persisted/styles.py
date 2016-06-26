@@ -16,9 +16,8 @@ except ImportError:
     import copyreg as copy_reg
 import copy
 import inspect
-import sys
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, _PYPY
 
 # Twisted Imports
 from twisted.python import log
@@ -262,8 +261,8 @@ class Ephemeral:
 
     def __getstate__(self):
         log.msg( "WARNING: serializing ephemeral %s" % self )
-        import gc
-        if '__pypy__' not in sys.builtin_module_names:
+        if _PYPY:
+            import gc
             if getattr(gc, 'get_referrers', None):
                 for r in gc.get_referrers(self):
                     log.msg( " referred to by %s" % (r,))
