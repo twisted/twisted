@@ -322,19 +322,15 @@ class PYPYTest(unittest.SynchronousTestCase):
     Identification of PyPy.
     """
 
-    def test_pypy(self):
+    def test_PYPY(self):
         """
         On PyPy, L{_PYPY} is True.
         """
         if 'PyPy' in sys.version:
             self.assertTrue(_PYPY)
-
-    def test_notPyPy(self):
-        """
-        On Pythons that aren't PyPy, L{_PYPY} is False.
-        """
-        if 'PyPy' not in sys.version:
+        else:
             self.assertFalse(_PYPY)
+
 
 
 @comparable
