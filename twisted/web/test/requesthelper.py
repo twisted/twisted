@@ -125,8 +125,8 @@ class DummyRequest(object):
     """
     Represents a dummy or fake request. See L{twisted.web.server.Request}.
 
-    @ivar _finishedDeferreds: C{None} or a C{list} of L{Deferreds} which will
-        be called back with C{None} when C{finish} is called or which will be
+    @ivar _finishedDeferreds: L{None} or a C{list} of L{Deferreds} which will
+        be called back with L{None} when C{finish} is called or which will be
         errbacked if C{processingFailed} is called.
 
     @type requestheaders: C{Headers}
@@ -201,7 +201,7 @@ class DummyRequest(object):
         @param name: The name of the request header for which to retrieve the
             value.  Header names are compared case-insensitively.
 
-        @rtype: C{bytes} or L{NoneType}
+        @rtype: C{bytes} or L{None}
         @return: The value of the specified request header.
         """
         return self.requestHeaders.getRawHeaders(name.lower(), [None])[0]
@@ -249,7 +249,7 @@ class DummyRequest(object):
 
     def notifyFinish(self):
         """
-        Return a L{Deferred} which is called back with C{None} when the request
+        Return a L{Deferred} which is called back with L{None} when the request
         is finished.  This will probably only work if you haven't called
         C{finish} yet.
         """
@@ -307,7 +307,7 @@ class DummyRequest(object):
     def getClientIP(self):
         """
         Return the IPv4 address of the client which made this request, if there
-        is one, otherwise C{None}.
+        is one, otherwise L{None}.
         """
         if isinstance(self.client, IPv4Address):
             return self.client.host

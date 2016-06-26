@@ -308,7 +308,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         @raise BananaError: If the given object is not an instance of one of
             the types supported by Banana.
 
-        @return: C{None}
+        @return: L{None}
         """
         io = cStringIO.StringIO()
         self._encode(obj, io.write)

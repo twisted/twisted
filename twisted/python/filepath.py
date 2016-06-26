@@ -703,7 +703,7 @@ class FilePath(AbstractFilePath):
         will become a private attribute)
         The currently cached status information about the file on
         the filesystem that this L{FilePath} points to.  This attribute is
-        C{None} if the file is in an indeterminate state (either this
+        L{None} if the file is in an indeterminate state (either this
         L{FilePath} has not yet had cause to call C{stat()} yet or
         L{FilePath.changed} indicated that new information is required), 0 if
         C{stat()} was called and returned an error (i.e. the path did not exist
@@ -713,7 +713,7 @@ class FilePath(AbstractFilePath):
         attribute.  Instead, use the methods on L{FilePath} which give you
         information about it, like C{getsize()}, C{isdir()},
         C{getModificationTime()}, and so on.
-    @type statinfo: L{int} or L{types.NoneType} or L{os.stat_result}
+    @type statinfo: L{int} or L{None} or L{os.stat_result}
     """
     _statinfo = None
     path = None
@@ -879,10 +879,10 @@ class FilePath(AbstractFilePath):
         in most cases this will be specified by a system administrator and not
         an arbitrary user.
 
-        If no appropriately-named children exist, this will return C{None}.
+        If no appropriately-named children exist, this will return L{None}.
 
-        @return: C{None} or the child path.
-        @rtype: L{types.NoneType} or L{FilePath}
+        @return: L{None} or the child path.
+        @rtype: L{None} or L{FilePath}
         """
         for child in paths:
             p = self._getPathAsSameTypeAs(child)
@@ -897,7 +897,7 @@ class FilePath(AbstractFilePath):
         extensions.
 
         Each extension in C{exts} will be tested and the first path which
-        exists will be returned.  If no path exists, C{None} will be returned.
+        exists will be returned.  If no path exists, L{None} will be returned.
         If C{''} is in C{exts}, then if the file referred to by this path
         exists, C{self} will be returned.
 
@@ -1413,7 +1413,7 @@ class FilePath(AbstractFilePath):
             already exists.
         @type ignoreExistingDirectory: L{bool}
 
-        @return: C{None}
+        @return: L{None}
         """
         try:
             return os.makedirs(self.path)
@@ -1561,7 +1561,7 @@ class FilePath(AbstractFilePath):
             will be required to create the file or not.
         @type val: L{bool}
 
-        @return: C{None}
+        @return: L{None}
         """
         self.alwaysCreate = val
 
@@ -1739,7 +1739,7 @@ class FilePath(AbstractFilePath):
         FilePath.statinfo is deprecated.
 
         @param value: value to set statinfo to, if setting a value
-        @return: C{_statinfo} if getting, C{None} if setting
+        @return: C{_statinfo} if getting, L{None} if setting
         """
         # This is a pretty awful hack to use the deprecated decorator to
         # deprecate a class attribute.  Ideally, there would just be a

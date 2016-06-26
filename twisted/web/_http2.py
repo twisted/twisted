@@ -271,7 +271,8 @@ class H2Connection(Protocol):
     def _sendPrioritisedData(self, *args):
         """
         The data sending loop. This function repeatedly calls itself, either
-        from L{Deferred}s or from L{twisted.internet.reactor.callLater}.
+        from L{Deferred}s or from
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
 
         This function sends data on streams according to the rules of HTTP/2
         priority. It ensures that the data from each stream is interleved
@@ -1059,7 +1060,7 @@ class H2Stream(object):
 
     def unregisterProducer(self):
         """
-        @see L{IConsumer.unregisterProducer}
+        @see: L{IConsumer.unregisterProducer}
         """
         # When the producer is unregistered, we're done.
         if self.producer is not None and not self.hasStreamingProducer:
@@ -1073,7 +1074,7 @@ class H2Stream(object):
     # Implementation: IPushProducer
     def stopProducing(self):
         """
-        @see L{IProducer.stopProducing}
+        @see: L{IProducer.stopProducing}
         """
         self.producing = False
         self.abortConnection()
@@ -1081,14 +1082,14 @@ class H2Stream(object):
 
     def pauseProducing(self):
         """
-        @see L{IPushProducer.pauseProducing}
+        @see: L{IPushProducer.pauseProducing}
         """
         self.producing = False
 
 
     def resumeProducing(self):
         """
-        @see L{IPushProducer.resumeProducing}
+        @see: L{IPushProducer.resumeProducing}
         """
         self.producing = True
         consumedLength = 0

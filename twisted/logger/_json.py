@@ -259,7 +259,7 @@ def eventsFromJSONLogFile(inFile, recordSeparator=None, bufferSize=4096):
     @type inFile: iterable of lines
 
     @param recordSeparator: The expected record separator.
-        If C{None}, attempt to automatically detect the record separator from
+        If L{None}, attempt to automatically detect the record separator from
         one of C{u"\\x1e"} or C{u""}.
     @type recordSeparator: L{unicode}
 

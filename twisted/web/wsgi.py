@@ -194,7 +194,7 @@ class _InputStream:
     def readline(self, size=None):
         """
         Pass through to the underlying C{readline}, with a size of C{-1} replaced
-        with a size of C{None}.
+        with a size of L{None}.
 
         This is called in a WSGI application thread, not the I/O thread.
         """

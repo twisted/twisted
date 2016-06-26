@@ -767,7 +767,7 @@ class IdentityTransferEncodingTests(TestCase):
 
     def test_unknownContentLength(self):
         """
-        If L{_IdentityTransferDecoder} is constructed with C{None} for the
+        If L{_IdentityTransferDecoder} is constructed with L{None} for the
         content length, it passes all data delivered to it through to the data
         callback.
         """
@@ -1784,7 +1784,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_getHeaderNotFound(self):
         """
-        L{http.Request.getHeader} returns C{None} when asked for the value of a
+        L{http.Request.getHeader} returns L{None} when asked for the value of a
         request header which is not present.
         """
         req = http.Request(DummyChannel(), False)

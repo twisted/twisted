@@ -494,10 +494,10 @@ class BasicFTPServerTests(FTPServerTestCase):
         d = self.client.queueStringCommand('FEAT')
         def gotResponse(responseLines):
             self.assertEqual('211-Features:', responseLines[0])
-            self.assertTrue(' MDTM' in responseLines)
-            self.assertTrue(' PASV' in responseLines)
-            self.assertTrue(' TYPE A;I' in responseLines)
-            self.assertTrue(' SIZE' in responseLines)
+            self.assertIn(' MDTM', responseLines)
+            self.assertIn(' PASV', responseLines)
+            self.assertIn(' TYPE A;I', responseLines)
+            self.assertIn(' SIZE', responseLines)
             self.assertEqual('211 End', responseLines[-1])
         return d.addCallback(gotResponse)
 
@@ -1156,7 +1156,7 @@ class DTPFactoryTests(unittest.TestCase):
         self.assertIsInstance(protocol, ftp.DTP)
 
         # A subsequent call returns None.
-        self.assertIdentical(self.factory.buildProtocol(None), None)
+        self.assertIsNone(self.factory.buildProtocol(None))
 
 
     def test_timeoutAfterConnection(self):
@@ -1173,7 +1173,7 @@ class DTPFactoryTests(unittest.TestCase):
     def test_connectionAfterTimeout(self):
         """
         If L{ftp.DTPFactory.buildProtocol} is called after the timeout
-        specified by L{ftp.DTPFactory.setTimeout} has elapsed, C{None} is
+        specified by L{ftp.DTPFactory.setTimeout} has elapsed, L{None} is
         returned.
         """
         # Handle the error so it doesn't get logged.
@@ -1185,7 +1185,7 @@ class DTPFactoryTests(unittest.TestCase):
         self.reactor.advance(10)
 
         # Try to get a protocol - we should not be able to.
-        self.assertIdentical(self.factory.buildProtocol(None), None)
+        self.assertIsNone(self.factory.buildProtocol(None))
 
         # Make sure the Deferred is doing the right thing.
         return d
@@ -1757,7 +1757,7 @@ class FTPClientTests(unittest.TestCase):
         self.client.lineReceived('200 PORT OK')
         self.assertEqual(self.transport.value(), 'RETR spam\r\n')
 
-        self.assert_(l)
+        self.assertTrue(l)
         l[0].loseConnection()
         self.transport.loseConnection()
         self.assertFailure(d, ftp.ConnectionLost)

@@ -209,7 +209,9 @@ class TopWindow(ContainerWidget):
     Note, however, that since calls to this may also be made in response to no
     apparent event, arrangements should be made for the function to be called
     even if an event handler such as C{keystrokeReceived} is not on the call
-    stack (eg, using C{reactor.callLater} with a short timeout).
+    stack (eg, using
+    L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+    with a short timeout).
     """
     focused = True
 

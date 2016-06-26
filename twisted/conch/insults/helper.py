@@ -16,6 +16,7 @@ from zope.interface import implementer
 
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log, _textattributes
+from twisted.python.compat import xrange
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.versions import Version
 from twisted.conch.insults import insults

@@ -153,9 +153,9 @@ class Angle(FancyEqMixin, object):
         """
         Initializes an angle.
 
-        @param angle: The value of the angle in decimal degrees. (C{None} if
+        @param angle: The value of the angle in decimal degrees. (L{None} if
             unknown).
-        @type angle: C{float} or C{NoneType}
+        @type angle: C{float} or L{None}
         @param angleType: A symbolic constant describing the angle type. Should
             be one of L{AngleTypes} or {None} if unknown.
 
@@ -182,9 +182,9 @@ class Angle(FancyEqMixin, object):
         """
         The value of this angle in decimal degrees. This value is immutable.
 
-        @return: This angle expressed in decimal degrees, or C{None} if the
+        @return: This angle expressed in decimal degrees, or L{None} if the
             angle is unknown.
-        @rtype: C{float} (or C{NoneType})
+        @rtype: C{float} (or L{None})
         """
         return self._angle
 
@@ -195,9 +195,9 @@ class Angle(FancyEqMixin, object):
         The value of this angle as a degrees, minutes, seconds tuple. This
         value is immutable.
 
-        @return: This angle expressed in degrees, minutes, seconds. C{None} if
+        @return: This angle expressed in degrees, minutes, seconds. L{None} if
             the angle is unknown.
-        @rtype: 3-C{tuple} of C{int} (or C{NoneType})
+        @rtype: 3-C{tuple} of C{int} (or L{None})
         """
         if self._angle is None:
             return None
@@ -290,10 +290,10 @@ class Heading(Angle):
         The sign of the variation is positive for variations towards the east
         (clockwise from north), and negative for variations towards the west
         (counterclockwise from north).
-        If the variation is unknown or not applicable, this is C{None}.
-    @type variation: C{Angle} or C{NoneType}.
+        If the variation is unknown or not applicable, this is L{None}.
+    @type variation: C{Angle} or L{None}.
     @ivar correctedHeading: The heading, corrected for variation. If the
-        variation is unknown (C{None}), is None. This attribute is read-only
+        variation is unknown (L{None}), is None. This attribute is read-only
         (its value is determined by the angle and variation attributes). The
         value is coerced to being between 0 (inclusive) and 360 (exclusive).
     """
@@ -327,8 +327,8 @@ class Heading(Angle):
         the true heading.
 
         @return: The heading, corrected by the variation. If the variation or
-            the angle are unknown, returns C{None}.
-        @rtype: C{float} or C{NoneType}
+            the angle are unknown, returns L{None}.
+        @rtype: C{float} or L{None}
         """
         if self._angle is None or self.variation is None:
             return None
@@ -393,7 +393,7 @@ class Coordinate(Angle):
             this value must be within -180.0 and +180.0 (exclusive).
         @type angle: C{float}
         @param coordinateType: The coordinate type. One of L{Angles.LATITUDE},
-            L{Angles.LONGITUDE} or C{None} if unknown.
+            L{Angles.LONGITUDE} or L{None} if unknown.
         """
         if coordinateType not in [Angles.LATITUDE, Angles.LONGITUDE, None]:
             raise ValueError("coordinateType must be one of Angles.LATITUDE, "
@@ -615,12 +615,12 @@ class PositionError(FancyEqMixin, object):
         C{TypeError}. This allows a DOP value to either be returned directly
         if it's know, or computed from other DOP types if it isn't.
     @type _DOP_EXPRESSIONS: C{dict} of C{str} to callables
-    @ivar pdop: The position dilution of precision. C{None} if unknown.
-    @type pdop: C{float} or C{NoneType}
-    @ivar hdop: The horizontal dilution of precision. C{None} if unknown.
-    @type hdop: C{float} or C{NoneType}
-    @ivar vdop: The vertical dilution of precision. C{None} if unknown.
-    @type vdop: C{float} or C{NoneType}
+    @ivar pdop: The position dilution of precision. L{None} if unknown.
+    @type pdop: C{float} or L{None}
+    @ivar hdop: The horizontal dilution of precision. L{None} if unknown.
+    @type hdop: C{float} or L{None}
+    @ivar vdop: The vertical dilution of precision. L{None} if unknown.
+    @type vdop: C{float} or L{None}
     """
     compareAttributes = 'pdop', 'hdop', 'vdop'
 
@@ -628,12 +628,12 @@ class PositionError(FancyEqMixin, object):
         """
         Initializes a positioning error object.
 
-        @param pdop: The position dilution of precision. C{None} if unknown.
-        @type pdop: C{float} or C{NoneType}
-        @param hdop: The horizontal dilution of precision. C{None} if unknown.
-        @type hdop: C{float} or C{NoneType}
-        @param vdop: The vertical dilution of precision. C{None} if unknown.
-        @type vdop: C{float} or C{NoneType}
+        @param pdop: The position dilution of precision. L{None} if unknown.
+        @type pdop: C{float} or L{None}
+        @param hdop: The horizontal dilution of precision. L{None} if unknown.
+        @type hdop: C{float} or L{None}
+        @param vdop: The vertical dilution of precision. L{None} if unknown.
+        @type vdop: C{float} or L{None}
         @param testInvariant: Flag to test if the DOP invariant is valid or
             not. If C{True}, the invariant (PDOP = (HDOP**2 + VDOP**2)*.5) is
             checked at every mutation. By default, this is false, because the
@@ -657,7 +657,7 @@ class PositionError(FancyEqMixin, object):
         position invariant (PDOP = (HDOP**2 + VDOP**2)*.5), unless the
         C{self._testInvariant} instance variable is C{False}.
 
-        @return: C{None} if the invariant was not satisfied or not tested.
+        @return: L{None} if the invariant was not satisfied or not tested.
         @raises ValueError: Raised if the invariant was tested but not
             satisfied.
         """
@@ -700,8 +700,8 @@ class PositionError(FancyEqMixin, object):
         @param dopType: The type of dilution of position to get. One of
             ('pdop', 'hdop', 'vdop').
         @type dopType: C{str}
-        @return: The DOP if it is known, C{None} otherwise.
-        @rtype: C{float} or C{NoneType}
+        @return: The DOP if it is known, L{None} otherwise.
+        @rtype: C{float} or L{None}
         """
         for dopExpression in self._DOP_EXPRESSIONS[dopType]:
             try:
