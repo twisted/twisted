@@ -261,7 +261,7 @@ class Ephemeral:
 
     def __getstate__(self):
         log.msg( "WARNING: serializing ephemeral %s" % self )
-        if _PYPY:
+        if not _PYPY:
             import gc
             if getattr(gc, 'get_referrers', None):
                 for r in gc.get_referrers(self):
