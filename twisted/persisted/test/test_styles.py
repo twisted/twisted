@@ -63,7 +63,7 @@ class UniversalPicklingErrorTests(unittest.TestCase):
 
     def test_handledBycPickleModule(self):
         """
-        Handling L{pickle.PicklingError} handles
+        Handling L{cPickle.PicklingError} handles
         L{_UniversalPicklingError}.
         """
         try:
