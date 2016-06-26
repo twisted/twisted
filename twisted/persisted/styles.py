@@ -16,7 +16,6 @@ except ImportError:
     import copyreg as copy_reg
 import copy
 import inspect
-import sys
 
 from twisted.python.compat import _PY3, _PYPY
 
