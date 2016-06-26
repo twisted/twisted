@@ -25,6 +25,21 @@ from twisted.python import reflect
 
 oldModules = {}
 
+
+if _PY3 or _PYPY:
+    from pickle import PicklingError as _UniversalPicklingError
+else:
+    import pickle
+    import cPickle
+
+    class _UniversalPicklingError(pickle.PicklingError,
+                                  cPickle.PicklingError):
+        """
+        An PicklingException catchable by both L{cPickle.PicklingException}
+        and L{pickle.PicklingException} handlers.
+        """
+
+
 ## First, let's register support for some stuff that really ought to
 ## be registerable...
 
@@ -113,7 +128,8 @@ def _pickleFunction(f):
     @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == '<lambda>':
-        return None
+        raise _UniversalPicklingError(
+            "Cannot pickle lambda function: {}".format(f))
     return (_unpickleFunction,
             tuple([".".join([f.__module__, f.__qualname__])]))
 
