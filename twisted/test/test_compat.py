@@ -324,14 +324,14 @@ class PYPYTest(unittest.SynchronousTestCase):
 
     def test_pypy(self):
         """
-        On PyPy, C{_PYPY} is True.
+        On PyPy, L{_PYPY} is True.
         """
         if 'PyPy' in sys.version:
             self.assertTrue(_PYPY)
 
     def test_notPyPy(self):
         """
-        On Pythons that aren't PyPy, C{_PYPY} is False.
+        On Pythons that aren't PyPy, L{_PYPY} is False.
         """
         if 'PyPy' not in sys.version:
             self.assertFalse(_PYPY)
