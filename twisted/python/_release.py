@@ -592,8 +592,8 @@ class NewsBuilder(object):
             for news entries.
 
         @param ticketType: The type of news entries to search for.  One of
-            L{NewsBuilder._FEATURE}, L{NewsBuilder._BUGFIX},
-            L{NewsBuilder._REMOVAL}, or L{NewsBuilder._MISC}.
+            C{NewsBuilder._FEATURE}, C{NewsBuilder._BUGFIX},
+            C{NewsBuilder._REMOVAL}, or C{NewsBuilder._MISC}.
 
         @return: A C{list} of two-tuples.  The first element is the ticket
             number as an C{int}.  The second element of each tuple is the
