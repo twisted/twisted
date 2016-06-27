@@ -1769,7 +1769,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         self.laterQuery = ["16-Dec-2009"]
         self.seq = 0
         self.msg = FakeyMessage({"date" : "Mon, 13 Dec 2009 21:25:10 GMT"}, [],
-                                '', '', 1234, None)
+                                '13 Dec 2009 00:00:00 GMT', '', 1234, None)
 
 
     def test_searchSentBefore(self):
@@ -1869,6 +1869,32 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertTrue(self.server.search_NOT(
                 ["SENTON"] + self.laterQuery, self.seq, self.msg,
                 (None, None)))
+
+
+    def test_searchBefore(self):
+        """
+        L{imap4.IMAP4Server.search_BEFORE} returns True if the
+        internal message date is before the query date.
+        """
+        self.assertFalse(
+            self.server.search_BEFORE(self.earlierQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_BEFORE(self.sameDateQuery, self.seq, self.msg))
+        self.assertTrue(
+            self.server.search_BEFORE(self.laterQuery, self.seq, self.msg))
+
+
+    def test_searchOn(self):
+        """
+        L{imap4.IMAP4Server.search_ON} returns True if the
+        internal message date is the same as the query date.
+        """
+        self.assertFalse(
+            self.server.search_ON(self.earlierQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_ON(self.sameDateQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_ON(self.laterQuery, self.seq, self.msg))
 
 
 
