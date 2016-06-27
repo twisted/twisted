@@ -751,7 +751,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
     @ivar _creatorInterface: the interface which L{_connectionCreator} is
         expected to implement.
-    @type _creatorInterface: L{zope.interface.Interface}
+    @type _creatorInterface: L{zope.interface.interface.InterfaceClass}
 
     @ivar _connectionCreator: a callable which creates an OpenSSL Connection
         object.

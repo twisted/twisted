@@ -109,7 +109,7 @@ def _addHook(registry):
     Add an adapter hook which will attempt to look up adapters in the given
     registry.
 
-    @type registry: L{zope.interface.adapter.AdapterRegistry}
+    @type registry: C{zope.interface.adapter.AdapterRegistry}
 
     @return: The hook which was added, for later use with L{_removeHook}.
     """

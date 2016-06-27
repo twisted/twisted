@@ -32,7 +32,7 @@ class Expose(object):
         Add one or more functions to the set of exposed functions.
 
         This is a way to declare something about a class definition, similar to
-        L{zope.interface.implements}.  Use it like this::
+        L{zope.interface.declarations.implementer}.  Use it like this::
 
             magic = Expose('perform extra magic')
             class Foo(Bar):
