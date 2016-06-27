@@ -173,9 +173,6 @@ class OptionsTests(TestCase):
         """
         Test run() method.
         """
-        if platformType == "win32":
-            raise SkipTest("win32 lacks support for getuid()")
-
         self.addCleanup(setattr, sys, 'argv', sys.argv)
         self.addCleanup(setattr, sys, 'stdin', sys.stdin)
         self.patch(sys, 'stderr', self.out)
@@ -183,14 +180,14 @@ class OptionsTests(TestCase):
         sys.stdin = StringIO('\n')
         mailmail.run()
 
+    if platformType == "win32":
+        test_run.skip = "win32 lacks support for getuid()"
+
 
     def test_readConfig(self):
         """
         Test reading the configuration from a file.
         """
-        if platformType == "win32":
-            raise SkipTest("win32 lacks support for getuid()")
-
         self.addCleanup(setattr, sys, 'stdin', sys.stdin)
         self.addCleanup(setattr, sys, 'argv', sys.argv)
 
@@ -226,3 +223,7 @@ class OptionsTests(TestCase):
                          "Illegal GID in \[groupaccess\] section: invalidgid1")
         self.assertRegex(self.out.getvalue(),
                          'Illegal entry in \[identity\] section: funny')
+
+    if platformType == "win32":
+        test_readConfig.skip = "win32 lacks support for getuid()"
+
