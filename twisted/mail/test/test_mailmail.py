@@ -118,8 +118,8 @@ class OptionsTests(TestCase):
         """
         The I{-odb} flag specifies background delivery.
         """
-        self.addCleanup(setattr, sys, 'stdin', sys.stdin)
-        sys.stdin = StringIO('\n')
+        stdin = StringIO('\n')
+        self.patch(sys, 'stdin', stdin)
         o = parseOptions("-odb")
         self.assertTrue(o.background)
 
@@ -128,8 +128,8 @@ class OptionsTests(TestCase):
         """
         The I{-odf} flags specifies foreground delivery.
         """
-        self.addCleanup(setattr, sys, 'stdin', sys.stdin)
-        sys.stdin = StringIO('\n')
+        stdin = StringIO('\n')
+        self.patch(sys, 'stdin', stdin)
         o = parseOptions("-odf")
         self.assertFalse(o.background)
 
@@ -139,13 +139,13 @@ class OptionsTests(TestCase):
         The I{-t} flags specifies that recipients should be obtained
         from headers.
         """
-        self.addCleanup(setattr, sys, 'stdin', sys.stdin)
-        sys.stdin = StringIO(
+        stdin = StringIO(
             'To: Curly <invaliduser2@example.com>\n'
             'Cc: Larry <invaliduser1@example.com>\n'
             'Bcc: Moe <invaliduser3@example.com>\n'
             '\n'
             'Oh, a wise guy?\n')
+        self.patch(sys, 'stdin', stdin)
         o = parseOptions("-t")
         self.assertEqual(len(o.to), 3)
 
@@ -155,10 +155,10 @@ class OptionsTests(TestCase):
         The I{-F} flags specifies the From: value.
         """
         self.patch(sys, 'stderr', self.out)
-        self.addCleanup(setattr, sys, 'stdin', sys.stdin)
-        sys.stdin = StringIO(
+        stdin = StringIO(
             'To: invaliduser2@example.com\n'
             'Subject: A wise guy?\n\n')
+        self.patch(sys, 'stdin', stdin)
         o = parseOptions(["-F", "Larry <invaliduser1@example.com>", "-t"])
         self.assertEqual(o.sender, "Larry <invaliduser1@example.com>")
         # Test that -F flag is overridden by From: value in header
@@ -188,7 +188,6 @@ class OptionsTests(TestCase):
         """
         Test reading the configuration from a file.
         """
-        self.addCleanup(setattr, sys, 'stdin', sys.stdin)
         self.addCleanup(setattr, sys, 'argv', sys.argv)
 
         filename = self.mktemp()
@@ -213,9 +212,11 @@ class OptionsTests(TestCase):
 
         # Override LOCAL_CFG with the file we just created
         self.patch(mailmail, "LOCAL_CFG", filename)
-        sys.stdin = StringIO('\n')
+        stdin = StringIO('\n')
+        self.patch(sys, 'stdin', stdin)
 
-        sys.argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
+        argv = ("test_mailmail.py", "invaliduser2@example.com", "-oep")
+        self.patch(sys, 'argv', argv)
         mailmail.run()
         self.assertRegex(self.out.getvalue(),
                          "Illegal UID in \[useraccess\] section: invaliduser1")
