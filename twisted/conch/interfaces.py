@@ -319,7 +319,7 @@ class IKnownHostEntry(Interface):
         otherwise.
 
         @param key: The key object to match against.
-        @type key: L{twisted.conch.ssh.Key}
+        @type key: L{twisted.conch.ssh.keys.Key}
         """
 
 

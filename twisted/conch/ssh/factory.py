@@ -49,7 +49,7 @@ class SSHFactory(protocol.Factory):
         @type addr: L{twisted.internet.interfaces.IAddress} provider
         @param addr: The address at which the server will listen.
 
-        @rtype: L{twisted.conch.ssh.SSHServerTransport}
+        @rtype: L{twisted.conch.ssh.transport.SSHServerTransport}
         @return: The built transport.
         """
         t = protocol.Factory.buildProtocol(self, addr)
