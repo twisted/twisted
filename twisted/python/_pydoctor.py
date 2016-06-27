@@ -45,6 +45,9 @@ class TwistedSphinxInventory(SphinxInventory):
     """
     Custom SphinxInventory to work around broken external references to
     Sphinx.
+
+    All exceptions should be reported upstream and a comment should be created
+    with a link to the upstream report.
     """
 
     def getLink(self, name):
@@ -67,6 +70,8 @@ class TwistedSphinxInventory(SphinxInventory):
                 'zope.interface.interfaces.IInterface')
 
             if name  == 'zope.interface.adapter.AdapterRegistry':
+                # FIXME:
+                # https://github.com/zopefoundation/zope.interface/issues/41
                 relative_link = 'adapter.html'
             else:
                 # Not a known exception.
