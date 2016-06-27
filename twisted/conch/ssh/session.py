@@ -19,7 +19,7 @@ from zope.interface import implementer
 from twisted.internet import interfaces, protocol
 from twisted.python import log
 from twisted.conch.interfaces import ISession
-from twisted.conch.ssh import common, channel
+from twisted.conch.ssh import common, channel, connection
 
 
 class SSHSession(channel.SSHChannel):
@@ -355,5 +355,3 @@ def packRequest_window_change(geometry):
     """
     (rows, cols, xpixel, ypixel) = geometry
     return struct.pack('>4L', cols, rows, xpixel, ypixel)
-
-import connection
