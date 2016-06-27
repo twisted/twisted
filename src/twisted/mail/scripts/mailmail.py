@@ -267,15 +267,17 @@ def loadConfig(path):
         if p.has_section(section):
             for (mode, L) in (('allow', a), ('deny', d)):
                 if p.has_option(section, mode) and p.get(section, mode):
-                    for id in p.get(section, mode).split(','):
+                    for sectionID in p.get(section, mode).split(','):
                         try:
-                            id = int(id)
+                            sectionID = int(sectionID)
                         except ValueError:
                             log.error(
-                                "Illegal {}ID in [{}] section: {}".format(
-                                section[0].upper(), section, id))
+                                "Illegal {prefix}ID in "
+                                "[{section}] section: {sectionID}",
+                                prefix=section[0].upper(),
+                                section=section, sectionID=sectionID)
                         else:
-                            L.append(id)
+                            L.append(sectionID)
             order = p.get(section, 'order')
             order = map(str.split, map(str.lower, order.split(',')))
             if order[0] == 'allow':
