@@ -2117,8 +2117,8 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
         File-like objects need to support read() and close(). Lines must be
         delimited by '\\n'. If you pass something that doesn't look like a file,
         we try to convert it to a string (so you should be able to pass an
-        L{email.Message} directly, but doing the conversion with
-        L{email.Generator} manually will give you more control over the process).
+        L{email.message} directly, but doing the conversion with
+        L{email.generator} manually will give you more control over the process).
 
     @param senderDomainName: Name by which to identify. If None, try to pick
         something sane (but this depends on external configuration and may not
