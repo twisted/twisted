@@ -10,7 +10,8 @@ import errno
 import shutil
 import pickle
 import StringIO
-import rfc822
+import email.message
+import email.parser
 import tempfile
 import signal
 import time
@@ -798,7 +799,8 @@ class ServiceDomainTests(unittest.TestCase):
              ['user@host.name']
          )
          fp = StringIO.StringIO(hdr)
-         m = rfc822.Message(fp)
+         emailParser = email.parser.Parser()
+         m = emailParser.parse(fp)
          self.assertEqual(len(m.items()), 1)
          self.assertIn('Received', m)
 
