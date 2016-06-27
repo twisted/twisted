@@ -18,11 +18,8 @@ include NEWS README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
 exclude codecov.yml
-exclude bin/_preamble.py
-exclude admin
-exclude bin/admin
-recursive-exclude admin *
-recursive-exclude bin/admin *
+prune bin
+prune admin
 
 # Include test-running utilities for downstream packagers
 include tox.ini .coveragerc
