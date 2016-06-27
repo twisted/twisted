@@ -11,7 +11,7 @@ import sys
 from StringIO import StringIO
 
 from twisted.copyright import version
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import TestCase
 from twisted.mail import smtp
 from twisted.mail.scripts import mailmail
 from twisted.mail.scripts.mailmail import parseOptions
