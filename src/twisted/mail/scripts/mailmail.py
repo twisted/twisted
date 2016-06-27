@@ -289,7 +289,8 @@ def loadConfig(path):
         for (host, up) in p.items('identity'):
             parts = up.split(':', 1)
             if len(parts) != 2:
-                log.error("Illegal entry in [identity] section: {}".format(up))
+                log.error("Illegal entry in [identity] section: {section}",
+                          section=up)
                 continue
             p.identities[host] = parts
 
