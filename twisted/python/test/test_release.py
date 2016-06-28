@@ -637,10 +637,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
-        self.assertIn(
-            '<a href="%s">%s</a>' % (projectURL, projectName),
-            indexPath.getContent(),
-            "Project name/location not in file contents.")
+        indexContent = indexPath.getContent()
+        self.assertIn('%s API Documentation' % (projectName,), indexContent)
+        # Project URL is ignored in the current index template.
+        self.assertNotIn(projectURL, indexContent)
 
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
@@ -663,6 +663,13 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         self.assertEqual(stdout.getvalue(), '')
 
+
+
+class BuildAPIDocsScriptTests(ExternalTempdirTestCase):
+    """
+    Tests for L{BuildAPIDocsScript}.
+    """
+    skip = pydoctorSkip
 
     def test_buildWithPolicy(self):
         """
@@ -690,10 +697,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
-        self.assertIn(
-            '<a href="http://twistedmatrix.com/">Twisted</a>',
-            indexPath.getContent(),
-            "Project name/location not in file contents.")
+        self.assertIn('Twisted API Documentation', indexPath.getContent())
 
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
