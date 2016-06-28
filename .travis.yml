@@ -1,10 +1,6 @@
 language: python
 sudo: false
 
-branches:
-  only:
-    - trunk
-
 addons:
   apt:
     packages:
@@ -39,3 +35,8 @@ before_script:
 
 script:
   - tox
+
+after_script:
+  - coverage combine
+  - coverage xml -o coverage.xml -i
+  - codecov
