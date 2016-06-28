@@ -1651,7 +1651,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def login():
             return self.client.login('testuser', 'password-test')
         def append():
-            message = file(infile)
+            message = open(infile)
             return self.client.sendCommand(
                 imap4.Command(
                     'APPEND',
