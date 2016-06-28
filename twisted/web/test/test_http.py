@@ -2482,6 +2482,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         protocol = factory.buildProtocol(None)
         transport = StringTransport()
 
+        # Confirm that the timeout is what we think it is.
+        self.assertEqual(protocol.timeOut, 100)
+
         # This is a terrible violation of the abstraction later of
         # _genericHTTPChannelProtocol, but we need to do it because
         # policies.TimeoutMixin doesn't accept a reactor on the object.
