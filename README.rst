@@ -1,4 +1,4 @@
-Twisted 16.3.0pre1
+Twisted 16.3.0pre2
 ==============
 
 |pypi|
@@ -10,7 +10,7 @@ Twisted 16.3.0pre1
     <lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
 
 
-For information on what's new in Twisted 16.3.0pre1, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.3.0pre2, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
