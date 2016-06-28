@@ -11,7 +11,7 @@ Maintainer: Glyph Lefkowitz
     result. B{Never ever ever use this as an actual result for a Deferred}.  You
     have been warned.
 
-@var _CONTINUE: A marker left in L{Deferred.callbacks} to indicate a Deferred
+@var _CONTINUE: A marker left in L{Deferred.callback} to indicate a Deferred
     chain.  Always accompanied by a Deferred instance in the args tuple pointing
     at the Deferred which is chained to the Deferred which has this marker.
 """
@@ -48,7 +48,7 @@ class CancelledError(Exception):
 class TimeoutError(Exception):
     """
     This exception is deprecated.  It is used only by the deprecated
-    L{Deferred.setTimeout} method.
+    C{Deferred.setTimeout} method.
     """
 
 
@@ -503,8 +503,8 @@ class Deferred:
 
     def _continuation(self):
         """
-        Build a tuple of callback and errback with L{_continue} to be used by
-        L{_addContinue} and L{_removeContinue} on another Deferred.
+        Build a tuple of callback and errback with L{_CONTINUE} to be used by
+        C{_addContinue} and C{_removeContinue} on another Deferred.
         """
         return ((_CONTINUE, (self,), None),
                 (_CONTINUE, (self,), None))
@@ -812,8 +812,8 @@ class DeferredList(Deferred):
         @type fireOnOneErrback: C{bool}
 
         @param consumeErrors: (keyword param) a flag indicating that failures in
-            any of the included L{Deferreds} should not be propagated to
-            errbacks added to the individual L{Deferreds} after this
+            any of the included L{Deferred} should not be propagated to
+            errbacks added to the individual L{Deferred} after this
             L{DeferredList} is constructed.  After constructing the
             L{DeferredList}, any errors in the individual L{Deferred}s will be
             converted to a callback result of L{None}.  This is useful to
@@ -912,8 +912,8 @@ def gatherResults(deferredList, consumeErrors=False):
     @type deferredList:  C{list} of L{Deferred}s
 
     @param consumeErrors: (keyword param) a flag, defaulting to False,
-        indicating that failures in any of the given L{Deferreds} should not be
-        propagated to errbacks added to the individual L{Deferreds} after this
+        indicating that failures in any of the given L{Deferred}s should not be
+        propagated to errbacks added to the individual L{Deferred}s after this
         L{gatherResults} invocation.  Any such errors in the individual
         L{Deferred}s will be converted to a callback result of L{None}.  This
         is useful to prevent spurious 'Unhandled error in Deferred' messages

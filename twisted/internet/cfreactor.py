@@ -100,9 +100,10 @@ class CFReactor(PosixReactorBase):
         able to look up what its file descriptor I{used} to be, so that we can
         look it up in C{_fdmap}
 
-    @ivar _cfrunloop: the L{CFRunLoop} pyobjc object wrapped by this reactor.
+    @ivar _cfrunloop: the L{CoreFoundation.CFRunLoopGetMain} pyobjc object wrapped
+        by this reactor.
 
-    @ivar _inCFLoop: Is L{CFRunLoopRun} currently running?
+    @ivar _inCFLoop: Is L{CoreFoundation.CFRunLoopRun} currently running?
 
     @type _inCFLoop: C{bool}
 
@@ -141,10 +142,11 @@ class CFReactor(PosixReactorBase):
         C{doWrite} calls to the L{IReadDescriptor} and L{IWriteDescriptor}
         registered with the file descriptor that we are being notified of.
 
-        @param cfSocket: The L{CFSocket} which has got some activity.
+        @param cfSocket: The L{CoreFoundation.CFSocket} which has got some activity.
 
         @param callbackType: The type of activity that we are being notified
-            of.  Either L{kCFSocketReadCallBack} or L{kCFSocketWriteCallBack}.
+            of.  Either L{CFNetwork.kCFSocketReadCallBack} or
+            L{CFNetwork.kCFSocketWriteCallBack}.
 
         @param ignoredAddress: Unused, because this is not used for either of
             the callback types we register for.
@@ -153,7 +155,7 @@ class CFReactor(PosixReactorBase):
             callback types we register for.
 
         @param context: The data associated with this callback by
-            L{CFSocketCreateWithNative} (in L{CFReactor._watchFD}).  A 2-tuple
+            L{CFNetwork.CFSocketCreateWithNative} (in L{CFReactor._watchFD}).  A 2-tuple
             of C{(int, CFRunLoopSource)}.
         """
         (fd, smugglesrc) = context
@@ -200,7 +202,7 @@ class CFReactor(PosixReactorBase):
 
     def _watchFD(self, fd, descr, flag):
         """
-        Register a file descriptor with the L{CFRunLoop}, or modify its state
+        Register a file descriptor with the C{CFRunLoop}, or modify its state
         so that it's listening for both notifications (read and write) rather
         than just one; used to implement C{addReader} and C{addWriter}.
 
@@ -211,7 +213,8 @@ class CFReactor(PosixReactorBase):
         @param descr: the L{IReadDescriptor} or L{IWriteDescriptor}
 
         @param flag: the flag to register for callbacks on, either
-            L{kCFSocketReadCallBack} or L{kCFSocketWriteCallBack}
+            L{CFNetwork.kCFSocketReadCallBack} or
+            L{CFNetwork.kCFSocketWriteCallBack}
         """
         if fd == -1:
             raise RuntimeError("Invalid file descriptor.")
@@ -270,7 +273,7 @@ class CFReactor(PosixReactorBase):
 
     def _unwatchFD(self, fd, descr, flag):
         """
-        Unregister a file descriptor with the L{CFRunLoop}, or modify its state
+        Unregister a file descriptor with the C{CFRunLoop}, or modify its state
         so that it's listening for only one notification (read or write) as
         opposed to both; used to implement C{removeReader} and C{removeWriter}.
 
@@ -280,7 +283,8 @@ class CFReactor(PosixReactorBase):
 
         @param descr: an L{IReadDescriptor} or L{IWriteDescriptor}
 
-        @param flag: L{kCFSocketWriteCallBack} L{kCFSocketReadCallBack}
+        @param flag: L{CFNetwork.kCFSocketWriteCallBack}
+            L{CFNetwork.kCFSocketReadCallBack}
         """
         if id(descr) not in self._idmap:
             return
@@ -372,8 +376,8 @@ class CFReactor(PosixReactorBase):
 
     def mainLoop(self):
         """
-        Run the runner (L{CFRunLoopRun} or something that calls it), which runs
-        the run loop until C{crash()} is called.
+        Run the runner (L{CoreFoundation.CFRunLoopRun} or something that calls it)
+        which runs the run loop until C{crash()} is called.
         """
         self._inCFLoop = True
         try:
@@ -474,9 +478,9 @@ def install(runLoop=None, runner=None):
     @param runLoop: the run loop to use.
 
     @param runner: the function to call in order to actually invoke the main
-        loop.  This will default to L{CFRunLoopRun} if not specified.  However,
-        this is not an appropriate choice for GUI applications, as you need to
-        run NSApplicationMain (or something like it).  For example, to run the
+        loop.  This will default to L{CoreFoundation.CFRunLoopRun} if not specified.
+        However, this is not an appropriate choice for GUI applications, as you need
+        to run NSApplicationMain (or something like it).  For example, to run the
         Twisted mainloop in a PyObjC application, your C{main.py} should look
         something like this::
 
