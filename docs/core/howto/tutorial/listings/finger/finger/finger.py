@@ -286,7 +286,7 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users = {}
-        for line in file(self.filename):
+        for line in open(self.filename):
             user, status = line.split(':', 1)
             user = user.strip()
             status = status.strip()
