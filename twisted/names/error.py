@@ -42,35 +42,35 @@ class DNSQueryTimeoutError(TimeoutError):
 
 class DNSFormatError(DomainError):
     """
-    Indicates a query failed with a result of L{twisted.names.dns.EFORMAT}.
+    Indicates a query failed with a result of C{twisted.names.dns.EFORMAT}.
     """
 
 
 
 class DNSServerError(DomainError):
     """
-    Indicates a query failed with a result of L{twisted.names.dns.ESERVER}.
+    Indicates a query failed with a result of C{twisted.names.dns.ESERVER}.
     """
 
 
 
 class DNSNameError(DomainError):
     """
-    Indicates a query failed with a result of L{twisted.names.dns.ENAME}.
+    Indicates a query failed with a result of C{twisted.names.dns.ENAME}.
     """
 
 
 
 class DNSNotImplementedError(DomainError):
     """
-    Indicates a query failed with a result of L{twisted.names.dns.ENOTIMP}.
+    Indicates a query failed with a result of C{twisted.names.dns.ENOTIMP}.
     """
 
 
 
 class DNSQueryRefusedError(DomainError):
     """
-    Indicates a query failed with a result of L{twisted.names.dns.EREFUSED}.
+    Indicates a query failed with a result of C{twisted.names.dns.EREFUSED}.
     """
 
 
