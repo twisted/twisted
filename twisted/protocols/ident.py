@@ -151,7 +151,7 @@ class ProcServerMixin:
             raise IdentError()
 
     def entries(self):
-        f = file('/proc/net/tcp')
+        f = open('/proc/net/tcp')
         f.readline()
         for L in f:
             yield L.strip()
