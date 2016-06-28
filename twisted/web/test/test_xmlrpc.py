@@ -624,7 +624,7 @@ class SerializationConfigMixin:
 
 class XMLRPCAllowNoneTests(SerializationConfigMixin, unittest.TestCase):
     """
-    Tests for passing C{None} when the C{allowNone} flag is set.
+    Tests for passing L{None} when the C{allowNone} flag is set.
     """
     flagName = "allowNone"
     value = None

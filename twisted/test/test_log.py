@@ -67,11 +67,11 @@ class TextFromEventDictTests(unittest.SynchronousTestCase):
     def test_noMessageNoFormat(self):
         """
         If C{"format"} is unspecified and C{"message"} is empty, return
-        C{None}.
+        L{None}.
         """
         eventDict = dict(message=(), isError=0)
         text = log.textFromEventDict(eventDict)
-        self.assertIdentical(text, None)
+        self.assertIsNone(text)
 
 
 
@@ -127,7 +127,7 @@ class LogTests(unittest.SynchronousTestCase):
         log.msg("test", testShouldCatch=True)
         i = catcher.pop()
         self.assertEqual(i["message"][0], "test")
-        self.assertEqual(i["testShouldCatch"], True)
+        self.assertTrue(i["testShouldCatch"])
         self.assertIn("time", i)
         self.assertEqual(len(catcher), 0)
 
@@ -364,7 +364,7 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.assertTrue(isinstance(chunk, str),
+            self.assertIsInstance(chunk, str,
                             "%r was not a string" % (chunk,))
 
         if self._origEncoding is not None:
@@ -700,7 +700,7 @@ class FileObserverTests(LogPublisherTestCaseMixin,
         self.assertIsInstance(sys.stdout, LoggingFile)
         fakeStdout = sys.stdout
         observer = log.startLogging(sys.stdout)
-        self.assertIdentical(sys.stdout, fakeStdout)
+        self.assertIs(sys.stdout, fakeStdout)
 
 
     def test_startLoggingOverridesWarning(self):
@@ -1022,8 +1022,8 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         """
         stdio = log.StdioOnnaStick()
         stdio.write("hello\n")
-        self.assertEqual(self.resultLogs[0]['isError'], False)
-        self.assertEqual(self.resultLogs[0]['printed'], True)
+        self.assertFalse(self.resultLogs[0]['isError'])
+        self.assertTrue(self.resultLogs[0]['printed'])
 
 
     def test_writeLines(self):
@@ -1053,7 +1053,7 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
         """
         stdio = log.StdioOnnaStick(isError=True)
         stdio.write("log 1\n")
-        self.assertEqual(self.resultLogs[0]['isError'], True)
+        self.assertTrue(self.resultLogs[0]['isError'])
 
 
     def test_unicode(self):

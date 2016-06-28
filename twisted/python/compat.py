@@ -422,7 +422,7 @@ Note that on Python 3, re-raised exceptions will be mutated, with their
 C{__traceback__} attribute being set.
 
 @param exception: The exception instance.
-@param traceback: The traceback to use, or C{None} indicating a new traceback.
+@param traceback: The traceback to use, or L{None} indicating a new traceback.
 """
 
 
@@ -735,6 +735,13 @@ def _coercedUnicode(s):
 
 
 
+if _PY3:
+    unichr = chr
+else:
+    unichr = unichr
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -770,4 +777,5 @@ __all__ = [
     "_bytesChr",
     "_coercedUnicode",
     "intern",
+    "unichr",
 ]

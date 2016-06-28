@@ -92,7 +92,7 @@ class SecondaryAuthority(FileAuthority):
         attempted.
     @type: C{int}
 
-    @ivar _reactor: The reactor to use to perform the zone transfers, or C{None}
+    @ivar _reactor: The reactor to use to perform the zone transfers, or L{None}
         to use the global reactor.
     """
 

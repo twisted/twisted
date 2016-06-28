@@ -43,8 +43,8 @@ class StringTransportTests(TestCase):
         producer = object()
         streaming = object()
         self.transport.registerProducer(producer, streaming)
-        self.assertIdentical(self.transport.producer, producer)
-        self.assertIdentical(self.transport.streaming, streaming)
+        self.assertIs(self.transport.producer, producer)
+        self.assertIs(self.transport.streaming, streaming)
 
 
     def test_disallowedRegisterProducer(self):
@@ -56,7 +56,7 @@ class StringTransportTests(TestCase):
         self.transport.registerProducer(producer, True)
         self.assertRaises(
             RuntimeError, self.transport.registerProducer, object(), False)
-        self.assertIdentical(self.transport.producer, producer)
+        self.assertIs(self.transport.producer, producer)
         self.assertTrue(self.transport.streaming)
 
 
@@ -70,9 +70,9 @@ class StringTransportTests(TestCase):
         newProducer = object()
         self.transport.registerProducer(oldProducer, False)
         self.transport.unregisterProducer()
-        self.assertIdentical(self.transport.producer, None)
+        self.assertIsNone(self.transport.producer)
         self.transport.registerProducer(newProducer, True)
-        self.assertIdentical(self.transport.producer, newProducer)
+        self.assertIs(self.transport.producer, newProducer)
         self.assertTrue(self.transport.streaming)
 
 
@@ -171,7 +171,7 @@ class StringTransportTests(TestCase):
         value is returned from L{StringTransport.getHost}.
         """
         address = object()
-        self.assertIdentical(StringTransport(address).getHost(), address)
+        self.assertIs(StringTransport(address).getHost(), address)
 
 
     def test_specifiedPeerAddress(self):
@@ -180,7 +180,7 @@ class StringTransportTests(TestCase):
         value is returned from L{StringTransport.getPeer}.
         """        
         address = object()
-        self.assertIdentical(
+        self.assertIs(
             StringTransport(peerAddress=address).getPeer(), address)
 
 

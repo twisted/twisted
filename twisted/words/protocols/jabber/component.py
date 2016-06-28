@@ -23,6 +23,7 @@ from zope.interface import implementer
 from twisted.application import service
 from twisted.internet import defer
 from twisted.python import log
+from twisted.python.compat import _coercedUnicode, unicode
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jstrports, xmlstream
 from twisted.words.protocols.jabber.jid import internJID as JID
@@ -34,7 +35,7 @@ def componentFactory(componentid, password):
     XML stream factory for external server-side components.
 
     @param componentid: JID of the component.
-    @type componentid: C{unicode}
+    @type componentid: L{unicode}
     @param password: password used to authenticate to the server.
     @type password: C{str}
     """
@@ -57,8 +58,10 @@ class ComponentInitiatingInitializer(object):
     def initialize(self):
         xs = self.xmlstream
         hs = domish.Element((self.xmlstream.namespace, "handshake"))
-        hs.addContent(xmlstream.hashPassword(xs.sid,
-                                             unicode(xs.authenticator.password)))
+        digest = xmlstream.hashPassword(
+            xs.sid,
+            _coercedUnicode(xs.authenticator.password))
+        hs.addContent(unicode(digest))
 
         # Setup observer to watch for handshake result
         xs.addOnetimeObserver("/handshake", self._cbHandshake)
@@ -230,13 +233,12 @@ class Service(service.Service):
 
 class ServiceManager(service.MultiService):
     """
-    Business logic representing a managed component connection to a Jabber
-    router.
+    Business logic for a managed component connection to a Jabber router.
 
     This service maintains a single connection to a Jabber router and provides
     facilities for packet routing and transmission. Business logic modules are
-    services implementing L{ijabber.IService} (like subclasses of L{Service}), and
-    added as sub-service.
+    services implementing L{ijabber.IService} (like subclasses of L{Service}),
+    and added as sub-service.
     """
 
     def __init__(self, jid, password):
@@ -335,13 +337,13 @@ class Router(object):
     Connected components are trusted to have correct addressing in the
     stanzas they offer for routing.
 
-    A route destination of C{None} adds a default route. Traffic for which no
+    A route destination of L{None} adds a default route. Traffic for which no
     specific route exists, will be routed to this default route.
 
     @since: 8.2
     @ivar routes: Routes based on the host part of JIDs. Maps host names to the
                   L{EventDispatcher<utility.EventDispatcher>}s that should
-                  receive the traffic. A key of C{None} means the default
+                  receive the traffic. A key of L{None} means the default
                   route.
     @type routes: C{dict}
     """
@@ -359,8 +361,8 @@ class Router(object):
         C{destination} will be passed to this stream.
 
         @param destination: Destination of the route to be added as a host name
-                            or C{None} for the default route.
-        @type destination: C{str} or C{NoneType}.
+                            or L{None} for the default route.
+        @type destination: C{str} or L{None}.
         @param xs: XML Stream to register the route for.
         @type xs: L{EventDispatcher<utility.EventDispatcher>}.
         """

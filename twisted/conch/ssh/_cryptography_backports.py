@@ -52,8 +52,8 @@ def intToBytes(integer, length=None):
     @type integer: L{int}
     @param integer: The integer to pack.
 
-    @type length: L{int} or C{None}
-    @param length: The length to pad the result to, or C{None} for no padding.
+    @type length: L{int} or L{None}
+    @param length: The length to pad the result to, or L{None} for no padding.
 
     @rtype: C{bytes}
     @return: The packed integer.

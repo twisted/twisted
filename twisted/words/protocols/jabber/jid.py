@@ -11,6 +11,7 @@ parse string representations into them with proper checking for illegal
 characters, case folding and canonicalisation through L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
 
+from twisted.python.compat import _PY3, unicode
 from twisted.words.protocols.jabber.xmpp_stringprep import nodeprep, resourceprep, nameprep
 
 class InvalidFormat(Exception):
@@ -23,12 +24,12 @@ def parse(jidstring):
     Parse given JID string into its respective parts and apply stringprep.
 
     @param jidstring: string representation of a JID.
-    @type jidstring: C{unicode}
-    @return: tuple of (user, host, resource), each of type C{unicode} as
+    @type jidstring: L{unicode}
+    @return: tuple of (user, host, resource), each of type L{unicode} as
              the parsed and stringprep'd parts of the given JID. If the
              given string did not have a user or resource part, the respective
-             field in the tuple will hold C{None}.
-    @rtype: C{tuple}
+             field in the tuple will hold L{None}.
+    @rtype: L{tuple}
     """
     user = None
     host = None
@@ -69,13 +70,13 @@ def prep(user, host, resource):
     Perform stringprep on all JID fragments.
 
     @param user: The user part of the JID.
-    @type user: C{unicode}
+    @type user: L{unicode}
     @param host: The host part of the JID.
-    @type host: C{unicode}
+    @type host: L{unicode}
     @param resource: The resource part of the JID.
-    @type resource: C{unicode}
+    @type resource: L{unicode}
     @return: The given parts with stringprep applied.
-    @rtype: C{tuple}
+    @rtype: L{tuple}
     """
 
     if user:
@@ -149,7 +150,7 @@ class JID(object):
         A bare JID does not have a resource part, so this returns either
         C{user@host} or just C{host}.
 
-        @rtype: C{unicode}
+        @rtype: L{unicode}
         """
         if self.user:
             return u"%s@%s" % (self.user, self.host)
@@ -178,7 +179,7 @@ class JID(object):
         """
         Return the string representation of this JID.
 
-        @rtype: C{unicode}
+        @rtype: L{unicode}
         """
         if self.user:
             if self.resource:
@@ -238,6 +239,9 @@ class JID(object):
         """
 
         return self.full()
+
+    if _PY3:
+        __str__ = __unicode__
 
     def __repr__(self):
         """
