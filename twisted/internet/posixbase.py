@@ -612,8 +612,7 @@ class _PollLikeMixin(object):
 
 
 @implementer(IReactorFDSet)
-class _ContinuousPolling(posixbase._PollLikeMixin,
-                         posixbase._DisconnectSelectableMixin):
+class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
     """
     Schedule reads and writes based on the passage of time, rather than
     notification.
@@ -621,7 +620,7 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
     This is useful for supporting polling filesystem files, which C{epoll(7)}
     does not support.
 
-    The implementation uses L{posixbase._PollLikeMixin}, which is a bit hacky,
+    The implementation uses L{_PollLikeMixin}, which is a bit hacky,
     but re-implementing and testing the relevant code yet again is
     unappealing.
 
