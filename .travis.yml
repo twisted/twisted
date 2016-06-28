@@ -10,10 +10,6 @@ matrix:
     - python: 2.7
       env: TOXENV=apidocs
 
-branches:
-  only:
-    - trunk
-
 addons:
   apt:
     packages:
