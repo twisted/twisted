@@ -104,7 +104,8 @@ else:
 
 def randomSource():
     """
-    Wrapper around L{randbytes.secureRandom} to return 2 random chars.
+    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to return
+    2 random chars.
     """
     return struct.unpack('H', randbytes.secureRandom(2, fallback=True))[0]
 
@@ -2367,7 +2368,7 @@ class Message(tputil.FancyEqMixin):
         """
         Retrieve the L{IRecord} implementation for the given record type.
 
-        @param type: A record type, such as L{A} or L{NS}.
+        @param type: A record type, such as C{A} or L{NS}.
         @type type: L{int}
 
         @return: An object which implements L{IRecord} or L{None} if none

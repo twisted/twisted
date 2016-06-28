@@ -93,7 +93,7 @@ def loadAliasFile(domains, filename=None, fp=None):
     """
     result = {}
     if fp is None:
-        fp = file(filename)
+        fp = open(filename)
     else:
         filename = getattr(fp, 'name', '<unknown>')
     i = 0
@@ -305,7 +305,7 @@ class FileWrapper:
         """
         self.fp.seek(0, 0)
         try:
-            f = file(self.finalname, 'a')
+            f = open(self.finalname, 'a')
         except:
             return defer.fail(failure.Failure())
 
@@ -732,7 +732,7 @@ class AliasGroup(AliasBase):
             addr = items.pop().strip()
             if addr.startswith(':'):
                 try:
-                    f = file(addr[1:])
+                    f = open(addr[1:])
                 except:
                     log.err("Invalid filename in alias file %r" % (addr[1:],))
                 else:

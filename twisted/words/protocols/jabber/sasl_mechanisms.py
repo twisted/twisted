@@ -69,7 +69,7 @@ class Plain(object):
         @param authzid: The authorization identity.
         @type authzid: L{unicode}
 
-        @param authcid; The authentication identity.
+        @param authcid: The authentication identity.
         @type authcid: L{unicode}
 
         @param password: The plain-text password.
