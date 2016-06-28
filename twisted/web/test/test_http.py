@@ -2488,6 +2488,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # This is a terrible violation of the abstraction later of
         # _genericHTTPChannelProtocol, but we need to do it because
         # policies.TimeoutMixin doesn't accept a reactor on the object.
+        # See https://twistedmatrix.com/trac/ticket/8488
         protocol._channel.callLater = clock.callLater
         protocol.makeConnection(transport)
         protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
