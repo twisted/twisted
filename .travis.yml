@@ -1,9 +1,10 @@
 language: python
 sudo: false
 
-; For now api documentation build on Travis-CI is not supported.
-; The hope is to fix all errors and fail the tests if there are any new errors.
+# For now api documentation build on Travis-CI is not supported.
+# The hope is to fix all errors and fail the tests if there are any new errors.
 matrix:
+  include:
     - python: 2.7
       env: TOXENV=apidocs
   allow_failures:
