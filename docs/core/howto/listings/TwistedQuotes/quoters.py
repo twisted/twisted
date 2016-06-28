@@ -30,7 +30,7 @@ class FortuneQuoter:
 
 
     def getQuote(self):
-        quoteFile = file(choice(self.filenames))
+        quoteFile = open(choice(self.filenames))
         quotes = quoteFile.read().split('\n%\n')
         quoteFile.close()
         return choice(quotes)
