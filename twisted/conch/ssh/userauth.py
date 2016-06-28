@@ -414,7 +414,7 @@ class SSHUserAuthClient(service.SSHService):
         removing methods that have already succeeded. We then call
         C{self.tryAuth} with the most preferred method.
 
-        @param packet: the L{MSG_USERAUTH_FAILURE} payload.
+        @param packet: the C{MSG_USERAUTH_FAILURE} payload.
         @type packet: C{bytes}
 
         @return: a L{defer.Deferred} that will be callbacked with L{None} as
