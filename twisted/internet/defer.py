@@ -45,10 +45,11 @@ class CancelledError(Exception):
     """
 
 
+@deprecated(Version("Twisted", 16, 3, 0)
+            replacement="twisted.internet.error.TimeoutError")
 class TimeoutError(Exception):
     """
-    This exception is deprecated.  It is used only by the deprecated
-    L{Deferred.setTimeout} method.
+    This exception is deprecated.
     """
 
 
