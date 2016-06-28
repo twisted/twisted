@@ -601,7 +601,7 @@ class DTPFactory(protocol.ClientFactory):
         d = self.deferred
         self.deferred = None
         d.errback(
-            PortConnectionError(defer.TimeoutError("DTPFactory timeout")))
+            PortConnectionError(error.TimeoutError("DTPFactory timeout")))
 
 
     def cancelTimeout(self):

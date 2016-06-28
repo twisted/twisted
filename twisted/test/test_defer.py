@@ -13,7 +13,7 @@ import re
 
 from twisted.python import failure, log
 from twisted.python.compat import _PY3
-from twisted.internet import defer, reactor
+from twisted.internet import defer, reactor, error
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 
@@ -2344,7 +2344,7 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         self.assertTrue(self.lock.lock())
 
         d = self.lock.deferUntilLocked(timeout=5.5)
-        self.assertFailure(d, defer.TimeoutError)
+        self.assertFailure(d, error.TimeoutError)
 
         self.clock.pump([1] * 10)
 
@@ -2357,7 +2357,7 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         but the lock is unlocked before our timeout.
         """
         def onTimeout(f):
-            f.trap(defer.TimeoutError)
+            f.trap(error.TimeoutError)
             self.fail("Should not have timed out")
 
         self.assertTrue(self.lock.lock())

@@ -9,7 +9,7 @@ from __future__ import division, absolute_import
 
 import unittest as pyunit
 
-from twisted.internet import defer
+from twisted.internet.error import TimeoutError
 from twisted.trial import unittest, reporter
 from twisted.trial import util
 from twisted.trial.test import detests
@@ -93,7 +93,7 @@ class NeverFireTests(unittest.TestCase):
         self.assertEqual(len(result.failures), 0)
         self.assertEqual(len(result.errors), 1)
         self.assertFalse(detests.DeferredSetUpNeverFire.testCalled)
-        self.assertTrue(result.errors[0][1].check(defer.TimeoutError))
+        self.assertTrue(result.errors[0][1].check(TimeoutError))
 
 
 class TestTester(unittest.TestCase):
@@ -178,8 +178,8 @@ class TimeoutTests(TestTester):
         return detests.TimeoutTests(name)
 
     def _wasTimeout(self, error):
-        self.assertEqual(error.check(defer.TimeoutError),
-                             defer.TimeoutError)
+        self.assertEqual(error.check(TimeoutError),
+                             TimeoutError)
 
     def test_pass(self):
         result = self.runTest('test_pass')
