@@ -4,11 +4,6 @@
 # We want 100% coverage for new patches to make sure we are always increasing
 # the coverage.
 #
-# For now codecov.io has no way to fail if project overall coverage is
-# decreased... but I think this is hard as for example if we deprecated and
-# remove some code which is well covered we might end up with a smaller
-# coverage.
-#
 coverage:
   precision: 2
   round: down
