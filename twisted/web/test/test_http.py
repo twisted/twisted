@@ -1888,8 +1888,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         since the epoch and sets the request's lastModified attribute.
         """
         req = http.Request(DummyChannel(), False)
-        req.setLastModified(0)
-        self.assertEqual(req.lastModified, 0)
+
+        req.setLastModified(42)
+
+        self.assertEqual(req.lastModified, 42)
 
 
     def test_setLastModifiedUpdate(self):
@@ -1900,7 +1902,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         req.setLastModified(0)
+
         req.setLastModified(1)
+
         self.assertEqual(req.lastModified, 1)
 
 
@@ -1911,7 +1915,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         req.setLastModified(1)
+
         req.setLastModified(0)
+
         self.assertEqual(req.lastModified, 1)
 
 
@@ -1925,7 +1931,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             networkString('if-modified-since'),
                           [b'02 Jan 1970 00:00:00 GMT']
             )
-        result = req.setLastModified(0)
+
+        result = req.setLastModified(42)
+
         self.assertEqual(result, http.CACHED)
 
 
@@ -1939,7 +1947,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             networkString('if-modified-since'),
                           [b'01 Jan 1970 00:00:00 GMT']
             )
+
         result = req.setLastModified(1000000)
+
         self.assertEqual(result, None)
 
 
@@ -1954,8 +1964,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             networkString('if-modified-since'),
                           [b'01 Jan 1970 00:00:01 GMT']
             )
-        result = req.setLastModified(1000000)
+        req.setLastModified(1000000)
+
         result = req.setLastModified(0)
+
         self.assertEqual(result, None)
 
 
@@ -1971,8 +1983,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             networkString('if-modified-since'),
                           [b'01 Jan 1999 00:00:01 GMT']
             )
-        result = req.setLastModified(1)
+        req.setLastModified(1)
+
         result = req.setLastModified(0)
+
         self.assertEqual(result, http.CACHED)
 
 
