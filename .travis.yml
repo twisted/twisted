@@ -1,10 +1,6 @@
 language: python
 sudo: false
 
-branches:
-  only:
-    - trunk
-
 addons:
   apt:
     packages:
