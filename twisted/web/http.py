@@ -1111,7 +1111,7 @@ class Request:
                 modifiedSince = stringToDatetime(firstPart)
             except ValueError:
                 return None
-            if modifiedSince >= when:
+            if modifiedSince >= self.lastModified:
                 self.setResponseCode(NOT_MODIFIED)
                 return CACHED
         return None
