@@ -4,18 +4,29 @@
 """
 Tests for L{twisted.python._pydoctor}.
 """
-from pydoctor import model
-
-from twisted.python._pydoctor import TwistedSphinxInventory, TwistedSystem
+from twisted.python.compat import _PY3
+from twisted.python.reflect import requireModule
 
 from twisted.trial.unittest import TestCase
 
+model = requireModule('pydoctor.model')
+pydoctorSkip = None
+TwistedSphinxInventory = object
+TwistedSystem = object
+if model is None:
+    pydoctorSkip = 'Pydoctor is not present.'
+elif _PY3:
+    pydoctorSkip = 'Pydoctor not supported on Python3.'
+else:
+    # We have a valid pydoctor.
+    from twisted.python._pydoctor import TwistedSphinxInventory, TwistedSystem
 
 
 class TwistedSystemTests(TestCase):
     """
     Tests for L{TwistedSystem}.
     """
+    skip = pydoctorSkip
 
     def test_initCustomSphinxInventory(self):
         """
@@ -155,6 +166,7 @@ class TwistedSphinxInventoryTests(TestCase):
     """
     Tests for L{TwistedSphinxInventory}.
     """
+    skip = pydoctorSkip
 
     def getInventoryWithZope(self):
         """
