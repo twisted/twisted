@@ -12,7 +12,7 @@ from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
-from twisted.python import log, runtime
+from twisted.python import filepath, log, runtime
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
 from twisted.conch.avatar import ConchUser
@@ -645,11 +645,14 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
     if runtime.platformType == 'win32':
         skip = "can't run cmdline client on win32"
 
-    def execute(self, remoteCommand, process, sshArgs=''):
+    def execute(self, remoteCommand, process, sshArgs='', conchArgs=None):
         """
         As for L{OpenSSHClientTestCase.execute}, except it runs the 'conch'
         command line tool, not 'ssh'.
         """
+        if conchArgs is None:
+            conchArgs = []
+
         process.deferred = defer.Deferred()
         port = self.conchServer.getHost().port
         cmd = ('-p %i -l testuser '
@@ -660,9 +663,30 @@ class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
                '-i dsa_test '
                '-v ') % port + sshArgs + \
                ' 127.0.0.1 ' + remoteCommand
-        cmds = _makeArgs(cmd.split())
+        cmds = _makeArgs(conchArgs + cmd.split())
         log.msg(str(cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         reactor.spawnProcess(process, sys.executable, cmds, env=env)
         return process.deferred
+
+
+    def test_runWithLogFile(self):
+        """
+        It can store logs to a local file.
+        """
+        def cb_check_log(result):
+            logContent = logPath.getContent()
+            self.assertIn('Log opened.', logContent)
+
+        logPath = filepath.FilePath(self.mktemp())
+
+        d = self.execute(
+            remoteCommand='echo goodbye',
+            process=ConchTestOpenSSHProcess(),
+            conchArgs=['--log', '--logfile', logPath.path]
+            )
+
+        d.addCallback(self.assertEqual, 'goodbye\n')
+        d.addCallback(cb_check_log)
+        return d
