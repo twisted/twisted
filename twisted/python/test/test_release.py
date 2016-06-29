@@ -21,7 +21,7 @@ from io import BytesIO as StringIO
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python.compat import execfile
+from twisted.python.compat import _PY3, execfile
 from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
@@ -50,7 +50,9 @@ try:
 except (ImportError, SyntaxError):
     pydoctorSkip = "Pydoctor is not present."
 else:
-    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
+    if _PY3:
+        pydoctorSkip = "PyDoctor does not yet work on Python 3."
+    elif getattr(pydoctor, "version_info", (0,)) < (0, 1):
         pydoctorSkip = "Pydoctor is too old."
     else:
         pydoctorSkip = skip
