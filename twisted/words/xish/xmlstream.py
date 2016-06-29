@@ -58,7 +58,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     def connectionMade(self):
         """ Called when a connection is made.
 
-        Sets up the XML parser and dispatches the L{STREAM_CONNECTED_EVENT}
+        Sets up the XML parser and dispatches the C{STREAM_CONNECTED_EVENT}
         event indicating the connection has been established.
         """
         self._initializeStream()
@@ -68,7 +68,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         """ Called whenever data is received.
 
         Passes the data to the XML parser. This can result in calls to the
-        DOM handlers. If a parse error occurs, the L{STREAM_ERROR_EVENT} event
+        DOM handlers. If a parse error occurs, the C{STREAM_ERROR_EVENT} event
         is called to allow for cleanup actions, followed by dropping the
         connection.
         """
@@ -83,7 +83,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     def connectionLost(self, reason):
         """ Called when the connection is shut down.
 
-        Dispatches the L{STREAM_END_EVENT}.
+        Dispatches the C{STREAM_END_EVENT}.
         """
         self.dispatch(reason, STREAM_END_EVENT)
         self.stream = None
@@ -97,7 +97,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     def onDocumentStart(self, rootElement):
         """ Called whenever the start tag of a root element has been received.
 
-        Dispatches the L{STREAM_START_EVENT}.
+        Dispatches the C{STREAM_START_EVENT}.
         """
         self.dispatch(self, STREAM_START_EVENT)
 

@@ -1139,7 +1139,7 @@ class StreamManagerTests(unittest.TestCase):
 
     def test_disconnectedReason(self):
         """
-        A L{STREAM_END_EVENT} results in L{StreamManager} firing the handlers
+        A C{STREAM_END_EVENT} results in L{StreamManager} firing the handlers
         L{connectionLost} methods, passing a L{failure.Failure} reason.
         """
         sm = self.streamManager

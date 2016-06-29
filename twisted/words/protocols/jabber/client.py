@@ -160,15 +160,15 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     U{JEP-0077<http://www.jabber.org/jeps/jep-0077.html>}.
 
     Under normal circumstances, the BasicAuthenticator generates the
-    L{xmlstream.STREAM_AUTHD_EVENT} once the stream has authenticated. However,
+    C{xmlstream.STREAM_AUTHD_EVENT} once the stream has authenticated. However,
     it can also generate other events, such as:
-      - L{INVALID_USER_EVENT} : Authentication failed, due to invalid username
-      - L{AUTH_FAILED_EVENT} : Authentication failed, due to invalid password
-      - L{REGISTER_FAILED_EVENT} : Registration failed
+      - C{INVALID_USER_EVENT} : Authentication failed, due to invalid username
+      - C{AUTH_FAILED_EVENT} : Authentication failed, due to invalid password
+      - C{REGISTER_FAILED_EVENT} : Registration failed
 
     If authentication fails for any reason, you can attempt to register by
     calling the L{registerAccount} method. If the registration succeeds, a
-    L{xmlstream.STREAM_AUTHD_EVENT} will be fired. Otherwise, one of the above
+    C{xmlstream.STREAM_AUTHD_EVENT} will be fired. Otherwise, one of the above
     errors will be generated (again).
     """
 
@@ -315,17 +315,17 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
     available), performs SASL authentication, binds a resource and establishes
     a session.
 
-    Upon successful stream initialization, the L{xmlstream.STREAM_AUTHD_EVENT}
+    Upon successful stream initialization, the C{xmlstream.STREAM_AUTHD_EVENT}
     event will be dispatched through the XML stream object. Otherwise, the
-    L{xmlstream.INIT_FAILED_EVENT} event will be dispatched with a failure
+    C{xmlstream.INIT_FAILED_EVENT} event will be dispatched with a failure
     object.
 
     After inspection of the failure, initialization can then be restarted by
-    calling L{initializeStream}. For example, in case of authentication
-    failure, a user may be given the opportunity to input the correct password.
-    By setting the L{password} instance variable and restarting initialization,
-    the stream authentication step is then retried, and subsequent steps are
-    performed if succesful.
+    calling L{ConnectAuthenticator.initializeStream}. For example, in case of
+    authentication failure, a user may be given the opportunity to input the
+    correct password.  By setting the L{password} instance variable and restarting
+    initialization, the stream authentication step is then retried, and subsequent
+    steps are performed if succesful.
 
     @ivar jid: Jabber ID to authenticate with. This may contain a resource
                part, as a suggestion to the server for resource binding. A

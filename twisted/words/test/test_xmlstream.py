@@ -86,7 +86,7 @@ class XmlStreamTests(unittest.TestCase):
 
     def test_streamEnd(self):
         """
-        Ending the stream fires a L{STREAM_END_EVENT}.
+        Ending the stream fires a C{STREAM_END_EVENT}.
         """
         streamEnd = []
 
