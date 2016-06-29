@@ -25,32 +25,39 @@ The ``DatagramProtocol`` class receives datagrams and can send them out over the
 Received datagrams include the address they were sent from.
 When sending datagrams the destination address must be specified.
 
-Here is a simple example::
+Here is a simple example:
 
-    from twisted.internet.protocol import DatagramProtocol
-    from twisted.internet import reactor
+:download:`basic_example.py <listings/udp/basic_example.py>`
 
-    class Echo(DatagramProtocol):
-
-        def datagramReceived(self, data, (host, port)):
-            print "received %r from %s:%d" % (data, host, port)
-            self.transport.write(data, (host, port))
-
-    reactor.listenUDP(9999, Echo())
-    reactor.run()
+.. literalinclude:: listings/udp/basic_example.py
 
 As you can see, the protocol is registered with the reactor.
 This means it may be persisted if it's added to an application, and thus it has :api:`twisted.internet.protocol.AbstractDatagramProtocol.startProtocol <startProtocol>` and :api:`twisted.internet.protocol.AbstractDatagramProtocol.stopProtocol <stopProtocol>` methods that will get called when the protocol is connected and disconnected from a UDP socket.
 
 The protocol's ``transport`` attribute will implement the :api:`twisted.internet.interfaces.IUDPTransport <twisted.internet.interfaces.IUDPTransport>` interface.
-Notice that the ``host`` argument should be an IP address, not a hostname.
-If you only have the hostname use ``reactor.resolve()`` to resolve the address (see :api:`twisted.internet.interfaces.IReactorCore.resolve <twisted.internet.interfaces.IReactorCore.resolve>`).
+Notice that ``addr`` argument to ``self.transport.write`` should be a tuple with IP address and port number. First element of tuple must be ip address and not a hostname. If you only have the hostname use ``reactor.resolve()`` to resolve the address (see :api:`twisted.internet.interfaces.IReactorCore.resolve <twisted.internet.interfaces.IReactorCore.resolve>`).
+
+Other thing to keep in mind is that data written to transport must be bytes. Trying to write string may work ok in Python 2, but will
+fail if you are using Python 3.
+
+To confirm that socket is indeed listening you can try following command line one-liner.
+
+.. code-block:: bash
+
+   > echo "Hello World!" | nc -4u -w1 localhost 9999
+
+If everything is ok your "server" logs should print:
+
+.. code-block:: bash
+
+    received b'Hello World!\n' from ('127.0.0.1', 32844) # where 32844 is some random port number
 
 
-Adopted Datagram Ports
-----------------------
+Adopting Datagram Ports
+-----------------------
 
-It is also possible to add an existing ``SOCK_DGRAM`` file descriptor to the reactor using the :api:`twisted.internet.interfaces.IReactorSocket.adoptDatagramPort <adoptDatagramPort>` API.
+By default ``reactor.listenUDP()`` call will create appropriate socket for you, but it is also possible to add an existing
+``SOCK_DGRAM`` file descriptor of some socket to the reactor using the :api:`twisted.internet.interfaces.IReactorSocket.adoptDatagramPort <adoptDatagramPort>` API.
 
 Here is a simple example:
 
@@ -75,44 +82,18 @@ This depends on many factors (almost all of which are out of the control of the 
 
 Unlike a regular UDP protocol, we do not need to specify where to send datagrams and are not told where they came from since they can only come from the address to which the socket is 'connected'.
 
-.. code-block:: python
+:download:`connected_udp.py <listings/udp/connected_udp.py>`
 
-    from twisted.internet.protocol import DatagramProtocol
-    from twisted.internet import reactor
+.. literalinclude:: listings/udp/connected_udp.py
 
-    class Helloer(DatagramProtocol):
-
-        def startProtocol(self):
-            host = "192.168.1.1"
-            port = 1234
-
-            self.transport.connect(host, port)
-            print "now we can only send to host %s port %d" % (host, port)
-            self.transport.write("hello") # no need for address
-
-        def datagramReceived(self, data, (host, port)):
-            print "received %r from %s:%d" % (data, host, port)
-
-        # Possibly invoked if there is no server listening on the
-        # address to which we are sending.
-        def connectionRefused(self):
-            print "No one listening"
-
-    # 0 means any port, we don't care in this case
-    reactor.listenUDP(0, Helloer())
-    reactor.run()
 
 Note that ``connect()``, like ``write()`` will only accept IP addresses, not unresolved hostnames.
-To obtain the IP of a hostname use ``reactor.resolve()`` , e.g.::
+To obtain the IP of a hostname use ``reactor.resolve()``, e.g:
 
-    from twisted.internet import reactor
+:download:`getting_ip.py <listings/udp/getting_ip.py>`
 
-    def gotIP(ip):
-        print "IP of 'example.com' is", ip
-        reactor.callLater(3, reactor.stop)
+.. literalinclude:: listings/udp/getting_ip.py
 
-    reactor.resolve('example.com').addCallback(gotIP)
-    reactor.run()
 
 Connecting to a new address after a previous connection or making a connected port unconnected are not currently supported, but likely will be in the future.
 
@@ -124,7 +105,7 @@ Multicast allows a process to contact multiple hosts with a single packet, witho
 This is in contrast to normal, or unicast, UDP, where each datagram has a single IP as its destination.
 Multicast datagrams are sent to special multicast group addresses (in the IPv4 range 224.0.0.0 to 239.255.255.255), along with a corresponding port.
 In order to receive multicast datagrams, you must join that specific group address.
-However, any UDP socket can send to multicast addresses.
+However, any UDP socket can send to multicast addresses. Here is a simple server example:
 
 :download:`MulticastServer.py <listings/udp/MulticastServer.py>`
 
@@ -137,6 +118,8 @@ The server calls :api:`twisted.internet.interfaces.IMulticastTransport.joinGroup
 A ``DatagramProtocol`` that is listening with multicast and has joined a group can receive multicast datagrams, but also unicast datagrams sent directly to its address.
 The server in the example above sends such a unicast message in reply to the multicast message it receives from the client.
 
+Client code may look like this:
+
 :download:`MulticastClient.py <listings/udp/MulticastClient.py>`
 
 .. literalinclude:: listings/udp/MulticastClient.py
@@ -144,6 +127,9 @@ The server in the example above sends such a unicast message in reply to the mul
 Note that a multicast socket will have a default TTL (time to live) of 1.
 That is, datagrams won't traverse more than one router hop, unless a higher TTL is set with :api:`twisted.internet.interfaces.IMulticastTransport.setTTL <setTTL>`.
 Other functionality provided by the multicast transport includes :api:`twisted.internet.interfaces.IMulticastTransport.setOutgoingInterface <setOutgoingInterface>` and :api:`twisted.internet.interfaces.IMulticastTransport.setLoopbackMode <setLoopbackMode>` -- see :api:`twisted.internet.interfaces.IMulticastTransport <IMulticastTransport>` for more information.
+
+To test your multicast setup you need to start server in one terminal and couple of clients in other terminals. If all
+goes ok you should see "Ping" messages sent by each client in logs of all other connected clients.
 
 
 Broadcast UDP

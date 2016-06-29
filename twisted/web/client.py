@@ -37,6 +37,7 @@ from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
+from twisted.internet.abstract import isIPv6Address
 from twisted.internet.interfaces import IProtocol
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python.util import InsensitiveDict
@@ -246,7 +247,7 @@ class HTTPPageGetter(http.HTTPClient):
 
     def timeout(self):
         self.quietLoss = True
-        self.transport.loseConnection()
+        self.transport.abortConnection()
         self.factory.noPage(defer.TimeoutError("Getting %s took longer than %s seconds." % (self.factory.url, self.factory.timeout)))
 
 
@@ -618,7 +619,7 @@ class URI(object):
         @type uri: C{bytes}
         @param uri: URI to parse.
 
-        @type defaultPort: C{int} or C{None}
+        @type defaultPort: C{int} or L{None}
         @param defaultPort: An alternate value to use as the port if the URI
             does not include one.
 
@@ -719,7 +720,7 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
         and C{kwargs} to produce the getter
 
     @param contextFactory: Context factory to use when creating a secure
-        connection, defaulting to C{None}
+        connection, defaulting to L{None}
 
     @return: The factory created by C{factoryFactory}
     """
@@ -1352,6 +1353,8 @@ class _AgentBase(object):
         Compute the string to use for the value of the I{Host} header, based on
         the given scheme, host name, and port number.
         """
+        if (isIPv6Address(nativeString(host))):
+            host = b'[' + host + b']'
         if (scheme, port) in ((b'http', 80), (b'https', 443)):
             return host
         return host + b":" + intToBytes(port)
@@ -1392,11 +1395,11 @@ class _StandardEndpointFactory(object):
     @ivar _policyForHTTPS: A web context factory which will be used to create
         SSL context objects for any SSL connections the agent needs to make.
 
-    @ivar _connectTimeout: If not C{None}, the timeout passed to
+    @ivar _connectTimeout: If not L{None}, the timeout passed to
         L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the
         connection timeout.
 
-    @ivar _bindAddress: If not C{None}, the address passed to
+    @ivar _bindAddress: If not L{None}, the address passed to
         L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the local
         address to bind to.
     """
@@ -1500,7 +1503,7 @@ class Agent(_AgentBase):
         @param bindAddress: The local address for client sockets to bind to.
         @type bindAddress: L{bytes}
 
-        @param pool: An L{HTTPConnectionPool} instance, or C{None}, in which
+        @param pool: An L{HTTPConnectionPool} instance, or L{None}, in which
             case a non-persistent L{HTTPConnectionPool} instance will be
             created.
         @type pool: L{HTTPConnectionPool}
@@ -1532,7 +1535,7 @@ class Agent(_AgentBase):
             HTTP client will connect with.
         @type endpointFactory: an L{IAgentEndpointFactory} provider.
 
-        @param pool: An L{HTTPConnectionPool} instance, or C{None}, in which
+        @param pool: An L{HTTPConnectionPool} instance, or L{None}, in which
             case a non-persistent L{HTTPConnectionPool} instance will be
             created.
         @type pool: L{HTTPConnectionPool}
@@ -1555,7 +1558,7 @@ class Agent(_AgentBase):
             HTTP client will connect with.
         @type endpointFactory: an L{IAgentEndpointFactory} provider.
 
-        @param pool: An L{HTTPConnectionPool} instance, or C{None}, in which
+        @param pool: An L{HTTPConnectionPool} instance, or L{None}, in which
             case a non-persistent L{HTTPConnectionPool} instance will be
             created.
         @type pool: L{HTTPConnectionPool}

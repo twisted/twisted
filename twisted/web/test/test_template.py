@@ -89,7 +89,7 @@ class ElementTests(TestCase):
     def test_missingTemplateLoader(self):
         """
         L{Element.render} raises L{MissingTemplateLoader} if the C{loader}
-        attribute is C{None}.
+        attribute is L{None}.
         """
         element = Element()
         err = self.assertRaises(MissingTemplateLoader, element.render, None)
@@ -800,7 +800,7 @@ class RenderElementTests(TestCase):
     def test_noneDoctype(self):
         """
         L{renderElement} will not write out a doctype if the doctype keyword
-        argument is C{None}.
+        argument is L{None}.
         """
         element = TestElement()
 

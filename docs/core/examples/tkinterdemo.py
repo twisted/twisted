@@ -13,6 +13,8 @@ Run this example by typing in:
 """
 
 
+from __future__ import print_function
+
 from Tkinter import Tk, Frame, Button, LEFT
 from twisted.internet import reactor, tksupport
 
@@ -20,11 +22,11 @@ from twisted.internet import reactor, tksupport
 class App(object):
 
     def onQuit(self):
-        print "Quit!"
+        print("Quit!")
         reactor.stop()
 
     def onButton(self):
-        print "Hello!"
+        print("Hello!")
 
     def __init__(self, master):
         frame = Frame(master)

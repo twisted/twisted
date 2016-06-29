@@ -1,1 +1,0 @@
-twisted.conch.endpoint.SSHCommandClientEndpoint, when authentication is delegated to an SSH agent, no longer leaves the agent connection opened when connection to the server is lost.

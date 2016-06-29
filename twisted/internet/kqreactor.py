@@ -55,7 +55,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
 
     @ivar _selectables: A dictionary mapping integer file descriptors to
         instances of L{FileDescriptor} which have been registered with the
-        reactor.  All L{FileDescriptors} which are currently receiving read or
+        reactor.  All L{FileDescriptor}s which are currently receiving read or
         write readiness notifications will be present as values in this
         dictionary.
 

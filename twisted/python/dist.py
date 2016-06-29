@@ -36,7 +36,7 @@ from setuptools import setup as _setup
 from setuptools import Extension
 
 from twisted import copyright
-from twisted.python.compat import execfile
+from twisted.python.compat import execfile, _PY3
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
@@ -57,6 +57,7 @@ on event-based network programming and multiprotocol integration.
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
         ],
     )
 
@@ -75,18 +76,22 @@ _EXTRA_OPTIONS = dict(
     conch=['gmpy',
            'pyasn1',
            'cryptography >= 0.9.1',
+           'appdirs >= 1.4.0',
            ],
     soap=['soappy'],
     serial=['pyserial'],
     osx=['pyobjc'],
-    windows=['pypiwin32']
+    windows=['pypiwin32'],
+    http2=['h2 >= 2.3.0, < 3.0',
+           'priority >= 1.1.0, < 2.0'],
 )
 
 _PLATFORM_INDEPENDENT = (
     _EXTRA_OPTIONS['tls'] +
     _EXTRA_OPTIONS['conch'] +
     _EXTRA_OPTIONS['soap'] +
-    _EXTRA_OPTIONS['serial']
+    _EXTRA_OPTIONS['serial'] +
+    _EXTRA_OPTIONS['http2']
 )
 
 _EXTRAS_REQUIRE = {
@@ -95,6 +100,7 @@ _EXTRAS_REQUIRE = {
     'conch': _EXTRA_OPTIONS['conch'],
     'soap': _EXTRA_OPTIONS['soap'],
     'serial': _EXTRA_OPTIONS['serial'],
+    'http2': _EXTRA_OPTIONS['http2'],
     'all_non_platform': _PLATFORM_INDEPENDENT,
     'osx_platform': (
         _EXTRA_OPTIONS['osx'] + _PLATFORM_INDEPENDENT
@@ -187,17 +193,19 @@ def getExtensions():
             ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
              "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
             libraries=["ws2_32"],
-            condition=lambda _: _isCPython and sys.platform == "win32"),
+            condition=lambda _: not _PY3 and
+                                _isCPython and sys.platform == "win32"),
 
         ConditionalExtension(
             "twisted.python._sendmsg",
             sources=["twisted/python/_sendmsg.c"],
-            condition=lambda _: sys.platform != "win32"),
+            condition=lambda _: not _PY3 and sys.platform != "win32"),
 
         ConditionalExtension(
             "twisted.runner.portmap",
             ["twisted/runner/portmap.c"],
-            condition=lambda builder: builder._check_header("rpc/rpc.h")),
+            condition=lambda builder: not _PY3 and
+                                      builder._check_header("rpc/rpc.h")),
     ]
 
     return extensions
@@ -216,7 +224,7 @@ def getScripts(basedir=''):
         if not os.path.isdir(scriptdir):
             return []
     thingies = os.listdir(scriptdir)
-    for specialExclusion in ['.svn', '_preamble.py', '_preamble.pyc']:
+    for specialExclusion in ['_preamble.py', '_preamble.pyc']:
         if specialExclusion in thingies:
             thingies.remove(specialExclusion)
     return list(filter(os.path.isfile,

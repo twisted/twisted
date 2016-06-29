@@ -259,7 +259,7 @@ class URL(object):
 
     @ivar query: The query parameters, as (name, value) pairs.
     @type query: L{tuple} of 2-L{tuple}s of (name: L{unicode}, value:
-        (L{unicode} for values or C{None} for stand-alone query parameters with
+        (L{unicode} for values or L{None} for stand-alone query parameters with
         no C{=} in them)).
 
     @ivar fragment: The fragment identifier.
@@ -284,8 +284,8 @@ class URL(object):
         @ivar host: The host portion of the netloc.
         @type host: L{unicode}
 
-        @ivar port: The port number indicated by this URL, or C{None} if none
-            is indicated.  (This is only C{None} if the default port for the
+        @ivar port: The port number indicated by this URL, or L{None} if none
+            is indicated.  (This is only L{None} if the default port for the
             scheme is unknown; if the port number is unspecified in the text of
             a URL, this will still be set to the default port for that scheme.)
         @type port: L{int} or L{None}
@@ -294,7 +294,7 @@ class URL(object):
         @type path: Iterable of L{unicode}.
 
         @ivar query: The query parameters, as name-value pairs
-        @type query: Iterable of pairs of L{unicode} (or C{None}, for values).
+        @type query: Iterable of pairs of L{unicode} (or L{None}, for values).
 
         @ivar fragment: The fragment identifier.
         @type fragment: L{unicode}

@@ -33,9 +33,9 @@ class ResourceTests(unittest.TestCase):
 
 class SimpleResource(resource.Resource):
     """
-    @ivar _contentType: C{None} or a C{str} giving the value of the
+    @ivar _contentType: L{None} or a C{str} giving the value of the
         I{Content-Type} header in the response this resource will render.  If it
-        is C{None}, no I{Content-Type} header will be set in the response.
+        is L{None}, no I{Content-Type} header will be set in the response.
     """
     def __init__(self, contentType=None):
         resource.Resource.__init__(self)
@@ -320,7 +320,7 @@ class ConditionalTests(unittest.TestCase):
         else:
             validator = b"If-Not-Match: " + etag
         for line in [b"GET / HTTP/1.1", validator, b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.OK)
         self.assertEqual(httpBody(result), b"correct")
@@ -346,7 +346,7 @@ class ConditionalTests(unittest.TestCase):
         """
         for line in [b"GET / HTTP/1.1",
                      b"If-Modified-Since: " + http.datetimeToString(100), b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
         self.assertEqual(httpBody(result), b"")
@@ -414,7 +414,7 @@ class ConditionalTests(unittest.TestCase):
         with an empty response body.
         """
         for line in [b"GET / HTTP/1.1", b"If-None-Match: MatchingTag", b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpHeader(result, b"ETag"), b"MatchingTag")
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
@@ -432,7 +432,7 @@ class ConditionalTests(unittest.TestCase):
         """
         for line in [b"GET /with-content-type HTTP/1.1",
                      b"If-None-Match: MatchingTag", b""]:
-            self.channel.lineReceived(line)
+            self.channel.dataReceived(line + b'\r\n')
         result = self.transport.getvalue()
         self.assertEqual(httpCode(result), http.NOT_MODIFIED)
         self.assertEqual(httpBody(result), b"")
@@ -554,8 +554,10 @@ class RequestTests(unittest.TestCase):
         fail = failure.Failure(Exception("Oh no!"))
         request.processingFailed(fail)
 
-        self.assertNotIn(b"Oh no!", request.transport.getvalue())
-        self.assertIn(b"Processing Failed", request.transport.getvalue())
+        self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
+        self.assertIn(
+            b"Processing Failed", request.transport.written.getvalue()
+        )
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -574,7 +576,7 @@ class RequestTests(unittest.TestCase):
         fail = failure.Failure(Exception("Oh no!"))
         request.processingFailed(fail)
 
-        self.assertIn(b"Oh no!", request.transport.getvalue())
+        self.assertIn(b"Oh no!", request.transport.written.getvalue())
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -594,7 +596,7 @@ class RequestTests(unittest.TestCase):
         fail = failure.Failure(Exception(u"\u2603"))
         request.processingFailed(fail)
 
-        self.assertIn(b"&#9731;", request.transport.getvalue())
+        self.assertIn(b"&#9731;", request.transport.written.getvalue())
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -823,11 +825,15 @@ class NewRenderTests(unittest.TestCase):
     def testGoodMethods(self):
         req = self._getReq()
         req.requestReceived(b'GET', b'/newrender', b'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'hi hi')
+        self.assertEqual(
+            req.transport.written.getvalue().splitlines()[-1], b'hi hi'
+        )
 
         req = self._getReq()
         req.requestReceived(b'HEH', b'/newrender', b'HTTP/1.0')
-        self.assertEqual(req.transport.getvalue().splitlines()[-1], b'ho ho')
+        self.assertEqual(
+            req.transport.written.getvalue().splitlines()[-1], b'ho ho'
+        )
 
     def testBadMethods(self):
         req = self._getReq()
@@ -855,7 +861,9 @@ class NewRenderTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'HEAD', b'/newrender', b'HTTP/1.0')
         self.assertEqual(req.code, 200)
-        self.assertEqual(-1, req.transport.getvalue().find(b'hi hi'))
+        self.assertEqual(
+            -1, req.transport.written.getvalue().find(b'hi hi')
+        )
 
 
     def test_unsupportedHead(self):
@@ -866,7 +874,7 @@ class NewRenderTests(unittest.TestCase):
         resource = HeadlessResource()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
-        headers, body = req.transport.getvalue().split(b'\r\n\r\n')
+        headers, body = req.transport.written.getvalue().split(b'\r\n\r\n')
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b'')
 
@@ -887,7 +895,7 @@ class NewRenderTests(unittest.TestCase):
 
         request.requestReceived(b"GET", b"/newrender", b"HTTP/1.0")
 
-        headers, body = request.transport.getvalue().split(b'\r\n\r\n')
+        headers, body = request.transport.written.getvalue().split(b'\r\n\r\n')
         self.assertEqual(request.code, 500)
         expected = [
             '',
@@ -988,7 +996,7 @@ class AllowedMethodsTests(unittest.TestCase):
         req.requestReceived(b'POST', b'/gettableresource?'
                             b'value=<script>bad', b'HTTP/1.0')
         self.assertEqual(req.code, 405)
-        renderedPage = req.transport.getvalue()
+        renderedPage = req.transport.written.getvalue()
         self.assertNotIn(b"<script>bad", renderedPage)
         self.assertIn(b'&lt;script&gt;bad', renderedPage)
 
@@ -1003,7 +1011,7 @@ class AllowedMethodsTests(unittest.TestCase):
         req = self._getReq()
         req.requestReceived(b'<style>bad', b'/gettableresource', b'HTTP/1.0')
         self.assertEqual(req.code, 501)
-        renderedPage = req.transport.getvalue()
+        renderedPage = req.transport.written.getvalue()
         self.assertNotIn(b"<style>bad", renderedPage)
         self.assertIn(b'&lt;style&gt;bad', renderedPage)
 
@@ -1045,8 +1053,7 @@ class AccessLogTestsMixin(object):
         reactor.advance(1234567890)
 
         logPath = self.mktemp()
-        factory = self.factory(logPath=logPath)
-        factory._reactor = reactor
+        factory = self.factory(logPath=logPath, reactor=reactor)
         factory.startFactory()
 
         try:
@@ -1147,7 +1154,7 @@ class CombinedLogFormatterTests(unittest.TestCase):
         reactor.advance(1234567890)
 
         timestamp = http.datetimeToLogString(reactor.seconds())
-        request = DummyRequestForLogTest(http.HTTPFactory())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
         request.client = IPv4Address("TCP", b"evil x-forwarded-for \x80", 12345)
         request.method = b"POS\x81"
         request.protocol = b"HTTP/1.\x82"
@@ -1188,7 +1195,7 @@ class ProxiedLogFormatterTests(unittest.TestCase):
         reactor.advance(1234567890)
 
         timestamp = http.datetimeToLogString(reactor.seconds())
-        request = DummyRequestForLogTest(http.HTTPFactory())
+        request = DummyRequestForLogTest(http.HTTPFactory(reactor=reactor))
         expected = http.combinedLogFormatter(timestamp, request).replace(
             u"1.2.3.4", u"172.16.1.2")
         request.requestHeaders.setRawHeaders(b"x-forwarded-for", [header])
@@ -1311,7 +1318,7 @@ class LogEscapingTests(unittest.TestCase):
         """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.requestHeaders.addRawHeader(b'user-agent', 
+        self.request.requestHeaders.addRawHeader(b'user-agent',
                                                  b'Malicious Web" Evil')
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
@@ -1357,3 +1364,29 @@ class ServerAttributesTests(unittest.TestCase):
             warnings[0]['message'],
             ("twisted.web.server.string_date_time was deprecated in Twisted "
              "12.1.0: Please use twisted.web.http.stringToDatetime instead"))
+
+
+
+class ExplicitHTTPFactoryReactor(unittest.TestCase):
+    """
+    L{http.HTTPFactory} accepts explicit reactor selection.
+    """
+
+    def test_explicitReactor(self):
+        """
+        L{http.HTTPFactory.__init__} accepts a reactor argument which is set on
+        L{http.HTTPFactory._reactor}.
+        """
+        reactor = "I am a reactor!"
+        factory = http.HTTPFactory(reactor=reactor)
+        self.assertIs(factory._reactor, reactor)
+
+
+    def test_defaultReactor(self):
+        """
+        Giving no reactor argument to L{http.HTTPFactory.__init__} means it
+        will select the global reactor.
+        """
+        from twisted.internet import reactor
+        factory = http.HTTPFactory()
+        self.assertIs(factory._reactor, reactor)

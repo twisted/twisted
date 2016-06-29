@@ -1,1 +1,0 @@
-twisted.internet.task.LoopingCall.deferred is now deprecated. Use the deferred returned by twisted.internet.task.LoopingCall.start()

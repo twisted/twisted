@@ -231,11 +231,11 @@ class ContextGeneratingMixin:
     @type serverBase: C{str}
 
     @ivar clientCtxFactory: a generated context factory to be used in
-        C{reactor.connectSSL}.
+        L{IReactorSSL.connectSSL}.
     @type clientCtxFactory: L{ssl.DefaultOpenSSLContextFactory}
 
     @ivar serverCtxFactory: a generated context factory to be used in
-        C{reactor.listenSSL}.
+        L{IReactorSSL.listenSSL}.
     @type serverCtxFactory: L{ssl.DefaultOpenSSLContextFactory}
     """
 
@@ -262,7 +262,8 @@ class ContextGeneratingMixin:
 if SSL is not None:
     class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
         """
-        A context factory with a default method set to L{SSL.TLSv1_METHOD}.
+        A context factory with a default method set to
+        L{OpenSSL.SSL.TLSv1_METHOD}.
         """
         isClient = False
 
@@ -298,19 +299,19 @@ class StolenTCPTests(ProperlyCloseFilesMixin, unittest.TestCase):
 
     def getHandleExceptionType(self):
         """
-        Return L{SSL.Error} as the expected error type which will be raised by
-        a write to the L{OpenSSL.SSL.Connection} object after it has been
-        closed.
+        Return L{OpenSSL.SSL.Error} as the expected error type which will be
+        raised by a write to the L{OpenSSL.SSL.Connection} object after it has
+        been closed.
         """
         return SSL.Error
 
 
     def getHandleErrorCode(self):
         """
-        Return the argument L{SSL.Error} will be constructed with for this
-        case.  This is basically just a random OpenSSL implementation detail.
-        It would be better if this test worked in a way which did not require
-        this.
+        Return the argument L{OpenSSL.SSL.Error} will be constructed with for
+        this case. This is basically just a random OpenSSL implementation
+        detail. It would be better if this test worked in a way which did not
+        require this.
         """
         # Windows 2000 SP 4 and Windows XP SP 2 give back WSAENOTSOCK for
         # SSL.Connection.write for some reason.  The twisted.protocols.tls

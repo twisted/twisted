@@ -1,1 +1,0 @@
-A new string endpoint type, "tls:", allows for properly-verified TLS (unlike "ssl:", always matching hostname resolution with certificate hostname verification) with faster IPv4/IPv6 connections.  This comes with an accompanying function, twisted.internet.endpoints.wrapClientTLS, which can wrap an arbitrary client endpoint with client TLS.

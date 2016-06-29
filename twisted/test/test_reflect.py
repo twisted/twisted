@@ -18,7 +18,6 @@ from twisted.python import reflect
 from twisted.python.reflect import (
     accumulateMethods, prefixedMethods, prefixedMethodNames,
     addMethodNamesToDict, fullyQualifiedName)
-from twisted.python.versions import Version
 
 
 class Base(object):
@@ -196,7 +195,7 @@ class LookupsTests(TestCase):
         """
         L{namedClass} should return the class object for the name it is passed.
         """
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedClass("twisted.test.test_reflect.Summer"),
             Summer)
 
@@ -207,7 +206,7 @@ class LookupsTests(TestCase):
         passed.
         """
         from twisted.python import monkey
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedModule("twisted.python.monkey"), monkey)
 
 
@@ -216,7 +215,7 @@ class LookupsTests(TestCase):
         L{namedAny} should return the package object for the name it is passed.
         """
         import twisted.python
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedAny("twisted.python"), twisted.python)
 
 
@@ -225,7 +224,7 @@ class LookupsTests(TestCase):
         L{namedAny} should return the module object for the name it is passed.
         """
         from twisted.python import monkey
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedAny("twisted.python.monkey"), monkey)
 
 
@@ -233,7 +232,7 @@ class LookupsTests(TestCase):
         """
         L{namedAny} should return the class object for the name it is passed.
         """
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedAny("twisted.test.test_reflect.Summer"),
             Summer)
 
@@ -258,7 +257,7 @@ class LookupsTests(TestCase):
         itself was an attribute of a non-module, non-package object is bound to
         for the name it is passed.
         """
-        self.assertIdentical(
+        self.assertIs(
             reflect.namedAny(
                 "twisted.test.test_reflect."
                 "Summer.reallySet.__doc__"),
@@ -360,11 +359,11 @@ class LookupsTests(TestCase):
 
     def test_requireModuleDefaultNone(self):
         """
-        When module import fails it returns C{None} by default.
+        When module import fails it returns L{None} by default.
         """
         result = reflect.requireModule('no.such.module')
 
-        self.assertIs(None, result)
+        self.assertIsNone(result)
 
 
     def test_requireModuleRequestedImport(self):
@@ -891,56 +890,3 @@ class GetClassTests(unittest.TestCase):
         new = NewClass()
         self.assertEqual(reflect.getClass(NewClass).__name__, 'type')
         self.assertEqual(reflect.getClass(new).__name__, 'NewClass')
-
-
-if not _PY3:
-    # The functions tested below are deprecated but still used by external
-    # projects like Nevow 0.10. They are not going to be ported to Python 3
-    # (hence the condition above) and will be removed as soon as no project used
-    # by Twisted will depend on these functions. Also, have a look at the
-    # comments related to those functions in twisted.python.reflect.
-    class DeprecationTests(unittest.TestCase):
-        """
-        Test deprecations in twisted.python.reflect
-        """
-
-        def test_allYourBase(self):
-            """
-            Test deprecation of L{reflect.allYourBase}. See #5481 for removal.
-            """
-            self.callDeprecated(
-                (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-                reflect.allYourBase, DeprecationTests)
-
-
-        def test_accumulateBases(self):
-            """
-            Test deprecation of L{reflect.accumulateBases}. See #5481 for removal.
-            """
-            l = []
-            self.callDeprecated(
-                (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-                reflect.accumulateBases, DeprecationTests, l, None)
-
-
-        def test_getcurrent(self):
-            """
-            Test deprecation of L{reflect.getcurrent}.
-            """
-
-            class C:
-                pass
-
-            self.callDeprecated(
-                Version("Twisted", 14, 0, 0),
-                reflect.getcurrent, C)
-
-
-        def test_isinst(self):
-            """
-            Test deprecation of L{reflect.isinst}.
-            """
-
-            self.callDeprecated(
-                (Version("Twisted", 14, 0, 0), "isinstance"),
-                reflect.isinst, object(), object)

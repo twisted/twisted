@@ -19,10 +19,25 @@ from ._observer import ILogObserver
 class PredicateResult(Names):
     """
     Predicate results.
+
+    @see: L{LogLevelFilterPredicate}
+
+    @cvar yes: Log the specified event.  When this value is used,
+        L{LogLevelFilterPredicate} will always log the message, without
+        evaluating other predicates.
+
+    @cvar no: Do not log the specified event.  When this value is used,
+        L{LogLevelFilterPredicate} will I{not} log the message, without
+        evaluating other predicates.
+
+    @cvar maybe: Do not have an opinion on the event.  When this value is used,
+        L{LogLevelFilterPredicate} will consider subsequent predicate results;
+        if returned by the last predicate being considered, then the event will
+        be logged.
     """
-    yes = NamedConstant()    # Log this
-    no = NamedConstant()     # Don't log this
-    maybe = NamedConstant()  # No opinion
+    yes = NamedConstant()
+    no = NamedConstant()
+    maybe = NamedConstant()
 
 
 
@@ -147,7 +162,7 @@ class LogLevelFilterPredicate(object):
         C{logLevelForNamespace("mypackage.subpackage")} will return
         C{LogLevel.debug}.
 
-        @param namespace: A logging namespace, or C{None} for the default
+        @param namespace: A logging namespace, or L{None} for the default
             namespace.
         @type namespace: L{str} (native string)
 

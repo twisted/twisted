@@ -394,7 +394,7 @@ The Channel
             self.catData += data
     
         def closed(self):
-            print 'We got this from "cat":', self.catData
+            print('We got this from "cat":', self.catData)
 
 
 

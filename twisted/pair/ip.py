@@ -12,7 +12,7 @@ import socket
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from zope.interface import implements
+from zope.interface import implementer
 
 
 class IPHeader:
@@ -29,20 +29,19 @@ class IPHeader:
         self.dont_fragment = (frag_off & 0x4000 != 0)
         self.more_fragments = (frag_off & 0x2000 != 0)
 
-MAX_SIZE = 2L**32
+MAX_SIZE = 2**32
 
+@implementer(raw.IRawPacketProtocol)
 class IPProtocol(protocol.AbstractDatagramProtocol):
-    implements(raw.IRawPacketProtocol)
-
     def __init__(self):
         self.ipProtos = {}
 
     def addProto(self, num, proto):
         proto = raw.IRawDatagramProtocol(proto)
         if num < 0:
-            raise TypeError, 'Added protocol must be positive or zero'
+            raise TypeError('Added protocol must be positive or zero')
         if num >= MAX_SIZE:
-            raise TypeError, 'Added protocol must fit in 32 bits'
+            raise TypeError('Added protocol must fit in 32 bits')
         if num not in self.ipProtos:
             self.ipProtos[num] = []
         self.ipProtos[num].append(proto)

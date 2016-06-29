@@ -11,12 +11,16 @@ doing authentication on either client or server side, and working with XML
 Stanzas.
 """
 
+from __future__ import absolute_import, division
+
+from binascii import hexlify
 from hashlib import sha1
-from zope.interface import directlyProvides, implements
+from zope.interface import directlyProvides, implementer
 
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
+from twisted.python.compat import intern, iteritems, itervalues, unicode
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -276,10 +280,10 @@ class ListenAuthenticator(Authenticator):
             self.xmlstream.thisEntity = jid.internJID(rootElement["to"])
 
         self.xmlstream.prefixes = {}
-        for prefix, uri in rootElement.localPrefixes.iteritems():
+        for prefix, uri in iteritems(rootElement.localPrefixes):
             self.xmlstream.prefixes[uri] = prefix
 
-        self.xmlstream.sid = unicode(randbytes.secureRandom(8).encode('hex'))
+        self.xmlstream.sid = hexlify(randbytes.secureRandom(8)).decode('ascii')
 
 
 
@@ -291,6 +295,7 @@ class FeatureNotAdvertized(Exception):
 
 
 
+@implementer(ijabber.IInitiatingInitializer)
 class BaseFeatureInitiatingInitializer(object):
     """
     Base class for initializers with a stream feature.
@@ -304,8 +309,6 @@ class BaseFeatureInitiatingInitializer(object):
                     by the receiving entity.
     @type required: C{bool}
     """
-
-    implements(ijabber.IInitiatingInitializer)
 
     feature = None
     required = False
@@ -537,7 +540,7 @@ class XmlStream(xmlstream.XmlStream):
         """
         # set up optional extra namespaces
         localPrefixes = {}
-        for uri, prefix in self.prefixes.iteritems():
+        for uri, prefix in iteritems(self.prefixes):
             if uri != NS_STREAMS:
                 localPrefixes[prefix] = uri
 
@@ -602,7 +605,7 @@ class XmlStream(xmlstream.XmlStream):
         if domish.IElement.providedBy(obj):
             obj = obj.toXml(prefixes=self.prefixes,
                             defaultUri=self.namespace,
-                            prefixesInScope=self.prefixes.values())
+                            prefixesInScope=list(self.prefixes.values()))
 
         xmlstream.XmlStream.send(self, obj)
 
@@ -745,7 +748,7 @@ def upgradeWithIQResponseTracker(xs):
         """
         iqDeferreds = xs.iqDeferreds
         xs.iqDeferreds = {}
-        for d in iqDeferreds.itervalues():
+        for d in itervalues(iqDeferreds):
             d.errback(ConnectionLost())
 
     xs.iqDeferreds = {}
@@ -863,6 +866,7 @@ def toResponse(stanza, stanzaType=None):
 
 
 
+@implementer(ijabber.IXMPPHandler)
 class XMPPHandler(object):
     """
     XMPP protocol handler.
@@ -870,8 +874,6 @@ class XMPPHandler(object):
     Classes derived from this class implement (part of) one or more XMPP
     extension protocols, and are referred to as a subprotocol implementation.
     """
-
-    implements(ijabber.IXMPPHandler)
 
     def __init__(self):
         self.parent = None
@@ -939,6 +941,7 @@ class XMPPHandler(object):
 
 
 
+@implementer(ijabber.IXMPPHandlerCollection)
 class XMPPHandlerCollection(object):
     """
     Collection of XMPP subprotocol handlers.
@@ -950,8 +953,6 @@ class XMPPHandlerCollection(object):
     @type handlers: C{list} of objects providing
                       L{IXMPPHandler}
     """
-
-    implements(ijabber.IXMPPHandlerCollection)
 
     def __init__(self):
         self.handlers = []

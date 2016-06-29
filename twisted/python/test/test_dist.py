@@ -93,6 +93,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('all_non_platform', _EXTRAS_REQUIRE)
         self.assertIn('osx_platform', _EXTRAS_REQUIRE)
         self.assertIn('windows_platform', _EXTRAS_REQUIRE)
+        self.assertIn('http2', _EXTRAS_REQUIRE)
 
 
     def test_extrasRequiresDevDeps(self):
@@ -131,6 +132,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('cryptography >= 0.9.1', deps)
+        self.assertIn('appdirs >= 1.4.0', deps)
 
 
     def test_extrasRequiresSoapDeps(self):
@@ -155,6 +157,16 @@ class OptionalDependenciesTests(TestCase):
         )
 
 
+    def test_extrasRequiresHttp2Deps(self):
+        """
+        L{_EXTRAS_REQUIRE}'s C{http2} extra contains setuptools requirements
+        for the packages required to make Twisted HTTP/2 support work.
+        """
+        deps = _EXTRAS_REQUIRE['http2']
+        self.assertIn('h2 >= 2.3.0, < 3.0', deps)
+        self.assertIn('priority >= 1.1.0, < 2.0', deps)
+
+
     def test_extrasRequiresAllNonPlatformDeps(self):
         """
         L{_EXTRAS_REQUIRE}'s C{all_non_platform} extra contains setuptools
@@ -170,6 +182,9 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
+        self.assertIn('appdirs >= 1.4.0', deps)
+        self.assertIn('h2 >= 2.3.0, < 3.0', deps)
+        self.assertIn('priority >= 1.1.0, < 2.0', deps)
 
 
     def test_extrasRequiresOsxPlatformDeps(self):
@@ -187,6 +202,8 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
+        self.assertIn('h2 >= 2.3.0, < 3.0', deps)
+        self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pyobjc', deps)
 
 
@@ -205,6 +222,8 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('cryptography >= 0.9.1', deps)
         self.assertIn('soappy', deps)
         self.assertIn('pyserial', deps)
+        self.assertIn('h2 >= 2.3.0, < 3.0', deps)
+        self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
 
 
@@ -379,7 +398,7 @@ class BuildScriptsTests(TestCase):
         self.patch(os, "name", "twisted")
         built = self.buildScripts()
         for name in ['script1', 'script2.py', 'shell.sh']:
-            self.assertTrue(name in built)
+            self.assertIn(name, built)
 
 
     def test_windows(self):
@@ -390,7 +409,7 @@ class BuildScriptsTests(TestCase):
         self.patch(os, "name", "nt")
         built = self.buildScripts()
         for name in ['script1.py', 'script2.py', 'shell.sh.py']:
-            self.assertTrue(name in built)
+            self.assertIn(name, built)
 
 
 

@@ -145,7 +145,7 @@ class Resource:
         return self.children.get(name)
 
     def getDynamicEntity(self, name, request):
-        if not self.children.has_key(name):
+        if name not in self.children:
             return self.getChild(name, request)
         else:
             return None
@@ -367,7 +367,7 @@ class _IEncodingResource(Interface):
         Parse the request and return an encoder if applicable, using
         L{_IRequestEncoderFactory.encoderForRequest}.
 
-        @return: A L{_IRequestEncoder}, or C{None}.
+        @return: A L{_IRequestEncoder}, or L{None}.
         """
 
 

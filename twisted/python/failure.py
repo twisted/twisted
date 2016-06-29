@@ -11,7 +11,7 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 # System Imports
 import sys
@@ -185,9 +185,9 @@ class Failure:
         raised by L{raiseException}, then this C{Failure} will act like
         the original C{Failure}.
 
-        For C{exc_tb} only L{traceback} instances or C{None} are allowed.
-        If C{None} is supplied for C{exc_value}, the value of C{exc_tb} is
-        ignored, otherwise if C{exc_tb} is C{None}, it will be found from
+        For C{exc_tb} only L{traceback} instances or L{None} are allowed.
+        If L{None} is supplied for C{exc_value}, the value of C{exc_tb} is
+        ignored, otherwise if C{exc_tb} is L{None}, it will be found from
         execution context (ie, L{sys.exc_info}).
 
         @param captureVars: if set, capture locals and globals of stack
@@ -324,11 +324,11 @@ class Failure:
 
             def _ebFoo(self, failure):
                 r = failure.trap(Spam, Eggs)
-                print 'The Failure is due to either Spam or Eggs!'
+                print('The Failure is due to either Spam or Eggs!')
                 if r == Spam:
-                    print 'Spam did it!'
+                    print('Spam did it!')
                 elif r == Eggs:
-                    print 'Eggs did it!'
+                    print('Eggs did it!')
 
         If the failure is not a Spam or an Eggs, then the Failure will be
         'passed on' to the next errback. In Python 2 the Failure will be
@@ -493,7 +493,7 @@ class Failure:
         Remove references to other objects, replacing them with strings.
 
         On Python 3, this will also set the C{__traceback__} attribute of the
-        exception instance to C{None}.
+        exception instance to L{None}.
         """
         self.__dict__ = self.__getstate__()
         if _PY3:

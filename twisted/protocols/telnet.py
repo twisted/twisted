@@ -1,10 +1,11 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""TELNET implementation, with line-oriented command handling.
 """
+TELNET implementation, with line-oriented command handling.
+"""
+
+from __future__ import absolute_import, division
 
 import warnings
 warnings.warn(
@@ -13,21 +14,16 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2)
 
+from io import BytesIO
 
-# System Imports
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
-# Twisted Imports
 from twisted import copyright
 from twisted.internet import protocol
+from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
 
 # Some utility chars.
 ESC =            chr(27) # ESC for doing fanciness
-BOLD_MODE_ON =   ESC+"[1m" # turn bold on
-BOLD_MODE_OFF=   ESC+"[m"  # no char attributes
+BOLD_MODE_ON =   ESC + b"[1m" # turn bold on
+BOLD_MODE_OFF=   ESC + b"[m"  # no char attributes
 
 
 # Characters gleaned from the various (and conflicting) RFCs.  Not all of these are correct.
@@ -122,7 +118,7 @@ HIDE  =         chr(133)  # The intention is that a server will send
 
 NOECHO=         chr(131)  # User-to-Server:  Asks the server not to
                           # return Echos of the transmitted data.
-                          # 
+                          #
                           # Server-to-User:  States that the server is
                           # not sending echos of the transmitted data.
                           # Sent only as a reply to ECHO or NO ECHO,
@@ -136,7 +132,7 @@ iacBytes = {
     WILL: 'WILL',
     WONT: 'WONT',
     IP:   'IP'
-    }
+}
 
 def multireplace(st, dct):
     for k, v in dct.items():
@@ -144,7 +140,8 @@ def multireplace(st, dct):
     return st
 
 class Telnet(protocol.Protocol):
-    """I am a Protocol for handling Telnet connections. I have two
+    """
+    I am a Protocol for handling Telnet connections. I have two
     sets of special methods, telnet_* and iac_*.
 
     telnet_* methods get called on every line sent to me. The method
@@ -165,9 +162,9 @@ class Telnet(protocol.Protocol):
     gotIAC = 0
     iacByte = None
     lastLine = None
-    buffer = ''
+    buffer = b''
     echo = 0
-    delimiters = ['\r\n', '\r\000']
+    delimiters = [b'\r\n', b'\r\000']
     mode = "User"
 
     def write(self, data):
@@ -183,13 +180,13 @@ class Telnet(protocol.Protocol):
         """Override me to return a string which will be sent to the client
         before login."""
         x = self.factory.__class__
-        return ("\r\n" + x.__module__ + '.' + x.__name__ +
+        return networkString("\r\n" + x.__module__ + '.' + x.__name__ +
                 '\r\nTwisted %s\r\n' % copyright.version
                 )
 
     def loginPrompt(self):
         """Override me to return a 'login:'-type prompt."""
-        return "username: "
+        return b"username: "
 
     def iacSBchunk(self, chunk):
         pass
@@ -214,7 +211,7 @@ class Telnet(protocol.Protocol):
         in by the current mode. telnet_* methods should return a string which
         will become the new mode.  If None is returned, the mode will not change.
         """
-        mode = getattr(self, "telnet_"+self.mode)(line)
+        mode = getattr(self, "telnet_" + self.mode)(line)
         if mode is not None:
             self.mode = mode
 
@@ -224,14 +221,14 @@ class Telnet(protocol.Protocol):
         you want to do something else when the username is received (ie,
         create a new user if the user doesn't exist), override me."""
         self.username = user
-        self.write(IAC+WILL+ECHO+"password: ")
+        self.write(IAC + WILL + ECHO + b"password: ")
         return "Password"
 
     def telnet_Password(self, paswd):
         """I accept a password as an argument, and check it with the
         checkUserAndPass method. If the login is successful, I call
         loggedIn()."""
-        self.write(IAC+WONT+ECHO+"*****\r\n")
+        self.write(IAC + WONT + ECHO + b"*****\r\n")
         try:
             checked = self.checkUserAndPass(self.username, paswd)
         except:
@@ -257,7 +254,7 @@ class Telnet(protocol.Protocol):
             idx = self.buffer.find(delim)
             if idx != -1:
                 break
-            
+
         while idx != -1:
             buf, self.buffer = self.buffer[:idx], self.buffer[idx+2:]
             self.processLine(buf)
@@ -270,9 +267,9 @@ class Telnet(protocol.Protocol):
                     break
 
     def dataReceived(self, data):
-        chunk = StringIO()
+        chunk = BytesIO()
         # silly little IAC state-machine
-        for char in data:
+        for char in iterbytes(data):
             if self.gotIAC:
                 # working on an IAC request state
                 if self.iacByte:
@@ -280,7 +277,7 @@ class Telnet(protocol.Protocol):
                     if self.iacByte == SB:
                         if char == SE:
                             self.iacSBchunk(chunk.getvalue())
-                            chunk = StringIO()
+                            chunk = BytesIO()
                             del self.iacByte
                             del self.gotIAC
                         else:
@@ -306,7 +303,7 @@ class Telnet(protocol.Protocol):
                     why = self.processChunk(c)
                     if why:
                         return why
-                    chunk = StringIO()
+                    chunk = BytesIO()
                 self.gotIAC = 1
             else:
                 chunk.write(char)
@@ -319,7 +316,7 @@ class Telnet(protocol.Protocol):
 
     def loggedIn(self):
         """Called after the user succesfully logged in.
-        
+
         Override in subclasses.
         """
         pass

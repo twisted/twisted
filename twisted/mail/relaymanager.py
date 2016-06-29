@@ -111,11 +111,11 @@ class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
         @type manager: L{_AttemptManager}
         @param manager: An attempt manager.
 
-        @type args: 3-L{tuple} of (0) L{bytes}, (1) L{NoneType
-            <types.NoneType>} or L{ClientContextFactory
+        @type args: 3-L{tuple} of (0) L{bytes}, (1) L{None} or
+            L{ClientContextFactory
             <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes} or
-            4-L{tuple} of (0) L{bytes}, (1) L{NoneType <types.NoneType>}
-            or L{ClientContextFactory
+            4-L{tuple} of (0) L{bytes}, (1) L{None} or
+            L{ClientContextFactory
             <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes},
             (3) L{int}
         @param args: Positional arguments for L{ESMTPClient.__init__}
@@ -231,7 +231,7 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
         @type secret: L{bytes}
         @param secret: A string for the authentication challenge response.
 
-        @type contextFactory: L{NoneType <types.NoneType>} or
+        @type contextFactory: L{None} or
             L{ClientContextFactory <twisted.internet.ssl.ClientContextFactory>}
         @param contextFactory: An SSL context factory.
 
@@ -678,7 +678,7 @@ class SmartHostSMTPRelayingManager:
     @type PORT: L{int}
     @ivar PORT: The port over which to connect to the SMTP server.
 
-    @type mxcalc: L{NoneType <types.NoneType>} or L{MXCalculator}
+    @type mxcalc: L{None} or L{MXCalculator}
     @ivar mxcalc: A resource for mail exchange host lookups.
 
     @type managed: L{dict} mapping L{SMTPManagedRelayerFactory} to L{list} of
@@ -747,7 +747,7 @@ class SmartHostSMTPRelayingManager:
         Check the state of the relay queue and, if possible, launch relayers to
         handle waiting messages.
 
-        @rtype: L{NoneType <types.NoneType>} or L{Deferred}
+        @rtype: L{None} or L{Deferred}
         @return: No return value if no further messages can be relayed or a
             deferred which fires when all of the SMTP connections initiated by
             this call have disconnected.
@@ -942,11 +942,11 @@ class MXCalculator:
     def __init__(self, resolver=None, clock=None):
         """
         @type resolver: L{IResolver <twisted.internet.interfaces.IResolver>}
-            provider or L{NoneType <types.NoneType>}
+            provider or L{None}
         @param: A resolver.
 
         @type clock: L{IReactorTime <twisted.internet.interfaces.IReactorTime>}
-            provider or L{NoneType <types.NoneType>}
+            provider or L{None}
         @param clock: A reactor which will be used to schedule timeouts.
         """
         self.badMXs = {}

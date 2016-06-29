@@ -1,12 +1,16 @@
-Twisted 15.5.0
+Twisted 16.2.0
 ==============
 
 |pypi|
 |coverage|
+|travis|
 
-    <reaperhulk> I continue to believe that networks are totally reliable despite ample evidence from my CI that I am wrong
+.. code::
 
-For information on what's new in Twisted 15.5.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+    <lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
+
+
+For information on what's new in Twisted 16.2.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -57,6 +61,12 @@ Twisted has a comprehensive test suite, which can be run by ``tox``::
   $ tox -e py27-tests # to run the tests for Python 2.7
   $ tox -e py34-tests # to run the tests for Python 3.4
 
+
+You can test running the test suite under the different reactors with the ``TWISTED_REACTOR`` environment variable::
+
+  $ env TWISTED_REACTOR=epoll tox -e py27-tests
+
+
 Some of these tests may fail if you:
 
 * don't have the dependencies required for a particular subsystem installed,
@@ -67,7 +77,7 @@ Some of these tests may fail if you:
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2015 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2016 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
@@ -94,3 +104,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |pypi| image:: http://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
+
+.. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
+.. _travis https://travis-ci.org/twisted/twisted

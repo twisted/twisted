@@ -11,11 +11,12 @@ from __future__ import absolute_import, division
 import base64
 import itertools
 import warnings
+
 from hashlib import md5
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding
 try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
@@ -74,12 +75,12 @@ class Key(object):
 
         @param filename: The path to load key data from.
 
-        @type type: L{str} or C{None}
+        @type type: L{str} or L{None}
         @param type: A string describing the format the key data is in, or
-        C{None} to attempt detection of the type.
+        L{None} to attempt detection of the type.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if there is no encryption.
 
         @rtype: L{Key}
@@ -101,12 +102,12 @@ class Key(object):
         @type data: L{bytes}
         @param data: The key data.
 
-        @type type: L{str} or C{None}
+        @type type: L{str} or L{None}
         @param type: A string describing the format the key data is in, or
-        C{None} to attempt detection of the type.
+        L{None} to attempt detection of the type.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if there is no encryption.
 
         @rtype: L{Key}
@@ -255,8 +256,8 @@ class Key(object):
         @type data: L{bytes}
         @param data: The key data.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if it is not encrypted.
 
         @return: A new key.
@@ -523,16 +524,16 @@ class Key(object):
         @type e: L{int}
         @param e: The 'e' RSA variable.
 
-        @type d: L{int} or C{None}
+        @type d: L{int} or L{None}
         @param d: The 'd' RSA variable (optional for a public key).
 
-        @type p: L{int} or C{None}
+        @type p: L{int} or L{None}
         @param p: The 'p' RSA variable (optional for a public key).
 
-        @type q: L{int} or C{None}
+        @type q: L{int} or L{None}
         @param q: The 'q' RSA variable (optional for a public key).
 
-        @type u: L{int} or C{None}
+        @type u: L{int} or L{None}
         @param u: The 'u' RSA variable. Ignored, as its value is determined by
         p and q.
 
@@ -575,7 +576,7 @@ class Key(object):
         @type g: L{int}
         @param g: The 'g' DSA variable.
 
-        @type x: L{int} or C{None}
+        @type x: L{int} or L{None}
         @param x: The 'x' DSA variable (optional for a public key)
 
         @rtype: L{Key}
@@ -975,7 +976,7 @@ class Key(object):
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
             encrypt with.
-        @type extra: L{bytes} or L{NoneType}
+        @type extra: L{bytes} or L{None}
 
         @rtype: L{bytes}
         """
@@ -1227,6 +1228,55 @@ def objectType(obj):
         return keyDataMapping[tuple(obj.keydata)]
     except (KeyError, AttributeError):
         raise BadKeyError("invalid key object", obj)
+
+
+
+def _getPersistentRSAKey(location, keySize=4096):
+    """
+    This function returns a persistent L{Key}.
+
+    The key is loaded from a PEM file in C{location}. If it does not exist, a
+    key with the key size of C{keySize} is generated and saved.
+
+    @param location: Where the key is stored.
+    @type location: L{twisted.python.filepath.FilePath}
+
+    @param keySize: The size of the key, if it needs to be generated.
+    @type keySize: L{int}
+
+    @returns: A persistent key.
+    @rtype: L{Key}
+    """
+    location.parent().makedirs(ignoreExistingDirectory=True)
+
+    # If it doesn't exist, we want to generate a new key and save it
+    if not location.exists():
+        privateKey = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=keySize,
+            backend=default_backend()
+        )
+
+        pem = privateKey.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+
+        location.setContent(pem)
+
+    # By this point (save any hilarious race conditions) we should have a
+    # working PEM file. Load it!
+    # (Future archaelogical readers: I chose not to short circuit above,
+    # because then there's two exit paths to this code!)
+    with location.open("rb") as keyFile:
+        privateKey = serialization.load_pem_private_key(
+            keyFile.read(),
+            password=None,
+            backend=default_backend()
+        )
+        return Key(privateKey)
+
 
 
 if _PY3:

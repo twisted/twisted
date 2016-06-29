@@ -16,11 +16,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
-from twisted.logger import Logger
-
-_log = Logger()
-_logFor = lambda _:_log.__get__(_, _.__class__)
-
+from twisted.logger import _loggerFor
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
@@ -73,8 +69,8 @@ class Factory:
         """
         if not self.numPorts:
             if self.noisy:
-                _logFor(self).info("Starting factory {factory!r}",
-                                   factory=self)
+                _loggerFor(self).info("Starting factory {factory!r}",
+                                      factory=self)
             self.startFactory()
         self.numPorts = self.numPorts + 1
 
@@ -90,8 +86,8 @@ class Factory:
         self.numPorts = self.numPorts - 1
         if not self.numPorts:
             if self.noisy:
-                _logFor(self).info("Stopping factory {factory!r}",
-                                   factory=self)
+                _loggerFor(self).info("Stopping factory {factory!r}",
+                                      factory=self)
             self.stopFactory()
 
     def startFactory(self):
@@ -125,7 +121,7 @@ class Factory:
         connection, and an attribute "factory" pointing to the creating
         factory.
 
-        Alternatively, C{None} may be returned to immediately close the
+        Alternatively, L{None} may be returned to immediately close the
         new connection.
 
         Override this method to alter how Protocol instances get created.
@@ -736,7 +732,7 @@ class DatagramProtocol(AbstractDatagramProtocol):
     """
     Protocol for datagram-oriented transport, e.g. UDP.
 
-    @type transport: C{NoneType} or
+    @type transport: L{None} or
         L{IUDPTransport<twisted.internet.interfaces.IUDPTransport>} provider
     @ivar transport: The transport with which this protocol is associated,
         if it is associated with one.

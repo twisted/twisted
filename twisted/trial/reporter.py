@@ -162,7 +162,7 @@ class TestResult(pyunit.TestResult, object):
         call this method to report the unexpected success.
 
         @type test: L{pyunit.TestCase}
-        @type todo: L{unittest.Todo}, or C{None}, in which case a default todo
+        @type todo: L{unittest.Todo}, or L{None}, in which case a default todo
             message is provided.
         """
         if todo is None:
@@ -179,7 +179,7 @@ class TestResult(pyunit.TestResult, object):
 
         @type test: L{pyunit.TestCase}
         @type error: L{Failure}
-        @type todo: L{unittest.Todo}, or C{None}, in which case a default todo
+        @type todo: L{unittest.Todo}, or L{None}, in which case a default todo
             message is provided.
         """
         if todo is None:
@@ -302,7 +302,7 @@ class _AdaptedReporter(TestResultDecorator):
         @type failure: A L{failure.Failure} or L{exceptions.AssertionError}
         @type todo: A L{unittest.Todo} or None
 
-        When C{todo} is C{None} a generic C{unittest.Todo} is built.
+        When C{todo} is L{None} a generic C{unittest.Todo} is built.
 
         L{pyunit.TestCase}'s C{run()} calls this with 3 positional arguments
         (without C{todo}).
@@ -334,7 +334,7 @@ class _AdaptedReporter(TestResultDecorator):
         @type test: A L{pyunit.TestCase}.
         @type todo: A L{unittest.Todo} or None
 
-        When C{todo} is C{None} a generic C{unittest.Todo} is built.
+        When C{todo} is L{None} a generic C{unittest.Todo} is built.
 
         L{pyunit.TestCase}'s C{run()} calls this with 2 positional arguments
         (without C{todo}).
@@ -364,8 +364,8 @@ class Reporter(TestResult):
     A basic L{TestResult} with support for writing to a stream.
 
     @ivar _startTime: The time when the first test was started. It defaults to
-        C{None}, which means that no test was actually launched.
-    @type _startTime: C{float} or C{NoneType}
+        L{None}, which means that no test was actually launched.
+    @type _startTime: C{float} or L{None}
 
     @ivar _warningCache: A C{set} of tuples of warning message (file, line,
         text, category) which have already been written to the output stream

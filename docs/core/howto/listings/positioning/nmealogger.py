@@ -4,6 +4,8 @@
 """
 Connects to an NMEA device, logs beacon information and position.
 """
+from __future__ import print_function
+
 import sys
 from twisted.internet import reactor, serialport
 from twisted.positioning import base, nmea
@@ -35,8 +37,8 @@ def run():
     opts = Options()
     try:
         opts.parseOptions()
-    except usage.UsageError, message:
-        print "{}: {}".format(sys.argv[0], message)
+    except usage.UsageError as message:
+        print("{}: {}".format(sys.argv[0], message))
         return
 
     positioningReceiver = PositioningReceiver()

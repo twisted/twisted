@@ -30,6 +30,15 @@ from twisted.python.usage import Options, UsageError
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
 
+# Types of topfiles.
+TOPFILE_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
+intersphinxURLs = [
+    "https://docs.python.org/2/objects.inv",
+    "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
+    "https://python-hyper.org/h2/en/stable/objects.inv",
+    "https://python-hyper.org/priority/en/stable/objects.inv",
+]
+
 
 def runCommand(args, cwd=None):
     """
@@ -193,90 +202,20 @@ class GitCommand(object):
 
 
 
-@implementer(IVCSCommand)
-class SVNCommand(object):
-    """
-    Subset of SVN commands to release Twisted from a Subversion checkout.
-    """
-    @staticmethod
-    def ensureIsWorkingDirectory(path):
-        """
-        Ensure that C{path} is a SVN working directory.
-
-        @type path: L{twisted.python.filepath.FilePath}
-        @param path: The path to check.
-        """
-        if "is not a working copy" in runCommand(
-                ["svn", "status", path.path]):
-            raise NotWorkingDirectory(
-                "%s does not appear to be an SVN working directory."
-                % (path.path,))
-
-
-    @staticmethod
-    def isStatusClean(path):
-        """
-        Return the SVN status of the files in the specified path.
-
-        @type path: L{twisted.python.filepath.FilePath}
-        @param path: The path to get the status from (can be a directory or a
-            file.)
-        """
-        status = runCommand(["svn", "status", path.path]).strip()
-        return status == ''
-
-
-    @staticmethod
-    def remove(path):
-        """
-        Remove the specified path from a Subversion checkout.
-
-        @type path: L{twisted.python.filepath.FilePath}
-        @param path: The path to remove from the checkout.
-        """
-        runCommand(["svn", "rm", path.path])
-
-
-    @staticmethod
-    def exportTo(fromDir, exportDir):
-        """
-        Export the content of a SVN checkout to the specified directory.
-
-        @type fromDir: L{twisted.python.filepath.FilePath}
-        @param fromDir: The path to the Subversion checkout to export.
-
-        @type exportDir: L{twisted.python.filepath.FilePath}
-        @param exportDir: The directory to export the content of the checkout
-            to. This directory doesn't have to exist prior to exporting the
-            repository.
-        """
-        runCommand(["svn", "export", fromDir.path, exportDir.path])
-
-
-
 def getRepositoryCommand(directory):
     """
-    Detect the VCS used in the specified directory and return either a
-    L{SVNCommand} or a L{GitCommand} if the directory is a Subversion checkout
-    or a Git repository, respectively.
-    If the directory is neither one nor the other, it raises a
-    L{NotWorkingDirectory} exception.
+    Detect the VCS used in the specified directory and return a L{GitCommand}
+    if the directory is a Git repository. If the directory is not git, it
+    raises a L{NotWorkingDirectory} exception.
 
     @type directory: L{FilePath}
     @param directory: The directory to detect the VCS used from.
 
-    @rtype: L{SVNCommand} or L{GitCommand}
+    @rtype: L{GitCommand}
 
     @raise NotWorkingDirectory: if no supported VCS can be found from the
         specified directory.
     """
-    try:
-        SVNCommand.ensureIsWorkingDirectory(directory)
-        return SVNCommand
-    except (NotWorkingDirectory, OSError):
-        # It's not SVN, but that's okay, eat the error
-        pass
-
     try:
         GitCommand.ensureIsWorkingDirectory(directory)
         return GitCommand
@@ -577,6 +516,12 @@ class APIBuilder(object):
         @param outputPath: An existing directory to which the generated API
             documentation will be written.
         """
+        intersphinxes = []
+
+        for intersphinx in intersphinxURLs:
+            intersphinxes.append("--intersphinx")
+            intersphinxes.append(intersphinx)
+
         from pydoctor.driver import main
         main(
             ["--project-name", projectName,
@@ -586,7 +531,8 @@ class APIBuilder(object):
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
-             "--html-write-function-pages", "--quiet", "--make-html"])
+             "--html-write-function-pages", "--quiet", "--make-html",
+            ] + intersphinxes)
 
 
 
@@ -646,8 +592,8 @@ class NewsBuilder(object):
             for news entries.
 
         @param ticketType: The type of news entries to search for.  One of
-            L{NewsBuilder._FEATURE}, L{NewsBuilder._BUGFIX},
-            L{NewsBuilder._REMOVAL}, or L{NewsBuilder._MISC}.
+            C{NewsBuilder._FEATURE}, C{NewsBuilder._BUGFIX},
+            C{NewsBuilder._REMOVAL}, or C{NewsBuilder._MISC}.
 
         @return: A C{list} of two-tuples.  The first element is the ticket
             number as an C{int}.  The second element of each tuple is the
@@ -709,7 +655,8 @@ class NewsBuilder(object):
         for description in reverse:
             reverse[description].sort()
         reverse = reverse.items()
-        reverse.sort(key=lambda (descr, tickets): tickets[0])
+        # result is a tuple of (descr, tickets)
+        reverse.sort(key=lambda result: result[1][0])
 
         fileObj.write(header + '\n' + '-' * len(header) + '\n')
         for (description, relatedTickets) in reverse:
@@ -1110,3 +1057,71 @@ class BuildAPIDocsScript(object):
             sys.exit("Must specify two arguments: "
                      "Twisted checkout and destination path")
         self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
+
+
+
+class CheckTopfileScript(object):
+    """
+    A thing for checking whether a checkout has a topfile.
+    """
+    def __init__(self, _print):
+        self._print = _print
+
+
+    def main(self, args):
+        """
+        Run the script.
+
+        @type args: L{list} of L{str}
+        @param args: The command line arguments to process. This must contain
+            one string: the path to the root of the Twisted checkout.
+        """
+        if len(args) != 1:
+            sys.exit("Must specify one argument: the Twisted checkout")
+
+        location = os.path.abspath(args[0])
+
+        branch = runCommand([b"git", b"rev-parse", b"--abbrev-ref",  "HEAD"],
+                            cwd=location).strip()
+
+        r = runCommand([b"git", b"diff", b"--name-only", b"origin/trunk..."],
+                       cwd=location).strip()
+
+        if not r:
+            self._print(
+                "On trunk or no diffs from trunk; no need to look at this.")
+            sys.exit(0)
+
+        files = r.strip().split(os.linesep)
+
+        self._print("Looking at these files:")
+        for change in files:
+            self._print(change)
+        self._print("----")
+
+        if len(files) == 1:
+            if files[0] == os.sep.join(["docs", "fun", "Twisted.Quotes"]):
+                self._print("Quotes change only; no topfile needed.")
+                sys.exit(0)
+
+        topfiles = []
+
+        for change in files:
+            if os.sep + "topfiles" + os.sep in change:
+                if change.rsplit(".", 1)[1] in TOPFILE_TYPES:
+                    topfiles.append(change)
+
+        if branch.startswith("release-"):
+            if topfiles:
+                self._print("No topfiles should be on the release branch.")
+                sys.exit(1)
+            else:
+                self._print("Release branch with no topfiles, all good.")
+                sys.exit(0)
+
+        for change in topfiles:
+            self._print("Found " + change)
+            sys.exit(0)
+
+        self._print("No topfile found. Have you committed it?")
+        sys.exit(1)

@@ -1,17 +1,16 @@
-* meejah uses a Makefile
-<glyph> meejah: and how's that work out for your Windows user :)
+Audience: "What about eggs, are those still a thing?"
+glyph: ::holds mic close:: "Nooooo."
 %
-<glyph> idnar: Insufficiently appeased! <link to grumpy twistedchecker>
+<artige> what! that's so cool
+<artige> and easy
+<artige> okay, i'll make a commit later
 %
-<foom> tomprince: I'm pretty sure it at least works on windows.
-<foom> ...or...not. If you're using windows 8.1 or higher.
+<tomprince> [...] that made me think of (infinity,1)-groupoids and motivic and crystalline cohomology. :)
+<@glyph> tomprince: NO IDEA IF THOSE ARE REAL WORDS
+<tomprince> They are.
+<tomprince> It would have been no fun to come up with nonsense, when there is perfectly good existing abstract nonsense to choose from.
 %
-<idnar> oh, sorry, this is easier than the last time I looked
-<glyph> idnar: HAHA PWNT
-<glyph> idnar: I WORKED SUPER HARD TO MAKE YOUR LIFE EASIER FOR MONTHS AND NOW YOU HAVE TO EAT CROWWWW
-<glyph> idnar: I AM THE WINNER IN THIS TRANSACTION SOMEHOW
+<dstufft> future maintainers should hate me just as much as I hate the past maintainers
 %
-<kenaan> new core task https://tm.tl/#8224 by hawkowl: We should actively discourage the use of versions of Twisted older than 14.0
-<idnar> "actively discourage"
-<idnar> that brings up some amusing mental imagery :D
-* idnar imagines hawkowl crashing in through somebody's window to yell at them for using ancient software
+<lukasa> But this is why the API is private and opt-in
+<lukasa> So that users can hit the weirdo edge cases that I can't replicate by just thinking really hard.
