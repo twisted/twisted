@@ -32,12 +32,12 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
     A reactor that uses poll(2).
 
-    @ivar _poller: A L{poll} which will be used to check for I/O
+    @ivar _poller: A L{select.poll} which will be used to check for I/O
         readiness.
 
     @ivar _selectables: A dictionary mapping integer file descriptors to
         instances of L{FileDescriptor} which have been registered with the
-        reactor.  All L{FileDescriptors} which are currently receiving read or
+        reactor.  All L{FileDescriptor}s which are currently receiving read or
         write readiness notifications will be present as values in this
         dictionary.
 

@@ -1007,7 +1007,7 @@ class IReactorSocket(Interface):
             done as soon as C{adoptDatagramPort} returns.
         @type fileDescriptor: C{int}
 
-        @param addressFamily: The address family (or I{domain}) of the socket.
+        @param addressFamily: The address family or I{domain} of the socket.
             For example, L{socket.AF_INET6}.
         @type addressFamily: C{int}
 
@@ -1020,7 +1020,7 @@ class IReactorSocket(Interface):
 
         @return: An object providing L{IListeningPort}.
 
-        @raise L{UnsupportedAddressFamily}: If the given address family is not
+        @raise UnsupportedAddressFamily: If the given address family is not
             supported by this reactor, or not supported with the given socket
             type.
 
