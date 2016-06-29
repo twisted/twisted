@@ -62,7 +62,7 @@ class TwistedSphinxInventory(SphinxInventory):
 
             return '%s/%s' % (baseURL, relativeLink)
 
-        return result
+        return None
 
 
 
@@ -79,29 +79,29 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
             logger=self.msg, project_name=self.projectname)
 
 
-    def privacyClass(self, obj):
+    def privacyClass(self, documentable):
         """
         Report the privacy level for an object.
 
-        Hide all tests with the exception of C{t.test.proto_helpers}.
+        Hide all tests with the exception of L{twisted.test.proto_helpers}.
 
         param obj: Object for which the privacy is reported.
-        type obj: L{object}
+        type obj: C{model.Documentable}
 
         rtype: C{model.PrivacyClass} member
         """
-        o = obj
 
-        if o.fullName() == 'twisted.test':
+        if documentable.fullName() == 'twisted.test':
             # Match this package exactly, so that proto_helpers
             # below is visible
             return model.PrivacyClass.VISIBLE
 
-        while o:
-            if o.fullName() == 'twisted.test.proto_helpers':
+        current = documentable
+        while current:
+            if current.fullName() == 'twisted.test.proto_helpers':
                 return model.PrivacyClass.VISIBLE
-            if isinstance(o, model.Package) and o.name == 'test':
+            if isinstance(current, model.Package) and current.name == 'test':
                 return model.PrivacyClass.HIDDEN
-            o = o.parent
+            current = current.parent
 
-        return super(TwistedSystem, self).privacyClass(obj)
+        return super(TwistedSystem, self).privacyClass(documentable)
