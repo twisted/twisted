@@ -29,7 +29,8 @@ import twisted.internet.error
 from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
-from twisted.python.deprecate import warnAboutFunction, deprecated
+from twisted.python.deprecate import (warnAboutFunction, deprecated,
+                                      deprecatedModuleAttribute)
 from twisted.python.versions import Version
 
 log = Logger()
@@ -46,12 +47,14 @@ class CancelledError(Exception):
     """
 
 
-@deprecated(Version("Twisted", 16, 3, 0),
-            replacement="twisted.internet.error.TimeoutError")
 class TimeoutError(Exception):
     """
     This exception is deprecated.
     """
+    deprecatedModuleAttribute(
+        Version("Twisted", 16, 3, 0),
+        "Use twisted.internet.error.TimeoutError instead",
+        "twisted.internet.defer", "TimeoutError")
 
 
 
