@@ -17,7 +17,7 @@ Test running processes.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import gzip
 import os
@@ -604,7 +604,7 @@ class ProcessTests(unittest.TestCase):
     def test_echo(self):
         """
         A spawning a subprocess which echoes its stdin to its stdout via
-        C{reactor.spawnProcess} will result in that echoed output being
+        L{IReactorProcess.spawnProcess} will result in that echoed output being
         delivered to outReceived.
         """
         finished = defer.Deferred()

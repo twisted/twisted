@@ -47,7 +47,7 @@ _preserveSOError = 1 << 6
 class _WakerPlus(_Waker):
     """
     The normal Twisted waker will simply wake up the main loop, which causes an
-    iteration to run, which in turn causes L{PosixReactorBase.runUntilCurrent}
+    iteration to run, which in turn causes L{ReactorBase.runUntilCurrent}
     to get invoked.
 
     L{CFReactor} has a slightly different model of iteration, though: rather

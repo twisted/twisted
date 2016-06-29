@@ -12,8 +12,7 @@ from twisted.internet import protocol
 from twisted.python import log
 
 from twisted.conch import error
-from twisted.conch.ssh import _kex
-import transport, userauth, connection
+from twisted.conch.ssh import (_kex, transport, userauth, connection)
 
 import random
 

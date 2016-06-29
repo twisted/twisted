@@ -1239,7 +1239,7 @@ def _getPersistentRSAKey(location, keySize=4096):
     key with the key size of C{keySize} is generated and saved.
 
     @param location: Where the key is stored.
-    @type location: L{twisted.python.filepath.FilePath)
+    @type location: L{twisted.python.filepath.FilePath}
 
     @param keySize: The size of the key, if it needs to be generated.
     @type keySize: L{int}

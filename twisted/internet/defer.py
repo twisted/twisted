@@ -175,7 +175,7 @@ def setDebugging(on):
     Enable or disable L{Deferred} debugging.
 
     When debugging is on, the call stacks from creation and invocation are
-    recorded, and added to any L{AlreadyCalledErrors} we raise.
+    recorded, and added to any L{AlreadyCalledError}s we raise.
     """
     Deferred.debug=bool(on)
 
