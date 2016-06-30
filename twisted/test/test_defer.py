@@ -2452,7 +2452,7 @@ class DeferredFilesystemLockTests(unittest.TestCase):
 class TimeoutErrorTests(unittest.TestCase):
     def test_deprecatedTimeoutError(self):
         """
-        Test that L{twisted.internet.defer.TimeoutError} is deprecated.
+        L{twisted.internet.defer.TimeoutError} is deprecated.
         """
         defer.TimeoutError
         warningsShown = self.flushWarnings([self.test_deprecatedTimeoutError])
