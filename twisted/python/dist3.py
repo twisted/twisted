@@ -232,6 +232,7 @@ modules = [
     "twisted._threads._pool",
     "twisted._threads._team",
     "twisted._threads._threadworker",
+    "twisted._threads.test.__init__",
     "twisted.trial.__init__",
     "twisted.trial._asyncrunner",
     "twisted.trial._asynctest",
