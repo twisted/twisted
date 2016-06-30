@@ -308,7 +308,7 @@ class StdioClient(basic.LineReceiver):
 
         @return: A deferred which fires when transfer is done.
         """
-        return self._cbGetMultipleNext(None, None, [remote], local, single=True)
+        return self._cbGetMultipleNext(None, '', [remote], local, single=True)
 
 
     def _cbGetMultiple(self, result, local):
@@ -329,17 +329,18 @@ class StdioClient(basic.LineReceiver):
             return
 
         currentMember = files.pop(0)
-        fileAttributes = currentMember[2]
-        fileName = currentMember[0]
-
-        if not stat.S_ISREG(fileAttributes['permissions']):
-            # Not a real file. Ignore it.
-            return self._cbGetMultipleNext(None, parentPath, files, local)
 
         if single:
+            fileName = currentMember
             localPath = local
         else:
+            fileAttributes = currentMember[2]
+            fileName = currentMember[0]
             localPath = os.path.join(local, os.path.split(fileName)[1])
+
+            if not stat.S_ISREG(fileAttributes['permissions']):
+                # Not a real file. Ignore it.
+                return self._cbGetMultipleNext(None, parentPath, files, local)
 
         lf = open(localPath, 'w', 0)
 
@@ -388,6 +389,10 @@ class StdioClient(basic.LineReceiver):
                 chunks.insert(i, (end, chunk[0]))
                 return (end, chunk[0] - end)
             end = chunk[1]
+
+        if end == 'eof':
+            # nothing more to get
+            return
 
         bufSize = int(self.client.transport.conn.options['buffersize'])
         chunks.append((end, end + bufSize))

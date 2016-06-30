@@ -917,10 +917,10 @@ class StdioClientTests(TestCase):
         local path is treated as a directory and files are transferred into
         that local path used the names of the remote files.
         """
-        firstContent = b'Test\r\nContent First\n'
-        secondContent = b'Test\r\nContent Second'
+        firstContent = b'Test\r\n First\n'
+        secondContent = b'Test\r\n Second'
         firstName = 'firstFile'
-        secondName = 'second Name'
+        secondName = 'second-Name'
         firstRemoteFile = InMemoryRemoteFile(
             firstName, content=firstContent)
         secondRemoteFile = InMemoryRemoteFile(
@@ -940,11 +940,14 @@ class StdioClientTests(TestCase):
         deferred = self.client.cmd_GET(arguments)
         self.successResultOf(deferred)
 
-        self.assertEqual(content, localPath.getContent())
-        self.assertTrue(remoteFile.closed)
+        self.assertEqual(firstContent, firstRemoteFile.getvalue())
+        self.assertTrue(firstRemoteFile.closed)
         self.checkGetMessage(
-            [(localPath.path, remoteName,
-                ['0% 0.0B', '76% 10.0B', '100% 13.0B', '100% 13.0B'])])
+            [(localPath.child(firstName).path, firstName,
+                ['0% 0.0B', '76% 10.0B', '100% 13.0B', '100% 13.0B']),
+            (localPath.child(secondName).path, secondName,
+                ['0% 0.0B', '76% 10.0B', '100% 13.0B', '100% 13.0B']),
+            ])
 
 
 
