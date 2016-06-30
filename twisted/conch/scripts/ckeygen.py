@@ -200,7 +200,7 @@ def _saveKey(key, options):
     @type key: C{keys.Key} implementation.
 
     @param options:
-    @type options: C{dict}
+    @type options: L{dict}
     """
     keyTypeName = key.type().lower()
     if not options['filename']:

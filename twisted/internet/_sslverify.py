@@ -449,7 +449,7 @@ class CertBase:
         Convert this L{CertBase} into a provider of the given interface.
 
         @param interface: The interface to conform to.
-        @type interface: L{Interface}
+        @type interface: L{zope.interface.interface.InterfaceClass}
 
         @return: an L{IOpenSSLTrustRoot} provider or L{NotImplemented}
         @rtype: C{interface} or L{NotImplemented}
@@ -764,7 +764,7 @@ class PublicKey:
     L{PublicKey} objects.
 
     @note: If constructing a L{PublicKey} manually, be sure to pass only a
-        L{crypto.PKey} that does not contain a private key!
+        L{OpenSSL.crypto.PKey} that does not contain a private key!
 
     @ivar original: The original private key.
     """
@@ -772,7 +772,7 @@ class PublicKey:
     def __init__(self, osslpkey):
         """
         @param osslpkey: The underlying pyOpenSSL key object.
-        @type osslpkey: L{crypto.PKey}
+        @type osslpkey: L{OpenSSL.crypto.PKey}
         """
         self.original = osslpkey
 

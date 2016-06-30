@@ -251,10 +251,10 @@ class FilesystemAccessExpectations(object):
         """
 
         @param path: Path at which the stream is requested.
-        @type path: C{str}
+        @type path: L{str}
 
         @param path: Flags with which the stream is requested.
-        @type path: C{str}
+        @type path: L{str}
 
         @param stream: A stream.
         @type stream: C{File}
@@ -267,10 +267,10 @@ class FilesystemAccessExpectations(object):
         Remove a stream from the memory.
 
         @param path: Path at which the stream is requested.
-        @type path: C{str}
+        @type path: L{str}
 
         @param path: Flags with which the stream is requested.
-        @type path: C{str}
+        @type path: L{str}
 
         @return: A stream.
         @rtype: C{File}
@@ -317,7 +317,7 @@ class InMemoryRemoteFile(StringIO):
     def __init__(self, name):
         """
         @param name: Name of this file.
-        @type name: C{str}
+        @type name: L{str}
         """
         self.name = name
         StringIO.__init__(self)
@@ -425,9 +425,9 @@ class StdioClientTests(TestCase):
         a fixed width and height.
 
         @param width: the width in characters
-        @type width: C{int}
+        @type width: L{int}
         @param height: the height in characters
-        @type height: C{int}
+        @type height: L{int}
         """
         # Local import to avoid win32 issues.
         import tty
@@ -546,7 +546,7 @@ class StdioClientTests(TestCase):
         When `path` is L{None}, it will create a new temporary file.
 
         @param path: Optional path for the new file.
-        @type path: C{str}
+        @type path: L{str}
 
         @param content: Content to be written in the new file.
         @type content: C{bytes}
