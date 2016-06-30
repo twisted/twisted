@@ -12,6 +12,7 @@ from twisted.protocols import ident
 from twisted.python import failure
 from twisted.internet import error
 from twisted.internet import defer
+from twisted.python.runtime import platform
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
@@ -202,3 +203,11 @@ class ProcMixinTests(unittest.TestCase):
         self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 25),
                                                   ('1.2.3.4', 763))
 
+
+    def testLookupProcNetTcp(self):
+        p = ident.ProcServerMixin()
+        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 26),
+                                                  ('1.2.3.4', 762))
+
+    if not platform.isLinux():
+        testLookupProcNetTcp.skip = "Test needs /proc/net/tcp on Linux"
