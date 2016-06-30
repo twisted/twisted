@@ -39,7 +39,7 @@ from twisted.trial.unittest import TestCase
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
-from twisted.python import log
+from twisted.python import filepath, log
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
 from twisted.conch.ssh import filetransfer
@@ -278,6 +278,15 @@ class FilesystemAccessExpectations(object):
         return self._cache.pop((path, flags))
 
 
+    def items(self):
+        """
+        Iterate over the expectations.
+        """
+        for key, deferred in self._cache.items():
+            path, _ = key
+            yield path, deferred.result
+
+
 
 class InMemorySFTPClient(object):
     """
@@ -307,6 +316,30 @@ class InMemorySFTPClient(object):
         return self._availableFiles.pop(filename, flags)
 
 
+    def openDirectory(self, path):
+        """
+        @see: L{filetransfer.FileTransferClient.openDirectory}.
+
+        Retrieve and remove cached file based on flags.
+        """
+        result = []
+        for filePath, file in self._availableFiles.items():
+            if filePath.startswith(path):
+                fileName = file.name
+                fileSize = file.len
+                longName = (
+                    '-rwxr-xr-x   1 mjos     staff      %s '
+                    'Mar 25 14:29 %s'
+                    ) % (fileSize, fileName)
+                attributes = {
+                    'permissions': 0100755,
+                    'size': fileSize,
+                    }
+                result.append((fileName, longName, attributes))
+
+        return defer.succeed(InMemoryRemoteDirectory(content=result))
+
+
 
 @implementer(ISFTPFile)
 class InMemoryRemoteFile(StringIO):
@@ -314,13 +347,19 @@ class InMemoryRemoteFile(StringIO):
     An L{ISFTPFile} which handles all data in memory.
     """
 
-    def __init__(self, name):
+    def __init__(self, name, content=None):
         """
         @param name: Name of this file.
-        @type name: C{str}
+        @type name: L{str}
+
+        @param content: Optional content with which the file is initialized.
+        @type content: L{bytes}
         """
         self.name = name
         StringIO.__init__(self)
+        if content is not None:
+            self.write(content)
+            self.seek(0)
 
 
     def writeChunk(self, start, data):
@@ -332,6 +371,17 @@ class InMemoryRemoteFile(StringIO):
         return defer.succeed(self)
 
 
+    def readChunk(self, start, length):
+        """
+        @see: L{ISFTPFile.readChunk}
+        """
+        self.seek(start)
+        data = self.read(length)
+        if not data:
+            return defer.fail(EOFError())
+        return defer.succeed(data)
+
+
     def close(self):
         """
         @see: L{ISFTPFile.writeChunk}
@@ -341,6 +391,16 @@ class InMemoryRemoteFile(StringIO):
         if not self.closed:
             self.closed = True
 
+    def getAttrs(self):
+        """
+        @see: L{ISFTPFile.getAttrs}
+
+        This is a minimal implementation to support the tests.
+        """
+        return defer.succeed({
+            'permissions': 0100755,
+            'size': len(self.getvalue()),
+            })
 
     def getvalue(self):
         """
@@ -353,6 +413,27 @@ class InMemoryRemoteFile(StringIO):
             self.buflist = []
         return self.buf
 
+
+class InMemoryRemoteDirectory(object):
+    """
+    """
+    def __init__(self, content):
+        self._content = content[:]
+        self._closed = False
+        self._read = False
+
+    def read(self):
+        if self._closed:
+            return defer.fail(AssertionError('Dir closed.'))
+
+        if self._read:
+            return defer.fail(EOFError())
+
+        self._read = True
+        return defer.succeed(self._content)
+
+    def close(self):
+        self._closed = True
 
 
 class StdioClientTests(TestCase):
@@ -569,7 +650,6 @@ class StdioClientTests(TestCase):
         @param transfers: List with tuple of (local, remote, progress).
         @param randomOrder: When set to C{True}, it will ignore the order
             in which put reposes are received
-
         """
         output = self.client.transport.value().split('\n\r')
 
@@ -613,6 +693,57 @@ class StdioClientTests(TestCase):
             self.assertEqual(sorted(expectedOutput), sorted(actualOutput))
         else:
             self.assertEqual(expectedOutput, actualOutput)
+
+        self.assertEqual(
+            0, len(output),
+            'There are still put responses which were not checked.',
+            )
+
+    def checkGetMessage(self, transfers):
+        """
+        Check output of cftp client for a get request.
+
+        @param transfers: List with tuple of (local, remote, progress).
+        """
+        output = self.client.transport.value().split('\n\r')
+
+        expectedOutput = []
+        actualOutput = []
+
+        for local, remote, expected in transfers:
+            # For each transfer we have a list of reported progress which
+            # ends with the final message informing that file was transferred.
+            expectedTransfer = []
+            for line in expected:
+                expectedTransfer.append('%s %s' % (remote, line))
+            expectedTransfer.append('Transferred %s to %s' % (remote, local))
+            expectedOutput.append(expectedTransfer)
+
+            progressParts = output.pop(0).strip('\r').split('\r')
+            actual = progressParts[:-1]
+
+            last = progressParts[-1].strip('\n').split('\n')
+            actual.extend(last)
+
+            actualTransfer = []
+            # Each transferred file is on a line with summary on the last
+            # line. Summary is copying at the end.
+            for line in actual[:-1]:
+                # Output line is in the format
+                # NAME PROGRESS_PERCENTAGE PROGRESS_BYTES SPEED ETA.
+                # For testing we only care about the
+                # PROGRESS_PERCENTAGE and PROGRESS values.
+
+                # Ignore SPPED and ETA.
+                line = line.strip().rsplit(' ', 2)[0]
+                # NAME can be followed by a lot of spaces so we need to
+                # reduce them to single space.
+                line = line.strip().split(' ', 1)
+                actualTransfer.append('%s %s' % (line[0], line[1].strip()))
+            actualTransfer.append(actual[-1])
+            actualOutput.append(actualTransfer)
+
+        self.assertEqual(expectedOutput, actualOutput)
 
         self.assertEqual(
             0, len(output),
@@ -753,6 +884,67 @@ class StdioClientTests(TestCase):
             ],
             randomOrder=True,
             )
+
+
+    def test_cmd_GETSingleWithLocalPath(self):
+        """
+        When getting a single remote file while specifying the local path, the
+        name of the remote file is ignored and the content is stored at the
+        specified local path.
+        """
+        content = 'Test\r\nContent'
+        localPath = filepath.FilePath(self.mktemp())
+        flags = filetransfer.FXF_READ
+        remoteName = '/remote-path'
+        remoteFile = InMemoryRemoteFile(remoteName, content=content)
+        self.fakeFilesystem.put(remoteName, flags, defer.succeed(remoteFile))
+        self.client.client.options['buffersize'] = 10
+        arguments = '%s %s' % (remoteName, localPath.path)
+
+        deferred = self.client.cmd_GET(arguments)
+        self.successResultOf(deferred)
+
+        self.assertEqual(content, localPath.getContent())
+        self.assertTrue(remoteFile.closed)
+        self.checkGetMessage(
+            [(localPath.path, remoteName,
+                ['0% 0.0B', '76% 10.0B', '100% 13.0B', '100% 13.0B'])])
+
+
+    def test_cmd_GETMultipleWithLocalPath(self):
+        """
+        When getting multiple remote files while specifying the local path, the
+        local path is treated as a directory and files are transferred into
+        that local path used the names of the remote files.
+        """
+        firstContent = b'Test\r\nContent First\n'
+        secondContent = b'Test\r\nContent Second'
+        firstName = 'firstFile'
+        secondName = 'second Name'
+        firstRemoteFile = InMemoryRemoteFile(
+            firstName, content=firstContent)
+        secondRemoteFile = InMemoryRemoteFile(
+            secondName, content=secondContent)
+        firstRemotePath = '/remote/%s' % (firstName,)
+        secondRemotePath = '/remote/%s' % (secondName,)
+        flags = filetransfer.FXF_READ
+        self.fakeFilesystem.put(
+            firstRemotePath, flags, defer.succeed(firstRemoteFile))
+        self.fakeFilesystem.put(
+            secondRemotePath, flags, defer.succeed(secondRemoteFile))
+        localPath = filepath.FilePath(self.mktemp())
+        localPath.createDirectory()
+        self.client.client.options['buffersize'] = 10
+        arguments = '/remote/* %s' % (localPath.path,)
+
+        deferred = self.client.cmd_GET(arguments)
+        self.successResultOf(deferred)
+
+        self.assertEqual(content, localPath.getContent())
+        self.assertTrue(remoteFile.closed)
+        self.checkGetMessage(
+            [(localPath.path, remoteName,
+                ['0% 0.0B', '76% 10.0B', '100% 13.0B', '100% 13.0B'])])
 
 
 

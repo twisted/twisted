@@ -286,39 +286,69 @@ class StdioClient(basic.LineReceiver):
             d = self._remoteGlob(remote)
             d.addCallback(self._cbGetMultiple, local)
             return d
+
         if rest:
             local, rest = self._getFilename(rest)
         else:
             local = os.path.split(remote)[1]
-        log.msg((remote, local))
-        lf = file(local, 'w', 0)
-        path = os.path.join(self.currentDirectory, remote)
-        d = self.client.openFile(path, filetransfer.FXF_READ, {})
-        d.addCallback(self._cbGetOpenFile, lf)
-        d.addErrback(self._ebCloseLf, lf)
-        return d
 
-    def _cbGetMultiple(self, files, local):
+        return self._getSingleFile(remote, local)
+
+
+    def _getSingleFile(self, remote, local):
+        """
+        Perform a download for a single file.
+
+        @param remote: Remote path for the request relative to current working
+            directory.
+        @type remote: L{str}
+
+        @param local: Path to local file.
+        @type local: L{str}.
+
+        @return: A deferred which fires when transfer is done.
+        """
+        return self._cbGetMultipleNext(None, None, [remote], local, single=True)
+
+
+    def _cbGetMultiple(self, result, local):
         #if self._useProgressBar: # one at a time
         # XXX this can be optimized for times w/o progress bar
-        return self._cbGetMultipleNext(None, files, local)
+        parentPath, files = result
+        return self._cbGetMultipleNext(None, parentPath, files, local)
 
-    def _cbGetMultipleNext(self, res, files, local):
+    def _cbGetMultipleNext(self, res, parentPath, files, local, single=False):
         if isinstance(res, failure.Failure):
             self._printFailure(res)
         elif res:
             self.transport.write(res)
             if not res.endswith('\n'):
                 self.transport.write('\n')
+
         if not files:
             return
-        f = files.pop(0)[0]
-        lf = file(os.path.join(local, os.path.split(f)[1]), 'w', 0)
-        path = os.path.join(self.currentDirectory, f)
-        d = self.client.openFile(path, filetransfer.FXF_READ, {})
+
+        currentMember = files.pop(0)
+        fileAttributes = currentMember[2]
+        fileName = currentMember[0]
+
+        if not stat.S_ISREG(fileAttributes['permissions']):
+            # Not a real file. Ignore it.
+            return self._cbGetMultipleNext(None, parentPath, files, local)
+
+        if single:
+            localPath = local
+        else:
+            localPath = os.path.join(local, os.path.split(fileName)[1])
+
+        lf = open(localPath, 'w', 0)
+
+        remotePath = os.path.join(self.currentDirectory, parentPath, fileName)
+
+        d = self.client.openFile(remotePath, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
         d.addErrback(self._ebCloseLf, lf)
-        d.addBoth(self._cbGetMultipleNext, files, local)
+        d.addBoth(self._cbGetMultipleNext, parentPath, files, local)
         return d
 
     def _ebCloseLf(self, f, lf):
@@ -351,12 +381,14 @@ class StdioClient(basic.LineReceiver):
         end = 0
         for chunk in chunks:
             if end == 'eof':
-                return # nothing more to get
+                # nothing more to get
+                return
             if end != chunk[0]:
                 i = chunks.index(chunk)
                 chunks.insert(i, (end, chunk[0]))
                 return (end, chunk[0] - end)
             end = chunk[1]
+
         bufSize = int(self.client.transport.conn.options['buffersize'])
         chunks.append((end, end + bufSize))
         return (end, bufSize)
@@ -615,7 +647,8 @@ class StdioClient(basic.LineReceiver):
         d.addCallback(self._cbDisplayFiles, options)
         return d
 
-    def _cbDisplayFiles(self, files, options):
+    def _cbDisplayFiles(self, result, options):
+        parentPath, files = result
         files.sort()
         if 'all' not in options:
             files = [f for f in files if not f[0].startswith('.')]
@@ -723,8 +756,11 @@ version                         Print the SFTP version.
         head, tail = os.path.split(fullPath)
         if '*' in tail or '?' in tail:
             glob = 1
+            parentPath = head
         else:
             glob = 0
+            parentPath = fullPath
+
         if tail and not glob: # could be file or directory
             # try directory first
             d = self.client.openDirectory(fullPath)
@@ -733,6 +769,8 @@ version                         Print the SFTP version.
         else:
             d = self.client.openDirectory(head)
             d.addCallback(self._cbOpenList, tail)
+
+        d.addCallback(lambda files: (parentPath, files))
         return d
 
     def _cbOpenList(self, directory, glob):
