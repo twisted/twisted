@@ -47,7 +47,7 @@ class CancelledError(Exception):
     """
 
 
-class TimeoutError(Exception):
+class TimeoutError(error.TimeoutError):
     """
     This exception is deprecated.
     """
