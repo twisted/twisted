@@ -308,7 +308,7 @@ class ClientCreator:
             checkPID=checkPID)
 
 
-    def connectSSL(self, host, port, contextFactory, timeout=30, bindAddress=None):
+    def connectSSL(self, host, port, contextFactory, timeout=30, bindAddress=None, sni=None):
         """
         Connect to an SSL server.
 
@@ -322,7 +322,7 @@ class ClientCreator:
         return self._connect(
             self.reactor.connectSSL, host, port,
             contextFactory=contextFactory, timeout=timeout,
-            bindAddress=bindAddress)
+            bindAddress=bindAddress, sni=sni)
 
 
 
