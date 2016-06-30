@@ -7,6 +7,8 @@ Test code for policies.
 
 from __future__ import division, absolute_import
 
+import os
+
 from zope.interface import Interface, implementer, implementedBy
 
 from twisted.python.compat import NativeStringIO
@@ -870,3 +872,15 @@ class LoggingFactoryTests(unittest.TestCase):
         f.resetCounter()
         self.assertEqual(f._counter, 0)
 
+
+
+class TrafficLoggingTests(unittest.TestCase):
+    def test_factory(self):
+        wrappedFactory = protocol.ServerFactory()
+        wrappedFactory.protocol = SimpleProtocol
+        factory = policies.TrafficLoggingFactory(wrappedFactory, self.mktemp())
+        proto = factory.buildProtocol(address.IPv4Address('TCP',
+                                                          '127.0.0.1', 12345))
+        factory.resetCounter()
+        self.assertEqual(factory._counter, 0)
+        self.assertTrue(os.path.exists(proto.logfile.name))
