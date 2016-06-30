@@ -119,7 +119,8 @@ class IdentServer(basic.LineOnlyReceiver):
 
 
     def lookup(self, serverAddress, clientAddress):
-        """Lookup user information about the specified address pair.
+        """
+        Lookup user information about the specified address pair.
 
         Return value should be a two-tuple of system name and username.
         Acceptable values for the system name may be found online at::
@@ -205,7 +206,8 @@ class IdentClient(basic.LineOnlyReceiver):
 
 
     def lookup(self, portOnServer, portOnClient):
-        """Lookup user information about the specified address pair.
+        """
+        Lookup user information about the specified address pair.
         """
         self.queries.append((defer.Deferred(), portOnServer, portOnClient))
         if len(self.queries) > 1:
