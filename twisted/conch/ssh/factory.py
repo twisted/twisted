@@ -48,7 +48,7 @@ class SSHFactory(protocol.Factory):
         @type addr: L{twisted.internet.interfaces.IAddress} provider
         @param addr: The address at which the server will listen.
 
-        @rtype: L{twisted.conch.ssh.SSHServerTransport}
+        @rtype: L{twisted.conch.ssh.transport.SSHServerTransport}
         @return: The built transport.
         """
         t = protocol.Factory.buildProtocol(self, addr)
@@ -68,7 +68,7 @@ class SSHFactory(protocol.Factory):
         servers host keys.  Returns a dictionary mapping SSH key types to
         public key strings.
 
-        @rtype: C{dict}
+        @rtype: L{dict}
         """
         raise NotImplementedError('getPublicKeys unimplemented')
 
@@ -79,7 +79,7 @@ class SSHFactory(protocol.Factory):
         servers host keys.  Returns a dictionary mapping SSH key types to
         L{twisted.conch.ssh.keys.Key} objects.
 
-        @rtype: C{dict}
+        @rtype: L{dict}
         """
         raise NotImplementedError('getPrivateKeys unimplemented')
 
@@ -90,7 +90,7 @@ class SSHFactory(protocol.Factory):
         primes to use.  Returns a dictionary mapping number of bits to lists
         of tuple of (generator, prime).
 
-        @rtype: C{dict}
+        @rtype: L{dict}
         """
 
 
@@ -99,8 +99,8 @@ class SSHFactory(protocol.Factory):
         Return a tuple of (g, p) for a Diffe-Hellman process, with p being as
         close to bits bits as possible.
 
-        @type bits: C{int}
-        @rtype:     C{tuple}
+        @type bits: L{int}
+        @rtype:     L{tuple}
         """
         primesKeys = self.primes.keys()
         primesKeys.sort(lambda x, y: cmp(abs(x - bits), abs(y - bits)))
@@ -113,7 +113,7 @@ class SSHFactory(protocol.Factory):
         Return a class to use as a service for the given transport.
 
         @type transport:    L{transport.SSHServerTransport}
-        @type service:      C{str}
+        @type service:      L{str}
         @rtype:             subclass of L{service.SSHService}
         """
         if service == 'ssh-userauth' or hasattr(transport, 'avatar'):
