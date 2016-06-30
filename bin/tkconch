@@ -8,7 +8,7 @@ sys.path.insert(0, extra)
 try:
     import _preamble
 except ImportError:
-    sys.exc_clear()
+    pass
 sys.path.remove(extra)
 
 from twisted.conch.scripts.tkconch import run
