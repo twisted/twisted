@@ -136,7 +136,7 @@ class Element(object):
     allows the rendering logic to be easily re-used in different ways.
 
     Element returns render methods which are registered using
-    L{twisted.web.element.renderer}.  For example::
+    L{twisted.web._element.renderer}.  For example::
 
         class Menu(Element):
             @renderer
