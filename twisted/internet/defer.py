@@ -25,7 +25,7 @@ from sys import exc_info
 from functools import wraps
 
 # Twisted imports
-import twisted.internet.error
+from twisted.internet import error
 from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
@@ -166,8 +166,7 @@ def maybeDeferred(f, *args, **kw):
 
 
 def timeout(deferred):
-    deferred.errback(failure.Failure(
-                     twisted.internet.error.TimeoutError("Callback timed out")))
+    deferred.errback(failure.Failure(error.TimeoutError("Callback timed out")))
 
 
 
@@ -1641,8 +1640,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
                 d.callback(None)
             else:
                 if timeout is not None and self._timeoutCall is None:
-                    reason = failure.Failure(
-                        twisted.internet.error.TimeoutError(
+                    reason = failure.Failure(error.TimeoutError(
                         "Timed out acquiring lock: %s after %fs" % (
                         self.name, timeout)))
                     self._timeoutCall = self._scheduler.callLater(
