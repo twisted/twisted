@@ -161,11 +161,11 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
 
     def __init__(self, port, data):
         """
-        @type port: C{int}
+        @type port: L{int}
         @param port: The port on which the third-party server is listening.
         (it is assumed that the server is running on localhost).
 
-        @type data: C{str}
+        @type data: L{str}
         @param data: This is sent to the third-party server. Must end with '\n'
         in order to trigger a disconnect.
         """
@@ -559,7 +559,7 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
         forces the exclusive use of the key exchange algorithm specified by
         keyExchangeAlgo
 
-        @type keyExchangeAlgo: C{str}
+        @type keyExchangeAlgo: L{str}
         @param keyExchangeAlgo: The key exchange algorithm to use
 
         @return: L{defer.Deferred}

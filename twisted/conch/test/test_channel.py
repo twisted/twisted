@@ -28,11 +28,11 @@ class MockConnection(SSHService):
     A mock for twisted.conch.ssh.connection.SSHConnection.  Record the data
     that channels send, and when they try to close the connection.
 
-    @ivar data: a C{dict} mapping channel id #s to lists of data sent by that
+    @ivar data: a L{dict} mapping channel id #s to lists of data sent by that
         channel.
-    @ivar extData: a C{dict} mapping channel id #s to lists of 2-tuples
+    @ivar extData: a L{dict} mapping channel id #s to lists of 2-tuples
         (extended data type, data) sent by that channel.
-    @ivar closes: a C{dict} mapping channel id #s to True if that channel sent
+    @ivar closes: a L{dict} mapping channel id #s to True if that channel sent
         a close message.
     """
 
