@@ -274,9 +274,9 @@ class LocalWorker(ProcessProtocol):
         self._ampProtocol.makeConnection(LocalWorkerTransport(self.transport))
         if not os.path.exists(self._logDirectory):
             os.makedirs(self._logDirectory)
-        self._outLog = file(os.path.join(self._logDirectory, 'out.log'), 'w')
-        self._errLog = file(os.path.join(self._logDirectory, 'err.log'), 'w')
-        testLog = file(os.path.join(self._logDirectory, self._logFile), 'w')
+        self._outLog = open(os.path.join(self._logDirectory, 'out.log'), 'w')
+        self._errLog = open(os.path.join(self._logDirectory, 'err.log'), 'w')
+        testLog = open(os.path.join(self._logDirectory, self._logFile), 'w')
         self._ampProtocol.setTestStream(testLog)
         d = self._ampProtocol.callRemote(workercommands.Start,
                                          directory=self._logDirectory)
