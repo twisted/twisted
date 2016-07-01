@@ -341,6 +341,7 @@ testModules = [
     "twisted.internet.test.test_udp",
     "twisted.internet.test.test_udp_internals",
     "twisted.internet.test.test_unix",
+    "twisted.internet.test.test_win32events",
     "twisted.logger.test.test_buffer",
     "twisted.logger.test.test_file",
     "twisted.logger.test.test_filter",
