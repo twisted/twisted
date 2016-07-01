@@ -205,9 +205,12 @@ class ProcMixinTests(unittest.TestCase):
 
 
     def testLookupProcNetTcp(self):
+        """
+        Look up nonexistent addresses in /proc/net/tcp
+        """
         p = ident.ProcServerMixin()
         self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 26),
                                                   ('1.2.3.4', 762))
 
     if not platform.isLinux():
-        testLookupProcNetTcp.skip = "Test needs /proc/net/tcp on Linux"
+        testLookupProcNetTcp.skip = "Needs Linux"
