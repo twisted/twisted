@@ -2449,7 +2449,23 @@ class DeferredFilesystemLockTests(unittest.TestCase):
 
 
 
-class TimeoutErrorTests(unittest.TestCase):
+class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
+    def test_deprecatedTimeout(self):
+        """
+        L{twisted.internet.defer.timeout} is deprecated.
+        """
+        deferred = defer.Deferred()
+        defer.timeout(deferred)
+        self.assertFailure(deferred, error.TimeoutError)
+        warningsShown = self.flushWarnings([self.test_deprecatedTimeout])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.internet.defer.timeout was deprecated in '
+            'Twisted 16.3.0')
+
+
     def test_deprecatedTimeoutError(self):
         """
         L{twisted.internet.defer.TimeoutError} is deprecated.

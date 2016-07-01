@@ -165,6 +165,7 @@ def maybeDeferred(f, *args, **kw):
 
 
 
+@deprecated(Version('Twisted', 16, 3, 0))
 def timeout(deferred):
     deferred.errback(failure.Failure(error.TimeoutError("Callback timed out")))
 
