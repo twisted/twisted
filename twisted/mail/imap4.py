@@ -4421,7 +4421,7 @@ def collapseNestedLists(items):
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, (DontQuoteMe, int, long)):
             pieces.extend([' ', str(i)])
-        elif isinstance(i, str):
+        elif isinstance(i, (str, unicode)):
             if _needsLiteral(i):
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
             else:
