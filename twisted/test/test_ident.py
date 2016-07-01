@@ -13,7 +13,6 @@ from twisted.python import failure
 from twisted.internet import error
 from twisted.internet import defer
 from twisted.python.compat import NativeStringIO
-from twisted.python.runtime import platform
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport

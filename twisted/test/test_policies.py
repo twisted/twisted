@@ -7,8 +7,6 @@ Test code for policies.
 
 from __future__ import division, absolute_import
 
-import os
-
 from zope.interface import Interface, implementer, implementedBy
 
 from twisted.python.compat import NativeStringIO
