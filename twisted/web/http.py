@@ -1111,7 +1111,7 @@ class Request:
                 modifiedSince = stringToDatetime(firstPart)
             except ValueError:
                 return None
-            if modifiedSince >= when:
+            if modifiedSince >= self.lastModified:
                 self.setResponseCode(NOT_MODIFIED)
                 return CACHED
         return None
@@ -2237,26 +2237,27 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
 
     @ivar _factory: A reference to the creating L{HTTPFactory} object.
     @type _factory: L{HTTPFactory}
+
+    @ivar _timeOut: A timeout value to pass to the backing channel.
+    @type _timeOut: L{int} or L{None}
     """
     _negotiatedProtocol = None
     _requestFactory = Request
     _factory = None
     _site = None
+    _timeOut = None
 
 
     @property
     def factory(self):
         """
-        @see: L{HTTPChannel.factory}
+        @see: L{_genericHTTPChannelProtocolFactory}
         """
         return self._channel.factory
 
 
     @factory.setter
     def factory(self, value):
-        """
-        @see: L{HTTPChannel.factory}
-        """
         self._factory = value
         self._channel.factory = value
 
@@ -2283,6 +2284,17 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._channel.site = value
 
 
+    @property
+    def timeOut(self):
+        return self._channel.timeOut
+
+
+    @timeOut.setter
+    def timeOut(self, value):
+        self._timeOut = value
+        self._channel.timeOut = value
+
+
     def dataReceived(self, data):
         """
         A override of L{IProtocol.dataReceived} that checks what protocol we're
@@ -2307,6 +2319,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.requestFactory = self._requestFactory
                 self._channel.site = self._site
                 self._channel.factory = self._factory
+                self._channel.timeOut = self._timeOut
                 self._channel.makeConnection(transport)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.

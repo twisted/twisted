@@ -26,7 +26,7 @@ from twisted.python.util import FancyEqMixin
 
 
 
-class _Attribute(object, FancyEqMixin):
+class _Attribute(FancyEqMixin, object):
     """
     A text attribute.
 
@@ -209,7 +209,7 @@ class CharacterAttributesMixin(object):
 
 
 
-class DefaultFormattingState(object, FancyEqMixin):
+class DefaultFormattingState(FancyEqMixin, object):
     """
     A character attribute that does nothing, thus applying no attributes to
     text.
