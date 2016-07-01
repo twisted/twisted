@@ -20,6 +20,12 @@ from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
 
 
+try:
+    import builtins
+except ImportError:
+    import __builtin__ as builtins
+
+
 
 class SimpleProtocol(protocol.Protocol):
 
@@ -873,14 +879,35 @@ class LoggingFactoryTests(unittest.TestCase):
         self.assertEqual(f._counter, 0)
 
 
+    def test_loggingFactoryOpensLogfileAutomatically(self):
+        """
+        When the L{policies.TrafficLoggingFactory} builds a protocol, it
+        automatically opens a unique log file for that protocol and attaches
+        the logfile to the built protocol.
+        """
+        open_calls = []
+        open_rvalues = []
 
-class TrafficLoggingTests(unittest.TestCase):
-    def test_factory(self):
+        def mocked_open(*args, **kwargs):
+            """
+            Mock for the open call to prevent actually opening a log file.
+            """
+            open_calls.append((args, kwargs))
+            io = NativeStringIO()
+            io.name = args[0]
+            open_rvalues.append(io)
+            return io
+
+        self.patch(builtins, 'open', mocked_open)
+
         wrappedFactory = protocol.ServerFactory()
         wrappedFactory.protocol = SimpleProtocol
-        factory = policies.TrafficLoggingFactory(wrappedFactory, self.mktemp())
+        factory = policies.TrafficLoggingFactory(wrappedFactory, 'test')
         proto = factory.buildProtocol(address.IPv4Address('TCP',
                                                           '127.0.0.1', 12345))
-        factory.resetCounter()
-        self.assertEqual(factory._counter, 0)
-        self.assertTrue(os.path.exists(proto.logfile.name))
+
+        # We expect open to be called once, with the file passed to the
+        # protocol.
+        expected_call = (('test-1', 'w'), {})
+        self.assertEqual([expected_call], open_calls)
+        self.assertEqual([proto.logfile], open_rvalues)
