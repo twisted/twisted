@@ -162,10 +162,10 @@ class ProcServerMixin:
 
 
     def entries(self):
-        f = open('/proc/net/tcp')
-        f.readline()
-        for L in f:
-            yield L.strip()
+        with open('/proc/net/tcp') as f:
+            f.readline()
+            for L in f:
+                yield L.strip()
 
 
     def dottedQuadFromHexString(self, hexstr):
