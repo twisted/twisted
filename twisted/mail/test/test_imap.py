@@ -1897,6 +1897,19 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
             self.server.search_ON(self.laterQuery, self.seq, self.msg))
 
 
+    def test_searchSince(self):
+        """
+        L{imap4.IMAP4Server.search_SINCE} returns True if the
+        internal message date is greater than the query date.
+        """
+        self.assertTrue(
+            self.server.search_SINCE(self.earlierQuery, self.seq, self.msg))
+        self.assertTrue(
+            self.server.search_SINCE(self.sameDateQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_SINCE(self.laterQuery, self.seq, self.msg))
+
+
 
 class TestRealm:
     theAccount = None
