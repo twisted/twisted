@@ -12,10 +12,17 @@ from twisted.protocols import ident
 from twisted.python import failure
 from twisted.internet import error
 from twisted.internet import defer
+from twisted.python.compat import NativeStringIO
 from twisted.python.runtime import platform
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
+
+
+try:
+    import builtins
+except ImportError:
+    import __builtin__ as builtins
 
 
 
@@ -206,11 +213,20 @@ class ProcMixinTests(unittest.TestCase):
 
     def testLookupProcNetTcp(self):
         """
-        Look up nonexistent addresses in /proc/net/tcp
+        L{ident.ProcServerMixin.lookup} uses the Linux TCP process table.
         """
+        open_calls = []
+
+        def mocked_open(*args, **kwargs):
+            """
+            Mock for the open call to prevent actually opening /proc/net/tcp.
+            """
+            open_calls.append((args, kwargs))
+            return NativeStringIO(self.line)
+
+        self.patch(builtins, 'open', mocked_open)
+
         p = ident.ProcServerMixin()
         self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 26),
                                                   ('1.2.3.4', 762))
-
-    if not platform.isLinux():
-        testLookupProcNetTcp.skip = "Needs Linux"
+        self.assertEqual([(('/proc/net/tcp',), {})], open_calls)
