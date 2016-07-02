@@ -428,9 +428,9 @@ def rectangle(terminal, position, dimension):
     """
     Draw a rectangle
 
-    @type position: C{tuple}
+    @type position: L{tuple}
     @param position: A tuple of the (top, left) coordinates of the rectangle.
-    @type dimension: C{tuple}
+    @type dimension: L{tuple}
     @param dimension: A tuple of the (width, height) size of the rectangle.
     """
     (top, left) = position

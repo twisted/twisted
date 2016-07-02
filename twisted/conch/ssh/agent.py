@@ -100,8 +100,8 @@ class SSHAgentClient(protocol.Protocol):
         which corresponds to the public key given by C{blob}.  The private
         key should have been added to the agent already.
 
-        @type blob: C{str}
-        @type data: C{str}
+        @type blob: L{str}
+        @type data: L{str}
         @return: A L{Deferred} which fires with a signature for given data
             created with the given key.
         """

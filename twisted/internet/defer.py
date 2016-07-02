@@ -504,8 +504,7 @@ class Deferred:
 
     def _continuation(self):
         """
-        Build a tuple of callback and errback with L{_CONTINUE} to be used by
-        L{_addContinue} and L{_removeContinue} on another Deferred.
+        Build a tuple of callback and errback with L{_CONTINUE}.
         """
         return ((_CONTINUE, (self,), None),
                 (_CONTINUE, (self,), None))
