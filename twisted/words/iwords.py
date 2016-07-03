@@ -15,7 +15,7 @@ class IProtocolPlugin(Interface):
         """Retrieve a C{twisted.internet.interfaces.IServerFactory} provider
 
         @param realm: An object providing C{twisted.cred.portal.IRealm} and
-        C{IChatService}, with which service information should be looked up.
+        L{IChatService}, with which service information should be looked up.
 
         @param portal: An object providing C{twisted.cred.portal.IPortal},
         through which logins should be performed.

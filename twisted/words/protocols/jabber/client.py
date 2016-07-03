@@ -85,6 +85,14 @@ class IQAuthInitializer(object):
     This protocol is defined in
     U{JEP-0078<http://www.jabber.org/jeps/jep-0078.html>} and mainly serves for
     compatibility with pre-XMPP-1.0 server implementations.
+
+    @cvar INVALID_USER_EVENT: Token to signat that authentication failed, due
+        to invalid username.
+    @type INVALID_USER_EVENT: L{str}
+
+    @cvar AUTH_FAILED_EVENT: Token to signal that authentication failed, due to
+        invalid password.
+    @type AUTH_FAILED_EVENT: L{str}
     """
 
     INVALID_USER_EVENT    = "//event/client/basicauth/invaliduser"
@@ -170,12 +178,23 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     calling the L{registerAccount} method. If the registration succeeds, a
     L{xmlstream.STREAM_AUTHD_EVENT} will be fired. Otherwise, one of the above
     errors will be generated (again).
+
+
+    @cvar INVALID_USER_EVENT: See L{IQAuthInitializer.INVALID_USER_EVENT}.
+    @type INVALID_USER_EVENT: L{str}
+
+    @cvar AUTH_FAILED_EVENT: See L{IQAuthInitializer.AUTH_FAILED_EVENT}.
+    @type AUTH_FAILED_EVENT: L{str}
+
+    @cvar REGISTER_FAILED_EVENT: Token to signal that registration failed.
+    @type REGISTER_FAILED_EVENT: L{str}
+
     """
 
     namespace = "jabber:client"
 
-    INVALID_USER_EVENT    = IQAuthInitializer.INVALID_USER_EVENT
-    AUTH_FAILED_EVENT     = IQAuthInitializer.AUTH_FAILED_EVENT
+    INVALID_USER_EVENT = IQAuthInitializer.INVALID_USER_EVENT
+    AUTH_FAILED_EVENT = IQAuthInitializer.AUTH_FAILED_EVENT
     REGISTER_FAILED_EVENT = "//event/client/basicauth/registerfailed"
 
     def __init__(self, jid, password):

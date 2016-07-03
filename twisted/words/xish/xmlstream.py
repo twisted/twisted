@@ -14,6 +14,20 @@ The most prominent use of XML Streams is Jabber, but this module is generically
 usable. See Twisted Words for Jabber specific protocol support.
 
 Maintainer: Ralph Meijer
+
+@var STREAM_CONNECTED_EVENT: Token indicating the connection has been
+    established.
+@type STREAM_CONNECTED_EVENT: L{intern}.
+
+@var STREAM_END_EVENT: Token indicating the connection has been closed.
+@type STREAM_CONNECTED_EVENT: L{intern}.
+
+@var STREAM_ERROR_EVENT: Token indicating a parse error occurred.
+@type STREAM_ERROR_EVENT: L{intern}.
+
+@var STREAM_START_EVENT: Token indicating the parsing of the document has
+    begin.
+@type STREAM_START_EVENT: L{intern}.
 """
 
 from __future__ import absolute_import, division
