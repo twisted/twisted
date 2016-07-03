@@ -467,7 +467,7 @@ class TimeoutProtocol(ProtocolWrapper):
         """
         Constructor.
 
-        @param factory: An L{IFactory}.
+        @param factory: An L{protocol.Factory}.
         @param wrappedProtocol: A L{Protocol} to wrapp.
         @param timeoutPeriod: Number of seconds to wait for activity before
             timing out.
@@ -538,7 +538,7 @@ class TimeoutProtocol(ProtocolWrapper):
         """
         This method is called when the timeout is triggered.
 
-        By default it calls L{loseConnection}.  Override this if you want
+        By default it calls I{loseConnection}.  Override this if you want
         something else to happen.
         """
         self.loseConnection()
@@ -579,7 +579,7 @@ class TrafficLoggingProtocol(ProtocolWrapper):
                  number=0):
         """
         @param factory: factory which created this protocol.
-        @type factory: C{protocol.Factory}.
+        @type factory: L{protocol.Factory}.
         @param wrappedProtocol: the underlying protocol.
         @type wrappedProtocol: C{protocol.Protocol}.
         @param logfile: file opened for writing used to write log messages.
