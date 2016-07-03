@@ -160,15 +160,15 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     U{JEP-0077<http://www.jabber.org/jeps/jep-0077.html>}.
 
     Under normal circumstances, the BasicAuthenticator generates the
-    C{xmlstream.STREAM_AUTHD_EVENT} once the stream has authenticated. However,
+    L{xmlstream.STREAM_AUTHD_EVENT} once the stream has authenticated. However,
     it can also generate other events, such as:
-      - C{INVALID_USER_EVENT} : Authentication failed, due to invalid username
-      - C{AUTH_FAILED_EVENT} : Authentication failed, due to invalid password
-      - C{REGISTER_FAILED_EVENT} : Registration failed
+      - L{INVALID_USER_EVENT} : Authentication failed, due to invalid username
+      - L{AUTH_FAILED_EVENT} : Authentication failed, due to invalid password
+      - L{REGISTER_FAILED_EVENT} : Registration failed
 
     If authentication fails for any reason, you can attempt to register by
     calling the L{registerAccount} method. If the registration succeeds, a
-    C{xmlstream.STREAM_AUTHD_EVENT} will be fired. Otherwise, one of the above
+    L{xmlstream.STREAM_AUTHD_EVENT} will be fired. Otherwise, one of the above
     errors will be generated (again).
     """
 
@@ -315,9 +315,9 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
     available), performs SASL authentication, binds a resource and establishes
     a session.
 
-    Upon successful stream initialization, the C{xmlstream.STREAM_AUTHD_EVENT}
+    Upon successful stream initialization, the L{xmlstream.STREAM_AUTHD_EVENT}
     event will be dispatched through the XML stream object. Otherwise, the
-    C{xmlstream.INIT_FAILED_EVENT} event will be dispatched with a failure
+    L{xmlstream.INIT_FAILED_EVENT} event will be dispatched with a failure
     object.
 
     After inspection of the failure, initialization can then be restarted by

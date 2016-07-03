@@ -69,7 +69,7 @@ class Authenticator:
     to different types of stream hosts (such as clients, components, etc.).
 
     Rules:
-      1. The Authenticator MUST dispatch a C{STREAM_AUTHD_EVENT} when the
+      1. The Authenticator MUST dispatch a L{STREAM_AUTHD_EVENT} when the
          stream has been completely initialized.
       2. The Authenticator SHOULD reset all state information when
          L{associateWithStream} is called.
@@ -175,7 +175,7 @@ class ConnectAuthenticator(Authenticator):
         been successfully processed. Otherwise it dispatches the
         C{INIT_FAILED_EVENT} event with the failure.
 
-        Initializers may return the special C{Reset} object to halt the
+        Initializers may return the special L{Reset} object to halt the
         initialization processing. It signals that the current initializer was
         successfully processed, but that the XML Stream has been reset. An
         example is the TLSInitiatingInitializer.
@@ -523,7 +523,7 @@ class XmlStream(xmlstream.XmlStream):
         """
         Called when a stream:error element has been received.
 
-        Dispatches a C{STREAM_ERROR_EVENT} event with the error element to
+        Dispatches a L{STREAM_ERROR_EVENT} event with the error element to
         allow for cleanup actions and drops the connection.
 
         @param errelem: The received error element.
@@ -715,7 +715,8 @@ def upgradeWithIQResponseTracker(xs):
 
     This makes an L{XmlStream} object provide L{IIQResponseTracker}. When a
     response is an error iq stanza, the deferred has its errback invoked with a
-    failure that holds a L{StanzaError} that is easier to examine.
+    failure that holds a L{error.StanzaException} that is
+    easier to examine.
     """
     def callback(iq):
         """

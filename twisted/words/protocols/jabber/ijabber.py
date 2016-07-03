@@ -41,7 +41,7 @@ class IIQResponseTracker(Interface):
     naturally with deferreds. You send out a request and when the response
     comes back a deferred is fired.
 
-    The L{<twisted.words.protocols.jabber.client.IQ>} class implements a C{send}
+    The L{twisted.words.protocols.jabber.client.IQ} class implements a C{send}
     method that returns a deferred. This deferred is put in a dictionary that
     is kept in an L{XmlStream} object, keyed by the request stanzas C{id}
     attribute.
@@ -93,7 +93,7 @@ class IXMPPHandler(Interface):
         This should setup L{xmlstream} and call L{connectionMade}.
 
         @type xs:
-               L{XmlStream<twisted.words.protocols.jabber.xmlstream.XmlStream>}
+               L{twisted.words.protocols.jabber.xmlstream.XmlStream}
         """
 
 
