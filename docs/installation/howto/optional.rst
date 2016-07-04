@@ -5,10 +5,6 @@
 Installing Optional Dependencies
 ================================
 
-.. warning::  At the moment, installing optional dependencies functions only on python2.
-              This is being addressed as part of the efforts to port the project to python3.
-              `Ticket #7807`_ has been created to fix this issue.
-
 This document describes the optional dependencies that Twisted supports.
 The dependencies are python packages that Twisted's developers have found useful either for developing Twisted itself or for developing Twisted applications.
 
@@ -20,12 +16,13 @@ For a deeper explanation of what optional dependencies are and how they are decl
 The following optional dependencies are supported:
 
 * **dev** - packages that aid in the development of Twisted itself.
-    * `TwistedChecker`_
     * `pyflakes`_
     * `twisted-dev-tools`_
     * `python-subunit`_
     * `Sphinx`_
-    * `pydoctor`_
+    * `TwistedChecker`_, only available on python2
+    * `pydoctor`_, only available on python2
+
 
 * **tls** - packages that are needed to work with TLS.
     * `pyOpenSSL`_
@@ -47,6 +44,10 @@ The following optional dependencies are supported:
 
 * **windows_platform** - **all_non_platform** options and `pypiwin32`_ to work with Windows's apis.
 
+* **http2** - packages needed for http2 support.
+     * `h2`_
+     * `priority`_
+
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker
 .. _pyflakes: https://pypi.python.org/pypi/pyflakes
@@ -66,4 +67,5 @@ The following optional dependencies are supported:
 .. _`setuptools documentation`: https://pythonhosted.org/setuptools/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 .. _`python packaging tutorial`: https://packaging.python.org/en/latest/installing.html#examples
 .. _idna: https://pypi.python.org/pypi/idna
-.. _`Ticket #7807`: https://twistedmatrix.com/trac/ticket/7807
+.. _h2: https://pypi.python.org/pypi/h2
+.. _priority: https://pypi.python.org/pypi/priority
