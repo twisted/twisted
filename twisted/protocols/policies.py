@@ -651,7 +651,7 @@ class TrafficLoggingFactory(WrappingFactory):
 
 
     def open(self, name):
-        return file(name, 'w')
+        return open(name, 'w')
 
 
     def buildProtocol(self, addr):
