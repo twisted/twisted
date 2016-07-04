@@ -168,6 +168,8 @@ class ProcMixinTests(unittest.TestCase):
     line = ('4: %s:0019 %s:02FA 0A 00000000:00000000 '
             '00:00000000 00000000     0        0 10927 1 f72a5b80 '
             '3000 0 0 2 -1') % (_addr1, _addr2)
+    sampleFile = ('  sl  local_address rem_address   st tx_queue rx_queue tr '
+                  'tm->when retrnsmt   uid  timeout inode\n   ' + line)
 
 
     def testDottedQuadFromHexString(self):
@@ -221,7 +223,7 @@ class ProcMixinTests(unittest.TestCase):
             Mock for the open call to prevent actually opening /proc/net/tcp.
             """
             open_calls.append((args, kwargs))
-            return NativeStringIO(self.line)
+            return NativeStringIO(self.sampleFile)
 
         self.patch(builtins, 'open', mocked_open)
 
