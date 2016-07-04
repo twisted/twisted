@@ -1241,11 +1241,11 @@ class ChunkedEncoder:
 @implementer(IPushProducer)
 class TransportProxyProducer:
     """
-    An L{IPushProducer} implementation which wraps another such thing and
-    proxies calls to it until it is told to stop.
+    An L{twisted.internet.interfaces.IPushProducer} implementation which
+    wraps another such thing and proxies calls to it until it is told to stop.
 
-    @ivar _producer: The wrapped L{IPushProducer} provider or L{None} after
-        this proxy has been stopped.
+    @ivar _producer: The wrapped L{twisted.internet.interfaces.IPushProducer}
+    provider or L{None} after this proxy has been stopped.
     """
 
     # LineReceiver uses this undocumented attribute of transports to decide
@@ -1262,8 +1262,9 @@ class TransportProxyProducer:
 
     def _stopProxying(self):
         """
-        Stop forwarding calls of L{IPushProducer} methods to the underlying
-        L{IPushProvider} provider.
+        Stop forwarding calls of L{twisted.internet.interfaces.IPushProducer}
+        methods to the underlying L{twisted.internet.interfaces.IPushProducer}
+        provider.
         """
         self._producer = None
 

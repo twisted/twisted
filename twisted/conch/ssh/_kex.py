@@ -20,7 +20,7 @@ class _IKexAlgorithm(Interface):
     """
 
     preference = Attribute(
-        "An C{int} giving the preference of the algorithm when negotiating "
+        "An L{int} giving the preference of the algorithm when negotiating "
         "key exchange. Algorithms with lower precedence values are more "
         "preferred.")
 
@@ -37,11 +37,11 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
     """
 
     prime = Attribute(
-        "A C{long} giving the prime number used in Diffie-Hellman key "
+        "A L{long} giving the prime number used in Diffie-Hellman key "
         "exchange, or L{None} if not applicable.")
 
     generator = Attribute(
-        "A C{long} giving the generator number used in Diffie-Hellman key "
+        "A L{long} giving the generator number used in Diffie-Hellman key "
         "exchange, or L{None} if not applicable. (This is not related to "
         "Python generator functions.)")
 
@@ -139,7 +139,7 @@ def getKex(kexAlgorithm):
     Get a description of a named key exchange algorithm.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: C{str}
+    @type kexAlgorithm: L{str}
 
     @return: A description of the key exchange algorithm named by
         C{kexAlgorithm}.
@@ -159,11 +159,11 @@ def isFixedGroup(kexAlgorithm):
     Returns C{True} if C{kexAlgorithm} has a fixed prime / generator group.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: C{str}
+    @type kexAlgorithm: L{str}
 
     @return: C{True} if C{kexAlgorithm} has a fixed prime / generator group,
         otherwise C{False}.
-    @rtype: C{bool}
+    @rtype: L{bool}
     """
     return _IFixedGroupKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
@@ -174,7 +174,7 @@ def getHashProcessor(kexAlgorithm):
     Get the hash algorithm callable to use in key exchange.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: C{str}
+    @type kexAlgorithm: L{str}
 
     @return: A callable hash algorithm constructor (e.g. C{hashlib.sha256}).
     @rtype: C{callable}
@@ -189,10 +189,10 @@ def getDHGeneratorAndPrime(kexAlgorithm):
     Get the generator and the prime to use in key exchange.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: C{str}
+    @type kexAlgorithm: L{str}
 
-    @return: A C{tuple} containing C{long} generator and C{long} prime.
-    @rtype: C{tuple}
+    @return: A L{tuple} containing L{long} generator and L{long} prime.
+    @rtype: L{tuple}
     """
     kex = getKex(kexAlgorithm)
     return kex.generator, kex.prime
@@ -205,7 +205,7 @@ def getSupportedKeyExchanges():
     preference.
 
     @return: A C{list} of supported key exchange algorithm names.
-    @rtype: C{list} of C{str}
+    @rtype: C{list} of L{str}
     """
     return sorted(
         _kexAlgorithms,

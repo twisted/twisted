@@ -526,7 +526,7 @@ class File(resource.Resource, filepath.FilePath):
         This method is not appropriate for requests for multiple byte ranges;
         L{_doMultipleRangeRequest} will set these headers in that case.
 
-        @param request: The L{Request} object.
+        @param request: The L{twisted.web.http.Request} object.
         @param size: The size of the response.  If not specified, default to
             C{self.getFileSize()}.
         """
@@ -545,7 +545,7 @@ class File(resource.Resource, filepath.FilePath):
 
         This method will also set the response code and Content-* headers.
 
-        @param request: The L{Request} object.
+        @param request: The L{twisted.web.http.Request} object.
         @param fileForReading: The file object containing the resource.
         @return: A L{StaticProducer}.  Calling C{.start()} on this will begin
             producing the response.
@@ -684,9 +684,9 @@ class StaticProducer(object):
         """
         Stop producing data.
 
-        L{IPullProducer.stopProducing} is called when our consumer has died,
-        and subclasses also call this method when they are done producing
-        data.
+        L{twisted.internet.interfaces.IProducer.stopProducing}
+        is called when our consumer has died, and subclasses also call this
+        method when they are done producing data.
         """
         self.fileObject.close()
         self.request = None

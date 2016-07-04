@@ -1,0 +1,1 @@
+If called multiple times, twisted.web.http.Request.setLastModified now correctly observes the greatest supplied value.
