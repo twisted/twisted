@@ -197,6 +197,7 @@ modules = [
     "twisted.python.constants",
     "twisted.python.context",
     "twisted.python.deprecate",
+    "twisted.python.dist",
     "twisted.python.dist3",
     "twisted.python.failure",
     "twisted.python.fakepwd",
@@ -558,8 +559,6 @@ almostModules = [
     "twisted.protocols.wire",
     # Missing test coverage:
     "twisted.protocols.loopback",
-    # Minimally used by setup3.py:
-    "twisted.python.dist",
     # twisted.python.filepath depends on twisted.python.win32, but on Linux it
     # only really needs to import:
     "twisted.python.win32",
