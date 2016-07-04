@@ -106,7 +106,7 @@ class WorkerReporter(TestResult):
         """
         Get the reason for a C{Todo}.
 
-        If L{todo} is L{None}, return a sensible default.
+        If C{todo} is L{None}, return a sensible default.
         """
         if todo is None:
             return self._DEFAULT_TODO

@@ -22,17 +22,17 @@ class SSHConnection(service.SSHService):
     multiplex multiple channels over the single SSH connection.
 
     @ivar localChannelID: the next number to use as a local channel ID.
-    @type localChannelID: C{int}
-    @ivar channels: a C{dict} mapping a local channel ID to C{SSHChannel}
+    @type localChannelID: L{int}
+    @ivar channels: a L{dict} mapping a local channel ID to C{SSHChannel}
         subclasses.
-    @type channels: C{dict}
-    @ivar localToRemoteChannel: a C{dict} mapping a local channel ID to a
+    @type channels: L{dict}
+    @ivar localToRemoteChannel: a L{dict} mapping a local channel ID to a
         remote channel ID.
-    @type localToRemoteChannel: C{dict}
-    @ivar channelsToRemoteChannel: a C{dict} mapping a C{SSHChannel} subclass
+    @type localToRemoteChannel: L{dict}
+    @ivar channelsToRemoteChannel: a L{dict} mapping a C{SSHChannel} subclass
         to remote channel ID.
-    @type channelsToRemoteChannel: C{dict}
-    @ivar deferreds: a C{dict} mapping a local channel ID to a C{list} of
+    @type channelsToRemoteChannel: L{dict}
+    @ivar deferreds: a L{dict} mapping a local channel ID to a C{list} of
         C{Deferreds} for outstanding channel requests.  Also, the 'global'
         key stores the C{list} of pending global request C{Deferred}s.
     """
@@ -326,10 +326,10 @@ class SSHConnection(service.SSHService):
 
         @param result: the value returned from the channel's requestReceived()
             method.  If it's False, the request failed.
-        @type result: C{bool}
+        @type result: L{bool}
         @param localChannel: the local channel ID of the channel to which the
             request was made.
-        @type localChannel: C{int}
+        @type localChannel: L{int}
         @raises ConchError: if the result is False.
         """
         if not result:
@@ -345,7 +345,7 @@ class SSHConnection(service.SSHService):
         @param result: a Failure, but it's not used.
         @param localChannel: the local channel ID of the channel to which the
             request was made.
-        @type localChannel: C{int}
+        @type localChannel: L{int}
         """
         self.transport.sendPacket(MSG_CHANNEL_FAILURE, struct.pack('>L',
                                 self.localToRemoteChannel[localChannel]))
@@ -385,9 +385,9 @@ class SSHConnection(service.SSHService):
         Send a global request for this connection.  Current this is only used
         for remote->local TCP forwarding.
 
-        @type request:      C{str}
-        @type data:         C{str}
-        @type wantReply:    C{bool}
+        @type request:      L{str}
+        @type data:         L{str}
+        @type wantReply:    L{bool}
         @rtype              C{Deferred}/L{None}
         """
         self.transport.sendPacket(MSG_GLOBAL_REQUEST,
@@ -404,7 +404,7 @@ class SSHConnection(service.SSHService):
         Open a new channel on this connection.
 
         @type channel:  subclass of C{SSHChannel}
-        @type extra:    C{str}
+        @type extra:    L{str}
         """
         log.msg('opening channel %s with %s %s'%(self.localChannelID,
                 channel.localWindowSize, channel.localMaxPacket))
@@ -421,9 +421,9 @@ class SSHConnection(service.SSHService):
         Send a request to a channel.
 
         @type channel:      subclass of C{SSHChannel}
-        @type requestType:  C{str}
-        @type data:         C{str}
-        @type wantReply:    C{bool}
+        @type requestType:  L{str}
+        @type data:         L{str}
+        @type wantReply:    L{bool}
         @rtype              C{Deferred}/L{None}
         """
         if channel.localClosed:
@@ -444,7 +444,7 @@ class SSHConnection(service.SSHService):
         normally need to be called as it is managed automatically.
 
         @type channel:      subclass of L{SSHChannel}
-        @type bytesToAdd:   C{int}
+        @type bytesToAdd:   L{int}
         """
         if channel.localClosed:
             return # we're already closed
@@ -461,7 +461,7 @@ class SSHConnection(service.SSHService):
         channel.write(data) as it manages the window automatically.
 
         @type channel:  subclass of L{SSHChannel}
-        @type data:     C{str}
+        @type data:     L{str}
         """
         if channel.localClosed:
             return # we're already closed
@@ -476,8 +476,8 @@ class SSHConnection(service.SSHService):
         the window automatically.
 
         @type channel:  subclass of L{SSHChannel}
-        @type dataType: C{int}
-        @type data:     C{str}
+        @type dataType: L{int}
+        @type data:     L{str}
         """
         if channel.localClosed:
             return # we're already closed
@@ -528,11 +528,11 @@ class SSHConnection(service.SSHService):
         find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error.
         The method is called with arguments of windowSize, maxPacket, data.
 
-        @type channelType:  C{str}
-        @type windowSize:   C{int}
-        @type maxPacket:    C{int}
-        @type data:         C{str}
-        @rtype:             subclass of L{SSHChannel}/C{tuple}
+        @type channelType:  L{str}
+        @type windowSize:   L{int}
+        @type maxPacket:    L{int}
+        @type data:         L{str}
+        @rtype:             subclass of L{SSHChannel}/L{tuple}
         """
         log.msg('got channel %s request' % channelType)
         if hasattr(self.transport, "avatar"): # this is a server!
@@ -568,9 +568,9 @@ class SSHConnection(service.SSHService):
         If this method cannot be found, this method returns 0.  Otherwise, it
         returns the return value of that method.
 
-        @type requestType:  C{str}
-        @type data:         C{str}
-        @rtype:             C{int}/C{tuple}
+        @type requestType:  L{str}
+        @type data:         L{str}
+        @rtype:             L{int}/L{tuple}
         """
         log.msg('got global %s request' % requestType)
         if hasattr(self.transport, 'avatar'): # this is a server!

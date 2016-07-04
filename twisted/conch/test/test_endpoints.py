@@ -1004,7 +1004,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         @param users: The users and their keys the checker will recognize.  Keys
             are byte strings giving user names.  Values are byte strings giving
             OpenSSH-formatted private keys.
-        @type users: C{dict}
+        @type users: L{dict}
         """
         mapping = dict([(k,[Key.fromString(v).public()])
                         for k, v in users.iteritems()])
