@@ -14,7 +14,7 @@ The most prominent use of XML Streams is Jabber, but this module is generically
 usable. See Twisted Words for Jabber specific protocol support.
 
 Maintainer: Ralph Meijer
-l
+
 @var STREAM_CONNECTED_EVENT: This event signals that the connection has been
     established.
 @type STREAM_CONNECTED_EVENT: L{str}.
