@@ -579,6 +579,9 @@ class H2Connection(Protocol):
         if streamID:
             # Update applies only to a specific stream. If we don't have the
             # stream, that's ok: just ignore it.
+            if streamID not in self.streams:
+                return
+
             self.priority.unblock(streamID)
             self.streams[streamID].windowUpdated()
         else:
