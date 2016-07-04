@@ -378,6 +378,7 @@ testModules = [
     "twisted.python.test.test_components",
     "twisted.python.test.test_constants",
     "twisted.python.test.test_deprecate",
+    "twisted.python.test.test_dist",
     "twisted.python.test.test_dist3",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
