@@ -12,11 +12,11 @@ Stanzas.
 
 @var STREAM_AUTHD_EVENT: Token dispatched by L{Authenticator} when the
     stream has been completely initialized
-@type STREAM_AUTHD_EVENT: L{intern}.
+@type STREAM_AUTHD_EVENT: L{str}.
 
 @var INIT_FAILED_EVENT: Token dispatched by L{Authenticator} when the
     stream has failed to be initialized
-@type INIT_FAILED_EVENT: L{intern}.
+@type INIT_FAILED_EVENT: L{str}.
 
 @var Reset: Token to signal that the XML stream has been reset.
 @type Reset: Basic object.
@@ -51,7 +51,6 @@ INIT_FAILED_EVENT = intern("//event/xmpp/initfailed")
 
 NS_STREAMS = 'http://etherx.jabber.org/streams'
 NS_XMPP_TLS = 'urn:ietf:params:xml:ns:xmpp-tls'
-
 
 Reset = object()
 
@@ -727,7 +726,7 @@ def upgradeWithIQResponseTracker(xs):
 
     This makes an L{XmlStream} object provide L{IIQResponseTracker}. When a
     response is an error iq stanza, the deferred has its errback invoked with a
-    failure that holds a L{error.StanzaError} that is
+    failure that holds a L{StanzaError<error.StanzaError>} that is
     easier to examine.
     """
     def callback(iq):

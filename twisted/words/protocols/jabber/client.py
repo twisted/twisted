@@ -86,7 +86,7 @@ class IQAuthInitializer(object):
     U{JEP-0078<http://www.jabber.org/jeps/jep-0078.html>} and mainly serves for
     compatibility with pre-XMPP-1.0 server implementations.
 
-    @cvar INVALID_USER_EVENT: Token to signat that authentication failed, due
+    @cvar INVALID_USER_EVENT: Token to signal that authentication failed, due
         to invalid username.
     @type INVALID_USER_EVENT: L{str}
 
