@@ -901,11 +901,18 @@ class LoggingFactoryTests(unittest.TestCase):
         wrappedFactory = protocol.ServerFactory()
         wrappedFactory.protocol = SimpleProtocol
         factory = policies.TrafficLoggingFactory(wrappedFactory, 'test')
-        proto = factory.buildProtocol(address.IPv4Address('TCP',
-                                                          '127.0.0.1', 12345))
+        first_proto = factory.buildProtocol(address.IPv4Address('TCP',
+                                                                '127.0.0.1',
+                                                                12345))
+        second_proto = factory.buildProtocol(address.IPv4Address('TCP',
+                                                                 '127.0.0.1',
+                                                                 12346))
 
-        # We expect open to be called once, with the file passed to the
-        # protocol.
-        expected_call = (('test-1', 'w'), {})
-        self.assertEqual([expected_call], open_calls)
-        self.assertEqual([proto.logfile], open_rvalues)
+        # We expect open to be called twice, with the files passed to the
+        # protocols.
+        first_call = (('test-1', 'w'), {})
+        second_call = (('test-2', 'w'), {})
+        self.assertEqual([first_call, second_call], open_calls)
+        self.assertEqual(
+            [first_proto.logfile, second_proto.logfile], open_rvalues
+        )
