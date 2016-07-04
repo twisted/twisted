@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_internet -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -17,19 +18,28 @@ from twisted.logger import Logger
 from twisted.internet.base import DelayedCall
 from twisted.internet.posixbase import (PosixReactorBase, _NO_FILEDESC,
                                         _ContinuousPolling)
+from twisted.python.compat import _PY3
 from twisted.python.log import callWithLogger
 from twisted.internet.interfaces import IReactorFDSet
+
+if not _PY3:
+    BrokenPipeError = OSError
+
 
 
 class _DCHandle(object):
     """
-    Wrapper for asyncio.Handle to be used by DelayedCall.
+    Wrapper for L{asyncio.Handle} to be used by
+    L{twisted.internet.base.DelayedCall}.
     """
     def __init__(self, handle):
         self.handle = handle
 
 
     def cancel(self):
+        """
+        Cancel the inner L{asyncio.Handle}.
+        """
         self.handle.cancel()
 
 
@@ -55,7 +65,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         super().__init__()
 
 
-    def _read_or_write(self, selectable, read):
+    def _readOrWrite(self, selectable, read):
         method = selectable.doRead if read else selectable.doWrite
 
         if selectable.fileno() == -1:
@@ -79,7 +89,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         fd = reader.fileno()
         try:
             self._asyncioEventloop.add_reader(fd, callWithLogger, reader,
-                                              self._read_or_write, reader,
+                                              self._readOrWrite, reader,
                                               True)
             self._readers[reader] = fd
         except BrokenPipeError:
@@ -97,12 +107,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def addWriter(self, writer):
         if writer in self._writers.keys() or \
            writer in self._continuousPolling._writers:
-           return
+            return
 
         fd = writer.fileno()
         try:
             self._asyncioEventloop.add_writer(fd, callWithLogger, writer,
-                                              self._read_or_write, writer,
+                                              self._readOrWrite, writer,
                                               False)
             self._writers[writer] = fd
         except BrokenPipeError:
