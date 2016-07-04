@@ -18,6 +18,12 @@ from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
 
 
+try:
+    import builtins
+except ImportError:
+    import __builtin__ as builtins
+
+
 
 class SimpleProtocol(protocol.Protocol):
 
@@ -870,3 +876,43 @@ class LoggingFactoryTests(unittest.TestCase):
         f.resetCounter()
         self.assertEqual(f._counter, 0)
 
+
+    def test_loggingFactoryOpensLogfileAutomatically(self):
+        """
+        When the L{policies.TrafficLoggingFactory} builds a protocol, it
+        automatically opens a unique log file for that protocol and attaches
+        the logfile to the built protocol.
+        """
+        open_calls = []
+        open_rvalues = []
+
+        def mocked_open(*args, **kwargs):
+            """
+            Mock for the open call to prevent actually opening a log file.
+            """
+            open_calls.append((args, kwargs))
+            io = NativeStringIO()
+            io.name = args[0]
+            open_rvalues.append(io)
+            return io
+
+        self.patch(builtins, 'open', mocked_open)
+
+        wrappedFactory = protocol.ServerFactory()
+        wrappedFactory.protocol = SimpleProtocol
+        factory = policies.TrafficLoggingFactory(wrappedFactory, 'test')
+        first_proto = factory.buildProtocol(address.IPv4Address('TCP',
+                                                                '127.0.0.1',
+                                                                12345))
+        second_proto = factory.buildProtocol(address.IPv4Address('TCP',
+                                                                 '127.0.0.1',
+                                                                 12346))
+
+        # We expect open to be called twice, with the files passed to the
+        # protocols.
+        first_call = (('test-1', 'w'), {})
+        second_call = (('test-2', 'w'), {})
+        self.assertEqual([first_call, second_call], open_calls)
+        self.assertEqual(
+            [first_proto.logfile, second_proto.logfile], open_rvalues
+        )
