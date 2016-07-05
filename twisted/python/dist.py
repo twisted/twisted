@@ -265,7 +265,7 @@ class build_ext_twisted(build_ext.build_ext):
         """
         Prepare the C{self.extensions} attribute (used by
         L{build_ext.build_ext}) by checking which extensions in
-        L{conditionalExtensions} should be built.  In addition, if we are
+        I{conditionalExtensions} should be built.  In addition, if we are
         building on NT, define the WIN32 macro to 1.
         """
         # always define WIN32 under Windows
