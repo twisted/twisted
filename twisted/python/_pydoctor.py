@@ -82,7 +82,6 @@ class TwistedSphinxInventory(SphinxInventory):
             baseURL = 'http://docs.activestate.com/activepython/2.7/pywin32'
 
             # For now only links to methods are supported.
-            # Methods have '_meth'
             relativeLink = '%s_meth.html' % (name.replace('.', '__'),)
 
             fullURL = '%s/%s' % (baseURL, relativeLink)
