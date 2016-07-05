@@ -122,7 +122,8 @@ class OldStyleDecoratorTests(unittest.TestCase):
 
     def test_withBasesEitherWay(self):
         """
-        The bases in the decorator are chosen when it is upgraded,
+        The bases in the decorator are chosen when it is upgraded, but the
+        regular MRO is chosen if it is not upgraded.
         """
         class Foo(object):
             pass
