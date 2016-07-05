@@ -78,7 +78,7 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Intercept unsupported version call.
 
-        @type remoteVersion: C{str}
+        @type remoteVersion: L{str}
         """
         self.gotUnsupportedVersion = remoteVersion
         return transport.SSHTransportBase._unsupportedVersionReceived(
@@ -89,8 +89,8 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Store any errors received.
 
-        @type reasonCode: C{int}
-        @type description: C{str}
+        @type reasonCode: L{int}
+        @type description: L{str}
         """
         self.errors.append((reasonCode, description))
 
@@ -99,7 +99,7 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Store any unimplemented packet messages.
 
-        @type seqnum: C{int}
+        @type seqnum: L{int}
         """
         self.unimplementeds.append(seqnum)
 
@@ -108,9 +108,9 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Store any debug messages.
 
-        @type alwaysDisplay: C{bool}
-        @type message: C{str}
-        @type lang: C{str}
+        @type alwaysDisplay: L{bool}
+        @type message: L{str}
+        @type lang: L{str}
         """
         self.debugs.append((alwaysDisplay, message, lang))
 
@@ -119,7 +119,7 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Store any ignored data.
 
-        @type packet: C{str}
+        @type packet: L{str}
         """
         self.ignoreds.append(packet)
 
@@ -281,7 +281,7 @@ class MockFactory(factory.SSHFactory):
         that use group exchange to establish a prime / generator group.
 
         @return: The primes and generators.
-        @rtype: C{dict} mapping the key size to a C{list} of
+        @rtype: L{dict} mapping the key size to a C{list} of
             C{(generator, prime)} tuple.
         """
         # In these tests, we hardwire the prime values to those defined by the
@@ -1376,7 +1376,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         KEXDH_REPLY with the server's public key and a signature.
 
         @param kexAlgorithm: The key exchange algorithm to use.
-        @type kexAlgorithm: C{str}
+        @type kexAlgorithm: L{str}
         """
         self.proto.supportedKeyExchanges = [kexAlgorithm]
         self.proto.supportedPublicKeys = [b'ssh-rsa']
@@ -1724,7 +1724,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         results in a correct KEXDH_INIT response.
 
         @param kexAlgorithm: The key exchange algorithm to use
-        @type kexAlgorithm: C{str}
+        @type kexAlgorithm: L{str}
         """
         self.proto.supportedKeyExchanges = [kexAlgorithm]
 
@@ -2041,11 +2041,11 @@ class GetMACTests(unittest.TestCase):
         @type hashProcessor: C{callable}
 
         @param digestSize: Size of the digest for algorithm.
-        @type digestSize: C{int}
+        @type digestSize: L{int}
 
         @param blockPadSize: Size of padding applied to the shared secret to
             match the block size.
-        @type blockPadSize: C{int}
+        @type blockPadSize: L{int}
         """
         secret = self.getSharedSecret()
 

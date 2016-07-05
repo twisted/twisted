@@ -309,7 +309,7 @@ class _UserAuth(SSHUserAuthClient):
         data, if one is available.
 
         @type publicKey: L{Key}
-        @type signData: C{str}
+        @type signData: L{str}
         """
         if self.agent is not None:
             return self.agent.signData(publicKey.blob(), signData)
