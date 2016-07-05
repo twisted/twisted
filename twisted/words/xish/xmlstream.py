@@ -27,7 +27,7 @@ Maintainer: Ralph Meijer
 
 @var STREAM_START_EVENT: This event signals that the root element of the XML
     Stream has been received.
-    For XMPP, this would be the C{<stream:stream …>} opening tag.
+    For XMPP, this would be the C{<stream:stream ...>} opening tag.
 @type STREAM_START_EVENT: L{str}.
 """
 
