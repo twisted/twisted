@@ -199,6 +199,7 @@ modules = [
     "twisted.python.constants",
     "twisted.python.context",
     "twisted.python.deprecate",
+    "twisted.python.dist",
     "twisted.python.dist3",
     "twisted.python.failure",
     "twisted.python.fakepwd",
@@ -343,6 +344,7 @@ testModules = [
     "twisted.internet.test.test_udp",
     "twisted.internet.test.test_udp_internals",
     "twisted.internet.test.test_unix",
+    "twisted.internet.test.test_win32events",
     "twisted.logger.test.test_buffer",
     "twisted.logger.test.test_file",
     "twisted.logger.test.test_filter",
@@ -382,6 +384,7 @@ testModules = [
     "twisted.python.test.test_components",
     "twisted.python.test.test_constants",
     "twisted.python.test.test_deprecate",
+    "twisted.python.test.test_dist",
     "twisted.python.test.test_dist3",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
@@ -561,8 +564,6 @@ almostModules = [
     "twisted.protocols.wire",
     # Missing test coverage:
     "twisted.protocols.loopback",
-    # Minimally used by setup3.py:
-    "twisted.python.dist",
     # twisted.python.filepath depends on twisted.python.win32, but on Linux it
     # only really needs to import:
     "twisted.python.win32",
