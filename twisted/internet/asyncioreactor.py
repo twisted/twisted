@@ -10,8 +10,6 @@ from __future__ import absolute_import, division
 
 import errno
 
-from asyncio import new_event_loop
-
 from zope.interface import implementer
 
 from twisted.logger import Logger
@@ -21,6 +19,14 @@ from twisted.internet.posixbase import (PosixReactorBase, _NO_FILEDESC,
 from twisted.python.compat import _PY3
 from twisted.python.log import callWithLogger
 from twisted.internet.interfaces import IReactorFDSet
+
+try:
+    from asyncio import new_event_loop
+except ImportError:
+    try:
+        from trollius import new_event_loop
+    except ImportError:
+        raise ImportError("Requires asyncio or trollius.")
 
 if not _PY3:
     BrokenPipeError = OSError
@@ -62,7 +68,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._readers = {}
         self._delayedCalls = set()
         self._continuousPolling = _ContinuousPolling(self)
-        super().__init__()
+        super(AsyncioSelectorReactor, self).__init__()
 
 
     def _readOrWrite(self, selectable, read):
@@ -92,8 +98,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               self._readOrWrite, reader,
                                               True)
             self._readers[reader] = fd
-        except BrokenPipeError:
-            pass
         except IOError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
@@ -115,8 +119,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
                                               self._readOrWrite, writer,
                                               False)
             self._writers[writer] = fd
-        except BrokenPipeError:
-            pass
         except IOError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
@@ -209,12 +211,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def stop(self):
-        super().stop()
+        super(AsyncioSelectorReactor, self).stop()
         self.callLater(0, self.fireSystemEvent, "shutdown")
 
 
     def crash(self):
-        super().crash()
+        super(AsyncioSelectorReactor, self).crash()
         self._asyncioEventloop.stop()
 
 

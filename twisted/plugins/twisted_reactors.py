@@ -21,8 +21,12 @@ epoll = Reactor(
 kqueue = Reactor(
     'kqueue', 'twisted.internet.kqreactor', 'kqueue(2)-based reactor.')
 
+asyncio = Reactor(
+        'asyncio', 'twisted.internet.asyncioreactor',
+        'asyncio integration reactor')
+
 __all__ = [
-    "default", "select", "poll", "epoll", "kqueue"
+    "default", "select", "poll", "epoll", "kqueue", "asyncio",
 ]
 
 if not _PY3:
@@ -51,9 +55,3 @@ if not _PY3:
     __all__.extend([
         "wx", "gi", "gtk2", "gtk3", "glib2", "glade", "win32er", "cf", "iocp"
     ])
-else:
-    asyncio = Reactor(
-        'asyncio', 'twisted.internet.asyncioreactor',
-        'asyncio integration reactor')
-
-    __all__.extend(["asyncio"])
