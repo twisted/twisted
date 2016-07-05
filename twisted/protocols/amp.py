@@ -170,7 +170,7 @@ has several features:
       web browsers) which issue non-NUL as the first byte, and AMP clients,
       which always issue NUL as the first byte.
 
-@var MAX_VALUE_LENGTH: The maximum lenght of a message.
+@var MAX_VALUE_LENGTH: The maximum length of a message.
 @type MAX_VALUE_LENGTH: L{int}
 
 @var ASK: Marker for an Ask packet.
