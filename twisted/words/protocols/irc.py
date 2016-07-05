@@ -3604,7 +3604,7 @@ def assembleFormattedText(formatted):
 
     @rtype: C{str}
     @return: String containing mIRC control sequences that mimic those
-        specified by L{formatted}.
+        specified by I{formatted}.
 
     @since: 13.1
     """
