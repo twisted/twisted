@@ -445,7 +445,7 @@ class HTTPClient(basic.LineReceiver):
         Parse the status line and headers for an HTTP request.
 
         @param line: Part of an HTTP request header. Request bodies are parsed
-            in L{rawDataReceived}.
+            in L{HTTPClient.rawDataReceived}.
         @type line: C{bytes}
         """
         if self.firstLine:
