@@ -18,9 +18,9 @@ class TestChannel(channel.SSHChannel):
     A mocked-up version of twisted.conch.ssh.channel.SSHChannel.
 
     @ivar gotOpen: True if channelOpen has been called.
-    @type gotOpen: C{bool}
+    @type gotOpen: L{bool}
     @ivar specificData: the specific channel open data passed to channelOpen.
-    @type specificData: C{str}
+    @type specificData: L{str}
     @ivar openFailureReason: the reason passed to openFailed.
     @type openFailed: C{error.ConchError}
     @ivar inBuffer: a C{list} of strings received by the channel.
@@ -30,13 +30,13 @@ class TestChannel(channel.SSHChannel):
     @type extBuffer: C{list}
     @ivar numberRequests: the number of requests that have been made to this
         channel.
-    @type numberRequests: C{int}
+    @type numberRequests: L{int}
     @ivar gotEOF: True if the other side sent EOF.
-    @type gotEOF: C{bool}
+    @type gotEOF: L{bool}
     @ivar gotOneClose: True if the other side closed the connection.
-    @type gotOneClose: C{bool}
+    @type gotOneClose: L{bool}
     @ivar gotClosed: True if the channel is closed.
-    @type gotClosed: C{bool}
+    @type gotClosed: L{bool}
     """
     name = "TestChannel"
     gotOpen = False
@@ -67,7 +67,7 @@ class TestChannel(channel.SSHChannel):
         """
         A test request.  Return True if data is 'data'.
 
-        @type data: C{str}
+        @type data: L{str}
         """
         self.numberRequests += 1
         return data == 'data'
@@ -352,7 +352,7 @@ class ConnectionTests(unittest.TestCase):
     def test_lookupChannelErrorLongCode(self):
         """
         Like L{test_lookupChannelError}, but for the case where the failure code
-        is represented as a C{long} instead of a C{int}.
+        is represented as a L{long} instead of a L{int}.
         """
         self._lookupChannelErrorTest(123)
 

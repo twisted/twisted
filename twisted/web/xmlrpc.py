@@ -6,6 +6,9 @@
 A generic resource for publishing objects via XML-RPC.
 
 Maintainer: Itamar Shtull-Trauring
+
+@var Fault: See L{xmlrpclib.Fault}
+@type Fault: L{xmlrpclib.Fault}
 """
 
 from __future__ import division, absolute_import

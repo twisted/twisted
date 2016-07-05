@@ -208,7 +208,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         data, if one is available.
 
         @type publicKey: L{Key}
-        @type signData: C{str}
+        @type signData: L{str}
         """
         if not self.usedFiles: # agent key
             return self.keyAgent.signData(publicKey.blob(), signData)

@@ -329,7 +329,7 @@ def packRequest_pty_req(term, geometry, modes):
 
     NOTE: modes must be packed before being sent here.
 
-    @type geometry: C{tuple}
+    @type geometry: L{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
     (rows, cols, xpixel, ypixel) = geometry
@@ -350,7 +350,7 @@ def packRequest_window_change(geometry):
     """
     Pack a window-change request so that it is suitable for sending.
 
-    @type geometry: C{tuple}
+    @type geometry: L{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
     (rows, cols, xpixel, ypixel) = geometry
