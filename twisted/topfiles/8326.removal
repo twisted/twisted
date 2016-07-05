@@ -1,0 +1,1 @@
+twisted.scripts.tap2deb and twisted.scripts.tap2rpm (along with the associated executables), deprecated since Twisted 15.2, have now been removed.
