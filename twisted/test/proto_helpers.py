@@ -138,9 +138,9 @@ class StringTransport:
         as an L{IPushProducer}.  One of C{'producing'}, C{'paused'}, or
         C{'stopped'}.
 
-    @ivar io: A L{BytesIO} which holds the data which has been written to this
-        transport since the last call to L{clear}.  Use L{value} instead of
-        accessing this directly.
+    @ivar io: A L{io.BytesIO} which holds the data which has been written to
+        this transport since the last call to L{clear}.  Use L{value} instead
+        of accessing this directly.
     """
 
     disconnecting = False
