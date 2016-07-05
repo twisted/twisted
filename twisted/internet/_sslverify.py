@@ -449,7 +449,7 @@ class CertBase:
         Convert this L{CertBase} into a provider of the given interface.
 
         @param interface: The interface to conform to.
-        @type interface: L{zope.interface.interface.InterfaceClass}
+        @type interface: L{zope.interface.interfaces.IInterface}
 
         @return: an L{IOpenSSLTrustRoot} provider or L{NotImplemented}
         @rtype: C{interface} or L{NotImplemented}

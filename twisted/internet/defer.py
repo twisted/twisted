@@ -48,7 +48,7 @@ class CancelledError(Exception):
 class TimeoutError(Exception):
     """
     This exception is deprecated.  It is used only by the deprecated
-    L{Deferred.setTimeout} method.
+    I{Deferred.setTimeout} method.
     """
 
 
