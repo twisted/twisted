@@ -160,8 +160,8 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         del worker
         del unique
         gc.collect()
-        self.assertEqual(uniqueRef(), None)
-        self.assertEqual(workerRef(), None)
+        self.assertIsNone(uniqueRef())
+        self.assertIsNone(workerRef())
 
 
     def test_threadCreationArgumentsCallInThreadWithCallback(self):
@@ -220,8 +220,8 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         onResultDone.wait(self.getTimeout())
         gc.collect()
 
-        self.assertEqual(uniqueRef(), None)
-        self.assertEqual(workerRef(), None)
+        self.assertIsNone(uniqueRef())
+        self.assertIsNone(workerRef())
 
         # XXX There's a race right here - has onResult in the worker thread
         # returned and the locals in _worker holding it and the result been
@@ -229,8 +229,8 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         del onResult
         gc.collect()
-        self.assertEqual(onResultRef(), None)
-        self.assertEqual(resultRef[0](), None)
+        self.assertIsNone(onResultRef())
+        self.assertIsNone(resultRef[0]())
 
 
     def test_persistence(self):
@@ -367,7 +367,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             tp.stop()
 
         self.assertFalse(results[0])
-        self.assertTrue(isinstance(results[1], failure.Failure))
+        self.assertIsInstance(results[1], failure.Failure)
         self.assertTrue(issubclass(results[1].type, NewError))
 
 
@@ -403,7 +403,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertEqual(len(errors), 1)
 
         self.assertTrue(results[0])
-        self.assertEqual(results[1], None)
+        self.assertIsNone(results[1])
 
 
     def test_callbackThread(self):

@@ -441,7 +441,7 @@ Note that on Python 3, re-raised exceptions will be mutated, with their
 C{__traceback__} attribute being set.
 
 @param exception: The exception instance.
-@param traceback: The traceback to use, or C{None} indicating a new traceback.
+@param traceback: The traceback to use, or L{None} indicating a new traceback.
 """
 
 
@@ -721,6 +721,46 @@ def _bytesChr(i):
 
 
 
+try:
+    from sys import intern
+except ImportError:
+    intern = intern
+
+
+
+def _coercedUnicode(s):
+    """
+    Coerce ASCII-only byte strings into unicode for Python 2.
+
+    In Python 2 C{unicode(b'bytes')} returns a unicode string C{'bytes'}. In
+    Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
+    instead. This function mimics the behavior for Python 2. It will decode the
+    byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
+    passing a byte string. Unicode strings are return as-is.
+
+    @param s: The string to coerce.
+    @type s: L{bytes} or L{unicode}
+
+    @raise UnicodeError: The input L{bytes} is not ASCII decodable.
+    @raise TypeError: The input is L{bytes} on Python 3.
+    """
+    if isinstance(s, bytes):
+        if _PY3:
+            raise TypeError("Expected str not %r (bytes)" % (s,))
+        else:
+            return s.decode('ascii')
+    else:
+        return s
+
+
+
+if _PY3:
+    unichr = chr
+else:
+    unichr = unichr
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -754,4 +794,7 @@ __all__ = [
     "_b64encodebytes",
     "_b64decodebytes",
     "_bytesChr",
+    "_coercedUnicode",
+    "intern",
+    "unichr",
 ]

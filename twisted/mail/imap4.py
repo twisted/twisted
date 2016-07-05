@@ -34,7 +34,7 @@ try:
 except:
     import StringIO
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -444,15 +444,15 @@ class IMailboxListener(Interface):
     def newMessages(exists, recent):
         """Indicates that the number of messages in a mailbox has changed.
 
-        @type exists: C{int} or C{None}
+        @type exists: C{int} or L{None}
         @param exists: The total number of messages now in this mailbox.
         If the total number of messages has not changed, this should be
-        C{None}.
+        L{None}.
 
         @type recent: C{int}
         @param recent: The number of messages now flagged \\Recent.
         If the number of recent messages has not changed, this should be
-        C{None}.
+        L{None}.
         """
 
 # Some constants to help define what an atom is and is not - see the grammar
@@ -469,6 +469,7 @@ _nonAtomChars = r'(){%*"\]' + _SP + _CTL
 # This is all the bytes that match the ATOM-CHAR from the grammar in the RFC.
 _atomChars = ''.join(chr(ch) for ch in range(0x100) if chr(ch) not in _nonAtomChars)
 
+@implementer(IMailboxListener)
 class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     """
     Protocol implementation for an IMAP4rev1 server.
@@ -479,8 +480,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         - Selected
         - Logout
     """
-    implements(IMailboxListener)
-
     # Identifier for this server software
     IDENT = 'Twisted IMAP4rev1 Ready'
 
@@ -1479,7 +1478,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             sequence numbers or UIDs.
 
         @type searchResults: C{list}
-        @param searchResults: The search results so far or C{None} if no
+        @param searchResults: The search results so far or L{None} if no
             results yet.
         """
         if searchResults is None:
@@ -2209,14 +2208,13 @@ class IllegalServerResponse(IMAP4Exception): pass
 
 TIMEOUT_ERROR = error.TimeoutError()
 
+@implementer(IMailboxListener)
 class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     """IMAP4 client protocol implementation
 
     @ivar state: A string representing the state the connection is currently
     in.
     """
-    implements(IMailboxListener)
-
     tags = None
     waiting = None
     queued = None
@@ -3365,7 +3363,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message-id fields are strings, while the from, sender, reply-to,
         to, cc, and bcc fields contain address data.  Address data consists
         of a sequence of name, source route, mailbox name, and hostname.
-        Fields which are not present for a particular address may be C{None}.
+        Fields which are not present for a particular address may be L{None}.
         """
         return self._fetch(str(messages), useUID=uid, envelope=1)
 
@@ -4204,7 +4202,7 @@ def splitQuoted(s):
 
     Tokens that would otherwise be separated but are surrounded by \"
     remain as a single token.  Any token that is not quoted and is
-    equal to \"NIL\" is tokenized as C{None}.
+    equal to \"NIL\" is tokenized as L{None}.
 
     @type s: C{str}
     @param s: The string to be split
@@ -4448,9 +4446,8 @@ class IClientAuthentication(Interface):
 
 
 
+@implementer(IClientAuthentication)
 class CramMD5ClientAuthenticator:
-    implements(IClientAuthentication)
-
     def __init__(self, user):
         self.user = user
 
@@ -4463,9 +4460,8 @@ class CramMD5ClientAuthenticator:
 
 
 
+@implementer(IClientAuthentication)
 class LOGINAuthenticator:
-    implements(IClientAuthentication)
-
     def __init__(self, user):
         self.user = user
         self.challengeResponse = self.challengeUsername
@@ -4482,9 +4478,8 @@ class LOGINAuthenticator:
         # Respond to something like "Password:"
         return secret
 
+@implementer(IClientAuthentication)
 class PLAINAuthenticator:
-    implements(IClientAuthentication)
-
     def __init__(self, user):
         self.user = user
 
@@ -4525,7 +4520,7 @@ class IAccount(Interface):
         contain multiple hierarchical parts.
 
         @type mbox: An object implementing C{IMailbox}
-        @param mbox: The mailbox to associate with this name.  If C{None},
+        @param mbox: The mailbox to associate with this name.  If L{None},
         a suitable default is created and used.
 
         @rtype: C{Deferred} or C{bool}
@@ -4702,9 +4697,8 @@ class INamespacePresenter(Interface):
         """
 
 
+@implementer(IAccount, INamespacePresenter)
 class MemoryAccount(object):
-    implements(IAccount, INamespacePresenter)
-
     mailboxes = None
     subscriptions = None
     top_id = 0
@@ -4954,7 +4948,7 @@ class _MessageStructure(object):
         Parse a I{Content-Disposition} header into a two-sequence of the
         disposition and a flattened list of its parameters.
 
-        @return: C{None} if there is no disposition header value, a C{list} with
+        @return: L{None} if there is no disposition header value, a C{list} with
             two elements otherwise.
         """
         if disp:

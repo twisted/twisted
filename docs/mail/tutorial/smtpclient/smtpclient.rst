@@ -849,7 +849,7 @@ failure of the message transmission to the application:
 
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        print 'Sent', numOk, 'messages'
+        print('Sent', numOk, 'messages')
 
 
 

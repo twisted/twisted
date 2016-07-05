@@ -4,12 +4,11 @@ from twisted.trial import unittest
 
 from twisted.python import components
 from twisted.pair import ethernet, raw
-from zope.interface import implements
+from zope.interface import implementer
 
 
+@implementer(raw.IRawPacketProtocol)
 class MyProtocol:
-    implements(raw.IRawPacketProtocol)
-
     def __init__(self, expecting):
         self.expecting = list(expecting)
 

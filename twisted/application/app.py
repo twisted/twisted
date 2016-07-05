@@ -290,7 +290,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None,
     @param profiler: object used to run the reactor with profiling.
     @type profiler: L{AppProfiler}
 
-    @param reactor: The reactor to use.  If C{None}, the global reactor will
+    @param reactor: The reactor to use.  If L{None}, the global reactor will
         be used.
     """
     if reactor is None:

@@ -4,6 +4,8 @@ Demonstrate sending mail via SMTP while employing TLS and performing
 authentication.
 """
 
+from __future__ import print_function
+
 import sys
 
 from OpenSSL.SSL import SSLv3_METHOD
@@ -101,7 +103,7 @@ class SendmailOptions(Options):
             raise UsageError(
                 "Must specify a message file to send with --message")
         try:
-            self['message'] = file(self['message'])
+            self['message'] = open(self['message'])
         except Exception as e:
             raise UsageError(e)
 
@@ -113,7 +115,7 @@ def cbSentMessage(result):
 
     Report success to the user and then stop the reactor.
     """
-    print "Message sent"
+    print("Message sent")
     reactor.stop()
 
 

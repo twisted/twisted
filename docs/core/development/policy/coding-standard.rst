@@ -281,7 +281,16 @@ For example:
 
 
 Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_.
-Please note that pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
+
+When you are referring to a type, you should use `L{}`, whether it's in the stdlib , in Twisted or somewhere else.
+
+`NoneType` is an exception and we are referring it just as `L{None}`.
+
+Pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
+
+For the API doc `C{something}` means "I made up a new word, and I want it to be monospaced, like it's an identifier in code and not an English noun"
+
+`L{something}` means "I am referring to the previously-defined concept/package/module/class/function/method/attribute identified as `something`"
 
 Additionally, to accommodate emacs users, single quotes of the type of the docstring's triple-quote should be escaped.
 This will prevent font-lock from accidentally fontifying large portions of the file as a string.

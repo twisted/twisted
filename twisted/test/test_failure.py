@@ -71,7 +71,7 @@ class FailureTests(SynchronousTestCase):
         except:
             f = failure.Failure()
         untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIdentical(f, untrapped)
+        self.assertIs(f, untrapped)
 
 
     if _PY3:
@@ -93,7 +93,7 @@ class FailureTests(SynchronousTestCase):
             f = failure.Failure()
 
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
-        self.assertIdentical(exception, untrapped)
+        self.assertIs(exception, untrapped)
 
 
     if not _PY3:
@@ -111,7 +111,7 @@ class FailureTests(SynchronousTestCase):
         exception = ValueError()
         f1 = failure.Failure(exception)
         f2 = failure.Failure(f1)
-        self.assertIdentical(f2.value, exception)
+        self.assertIs(f2.value, exception)
 
 
     def test_failureValueFromFoundFailure(self):
@@ -128,7 +128,7 @@ class FailureTests(SynchronousTestCase):
         except:
             f2 = failure.Failure()
 
-        self.assertIdentical(f2.value, exception)
+        self.assertIs(f2.value, exception)
 
 
     def assertStartsWith(self, s, prefix):
@@ -297,7 +297,7 @@ class FailureTests(SynchronousTestCase):
             "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack))
 
         if captureVars:
-            self.assertEqual(None, re.search('exampleLocalVar.*abcde', tb))
+            self.assertIsNone(re.search('exampleLocalVar.*abcde', tb))
 
 
     def assertDefaultTraceback(self, captureVars=False):
@@ -346,7 +346,7 @@ class FailureTests(SynchronousTestCase):
             reflect.qual(f.type), reflect.safe_str(f.value)))
 
         if captureVars:
-            self.assertEqual(None, re.search('exampleLocalVar.*xyzzy', tb))
+            self.assertIsNone(re.search('exampleLocalVar.*xyzzy', tb))
 
 
     def test_printDetailedTraceback(self):
@@ -458,6 +458,8 @@ class FailureTests(SynchronousTestCase):
         current interpreter exception state.  If no such state exists, creating
         the Failure should raise a synchronous exception.
         """
+        if sys.version_info < (3, 0):
+            sys.exc_clear()
         self.assertRaises(failure.NoCurrentExceptionError, failure.Failure)
 
 
@@ -492,7 +494,7 @@ class FailureTests(SynchronousTestCase):
         expected = traceback.extract_tb(f.getTracebackObject())
         f.cleanFailure()
         observed = traceback.extract_tb(f.getTracebackObject())
-        self.assertNotEqual(None, expected)
+        self.assertIsNotNone(expected)
         self.assertEqual(expected, observed)
 
 
@@ -517,7 +519,7 @@ class FailureTests(SynchronousTestCase):
         None is a good value, because traceback.extract_tb(None) -> [].
         """
         f = failure.Failure(Exception("some error"))
-        self.assertEqual(f.getTracebackObject(), None)
+        self.assertIsNone(f.getTracebackObject())
 
 
     def test_tracebackFromExceptionInPython3(self):
@@ -531,19 +533,19 @@ class FailureTests(SynchronousTestCase):
         except:
             klass, exception, tb = sys.exc_info()
         f = failure.Failure(exception)
-        self.assertIdentical(f.tb, tb)
+        self.assertIs(f.tb, tb)
 
 
     def test_cleanFailureRemovesTracebackInPython3(self):
         """
         L{failure.Failure.cleanFailure} sets the C{__traceback__} attribute of
-        the exception to C{None} in Python 3.
+        the exception to L{None} in Python 3.
         """
         f = getDivisionFailure()
-        self.assertNotEqual(f.tb, None)
-        self.assertIdentical(f.value.__traceback__, f.tb)
+        self.assertIsNotNone(f.tb)
+        self.assertIs(f.value.__traceback__, f.tb)
         f.cleanFailure()
-        self.assertIdentical(f.value.__traceback__, None)
+        self.assertIsNone(f.value.__traceback__)
 
     if not _PY3:
         test_tracebackFromExceptionInPython3.skip = "Python 3 only."
@@ -680,13 +682,13 @@ class FindFailureTests(SynchronousTestCase):
     def test_findNoFailureInExceptionHandler(self):
         """
         Within an exception handler, _findFailure should return
-        C{None} in case no Failure is associated with the current
+        L{None} in case no Failure is associated with the current
         exception.
         """
         try:
             1/0
         except:
-            self.assertEqual(failure.Failure._findFailure(), None)
+            self.assertIsNone(failure.Failure._findFailure())
         else:
             self.fail("No exception raised from 1/0!?")
 
@@ -695,8 +697,10 @@ class FindFailureTests(SynchronousTestCase):
         """
         Outside of an exception handler, _findFailure should return None.
         """
-        self.assertEqual(sys.exc_info()[-1], None) #environment sanity check
-        self.assertEqual(failure.Failure._findFailure(), None)
+        if sys.version_info < (3, 0):
+            sys.exc_clear()
+        self.assertIsNone(sys.exc_info()[-1]) #environment sanity check
+        self.assertIsNone(failure.Failure._findFailure())
 
 
     def test_findFailure(self):
@@ -862,7 +866,7 @@ class DebugModeTests(SynchronousTestCase):
             typ, exc, tb = sys.exc_info()
             f = failure.Failure()
         self.assertEqual(self.result, [tb])
-        self.assertEqual(f.captureVars, False)
+        self.assertFalse(f.captureVars)
 
 
     def test_captureVars(self):
@@ -876,7 +880,7 @@ class DebugModeTests(SynchronousTestCase):
             typ, exc, tb = sys.exc_info()
             f = failure.Failure(captureVars=True)
         self.assertEqual(self.result, [tb])
-        self.assertEqual(f.captureVars, True)
+        self.assertTrue(f.captureVars)
 
 
 
@@ -913,7 +917,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self._throwIntoGenerator(f, g)
 
         self.assertEqual(stuff[0][0], ZeroDivisionError)
-        self.assertTrue(isinstance(stuff[0][1], ZeroDivisionError))
+        self.assertIsInstance(stuff[0][1], ZeroDivisionError)
 
         self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1/0")
 

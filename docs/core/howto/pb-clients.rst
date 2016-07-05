@@ -67,7 +67,7 @@ caching mechanism:
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     class SimpleAvatar(pb.Avatar):
         greetings = 0
@@ -77,8 +77,8 @@ caching mechanism:
             self.greetings += 1
             return "<%d>hello %s" % (self.greetings, self.name)
     
+    @implementer(portal.IRealm)
     class CachingRealm:
-        implements(portal.IRealm)
     
         def __init__(self):
             self.avatars = {}
@@ -116,7 +116,7 @@ else. Here is an example of that:
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     class Greeter:
         greetings = 0
@@ -131,9 +131,8 @@ else. Here is an example of that:
         def perspective_greet(self):
             return self.greeter.hello()+' '+self.name
     
+    @implementer(portal.IRealm)
     class CachingRealm:
-        implements(portal.IRealm)
-    
         def __init__(self):
             self.greeters = {}
     
@@ -161,7 +160,7 @@ there is a better pattern:
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     class SimpleAvatar(pb.Avatar):
         greetings = 0
@@ -176,9 +175,8 @@ there is a better pattern:
             self.greetings += 1
             return "<%d>hello %s" % (self.greetings, self.name)
     
+    @implementer(portal.IRealm)
     class CachingRealm:
-        implements(portal.IRealm)
-    
         def __init__(self):
             self.avatars = {}
     
@@ -204,7 +202,7 @@ the number of concurrent connections:
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     class SimpleAvatar(pb.Avatar):
         greetings = 0
@@ -219,9 +217,8 @@ the number of concurrent connections:
             self.greetings += 1
             return "<%d>hello %s" % (self.greetings, self.name)
     
+    @implementer(portal.IRealm)
     class CachingRealm:
-        implements(portal.IRealm)
-    
         def __init__(self, max=1):
             self.avatars = {}
             self.max = max
@@ -266,7 +263,7 @@ of the ``mind`` argument:
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     class SimpleAvatar(pb.Avatar):
         def __init__(self, client):
@@ -282,9 +279,8 @@ of the ``mind`` argument:
         def logout(self):
             self.s.stopService()
     
+    @implementer(portal.IRealm)
     class Realm:
-        implements(portal.IRealm)
-    
         def requestAvatar(self, avatarId, mind, *interfaces):
             if pb.IPerspective not in interfaces: raise NotImplementedError
             p = SimpleAvatar(mind)

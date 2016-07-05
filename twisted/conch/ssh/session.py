@@ -19,7 +19,7 @@ from zope.interface import implementer
 from twisted.internet import interfaces, protocol
 from twisted.python import log
 from twisted.conch.interfaces import ISession
-from twisted.conch.ssh import common, channel
+from twisted.conch.ssh import common, channel, connection
 
 
 class SSHSession(channel.SSHChannel):
@@ -329,7 +329,7 @@ def packRequest_pty_req(term, geometry, modes):
 
     NOTE: modes must be packed before being sent here.
 
-    @type geometry: C{tuple}
+    @type geometry: L{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
     (rows, cols, xpixel, ypixel) = geometry
@@ -350,10 +350,8 @@ def packRequest_window_change(geometry):
     """
     Pack a window-change request so that it is suitable for sending.
 
-    @type geometry: C{tuple}
+    @type geometry: L{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
     (rows, cols, xpixel, ypixel) = geometry
     return struct.pack('>4L', cols, rows, xpixel, ypixel)
-
-import connection

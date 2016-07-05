@@ -38,7 +38,7 @@ class NewsTests(unittest.TestCase):
 
     def testArticleExists(self):
         d = self.backend.articleExistsRequest(MESSAGE_ID)
-        d.addCallback(self.failUnless)
+        d.addCallback(self.assertTrue)
         return d
 
 
@@ -55,7 +55,7 @@ class NewsTests(unittest.TestCase):
                               "callback result Message-Id doesn't match: %s vs %s" %
                               (MESSAGE_ID, result[1]))
             body = result[2].read()
-            self.failIfEqual(body.find('\r\n\r\n'), -1,
+            self.assertNotEqual(body.find('\r\n\r\n'), -1,
                              "Can't find \\r\\n\\r\\n between header and body")
             return result
 

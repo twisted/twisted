@@ -40,10 +40,10 @@ def _getRandomNumber(random, bits):
     @param random: A callable taking a count of bytes and returning that many
     random bytes.
 
-    @type bits: C{int}
+    @type bits: L{int}
     @param bits: The number of bits in the result.
 
-    @rtype: C{int} or C{long}
+    @rtype: L{int} or L{long}
     @return: The newly generated random number.
 
     @raise ValueError: if C{bits} is not a multiple of 8.
@@ -107,8 +107,8 @@ class SSHCiphers:
     to encrypt and authenticate the SSH connection.
 
     @cvar cipherMap: A dictionary mapping SSH encryption names to 3-tuples of
-                     (<cryptography.hazmat.primitives.interfaces.CipherAlgorithm>,
-                      <block size>, <cryptography.hazmat.primitives.interfaces.Mode>)
+        (<cryptography.hazmat.primitives.interfaces.CipherAlgorithm>,
+        <block size>, <cryptography.hazmat.primitives.interfaces.Mode>)
     @cvar macMap: A dictionary mapping SSH MAC names to hash modules.
 
     @ivar outCipType: the string type of the outgoing cipher.
@@ -275,7 +275,7 @@ class SSHCiphers:
         @type data: L{bytes}
         @param data: The data to create a MAC for.
 
-        @rtype: C{str}
+        @rtype: L{str}
         @return: The serialized MAC.
         """
         if not self.outMAC[0]:
@@ -297,7 +297,7 @@ class SSHCiphers:
         @type mac: L{bytes}
         @param mac: The MAC sent with the packet.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         @return: C{True} if the MAC is valid.
         """
         if not self.inMAC[0]:
@@ -455,7 +455,7 @@ class SSHTransportBase(protocol.Protocol):
     ourVersionString = (b'SSH-' + protocolVersion + b'-' + version + b' '
             + comment).strip()
 
-    # C{none} is supported as cipher and hmac. For security they are disabled
+    # L{None} is supported as cipher and hmac. For security they are disabled
     # by default. To enable them, subclass this class and add it, or do:
     # SSHTransportBase.supportedCiphers.append('none')
     # List ordered by preference.
@@ -535,7 +535,7 @@ class SSHTransportBase(protocol.Protocol):
         @raise RuntimeError: If a key exchange has already been started and it
             is not appropriate to send a I{KEXINIT} message at this time.
 
-        @return: C{None}
+        @return: L{None}
         """
         if self._keyExchangeState != self._KEY_EXCHANGE_NONE:
             raise RuntimeError(
@@ -567,11 +567,11 @@ class SSHTransportBase(protocol.Protocol):
         in progress.
 
         @param messageType: The type of message
-        @type messageType: C{int}
+        @type messageType: L{int}
 
         @return: C{True} if the given type of message may be sent while key
             exchange is in progress, C{False} if it may not.
-        @rtype: C{bool}
+        @rtype: L{bool}
 
         @see: U{http://tools.ietf.org/html/rfc4253#section-7.1}
         """
@@ -592,9 +592,9 @@ class SSHTransportBase(protocol.Protocol):
 
         @param messageType: The type of the packet; generally one of the
                             MSG_* values.
-        @type messageType: C{int}
+        @type messageType: L{int}
         @param payload: The payload for the message.
-        @type payload: C{str}
+        @type payload: L{str}
         """
         if self._keyExchangeState != self._KEY_EXCHANGE_NONE:
             if not self._allowedKeyExchangeMessageType(messageType):
@@ -627,7 +627,7 @@ class SSHTransportBase(protocol.Protocol):
         Try to return a decrypted, authenticated, and decompressed packet
         out of the buffer.  If there is not enough data, return None.
 
-        @rtype: C{str} or C{None}
+        @rtype: L{str} or L{None}
         @return: The decoded packet, if any.
         """
         bs = self.currentEncryptions.decBlockSize
@@ -688,7 +688,7 @@ class SSHTransportBase(protocol.Protocol):
 
         @param remoteVersion: remote ssh protocol version which is unsupported
             by us.
-        @type remoteVersion: C{str}
+        @type remoteVersion: L{str}
         """
         self.sendDisconnect(DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
             b'bad version ' + remoteVersion)
@@ -836,7 +836,7 @@ class SSHTransportBase(protocol.Protocol):
         @param packet: The message data.
 
         @return: A L{tuple} of negotiated key exchange algorithms, key
-        algorithms, and unhandled data, or C{None} if something went wrong.
+        algorithms, and unhandled data, or L{None} if something went wrong.
         """
         self.otherKexInitPayload = chr(MSG_KEXINIT) + packet
         # This is useless to us:
@@ -972,12 +972,12 @@ class SSHTransportBase(protocol.Protocol):
         Send a debug message to the other side.
 
         @param message: the message to send.
-        @type message: C{str}
+        @type message: L{str}
         @param alwaysDisplay: if True, tell the other side to always
                               display this message.
-        @type alwaysDisplay: C{bool}
+        @type alwaysDisplay: L{bool}
         @param language: optionally, the language the message is in.
-        @type language: C{str}
+        @type language: L{str}
         """
         self.sendPacket(MSG_DEBUG, chr(alwaysDisplay) + NS(message) +
                         NS(language))
@@ -990,7 +990,7 @@ class SSHTransportBase(protocol.Protocol):
         encrypted stream.
 
         @param message: data to send with the message
-        @type message: C{str}
+        @type message: L{str}
         """
         self.sendPacket(MSG_IGNORE, NS(message))
 
@@ -1010,9 +1010,9 @@ class SSHTransportBase(protocol.Protocol):
 
         @param reason: the reason for the disconnect.  Should be one of the
                        DISCONNECT_* values.
-        @type reason: C{int}
+        @type reason: L{int}
         @param desc: a descrption of the reason for the disconnection.
-        @type desc: C{str}
+        @type desc: L{str}
         """
         self.sendPacket(
             MSG_DISCONNECT, struct.pack('>L', reason) + NS(desc) + NS(b''))
@@ -1052,9 +1052,9 @@ class SSHTransportBase(protocol.Protocol):
         @param sharedSecret: a secret string agreed upon using a Diffie-
                              Hellman exchange, so it is only shared between
                              the server and the client.
-        @type sharedSecret: C{str}
+        @type sharedSecret: L{str}
         @param exchangeHash: A hash of various data known by both sides.
-        @type exchangeHash: C{str}
+        @type exchangeHash: L{str}
         """
         if not self.sessionID:
             self.sessionID = exchangeHash
@@ -1153,10 +1153,10 @@ class SSHTransportBase(protocol.Protocol):
 
         @param reasonCode: the reason for the disconnect, one of the
                            DISCONNECT_ values.
-        @type reasonCode: C{int}
+        @type reasonCode: L{int}
         @param description: a human-readable description of the
                             disconnection.
-        @type description: C{str}
+        @type description: L{str}
         """
         log.msg('Got remote error, code %s\nreason: %s' % (reasonCode,
                                                            description))
@@ -1168,7 +1168,7 @@ class SSHTransportBase(protocol.Protocol):
         side.
 
         @param seqnum: the sequence number that was not understood.
-        @type seqnum: C{int}
+        @type seqnum: L{int}
         """
         log.msg('other side unimplemented packet #%s' % (seqnum,))
 
@@ -1179,11 +1179,11 @@ class SSHTransportBase(protocol.Protocol):
 
         @param alwaysDisplay: if True, this message should always be
                               displayed.
-        @type alwaysDisplay: C{bool}
+        @type alwaysDisplay: L{bool}
         @param message: the debug message
-        @type message: C{str}
+        @type message: L{str}
         @param lang: optionally the language the message is in.
-        @type lang: C{str}
+        @type lang: L{str}
         """
         if alwaysDisplay:
             log.msg('Remote Debug Message: %s' % (message,))
@@ -1568,12 +1568,12 @@ class SSHClientTransport(SSHTransportBase):
         @param ignored: Ignored.
 
         @param pubKey: the public key blob for the server's public key.
-        @type pubKey: C{str}
+        @type pubKey: L{str}
         @param f: the server's Diffie-Hellman public key.
-        @type f: C{long}
+        @type f: L{long}
         @param signature: the server's signature, verifying that it has the
             correct private key.
-        @type signature: C{str}
+        @type signature: L{str}
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = _MPpow(f, self.x, self.p)
@@ -1628,12 +1628,12 @@ class SSHClientTransport(SSHTransportBase):
         @param ignored: Ignored.
 
         @param pubKey: the public key blob for the server's public key.
-        @type pubKey: C{str}
+        @type pubKey: L{str}
         @param f: the server's Diffie-Hellman public key.
-        @type f: C{long}
+        @type f: L{long}
         @param signature: the server's signature, verifying that it has the
             correct private key.
-        @type signature: C{str}
+        @type signature: L{str}
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = _MPpow(f, self.x, self.p)

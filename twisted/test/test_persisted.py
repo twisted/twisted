@@ -204,7 +204,7 @@ class EphemeralTests(unittest.TestCase):
         o = pickle.loads(pickl)
         
         self.assertEqual(o.__class__, styles.Ephemeral)
-        self.assert_(not hasattr(o, 'x'))
+        self.assertFalse(hasattr(o, 'x'))
 
 
 class Pickleable:

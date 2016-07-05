@@ -11,7 +11,7 @@ from twisted.internet import defer, reactor
 from twisted.protocols import sip
 from twisted.trial import unittest
 
-from zope.interface import implements
+from zope.interface import implementer
 
 
 # request, prefixed by random CRLFs
@@ -270,9 +270,9 @@ class ViaTests(unittest.TestCase):
         self.assertEqual(v.transport, "UDP")
         self.assertEqual(v.host, "first.example.com")
         self.assertEqual(v.port, 4000)
-        self.assertEqual(v.rport, None)
-        self.assertEqual(v.rportValue, None)
-        self.assertEqual(v.rportRequested, False)
+        self.assertIsNone(v.rport)
+        self.assertIsNone(v.rportValue)
+        self.assertFalse(v.rportRequested)
         self.assertEqual(v.ttl, 16)
         self.assertEqual(v.maddr, "224.2.0.1")
         self.assertEqual(v.branch, "a7c6a8dlze")
@@ -291,13 +291,13 @@ class ViaTests(unittest.TestCase):
         self.assertEqual(v.transport, "UDP")
         self.assertEqual(v.host, "example.com")
         self.assertEqual(v.port, 5060)
-        self.assertEqual(v.rport, None)
-        self.assertEqual(v.rportValue, None)
-        self.assertEqual(v.rportRequested, False)
-        self.assertEqual(v.ttl, None)
-        self.assertEqual(v.maddr, None)
-        self.assertEqual(v.branch, None)
-        self.assertEqual(v.hidden, True)
+        self.assertIsNone(v.rport)
+        self.assertIsNone(v.rportValue)
+        self.assertFalse(v.rportRequested)
+        self.assertIsNone(v.ttl)
+        self.assertIsNone(v.maddr)
+        self.assertIsNone(v.branch)
+        self.assertTrue(v.hidden)
         self.assertEqual(v.toString(),
                           "SIP/2.0/UDP example.com:5060;hidden")
         self.checkRoundtrip(v)
@@ -325,9 +325,9 @@ class ViaTests(unittest.TestCase):
             DeprecationWarning)
 
         self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport")
-        self.assertEqual(v.rport, True)
-        self.assertEqual(v.rportRequested, True)
-        self.assertEqual(v.rportValue, None)
+        self.assertTrue(v.rport)
+        self.assertTrue(v.rportRequested)
+        self.assertIsNone(v.rportValue)
 
 
     def test_rport(self):
@@ -336,8 +336,8 @@ class ViaTests(unittest.TestCase):
         """
         v = sip.Via("foo.bar", rport=None)
         self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport")
-        self.assertEqual(v.rportRequested, True)
-        self.assertEqual(v.rportValue, None)
+        self.assertTrue(v.rportRequested)
+        self.assertIsNone(v.rportValue)
 
 
     def test_rportValue(self):
@@ -347,7 +347,7 @@ class ViaTests(unittest.TestCase):
         """
         v = sip.Via("foo.bar", rport=1)
         self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport=1")
-        self.assertEqual(v.rportRequested, False)
+        self.assertFalse(v.rportRequested)
         self.assertEqual(v.rportValue, 1)
         self.assertEqual(v.rport, 1)
 
@@ -416,13 +416,13 @@ class ParseTests(unittest.TestCase):
             self.assertEqual(gparams, params)
 
 
+@implementer(sip.ILocator)
 class DummyLocator:
-    implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.succeed(sip.URL("server.com", port=5060))
 
+@implementer(sip.ILocator)
 class FailingLocator:
-    implements(sip.ILocator)
     def getAddress(self, logicalURL):
         return defer.fail(LookupError())
 

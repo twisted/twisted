@@ -111,7 +111,7 @@ def _pickleFunction(f):
 
     @return: a 2-tuple of a reference to L{_unpickleFunction} and a tuple of
         its arguments, a 1-tuple of the function's fully qualified name.
-    @rtype: 2-tuple of C{(callable, native string}}
+    @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == '<lambda>':
         return None

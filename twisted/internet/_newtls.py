@@ -167,7 +167,7 @@ class ConnectionMixin(object):
 
     @ivar TLS: A flag indicating whether TLS is currently in use on this
         transport.  This is not a good way for applications to check for TLS,
-        instead use L{ISSLTransport.providedBy}.
+        instead use L{twisted.internet.interfaces.ISSLTransport}.
     """
 
     TLS = False

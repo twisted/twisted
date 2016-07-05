@@ -1397,7 +1397,7 @@ class SphinxBuilderTests(TestCase):
                 3. In the case where it's a path to a C{.html} file, the
                    content looks like an HTML file.
 
-        @return: C{None}
+        @return: L{None}
         """
         # check that file exists
         fpath = fileDir.child(fileName)
@@ -1605,7 +1605,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         working directory doesn't produce any error.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        self.assertEqual(None,
+        self.assertIsNone(
                          self.createCommand.ensureIsWorkingDirectory(reposDir))
 
 

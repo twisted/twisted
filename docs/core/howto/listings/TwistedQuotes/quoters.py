@@ -1,18 +1,16 @@
 from random import choice
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from TwistedQuotes import quoteproto
 
 
 
+@implementer(quoteproto.IQuoter)
 class StaticQuoter:
     """
     Return a static quote.
     """
-
-    implements(quoteproto.IQuoter)
-
     def __init__(self, quote):
         self.quote = quote
 
@@ -22,18 +20,17 @@ class StaticQuoter:
 
 
 
+@implementer(quoteproto.IQuoter)
 class FortuneQuoter:
     """
     Load quotes from a fortune-format file.
     """
-    implements(quoteproto.IQuoter)
-
     def __init__(self, filenames):
         self.filenames = filenames
 
 
     def getQuote(self):
-        quoteFile = file(choice(self.filenames))
+        quoteFile = open(choice(self.filenames))
         quotes = quoteFile.read().split('\n%\n')
         quoteFile.close()
         return choice(quotes)

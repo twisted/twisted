@@ -407,8 +407,8 @@ class ParsingTests(unittest.TestCase):
         else.
         """
         b = amp.Boolean()
-        self.assertEqual(b.fromString(b"True"), True)
-        self.assertEqual(b.fromString(b"False"), False)
+        self.assertTrue(b.fromString(b"True"))
+        self.assertFalse(b.fromString(b"False"))
         self.assertRaises(TypeError, b.fromString, b"ninja")
         self.assertRaises(TypeError, b.fromString, b"true")
         self.assertRaises(TypeError, b.fromString, b"TRUE")
@@ -423,7 +423,7 @@ class ParsingTests(unittest.TestCase):
         p = amp.Path()
         s = p.toString(fp)
         v = p.fromString(s)
-        self.assertNotIdentical(fp, v) # sanity check
+        self.assertIsNot(fp, v) # sanity check
         self.assertEqual(fp, v)
 
 
@@ -630,7 +630,7 @@ class CommandDispatchTests(unittest.TestCase):
 
     def _localCallbackErrorLoggingTest(self, callResult):
         """
-        Verify that C{callResult} completes with a C{None} result and that an
+        Verify that C{callResult} completes with a L{None} result and that an
         unhandled error has been logged.
         """
         finalResult = []
@@ -907,7 +907,7 @@ class BinaryProtocolTests(unittest.TestCase):
         """
         protocol = amp.BinaryBoxProtocol(self)
         protocol.makeConnection(None)
-        self.assertIdentical(self._boxSender, protocol)
+        self.assertIs(self._boxSender, protocol)
 
 
     def test_sendBoxInStartReceivingBoxes(self):
@@ -998,8 +998,8 @@ class BinaryProtocolTests(unittest.TestCase):
         self.stopReason.trap(amp.TooLong)
         self.assertTrue(self.stopReason.value.isKey)
         self.assertFalse(self.stopReason.value.isLocal)
-        self.assertIdentical(self.stopReason.value.value, None)
-        self.assertIdentical(self.stopReason.value.keyName, None)
+        self.assertIsNone(self.stopReason.value.value)
+        self.assertIsNone(self.stopReason.value.keyName)
 
 
     def test_unhandledErrorWithTransport(self):
@@ -1078,7 +1078,7 @@ class BinaryProtocolTests(unittest.TestCase):
         a.makeConnection(self)
         connectionFailure = Failure(RuntimeError())
         a.connectionLost(connectionFailure)
-        self.assertIdentical(self.stopReason, connectionFailure)
+        self.assertIs(self.stopReason, connectionFailure)
 
 
     def test_protocolSwitch(self):
@@ -1108,7 +1108,7 @@ class BinaryProtocolTests(unittest.TestCase):
         # boxes either...
         moreThanOneBox = anyOldBox.serialize() + b"\x00\x00Hello, world!"
         a.dataReceived(moreThanOneBox)
-        self.assertIdentical(otherProto.transport, self)
+        self.assertIs(otherProto.transport, self)
         self.assertEqual(b"".join(otherProto.data), b"\x00\x00Hello, world!")
         self.assertEqual(self.data, [b"outgoing data"])
         a.dataReceived(b"more data")
@@ -1253,12 +1253,12 @@ class AMPTests(unittest.TestCase):
 
     def test_callRemoteStringRequiresAnswerFalse(self):
         """
-        L{BoxDispatcher.callRemoteString} returns C{None} if C{requiresAnswer}
+        L{BoxDispatcher.callRemoteString} returns L{None} if C{requiresAnswer}
         is C{False}.
         """
         c, s, p = connectedServerAndClient()
         ret = c.callRemoteString(b"WTF", requiresAnswer=False)
-        self.assertIdentical(ret, None)
+        self.assertIsNone(ret)
 
 
     def test_unknownCommandLow(self):
@@ -1346,7 +1346,7 @@ class AMPTests(unittest.TestCase):
         self.assertEqual(type(repr(amp._SwitchBox('a'))), str)
         self.assertEqual(type(repr(amp.QuitBox())), str)
         self.assertEqual(type(repr(amp.AmpBox())), str)
-        self.assertTrue("AmpBox" in repr(amp.AmpBox()))
+        self.assertIn("AmpBox", repr(amp.AmpBox()))
 
 
     def test_innerProtocolInRepr(self):
@@ -1392,7 +1392,7 @@ class AMPTests(unittest.TestCase):
                                **{x: b"hi"})
         self.assertTrue(tl.isKey)
         self.assertTrue(tl.isLocal)
-        self.assertIdentical(tl.keyName, None)
+        self.assertIsNone(tl.keyName)
         self.assertEqual(tl.value, x.encode("ascii"))
         self.assertIn(str(len(x)), repr(tl))
         self.assertIn("key", repr(tl))
@@ -1411,9 +1411,9 @@ class AMPTests(unittest.TestCase):
         self.assertTrue(tl.isLocal)
         self.assertEqual(tl.keyName, b'hello')
         self.failUnlessIdentical(tl.value, x)
-        self.assertTrue(str(len(x)) in repr(tl))
-        self.assertTrue("value" in repr(tl))
-        self.assertTrue('hello' in repr(tl))
+        self.assertIn(str(len(x)), repr(tl))
+        self.assertIn("value", repr(tl))
+        self.assertIn('hello', repr(tl))
 
 
     def test_helloWorldCommand(self):
@@ -2573,7 +2573,7 @@ class CommandTests(unittest.TestCase):
 
         result = ProtocolIncludingCommandWithDifferentCommandType.makeArguments(
             objects, protocol)
-        self.assertIdentical(type(result), MyBox)
+        self.assertIs(type(result), MyBox)
 
 
     def test_callRemoteCallsMakeArguments(self):
@@ -2982,7 +2982,7 @@ class ListOfOptionalTests(unittest.TestCase):
     """
     def test_requiredArgumentWithNoneValueRaisesTypeError(self):
         """
-        L{ListOf.toBox} raises C{TypeError} when passed a value of C{None}
+        L{ListOf.toBox} raises C{TypeError} when passed a value of L{None}
         for the argument.
         """
         stringList = amp.ListOf(amp.Integer())
@@ -2994,7 +2994,7 @@ class ListOfOptionalTests(unittest.TestCase):
     def test_optionalArgumentWithNoneValueOmitted(self):
         """
         L{ListOf.toBox} silently omits serializing any argument with a
-        value of C{None} that is designated as optional for the protocol.
+        value of L{None} that is designated as optional for the protocol.
         """
         stringList = amp.ListOf(amp.Integer(), optional=True)
         strings = amp.AmpBox()
