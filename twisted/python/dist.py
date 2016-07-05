@@ -62,14 +62,18 @@ on event-based network programming and multiprotocol integration.
     )
 
 
+_dev=['pyflakes >= 1.0.0',
+      'twisted-dev-tools >= 0.0.2',
+      'python-subunit',
+      'sphinx >= 1.3.1']
+
+if not _PY3:
+    # These modules do not yet work on Python 3.
+    _dev += ['twistedchecker >= 0.4.0',
+             'pydoctor >= 15.0.0']
 
 _EXTRA_OPTIONS = dict(
-    dev=['twistedchecker >= 0.4.0',
-         'pyflakes >= 1.0.0',
-         'twisted-dev-tools >= 0.0.2',
-         'python-subunit',
-         'sphinx >= 1.3.1',
-         'pydoctor >= 15.0.0'],
+    dev=_dev,
     tls=['pyopenssl >= 0.13',
          'service_identity',
          'idna >= 0.6'],
