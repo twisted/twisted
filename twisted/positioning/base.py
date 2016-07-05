@@ -26,6 +26,19 @@ METERS_PER_FOOT = 0.3048
 class Angles(Names):
     """
     The types of angles.
+
+    @cvar LATITUDE: Angle representing a latitude of an object.
+    @type LATITUDE: L{NamedConstant}
+
+    @cvar LONGITUDE: Angle representing the longitude of an object.
+    @type LONGITUDE: L{NamedConstant}
+
+    @cvar HEADING: Angle representing the heading of an object.
+    @type HEADING: L{NamedConstant}
+
+    @cvar VARIATION: Angle representing a magnetic variation.
+    @type VARIATION: L{NamedConstant}
+
     """
     LATITUDE = NamedConstant()
     LONGITUDE = NamedConstant()
@@ -89,7 +102,7 @@ class BasePositioningReceiver(object):
 
     def positionErrorReceived(self, positionError):
         """
-        Implements L{IPositioningReceiver.positioningErrorReceived} stub.
+        Implements L{IPositioningReceiver.positionErrorReceived} stub.
         """
 
 
@@ -156,8 +169,9 @@ class Angle(FancyEqMixin, object):
         @param angle: The value of the angle in decimal degrees. (L{None} if
             unknown).
         @type angle: C{float} or L{None}
+
         @param angleType: A symbolic constant describing the angle type. Should
-            be one of L{AngleTypes} or {None} if unknown.
+            be one of L{Angles} or {None} if unknown.
 
         @raises ValueError: If the angle type is not the default argument,
             but it is an unknown type (not in  C{Angle._RANGE_EXPRESSIONS}),

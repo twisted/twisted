@@ -414,7 +414,7 @@ class _ProxyDescriptor(object):
 
     def __get__(self, oself, type=None):
         """
-        Retrieve the C{self.attributeName} property from L{oself}.
+        Retrieve the C{self.attributeName} property from I{oself}.
         """
         if oself is None:
             return _ProxiedClassMethod(self.attributeName,
@@ -425,7 +425,7 @@ class _ProxyDescriptor(object):
 
     def __set__(self, oself, value):
         """
-        Set the C{self.attributeName} property of L{oself}.
+        Set the C{self.attributeName} property of I{oself}.
         """
         original = getattr(oself, self.originalAttribute)
         setattr(original, self.attributeName, value)
@@ -433,7 +433,7 @@ class _ProxyDescriptor(object):
 
     def __delete__(self, oself):
         """
-        Delete the C{self.attributeName} property of L{oself}.
+        Delete the C{self.attributeName} property of I{oself}.
         """
         original = getattr(oself, self.originalAttribute)
         delattr(original, self.attributeName)

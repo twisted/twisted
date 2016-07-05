@@ -303,7 +303,7 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
             if not os.path.exists(fdir):
                 os.makedirs(fdir)
             if overwrite or not os.path.exists(f):
-                outfile = file(f, 'wb')
+                outfile = open(f, 'wb')
                 fp = czf.readfile(entry)
                 if info.file_size == 0:
                     remaining -= 1

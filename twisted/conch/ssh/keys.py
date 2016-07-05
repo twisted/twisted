@@ -838,7 +838,7 @@ class Key(object):
         Return the size of the object we wrap.
 
         @return: The size of the key.
-        @rtype: C{int}
+        @rtype: L{int}
         """
         if self._keyObject is None:
             return 0
@@ -849,7 +849,7 @@ class Key(object):
         """
         Return the values of the public key as a dictionary.
 
-        @rtype: C{dict}
+        @rtype: L{dict}
         """
         if isinstance(self._keyObject, rsa.RSAPublicKey):
             numbers = self._keyObject.public_numbers()
@@ -1217,7 +1217,7 @@ def objectType(obj):
     @type obj: C{Crypto.PublicKey.pubkey.pubkey}
 
     @return: Return the SSH key type corresponding to a PyCrypto object.
-    @rtype: C{str}
+    @rtype: L{str}
     """
     keyDataMapping = {
         ('n', 'e', 'd', 'p', 'q'): b'ssh-rsa',
