@@ -1,4 +1,4 @@
-Twisted 16.2.0
+Twisted 16.3.0
 ==============
 
 |pypi|
@@ -7,10 +7,13 @@ Twisted 16.2.0
 
 .. code::
 
-    <lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
+    <tomprince> [...] that made me think of (infinity,1)-groupoids and motivic and crystalline cohomology. :)
+    <@glyph> tomprince: NO IDEA IF THOSE ARE REAL WORDS
+    <tomprince> They are.
+    <tomprince> It would have been no fun to come up with nonsense, when there is perfectly good existing abstract nonsense to choose from.
 
 
-For information on what's new in Twisted 16.2.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.3.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
