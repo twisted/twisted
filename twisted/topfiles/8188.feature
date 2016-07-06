@@ -1,1 +1,0 @@
-Defined a new interface, IProtocolNegotiationFactory, that can be implemented by IOpenSSLClientConnectionCreator or IOpenSSLServerConnectionCreator factories to allow them to offer protocols for negotiation using ALPN or NPN during the TLS handshake.

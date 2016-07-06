@@ -543,6 +543,15 @@ class DTPFactory(protocol.ClientFactory):
         this is L{_IN_PROGRESS}.  If the connection fails or times out, it is
         L{_FAILED}.  If the connection succeeds before the timeout, it is
         L{_FINISHED}.
+
+    @cvar _IN_PROGRESS: Token to signal that connection is active.
+    @type _IN_PROGRESS: L{object}.
+
+    @cvar _FAILED: Token to signal that connection has failed.
+    @type _FAILED: L{object}.
+
+    @cvar _FINISHED: Token to signal that connection was successfully closed.
+    @type _FINISHED: L{object}.
     """
 
     _IN_PROGRESS = object()
@@ -693,6 +702,18 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar passivePortRange: iterator used as source of passive port numbers.
     @type passivePortRange: C{iterator}
+
+    @cvar UNAUTH: Command channel is not yet authenticated.
+    @type UNAUTH: L{int}
+
+    @cvar INAUTH: Command channel is in the process of being authenticated.
+    @type INAUTH: L{int}
+
+    @cvar AUTHED: Command channel was successfully authenticated.
+    @type AUTHED: L{int}
+
+    @cvar RENAMING: Command channel is between the renaming command sequence.
+    @type RENAMING: L{int}
     """
 
     disconnected = False
