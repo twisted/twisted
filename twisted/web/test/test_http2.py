@@ -2009,6 +2009,46 @@ class H2FlowControlTests(unittest.TestCase):
         )
 
 
+    def test_windowUpdateAfterComplete(self):
+        """
+        When a WindowUpdate frame is received for a stream that has been
+        completed it is ignored.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DummyHTTPHandler
+
+        # Send the request.
+        frames = buildRequestFrames(
+            self.postRequestHeaders, self.postRequestData, f
+        )
+        requestBytes = f.preamble()
+        requestBytes += b''.join(f.serialize() for f in frames)
+        a.makeConnection(b)
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        def update_window(*args):
+            # Send a WindowUpdate
+            windowUpdateFrame = f.buildWindowUpdateFrame(
+                streamID=1, increment=5
+            )
+            a.dataReceived(windowUpdateFrame.serialize())
+
+        def validate(*args):
+            # Give the sending loop a chance to catch up!
+            buffer = FrameBuffer()
+            buffer.receiveData(b.value())
+            frames = list(buffer)
+
+            # Check that the stream is ended neatly.
+            self.assertIn('END_STREAM', frames[-1].flags)
+
+        d = a._streamCleanupCallbacks[1].addCallback(update_window)
+        return d.addCallback(validate)
+
 
 class HTTP2TransportChecking(unittest.TestCase):
     if skipH2:
