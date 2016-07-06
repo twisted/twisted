@@ -577,9 +577,11 @@ class H2Connection(Protocol):
         streamID = event.stream_id
 
         if streamID:
-            # Update applies only to a specific stream. If we don't have the
-            # stream, that's ok: just ignore it.
-            if streamID not in self.streams:
+            # Update applies only to a specific stream. We may have already
+            # cleaned up our stream state, making this a late WINDOW_UPDATE
+            # frame. That's fine, it's not a problem: the update is unnecessary
+            # but benign. We'll just ignore it.
+            if not self._streamIsActive(streamID):
                 return
 
             self.priority.unblock(streamID)
@@ -687,6 +689,20 @@ class H2Connection(Protocol):
         stream = self.streams[streamID]
         stream.connectionLost("Stream reset")
         self._requestDone(streamID)
+
+
+    def _streamIsActive(self, streamID):
+        """
+        Checks whether Twisted has still got state for a given stream and so
+        can process events for that stream.
+
+        @param streamID: The ID of the stream that needs processing.
+        @type streamID: L{int}
+
+        @return: Whether the stream still has state allocated.
+        @rtype: L{bool}
+        """
+        return streamID in self.streams
 
 
 
