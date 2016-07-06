@@ -898,7 +898,7 @@ class SphinxBuilder(object):
         """
         output = self.build(FilePath(args[0]).child("docs"))
         if output:
-            sys.stdout.write("Unclean build:\n{}\n".format(output))
+            sys.stdout.write(u"Unclean build:\n{}\n".format(output))
             raise sys.exit(1)
 
 
