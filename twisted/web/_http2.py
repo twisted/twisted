@@ -577,11 +577,10 @@ class H2Connection(Protocol):
         streamID = event.stream_id
 
         if streamID:
-            # Update applies only to a specific stream. We may have already
-            # cleaned up our stream state, making this a late WINDOW_UPDATE
-            # frame. That's fine, it's not a problem: the update is unnecessary
-            # but benign. We'll just ignore it.
             if not self._streamIsActive(streamID):
+                # We may have already cleaned up our stream state, making this
+                # a late WINDOW_UPDATE frame. That's fine: the update is
+                # unnecessary but benign. We'll ignore it.
                 return
 
             self.priority.unblock(streamID)
