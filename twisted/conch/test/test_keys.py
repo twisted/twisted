@@ -125,7 +125,7 @@ class ObjectTypeTests(unittest.TestCase):
 
     def test_objectKey_none(self):
         """
-        A BadKeyError is raised when getting the type of C{None}.
+        A BadKeyError is raised when getting the type of L{None}.
         """
         self.assertRaises(keys.BadKeyError, keys.objectType, None)
         self.checkDeprecation()

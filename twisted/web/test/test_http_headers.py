@@ -58,7 +58,7 @@ class BytesHeadersTests(TestCase):
 
     def test_getRawHeadersNoDefault(self):
         """
-        L{Headers.getRawHeaders} returns C{None} if the header is not found and
+        L{Headers.getRawHeaders} returns L{None} if the header is not found and
         no default is specified.
         """
         self.assertIsNone(Headers().getRawHeaders(b"test"))
@@ -357,7 +357,7 @@ class UnicodeHeadersTests(TestCase):
 
     def test_getRawHeadersNoDefault(self):
         """
-        L{Headers.getRawHeaders} returns C{None} if the header is not found and
+        L{Headers.getRawHeaders} returns L{None} if the header is not found and
         no default is specified.
         """
         self.assertIsNone(Headers().getRawHeaders(u"test"))

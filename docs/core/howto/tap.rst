@@ -145,7 +145,7 @@ subclass) will be used to parse the given args.
 .. code-block:: python
 
     
-    from zope.interface import implements
+    from zope.interface import implementer
     
     from twisted.python import usage
     from twisted.plugin import IPlugin
@@ -159,8 +159,8 @@ subclass) will be used to parse the given args.
         optParameters = [["port", "p", 1235, "The port number to listen on."]]
     
     
+    @implementer(IServiceMaker, IPlugin)
     class MyServiceMaker(object):
-        implements(IServiceMaker, IPlugin)
         tapname = "myproject"
         description = "Run this! It'll make your dog happy."
         options = Options
@@ -237,8 +237,8 @@ The following code is an example of using this mixin:
             ["port", "p", 1234, "Server port number"],
             ["host", "h", "localhost", "Server hostname"]]
     
+    @implementer(IServiceMaker, IPlugin)
     class MyServerServiceMaker(object):
-        implements(IServiceMaker, IPlugin)
         tapname = "myserver"
         description = "This server does nothing productive."
         options = ServerOptions

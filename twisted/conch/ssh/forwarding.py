@@ -14,7 +14,7 @@ from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
 from twisted.python import log
 
-import common, channel
+from twisted.conch.ssh import common, channel
 
 class SSHListenForwardingFactory(protocol.Factory):
     def __init__(self, connection, hostport, klass):
@@ -185,9 +185,18 @@ class SSHForwardingClient(protocol.Protocol):
             self.channel = None
 
 
-def packOpen_direct_tcpip((connHost, connPort), (origHost, origPort)):
-    """Pack the data suitable for sending in a CHANNEL_OPEN packet.
+def packOpen_direct_tcpip(destination, source):
     """
+    Pack the data suitable for sending in a CHANNEL_OPEN packet.
+
+    @type destination: L{tuple}
+    @param destination: A tuple of the (host, port) of the destination host.
+
+    @type source: L{tuple}
+    @param source: A tuple of the (host, port) of the source host.
+    """
+    (connHost, connPort) = destination
+    (origHost, origPort) = source
     conn = common.NS(connHost) + struct.pack('>L', connPort)
     orig = common.NS(origHost) + struct.pack('>L', origPort)
     return conn + orig
@@ -204,9 +213,20 @@ def unpackOpen_direct_tcpip(data):
     return (connHost, connPort), (origHost, origPort)
 
 unpackOpen_forwarded_tcpip = unpackOpen_direct_tcpip
-    
-def packGlobal_tcpip_forward((host, port)):
+
+
+
+def packGlobal_tcpip_forward(peer):
+    """
+    Pack the data for tcpip forwarding.
+
+    @param peer: A tuple of the (host, port) .
+    @type peer: L{tuple}
+    """
+    (host, port) = peer
     return common.NS(host) + struct.pack('>L', port)
+
+
 
 def unpackGlobal_tcpip_forward(data):
     host, rest = common.getNS(data)

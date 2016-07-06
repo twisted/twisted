@@ -121,26 +121,26 @@ class StringTransport:
         called, then C{True}.
 
     @ivar producer: If a producer is currently registered, C{producer} is a
-        reference to it.  Otherwise, C{None}.
+        reference to it.  Otherwise, L{None}.
 
     @ivar streaming: If a producer is currently registered, C{streaming} refers
         to the value of the second parameter passed to C{registerProducer}.
 
-    @ivar hostAddr: C{None} or an object which will be returned as the host
-        address of this transport.  If C{None}, a nasty tuple will be returned
+    @ivar hostAddr: L{None} or an object which will be returned as the host
+        address of this transport.  If L{None}, a nasty tuple will be returned
         instead.
 
-    @ivar peerAddr: C{None} or an object which will be returned as the peer
-        address of this transport.  If C{None}, a nasty tuple will be returned
+    @ivar peerAddr: L{None} or an object which will be returned as the peer
+        address of this transport.  If L{None}, a nasty tuple will be returned
         instead.
 
     @ivar producerState: The state of this L{StringTransport} in its capacity
         as an L{IPushProducer}.  One of C{'producing'}, C{'paused'}, or
         C{'stopped'}.
 
-    @ivar io: A L{BytesIO} which holds the data which has been written to this
-        transport since the last call to L{clear}.  Use L{value} instead of
-        accessing this directly.
+    @ivar io: A L{io.BytesIO} which holds the data which has been written to
+        this transport since the last call to L{clear}.  Use L{value} instead
+        of accessing this directly.
     """
 
     disconnecting = False
@@ -331,7 +331,7 @@ class _FakeConnector(object):
     connecting.
 
     @ivar stoppedConnecting: has this connector's
-        L{FakeConnector.stopConnecting} method been invoked yet?
+        L{_FakeConnector.stopConnecting} method been invoked yet?
 
     @ivar _address: An L{IAddress} provider that represents our destination.
     """
@@ -349,7 +349,7 @@ class _FakeConnector(object):
     def stopConnecting(self):
         """
         Implement L{IConnector.stopConnecting} and set
-        L{FakeConnector.stoppedConnecting} to C{True}
+        L{_FakeConnector.stoppedConnecting} to C{True}
         """
         self.stoppedConnecting = True
 
@@ -482,8 +482,8 @@ class MemoryReactor(object):
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """
-        Fake L{reactor.listenTCP}, that logs the call and returns an
-        L{IListeningPort}.
+        Fake L{IReactorTCP.listenTCP}, that logs the call and
+        returns an L{IListeningPort}.
         """
         self.tcpServers.append((port, factory, backlog, interface))
         if isIPv6Address(interface):
@@ -495,8 +495,8 @@ class MemoryReactor(object):
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectTCP}, that logs the call and returns an
-        L{IConnector}.
+        Fake L{IReactorTCP.connectTCP}, that logs the call and
+        returns an L{IConnector}.
         """
         self.tcpClients.append((host, port, factory, timeout, bindAddress))
         if isIPv6Address(host):
@@ -511,8 +511,8 @@ class MemoryReactor(object):
     def listenSSL(self, port, factory, contextFactory,
                   backlog=50, interface=''):
         """
-        Fake L{reactor.listenSSL}, that logs the call and returns an
-        L{IListeningPort}.
+        Fake L{IReactorSSL.listenSSL}, that logs the call and
+        returns an L{IListeningPort}.
         """
         self.sslServers.append((port, factory, contextFactory,
                                 backlog, interface))
@@ -522,7 +522,7 @@ class MemoryReactor(object):
     def connectSSL(self, host, port, factory, contextFactory,
                    timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectSSL}, that logs the call and returns an
+        Fake L{IReactorSSL.connectSSL}, that logs the call and returns an
         L{IConnector}.
         """
         self.sslClients.append((host, port, factory, contextFactory,
@@ -536,7 +536,7 @@ class MemoryReactor(object):
     def listenUNIX(self, address, factory,
                    backlog=50, mode=0o666, wantPID=0):
         """
-        Fake L{reactor.listenUNIX}, that logs the call and returns an
+        Fake L{IReactorUNIX.listenUNIX}, that logs the call and returns an
         L{IListeningPort}.
         """
         self.unixServers.append((address, factory, backlog, mode, wantPID))
@@ -545,7 +545,7 @@ class MemoryReactor(object):
 
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """
-        Fake L{reactor.connectUNIX}, that logs the call and returns an
+        Fake L{IReactorUNIX.connectUNIX}, that logs the call and returns an
         L{IConnector}.
         """
         self.unixClients.append((address, factory, timeout, checkPID))
@@ -647,21 +647,21 @@ class RaisingMemoryReactor(object):
     def adoptStreamPort(self, fileno, addressFamily, factory):
         """
         Fake L{IReactorSocket.adoptStreamPort}, that raises
-        L{self._listenException}.
+        L{_listenException}.
         """
         raise self._listenException
 
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """
-        Fake L{reactor.listenTCP}, that raises L{self._listenException}.
+        Fake L{IReactorTCP.listenTCP}, that raises L{_listenException}.
         """
         raise self._listenException
 
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectTCP}, that raises L{self._connectException}.
+        Fake L{IReactorTCP.connectTCP}, that raises L{_connectException}.
         """
         raise self._connectException
 
@@ -669,7 +669,7 @@ class RaisingMemoryReactor(object):
     def listenSSL(self, port, factory, contextFactory,
                   backlog=50, interface=''):
         """
-        Fake L{reactor.listenSSL}, that raises L{self._listenException}.
+        Fake L{IReactorSSL.listenSSL}, that raises L{_listenException}.
         """
         raise self._listenException
 
@@ -677,7 +677,7 @@ class RaisingMemoryReactor(object):
     def connectSSL(self, host, port, factory, contextFactory,
                    timeout=30, bindAddress=None):
         """
-        Fake L{reactor.connectSSL}, that raises L{self._connectException}.
+        Fake L{IReactorSSL.connectSSL}, that raises L{_connectException}.
         """
         raise self._connectException
 
@@ -685,13 +685,13 @@ class RaisingMemoryReactor(object):
     def listenUNIX(self, address, factory,
                    backlog=50, mode=0o666, wantPID=0):
         """
-        Fake L{reactor.listenUNIX}, that raises L{self._listenException}.
+        Fake L{IReactorUNIX.listenUNIX}, that raises L{_listenException}.
         """
         raise self._listenException
 
 
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """
-        Fake L{reactor.connectUNIX}, that raises L{self._connectException}.
+        Fake L{IReactorUNIX.connectUNIX}, that raises L{_connectException}.
         """
         raise self._connectException

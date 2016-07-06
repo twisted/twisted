@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from pprint import pformat
 
 from twisted.internet import reactor
@@ -14,12 +16,12 @@ class BeginningPrinter(Protocol):
     def dataReceived(self, bytes):
         if self.remaining:
             display = bytes[:self.remaining]
-            print 'Some data received:'
-            print display
+            print('Some data received:')
+            print(display)
             self.remaining -= len(display)
 
     def connectionLost(self, reason):
-        print 'Finished receiving body:', reason.getErrorMessage()
+        print('Finished receiving body:', reason.getErrorMessage())
         self.finished.callback(None)
 
 agent = Agent(reactor)
@@ -30,11 +32,11 @@ d = agent.request(
     None)
 
 def cbRequest(response):
-    print 'Response version:', response.version
-    print 'Response code:', response.code
-    print 'Response phrase:', response.phrase
-    print 'Response headers:'
-    print pformat(list(response.headers.getAllRawHeaders()))
+    print('Response version:', response.version)
+    print('Response code:', response.code)
+    print('Response phrase:', response.phrase)
+    print('Response headers:')
+    print(pformat(list(response.headers.getAllRawHeaders())))
     finished = Deferred()
     response.deliverBody(BeginningPrinter(finished))
     return finished

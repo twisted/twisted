@@ -70,9 +70,9 @@ class Port(base.BasePort):
         whether this port is listening on an IPv4 address or an IPv6 address.
 
     @ivar _realPortNumber: Actual port number being listened on. The
-        value will be C{None} until this L{Port} is listening.
+        value will be L{None} until this L{Port} is listening.
 
-    @ivar _preexistingSocket: If not C{None}, a L{socket.socket} instance which
+    @ivar _preexistingSocket: If not L{None}, a L{socket.socket} instance which
         was created and initialized outside of the reactor and will be used to
         listen for connections (instead of a new socket being created by this
         L{Port}).
@@ -103,7 +103,7 @@ class Port(base.BasePort):
 
         @param reactor: A reactor which will notify this C{Port} when
             its socket is ready for reading or writing. Defaults to
-            C{None}, ie the default global reactor.
+            L{None}, ie the default global reactor.
         @type reactor: L{interfaces.IReactorFDSet}
         """
         base.BasePort.__init__(self, reactor)
@@ -125,7 +125,7 @@ class Port(base.BasePort):
 
         @param reactor: A reactor which will notify this L{Port} when
             its socket is ready for reading or writing. Defaults to
-            C{None}, ie the default global reactor.
+            L{None}, ie the default global reactor.
         @type reactor: L{interfaces.IReactorFDSet}
 
         @param fd: An integer file descriptor associated with a listening
@@ -258,9 +258,9 @@ class Port(base.BasePort):
         @param datagram: The datagram to be sent.
 
         @type addr: C{tuple} containing C{str} as first element and C{int} as
-            second element, or C{None}
+            second element, or L{None}
         @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
-            I{integer port number}); can be C{None} in connected mode.
+            I{integer port number}); can be L{None} in connected mode.
         """
         if self._connectedAddr:
             assert addr in (None, self._connectedAddr)

@@ -111,7 +111,7 @@ def _pickleFunction(f):
 
     @return: a 2-tuple of a reference to L{_unpickleFunction} and a tuple of
         its arguments, a 1-tuple of the function's fully qualified name.
-    @rtype: 2-tuple of C{(callable, native string}}
+    @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == '<lambda>':
         return None
@@ -377,7 +377,7 @@ class Versioned:
             highestVersion = 0
             highestBase = None
             for base in bases:
-                if not base.__dict__.has_key('persistenceVersion'):
+                if 'persistenceVersion' not in base.__dict__:
                     continue
                 if base.persistenceVersion > highestVersion:
                     highestBase = base

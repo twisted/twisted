@@ -6,6 +6,8 @@
 Implementation module for the `ckeygen` command.
 """
 
+from __future__ import print_function
+
 import sys, os, getpass, socket
 if getpass.getpass == getpass.unix_getpass:
     try:
@@ -49,7 +51,7 @@ def run():
     try:
         options.parseOptions(sys.argv[1:])
     except usage.UsageError as u:
-        print 'ERROR: %s' % u
+        print('ERROR: %s' % u)
         options.opt_help()
         sys.exit(1)
     log.discardLogs()
@@ -85,7 +87,7 @@ def generateRSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import rsa
 
-    print 'Generating public/private rsa key pair.'
+    print('Generating public/private rsa key pair.')
     keyPrimitive = rsa.generate_private_key(
         key_size=int(options['bits']),
         public_exponent=65537,
@@ -100,7 +102,7 @@ def generateDSAkey(options):
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import dsa
 
-    print 'Generating public/private dsa key pair.'
+    print('Generating public/private dsa key pair.')
     keyPrimitive = dsa.generate_private_key(
         key_size=int(options['bits']),
         backed=default_backend(),
@@ -118,10 +120,10 @@ def printFingerprint(options):
         options['filename'] += '.pub'
     try:
         key = keys.Key.fromFile(options['filename'])
-        print '%s %s %s' % (
+        print('%s %s %s' % (
             key.size(),
             key.fingerprint(),
-            os.path.basename(options['filename']))
+            os.path.basename(options['filename'])))
     except:
         sys.exit('bad key')
 
@@ -155,7 +157,7 @@ def changePassPhrase(options):
             p2 = getpass.getpass('Enter same passphrase again: ')
             if p1 == p2:
                 break
-            print 'Passphrases do not match.  Try again.'
+            print('Passphrases do not match.  Try again.')
         options['newpass'] = p1
 
     try:
@@ -171,7 +173,7 @@ def changePassPhrase(options):
     with open(options['filename'], 'w') as fd:
         fd.write(newkeydata)
 
-    print 'Your identification has been saved with the new passphrase.'
+    print('Your identification has been saved with the new passphrase.')
 
 
 
@@ -186,7 +188,7 @@ def displayPublicKey(options):
             options['pass'] = getpass.getpass('Enter passphrase: ')
         key = keys.Key.fromFile(
             options['filename'], passphrase = options['pass'])
-    print key.public().toString('openssh')
+    print(key.public().toString('openssh'))
 
 
 
@@ -198,7 +200,7 @@ def _saveKey(key, options):
     @type key: C{keys.Key} implementation.
 
     @param options:
-    @type options: C{dict}
+    @type options: L{dict}
     """
     keyTypeName = key.type().lower()
     if not options['filename']:
@@ -209,7 +211,7 @@ def _saveKey(key, options):
         options['filename'] = newPath.strip() or defaultPath
 
     if os.path.exists(options['filename']):
-        print '%s already exists.' % (options['filename'],)
+        print('%s already exists.' % (options['filename'],))
         yn = raw_input('Overwrite (y/n)? ')
         if yn[0].lower() != 'y':
             sys.exit()
@@ -222,7 +224,7 @@ def _saveKey(key, options):
             p2 = getpass.getpass('Enter same passphrase again: ')
             if p1 == p2:
                 break
-            print 'Passphrases do not match.  Try again.'
+            print('Passphrases do not match.  Try again.')
         options['pass'] = p1
 
     comment = '%s@%s' % (getpass.getuser(), socket.gethostname())
@@ -234,10 +236,10 @@ def _saveKey(key, options):
     filepath.FilePath(options['filename'] + '.pub').setContent(
         key.public().toString('openssh', comment))
 
-    print 'Your identification has been saved in %s' % (options['filename'],)
-    print 'Your public key has been saved in %s.pub' % (options['filename'],)
-    print 'The key fingerprint is:'
-    print key.fingerprint()
+    print('Your identification has been saved in %s' % (options['filename'],))
+    print('Your public key has been saved in %s.pub' % (options['filename'],))
+    print('The key fingerprint is:')
+    print(key.fingerprint())
 
 
 

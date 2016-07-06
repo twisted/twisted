@@ -171,9 +171,9 @@ class MockProcessProtocol(protocol.ProcessProtocol):
     appends a tilde.  The tilde is appended so the tests can verify that
     we received and processed the data.
 
-    @ivar packetData: C{str} of data to be sent when the connection is made.
-    @ivar data: a C{str} of data received.
-    @ivar err: a C{str} of error data received.
+    @ivar packetData: L{str} of data to be sent when the connection is made.
+    @ivar data: a L{str} of data received.
+    @ivar err: a L{str} of error data received.
     @ivar inConnectionOpen: True if the input side is open.
     @ivar outConnectionOpen: True if the output side is open.
     @ivar errConnectionOpen: True if the error side is open.
@@ -251,7 +251,7 @@ class EchoTransport:
     C{ProcessProtocol} with a 0 exit code.
 
     @ivar proto: the C{ProcessProtocol} connected to us.
-    @ivar data: a C{str} of data written to us.
+    @ivar data: a L{str} of data written to us.
     """
 
 
@@ -299,8 +299,8 @@ class MockProtocol(protocol.Protocol):
     """
     A sample Protocol which stores the data passed to it.
 
-    @ivar packetData: a C{str} of data to be sent when the connection is made.
-    @ivar data: a C{str} of the data passed to us.
+    @ivar packetData: a L{str} of data to be sent when the connection is made.
+    @ivar data: a L{str} of the data passed to us.
     @ivar open: True if the channel is open.
     @ivar reason: if not None, the reason the protocol was closed.
     """
@@ -345,15 +345,15 @@ class StubConnection(object):
     A stub for twisted.conch.ssh.connection.SSHConnection.  Record the data
     that channels send, and when they try to close the connection.
 
-    @ivar data: a C{dict} mapping C{SSHChannel}s to a C{list} of C{str} of data
+    @ivar data: a L{dict} mapping C{SSHChannel}s to a C{list} of L{str} of data
         they sent.
-    @ivar extData: a C{dict} mapping L{SSHChannel}s to a C{list} of C{tuple} of
-        (C{int}, C{str}) of extended data they sent.
-    @ivar requests: a C{dict} mapping L{SSHChannel}s to a C{list} of C{tuple}
-        of (C{str}, C{str}) of channel requests they made.
-    @ivar eofs: a C{dict} mapping L{SSHChannel}s to C{true} if they have sent
+    @ivar extData: a L{dict} mapping L{SSHChannel}s to a C{list} of L{tuple} of
+        (L{int}, L{str}) of extended data they sent.
+    @ivar requests: a L{dict} mapping L{SSHChannel}s to a C{list} of L{tuple}
+        of (L{str}, L{str}) of channel requests they made.
+    @ivar eofs: a L{dict} mapping L{SSHChannel}s to C{true} if they have sent
         an EOF.
-    @ivar closes: a C{dict} mapping L{SSHChannel}s to C{true} if they have sent
+    @ivar closes: a L{dict} mapping L{SSHChannel}s to C{true} if they have sent
         a close.
     """
 
@@ -421,10 +421,10 @@ class StubTransport:
     A stub transport which records the data written.
 
     @ivar buf: the data sent to the transport.
-    @type buf: C{str}
+    @type buf: L{str}
 
     @ivar close: flags indicating if the transport has been closed.
-    @type close: C{bool}
+    @type close: L{bool}
     """
 
     buf = ''
@@ -471,7 +471,7 @@ class StubTransportWithWriteErr(StubTransport):
     A version of StubTransport which records the error data sent to it.
 
     @ivar err: the extended data sent to the transport.
-    @type err: C{str}
+    @type err: L{str}
     """
 
     err = ''
@@ -536,8 +536,8 @@ class SessionInterfaceTests(unittest.TestCase):
         s = session.SSHSession(avatar=object) # use object because it doesn't
                                               # have an adapter
         self.assertEqual(s.buf, '')
-        self.assertIs(s.client, None)
-        self.assertIs(s.session, None)
+        self.assertIsNone(s.client)
+        self.assertIsNone(s.session)
 
 
     def test_client_dataReceived(self):
@@ -594,7 +594,7 @@ class SessionInterfaceTests(unittest.TestCase):
         ret = self.session.requestReceived(
             'subsystem', common.NS('BadSubsystem'))
         self.assertFalse(ret)
-        self.assertIs(self.session.client, None)
+        self.assertIsNone(self.session.client)
 
 
     def test_lookupSubsystem(self):
@@ -623,8 +623,8 @@ class SessionInterfaceTests(unittest.TestCase):
         ret = s.request_subsystem(
             common.NS('subsystem') + 'data')
         self.assertTrue(ret)
-        self.assertIsNot(s.client, None)
-        self.assertIs(s.conn.closes.get(s), None)
+        self.assertIsNotNone(s.client)
+        self.assertIsNone(s.conn.closes.get(s))
         s.eofReceived()
         self.assertTrue(s.conn.closes.get(s))
         # these should not raise errors
@@ -725,7 +725,7 @@ class SessionInterfaceTests(unittest.TestCase):
                                            common.NS('failure'))
         self.assertFalse(ret)
         self.assertRequestRaisedRuntimeError()
-        self.assertIs(self.session.client, None)
+        self.assertIsNone(self.session.client)
 
         self.assertTrue(self.session.requestReceived('exec',
                                                      common.NS('success')))
@@ -812,7 +812,7 @@ class SessionInterfaceTests(unittest.TestCase):
         When a close is received, the session should send a close message.
         """
         ret = self.session.closeReceived()
-        self.assertIs(ret, None)
+        self.assertIsNone(ret)
         self.assertTrue(self.session.conn.closes[self.session])
 
 
@@ -839,7 +839,7 @@ class SessionWithNoAvatarTests(unittest.TestCase):
     def setUp(self):
         self.session = session.SSHSession()
         self.session.avatar = StubAvatar()
-        self.assertIs(self.session.session, None)
+        self.assertIsNone(self.session.session)
 
 
     def assertSessionProvidesISession(self):

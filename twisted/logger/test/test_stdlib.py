@@ -143,7 +143,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].pathname, filename)
         self.assertEqual(records[0].lineno, logLine)
-        self.assertEqual(records[0].exc_info, None)
+        self.assertIsNone(records[0].exc_info)
 
         # Attribute "func" is missing from record, which is weird because it's
         # documented.
@@ -270,7 +270,7 @@ def handlerAndBytesIO():
     with the 'logging' module.
 
     @return: handler and io object
-    @rtype: tuple of L{StreamHandler} and L{BytesIO}
+    @rtype: tuple of L{StreamHandler} and L{io.BytesIO}
     """
     output = BytesIO()
     stream = output

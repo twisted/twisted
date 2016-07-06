@@ -11,6 +11,8 @@ To run the script:
     $ python oscardemo.py
 """
 
+from __future__ import print_function
+
 from twisted.words.protocols import oscar
 from twisted.internet import protocol, reactor
 import getpass
@@ -30,10 +32,10 @@ class B(oscar.BOSConnection):
         self.requestSelfInfo().addCallback(self.gotSelfInfo)
         self.requestSSI().addCallback(self.gotBuddyList)
     def gotSelfInfo(self, user):
-        print user.__dict__
+        print(user.__dict__)
         self.name = user.name
     def gotBuddyList(self, l):
-        print l
+        print(l)
         self.activateSSI()
         self.setProfile("""this is a test of the current twisted.oscar code.<br>
 current features:<br>
@@ -46,15 +48,16 @@ if any of those features don't work, tell paul (Z3Penguin).  thanks."""%SN)
         self.setIdleTime(0)
         self.clientReady()
         self.createChat('%s Chat'%SN).addCallback(self.createdRoom)
-    def createdRoom(self, (exchange, fullName, instance)):
-        print 'created room',exchange, fullName, instance
+    def createdRoom(self, result):
+        (exchange, fullName, instance) = result
+        print('created room', exchange, fullName, instance)
         self.joinChat(exchange, fullName, instance).addCallback(self.chatJoined)
     def updateBuddy(self, user):
-        print user
+        print(user)
     def offlineBuddy(self, user):
-        print 'offline', user.name
+        print('offline', user.name)
     def receiveMessage(self, user, multiparts, flags):
-        print user.name, multiparts, flags
+        print(user.name, multiparts, flags)
         self.getAway(user.name).addCallback(self.gotAway, user.name)
         if multiparts[0][0].find('away')!=-1:
             self.setAway('I am away from my computer right now.')
@@ -66,39 +69,40 @@ if any of those features don't work, tell paul (Z3Penguin).  thanks."""%SN)
             self.lastUser = user.name
             self.sendMessage(user.name, multiparts, wantAck = 1, autoResponse = (self.awayMessage!=None)).addCallback( \
                 self.messageAck)
-    def messageAck(self, (username, message)):
-        print 'message sent to %s acked' % username
+    def messageAck(self, result):
+        (username, message) = result
+        print('message sent to %s acked' % username)
     def gotAway(self, away, user):
         if away != None:
-            print 'got away for',user,':',away
+            print('got away for',user,':',away)
     def receiveWarning(self, newLevel, user):
-        print 'got warning from', hasattr(user,'name') and user.name or None
-        print 'new warning level', newLevel
+        print('got warning from', hasattr(user,'name') and user.name or None)
+        print('new warning level', newLevel)
         if not user:
             #username = self.lastUser
-            return 
+            return
         else:
             username = user.name
         self.warnUser(username).addCallback(self.warnedUser, username)
     def warnedUser(self, oldLevel, newLevel, username):
         self.sendMessage(username,'muahaha :-p')
     def receiveChatInvite(self, user, message, exchange, fullName, instance, shortName, inviteTime):
-            print 'chat invite from',user.name,'for room',shortName,'with message:',message
+            print('chat invite from',user.name,'for room',shortName,'with message:',message)
             self.joinChat(exchange, fullName, instance).addCallback(self.chatJoined)
     def chatJoined(self, chat):
-        print 'joined chat room', chat.name
-        print 'members:',map(lambda x:x.name,chat.members)
+        print('joined chat room', chat.name)
+        print('members:',map(lambda x:x.name,chat.members))
     def chatReceiveMessage(self, chat, user, message):
-        print 'message to',chat.name,'from',user.name,':',message
+        print('message to',chat.name,'from',user.name,':',message)
         if user.name!=self.name: chat.sendMessage(user.name+': '+message)
         if message.find('leave')!=-1 and chat.name!='%s Chat'%SN: chat.leaveChat()
     def chatMemberJoined(self, chat, member):
-        print member.name,'joined',chat.name
+        print(member.name,'joined',chat.name)
     def chatMemberLeft(self, chat, member):
-        print member.name,'left',chat.name
-        print 'current members',map(lambda x:x.name,chat.members)
+        print(member.name,'left',chat.name)
+        print('current members',map(lambda x:x.name,chat.members))
         if chat.name!="%s Chat"%SN and len(chat.members)==1:
-            print 'leaving', chat.name
+            print('leaving', chat.name)
             chat.leaveChat()
 
 class OA(oscar.OscarAuthenticator):

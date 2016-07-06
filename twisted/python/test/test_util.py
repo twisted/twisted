@@ -247,7 +247,7 @@ class MergeFunctionMetadataTests(unittest.TestCase):
             return bar_object
 
         baz = util.mergeFunctionMetadata(foo, bar)
-        self.assertIdentical(baz(1, 2, (3, 4), quux=10), bar_object)
+        self.assertIs(baz(1, 2, (3, 4), quux=10), bar_object)
 
 
     def test_moduleIsMerged(self):
@@ -1040,7 +1040,7 @@ class PadToTests(unittest.TestCase):
 
     def test_default(self):
         """
-        C{None} values can be added to a list to cause it to have a certain
+        L{None} values can be added to a list to cause it to have a certain
         length.
         """
         padded = util.padTo(3, [])

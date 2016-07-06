@@ -1,15 +1,15 @@
 language: python
 sudo: false
 
-branches:
-  only:
-    - trunk
-
 addons:
   apt:
     packages:
     - libssl-dev
     - libssl1.0.0
+
+cache:
+  directories:
+    - $HOME/.cache/pip
 
 python:
   - "2.7"

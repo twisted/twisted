@@ -70,7 +70,8 @@ class INotifyTests(unittest.TestCase):
         if expectedPath is None:
             expectedPath = self.dirname.child("foo.bar")
         notified = defer.Deferred()
-        def cbNotified((watch, filename, events)):
+        def cbNotified(result):
+            (watch, filename, events) = result
             self.assertEqual(filename, expectedPath)
             self.assertTrue(events & mask)
         notified.addCallback(cbNotified)
@@ -276,7 +277,7 @@ class INotifyTests(unittest.TestCase):
             def _eb():
                 # second call, we have just removed the subdir
                 try:
-                    self.assertTrue(not self.inotify._isWatched(subdir))
+                    self.assertFalse(self.inotify._isWatched(subdir))
                     d.callback(None)
                 except Exception:
                     d.errback()
@@ -387,7 +388,8 @@ class INotifyTests(unittest.TestCase):
         expectedPath.touch()
 
         notified = defer.Deferred()
-        def cbNotified((ignored, filename, events)):
+        def cbNotified(result):
+            (ignored, filename, events) = result
             self.assertEqual(filename, expectedPath)
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
@@ -423,7 +425,8 @@ class INotifyTests(unittest.TestCase):
         expectedPath2.touch()
 
         notified = defer.Deferred()
-        def cbNotified((ignored, filename, events)):
+        def cbNotified(result):
+            (ignored, filename, events) = result
             self.assertEqual(filename, expectedPath2)
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 

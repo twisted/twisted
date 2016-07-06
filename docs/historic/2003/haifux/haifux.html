@@ -2080,12 +2080,12 @@ def updateApplication(app, **kwargs):
      app.listenTCP(80, site)
      if kwargs.get('ssl'):
          app.listenSSL(443, site, ServerContextFactory())
-     if kwargs.has_key('ircnick'):
+     if 'ircnick' in kwargs:
          i = IIRCClientFactory(f)
          i.nickname = kwargs['ircnick']
          ircServer = kwargs['ircserver']
          application.connectTCP(ircserver, 6667, i)
-     if kwargs.has_key('pbport'):
+     if 'pbport' in kwargs:
          application.listenTCP(int(kwargs['pbport']),
                                pb.BrokerFactory(IPerspectiveFinger(f))
 </pre>

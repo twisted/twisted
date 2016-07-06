@@ -62,11 +62,12 @@ class BaseLogFile:
         Open the log file.
 
         We don't open files in binary mode since:
-        * an encoding would have to be chosen and that would have to be
-          configurable
-        * Twisted doesn't actually support logging non-ASCII messages
-          (see U{https://twistedmatrix.com/trac/ticket/989})
-        * logging plain ASCII messages is fine with any non-binary mode.
+
+            - an encoding would have to be chosen and that would have to be
+              configurable
+            - Twisted doesn't actually support logging non-ASCII messages
+              (see U{https://twistedmatrix.com/trac/ticket/989})
+            - logging plain ASCII messages is fine with any non-binary mode.
 
         See
         U{https://twistedmatrix.com/pipermail/twisted-python/2013-October/027651.html}

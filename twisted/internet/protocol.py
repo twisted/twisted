@@ -121,7 +121,7 @@ class Factory:
         connection, and an attribute "factory" pointing to the creating
         factory.
 
-        Alternatively, C{None} may be returned to immediately close the
+        Alternatively, L{None} may be returned to immediately close the
         new connection.
 
         Override this method to alter how Protocol instances get created.
@@ -732,7 +732,7 @@ class DatagramProtocol(AbstractDatagramProtocol):
     """
     Protocol for datagram-oriented transport, e.g. UDP.
 
-    @type transport: C{NoneType} or
+    @type transport: L{None} or
         L{IUDPTransport<twisted.internet.interfaces.IUDPTransport>} provider
     @ivar transport: The transport with which this protocol is associated,
         if it is associated with one.
