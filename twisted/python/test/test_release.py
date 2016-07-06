@@ -17,7 +17,8 @@ import tempfile
 import shutil
 
 from datetime import date
-from io import BytesIO as StringIO
+from io import StringIO
+from io import BytesIO
 
 from twisted.trial.unittest import TestCase
 
@@ -163,7 +164,7 @@ class StructureAssertingMixin(object):
                 child.createDirectory()
                 self.createStructure(child, dirDict[x])
             else:
-                child.setContent(dirDict[x].replace('\n', os.linesep))
+                child.setContent(dirDict[x].replace('\n', os.linesep).encode())
 
     def assertStructure(self, root, dirDict):
         """
@@ -186,7 +187,7 @@ class StructureAssertingMixin(object):
                                 % (child.path,))
                 self.assertStructure(child, expectation)
             else:
-                actual = child.getContent().replace(os.linesep, '\n')
+                actual = child.getContent().decode().replace(os.linesep, '\n')
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
@@ -212,7 +213,7 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         directory, filename = os.path.split(relativePath)
         directory = baseDirectory.preauthChild(directory)
         file = directory.child(filename)
-        directory.child(filename).setContent(content)
+        directory.child(filename).setContent(content.encode())
         return file
 
 
@@ -330,7 +331,7 @@ class ChangeVersionTests(ExternalTempdirTestCase, StructureAssertingMixin):
         newVersion = Version(packageName, 7, 6, 0)
         _changeVersionInFile(oldVersion, newVersion, file.path)
 
-        self.assertEqual(file.getContent(),
+        self.assertEqual(file.getContent().decode(),
                          "Hello and welcome to %s." % newVersion.base())
 
 
@@ -451,9 +452,9 @@ class ProjectTests(ExternalTempdirTestCase):
             directory = directory.child(segment)
             if not directory.exists():
                 directory.createDirectory()
-            directory.child('__init__.py').setContent('')
+            directory.child('__init__.py').setContent(''.encode())
         directory.child('topfiles').createDirectory()
-        directory.child('topfiles').child('README').setContent(version.base())
+        directory.child('topfiles').child('README').setContent(version.base().encode())
         replaceProjectVersion(
             directory.child('_version.py').path, version)
         return Project(directory)
@@ -490,7 +491,7 @@ class ProjectTests(ExternalTempdirTestCase):
         project.updateVersion(newVersion)
         self.assertEqual(project.getVersion(), newVersion)
         self.assertEqual(
-            project.directory.child("topfiles").child("README").getContent(),
+            project.directory.child("topfiles").child("README").getContent().decode(),
             "3.2.9")
 
 
@@ -608,7 +609,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{APIBuilder.build} writes an index file which includes the name of the
         project specified.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
 
         projectName = "Foobar"
@@ -624,7 +625,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "def foo():\n"
             "    '%s'\n"
             "def _bar():\n"
-            "    '%s'" % (docstring, privateDocstring))
+            "    '%s'".encode() % (docstring, privateDocstring))
 
         outputPath = FilePath(self.mktemp())
 
@@ -641,22 +642,22 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxPath = outputPath.child("quux.html")
         self.assertIn(
             '<a href="%s">%s</a>' % (projectURL, projectName),
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
             "Project name/location not in file contents.")
         self.assertTrue(
             quuxPath.exists(),
             "Package documentation file %r did not exist." % (quuxPath.path,))
         self.assertIn(
-            docstring, quuxPath.getContent(),
+            docstring, quuxPath.getContent().decode(),
             "Docstring not in package documentation file.")
         self.assertIn(
             '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
-            quuxPath.getContent())
+            quuxPath.getContent().decode())
         self.assertIn(
             '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">' % (
                 sourceURL, packageName),
-            quuxPath.getContent())
-        self.assertIn(privateDocstring, quuxPath.getContent())
+            quuxPath.getContent().decode())
+        self.assertIn(privateDocstring, quuxPath.getContent().decode())
 
         # There should also be a page for the foo function in quux.
         self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
@@ -669,18 +670,18 @@ class APIBuilderTests(ExternalTempdirTestCase):
         L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
         appropriate for the Twisted project.
         """
-        stdout = StringIO()
+        stdout = BytesIO()
         self.patch(sys, 'stdout', stdout)
         docstring = "text in docstring"
 
         projectRoot = FilePath(self.mktemp())
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
-        packagePath.child("__init__.py").setContent(
-            "def foo():\n"
-            "    '%s'\n" % (docstring,))
+        initPyContent = "def foo():\n    '%s'\n" % (docstring,)
+        packagePath.child("__init__.py").setContent(initPyContent.encode())
+        versionPyContent = genVersion("twisted", 1, 0, 0)
         packagePath.child("_version.py").setContent(
-            genVersion("twisted", 1, 0, 0))
+            versionPyContent.encode())
         outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
@@ -694,21 +695,21 @@ class APIBuilderTests(ExternalTempdirTestCase):
         twistedPath = outputPath.child("twisted.html")
         self.assertIn(
             '<a href="http://twistedmatrix.com/">Twisted</a>',
-            twistedPath.getContent(),
+            twistedPath.getContent().decode(),
             "Project name/location not in file contents.")
         self.assertTrue(
             twistedPath.exists(),
             "Package documentation file %r did not exist."
             % (twistedPath.path,))
         self.assertIn(
-            docstring, twistedPath.getContent(),
+            docstring, twistedPath.getContent().decode(),
             "Docstring not in package documentation file.")
         #Here we check that it figured out the correct version based on the
         #source code.
         self.assertIn(
             '<a href="http://twistedmatrix.com/trac/browser/tags/releases/'
             'twisted-1.0.0/twisted">View Source</a>',
-            twistedPath.getContent())
+            twistedPath.getContent().decode())
 
         self.assertEqual(stdout.getvalue(), '')
 
@@ -903,10 +904,10 @@ class NewsBuilderMixin(StructureAssertingMixin):
         L{NewsBuilder._writeHeader} accepts a file-like object opened for
         writing and a header string and writes out a news file header to it.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeHeader(output, "Super Awesometastic 32.16")
         self.assertEqual(
-            output.getvalue(),
+            output.getvalue().decode(),
             "Super Awesometastic 32.16\n"
             "=========================\n"
             "\n")
@@ -919,14 +920,14 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges}) and writes out a section header and all
         of the given ticket information.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeSection(
             output, "Features",
             [(3, "Great stuff."),
              (17, "Very long line which goes on and on and on, seemingly "
               "without end until suddenly without warning it does end.")])
         self.assertEqual(
-            output.getvalue(),
+            output.getvalue().decode(),
             "Features\n"
             "--------\n"
             " - Great stuff. (#3)\n"
@@ -943,12 +944,12 @@ class NewsBuilderMixin(StructureAssertingMixin):
         by L{NewsBuilder._findChanges} and writes out a section header and all
         of the ticket numbers, but excludes any descriptions.
         """
-        output = StringIO()
+        output = BytesIO()
         self.builder._writeMisc(
             output, "Other",
             [(x, "") for x in range(2, 50, 3)])
         self.assertEqual(
-            output.getvalue(),
+            output.getvalue().decode(),
             "Other\n"
             "-----\n"
             " - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, "
@@ -966,7 +967,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             self.project, self.project.child('NEWS'),
             "Super Awesometastic 32.16")
 
-        results = self.project.child('NEWS').getContent()
+        results = self.project.child('NEWS').getContent().decode()
         self.assertEqual(
             results,
             'Super Awesometastic 32.16\n'
@@ -1016,7 +1017,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
         self.builder.build(
             project, project.child('NEWS'),
             "Super Awesometastic 32.16")
-        results = project.child('NEWS').getContent()
+        results = project.child('NEWS').getContent().decode()
         self.assertEqual(
             results,
             'Super Awesometastic 32.16\n'
@@ -1033,15 +1034,15 @@ class NewsBuilderMixin(StructureAssertingMixin):
         """
         news = self.project.child('NEWS')
         news.setContent(
-            'Ticket numbers in this file can be looked up by visiting\n'
+            ('Ticket numbers in this file can be looked up by visiting\n'
             'http://twistedmatrix.com/trac/ticket/<number>\n'
             '\n'
-            'Blah blah other stuff.\n')
+            'Blah blah other stuff.\n').encode())
 
         self.builder.build(self.project, news, "Super Awesometastic 32.16")
 
         self.assertEqual(
-            news.getContent(),
+            news.getContent().decode(),
             'Ticket numbers in this file can be looked up by visiting\n'
             'http://twistedmatrix.com/trac/ticket/<number>\n'
             '\n'
@@ -1094,7 +1095,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             'Some Thing 1.2')
 
         self.assertEqual(
-            self.project.child('NEWS').getContent(),
+            self.project.child('NEWS').getContent().decode(),
             'Some Thing 1.2\n'
             '==============\n'
             '\n'
@@ -1124,7 +1125,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             'Project Name 5.0')
 
         self.assertEqual(
-            self.project.child('NEWS').getContent(),
+            self.project.child('NEWS').getContent().decode(),
             'Project Name 5.0\n'
             '================\n'
             '\n'
@@ -1224,7 +1225,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
 
         aggregateNews = project.child("NEWS")
 
-        aggregateContent = aggregateNews.getContent()
+        aggregateContent = aggregateNews.getContent().decode()
         self.assertIn("Third feature addition", aggregateContent)
         self.assertIn("Fixed that bug", aggregateContent)
         self.assertIn("Old boring stuff from the past", aggregateContent)
@@ -1258,7 +1259,7 @@ class NewsBuilderMixin(StructureAssertingMixin):
             '-----\n'
             ' - #5\n\n\n')
         self.assertEqual(
-            expectedCore + 'Old core news.\n', coreNews.getContent())
+            expectedCore + 'Old core news.\n', coreNews.getContent().decode())
 
 
     def test_removeNEWSfragments(self):
@@ -1371,8 +1372,8 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        self.sourceDir.child("conf.py").setContent(self.confContent)
-        self.sourceDir.child("index.rst").setContent(self.indexContent)
+        self.sourceDir.child("conf.py").setContent(self.confContent.encode())
+        self.sourceDir.child("index.rst").setContent(self.indexContent.encode())
 
 
     def verifyFileExists(self, fileDir, fileName):
@@ -1410,7 +1411,7 @@ class SphinxBuilderTests(TestCase):
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
         if fpath.path.endswith('.html'):
-            self.assertIn("<body", fcontents)
+            self.assertIn("<body".encode(), fcontents)
 
 
     def test_build(self):
@@ -1440,7 +1441,7 @@ class SphinxBuilderTests(TestCase):
         self.patch(sys, "stdout", output)
         self.createFakeSphinxProject()
         with self.sphinxDir.child("index.rst").open("a") as f:
-            f.write("\n.. _malformed-link-target\n")
+            f.write("\n.. _malformed-link-target\n".encode())
         exception = self.assertRaises(
             SystemExit,
             self.builder.main, [self.sphinxDir.parent().path]
@@ -1634,7 +1635,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         no pending modifications returns C{False}.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        reposDir.child('some-file').setContent("something")
+        reposDir.child('some-file').setContent("something".encode())
         self.assertFalse(self.createCommand.isStatusClean(reposDir))
 
 
@@ -1645,7 +1646,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         """
         reposDir = self.makeRepository(self.tmpDir)
         testFile = reposDir.child('some-file')
-        testFile.setContent("something")
+        testFile.setContent("something".encode())
         self.commitRepository(reposDir)
         self.assertTrue(testFile.exists())
 

@@ -606,7 +606,7 @@ class NewsBuilder(object):
             if ext == ticketType:
                 results.append((
                     int(base),
-                    ' '.join(child.getContent().splitlines())))
+                    ' '.join(child.getContent().decode().splitlines())))
         results.sort()
         return results
 
@@ -632,7 +632,7 @@ class NewsBuilder(object):
         @param header: The header to write to the file.
         @type header: C{str}
         """
-        fileObj.write(self._formatHeader(header))
+        fileObj.write(self._formatHeader(header).encode())
 
 
     def _writeSection(self, fileObj, header, tickets):
@@ -659,14 +659,17 @@ class NewsBuilder(object):
         # result is a tuple of (descr, tickets)
         reverse = sorted(reverse, key=lambda result: result[1][0])
 
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
+        line = header + '\n' + '-' * len(header) + '\n'
+        fileObj.write(line.encode())
         for (description, relatedTickets) in reverse:
             ticketList = ', '.join([
                 '#' + str(ticket) for ticket in relatedTickets])
             entry = ' - %s (%s)' % (description, ticketList)
             entry = textwrap.fill(entry, subsequent_indent='   ')
-            fileObj.write(entry + '\n')
-        fileObj.write('\n')
+            line = entry + '\n'
+            fileObj.write(line.encode())
+        line = "\n"
+        fileObj.write(line.encode())
 
 
     def _writeMisc(self, fileObj, header, tickets):
@@ -683,14 +686,15 @@ class NewsBuilder(object):
         """
         if not tickets:
             return
-
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
+        line = header + '\n' + '-' * len(header) + '\n'
+        fileObj.write(line.encode())
         formattedTickets = []
         for (ticket, ignored) in tickets:
             formattedTickets.append('#' + str(ticket))
         entry = ' - ' + ', '.join(formattedTickets)
         entry = textwrap.fill(entry, subsequent_indent='   ')
-        fileObj.write(entry + '\n\n')
+        line = entry + '\n\n'
+        fileObj.write(line.encode())
 
 
     def build(self, path, output, header):
@@ -718,10 +722,10 @@ class NewsBuilder(object):
                 changes.append((part, tickets))
         misc = self._findChanges(path, self._MISC)
 
-        oldNews = output.getContent()
+        oldNews = output.getContent().decode()
         newNews = output.sibling('NEWS.new').open('w')
         if oldNews.startswith(self._TICKET_HINT):
-            newNews.write(self._TICKET_HINT)
+            newNews.write(self._TICKET_HINT.encode())
             oldNews = oldNews[len(self._TICKET_HINT):]
 
         self._writeHeader(newNews, header)
@@ -729,11 +733,11 @@ class NewsBuilder(object):
             for (part, tickets) in changes:
                 self._writeSection(newNews, self._headings.get(part), tickets)
         else:
-            newNews.write(self._NO_CHANGES)
-            newNews.write('\n')
+            newNews.write(self._NO_CHANGES.encode())
+            newNews.write('\n'.encode())
         self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-        newNews.write('\n')
-        newNews.write(oldNews)
+        newNews.write('\n'.encode())
+        newNews.write(oldNews.encode())
         newNews.close()
         output.sibling('NEWS.new').moveTo(output)
 
@@ -848,7 +852,7 @@ class NewsBuilder(object):
         expectedHeaderRegex = re.compile(
             r"Twisted %s %s \(\d{4}-\d\d-\d\d\)\n=+\n\n" % (
                 re.escape(name), re.escape(oldVersion.base())))
-        oldNews = news.getContent()
+        oldNews = news.getContent().decode()
         match = expectedHeaderRegex.search(oldNews)
         if match:
             oldHeader = match.group()
