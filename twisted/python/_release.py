@@ -45,20 +45,20 @@ def runCommand(args, cwd=None):
     """
     Execute a vector of arguments.
 
-    @type args: L{list} of L{bytes}
+    @type args: L{list} of L{str}
     @param args: A list of arguments, the first of which will be used as the
         executable to run.
 
-    @type cwd: L{bytes}
+    @type cwd: L{str}
     @param: The current working directory that the command should run with.
 
-    @rtype: L{bytes}
+    @rtype: L{str}
     @return: All of the standard output.
 
     @raise CommandFailed: when the program exited with a non-0 exit code.
     """
     process = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=cwd)
-    stdout = process.stdout.read()
+    stdout = process.stdout.read().decode()
     exitCode = process.wait()
     if exitCode < 0:
         raise CommandFailed(None, -exitCode, stdout)
