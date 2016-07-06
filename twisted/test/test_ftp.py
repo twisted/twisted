@@ -1226,7 +1226,7 @@ class DTPFactoryTests(unittest.TestCase):
 
         # Now fail the connection attempt.  This should do nothing.  In
         # particular, it should not raise an exception.
-        self.factory.clientConnectionFailed(None, defer.TimeoutError("foo"))
+        self.factory.clientConnectionFailed(None, error.TimeoutError("foo"))
 
         # Give the Deferred to trial so it can make sure it did what we
         # expected.

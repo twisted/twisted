@@ -40,6 +40,7 @@ from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.interfaces import IProtocol
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
+from twisted.internet.error import TimeoutError
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
@@ -248,7 +249,9 @@ class HTTPPageGetter(http.HTTPClient):
     def timeout(self):
         self.quietLoss = True
         self.transport.abortConnection()
-        self.factory.noPage(defer.TimeoutError("Getting %s took longer than %s seconds." % (self.factory.url, self.factory.timeout)))
+        self.factory.noPage(
+            TimeoutError("Getting %s took longer than %s seconds." %
+                         (self.factory.url, self.factory.timeout)))
 
 
 class HTTPPageDownloader(HTTPPageGetter):

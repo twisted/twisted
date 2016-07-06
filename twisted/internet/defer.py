@@ -25,10 +25,12 @@ from sys import exc_info
 from functools import wraps
 
 # Twisted imports
+from twisted.internet import error
 from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, failure
 from twisted.logger import Logger
-from twisted.python.deprecate import warnAboutFunction, deprecated
+from twisted.python.deprecate import (warnAboutFunction, deprecated,
+                                      deprecatedModuleAttribute)
 from twisted.python.versions import Version
 
 log = Logger()
@@ -45,11 +47,14 @@ class CancelledError(Exception):
     """
 
 
-class TimeoutError(Exception):
+class TimeoutError(error.TimeoutError):
     """
-    This exception is deprecated.  It is used only by the deprecated
-    L{Deferred.setTimeout} method.
+    This exception is deprecated.
     """
+    deprecatedModuleAttribute(
+        Version("Twisted", 16, 3, 0),
+        "Use twisted.internet.error.TimeoutError instead",
+        "twisted.internet.defer", "TimeoutError")
 
 
 
@@ -160,8 +165,9 @@ def maybeDeferred(f, *args, **kw):
 
 
 
+@deprecated(Version('Twisted', 16, 3, 0))
 def timeout(deferred):
-    deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
+    deferred.errback(failure.Failure(error.TimeoutError("Callback timed out")))
 
 
 
@@ -1594,7 +1600,8 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
             lock has not been acquired.
 
         @return: a L{Deferred} which will callback when the lock is acquired, or
-            errback with a L{TimeoutError} after timing out or an
+            errback with a
+            L{twisted.internet.error.TimeoutError} after timing out or an
             L{AlreadyTryingToLockError} if the L{deferUntilLocked} has already
             been called and not successfully locked the file.
         """
@@ -1634,10 +1641,9 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
                 d.callback(None)
             else:
                 if timeout is not None and self._timeoutCall is None:
-                    reason = failure.Failure(TimeoutError(
+                    reason = failure.Failure(error.TimeoutError(
                         "Timed out acquiring lock: %s after %fs" % (
-                            self.name,
-                            timeout)))
+                        self.name, timeout)))
                     self._timeoutCall = self._scheduler.callLater(
                         timeout, _cancelLock, reason)
 

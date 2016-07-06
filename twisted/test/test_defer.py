@@ -13,7 +13,7 @@ import re
 
 from twisted.python import failure, log
 from twisted.python.compat import _PY3
-from twisted.internet import defer, reactor
+from twisted.internet import defer, reactor, error
 from twisted.internet.task import Clock
 from twisted.trial import unittest
 
@@ -2344,7 +2344,7 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         self.assertTrue(self.lock.lock())
 
         d = self.lock.deferUntilLocked(timeout=5.5)
-        self.assertFailure(d, defer.TimeoutError)
+        self.assertFailure(d, error.TimeoutError)
 
         self.clock.pump([1] * 10)
 
@@ -2357,7 +2357,7 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         but the lock is unlocked before our timeout.
         """
         def onTimeout(f):
-            f.trap(defer.TimeoutError)
+            f.trap(error.TimeoutError)
             self.fail("Should not have timed out")
 
         self.assertTrue(self.lock.lock())
@@ -2446,3 +2446,36 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         self.assertFalse(timeoutCall.active())
         self.assertIsNone(self.lock._timeoutCall)
         self.failureResultOf(deferred, defer.CancelledError)
+
+
+
+class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
+    def test_deprecatedTimeout(self):
+        """
+        L{twisted.internet.defer.timeout} is deprecated.
+        """
+        deferred = defer.Deferred()
+        defer.timeout(deferred)
+        self.assertFailure(deferred, error.TimeoutError)
+        warningsShown = self.flushWarnings([self.test_deprecatedTimeout])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.internet.defer.timeout was deprecated in '
+            'Twisted 16.3.0')
+
+
+    def test_deprecatedTimeoutError(self):
+        """
+        L{twisted.internet.defer.TimeoutError} is deprecated.
+        """
+        defer.TimeoutError
+        warningsShown = self.flushWarnings([self.test_deprecatedTimeoutError])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            'twisted.internet.defer.TimeoutError was deprecated in '
+            'Twisted 16.3.0: Use twisted.internet.error.'
+            'TimeoutError instead')

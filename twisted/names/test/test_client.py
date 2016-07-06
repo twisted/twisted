@@ -14,7 +14,8 @@ from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
 from twisted.internet import defer
-from twisted.internet.error import CannotListenError, ConnectionRefusedError
+from twisted.internet.error import (CannotListenError, ConnectionRefusedError,
+                                    TimeoutError)
 from twisted.internet.interfaces import IResolver
 from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.internet.task import Clock
@@ -1173,7 +1174,7 @@ class RetryLogicTests(unittest.TestCase):
 
 
     def _ebRoundRobinBackoff(self, failure, fakeProto):
-        failure.trap(defer.TimeoutError)
+        failure.trap(TimeoutError)
 
         # Assert that each server is tried with a particular timeout
         # before the timeout is increased and the attempts are repeated.
