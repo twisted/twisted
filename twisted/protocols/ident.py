@@ -138,7 +138,7 @@ class IdentServer(basic.LineOnlyReceiver):
         a dotted-quad IP address.  The second element is an integer
         representing the port.
 
-        @param clientAddress: Like L{serverAddress}, but represents the
+        @param clientAddress: Like I{serverAddress}, but represents the
         client endpoint of the address being queried.
         """
         raise IdentError()

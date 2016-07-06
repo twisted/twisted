@@ -37,6 +37,7 @@ intersphinxURLs = [
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "https://python-hyper.org/h2/en/stable/objects.inv",
     "https://python-hyper.org/priority/en/stable/objects.inv",
+    "https://docs.zope.org/zope.interface/objects.inv",
 ]
 
 
@@ -487,7 +488,7 @@ class NoDocumentsFound(Exception):
 class APIBuilder(object):
     """
     Generate API documentation from source files using
-    U{pydoctor<http://codespeak.net/~mwh/pydoctor/>}.  This requires
+    U{pydoctor<https://github.com/twisted/pydoctor>}.  This requires
     pydoctor to be installed and usable.
     """
     def build(self, projectName, projectURL, sourceURL, packagePath,
@@ -526,7 +527,7 @@ class APIBuilder(object):
         main(
             ["--project-name", projectName,
              "--project-url", projectURL,
-             "--system-class", "pydoctor.twistedmodel.TwistedSystem",
+             "--system-class", "twisted.python._pydoctor.TwistedSystem",
              "--project-base-dir", packagePath.parent().path,
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
