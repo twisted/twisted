@@ -112,7 +112,7 @@ class IResolver(IResolverSimple):
         """
         Perform an A record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
