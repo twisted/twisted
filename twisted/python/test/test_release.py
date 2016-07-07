@@ -21,7 +21,7 @@ from io import BytesIO as StringIO
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python.compat import execfile
+from twisted.python.compat import _PY3, execfile
 from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
@@ -50,7 +50,9 @@ try:
 except (ImportError, SyntaxError):
     pydoctorSkip = "Pydoctor is not present."
 else:
-    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
+    if _PY3:
+        pydoctorSkip = "PyDoctor does not yet work on Python 3."
+    elif getattr(pydoctor, "version_info", (0,)) < (0, 1):
         pydoctorSkip = "Pydoctor is too old."
     else:
         pydoctorSkip = skip
@@ -637,10 +639,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
-        self.assertIn(
-            '<a href="%s">%s</a>' % (projectURL, projectName),
-            indexPath.getContent(),
-            "Project name/location not in file contents.")
+        indexContent = indexPath.getContent()
+        self.assertIn('%s API Documentation' % (projectName,), indexContent)
+        # Project URL is ignored in the current index template.
+        self.assertNotIn(projectURL, indexContent)
 
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
@@ -663,6 +665,13 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         self.assertEqual(stdout.getvalue(), '')
 
+
+
+class BuildAPIDocsScriptTests(ExternalTempdirTestCase):
+    """
+    Tests for L{BuildAPIDocsScript}.
+    """
+    skip = pydoctorSkip
 
     def test_buildWithPolicy(self):
         """
@@ -690,10 +699,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
-        self.assertIn(
-            '<a href="http://twistedmatrix.com/">Twisted</a>',
-            indexPath.getContent(),
-            "Project name/location not in file contents.")
+        self.assertIn('Twisted API Documentation', indexPath.getContent())
 
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
