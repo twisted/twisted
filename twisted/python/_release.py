@@ -1034,7 +1034,7 @@ class BuildAPIDocsScript(object):
         """
         version = Project(projectRoot.child("twisted")).getVersion()
         versionString = version.base()
-        sourceURL = ("http://twistedmatrix.com/trac/browser/tags/releases/"
+        sourceURL = ("https://github.com/twisted/twisted/tree/"
                      "twisted-%s" % (versionString,))
         apiBuilder = APIBuilder()
         apiBuilder.build(
