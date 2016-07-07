@@ -34,18 +34,6 @@ class PickyBuildPy(build_py):
 
 
 
-class PickyBuildScripts(build_scripts):
-    """
-    A version of build_scripts which doesn't install the scripts that aren't
-    yet ported to Python 3.
-    """
-    def copy_scripts(self):
-        from twisted.python.dist3 import portedScripts
-        self.scripts = portedScripts
-        return super(PickyBuildScripts, self).copy_scripts()
-
-
-
 def main():
     # Make sure the to-be-installed version of Twisted is used, if available,
     # since we're importing from it:
@@ -58,8 +46,7 @@ def main():
     args = STATIC_PACKAGE_METADATA.copy()
     args.update(dict(
         cmdclass={
-            'build_py': PickyBuildPy,
-            'build_scripts': PickyBuildScripts,
+            'build_py': PickyBuildPy
         },
         packages=find_packages(),
         install_requires=["zope.interface >= 4.0.2"],

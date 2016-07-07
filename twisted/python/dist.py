@@ -220,6 +220,10 @@ def getScripts(basedir=''):
     """
     Returns a list of scripts for Twisted.
     """
+    if _PY3:
+        portedScripts = ["bin/trial", "bin/twistd"]
+        return portedScripts
+
     scriptdir = os.path.join(basedir, 'bin')
     if not os.path.isdir(scriptdir):
         # Probably a project-specific tarball, in which case only this

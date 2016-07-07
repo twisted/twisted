@@ -586,5 +586,3 @@ almostModules = [
 ]
 
 modulesToInstall = modules + testModules + almostModules
-
-portedScripts = ["bin/trial", "bin/twistd"]
