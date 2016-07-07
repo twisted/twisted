@@ -168,6 +168,20 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.callback2Results,
                              (('hello',), {}))
 
+
+    def test_errbackWithArgs(self):
+        """
+        Calling C{deferred.errback()} with a tuple value will mean that tuple
+        is passed through in a L{Failure} to the registered errback.
+        """
+        deferred = defer.Deferred()
+        deferred.addErrback(self._errback)
+        deferred.errback(("Foo", "Bar"))
+        self.assertIsNone(self.callbackResults)
+        self.assertEqual(self.errbackResults[0][0].value,
+                         ("Foo", "Bar"))
+
+
     def testDeferredList(self):
         defr1 = defer.Deferred()
         defr2 = defer.Deferred()
