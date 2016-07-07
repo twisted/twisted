@@ -445,7 +445,7 @@ class HTTPClient(basic.LineReceiver):
         Parse the status line and headers for an HTTP request.
 
         @param line: Part of an HTTP request header. Request bodies are parsed
-            in L{rawDataReceived}.
+            in L{HTTPClient.rawDataReceived}.
         @type line: C{bytes}
         """
         if self.firstLine:
@@ -1111,7 +1111,7 @@ class Request:
                 modifiedSince = stringToDatetime(firstPart)
             except ValueError:
                 return None
-            if modifiedSince >= when:
+            if modifiedSince >= self.lastModified:
                 self.setResponseCode(NOT_MODIFIED)
                 return CACHED
         return None
@@ -2251,16 +2251,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     @property
     def factory(self):
         """
-        @see: L{HTTPChannel.factory}
+        @see: L{_genericHTTPChannelProtocolFactory}
         """
         return self._channel.factory
 
 
     @factory.setter
     def factory(self, value):
-        """
-        @see: L{HTTPChannel.factory}
-        """
         self._factory = value
         self._channel.factory = value
 

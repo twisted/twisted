@@ -50,7 +50,7 @@ class IAccount(Interface):
 
         @type chatui: Implementor of C{IChatUI}
 
-        @rtype: L{Deferred} L{Client}
+        @rtype: L{Deferred} with an eventual L{IClient} result.
         """
 
     def logOff():
