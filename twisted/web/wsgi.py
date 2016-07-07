@@ -194,7 +194,7 @@ class _InputStream:
     def readline(self, size=None):
         """
         Pass through to the underlying C{readline}, with a size of C{-1} replaced
-        with a size of C{None}.
+        with a size of L{None}.
 
         This is called in a WSGI application thread, not the I/O thread.
         """
@@ -230,9 +230,9 @@ class _InputStream:
 class _WSGIResponse:
     """
     Helper for L{WSGIResource} which drives the WSGI application using a
-    threadpool and hooks it up to the L{Request}.
+    threadpool and hooks it up to the L{http.Request}.
 
-    @ivar started: A C{bool} indicating whether or not the response status and
+    @ivar started: A L{bool} indicating whether or not the response status and
         headers have been written to the request yet.  This may only be read or
         written in the WSGI application thread.
 
@@ -244,20 +244,21 @@ class _WSGIResponse:
 
     @ivar application: The WSGI application object.
 
-    @ivar request: The L{Request} upon which the WSGI environment is based and
-        to which the application's output will be sent.
+    @ivar request: The L{http.Request} upon which the WSGI environment is
+        based and to which the application's output will be sent.
 
-    @ivar environ: The WSGI environment C{dict}.
+    @ivar environ: The WSGI environment L{dict}.
 
-    @ivar status: The HTTP response status C{str} supplied to the WSGI
+    @ivar status: The HTTP response status L{str} supplied to the WSGI
         I{start_response} callable by the application.
 
     @ivar headers: A list of HTTP response headers supplied to the WSGI
         I{start_response} callable by the application.
 
     @ivar _requestFinished: A flag which indicates whether it is possible to
-        generate more response data or not.  This is C{False} until
-        L{Request.notifyFinish} tells us the request is done, then C{True}.
+        generate more response data or not.  This is L{False} until
+        L{http.Request.notifyFinish} tells us the request is done,
+        then L{True}.
     """
 
     _requestFinished = False

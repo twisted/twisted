@@ -87,7 +87,9 @@ class GlibTimeTestsBuilder(ReactorBuilder):
 
     def test_timeout_add(self):
         """
-        A C{reactor.callLater} call scheduled from a C{gobject.timeout_add}
+        A
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        call scheduled from a C{gobject.timeout_add}
         call is run on time.
         """
         import gobject

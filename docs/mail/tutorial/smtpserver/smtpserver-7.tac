@@ -1,5 +1,5 @@
 import os
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.application import service
 
@@ -10,9 +10,8 @@ from twisted.internet import protocol, defer
 
 from twisted.mail import smtp
 
+@implementer(smtp.IMessage)
 class FileMessage(object):
-    implements(smtp.IMessage)
-
     def __init__(self, fileObj):
         self.fileObj = fileObj
 
@@ -27,14 +26,14 @@ class FileMessage(object):
         self.fileObj.close()
         os.remove(self.fileObj.name)
 
+@implementer(smtp.IMessageDelivery)
 class TutorialDelivery(object):
-    implements(smtp.IMessageDelivery)
     counter = 0
 
     def validateTo(self, user):
         fileName = 'tutorial-smtp.' + str(self.counter)
         self.counter += 1
-        return lambda: FileMessage(file(fileName, 'w'))
+        return lambda: FileMessage(open(fileName, 'w'))
 
     def validateFrom(self, helo, origin):
         return origin

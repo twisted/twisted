@@ -482,8 +482,8 @@ class ResolverTests(unittest.TestCase):
         firstProto = resolver._connectedProtocol()
         secondProto = resolver._connectedProtocol()
 
-        self.assertIsNot(firstProto.transport, None)
-        self.assertIsNot(secondProto.transport, None)
+        self.assertIsNotNone(firstProto.transport)
+        self.assertIsNotNone(secondProto.transport)
         self.assertNotEqual(
             firstProto.transport.getHost().port,
             secondProto.transport.getHost().port)
@@ -716,7 +716,7 @@ class ResolverTests(unittest.TestCase):
 
         f1 = self.failureResultOf(d1, SentinelException)
         f2 = self.failureResultOf(d2, SentinelException)
-        self.assertIdentical(f1, f2)
+        self.assertIs(f1, f2)
 
 
     def test_reentrantTCPQueryErrbackOnConnectionFailure(self):
@@ -765,7 +765,7 @@ class ResolverTests(unittest.TestCase):
 
         # Original deferred now fires with the second failure
         f = self.failureResultOf(d, ConnectionRefusedError)
-        self.assertIdentical(f, f2)
+        self.assertIs(f, f2)
 
 
     def test_pendingEmptiedInPlaceOnError(self):
@@ -793,7 +793,7 @@ class ResolverTests(unittest.TestCase):
             reactor.connectors[0], failure.Failure(SentinelException()))
 
         self.failureResultOf(d, SentinelException)
-        self.assertIdentical(resolver.pending, prePending)
+        self.assertIs(resolver.pending, prePending)
         self.assertEqual(len(prePending), 0)
 
 

@@ -467,7 +467,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
 
     def test_dataReceived(self):
@@ -1004,7 +1004,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         @param users: The users and their keys the checker will recognize.  Keys
             are byte strings giving user names.  Values are byte strings giving
             OpenSSH-formatted private keys.
-        @type users: C{dict}
+        @type users: L{dict}
         """
         mapping = dict([(k,[Key.fromString(v).public()])
                         for k, v in users.iteritems()])
@@ -1106,7 +1106,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             self.factory, self.reactor.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
 
     def test_skipPasswordAuthentication(self):
@@ -1172,7 +1172,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             pump.pump()
 
         protocol = self.successResultOf(connected)
-        self.assertIsNot(None, protocol.transport)
+        self.assertIsNotNone(protocol.transport)
 
         # Ensure the connection with the agent is cleaned up after the
         # connection with the server is lost.
@@ -1424,7 +1424,7 @@ class NewConnectionHelperTests(TestCase):
 
     def test_defaultConsoleUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to
+        If L{None} is passed for the C{ui} parameter to
         L{_NewConnectionHelper}, a L{ConsoleUI} is used.
         """
         helper = _NewConnectionHelper(
@@ -1434,7 +1434,7 @@ class NewConnectionHelperTests(TestCase):
 
     def test_ttyConsoleUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        If L{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
         and /dev/tty is available, the L{ConsoleUI} used is associated with
         /dev/tty.
         """
@@ -1447,7 +1447,7 @@ class NewConnectionHelperTests(TestCase):
 
     def test_nottyUI(self):
         """
-        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        If L{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
         and /dev/tty is not available, the L{ConsoleUI} used is associated with
         some file which always produces a C{b"no"} response.
         """

@@ -12,7 +12,7 @@ from __future__ import division, absolute_import
 import sys
 import os
 
-from setuptools import setup, find_packages
+from setuptools import find_packages
 from setuptools.command.build_py import build_py
 from distutils.command.build_scripts import build_scripts
 
@@ -52,7 +52,8 @@ def main():
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
-    from twisted.python.dist import STATIC_PACKAGE_METADATA, getScripts
+    from twisted.python.dist import (STATIC_PACKAGE_METADATA, _EXTRAS_REQUIRE,
+                                     getExtensions, getScripts, setup)
 
     args = STATIC_PACKAGE_METADATA.copy()
     args.update(dict(
@@ -62,9 +63,11 @@ def main():
         },
         packages=find_packages(),
         install_requires=["zope.interface >= 4.0.2"],
-        zip_safe=False,
-        include_package_data=True,
+        conditionalExtensions=getExtensions(),
         scripts=getScripts(),
+        include_package_data=True,
+        zip_safe=False,
+        extras_require=_EXTRAS_REQUIRE,
     ))
 
     setup(**args)

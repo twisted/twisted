@@ -33,9 +33,9 @@ class ResourceTests(unittest.TestCase):
 
 class SimpleResource(resource.Resource):
     """
-    @ivar _contentType: C{None} or a C{str} giving the value of the
+    @ivar _contentType: L{None} or a C{str} giving the value of the
         I{Content-Type} header in the response this resource will render.  If it
-        is C{None}, no I{Content-Type} header will be set in the response.
+        is L{None}, no I{Content-Type} header will be set in the response.
     """
     def __init__(self, contentType=None):
         resource.Resource.__init__(self)

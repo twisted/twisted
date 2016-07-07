@@ -223,13 +223,13 @@ alert("I hate you");
         # however this assertion tests preserving case for start and
         # end tags while still matching stuff like <bOrk></BoRk>
         self.assertEqual(d.documentElement.toxml(), s)
-        self.assert_(d.isEqualToDocument(d2), "%r != %r" % (d.toxml(), d2.toxml()))
-        self.assert_(d2.isEqualToDocument(d3), "%r != %r" % (d2.toxml(), d3.toxml()))
+        self.assertTrue(d.isEqualToDocument(d2), "%r != %r" % (d.toxml(), d2.toxml()))
+        self.assertTrue(d2.isEqualToDocument(d3), "%r != %r" % (d2.toxml(), d3.toxml()))
         # caseInsensitive=0 on the left, NOT perserveCase=1 on the right
         ## XXX THIS TEST IS TURNED OFF UNTIL SOMEONE WHO CARES ABOUT FIXING IT DOES
         #self.assertFalse(d3.isEqualToDocument(d2), "%r == %r" % (d3.toxml(), d2.toxml()))
-        self.assert_(d3.isEqualToDocument(d4), "%r != %r" % (d3.toxml(), d4.toxml()))
-        self.assert_(d4.isEqualToDocument(d5), "%r != %r" % (d4.toxml(), d5.toxml()))
+        self.assertTrue(d3.isEqualToDocument(d4), "%r != %r" % (d3.toxml(), d4.toxml()))
+        self.assertTrue(d4.isEqualToDocument(d5), "%r != %r" % (d4.toxml(), d5.toxml()))
 
     def testDifferentQuotes(self):
         s = '<test a="a" b=\'b\' />'
@@ -255,19 +255,19 @@ alert("I hate you");
         e = d.documentElement
         self.assertEqual(e.nodeName, "bar")
         c = e.childNodes[0]
-        self.assert_(isinstance(c, microdom.Comment))
+        self.assertTrue(isinstance(c, microdom.Comment))
         self.assertEqual(c.value, "<foo />")
         c2 = c.cloneNode()
-        self.assert_(c is not c2)
+        self.assertTrue(c is not c2)
         self.assertEqual(c2.toxml(), "<!--<foo />-->")
 
     def testText(self):
         d = microdom.parseString("<bar>xxxx</bar>").documentElement
         text = d.childNodes[0]
-        self.assert_(isinstance(text, microdom.Text))
+        self.assertTrue(isinstance(text, microdom.Text))
         self.assertEqual(text.value, "xxxx")
         clone = text.cloneNode()
-        self.assert_(clone is not text)
+        self.assertTrue(clone is not text)
         self.assertEqual(clone.toxml(), "xxxx")
 
     def testEntities(self):
@@ -277,12 +277,12 @@ alert("I hate you");
         self.assertEqual(nodes[1].data, "&#12AB;")
         self.assertEqual(nodes[0].cloneNode().toxml(), "&amp;")
         for n in nodes:
-            self.assert_(isinstance(n, microdom.EntityReference))
+            self.assertTrue(isinstance(n, microdom.EntityReference))
 
     def testCData(self):
         s = '<x><![CDATA[</x>\r\n & foo]]></x>'
         cdata = microdom.parseString(s).documentElement.childNodes[0]
-        self.assert_(isinstance(cdata, microdom.CDATASection))
+        self.assertTrue(isinstance(cdata, microdom.CDATASection))
         self.assertEqual(cdata.data, "</x>\r\n & foo")
         self.assertEqual(cdata.cloneNode().toxml(), "<![CDATA[</x>\r\n & foo]]>")
 
@@ -293,9 +293,9 @@ alert("I hate you");
         nodes2 = microdom.parseString(s2).documentElement.childNodes
         self.assertEqual(len(nodes), 3)
         for (n, n2) in zip(nodes, nodes2):
-            self.assert_(isinstance(n, microdom.Element))
+            self.assertTrue(isinstance(n, microdom.Element))
             self.assertEqual(n.nodeName, "b")
-            self.assert_(n.isEqualToNode(n2))
+            self.assertTrue(n.isEqualToNode(n2))
 
     def testAttributes(self):
         s = '<foo a="b" />'
@@ -303,8 +303,8 @@ alert("I hate you");
 
         self.assertEqual(node.getAttribute("a"), "b")
         self.assertEqual(node.getAttribute("c"), None)
-        self.assert_(node.hasAttribute("a"))
-        self.assert_(not node.hasAttribute("c"))
+        self.assertTrue(node.hasAttribute("a"))
+        self.assertTrue(not node.hasAttribute("c"))
         a = node.getAttributeNode("a")
         self.assertEqual(a.value, "b")
 
@@ -317,8 +317,8 @@ alert("I hate you");
         self.assertEqual([n.nodeName for n in d.childNodes], ["bar", "baz", "bax"])
         self.assertEqual(d.lastChild().nodeName, "bax")
         self.assertEqual(d.firstChild().nodeName, "bar")
-        self.assert_(d.hasChildNodes())
-        self.assert_(not d.firstChild().hasChildNodes())
+        self.assertTrue(d.hasChildNodes())
+        self.assertTrue(not d.firstChild().hasChildNodes())
 
     def testMutate(self):
         s = "<foo />"
@@ -339,7 +339,7 @@ alert("I hate you");
         self.assertEqual(d.childNodes[1], child)
         for n in d.childNodes:
             self.assertEqual(n.parentNode, d)
-        self.assert_(d.isEqualToNode(d1))
+        self.assertTrue(d.isEqualToNode(d1))
 
         d.removeChild(child)
         self.assertEqual(len(d.childNodes), 1)
@@ -348,7 +348,7 @@ alert("I hate you");
         t = microdom.Text("foo")
         d.replaceChild(t, d.firstChild())
         self.assertEqual(d.firstChild(), t)
-        self.assert_(d.isEqualToNode(d2))
+        self.assertTrue(d.isEqualToNode(d2))
 
 
     def test_replaceNonChild(self):
@@ -416,7 +416,7 @@ alert("I hate you");
             d2 = microdom.parseString(out, caseInsensitive=0)
             testOut = d.documentElement.toxml()
             self.assertEqual(out, testOut)
-            self.assert_(d.isEqualToDocument(d2))
+            self.assertTrue(d.isEqualToDocument(d2))
 
     def testErrors(self):
         for s in ["<foo>&am</foo>", "<foo", "<f>&</f>", "<() />"]:
@@ -519,13 +519,13 @@ alert("I hate you");
         urd = microdom.parseString(reverseBytes(s.encode('UTF-16')))
         ud = microdom.parseString(s.encode('UTF-16'))
         sd = microdom.parseString(s)
-        self.assert_(ud.isEqualToDocument(sd))
-        self.assert_(ud.isEqualToDocument(urd))
+        self.assertTrue(ud.isEqualToDocument(sd))
+        self.assertTrue(ud.isEqualToDocument(urd))
         ud = microdom.parseString(j)
         urd = microdom.parseString(reverseBytes(j2))
         sd = microdom.parseString(j2)
-        self.assert_(ud.isEqualToDocument(sd))
-        self.assert_(ud.isEqualToDocument(urd))
+        self.assertTrue(ud.isEqualToDocument(sd))
+        self.assertTrue(ud.isEqualToDocument(urd))
 
         # test that raw text still gets encoded
         # test that comments get encoded
@@ -549,7 +549,7 @@ alert("I hate you");
             result = domhelpers.namedChildren(node, 'bar')
             self.assertEqual(len(result), tests[t])
             if result:
-                self.assert_(hasattr(result[0], 'tagName'))
+                self.assertTrue(hasattr(result[0], 'tagName'))
 
     def testCloneNode(self):
         s = '<foo a="b"><bax>x</bax></foo>'

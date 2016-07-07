@@ -183,11 +183,11 @@ class IterationTimeoutTests(TestCase):
     def test_noCalls(self):
         """
         If there are no delayed calls, C{doIteration} is called with a
-        timeout of C{None}.
+        timeout of L{None}.
         """
         reactor = TimeoutReportReactor()
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEqual(timeout, None)
+        self.assertIsNone(timeout)
 
 
     def test_delayedCall(self):
@@ -260,14 +260,14 @@ class IterationTimeoutTests(TestCase):
 
     def test_cancelDelayedCall(self):
         """
-        If the only delayed call is canceled, C{None} is the timeout passed
+        If the only delayed call is canceled, L{None} is the timeout passed
         to C{doIteration}.
         """
         reactor = TimeoutReportReactor()
         call = reactor.callLater(50, lambda: None)
         call.cancel()
         timeout = self._checkIterationTimeout(reactor)
-        self.assertEqual(timeout, None)
+        self.assertIsNone(timeout)
 
 
 
@@ -313,4 +313,4 @@ class ConnectedDatagramPortTests(TestCase):
         port = unix.ConnectedDatagramPort(None, ClientProto())
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
-        self.assertEqual(self.called, True)
+        self.assertTrue(self.called)

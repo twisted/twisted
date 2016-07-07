@@ -14,9 +14,27 @@ The most prominent use of XML Streams is Jabber, but this module is generically
 usable. See Twisted Words for Jabber specific protocol support.
 
 Maintainer: Ralph Meijer
+
+@var STREAM_CONNECTED_EVENT: This event signals that the connection has been
+    established.
+@type STREAM_CONNECTED_EVENT: L{str}.
+
+@var STREAM_END_EVENT: This event signals that the connection has been closed.
+@type STREAM_END_EVENT: L{str}.
+
+@var STREAM_ERROR_EVENT: This event signals that a parse error occurred.
+@type STREAM_ERROR_EVENT: L{str}.
+
+@var STREAM_START_EVENT: This event signals that the root element of the XML
+    Stream has been received.
+    For XMPP, this would be the C{<stream:stream ...>} opening tag.
+@type STREAM_START_EVENT: L{str}.
 """
 
+from __future__ import absolute_import, division
+
 from twisted.python import failure
+from twisted.python.compat import intern, unicode
 from twisted.internet import protocol
 from twisted.words.xish import domish, utility
 

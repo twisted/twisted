@@ -11,9 +11,11 @@ See the twistd(1) man page or
 http://twistedmatrix.com/documents/current/howto/application for details.
 """
 
+from __future__ import print_function
+
 import sys
 if __name__ == '__main__':
-    print __doc__
+    print(__doc__)
     sys.exit(1)
 
 from twisted.application import service, internet
@@ -30,7 +32,7 @@ pb.setUnjellyableForClass(CopyPond, ReceiverPond)
 
 class Receiver(pb.Root):
     def remote_takePond(self, pond):
-        print " got pond:", pond
+        print(" got pond:", pond)
         pond.countFrogs()
         return "safe and sound" # positive acknowledgement
     def remote_shutdown(self):

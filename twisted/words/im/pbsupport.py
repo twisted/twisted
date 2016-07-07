@@ -17,7 +17,7 @@ from twisted.spread import pb
 from twisted.words.im.locals import ONLINE, OFFLINE, AWAY
 
 from twisted.words.im import basesupport, interfaces
-from zope.interface import implements
+from zope.interface import implementer
 
 
 class TwistedWordsPerson(basesupport.AbstractPerson):
@@ -53,8 +53,8 @@ class TwistedWordsPerson(basesupport.AbstractPerson):
         self.status = status
         self.chat.getContactsList().setContactStatus(self)
 
+@implementer(interfaces.IGroup)
 class TwistedWordsGroup(basesupport.AbstractGroup):
-    implements(interfaces.IGroup)
     def __init__(self, name, wordsClient):
         basesupport.AbstractGroup.__init__(self, name, wordsClient)
         self.joined = 0
@@ -147,7 +147,7 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
             self.chat.getPerson(name, self).setStatus(status)
 
     def remote_setGroupMetadata(self, dict_, groupName):
-        if dict_.has_key("topic"):
+        if "topic" in dict_:
             self.getGroupConversation(groupName).setTopic(dict_["topic"], dict_.get("topic_author", None))
 
     def joinGroup(self, name):
@@ -182,8 +182,8 @@ pbFrontEnds = {
     }
 
 
+@implementer(interfaces.IAccount)
 class PBAccount(basesupport.AbstractAccount):
-    implements(interfaces.IAccount)
     gatewayType = "PB"
     _groupFactory = TwistedWordsGroup
     _personFactory = TwistedWordsPerson

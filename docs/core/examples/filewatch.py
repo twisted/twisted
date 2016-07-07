@@ -11,7 +11,7 @@ def watch(fp):
 
 import sys
 from twisted.internet import reactor
-s = internet.TimerService(0.1, watch, file(sys.argv[1]))
+s = internet.TimerService(0.1, watch, open(sys.argv[1]))
 s.startService()
 reactor.run()
 s.stopService()

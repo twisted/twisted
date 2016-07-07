@@ -38,24 +38,24 @@ class slot(object):
     @type children: C{list}
     @ivar children: The L{Tag} objects included in this L{slot}'s template.
 
-    @type default: anything flattenable, or C{NoneType}
+    @type default: anything flattenable, or L{None}
     @ivar default: The default contents of this slot, if it is left unfilled.
-        If this is C{None}, an L{UnfilledSlot} will be raised, rather than
-        C{None} actually being used.
+        If this is L{None}, an L{UnfilledSlot} will be raised, rather than
+        L{None} actually being used.
 
-    @type filename: C{str} or C{NoneType}
+    @type filename: C{str} or L{None}
     @ivar filename: The name of the XML file from which this tag was parsed.
-        If it was not parsed from an XML file, C{None}.
+        If it was not parsed from an XML file, L{None}.
 
-    @type lineNumber: C{int} or C{NoneType}
+    @type lineNumber: C{int} or L{None}
     @ivar lineNumber: The line number on which this tag was encountered in the
         XML file from which it was parsed.  If it was not parsed from an XML
-        file, C{None}.
+        file, L{None}.
 
-    @type columnNumber: C{int} or C{NoneType}
+    @type columnNumber: C{int} or L{None}
     @ivar columnNumber: The column number at which this tag was encountered in
         the XML file from which it was parsed.  If it was not parsed from an
-        XML file, C{None}.
+        XML file, L{None}.
     """
 
     def __init__(self, name, default=None, filename=None, lineNumber=None,
@@ -98,21 +98,21 @@ class Tag(object):
         method to call.
     @type render: C{str}
 
-    @type filename: C{str} or C{NoneType}
+    @type filename: C{str} or L{None}
     @ivar filename: The name of the XML file from which this tag was parsed.
-        If it was not parsed from an XML file, C{None}.
+        If it was not parsed from an XML file, L{None}.
 
-    @type lineNumber: C{int} or C{NoneType}
+    @type lineNumber: C{int} or L{None}
     @ivar lineNumber: The line number on which this tag was encountered in the
         XML file from which it was parsed.  If it was not parsed from an XML
-        file, C{None}.
+        file, L{None}.
 
-    @type columnNumber: C{int} or C{NoneType}
+    @type columnNumber: C{int} or L{None}
     @ivar columnNumber: The column number at which this tag was encountered in
         the XML file from which it was parsed.  If it was not parsed from an
-        XML file, C{None}.
+        XML file, L{None}.
 
-    @type slotData: C{dict} or C{NoneType}
+    @type slotData: C{dict} or L{None}
     @ivar slotData: The data which can fill slots.  If present, a dictionary
         mapping slot names to renderable values.  The values in this dict might
         be anything that can be present as the child of a L{Tag}; strings,

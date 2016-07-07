@@ -28,6 +28,8 @@ Other desired features:
    - A control protocol
 """
 
+from __future__ import print_function
+
 import time
 
 from twisted.protocols import basic
@@ -398,7 +400,8 @@ class NNTPClient(basic.LineReceiver):
         log.err('Passive Error: %s' % (error,))
 
 
-    def _headerInitial(self, (code, message)):
+    def _headerInitial(self, response):
+        (code, message) = response
         if code == 200:
             self.canPost = 1
         else:
@@ -428,7 +431,8 @@ class NNTPClient(basic.LineReceiver):
             self.gotSubscriptions(self._endState())
 
 
-    def _headerGroup(self, (code, line)):
+    def _headerGroup(self, response):
+        (code, line) = response
         self.gotGroup(tuple(line.split()))
         self._endState()
 
@@ -458,7 +462,8 @@ class NNTPClient(basic.LineReceiver):
             self.gotBody('\n'.join(self._endState())+'\n')
 
 
-    def _headerPost(self, (code, message)):
+    def _headerPost(self, response):
+        (code, message) = response
         if code == 340:
             self.transport.write(self._postText[0].replace('\n', '\r\n').replace('\r\n.', '\r\n..'))
             if self._postText[0][-1:] != '\n':
@@ -471,7 +476,8 @@ class NNTPClient(basic.LineReceiver):
         self._endState()
 
 
-    def _headerPosted(self, (code, message)):
+    def _headerPosted(self, response):
+        (code, message) = response
         if code == 240:
             self.postedOk()
         else:
@@ -500,7 +506,8 @@ class NNTPClient(basic.LineReceiver):
             self.gotNewGroups(self._endState())
 
 
-    def _headerMode(self, (code, message)):
+    def _headerMode(self, response):
+        (code, message) = response
         if code == 203:
             self.setStreamSuccess()
         else:
@@ -579,7 +586,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errList(self, failure):
-        print 'LIST failed: ', failure
+        print('LIST failed: ', failure)
         self.sendLine('503 program fault - command not performed')
 
 
@@ -591,7 +598,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errSubscription(self, failure):
-        print 'SUBSCRIPTIONS failed: ', failure
+        print('SUBSCRIPTIONS failed: ', failure)
         self.sendLine('503 program fault - comand not performed')
 
 
@@ -603,7 +610,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errOverview(self, failure):
-        print 'LIST OVERVIEW.FMT failed: ', failure
+        print('LIST OVERVIEW.FMT failed: ', failure)
         self.sendLine('503 program fault - command not performed')
 
 
@@ -616,7 +623,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotListGroup, self._errListGroup)
 
 
-    def _gotListGroup(self, (group, articles)):
+    def _gotListGroup(self, result):
+        (group, articles) = result
         self.currentGroup = group
         if len(articles):
             self.currentIndex = int(articles[0])
@@ -630,7 +638,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errListGroup(self, failure):
-        print 'LISTGROUP failed: ', failure
+        print('LISTGROUP failed: ', failure)
         self.sendLine('502 no permission')
 
 
@@ -651,7 +659,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errXOver(self, failure):
-        print 'XOVER failed: ', failure
+        print('XOVER failed: ', failure)
         self.sendLine('420 No article(s) selected')
 
 
@@ -688,7 +696,7 @@ class NNTPServer(basic.LineReceiver):
         self.sendLine('.')
 
     def _errXHDR(self, failure):
-        print 'XHDR failed: ', failure
+        print('XHDR failed: ', failure)
         self.sendLine('502 no permission')
 
 
@@ -715,7 +723,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errPost(self, failure):
-        print 'POST failed: ', failure
+        print('POST failed: ', failure)
         self.sendLine('441 posting failed')
 
 
@@ -732,7 +740,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errCheck(self, failure):
-        print 'CHECK failed: ', failure
+        print('CHECK failed: ', failure)
         self.sendLine('431 try sending it again later')
 
 
@@ -757,7 +765,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errTakeThis(self, failure):
-        print 'TAKETHIS failed: ', failure
+        print('TAKETHIS failed: ', failure)
         self.sendLine('439 article transfer failed')
 
 
@@ -766,14 +774,15 @@ class NNTPServer(basic.LineReceiver):
         defer.addCallbacks(self._gotGroup, self._errGroup)
 
 
-    def _gotGroup(self, (name, num, high, low, flags)):
+    def _gotGroup(self, result):
+        (name, num, high, low, flags) = result
         self.currentGroup = name
         self.currentIndex = low
         self.sendLine('211 %d %d %d %s group selected' % (num, low, high, name))
 
 
     def _errGroup(self, failure):
-        print 'GROUP failed: ', failure
+        print('GROUP failed: ', failure)
         self.sendLine('411 no such group')
 
 
@@ -803,7 +812,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotArticle, self._errArticle)
 
 
-    def _gotArticle(self, (index, id, article)):
+    def _gotArticle(self, result):
+        (index, id, article) = result
         self.currentIndex = index
         self.sendLine('220 %d %s article' % (index, id))
         s = basic.FileSender()
@@ -822,7 +832,7 @@ class NNTPServer(basic.LineReceiver):
     ##
 
     def _errArticle(self, failure):
-        print 'ARTICLE failed: ', failure
+        print('ARTICLE failed: ', failure)
         self.sendLine('423 bad article number')
 
 
@@ -832,13 +842,14 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotStat, self._errStat)
 
 
-    def _gotStat(self, (index, id, article)):
+    def _gotStat(self, result):
+        (index, id, article) = result
         self.currentIndex = index
         self.sendLine('223 %d %s article retreived - request text separately' % (index, id))
 
 
     def _errStat(self, failure):
-        print 'STAT failed: ', failure
+        print('STAT failed: ', failure)
         self.sendLine('423 bad article number')
 
 
@@ -848,7 +859,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotHead, self._errHead)
 
 
-    def _gotHead(self, (index, id, head)):
+    def _gotHead(self, result):
+        (index, id, head) = result
         self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
         self.transport.write(head + '\r\n')
@@ -856,7 +868,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errHead(self, failure):
-        print 'HEAD failed: ', failure
+        print('HEAD failed: ', failure)
         self.sendLine('423 no such article number in this group')
 
 
@@ -866,7 +878,8 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotBody, self._errBody)
 
 
-    def _gotBody(self, (index, id, body)):
+    def _gotBody(self, result):
+        (index, id, body) = result
         self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
         self.lastsent = ''
@@ -875,7 +888,7 @@ class NNTPServer(basic.LineReceiver):
         d.addCallback(self.finishedFileTransfer)
 
     def _errBody(self, failure):
-        print 'BODY failed: ', failure
+        print('BODY failed: ', failure)
         self.sendLine('423 no such article number in this group')
 
 
@@ -975,7 +988,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _errIHAVE(self, failure):
-        print 'IHAVE failed: ', failure
+        print('IHAVE failed: ', failure)
         self.sendLine('436 transfer failed - try again later')
 
 
