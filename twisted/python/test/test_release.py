@@ -1991,7 +1991,7 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
         self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
 
 
-    def test_topfileAdded(self):
+    def test_topfileAddedButWithOtherTopfiles(self):
         """
         Running it on a branch with a fragment in the topfiles dir added
         returns green, even if there are other files in the topfiles dir.
