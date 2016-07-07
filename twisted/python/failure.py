@@ -228,7 +228,7 @@ class Failure:
         if tb is None:
             if exc_tb:
                 tb = exc_tb
-            elif _PY3:
+            elif _PY3 and hasattr(self.value, "__traceback__"):
                 tb = self.value.__traceback__
 
         frames = self.frames = []
