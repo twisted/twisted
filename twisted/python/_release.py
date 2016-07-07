@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import textwrap
+import twisted
 
 from zope.interface import Interface, implementer
 
@@ -26,6 +27,7 @@ from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 from twisted.python.compat import execfile
 from twisted.python.usage import Options, UsageError
+from twisted.python.monkey import MonkeyPatcher
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
@@ -523,7 +525,23 @@ class APIBuilder(object):
             intersphinxes.append("--intersphinx")
             intersphinxes.append(intersphinx)
 
+        # Super awful monkeypatch that will selectively use our templates.
+        from pydoctor.templatewriter import util
+        originalTemplatefile = util.templatefile
+
+        def templatefile(filename):
+            if filename in ["summary.html", "index.html", "common.html"]:
+                twistedDir = FilePath(twisted.__file__).parent().parent()
+                templatesDir = twistedDir.child("admin").child("templates")
+                return .child(filename).path
+            else:
+                return originalTemplatefile(filename)
+
+        monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
+        monkeyPatch.patch()
+
         from pydoctor.driver import main
+
         main(
             ["--project-name", projectName,
              "--project-url", projectURL,
@@ -535,6 +553,7 @@ class APIBuilder(object):
              "--html-write-function-pages", "--quiet", "--make-html",
             ] + intersphinxes)
 
+        monkeyPatch.restore()
 
 
 class NewsBuilder(object):

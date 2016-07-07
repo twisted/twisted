@@ -113,10 +113,82 @@ class TwistedSphinxInventory(SphinxInventory):
 
 
 
+class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
+
+    def visitClass(self, node):
+        """
+        Called when a class is visited.
+        """
+        super(TwistedModuleVisitor, self).visitClass(node)
+
+        cls = self.builder.current.contents[node.name]
+
+        for a in list(cls.raw_decorators):
+            if isinstance(a, ast.CallFunc):
+                decorator = a.asList()
+                fn = cls.expandName(decorator[0].name)
+                if fn == "twisted.python.deprecate.deprecated":
+                    cls._deprecated_info = deprecatedToUsefulText(cls.name, decorator)
+
+
+
+def versionToUsefulText(version):
+    """
+    Change a C{Version()} to a useful object.
+    """
+    from twisted.python.versions import Version
+
+    return Version(*[x.value for x in version.asList()[1:] if x])
+
+
+
+def deprecatedToUsefulText(name, deprecated):
+    """
+    Change a C{@deprecated} to a useful string.
+    """
+    from twisted.python.deprecate import _getDeprecationWarningString
+
+    version = versionToUsefulText(deprecated[1])
+    if deprecated[2]:
+        if isinstance(deprecated[2], ast.Keyword):
+            replacement = deprecated[2].asList()[1].value
+        else:
+            replacement = deprecated[2].value
+    else:
+        replacement = None
+
+    return _getDeprecationWarningString(name, version, replacement=replacement) + "."
+
+
+
+class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
+
+    def docsources(self):
+
+        if self.decorators:
+            for a in list(self.decorators):
+                if isinstance(a, ast.CallFunc):
+                    decorator = a.asList()
+                    fn = self.expandName(decorator[0].name)
+                    if fn == "twisted.python.deprecate.deprecated":
+                        self._deprecated_info = deprecatedToUsefulText(self.name, decorator)
+
+        for x in super(TwistedFunction, self).docsources():
+            yield x
+
+
+
+class TwistedASTBuilder(zopeinterface.ZopeInterfaceASTBuilder):
+    ModuleVistor = TwistedModuleVisitor
+
+
+
 class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
     """
-    Maybe class used to set up all pydoctor system.
+    A PyDoctor "system" used to generate the docs.
     """
+    defaultBuilder = TwistedASTBuilder
+    Function = TwistedFunction
 
     def __init__(self, options=None):
         super(TwistedSystem, self).__init__(options=options)
@@ -137,7 +209,6 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
 
         rtype: C{model.PrivacyClass} member
         """
-
         if documentable.fullName() == 'twisted.test':
             # Match this package exactly, so that proto_helpers
             # below is visible

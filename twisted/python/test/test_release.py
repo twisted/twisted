@@ -8,6 +8,8 @@ All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
 
+from __future__ import print_function
+
 import glob
 import operator
 import os
@@ -637,6 +639,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
+        print(indexPath.getContent(), file=sys.__stdout__)
         self.assertIn(
             '<a href="%s">%s</a>' % (projectURL, projectName),
             indexPath.getContent(),
@@ -706,7 +709,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         #Here we check that it figured out the correct version based on the
         #source code.
         self.assertIn(
-            '<a href="http://twistedmatrix.com/trac/browser/tags/releases/'
+            '<a href="https://github.com/twisted/twisted/tree/'
             'twisted-1.0.0/twisted">View Source</a>',
             twistedPath.getContent())
 
