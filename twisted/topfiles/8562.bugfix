@@ -1,0 +1,1 @@
+twisted.internet.defer.Deferred.errback now supports arbitary values on Python 3, as it does on Python 2.
