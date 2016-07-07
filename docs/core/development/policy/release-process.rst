@@ -20,7 +20,7 @@ By the end of a Twisted release we'll have:
 - Updated documentation on Read The Docs
 - Updated download links on the twistedmatrix.com site
 - Announcement emails sent to major Python lists
-- Announcement post on ​`the Twisted blog <​http://labs.twistedmatrix.com>`_
+- Announcement post on `the Twisted blog <http://labs.twistedmatrix.com>`_
 - A tag in our Git repository marking the release
 
 
@@ -34,7 +34,7 @@ To release Twisted, you will need:
 - Permissions to edit the Downloads wiki page
 - Channel operator permissions for ``#twisted``
 - Admin privileges for Twisted's PyPI packages
-- Contributor status for `the Twisted blog <​http://labs.twistedmatrix.com>`_
+- Contributor status for `the Twisted blog <http://labs.twistedmatrix.com>`_
 - Read The Docs access for the Twisted project
 
 
@@ -246,7 +246,7 @@ Distribute
 
   - Browse to ``http://twistedmatrix.com/documents/$RELEASE/``
   - Make sure that there is content in each of the directories and that it looks good
-  - Follow each link on ​`the documentation page <https://twistedmatrix.com/trac/wiki/Documentation>`_, replace current with ``$RELEASE`` (e.g. 10.0.0) and look for any obvious breakage
+  - Follow each link on `the documentation page <https://twistedmatrix.com/trac/wiki/Documentation>`_, replace current with ``$RELEASE`` (e.g. 10.0.0) and look for any obvious breakage
 
 4. Change the "current" symlink
 
@@ -362,9 +362,6 @@ This section goes over doing these "point" releases.
 
 1. Ensure all bugfixes are in trunk.
 2. Make a branch off the affected version.
-
-  - eg. ``svn cp svn+ssh://svn.twistedmatrix.com/svn/Twisted/branches/releases/release-$API.0-7844 svn+ssh://svn.twistedmatrix.com/svn/Twisted/branches/releases/release-$API.1-7906 -m "Branching to $API.1"``
-
 3. Cherry-pick the merge commits that merge the bugfixes into trunk, onto the new release branch.
 4. Go through the rest of the process for a full release from "How to do a pre-release", merging the release branch into trunk as normal as the end of the process.
 
