@@ -40,10 +40,7 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
-if platform.python_implementation() == 'PyPy':
-    _PYPY = True
-else:
-    _PYPY = False
+_PYPY = platform.python_implementation() == 'PyPy'
 
 
 def currentframe(n=0):
