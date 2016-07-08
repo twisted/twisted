@@ -37,11 +37,11 @@ def add(fd, path, mask):
     Add a watch for the given path to the inotify file descriptor, and return
     the watch descriptor.
 
-    @param fd: The file descriptor returned by C{libc.inotify_init).
+    @param fd: The file descriptor returned by C{libc.inotify_init}.
     @type fd: L{int}
 
     @param path: The path to watch via inotify.
-    @type path: L{twisted.python.FilePath}
+    @type path: L{twisted.python.filepath.FilePath}
 
     @param mask: Bitmask specifying the events that inotify should monitor.
     @type mask: L{int}
