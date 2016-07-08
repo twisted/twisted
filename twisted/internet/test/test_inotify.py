@@ -102,7 +102,7 @@ class INotifyTests(unittest.TestCase):
         """
         def operation(path):
             fObj = path.open("w")
-            fObj.write('foo')
+            fObj.write(b'foo')
             fObj.close()
 
         return self._notificationTest(inotify.IN_MODIFY, operation)
