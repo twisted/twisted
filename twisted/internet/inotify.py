@@ -189,7 +189,7 @@ class INotify(FileDescriptor, object):
         adding a watchpath for inverse lookup of the file descriptor from the
         path.
         """
-        wd = self._inotify.add(self._fd, path.path, mask)
+        wd = self._inotify.add(self._fd, path, mask)
 
         iwp = _Watch(path, mask, autoAdd, callbacks)
 
