@@ -328,6 +328,7 @@ testModules = [
     "twisted.internet.test.test_gireactor",
     "twisted.internet.test.test_glibbase",
     "twisted.internet.test.test_inlinecb",
+    "twisted.internet.test.test_iocp",
     "twisted.internet.test.test_kqueuereactor",
     "twisted.internet.test.test_main",
     "twisted.internet.test.test_newtls",
