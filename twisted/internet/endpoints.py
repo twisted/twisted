@@ -506,7 +506,7 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
         @param backlog: Size of the listen queue
         @type backlog: int
 
-        @param interface: The hostname to bind to, defaults to '' (all)
+        @param interface: The hostname to bind to, defaults to C{::} (all)
         @type interface: str
         """
         _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)

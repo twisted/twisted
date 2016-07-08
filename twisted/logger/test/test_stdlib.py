@@ -270,7 +270,7 @@ def handlerAndBytesIO():
     with the 'logging' module.
 
     @return: handler and io object
-    @rtype: tuple of L{StreamHandler} and L{BytesIO}
+    @rtype: tuple of L{StreamHandler} and L{io.BytesIO}
     """
     output = BytesIO()
     stream = output
