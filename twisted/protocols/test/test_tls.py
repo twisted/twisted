@@ -976,7 +976,29 @@ class TLSProducerTests(TestCase):
     The TLS transport must support the IConsumer interface.
     """
 
-    def setupStreamingProducer(self, transport=None, fakeConnection=None):
+    def drain(self, transport, allowEmpty=False):
+        """
+        Drain the bytes currently pending write from a L{StringTransport}, then
+        clear it, since those bytes have been consumed.
+
+        @param transport: The L{StringTransport} to get the bytes from.
+        @type transport: L{StringTransport}
+
+        @param allowEmpty: Allow the test to pass even if the transport has no
+            outgoing bytes in it.
+        @type allowEmpty: L{bool}
+
+        @return: the outgoing bytes from the given transport
+        @rtype: L{bytes}
+        """
+        value = transport.value()
+        transport.clear()
+        self.assertEqual(bool(allowEmpty or value), True)
+        return value
+
+
+    def setupStreamingProducer(self, transport=None, fakeConnection=None,
+                               server=False):
         class HistoryStringTransport(StringTransport):
             def __init__(self):
                 StringTransport.__init__(self)
@@ -994,12 +1016,13 @@ class TLSProducerTests(TestCase):
                 self.producerHistory.append("stop")
                 StringTransport.stopProducing(self)
 
-        clientProtocol, tlsProtocol = buildTLSProtocol(
-            transport=transport, fakeConnection=fakeConnection)
+        applicationProtocol, tlsProtocol = buildTLSProtocol(
+            transport=transport, fakeConnection=fakeConnection,
+            server=server)
         producer = HistoryStringTransport()
-        clientProtocol.transport.registerProducer(producer, True)
+        applicationProtocol.transport.registerProducer(producer, True)
         self.assertEqual(tlsProtocol.transport.streaming, True)
-        return clientProtocol, tlsProtocol, producer
+        return applicationProtocol, tlsProtocol, producer
 
 
     def flushTwoTLSProtocols(self, tlsProtocol, serverTLSProtocol):
@@ -1009,18 +1032,53 @@ class TLSProducerTests(TestCase):
         # We want to make sure all bytes are passed back and forth; JP
         # estimated that 3 rounds should be enough:
         for i in range(3):
-            clientData = tlsProtocol.transport.value()
+            clientData = self.drain(tlsProtocol.transport, True)
             if clientData:
                 serverTLSProtocol.dataReceived(clientData)
-                tlsProtocol.transport.clear()
-            serverData = serverTLSProtocol.transport.value()
+            serverData = self.drain(serverTLSProtocol.transport, True)
             if serverData:
                 tlsProtocol.dataReceived(serverData)
-                serverTLSProtocol.transport.clear()
             if not serverData and not clientData:
                 break
         self.assertEqual(tlsProtocol.transport.value(), b"")
         self.assertEqual(serverTLSProtocol.transport.value(), b"")
+
+
+    def test_producerDuringRenegotiation(self):
+        """
+        If we write some data to a TLS connection that is blocked waiting for a
+        renegotiation with its peer, it will pause and resume its registered
+        producer exactly once.
+        """
+        c, ct, cp = self.setupStreamingProducer()
+        s, st, sp = self.setupStreamingProducer(server=True)
+
+        self.flushTwoTLSProtocols(ct, st)
+        # no public API for this yet because it's (mostly) unnecessary, but we
+        # have to be prepared for a peer to do it to us
+        tlsc = ct._tlsConnection
+        tlsc.renegotiate()
+        self.assertRaises(WantReadError, tlsc.do_handshake)
+        ct._flushSendBIO()
+        st.dataReceived(self.drain(ct.transport))
+        payload = b'payload'
+        s.transport.write(payload)
+        s.transport.loseConnection()
+        # give the client the server the client's response...
+        ct.dataReceived(self.drain(st.transport))
+        messageThatUnblocksTheServer = self.drain(ct.transport)
+        # split it into just enough chunks that it would provoke the producer
+        # with an incorrect implementation...
+        for fragment in (messageThatUnblocksTheServer[0:1],
+                         messageThatUnblocksTheServer[1:2],
+                         messageThatUnblocksTheServer[2:]):
+            st.dataReceived(fragment)
+        self.assertEqual(st.transport.disconnecting, False)
+        s.transport.unregisterProducer()
+        self.flushTwoTLSProtocols(ct, st)
+        self.assertEqual(st.transport.disconnecting, True)
+        self.assertEqual(b''.join(c.received), payload)
+        self.assertEqual(sp.producerHistory, ['pause', 'resume'])
 
 
     def test_streamingProducerPausedInNormalMode(self):
