@@ -276,9 +276,6 @@ cdef object fillinet6addr(sockaddr_in6 *dest, object addr):
     dest.sin6_scope_id = scope
 
 
-def AllocateReadBuffer(int size):
-    return PyBuffer_New(size)
-
 def maxAddrLen(long s):
     cdef WSAPROTOCOL_INFO wsa_pi
     cdef int size, rc
