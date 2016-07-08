@@ -25,29 +25,29 @@ class RawUDPTests(unittest.TestCase):
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol([
 
-            ('foobar', 'testHost', 0x43A2),
+            (b'foobar', b'testHost', 0x43A2),
 
             ])
         proto.addProto(0xF00F, p1)
 
-        proto.datagramReceived("\x43\xA2" #source
-                               + "\xf0\x0f" #dest
-                               + "\x00\x06" #len
-                               + "\xDE\xAD" #check
-                               + "foobar",
+        proto.datagramReceived(b"\x43\xA2" #source
+                               b"\xf0\x0f" #dest
+                               b"\x00\x06" #len
+                               b"\xDE\xAD" #check
+                               b"foobar",
                                partial=0,
-                               dest='dummy',
-                               source='testHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'testHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
 
         assert not p1.expecting, \
@@ -57,48 +57,48 @@ class RawUDPTests(unittest.TestCase):
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol([
 
-            ('foobar', 'testHost', 0x43A2),
-            ('quux', 'otherHost', 0x33FE),
+            (b'foobar', b'testHost', 0x43A2),
+            (b'quux', b'otherHost', 0x33FE),
 
             ])
         proto.addProto(0xF00F, p1)
-        proto.datagramReceived("\x43\xA2" #source
-                               + "\xf0\x0f" #dest
-                               + "\x00\x06" #len
-                               + "\xDE\xAD" #check
-                               + "foobar",
+        proto.datagramReceived(b"\x43\xA2" #source
+                               b"\xf0\x0f" #dest
+                               b"\x00\x06" #len
+                               b"\xDE\xAD" #check
+                               b"foobar",
                                partial=0,
-                               dest='dummy',
-                               source='testHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'testHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
-        proto.datagramReceived("\x33\xFE" #source
-                               + "\xf0\x0f" #dest
-                               + "\x00\x05" #len
-                               + "\xDE\xAD" #check
-                               + "quux",
+        proto.datagramReceived(b"\x33\xFE" #source
+                               b"\xf0\x0f" #dest
+                               b"\x00\x05" #len
+                               b"\xDE\xAD" #check
+                               b"quux",
                                partial=0,
-                               dest='dummy',
-                               source='otherHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'otherHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
 
         assert not p1.expecting, \
@@ -109,37 +109,37 @@ class RawUDPTests(unittest.TestCase):
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol([
 
-            ('foobar', 'testHost', 0x43A2),
+            (b'foobar', b'testHost', 0x43A2),
 
             ])
 
         p2 = MyProtocol([
 
-            ('foobar', 'testHost', 0x43A2),
+            (b'foobar', b'testHost', 0x43A2),
 
             ])
 
         proto.addProto(0xF00F, p1)
         proto.addProto(0xF00F, p2)
 
-        proto.datagramReceived("\x43\xA2" #source
-                               + "\xf0\x0f" #dest
-                               + "\x00\x06" #len
-                               + "\xDE\xAD" #check
-                               + "foobar",
+        proto.datagramReceived(b"\x43\xA2" #source
+                               b"\xf0\x0f" #dest
+                               b"\x00\x06" #len
+                               b"\xDE\xAD" #check
+                               b"foobar",
                                partial=0,
-                               dest='dummy',
-                               source='testHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'testHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
 
         assert not p1.expecting, \
@@ -152,119 +152,119 @@ class RawUDPTests(unittest.TestCase):
         p1 = MyProtocol([])
         proto.addProto(1, p1)
 
-        proto.datagramReceived("\x43\xA2" #source
-                               + "\xf0\x0f" #dest
-                               + "\x00\x06" #len
-                               + "\xDE\xAD" #check
-                               + "foobar",
+        proto.datagramReceived(b"\x43\xA2" #source
+                               b"\xf0\x0f" #dest
+                               b"\x00\x06" #len
+                               b"\xDE\xAD" #check
+                               b"foobar",
                                partial=0,
-                               dest='dummy',
-                               source='testHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'testHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
 
     def testDemuxing(self):
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol([
 
-            ('foobar', 'testHost', 0x43A2),
-            ('quux', 'otherHost', 0x33FE),
+            (b'foobar', b'testHost', 0x43A2),
+            (b'quux', b'otherHost', 0x33FE),
 
             ])
         proto.addProto(0xF00F, p1)
 
         p2 = MyProtocol([
 
-            ('quux', 'otherHost', 0xA401),
-            ('foobar', 'testHost', 0xA302),
+            (b'quux', b'otherHost', 0xA401),
+            (b'foobar', b'testHost', 0xA302),
 
             ])
         proto.addProto(0xB050, p2)
 
-        proto.datagramReceived("\xA4\x01" #source
-                               + "\xB0\x50" #dest
-                               + "\x00\x05" #len
-                               + "\xDE\xAD" #check
-                               + "quux",
+        proto.datagramReceived(b"\xA4\x01" #source
+                               b"\xB0\x50" #dest
+                               b"\x00\x05" #len
+                               b"\xDE\xAD" #check
+                               b"quux",
                                partial=0,
-                               dest='dummy',
-                               source='otherHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'otherHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
-        proto.datagramReceived("\x43\xA2" #source
-                               + "\xf0\x0f" #dest
-                               + "\x00\x06" #len
-                               + "\xDE\xAD" #check
-                               + "foobar",
+        proto.datagramReceived(b"\x43\xA2" #source
+                               b"\xf0\x0f" #dest
+                               b"\x00\x06" #len
+                               b"\xDE\xAD" #check
+                               b"foobar",
                                partial=0,
-                               dest='dummy',
-                               source='testHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'testHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
-        proto.datagramReceived("\x33\xFE" #source
-                               + "\xf0\x0f" #dest
-                               + "\x00\x05" #len
-                               + "\xDE\xAD" #check
-                               + "quux",
+        proto.datagramReceived(b"\x33\xFE" #source
+                               b"\xf0\x0f" #dest
+                               b"\x00\x05" #len
+                               b"\xDE\xAD" #check
+                               b"quux",
                                partial=0,
-                               dest='dummy',
-                               source='otherHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'otherHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
-        proto.datagramReceived("\xA3\x02" #source
-                               + "\xB0\x50" #dest
-                               + "\x00\x06" #len
-                               + "\xDE\xAD" #check
-                               + "foobar",
+        proto.datagramReceived(b"\xA3\x02" #source
+                               b"\xB0\x50" #dest
+                               b"\x00\x06" #len
+                               b"\xDE\xAD" #check
+                               b"foobar",
                                partial=0,
-                               dest='dummy',
-                               source='testHost',
-                               protocol='dummy',
-                               version='dummy',
-                               ihl='dummy',
-                               tos='dummy',
-                               tot_len='dummy',
-                               fragment_id='dummy',
-                               fragment_offset='dummy',
-                               dont_fragment='dummy',
-                               more_fragments='dummy',
-                               ttl='dummy',
+                               dest=b'dummy',
+                               source=b'testHost',
+                               protocol=b'dummy',
+                               version=b'dummy',
+                               ihl=b'dummy',
+                               tos=b'dummy',
+                               tot_len=b'dummy',
+                               fragment_id=b'dummy',
+                               fragment_offset=b'dummy',
+                               dont_fragment=b'dummy',
+                               more_fragments=b'dummy',
+                               ttl=b'dummy',
                                )
 
         assert not p1.expecting, \
