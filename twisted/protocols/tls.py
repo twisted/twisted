@@ -335,7 +335,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             self._tlsConnection.do_handshake()
         except WantReadError:
             self._flushSendBIO()
-        except Error as e:
+        except Error:
             self._tlsShutdownFinished(Failure())
         else:
             self._handshakeDone = True
@@ -383,7 +383,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 # Passing in None means the user protocol's connnectionLost
                 # will get called with reason from underlying transport:
                 self._tlsShutdownFinished(None)
-            except Error as e:
+            except Error:
                 # Something went pretty wrong.  For example, this might be a
                 # handshake failure during renegotiation (because there were no
                 # shared ciphers, because a certificate failed to verify, etc).
