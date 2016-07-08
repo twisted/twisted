@@ -89,8 +89,8 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_ACCESS} event to the callback.
         """
         def operation(path):
-            path.setContent("foo")
-            path.getContent()
+            path.setContent(b"foo")
+            path.getContent().decode()
 
         return self._notificationTest(inotify.IN_ACCESS, operation)
 
@@ -502,5 +502,5 @@ class INotifyTests(unittest.TestCase):
         # Add some files in pretty much all the directories so that we
         # see that we process all of them.
         for i, filename in enumerate(someFiles):
-            filename.setContent(filename.path)
+            filename.setContent(filename.path.encode())
         return d
