@@ -120,7 +120,7 @@ class _Watch(object):
     @ivar mask: The events monitored by this watchpoint
     @ivar autoAdd: Flag that determines whether this watch point
         should automatically add created subdirectories
-    @ivar callbacks: C{list} of callback functions that will be called
+    @ivar callbacks: L{list} of callback functions that will be called
         when an event occurs on this watch.
     """
     def __init__(self, path, mask=IN_WATCH_MASK, autoAdd=False,
@@ -147,12 +147,12 @@ class INotify(FileDescriptor, object):
     The INotify file descriptor, it basically does everything related
     to INotify, from reading to notifying watch points.
 
-    @ivar _buffer: a C{str} containing the data read from the inotify fd.
+    @ivar _buffer: a L{str} containing the data read from the inotify fd.
 
-    @ivar _watchpoints: a C{dict} that maps from inotify watch ids to
+    @ivar _watchpoints: a L{dict} that maps from inotify watch ids to
         watchpoints objects
 
-    @ivar _watchpaths: a C{dict} that maps from watched paths to the
+    @ivar _watchpaths: a L{dict} that maps from watched paths to the
         inotify watch ids
     """
     _inotify = _inotify
@@ -334,20 +334,20 @@ class INotify(FileDescriptor, object):
         @type path: L{FilePath}
 
         @param mask: The events that should be watched
-        @type mask: C{int}
+        @type mask: L{int}
 
         @param autoAdd: if True automatically add newly created
                         subdirectories
-        @type autoAdd: C{boolean}
+        @type autoAdd: L{bool}
 
         @param callbacks: A list of callbacks that should be called
                           when an event happens in the given path.
                           The callback should accept 3 arguments:
                           (ignored, filepath, mask)
-        @type callbacks: C{list} of callables
+        @type callbacks: L{list} of callables
 
         @param recursive: Also add all the subdirectories in this path
-        @type recursive: C{boolean}
+        @type recursive: L{bool}
         """
         if recursive:
             # This behavior is needed to be compatible with the windows
