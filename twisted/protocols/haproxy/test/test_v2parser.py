@@ -241,9 +241,9 @@ class V2ParserTests(unittest.TestCase):
         header = _makeHeaderIPv4(verCom=b'\x21')
         info = _v2parser.V2Parser.parse(header)
         self.assertTrue(info.source)
-        self.assertTrue(isinstance(info.source, address.IPv4Address))
+        self.assertIsInstance(info.source, address.IPv4Address)
         self.assertTrue(info.destination)
-        self.assertTrue(isinstance(info.destination, address.IPv4Address))
+        self.assertIsInstance(info.destination, address.IPv4Address)
 
 
     def test_proxyCommandIpv6(self):
@@ -253,9 +253,9 @@ class V2ParserTests(unittest.TestCase):
         header = _makeHeaderIPv6(verCom=b'\x21')
         info = _v2parser.V2Parser.parse(header)
         self.assertTrue(info.source)
-        self.assertTrue(isinstance(info.source, address.IPv6Address))
+        self.assertIsInstance(info.source, address.IPv6Address)
         self.assertTrue(info.destination)
-        self.assertTrue(isinstance(info.destination, address.IPv6Address))
+        self.assertIsInstance(info.destination, address.IPv6Address)
 
 
     def test_proxyCommandUnix(self):
@@ -265,9 +265,9 @@ class V2ParserTests(unittest.TestCase):
         header = _makeHeaderUnix(verCom=b'\x21')
         info = _v2parser.V2Parser.parse(header)
         self.assertTrue(info.source)
-        self.assertTrue(isinstance(info.source, address.UNIXAddress))
+        self.assertIsInstance(info.source, address.UNIXAddress)
         self.assertTrue(info.destination)
-        self.assertTrue(isinstance(info.destination, address.UNIXAddress))
+        self.assertIsInstance(info.destination, address.UNIXAddress)
 
 
     def test_unspecFamilyIpv4(self):

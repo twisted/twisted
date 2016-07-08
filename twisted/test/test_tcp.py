@@ -90,15 +90,15 @@ class MyProtocolFactoryMixin(object):
         typical C{protocol} attribute of factories (but that name is used by
         this class for something else).
 
-    @type protocolConnectionMade: L{NoneType} or L{defer.Deferred}
+    @type protocolConnectionMade: L{None} or L{defer.Deferred}
     @ivar protocolConnectionMade: When an instance of L{AccumulatingProtocol}
-        is connected, if this is not C{None}, the L{Deferred} will be called
-        back with the protocol instance and the attribute set to C{None}.
+        is connected, if this is not L{None}, the L{Deferred} will be called
+        back with the protocol instance and the attribute set to L{None}.
 
-    @type protocolConnectionLost: L{NoneType} or L{defer.Deferred}
+    @type protocolConnectionLost: L{None} or L{defer.Deferred}
     @ivar protocolConnectionLost: When an instance of L{AccumulatingProtocol}
         is created, this will be set as its C{closedDeferred} attribute and
-        then this attribute will be set to C{None} so the L{defer.Deferred} is
+        then this attribute will be set to L{None} so the L{defer.Deferred} is
         not used by more than one protocol.
 
     @ivar protocol: The most recently created L{AccumulatingProtocol} instance
@@ -1071,7 +1071,7 @@ class ConnectionLostNotifyingProtocol(protocol.Protocol):
     @ivar onConnectionLost: The L{Deferred} which will be fired in
         C{connectionLost}.
 
-    @ivar lostConnectionReason: C{None} until the connection is lost, then a
+    @ivar lostConnectionReason: L{None} until the connection is lost, then a
         reference to the reason passed to C{connectionLost}.
     """
     def __init__(self, onConnectionLost):
@@ -1516,9 +1516,9 @@ class HalfCloseTests(unittest.TestCase):
             t.loseWriteConnection()
             return loopUntil(lambda :t._writeDisconnected)
         def check(ignored):
-            self.assertEqual(client.closed, False)
-            self.assertEqual(client.writeHalfClosed, True)
-            self.assertEqual(client.readHalfClosed, False)
+            self.assertFalse(client.closed)
+            self.assertTrue(client.writeHalfClosed)
+            self.assertFalse(client.readHalfClosed)
             return loopUntil(lambda :f.protocol.readHalfClosed)
         def write(ignored):
             w = client.transport.write
@@ -1526,8 +1526,8 @@ class HalfCloseTests(unittest.TestCase):
             w(b"lalala fooled you")
             self.assertEqual(0, len(client.transport._tempDataBuffer))
             self.assertEqual(f.protocol.data, b"hello")
-            self.assertEqual(f.protocol.closed, False)
-            self.assertEqual(f.protocol.readHalfClosed, True)
+            self.assertFalse(f.protocol.closed)
+            self.assertTrue(f.protocol.readHalfClosed)
         return d.addCallback(loseWrite).addCallback(check).addCallback(write)
 
     def testWriteCloseNotification(self):
@@ -1579,7 +1579,7 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
                       self.assertEqual(self.f.protocol.data, b'hello'))
-        d.addCallback(lambda x: self.assertEqual(self.f.protocol.closed, True))
+        d.addCallback(lambda x: self.assertTrue(self.f.protocol.closed))
         return defer.gatherResults([d, d2])
 
     def testShutdownException(self):
@@ -1593,7 +1593,7 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         self.f.protocol.closedDeferred = d = defer.Deferred()
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
-                      self.assertEqual(self.f.protocol.closed, True))
+                      self.assertTrue(self.f.protocol.closed))
         return defer.gatherResults([d, d2])
 
 

@@ -449,7 +449,7 @@ class CertBase:
         Convert this L{CertBase} into a provider of the given interface.
 
         @param interface: The interface to conform to.
-        @type interface: L{Interface}
+        @type interface: L{zope.interface.interfaces.IInterface}
 
         @return: an L{IOpenSSLTrustRoot} provider or L{NotImplemented}
         @rtype: C{interface} or L{NotImplemented}
@@ -764,7 +764,7 @@ class PublicKey:
     L{PublicKey} objects.
 
     @note: If constructing a L{PublicKey} manually, be sure to pass only a
-        L{crypto.PKey} that does not contain a private key!
+        L{OpenSSL.crypto.PKey} that does not contain a private key!
 
     @ivar original: The original private key.
     """
@@ -772,7 +772,7 @@ class PublicKey:
     def __init__(self, osslpkey):
         """
         @param osslpkey: The underlying pyOpenSSL key object.
-        @type osslpkey: L{crypto.PKey}
+        @type osslpkey: L{OpenSSL.crypto.PKey}
         """
         self.original = osslpkey
 
@@ -1282,7 +1282,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         be a L{Certificate} or the result of L{platformTrust}.  By default it
         is L{platformTrust} and you probably shouldn't adjust it unless you
         really know what you're doing.  Be aware that clients using this
-        interface I{must} verify the server; you cannot explicitly pass C{None}
+        interface I{must} verify the server; you cannot explicitly pass L{None}
         since that just means to use L{platformTrust}.
     @type trustRoot: L{IOpenSSLTrustRoot}
 
@@ -1419,7 +1419,7 @@ class OpenSSLCertificateOptions(object):
             List of certificate authority certificate objects to use to verify
             the peer's certificate.  Only used if verify is L{True} and will be
             ignored otherwise.  Since verify is L{False} by default, this is
-            C{None} by default.
+            L{None} by default.
 
         @type caCerts: C{list} of L{OpenSSL.crypto.X509}
 

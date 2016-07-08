@@ -23,7 +23,7 @@ class FingerService(service.Service):
         self.filename = filename
 
     def _read(self):
-        for line in file(self.filename):
+        for line in open(self.filename):
             user, status = line.split(':', 1)
             user = user.strip()
             status = status.strip()

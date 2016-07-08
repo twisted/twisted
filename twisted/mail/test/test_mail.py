@@ -17,7 +17,7 @@ import time
 from hashlib import md5
 
 from zope.interface.verify import verifyClass
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from twisted.trial import unittest
 from twisted.mail import smtp
@@ -191,7 +191,7 @@ class FileMessageTests(unittest.TestCase):
     def setUp(self):
         self.name = "fileMessage.testFile"
         self.final = "final.fileMessage.testFile"
-        self.f = file(self.name, 'w')
+        self.f = open(self.name, 'w')
         self.fp = mail.mail.FileMessage(self.f, self.name, self.final)
 
     def tearDown(self):
@@ -221,7 +221,7 @@ class FileMessageTests(unittest.TestCase):
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.eomReceived()
-        self.assertEqual(file(self.final).read(), contents)
+        self.assertEqual(open(self.final).read(), contents)
 
     def testInterrupted(self):
         contents = "first line\nsecond line\n"
@@ -402,7 +402,7 @@ class MaildirAppendStringTests(unittest.TestCase, _AppendTestMixin):
         Change the behavior of future C{rename}, C{write}, or C{open} calls made
         by the mailbox C{mbox}.
 
-        @param rename: If not C{None}, a new value for the C{_renamestate}
+        @param rename: If not L{None}, a new value for the C{_renamestate}
             attribute of the mailbox's append factory.  The original value will
             be restored at the end of the test.
 
@@ -562,7 +562,7 @@ class MaildirTests(unittest.TestCase):
         # Toss a few files into the mailbox
         i = 1
         for f in msgs:
-            fObj = file(j(self.d, f), 'w')
+            fObj = open(j(self.d, f), 'w')
             fObj.write('x' * i)
             fObj.close()
             i = i + 1
@@ -724,12 +724,11 @@ class MaildirDirdbmDomainTests(unittest.TestCase):
 
 
 
+@implementer(mail.mail.IAliasableDomain)
 class StubAliasableDomain(object):
     """
     Minimal testable implementation of IAliasableDomain.
     """
-    implements(mail.mail.IAliasableDomain)
-
     def exists(self, user):
         """
         No test coverage for invocations of this method on domain objects,
@@ -958,11 +957,11 @@ class RelayerTests(unittest.TestCase):
         self.messageFiles = []
         for i in range(10):
             name = os.path.join(self.tmpdir, 'body-%d' % (i,))
-            f = file(name + '-H', 'w')
+            f = open(name + '-H', 'w')
             pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
             f.close()
 
-            f = file(name + '-D', 'w')
+            f = open(name + '-D', 'w')
             f.write(name)
             f.seek(0, 0)
             self.messageFiles.append(name)
@@ -1790,7 +1789,7 @@ class AliasTests(unittest.TestCase):
         return m.eomReceived().addCallback(self._cbTestFileAlias, tmpfile)
 
     def _cbTestFileAlias(self, ignored, tmpfile):
-        lines = file(tmpfile).readlines()
+        lines = open(tmpfile).readlines()
         self.assertEqual([L[:-1] for L in lines], self.lines)
 
 
@@ -1851,14 +1850,14 @@ class AddressAliasTests(unittest.TestCase):
     def test_resolve(self):
         """
         L{resolve} will look for additional aliases when an C{aliasmap}
-        dictionary is passed, and returns C{None} if none were found.
+        dictionary is passed, and returns L{None} if none were found.
         """
         self.assertEqual(self.alias.resolve({self.address: 'bar'}), None)
 
 
     def test_resolveWithoutAliasmap(self):
         """
-        L{resolve} returns C{None} when the alias could not be found in the
+        L{resolve} returns L{None} when the alias could not be found in the
         C{aliasmap} and no L{mail.smtp.User} with this alias exists either.
         """
         self.assertEqual(self.alias.resolve({}), None)
@@ -2012,7 +2011,7 @@ done""")
             m.lineReceived(l)
 
         def _cbProcessAlias(ignored):
-            lines = file('process.alias.out').readlines()
+            lines = open('process.alias.out').readlines()
             self.assertEqual([L[:-1] for L in lines], self.lines)
 
         return m.eomReceived().addCallback(_cbProcessAlias)
@@ -2342,7 +2341,7 @@ class _AttemptManagerTests(unittest.TestCase):
     @type reactor: L{MemoryReactorClock}
     @ivar reactor: The reactor used for test purposes.
 
-    @type eventLog: L{types.NoneType} or L{dict} of L{bytes} -> L{object}
+    @type eventLog: L{None} or L{dict} of L{bytes} -> L{object}
     @ivar eventLog: Information about the last informational log message
         generated or none if no log message has been generated.
 
@@ -2390,10 +2389,10 @@ class _AttemptManagerTests(unittest.TestCase):
         self.noisyMessage = os.path.join(self.tmpdir, noisyBaseName)
         self.quietMessage = os.path.join(self.tmpdir, quietBaseName)
 
-        message = file(self.noisyMessage+'-D', "w")
+        message = open(self.noisyMessage+'-D', "w")
         message.close()
 
-        message = file(self.quietMessage+'-D', "w")
+        message = open(self.quietMessage+'-D', "w")
         message.close()
 
         self.noisyAttemptMgr.manager.managed['noisyRelayer'] = [
@@ -2401,11 +2400,11 @@ class _AttemptManagerTests(unittest.TestCase):
         self.quietAttemptMgr.manager.managed['quietRelayer'] = [
                 quietBaseName]
 
-        envelope = file(self.noisyMessage+'-H', 'w')
+        envelope = open(self.noisyMessage+'-H', 'w')
         pickle.dump(['from-noisy@domain', 'to-noisy@domain'], envelope)
         envelope.close()
 
-        envelope = file(self.quietMessage+'-H', 'w')
+        envelope = open(self.quietMessage+'-H', 'w')
         pickle.dump(['from-quiet@domain', 'to-quiet@domain'], envelope)
         envelope.close()
 

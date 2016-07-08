@@ -307,13 +307,13 @@ class BananaTests(BananaTestBase):
     def test_oversizedList(self):
         data = '\x02\x01\x01\x01\x01\x80'
         # list(size=0x0101010102, about 4.3e9)
-        self.failUnlessRaises(banana.BananaError, self.feed, data)
+        self.assertRaises(banana.BananaError, self.feed, data)
 
 
     def test_oversizedString(self):
         data = '\x02\x01\x01\x01\x01\x82'
         # string(size=0x0101010102, about 4.3e9)
-        self.failUnlessRaises(banana.BananaError, self.feed, data)
+        self.assertRaises(banana.BananaError, self.feed, data)
 
 
     def test_crashString(self):

@@ -1,6 +1,6 @@
 """A process that reads from stdin and out using Twisted."""
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment

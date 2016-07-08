@@ -92,8 +92,8 @@ class WriteDescriptorTests(SynchronousTestCase):
         """
         When L{FileDescriptor.writeSomeData} returns C{0} to indicate no more
         data can be written immediately, L{FileDescriptor.doWrite} returns
-        C{None}.
+        L{None}.
         """
         descriptor = MemoryFile()
         descriptor.write(b"hello, world")
-        self.assertIs(None, descriptor.doWrite())
+        self.assertIsNone(descriptor.doWrite())

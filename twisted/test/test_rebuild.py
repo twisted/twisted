@@ -121,7 +121,7 @@ class RebuildTests(unittest.TestCase):
 
         # Test that a duplicate registerAdapter is not allowed
         from twisted.python import components
-        self.failUnlessRaises(ValueError, components.registerAdapter,
+        self.assertRaises(ValueError, components.registerAdapter,
                               crash_test_dummy.XA, crash_test_dummy.X,
                               crash_test_dummy.IX)
 
@@ -158,7 +158,7 @@ class RebuildTests(unittest.TestCase):
             unhashableObject = None
         self.addCleanup(_cleanup)
         rebuild.rebuild(rebuild)
-        self.assertEqual(unhashableObject.hashCalled, True)
+        self.assertTrue(unhashableObject.hashCalled)
 
 
 
@@ -190,7 +190,7 @@ class NewStyleTests(unittest.TestCase):
         exec(classDefinition, self.m.__dict__)
         rebuild.updateInstance(inst)
         self.assertEqual(inst.a, 7)
-        self.assertIdentical(type(inst), self.m.SlottedClass)
+        self.assertIs(type(inst), self.m.SlottedClass)
 
 
     def test_typeSubclass(self):
@@ -207,7 +207,7 @@ class NewStyleTests(unittest.TestCase):
         exec(classDefinition, self.m.__dict__)
         rebuild.updateInstance(inst)
         self.assertEqual(inst[0], 2)
-        self.assertIdentical(type(inst), self.m.ListSubclass)
+        self.assertIs(type(inst), self.m.ListSubclass)
 
 
     def test_instanceSlots(self):

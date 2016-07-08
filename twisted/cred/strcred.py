@@ -52,7 +52,7 @@ class ICheckerFactory(Interface):
 
     def generateChecker(argstring):
         """
-        Return an L{ICredentialChecker} provider using the supplied
+        Return an L{twisted.cred.checkers.ICredentialsChecker} provider using the supplied
         argument string.
         """
 

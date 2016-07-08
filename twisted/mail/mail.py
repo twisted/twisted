@@ -20,7 +20,7 @@ from twisted.mail import protocols, smtp
 
 # System imports
 import os
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 
 class DomainWithDefaultDict:
@@ -83,7 +83,7 @@ class DomainWithDefaultDict:
         @type keys: iterable of L{bytes}
         @param keys: Domain names to serve as keys in the new dictionary.
 
-        @type value: L{NoneType <types.NoneType>} or L{IDomain} provider
+        @type value: L{None} or L{IDomain} provider
         @param value: A domain object to serve as the value for all new keys
             in the dictionary.
 
@@ -122,7 +122,7 @@ class DomainWithDefaultDict:
         @type name: L{bytes}
         @param name: A domain name.
 
-        @rtype: L{IDomain} provider or L{NoneType <types.NoneType>}
+        @rtype: L{IDomain} provider or L{None}
         @return: A domain object.
         """
         return self.domains.get(name, self.default)
@@ -200,11 +200,11 @@ class DomainWithDefaultDict:
         @type key: L{bytes}
         @param key: A domain name.
 
-        @type default: L{IDomain} provider or L{NoneType <types.NoneType>}
+        @type default: L{IDomain} provider or L{None}
         @param default: A domain object to be returned if the domain name is
             not in this dictionary.
 
-        @rtype: L{IDomain} provider or L{NoneType <types.NoneType>}
+        @rtype: L{IDomain} provider or L{None}
         @return: The domain object associated with the domain name if it is in
             this dictionary.  Otherwise, the default value.
         """
@@ -231,7 +231,7 @@ class DomainWithDefaultDict:
         failing to iterate over all the domain name/domain object pairs.
 
         @rtype: iterator over 2-L{tuple} of (E{1}) L{bytes},
-            (E{2}) L{IDomain} provider or L{NoneType <types.NoneType>}
+            (E{2}) L{IDomain} provider or L{None}
         @return: An iterator over the domain name/domain object pairs.
         """
         return self.domains.iteritems()
@@ -260,7 +260,7 @@ class DomainWithDefaultDict:
         or failing to iterate over all the domain objects.
 
         @rtype: iterator over L{IDomain} provider or
-            L{NoneType <types.NoneType>}
+            L{None}
         @return: An iterator over the domain objects.
         """
         return self.domains.itervalues()
@@ -281,7 +281,7 @@ class DomainWithDefaultDict:
         """
         Return a list of all domain objects in this dictionary.
 
-        @rtype: L{list} of L{IDomain} provider or L{NoneType <types.NoneType>}
+        @rtype: L{list} of L{IDomain} provider or L{None}
         @return: The domain objects in this dictionary.
         """
         return self.domains.values()
@@ -293,7 +293,7 @@ class DomainWithDefaultDict:
         dictionary.
 
         @rtype: L{list} of 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{IDomain}
-            provider or L{NoneType <types.NoneType>}
+            provider or L{None}
         @return: Domain name/domain object pairs in this dictionary.
         """
         return self.domains.items()
@@ -305,7 +305,7 @@ class DomainWithDefaultDict:
         return it as a tuple.
 
         @rtype: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{IDomain} provider or
-            L{NoneType <types.NoneType>}
+            L{None}
         @return: A domain name/domain object pair.
 
         @raise KeyError: When this dictionary is empty.
@@ -322,10 +322,10 @@ class DomainWithDefaultDict:
         dictionary, its value will be overwritten.
 
         @type other: L{dict} of L{bytes} -> L{IDomain} provider and/or
-            L{bytes} -> L{NoneType <types.NoneType>}
+            L{bytes} -> L{None}
         @param other: Another dictionary of domain name/domain object pairs.
 
-        @rtype: L{NoneType <types.NoneType>}
+        @rtype: L{None}
         @return: None.
         """
         return self.domains.update(other)
@@ -335,7 +335,7 @@ class DomainWithDefaultDict:
         """
         Remove all items from this dictionary.
 
-        @rtype: L{NoneType <types.NoneType>}
+        @rtype: L{None}
         @return: None.
         """
         return self.domains.clear()
@@ -353,7 +353,7 @@ class DomainWithDefaultDict:
         @type default: L{IDomain} provider
         @param default: A domain object.
 
-        @rtype: L{IDomain} provider or L{NoneType <types.NoneType>}
+        @rtype: L{IDomain} provider or L{None}
         @return: The domain object associated with the domain name.
         """
         return self.domains.setdefault(key, default)
@@ -423,7 +423,7 @@ class IAliasableDomain(IDomain):
         @type user: L{User}
         @param user: A user.
 
-        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @type memo: L{None} or L{dict} of L{AliasBase}
         @param memo: A record of the addresses already considered while
             resolving aliases.  The default value should be used by all
             external code.
@@ -439,14 +439,13 @@ class IAliasableDomain(IDomain):
 
 
 
+@implementer(IDomain)
 class BounceDomain:
     """
     A domain with no users.
 
     This can be used to block off a domain.
     """
-    implements(IDomain)
-
     def exists(self, user):
         """
         Raise an exception to indicate that the user does not exist in this
@@ -501,6 +500,7 @@ class BounceDomain:
 
 
 
+@implementer(smtp.IMessage)
 class FileMessage:
     """
     A message receiver which delivers a message to a file.
@@ -509,8 +509,6 @@ class FileMessage:
     @ivar name: See L{__init__}.
     @ivar finalName: See L{__init__}.
     """
-    implements(smtp.IMessage)
-
     def __init__(self, fp, name, finalName):
         """
         @type fp: file-like object
@@ -565,7 +563,7 @@ class MailService(service.MultiService):
     """
     An email service.
 
-    @type queue: L{Queue} or L{NoneType <types.NoneType>}
+    @type queue: L{Queue} or L{None}
     @ivar queue: A queue for outgoing messages.
 
     @type domains: L{dict} of L{bytes} -> L{IDomain} provider
@@ -574,7 +572,7 @@ class MailService(service.MultiService):
     @type portals: L{dict} of L{bytes} -> L{Portal}
     @ivar portals: A mapping of domain name to authentication portal.
 
-    @type aliases: L{NoneType <types.NoneType>} or L{dict} of
+    @type aliases: L{None} or L{dict} of
         L{bytes} -> L{IAlias} provider
     @ivar aliases: A mapping of domain name to alias.
 
@@ -669,7 +667,7 @@ class MailService(service.MultiService):
         @type avatarId: L{bytes}
         @param avatarId: A string which identifies an authenticated user.
 
-        @type mind: L{NoneType <types.NoneType>}
+        @type mind: L{None}
         @param mind: Unused.
 
         @type interfaces: n-L{tuple} of C{zope.interface.Interface}

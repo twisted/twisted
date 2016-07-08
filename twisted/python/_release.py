@@ -37,6 +37,7 @@ intersphinxURLs = [
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "https://python-hyper.org/h2/en/stable/objects.inv",
     "https://python-hyper.org/priority/en/stable/objects.inv",
+    "https://docs.zope.org/zope.interface/objects.inv",
 ]
 
 
@@ -487,7 +488,7 @@ class NoDocumentsFound(Exception):
 class APIBuilder(object):
     """
     Generate API documentation from source files using
-    U{pydoctor<http://codespeak.net/~mwh/pydoctor/>}.  This requires
+    U{pydoctor<https://github.com/twisted/pydoctor>}.  This requires
     pydoctor to be installed and usable.
     """
     def build(self, projectName, projectURL, sourceURL, packagePath,
@@ -526,7 +527,7 @@ class APIBuilder(object):
         main(
             ["--project-name", projectName,
              "--project-url", projectURL,
-             "--system-class", "pydoctor.twistedmodel.TwistedSystem",
+             "--system-class", "twisted.python._pydoctor.TwistedSystem",
              "--project-base-dir", packagePath.parent().path,
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
@@ -592,8 +593,8 @@ class NewsBuilder(object):
             for news entries.
 
         @param ticketType: The type of news entries to search for.  One of
-            L{NewsBuilder._FEATURE}, L{NewsBuilder._BUGFIX},
-            L{NewsBuilder._REMOVAL}, or L{NewsBuilder._MISC}.
+            C{NewsBuilder._FEATURE}, C{NewsBuilder._BUGFIX},
+            C{NewsBuilder._REMOVAL}, or C{NewsBuilder._MISC}.
 
         @return: A C{list} of two-tuples.  The first element is the ticket
             number as an C{int}.  The second element of each tuple is the

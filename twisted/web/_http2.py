@@ -271,7 +271,8 @@ class H2Connection(Protocol):
     def _sendPrioritisedData(self, *args):
         """
         The data sending loop. This function repeatedly calls itself, either
-        from L{Deferred}s or from L{twisted.internet.reactor.callLater}.
+        from L{Deferred}s or from
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
 
         This function sends data on streams according to the rules of HTTP/2
         priority. It ensures that the data from each stream is interleved
@@ -576,8 +577,12 @@ class H2Connection(Protocol):
         streamID = event.stream_id
 
         if streamID:
-            # Update applies only to a specific stream. If we don't have the
-            # stream, that's ok: just ignore it.
+            if not self._streamIsActive(streamID):
+                # We may have already cleaned up our stream state, making this
+                # a late WINDOW_UPDATE frame. That's fine: the update is
+                # unnecessary but benign. We'll ignore it.
+                return
+
             self.priority.unblock(streamID)
             self.streams[streamID].windowUpdated()
         else:
@@ -683,6 +688,20 @@ class H2Connection(Protocol):
         stream = self.streams[streamID]
         stream.connectionLost("Stream reset")
         self._requestDone(streamID)
+
+
+    def _streamIsActive(self, streamID):
+        """
+        Checks whether Twisted has still got state for a given stream and so
+        can process events for that stream.
+
+        @param streamID: The ID of the stream that needs processing.
+        @type streamID: L{int}
+
+        @return: Whether the stream still has state allocated.
+        @rtype: L{bool}
+        """
+        return streamID in self.streams
 
 
 
@@ -1059,7 +1078,7 @@ class H2Stream(object):
 
     def unregisterProducer(self):
         """
-        @see L{IConsumer.unregisterProducer}
+        @see: L{IConsumer.unregisterProducer}
         """
         # When the producer is unregistered, we're done.
         if self.producer is not None and not self.hasStreamingProducer:
@@ -1073,7 +1092,7 @@ class H2Stream(object):
     # Implementation: IPushProducer
     def stopProducing(self):
         """
-        @see L{IProducer.stopProducing}
+        @see: L{IProducer.stopProducing}
         """
         self.producing = False
         self.abortConnection()
@@ -1081,14 +1100,14 @@ class H2Stream(object):
 
     def pauseProducing(self):
         """
-        @see L{IPushProducer.pauseProducing}
+        @see: L{IPushProducer.pauseProducing}
         """
         self.producing = False
 
 
     def resumeProducing(self):
         """
-        @see L{IPushProducer.resumeProducing}
+        @see: L{IPushProducer.resumeProducing}
         """
         self.producing = True
         consumedLength = 0
