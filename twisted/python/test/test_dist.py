@@ -15,6 +15,7 @@ from setuptools.dist import Distribution
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
+from twisted.python.compat import _PY3
 from twisted.python.dist import (get_setup_args, ConditionalExtension,
                                  build_scripts_twisted, _EXTRAS_REQUIRE)
 from twisted.python.filepath import FilePath
@@ -102,12 +103,13 @@ class OptionalDependenciesTests(TestCase):
         the tools required for Twisted development.
         """
         deps = _EXTRAS_REQUIRE['dev']
-        self.assertIn('twistedchecker >= 0.4.0', deps)
         self.assertIn('pyflakes >= 1.0.0', deps)
         self.assertIn('twisted-dev-tools >= 0.0.2', deps)
         self.assertIn('python-subunit', deps)
         self.assertIn('sphinx >= 1.3.1', deps)
-        self.assertIn('pydoctor >= 15.0.0', deps)
+        if not _PY3:
+            self.assertIn('twistedchecker >= 0.4.0', deps)
+            self.assertIn('pydoctor >= 15.0.0', deps)
 
 
     def test_extrasRequiresTlsDeps(self):
@@ -266,9 +268,9 @@ class GetScriptsTests(TestCase):
         basedir = FilePath(self.mktemp())
         bin = basedir.child('bin')
         bin.makedirs()
-        bin.child('_preamble.py').setContent('some preamble code\n')
-        bin.child('_preamble.pyc').setContent('some preamble byte code\n')
-        bin.child('program').setContent('good program code\n')
+        bin.child('_preamble.py').setContent(b'some preamble code\n')
+        bin.child('_preamble.pyc').setContent(b'some preamble byte code\n')
+        bin.child('program').setContent(b'good program code\n')
         scripts = dist.getScripts(basedir=basedir.path)
         self.assertEqual(scripts, [bin.child('program').path])
 
@@ -299,10 +301,10 @@ class GetScriptsTests(TestCase):
         bindir = basedir.child("bin")
         bindir.createDirectory()
         included = bindir.child("included")
-        included.setContent("yay included")
+        included.setContent(b"yay included")
         subdir = bindir.child("subdir")
         subdir.createDirectory()
-        subdir.child("not-included").setContent("not included")
+        subdir.child("not-included").setContent(b"not included")
 
         scripts = dist.getScripts(basedir=basedir.path)
         self.assertEqual(scripts, [included.path])

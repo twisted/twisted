@@ -1245,7 +1245,7 @@ class FileSenderTests(unittest.TestCase):
         sender.resumeProducing()
         # resumeProducing only finishes after trying to read at eof
         sender.resumeProducing()
-        self.assertEqual(consumer.producer, None)
+        self.assertIsNone(consumer.producer)
 
         self.assertEqual(b"t", self.successResultOf(d))
         self.assertEqual(b"Test content", consumer.value())

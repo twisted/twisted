@@ -740,6 +740,13 @@ def _coercedUnicode(s):
 
 
 
+if _PY3:
+    unichr = chr
+else:
+    unichr = unichr
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -775,4 +782,5 @@ __all__ = [
     "_bytesChr",
     "_coercedUnicode",
     "intern",
+    "unichr",
 ]

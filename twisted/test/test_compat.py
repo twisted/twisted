@@ -16,8 +16,7 @@ from twisted.python.compat import (
     reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
     networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
     NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
-    _coercedUnicode
-
+    _coercedUnicode, unichr,
 )
 from twisted.python.filepath import FilePath
 
@@ -847,3 +846,16 @@ class CoercedUnicodeTests(unittest.TestCase):
     if _PY3:
         test_bytesNonASCII.skip = (
             "Bytes behavior of _coercedUnicode only provided on Python 2.")
+
+
+
+class UnichrTests(unittest.TestCase):
+    """
+    Tests for L{unichr}.
+    """
+
+    def test_unichr(self):
+        """
+        unichar exists and returns a unicode string with the given code point.
+        """
+        self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")

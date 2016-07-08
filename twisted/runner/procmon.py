@@ -190,7 +190,7 @@ class ProcessMonitor(service.Service):
     def connectionLost(self, name):
         """
         Called when a monitored processes exits. If
-        L{ProcessMonitor.running} is C{True} (ie the service is started), the
+        L{service.IService.running} is L{True} (ie the service is started), the
         process will be restarted.
         If the process had been running for more than
         L{ProcessMonitor.threshold} seconds it will be restarted immediately.

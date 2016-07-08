@@ -34,7 +34,7 @@ class ICredentials(Interface):
     I check credentials.
 
     Implementors _must_ specify which sub-interfaces of ICredentials
-    to which it conforms, using L{zope.interface.implementer}.
+    to which it conforms, using L{zope.interface.declarations.implementer}.
     """
 
 
