@@ -249,7 +249,7 @@ class INotify(FileDescriptor, object):
             wd, mask, cookie, size = struct.unpack("=LLLL", self._buffer[0:16])
 
             if size:
-                nameBytes = self._buffer[16:16 + size].rstrip('\0')
+                nameBytes = self._buffer[16:16 + size].rstrip(b'\0')
                 name = nameBytes.decode()
             else:
                 name = None
