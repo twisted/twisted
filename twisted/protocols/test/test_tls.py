@@ -226,18 +226,15 @@ def handshakingClientAndServer(clientGreetingData=None,
     @return: 3-tuple of client, server, L{twisted.test.iosim.IOPump}
     """
     authCert, serverCert = certificatesForAuthorityAndServer()
-    @ClientFactory.forProtocol
     @implementer(IHandshakeListener)
-    class Client(Protocol, object):
+    class Client(AccumulatingProtocol, object):
         handshook = False
         peerAfterHandshake = None
 
         def connectionMade(self):
+            super(Client, self).connectionMade()
             if clientGreetingData is not None:
                 self.transport.write(clientGreetingData)
-
-        def dataReceived(self, data):
-            self.applicationData.append(data)
 
         def handshakeCompleted(self):
             self.handshook = True
@@ -245,24 +242,26 @@ def handshakingClientAndServer(clientGreetingData=None,
             if clientAbortAfterHandshake:
                 self.transport.abortConnection()
 
-    @ServerFactory.forProtocol
+        def connectionLost(self, reason):
+            pass
+
     @implementer(IHandshakeListener)
-    class Server(Protocol, object):
+    class Server(AccumulatingProtocol, object):
         handshaked = False
-        applicationData = []
         def handshakeCompleted(self):
             self.handshaked = True
 
-        def dataReceived(self, data):
-            self.applicationData.append(data)
+        def connectionLost(self, reason):
+            pass
 
     clientF = TLSMemoryBIOFactory(
         optionsForClientTLS(u"example.com", trustRoot=authCert),
         isClient=True,
-        wrappedFactory=Client
+        wrappedFactory=ClientFactory.forProtocol(lambda: Client(999999))
     )
     serverF = TLSMemoryBIOFactory(
-        serverCert.options(), isClient=False, wrappedFactory=Server
+        serverCert.options(), isClient=False,
+        wrappedFactory=ServerFactory.forProtocol(lambda: Server(999999))
     )
     client, server, pump = connectedServerAndClient(
         lambda: serverF.buildProtocol(None),
@@ -308,7 +307,7 @@ class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
         client, server, pump = handshakingClientAndServer(b"untrustworthy",
                                                           True)
         pump.flush()
-        self.assertEqual(server.wrappedProtocol.applicationData, [])
+        self.assertEqual(server.wrappedProtocol.received, [])
 
 
 
