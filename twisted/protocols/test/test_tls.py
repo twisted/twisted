@@ -145,8 +145,7 @@ def buildTLSProtocol(server=False, transport=None, fakeConnection=None):
         class HardCodedConnection(object):
             def clientConnectionForTLS(self, tlsProtocol):
                 return fakeConnection
-            def serverConnectionForTLS(self, tlsProtocol):
-                return fakeConnection
+            serverConnectionForTLS = clientConnectionForTLS
         contextFactory = HardCodedConnection()
     else:
         if server:
