@@ -530,10 +530,11 @@ class APIBuilder(object):
         originalTemplatefile = util.templatefile
 
         def templatefile(filename):
+
             if filename in ["summary.html", "index.html", "common.html"]:
                 twistedDir = FilePath(twisted.__file__).parent().parent()
                 templatesDir = twistedDir.child("admin").child("templates")
-                return .child(filename).path
+                return templatesDir.child(filename).path
             else:
                 return originalTemplatefile(filename)
 

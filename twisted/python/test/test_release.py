@@ -639,7 +639,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertTrue(
             indexPath.exists(),
             "API index %r did not exist." % (outputPath.path,))
-        print(indexPath.getContent(), file=sys.__stdout__)
         self.assertIn(
             '<a href="%s">%s</a>' % (projectURL, projectName),
             indexPath.getContent(),
