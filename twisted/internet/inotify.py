@@ -147,7 +147,7 @@ class INotify(FileDescriptor, object):
     The INotify file descriptor, it basically does everything related
     to INotify, from reading to notifying watch points.
 
-    @ivar _buffer: a L{str} containing the data read from the inotify fd.
+    @ivar _buffer: a L{bytes} containing the data read from the inotify fd.
 
     @ivar _watchpoints: a L{dict} that maps from inotify watch ids to
         watchpoints objects
@@ -174,7 +174,7 @@ class INotify(FileDescriptor, object):
         self.connected = 1
         self._writeDisconnected = True
 
-        self._buffer = ''
+        self._buffer = b''
         self._watchpoints = {}
         self._watchpaths = {}
 
@@ -249,7 +249,8 @@ class INotify(FileDescriptor, object):
             wd, mask, cookie, size = struct.unpack("=LLLL", self._buffer[0:16])
 
             if size:
-                name = self._buffer[16:16 + size].rstrip('\0')
+                nameBytes = self._buffer[16:16 + size].rstrip('\0')
+                name = nameBytes.decode()
             else:
                 name = None
 
