@@ -531,7 +531,7 @@ def _wrappedPdb():
     for path in ('.pdbrc', 'pdbrc'):
         if os.path.exists(path):
             try:
-                rcFile = file(path, 'r')
+                rcFile = open(path, 'r')
             except IOError:
                 sys.exc_clear()
             else:

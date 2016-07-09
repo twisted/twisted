@@ -26,7 +26,7 @@ class OptionsTests(TestCase):
     """
     def setUp(self):
         self.aliasFilename = self.mktemp()
-        aliasFile = file(self.aliasFilename, 'w')
+        aliasFile = open(self.aliasFilename, 'w')
         aliasFile.write('someuser:\tdifferentuser\n')
         aliasFile.close()
 

@@ -240,7 +240,7 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        for line in file(self.filename):
+        for line in open(self.filename):
             user, status = line.split(':', 1)
             user = user.strip()
             status = status.strip()
@@ -274,7 +274,7 @@ class LocalFingerService(service.Service):
         except KeyError:
             return defer.succeed("No such user")
         try:
-            f = file(os.path.join(entry[5],'.plan'))
+            f = open(os.path.join(entry[5],'.plan'))
         except (IOError, OSError):
             return defer.succeed("No such user")
         data = f.read()

@@ -90,7 +90,7 @@ def makeService(options):
     """
     Create a manhole server service.
 
-    @type options: C{dict}
+    @type options: L{dict}
     @param options: A mapping describing the configuration of
     the desired service.  Recognized key/value pairs are::
 

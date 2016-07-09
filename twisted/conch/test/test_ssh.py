@@ -360,7 +360,7 @@ if cryptography is not None and pyasn1 is not None:
             diffie-hellman-group-exchange-sha1 key exchange.
 
             @return: The primes and generators.
-            @rtype: C{dict} mapping the key size to a C{list} of
+            @rtype: L{dict} mapping the key size to a C{list} of
                 C{(generator, prime)} tupple.
             """
             # In these tests, we hardwire the prime values to those defined by

@@ -1881,6 +1881,115 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             "Python 3 has no separate long integer type.")
 
 
+    def test_setLastModifiedNeverSet(self):
+        """
+        When no previous value was set and no 'if-modified-since' value was
+        requested, L{http.Request.setLastModified} takes a timestamp in seconds
+        since the epoch and sets the request's lastModified attribute.
+        """
+        req = http.Request(DummyChannel(), False)
+
+        req.setLastModified(42)
+
+        self.assertEqual(req.lastModified, 42)
+
+
+    def test_setLastModifiedUpdate(self):
+        """
+        If the supplied timestamp is later than the lastModified attribute's
+        value, L{http.Request.setLastModified} updates the lastModifed
+        attribute.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.setLastModified(0)
+
+        req.setLastModified(1)
+
+        self.assertEqual(req.lastModified, 1)
+
+
+    def test_setLastModifiedIgnore(self):
+        """
+        If the supplied timestamp occurs earlier than the current lastModified
+        attribute, L{http.Request.setLastModified} ignores it.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.setLastModified(1)
+
+        req.setLastModified(0)
+
+        self.assertEqual(req.lastModified, 1)
+
+
+    def test_setLastModifiedCached(self):
+        """
+        If the resource is older than the if-modified-since date in the request
+        header, L{http.Request.setLastModified} returns L{http.CACHED}.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.requestHeaders.setRawHeaders(
+            networkString('if-modified-since'),
+                          [b'02 Jan 1970 00:00:00 GMT']
+            )
+
+        result = req.setLastModified(42)
+
+        self.assertEqual(result, http.CACHED)
+
+
+    def test_setLastModifiedNotCached(self):
+        """
+        If the resource is newer than the if-modified-since date in the request
+        header, L{http.Request.setLastModified} returns None
+        """
+        req = http.Request(DummyChannel(), False)
+        req.requestHeaders.setRawHeaders(
+            networkString('if-modified-since'),
+                          [b'01 Jan 1970 00:00:00 GMT']
+            )
+
+        result = req.setLastModified(1000000)
+
+        self.assertEqual(result, None)
+
+
+    def test_setLastModifiedTwiceNotCached(self):
+        """
+        When L{http.Request.setLastModified} is called multiple times, the
+        highest supplied value is honored. If that value is higher than the
+        if-modified-since date in the request header, the method returns None.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.requestHeaders.setRawHeaders(
+            networkString('if-modified-since'),
+                          [b'01 Jan 1970 00:00:01 GMT']
+            )
+        req.setLastModified(1000000)
+
+        result = req.setLastModified(0)
+
+        self.assertEqual(result, None)
+
+
+    def test_setLastModifiedTwiceCached(self):
+        """
+        When L{http.Request.setLastModified} is called multiple times, the
+        highest supplied value is honored. If that value is lower than the
+        if-modified-since date in the request header, the method returns
+        L{http.CACHED}.
+        """
+        req = http.Request(DummyChannel(), False)
+        req.requestHeaders.setRawHeaders(
+            networkString('if-modified-since'),
+                          [b'01 Jan 1999 00:00:01 GMT']
+            )
+        req.setLastModified(1)
+
+        result = req.setLastModified(0)
+
+        self.assertEqual(result, http.CACHED)
+
+
     def test_setHost(self):
         """
         L{http.Request.setHost} sets the value of the host request header.
@@ -2446,6 +2555,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         message.
         """
         factory = http.HTTPFactory()
+        factory.timeOut = None
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True
         factory.startFactory()
@@ -2468,6 +2578,33 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # A log message should be written out
         self.assertIn('sometime "GET /path HTTP/1.1"',
                       factory.logFile.getvalue())
+
+
+    def test_requestBodyTimeoutFromFactory(self):
+        """
+        L{HTTPChannel} timeouts whenever data from a request body is not
+        delivered to it in time, even when it gets built from a L{HTTPFactory}.
+        """
+        clock = Clock()
+        factory = http.HTTPFactory(timeout=100, reactor=clock)
+        factory.startFactory()
+        protocol = factory.buildProtocol(None)
+        transport = StringTransport()
+
+        # Confirm that the timeout is what we think it is.
+        self.assertEqual(protocol.timeOut, 100)
+
+        # This is a terrible violation of the abstraction later of
+        # _genericHTTPChannelProtocol, but we need to do it because
+        # policies.TimeoutMixin doesn't accept a reactor on the object.
+        # See https://twistedmatrix.com/trac/ticket/8488
+        protocol._channel.callLater = clock.callLater
+        protocol.makeConnection(transport)
+        protocol.dataReceived(b'POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        clock.advance(99)
+        self.assertFalse(transport.disconnecting)
+        clock.advance(2)
+        self.assertTrue(transport.disconnecting)
 
 
 

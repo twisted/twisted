@@ -103,7 +103,7 @@ class SendmailOptions(Options):
             raise UsageError(
                 "Must specify a message file to send with --message")
         try:
-            self['message'] = file(self['message'])
+            self['message'] = open(self['message'])
         except Exception as e:
             raise UsageError(e)
 
