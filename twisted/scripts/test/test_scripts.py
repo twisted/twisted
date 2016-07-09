@@ -37,8 +37,8 @@ def outputFromPythonScript(script, *args):
         from C{stderr}.
     @rtype: L{bytes}
     """
-    nullInput = file(devnull, "rb")
-    nullError = file(devnull, "wb")
+    nullInput = open(devnull, "rb")
+    nullError = open(devnull, "wb")
     stdout = Popen([executable, script.path] + list(args),
                    stdout=PIPE, stderr=nullError, stdin=nullInput).stdout.read()
     nullInput.close()
