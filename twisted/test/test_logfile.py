@@ -260,7 +260,7 @@ class LogFileTests(unittest.TestCase):
         Test the default permission of the log file: if the file exist, it
         should keep the permission.
         """
-        with open(self.path, "wb") as f:
+        with open(self.path, "wb"):
             os.chmod(self.path, 0o707)
             currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         log1 = logfile.LogFile(self.name, self.dir)
