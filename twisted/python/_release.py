@@ -454,9 +454,8 @@ def replaceProjectVersion(filename, newversion):
     """
     # XXX - this should be moved to Project and renamed to writeVersionFile.
     # jml, 2007-11-15.
-    f = open(filename, 'w')
-    f.write(generateVersionFileData(newversion))
-    f.close()
+    with open(filename, 'w') as f:
+        f.write(generateVersionFileData(newversion))
 
 
 
@@ -465,14 +464,12 @@ def replaceInFile(filename, oldToNew):
     I replace the text `oldstr' with `newstr' in `filename' using science.
     """
     os.rename(filename, filename + '.bak')
-    f = open(filename + '.bak')
-    d = f.read()
-    f.close()
+    with open(filename + '.bak') as f:
+        d = f.read()
     for k, v in oldToNew.items():
         d = d.replace(k, v)
-    f = open(filename + '.new', 'w')
-    f.write(d)
-    f.close()
+    with open(filename + '.new', 'w') as f:
+        f.write(d)
     os.rename(filename + '.new', filename)
     os.unlink(filename + '.bak')
 

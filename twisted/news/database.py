@@ -461,9 +461,8 @@ class PickleStorage(_ModerationMixin):
 
 
     def flush(self):
-        f = open(self.datafile, 'w')
-        pickle.dump(self.db, f)
-        f.close()
+        with open(self.datafile, 'w') as f:
+            pickle.dump(self.db, f)
 
 
     def load(self, filename, groups = None, moderators = ()):

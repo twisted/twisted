@@ -33,13 +33,12 @@ class DBOptions(usage.Options):
         except ImportError:
             log.msg("Warning: Cannot import %s" % (self['module'],))
         
-        f = open(self['schema'], 'w')
-        f.write(
-            database.NewsStorageAugmentation.schema + '\n' +
-            database.makeGroupSQL(self['groups']) + '\n' +
-            database.makeOverviewSQL()
-        )
-        f.close()
+        with open(self['schema'], 'w') as f:
+            f.write(
+                database.NewsStorageAugmentation.schema + '\n' +
+                database.makeGroupSQL(self['groups']) + '\n' +
+                database.makeOverviewSQL()
+            )
         
         info = {
             'host': self['dbhost'], 'user': self['dbuser'],

@@ -315,9 +315,9 @@ class FileWrapper:
         except:
             return defer.fail(failure.Failure())
 
-        f.write(self.fp.read())
-        self.fp.close()
-        f.close()
+        with f:
+            f.write(self.fp.read())
+            self.fp.close()
 
         return defer.succeed(self.finalname)
 
