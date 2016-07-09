@@ -449,7 +449,8 @@ class Queue:
         @return: A list containing the origination and destination addresses
             for the message.
         """
-        return pickle.load(self.getEnvelopeFile(message))
+        with self.getEnvelopeFile(message) as f:
+            return pickle.load(f)
 
 
     def getEnvelopeFile(self, message):

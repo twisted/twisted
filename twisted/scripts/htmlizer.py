@@ -64,8 +64,8 @@ def run():
             'alternate': alternateLink % {'source': filename},
             'stylesheet': stylesheet
             })
-        htmlizer.filter(open(filename), output,
-                        htmlizer.SmallerHTMLWriter)
+        with open(filename) as f:
+            htmlizer.filter(f, output, htmlizer.SmallerHTMLWriter)
         output.write(footer)
     finally:
         output.close()

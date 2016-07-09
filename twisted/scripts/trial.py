@@ -535,7 +535,8 @@ def _wrappedPdb():
             except IOError:
                 sys.exc_clear()
             else:
-                dbg.rcLines.extend(rcFile.readlines())
+                with rcFile:
+                    dbg.rcLines.extend(rcFile.readlines())
     return dbg
 
 

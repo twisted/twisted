@@ -880,8 +880,9 @@ class ExpatElementStream:
 ##         self.done = 1
 
 ##     def parse(self, filename):
-##         for l in open(filename).readlines():
-##             self.parser.Parse(l)
+##         with open(filename) as f:
+##             for l in f.readlines():
+##                 self.parser.Parse(l)
 ##         assert self.done == 1
 ##         return self.document
 

@@ -221,7 +221,8 @@ class FileMessageTests(unittest.TestCase):
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.eomReceived()
-        self.assertEqual(open(self.final).read(), contents)
+        with open(self.final) as f:
+            self.assertEqual(f.read(), contents)
 
     def testInterrupted(self):
         contents = "first line\nsecond line\n"
@@ -1789,7 +1790,8 @@ class AliasTests(unittest.TestCase):
         return m.eomReceived().addCallback(self._cbTestFileAlias, tmpfile)
 
     def _cbTestFileAlias(self, ignored, tmpfile):
-        lines = open(tmpfile).readlines()
+        with open(tmpfile) as f:
+            lines = f.readlines()
         self.assertEqual([L[:-1] for L in lines], self.lines)
 
 
@@ -2011,7 +2013,8 @@ done""")
             m.lineReceived(l)
 
         def _cbProcessAlias(ignored):
-            lines = open('process.alias.out').readlines()
+            with open('process.alias.out') as f:
+                lines = f.readlines()
             self.assertEqual([L[:-1] for L in lines], self.lines)
 
         return m.eomReceived().addCallback(_cbProcessAlias)

@@ -719,22 +719,22 @@ class NewsBuilder(object):
         misc = self._findChanges(path, self._MISC)
 
         oldNews = output.getContent()
-        newNews = output.sibling('NEWS.new').open('w')
-        if oldNews.startswith(self._TICKET_HINT):
-            newNews.write(self._TICKET_HINT)
-            oldNews = oldNews[len(self._TICKET_HINT):]
+        with output.sibling('NEWS.new').open('w') as newNews:
+            if oldNews.startswith(self._TICKET_HINT):
+                newNews.write(self._TICKET_HINT)
+                oldNews = oldNews[len(self._TICKET_HINT):]
 
-        self._writeHeader(newNews, header)
-        if changes:
-            for (part, tickets) in changes:
-                self._writeSection(newNews, self._headings.get(part), tickets)
-        else:
-            newNews.write(self._NO_CHANGES)
+            self._writeHeader(newNews, header)
+            if changes:
+                for (part, tickets) in changes:
+                    self._writeSection(newNews, self._headings.get(part),
+                                       tickets)
+            else:
+                newNews.write(self._NO_CHANGES)
+                newNews.write('\n')
+            self._writeMisc(newNews, self._headings.get(self._MISC), misc)
             newNews.write('\n')
-        self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-        newNews.write('\n')
-        newNews.write(oldNews)
-        newNews.close()
+            newNews.write(oldNews)
         output.sibling('NEWS.new').moveTo(output)
 
 
