@@ -56,8 +56,7 @@ def run():
     else:
         stylesheet = ''
 
-    output = open(filename + '.html', 'w')
-    try:
+    with open(filename + '.html', 'w') as output:
         output.write(header % {
             'title': filename,
             'generator': 'htmlizer/%s' % (copyright.longversion,),
@@ -67,5 +66,3 @@ def run():
         with open(filename) as f:
             htmlizer.filter(f, output, htmlizer.SmallerHTMLWriter)
         output.write(footer)
-    finally:
-        output.close()
