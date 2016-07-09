@@ -1196,8 +1196,9 @@ class FilePathTests(AbstractFilePathTests):
         self.assertIn("b", f.mode)
         f.write(b"\n")
         f.close()
-        read = open(path.path, "rb").read()
-        self.assertEqual(read, b"\n")
+        with open(path.path, "rb") as fp:
+            read = fp.read()
+            self.assertEqual(read, b"\n")
 
 
     def testOpen(self):
