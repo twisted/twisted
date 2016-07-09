@@ -8,7 +8,6 @@ Test cases covering L{twisted.python.filepath}.
 from __future__ import division, absolute_import
 
 import os, time, pickle, errno, stat
-import contextlib
 from pprint import pformat
 
 from twisted.python.compat import _PY3, unicode
@@ -167,10 +166,10 @@ class AbstractFilePathTests(BytesTestCase):
         Make sure that we can read existent non-empty files.
         """
         f1 = self.path.child(b'file1')
-        with contextlib.closing(f1.open()) as f:
+        with f1.open() as f:
             self.assertEqual(f.read(), self.f1content)
         f2 = self.path.child(b'sub1').child(b'file2')
-        with contextlib.closing(f2.open()) as f:
+        with f2.open() as f:
             self.assertEqual(f.read(), self.f2content)
 
 
