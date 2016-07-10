@@ -11,9 +11,17 @@
 #
 target=$1
 
+# Since for unknown modules twistedchecker will return the same error, the
+# diff will fail to detect that we are trying to check an invalid path or
+# module.
+# This is why we check that the argument is a path and if not a path, it is
+# an importable module.
 if [ ! -d "$target" ]; then
-    >&2 echo "$target does not exists."
-    exit 1
+    python -c "import $target" 2> /dev/null
+    if [ $? -ne 0 ]; then
+        >&2 echo "$target does not exists as a path or as a module."
+        exit 1
+    fi
 fi
 
 mkdir -p build/trunk-checkout
