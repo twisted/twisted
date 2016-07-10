@@ -296,13 +296,18 @@ class ConchServerSetupMixin:
                   'kh_test']:
             if os.path.exists(f):
                 os.remove(f)
-        open('rsa_test','w').write(privateRSA_openssh)
-        open('rsa_test.pub','w').write(publicRSA_openssh)
-        open('dsa_test.pub','w').write(publicDSA_openssh)
-        open('dsa_test','w').write(privateDSA_openssh)
+        with open('rsa_test','w') as f:
+            f.write(privateRSA_openssh)
+        with open('rsa_test.pub','w') as f:
+            f.write(publicRSA_openssh)
+        with open('dsa_test.pub','w') as f:
+            f.write(publicDSA_openssh)
+        with open('dsa_test','w') as f:
+            f.write(privateDSA_openssh)
         os.chmod('dsa_test', 33152)
         os.chmod('rsa_test', 33152)
-        open('kh_test','w').write('127.0.0.1 '+publicRSA_openssh)
+        with open('kh_test','w') as f:
+            f.write('127.0.0.1 '+publicRSA_openssh)
 
 
     def _getFreePort(self):

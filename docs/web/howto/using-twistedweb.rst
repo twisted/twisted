@@ -859,8 +859,9 @@ use the full power of Python. Here are some simple examples:
     application = service.Application('web')
     serviceCollection = service.IServiceCollection(application)
     
-    for num in map(int, open("/etc/web/ports").read().split()):
-        serviceCollection.addCollection(internet.TCPServer(num, site))
+    with open("/etc/web/ports") as f:
+        for num in map(int, f.read().split()):
+            serviceCollection.addCollection(internet.TCPServer(num, site))
 
 
 

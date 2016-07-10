@@ -550,18 +550,19 @@ class UtilityTests(ExternalTempdirTestCase):
         value.
         """
         content = 'foo\nhey hey $VER\nbar\n'
-        outf = open('release.replace', 'w')
-        outf.write(content)
-        outf.close()
+        with open('release.replace', 'w') as outf:
+            outf.write(content)
 
         expected = content.replace('$VER', '2.0.0')
         replaceInFile('release.replace', {'$VER': '2.0.0'})
-        self.assertEqual(open('release.replace').read(), expected)
+        with open('release.replace') as f:
+            self.assertEqual(f.read(), expected)
 
 
         expected = expected.replace('2.0.0', '3.0.0')
         replaceInFile('release.replace', {'2.0.0': '3.0.0'})
-        self.assertEqual(open('release.replace').read(), expected)
+        with open('release.replace') as f:
+            self.assertEqual(f.read(), expected)
 
 
 
