@@ -89,7 +89,7 @@ class PlatformAssumptionsTests(TestCase):
         client.setblocking(False)
 
         # Use up all the rest of the file descriptors.
-        for i in xrange(self.socketLimit):
+        for i in range(self.socketLimit):
             try:
                 self.socket()
             except socket.error as e:
