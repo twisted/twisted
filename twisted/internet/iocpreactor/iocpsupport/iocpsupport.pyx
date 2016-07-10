@@ -37,12 +37,10 @@ cdef extern from 'windows.h':
     void DebugBreak()
 
 cdef extern from 'python.h':
-    struct PyObject:
-        pass
+    ctypedef struct PyObject
     void *PyMem_Malloc(size_t n) except NULL
     void PyMem_Free(void *p)
-    struct PyThreadState:
-        pass
+    ctypedef struct PyThreadState
     PyThreadState *PyEval_SaveThread()
     void PyEval_RestoreThread(PyThreadState *tstate)
     void Py_INCREF(object o)
