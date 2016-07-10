@@ -1,4 +1,3 @@
-# -*- test-case-name: twisted.words.test -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
