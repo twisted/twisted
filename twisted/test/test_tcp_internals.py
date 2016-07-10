@@ -14,7 +14,6 @@ try:
 except ImportError:
     resource = None
 
-from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 
 from twisted.python import log
