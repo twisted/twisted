@@ -3,12 +3,11 @@
 # Helper for running twistedchecker and reporting only errors that are part
 # of the changes since trunk.
 #
-# Call it as ./admin/twistedchecker-trunk-diff.sh twisted
-#
-# You can also get errors only for a subset of the files using:
-#
-# ./admin/twistedchecker-trunk-diff.sh twisted/words
-#
+# Call it as:
+# * SCRIPT_NAME twisted
+# * SCRIPT_NAME twisted/words/
+# * SCRIPT_NAME twisted.words
+
 target=$1
 
 # Since for unknown modules twistedchecker will return the same error, the
