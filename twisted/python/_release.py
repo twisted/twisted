@@ -1106,7 +1106,7 @@ class CheckTopfileScript(object):
 
         for change in files:
             if os.sep + "topfiles" + os.sep in change:
-                if change.rsplit(".", 1)[1] in TOPFILE_TYPES:
+                if "." in change and change.rsplit(".", 1)[1] in TOPFILE_TYPES:
                     topfiles.append(change)
 
         if branch.startswith("release-"):
