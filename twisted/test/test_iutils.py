@@ -36,9 +36,8 @@ class ProcessUtilsTests(unittest.TestCase):
         path to it.
         """
         script = self.mktemp()
-        scriptFile = file(script, 'wt')
-        scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
-        scriptFile.close()
+        with open(script, 'wt') as scriptFile:
+            scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 
 
