@@ -52,7 +52,7 @@ class ProcessUtilsTests(unittest.TestCase):
                 "    sys.stdout.write(s)",
                 "    sys.stdout.flush()"])
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
-        return d.addCallback(self.assertEqual, "hello world\n")
+        return d.addCallback(self.assertEqual, b"hello world\n")
 
 
     def test_outputWithErrorIgnored(self):
@@ -90,7 +90,7 @@ class ProcessUtilsTests(unittest.TestCase):
             'sys.stderr.flush()'])
 
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile], errortoo=True)
-        return d.addCallback(self.assertEqual, "foofoo")
+        return d.addCallback(self.assertEqual, b"foofoo")
 
 
     def test_value(self):
@@ -120,8 +120,8 @@ class ProcessUtilsTests(unittest.TestCase):
 
         def gotOutputAndValue(out_err_code):
             out, err, code = out_err_code
-            self.assertEqual(out, "hello world!\n")
-            self.assertEqual(err, "goodbye world!" + os.linesep)
+            self.assertEqual(out, b"hello world!\n")
+            self.assertEqual(err, b"goodbye world!" + os.linesep.encode())
             self.assertEqual(code, 1)
         d = utils.getProcessOutputAndValue(self.exe, ["-u", scriptFile])
         return d.addCallback(gotOutputAndValue)
@@ -147,8 +147,8 @@ class ProcessUtilsTests(unittest.TestCase):
 
         def gotOutputAndValue(out_err_sig):
             out, err, sig = out_err_sig
-            self.assertEqual(out, "stdout bytes\n")
-            self.assertEqual(err, "stderr bytes\n")
+            self.assertEqual(out, b"stdout bytes\n")
+            self.assertEqual(err, b"stderr bytes\n")
             self.assertEqual(sig, signal.SIGKILL)
 
         d = utils.getProcessOutputAndValue(self.exe, ['-u', scriptFile])
@@ -166,7 +166,7 @@ class ProcessUtilsTests(unittest.TestCase):
                 "import os, sys",
                 "sys.stdout.write(os.getcwd())"])
         d = utilFunc(self.exe, ['-u', scriptFile], path=dir)
-        d.addCallback(check, dir)
+        d.addCallback(check, dir.encode())
         return d
 
 
@@ -225,7 +225,7 @@ class ProcessUtilsTests(unittest.TestCase):
         os.chmod(dir, 0)
 
         d = utilFunc(self.exe, ['-u', scriptFile])
-        d.addCallback(check, dir)
+        d.addCallback(check, dir.encode())
         return d
 
 
