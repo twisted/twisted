@@ -29,9 +29,6 @@ class PlatformAssumptionsTests(TestCase):
     """
     Test assumptions about platform behaviors.
     """
-    if _PY3:
-        skip = "Port when Python 3 supports twisted.internet.process (#5987)"
-
     socketLimit = 8192
 
     def setUp(self):
