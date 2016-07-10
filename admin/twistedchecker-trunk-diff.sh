@@ -10,6 +10,12 @@
 # ./admin/twistedchecker-trunk-diff.sh twisted/words
 #
 target=$1
+
+if [ ! -d "$target" ]; then
+    >&2 echo "$target does not exists."
+    exit 1
+fi
+
 mkdir -p build/trunk-checkout
 cd build/trunk-checkout
 git --work-tree . checkout origin/trunk .
