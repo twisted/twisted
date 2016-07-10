@@ -1,6 +1,9 @@
 language: python
 sudo: false
 
+notifications:
+  email: false
+
 addons:
   apt:
     packages:
@@ -13,9 +16,6 @@ cache:
 
 python:
   - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
 
 env:
   global:
