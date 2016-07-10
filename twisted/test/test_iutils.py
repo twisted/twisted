@@ -345,6 +345,3 @@ class DeferredSuppressedWarningsTests(SuppressedWarningsTests):
         warnings.warn("ignore foo 2")
         self.assertEqual(
             ["ignore foo 2"], [w['message'] for w in self.flushWarnings()])
-
-if _PY3:
-    del ProcessUtilsTests
