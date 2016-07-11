@@ -73,7 +73,7 @@ class INotifyTests(unittest.TestCase):
         notified = defer.Deferred()
         def cbNotified(result):
             (watch, filename, events) = result
-            self.assertEqual(filename, expectedPath)
+            self.assertEqual(filename.asBytesMode(), expectedPath.asBytesMode())
             self.assertTrue(events & mask)
         notified.addCallback(cbNotified)
 
@@ -91,7 +91,7 @@ class INotifyTests(unittest.TestCase):
         """
         def operation(path):
             path.setContent(b"foo")
-            path.getContent().decode(sys.getfilesystemencoding())
+            path.getContent()
 
         return self._notificationTest(inotify.IN_ACCESS, operation)
 
@@ -364,7 +364,7 @@ class INotifyTests(unittest.TestCase):
             # directories, so we need to defer this check.
             def _():
                 try:
-                    self.assertFalse(self.inotify._isWatched(subdir.path))
+                    self.assertFalse(self.inotify._isWatched(subdir))
                     d.callback(None)
                 except Exception:
                     d.errback()
@@ -391,7 +391,7 @@ class INotifyTests(unittest.TestCase):
         notified = defer.Deferred()
         def cbNotified(result):
             (ignored, filename, events) = result
-            self.assertEqual(filename, expectedPath)
+            self.assertEqual(filename.asBytesMode(), expectedPath.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
         def callIt(*args):
@@ -428,7 +428,7 @@ class INotifyTests(unittest.TestCase):
         notified = defer.Deferred()
         def cbNotified(result):
             (ignored, filename, events) = result
-            self.assertEqual(filename, expectedPath2)
+            self.assertEqual(filename.asBytesMode(), expectedPath2.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
         def callIt(*args):
@@ -480,8 +480,9 @@ class INotifyTests(unittest.TestCase):
                     self.assertTrue(self.inotify._isWatched(subdir2))
                     self.assertTrue(self.inotify._isWatched(subdir3))
                     created = someFiles + [subdir, subdir2, subdir3]
+                    created = {f.asBytesMode() for f in created}
                     self.assertEqual(len(calls), len(created))
-                    self.assertEqual(calls, set(created))
+                    self.assertEqual(calls, created)
                 except Exception:
                     d.errback()
                 else:

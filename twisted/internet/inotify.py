@@ -126,7 +126,7 @@ class _Watch(object):
     """
     def __init__(self, path, mask=IN_WATCH_MASK, autoAdd=False,
                  callbacks=None):
-        self.path = path
+        self.path = path.asBytesMode()
         self.mask = mask
         self.autoAdd = autoAdd
         if callbacks is None:
@@ -138,6 +138,7 @@ class _Watch(object):
         """
         Callback function used by L{INotify} to dispatch an event.
         """
+        filepath = filepath.asBytesMode()
         for callback in self.callbacks:
             callback(self, filepath, events)
 
@@ -190,6 +191,7 @@ class INotify(FileDescriptor, object):
         adding a watchpath for inverse lookup of the file descriptor from the
         path.
         """
+        path = path.asBytesMode()
         wd = self._inotify.add(self._fd, path, mask)
 
         iwp = _Watch(path, mask, autoAdd, callbacks)
@@ -250,8 +252,7 @@ class INotify(FileDescriptor, object):
             wd, mask, cookie, size = struct.unpack("=LLLL", self._buffer[0:16])
 
             if size:
-                nameBytes = self._buffer[16:16 + size].rstrip(b'\0')
-                name = nameBytes.decode(sys.getfilesystemencoding())
+                name = self._buffer[16:16 + size].rstrip(b'\0')
             else:
                 name = None
 
@@ -262,7 +263,7 @@ class INotify(FileDescriptor, object):
             except KeyError:
                 continue
 
-            path = iwp.path
+            path = iwp.path.asBytesMode()
             if name:
                 path = path.child(name)
             iwp._notify(path, mask)
@@ -379,6 +380,7 @@ class INotify(FileDescriptor, object):
         @param path: The path that should be ignored
         @type path: L{FilePath}
         """
+        path = path.asBytesMode()
         wd = self._isWatched(path)
         if wd is None:
             raise KeyError("%r is not watched" % (path,))
@@ -394,6 +396,7 @@ class INotify(FileDescriptor, object):
         @param path: The path that should be checked
         @type path: L{FilePath}
         """
+        path = path.asBytesMode()
         return self._watchpaths.get(path, None)
 
 
