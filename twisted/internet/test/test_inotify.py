@@ -4,6 +4,7 @@
 """
 Tests for the inotify wrapper in L{twisted.internet.inotify}.
 """
+import sys
 
 from twisted.internet import defer, reactor
 from twisted.python import filepath, runtime
@@ -90,7 +91,7 @@ class INotifyTests(unittest.TestCase):
         """
         def operation(path):
             path.setContent(b"foo")
-            path.getContent().decode()
+            path.getContent().decode(sys.getfilesystemencoding())
 
         return self._notificationTest(inotify.IN_ACCESS, operation)
 
@@ -502,5 +503,6 @@ class INotifyTests(unittest.TestCase):
         # Add some files in pretty much all the directories so that we
         # see that we process all of them.
         for i, filename in enumerate(someFiles):
-            filename.setContent(filename.path.encode())
+            filename.setContent(
+                filename.path.encode(sys.getfilesystemencoding()))
         return d
