@@ -32,6 +32,7 @@ at some point)::
 from __future__ import print_function
 
 import os
+import sys
 import struct
 
 from twisted.internet import fdesc
@@ -250,7 +251,7 @@ class INotify(FileDescriptor, object):
 
             if size:
                 nameBytes = self._buffer[16:16 + size].rstrip(b'\0')
-                name = nameBytes.decode()
+                name = nameBytes.decode(sys.getfilesystemencoding())
             else:
                 name = None
 
