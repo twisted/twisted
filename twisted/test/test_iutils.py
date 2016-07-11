@@ -121,7 +121,7 @@ class ProcessUtilsTests(unittest.TestCase):
         def gotOutputAndValue(out_err_code):
             out, err, code = out_err_code
             self.assertEqual(out, b"hello world!\n")
-            self.assertEqual(err, b"goodbye world!" + os.linesep.encode())
+            self.assertEqual(err, b"goodbye world!" + os.linesep.encode("ascii"))
             self.assertEqual(code, 1)
         d = utils.getProcessOutputAndValue(self.exe, ["-u", scriptFile])
         return d.addCallback(gotOutputAndValue)
@@ -168,7 +168,7 @@ class ProcessUtilsTests(unittest.TestCase):
                 "import os, sys",
                 "sys.stdout.write(os.getcwd())"])
         d = utilFunc(self.exe, ['-u', scriptFile], path=dir)
-        d.addCallback(check, dir.encode())
+        d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
 
 
@@ -227,7 +227,7 @@ class ProcessUtilsTests(unittest.TestCase):
         os.chmod(dir, 0)
 
         d = utilFunc(self.exe, ['-u', scriptFile])
-        d.addCallback(check, dir.encode())
+        d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
 
 
