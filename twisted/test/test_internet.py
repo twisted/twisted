@@ -959,23 +959,28 @@ class DelayedTests(unittest.TestCase):
 
 
 
-resolve_helper = """
-from __future__ import print_function
+resolve_helper = r"""
 import %(reactor)s
 %(reactor)s.install()
 from twisted.internet import reactor
 
-class Foo:
+import sys
+if hasattr(sys.stdout, "buffer"):
+    output = sys.stdout.buffer
+else:
+    output = sys.stdout
+
+class Foo(object):
     def __init__(self):
         reactor.callWhenRunning(self.start)
         self.timer = reactor.callLater(3, self.failed)
     def start(self):
         reactor.resolve('localhost').addBoth(self.done)
     def done(self, res):
-        print('done', res)
+        output.write(('done ' + res + '\n').encode('ascii'))
         reactor.stop()
     def failed(self):
-        print('failed')
+        output.write('failed\n')
         self.timer = None
         reactor.stop()
 f = Foo()

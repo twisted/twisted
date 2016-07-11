@@ -739,6 +739,25 @@ else:
 
 
 
+def _maybeMBCS(s):
+    """
+    Convert the string C{s} to a L{unicode} string, if required.
+
+    @param s: The string to convert.
+    @type s: L{bytes} or L{unicode}
+
+    @return: The string, decoded using MBCS if needed.
+    @rtype: L{unicode}
+    """
+    assert sys.platform == "win32", "only reasonable on Windows"
+    assert type(s) in [bytes, unicode], str(type(s)) + " is not a string"
+
+    if isinstance(s, bytes):
+        return s.decode('mbcs')
+    return s
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -775,4 +794,5 @@ __all__ = [
     "_coercedUnicode",
     "intern",
     "unichr",
+    "_maybeMBCS",
 ]

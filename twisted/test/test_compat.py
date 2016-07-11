@@ -1,7 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Tests for L{twisted.python.compat}.
 """
@@ -19,6 +18,7 @@ from twisted.python.compat import (
     unichr,
 )
 from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 
 
 
@@ -753,6 +753,9 @@ class BytesEnvironTests(unittest.TestCase):
             types.add(type(val))
 
         self.assertEqual(list(types), [bytes])
+
+    if platform.isWindows():
+        test_alwaysBytes.skip = "Environment vars are always str on Windows."
 
 
 

@@ -64,7 +64,20 @@ else:
 
     # For monkeypatching in tests
     _open = open
+    from time import sleep as _sleep
 
+    # Python 3 has no 'commit' flag for fopen, so when making the lockfile on
+    # it we must let Windows catch up... we do this by looping and reading the
+    # file, hoping to get the correct value. It sucks, but, what can you do?
+    # Locks are global state, and as we all know, global state is BAD and EVIL.
+    # What is a reasonable time to wait? Well, sleeping for a long period may
+    # waste time, but waiting for a small (0.001s) time takes far longer on
+    # Python 3.5 than the 0.001s you'd expect. 10 seconds seems like a
+    # reasonable amount of time, assuming that file I/O on Windows can be
+    # deathly slow.
+    # Therefore, 100 iterations of 0.1 second seems to work well enough.
+    _iterations = 100
+    _sleepTime = 0.1
 
     def symlink(value, filename):
         """
@@ -86,6 +99,31 @@ else:
         with _open(newvalname, mode) as f:
             f.write(value)
             f.flush()
+
+        if _PY3:
+            readValue = ""
+            iterations = 0
+
+            while readValue != value:
+                with _open(newvalname, "r") as f:
+                    readValue = f.read()
+
+                if readValue != value:
+                    iterations += 1
+
+                    if iterations > _iterations:
+                        try:
+                            # Try and remove the failed lock. We have given up
+                            # at this point, so if we can't remove it, we
+                            # can't really try much.
+                            os.remove(newvalname)
+                        except:
+                            pass
+                        # We ought to play sad_trombone.mp3 here. Give up and
+                        # throw an exception.
+                        raise OSError(errno.ETIME, "Unable to get a lock.")
+
+                    _sleep(_sleepTime)
 
         try:
             rename(newlinkname, filename)

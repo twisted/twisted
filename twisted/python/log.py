@@ -554,7 +554,23 @@ class FileLogObserver(_GlobalStartStopMixIn):
         }
         msgStr = _safeFormat("[%(system)s] %(text)s\n", fmtDict)
 
-        util.untilConcludes(self.write, timeStr + " " + msgStr)
+        if _PY3:
+            completedLine = timeStr + " " + msgStr
+
+            try:
+                util.untilConcludes(self.write, completedLine)
+            except UnicodeEncodeError:
+                # If we get a UnicodeDecodeError, we shouldn't really try
+                # guessing what the terminal is. Go ASCII, and if people
+                # don't like it, they should use twisted.logger.
+                completedLine = completedLine.encode(
+                    'ascii',
+                    errors='backslashreplace')
+                util.untilConcludes(self.write,
+                                    completedLine.decode('ascii'))
+        else:
+            util.untilConcludes(self.write, timeStr + " " + msgStr)
+
         util.untilConcludes(self.flush)  # Hoorj!
 
 

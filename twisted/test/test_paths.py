@@ -282,6 +282,9 @@ class ListingCompatibilityTests(BytesTestCase):
         self.assertRaises(filepath.UnlistableError, fwp.children)
         self.assertRaises(WindowsError, fwp.children)
 
+    if _PY3:
+        test_windowsErrorExcept.skip = "This doesn't raise WindowsError anymore"
+
 
     def test_alwaysCatchOSError(self):
         """

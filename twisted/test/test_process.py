@@ -44,8 +44,8 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
-from twisted.python.compat import _PY3, networkString, xrange, bytesEnviron
-from twisted.python.filepath import FilePath
+from twisted.python.compat import _PY3, networkString, xrange
+from twisted.python.filepath import FilePath, _asFilesystemBytes
 
 
 # Get the current Python executable as a bytestring.
@@ -2262,8 +2262,8 @@ class Win32ProcessTests(unittest.TestCase):
         p.transport.closeStdin()
 
         def processEnded(ign):
-            self.assertEqual(p.errF.getvalue(), "err\nerr\n")
-            self.assertEqual(p.outF.getvalue(), "out\nhello, world\nout\n")
+            self.assertEqual(p.errF.getvalue(), b"err\nerr\n")
+            self.assertEqual(p.outF.getvalue(), b"out\nhello, world\nout\n")
         return d.addCallback(processEnded)
 
 
@@ -2404,19 +2404,16 @@ class DumbWin32ProcTests(unittest.TestCase):
         from twisted.internet import _dumbwin32proc
         from twisted.test import mock_win32process
         self.patch(_dumbwin32proc, "win32process", mock_win32process)
-        scriptPath = util.sibpath(__file__, "process_cmdline.py")
+        scriptPath = FilePath(__file__).sibling(u"process_cmdline.py").path
+        pyExe = FilePath(sys.executable).asTextMode().path
 
         d = defer.Deferred()
         processProto = TrivialProcessProtocol(d)
-        comspec = bytes(os.environ["COMSPEC"])
-        cmd = [comspec, b"/c", pyExe, scriptPath]
+        comspec = u"cmd.exe"
+        cmd = [comspec, u"/c", pyExe, scriptPath]
 
-        p = _dumbwin32proc.Process(reactor,
-                                  processProto,
-                                  None,
-                                  cmd,
-                                  {},
-                                  None)
+        p = _dumbwin32proc.Process(
+            reactor, processProto, None, cmd, {}, None)
         self.assertEqual(42, p.pid)
         self.assertEqual("<Process pid=42>", repr(p))
 
@@ -2611,8 +2608,11 @@ class ClosingPipesTests(unittest.TestCase):
         """
         d = self.doit(1)
         def _check(errput):
-            if _PY3:
+            if _PY3 and not runtime.platform.isWindows():
                 self.assertIn(b'BrokenPipeError', errput)
+            elif _PY3:
+                self.assertIn(b"OSError", errput)
+                self.assertIn(b"22", errput)
             else:
                 self.assertIn(b'OSError', errput)
             if runtime.platform.getType() != 'win32':

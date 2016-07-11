@@ -14,6 +14,8 @@ from zope.interface import implementer
 
 from twisted.trial import unittest
 
+from twisted.python.compat import _PY3
+from twisted.python.runtime import platform
 from twisted.python.log import msg, err
 from twisted.internet import protocol, reactor, defer, interfaces
 from twisted.internet import error
@@ -21,6 +23,8 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.protocols import policies
 from twisted.test.proto_helpers import AccumulatingProtocol
+
+WSAENOTSOCK = 10038
 
 
 def loopUntil(predicate, interval=0):
@@ -906,7 +910,8 @@ class WriteDataTests(unittest.TestCase):
             expected = b"".join([b"Hello Cleveland!\n",
                                 b"Goodbye", b" cruel", b" world", b"\n"])
             self.assertTrue(clientF.data == expected,
-                            "client didn't receive all the data it expected")
+                            "client didn't receive all the data it expected"
+                            "(%s!=%s)" % (clientF.data, expected))
         d = defer.gatherResults([wrappedF.onDisconnect,
                                  wrappedClientF.onDisconnect])
         return d.addCallback(check)
@@ -1138,11 +1143,18 @@ class ProperlyCloseFilesMixin:
         Return the errno expected to result from writing to a closed
         platform socket handle.
         """
-        # These platforms have been seen to give EBADF:
-        #
-        #  Linux 2.4.26, Linux 2.6.15, OS X 10.4, FreeBSD 5.4
-        #  Windows 2000 SP 4, Windows XP SP 2
-        return errno.EBADF
+        if _PY3 and platform.isWindows():
+            # These platforms have been seen to give WinError 10038
+            #
+            #  Windows 10 on Python 3.4/3.5
+            return WSAENOTSOCK
+        else:
+            # These platforms have been seen to give EBADF:
+            #
+            #  Linux 2.4.26, Linux 2.6.15, OS X 10.4, FreeBSD 5.4
+            #  Windows 2000 SP 4, Windows XP SP 2
+            return errno.EBADF
+
 
 
     def test_properlyCloseFiles(self):
@@ -1363,11 +1375,15 @@ class LargeBufferWriterProtocol(protocol.Protocol):
         self.factory.done = 1
         self.transport.loseConnection()
 
+
+
 class LargeBufferReaderProtocol(protocol.Protocol):
     def dataReceived(self, data):
         self.factory.len += len(data)
     def connectionLost(self, reason):
         self.factory.done = 1
+
+
 
 class LargeBufferReaderClientFactory(protocol.ClientFactory):
     def __init__(self):
@@ -1380,13 +1396,16 @@ class LargeBufferReaderClientFactory(protocol.ClientFactory):
         return p
 
 
+
 class FireOnClose(policies.ProtocolWrapper):
-    """A wrapper around a protocol that makes it fire a deferred when
+    """
+    A wrapper around a protocol that makes it fire a deferred when
     connectionLost is called.
     """
     def connectionLost(self, reason):
         policies.ProtocolWrapper.connectionLost(self, reason)
         self.factory.deferred.callback(None)
+
 
 
 class FireOnCloseFactory(policies.WrappingFactory):
@@ -1398,10 +1417,12 @@ class FireOnCloseFactory(policies.WrappingFactory):
 
 
 class LargeBufferTests(unittest.TestCase):
-    """Test that buffering large amounts of data works.
+    """
+    Test that buffering large amounts of data works.
     """
 
     datalen = 60*1024*1024
+
     def testWriter(self):
         f = protocol.Factory()
         f.protocol = LargeBufferWriterProtocol
@@ -1427,9 +1448,9 @@ class LargeBufferTests(unittest.TestCase):
         return d.addCallback(check)
 
 
+
 @implementer(IHalfCloseableProtocol)
 class MyHCProtocol(AccumulatingProtocol):
-
 
     readHalfClosed = False
     writeHalfClosed = False
@@ -1445,6 +1466,7 @@ class MyHCProtocol(AccumulatingProtocol):
         # Invoke notification logic from the base class to simplify testing.
         if self.readHalfClosed:
             self.connectionLost(None)
+
 
 
 class MyHCFactory(protocol.ServerFactory):
