@@ -1644,7 +1644,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN', '\\DELETED'], 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
@@ -1674,7 +1675,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN'], 'Right now', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testCheck(self):
         SimpleServer.theAccount.addMailbox('root/subthing')

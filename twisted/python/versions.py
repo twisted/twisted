@@ -229,12 +229,9 @@ class Version(object):
                 return b'Unknown'
 
             entriesFile = os.path.join(svn, 'entries')
-            entries = open(entriesFile, 'rb')
             try:
-                try:
+                with open(entriesFile, 'rb') as entries:
                     return parser(entries)
-                finally:
-                    entries.close()
             except:
                 return b'Unknown'
 

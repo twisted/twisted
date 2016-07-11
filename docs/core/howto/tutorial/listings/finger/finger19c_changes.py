@@ -17,9 +17,9 @@ class LocalFingerService(service.Service):
             f = open(os.path.join(entry[5],'.plan'))
         except (IOError, OSError):
             return defer.succeed("No such user")
-        data = f.read()
+        with f:
+            data = f.read()
         data = data.strip()
-        f.close()
         return defer.succeed(data)
     
     def getUsers(self):

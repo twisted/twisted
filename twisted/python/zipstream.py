@@ -303,17 +303,16 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
             if not os.path.exists(fdir):
                 os.makedirs(fdir)
             if overwrite or not os.path.exists(f):
-                outfile = open(f, 'wb')
                 fp = czf.readfile(entry)
                 if info.file_size == 0:
                     remaining -= 1
                     yield remaining
-                while fp.tell() < info.file_size:
-                    hunk = fp.read(chunksize)
-                    outfile.write(hunk)
-                    remaining -= 1
-                    yield remaining
-                outfile.close()
+                with open(f, 'wb') as outfile:
+                    while fp.tell() < info.file_size:
+                        hunk = fp.read(chunksize)
+                        outfile.write(hunk)
+                        remaining -= 1
+                        yield remaining
             else:
                 remaining -= countFileChunks(info, chunksize)
                 yield remaining
