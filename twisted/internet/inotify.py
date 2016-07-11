@@ -32,7 +32,6 @@ at some point)::
 from __future__ import print_function
 
 import os
-import sys
 import struct
 
 from twisted.internet import fdesc
