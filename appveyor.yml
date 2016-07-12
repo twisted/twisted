@@ -46,7 +46,7 @@ install:
 
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
-  - "%PYTHON%\\Scripts\\pip install --disable-pip-version-check --user --upgrade pip"
+  - "%PYTHON%\\Scripts\\pip install --upgrade pip"
 
   # Install the build dependencies of the project.
   - "%PYTHON%\\Scripts\\pip install tox-travis"
@@ -58,6 +58,7 @@ test_script:
 # Always push coverage, even if tests failed.
 # This should be removed once coverage is pushed from tox.
 on_finish:
+  - "%PYTHON%\\Scripts\\pip install codecov"
   - "%PYTHON%\\python -m coverage combine"
   - "%PYTHON%\\python -m coverage xml"
   - "%PYTHON%\\python -m codecov"
