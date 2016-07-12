@@ -40,12 +40,6 @@ def main(args):
     Invoke twisted.python.dist with the appropriate metadata about the
     Twisted package.
     """
-    # On Python 3, use setup3.py until Python 3 port is done:
-    if sys.version_info[0] > 2:
-        import setup3
-        setup3.main()
-        return
-
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
