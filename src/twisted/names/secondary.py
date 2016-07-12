@@ -141,7 +141,7 @@ class SecondaryAuthority(FileAuthority):
     def transfer(self):
         if self.transferring:
             return
-        self.transfering = True
+        self.transferring = True
 
         reactor = self._reactor
         if reactor is None:
@@ -185,6 +185,6 @@ class SecondaryAuthority(FileAuthority):
 
 
     def _ebTransferred(self, failure):
-        self.transferred = False
+        self.transferring = False
         log.msg("Transferring %s from %s failed after zone transfer" % (self.domain, self.primary))
         log.err(failure)
