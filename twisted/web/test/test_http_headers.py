@@ -241,7 +241,7 @@ class BytesHeadersTests(TestCase):
 
     def test_copy(self):
         """
-        L{Headers.copy} creates a new independant copy of an existing
+        L{Headers.copy} creates a new independent copy of an existing
         L{Headers} instance, allowing future modifications without impacts
         between the copies.
         """
@@ -540,7 +540,7 @@ class UnicodeHeadersTests(TestCase):
 
     def test_copy(self):
         """
-        L{Headers.copy} creates a new independant copy of an existing
+        L{Headers.copy} creates a new independent copy of an existing
         L{Headers} instance, allowing future modifications without impacts
         between the copies.
         """

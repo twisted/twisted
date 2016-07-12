@@ -175,7 +175,7 @@ class Test(XMLRPC):
         except xmlrpc.NoSuchFunction:
             if procedurePath.startswith("SESSION"):
                 raise xmlrpc.Fault(self.SESSION_EXPIRED,
-                                   "Session non-existant/expired.")
+                                   "Session non-existent/expired.")
             else:
                 raise
 

@@ -1414,7 +1414,7 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
 
 
 __all__ = [
-    # Everything from flavors is exposed publically here.
+    # Everything from flavors is exposed publicly here.
     'IPBRoot', 'Serializable', 'Referenceable', 'NoSuchMethod', 'Root',
     'ViewPoint', 'Viewable', 'Copyable', 'Jellyable', 'Cacheable',
     'RemoteCopy', 'RemoteCache', 'RemoteCacheObserver', 'copyTags',

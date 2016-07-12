@@ -1324,7 +1324,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
           The response_headers argument ... must be a Python list; i.e.
           type(response_headers) is ListType
 
-        However, for bug-compatiblity, any sequence is accepted. In both
+        However, for bug-compatibility, any sequence is accepted. In both
         Python 2 and Python 3, only a warning is issued when a sequence other
         than a list is encountered.
         """
@@ -1374,7 +1374,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
           The response_headers argument is a list of (header_name,
           header_value) tuples
 
-        However, for bug-compatiblity, any 2 element sequence is also
+        However, for bug-compatibility, any 2 element sequence is also
         accepted. In both Python 2 and Python 3, only a warning is issued when
         a sequence other than a tuple is encountered.
         """

@@ -197,8 +197,7 @@ def getExtensions():
             ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
              "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
             libraries=["ws2_32"],
-            condition=lambda _: not _PY3 and
-                                _isCPython and sys.platform == "win32"),
+            condition=lambda _: _isCPython and sys.platform == "win32"),
 
         ConditionalExtension(
             "twisted.python._sendmsg",
@@ -265,7 +264,7 @@ class build_ext_twisted(build_ext.build_ext):
         """
         Prepare the C{self.extensions} attribute (used by
         L{build_ext.build_ext}) by checking which extensions in
-        L{conditionalExtensions} should be built.  In addition, if we are
+        I{conditionalExtensions} should be built.  In addition, if we are
         building on NT, define the WIN32 macro to 1.
         """
         # always define WIN32 under Windows

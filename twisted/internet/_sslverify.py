@@ -449,7 +449,7 @@ class CertBase:
         Convert this L{CertBase} into a provider of the given interface.
 
         @param interface: The interface to conform to.
-        @type interface: L{zope.interface.interface.InterfaceClass}
+        @type interface: L{zope.interface.interfaces.IInterface}
 
         @return: an L{IOpenSSLTrustRoot} provider or L{NotImplemented}
         @rtype: C{interface} or L{NotImplemented}
@@ -1292,7 +1292,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
     @type clientCertificate: L{PrivateCertificate}
 
     @param acceptableProtocols: The protocols this peer is willing to speak
-        after the TLS negotation has completed, advertised over both ALPN and
+        after the TLS negotiation has completed, advertised over both ALPN and
         NPN. If this argument is specified, and no overlap can be found with
         the other peer, the connection will fail to be established. If the
         remote peer does not offer NPN or ALPN, the connection will be
@@ -1484,7 +1484,7 @@ class OpenSSLCertificateOptions(object):
         @type trustRoot: L{IOpenSSLTrustRoot}
 
         @param acceptableProtocols: The protocols this peer is willing to speak
-            after the TLS negotation has completed, advertised over both ALPN
+            after the TLS negotiation has completed, advertised over both ALPN
             and NPN. If this argument is specified, and no overlap can be found
             with the other peer, the connection will fail to be established.
             If the remote peer does not offer NPN or ALPN, the connection will
@@ -1912,7 +1912,7 @@ def _setAcceptableProtocols(context, acceptableProtocols):
     @type context: L{OpenSSL.SSL.Context}
 
     @param acceptableProtocols: The protocols this peer is willing to speak
-        after the TLS negotation has completed, advertised over both ALPN and
+        after the TLS negotiation has completed, advertised over both ALPN and
         NPN. If this argument is specified, and no overlap can be found with
         the other peer, the connection will fail to be established. If the
         remote peer does not offer NPN or ALPN, the connection will be

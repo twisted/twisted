@@ -102,14 +102,13 @@ class Persistent:
         return finalname, filename
 
     def _saveTemp(self, filename, passphrase, dumpFunc):
-        f = open(filename, 'wb')
-        if passphrase is None:
-            dumpFunc(self.original, f)
-        else:
-            s = BytesIO()
-            dumpFunc(self.original, s)
-            f.write(_encrypt(passphrase, s.getvalue()))
-        f.close()
+        with open(filename, 'wb') as f:
+            if passphrase is None:
+                dumpFunc(self.original, f)
+            else:
+                s = BytesIO()
+                dumpFunc(self.original, s)
+                f.write(_encrypt(passphrase, s.getvalue()))
 
     def _getStyle(self):
         if self.style == "source":

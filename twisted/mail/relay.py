@@ -96,11 +96,8 @@ class RelayerMixin:
         self.messages = []
         self.names = []
         for message in messagePaths:
-            fp = open(message + '-H')
-            try:
+            with open(message + '-H') as fp:
                 messageContents = pickle.load(fp)
-            finally:
-                fp.close()
             fp = open(message + '-D')
             messageContents.append(fp)
             self.messages.append(messageContents)
