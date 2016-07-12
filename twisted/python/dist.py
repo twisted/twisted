@@ -70,7 +70,7 @@ _dev=['pyflakes >= 1.0.0',
 if not _PY3:
     # These modules do not yet work on Python 3.
     _dev += ['twistedchecker >= 0.4.0',
-             'pydoctor >= 15.0.0']
+             'pydoctor >= 16.1.0']
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
