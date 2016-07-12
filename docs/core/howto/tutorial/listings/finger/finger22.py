@@ -323,8 +323,7 @@ strports.service("tcp:79", IFingerFactory(f)
 site = server.Site(resource.IResource(f))
 strports.service("tcp:8000", site,
                    ).setServiceParent(serviceCollection)
-strports.service("ssl:port=443:certKey=cert.pem:privateKey=key.pem",
-                 server.Site(resource.IResource(f))
+strports.service("ssl:port=443:certKey=cert.pem:privateKey=key.pem", site
                    ).setServiceParent(serviceCollection)
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'
