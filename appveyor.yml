@@ -18,7 +18,9 @@ environment:
     # a later point release.
     # See: http://www.appveyor.com/docs/installed-software#python
     - PYTHON: "C:\\Python27-x64"
+      PYTHON_HOME: "C:\\Python27-x64"
     - PYTHON: "C:\\Python35-x64"
+      PYTHON_HOME: "C:\\Python34-x64"
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
@@ -37,6 +39,9 @@ install:
   - ECHO "Installed SDKs:"
   - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
 
+  - ECHO "TOXENV:"
+  - ps: echo $env:TOXENV
+
   # Check that we have the expected version and architecture for Python
   - "python --version"
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
@@ -51,4 +56,4 @@ install:
 
 test_script:
   # Run the project tests
-  - "%PYTHON_HOME%\Scripts\tox"
+  - "%PYTHON_HOME%\\Scripts\\tox"
