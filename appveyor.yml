@@ -20,9 +20,7 @@ environment:
     # a later point release.
     # See: http://www.appveyor.com/docs/installed-software#python
     - PYTHON: "C:\\Python27-x64"
-      PYTHON_HOME: "C:\\Python27-x64"
-    - PYTHON: "C:\\Python35-x64"
-      PYTHON_HOME: "C:\\Python34-x64"
+      TOX_ENV: "py27-coverage-windows"
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
@@ -42,16 +40,16 @@ install:
   - ps: echo $env:TOXENV
 
   # Check that we have the expected version and architecture for Python
-  - "%PYTHON_HOME%\\python --version"
-  - "%PYTHON_HOME%\\python -c \"import struct; print(struct.calcsize('P') * 8)\""
+  - "%PYTHON%\\python --version"
+  - "%PYTHON%\\python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
-  - "%PYTHON_HOME%\\Scripts\\pip install --disable-pip-version-check --user --upgrade pip"
+  - "%PYTHON%\\Scripts\\pip install --disable-pip-version-check --user --upgrade pip"
 
   # Install the build dependencies of the project.
-  - "%PYTHON_HOME%\\Scripts\\pip install tox-travis"
+  - "%PYTHON%\\Scripts\\pip install tox-travis"
 
 test_script:
   # Run the project tests
-  - "%PYTHON_HOME%\\Scripts\\tox"
+  - "%PYTHON%\\python -m tox -e %TOX_ENV%"
