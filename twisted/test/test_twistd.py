@@ -170,7 +170,7 @@ class CrippledApplicationRunner(twistd._SomeApplicationRunner):
 
 class ServerOptionsTests(unittest.TestCase):
     """
-    Non-platform-specific tests for the pltaform-specific ServerOptions class.
+    Non-platform-specific tests for the platform-specific ServerOptions class.
     """
     def test_subCommands(self):
         """
