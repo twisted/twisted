@@ -50,7 +50,7 @@ Assuming you own the account ``alice@gmail.com``, this would send an email to bo
   (2, [('bob@gmail.com', 250, '2.1.5 OK hz13sm11691456pac.6 - gsmtp'),
        ('charlie@gmail.com', 250, '2.1.5 OK hz13sm11691456pac.6 - gsmtp')])
 
-``sendmail`` returns a 2-tuple, containing the number of emails sent successfully (note that this is from you to the server you specified, not to the recepient -- emails may still be lost between that server and the recepient) and a list of statuses of the sent mail.
+``sendmail`` returns a 2-tuple, containing the number of emails sent successfully (note that this is from you to the server you specified, not to the recipient -- emails may still be lost between that server and the recipient) and a list of statuses of the sent mail.
 Each status is a 3-tuple containing the address it was sent to, the SMTP status code, and the server response.
 
 

@@ -2239,7 +2239,7 @@ class IProtocolNegotiationFactory(Interface):
     A provider of L{IProtocolNegotiationFactory} can provide information about
     the various protocols that the factory can create implementations of. This
     can be used, for example, to provide protocol names for Next Protocol
-    Negotation and Application Layer Protocol Negotiation.
+    Negotiation and Application Layer Protocol Negotiation.
 
     @see: L{twisted.internet.ssl}
     """

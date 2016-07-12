@@ -3842,7 +3842,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}
@@ -3868,7 +3868,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}
@@ -3894,7 +3894,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}

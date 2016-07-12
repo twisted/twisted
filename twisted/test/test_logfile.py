@@ -94,7 +94,7 @@ class LogFileTests(unittest.TestCase):
         """
         Log files can be written to, closed. Their size is the number of
         bytes written to them. Everything that was written to them can
-        be read, even if the writing happened on seperate occasions,
+        be read, even if the writing happened on separate occasions,
         and even if the log file was closed in between.
         """
         with contextlib.closing(logfile.LogFile(self.name, self.dir)) as log:

@@ -319,7 +319,7 @@ class Cacheable(Copyable):
         Get state to cache on the client and client-cache reference
         to observe locally.
 
-        This is similiar to getStateToCopyFor, but it additionally
+        This is similar to getStateToCopyFor, but it additionally
         passes in a reference to the client-side RemoteCache instance
         that will be created when it is unserialized.  This allows
         Cacheable instances to keep their RemoteCaches up to date when

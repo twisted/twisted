@@ -675,7 +675,7 @@ class StdioClientTests(TestCase):
 
     def test_cmd_PUTMultipleNoRemotePath(self):
         """
-        When a gobbing expression is used local files are transfered with
+        When a gobbing expression is used local files are transferred with
         remote file names based on local names.
         """
         first = self.makeFile()
@@ -714,7 +714,7 @@ class StdioClientTests(TestCase):
 
     def test_cmd_PUTMultipleWithRemotePath(self):
         """
-        When a gobbing expression is used local files are transfered with
+        When a gobbing expression is used local files are transferred with
         remote file names based on local names.
         when a remote folder is requested remote paths are composed from
         remote path and local filename.

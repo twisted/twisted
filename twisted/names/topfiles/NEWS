@@ -457,7 +457,7 @@ Fixes
 
 0.2.0
 =====
- - Fix occassional TCP connection leak in gethostbyname()
+ - Fix occasional TCP connection leak in gethostbyname()
  - Fix TCP connection leak in recursive lookups
  - Remove deprecated use of Deferred.setTimeout
  - Improved test coverage for zone transfers

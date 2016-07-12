@@ -269,7 +269,7 @@ class DeferredResultTests(unittest.TestCase):
 
     def test_deferredFailureAfterSuccess(self):
         """
-        Check that a successfull L{threads.deferToThread} followed by a one
+        Check that a successful L{threads.deferToThread} followed by a one
         that raises an exception correctly result as a failure.
         """
         # set up a condition that causes cReactor to hang. These conditions
