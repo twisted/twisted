@@ -8,6 +8,8 @@ Support for a few things specific to documenting Twisted using pydoctor.
 FIXME: https://github.com/twisted/pydoctor/issues/106
 This documentation does not link to pydoctor API as there is no public API yet.
 """
+
+import ast
 import urllib2
 
 from pydoctor import model, zopeinterface
