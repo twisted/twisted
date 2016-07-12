@@ -48,7 +48,7 @@ this case, don't worry: you're not at risk.
 To create a certificate and key that can be used by this tutorial, run the
 following:
 
-.. code-block::
+.. code-block:: bash
 
     openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365
 
