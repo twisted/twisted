@@ -24,14 +24,6 @@ environment:
   matrix:
     - PYTHON: C:\Python27-x64
       TOXENV: py27-coverage-publish-windows
-    - PYTHON: C:\Python35-x64
-      TOXENV: py35-coverage-publish-windows
-
-
-matrix:
-  allow_failures:
-    # Python 3 is not yet fully ported on Windows.
-    - PYTHON: C:\Python35-x64
 
 
 install:
