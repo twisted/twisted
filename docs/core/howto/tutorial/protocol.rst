@@ -222,7 +222,7 @@ Announce on IRC, Too
 
 
 This is the first time there is client code. IRC clients often act a lot like
-servers: responding to events from the network.  The Client SErvice will make
+servers: responding to events from the network.  The Client Service will make
 sure that severed links will get re-established, with intelligent
 tweaked exponential back-off algorithms. The IRC client itself is simple: the
 only real hack is getting the nickname from the factory
