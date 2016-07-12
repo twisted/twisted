@@ -53,3 +53,10 @@ install:
 test_script:
   # Run the project tests
   - "%PYTHON%\\python -m tox -e %TOXENV%"
+
+# Always push coverage, even if tests failed.
+# This should be removed once coverage is pushed from tox.
+on_finish:
+  - "%PYTHON%\\python -m coverage combine"
+  - "%PYTHON%\\python -m coverage xml"
+  - "%PYTHON%\\python -m codecov"
