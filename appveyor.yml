@@ -44,10 +44,6 @@ install:
   - "%PYTHON%\\python --version"
   - "%PYTHON%\\python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
-  # Upgrade to the latest version of pip to avoid it displaying warnings
-  # about it being out of date.
-  - "%PYTHON%\\Scripts\\pip install --upgrade pip"
-
   # Install the build dependencies of the project.
   - "%PYTHON%\\Scripts\\pip install tox-travis"
 
