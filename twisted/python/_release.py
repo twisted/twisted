@@ -16,7 +16,6 @@ import os
 import re
 import sys
 import textwrap
-import twisted
 
 from zope.interface import Interface, implementer
 
