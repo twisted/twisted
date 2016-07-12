@@ -19,8 +19,8 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
     # See: http://www.appveyor.com/docs/installed-software#python
-    - PYTHON: "C:\\Python27-x64"
-      TOX_ENV: "py27-coverage-windows"
+    - PYTHON: C:\Python27-x64
+      TOXENV: py27-coverage-windows
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
@@ -52,4 +52,4 @@ install:
 
 test_script:
   # Run the project tests
-  - "%PYTHON%\\python -m tox -e %TOX_ENV%"
+  - "%PYTHON%\\python -m tox -e %TOXENV%"
