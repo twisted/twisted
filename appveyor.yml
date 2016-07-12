@@ -1,4 +1,4 @@
-version: {branch}-{build}
+version: '{branch}-{build}'
 
 # No need for Python.
 build: off
