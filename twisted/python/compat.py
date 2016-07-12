@@ -627,6 +627,9 @@ def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
     L{bytes}.
+
+    This function is POSIX only; environment variables are always text strings
+    on Windows.
     """
     if not _PY3:
         # On py2, nothing to do.
