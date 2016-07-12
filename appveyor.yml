@@ -1,3 +1,8 @@
+#
+# Some help for Python on AppVeyor:
+# * https://packaging.python.org/appveyor/
+# * https://ci.appveyor.com/tools/validate-yaml
+
 version: '{branch}-{build}'
 
 # No need for Python.
@@ -7,6 +12,7 @@ skip_branch_with_pr: true
 
 cache:
   - '%LOCALAPPDATA%\pip\Cache'
+
 
 environment:
   global:
@@ -18,6 +24,15 @@ environment:
   matrix:
     - PYTHON: C:\Python27-x64
       TOXENV: py27-coverage-windows
+    - PYTHON: C:\Python35-x64
+      TOXENV: py27-coverage-windows
+
+
+matrix:
+  allow_failures:
+    # Python 3 is not yet fully ported on Windows.
+    - PYTHON: C:\Python35-x64
+
 
 install:
   # Get some information about the build environment.
