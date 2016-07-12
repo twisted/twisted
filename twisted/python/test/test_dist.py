@@ -244,12 +244,11 @@ class GetVersionTests(TestCase):
         Test that getting the version of core reads from the
         [base]/_version.py file.
         """
-        f = open(os.path.join(self.dirname, "_version.py"), "w")
-        f.write("""
+        with open(os.path.join(self.dirname, "_version.py"), "w") as f:
+            f.write("""
 from twisted.python import versions
 version = versions.Version("twisted", 0, 1, 2)
 """)
-        f.close()
         self.assertEqual(dist.getVersion(base=self.dirname), "0.1.2")
 
 
@@ -283,9 +282,8 @@ class GetScriptsTests(TestCase):
         basedir = self.mktemp()
         os.mkdir(basedir)
         os.mkdir(os.path.join(basedir, 'bin'))
-        f = open(os.path.join(basedir, 'bin', 'exy'), 'w')
-        f.write('yay')
-        f.close()
+        with open(os.path.join(basedir, 'bin', 'exy'), 'w') as f:
+            f.write('yay')
         scripts = dist.getScripts(basedir=basedir)
         self.assertEqual(len(scripts), 1)
         self.assertEqual(os.path.basename(scripts[0]), 'exy')
