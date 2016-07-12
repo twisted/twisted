@@ -116,7 +116,11 @@ class TwistedSphinxInventory(SphinxInventory):
 
 
 def getDeprecated(self, decorators):
-
+    """
+    With a list of decorators, and the object it is running on, set the
+    C{_deprecated_info} flag if any of the decorators are a Twisted deprecation
+    decorator.
+    """
     for a in decorators:
         if isinstance(a, ast.CallFunc):
             decorator = a.asList()
@@ -150,7 +154,7 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
 
 def versionToUsefulText(version):
     """
-    Change a C{Version()} to a useful object.
+    Change an AST C{Version()} to a real one.
     """
     from twisted.python.versions import Version
 
@@ -160,7 +164,7 @@ def versionToUsefulText(version):
 
 def deprecatedToUsefulText(name, deprecated):
     """
-    Change a C{@deprecated} to a useful string.
+    Change a C{@deprecated} to a display string.
     """
     from twisted.python.deprecate import _getDeprecationWarningString
 

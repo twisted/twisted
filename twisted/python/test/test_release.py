@@ -716,6 +716,62 @@ class APIBuilderTests(ExternalTempdirTestCase):
         self.assertEqual(stdout.getvalue(), '')
 
 
+    def test_buildWithDeprecated(self):
+        """
+        The templates and System for Twisted includes adding deprecations.
+        """
+        stdout = StringIO()
+        self.patch(sys, 'stdout', stdout)
+
+        projectName = "Foobar"
+        packageName = "quux"
+        projectURL = "scheme:project"
+        sourceURL = "scheme:source"
+        docstring = "text in docstring"
+        privateDocstring = "should also appear in output"
+
+        inputPath = FilePath(self.mktemp()).child(packageName)
+        inputPath.makedirs()
+        inputPath.child("__init__.py").setContent(
+            "from twisted.python.deprecate import deprecated\n"
+            "from twisted.python.versions import Version\n"
+            "@deprecated(Version('Twisted', 15, 0, 0))\n"
+            "def foo():\n"
+            "    '%s'\n"
+            "from twisted.python import deprecate, versions\n"
+            "@deprecate.deprecated(versions.Version('Twisted', 16, 0, 0))\n"
+            "def _bar():\n"
+            "    '%s'" % (docstring, privateDocstring))
+
+        outputPath = FilePath(self.mktemp())
+
+        builder = APIBuilder()
+        builder.build(projectName, projectURL, sourceURL, inputPath,
+                      outputPath)
+
+        quuxPath = outputPath.child("quux.html")
+        self.assertTrue(
+            quuxPath.exists(),
+            "Package documentation file %r did not exist." % (quuxPath.path,))
+        self.assertIn(
+            docstring, quuxPath.getContent(),
+            "Docstring not in package documentation file.")
+        self.assertIn(
+            'foo was deprecated in Twisted 15.0.0',
+            quuxPath.getContent())
+        self.assertIn(
+            '_bar was deprecated in Twisted 16.0.0',
+            quuxPath.getContent())
+        self.assertIn(privateDocstring, quuxPath.getContent())
+
+        from time import sleep
+        print(quuxPath.path, file=sys.__stdout__)
+        sleep(99999)
+        assert False
+
+        self.assertEqual(stdout.getvalue(), '')
+
+
     def test_apiBuilderScriptMainRequiresTwoArguments(self):
         """
         SystemExit is raised when the incorrect number of command line
