@@ -83,7 +83,8 @@ def checkPID(pidfile):
         return
     if os.path.exists(pidfile):
         try:
-            pid = int(open(pidfile).read())
+            with open(pidfile) as f:
+                pid = int(f.read())
         except ValueError:
             sys.exit('Pidfile %s contains non-numeric value' % pidfile)
         try:
