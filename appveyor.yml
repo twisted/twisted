@@ -23,9 +23,9 @@ environment:
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
     - PYTHON: C:\Python27-x64
-      TOXENV: py27-coverage-windows
+      TOXENV: py27-coverage-publish-windows
     - PYTHON: C:\Python35-x64
-      TOXENV: py27-coverage-windows
+      TOXENV: py35-coverage-publish-windows
 
 
 matrix:
@@ -48,11 +48,3 @@ install:
 
 test_script:
   - "%PYTHON%\\python -m tox -e %TOXENV%"
-
-# Always push coverage, even if tests failed.
-# This should be removed once coverage is pushed from tox.
-on_finish:
-  - "%PYTHON%\\Scripts\\pip install codecov"
-  - "%PYTHON%\\python -m coverage combine"
-  - "%PYTHON%\\python -m coverage xml"
-  - "%PYTHON%\\python -m codecov"
