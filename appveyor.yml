@@ -14,13 +14,14 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
+    TRIAL_REPORTER: text
 
   matrix:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
     # See: http://www.appveyor.com/docs/installed-software#python
     - PYTHON: C:\Python27-x64
-      TOXENV: py27-coverage-windows
+      TOXENV: py27-tests-windows
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
