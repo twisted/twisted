@@ -115,6 +115,25 @@ class TwistedSphinxInventory(SphinxInventory):
 
 
 
+def getDeprecated(self, decorators):
+
+    for a in decorators:
+        if isinstance(a, ast.CallFunc):
+            decorator = a.asList()
+
+            # Getattr is used when the decorator is @foo.bar, not @bar
+            if isinstance(decorator[0], ast.Getattr):
+                getAttr = decorator[0].asList()
+                name = getAttr[0].name
+                fn = self.expandName(name) + "." + getAttr[1]
+            else:
+                fn = self.expandName(decorator[0].name)
+
+            if fn == "twisted.python.deprecate.deprecated":
+                self._deprecated_info = deprecatedToUsefulText(self.name, decorator)
+
+
+
 class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
 
     def visitClass(self, node):
@@ -125,12 +144,7 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
 
         cls = self.builder.current.contents[node.name]
 
-        for a in list(cls.raw_decorators):
-            if isinstance(a, ast.CallFunc):
-                decorator = a.asList()
-                fn = cls.expandName(decorator[0].name)
-                if fn == "twisted.python.deprecate.deprecated":
-                    cls._deprecated_info = deprecatedToUsefulText(cls.name, decorator)
+        getDeprecated(cls, list(cls.raw_decorators))
 
 
 
@@ -168,12 +182,7 @@ class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
     def docsources(self):
 
         if self.decorators:
-            for a in list(self.decorators):
-                if isinstance(a, ast.CallFunc):
-                    decorator = a.asList()
-                    fn = self.expandName(decorator[0].name)
-                    if fn == "twisted.python.deprecate.deprecated":
-                        self._deprecated_info = deprecatedToUsefulText(self.name, decorator)
+            getDeprecated(self, list(self.decorators))
 
         for x in super(TwistedFunction, self).docsources():
             yield x
