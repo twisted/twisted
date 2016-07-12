@@ -1,1 +1,1 @@
-Add IRC constants for ERR_TOOMANYMATCHES, RPL_ADMINLOC1, RPL_ADMINLOC2 as specified in RFC2812
+twisted.words.protocols.irc.ERR_TOOMANYMATCHES was introduced according to the RFC 2812 errata.

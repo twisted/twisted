@@ -3868,6 +3868,8 @@ ERR_NOTEXTTOSEND = '412'
 ERR_NOTOPLEVEL = '413'
 ERR_WILDTOPLEVEL = '414'
 ERR_BADMASK = '415'
+# Defined in errata.
+# https://www.rfc-editor.org/errata_search.php?rfc=2812&eid=2822
 ERR_TOOMANYMATCHES = '416'
 ERR_UNKNOWNCOMMAND = '421'
 ERR_NOMOTD = '422'
