@@ -764,11 +764,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
             quuxPath.getContent())
         self.assertIn(privateDocstring, quuxPath.getContent())
 
-        from time import sleep
-        print(quuxPath.path, file=sys.__stdout__)
-        sleep(99999)
-        assert False
-
         self.assertEqual(stdout.getvalue(), '')
 
 
