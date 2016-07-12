@@ -21,7 +21,7 @@ environment:
     # a later point release.
     # See: http://www.appveyor.com/docs/installed-software#python
     - PYTHON: C:\Python27-x64
-      TOXENV: py27-tests-windows
+      TOXENV: py27-coverage-windows
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
