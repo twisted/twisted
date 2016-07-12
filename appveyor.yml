@@ -1,9 +1,9 @@
-version: '{branch}-{build}'
+version: {branch}-{build}
 
 # No need for Python.
 build: off
 # Don't build branch if there is a open PR, to prevent double builds.
-skip_branch_with_pr: true
+skip_branch_with_pr: false
 
 cache:
   - '%LOCALAPPDATA%\pip\Cache'
