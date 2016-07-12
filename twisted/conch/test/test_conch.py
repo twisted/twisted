@@ -499,8 +499,7 @@ class RekeyTestsMixin(ConchServerSetupMixin):
 
 
 class OpenSSHClientMixin:
-    if not which('ssh'):
-        skip = "no ssh command-line client available"
+    skip = "no ssh command-line client available"
 
     def execute(self, remoteCommand, process, sshArgs=''):
         """
