@@ -30,8 +30,11 @@ env:
   global:
     - TRIAL_REPORTER=text
 
+# Install packages in a virtualenv.
+# Install the virtualenv if required.
+# Install Python version if required.
 install:
-  - pip install tox tox-travis
+  - ./.travis/install.sh tox tox-travis
 
 
 # FIXME: https://twistedmatrix.com/trac/ticket/8373
@@ -42,5 +45,6 @@ before_script:
   - git remote set-branches --add origin trunk
   - git fetch origin trunk
 
+# Run tox from the created virtualenv.
 script:
-  - tox
+  - ./.travis/run.sh
