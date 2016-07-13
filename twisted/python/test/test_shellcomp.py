@@ -6,7 +6,7 @@ Test cases for twisted.python._shellcomp
 """
 
 import sys
-from cStringIO import StringIO
+from io import StringIO, BytesIO
 
 from twisted.trial import unittest
 from twisted.python import _shellcomp, usage, reflect
