@@ -818,7 +818,7 @@ class SSL4ServerEndpoint(object):
         @type port: int
 
         @param sslContextFactory: An instance of
-            L{twisted.internet.ssl.ContextFactory}.
+            L{interfaces.ITLSContextFactory}.
 
         @param backlog: Size of the listen queue
         @type backlog: int
@@ -864,7 +864,7 @@ class SSL4ClientEndpoint(object):
         @type port: int
 
         @param sslContextFactory: SSL Configuration information as an instance
-            of L{twisted.internet.ssl.ContextFactory}.
+            of L{interfaces.ITLSContextFactory}.
 
         @param timeout: Number of seconds to wait before assuming the
             connection has failed.

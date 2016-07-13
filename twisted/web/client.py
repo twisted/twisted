@@ -936,9 +936,8 @@ class _ContextFactoryWithContext(object):
         Return the context created by
         L{_DeprecatedToCurrentPolicyForHTTPS._webContextFactory}.
 
-        @return: An old-style context factory.
-        @rtype: object with C{getContext} method, like
-            L{twisted.internet.ssl.ContextFactory}.
+        @return: A context.
+        @rtype context: L{OpenSSL.SSL.Context}
         """
         return self._context
 
@@ -977,9 +976,8 @@ class _DeprecatedToCurrentPolicyForHTTPS(object):
         @param port: The port part of the URI.
         @type port: L{int}
 
-        @return: An old-style context factory.
-        @rtype: object with C{getContext} method, like
-            L{twisted.internet.ssl.ContextFactory}.
+        @return: A context factory.
+        @rtype: L{ITLSContextFactory}
         """
         context = self._webContextFactory.getContext(hostname, port)
         return _ContextFactoryWithContext(context)
