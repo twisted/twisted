@@ -480,7 +480,7 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
     Assuming all class attributes of this name are dictionaries.
     If any of the dictionaries being accumulated have the same key, the
-    one highest in the class heirarchy wins.
+    one highest in the class hierarchy wins.
     (XXX: If \"highest\" means \"closest to the starting class\".)
 
     Ex::
@@ -513,7 +513,7 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
     """
-    Accumulate all attributes of a given name in a class heirarchy into a single list.
+    Accumulate all attributes of a given name in a class hierarchy into a single list.
 
     Assuming all class attributes of this name are lists.
     """

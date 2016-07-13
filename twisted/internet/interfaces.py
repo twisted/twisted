@@ -112,7 +112,7 @@ class IResolver(IResolverSimple):
         """
         Perform an A record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -1949,6 +1949,33 @@ class IHalfCloseableProtocol(Interface):
 
 
 
+class IHandshakeListener(Interface):
+    """
+    An interface implemented by a L{IProtocol} to indicate that it would like
+    to be notified when TLS handshakes complete when run over a TLS-based
+    transport.
+
+    This interface is only guaranteed to be called when run over a TLS-based
+    transport: non TLS-based transports will not respect this interface.
+    """
+
+    def handshakeCompleted():
+        """
+        Notification of the TLS handshake being completed.
+
+        This notification fires when OpenSSL has completed the TLS handshake.
+        At this point the TLS connection is established, and the protocol can
+        interrogate its transport (usually an L{ISSLTransport}) for details of
+        the TLS connection.
+
+        This notification *also* fires whenever the TLS session is
+        renegotiated. As a result, protocols that have certain minimum security
+        requirements should implement this interface to ensure that they are
+        able to re-evaluate the security of the TLS session if it changes.
+        """
+
+
+
 class IFileDescriptorReceiver(Interface):
     """
     Protocols may implement L{IFileDescriptorReceiver} to receive file
@@ -2215,7 +2242,7 @@ class IProtocolNegotiationFactory(Interface):
     A provider of L{IProtocolNegotiationFactory} can provide information about
     the various protocols that the factory can create implementations of. This
     can be used, for example, to provide protocol names for Next Protocol
-    Negotation and Application Layer Protocol Negotiation.
+    Negotiation and Application Layer Protocol Negotiation.
 
     @see: L{twisted.internet.ssl}
     """

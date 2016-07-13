@@ -62,14 +62,18 @@ on event-based network programming and multiprotocol integration.
     )
 
 
+_dev=['pyflakes >= 1.0.0',
+      'twisted-dev-tools >= 0.0.2',
+      'python-subunit',
+      'sphinx >= 1.3.1']
+
+if not _PY3:
+    # These modules do not yet work on Python 3.
+    _dev += ['twistedchecker >= 0.4.0',
+             'pydoctor >= 15.0.0']
 
 _EXTRA_OPTIONS = dict(
-    dev=['twistedchecker >= 0.4.0',
-         'pyflakes >= 1.0.0',
-         'twisted-dev-tools >= 0.0.2',
-         'python-subunit',
-         'sphinx >= 1.3.1',
-         'pydoctor >= 15.0.0'],
+    dev=_dev,
     tls=['pyopenssl >= 0.13',
          'service_identity',
          'idna >= 0.6'],
@@ -193,8 +197,7 @@ def getExtensions():
             ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
              "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
             libraries=["ws2_32"],
-            condition=lambda _: not _PY3 and
-                                _isCPython and sys.platform == "win32"),
+            condition=lambda _: _isCPython and sys.platform == "win32"),
 
         ConditionalExtension(
             "twisted.python._sendmsg",
@@ -261,7 +264,7 @@ class build_ext_twisted(build_ext.build_ext):
         """
         Prepare the C{self.extensions} attribute (used by
         L{build_ext.build_ext}) by checking which extensions in
-        L{conditionalExtensions} should be built.  In addition, if we are
+        I{conditionalExtensions} should be built.  In addition, if we are
         building on NT, define the WIN32 macro to 1.
         """
         # always define WIN32 under Windows

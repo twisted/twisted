@@ -110,7 +110,7 @@ When
 
 
     
-Always, always, *always* be sure `all the     tests pass <http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm>`_ before committing any code.  If someone else
+Always, always, *always* be sure `all the     tests pass <http://ronjeffries.com/xprog/classics/expunittestsat100/>`_ before committing any code.  If someone else
 checks out code at the start of a development session and finds
 failing tests, they will not be happy and may decide to *hunt you down* .
 
@@ -586,8 +586,8 @@ Links
 - `UnitTest <http://c2.com/cgi/wiki?UnitTest>`__ on
   the `PortlandPatternRepository      Wiki <http://c2.com/cgi/wiki>`_ , where all the cool `ExtremeProgramming <http://c2.com/cgi/wiki?ExtremeProgramming>`_ kids hang out.
 - `Unit      Tests <http://www.extremeprogramming.org/rules/unittests.html>`_ in `Extreme Programming: A Gentle Introduction <http://www.extremeprogramming.org>`_ .
-- Ron Jeffries expounds on the importance of `Unit      Tests at 100% <http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm>`_ .
-- Ron Jeffries writes about the `Unit      Test <http://www.xprogramming.com/Practices/PracUnitTest.html>`_ in the `Extreme      Programming practices of C3 <http://www.xprogramming.com/Practices/xpractices.htm>`_ .
+- Ron Jeffries expounds on the importance of `Unit      Tests at 100% <http://ronjeffries.com/xprog/classics/expunittestsat100/>`_ .
+- Ron Jeffries writes about the `Unit      Test <https://web.archive.org/web/20140708115244/http://www.xprogramming.com/Practices/PracUnitTest.html>`_ in the `Extreme      Programming practices of C3 <http://web.archive.org/web/20140827044941/http://www.xprogramming.com/Practices/xpractices.htm>`_ .
 - `PyUnit's homepage <http://pyunit.sourceforge.net>`_ .
 - The top-level tests directory, `twisted/test <https://github.com/twisted/twisted/tree/trunk/twisted/test>`_.
 
