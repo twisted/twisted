@@ -269,7 +269,7 @@ class DeferredResultTests(unittest.TestCase):
 
     def test_deferredFailureAfterSuccess(self):
         """
-        Check that a successfull L{threads.deferToThread} followed by a one
+        Check that a successful L{threads.deferToThread} followed by a one
         that raises an exception correctly result as a failure.
         """
         # set up a condition that causes cReactor to hang. These conditions
@@ -381,9 +381,8 @@ class StartupBehaviorTests(unittest.TestCase):
 
     def testCallBeforeStartupUnexecuted(self):
         progname = self.mktemp()
-        progfile = open(progname, 'w')
-        progfile.write(_callBeforeStartupProgram % {'reactor': reactor.__module__})
-        progfile.close()
+        with open(progname, 'w') as progfile:
+            progfile.write(_callBeforeStartupProgram % {'reactor': reactor.__module__})
 
         def programFinished(result):
             (out, err, reason) = result

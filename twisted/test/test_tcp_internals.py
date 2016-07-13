@@ -14,7 +14,6 @@ try:
 except ImportError:
     resource = None
 
-from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 
 from twisted.python import log
@@ -29,9 +28,6 @@ class PlatformAssumptionsTests(TestCase):
     """
     Test assumptions about platform behaviors.
     """
-    if _PY3:
-        skip = "Port when Python 3 supports twisted.internet.process (#5987)"
-
     socketLimit = 8192
 
     def setUp(self):
@@ -89,7 +85,7 @@ class PlatformAssumptionsTests(TestCase):
         client.setblocking(False)
 
         # Use up all the rest of the file descriptors.
-        for i in xrange(self.socketLimit):
+        for i in range(self.socketLimit):
             try:
                 self.socket()
             except socket.error as e:
