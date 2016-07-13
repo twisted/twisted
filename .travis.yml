@@ -28,7 +28,7 @@ matrix:
 
 env:
   global:
-    - TRIAL_REPORTER=text
+    - TRIAL_REPORTER=verbose
 
 # Install packages in a virtualenv.
 # Install the virtualenv if required.
