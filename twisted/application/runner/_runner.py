@@ -37,7 +37,7 @@ class Runner(object):
     def __init__(self, options):
         """
         @param options: Configuration options for this runner.
-        @type options: mapping
+        @type options: mapping of L{RunnerOptions} to values
         """
         self.options = options
 
