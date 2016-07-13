@@ -359,7 +359,7 @@ class ZshArgumentsGenerator(object):
         Write out zsh code for each option in this command
         @return: L{None}
         """
-        optNames = self.allOptionsNameToDefinition.keys()
+        optNames = list(self.allOptionsNameToDefinition.keys())
         optNames.sort()
         for longname in optNames:
             self.writeOpt(longname)
