@@ -42,6 +42,9 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         self.opened = []
 
         def fakeOpen(name, mode=None):
+            if name == "nocanopen":
+                raise IOError(None, None, name)
+
             self.opened.append((name, mode))
             return NotImplemented
 
@@ -184,6 +187,25 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.opt_log_file("mylog")
 
         self.assertEqual([("mylog", "a")], self.opened)
+
+
+    def test_logFileCantOpen(self):
+        """
+        L{TwistOptions.opt_log_file} exits with L{ExitStatus.EX_IOERR} if
+        unable to open the log file due to an L{EnvironmentError}.
+        """
+        self.patchExit()
+        self.patchOpen()
+
+        options = TwistOptions()
+        options.opt_log_file("nocanopen")
+
+        self.assertEquals(self.exit.status, ExitStatus.EX_IOERR)
+        self.assertTrue(
+            self.exit.message.startswith(
+                "Unable to open log file 'nocanopen': "
+            )
+        )
 
 
     def _testLogFormat(self, format, expectedObserver):
