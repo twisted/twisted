@@ -388,6 +388,7 @@ testModules = [
     "twisted.python.test.test_dist3",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
+    "twisted.python.test.test_shellcomp"
     "twisted.python.test.test_syslog",
     "twisted.python.test.test_systemd",
     "twisted.python.test.test_textattributes",
