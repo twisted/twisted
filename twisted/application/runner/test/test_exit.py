@@ -5,6 +5,7 @@
 Tests for L{twisted.application.runner._exit}.
 """
 
+from io import BytesIO
 from ...runner import _exit
 from .._exit import exit, ExitStatus
 
@@ -58,11 +59,39 @@ class ExitTests(twisted.trial.unittest.TestCase):
         self.assertEqual(self.exit.arg, status.value)
 
 
+    def test_exitMessageZero(self):
+        """
+        L{exit} given a status code of zero (C{0}) writes the given message to
+        standard output.
+        """
+        out = BytesIO()
+        self.patch(_exit, "stdout", out)
+
+        message = b"Hello, world."
+        exit(0, message)
+
+        self.assertEqual(out.getvalue(), b"{}\n".format(message))
+
+
+    def test_exitMessageNonZero(self):
+        """
+        L{exit} given a non-zero status code writes the given message to
+        standard error.
+        """
+        out = BytesIO()
+        self.patch(_exit, "stderr", out)
+
+        message = b"Hello, world."
+        exit(64, message)
+
+        self.assertEqual(out.getvalue(), b"{}\n".format(message))
+
+
 
 class DummyExit(object):
     """
-    Stub for L{sys.exit} that remembers whether it's been called and, if it has,
-    what argument it was given.
+    Stub for L{sys.exit} that remembers whether it's been called and, if it
+    has, what argument it was given.
     """
     def __init__(self):
         self.exited = False
