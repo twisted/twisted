@@ -24,10 +24,12 @@ matrix:
       # 7.1 is OS X 10.10.x
       # see: https://docs.travis-ci.com/user/languages/objective-c/#Supported-OS-X-iOS-SDK-versions
       osx_image: xcode7.1
+      python: 2.7
       env: TOXENV=py27-coverage-publish-posix
   allow_failures:
     # For now, OSX run on Travis-CI has a few failures.
     - language: generic
+      python: 2.7
       env: TOXENV=py27-coverage-publish-posix
 
 env:
