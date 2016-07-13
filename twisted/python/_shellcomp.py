@@ -350,8 +350,8 @@ class ZshArgumentsGenerator(object):
         This is the start of the code that calls _arguments
         @return: L{None}
         """
-        self.file.write('#compdef %s\n\n'
-                        '_arguments -s -A "-*" \\\n' % (self.cmdName,))
+        self.file.write(b'#compdef %s\n\n'
+                        b'_arguments -s -A "-*" \\\n' % (self.cmdName.encode('utf-8'),))
 
 
     def writeOptions(self):
@@ -382,8 +382,8 @@ class ZshArgumentsGenerator(object):
             if action._repeat and i != len(self.extraActions) - 1:
                 raise ValueError("Completer with repeat=True must be "
                                  "last item in Options.extraActions")
-            self.file.write(escape(action._shellCode('', usage._ZSH)))
-            self.file.write(' \\\n')
+            self.file.write(escape(action._shellCode('', usage._ZSH)).encode('utf-8'))
+            self.file.write(b' \\\n')
 
 
     def writeFooter(self):
