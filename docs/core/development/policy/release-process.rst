@@ -20,8 +20,8 @@ By the end of a Twisted release we'll have:
 - Updated documentation on Read The Docs
 - Updated download links on the twistedmatrix.com site
 - Announcement emails sent to major Python lists
-- Announcement post on ​http://labs.twistedmatrix.com
-- A tag in our Subversion repository marking the release
+- Announcement post on `the Twisted blog <http://labs.twistedmatrix.com>`_
+- A tag in our Git repository marking the release
 
 
 Prerequisites
@@ -30,11 +30,11 @@ Prerequisites
 To release Twisted, you will need:
 
 - Commit privileges to Twisted
-- Access to dornkirk.twistedmatrix.com as t-web
+- Access to ``dornkirk.twistedmatrix.com`` as t-web
 - Permissions to edit the Downloads wiki page
 - Channel operator permissions for ``#twisted``
 - Admin privileges for Twisted's PyPI packages
-- Contributor status for ​http://labs.twistedmatrix.com
+- Contributor status for `the Twisted blog <http://labs.twistedmatrix.com>`_
 - Read The Docs access for the Twisted project
 
 
@@ -82,7 +82,7 @@ Prepare for a release
   - Check the release manager notes in case anyone has left anything which can only be done during the release.
 
 2. Check for any ​regressions
-3. Read through the ``INSTALL`` and ``README`` files to make sure things like the supported Python versions are correct
+3. Read through the ``INSTALL.rst`` and ``README.rst`` files to make sure things like the supported Python versions are correct
 
   - Check the required Python version.
   - Check that the list matches the current set of buildbots.
@@ -95,21 +95,26 @@ Prepare for a release
   - Assign it to yourself
   - Call it "Release $RELEASE"
 
-6. Make a branch (``mkbranch release-$RELEASE-4290``, using ``mkbranch`` from ``twisted-dev-tools``)
+6. Make a branch and attach it to the ticket:
+
+   - ``git fetch origin``
+   - ``git checkout origin/trunk``
+   - ``git checkout -b release-$RELEASE-4290``
+
 
 How to do a pre-release
 -----------------------
 
 1. Check ​buildbot to make sure all supported platforms are green (wait for pending builds if necessary).
-2. If a previously supported platform does not currently have a buildbot, move from supported platforms to "expected to work" in ``INSTALL``. (Pending #1305)
+2. If a previously supported platform does not currently have a buildbot, move from supported platforms to "expected to work" in ``INSTALL.rst``.
 3. In your Git-SVN-enabled Git repo, fetch and check out the new release branch.
 4. Run ``./bin/admin/change-versions --prerelease``
 5. Commit the changes made by change-versions
 6. Run ``./bin/admin/build-news .``
 7. Commit the changes made by build-news - this automatically removes the NEWS topfiles (see #4315)
-8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README`` if required
-9. ``git svn dcommit --dry`` to make sure everything looks fine, and then ``git svn dcommit`` to push up the changes.
-10. Run ``python setup.py sdist -d /tmp/twisted-release`` to build the tarballs.
+8. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
+9. Push the changes up to GitHub.
+10. Run ``python setup.py sdist --formats=bztar -d /tmp/twisted-release`` to build the tarballs.
 11. Copy ``NEWS`` to ``/tmp/twisted-release/`` as ``NEWS.txt`` for people to view without having to download the tarballs.
     (e.g. ``cp NEWS /tmp/twisted-release/NEWS.txt``)
 12. Upload the tarballs to ``twistedmatrix.com/Releases/pre/$RELEASE`` (see #4353)
@@ -171,29 +176,30 @@ Prepare the branch
 
 1. Have the release branch, previously used to generate a pre-release, checked out
 2. Run ``./bin/admin/change-versions``
-3. Add the quote of the release to the ``README``
+3. Add the quote of the release to the ``README.rst``
 4. Make a new quote file for the next version
 
    - ``git mv docs/fun/Twisted.Quotes docs/historic/Quotes/Twisted-$API; echo '' > docs/fun/Twisted.Quotes; git add docs/fun/Twisted.Quotes``
 
-5. Commit the version and ``README`` changes.
+5. Commit the version and ``README.rst`` changes.
 6. Submit the ticket for review
 7. Pause until the ticket is reviewed and accepted.
-8.  Tag the release
+8. Tag the release.
 
-  - e.g. ``svn cp svn+ssh://svn.twistedmatrix.com/svn/Twisted/branches/releases/release-$RELEASE-4290 svn+ssh://svn.twistedmatrix.com/svn/Twisted/tags/releases/twisted-$RELEASE``
-  - A good commit message to use is something like "Tag $RELEASE release"
+   - ``git tag -s twisted-$RELEASE -m "Tag $RELEASE release"``
+   - ``git push --tags``
 
 
 Cut the tarballs & installers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Using a checkout of the release branch or the release tag (with no local changes!), run ``python setup.py sdist -d /tmp/twisted-release`` to build the tarballs.
+1. Using a checkout of the release branch or the release tag (with no local changes!), build the tarballs:
+
+   - ``python setup.py sdist --formats=bztar -d /tmp/twisted-release``
+
 2. Build Windows MSI
 
-  - ​http://buildbot.twistedmatrix.com/builders/windows7-64-py2.7-msi
-  - For "Branch" specify the release branch, e.g. "branches/releases/release-$RELEASE-4290"
-  - Download the latest .whl files from from ​http://buildbot.twistedmatrix.com/builds/twisted-packages/ and save them in the staging directory
+  - Download the latest ``.whl`` files from from ​http://buildbot.twistedmatrix.com/builds/twisted-packages/ and save them in the staging directory
 
 3. Sign the tarballs and Windows installers.
    (You will need a PGP key for this - use something like Seahorse to generate one, if you don't have one.)
@@ -209,14 +215,14 @@ Update documentation
 1. Get the dependencies
 
   - Pydoctor (use the branch "twisted" from ​https://github.com/twisted/pydoctor)
-  - Epydoc (python-epydoc in Debian)
+  - Epydoc
 
 2. Build the documentation
 
   - ``./bin/admin/build-docs .``
   - ``cp -R doc /tmp/twisted-release/``
 
-3. Run the build-apidocs script to build the API docs and then upload them (See also APIDocs and #2891).
+3. Run the build-apidocs script to build the API docs and then upload them (See also #2891).
 
   - Copy the pydoctor directory from the twisted branch into your Git checkout.
   - ``./bin/admin/build-apidocs . /tmp/twisted-release/api``
@@ -232,15 +238,15 @@ Distribute
 2. Upload to the official upload locations (see #2888)
 
   - ``cd ~; git clone https://github.com/twisted-infra/braid``
-  - ``cd braid``;
+  - ``cd braid``
   - ``virtualenv ~/dev/braid; source ~/dev/braid/bin/activate; cd ~/braid; python setup.py develop;``
   - ``cd ~/braid; fab config.production t-web.uploadRelease:$RELEASE,/tmp/release.tar.bz2``
 
 3. Test the generated docs
 
-  - Browse to ​``http://twistedmatrix.com/documents/$RELEASE/``
+  - Browse to ``http://twistedmatrix.com/documents/$RELEASE/``
   - Make sure that there is content in each of the directories and that it looks good
-  - Follow each link on ​http://twistedmatrix.com/trac/wiki/Documentation, replace current with $RELEASE (e.g. 10.0.0) and look for any obvious breakage
+  - Follow each link on `the documentation page <https://twistedmatrix.com/trac/wiki/Documentation>`_, replace current with ``$RELEASE`` (e.g. 10.0.0) and look for any obvious breakage
 
 4. Change the "current" symlink
 
@@ -264,10 +270,8 @@ Announce
 
 2. Update PyPI records & upload files
 
-  - ​http://pypi.python.org/pypi/Twisted/
-
-    - Edit the version. *Make sure you do this first.*
-    - Upload tarball, MSIs and wheels
+   - ``pip install -U twine``
+   - ``twine upload /tmp/twisted-release/Twisted-$RELEASE*``
 
 3. Write the release announcement (see below)
 4. Announce the release
@@ -278,9 +282,6 @@ Announce
   - ``#twisted`` topic on IRC (you'll need ops)
 
 5. Merge the release branch into trunk, closing the release ticket at the same time.
-
-  - For now you need to add a ``.misc`` NEWS fragment to merge the branch.
-
 6. Close the release milestone (which should have no tickets in it).
 7. Open a milestone for the next release.
 
@@ -361,9 +362,6 @@ This section goes over doing these "point" releases.
 
 1. Ensure all bugfixes are in trunk.
 2. Make a branch off the affected version.
-
-  - eg. ``svn cp svn+ssh://svn.twistedmatrix.com/svn/Twisted/branches/releases/release-$API.0-7844 svn+ssh://svn.twistedmatrix.com/svn/Twisted/branches/releases/release-$API.1-7906 -m "Branching to $API.1"``
-
 3. Cherry-pick the merge commits that merge the bugfixes into trunk, onto the new release branch.
 4. Go through the rest of the process for a full release from "How to do a pre-release", merging the release branch into trunk as normal as the end of the process.
 
