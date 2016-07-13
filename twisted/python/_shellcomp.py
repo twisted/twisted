@@ -174,11 +174,11 @@ class ZshBuilder(object):
             gen = ZshArgumentsGenerator(self.options, self.cmdName, self.file)
             gen.extraActions.insert(0, SubcommandAction())
             gen.write()
-            self.file.write('local _zsh_subcmds_array\n_zsh_subcmds_array=(\n')
+            self.file.write(b'local _zsh_subcmds_array\n_zsh_subcmds_array=(\n')
             for (cmd, short, parser, desc) in self.options.subCommands:
-                self.file.write('"%s:%s"\n' % (cmd, desc))
-            self.file.write(")\n\n")
-            self.file.write('_describe "sub-command" _zsh_subcmds_array\n')
+                self.file.write(b'"%s:%s"\n' % (cmd.encode('utf-8'), desc.encode('utf-8')))
+            self.file.write(b")\n\n")
+            self.file.write(b'_describe "sub-command" _zsh_subcmds_array\n')
         else:
             gen = ZshArgumentsGenerator(self.options, self.cmdName, self.file)
             gen.write()
@@ -391,7 +391,7 @@ class ZshArgumentsGenerator(object):
         Write the last bit of code that finishes the call to _arguments
         @return: L{None}
         """
-        self.file.write('&& return 0\n')
+        self.file.write(b'&& return 0\n')
 
 
     def verifyZshNames(self):
@@ -526,12 +526,12 @@ class ZshArgumentsGenerator(object):
             #we have to write an extra line for the short option if we have one
             shortExclusionsField = self.excludeStr(longname, buildShort=True)
             self.file.write(escape('%s%s%s%s%s' % (shortExclusionsField,
-                multiField, shortField, descriptionField, actionField)))
-            self.file.write(' \\\n')
+                multiField, shortField, descriptionField, actionField)).encode('utf-8'))
+            self.file.write(b' \\\n')
 
         self.file.write(escape('%s%s%s%s%s' % (longExclusionsField,
-            multiField, longField, descriptionField, actionField)))
-        self.file.write(' \\\n')
+            multiField, longField, descriptionField, actionField)).encode('utf-8'))
+        self.file.write(b' \\\n')
 
 
     def getAction(self, longname):
