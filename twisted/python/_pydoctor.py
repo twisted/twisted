@@ -16,7 +16,6 @@ from pydoctor import model, zopeinterface
 from pydoctor.sphinx import SphinxInventory
 
 
-
 class HeadRequest(urllib2.Request):
     """
     A request for the HEAD HTTP method.
@@ -134,7 +133,13 @@ def getDeprecated(self, decorators):
                 fn = self.expandName(decorator[0].name)
 
             if fn == "twisted.python.deprecate.deprecated":
-                self._deprecated_info = deprecatedToUsefulText(self.name, decorator)
+                try:
+                    self._deprecated_info = deprecatedToUsefulText(
+                        self.name, decorator)
+                except AttributeError:
+                    # It's a reference or something that we can't figure out
+                    # from the AST.
+                    pass
 
 
 
@@ -151,8 +156,20 @@ class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
         getDeprecated(cls, list(cls.raw_decorators))
 
 
+    def visitFunction(self, node):
+        """
+        Called when a class is visited.
+        """
+        super(TwistedModuleVisitor, self).visitFunction(node)
 
-def versionToUsefulText(version):
+        func = self.builder.current.contents[node.name]
+
+        if func.decorators:
+            getDeprecated(func, list(func.decorators))
+
+
+
+def versionToUsefulObject(version):
     """
     Change an AST C{Version()} to a real one.
     """
@@ -168,7 +185,7 @@ def deprecatedToUsefulText(name, deprecated):
     """
     from twisted.python.deprecate import _getDeprecationWarningString
 
-    version = versionToUsefulText(deprecated[1])
+    version = versionToUsefulObject(deprecated[1])
     if deprecated[2]:
         if isinstance(deprecated[2], ast.Keyword):
             replacement = deprecated[2].asList()[1].value
@@ -194,6 +211,7 @@ class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
 
 
 class TwistedASTBuilder(zopeinterface.ZopeInterfaceASTBuilder):
+    # Vistor is not a typo...
     ModuleVistor = TwistedModuleVisitor
 
 

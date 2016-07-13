@@ -735,13 +735,18 @@ class APIBuilderTests(ExternalTempdirTestCase):
         inputPath.child("__init__.py").setContent(
             "from twisted.python.deprecate import deprecated\n"
             "from twisted.python.versions import Version\n"
-            "@deprecated(Version('Twisted', 15, 0, 0))\n"
+            "@deprecated(Version('Twisted', 15, 0, 0), "
+            "'Baz')\n"
             "def foo():\n"
             "    '%s'\n"
             "from twisted.python import deprecate, versions\n"
             "@deprecate.deprecated(versions.Version('Twisted', 16, 0, 0))\n"
             "def _bar():\n"
-            "    '%s'" % (docstring, privateDocstring))
+            "    '%s'\n"
+            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            "class Baz(object):\n"
+            "    pass"
+            "" % (docstring, privateDocstring))
 
         outputPath = FilePath(self.mktemp())
 
@@ -757,12 +762,24 @@ class APIBuilderTests(ExternalTempdirTestCase):
             docstring, quuxPath.getContent(),
             "Docstring not in package documentation file.")
         self.assertIn(
-            'foo was deprecated in Twisted 15.0.0',
+            'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
             quuxPath.getContent())
         self.assertIn(
-            '_bar was deprecated in Twisted 16.0.0',
+            '_bar was deprecated in Twisted 16.0.0.',
             quuxPath.getContent())
         self.assertIn(privateDocstring, quuxPath.getContent())
+
+        # There should also be a page for the foo function in quux.
+        self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
+
+        self.assertIn(
+            'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
+            quuxPath.sibling('quux.foo.html').getContent())
+
+        self.assertIn(
+            'Baz was deprecated in Twisted 14.2.3; please use stuff instead.',
+            quuxPath.sibling('quux.baz.html').getContent())
+
 
         self.assertEqual(stdout.getvalue(), '')
 
