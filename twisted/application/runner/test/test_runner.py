@@ -150,6 +150,23 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.assertEqual(self.exit.message, "Unable to read PID file.")
 
 
+    def test_killRequestedWithPIDFileEmpty(self):
+        """
+        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
+        L{RunnerOptions.pidFilePath} containing no value exits with
+        L{ExitStatus.EX_DATAERR}.
+        """
+        pidFilePath = DummyFilePath(b"")
+        runner = Runner({
+            RunnerOptions.kill: True,
+            RunnerOptions.pidFilePath: pidFilePath,
+        })
+        runner.killIfRequested()
+
+        self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
+        self.assertEqual(self.exit.message, "Invalid PID file.")
+
+
     def test_killRequestedWithPIDFileNotAnInt(self):
         """
         L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
