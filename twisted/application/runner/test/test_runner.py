@@ -405,4 +405,3 @@ class DummyWarningsModule(object):
         @param args: ignored.
         @param kwargs: ignored.
         """
-        pass
