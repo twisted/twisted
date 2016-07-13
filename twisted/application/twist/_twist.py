@@ -138,8 +138,3 @@ class Twist(object):
 
         cls.startService(reactor, service)
         cls.run(cls.runnerOptions(options))
-
-
-
-if __name__ == "__main__":
-    Twist.main()
