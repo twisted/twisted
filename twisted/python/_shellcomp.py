@@ -619,7 +619,7 @@ class ZshArgumentsGenerator(object):
             if methodObj in methodToShort:
                 short = methodToShort[methodObj]
 
-            reqArgs = methodObj.im_func.func_code.co_argcount
+            reqArgs = methodObj.__func__.__code__.co_argcount
             if reqArgs == 2:
                 self.optParams.append([longname, short, None, descr])
                 self.paramNameToDefinition[longname] = [short, None, descr]
