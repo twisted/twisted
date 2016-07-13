@@ -569,7 +569,7 @@ class SimpleProgWithSubcommands(SimpleProgOptions):
 
 
 
-testOutput1 = """#compdef silly
+testOutput1 = b"""#compdef silly
 
 _arguments -s -A "-*" \\
 ':output file (*):_files -g "*"' \\
@@ -588,7 +588,7 @@ _arguments -s -A "-*" \\
 """
 
 # with sub-commands
-testOutput2 = """#compdef silly2
+testOutput2 = b"""#compdef silly2
 
 _arguments -s -A "-*" \\
 '*::subcmd:->subcmd' \\
