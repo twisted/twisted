@@ -11,11 +11,11 @@ cache:
   directories:
     - $HOME/.cache/pip
 
-# python:
-#   - "2.7"
-#   - "3.3"
-#   - "3.4"
-#   - "3.5"
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
 
 matrix:
   include:
@@ -24,6 +24,10 @@ matrix:
       # 7.1 is OS X 10.10.x
       # see: https://docs.travis-ci.com/user/languages/objective-c/#Supported-OS-X-iOS-SDK-versions
       osx_image: xcode7.1
+      env: TOXENV=py27-coverage-publish-posix
+  allow_failures:
+    # For now, OSX run on Travis-CI has a few failures.
+    - language: generic
       env: TOXENV=py27-coverage-publish-posix
 
 env:
