@@ -1176,7 +1176,7 @@ class ProducerTests(unittest.SynchronousTestCase):
         self.assertTrue(p.paused)
 
         # Unpausing delivers the waiting line, and causes the protocol to
-        # pause agin.
+        # pause again.
         p.resumeProducing()
         self.assertEqual(t.data, [b'hello, world', b'hello', b'world'])
         self.assertTrue(t.paused)
@@ -1190,7 +1190,7 @@ class ProducerTests(unittest.SynchronousTestCase):
         self.assertTrue(p.paused)
 
         # Unpausing delivers the waiting line, and causes the protocol to
-        # pause agin.
+        # pause again.
         p.resumeProducing()
         self.assertEqual(
             t.data, [b'hello, world', b'hello', b'world', b'goodbye'])

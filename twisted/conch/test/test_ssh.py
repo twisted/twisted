@@ -448,7 +448,7 @@ if cryptography is not None and pyasn1 is not None:
         def ssh_USERAUTH_SUCCESS(self, packet):
             if not self.canSucceedPassword and self.canSucceedPublicKey:
                 raise unittest.FailTest(
-                    'got USERAUTH_SUCESS before password and publickey')
+                    'got USERAUTH_SUCCESS before password and publickey')
             userauth.SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
 
         def getPassword(self):

@@ -107,7 +107,7 @@ class InsensitiveDict:
             return default
 
     def setdefault(self, key, default):
-        """If 'key' doesn't exists, associate it with the 'default' value.
+        """If 'key' doesn't exist, associate it with the 'default' value.
         Return value associated with 'key'."""
         if not self.has_key(key):
             self[key] = default

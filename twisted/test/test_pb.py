@@ -720,7 +720,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(o2.remoteMethod("getCache"),
                           o2.remoteMethod("getCache"))
 
-        # now, refcounting (similiar to testRefCount)
+        # now, refcounting (similar to testRefCount)
         luid = cp.luid
         baroqueLuid = complex[0].luid
         self.assertIn(luid, s.remotelyCachedObjects,

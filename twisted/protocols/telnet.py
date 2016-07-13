@@ -99,7 +99,7 @@ ECHO  =           chr(1)  # User-to-Server:  Asks the server to send
                           # sending echos of the transmitted data.
                           # Sent only as a reply to ECHO or NO ECHO.
 
-SUPGA =           chr(3)  # Supress Go Ahead...? "Modern" telnet servers
+SUPGA =           chr(3)  # Suppress Go Ahead...? "Modern" telnet servers
                           # are supposed to do this.
 
 LINEMODE =       chr(34)  # I don't care that Jon Postel is dead.
@@ -315,7 +315,7 @@ class Telnet(protocol.Protocol):
                 return why
 
     def loggedIn(self):
-        """Called after the user succesfully logged in.
+        """Called after the user successfully logged in.
 
         Override in subclasses.
         """
