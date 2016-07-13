@@ -133,6 +133,23 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.assertIdentical(self.exit.message, None)
 
 
+    def test_killRequestedWithPIDFileNotAnInt(self):
+        """
+        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and
+        a L{RunnerOptions.pidFilePath} containing a non-integer value exits
+        with L{ExitStatus.EX_DATAERR}.
+        """
+        pidFilePath = DummyFilePath(b"** totally not a number, dude **")
+        runner = Runner({
+            RunnerOptions.kill: True,
+            RunnerOptions.pidFilePath: pidFilePath,
+        })
+        runner.killIfRequested()
+
+        self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
+        self.assertEqual(self.exit.message, "Invalid pid file.")
+
+
     def test_writePIDFileWithPIDFile(self):
         """
         L{Runner.writePIDFile} with L{RunnerOptions.pidFilePath} writes a PID
