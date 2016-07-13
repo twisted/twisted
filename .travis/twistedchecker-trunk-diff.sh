@@ -10,6 +10,7 @@
 
 target=$1
 
+# FIXME: https://github.com/twisted/twistedchecker/issues/116
 # Since for unknown modules twistedchecker will return the same error, the
 # diff will fail to detect that we are trying to check an invalid path or
 # module.
