@@ -7,9 +7,18 @@ version: '{branch}-{build}'
 
 # No need for Python.
 build: off
+# We don't report the test in XUnit tests or any other format supported by
+# AppVeyor.
+test: off
+
 # Don't build branch if there is a open PR, to prevent double builds.
+# For now, Appveyour will only build PR commits and not commits to master or
+# commits on random branches without an associated PR.
 skip_branch_with_pr: true
 
+# Not sure if the cache works.
+# Note the use of single quotes around the entire line, when environment
+# variables are used.
 cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
