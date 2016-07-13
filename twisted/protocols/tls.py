@@ -57,7 +57,7 @@ from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
     ISystemHandle, INegotiated, IPushProducer, ILoggingContext,
     IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
-    IProtocolNegotiationFactory, IHandshakeListener, ITLSContextFactory
+    IProtocolNegotiationFactory, IHandshakeListener
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
@@ -719,8 +719,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 @implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
 class _ContextFactoryToConnectionFactory(object):
     """
-    Adapter wrapping an L{ITLSContextFactory} into a
-    L{IOpenSSLClientConnectionCreator} or L{IOpenSSLServerConnectionCreator}.
+    Adapter wrapping a L{twisted.internet.interfaces.ITLSContextFactory} into
+    a L{IOpenSSLClientConnectionCreator} or L{IOpenSSLServerConnectionCreator}.
 
     See U{https://twistedmatrix.com/trac/ticket/7215} for work that should make
     this unnecessary.
@@ -728,15 +728,16 @@ class _ContextFactoryToConnectionFactory(object):
 
     def __init__(self, oldStyleContextFactory):
         """
-        Construct a L{_ContextFactoryToConnectionFactory} with an
-        L{ITLSContextFactory}.
+        Construct a L{_ContextFactoryToConnectionFactory} with a
+        L{twisted.internet.interfaces.ITLSContextFactory}.
 
         Immediately call C{getContext} on C{oldStyleContextFactory} in order to
         force advance parameter checking, since old-style context factories
         don't actually check that their arguments to L{OpenSSL} are correct.
 
         @param oldStyleContextFactory: A factory that can produce contexts.
-        @type oldStyleContextFactory: L{ITLSContextFactory}
+        @type oldStyleContextFactory:
+            L{twisted.internet.interfaces.ITLSContextFactory}
         """
         oldStyleContextFactory.getContext()
         self._oldStyleContextFactory = oldStyleContextFactory
@@ -835,7 +836,8 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
         @type contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, or, for compatibility with
-            older code, anything implementing L{ITLSContextFactory}.  See
+            older code, anything implementing
+            L{twisted.internet.interfaces.ITLSContextFactory}.  See
             U{https://twistedmatrix.com/trac/ticket/7215} for information on
             the upcoming deprecation of passing a
             L{twisted.internet.ssl.ContextFactory} here.
