@@ -176,7 +176,8 @@ class ZshBuilder(object):
             gen.write()
             self.file.write(b'local _zsh_subcmds_array\n_zsh_subcmds_array=(\n')
             for (cmd, short, parser, desc) in self.options.subCommands:
-                self.file.write(b'"%s:%s"\n' % (cmd.encode('utf-8'), desc.encode('utf-8')))
+                self.file.write(
+                    b'"%s:%s"\n' % (cmd.encode('utf-8'), desc.encode('utf-8')))
             self.file.write(b")\n\n")
             self.file.write(b'_describe "sub-command" _zsh_subcmds_array\n')
         else:
@@ -351,7 +352,8 @@ class ZshArgumentsGenerator(object):
         @return: L{None}
         """
         self.file.write(b'#compdef %s\n\n'
-                        b'_arguments -s -A "-*" \\\n' % (self.cmdName.encode('utf-8'),))
+                        b'_arguments -s -A "-*" \\\n'
+                        % (self.cmdName.encode('utf-8'),))
 
 
     def writeOptions(self):
@@ -382,7 +384,8 @@ class ZshArgumentsGenerator(object):
             if action._repeat and i != len(self.extraActions) - 1:
                 raise ValueError("Completer with repeat=True must be "
                                  "last item in Options.extraActions")
-            self.file.write(escape(action._shellCode('', usage._ZSH)).encode('utf-8'))
+            self.file.write(
+                escape(action._shellCode('', usage._ZSH)).encode('utf-8'))
             self.file.write(b' \\\n')
 
 
