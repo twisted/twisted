@@ -11,6 +11,7 @@ from twisted.copyright import version
 from twisted.python.usage import UsageError
 from twisted.logger import LogLevel, textFileLogObserver, jsonFileLogObserver
 from twisted.test.proto_helpers import MemoryReactor
+from ...reactors import NoSuchReactor
 from ...service import ServiceMaker
 from ...runner import ExitStatus
 from ...runner.test.test_runner import DummyExit
@@ -55,6 +56,9 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         self.installedReactors = {}
 
         def installReactor(name):
+            if name != "fusion":
+                raise NoSuchReactor()
+
             reactor = MemoryReactor()
             self.installedReactors[name] = reactor
             return reactor
@@ -108,6 +112,19 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.installReactor()
 
         self.assertEqual(set(self.installedReactors), set(["fusion"]))
+
+
+    def test_installReactorBogus(self):
+        """
+        L{TwistOptions.installReactor} raises UsageError if an unknown reactor
+        is specified.
+        """
+        self.patchInstallReactor()
+
+        options = TwistOptions()
+        options.opt_reactor("coal")
+
+        self.assertRaises(UsageError, options.installReactor)
 
 
     def test_logLevelValid(self):
