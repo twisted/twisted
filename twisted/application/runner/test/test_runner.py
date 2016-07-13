@@ -133,10 +133,27 @@ class CommandTests(twisted.trial.unittest.TestCase):
         self.assertIdentical(self.exit.message, None)
 
 
+    def test_killRequestedWithPIDFileCantOpen(self):
+        """
+        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
+        L{RunnerOptions.pidFilePath} that it can't read value exits with
+        L{ExitStatus.EX_IOERR}.
+        """
+        pidFilePath = DummyFilePath(None)
+        runner = Runner({
+            RunnerOptions.kill: True,
+            RunnerOptions.pidFilePath: pidFilePath,
+        })
+        runner.killIfRequested()
+
+        self.assertEqual(self.exit.status, ExitStatus.EX_IOERR)
+        self.assertEqual(self.exit.message, "Unable to read PID file.")
+
+
     def test_killRequestedWithPIDFileNotAnInt(self):
         """
-        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and
-        a L{RunnerOptions.pidFilePath} containing a non-integer value exits
+        L{Runner.killIfRequested} with both L{RunnerOptions.kill} and a
+        L{RunnerOptions.pidFilePath} containing a non-integer value exits
         with L{ExitStatus.EX_DATAERR}.
         """
         pidFilePath = DummyFilePath(b"** totally not a number, dude **")
@@ -147,7 +164,7 @@ class CommandTests(twisted.trial.unittest.TestCase):
         runner.killIfRequested()
 
         self.assertEqual(self.exit.status, ExitStatus.EX_DATAERR)
-        self.assertEqual(self.exit.message, "Invalid pid file.")
+        self.assertEqual(self.exit.message, "Invalid PID file.")
 
 
     def test_writePIDFileWithPIDFile(self):
@@ -378,6 +395,8 @@ class DummyFilePath(FilePath):
 
 
     def open(self, mode="r"):
+        if self._content is None:
+            raise EnvironmentError()
         return BytesIO(self._content)
 
 

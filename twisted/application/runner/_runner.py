@@ -82,13 +82,13 @@ class Runner(object):
                 try:
                     for pid in pidFilePath.open():
                         break
-                except (IOError, OSError):
-                    exit(ExitStatus.EX_DATAERR, "Unable to read pid file.")
+                except EnvironmentError:
+                    exit(ExitStatus.EX_IOERR, "Unable to read PID file.")
                     return  # When testing, patched exit doesn't exit
                 try:
                     pid = int(pid)
                 except ValueError:
-                    exit(ExitStatus.EX_DATAERR, "Invalid pid file.")
+                    exit(ExitStatus.EX_DATAERR, "Invalid PID file.")
                     return  # When testing, patched exit doesn't exit
 
             self.startLogging()
