@@ -982,7 +982,7 @@ here's some other stuff
 
     def test_compatabilityVersion(self):
         """
-        Test that the transport treats the compatbility version (1.99)
+        Test that the transport treats the compatibility version (1.99)
         as equivalent to version 2.0.
         """
         proto = MockTransportBase()

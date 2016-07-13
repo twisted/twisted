@@ -416,9 +416,9 @@ Features
 Fixes
 -----
  - Handle empty passwords in SMTP auth. (#2521)
- - Fix IMAP4Client's parsing of literals which are not preceeded by whitespace.
+ - Fix IMAP4Client's parsing of literals which are not preceded by whitespace.
    (#2700)
- - Handle MX lookup suceeding without answers. (#2807)
+ - Handle MX lookup succeeding without answers. (#2807)
  - Fix issues with aliases(5) process support. (#2729)
 
 Misc

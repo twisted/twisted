@@ -833,7 +833,7 @@ class BoxDispatcher:
     def stopReceivingBoxes(self, reason):
         """
         No further boxes will be received here.  Terminate all currently
-        oustanding command deferreds with the given reason.
+        outstanding command deferreds with the given reason.
         """
         self.failAllOutgoing(reason)
 

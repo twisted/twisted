@@ -362,7 +362,7 @@ def _unusedTestDirectory(base):
             # Create it anew and mark it as ours so the next _removeSafely on
             # it succeeds.
             testdir.makedirs()
-            testdir.child('_trial_marker').setContent(b'')
+            testdir.child(b'_trial_marker').setContent(b'')
             return testdir, testDirLock
         else:
             # It is in use
