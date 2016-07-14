@@ -2204,28 +2204,41 @@ class HTTP2TimeoutTests(unittest.TestCase):
         connection.callLater = reactor.callLater
 
 
-    def test_timeoutAfterInactivity(self):
+    def initiateH2Connection(self, initialData, requestFactory):
         """
-        When a L{H2Connection} does not receive any data for more than the
-        time out interval, it closes the connection cleanly.
+        Performs test setup by building a HTTP/2 connection object, a transport
+        to back it, a reactor to run in, and sending in some initial data as
+        needed.
         """
         reactor = task.Clock()
         conn = H2Connection(reactor)
         conn.timeOut = 100
         self.patch_TimeoutMixin_clock(conn, reactor)
 
-        frameFactory = FrameFactory()
         transport = StringTransport()
-        conn.requestFactory = DummyHTTPHandler
-
-        # Send the preamble with no request.
+        conn.requestFactory = requestFactory
         conn.makeConnection(transport)
 
         # one byte at a time, to stress the implementation.
-        for byte in iterbytes(frameFactory.preamble()):
+        for byte in iterbytes(initialData):
             conn.dataReceived(byte)
 
-        # Save the preamble.
+        return (reactor, conn, transport)
+
+
+    def test_timeoutAfterInactivity(self):
+        """
+        When a L{H2Connection} does not receive any data for more than the
+        time out interval, it closes the connection cleanly.
+        """
+        frameFactory = FrameFactory()
+        initialData = frameFactory.preamble()
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+
+        # Save the response preamble.
         preamble = transport.value()
 
         # Advance the clock.
@@ -2257,17 +2270,15 @@ class HTTP2TimeoutTests(unittest.TestCase):
         """
         When a L{H2Connection} receives data, the timeout is reset.
         """
-        reactor = task.Clock()
-        conn = H2Connection(reactor)
-        conn.timeOut = 100
-        self.patch_TimeoutMixin_clock(conn, reactor)
-
+        # Don't send any initial data, we'll send the preamble manually.
         frameFactory = FrameFactory()
-        transport = StringTransport()
-        conn.requestFactory = DummyHTTPHandler
-        conn.makeConnection(transport)
+        initialData = b''
 
-        # Send one byte of the preamble.
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+
+        # Send one byte of the preamble every 99 'seconds'.
         for byte in iterbytes(frameFactory.preamble()):
             conn.dataReceived(byte)
 
@@ -2300,24 +2311,14 @@ class HTTP2TimeoutTests(unittest.TestCase):
         When a L{H2Connection} times out with active streams, the error code
         returned is L{h2.errors.PROTOCOL_ERROR}.
         """
-        reactor = task.Clock()
-        conn = H2Connection(reactor)
-        conn.timeOut = 100
-        self.patch_TimeoutMixin_clock(conn, reactor)
-
         frameFactory = FrameFactory()
-        transport = StringTransport()
-        conn.requestFactory = DummyProducerHandler
         frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
-        requestBytes = frameFactory.preamble()
-        requestBytes += b''.join(f.serialize() for f in frames)
+        initialData = frameFactory.preamble()
+        initialData += b''.join(f.serialize() for f in frames)
 
-        # Send the preamble with no request.
-        conn.makeConnection(transport)
-
-        # one byte at a time, to stress the implementation.
-        for byte in iterbytes(requestBytes):
-            conn.dataReceived(byte)
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyProducerHandler,
+        )
 
         # Advance the clock to time out the request.
         reactor.advance(101)
@@ -2341,24 +2342,14 @@ class HTTP2TimeoutTests(unittest.TestCase):
         """
         When a L{H2Connection} loses its connection it cancels its timeout.
         """
-        reactor = task.Clock()
-        conn = H2Connection(reactor)
-        conn.timeOut = 100
-        self.patch_TimeoutMixin_clock(conn, reactor)
-
         frameFactory = FrameFactory()
-        transport = StringTransport()
-        conn.requestFactory = DummyProducerHandler
         frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
-        requestBytes = frameFactory.preamble()
-        requestBytes += b''.join(f.serialize() for f in frames)
+        initialData = frameFactory.preamble()
+        initialData += b''.join(f.serialize() for f in frames)
 
-        # Send the preamble with no request.
-        conn.makeConnection(transport)
-
-        # one byte at a time, to stress the implementation.
-        for byte in iterbytes(requestBytes):
-            conn.dataReceived(byte)
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyProducerHandler,
+        )
 
         sentData = transport.value()
         oldCallCount = len(reactor.getDelayedCalls())
