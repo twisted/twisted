@@ -46,8 +46,6 @@ __all__ = []
 
 _END_STREAM_SENTINEL = object()
 
-log = Logger()
-
 
 # Python versions 2.7.3 and older don't have a memoryview object that plays
 # well with the struct module, which h2 needs. On those versions, just refuse
@@ -108,6 +106,8 @@ class H2Connection(Protocol, TimeoutMixin):
     """
     factory = None
     site = None
+
+    _log = Logger()
 
     def __init__(self, reactor=None):
         self.conn = h2.connection.H2Connection(
@@ -191,7 +191,9 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         # In our override of timeoutConnection we deliberately send a GoAway
         # frame *before* we tear the connection down.
-        log.info("Timing out client {client}", client=self.transport.getPeer())
+        self._log.info(
+            "Timing out client {client}", client=self.transport.getPeer()
+        )
 
         # Check whether there are open streams. If there are, we're going to
         # want to use the error code PROTOCOL_ERROR. If there aren't, use
