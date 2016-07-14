@@ -631,17 +631,14 @@ Emitting logs
 All new code emitting log messages should use the new logging system.
 
 This section is dedicated to using the new logging system in Twisted core code.
-For general information about using the logging system please check the dedicated
-documentation about :doc:`how to log with twisted.logger </core/howto/logger>` and the
-:api:`twisted.logger.Logger <Logger>` API docs.
+For general information about using the logging system please check the dedicated documentation about :doc:`how to log with twisted.logger </core/howto/logger>` and the :api:`twisted.logger.Logger <Logger>` API docs.
 
 General usage rules:
 
 * Don't use explicit namespaces.
   The logger will automatically fill the namespace.
 * Use the global log publisher.
-  Twisted code may call into non-Twisted code which makes stdlib/legacy log messages,
-  which then get redirected to the global logger.
+  Twisted code may call into non-Twisted code which makes stdlib/legacy log messages, which then get redirected to the global logger.
 * When possible instantiate the Logger as ``self._log`` instance member.
 * Emitted logs are not part of the API/contract so you don't have to document it as part of the API.
 * For security features you might documented the emitted logs and then they will became part of the contract.
@@ -700,14 +697,10 @@ Example of testing the code::
 
 
 Working around `self._log` conflicts.
-For older code you might now be able to use `self._log` as it can be already
-used for other purpose.
-The :api:`twisted.logger._logFor` helper is provided to work around these cases.
-
+For older code you might now be able to use `self._log` as it can be already used for other purpose.
+In this case you can just use a diffrent name for the new logging object.
 
 .. code-block:: python
-
-    from twisted.logger import _logFor
 
     class SomeStuff(object):
         """
@@ -717,21 +710,21 @@ The :api:`twisted.logger._logFor` helper is provided to work around these cases.
 
         def __init__(self):
             self._log = SomeOtherStuff()
+            # Use a diffrent name for the new logging code.
+            self._logger = Logger()
 
 
         def doSomething(self):
             """
-            The C{_logFor} helper is used to work around the existing C{_log}
-            member.
+            Use the C{_logger} name to emit the logs using the new logger.
             """
-            _logFor(self).info(
+            self._logger.info(
                 "Starting factory {factory!r}", factory=self)
 
             self.otherStuff()
 
 
-To control the log output level, use the dedicated log level and filter the
-logs at runtime.
+To control the log output level, use the dedicated log level and filter the logs at runtime.
 You can also delay calling an expensive call.
 
 .. code-block:: python
