@@ -78,7 +78,7 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Intercept unsupported version call.
 
-        @type remoteVersion: C{str}
+        @type remoteVersion: L{str}
         """
         self.gotUnsupportedVersion = remoteVersion
         return transport.SSHTransportBase._unsupportedVersionReceived(
@@ -89,8 +89,8 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Store any errors received.
 
-        @type reasonCode: C{int}
-        @type description: C{str}
+        @type reasonCode: L{int}
+        @type description: L{str}
         """
         self.errors.append((reasonCode, description))
 
@@ -99,7 +99,7 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Store any unimplemented packet messages.
 
-        @type seqnum: C{int}
+        @type seqnum: L{int}
         """
         self.unimplementeds.append(seqnum)
 
@@ -108,9 +108,9 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Store any debug messages.
 
-        @type alwaysDisplay: C{bool}
-        @type message: C{str}
-        @type lang: C{str}
+        @type alwaysDisplay: L{bool}
+        @type message: L{str}
+        @type lang: L{str}
         """
         self.debugs.append((alwaysDisplay, message, lang))
 
@@ -119,7 +119,7 @@ class MockTransportBase(transport.SSHTransportBase):
         """
         Store any ignored data.
 
-        @type packet: C{str}
+        @type packet: L{str}
         """
         self.ignoreds.append(packet)
 
@@ -281,7 +281,7 @@ class MockFactory(factory.SSHFactory):
         that use group exchange to establish a prime / generator group.
 
         @return: The primes and generators.
-        @rtype: C{dict} mapping the key size to a C{list} of
+        @rtype: L{dict} mapping the key size to a C{list} of
             C{(generator, prime)} tuple.
         """
         # In these tests, we hardwire the prime values to those defined by the
@@ -574,7 +574,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.sendPacket(ord('A'), b'BCD')
         value = self.transport.value()
         proto.buf = value[:MockCipher.decBlockSize]
-        self.assertEqual(proto.getPacket(), None)
+        self.assertIsNone(proto.getPacket())
         self.assertTrue(testCipher.usedDecrypt)
         self.assertEqual(proto.first, b'\x00\x00\x00\x0e\x09A')
         proto.buf += value[MockCipher.decBlockSize:]
@@ -982,7 +982,7 @@ here's some other stuff
 
     def test_compatabilityVersion(self):
         """
-        Test that the transport treats the compatbility version (1.99)
+        Test that the transport treats the compatibility version (1.99)
         as equivalent to version 2.0.
         """
         proto = MockTransportBase()
@@ -1024,7 +1024,7 @@ here's some other stuff
         def testBad(packet, error=transport.DISCONNECT_PROTOCOL_ERROR):
             self.packets = []
             self.proto.buf = packet
-            self.assertEqual(self.proto.getPacket(), None)
+            self.assertIsNone(self.proto.getPacket())
             self.assertEqual(len(self.packets), 1)
             self.assertEqual(self.packets[0][0], transport.MSG_DISCONNECT)
             self.assertEqual(self.packets[0][1][3], chr(error))
@@ -1376,7 +1376,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         KEXDH_REPLY with the server's public key and a signature.
 
         @param kexAlgorithm: The key exchange algorithm to use.
-        @type kexAlgorithm: C{str}
+        @type kexAlgorithm: L{str}
         """
         self.proto.supportedKeyExchanges = [kexAlgorithm]
         self.proto.supportedPublicKeys = [b'ssh-rsa']
@@ -1457,16 +1457,16 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.ssh_NEWKEYS(b'')
         self.assertIs(self.proto.currentEncryptions,
                       self.proto.nextEncryptions)
-        self.assertIs(self.proto.outgoingCompression, None)
-        self.assertIs(self.proto.incomingCompression, None)
+        self.assertIsNone(self.proto.outgoingCompression)
+        self.assertIsNone(self.proto.incomingCompression)
         self.proto.outgoingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'CD')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.outgoingCompression, None)
+        self.assertIsNotNone(self.proto.outgoingCompression)
         self.proto.incomingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'EF')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.incomingCompression, None)
+        self.assertIsNotNone(self.proto.incomingCompression)
 
 
     def test_SERVICE_REQUEST(self):
@@ -1724,7 +1724,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         results in a correct KEXDH_INIT response.
 
         @param kexAlgorithm: The key exchange algorithm to use
-        @type kexAlgorithm: C{str}
+        @type kexAlgorithm: L{str}
         """
         self.proto.supportedKeyExchanges = [kexAlgorithm]
 
@@ -1785,8 +1785,8 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         exchangeHash = h.digest()
 
         def _cbTestKEXDH_REPLY(value):
-            self.assertIs(value, None)
-            self.assertEqual(self.calledVerifyHostKey, True)
+            self.assertIsNone(value)
+            self.assertTrue(self.calledVerifyHostKey)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
         signature = self.privObj.sign(exchangeHash)
@@ -1835,19 +1835,19 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.nextEncryptions = MockCipher()
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIs(self.proto.outgoingCompression, None)
-        self.assertIs(self.proto.incomingCompression, None)
+        self.assertIsNone(self.proto.outgoingCompression)
+        self.assertIsNone(self.proto.incomingCompression)
         self.assertIs(self.proto.currentEncryptions,
                       self.proto.nextEncryptions)
         self.assertTrue(secure[0])
         self.proto.outgoingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'GH')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.outgoingCompression, None)
+        self.assertIsNotNone(self.proto.outgoingCompression)
         self.proto.incomingCompressionType = b'zlib'
         self.simulateKeyExchange(b'AB', b'IJ')
         self.proto.ssh_NEWKEYS(b'')
-        self.assertIsNot(self.proto.incomingCompression, None)
+        self.assertIsNotNone(self.proto.incomingCompression)
 
 
     def test_SERVICE_ACCEPT(self):
@@ -1963,8 +1963,8 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         exchangeHash = h.digest()
 
         def _cbTestKEX_DH_GEX_REPLY(value):
-            self.assertIs(value, None)
-            self.assertEqual(self.calledVerifyHostKey, True)
+            self.assertIsNone(value)
+            self.assertTrue(self.calledVerifyHostKey)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
         signature = self.privObj.sign(exchangeHash)
@@ -2041,11 +2041,11 @@ class GetMACTests(unittest.TestCase):
         @type hashProcessor: C{callable}
 
         @param digestSize: Size of the digest for algorithm.
-        @type digestSize: C{int}
+        @type digestSize: L{int}
 
         @param blockPadSize: Size of padding applied to the shared secret to
             match the block size.
-        @type blockPadSize: C{int}
+        @type blockPadSize: L{int}
         """
         secret = self.getSharedSecret()
 

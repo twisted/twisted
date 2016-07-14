@@ -32,11 +32,11 @@ class Bucket:
     A bucket can hold a certain number of tokens and it drains over time.
 
     @cvar maxburst: The maximum number of tokens that the bucket can
-        hold at any given time. If this is C{None}, the bucket has
+        hold at any given time. If this is L{None}, the bucket has
         an infinite size.
     @type maxburst: C{int}
     @cvar rate: The rate at which the bucket drains, in number
-        of tokens per second. If the rate is C{None}, the bucket
+        of tokens per second. If the rate is L{None}, the bucket
         drains instantaneously.
     @type rate: C{int}
     """

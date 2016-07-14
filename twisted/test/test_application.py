@@ -62,7 +62,7 @@ class ServiceTests(unittest.TestCase):
         p = service.MultiService()
         s.setName("hello")
         s.setServiceParent(p)
-        self.failUnlessRaises(RuntimeError, s.setName, "lala")
+        self.assertRaises(RuntimeError, s.setName, "lala")
 
     def testDuplicateNamedChild(self):
         s = service.Service()
@@ -71,7 +71,7 @@ class ServiceTests(unittest.TestCase):
         s.setServiceParent(p)
         s = service.Service()
         s.setName("hello")
-        self.failUnlessRaises(RuntimeError, s.setServiceParent, p)
+        self.assertRaises(RuntimeError, s.setServiceParent, p)
 
     def testDisowning(self):
         s = service.Service()
@@ -81,33 +81,33 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(s.parent, p)
         s.disownServiceParent()
         self.assertEqual(list(p), [])
-        self.assertEqual(s.parent, None)
+        self.assertIsNone(s.parent)
 
     def testRunning(self):
         s = service.Service()
-        self.assert_(not s.running)
+        self.assertFalse(s.running)
         s.startService()
-        self.assert_(s.running)
+        self.assertTrue(s.running)
         s.stopService()
-        self.assert_(not s.running)
+        self.assertFalse(s.running)
 
     def testRunningChildren1(self):
         s = service.Service()
         p = service.MultiService()
         s.setServiceParent(p)
-        self.assert_(not s.running)
-        self.assert_(not p.running)
+        self.assertFalse(s.running)
+        self.assertFalse(p.running)
         p.startService()
-        self.assert_(s.running)
-        self.assert_(p.running)
+        self.assertTrue(s.running)
+        self.assertTrue(p.running)
         p.stopService()
-        self.assert_(not s.running)
-        self.assert_(not p.running)
+        self.assertFalse(s.running)
+        self.assertFalse(p.running)
 
     def testRunningChildren2(self):
         s = service.Service()
         def checkRunning():
-            self.assert_(s.running)
+            self.assertTrue(s.running)
         t = service.Service()
         t.stopService = checkRunning
         t.startService = checkRunning
@@ -121,11 +121,11 @@ class ServiceTests(unittest.TestCase):
         p = service.MultiService()
         p.startService()
         s = service.Service()
-        self.assert_(not s.running)
+        self.assertFalse(s.running)
         s.setServiceParent(p)
-        self.assert_(s.running)
+        self.assertTrue(s.running)
         s.disownServiceParent()
-        self.assert_(not s.running)
+        self.assertFalse(s.running)
 
     def testPrivileged(self):
         s = service.Service()
@@ -137,14 +137,14 @@ class ServiceTests(unittest.TestCase):
         s.setServiceParent(p)
         s1.setServiceParent(p)
         p.privilegedStartService()
-        self.assert_(s.privilegedStarted)
+        self.assertTrue(s.privilegedStarted)
 
     def testCopying(self):
         s = service.Service()
         s.startService()
         s1 = copy.copy(s)
-        self.assert_(not s1.running)
-        self.assert_(s.running)
+        self.assertFalse(s1.running)
+        self.assertTrue(s.running)
 
 
 if hasattr(os, "getuid"):
@@ -164,17 +164,17 @@ class ProcessTests(unittest.TestCase):
     def testDefaults(self):
         p = service.Process(5)
         self.assertEqual(p.uid, 5)
-        self.assertEqual(p.gid, None)
+        self.assertIsNone(p.gid)
         p = service.Process(gid=5)
-        self.assertEqual(p.uid, None)
+        self.assertIsNone(p.uid)
         self.assertEqual(p.gid, 5)
         p = service.Process()
-        self.assertEqual(p.uid, None)
-        self.assertEqual(p.gid, None)
+        self.assertIsNone(p.uid)
+        self.assertIsNone(p.gid)
 
     def testProcessName(self):
         p = service.Process()
-        self.assertEqual(p.processName, None)
+        self.assertIsNone(p.processName)
         p.processName = 'hello'
         self.assertEqual(p.processName, 'hello')
 
@@ -182,14 +182,15 @@ class ProcessTests(unittest.TestCase):
 class InterfacesTests(unittest.TestCase):
 
     def testService(self):
-        self.assert_(service.IService.providedBy(service.Service()))
+        self.assertTrue(service.IService.providedBy(service.Service()))
 
     def testMultiService(self):
-        self.assert_(service.IService.providedBy(service.MultiService()))
-        self.assert_(service.IServiceCollection.providedBy(service.MultiService()))
+        self.assertTrue(service.IService.providedBy(service.MultiService()))
+        self.assertTrue(service.IServiceCollection.providedBy(
+                        service.MultiService()))
 
     def testProcess(self):
-        self.assert_(service.IProcess.providedBy(service.Process()))
+        self.assertTrue(service.IProcess.providedBy(service.Process()))
 
 
 class ApplicationTests(unittest.TestCase):
@@ -201,27 +202,27 @@ class ApplicationTests(unittest.TestCase):
 
     def testProcessComponent(self):
         a = service.Application("hello")
-        self.assertEqual(service.IProcess(a).uid, None)
-        self.assertEqual(service.IProcess(a).gid, None)
+        self.assertIsNone(service.IProcess(a).uid)
+        self.assertIsNone(service.IProcess(a).gid)
         a = service.Application("hello", 5)
         self.assertEqual(service.IProcess(a).uid, 5)
-        self.assertEqual(service.IProcess(a).gid, None)
+        self.assertIsNone(service.IProcess(a).gid)
         a = service.Application("hello", 5, 6)
         self.assertEqual(service.IProcess(a).uid, 5)
         self.assertEqual(service.IProcess(a).gid, 6)
 
     def testServiceComponent(self):
         a = service.Application("hello")
-        self.assert_(service.IService(a) is service.IServiceCollection(a))
+        self.assertIs(service.IService(a), service.IServiceCollection(a))
         self.assertEqual(service.IService(a).name, "hello")
-        self.assertEqual(service.IService(a).parent, None)
+        self.assertIsNone(service.IService(a).parent)
 
     def testPersistableComponent(self):
         a = service.Application("hello")
         p = sob.IPersistable(a)
         self.assertEqual(p.style, 'pickle')
         self.assertEqual(p.name, 'hello')
-        self.assert_(p.original is a)
+        self.assertIs(p.original, a)
 
 class LoadingTests(unittest.TestCase):
 
@@ -233,12 +234,11 @@ class LoadingTests(unittest.TestCase):
             p.save()
             a1 = service.loadApplication("hello.ta"+style[0], style)
             self.assertEqual(service.IService(a1).name, "hello")
-        f = open("hello.tac", 'w')
-        f.writelines([
-        "from twisted.application import service\n",
-        "application = service.Application('hello')\n",
-        ])
-        f.close()
+        with open("hello.tac", 'w') as f:
+            f.writelines([
+                "from twisted.application import service\n",
+                "application = service.Application('hello')\n",
+            ])
         a1 = service.loadApplication("hello.tac", 'python')
         self.assertEqual(service.IService(a1).name, "hello")
 
@@ -247,7 +247,7 @@ class LoadingTests(unittest.TestCase):
 class AppSupportTests(unittest.TestCase):
 
     def testPassphrase(self):
-        self.assertEqual(app.getPassphrase(0), None)
+        self.assertIsNone(app.getPassphrase(0))
 
     def testLoadApplication(self):
         """
@@ -264,12 +264,11 @@ class AppSupportTests(unittest.TestCase):
             self.assertEqual(service.IService(a1).name, "hello")
         config = baseconfig.copy()
         config['python'] = 'helloapplication'
-        f = open("helloapplication", 'w')
-        f.writelines([
-        "from twisted.application import service\n",
-        "application = service.Application('hello')\n",
-        ])
-        f.close()
+        with open("helloapplication", 'w') as f:
+            f.writelines([
+                "from twisted.application import service\n",
+                "application = service.Application('hello')\n",
+            ])
         a1 = app.getApplication(config, None)
         self.assertEqual(service.IService(a1).name, "hello")
 
@@ -288,7 +287,7 @@ class AppSupportTests(unittest.TestCase):
     def test_startApplication(self):
         appl = service.Application("lala")
         app.startApplication(appl, 0)
-        self.assert_(service.IService(appl).running)
+        self.assertTrue(service.IService(appl).running)
 
 
 class Foo(basic.LineReceiver):
@@ -438,9 +437,9 @@ class InternetTests(unittest.TestCase):
         t.startService()
         self.failIfIdentical(t._port, None)
         t1 = copy.copy(t)
-        self.assertIdentical(t1._port, None)
+        self.assertIsNone(t1._port)
         t.stopService()
-        self.assertIdentical(t._port, None)
+        self.assertIsNone(t._port)
         self.assertFalse(t.running)
 
         factory = protocol.ClientFactory()
@@ -449,9 +448,9 @@ class InternetTests(unittest.TestCase):
         t.startService()
         self.failIfIdentical(t._connection, None)
         t1 = copy.copy(t)
-        self.assertIdentical(t1._connection, None)
+        self.assertIsNone(t1._connection)
         t.stopService()
-        self.assertIdentical(t._connection, None)
+        self.assertIsNone(t._connection)
         self.assertFalse(t.running)
 
     def testStoppingServer(self):
@@ -774,7 +773,7 @@ class PluggableReactorTests(TwistedModulesMixin, unittest.TestCase):
         description = 'description'
         self.pluginResults = [FakeReactor(install, name, package, description)]
         installed = reactors.installReactor(name)
-        self.assertIdentical(installed, reactor)
+        self.assertIs(installed, reactor)
 
 
     def test_installReactorMultiplePlugins(self):

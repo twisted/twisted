@@ -1087,13 +1087,13 @@ class WordsRealm(object):
     def addUser(self, user):
         """Add the given user to this service.
 
-        This is an internal method intented to be overridden by
+        This is an internal method intended to be overridden by
         L{WordsRealm} subclasses, not called by external code.
 
         @type user: L{IUser}
 
         @rtype: L{twisted.internet.defer.Deferred}
-        @return: A Deferred which fires with C{None} when the user is
+        @return: A Deferred which fires with L{None} when the user is
         added, or which fails with
         L{twisted.words.ewords.DuplicateUser} if a user with the
         same name exists already.
@@ -1107,7 +1107,7 @@ class WordsRealm(object):
         @type group: L{IGroup}
 
         @rtype: L{twisted.internet.defer.Deferred}
-        @return: A Deferred which fires with C{None} when the group is
+        @return: A Deferred which fires with L{None} when the group is
         added, or which fails with
         L{twisted.words.ewords.DuplicateGroup} if a group with the
         same name exists already.

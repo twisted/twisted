@@ -41,9 +41,10 @@ class IIQResponseTracker(Interface):
     naturally with deferreds. You send out a request and when the response
     comes back a deferred is fired.
 
-    The L{IQ} class implements a C{send} method that returns a deferred. This
-    deferred is put in a dictionary that is kept in an L{XmlStream} object,
-    keyed by the request stanzas C{id} attribute.
+    The L{twisted.words.protocols.jabber.client.IQ} class implements a C{send}
+    method that returns a deferred. This deferred is put in a dictionary that
+    is kept in an L{XmlStream} object, keyed by the request stanzas C{id}
+    attribute.
 
     An object providing this interface (usually an instance of L{XmlStream}),
     keeps the said dictionary and sets observers on the iq stanzas of type
@@ -91,7 +92,8 @@ class IXMPPHandler(Interface):
 
         This should setup L{xmlstream} and call L{connectionMade}.
 
-        @type xs: L{XmlStream<twisted.words.protocols.jabber.XmlStream>}
+        @type xs:
+               L{twisted.words.protocols.jabber.xmlstream.XmlStream}
         """
 
 
@@ -169,7 +171,7 @@ class IService(Interface):
         """
         Parent component has established a connection.
 
-        At this point, authentication was succesful, and XML stanzas
+        At this point, authentication was successful, and XML stanzas
         can be exchanged over the XML stream C{xs}. This method can be used
         to setup observers for incoming stanzas.
 

@@ -213,13 +213,13 @@ class OnDiskDatabaseTests(unittest.TestCase):
         """
         self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
 
-        self.failUnlessRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
+        self.assertRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
 
 
     def testUserLookup(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
         for (u, p) in self.users:
-            self.failUnlessRaises(KeyError, self.db.getUser, u.upper())
+            self.assertRaises(KeyError, self.db.getUser, u.upper())
             self.assertEqual(self.db.getUser(u), (u, p))
 
 
@@ -386,26 +386,23 @@ class HashlessFilePasswordDBMixin(object):
 
         for cache in True, False:
             fn = self.mktemp()
-            fObj = open(fn, 'wb')
-            for u, p in self._validCredentials:
-                fObj.write(u + b":" + diskHash(p) + b"\n")
-            fObj.close()
+            with open(fn, 'wb') as fObj:
+                for u, p in self._validCredentials:
+                    fObj.write(u + b":" + diskHash(p) + b"\n")
             yield checkers.FilePasswordDB(fn, cache=cache, hash=hashCheck)
 
             fn = self.mktemp()
-            fObj = open(fn, 'wb')
-            for u, p in self._validCredentials:
-                fObj.write(diskHash(p) + b' dingle dongle ' + u + b'\n')
-            fObj.close()
+            with open(fn, 'wb') as fObj:
+                for u, p in self._validCredentials:
+                    fObj.write(diskHash(p) + b' dingle dongle ' + u + b'\n')
             yield checkers.FilePasswordDB(fn, b' ', 3, 0,
                                           cache=cache, hash=hashCheck)
 
             fn = self.mktemp()
-            fObj = open(fn, 'wb')
-            for u, p in self._validCredentials:
-                fObj.write(b'zip,zap,' + u.title() + b',zup,'\
-                           + diskHash(p) + b'\n',)
-            fObj.close()
+            with open(fn, 'wb') as fObj:
+                for u, p in self._validCredentials:
+                    fObj.write(b'zip,zap,' + u.title() + b',zup,'\
+                               + diskHash(p) + b'\n',)
             yield checkers.FilePasswordDB(fn, b',', 2, 4, False,
                                           cache=cache, hash=hashCheck)
 

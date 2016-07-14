@@ -106,12 +106,11 @@ class CProfileRunner(_BasicProfiler):
         if self.saveStats:
             p.dump_stats(self.profileOutput)
         else:
-            stream = open(self.profileOutput, 'w')
-            s = pstats.Stats(p, stream=stream)
-            s.strip_dirs()
-            s.sort_stats(-1)
-            s.print_stats()
-            stream.close()
+            with open(self.profileOutput, 'w') as stream:
+                s = pstats.Stats(p, stream=stream)
+                s.strip_dirs()
+                s.sort_stats(-1)
+                s.print_stats()
 
 
 
@@ -290,7 +289,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None,
     @param profiler: object used to run the reactor with profiling.
     @type profiler: L{AppProfiler}
 
-    @param reactor: The reactor to use.  If C{None}, the global reactor will
+    @param reactor: The reactor to use.  If L{None}, the global reactor will
         be used.
     """
     if reactor is None:

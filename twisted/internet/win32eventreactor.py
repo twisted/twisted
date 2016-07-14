@@ -15,7 +15,7 @@ listeners or connectors are added)::
 
 LIMITATIONS:
  1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
- 2. Process running has some problems (see L{Process} docstring).
+ 2. Process running has some problems (see L{twisted.internet.process} docstring).
 
 
 TODO:
@@ -365,10 +365,10 @@ class _ThreadedWin32EventsMixin(object):
     a L{Win32Reactor} in a separate thread and dispatching work to it.
 
     @ivar _reactor: The L{Win32Reactor} running in the other thread.  This is
-        C{None} until it is actually needed.
+        L{None} until it is actually needed.
 
     @ivar _reactorThread: The L{threading.Thread} which is running the
-        L{Win32Reactor}.  This is C{None} until it is actually needed.
+        L{Win32Reactor}.  This is L{None} until it is actually needed.
     """
 
     _reactor = None

@@ -91,7 +91,7 @@ class Request(Copyable, http.Request, components.Componentized):
     An HTTP request.
 
     @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
-        value to send in responses if no other value is set.  C{None} disables
+        value to send in responses if no other value is set.  L{None} disables
         the default.
     """
 
@@ -576,7 +576,7 @@ class Session(components.Componentized):
         """
         Start expiration tracking.
 
-        @return: C{None}
+        @return: L{None}
         """
         self._expireCall = self._reactor.callLater(
             self.sessionTimeout, self.expire)
@@ -730,7 +730,7 @@ class Site(http.HTTPFactory):
         """
         Get a resource for a request.
 
-        This iterates through the resource heirarchy, calling
+        This iterates through the resource hierarchy, calling
         getChildWithDefault on each resource it finds for a path element,
         stopping when it hits an element where isLeaf is true.
         """

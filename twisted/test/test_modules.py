@@ -126,7 +126,7 @@ class BasicTests(TwistedModulesTestCase):
     def test_unimportablePackageGetItem(self):
         """
         If a package has been explicitly forbidden from importing by setting a
-        C{None} key in sys.modules under its name,
+        L{None} key in sys.modules under its name,
         L{modules.PythonPath.__getitem__} should still be able to retrieve an
         unloaded L{modules.PythonModule} for that package.
         """
@@ -137,13 +137,13 @@ class BasicTests(TwistedModulesTestCase):
                                   sysPathHooks={},
                                   moduleDict={'test_package': None})
         self.assertEqual(shouldNotLoad, [])
-        self.assertEqual(path['test_package'].isLoaded(), False)
+        self.assertFalse(path['test_package'].isLoaded())
 
 
     def test_unimportablePackageWalkModules(self):
         """
         If a package has been explicitly forbidden from importing by setting a
-        C{None} key in sys.modules under its name, L{modules.walkModules} should
+        L{None} key in sys.modules under its name, L{modules.walkModules} should
         still be able to retrieve an unloaded L{modules.PythonModule} for that
         package.
         """
@@ -154,7 +154,7 @@ class BasicTests(TwistedModulesTestCase):
         walked = list(modules.walkModules())
         self.assertEqual([m.name for m in walked],
                           ["test_package"])
-        self.assertEqual(walked[0].isLoaded(), False)
+        self.assertFalse(walked[0].isLoaded())
 
 
     def test_nonexistentPaths(self):

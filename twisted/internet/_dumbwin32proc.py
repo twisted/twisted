@@ -75,7 +75,7 @@ def _findShebang(filename):
 
     @return: a str representing another filename.
     """
-    f = file(filename, 'rU')
+    f = open(filename, 'rU')
     if f.read(2) == '#!':
         exe = f.readline(1024).strip('\n')
         return exe
@@ -295,7 +295,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         @param data: The bytes to write.
         @type data: C{str}
 
-        @return: C{None}
+        @return: L{None}
 
         @raise KeyError: If C{fd} is anything other than the stdin file
             descriptor (C{0}).

@@ -392,7 +392,7 @@ class CooperativeTask(object):
     @type _pauseCount: C{int}
 
     @ivar _completionState: The completion-state of this L{CooperativeTask}.
-        C{None} if the task is not yet completed, an instance of L{TaskStopped}
+        L{None} if the task is not yet completed, an instance of L{TaskStopped}
         if C{stop} was called to stop this task early, of L{TaskFailed} if the
         application code in the iterator raised an exception which caused it to
         terminate, and of L{TaskDone} if it terminated normally via raising

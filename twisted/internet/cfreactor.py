@@ -47,7 +47,7 @@ _preserveSOError = 1 << 6
 class _WakerPlus(_Waker):
     """
     The normal Twisted waker will simply wake up the main loop, which causes an
-    iteration to run, which in turn causes L{PosixReactorBase.runUntilCurrent}
+    iteration to run, which in turn causes L{ReactorBase.runUntilCurrent}
     to get invoked.
 
     L{CFReactor} has a slightly different model of iteration, though: rather
@@ -100,15 +100,16 @@ class CFReactor(PosixReactorBase):
         able to look up what its file descriptor I{used} to be, so that we can
         look it up in C{_fdmap}
 
-    @ivar _cfrunloop: the L{CFRunLoop} pyobjc object wrapped by this reactor.
+    @ivar _cfrunloop: the C{CFRunLoop} pyobjc object wrapped
+        by this reactor.
 
-    @ivar _inCFLoop: Is L{CFRunLoopRun} currently running?
+    @ivar _inCFLoop: Is C{CFRunLoopRun} currently running?
 
-    @type _inCFLoop: C{bool}
+    @type _inCFLoop: L{bool}
 
     @ivar _currentSimulator: if a CFTimer is currently scheduled with the CF
         run loop to run Twisted callLater calls, this is a reference to it.
-        Otherwise, it is C{None}
+        Otherwise, it is L{None}
     """
     def __init__(self, runLoop=None, runner=None):
         self._fdmap = {}
@@ -141,10 +142,10 @@ class CFReactor(PosixReactorBase):
         C{doWrite} calls to the L{IReadDescriptor} and L{IWriteDescriptor}
         registered with the file descriptor that we are being notified of.
 
-        @param cfSocket: The L{CFSocket} which has got some activity.
+        @param cfSocket: The C{CFSocket} which has got some activity.
 
         @param callbackType: The type of activity that we are being notified
-            of.  Either L{kCFSocketReadCallBack} or L{kCFSocketWriteCallBack}.
+            of.  Either C{kCFSocketReadCallBack} or C{kCFSocketWriteCallBack}.
 
         @param ignoredAddress: Unused, because this is not used for either of
             the callback types we register for.
@@ -153,7 +154,7 @@ class CFReactor(PosixReactorBase):
             callback types we register for.
 
         @param context: The data associated with this callback by
-            L{CFSocketCreateWithNative} (in L{CFReactor._watchFD}).  A 2-tuple
+            C{CFSocketCreateWithNative} (in C{CFReactor._watchFD}).  A 2-tuple
             of C{(int, CFRunLoopSource)}.
         """
         (fd, smugglesrc) = context
@@ -200,18 +201,18 @@ class CFReactor(PosixReactorBase):
 
     def _watchFD(self, fd, descr, flag):
         """
-        Register a file descriptor with the L{CFRunLoop}, or modify its state
+        Register a file descriptor with the C{CFRunLoop}, or modify its state
         so that it's listening for both notifications (read and write) rather
         than just one; used to implement C{addReader} and C{addWriter}.
 
         @param fd: The file descriptor.
 
-        @type fd: C{int}
+        @type fd: L{int}
 
         @param descr: the L{IReadDescriptor} or L{IWriteDescriptor}
 
         @param flag: the flag to register for callbacks on, either
-            L{kCFSocketReadCallBack} or L{kCFSocketWriteCallBack}
+            C{kCFSocketReadCallBack} or C{kCFSocketWriteCallBack}
         """
         if fd == -1:
             raise RuntimeError("Invalid file descriptor.")
@@ -270,7 +271,7 @@ class CFReactor(PosixReactorBase):
 
     def _unwatchFD(self, fd, descr, flag):
         """
-        Unregister a file descriptor with the L{CFRunLoop}, or modify its state
+        Unregister a file descriptor with the C{CFRunLoop}, or modify its state
         so that it's listening for only one notification (read or write) as
         opposed to both; used to implement C{removeReader} and C{removeWriter}.
 
@@ -280,7 +281,7 @@ class CFReactor(PosixReactorBase):
 
         @param descr: an L{IReadDescriptor} or L{IWriteDescriptor}
 
-        @param flag: L{kCFSocketWriteCallBack} L{kCFSocketReadCallBack}
+        @param flag: C{kCFSocketWriteCallBack} C{kCFSocketReadCallBack}
         """
         if id(descr) not in self._idmap:
             return
@@ -372,7 +373,7 @@ class CFReactor(PosixReactorBase):
 
     def mainLoop(self):
         """
-        Run the runner (L{CFRunLoopRun} or something that calls it), which runs
+        Run the runner (C{CFRunLoopRun} or something that calls it), which runs
         the run loop until C{crash()} is called.
         """
         self._inCFLoop = True
@@ -391,7 +392,7 @@ class CFReactor(PosixReactorBase):
 
         @param force: Even if there are no timed calls, make sure that
             C{runUntilCurrent} runs immediately (in a 0-seconds-from-now
-            {CFRunLoopTimer}).  This is necessary for calls which need to
+            C{CFRunLoopTimer}).  This is necessary for calls which need to
             trigger behavior of C{runUntilCurrent} other than running timed
             calls, such as draining the thread call queue or calling C{crash()}
             when the appropriate flags are set.
@@ -474,7 +475,7 @@ def install(runLoop=None, runner=None):
     @param runLoop: the run loop to use.
 
     @param runner: the function to call in order to actually invoke the main
-        loop.  This will default to L{CFRunLoopRun} if not specified.  However,
+        loop.  This will default to C{CFRunLoopRun} if not specified.  However,
         this is not an appropriate choice for GUI applications, as you need to
         run NSApplicationMain (or something like it).  For example, to run the
         Twisted mainloop in a PyObjC application, your C{main.py} should look
@@ -488,7 +489,7 @@ def install(runLoop=None, runner=None):
 
     @return: The installed reactor.
 
-    @rtype: L{CFReactor}
+    @rtype: C{CFReactor}
     """
 
     reactor = CFReactor(runLoop=runLoop, runner=runner)

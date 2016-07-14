@@ -855,7 +855,7 @@ class ReactorBase(object):
         @return: A two element tuple giving values to use when creating the
         process.  The first element of the tuple is a C{list} of C{str}
         giving the values for argv of the child process.  The second element
-        of the tuple is either C{None} if C{env} was C{None} or a C{dict}
+        of the tuple is either L{None} if C{env} was L{None} or a C{dict}
         mapping C{str} environment keys to C{str} environment values.
         """
         # Any unicode string which Python would successfully implicitly
@@ -940,7 +940,8 @@ class ReactorBase(object):
 
         def callFromThread(self, f, *args, **kw):
             """
-            See L{twisted.internet.interfaces.IReactorThreads.callFromThread}.
+            See
+            L{twisted.internet.interfaces.IReactorFromThreads.callFromThread}.
             """
             assert callable(f), "%s is not callable" % (f,)
             # lists are thread-safe in CPython, but not in Jython

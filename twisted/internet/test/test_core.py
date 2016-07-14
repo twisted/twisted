@@ -141,7 +141,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
             sawPhase.append(phase[0])
         self.patch(signal, 'signal', fakeSignal)
         reactor.callWhenRunning(reactor.stop)
-        self.assertEqual(phase[0], None)
+        self.assertIsNone(phase[0])
         self.assertEqual(sawPhase, [])
         self.runReactor(reactor)
         self.assertIn("before", sawPhase)

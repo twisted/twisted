@@ -74,7 +74,7 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
         methods.  To collect all method names, do not pass a value for this
         parameter.
 
-    @return: C{None}
+    @return: L{None}
     """
     for base in classObj.__bases__:
         addMethodNamesToDict(base, dict, prefix, baseClass)
@@ -128,7 +128,7 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
         collecting methods.  Collection proceeds up.  To collect all methods
         from C{obj}, do not pass a value for this parameter.
 
-    @return: C{None}
+    @return: L{None}
     """
     if not curClass:
         curClass = obj.__class__
@@ -480,7 +480,7 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
     Assuming all class attributes of this name are dictionaries.
     If any of the dictionaries being accumulated have the same key, the
-    one highest in the class heirarchy wins.
+    one highest in the class hierarchy wins.
     (XXX: If \"highest\" means \"closest to the starting class\".)
 
     Ex::
@@ -513,7 +513,7 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
     """
-    Accumulate all attributes of a given name in a class heirarchy into a single list.
+    Accumulate all attributes of a given name in a class hierarchy into a single list.
 
     Assuming all class attributes of this name are lists.
     """

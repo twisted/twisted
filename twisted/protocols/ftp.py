@@ -543,6 +543,15 @@ class DTPFactory(protocol.ClientFactory):
         this is L{_IN_PROGRESS}.  If the connection fails or times out, it is
         L{_FAILED}.  If the connection succeeds before the timeout, it is
         L{_FINISHED}.
+
+    @cvar _IN_PROGRESS: Token to signal that connection is active.
+    @type _IN_PROGRESS: L{object}.
+
+    @cvar _FAILED: Token to signal that connection has failed.
+    @type _FAILED: L{object}.
+
+    @cvar _FINISHED: Token to signal that connection was successfully closed.
+    @type _FINISHED: L{object}.
     """
 
     _IN_PROGRESS = object()
@@ -693,6 +702,18 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar passivePortRange: iterator used as source of passive port numbers.
     @type passivePortRange: C{iterator}
+
+    @cvar UNAUTH: Command channel is not yet authenticated.
+    @type UNAUTH: L{int}
+
+    @cvar INAUTH: Command channel is in the process of being authenticated.
+    @type INAUTH: L{int}
+
+    @cvar AUTHED: Command channel was successfully authenticated.
+    @type AUTHED: L{int}
+
+    @cvar RENAMING: Command channel is between the renaming command sequence.
+    @type RENAMING: L{int}
     """
 
     disconnected = False
@@ -1043,9 +1064,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             @param results: The names of the files in the directory.
 
             @param glob: A shell-style glob through which to filter results (see
-                U{http://docs.python.org/2/library/fnmatch.html}), or C{None}
+                U{http://docs.python.org/2/library/fnmatch.html}), or L{None}
                 for no filtering.
-            @type glob: L{str} or L{NoneType}
+            @type glob: L{str} or L{None}
 
             @return: A C{tuple} containing the status code for a successful
                 transfer.
@@ -2536,7 +2557,7 @@ class FTPClientBasic(basic.LineReceiver):
         """
         Login: send the username, send the password.
 
-        If the password is C{None}, the PASS command won't be sent.  Also, if
+        If the password is L{None}, the PASS command won't be sent.  Also, if
         the response to the USER command has a response code of 230 (User logged
         in), then PASS won't be sent either.
         """
@@ -3204,7 +3225,7 @@ def parsePWDResponse(response):
 
     For this example, I will return C{'/home/andrew'}.
 
-    If I can't find the path, I return C{None}.
+    If I can't find the path, I return L{None}.
     """
     match = re.search('"(.*)"', response)
     if match:

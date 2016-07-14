@@ -74,7 +74,7 @@ def _pwdGetByName(username):
 def _shadowGetByName(username):
     """
     Look up a user in the /etc/shadow database using the spwd module. If it is
-    not available, return C{None}.
+    not available, return L{None}.
 
     @param username: the username of the user to return the shadow database
         information for.
@@ -424,7 +424,7 @@ class InMemorySSHKeyDB(object):
 
         @param mapping: mapping of usernames to iterables of
             L{twisted.conch.ssh.keys.Key}s
-        @type mapping: C{dict}
+        @type mapping: L{dict}
 
         """
         self._mapping = mapping
