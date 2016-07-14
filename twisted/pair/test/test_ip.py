@@ -7,9 +7,8 @@ from twisted.pair import ip, raw
 from zope import interface
 
 
+@interface.implementer(raw.IRawDatagramProtocol)
 class MyProtocol:
-    interface.implements(raw.IRawDatagramProtocol)
-
     def __init__(self, expecting):
         self.expecting = list(expecting)
 
@@ -371,7 +370,7 @@ class IPTests(unittest.TestCase):
         except components.CannotAdapt:
             pass
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooSmall(self):
@@ -379,37 +378,37 @@ class IPTests(unittest.TestCase):
         e = ip.IPProtocol()
         try:
             e.addProto(-1, MyProtocol([]))
-        except TypeError, e:
+        except TypeError as e:
             if e.args == ('Added protocol must be positive or zero',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
 
     def testAddingBadProtos_TooBig(self):
         """Adding a protocol with a number >=2**32 raises an exception."""
         e = ip.IPProtocol()
         try:
-            e.addProto(2L**32, MyProtocol([]))
-        except TypeError, e:
+            e.addProto(2**32, MyProtocol([]))
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 32 bits',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')
 
     def testAddingBadProtos_TooBig2(self):
         """Adding a protocol with a number >=2**32 raises an exception."""
         e = ip.IPProtocol()
         try:
-            e.addProto(2L**32+1, MyProtocol([]))
-        except TypeError, e:
+            e.addProto(2**32+1, MyProtocol([]))
+        except TypeError as e:
             if e.args == ('Added protocol must fit in 32 bits',):
                 pass
             else:
                 raise
         else:
-            raise AssertionError, 'addProto must raise an exception for bad protocols'
+            raise AssertionError('addProto must raise an exception for bad protocols')

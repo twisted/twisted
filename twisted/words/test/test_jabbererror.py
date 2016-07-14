@@ -5,6 +5,9 @@
 Tests for L{twisted.words.protocols.jabber.error}.
 """
 
+from __future__ import absolute_import, division
+
+from twisted.python.compat import unicode
 from twisted.trial import unittest
 
 from twisted.words.protocols.jabber import error
@@ -30,7 +33,7 @@ class BaseErrorTests(unittest.TestCase):
         """
         Test getting an element for an error with a text.
         """
-        e = error.BaseError('feature-not-implemented', 'text')
+        e = error.BaseError('feature-not-implemented', u'text')
         element = e.getElement()
         self.assertEqual(len(element.children), 2)
         self.assertEqual(unicode(element.text), 'text')
@@ -40,7 +43,7 @@ class BaseErrorTests(unittest.TestCase):
         """
         Test getting an element for an error with a text and language.
         """
-        e = error.BaseError('feature-not-implemented', 'text', 'en_US')
+        e = error.BaseError('feature-not-implemented', u'text', 'en_US')
         element = e.getElement()
         self.assertEqual(len(element.children), 2)
         self.assertEqual(unicode(element.text), 'text')
@@ -78,7 +81,7 @@ class StreamErrorTests(unittest.TestCase):
         """
         Test that the error text element has the correct namespace.
         """
-        e = error.StreamError('feature-not-implemented', 'text')
+        e = error.StreamError('feature-not-implemented', u'text')
         element = e.getElement()
         self.assertEqual(NS_XMPP_STREAMS, element.text.uri)
 
@@ -134,7 +137,7 @@ class StanzaErrorTests(unittest.TestCase):
         """
         Test that the error text element has the correct namespace.
         """
-        e = error.StanzaError('feature-not-implemented', text='text')
+        e = error.StanzaError('feature-not-implemented', text=u'text')
         element = e.getElement()
         self.assertEqual(NS_XMPP_STANZAS, element.text.uri)
 
@@ -199,7 +202,7 @@ class ParseErrorTests(unittest.TestCase):
         Test parsing of an error element with a text.
         """
         text = self.error.addElement(('errorns', 'text'))
-        text.addContent('test')
+        text.addContent(u'test')
         result = error._parseError(self.error, 'errorns')
         self.assertEqual('test', result['text'])
         self.assertEqual(None, result['textLang'])
@@ -211,7 +214,7 @@ class ParseErrorTests(unittest.TestCase):
         """
         text = self.error.addElement(('errorns', 'text'))
         text[NS_XML, 'lang'] = 'en_US'
-        text.addContent('test')
+        text.addContent(u'test')
         result = error._parseError(self.error, 'errorns')
         self.assertEqual('en_US', result['textLang'])
 
@@ -273,7 +276,7 @@ class ExceptionFromStanzaTests(unittest.TestCase):
         uc['feature'] = 'retrieve-subscriptions'
 
         result = error.exceptionFromStanza(stanza)
-        self.assert_(isinstance(result, error.StanzaError))
+        self.assertIsInstance(result, error.StanzaError)
         self.assertEqual('feature-not-implemented', result.condition)
         self.assertEqual('cancel', result.type)
         self.assertEqual(uc, result.appCondition)
@@ -296,12 +299,12 @@ class ExceptionFromStanzaTests(unittest.TestCase):
           </message>
         """
         stanza = domish.Element((None, 'stanza'))
-        p = stanza.addElement('body', content='Are you there?')
-        e = stanza.addElement('error', content='Unable to resolve hostname.')
+        p = stanza.addElement('body', content=u'Are you there?')
+        e = stanza.addElement('error', content=u'Unable to resolve hostname.')
         e['code'] = '502'
 
         result = error.exceptionFromStanza(stanza)
-        self.assert_(isinstance(result, error.StanzaError))
+        self.assertIsInstance(result, error.StanzaError)
         self.assertEqual('service-unavailable', result.condition)
         self.assertEqual('wait', result.type)
         self.assertEqual('Unable to resolve hostname.', result.text)
@@ -326,5 +329,5 @@ class ExceptionFromStreamErrorTests(unittest.TestCase):
         e.addElement((NS_XMPP_STREAMS, 'xml-not-well-formed'))
 
         result = error.exceptionFromStreamError(e)
-        self.assert_(isinstance(result, error.StreamError))
+        self.assertIsInstance(result, error.StreamError)
         self.assertEqual('xml-not-well-formed', result.condition)

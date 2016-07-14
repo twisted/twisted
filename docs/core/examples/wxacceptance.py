@@ -14,6 +14,7 @@ Please test on Linux, Win32 and OS X:
    (use dialog menu item), when menus are held down, when window is being
    dragged.
 """
+from __future__ import print_function
 
 import sys, time
 
@@ -21,7 +22,7 @@ try:
     from wx import Frame as wxFrame, DefaultPosition as wxDefaultPosition, \
          Size as wxSize, Menu as wxMenu, MenuBar as wxMenuBar, \
          EVT_MENU, MessageDialog as wxMessageDialog, App as wxApp
-except ImportError, e:
+except ImportError as e:
     from wxPython.wx import *
 
 from twisted.python import log
@@ -34,18 +35,18 @@ from twisted.internet import reactor, defer
 dc = None
 def helloWorld():
     global dc
-    print "hello, world", time.time()
+    print("hello, world", time.time())
     dc = reactor.callLater(0.1, helloWorld)
 dc = reactor.callLater(0.1, helloWorld)
 
 def twoSecondsPassed():
-    print "two seconds passed"
+    print("two seconds passed")
 
 def printer(s):
-    print s
+    print(s)
 
 def shutdown():
-    print "shutting down in 3 seconds"
+    print("shutting down in 3 seconds")
     if dc.active():
         dc.cancel()
     reactor.callLater(1, printer, "2...")
@@ -56,7 +57,7 @@ def shutdown():
     return d
 
 def startup():
-    print "Start up event!"
+    print("Start up event!")
 
 reactor.callLater(2, twoSecondsPassed)
 reactor.addSystemEventTrigger("after", "startup", startup)

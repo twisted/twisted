@@ -60,7 +60,7 @@ class DistReporter(proxyForInterface(IReporter)):
                                         test, reason))
 
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         """
         Queue adding an unexpected success.
         """
@@ -68,7 +68,7 @@ class DistReporter(proxyForInterface(IReporter)):
                                         test, todo))
 
 
-    def addExpectedFailure(self, test, error, todo):
+    def addExpectedFailure(self, test, error, todo=None):
         """
         Queue adding an unexpected failure.
         """
@@ -89,5 +89,5 @@ class DistReporter(proxyForInterface(IReporter)):
         """
         self.running[test.id()].append((self.original.stopTest, test))
         for step in self.running[test.id()]:
-            apply(step[0], step[1:])
+            step[0](*step[1:])
         del self.running[test.id()]

@@ -15,17 +15,37 @@ from zope.interface import implementer
 
 skipSSL = None
 skipSNI = None
+skipNPN = None
+skipALPN = None
 try:
     import OpenSSL
 except ImportError:
     skipSSL = "OpenSSL is required for SSL tests."
     skipSNI = skipSSL
+    skipNPN = skipSSL
+    skipALPN = skipSSL
 else:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
     if getattr(SSL.Context, "set_tlsext_servername_callback", None) is None:
         skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
+
+    try:
+        ctx = SSL.Context(SSL.SSLv23_METHOD)
+        ctx.set_npn_advertise_callback(lambda c: None)
+    except AttributeError:
+        skipNPN = "PyOpenSSL 0.15 or greater is required for NPN support"
+    except NotImplementedError:
+        skipNPN = "OpenSSL 1.0.1 or greater required for NPN support"
+
+    try:
+        ctx = SSL.Context(SSL.SSLv23_METHOD)
+        ctx.set_alpn_select_callback(lambda c: None)
+    except AttributeError:
+        skipALPN = "PyOpenSSL 0.15 or greater is required for ALPN support"
+    except NotImplementedError:
+        skipALPN = "OpenSSL 1.0.2 or greater required for ALPN support"
 
 from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
@@ -34,6 +54,7 @@ from twisted.internet.error import ConnectionClosed
 from twisted.python.compat import nativeString, _PY3
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.filepath import FilePath
+from twisted.python.modules import getModule
 
 from twisted.trial import unittest, util
 from twisted.internet import protocol, defer, reactor
@@ -46,6 +67,7 @@ if not skipSSL:
     from twisted.internet.ssl import platformTrust, VerificationError
     from twisted.internet import _sslverify as sslverify
     from twisted.protocols.tls import TLSMemoryBIOFactory
+
 
 # A couple of static PEM-format certificates to be used by various tests.
 A_HOST_CERTIFICATE_PEM = """
@@ -89,6 +111,8 @@ A_PEER_CERTIFICATE_PEM = """
         yqDtGhklsWW3ZwBzEh5VEOUp
 -----END CERTIFICATE-----
 """
+
+A_KEYPAIR = getModule(__name__).filePath.sibling('server.pem').getContent()
 
 
 
@@ -177,6 +201,53 @@ def certificatesForAuthorityAndServer(commonName=b'example.com'):
 
 
 
+def _loopbackTLSConnection(serverOpts, clientOpts):
+    """
+    Common implementation code for both L{loopbackTLSConnection} and
+    L{loopbackTLSConnectionInMemory}. Creates a loopback TLS connection
+    using the provided server and client context factories.
+
+    @param serverOpts: An OpenSSL context factory for the server.
+    @type serverOpts: C{OpenSSLCertificateOptions}, or any class with an
+        equivalent API.
+
+    @param clientOpts: An OpenSSL context factory for the client.
+    @type clientOpts: C{OpenSSLCertificateOptions}, or any class with an
+        equivalent API.
+
+    @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
+    @rtype: L{tuple}
+    """
+    class GreetingServer(protocol.Protocol):
+        greeting = b"greetings!"
+        def connectionMade(self):
+            self.transport.write(self.greeting)
+
+    class ListeningClient(protocol.Protocol):
+        data = b''
+        lostReason = None
+        def dataReceived(self, data):
+            self.data += data
+        def connectionLost(self, reason):
+            self.lostReason = reason
+
+    clientFactory = TLSMemoryBIOFactory(
+        clientOpts, isClient=True,
+        wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+    )
+    serverFactory = TLSMemoryBIOFactory(
+        serverOpts, isClient=False,
+        wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+    )
+
+    sProto, cProto, pump = connectedServerAndClient(
+        lambda: serverFactory.buildProtocol(None),
+        lambda: clientFactory.buildProtocol(None)
+    )
+    return sProto, cProto, pump
+
+
+
 def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
     """
     Create a loopback TLS connection with the given trust and keys.
@@ -210,36 +281,58 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
             ctx.check_privatekey()
             return ctx
 
-    class GreetingServer(protocol.Protocol):
-        greeting = b"greetings!"
-        def connectionMade(self):
-            self.transport.write(self.greeting)
-
-    class ListeningClient(protocol.Protocol):
-        data = b''
-        lostReason = None
-        def dataReceived(self, data):
-            self.data += data
-        def connectionLost(self, reason):
-            self.lostReason = reason
-
     serverOpts = ContextFactory()
     clientOpts = sslverify.OpenSSLCertificateOptions(trustRoot=trustRoot)
 
-    clientFactory = TLSMemoryBIOFactory(
-        clientOpts, isClient=True,
-        wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+    return _loopbackTLSConnection(serverOpts, clientOpts)
+
+
+
+def loopbackTLSConnectionInMemory(trustRoot, privateKey,
+                                  serverCertificate, clientProtocols=None,
+                                  serverProtocols=None,
+                                  clientOptions=None):
+    """
+    Create a loopback TLS connection with the given trust and keys. Like
+    L{loopbackTLSConnection}, but using in-memory certificates and keys rather
+    than writing them to disk.
+
+    @param trustRoot: the C{trustRoot} argument for the client connection's
+        context.
+    @type trustRoot: L{sslverify.IOpenSSLTrustRoot}
+
+    @param privateKey: The private key.
+    @type privateKey: L{str} (native string)
+
+    @param serverCertificate: The certificate used by the server.
+    @type chainedCertFile: L{str} (native string)
+
+    @param clientProtocols: The protocols the client is willing to negotiate
+        using NPN/ALPN.
+
+    @param serverProtocols: The protocols the server is willing to negotiate
+        using NPN/ALPN.
+
+    @param clientOptions: The type of C{OpenSSLCertificateOptions} class to
+        use for the client. Defaults to C{OpenSSLCertificateOptions}.
+
+    @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
+    @rtype: L{tuple}
+    """
+    if clientOptions is None:
+        clientOptions = sslverify.OpenSSLCertificateOptions
+
+    clientCertOpts = clientOptions(
+        trustRoot=trustRoot,
+        acceptableProtocols=clientProtocols
     )
-    serverFactory = TLSMemoryBIOFactory(
-        serverOpts, isClient=False,
-        wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+    serverCertOpts = sslverify.OpenSSLCertificateOptions(
+        privateKey=privateKey,
+        certificate=serverCertificate,
+        acceptableProtocols=serverProtocols,
     )
 
-    sProto, cProto, pump = connectedServerAndClient(
-        lambda: serverFactory.buildProtocol(None),
-        lambda: clientFactory.buildProtocol(None)
-    )
-    return sProto, cProto, pump
+    return _loopbackTLSConnection(serverCertOpts, clientCertOpts)
 
 
 
@@ -759,7 +852,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
             privateKey=self.sKey,
             certificate=self.sCert,
         )
-        self.assertIs(None, opts._ecCurve)
+        self.assertIsNone(opts._ecCurve)
 
 
     def test_ecNeverBreaksGetContext(self):
@@ -807,7 +900,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
                 sslverify.DN(CN=b'a', OU=b'hello'),
                 sslverify.DistinguishedName(commonName=b'a',
                                             organizationalUnitName=b'hello'))
-        self.assertNotEquals(
+        self.assertNotEqual(
                 sslverify.DN(CN=b'a', OU=b'hello'),
                 sslverify.DN(CN=b'a', OU=b'hello', emailAddress=b'xxx'))
         dn = sslverify.DN(CN=b'abcdefg')
@@ -916,7 +1009,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         firstOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
-            method=SSL.SSLv3_METHOD,
+            method=SSL.SSLv23_METHOD,
             verify=True,
             caCerts=[self.sCert],
             verifyDepth=2,
@@ -927,8 +1020,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
             fixBrokenPeers=True,
             enableSessionTickets=True)
         context = firstOpts.getContext()
-        self.assertIdentical(context, firstOpts._context)
-        self.assertNotIdentical(context, None)
+        self.assertIs(context, firstOpts._context)
+        self.assertIsNotNone(context)
         state = firstOpts.__getstate__()
         self.assertNotIn("_context", state)
 
@@ -936,16 +1029,16 @@ class OpenSSLOptionsTests(unittest.TestCase):
         opts.__setstate__(state)
         self.assertEqual(opts.privateKey, self.sKey)
         self.assertEqual(opts.certificate, self.sCert)
-        self.assertEqual(opts.method, SSL.SSLv3_METHOD)
-        self.assertEqual(opts.verify, True)
+        self.assertEqual(opts.method, SSL.SSLv23_METHOD)
+        self.assertTrue(opts.verify)
         self.assertEqual(opts.caCerts, [self.sCert])
         self.assertEqual(opts.verifyDepth, 2)
-        self.assertEqual(opts.requireCertificate, False)
-        self.assertEqual(opts.verifyOnce, False)
-        self.assertEqual(opts.enableSingleUseKeys, False)
-        self.assertEqual(opts.enableSessions, False)
-        self.assertEqual(opts.fixBrokenPeers, True)
-        self.assertEqual(opts.enableSessionTickets, True)
+        self.assertFalse(opts.requireCertificate)
+        self.assertFalse(opts.verifyOnce)
+        self.assertFalse(opts.enableSingleUseKeys)
+        self.assertFalse(opts.enableSessions)
+        self.assertTrue(opts.fixBrokenPeers)
+        self.assertTrue(opts.enableSessionTickets)
 
     test_certificateOptionsSerialization.suppress = [
         util.suppress(category = DeprecationWarning,
@@ -1007,8 +1100,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
 
         def afterLost(result):
             ((cSuccess, cResult), (sSuccess, sResult)) = result
-            self.failIf(cSuccess)
-            self.failIf(sSuccess)
+            self.assertFalse(cSuccess)
+            self.assertFalse(sSuccess)
             # Win32 fails to report the SSL Error, and report a connection lost
             # instead: there is a race condition so that's not totally
             # surprising (see ticket #2877 in the tracker)
@@ -1036,8 +1129,8 @@ class OpenSSLOptionsTests(unittest.TestCase):
                                consumeErrors=True)
         def afterLost(result):
             ((cSuccess, cResult), (sSuccess, sResult)) = result
-            self.failIf(cSuccess)
-            self.failIf(sSuccess)
+            self.assertFalse(cSuccess)
+            self.assertFalse(sSuccess)
 
         return d.addCallback(afterLost)
 
@@ -1294,7 +1387,7 @@ class TrustRootTests(unittest.TestCase):
             chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
-        self.assertIs(cProto.wrappedProtocol.lostReason, None)
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
 
@@ -1333,7 +1426,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @param serverContextSetup: a 1-argument callable invoked with the
             L{OpenSSL.SSL.Context} after it's produced.
         @type serverContextSetup: L{callable} taking L{OpenSSL.SSL.Context}
-            returning L{NoneType}.
+            returning L{None}.
 
         @param validCertificate: Is the server's certificate valid?  L{True} if
             so, L{False} otherwise.
@@ -1491,8 +1584,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_validHostnameInvalidCertificate(self):
@@ -1554,8 +1647,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_clientPresentsCertificate(self):
@@ -1577,8 +1670,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
 
     def test_clientPresentsBadCertificate(self):
@@ -1650,8 +1743,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         cErr = cProto.wrappedProtocol.lostReason
         sErr = sProto.wrappedProtocol.lostReason
-        self.assertIdentical(cErr, None)
-        self.assertIdentical(sErr, None)
+        self.assertIsNone(cErr)
+        self.assertIsNone(sErr)
 
     if skipSNI is not None:
         test_hostnameEncoding.skip = skipSNI
@@ -1676,7 +1769,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 cert.get_subject().commonName = name
                 return cert
         conn = Connection()
-        self.assertIdentical(
+        self.assertIs(
             sslverify.simpleVerifyHostname(conn, u'something.example.com'),
             None
         )
@@ -1704,9 +1797,206 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         sErr = sProto.wrappedProtocol.lostReason.value
 
         self.assertIsInstance(cErr, ZeroDivisionError)
-        self.assertIsInstance(sErr, ConnectionClosed)
+        self.assertIsInstance(sErr, (ConnectionClosed, SSL.Error))
         errors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertTrue(errors)
+
+
+
+def negotiateProtocol(serverProtocols,
+                      clientProtocols,
+                      clientOptions=None):
+    """
+    Create the TLS connection and negotiate a next protocol.
+
+    @param serverProtocols: The protocols the server is willing to negotiate.
+    @param clientProtocols: The protocols the client is willing to negotiate.
+    @param clientOptions: The type of C{OpenSSLCertificateOptions} class to
+        use for the client. Defaults to C{OpenSSLCertificateOptions}.
+    @return: A C{typle} of: the negotiated protocol and the reason the
+        connection was lost.
+    """
+    caCertificate, serverCertificate = certificatesForAuthorityAndServer()
+    trustRoot = sslverify.OpenSSLCertificateAuthorities([
+        caCertificate.original,
+    ])
+
+    sProto, cProto, pump = loopbackTLSConnectionInMemory(
+        trustRoot=trustRoot,
+        privateKey=serverCertificate.privateKey.original,
+        serverCertificate=serverCertificate.original,
+        clientProtocols=clientProtocols,
+        serverProtocols=serverProtocols,
+        clientOptions=clientOptions,
+    )
+    pump.flush()
+
+    return (cProto.negotiatedProtocol, cProto.wrappedProtocol.lostReason)
+
+
+
+class NPNOrALPNTests(unittest.TestCase):
+    """
+    NPN and ALPN protocol selection.
+
+    These tests only run on platforms that have a PyOpenSSL version >= 0.15,
+    and OpenSSL version 1.0.1 or later.
+    """
+    if skipSSL:
+        skip = skipSSL
+    elif skipNPN:
+        skip = skipNPN
+
+    def test_nextProtocolMechanismsNPNIsSupported(self):
+        """
+        When at least NPN is available on the platform, NPN is in the set of
+        supported negotiation protocols.
+        """
+        supportedProtocols = sslverify.protocolNegotiationMechanisms()
+        self.assertTrue(
+            sslverify.ProtocolNegotiationSupport.NPN in supportedProtocols
+        )
+
+
+    def test_NPNAndALPNSuccess(self):
+        """
+        When both ALPN and NPN are used, and both the client and server have
+        overlapping protocol choices, a protocol is successfully negotiated.
+        Further, the negotiated protocol is the first one in the list.
+        """
+        protocols = [b'h2', b'http/1.1']
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            clientProtocols=protocols,
+            serverProtocols=protocols,
+        )
+        self.assertEqual(negotiatedProtocol, b'h2')
+        self.assertIsNone(lostReason)
+
+
+    def test_NPNAndALPNDifferent(self):
+        """
+        Client and server have different protocol lists: only the common
+        element is chosen.
+        """
+        serverProtocols = [b'h2', b'http/1.1', b'spdy/2']
+        clientProtocols = [b'spdy/3', b'http/1.1']
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            clientProtocols=clientProtocols,
+            serverProtocols=serverProtocols,
+        )
+        self.assertEqual(negotiatedProtocol, b'http/1.1')
+        self.assertIsNone(lostReason)
+
+
+    def test_NPNAndALPNNoAdvertise(self):
+        """
+        When one peer does not advertise any protocols, the connection is set
+        up with no next protocol.
+        """
+        protocols = [b'h2', b'http/1.1']
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            clientProtocols=protocols,
+            serverProtocols=[],
+        )
+        self.assertIsNone(negotiatedProtocol)
+        self.assertIsNone(lostReason)
+
+
+    def test_NPNAndALPNNoOverlap(self):
+        """
+        When the client and server have no overlap of protocols, the connection
+        fails.
+        """
+        clientProtocols = [b'h2', b'http/1.1']
+        serverProtocols = [b'spdy/3']
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            serverProtocols=clientProtocols,
+            clientProtocols=serverProtocols,
+        )
+        self.assertIsNone(negotiatedProtocol)
+        self.assertEqual(lostReason.type, SSL.Error)
+
+
+
+class ALPNTests(unittest.TestCase):
+    """
+    ALPN protocol selection.
+
+    These tests only run on platforms that have a PyOpenSSL version >= 0.15,
+    and OpenSSL version 1.0.2 or later.
+
+    This covers only the ALPN specific logic, as any platform that has ALPN
+    will also have NPN and so will run the NPNAndALPNTest suite as well.
+    """
+    if skipSSL:
+        skip = skipSSL
+    elif skipALPN:
+        skip = skipALPN
+
+
+    def test_nextProtocolMechanismsALPNIsSupported(self):
+        """
+        When ALPN is available on a platform, protocolNegotiationMechanisms
+        includes ALPN in the suported protocols.
+        """
+        supportedProtocols = sslverify.protocolNegotiationMechanisms()
+        self.assertTrue(
+            sslverify.ProtocolNegotiationSupport.ALPN in
+            supportedProtocols
+        )
+
+
+
+class NPNAndALPNAbsentTests(unittest.TestCase):
+    """
+    NPN/ALPN operations fail on platforms that do not support them.
+
+    These tests only run on platforms that have a PyOpenSSL version < 0.15,
+    or an OpenSSL version earlier than 1.0.1
+    """
+    if skipSSL:
+        skip = skipSSL
+    elif not skipNPN:
+        skip = "NPN/ALPN is present on this platform"
+
+
+    def test_nextProtocolMechanismsNoNegotiationSupported(self):
+        """
+        When neither NPN or ALPN are available on a platform, there are no
+        supported negotiation protocols.
+        """
+        supportedProtocols = sslverify.protocolNegotiationMechanisms()
+        self.assertFalse(supportedProtocols)
+
+
+    def test_NPNAndALPNNotImplemented(self):
+        """
+        A NotImplementedError is raised when using acceptableProtocols on a
+        platform that does not support either NPN or ALPN.
+        """
+        protocols = [b'h2', b'http/1.1']
+        self.assertRaises(
+            NotImplementedError,
+            negotiateProtocol,
+            serverProtocols=protocols,
+            clientProtocols=protocols,
+        )
+
+
+    def test_NegotiatedProtocolReturnsNone(self):
+        """
+        negotiatedProtocol return L{None} even when NPN/ALPN aren't supported.
+        This works because, as neither are supported, negotiation isn't even
+        attempted.
+        """
+        serverProtocols = None
+        clientProtocols = None
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            clientProtocols=clientProtocols,
+            serverProtocols=serverProtocols,
+        )
+        self.assertIsNone(negotiatedProtocol)
+        self.assertIsNone(lostReason)
 
 
 
@@ -1752,7 +2042,7 @@ class ConstructorsTests(unittest.TestCase):
         x = self.assertRaises(CertificateError,
                               sslverify.Certificate.peerFromTransport,
                               _NotSSLTransport())
-        self.failUnless(str(x).startswith("non-TLS"))
+        self.assertTrue(str(x).startswith("non-TLS"))
 
 
     def test_peerFromBlankSSLTransport(self):
@@ -1763,7 +2053,7 @@ class ConstructorsTests(unittest.TestCase):
         x = self.assertRaises(CertificateError,
                               sslverify.Certificate.peerFromTransport,
                               _MaybeSSLTransport())
-        self.failUnless(str(x).startswith("TLS"))
+        self.assertTrue(str(x).startswith("TLS"))
 
 
     def test_hostFromNonSSLTransport(self):
@@ -1774,7 +2064,7 @@ class ConstructorsTests(unittest.TestCase):
         x = self.assertRaises(CertificateError,
                               sslverify.Certificate.hostFromTransport,
                               _NotSSLTransport())
-        self.failUnless(str(x).startswith("non-TLS"))
+        self.assertTrue(str(x).startswith("non-TLS"))
 
 
     def test_hostFromBlankSSLTransport(self):
@@ -1785,7 +2075,7 @@ class ConstructorsTests(unittest.TestCase):
         x = self.assertRaises(CertificateError,
                               sslverify.Certificate.hostFromTransport,
                               _MaybeSSLTransport())
-        self.failUnless(str(x).startswith("TLS"))
+        self.assertTrue(str(x).startswith("TLS"))
 
 
     def test_hostFromSSLTransport(self):
@@ -1808,6 +2098,140 @@ class ConstructorsTests(unittest.TestCase):
             sslverify.Certificate.peerFromTransport(
                 _ActualSSLTransport()).serialNumber(),
             12346)
+
+
+
+class MultipleCertificateTrustRootTests(unittest.TestCase):
+    """
+    Test the behavior of the trustRootFromCertificates() API call.
+    """
+
+    if skipSSL:
+        skip = skipSSL
+
+
+    def test_trustRootFromCertificatesPrivatePublic(self):
+        """
+        L{trustRootFromCertificates} accepts either a L{sslverify.Certificate}
+        or a L{sslverify.PrivateCertificate} instance.
+        """
+        privateCert = sslverify.PrivateCertificate.loadPEM(A_KEYPAIR)
+        cert = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
+
+        mt = sslverify.trustRootFromCertificates([privateCert, cert])
+
+        # Verify that the returned object acts correctly when used as a
+        # trustRoot= param to optionsForClientTLS.
+        sProto, cProto, pump = loopbackTLSConnectionInMemory(
+            trustRoot=mt,
+            privateKey=privateCert.privateKey.original,
+            serverCertificate=privateCert.original,
+        )
+
+        # This connection should succeed
+        self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
+
+
+    def test_trustRootSelfSignedServerCertificate(self):
+        """
+        L{trustRootFromCertificates} called with a single self-signed
+        certificate will cause L{optionsForClientTLS} to accept client
+        connections to a server with that certificate.
+        """
+        key, cert = makeCertificate(O=b"Server Test Certificate", CN=b"server")
+        selfSigned = sslverify.PrivateCertificate.fromCertificateAndKeyPair(
+            sslverify.Certificate(cert),
+            sslverify.KeyPair(key),
+        )
+
+        trust = sslverify.trustRootFromCertificates([selfSigned])
+
+        # Since we trust this exact certificate, connections to this server
+        # should succeed.
+        sProto, cProto, pump = loopbackTLSConnectionInMemory(
+            trustRoot=trust,
+            privateKey=selfSigned.privateKey.original,
+            serverCertificate=selfSigned.original,
+        )
+        self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
+
+
+    def test_trustRootCertificateAuthorityTrustsConnection(self):
+        """
+        L{trustRootFromCertificates} called with certificate A will cause
+        L{optionsForClientTLS} to accept client connections to a server with
+        certificate B where B is signed by A.
+        """
+        caCert, serverCert = certificatesForAuthorityAndServer()
+
+        trust = sslverify.trustRootFromCertificates([caCert])
+
+        # Since we've listed the CA's certificate as a trusted cert, a
+        # connection to the server certificate it signed should succeed.
+        sProto, cProto, pump = loopbackTLSConnectionInMemory(
+            trustRoot=trust,
+            privateKey=serverCert.privateKey.original,
+            serverCertificate=serverCert.original,
+        )
+        self.assertEqual(cProto.wrappedProtocol.data, b'greetings!')
+        self.assertIsNone(cProto.wrappedProtocol.lostReason)
+
+
+    def test_trustRootFromCertificatesUntrusted(self):
+        """
+        L{trustRootFromCertificates} called with certificate A will cause
+        L{optionsForClientTLS} to disallow any connections to a server with
+        certificate B where B is not signed by A.
+        """
+        key, cert = makeCertificate(O=b"Server Test Certificate", CN=b"server")
+        serverCert = sslverify.PrivateCertificate.fromCertificateAndKeyPair(
+            sslverify.Certificate(cert),
+            sslverify.KeyPair(key),
+        )
+        untrustedCert = sslverify.Certificate(
+            makeCertificate(O=b"CA Test Certificate", CN=b"unknown CA")[1]
+        )
+
+        trust = sslverify.trustRootFromCertificates([untrustedCert])
+
+        # Since we only trust 'untrustedCert' which has not signed our
+        # server's cert, we should reject this connection
+        sProto, cProto, pump = loopbackTLSConnectionInMemory(
+            trustRoot=trust,
+            privateKey=serverCert.privateKey.original,
+            serverCertificate=serverCert.original,
+        )
+
+        # This connection should fail, so no data was received.
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+
+        # It was an L{SSL.Error}.
+        self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
+
+        # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
+        err = cProto.wrappedProtocol.lostReason.value
+        self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
+
+
+    def test_trustRootFromCertificatesOpenSSLObjects(self):
+        """
+        L{trustRootFromCertificates} rejects any L{OpenSSL.crypto.X509}
+        instances in the list passed to it.
+        """
+        private = sslverify.PrivateCertificate.loadPEM(A_KEYPAIR)
+        certX509 = private.original
+
+        exception = self.assertRaises(
+            TypeError,
+            sslverify.trustRootFromCertificates, [certX509],
+        )
+        self.assertEqual(
+            "certificates items must be twisted.internet.ssl.CertBase "
+            "instances",
+            exception.args[0],
+        )
 
 
 

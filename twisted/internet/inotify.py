@@ -19,8 +19,8 @@ at some point)::
         @param filepath: FilePath on which the event happened.
         @param mask: inotify event as hexadecimal masks
         \"""
-        print "event %s on %s" % (
-            ', '.join(inotify.humanReadableMask(mask)), filepath)
+        print("event %s on %s" % (
+            ', '.join(inotify.humanReadableMask(mask)), filepath))
 
     notifier = inotify.INotify()
     notifier.startReading()
@@ -28,6 +28,8 @@ at some point)::
 
 @since: 10.1
 """
+
+from __future__ import print_function
 
 import os
 import struct
@@ -39,21 +41,21 @@ from twisted.python import log, _inotify
 
 # from /usr/src/linux/include/linux/inotify.h
 
-IN_ACCESS = 0x00000001L         # File was accessed
-IN_MODIFY = 0x00000002L         # File was modified
-IN_ATTRIB = 0x00000004L         # Metadata changed
-IN_CLOSE_WRITE = 0x00000008L    # Writeable file was closed
-IN_CLOSE_NOWRITE = 0x00000010L  # Unwriteable file closed
-IN_OPEN = 0x00000020L           # File was opened
-IN_MOVED_FROM = 0x00000040L     # File was moved from X
-IN_MOVED_TO = 0x00000080L       # File was moved to Y
-IN_CREATE = 0x00000100L         # Subfile was created
-IN_DELETE = 0x00000200L         # Subfile was delete
-IN_DELETE_SELF = 0x00000400L    # Self was deleted
-IN_MOVE_SELF = 0x00000800L      # Self was moved
-IN_UNMOUNT = 0x00002000L        # Backing fs was unmounted
-IN_Q_OVERFLOW = 0x00004000L     # Event queued overflowed
-IN_IGNORED = 0x00008000L        # File was ignored
+IN_ACCESS = 0x00000001         # File was accessed
+IN_MODIFY = 0x00000002         # File was modified
+IN_ATTRIB = 0x00000004         # Metadata changed
+IN_CLOSE_WRITE = 0x00000008    # Writeable file was closed
+IN_CLOSE_NOWRITE = 0x00000010  # Unwriteable file closed
+IN_OPEN = 0x00000020           # File was opened
+IN_MOVED_FROM = 0x00000040     # File was moved from X
+IN_MOVED_TO = 0x00000080       # File was moved to Y
+IN_CREATE = 0x00000100         # Subfile was created
+IN_DELETE = 0x00000200         # Subfile was delete
+IN_DELETE_SELF = 0x00000400    # Self was deleted
+IN_MOVE_SELF = 0x00000800      # Self was moved
+IN_UNMOUNT = 0x00002000        # Backing fs was unmounted
+IN_Q_OVERFLOW = 0x00004000     # Event queued overflowed
+IN_IGNORED = 0x00008000        # File was ignored
 
 IN_ONLYDIR = 0x01000000         # only watch the path if it is a directory
 IN_DONT_FOLLOW = 0x02000000     # don't follow a sym link
@@ -218,7 +220,7 @@ class INotify(FileDescriptor, object):
         if self._fd >= 0:
             try:
                 os.close(self._fd)
-            except OSError, e:
+            except OSError as e:
                 log.err(e, "Couldn't close INotify file descriptor.")
 
 

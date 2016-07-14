@@ -43,7 +43,7 @@ rereading the file every half minute, but also how to display itself in a myriad
 of protocols. Here, we used the component-based architecture that Twisted
 provides to achieve a separation of concerns. All the service is responsible
 for, now, is supporting ``getUser`` /``getUsers`` . It declares
-its support via a call to ``zope.interface.implements`` . Then, adapters
+its support via the ``zope.interface.implementer`` decorator. Then, adapters
 are used to make this service look like an appropriate class for various things:
 for supplying a finger factory to ``TCPServer`` , for supplying a
 resource to site's constructor, and to provide an IRC client factory

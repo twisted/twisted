@@ -7,7 +7,7 @@ UDP support for IOCP reactor
 
 import socket, operator, struct, warnings, errno
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet import defer, address, error, interfaces
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -21,6 +21,8 @@ from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 
 
 
+@implementer(IReadWriteHandle, interfaces.IListeningPort,
+             interfaces.IUDPTransport, interfaces.ISystemHandle)
 class Port(abstract.FileHandle):
     """
     UDP port, listening for packets.
@@ -28,10 +30,6 @@ class Port(abstract.FileHandle):
     @ivar addressFamily: L{socket.AF_INET} or L{socket.AF_INET6}, depending on
         whether this port is listening on an IPv4 address or an IPv6 address.
     """
-    implements(
-        IReadWriteHandle, interfaces.IListeningPort, interfaces.IUDPTransport,
-        interfaces.ISystemHandle)
-
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
     dynamicReadBuffers = False
@@ -58,10 +56,9 @@ class Port(abstract.FileHandle):
 
         skt = socket.socket(self.addressFamily, self.socketType)
         addrLen = _iocp.maxAddrLen(skt.fileno())
-        self.addressBuffer = _iocp.AllocateReadBuffer(addrLen)
+        self.addressBuffer = bytearray(addrLen)
         # WSARecvFrom takes an int
-        self.addressLengthBuffer = _iocp.AllocateReadBuffer(
-                struct.calcsize('i'))
+        self.addressLengthBuffer = bytearray(struct.calcsize('i'))
 
 
     def _setAddressFamily(self):
@@ -111,7 +108,7 @@ class Port(abstract.FileHandle):
         try:
             skt = self.createSocket()
             skt.bind((self.interface, self.port))
-        except socket.error, le:
+        except socket.error as le:
             raise error.CannotListenError(self.interface, self.port, le)
 
         # Make sure that if we listened on port 0, we update that to
@@ -178,7 +175,7 @@ class Port(abstract.FileHandle):
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
-            except socket.error, se:
+            except socket.error as se:
                 no = se.args[0]
                 if no == errno.WSAEINTR:
                     return self.write(datagram)
@@ -204,7 +201,7 @@ class Port(abstract.FileHandle):
                     addr[0], "IPv4 port write() called with IPv6 address")
             try:
                 return self.socket.sendto(datagram, addr)
-            except socket.error, se:
+            except socket.error as se:
                 no = se.args[0]
                 if no == errno.WSAEINTR:
                     return self.write(datagram, addr)
@@ -396,7 +393,7 @@ class MulticastMixin:
             cmd = socket.IP_DROP_MEMBERSHIP
         try:
             self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except socket.error, e:
+        except socket.error as e:
             return failure.Failure(error.MulticastJoinError(addr, interface,
                                                             *e.args))
 
@@ -410,13 +407,11 @@ class MulticastMixin:
 
 
 
+@implementer(interfaces.IMulticastTransport)
 class MulticastPort(MulticastMixin, Port):
     """
     UDP Port that supports multicasting.
     """
-
-    implements(interfaces.IMulticastTransport)
-
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192,
                  reactor=None, listenMultiple=False):

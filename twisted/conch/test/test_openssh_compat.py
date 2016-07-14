@@ -11,7 +11,7 @@ from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 
-if requireModule('Crypto.Cipher.DES3') and requireModule('pyasn1'):
+if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 else:
     OpenSSHFactory = None
@@ -27,7 +27,8 @@ class OpenSSHFactoryTests(TestCase):
     if getattr(os, "geteuid", None) is None:
         skip = "geteuid/seteuid not available"
     elif OpenSSHFactory is None:
-        skip = "Cannot run without PyCrypto or PyASN1"
+        skip = "Cannot run without cryptography or PyASN1"
+
 
     def setUp(self):
         self.factory = OpenSSHFactory()
@@ -65,8 +66,8 @@ class OpenSSHFactoryTests(TestCase):
 
     def test_getPrivateKeys(self):
         """
-        L{OpenSSHFactory.getPrivateKeys} should return the available private
-        keys in the data directory.
+        Will return the available private keys in the data directory, ignoring
+        key files which failed to be loaded.
         """
         keys = self.factory.getPrivateKeys()
         self.assertEqual(len(keys), 2)
@@ -84,11 +85,11 @@ class OpenSSHFactoryTests(TestCase):
         keyFile = self.keysDir.child("ssh_host_two_key")
         # Fake permission error by changing the mode
         keyFile.chmod(0000)
-        self.addCleanup(keyFile.chmod, 0777)
+        self.addCleanup(keyFile.chmod, 0o777)
         # And restore the right mode when seteuid is called
         savedSeteuid = os.seteuid
         def seteuid(euid):
-            keyFile.chmod(0777)
+            keyFile.chmod(0o777)
             return savedSeteuid(euid)
         self.patch(os, "seteuid", seteuid)
         keys = self.factory.getPrivateKeys()

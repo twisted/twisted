@@ -3,7 +3,7 @@
  */
 
 
-#include<windows.h>
+#include <windows.h>
 
 int initWinsockPointers();
 BOOL

@@ -675,7 +675,8 @@ class TimeTests(unittest.TestCase):
 
     def test_callLaterUsesReactorSecondsInDelayedCall(self):
         """
-        L{reactor.callLater} should use the reactor's seconds factory
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        should use the reactor's seconds factory
         to produce the time at which the DelayedCall will be called.
         """
         oseconds = reactor.seconds
@@ -689,7 +690,8 @@ class TimeTests(unittest.TestCase):
 
     def test_callLaterUsesReactorSecondsAsDelayedCallSecondsFactory(self):
         """
-        L{reactor.callLater} should propagate its own seconds factory
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        should propagate its own seconds factory
         to the DelayedCall to use as its own seconds factory.
         """
         oseconds = reactor.seconds
@@ -786,7 +788,7 @@ class TimeTests(unittest.TestCase):
     def testCallLaterTime(self):
         d = reactor.callLater(10, lambda: None)
         try:
-            self.failUnless(d.getTime() - (time.time() + 10) < 1)
+            self.assertTrue(d.getTime() - (time.time() + 10) < 1)
         finally:
             d.cancel()
 
@@ -851,7 +853,7 @@ class CallFromThreadStopsAndWakeUpTests(unittest.TestCase):
 
     def _callFromThreadCallback2(self, d):
         try:
-            self.assert_(self.stopped)
+            self.assertTrue(self.stopped)
         except:
             # Send the error to the deferred
             d.errback()
@@ -895,7 +897,8 @@ class DelayedTests(unittest.TestCase):
                 missing.append(dc)
         if missing:
             self.finished = 1
-        self.failIf(missing, "Should have been missing no calls, instead was missing " + repr(missing))
+        self.assertFalse(missing, "Should have been missing no calls, instead "
+                         + "was missing " + repr(missing))
 
     def callback(self, tag):
         del self.timers[tag]
@@ -944,10 +947,10 @@ class DelayedTests(unittest.TestCase):
         L{IDelayedCall.active} returns False once the call has run.
         """
         dcall = reactor.callLater(0.01, self.deferred.callback, True)
-        self.assertEqual(dcall.active(), True)
+        self.assertTrue(dcall.active())
 
         def checkDeferredCall(success):
-            self.assertEqual(dcall.active(), False)
+            self.assertFalse(dcall.active())
             return success
 
         self.deferred.addCallback(checkDeferredCall)
@@ -1004,13 +1007,12 @@ class ResolveTests(unittest.TestCase):
         # child which just does reactor.resolve after the reactor has
         # started, fail if it does not complete in a timely fashion.
         helperPath = os.path.abspath(self.mktemp())
-        helperFile = open(helperPath, 'w')
+        with open(helperPath, 'w') as helperFile:
 
-        # Eeueuuggg
-        reactorName = reactor.__module__
+            # Eeueuuggg
+            reactorName = reactor.__module__
 
-        helperFile.write(resolve_helper % {'reactor': reactorName})
-        helperFile.close()
+            helperFile.write(resolve_helper % {'reactor': reactorName})
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
@@ -1129,7 +1131,7 @@ class ProtocolTests(unittest.TestCase):
         factory = MyFactory()
         protocol = factory.buildProtocol(None)
         self.assertEqual(protocol.factory, factory)
-        self.assert_( isinstance(protocol, factory.protocol) )
+        self.assertIsInstance(protocol, factory.protocol)
 
 
 class DummyProducer(object):
@@ -1371,27 +1373,3 @@ class PortStringificationTests(unittest.TestCase):
 
         if _PY3:
             testSSL.skip = ("Re-enable once the Python 3 SSL port is done.")
-
-
-
-class IStreamClientEndpointStringParserTests(unittest.TestCase):
-    """
-    Tests for L{twisted.internet.interfaces.IStreamClientEndpointStringParser}.
-    """
-    def test_deprecated(self):
-        """
-        Accessing L{IStreamClientEndpointStringParser} via the
-        I{IStreamClientEndpointStringParser} attribute of
-        L{twisted.internet.interfaces} results in a deprecation warning being
-        emitted.
-        """
-        interfaces.IStreamClientEndpointStringParser
-
-        warnings = self.flushWarnings([self.test_deprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "twisted.internet.interfaces.IStreamClientEndpointStringParser "
-            "was deprecated in Twisted 14.0.0: This interface has been "
-            "superseded by IStreamClientEndpointStringParserWithReactor.")
-        self.assertEqual(len(warnings), 1)

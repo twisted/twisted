@@ -141,7 +141,7 @@ class TrialRunnerTestsMixin:
         self.runner.run(self.test)
         self.runner.run(self.test)
         self.assertEqual(len(l), 2)
-        self.failIf(l[0] is l[1], "Should have created a new file observer")
+        self.assertFalse(l[0] is l[1], "Should have created a new file observer")
 
 
     def test_logFileGetsClosed(self):
@@ -156,7 +156,7 @@ class TrialRunnerTestsMixin:
         self.runner._setUpLogFile = setUpLogFile
         self.runner.run(self.test)
         self.assertEqual(len(l), 1)
-        self.failUnless(l[0].closed)
+        self.assertTrue(l[0].closed)
 
 
 
@@ -517,6 +517,8 @@ class RunnerTests(unittest.SynchronousTestCase):
         Trial uses pdb if no debugger is specified by `--debugger`
         """
         self.parseOptions(['--debug', 'twisted.trial.test.sample'])
+        pdbrcFile = FilePath("pdbrc")
+        pdbrcFile.touch()
 
         self.runcall_called = False
         def runcall(pdb, suite, result):
@@ -614,7 +616,7 @@ class UntilFailureTests(unittest.SynchronousTestCase):
         """
         result = self.runner.runUntilFailure(self.test)
         self.assertEqual(result.testsRun, 1)
-        self.failIf(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(self._getFailures(result), 1)
 
 
@@ -726,7 +728,7 @@ class LoggedErrorsTests(unittest.SynchronousTestCase):
         suite.run(result)
         self.assertEqual(len(result.errors), 1)
         self.assertEqual(result.errors[0][0].id(), runner.NOT_IN_TEST)
-        self.failUnless(result.errors[0][1].check(RuntimeError))
+        self.assertTrue(result.errors[0][1].check(RuntimeError))
 
 
 
@@ -906,7 +908,7 @@ class MalformedMethodTests(unittest.SynchronousTestCase):
         test = MalformedMethodTests.ContainMalformed(method)
         result = trialRunner.run(test)
         self.assertEqual(result.testsRun, 1)
-        self.failIf(result.wasSuccessful())
+        self.assertFalse(result.wasSuccessful())
         self.assertEqual(len(result.errors), 1)
 
     def test_extraArg(self):

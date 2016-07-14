@@ -55,12 +55,14 @@ from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
-    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext,
+    ISystemHandle, INegotiated, IPushProducer, ILoggingContext,
     IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
+    IProtocolNegotiationFactory, IHandshakeListener
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
+from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
@@ -209,8 +211,7 @@ class _ProducerMembrane(object):
         self._producer.stopProducing()
 
 
-
-@implementer(ISystemHandle, ISSLTransport)
+@implementer(ISystemHandle, INegotiated)
 class TLSMemoryBIOProtocol(ProtocolWrapper):
     """
     L{TLSMemoryBIOProtocol} is a protocol wrapper which uses OpenSSL via a
@@ -231,13 +232,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         already been dealt with (C{True}) or not (C{False}).  TLS disconnection
         is distinct from the underlying connection being lost.
 
-    @ivar _writeBlockedOnRead: A flag indicating whether further writing must
-        wait for data to be received (C{True}) or not (C{False}).
-
-    @ivar _appSendBuffer: A C{list} of C{str} of application-level (cleartext)
-        data which is waiting for C{_writeBlockedOnRead} to be reset to
-        C{False} so it can be passed to and perhaps accepted by
-        C{_tlsConnection.send}.
+    @ivar _appSendBuffer: application-level (cleartext) data that is waiting to
+        be transferred to the TLS buffer, but can't be because the TLS
+        connection is handshaking.
+    @type _appSendBuffer: L{list} of L{bytes}
 
     @ivar _connectWrapped: A flag indicating whether or not to call
         C{makeConnection} on the wrapped protocol.  This is for the reactor's
@@ -261,7 +259,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         C{connectionLost} method.
 
     @ivar _producer: The current producer registered via C{registerProducer},
-        or C{None} if no producer has been registered or a previous one was
+        or L{None} if no producer has been registered or a previous one was
         unregistered.
 
     @ivar _aborted: C{abortConnection} has been called.  No further data will
@@ -272,7 +270,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     _reason = None
     _handshakeDone = False
     _lostTLSConnection = False
-    _writeBlockedOnRead = False
     _producer = None
     _aborted = False
 
@@ -318,15 +315,32 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # Now that we ourselves have a transport (initialized by the
         # ProtocolWrapper.makeConnection call above), kick off the TLS
         # handshake.
+        self._checkHandshakeStatus()
+
+
+    def _checkHandshakeStatus(self):
+        """
+        Ask OpenSSL to proceed with a handshake in progress.
+
+        Initially, this just sends the ClientHello; after some bytes have been
+        stuffed in to the C{Connection} object by C{dataReceived}, it will then
+        respond to any C{Certificate} or C{KeyExchange} messages.
+        """
+        # The connection might already be aborted (eg. by a callback during
+        # connection setup), so don't even bother trying to handshake in that
+        # case.
+        if self._aborted:
+            return
         try:
             self._tlsConnection.do_handshake()
         except WantReadError:
-            # This is the expected case - there's no data in the connection's
-            # input buffer yet, so it won't be able to complete the whole
-            # handshake now.  If this is the speak-first side of the
-            # connection, then some bytes will be in the send buffer now; flush
-            # them.
             self._flushSendBIO()
+        except Error:
+            self._tlsShutdownFinished(Failure())
+        else:
+            self._handshakeDone = True
+            if IHandshakeListener.providedBy(self.wrappedProtocol):
+                self.wrappedProtocol.handshakeCompleted()
 
 
     def _flushSendBIO(self):
@@ -369,25 +383,14 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 # Passing in None means the user protocol's connnectionLost
                 # will get called with reason from underlying transport:
                 self._tlsShutdownFinished(None)
-            except Error as e:
+            except Error:
                 # Something went pretty wrong.  For example, this might be a
-                # handshake failure (because there were no shared ciphers, because
-                # a certificate failed to verify, etc).  TLS can no longer proceed.
-
-                # Squash EOF in violation of protocol into ConnectionLost; we
-                # create Failure before calling _flushSendBio so that no new
-                # exception will get thrown in the interim.
-                if e.args[0] == -1 and e.args[1] == 'Unexpected EOF':
-                    failure = Failure(CONNECTION_LOST)
-                else:
-                    failure = Failure()
-
-                self._flushSendBIO()
+                # handshake failure during renegotiation (because there were no
+                # shared ciphers, because a certificate failed to verify, etc).
+                # TLS can no longer proceed.
+                failure = Failure()
                 self._tlsShutdownFinished(failure)
             else:
-                # If we got application bytes, the handshake must be done by
-                # now.  Keep track of this to control error reporting later.
-                self._handshakeDone = True
                 if not self._aborted:
                     ProtocolWrapper.dataReceived(self, bytes)
 
@@ -403,22 +406,27 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         to the application any application-level data which becomes available
         as a result of this.
         """
+        # Let OpenSSL know some bytes were just received.
         self._tlsConnection.bio_write(bytes)
 
-        if self._writeBlockedOnRead:
-            # A read just happened, so we might not be blocked anymore.  Try to
-            # flush all the pending application bytes.
-            self._writeBlockedOnRead = False
-            appSendBuffer = self._appSendBuffer
-            self._appSendBuffer = []
-            for bytes in appSendBuffer:
-                self._write(bytes)
-            if (not self._writeBlockedOnRead and self.disconnecting and
-                self.producer is None):
-                self._shutdownTLS()
-            if self._producer is not None:
-                self._producer.resumeProducing()
+        # If we are still waiting for the handshake to complete, try to
+        # complete the handshake with the bytes we just received.
+        if not self._handshakeDone:
+            self._checkHandshakeStatus()
 
+            # If the handshake still isn't finished, then we've nothing left to
+            # do.
+            if not self._handshakeDone:
+                return
+
+        # If we've any pending writes, this read may have un-blocked them, so
+        # attempt to unbuffer them into the OpenSSL layer.
+        if self._appSendBuffer:
+            self._unbufferPendingWrites()
+
+        # Since the handshake is complete, the wire-level bytes we just
+        # processed might turn into some application-level bytes; try to pull
+        # those out.
         self._flushReceiveBIO()
 
 
@@ -447,10 +455,27 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         Called when TLS connection has gone away; tell underlying transport to
         disconnect.
+
+        @param reason: a L{Failure} whose value is an L{Error} if we want to
+            report that failure through to the wrapped protocol's
+            C{connectionLost}, or L{None} if the C{reason} that
+            C{connectionLost} should receive should be coming from the
+            underlying transport.
+        @type reason: L{Failure} or L{None}
         """
+        if reason is not None:
+            # Squash an EOF in violation of the TLS protocol into
+            # ConnectionLost, so that applications which might run over
+            # multiple protocols can recognize its type.
+            if tuple(reason.value.args[:2]) == (-1, 'Unexpected EOF'):
+                reason = Failure(CONNECTION_LOST)
         if self._reason is None:
             self._reason = reason
         self._lostTLSConnection = True
+        # We may need to send a TLS alert regarding the nature of the shutdown
+        # here (for example, why a handshake failed), so always flush our send
+        # buffer before telling our lower-level transport to go away.
+        self._flushSendBIO()
         # Using loseConnection causes the application protocol's
         # connectionLost method to be invoked non-reentrantly, which is always
         # a nice feature. However, for error cases (reason != None) we might
@@ -483,8 +508,16 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         if self.disconnecting:
             return
+        # If connection setup has not finished, OpenSSL 1.0.2f+ will not shut
+        # down the connection until we write some data to the connection which
+        # allows the handshake to complete. However, since no data should be
+        # written after loseConnection, this means we'll be stuck forever
+        # waiting for shutdown to complete. Instead, we simply abort the
+        # connection without trying to shut down cleanly:
+        if not self._handshakeDone and not self._appSendBuffer:
+            self.abortConnection()
         self.disconnecting = True
-        if not self._writeBlockedOnRead and self._producer is None:
+        if not self._appSendBuffer and self._producer is None:
             self._shutdownTLS()
 
 
@@ -530,6 +563,44 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self._write(bytes)
 
 
+    def _bufferedWrite(self, octets):
+        """
+        Put the given octets into L{TLSMemoryBIOProtocol._appSendBuffer}, and
+        tell any listening producer that it should pause because we are now
+        buffering.
+        """
+        self._appSendBuffer.append(octets)
+        if self._producer is not None:
+            self._producer.pauseProducing()
+
+
+    def _unbufferPendingWrites(self):
+        """
+        Un-buffer all waiting writes in L{TLSMemoryBIOProtocol._appSendBuffer}.
+        """
+        pendingWrites, self._appSendBuffer = self._appSendBuffer, []
+        for eachWrite in pendingWrites:
+            self._write(eachWrite)
+
+        if self._appSendBuffer:
+            # If OpenSSL ran out of buffer space in the Connection on our way
+            # through the loop earlier and re-buffered any of our outgoing
+            # writes, then we're done; don't consider any future work.
+            return
+
+        if self._producer is not None:
+            # If we have a registered producer, let it know that we have some
+            # more buffer space.
+            self._producer.resumeProducing()
+            return
+
+        if self.disconnecting:
+            # Finally, if we have no further buffered data, no producer wants
+            # to send us more data in the future, and the application told us
+            # to end the stream, initiate a TLS shutdown.
+            self._shutdownTLS()
+
+
     def _write(self, bytes):
         """
         Process the given application bytes and send any resulting TLS traffic
@@ -553,10 +624,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             try:
                 sent = self._tlsConnection.send(toSend)
             except WantReadError:
-                self._writeBlockedOnRead = True
-                self._appSendBuffer.append(bytes[alreadySent:])
-                if self._producer is not None:
-                    self._producer.pauseProducing()
+                self._bufferedWrite(bytes[alreadySent:])
                 break
             except Error:
                 # Pretend TLS connection disconnected, which will trigger
@@ -567,11 +635,12 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 self._tlsShutdownFinished(Failure())
                 break
             else:
-                # If we sent some bytes, the handshake must be done.  Keep
-                # track of this to control error reporting behavior.
-                self._handshakeDone = True
-                self._flushSendBIO()
+                # We've successfully handed off the bytes to the OpenSSL
+                # Connection object.
                 alreadySent += sent
+                # See if OpenSSL wants to hand any bytes off to the underlying
+                # transport as a result.
+                self._flushSendBIO()
 
 
     def writeSequence(self, iovec):
@@ -584,6 +653,34 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     def getPeerCertificate(self):
         return self._tlsConnection.get_peer_certificate()
+
+
+    @property
+    def negotiatedProtocol(self):
+        """
+        @see: L{INegotiated.negotiatedProtocol}
+        """
+        protocolName = None
+
+        try:
+            # If ALPN is not implemented that's ok, NPN might be.
+            protocolName = self._tlsConnection.get_alpn_proto_negotiated()
+        except (NotImplementedError, AttributeError):
+            pass
+
+        if protocolName not in (b'', None):
+            # A protocol was selected using ALPN.
+            return protocolName
+
+        try:
+            protocolName = self._tlsConnection.get_next_proto_negotiated()
+        except (NotImplementedError, AttributeError):
+            pass
+
+        if protocolName != b'':
+            return protocolName
+
+        return None
 
 
     def registerProducer(self, producer, streaming):
@@ -614,7 +711,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self._producer = None
         self._producerPaused = False
         self.transport.unregisterProducer()
-        if self.disconnecting and not self._writeBlockedOnRead:
+        if self.disconnecting and not self._appSendBuffer:
             self._shutdownTLS()
 
 
@@ -622,11 +719,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 @implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
 class _ContextFactoryToConnectionFactory(object):
     """
-    Adapter wrapping "something" (ideally something like a
-    L{twisted.internet.ssl.ContextFactory}; implementations of this interface
-    don't actually typically subclass though, so "something" is more likely
-    just something with a C{getContext} method) into an
-    L{IOpenSSLClientConnectionCreator} or L{IOpenSSLServerConnectionCreator}.
+    Adapter wrapping a L{twisted.internet.interfaces.IOpenSSLContextFactory}
+    into a L{IOpenSSLClientConnectionCreator} or
+    L{IOpenSSLServerConnectionCreator}.
 
     See U{https://twistedmatrix.com/trac/ticket/7215} for work that should make
     this unnecessary.
@@ -634,16 +729,16 @@ class _ContextFactoryToConnectionFactory(object):
 
     def __init__(self, oldStyleContextFactory):
         """
-        Construct a L{_ContextFactoryToConnectionFactory} with an old-style
-        context factory.
+        Construct a L{_ContextFactoryToConnectionFactory} with a
+        L{twisted.internet.interfaces.IOpenSSLContextFactory}.
 
         Immediately call C{getContext} on C{oldStyleContextFactory} in order to
         force advance parameter checking, since old-style context factories
         don't actually check that their arguments to L{OpenSSL} are correct.
 
         @param oldStyleContextFactory: A factory that can produce contexts.
-        @type oldStyleContextFactory: L{twisted.internet.ssl.ContextFactory} or
-            something like it.
+        @type oldStyleContextFactory:
+            L{twisted.internet.interfaces.IOpenSSLContextFactory}
         """
         oldStyleContextFactory.getContext()
         self._oldStyleContextFactory = oldStyleContextFactory
@@ -706,7 +801,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
     @ivar _creatorInterface: the interface which L{_connectionCreator} is
         expected to implement.
-    @type _creatorInterface: L{zope.interface.Interface}
+    @type _creatorInterface: L{zope.interface.interfaces.IInterface}
 
     @ivar _connectionCreator: a callable which creates an OpenSSL Connection
         object.
@@ -742,7 +837,8 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
         @type contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, or, for compatibility with
-            older code, L{twisted.internet.ssl.ContextFactory}.  See
+            older code, anything implementing
+            L{twisted.internet.interfaces.IOpenSSLContextFactory}.  See
             U{https://twistedmatrix.com/trac/ticket/7215} for information on
             the upcoming deprecation of passing a
             L{twisted.internet.ssl.ContextFactory} here.
@@ -784,6 +880,26 @@ class TLSMemoryBIOFactory(WrappingFactory):
         return "%s (TLS)" % (logPrefix,)
 
 
+    def _applyProtocolNegotiation(self, connection):
+        """
+        Applies ALPN/NPN protocol neogitation to the connection, if the factory
+        supports it.
+
+        @param connection: The OpenSSL connection object to have ALPN/NPN added
+            to it.
+        @type connection: L{OpenSSL.SSL.Connection}
+
+        @return: Nothing
+        @rtype: L{None}
+        """
+        if IProtocolNegotiationFactory.providedBy(self.wrappedFactory):
+            protocols = self.wrappedFactory.acceptableProtocols()
+            context = connection.get_context()
+            _setAcceptableProtocols(context, protocols)
+
+        return
+
+
     def _createConnection(self, tlsProtocol):
         """
         Create an OpenSSL connection and set it up good.
@@ -797,9 +913,11 @@ class TLSMemoryBIOFactory(WrappingFactory):
         connectionCreator = self._connectionCreator
         if self._creatorInterface is IOpenSSLClientConnectionCreator:
             connection = connectionCreator.clientConnectionForTLS(tlsProtocol)
+            self._applyProtocolNegotiation(connection)
             connection.set_connect_state()
         else:
             connection = connectionCreator.serverConnectionForTLS(tlsProtocol)
+            self._applyProtocolNegotiation(connection)
             connection.set_accept_state()
         return connection
 

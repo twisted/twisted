@@ -145,7 +145,6 @@ class DeferredResource(resource.Resource):
 
     def _ebChild(self, reason, request):
         request.processingFailed(reason)
-        return reason
 
 
 

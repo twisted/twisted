@@ -95,7 +95,7 @@ class InMemoryUsernamePasswordDatabaseDontUse(object):
             return defer.maybeDeferred(
                 credentials.checkPassword,
                 self.users[credentials.username]).addCallback(
-                self._cbPasswordMatch, bytes(credentials.username))
+                self._cbPasswordMatch, credentials.username)
         else:
             return defer.fail(error.UnauthorizedLogin())
 
@@ -143,7 +143,7 @@ class FilePasswordDB:
         @param caseSensitive: If true, consider the case of the username when
         performing a lookup.  Ignore it otherwise.
 
-        @type hash: Three-argument callable or C{None}
+        @type hash: Three-argument callable or L{None}
         @param hash: A function used to transform the plaintext password
         received over the network to a format suitable for comparison
         against the version stored on disk.  The arguments to the callable

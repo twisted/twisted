@@ -1,7 +1,7 @@
-Twisted Conch 15.4.0
+Twisted Conch 16.3.0
 
-Twisted Conch depends on Twisted Core and on Python Crypto extensions
-(<http://www.pycrypto.org>).
+Twisted Conch depends on Twisted Core and PyCA's Cryptography
+(<https://cryptography.io/en>).
 
 The pyasn1 module (<http://pyasn1.sourceforge.net/>) is also required.
 

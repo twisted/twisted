@@ -12,9 +12,10 @@ from inspect import getsourcefile
 
 from zope.interface.verify import verifyObject, BrokenMethodImplementation
 
+from twisted.python.compat import _PY3, currentframe
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 
-from twisted.python.compat import _PY3, currentframe
 from .._levels import LogLevel
 from .._observer import ILogObserver
 from .._stdlib import STDLibLogObserver
@@ -117,7 +118,7 @@ class STDLibLogObserverTests(unittest.TestCase):
             if level is not None:
                 event["log_level"] = level
 
-            # Remeber the Python log level we expect to see for this
+            # Remember the Python log level we expect to see for this
             # event (as an int)
             event["py_levelno"] = int(pyLevel)
 
@@ -142,7 +143,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].pathname, filename)
         self.assertEqual(records[0].lineno, logLine)
-        self.assertEqual(records[0].exc_info, None)
+        self.assertIsNone(records[0].exc_info)
 
         # Attribute "func" is missing from record, which is weird because it's
         # documented.
@@ -181,6 +182,45 @@ class STDLibLogObserverTests(unittest.TestCase):
 
         self.assertEqual(len(records), 1)
         self.assertEqual(str(records[0].msg), "")
+
+
+    def test_failure(self):
+        """
+        An event with a failure logs the failure details as well.
+        """
+        def failing_func():
+            1 / 0
+        try:
+            failing_func()
+        except ZeroDivisionError:
+            failure = Failure()
+        event = dict(log_format='Hi mom', who='me', log_failure=failure)
+        records, output = self.logEvent(event)
+        self.assertEqual(len(records), 1)
+        self.assertIn(u'Hi mom', output)
+        self.assertIn(u'in failing_func', output)
+        self.assertIn(u'ZeroDivisionError', output)
+
+
+    def test_cleanedFailure(self):
+        """
+        A cleaned Failure object has a fake traceback object; make sure that
+        logging such a failure still results in the exception details being
+        logged.
+        """
+        def failing_func():
+            1 / 0
+        try:
+            failing_func()
+        except ZeroDivisionError:
+            failure = Failure()
+        failure.cleanFailure()
+        event = dict(log_format='Hi mom', who='me', log_failure=failure)
+        records, output = self.logEvent(event)
+        self.assertEqual(len(records), 1)
+        self.assertIn(u'Hi mom', output)
+        self.assertIn(u'in failing_func', output)
+        self.assertIn(u'ZeroDivisionError', output)
 
 
 
@@ -230,7 +270,7 @@ def handlerAndBytesIO():
     with the 'logging' module.
 
     @return: handler and io object
-    @rtype: tuple of L{StreamHandler} and L{BytesIO}
+    @rtype: tuple of L{StreamHandler} and L{io.BytesIO}
     """
     output = BytesIO()
     stream = output

@@ -139,14 +139,14 @@ class CredTests(unittest.TestCase):
 
         # whitebox
         self.assertEqual(iface, ITestable)
-        self.failUnless(iface.providedBy(impl),
+        self.assertTrue(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
 
         # greybox
-        self.failUnless(impl.original.loggedIn)
-        self.failUnless(not impl.original.loggedOut)
+        self.assertTrue(impl.original.loggedIn)
+        self.assertTrue(not impl.original.loggedOut)
         logout()
-        self.failUnless(impl.original.loggedOut)
+        self.assertTrue(impl.original.loggedOut)
 
 
     def test_derivedInterface(self):
@@ -160,14 +160,14 @@ class CredTests(unittest.TestCase):
 
         # whitebox
         self.assertEqual(iface, ITestable)
-        self.failUnless(iface.providedBy(impl),
+        self.assertTrue(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
 
         # greybox
-        self.failUnless(impl.original.loggedIn)
-        self.failUnless(not impl.original.loggedOut)
+        self.assertTrue(impl.original.loggedIn)
+        self.assertTrue(not impl.original.loggedOut)
         logout()
-        self.failUnless(impl.original.loggedOut)
+        self.assertTrue(impl.original.loggedOut)
 
 
     def test_failedLoginPassword(self):
@@ -177,7 +177,7 @@ class CredTests(unittest.TestCase):
         """
         login = self.failureResultOf(self.portal.login(
             credentials.UsernamePassword(b"bob", b"h3llo"), self, ITestable))
-        self.failUnless(login)
+        self.assertTrue(login)
         self.assertEqual(error.UnauthorizedLogin, login.type)
 
 
@@ -188,7 +188,7 @@ class CredTests(unittest.TestCase):
         """
         login = self.failureResultOf(self.portal.login(
             credentials.UsernamePassword(b"jay", b"hello"), self, ITestable))
-        self.failUnless(login)
+        self.assertTrue(login)
         self.assertEqual(error.UnauthorizedLogin, login.type)
 
 
@@ -215,7 +215,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
         self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
 
         with LogCapture() as lc:
-            self.failUnlessRaises(error.UnauthorizedLogin, self.db.getUser, '')
+            self.assertRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
             self.assertIn(
                 'Unable to load credentials db: IOError', lc.messages[0])
 
@@ -224,7 +224,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
     def testUserLookup(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
         for (u, p) in self.users:
-            self.failUnlessRaises(KeyError, self.db.getUser, u.upper())
+            self.assertRaises(KeyError, self.db.getUser, u.upper())
             self.assertEqual(self.db.getUser(u), (u, p))
 
 
@@ -391,26 +391,23 @@ class HashlessFilePasswordDBMixin(object):
 
         for cache in True, False:
             fn = self.mktemp()
-            fObj = open(fn, 'wb')
-            for u, p in self._validCredentials:
-                fObj.write(u + b":" + diskHash(p) + b"\n")
-            fObj.close()
+            with open(fn, 'wb') as fObj:
+                for u, p in self._validCredentials:
+                    fObj.write(u + b":" + diskHash(p) + b"\n")
             yield checkers.FilePasswordDB(fn, cache=cache, hash=hashCheck)
 
             fn = self.mktemp()
-            fObj = open(fn, 'wb')
-            for u, p in self._validCredentials:
-                fObj.write(diskHash(p) + b' dingle dongle ' + u + b'\n')
-            fObj.close()
+            with open(fn, 'wb') as fObj:
+                for u, p in self._validCredentials:
+                    fObj.write(diskHash(p) + b' dingle dongle ' + u + b'\n')
             yield checkers.FilePasswordDB(fn, b' ', 3, 0,
                                           cache=cache, hash=hashCheck)
 
             fn = self.mktemp()
-            fObj = open(fn, 'wb')
-            for u, p in self._validCredentials:
-                fObj.write(b'zip,zap,' + u.title() + b',zup,'\
-                           + diskHash(p) + b'\n',)
-            fObj.close()
+            with open(fn, 'wb') as fObj:
+                for u, p in self._validCredentials:
+                    fObj.write(b'zip,zap,' + u.title() + b',zup,'\
+                               + diskHash(p) + b'\n',)
             yield checkers.FilePasswordDB(fn, b',', 2, 4, False,
                                           cache=cache, hash=hashCheck)
 

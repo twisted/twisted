@@ -271,15 +271,15 @@ class TestModuleTests(unittest.SynchronousTestCase):
                              localVars)
 
     def test_invalidLine(self):
-        self.failUnlessRaises(ValueError, trial._parseLocalVariables,
+        self.assertRaises(ValueError, trial._parseLocalVariables,
                               'foo')
 
     def test_invalidDeclaration(self):
-        self.failUnlessRaises(ValueError, trial._parseLocalVariables,
+        self.assertRaises(ValueError, trial._parseLocalVariables,
                               '-*- foo -*-')
-        self.failUnlessRaises(ValueError, trial._parseLocalVariables,
+        self.assertRaises(ValueError, trial._parseLocalVariables,
                               '-*- foo: bar; qux -*-')
-        self.failUnlessRaises(ValueError, trial._parseLocalVariables,
+        self.assertRaises(ValueError, trial._parseLocalVariables,
                               '-*- foo: bar: baz; qux: qax -*-')
 
     def test_variablesFromFile(self):
@@ -315,11 +315,11 @@ class TestModuleTests(unittest.SynchronousTestCase):
 
     def test_looksLikeTestModule(self):
         for filename in ['test_script.py', 'twisted/trial/test/test_script.py']:
-            self.failUnless(trial.isTestFile(filename),
+            self.assertTrue(trial.isTestFile(filename),
                             "%r should be a test file" % (filename,))
         for filename in ['twisted/trial/test/moduletest.py',
                          sibpath('scripttest.py'), sibpath('test_foo.bat')]:
-            self.failIf(trial.isTestFile(filename),
+            self.assertFalse(trial.isTestFile(filename),
                         "%r should *not* be a test file" % (filename,))
 
 

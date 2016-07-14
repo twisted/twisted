@@ -85,14 +85,9 @@ import copy
 import datetime
 from types import BooleanType
 
-try:
-    # Filter out deprecation warning for Python >= 2.6
-    warnings.filterwarnings("ignore", category=DeprecationWarning,
-        message="the sets module is deprecated", append=True)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
     import sets as _sets
-finally:
-    warnings.filters.pop()
-
 
 from zope.interface import implementer
 
@@ -235,7 +230,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
     Set all classes in a module derived from C{baseClass} as copiers for
     a corresponding remote class.
 
-    When you have a heirarchy of Copyable (or Cacheable) classes on one
+    When you have a hierarchy of Copyable (or Cacheable) classes on one
     side, and a mirror structure of Copied (or RemoteCache) classes on the
     other, use this to setUnjellyableForClass all your Copieds for the
     Copyables.

@@ -14,6 +14,8 @@ import re
 import sys
 
 from inspect import getmro
+from unittest import expectedFailure
+from unittest import TestCase as StdlibTestCase
 
 from twisted.python import log
 from twisted.python.failure import Failure
@@ -61,7 +63,7 @@ class BrokenStream(object):
 class StringTest(unittest.SynchronousTestCase):
     def stringComparison(self, expect, output):
         output = list(filter(None, output))
-        self.failUnless(len(expect) <= len(output),
+        self.assertTrue(len(expect) <= len(output),
                         "Must have more observed than expected"
                         "lines %d < %d" % (len(output), len(expect)))
         REGEX_PATTERN_TYPE = type(re.compile(''))
@@ -72,7 +74,7 @@ class StringTest(unittest.SynchronousTestCase):
                 self.assertSubstring(exp, out, "Line %d: %r not in %r"
                                      % (line_number, exp, out))
             elif isinstance(exp, REGEX_PATTERN_TYPE):
-                self.failUnless(exp.match(out),
+                self.assertTrue(exp.match(out),
                                 "Line %d: %r did not match string %r"
                                 % (line_number, exp.pattern, out))
             else:
@@ -187,7 +189,7 @@ class ErrorReportingTests(StringTest):
         for substring in ['1/0', 'ZeroDivisionError',
                           'Exception raised:', path]:
             self.assertSubstring(substring, output)
-        self.failUnless(re.search('Fail(ed|ure in) example:', output),
+        self.assertTrue(re.search('Fail(ed|ure in) example:', output),
                         "Couldn't match 'Failure in example: ' "
                         "or 'Failed example: '")
         expect = [self.doubleSeparator,
@@ -569,7 +571,7 @@ class SkipTests(unittest.SynchronousTestCase):
         self.result.done()
         output = self.stream.getvalue().splitlines()[-1]
         prefix = 'PASSED '
-        self.failUnless(output.startswith(prefix))
+        self.assertTrue(output.startswith(prefix))
         self.assertEqual(output[len(prefix):].strip(), '(skips=1)')
 
 
@@ -642,16 +644,16 @@ class TodoTests(unittest.SynchronousTestCase):
 
     def _getTodos(self, result):
         """
-        Get the number of todos that happened to a reporter.
+        Get the expected failures that happened to a reporter.
         """
-        return len(result.expectedFailures)
+        return result.expectedFailures
 
 
     def _getUnexpectedSuccesses(self, result):
         """
-        Get the number of unexpected successes that happened to a reporter.
+        Get the unexpected successes that happened to a reporter.
         """
-        return len(result.unexpectedSuccesses)
+        return result.unexpectedSuccesses
 
 
     def test_accumulation(self):
@@ -661,7 +663,22 @@ class TodoTests(unittest.SynchronousTestCase):
         """
         self.result.addExpectedFailure(self.test, Failure(Exception()),
                                        makeTodo('todo!'))
-        self.assertEqual(self._getTodos(self.result), 1)
+        self.assertEqual(len(self._getTodos(self.result)), 1)
+
+
+    def test_noTodoProvided(self):
+        """
+        If no C{Todo} is provided to C{addExpectedFailure}, then
+        L{reporter.Reporter} makes up a sensible default.
+
+        This allows standard Python unittests to use Twisted reporters.
+        """
+        failure = Failure(Exception())
+        self.result.addExpectedFailure(self.test, failure)
+        [(test, error, todo)] = self._getTodos(self.result)
+        self.assertEqual(test, self.test)
+        self.assertEqual(error, failure)
+        self.assertEqual(repr(todo), repr(makeTodo('Test expected to fail')))
 
 
     def test_success(self):
@@ -681,7 +698,22 @@ class TodoTests(unittest.SynchronousTestCase):
         """
         self.result.addUnexpectedSuccess(self.test, makeTodo("Heya!"))
         self.assertEqual(True, self.result.wasSuccessful())
-        self.assertEqual(self._getUnexpectedSuccesses(self.result), 1)
+        self.assertEqual(len(self._getUnexpectedSuccesses(self.result)), 1)
+
+
+    def test_unexpectedSuccessNoTodo(self):
+        """
+        A test which is marked as todo but succeeds will have an unexpected
+        success reported to its result. A test run is still successful even
+        when this happens.
+
+        If no C{Todo} is provided, then we make up a sensible default. This
+        allows standard Python unittests to use Twisted reporters.
+        """
+        self.result.addUnexpectedSuccess(self.test)
+        [(test, todo)] = self._getUnexpectedSuccesses(self.result)
+        self.assertEqual(test, self.test)
+        self.assertEqual(repr(todo), repr(makeTodo('Test expected to fail')))
 
 
     def test_summary(self):
@@ -694,7 +726,7 @@ class TodoTests(unittest.SynchronousTestCase):
         self.result.done()
         output = self.stream.getvalue().splitlines()[-1]
         prefix = 'PASSED '
-        self.failUnless(output.startswith(prefix))
+        self.assertTrue(output.startswith(prefix))
         self.assertEqual(output[len(prefix):].strip(),
                          '(expectedFailures=1)')
 
@@ -716,8 +748,7 @@ class TodoTests(unittest.SynchronousTestCase):
         Booleans CAN'T be used as the value of a todo. Maybe this sucks. This
         is a test for current behavior, not a requirement.
         """
-        self.result.addExpectedFailure(self.test, Failure(Exception()),
-                                       makeTodo(True))
+        self.result.addExpectedFailure(self.test, Failure(Exception()), True)
         self.assertRaises(Exception, self.result.done)
 
 
@@ -737,6 +768,36 @@ class TodoTests(unittest.SynchronousTestCase):
         self.assertTrue(str(error) in output)
 
 
+    def test_standardLibraryCompatibilityFailure(self):
+        """
+        Tests that use the standard library C{expectedFailure} feature worth
+        with Trial reporters.
+        """
+        class Test(StdlibTestCase):
+            @expectedFailure
+            def test_fail(self):
+                self.fail('failure')
+
+        test = Test('test_fail')
+        test.run(self.result)
+        self.assertEqual(len(self._getTodos(self.result)), 1)
+
+
+    def test_standardLibraryCompatibilitySuccess(self):
+        """
+        Tests that use the standard library C{expectedFailure} feature worth
+        with Trial reporters.
+        """
+        class Test(StdlibTestCase):
+            @expectedFailure
+            def test_success(self):
+                pass
+
+        test = Test('test_success')
+        test.run(self.result)
+        self.assertEqual(len(self._getUnexpectedSuccesses(self.result)), 1)
+
+
 
 class UncleanWarningTodoTests(TodoTests):
     """
@@ -750,10 +811,10 @@ class UncleanWarningTodoTests(TodoTests):
 
     def _getTodos(self, result):
         """
-        Get the number of todos that happened to a reporter inside of an
-        unclean warnings reporter wrapper.
+        Get the  todos that happened to a reporter inside of an unclean
+        warnings reporter wrapper.
         """
-        return len(result._originalReporter.expectedFailures)
+        return result._originalReporter.expectedFailures
 
 
     def _getUnexpectedSuccesses(self, result):
@@ -761,7 +822,7 @@ class UncleanWarningTodoTests(TodoTests):
         Get the number of unexpected successes that happened to a reporter
         inside of an unclean warnings reporter wrapper.
         """
-        return len(result._originalReporter.unexpectedSuccesses)
+        return result._originalReporter.unexpectedSuccesses
 
 
 
@@ -1301,7 +1362,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
         subunitClient = reporter.TestProtocolClient(stream)
         subunitClient.addSuccess(self.test)
         subunitOutput = stream.getvalue()
-        self.result.addUnexpectedSuccess(self.test, 'todo')
+        self.result.addUnexpectedSuccess(self.test)
         self.assertEqual(subunitOutput, self.stream.getvalue())
 
 
@@ -1352,7 +1413,7 @@ class LoggingReporter(reporter.Reporter):
     def addError(self, test, error):
         self.test = test
 
-    def addExpectedFailure(self, test, failure, todo):
+    def addExpectedFailure(self, test, failure, todo=None):
         self.test = test
 
     def addFailure(self, test, failure):
@@ -1361,7 +1422,7 @@ class LoggingReporter(reporter.Reporter):
     def addSkip(self, test, skip):
         self.test = test
 
-    def addUnexpectedSuccess(self, test, todo):
+    def addUnexpectedSuccess(self, test, todo=None):
         self.test = test
 
     def startTest(self, test):
@@ -1459,11 +1520,28 @@ class AdaptedReporterTests(unittest.SynchronousTestCase):
         self.assertWrapped(self.wrappedResult, self)
 
 
+    def test_expectedFailureWithoutTodo(self):
+        """
+        C{addExpectedFailure} works without a C{Todo}.
+        """
+        self.wrappedResult.addExpectedFailure(
+            self, self.getFailure(RuntimeError()))
+        self.assertWrapped(self.wrappedResult, self)
+
+
     def test_addUnexpectedSuccess(self):
         """
         C{addUnexpectedSuccess} wraps its test with the provided adapter.
         """
         self.wrappedResult.addUnexpectedSuccess(self, Todo("no reason"))
+        self.assertWrapped(self.wrappedResult, self)
+
+
+    def test_unexpectedSuccessWithoutTodo(self):
+        """
+        C{addUnexpectedSuccess} works without a C{Todo}.
+        """
+        self.wrappedResult.addUnexpectedSuccess(self)
         self.assertWrapped(self.wrappedResult, self)
 
 

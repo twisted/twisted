@@ -115,7 +115,7 @@ class SendFileDescriptor(ConnectableProtocol):
             connection.
 
         @param data: A C{str} giving data to send over the connection, or
-            C{None} if no data is to be sent.
+            L{None} if no data is to be sent.
         """
         self.fd = fd
         self.data = data
@@ -123,7 +123,7 @@ class SendFileDescriptor(ConnectableProtocol):
 
     def connectionMade(self):
         """
-        Send C{self.fd} and, if it is not C{None}, C{self.data}.  Then close the
+        Send C{self.fd} and, if it is not L{None}, C{self.data}.  Then close the
         connection.
         """
         self.transport.sendFileDescriptor(self.fd)

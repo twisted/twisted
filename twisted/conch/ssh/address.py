@@ -10,6 +10,8 @@ Maintainer: Paul Swartz
 @since: 12.1
 """
 
+from __future__ import division, absolute_import
+
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IAddress
@@ -18,9 +20,14 @@ from twisted.python import util
 
 
 @implementer(IAddress)
-class SSHTransportAddress(object, util.FancyEqMixin):
+class SSHTransportAddress(util.FancyEqMixin, object):
     """
     Object representing an SSH Transport endpoint.
+
+    This is used to ensure that any code inspecting this address and
+    attempting to construct a similar connection based upon it is not
+    mislead into creating a transport which is not similar to the one it is
+    indicating.
 
     @ivar address: A instance of an object which implements I{IAddress} to
         which this transport address is connected.
@@ -38,4 +45,3 @@ class SSHTransportAddress(object, util.FancyEqMixin):
 
     def __hash__(self):
         return hash(('SSH', self.address))
-

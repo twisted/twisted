@@ -10,7 +10,8 @@ Maintainer: Paul Swartz
 """
 
 def parseModuliFile(filename):
-    lines = open(filename).readlines()
+    with open(filename) as f:
+        lines = f.readlines()
     primes = {}
     for l in lines:
         l = l.strip()
@@ -20,7 +21,7 @@ def parseModuliFile(filename):
         size = int(size) + 1
         gen = long(gen)
         mod = long(mod, 16)
-        if not primes.has_key(size):
+        if size not in primes:
             primes[size] = []
         primes[size].append((gen, mod))
     return primes

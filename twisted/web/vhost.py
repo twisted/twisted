@@ -6,6 +6,8 @@
 I am a virtual hosts implementation.
 """
 
+from __future__ import division, absolute_import
+
 # Twisted Imports
 from twisted.python import roots
 from twisted.web import resource
@@ -75,11 +77,11 @@ class NameVirtualHost(resource.Resource):
     def _getResourceForRequest(self, request):
         """(Internal) Get the appropriate resource for the given host.
         """
-        hostHeader = request.getHeader('host')
+        hostHeader = request.getHeader(b'host')
         if hostHeader == None:
             return self.default or resource.NoResource()
         else:
-            host = hostHeader.lower().split(':', 1)[0]
+            host = hostHeader.lower().split(b':', 1)[0]
         return (self.hosts.get(host, self.default)
                 or resource.NoResource("host %s not in vhost map" % repr(host)))
 
@@ -102,14 +104,15 @@ class NameVirtualHost(resource.Resource):
 class _HostResource(resource.Resource):
 
     def getChild(self, path, request):
-        if ':' in path:
-            host, port = path.split(':', 1)
+        if b':' in path:
+            host, port = path.split(b':', 1)
             port = int(port)
         else:
             host, port = path, 80
         request.setHost(host, port)
-        prefixLen = 3+request.isSecure()+4+len(path)+len(request.prepath[-3])
-        request.path = '/'+'/'.join(request.postpath)
+        prefixLen = (3 + request.isSecure() + 4 + len(path) +
+                     len(request.prepath[-3]))
+        request.path = b'/' + b'/'.join(request.postpath)
         request.uri = request.uri[prefixLen:]
         del request.prepath[:3]
         return request.site.getResourceFor(request)
@@ -128,8 +131,8 @@ class VHostMonsterResource(resource.Resource):
     then redirect and url generation will work correctly
     """
     def getChild(self, path, request):
-        if path == 'http':
+        if path == b'http':
             request.isSecure = lambda: 0
-        elif path == 'https':
+        elif path == b'https':
             request.isSecure = lambda: 1
         return _HostResource()

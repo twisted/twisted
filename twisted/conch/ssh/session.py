@@ -19,7 +19,7 @@ from zope.interface import implementer
 from twisted.internet import interfaces, protocol
 from twisted.python import log
 from twisted.conch.interfaces import ISession
-from twisted.conch.ssh import common, channel
+from twisted.conch.ssh import common, channel, connection
 
 
 class SSHSession(channel.SSHChannel):
@@ -323,11 +323,16 @@ def parseRequest_pty_req(data):
     modes = [(ord(modes[i]), struct.unpack('>L', modes[i+1: i+5])[0]) for i in range(0, len(modes)-1, 5)]
     return term, winSize, modes
 
-def packRequest_pty_req(term, (rows, cols, xpixel, ypixel), modes):
-    """Pack a pty-req request so that it is suitable for sending.
+def packRequest_pty_req(term, geometry, modes):
+    """
+    Pack a pty-req request so that it is suitable for sending.
 
     NOTE: modes must be packed before being sent here.
+
+    @type geometry: L{tuple}
+    @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
+    (rows, cols, xpixel, ypixel) = geometry
     termPacked = common.NS(term)
     winSizePacked = struct.pack('>4L', cols, rows, xpixel, ypixel)
     modesPacked = common.NS(modes) # depend on the client packing modes
@@ -341,9 +346,12 @@ def parseRequest_window_change(data):
     cols, rows, xpixel, ypixel = struct.unpack('>4L', data)
     return rows, cols, xpixel, ypixel
 
-def packRequest_window_change((rows, cols, xpixel, ypixel)):
-    """Pack a window-change request so that it is suitable for sending.
+def packRequest_window_change(geometry):
     """
-    return struct.pack('>4L', cols, rows, xpixel, ypixel)
+    Pack a window-change request so that it is suitable for sending.
 
-import connection
+    @type geometry: L{tuple}
+    @param geometry: A tuple of (rows, columns, xpixel, ypixel)
+    """
+    (rows, cols, xpixel, ypixel) = geometry
+    return struct.pack('>4L', cols, rows, xpixel, ypixel)

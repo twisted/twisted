@@ -8,12 +8,15 @@ Partial in-memory terminal emulator
 @author: Jp Calderone
 """
 
+from __future__ import print_function
+
 import re, string
 
 from zope.interface import implementer
 
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log, _textattributes
+from twisted.python.compat import xrange
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.versions import Version
 from twisted.conch.insults import insults
@@ -108,7 +111,7 @@ class TerminalBuffer(protocol.Protocol):
                   'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
                   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
                   'F10', 'F11', 'F12'):
-        exec '%s = object()' % (keyID,)
+        exec('%s = object()' % (keyID,))
 
     TAB = '\t'
     BACKSPACE = '\x7f'
@@ -393,7 +396,7 @@ class TerminalBuffer(protocol.Protocol):
         self.eraseDisplay()
 
     def unhandledControlSequence(self, buf):
-        print 'Could not handle', repr(buf)
+        print('Could not handle', repr(buf))
 
     def __str__(self):
         lines = []

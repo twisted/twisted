@@ -10,7 +10,7 @@ docs/_build/
 dist/
 venv/
 htmlcov/
-.coverage
+.coverage*
 *~
 *.lock
 apidocs/

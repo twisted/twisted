@@ -11,6 +11,7 @@ from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
+from twisted.internet.utils import getProcessValue
 from twisted.python import log, runtime
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
@@ -19,7 +20,7 @@ from twisted.conch.ssh.session import ISession, SSHSession, wrapProtocol
 
 try:
     from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
-except ImportError, e:
+except ImportError as e:
     StdioInteractingSession = None
     _reason = str(e)
     del e
@@ -30,12 +31,20 @@ from twisted.python.procutils import which
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 
-from twisted.conch.test.test_ssh import Crypto, pyasn1
 try:
     from twisted.conch.test.test_ssh import ConchTestServerFactory, \
         conchTestPublicKeyChecker
 except ImportError:
     pass
+
+try:
+    import cryptography
+except ImportError:
+    cryptography = None
+try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
 
 
 
@@ -152,11 +161,11 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
 
     def __init__(self, port, data):
         """
-        @type port: C{int}
+        @type port: L{int}
         @param port: The port on which the third-party server is listening.
         (it is assumed that the server is running on localhost).
 
-        @type data: C{str}
+        @type data: L{str}
         @param data: This is sent to the third-party server. Must end with '\n'
         in order to trigger a disconnect.
         """
@@ -274,8 +283,8 @@ run()""" % mod]
 
 
 class ConchServerSetupMixin:
-    if not Crypto:
-        skip = "can't run w/o PyCrypto"
+    if not cryptography:
+        skip = "can't run without cryptography"
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"
@@ -287,13 +296,18 @@ class ConchServerSetupMixin:
                   'kh_test']:
             if os.path.exists(f):
                 os.remove(f)
-        open('rsa_test','w').write(privateRSA_openssh)
-        open('rsa_test.pub','w').write(publicRSA_openssh)
-        open('dsa_test.pub','w').write(publicDSA_openssh)
-        open('dsa_test','w').write(privateDSA_openssh)
+        with open('rsa_test','w') as f:
+            f.write(privateRSA_openssh)
+        with open('rsa_test.pub','w') as f:
+            f.write(publicRSA_openssh)
+        with open('dsa_test.pub','w') as f:
+            f.write(publicDSA_openssh)
+        with open('dsa_test','w') as f:
+            f.write(privateDSA_openssh)
         os.chmod('dsa_test', 33152)
         os.chmod('rsa_test', 33152)
-        open('kh_test','w').write('127.0.0.1 '+publicRSA_openssh)
+        with open('kh_test','w') as f:
+            f.write('127.0.0.1 '+publicRSA_openssh)
 
 
     def _getFreePort(self):
@@ -504,19 +518,36 @@ class OpenSSHClientMixin:
 
         @return: L{defer.Deferred}
         """
-        process.deferred = defer.Deferred()
-        cmdline = ('ssh -2 -l testuser -p %i '
-                   '-oUserKnownHostsFile=kh_test '
-                   '-oPasswordAuthentication=no '
-                   # Always use the RSA key, since that's the one in kh_test.
-                   '-oHostKeyAlgorithms=ssh-rsa '
-                   '-a '
-                   '-i dsa_test ') + sshArgs + \
-                   ' 127.0.0.1 ' + remoteCommand
-        port = self.conchServer.getHost().port
-        cmds = (cmdline % port).split()
-        reactor.spawnProcess(process, "ssh", cmds)
-        return process.deferred
+        # PubkeyAcceptedKeyTypes does not exist prior to OpenSSH 7.0 so we
+        # first need to check if we can set it. If we can, -V will just print
+        # the version without doing anything else; if we can't, we will get a
+        # configuration error.
+        d = getProcessValue(
+            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+        def hasPAKT(status):
+            if status == 0:
+                opts = '-oPubkeyAcceptedKeyTypes=ssh-dss '
+            else:
+                opts = ''
+
+            process.deferred = defer.Deferred()
+            # Pass -F /dev/null to avoid the user's configuration file from
+            # being loaded, as it may contain settings that cause our tests to
+            # fail or hang.
+            cmdline = ('ssh -2 -l testuser -p %i '
+                       '-F /dev/null '
+                       '-oUserKnownHostsFile=kh_test '
+                       '-oPasswordAuthentication=no '
+                       # Always use the RSA key, since that's the one in kh_test.
+                       '-oHostKeyAlgorithms=ssh-rsa '
+                       '-a '
+                       '-i dsa_test ') + opts + sshArgs + \
+                       ' 127.0.0.1 ' + remoteCommand
+            port = self.conchServer.getHost().port
+            cmds = (cmdline % port).split()
+            reactor.spawnProcess(process, "ssh", cmds)
+            return process.deferred
+        return d.addCallback(hasPAKT)
 
 
 
@@ -533,7 +564,7 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
         forces the exclusive use of the key exchange algorithm specified by
         keyExchangeAlgo
 
-        @type keyExchangeAlgo: C{str}
+        @type keyExchangeAlgo: L{str}
         @param keyExchangeAlgo: The key exchange algorithm to use
 
         @return: L{defer.Deferred}
@@ -568,6 +599,15 @@ class OpenSSHKeyExchangeTestCase(ConchServerSetupMixin, OpenSSHClientMixin,
         """
         return self.assertExecuteWithKexAlgorithm(
             'diffie-hellman-group-exchange-sha1')
+
+
+    def test_DH_GROUP_EXCHANGE_SHA256(self):
+        """
+        The diffie-hellman-group-exchange-sha256 key exchange algorithm is
+        compatible with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm(
+            'diffie-hellman-group-exchange-sha256')
 
 
 

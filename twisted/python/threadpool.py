@@ -32,6 +32,9 @@ class ThreadPool:
 
     @ivar threads: List of workers currently running in this thread pool.
     @type threads: L{list}
+
+    @ivar _pool: A hook for testing.
+    @type _pool: callable compatible with L{_pool}
     """
     min = 5
     max = 20
@@ -42,6 +45,7 @@ class ThreadPool:
 
     threadFactory = threading.Thread
     currentThread = staticmethod(threading.currentThread)
+    _pool = staticmethod(_pool)
 
     def __init__(self, minthreads=5, maxthreads=20, name=None):
         """
@@ -73,7 +77,7 @@ class ThreadPool:
                 return 0
             return self.max
 
-        self._team = _pool(currentLimit, trackingThreadFactory)
+        self._team = self._pool(currentLimit, trackingThreadFactory)
 
 
     @property
@@ -96,7 +100,7 @@ class ThreadPool:
         expressed by a list the length of that number.
 
         @return: the number of workers currently processing a work item.
-        @rtype: L{list} of L{types.NoneType}
+        @rtype: L{list} of L{None}
         """
         return [None] * self._team.statistics().busyWorkerCount
 
@@ -109,7 +113,7 @@ class ThreadPool:
 
         @return: the number of workers currently alive (with an allocated
             thread) but waiting for new work.
-        @rtype: L{list} of L{types.NoneType}
+        @rtype: L{list} of L{None}
         """
         return [None] * self._team.statistics().idleWorkerCount
 
@@ -147,8 +151,9 @@ class ThreadPool:
         self.started = True
         # Start some threads.
         self.adjustPoolsize()
-        if self._team.statistics().backloggedWorkCount:
-            self._team.grow(1)
+        backlog = self._team.statistics().backloggedWorkCount
+        if backlog:
+            self._team.grow(backlog)
 
 
     def startAWorker(self):
@@ -223,7 +228,7 @@ class ThreadPool:
             callable.  If the callable throws an exception, C{onResult} is
             called with C{(False, failure)}.
 
-            Optionally, C{onResult} may be C{None}, in which case it is not
+            Optionally, C{onResult} may be L{None}, in which case it is not
             called at all.
 
         @param func: callable object to be called in separate thread

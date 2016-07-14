@@ -1,16 +1,17 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import, division
+
 from twisted.trial import unittest
 from twisted.python import roots
-import types
 
 class RootsTests(unittest.TestCase):
 
     def testExceptions(self):
         request = roots.Request()
         try:
-            request.write("blah")
+            request.write(b"blah")
         except NotImplementedError:
             pass
         else:
@@ -48,16 +49,15 @@ class RootsTests(unittest.TestCase):
             def nameConstraint(self, name):
                 return (name == 'x')
         c = const()
-        self.assertEqual(c.putEntity('x', 'test'), None)
-        self.failUnlessRaises(roots.ConstraintViolation,
+        self.assertIsNone(c.putEntity('x', 'test'))
+        self.assertRaises(roots.ConstraintViolation,
                               c.putEntity, 'y', 'test')
 
 
     def testHomogenous(self):
         h = roots.Homogenous()
-        h.entityType = types.IntType
+        h.entityType = int
         h.putEntity('a', 1)
         self.assertEqual(h.getStaticEntity('a'),1 )
-        self.failUnlessRaises(roots.ConstraintViolation,
+        self.assertRaises(roots.ConstraintViolation,
                               h.putEntity, 'x', 'y')
-

@@ -79,7 +79,8 @@ def ResourceTemplate(path, registry):
                                            rpyNoResource),
             'registry': registry}
 
-    e = ptl_compile.compile_template(open(path), path)
+    with open(path) as f:  # Not closed by quixote as of 2.9.1
+        e = ptl_compile.compile_template(f, path)
     code = compile(e, "<source>", "exec")
     eval(code, glob, glob)
     return glob['resource']

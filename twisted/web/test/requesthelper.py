@@ -13,6 +13,7 @@ from io import BytesIO
 
 from zope.interface import implementer
 
+from twisted.python.compat import intToBytes
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
 from twisted.internet.defer import Deferred
@@ -22,6 +23,7 @@ from twisted.internet.interfaces import ISSLTransport
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
+from twisted.web._responses import FOUND
 
 
 class DummyChannel:
@@ -51,6 +53,9 @@ class DummyChannel:
         def registerProducer(self, producer, streaming):
             self.producers.append((producer, streaming))
 
+        def unregisterProducer(self):
+            pass
+
         def loseConnection(self):
             self.disconnected = True
 
@@ -69,21 +74,67 @@ class DummyChannel:
         pass
 
 
+    def writeHeaders(self, version, code, reason, headers):
+        response_line = version + b" " + code + b" " + reason + b"\r\n"
+        headerSequence = [response_line]
+        headerSequence.extend(
+            name + b': ' + value + b"\r\n" for name, value in headers
+        )
+        headerSequence.append(b"\r\n")
+        self.transport.writeSequence(headerSequence)
+
+
+    def getPeer(self):
+        return self.transport.getPeer()
+
+
+    def getHost(self):
+        return self.transport.getHost()
+
+
+    def registerProducer(self, producer, streaming):
+        self.transport.registerProducer(producer, streaming)
+
+
+    def unregisterProducer(self):
+        self.transport.unregisterProducer()
+
+
+    def write(self, data):
+        self.transport.write(data)
+
+
+    def writeSequence(self, iovec):
+        self.transport.writeSequence(iovec)
+
+
+    def loseConnection(self):
+        self.transport.loseConnection()
+
+
+    def endRequest(self):
+        pass
+
+
+    def isSecure(self):
+        return isinstance(self.transport, self.SSL)
+
+
 
 class DummyRequest(object):
     """
-    Represents a dummy or fake request.
+    Represents a dummy or fake request. See L{twisted.web.server.Request}.
 
-    @ivar _finishedDeferreds: C{None} or a C{list} of L{Deferreds} which will
-        be called back with C{None} when C{finish} is called or which will be
+    @ivar _finishedDeferreds: L{None} or a C{list} of L{Deferreds} which will
+        be called back with L{None} when C{finish} is called or which will be
         errbacked if C{processingFailed} is called.
 
-    @type headers: C{dict}
-    @ivar headers: A mapping of header name to header value for all request
+    @type requestheaders: C{Headers}
+    @ivar requestheaders: A Headers instance that stores values for all request
         headers.
 
-    @type outgoingHeaders: C{dict}
-    @ivar outgoingHeaders: A mapping of header name to header value for all
+    @type responseHeaders: C{Headers}
+    @ivar responseHeaders: A Headers instance that stores values for all
         response headers.
 
     @type responseCode: C{int}
@@ -97,10 +148,12 @@ class DummyRequest(object):
     method = b'GET'
     client = None
 
+
     def registerProducer(self, prod,s):
         self.go = 1
         while self.go:
             prod.resumeProducing()
+
 
     def unregisterProducer(self):
         self.go = 0
@@ -115,14 +168,30 @@ class DummyRequest(object):
         self.session = None
         self.protoSession = session or Session(0, self)
         self.args = {}
-        self.outgoingHeaders = {}
         self.requestHeaders = Headers()
         self.responseHeaders = Headers()
         self.responseCode = None
-        self.headers = {}
         self._finishedDeferreds = []
         self._serverName = b"dummy"
         self.clientproto = b"HTTP/1.0"
+
+
+    def getAllHeaders(self):
+        """
+        Return dictionary mapping the names of all received headers to the last
+        value received for each.
+
+        Since this method does not return all header information,
+        C{self.requestHeaders.getAllRawHeaders()} may be preferred.
+
+        NOTE: This function is a direct copy of
+        C{twisted.web.http.Request.getAllRawHeaders}.
+        """
+        headers = {}
+        for k, v in self.requestHeaders.getAllRawHeaders():
+            headers[k.lower()] = v[-1]
+        return headers
+
 
     def getHeader(self, name):
         """
@@ -132,25 +201,17 @@ class DummyRequest(object):
         @param name: The name of the request header for which to retrieve the
             value.  Header names are compared case-insensitively.
 
-        @rtype: C{bytes} or L{NoneType}
+        @rtype: C{bytes} or L{None}
         @return: The value of the specified request header.
         """
-        return self.headers.get(name.lower(), None)
-
-
-    def getAllHeaders(self):
-        """
-        Retrieve all the values of the request headers as a dictionary.
-
-        @return: The entire C{headers} L{dict}.
-        """
-        return self.headers
+        return self.requestHeaders.getRawHeaders(name.lower(), [None])[0]
 
 
     def setHeader(self, name, value):
         """TODO: make this assert on write() if the header is content-length
         """
-        self.outgoingHeaders[name.lower()] = value
+        self.responseHeaders.addRawHeader(name, value)
+
 
     def getSession(self):
         if self.session:
@@ -185,9 +246,10 @@ class DummyRequest(object):
             raise TypeError("write() only accepts bytes")
         self.written.append(data)
 
+
     def notifyFinish(self):
         """
-        Return a L{Deferred} which is called back with C{None} when the request
+        Return a L{Deferred} which is called back with L{None} when the request
         is finished.  This will probably only work if you haven't called
         C{finish} yet.
         """
@@ -245,7 +307,7 @@ class DummyRequest(object):
     def getClientIP(self):
         """
         Return the IPv4 address of the client which made this request, if there
-        is one, otherwise C{None}.
+        is one, otherwise L{None}.
         """
         if isinstance(self.client, IPv4Address):
             return self.client.host
@@ -272,6 +334,29 @@ class DummyRequest(object):
         return IPv4Address('TCP', '127.0.0.1', 80)
 
 
+    def setHost(self, host, port, ssl=0):
+        """
+        Change the host and port the request thinks it's using.
+
+        @type host: C{bytes}
+        @param host: The value to which to change the host header.
+
+        @type ssl: C{bool}
+        @param ssl: A flag which, if C{True}, indicates that the request is
+            considered secure (if C{True}, L{isSecure} will return C{True}).
+        """
+        self._forceSSL = ssl # set first so isSecure will work
+        if self.isSecure():
+            default = 443
+        else:
+            default = 80
+        if port == default:
+            hostHeader = host
+        else:
+            hostHeader = host + b":" + intToBytes(port)
+        self.requestHeaders.addRawHeader(b"host", hostHeader)
+
+
     def getClient(self):
         """
         Get the client's IP address, if it has one.
@@ -280,6 +365,16 @@ class DummyRequest(object):
         @rtype: L{bytes}
         """
         return self.getClientIP()
+
+
+    def redirect(self, url):
+        """
+        Utility function that does a redirect.
+
+        The request should have finish() called after this.
+        """
+        self.setResponseCode(FOUND)
+        self.setHeader(b"location", url)
 
 DummyRequest.getClient = deprecated(
     Version("Twisted", 15, 0, 0),

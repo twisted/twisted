@@ -90,6 +90,20 @@ class ForeverTakingResource(resource.Resource):
         return server.NOT_DONE_YET
 
 
+class ForeverTakingNoReadingResource(resource.Resource):
+    """
+    L{ForeverTakingNoReadingResource} is a resource that never finishes
+    responding and that removes itself from the read loop.
+    """
+    def __init__(self):
+        resource.Resource.__init__(self)
+
+    def render(self, request):
+        # Stop the producing.
+        request.transport.pauseProducing()
+        return server.NOT_DONE_YET
+
+
 class CookieMirrorResource(resource.Resource):
     def render(self, request):
         l = []
@@ -291,6 +305,7 @@ class WebClientTests(unittest.TestCase):
         r.putChild(b"infiniteRedirect", self.infiniteRedirectResource)
         r.putChild(b"wait", ForeverTakingResource())
         r.putChild(b"write-then-wait", ForeverTakingResource(write=True))
+        r.putChild(b"never-read", ForeverTakingNoReadingResource())
         r.putChild(b"error", ErrorResource())
         r.putChild(b"nolength", NoLengthResource())
         r.putChild(b"host", HostHeaderResource())
@@ -484,7 +499,8 @@ class WebClientTests(unittest.TestCase):
         return defer.gatherResults(downloads)
 
     def _cbDownloadPageTest(self, ignored, data, name):
-        bytes = open(name, "rb").read()
+        with open(name, "rb") as f:
+            bytes = f.read()
         self.assertEqual(bytes, data)
 
     def testDownloadPageError1(self):
@@ -551,7 +567,7 @@ class WebClientTests(unittest.TestCase):
 
     def _cbFactoryInfo(self, ignoredResult, factory):
         self.assertEqual(factory.status, b'200')
-        self.assert_(factory.version.startswith(b'HTTP/'))
+        self.assertTrue(factory.version.startswith(b'HTTP/'))
         self.assertEqual(factory.message, b'OK')
         self.assertEqual(factory.response_headers[b'content-length'][0], b'10')
 
@@ -673,33 +689,6 @@ class WebClientTests(unittest.TestCase):
         return d
 
 
-    def testPartial(self):
-        name = self.mktemp()
-        f = open(name, "wb")
-        f.write(b"abcd")
-        f.close()
-
-        partialDownload = [(True, b"abcd456789"),
-                           (True, b"abcd456789"),
-                           (False, b"0123456789")]
-
-        d = defer.succeed(None)
-        for (partial, expectedData) in partialDownload:
-            d.addCallback(self._cbRunPartial, name, partial)
-            d.addCallback(self._cbPartialTest, expectedData, name)
-
-        return d
-
-    testPartial.skip = "Cannot test until webserver can serve partial data properly"
-
-    def _cbRunPartial(self, ignored, name, partial):
-        return client.downloadPage(self.getURL("file"), name, supportPartial=partial)
-
-    def _cbPartialTest(self, ignored, expectedData, filename):
-        bytes = file(filename, "rb").read()
-        self.assertEqual(bytes, expectedData)
-
-
     def test_downloadTimeout(self):
         """
         If the timeout indicated by the C{timeout} parameter to
@@ -723,6 +712,25 @@ class WebClientTests(unittest.TestCase):
         return defer.gatherResults([
             self.assertFailure(first, defer.TimeoutError),
             self.assertFailure(second, defer.TimeoutError)])
+
+
+    def test_downloadTimeoutsWorkWithoutReading(self):
+        """
+        If the timeout indicated by the C{timeout} parameter to
+        L{client.HTTPDownloader.__init__} elapses without the complete response
+        being received, the L{defer.Deferred} returned by
+        L{client.downloadPage} fires with a L{Failure} wrapping a
+        L{defer.TimeoutError}, even if the remote peer isn't reading data from
+        the socket.
+        """
+        self.cleanupServerConnections = 1
+
+        # The timeout here needs to be slightly longer to give the resource a
+        # change to stop the reading.
+        d = client.downloadPage(
+            self.getURL("never-read"),
+            self.mktemp(), timeout=0.05)
+        return self.assertFailure(d, defer.TimeoutError)
 
 
     def test_downloadHeaders(self):
@@ -1061,9 +1069,15 @@ class URITests:
     """
     Abstract tests for L{twisted.web.client.URI}.
 
-    Subclass this and L{unittest.TestCase}, and provide a value for C{host}.
+    Subclass this and L{unittest.TestCase}. Then provide a value for
+    C{host} and C{uriHost}.
 
     @ivar host: A host specification for use in tests, must be L{bytes}.
+
+    @ivar uriHost: The host specification in URI form, must be a L{bytes}. In
+        most cases this is identical with C{host}. IPv6 address literals are an
+        exception, according to RFC 3986 section 3.2.2, as they need to be
+        enclosed in brackets. In this case this variable is different.
     """
 
     def makeURIString(self, template):
@@ -1081,9 +1095,10 @@ class URITests:
         @return: A string where "HOST" has been replaced by C{self.host}.
         """
         self.assertIsInstance(self.host, bytes)
+        self.assertIsInstance(self.uriHost, bytes)
         self.assertIsInstance(template, bytes)
         self.assertIn(b"HOST", template)
-        return template.replace(b"HOST", self.host)
+        return template.replace(b"HOST", self.uriHost)
 
     def assertURIEquals(self, uri, scheme, netloc, host, port, path,
                         params=b'', query=b'', fragment=b''):
@@ -1160,11 +1175,11 @@ class URITests:
             self.makeURIString(b'http://HOST:5144'))
         self.assertEqual(5144, uri.port)
         self.assertEqual(self.host, uri.host)
-        self.assertEqual(self.host + b':5144', uri.netloc)
+        self.assertEqual(self.uriHost + b':5144', uri.netloc)
 
         # Spaces in the hostname are trimmed, the default path is /.
         uri = client.URI.fromBytes(self.makeURIString(b'http://HOST '))
-        self.assertEqual(self.host, uri.netloc)
+        self.assertEqual(self.uriHost, uri.netloc)
 
 
     def test_path(self):
@@ -1176,7 +1191,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/foo/bar')
@@ -1192,7 +1207,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'')
@@ -1207,7 +1222,7 @@ class URITests:
         self.assertURIEquals(
             client.URI.fromBytes(uri),
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/')
@@ -1222,7 +1237,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/foo/bar',
@@ -1239,7 +1254,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/foo/bar',
@@ -1257,7 +1272,7 @@ class URITests:
         self.assertURIEquals(
             parsed,
             scheme=b'http',
-            netloc=self.host,
+            netloc=self.uriHost,
             host=self.host,
             port=80,
             path=b'/foo/bar',
@@ -1328,7 +1343,7 @@ class URITestsForHostname(URITests, unittest.TestCase):
     Tests for L{twisted.web.client.URI} with host names.
     """
 
-    host = b"example.com"
+    uriHost = host = b"example.com"
 
 
 
@@ -1337,7 +1352,7 @@ class URITestsForIPv4(URITests, unittest.TestCase):
     Tests for L{twisted.web.client.URI} with IPv4 host addresses.
     """
 
-    host = b"192.168.1.67"
+    uriHost = host = b"192.168.1.67"
 
 
 
@@ -1349,4 +1364,18 @@ class URITestsForIPv6(URITests, unittest.TestCase):
     attempt is made to test without.
     """
 
-    host = b"[fe80::20c:29ff:fea4:c60]"
+    host = b"fe80::20c:29ff:fea4:c60"
+    uriHost = b"[fe80::20c:29ff:fea4:c60]"
+
+
+    def test_hostBracketIPv6AddressLiteral(self):
+        """
+        Brackets around IPv6 addresses are stripped in the host field. The host
+        field is then exported with brackets in the output of
+        L{client.URI.toBytes}.
+        """
+        uri = client.URI.fromBytes(b"http://[::1]:80/index.html")
+
+        self.assertEqual(uri.host, b"::1")
+        self.assertEqual(uri.netloc, b"[::1]:80")
+        self.assertEqual(uri.toBytes(), b'http://[::1]:80/index.html')

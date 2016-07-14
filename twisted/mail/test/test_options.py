@@ -26,9 +26,8 @@ class OptionsTests(TestCase):
     """
     def setUp(self):
         self.aliasFilename = self.mktemp()
-        aliasFile = file(self.aliasFilename, 'w')
-        aliasFile.write('someuser:\tdifferentuser\n')
-        aliasFile.close()
+        with open(self.aliasFilename, 'w') as aliasFile:
+            aliasFile.write('someuser:\tdifferentuser\n')
 
 
     def testAliasesWithoutDomain(self):
@@ -124,11 +123,11 @@ class OptionsTests(TestCase):
         options = Options()
         options.parseOptions(['--no-pop3'])
         self.assertEqual(options._getEndpoints(None, 'pop3'), [])
-        self.assertNotEquals(options._getEndpoints(None, 'smtp'), [])
+        self.assertNotEqual(options._getEndpoints(None, 'smtp'), [])
 
         options = Options()
         options.parseOptions(['--no-smtp'])
-        self.assertNotEquals(options._getEndpoints(None, 'pop3'), [])
+        self.assertNotEqual(options._getEndpoints(None, 'pop3'), [])
         self.assertEqual(options._getEndpoints(None, 'smtp'), [])
 
 

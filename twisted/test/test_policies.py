@@ -18,6 +18,12 @@ from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
 
 
+try:
+    import builtins
+except ImportError:
+    import __builtin__ as builtins
+
+
 
 class SimpleProtocol(protocol.Protocol):
 
@@ -133,7 +139,7 @@ class WrapperTests(unittest.TestCase):
         f = Server()
         wf = policies.WrappingFactory(f)
         p = wf.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 35))
-        self.assertIdentical(p.wrappedProtocol.factory, f)
+        self.assertIs(p.wrappedProtocol.factory, f)
 
 
     def test_transportInterfaces(self):
@@ -256,7 +262,7 @@ class WrapperTests(unittest.TestCase):
         wrapper = self._getWrapper()
         producer = object()
         wrapper.registerProducer(producer, True)
-        self.assertIdentical(wrapper.transport.producer, producer)
+        self.assertIs(wrapper.transport.producer, producer)
         self.assertTrue(wrapper.transport.streaming)
 
 
@@ -269,8 +275,8 @@ class WrapperTests(unittest.TestCase):
         producer = object()
         wrapper.registerProducer(producer, True)
         wrapper.unregisterProducer()
-        self.assertIdentical(wrapper.transport.producer, None)
-        self.assertIdentical(wrapper.transport.streaming, None)
+        self.assertIsNone(wrapper.transport.producer)
+        self.assertIsNone(wrapper.transport.streaming)
 
 
     def test_stopConsuming(self):
@@ -527,11 +533,11 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let almost 3 time units pass
         self.clock.pump([0.0, 0.5, 1.0, 1.0, 0.4])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Now let the timer elapse
         self.clock.pump([0.0, 0.2])
-        self.failUnless(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.proto.wrappedProtocol.disconnected)
 
 
     def test_sendAvoidsTimeout(self):
@@ -541,7 +547,7 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let half the countdown period elapse
         self.clock.pump([0.0, 0.5, 1.0])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Send some data (self.proto is the /real/ proto's transport, so this
         # is the write that gets called)
@@ -549,18 +555,18 @@ class TimeoutFactoryTests(unittest.TestCase):
 
         # More time passes, putting us past the original timeout
         self.clock.pump([0.0, 1.0, 1.0])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Make sure writeSequence delays timeout as well
         self.proto.writeSequence([b'bytes'] * 3)
 
         # Tick tock
         self.clock.pump([0.0, 1.0, 1.0])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Don't write anything more, just let the timeout expire
         self.clock.pump([0.0, 2.0])
-        self.failUnless(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.proto.wrappedProtocol.disconnected)
 
 
     def test_receiveAvoidsTimeout(self):
@@ -569,19 +575,19 @@ class TimeoutFactoryTests(unittest.TestCase):
         """
         # Let half the countdown period elapse
         self.clock.pump([0.0, 1.0, 0.5])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Some bytes arrive, they should reset the counter
         self.proto.dataReceived(b'bytes bytes bytes')
 
         # We pass the original timeout
         self.clock.pump([0.0, 1.0, 1.0])
-        self.failIf(self.proto.wrappedProtocol.disconnected)
+        self.assertFalse(self.proto.wrappedProtocol.disconnected)
 
         # Nothing more arrives though, the new timeout deadline is passed,
         # the connection should be dropped.
         self.clock.pump([0.0, 1.0, 1.0])
-        self.failUnless(self.proto.wrappedProtocol.disconnected)
+        self.assertTrue(self.proto.wrappedProtocol.disconnected)
 
 
 
@@ -655,7 +661,7 @@ class TimeoutMixinTests(unittest.TestCase):
     def test_overriddenCallLater(self):
         """
         Test that the callLater of the clock is used instead of
-        C{reactor.callLater}.
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
         """
         self.proto.setTimeout(10)
         self.assertEqual(len(self.clock.calls), 1)
@@ -670,9 +676,9 @@ class TimeoutMixinTests(unittest.TestCase):
 
         # timeOut value is 3
         self.clock.pump([0, 0.5, 1.0, 1.0])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
         self.clock.pump([0, 1.0])
-        self.failUnless(self.proto.timedOut)
+        self.assertTrue(self.proto.timedOut)
 
 
     def test_noTimeout(self):
@@ -682,12 +688,12 @@ class TimeoutMixinTests(unittest.TestCase):
         self.proto.makeConnection(StringTransport())
 
         self.clock.pump([0, 0.5, 1.0, 1.0])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
         self.proto.dataReceived(b'hello there')
         self.clock.pump([0, 1.0, 1.0, 0.5])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
         self.clock.pump([0, 1.0])
-        self.failUnless(self.proto.timedOut)
+        self.assertTrue(self.proto.timedOut)
 
 
     def test_resetTimeout(self):
@@ -702,23 +708,23 @@ class TimeoutMixinTests(unittest.TestCase):
         self.assertEqual(self.proto.timeOut, 1)
 
         self.clock.pump([0, 0.9])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
         self.clock.pump([0, 0.2])
-        self.failUnless(self.proto.timedOut)
+        self.assertTrue(self.proto.timedOut)
 
 
     def test_cancelTimeout(self):
         """
-        Setting the timeout to C{None} cancel any timeout operations.
+        Setting the timeout to L{None} cancel any timeout operations.
         """
         self.proto.timeOut = 5
         self.proto.makeConnection(StringTransport())
 
         self.proto.setTimeout(None)
-        self.assertEqual(self.proto.timeOut, None)
+        self.assertIsNone(self.proto.timeOut)
 
         self.clock.pump([0, 5, 5, 5])
-        self.failIf(self.proto.timedOut)
+        self.assertFalse(self.proto.timedOut)
 
 
     def test_return(self):
@@ -729,7 +735,7 @@ class TimeoutMixinTests(unittest.TestCase):
 
         self.assertEqual(self.proto.setTimeout(10), 5)
         self.assertEqual(self.proto.setTimeout(None), 10)
-        self.assertEqual(self.proto.setTimeout(1), None)
+        self.assertIsNone(self.proto.setTimeout(1))
         self.assertEqual(self.proto.timeOut, 1)
 
         # Clean up the DelayedCall
@@ -767,12 +773,12 @@ class LimitTotalConnectionsFactoryTests(unittest.TestCase):
 
         # Make a connection
         p = factory.buildProtocol(None)
-        self.assertNotEqual(None, p)
+        self.assertIsNotNone(p)
         self.assertEqual(1, factory.connectionCount)
 
         # Try to make a second connection, which will exceed the connection
         # limit.  This should return None, because overflowProtocol is None.
-        self.assertEqual(None, factory.buildProtocol(None))
+        self.assertIsNone(factory.buildProtocol(None))
         self.assertEqual(1, factory.connectionCount)
 
         # Define an overflow protocol
@@ -787,7 +793,7 @@ class LimitTotalConnectionsFactoryTests(unittest.TestCase):
         # count.
         op = factory.buildProtocol(None)
         op.makeConnection(None) # to trigger connectionMade
-        self.assertEqual(True, factory.overflowed)
+        self.assertTrue(factory.overflowed)
         self.assertEqual(2, factory.connectionCount)
 
         # Close the connections.
@@ -832,7 +838,7 @@ class LoggingFactoryTests(unittest.TestCase):
 
         v = f.openFile.getvalue()
         self.assertIn('*', v)
-        self.failIf(t.value())
+        self.assertFalse(t.value())
 
         p.dataReceived(b'here are some bytes')
 
@@ -870,3 +876,43 @@ class LoggingFactoryTests(unittest.TestCase):
         f.resetCounter()
         self.assertEqual(f._counter, 0)
 
+
+    def test_loggingFactoryOpensLogfileAutomatically(self):
+        """
+        When the L{policies.TrafficLoggingFactory} builds a protocol, it
+        automatically opens a unique log file for that protocol and attaches
+        the logfile to the built protocol.
+        """
+        open_calls = []
+        open_rvalues = []
+
+        def mocked_open(*args, **kwargs):
+            """
+            Mock for the open call to prevent actually opening a log file.
+            """
+            open_calls.append((args, kwargs))
+            io = NativeStringIO()
+            io.name = args[0]
+            open_rvalues.append(io)
+            return io
+
+        self.patch(builtins, 'open', mocked_open)
+
+        wrappedFactory = protocol.ServerFactory()
+        wrappedFactory.protocol = SimpleProtocol
+        factory = policies.TrafficLoggingFactory(wrappedFactory, 'test')
+        first_proto = factory.buildProtocol(address.IPv4Address('TCP',
+                                                                '127.0.0.1',
+                                                                12345))
+        second_proto = factory.buildProtocol(address.IPv4Address('TCP',
+                                                                 '127.0.0.1',
+                                                                 12346))
+
+        # We expect open to be called twice, with the files passed to the
+        # protocols.
+        first_call = (('test-1', 'w'), {})
+        second_call = (('test-2', 'w'), {})
+        self.assertEqual([first_call, second_call], open_calls)
+        self.assertEqual(
+            [first_proto.logfile, second_proto.logfile], open_rvalues
+        )

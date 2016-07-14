@@ -19,8 +19,8 @@ from twisted.conch.openssh_compat import primes
 
 class OpenSSHFactory(factory.SSHFactory):
     dataRoot = '/usr/local/etc'
-    moduliRoot = '/usr/local/etc' # for openbsd which puts moduli in a different
-                                  # directory from keys
+    # For openbsd which puts moduli in a different directory from keys.
+    moduliRoot = '/usr/local/etc'
 
 
     def getPublicKeys(self):
@@ -35,7 +35,7 @@ class OpenSSHFactory(factory.SSHFactory):
                         os.path.join(self.dataRoot, filename))
                     t = common.getNS(k.blob())[0]
                     ks[t] = k
-                except Exception, e:
+                except Exception as e:
                     log.msg('bad public key file %s: %s' % (filename, e))
         return ks
 
@@ -50,19 +50,18 @@ class OpenSSHFactory(factory.SSHFactory):
                 fullPath = os.path.join(self.dataRoot, filename)
                 try:
                     key = keys.Key.fromFile(fullPath)
-                except IOError, e:
+                except IOError as e:
                     if e.errno == errno.EACCES:
                         # Not allowed, let's switch to root
-                        key = runAsEffectiveUser(0, 0, keys.Key.fromFile, fullPath)
-                        keyType = keys.objectType(key.keyObject)
-                        privateKeys[keyType] = key
+                        key = runAsEffectiveUser(
+                            0, 0, keys.Key.fromFile, fullPath)
+                        privateKeys[key.sshType()] = key
                     else:
                         raise
-                except Exception, e:
+                except Exception as e:
                     log.msg('bad private key file %s: %s' % (filename, e))
                 else:
-                    keyType = keys.objectType(key.keyObject)
-                    privateKeys[keyType] = key
+                    privateKeys[key.sshType()] = key
         return privateKeys
 
 

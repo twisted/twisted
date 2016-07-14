@@ -27,7 +27,7 @@ from twisted.internet import interfaces, defer, error, fdesc, threads
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.internet.interfaces import (
-    IStreamServerEndpointStringParser, IStreamClientEndpointStringParser,
+    IStreamServerEndpointStringParser,
     IStreamClientEndpointStringParserWithReactor)
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
@@ -35,13 +35,25 @@ from twisted.internet.stdio import StandardIO, PipeAddress
 from twisted.internet.task import LoopingCall
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import log
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, unicode, _matchingString
 from twisted.python.components import proxyForInterface
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
+from twisted.python.compat import iterbytes
 from twisted.python.systemd import ListenFDs
 
+
+try:
+    from twisted.protocols.tls import TLSMemoryBIOFactory
+    from twisted.internet._sslverify import _idnaBytes, _idnaText
+    from twisted.internet.ssl import (
+        optionsForClientTLS, PrivateCertificate, Certificate, KeyPair,
+        CertificateOptions, trustRootFromCertificates
+    )
+    from OpenSSL.SSL import Error as SSLError
+except ImportError:
+    TLSMemoryBIOFactory = None
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -50,7 +62,8 @@ __all__ = ["clientFromString", "serverFromString",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
            "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
            "ProcessEndpoint", "HostnameEndpoint",
-           "StandardErrorBehavior", "connectProtocol"]
+           "StandardErrorBehavior", "connectProtocol",
+           "wrapClientTLS"]
 
 
 
@@ -183,7 +196,7 @@ class _WrappingFactory(ClientFactory):
             L{_WrappingFactory}'s L{Deferred <defer.Deferred>} is returned to
             C{connect()}'s caller.
 
-        @return: C{None}
+        @return: L{None}
         """
         deferred.errback(
             error.ConnectingCancelledError(
@@ -209,9 +222,9 @@ class _WrappingFactory(ClientFactory):
         """
         Proxy C{buildProtocol} to our C{self._wrappedFactory} or errback the
         C{self._onConnection} L{Deferred} if the wrapped factory raises an
-        exception or returns C{None}.
+        exception or returns L{None}.
 
-        @return: An instance of L{_WrappingProtocol} or C{None}
+        @return: An instance of L{_WrappingProtocol} or L{None}
         """
         try:
             proto = self._wrappedFactory.buildProtocol(addr)
@@ -493,7 +506,7 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
         @param backlog: Size of the listen queue
         @type backlog: int
 
-        @param interface: The hostname to bind to, defaults to '' (all)
+        @param interface: The hostname to bind to, defaults to C{::} (all)
         @type interface: str
         """
         _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
@@ -622,24 +635,46 @@ class TCP6ClientEndpoint(object):
 @implementer(interfaces.IStreamClientEndpoint)
 class HostnameEndpoint(object):
     """
-    A name-based endpoint that connects to the fastest amongst the
-    resolved host addresses.
+    A name-based endpoint that connects to the fastest amongst the resolved
+    host addresses.
 
     @ivar _getaddrinfo: A hook used for testing name resolution.
 
     @ivar _deferToThread: A hook used for testing deferToThread.
+
+    @cvar _DEFAULT_ATTEMPT_DELAY: The default time to use between attempts, in
+        seconds, when no C{attemptDelay} is given to
+        L{HostnameEndpoint.__init__}.
     """
     _getaddrinfo = staticmethod(socket.getaddrinfo)
     _deferToThread = staticmethod(threads.deferToThread)
+    _DEFAULT_ATTEMPT_DELAY = 0.3
 
-    def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
+    def __init__(self, reactor, host, port, timeout=30, bindAddress=None,
+                 attemptDelay=None):
         """
+        Create a L{HostnameEndpoint}.
+
+        @param reactor: The reactor to use for connections and delayed calls.
+        @type reactor: provider of L{IReactorTCP} and L{IReactorTime}
+
         @param host: A hostname to connect to.
         @type host: L{bytes}
+
+        @param port: The port number to connect to.
+        @type port: L{int}
 
         @param timeout: For each individual connection attempt, the number of
             seconds to wait before assuming the connection has failed.
         @type timeout: L{int}
+
+        @param bindAddress: the local address of the network interface to make
+            the connections from.
+        @type bindAddress: L{bytes}
+
+        @param attemptDelay: The number of seconds to delay between connection
+            attempts.
+        @type attemptDelay: L{float}
 
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
@@ -648,6 +683,9 @@ class HostnameEndpoint(object):
         self._port = port
         self._timeout = timeout
         self._bindAddress = bindAddress
+        if attemptDelay is None:
+            attemptDelay = self._DEFAULT_ATTEMPT_DELAY
+        self._attemptDelay = attemptDelay
 
 
     def connect(self, protocolFactory):
@@ -656,35 +694,14 @@ class HostnameEndpoint(object):
         connection which is established first.
         """
         wf = protocolFactory
-        pending = []
-
-        def _canceller(d):
-            """
-            The outgoing connection attempt was cancelled.  Fail that L{Deferred}
-            with an L{error.ConnectingCancelledError}.
-
-            @param d: The L{Deferred <defer.Deferred>} that was cancelled
-            @type d: L{Deferred <defer.Deferred>}
-
-            @return: C{None}
-            """
-            d.errback(error.ConnectingCancelledError(
-                HostnameAddress(self._host, self._port)))
-            for p in pending[:]:
-                p.cancel()
-
-        def errbackForGai(failure):
-            """
-            Errback for when L{_nameResolution} returns a Deferred that fires
-            with failure.
-            """
-            return defer.fail(error.DNSLookupError(
-                "Couldn't find the hostname '%s'" % (self._host,)))
-
-        def _endpoints(gaiResult):
+        d = self._nameResolution(self._host, self._port)
+        d.addErrback(lambda ignored: defer.fail(error.DNSLookupError(
+            "Couldn't find the hostname '%s'" % (self._host,))))
+        @d.addCallback
+        def gaiResultToEndpoints(gaiResult):
             """
             This method matches the host address family with an endpoint for
-            every address returned by GAI.
+            every address returned by C{getaddrinfo}.
 
             @param gaiResult: A list of 5-tuples as returned by GAI.
             @type gaiResult: list
@@ -696,71 +713,85 @@ class HostnameEndpoint(object):
                 elif family in [AF_INET]:
                     yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
                             sockaddr[1], self._timeout, self._bindAddress)
-                        # Yields an endpoint for every address returned by GAI
+                    # Yields an endpoint for every address returned by GAI
 
-        def attemptConnection(endpoints):
-            """
-            When L{endpoints} yields an endpoint, this method attempts to connect it.
-            """
-            # The trial attempts for each endpoints, the recording of
-            # successful and failed attempts, and the algorithm to pick the
-            # winner endpoint goes here.
-            # Return a Deferred that fires with the endpoint that wins,
-            # or `failures` if none succeed.
+        def _canceller(d):
+            # This canceller must remain defined outside of
+            # `startConnectionAttempts`, because Deferred should not
+            # participate in cycles with their cancellers; that would create a
+            # potentially problematic circular reference and possibly
+            # gc.garbage.
+            d.errback(error.ConnectingCancelledError(
+                HostnameAddress(self._host, self._port)))
 
-            endpointsListExhausted = []
-            successful = []
+        @d.addCallback
+        def startConnectionAttempts(endpoints):
+            """
+            Given a sequence of endpoints obtained via name resolution, start
+            connecting to a new one every C{self._attemptDelay} seconds until
+            one of the connections succeeds, all of them fail, or the attempt
+            is cancelled.
+
+            @param endpoints: an iterable of all the endpoints we might try to
+                connect to, as determined by name resolution.
+            @type endpoints: iterable of L{IStreamServerEndpoint}
+
+            @return: a Deferred that fires with the result of the
+                C{endpoint.connect} method that completes the fastest, or fails
+                with the first connection error it encountered if none of them
+                succeed.
+            @rtype: L{Deferred} failing with L{error.ConnectingCancelledError}
+                or firing with L{IProtocol}
+            """
+            pending = []
             failures = []
             winner = defer.Deferred(canceller=_canceller)
 
-            def usedEndpointRemoval(connResult, connAttempt):
-                pending.remove(connAttempt)
-                return connResult
-
-            def afterConnectionAttempt(connResult):
-                if lc.running:
-                    lc.stop()
-
-                successful.append(True)
-                for p in pending[:]:
-                    p.cancel()
-                winner.callback(connResult)
-                return None
-
             def checkDone():
-                if endpointsListExhausted and not pending and not successful:
-                    winner.errback(failures.pop())
+                if pending or checkDone.completed or checkDone.endpointsLeft:
+                    return
+                winner.errback(failures.pop())
+            checkDone.completed = False
+            checkDone.endpointsLeft = True
 
-            def connectFailed(reason):
-                failures.append(reason)
-                checkDone()
-                return None
-
+            @LoopingCall
             def iterateEndpoint():
-                try:
-                    endpoint = next(endpoints)
-                except StopIteration:
+                endpoint = next(endpoints, None)
+                if endpoint is None:
                     # The list of endpoints ends.
-                    endpointsListExhausted.append(True)
-                    lc.stop()
+                    checkDone.endpointsLeft = False
                     checkDone()
-                else:
-                    dconn = endpoint.connect(wf)
-                    pending.append(dconn)
-                    dconn.addBoth(usedEndpointRemoval, dconn)
-                    dconn.addCallback(afterConnectionAttempt)
-                    dconn.addErrback(connectFailed)
+                    return
 
-            lc = LoopingCall(iterateEndpoint)
-            lc.clock = self._reactor
-            lc.start(0.3)
+                eachAttempt = endpoint.connect(wf)
+                pending.append(eachAttempt)
+                @eachAttempt.addBoth
+                def noLongerPending(result):
+                    pending.remove(eachAttempt)
+                    return result
+                @eachAttempt.addCallback
+                def succeeded(result):
+                    winner.callback(result)
+                @eachAttempt.addErrback
+                def failed(reason):
+                    failures.append(reason)
+                    checkDone()
+
+            iterateEndpoint.clock = self._reactor
+            iterateEndpoint.start(self._attemptDelay)
+
+            @winner.addBoth
+            def cancelRemainingPending(result):
+                checkDone.completed = True
+                for remaining in pending[:]:
+                    remaining.cancel()
+                if iterateEndpoint.running:
+                    iterateEndpoint.stop()
+                return result
             return winner
 
-        d = self._nameResolution(self._host, self._port)
-        d.addErrback(errbackForGai)
-        d.addCallback(_endpoints)
-        d.addCallback(attemptConnection)
         return d
+
 
     def _nameResolution(self, host, port):
         """
@@ -787,7 +818,7 @@ class SSL4ServerEndpoint(object):
         @type port: int
 
         @param sslContextFactory: An instance of
-            L{twisted.internet.ssl.ContextFactory}.
+            L{interfaces.IOpenSSLContextFactory}.
 
         @param backlog: Size of the listen queue
         @type backlog: int
@@ -833,7 +864,7 @@ class SSL4ClientEndpoint(object):
         @type port: int
 
         @param sslContextFactory: SSL Configuration information as an instance
-            of L{twisted.internet.ssl.ContextFactory}.
+            of L{interfaces.IOpenSSLContextFactory}.
 
         @param timeout: Number of seconds to wait before assuming the
             connection has failed.
@@ -997,11 +1028,11 @@ def _parseTCP(factory, port, interface="", backlog=50):
     Internal parser function for L{_parseServer} to convert the string
     arguments for a TCP(IPv4) stream endpoint into the structured arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
 
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param port: the integer port number to bind
     @type port: C{str}
@@ -1025,11 +1056,11 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
     arguments for a UNIX (AF_UNIX/SOCK_STREAM) stream endpoint into the
     structured arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
 
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param address: the pathname of the unix socket
     @type address: C{str}
@@ -1041,8 +1072,8 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
         respectively.  See the C{wantPID} argument to C{listenUNIX}
 
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
-        L{IReactorTCP.listenUNIX} (or, modulo argument 2, the factory,
-        arguments to L{UNIXServerEndpoint}.
+        L{twisted.internet.interfaces.IReactorUNIX.listenUNIX} (or,
+        modulo argument 2, the factory, arguments to L{UNIXServerEndpoint}.
     """
     return (
         (address, factory),
@@ -1059,10 +1090,10 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
     arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param port: the integer port number to bind
     @type port: C{str}
@@ -1106,10 +1137,9 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     keyPEM = FilePath(privateKey).getContent()
     privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
     if extraCertChain is not None:
-        extraCertChain = FilePath(extraCertChain).getContent()
         matches = re.findall(
             r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',
-            nativeString(extraCertChain),
+            nativeString(FilePath(extraCertChain).getContent()),
             flags=re.DOTALL
         )
         chainCertificates = [ssl.Certificate.loadPEM(chainCertPEM).original
@@ -1143,7 +1173,7 @@ class _StandardIOParser(object):
     """
     Stream server endpoint string parser for the Standard I/O type.
 
-    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
     """
     prefix = "stdio"
 
@@ -1169,7 +1199,7 @@ class _SystemdParser(object):
     """
     Stream server endpoint string parser for the I{systemd} endpoint type.
 
-    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
 
     @ivar _sddaemon: A L{ListenFDs} instance used to translate an index into an
         actual file descriptor.
@@ -1219,7 +1249,7 @@ class _TCP6ServerParser(object):
     """
     Stream server endpoint string parser for the TCP6ServerEndpoint type.
 
-    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
     """
     prefix = "tcp6"     # Used in _parseServer to identify the plugin with the endpoint type
 
@@ -1264,12 +1294,13 @@ def _tokenize(description):
 
     @param description: a string as described by L{serverFromString} or
         L{clientFromString}.
+    @type description: L{str} or L{bytes}
 
-    @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
-        starting with L{_OP} will contain a second element of either ':' (i.e.
+    @return: an iterable of 2-tuples of (C{_OP} or C{_STRING}, string).  Tuples
+        starting with C{_OP} will contain a second element of either ':' (i.e.
         'next parameter') or '=' (i.e. 'assign parameter value').  For example,
-        the string 'hello:greet\=ing=world' would result in a generator
-        yielding these values::
+        the string 'hello:greeting=world' would result in a generator yielding
+        these values::
 
             _STRING, 'hello'
             _OP, ':'
@@ -1277,18 +1308,23 @@ def _tokenize(description):
             _OP, '='
             _STRING, 'world'
     """
-    current = ''
-    ops = ':='
-    nextOps = {':': ':=', '=': ':'}
-    description = iter(description)
-    for n in description:
-        if n in ops:
+    empty = _matchingString(u'', description)
+    colon = _matchingString(u':', description)
+    equals = _matchingString(u'=', description)
+    backslash = _matchingString(u'\x5c', description)
+    current = empty
+
+    ops = colon + equals
+    nextOps = {colon: colon + equals, equals: colon}
+    iterdesc = iter(iterbytes(description))
+    for n in iterdesc:
+        if n in iterbytes(ops):
             yield _STRING, current
             yield _OP, n
-            current = ''
+            current = empty
             ops = nextOps[n]
-        elif n == '\\':
-            current += next(description)
+        elif n == backslash:
+            current += next(iterdesc)
         else:
             current += n
     yield _STRING, current
@@ -1309,16 +1345,17 @@ def _parse(description):
         C{_parse('a:b:d=1:c')} would be C{(['a', 'b', 'c'], {'d': '1'})}.
     """
     args, kw = [], {}
+    colon = _matchingString(u':', description)
     def add(sofar):
         if len(sofar) == 1:
             args.append(sofar[0])
         else:
-            kw[sofar[0]] = sofar[1]
+            kw[nativeString(sofar[0])] = sofar[1]
     sofar = ()
     for (type, value) in _tokenize(description):
         if type is _STRING:
             sofar += (value,)
-        elif value == ':':
+        elif value == colon:
             add(sofar)
             sofar = ()
     add(sofar)
@@ -1357,7 +1394,7 @@ def _parseServer(description, factory, default=None):
     @param default: Deprecated argument, specifying the default parser mode to
         use for unqualified description strings (those which do not have a ':'
         and prefix).
-    @type default: C{str} or C{NoneType}
+    @type default: C{str} or L{None}
 
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
@@ -1381,10 +1418,10 @@ def _parseServer(description, factory, default=None):
     if parser is None:
         # If the required parser is not found in _server, check if
         # a plugin exists for the endpointType
-        for plugin in getPlugins(IStreamServerEndpointStringParser):
-            if plugin.prefix == endpointType:
-                return (plugin, args[1:], kw)
-        raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
+        plugin = _matchPluginToPrefix(
+            getPlugins(IStreamServerEndpointStringParser), endpointType
+        )
+        return (plugin, args[1:], kw)
     return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
 
 
@@ -1403,6 +1440,19 @@ def _serverFromStringLegacy(reactor, description, default):
     # Chop out the factory.
     args = args[:1] + args[2:]
     return _endpointServerFactories[name](reactor, *args, **kw)
+
+
+
+def _matchPluginToPrefix(plugins, endpointType):
+    """
+    Match plugin to prefix.
+    """
+    endpointType = endpointType.lower()
+    for plugin in plugins:
+        if (_matchingString(plugin.prefix.lower(),
+                            endpointType) == endpointType):
+            return plugin
+    raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
 
 
 
@@ -1501,7 +1551,10 @@ def quoteStringArgument(argument):
 
     @rtype: C{str}
     """
-    return argument.replace('\\', '\\\\').replace(':', '\\:')
+    backslash, colon = '\\:'
+    for c in backslash, colon:
+        argument = argument.replace(c, backslash + c)
+    return argument
 
 
 
@@ -1549,16 +1602,14 @@ def _loadCAsFromDir(directoryPath):
     """
     Load certificate-authority certificate objects in a given directory.
 
-    @param directoryPath: a L{FilePath} pointing at a directory to load .pem
-        files from.
+    @param directoryPath: a L{unicode} or L{bytes} pointing at a directory to
+        load .pem files from, or L{None}.
 
-    @return: a C{list} of L{OpenSSL.crypto.X509} objects.
+    @return: an L{IOpenSSLTrustRoot} provider.
     """
-    from twisted.internet import ssl
-
     caCerts = {}
     for child in directoryPath.children():
-        if not child.basename().split('.')[-1].lower() == 'pem':
+        if not child.asTextMode().basename().split(u'.')[-1].lower() == u'pem':
             continue
         try:
             data = child.getContent()
@@ -1566,13 +1617,94 @@ def _loadCAsFromDir(directoryPath):
             # Permission denied, corrupt disk, we don't care.
             continue
         try:
-            theCert = ssl.Certificate.loadPEM(data)
-        except ssl.SSL.Error:
+            theCert = Certificate.loadPEM(data)
+        except SSLError:
             # Duplicate certificate, invalid certificate, etc.  We don't care.
             pass
         else:
-            caCerts[theCert.digest()] = theCert.original
-    return caCerts.values()
+            caCerts[theCert.digest()] = theCert
+    return trustRootFromCertificates(caCerts.values())
+
+
+
+def _parseTrustRootPath(pathName):
+    """
+    Parse a string referring to a directory full of certificate authorities
+    into a trust root.
+
+    @param pathName: path name
+    @type pathName: L{unicode} or L{bytes} or L{None}
+
+    @return: L{None} or L{IOpenSSLTrustRoot}
+    """
+    if pathName is None:
+        return None
+    return _loadCAsFromDir(FilePath(pathName))
+
+
+
+def _privateCertFromPaths(certificatePath, keyPath):
+    """
+    Parse a certificate path and key path, either or both of which might be
+    L{None}, into a certificate object.
+
+    @param certificatePath: the certificate path
+    @type certificatePath: L{bytes} or L{unicode} or L{None}
+
+    @param keyPath: the private key path
+    @type keyPath: L{bytes} or L{unicode} or L{None}
+
+    @return: a L{PrivateCertificate} or L{None}
+    """
+    if certificatePath is None:
+        return None
+    certBytes = FilePath(certificatePath).getContent()
+    if keyPath is None:
+        return PrivateCertificate.loadPEM(certBytes)
+    else:
+        return PrivateCertificate.fromCertificateAndKeyPair(
+            Certificate.loadPEM(certBytes),
+            KeyPair.load(FilePath(keyPath).getContent(), 1)
+        )
+
+
+
+def _parseClientSSLOptions(kwargs):
+    """
+    Parse common arguments for SSL endpoints, creating an L{CertificateOptions}
+    instance.
+
+    @param kwargs: A dict of keyword arguments to be parsed, potentially
+        containing keys C{certKey}, C{privateKey}, C{caCertsDir}, and
+        C{hostname}.  See L{_parseClientSSL}.
+    @type kwargs: L{dict}
+
+    @return: The remaining arguments, including a new key C{sslContextFactory}.
+    """
+    hostname = kwargs.pop('hostname', None)
+    clientCertificate = _privateCertFromPaths(kwargs.pop('certKey', None),
+                                              kwargs.pop('privateKey', None))
+    trustRoot = _parseTrustRootPath(kwargs.pop('caCertsDir', None))
+    if hostname is not None:
+        configuration = optionsForClientTLS(
+            _idnaText(hostname), trustRoot=trustRoot,
+            clientCertificate=clientCertificate
+        )
+    else:
+        # _really_ though, you should specify a hostname.
+        if clientCertificate is not None:
+            privateKeyOpenSSL = clientCertificate.privateKey.original
+            certificateOpenSSL = clientCertificate.original
+        else:
+            privateKeyOpenSSL = None
+            certificateOpenSSL = None
+        configuration = CertificateOptions(
+            trustRoot=trustRoot,
+            privateKey=privateKeyOpenSSL,
+            certificate=certificateOpenSSL,
+        )
+    kwargs['sslContextFactory'] = configuration
+    return kwargs
 
 
 
@@ -1594,38 +1726,16 @@ def _parseClientSSL(*args, **kwargs):
         will be scanned for files ending in C{.pem}, all of which will be
         considered valid certificate authorities for this connection.
 
-    @type caCertsDir: C{str}
+    @type caCertsDir: L{str}
 
-    @return: The coerced values as a C{dict}.
+    @param hostname: The hostname to use for validating the server's
+        certificate.
+    @type hostname: L{unicode}
+
+    @return: The coerced values as a L{dict}.
     """
-    from twisted.internet import ssl
     kwargs = _parseClientTCP(*args, **kwargs)
-    certKey = kwargs.pop('certKey', None)
-    privateKey = kwargs.pop('privateKey', None)
-    caCertsDir = kwargs.pop('caCertsDir', None)
-    if certKey is not None:
-        certx509 = ssl.Certificate.loadPEM(
-            FilePath(certKey).getContent()).original
-    else:
-        certx509 = None
-    if privateKey is not None:
-        privateKey = ssl.PrivateCertificate.loadPEM(
-            FilePath(privateKey).getContent()).privateKey.original
-    else:
-        privateKey = None
-    if caCertsDir is not None:
-        verify = True
-        caCerts = _loadCAsFromDir(FilePath(caCertsDir))
-    else:
-        verify = False
-        caCerts = None
-    kwargs['sslContextFactory'] = ssl.CertificateOptions(
-        certificate=certx509,
-        privateKey=privateKey,
-        verify=verify,
-        caCerts=caCerts
-    )
-    return kwargs
+    return _parseClientSSLOptions(kwargs)
 
 
 
@@ -1737,14 +1847,11 @@ def clientFromString(reactor, description):
     args, kwargs = _parse(description)
     aname = args.pop(0)
     name = aname.upper()
-    for plugin in getPlugins(IStreamClientEndpointStringParserWithReactor):
-        if plugin.prefix.upper() == name:
-            return plugin.parseStreamClient(reactor, *args, **kwargs)
-    for plugin in getPlugins(IStreamClientEndpointStringParser):
-        if plugin.prefix.upper() == name:
-            return plugin.parseStreamClient(*args, **kwargs)
     if name not in _clientParsers:
-        raise ValueError("Unknown endpoint type: %r" % (aname,))
+        plugin = _matchPluginToPrefix(
+            getPlugins(IStreamClientEndpointStringParserWithReactor), name
+        )
+        return plugin.parseStreamClient(reactor, *args, **kwargs)
     kwargs = _clientParsers[name](*args, **kwargs)
     return _endpointClientFactories[name](reactor, **kwargs)
 
@@ -1770,3 +1877,178 @@ def connectProtocol(endpoint, protocol):
         def buildProtocol(self, addr):
             return protocol
     return endpoint.connect(OneShotFactory())
+
+
+
+@implementer(interfaces.IStreamClientEndpoint)
+class _WrapperEndpoint(object):
+    """
+    An endpoint that wraps another endpoint.
+    """
+
+    def __init__(self, wrappedEndpoint, wrapperFactory):
+        """
+        Construct a L{_WrapperEndpoint}.
+        """
+        self._wrappedEndpoint = wrappedEndpoint
+        self._wrapperFactory = wrapperFactory
+
+
+    def connect(self, protocolFactory):
+        """
+        Connect the given protocol factory and unwrap its result.
+        """
+        return self._wrappedEndpoint.connect(
+            self._wrapperFactory(protocolFactory)
+        ).addCallback(lambda protocol: protocol.wrappedProtocol)
+
+
+
+@implementer(interfaces.IStreamServerEndpoint)
+class _WrapperServerEndpoint(object):
+    """
+    A server endpoint that wraps another server endpoint.
+    """
+
+    def __init__(self, wrappedEndpoint, wrapperFactory):
+        """
+        Construct a L{_WrapperServerEndpoint}.
+        """
+        self._wrappedEndpoint = wrappedEndpoint
+        self._wrapperFactory = wrapperFactory
+
+
+    def listen(self, protocolFactory):
+        """
+        Connect the given protocol factory and unwrap its result.
+        """
+        return self._wrappedEndpoint.listen(
+            self._wrapperFactory(protocolFactory)
+        )
+
+
+
+def wrapClientTLS(connectionCreator, wrappedEndpoint):
+    """
+    Wrap an endpoint which upgrades to TLS as soon as the connection is
+    established.
+
+    @since: 16.0
+
+    @param connectionCreator: The TLS options to use when connecting; see
+        L{twisted.internet.ssl.optionsForClientTLS} for how to construct this.
+    @type connectionCreator:
+        L{twisted.internet.interfaces.IOpenSSLClientConnectionCreator}
+
+    @param wrappedEndpoint: The endpoint to wrap.
+    @type wrappedEndpoint: An L{IStreamClientEndpoint} provider.
+
+    @return: an endpoint that provides transport level encryption layered on
+        top of C{wrappedEndpoint}
+    @rtype: L{twisted.internet.interfaces.IStreamClientEndpoint}
+    """
+    if TLSMemoryBIOFactory is None:
+        raise NotImplementedError(
+            "OpenSSL not available. Try `pip install twisted[tls]`."
+        )
+    return _WrapperEndpoint(
+        wrappedEndpoint,
+        lambda protocolFactory:
+        TLSMemoryBIOFactory(connectionCreator, True, protocolFactory)
+    )
+
+
+
+def _parseClientTLS(reactor, host, port, timeout=b'30', bindAddress=None,
+                    certificate=None, privateKey=None, trustRoots=None,
+                    endpoint=None, **kwargs):
+    """
+    Internal method to construct an endpoint from string parameters.
+
+    @param reactor: The reactor passed to L{clientFromString}.
+
+    @param host: The hostname to connect to.
+    @type host: L{bytes} or L{unicode}
+
+    @param port: The port to connect to.
+    @type port: L{bytes} or L{unicode}
+
+    @param timeout: For each individual connection attempt, the number of
+        seconds to wait before assuming the connection has failed.
+    @type timeout: L{bytes} or L{unicode}
+
+    @param bindAddress: The address to which to bind outgoing connections.
+    @type bindAddress: L{bytes} or L{unicode}
+
+    @param certificate: a string representing a filesystem path to a
+        PEM-encoded certificate.
+    @type certificate: L{bytes} or L{unicode}
+
+    @param privateKey: a string representing a filesystem path to a PEM-encoded
+        certificate.
+    @type privateKey: L{bytes} or L{unicode}
+
+    @param endpoint: an optional string endpoint description of an endpoint to
+        wrap; if this is passed then C{host} is used only for certificate
+        verification.
+    @type endpoint: L{bytes} or L{unicode}
+
+    @return: a client TLS endpoint
+    @rtype: L{IStreamClientEndpoint}
+    """
+    if kwargs:
+        raise TypeError('unrecognized keyword arguments present',
+                        list(kwargs.keys()))
+    host = host if isinstance(host, unicode) else host.decode("utf-8")
+    bindAddress = (bindAddress
+                   if isinstance(bindAddress, unicode) or bindAddress is None
+                   else bindAddress.decode("utf-8"))
+    port = int(port)
+    timeout = int(timeout)
+    return wrapClientTLS(
+        optionsForClientTLS(
+            host, trustRoot=_parseTrustRootPath(trustRoots),
+            clientCertificate=_privateCertFromPaths(certificate,
+                                                    privateKey)),
+        clientFromString(reactor, endpoint) if endpoint is not None
+        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout,
+                              bindAddress)
+    )
+
+
+
+@implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
+class _TLSClientEndpointParser(object):
+    """
+    Stream client endpoint string parser for L{wrapClientTLS} with
+    L{HostnameEndpoint}.
+
+    @ivar prefix: See
+        L{IStreamClientEndpointStringParserWithReactor.prefix}.
+    """
+    prefix = 'tls'
+
+    @staticmethod
+    def parseStreamClient(reactor, *args, **kwargs):
+        """
+        Redirects to another function L{_parseClientTLS}; tricks zope.interface
+        into believing the interface is correctly implemented, since the
+        signature is (C{reactor}, C{*args}, C{**kwargs}).  See
+        L{_parseClientTLS} for an the specific signature description for this
+        endpoint parser.
+
+        @param reactor: The reactor passed to L{clientFromString}.
+
+        @param args: The positional arguments in the endpoint description.
+        @type args: L{tuple}
+
+        @param kwargs: The named arguments in the endpoint description.
+        @type kwargs: L{dict}
+
+        @return: a client TLS endpoint
+        @rtype: L{IStreamClientEndpoint}
+        """
+        return _parseClientTLS(reactor, *args, **kwargs)
+
+
+

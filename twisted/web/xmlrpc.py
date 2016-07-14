@@ -6,6 +6,9 @@
 A generic resource for publishing objects via XML-RPC.
 
 Maintainer: Itamar Shtull-Trauring
+
+@var Fault: See L{xmlrpclib.Fault}
+@type Fault: L{xmlrpclib.Fault}
 """
 
 from __future__ import division, absolute_import
@@ -394,11 +397,11 @@ class _QueryFactory(protocol.ClientFactory):
 
     @ivar user: The username with which to authenticate with the server
         when making calls.
-    @type user: L{bytes} or C{NoneType}
+    @type user: L{bytes} or L{None}
 
     @ivar password: The password with which to authenticate with the server
         when making calls.
-    @type password: L{bytes} or C{NoneType}
+    @type password: L{bytes} or L{None}
 
     @ivar useDateTime: Accept datetime values as datetime.datetime objects.
         also passed to the underlying xmlrpclib implementation.  Defaults to
@@ -418,14 +421,14 @@ class _QueryFactory(protocol.ClientFactory):
         @param allowNone: allow the use of None values in parameters. It's
             passed to the underlying xmlrpclib implementation. Defaults to
             C{False}.
-        @type allowNone: C{bool} or C{NoneType}
+        @type allowNone: C{bool} or L{None}
 
         @param args: the arguments to pass to the method.
         @type args: C{tuple}
 
         @param canceller: A 1-argument callable passed to the deferred as the
             canceller callback.
-        @type canceller: callable or C{NoneType}
+        @type canceller: callable or L{None}
         """
         self.path, self.host = path, host
         self.user, self.password = user, password
@@ -475,18 +478,18 @@ class Proxy:
         when making calls.  If specified, overrides any username information
         embedded in C{url}.  If not specified, a value may be taken from
         C{url} if present.
-    @type user: L{bytes} or C{NoneType}
+    @type user: L{bytes} or L{None}
 
     @ivar password: The password with which to authenticate with the server
         when making calls.  If specified, overrides any password information
         embedded in C{url}.  If not specified, a value may be taken from
         C{url} if present.
-    @type password: L{bytes} or C{NoneType}
+    @type password: L{bytes} or L{None}
 
     @ivar allowNone: allow the use of None values in parameters. It's
         passed to the underlying L{xmlrpclib} implementation. Defaults to
         C{False}.
-    @type allowNone: C{bool} or C{NoneType}
+    @type allowNone: C{bool} or L{None}
 
     @ivar useDateTime: Accept datetime values as datetime.datetime objects.
         also passed to the underlying L{xmlrpclib} implementation. Defaults to

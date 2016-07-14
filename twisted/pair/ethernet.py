@@ -12,7 +12,7 @@ import struct
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 
 class IEthernetProtocol(Interface):
@@ -29,19 +29,19 @@ class EthernetHeader:
         (self.dest, self.source, self.proto) \
                     = struct.unpack("!6s6sH", data[:6+6+2])
 
-class EthernetProtocol(protocol.AbstractDatagramProtocol):
 
-    implements(IEthernetProtocol)
-    
+
+@implementer(IEthernetProtocol)
+class EthernetProtocol(protocol.AbstractDatagramProtocol):
     def __init__(self):
         self.etherProtos = {}
 
     def addProto(self, num, proto):
         proto = raw.IRawPacketProtocol(proto)
         if num < 0:
-            raise TypeError, 'Added protocol must be positive or zero'
+            raise TypeError('Added protocol must be positive or zero')
         if num >= 2**16:
-            raise TypeError, 'Added protocol must fit in 16 bits'
+            raise TypeError('Added protocol must fit in 16 bits')
         if num not in self.etherProtos:
             self.etherProtos[num] = []
         self.etherProtos[num].append(proto)

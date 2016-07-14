@@ -46,7 +46,7 @@ class XMPPStringPrepTests(unittest.TestCase):
 
     def testResourcePrep(self):
         self.assertEqual(resourceprep.prepare(u'resource'), u'resource')
-        self.assertNotEquals(resourceprep.prepare(u'Resource'), u'resource')
+        self.assertNotEqual(resourceprep.prepare(u'Resource'), u'resource')
         self.assertEqual(resourceprep.prepare(u' '), u' ')
 
         self.assertEqual(resourceprep.prepare(u'Henry \u2163'), u'Henry IV')
@@ -107,3 +107,9 @@ class XMPPStringPrepTests(unittest.TestCase):
 
         self.assertEqual(nameprep.prepare(u'stra\u00dfe.example.com'),
                           u'strasse.example.com')
+
+    def test_nameprepTrailingDot(self):
+        """
+        A trailing dot in domain names is preserved.
+        """
+        self.assertEqual(nameprep.prepare(u'example.com.'), u'example.com.')

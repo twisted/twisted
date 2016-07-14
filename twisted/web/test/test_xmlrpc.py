@@ -175,7 +175,7 @@ class Test(XMLRPC):
         except xmlrpc.NoSuchFunction:
             if procedurePath.startswith("SESSION"):
                 raise xmlrpc.Fault(self.SESSION_EXPIRED,
-                                   "Session non-existant/expired.")
+                                   "Session non-existent/expired.")
             else:
                 raise
 
@@ -393,7 +393,7 @@ class XMLRPCTests(unittest.TestCase):
             factory.f = TestQueryFactoryCancel(*args, **kw)
             return factory.f
         d = self.proxy(factory).callRemote('add', 2, 3)
-        self.assertNotEquals(factory.f.connector.state, "disconnected")
+        self.assertNotEqual(factory.f.connector.state, "disconnected")
         d.cancel()
         self.assertEqual(factory.f.connector.state, "disconnected")
         d = self.assertFailure(d, defer.CancelledError)
@@ -624,7 +624,7 @@ class SerializationConfigMixin:
 
 class XMLRPCAllowNoneTests(SerializationConfigMixin, unittest.TestCase):
     """
-    Tests for passing C{None} when the C{allowNone} flag is set.
+    Tests for passing L{None} when the C{allowNone} flag is set.
     """
     flagName = "allowNone"
     value = None

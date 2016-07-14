@@ -15,7 +15,7 @@ from twisted.internet import protocol, defer
 from twisted.python import failure
 from twisted.python.compat import reraise
 
-from io import BytesIO as StringIO
+from io import BytesIO
 
 
 
@@ -56,7 +56,7 @@ class _BackRelay(protocol.ProcessProtocol):
         and, if C{errortoo} is true, all of stderr as well (mixed together in
         one string).  If C{errortoo} is false and any bytes are received over
         stderr, this will fire with an L{_UnexpectedErrorOutput} instance and
-        the attribute will be set to C{None}.
+        the attribute will be set to L{None}.
 
     @ivar onProcessEnded: If C{errortoo} is false and bytes are received over
         stderr, this attribute will refer to a L{Deferred} which will be called
@@ -68,7 +68,7 @@ class _BackRelay(protocol.ProcessProtocol):
 
     def __init__(self, deferred, errortoo=0):
         self.deferred = deferred
-        self.s = StringIO()
+        self.s = BytesIO()
         if errortoo:
             self.errReceived = self.errReceivedIsGood
         else:
@@ -99,7 +99,7 @@ class _BackRelay(protocol.ProcessProtocol):
 def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
                      errortoo=0):
     """
-    Spawn a process and return its output as a deferred returning a string.
+    Spawn a process and return its output as a deferred returning a L{bytes}.
 
     @param executable: The file name to run and get the output of - the
                        full path should be used.
@@ -147,8 +147,8 @@ class _EverythingGetter(protocol.ProcessProtocol):
 
     def __init__(self, deferred):
         self.deferred = deferred
-        self.outBuf = StringIO()
-        self.errBuf = StringIO()
+        self.outBuf = BytesIO()
+        self.errBuf = BytesIO()
         self.outReceived = self.outBuf.write
         self.errReceived = self.errBuf.write
 

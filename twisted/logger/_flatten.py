@@ -20,7 +20,7 @@ aFormatter = Formatter()
 class KeyFlattener(object):
     """
     A L{KeyFlattener} computes keys for the things within curly braces in
-    PEP-3101-style format strings as parsed by L{Formatter.parse}.
+    PEP-3101-style format strings as parsed by L{string.Formatter.parse}.
     """
 
     def __init__(self):

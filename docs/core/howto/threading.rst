@@ -121,9 +121,9 @@ Similarly, you want some code running in a non-reactor thread wants to invoke so
             result = threads.blockingCallFromThread(
                 reactor, getPage, "http://twistedmatrix.com/")
         except Error, exc:
-            print exc
+            print(exc)
         else:
-            print result
+            print(result)
         reactor.callFromThread(reactor.stop)
 
     reactor.callInThread(inThread)
@@ -142,7 +142,7 @@ We can do this::
 
     reactor.suggestThreadPoolSize(30)
 
-The default size of the thread pool depends on the reactor being used; the default reactor uses a minimum size of 5 and a maximum size of 10.
+The default size of the thread pool depends on the reactor being used; the default reactor uses a minimum size of 0 and a maximum size of 10.
 
 The reactor thread pool is implemented by :api:`twisted.python.threadpool.ThreadPool <ThreadPool>`.
 To access methods on this object for more advanced tuning and monitoring (see the API documentation for details) you can get the thread pool with :api:`twisted.internet.interfaces.IReactorThreads.getThreadPool <getThreadPool>`.

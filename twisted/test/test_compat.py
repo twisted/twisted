@@ -15,7 +15,8 @@ from twisted.trial import unittest
 from twisted.python.compat import (
     reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
     unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType, bytesEnviron, iteritems
+    iterbytes, intToBytes, ioType, bytesEnviron, iteritems, _coercedUnicode,
+    unichr,
 )
 from twisted.python.filepath import FilePath
 
@@ -30,28 +31,30 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         An L{io.StringIO} accepts and returns text.
         """
-        self.assertEquals(ioType(io.StringIO()), unicodeCompat)
+        self.assertEqual(ioType(io.StringIO()), unicodeCompat)
 
 
     def test_3BytesIO(self):
         """
         An L{io.BytesIO} accepts and returns bytes.
         """
-        self.assertEquals(ioType(io.BytesIO()), bytes)
+        self.assertEqual(ioType(io.BytesIO()), bytes)
 
 
     def test_3openTextMode(self):
         """
         A file opened via 'io.open' in text mode accepts and returns text.
         """
-        self.assertEquals(ioType(io.open(self.mktemp(), "w")), unicodeCompat)
+        with io.open(self.mktemp(), "w") as f:
+            self.assertEqual(ioType(f), unicodeCompat)
 
 
     def test_3openBinaryMode(self):
         """
         A file opened via 'io.open' in binary mode accepts and returns bytes.
         """
-        self.assertEquals(ioType(io.open(self.mktemp(), "wb")), bytes)
+        with io.open(self.mktemp(), "wb") as f:
+            self.assertEqual(ioType(f), bytes)
 
 
     def test_2openTextMode(self):
@@ -71,7 +74,7 @@ class IOTypeTests(unittest.SynchronousTestCase):
             """
             encoding = 'utf-8'
 
-        self.assertEquals(ioType(VerySpecificLie(self.mktemp(), "wb")),
+        self.assertEqual(ioType(VerySpecificLie(self.mktemp(), "wb")),
                           basestring)
 
 
@@ -81,15 +84,16 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         from cStringIO import StringIO as cStringIO
         from StringIO import StringIO
-        self.assertEquals(ioType(StringIO()), bytes)
-        self.assertEquals(ioType(cStringIO()), bytes)
+        self.assertEqual(ioType(StringIO()), bytes)
+        self.assertEqual(ioType(cStringIO()), bytes)
 
 
     def test_2openBinaryMode(self):
         """
         The normal 'open' builtin in Python 2 will always result in bytes I/O.
         """
-        self.assertEquals(ioType(open(self.mktemp(), "w")), bytes)
+        with open(self.mktemp(), "w") as f:
+            self.assertEqual(ioType(f), bytes)
 
     if _PY3:
         test_2openTextMode.skip = "The 'file' type is no longer available."
@@ -103,17 +107,16 @@ class IOTypeTests(unittest.SynchronousTestCase):
         The L{codecs} module, oddly, returns a file-like object which returns
         bytes when not passed an 'encoding' argument.
         """
-        self.assertEquals(ioType(codecs.open(self.mktemp(), 'wb')),
-                          bytes)
+        with codecs.open(self.mktemp(), 'wb') as f:
+            self.assertEqual(ioType(f), bytes)
 
 
     def test_codecsOpenText(self):
         """
         When passed an encoding, however, the L{codecs} module returns unicode.
         """
-        self.assertEquals(ioType(codecs.open(self.mktemp(), 'wb',
-                                             encoding='utf-8')),
-                          unicodeCompat)
+        with codecs.open(self.mktemp(), 'wb', encoding='utf-8') as f:
+            self.assertEqual(ioType(f), unicodeCompat)
 
 
     def test_defaultToText(self):
@@ -121,7 +124,7 @@ class IOTypeTests(unittest.SynchronousTestCase):
         When passed an object about which no sensible decision can be made, err
         on the side of unicode.
         """
-        self.assertEquals(ioType(object()), unicodeCompat)
+        self.assertEqual(ioType(object()), unicodeCompat)
 
 
 
@@ -561,7 +564,7 @@ class StringTests(unittest.SynchronousTestCase):
             expected = str
         else:
             expected = unicode
-        self.assertTrue(unicodeCompat is expected)
+        self.assertIs(unicodeCompat, expected)
 
 
     def test_nativeStringIO(self):
@@ -640,7 +643,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
     def test_reraiseWithNone(self):
         """
         Calling L{reraise} with an exception instance and a traceback of
-        C{None} re-raises it with a new traceback.
+        L{None} re-raises it with a new traceback.
         """
         try:
             1/0
@@ -651,7 +654,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
         except:
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
-            self.assertTrue(value is value2)
+            self.assertIs(value, value2)
             self.assertNotEqual(traceback.format_tb(tb)[-1],
                                 traceback.format_tb(tb2)[-1])
         else:
@@ -672,7 +675,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
         except:
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
-            self.assertTrue(value is value2)
+            self.assertIs(value, value2)
             self.assertEqual(traceback.format_tb(tb)[-1],
                              traceback.format_tb(tb2)[-1])
         else:
@@ -772,3 +775,73 @@ class OrderedDictTests(unittest.TestCase):
             "15.5.0: Use collections.OrderedDict instead.")
         self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
         self.assertEqual(len(currentWarnings), 1)
+
+
+
+class CoercedUnicodeTests(unittest.TestCase):
+    """
+    Tests for L{twisted.python.compat._coercedUnicode}.
+    """
+
+    def test_unicodeASCII(self):
+        """
+        Unicode strings with ASCII code points are unchanged.
+        """
+        result = _coercedUnicode(u'text')
+        self.assertEqual(result, u'text')
+        self.assertIsInstance(result, unicodeCompat)
+
+
+    def test_unicodeNonASCII(self):
+        """
+        Unicode strings with non-ASCII code points are unchanged.
+        """
+        result = _coercedUnicode(u'\N{SNOWMAN}')
+        self.assertEqual(result, u'\N{SNOWMAN}')
+        self.assertIsInstance(result, unicodeCompat)
+
+
+    def test_nativeASCII(self):
+        """
+        Native strings with ASCII code points are unchanged.
+
+        On Python 2, this verifies that ASCII-only byte strings are accepted,
+        whereas for Python 3 it is identical to L{test_unicodeASCII}.
+        """
+        result = _coercedUnicode('text')
+        self.assertEqual(result, u'text')
+        self.assertIsInstance(result, unicodeCompat)
+
+
+    def test_bytesPy3(self):
+        """
+        Byte strings are not accceptable in Python 3.
+        """
+        exc = self.assertRaises(TypeError, _coercedUnicode, b'bytes')
+        self.assertEqual(str(exc), "Expected str not b'bytes' (bytes)")
+    if not _PY3:
+        test_bytesPy3.skip = (
+            "Bytes behavior of _coercedUnicode only provided on Python 2.")
+
+
+    def test_bytesNonASCII(self):
+        """
+        Byte strings with non-ASCII code points raise an exception.
+        """
+        self.assertRaises(UnicodeError, _coercedUnicode, b'\xe2\x98\x83')
+    if _PY3:
+        test_bytesNonASCII.skip = (
+            "Bytes behavior of _coercedUnicode only provided on Python 2.")
+
+
+
+class UnichrTests(unittest.TestCase):
+    """
+    Tests for L{unichr}.
+    """
+
+    def test_unichr(self):
+        """
+        unichar exists and returns a unicode string with the given code point.
+        """
+        self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")

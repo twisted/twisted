@@ -111,7 +111,7 @@ def _pickleFunction(f):
 
     @return: a 2-tuple of a reference to L{_unpickleFunction} and a tuple of
         its arguments, a 1-tuple of the function's fully qualified name.
-    @rtype: 2-tuple of C{(callable, native string}}
+    @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == '<lambda>':
         return None
@@ -298,9 +298,6 @@ def _aybabtu(c):
     Get all of the parent classes of C{c}, not including C{c} itself, which are
     strict subclasses of L{Versioned}.
 
-    The name comes from "all your base are belong to us", from the deprecated
-    L{twisted.python.reflect.allYourBase} function.
-
     @param c: a class
     @returns: list of classes
     """
@@ -380,7 +377,7 @@ class Versioned:
             highestVersion = 0
             highestBase = None
             for base in bases:
-                if not base.__dict__.has_key('persistenceVersion'):
+                if 'persistenceVersion' not in base.__dict__:
                     continue
                 if base.persistenceVersion > highestVersion:
                     highestBase = base

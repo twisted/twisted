@@ -7,7 +7,7 @@ TCP support for IOCP reactor
 
 import socket, operator, errno, struct
 
-from zope.interface import implements, classImplements
+from zope.interface import implementer, classImplements
 
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.protocol import Protocol
@@ -35,15 +35,14 @@ connectExErrors = {
         ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,
         }
 
+@implementer(IReadWriteHandle, interfaces.ITCPTransport,
+             interfaces.ISystemHandle)
 class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     """
     @ivar TLS: C{False} to indicate the connection is in normal TCP mode,
         C{True} to indicate that TLS has been started and that operations must
         be routed through the L{TLSMemoryBIOProtocol} instance.
     """
-    implements(IReadWriteHandle, interfaces.ITCPTransport,
-               interfaces.ISystemHandle)
-
     TLS = False
 
 
@@ -156,7 +155,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         has been started, to the L{TLSMemoryBIOProtocol} for it to encrypt and
         send.
 
-        @see: L{ITCPTransport.write}
+        @see: L{twisted.internet.interfaces.ITransport.write}
         """
         if self.disconnected:
             return
@@ -172,7 +171,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         has been started, to the L{TLSMemoryBIOProtocol} for it to encrypt and
         send.
 
-        @see: L{ITCPTransport.writeSequence}
+        @see: L{twisted.internet.interfaces.ITransport.writeSequence}
         """
         if self.disconnected:
             return
@@ -187,7 +186,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         Close the underlying handle or, if TLS has been started, first shut it
         down.
 
-        @see: L{ITCPTransport.loseConnection}
+        @see: L{twisted.internet.interfaces.ITransport.loseConnection}
         """
         if self.TLS:
             if self.connected and not self.disconnecting:
@@ -388,8 +387,8 @@ class Connector(TCPConnector):
 
 
 
+@implementer(interfaces.IListeningPort)
 class Port(_SocketCloser, _LogOwner):
-    implements(interfaces.IListeningPort)
 
     connected = False
     disconnected = False
@@ -440,8 +439,8 @@ class Port(_SocketCloser, _LogOwner):
             else:
                 addr = (self.interface, self.port)
             skt.bind(addr)
-        except socket.error, le:
-            raise error.CannotListenError, (self.interface, self.port, le)
+        except socket.error as le:
+            raise error.CannotListenError(self.interface, self.port, le)
 
         self.addrLen = _iocp.maxAddrLen(skt.fileno())
 
@@ -578,7 +577,7 @@ class Port(_SocketCloser, _LogOwner):
         evt = _iocp.Event(self.cbAccept, self)
 
         # see AcceptEx documentation
-        evt.buff = buff = _iocp.AllocateReadBuffer(2 * (self.addrLen + 16))
+        evt.buff = buff = bytearray(2 * (self.addrLen + 16))
 
         evt.newskt = newskt = self.reactor.createSocket(self.addressFamily,
                                                         self.socketType)
@@ -586,5 +585,3 @@ class Port(_SocketCloser, _LogOwner):
 
         if rc and rc != ERROR_IO_PENDING:
             self.handleAccept(rc, evt)
-
-

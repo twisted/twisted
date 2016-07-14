@@ -484,7 +484,7 @@ class FormattingStateAttributeTests(unittest.TestCase):
                 bold=True, underline=True, off=False, reverseVideo=True,
                 foreground=irc._IRC_COLORS['blue']))
 
-        self.assertNotEquals(
+        self.assertNotEqual(
             irc._FormattingState(bold=True),
             irc._FormattingState(bold=False))
 
@@ -650,7 +650,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         """
         L{ServerSupportedFeatures._parsePrefixParam} parses the ISUPPORT PREFIX
         parameter into a mapping from modes to prefix symbols, returns
-        C{None} if there is no parseable prefix parameter or raises
+        L{None} if there is no parseable prefix parameter or raises
         C{ValueError} if the prefix parameter is malformed.
         """
         _parsePrefixParam = irc.ServerSupportedFeatures._parsePrefixParam
@@ -1052,7 +1052,7 @@ class CTCPTests(unittest.TestCase):
     def test_noNumbersVERSION(self):
         """
         If attributes for version information on L{IRCClient} are set to
-        C{None}, the parts of the CTCP VERSION response they correspond to
+        L{None}, the parts of the CTCP VERSION response they correspond to
         are omitted.
         """
         self.client.versionName = "FrobozzIRC"
@@ -1615,7 +1615,7 @@ class ClientImplementationTests(unittest.TestCase):
 
     def test_heartbeatDisabled(self):
         """
-        If L{irc.IRCClient.heartbeatInterval} is set to C{None} then no
+        If L{irc.IRCClient.heartbeatInterval} is set to L{None} then no
         heartbeat is created.
         """
         self.assertIdentical(self.client._heartbeat, None)
@@ -1671,7 +1671,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
 
     def test_sendMessageNoCommand(self):
         """
-        Passing C{None} as the command to L{IRC.sendMessage} raises a
+        Passing L{None} as the command to L{IRC.sendMessage} raises a
         C{ValueError}.
         """
         error = self.assertRaises(ValueError, self.p.sendMessage, None,
@@ -1681,12 +1681,12 @@ class BasicServerFunctionalityTests(unittest.TestCase):
 
     def test_sendCommandNoCommand(self):
         """
-        Passing C{None} as the command to L{IRC.sendCommand} raises a
+        Passing L{None} as the command to L{IRC.sendCommand} raises a
         C{ValueError}.
         """
         error = self.assertRaises(ValueError, self.p.sendCommand, None,
             (u"param1", u"param2"))
-        self.assertEqual(error.message, "IRC message requires a command.")
+        self.assertEqual(error.args[0], "IRC message requires a command.")
 
 
     def test_sendMessageInvalidCommand(self):
@@ -1708,7 +1708,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         """
         error = self.assertRaises(ValueError, self.p.sendCommand, u" ",
             (u"param1", u"param2"))
-        self.assertEqual(error.message, 'Invalid command: " "')
+        self.assertEqual(error.args[0], 'Invalid command: " "')
 
 
     def test_sendCommandWithPrefix(self):
@@ -1763,7 +1763,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         }
         error = self.assertRaises(ValueError, self.p.sendCommand, u"CMD",
             (u"param1", u"param2"), u"irc.example.com", sendTags)
-        self.assertEqual(error.message, "A tag name is required.")
+        self.assertEqual(error.args[0], "A tag name is required.")
 
 
     def test_sendCommandValidateNoneTags(self):
@@ -1778,7 +1778,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         }
         error = self.assertRaises(ValueError, self.p.sendCommand, u"CMD",
             (u"param1", u"param2"), u"irc.example.com", sendTags)
-        self.assertEqual(error.message, "A tag name is required.")
+        self.assertEqual(error.args[0], "A tag name is required.")
 
 
     def test_sendCommandValidateTagsWithSpaces(self):
@@ -1791,7 +1791,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         }
         error = self.assertRaises(ValueError, self.p.sendCommand, u"CMD",
             (u"param1", u"param2"), u"irc.example.com", sendTags)
-        self.assertEqual(error.message, "Tag contains invalid characters.")
+        self.assertEqual(error.args[0], "Tag contains invalid characters.")
 
 
     def test_sendCommandValidateTagsWithInvalidChars(self):
@@ -1804,7 +1804,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         }
         error = self.assertRaises(ValueError, self.p.sendCommand, u"CMD",
             (u"param1", u"param2"), u"irc.example.com", sendTags)
-        self.assertEqual(error.message, "Tag contains invalid characters.")
+        self.assertEqual(error.args[0], "Tag contains invalid characters.")
 
 
     def test_sendCommandValidateTagValueEscaping(self):
@@ -2161,7 +2161,7 @@ class ClientMsgTests(unittest.TestCase):
         then sends the message to the server for delivery to that channel.
         """
         self.client.say("thechannel", "the message")
-        self.assertEquals(
+        self.assertEqual(
             self.client.lines, ["PRIVMSG #thechannel :the message"])
 
 
@@ -2262,7 +2262,7 @@ class ClientTests(TestCase):
 
     def test_registerWithPassword(self):
         """
-        If the C{password} attribute of L{IRCClient} is not C{None}, the
+        If the C{password} attribute of L{IRCClient} is not L{None}, the
         C{register} method also sends a PASS command with it as the
         argument.
         """
@@ -2295,7 +2295,7 @@ class ClientTests(TestCase):
         self.protocol.register(username, hostname, servername)
         self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])
         lastLine = self.getLastLine(self.transport)
-        self.assertNotEquals(lastLine, 'NICK %s' % (username,))
+        self.assertNotEqual(lastLine, 'NICK %s' % (username,))
 
         # Keep chaining underscores for each collision
         self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])
@@ -2916,4 +2916,3 @@ class DccFileReceiveTests(unittest.TestCase):
         fp = FilePath(self.mktemp()).child(u'child-with-no-existing-parent')
 
         self.assertRaises(IOError, self.makeConnectedDccFileReceive, fp.path)
-

@@ -10,6 +10,7 @@ import zipfile
 from hashlib import md5
 
 from twisted.python import zipstream, filepath
+from twisted.python.compat import xrange
 from twisted.trial import unittest
 
 
@@ -33,7 +34,7 @@ class FileEntryMixin:
         """
         zip files should not be ttys, so isatty() should be false
         """
-        self.assertEqual(self.getFileEntry('').isatty(), False)
+        self.assertFalse(self.getFileEntry('').isatty())
 
 
     def test_closed(self):
@@ -42,9 +43,9 @@ class FileEntryMixin:
         called.
         """
         fileEntry = self.getFileEntry('')
-        self.assertEqual(fileEntry.closed, False)
+        self.assertFalse(fileEntry.closed)
         fileEntry.close()
-        self.assertEqual(fileEntry.closed, True)
+        self.assertTrue(fileEntry.closed)
 
 
     def test_readline(self):
@@ -81,8 +82,8 @@ class FileEntryMixin:
         C{__iter__()} and C{xreadlines()} should return C{self}.
         """
         fileEntry = self.getFileEntry('')
-        self.assertIdentical(iter(fileEntry), fileEntry)
-        self.assertIdentical(fileEntry.xreadlines(), fileEntry)
+        self.assertIs(iter(fileEntry), fileEntry)
+        self.assertIs(fileEntry.xreadlines(), fileEntry)
 
 
     def test_readWhole(self):
@@ -319,13 +320,13 @@ class ZipstreamTests(unittest.TestCase):
         # this could theoretically be any number but statistically it
         # should always be in this range
         approx = lower < r < upper
-        self.failUnless(approx)
+        self.assertTrue(approx)
         for r in uziter:
             pass
         self.assertEqual(r, 0)
-        newmd5 = md5(
-            tempdir.child("zipstreamjunk").open().read()).hexdigest()
-        self.assertEqual(newmd5, junkmd5)
+        with tempdir.child("zipstreamjunk").open() as f:
+            newmd5 = md5(f.read()).hexdigest()
+            self.assertEqual(newmd5, junkmd5)
 
     def test_unzipIterChunkyStored(self):
         """

@@ -289,9 +289,9 @@ class _UserAuth(SSHUserAuthClient):
         delegating to an authentication agent if there is one.
 
         @return: The public part of a key pair that could be used to
-            authenticate with the server, or C{None} if there are no more public
+            authenticate with the server, or L{None} if there are no more public
             keys to try.
-        @rtype: L{twisted.conch.ssh.keys.Key} or L{types.NoneType}
+        @rtype: L{twisted.conch.ssh.keys.Key} or L{None}
         """
         if self.agent is not None:
             return self.agent.getPublicKey()
@@ -309,7 +309,7 @@ class _UserAuth(SSHUserAuthClient):
         data, if one is available.
 
         @type publicKey: L{Key}
-        @type signData: C{str}
+        @type signData: L{str}
         """
         if self.agent is not None:
             return self.agent.signData(publicKey.blob(), signData)
@@ -333,7 +333,7 @@ class _UserAuth(SSHUserAuthClient):
         """
         Get the password to use for authentication.
 
-        @return: A L{Deferred} which fires with the password, or C{None} if the
+        @return: A L{Deferred} which fires with the password, or L{None} if the
             password was not specified.
         """
         if self.password is None:
@@ -350,6 +350,37 @@ class _UserAuth(SSHUserAuthClient):
         return SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
 
 
+    def connectToAgent(self, endpoint):
+        """
+        Set up a connection to the authentication agent and trigger its
+        initialization.
+
+        @param endpoint: An endpoint which can be used to connect to the
+            authentication agent.
+        @type endpoint: L{IStreamClientEndpoint} provider
+
+        @return: A L{Deferred} which fires when the agent connection is ready
+            for use.
+        """
+        factory = Factory()
+        factory.protocol = SSHAgentClient
+        d = endpoint.connect(factory)
+        def connected(agent):
+            self.agent = agent
+            return agent.getPublicKeys()
+        d.addCallback(connected)
+        return d
+
+
+    def loseAgentConnection(self):
+        """
+        Disconnect the agent.
+        """
+        if self.agent is None:
+            return
+        self.agent.transport.loseConnection()
+
+
 
 class _CommandTransport(SSHClientTransport):
     """
@@ -358,11 +389,18 @@ class _CommandTransport(SSHClientTransport):
 
     L{_CommandTransport} also knows how to set up a connection to an
     authentication agent if it is told where it can connect to one.
+
+    @ivar _userauth: The L{_UserAuth} instance which is in charge of the
+        overall authentication process or L{None} if the SSH connection has not
+        reach yet the C{user-auth} service.
+    @type _userauth: L{_UserAuth}
     """
     # STARTING -> SECURING -> AUTHENTICATING -> CHANNELLING -> RUNNING
     _state = b'STARTING'
 
     _hostKeyFailure = None
+
+    _userauth = None
 
 
     def __init__(self, creator):
@@ -426,52 +464,30 @@ class _CommandTransport(SSHClientTransport):
 
         command = _ConnectionReady(self.connectionReady)
 
-        userauth = _UserAuth(self.creator.username, command)
-        userauth.password = self.creator.password
+        self._userauth = _UserAuth(self.creator.username, command)
+        self._userauth.password = self.creator.password
         if self.creator.keys:
-            userauth.keys = list(self.creator.keys)
+            self._userauth.keys = list(self.creator.keys)
 
         if self.creator.agentEndpoint is not None:
-            d = self._connectToAgent(userauth, self.creator.agentEndpoint)
+            d = self._userauth.connectToAgent(self.creator.agentEndpoint)
         else:
             d = succeed(None)
 
         def maybeGotAgent(ignored):
-            self.requestService(userauth)
+            self.requestService(self._userauth)
         d.addBoth(maybeGotAgent)
-
-
-    def _connectToAgent(self, userauth, endpoint):
-        """
-        Set up a connection to the authentication agent and trigger its
-        initialization.
-
-        @param userauth: The L{_UserAuth} instance which is in charge of the
-            overall authentication process.
-        @type userauth: L{_UserAuth}
-
-        @param endpoint: An endpoint which can be used to connect to the
-            authentication agent.
-        @type endpoint: L{IStreamClientEndpoint} provider
-
-        @return: A L{Deferred} which fires when the agent connection is ready
-            for use.
-        """
-        factory = Factory()
-        factory.protocol = SSHAgentClient
-        d = endpoint.connect(factory)
-        def connected(agent):
-            userauth.agent = agent
-            return agent.getPublicKeys()
-        d.addCallback(connected)
-        return d
 
 
     def connectionLost(self, reason):
         """
         When the underlying connection to the SSH server is lost, if there were
-        any connection setup errors, propagate them.
+        any connection setup errors, propagate them. Also, clean up the
+        connection to the ssh agent if one was created.
         """
+        if self._userauth:
+            self._userauth.loseAgentConnection()
+
         if self._state == b'RUNNING' or self.connectionReady is None:
             return
         if self._state == b'SECURING' and self._hostKeyFailure is not None:
@@ -548,13 +564,13 @@ class SSHCommandClientEndpoint(object):
         @type port: L{int}
 
         @param keys: Private keys with which to authenticate to the SSH server,
-            if key authentication is to be attempted (otherwise C{None}).
+            if key authentication is to be attempted (otherwise L{None}).
         @type keys: L{list} of L{Key}
 
         @param password: The password with which to authenticate to the SSH
             server, if password authentication is to be attempted (otherwise
-            C{None}).
-        @type password: L{bytes} or L{types.NoneType}
+            L{None}).
+        @type password: L{bytes} or L{None}
 
         @param agentEndpoint: An L{IStreamClientEndpoint} provider which may be
             used to connect to an SSH agent, if one is to be used to help with
@@ -566,10 +582,10 @@ class SSHCommandClientEndpoint(object):
         @type knownHosts: L{KnownHostsFile}
 
         @param ui: An object for interacting with users to make decisions about
-            whether to accept the server host keys.  If C{None}, a L{ConsoleUI}
+            whether to accept the server host keys.  If L{None}, a L{ConsoleUI}
             connected to /dev/tty will be used; if /dev/tty is unavailable, an
             object which answers C{b"no"} to all prompts will be used.
-        @type ui: L{NoneType} or L{ConsoleUI}
+        @type ui: L{None} or L{ConsoleUI}
 
         @return: A new instance of C{cls} (probably
             L{SSHCommandClientEndpoint}).
@@ -706,7 +722,7 @@ class _NewConnectionHelper(object):
                  password, agentEndpoint, knownHosts, ui,
                  tty=FilePath(b"/dev/tty")):
         """
-        @param tty: The path of the tty device to use in case C{ui} is C{None}.
+        @param tty: The path of the tty device to use in case C{ui} is L{None}.
         @type tty: L{FilePath}
 
         @see: L{SSHCommandClientEndpoint.newConnection}

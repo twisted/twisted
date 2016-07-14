@@ -4,13 +4,15 @@ Demonstrate sending mail via SMTP while employing TLS and performing
 authentication.
 """
 
+from __future__ import print_function
+
 import sys
 
 from OpenSSL.SSL import SSLv3_METHOD
 
 from twisted.mail.smtp import ESMTPSenderFactory
 from twisted.python.usage import Options, UsageError
-from twisted.internet.ssl import ClientContextFactory
+from twisted.internet.ssl import optionsForClientTLS
 from twisted.internet.defer import Deferred
 from twisted.internet import reactor
 
@@ -34,10 +36,8 @@ def sendmail(
     sent or which will errback if it cannot be sent.
     """
 
-    # Create a context factory which only allows SSLv3 and does not verify
-    # the peer's certificate.
-    contextFactory = ClientContextFactory()
-    contextFactory.method = SSLv3_METHOD
+    # Create a TLS context factory.
+    contextFactory = optionsForClientTLS(smtpHost.decode('utf8'))
 
     resultDeferred = Deferred()
 
@@ -101,8 +101,8 @@ class SendmailOptions(Options):
             raise UsageError(
                 "Must specify a message file to send with --message")
         try:
-            self['message'] = file(self['message'])
-        except Exception, e:
+            self['message'] = open(self['message'])
+        except Exception as e:
             raise UsageError(e)
 
 
@@ -113,7 +113,7 @@ def cbSentMessage(result):
 
     Report success to the user and then stop the reactor.
     """
-    print "Message sent"
+    print("Message sent")
     reactor.stop()
 
 
@@ -136,7 +136,7 @@ def main(args=None):
     o = SendmailOptions()
     try:
         o.parseOptions(args)
-    except UsageError, e:
+    except UsageError as e:
         raise SystemExit(e)
     else:
         from twisted.python import log

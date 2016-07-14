@@ -11,16 +11,16 @@ from twisted.trial import unittest
 from twisted.test import iosim
 
 try:
-    import Crypto.Cipher.DES3
+    import cryptography
 except ImportError:
-    Crypto = None
+    cryptography = None
 
 try:
     import pyasn1
 except ImportError:
     pyasn1 = None
 
-if Crypto and pyasn1:
+if cryptography and pyasn1:
     from twisted.conch.ssh import keys, agent
 else:
     keys = agent = None
@@ -46,7 +46,7 @@ class AgentTestBase(unittest.TestCase):
     if iosim is None:
         skip = "iosim requires SSL, but SSL is not available"
     elif agent is None or keys is None:
-        skip = "Cannot run without PyCrypto or PyASN1"
+        skip = "Cannot run without cryptography or PyASN1"
 
     def setUp(self):
         # wire up our client <-> server
@@ -286,11 +286,11 @@ class AgentIdentityRequestsTests(AgentTestBase):
         """
         d = self.client.signData(self.rsaPublic.blob(), "John Hancock")
         self.pump.flush()
-        def _check(sig):
-            expected = self.rsaPrivate.sign("John Hancock")
-            self.assertEqual(expected, sig)
-            self.assertTrue(self.rsaPublic.verify(sig, "John Hancock"))
-        return d.addCallback(_check)
+        signature = self.successResultOf(d)
+
+        expected = self.rsaPrivate.sign("John Hancock")
+        self.assertEqual(expected, signature)
+        self.assertTrue(self.rsaPublic.verify(signature, "John Hancock"))
 
 
     def test_signDataDSA(self):

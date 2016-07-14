@@ -6,6 +6,8 @@
 Implementation module for the `ckeygen` command.
 """
 
+from __future__ import print_function
+
 import sys, os, getpass, socket
 if getpass.getpass == getpass.unix_getpass:
     try:
@@ -16,7 +18,7 @@ if getpass.getpass == getpass.unix_getpass:
         reload(getpass)
 
 from twisted.conch.ssh import keys
-from twisted.python import failure, filepath, log, usage, randbytes
+from twisted.python import failure, filepath, log, usage
 
 
 
@@ -48,8 +50,8 @@ def run():
     options = GeneralOptions()
     try:
         options.parseOptions(sys.argv[1:])
-    except usage.UsageError, u:
-        print 'ERROR: %s' % u
+    except usage.UsageError as u:
+        print('ERROR: %s' % u)
         options.opt_help()
         sys.exit(1)
     log.discardLogs()
@@ -82,17 +84,30 @@ def handleError():
 
 
 def generateRSAkey(options):
-    from Crypto.PublicKey import RSA
-    print 'Generating public/private rsa key pair.'
-    key = RSA.generate(int(options['bits']), randbytes.secureRandom)
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    print('Generating public/private rsa key pair.')
+    keyPrimitive = rsa.generate_private_key(
+        key_size=int(options['bits']),
+        public_exponent=65537,
+        backend=default_backend(),
+        )
+    key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 
 
 
 def generateDSAkey(options):
-    from Crypto.PublicKey import DSA
-    print 'Generating public/private dsa key pair.'
-    key = DSA.generate(int(options['bits']), randbytes.secureRandom)
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.asymmetric import dsa
+
+    print('Generating public/private dsa key pair.')
+    keyPrimitive = dsa.generate_private_key(
+        key_size=int(options['bits']),
+        backed=default_backend(),
+        )
+    key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 
 
@@ -105,11 +120,10 @@ def printFingerprint(options):
         options['filename'] += '.pub'
     try:
         key = keys.Key.fromFile(options['filename'])
-        obj = key.keyObject
-        print '%s %s %s' % (
-            obj.size() + 1,
+        print('%s %s %s' % (
+            key.size(),
             key.fingerprint(),
-            os.path.basename(options['filename']))
+            os.path.basename(options['filename'])))
     except:
         sys.exit('bad key')
 
@@ -121,14 +135,14 @@ def changePassPhrase(options):
         options['filename'] = raw_input(
             'Enter file in which the key is (%s): ' % filename)
     try:
-        key = keys.Key.fromFile(options['filename']).keyObject
+        key = keys.Key.fromFile(options['filename'])
     except keys.EncryptedKeyError as e:
         # Raised if password not supplied for an encrypted key
         if not options.get('pass'):
             options['pass'] = getpass.getpass('Enter old passphrase: ')
         try:
             key = keys.Key.fromFile(
-                options['filename'], passphrase=options['pass']).keyObject
+                options['filename'], passphrase=options['pass'])
         except keys.BadKeyError:
             sys.exit('Could not change passphrase: old passphrase error')
         except keys.EncryptedKeyError as e:
@@ -143,12 +157,11 @@ def changePassPhrase(options):
             p2 = getpass.getpass('Enter same passphrase again: ')
             if p1 == p2:
                 break
-            print 'Passphrases do not match.  Try again.'
+            print('Passphrases do not match.  Try again.')
         options['newpass'] = p1
 
     try:
-        newkeydata = keys.Key(key).toString('openssh',
-                                            extra=options['newpass'])
+        newkeydata = key.toString('openssh', extra=options['newpass'])
     except Exception as e:
         sys.exit('Could not change passphrase: %s' % (e,))
 
@@ -157,11 +170,10 @@ def changePassPhrase(options):
     except (keys.EncryptedKeyError, keys.BadKeyError) as e:
         sys.exit('Could not change passphrase: %s' % (e,))
 
-    fd = open(options['filename'], 'w')
-    fd.write(newkeydata)
-    fd.close()
+    with open(options['filename'], 'w') as fd:
+        fd.write(newkeydata)
 
-    print 'Your identification has been saved with the new passphrase.'
+    print('Your identification has been saved with the new passphrase.')
 
 
 
@@ -170,27 +182,40 @@ def displayPublicKey(options):
         filename = os.path.expanduser('~/.ssh/id_rsa')
         options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
     try:
-        key = keys.Key.fromFile(options['filename']).keyObject
+        key = keys.Key.fromFile(options['filename'])
     except keys.EncryptedKeyError:
         if not options.get('pass'):
             options['pass'] = getpass.getpass('Enter passphrase: ')
         key = keys.Key.fromFile(
-            options['filename'], passphrase = options['pass']).keyObject
-    print keys.Key(key).public().toString('openssh')
+            options['filename'], passphrase = options['pass'])
+    print(key.public().toString('openssh'))
 
 
 
 def _saveKey(key, options):
+    """
+    Persist a SSH key on local filesystem.
+
+    @param key: Key which is persisted on local filesystem.
+    @type key: C{keys.Key} implementation.
+
+    @param options:
+    @type options: L{dict}
+    """
+    keyTypeName = key.type().lower()
     if not options['filename']:
-        kind = keys.objectType(key)
-        kind = {'ssh-rsa':'rsa','ssh-dss':'dsa'}[kind]
-        filename = os.path.expanduser('~/.ssh/id_%s'%kind)
-        options['filename'] = raw_input('Enter file in which to save the key (%s): '%filename).strip() or filename
+        defaultPath = os.path.expanduser(u'~/.ssh/id_%s' % (keyTypeName,))
+        newPath = raw_input(
+            'Enter file in which to save the key (%s): ' % (defaultPath,))
+
+        options['filename'] = newPath.strip() or defaultPath
+
     if os.path.exists(options['filename']):
-        print '%s already exists.' % options['filename']
+        print('%s already exists.' % (options['filename'],))
         yn = raw_input('Overwrite (y/n)? ')
         if yn[0].lower() != 'y':
             sys.exit()
+
     if options.get('no-passphrase'):
         options['pass'] = b''
     elif not options['pass']:
@@ -199,23 +224,22 @@ def _saveKey(key, options):
             p2 = getpass.getpass('Enter same passphrase again: ')
             if p1 == p2:
                 break
-            print 'Passphrases do not match.  Try again.'
+            print('Passphrases do not match.  Try again.')
         options['pass'] = p1
 
-    keyObj = keys.Key(key)
     comment = '%s@%s' % (getpass.getuser(), socket.gethostname())
 
     filepath.FilePath(options['filename']).setContent(
-        keyObj.toString('openssh', options['pass']))
+        key.toString('openssh', options['pass']))
     os.chmod(options['filename'], 33152)
 
     filepath.FilePath(options['filename'] + '.pub').setContent(
-        keyObj.public().toString('openssh', comment))
+        key.public().toString('openssh', comment))
 
-    print 'Your identification has been saved in %s' % options['filename']
-    print 'Your public key has been saved in %s.pub' % options['filename']
-    print 'The key fingerprint is:'
-    print keyObj.fingerprint()
+    print('Your identification has been saved in %s' % (options['filename'],))
+    print('Your public key has been saved in %s.pub' % (options['filename'],))
+    print('The key fingerprint is:')
+    print(key.fingerprint())
 
 
 

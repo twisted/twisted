@@ -97,11 +97,11 @@ def initializeMaildir(dir):
     @param dir: The path name for a user directory.
     """
     if not os.path.isdir(dir):
-        os.mkdir(dir, 0700)
+        os.mkdir(dir, 0o700)
         for subdir in ['new', 'cur', 'tmp', '.Trash']:
-            os.mkdir(os.path.join(dir, subdir), 0700)
+            os.mkdir(os.path.join(dir, subdir), 0o700)
         for subdir in ['new', 'cur', 'tmp']:
-            os.mkdir(os.path.join(dir, '.Trash', subdir), 0700)
+            os.mkdir(os.path.join(dir, '.Trash', subdir), 0o700)
         # touch
         open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w').close()
 
@@ -169,7 +169,7 @@ class AbstractMaildirDomain:
     """
     An abstract maildir-backed domain.
 
-    @type alias: L{NoneType <types.NoneType>} or L{dict} mapping
+    @type alias: L{None} or L{dict} mapping
         L{bytes} to L{AliasBase}
     @ivar alias: A mapping of username to alias.
 
@@ -196,9 +196,9 @@ class AbstractMaildirDomain:
         @type user: L{bytes}
         @param user: A username.
 
-        @rtype: L{bytes} or L{NoneType <types.NoneType>}
+        @rtype: L{bytes} or L{None}
         @return: The user's mail directory for a valid user. Otherwise,
-            C{None}.
+            L{None}.
         """
         return None
 
@@ -220,7 +220,7 @@ class AbstractMaildirDomain:
         @type user: L{User}
         @param user: A user.
 
-        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @type memo: L{None} or L{dict} of L{AliasBase}
         @param memo: A record of the addresses already considered while
             resolving aliases. The default value should be used by all
             external code.
@@ -324,11 +324,11 @@ class _MaildirMailboxAppendMessageTask:
     @ivar mbox: See L{__init__}.
 
     @type defer: L{Deferred <defer.Deferred>} which successfully returns
-        L{NoneType <types.NoneType>}
+        L{None}
     @ivar defer: A deferred which fires when the task has completed.
 
     @type opencall: L{IDelayedCall <interfaces.IDelayedCall>} provider or
-        L{NoneType <types.NoneType>}
+        L{None}
     @ivar opencall: A scheduled call to L{prodProducer}.
 
     @type msg: file-like object
@@ -459,7 +459,8 @@ class _MaildirMailboxAppendMessageTask:
             try:
                 self.osrename(self.tmpname, newname)
                 break
-            except OSError, (err, estr):
+            except OSError as e:
+                (err, estr) = e.args
                 import errno
                 # if the newname exists, retry with a new newname.
                 if err != errno.EEXIST:
@@ -484,7 +485,7 @@ class _MaildirMailboxAppendMessageTask:
         while True:
             self.tmpname = os.path.join(self.mbox.path, "tmp", _generateMaildirName())
             try:
-                self.fh = self.osopen(self.tmpname, attr, 0600)
+                self.fh = self.osopen(self.tmpname, attr, 0o600)
                 return None
             except OSError:
                 tries += 1
@@ -537,7 +538,7 @@ class MaildirMailbox(pop3.Mailbox):
         Retrieve the size of a message, or, if none is specified, the size of
         each message in the mailbox.
 
-        @type i: L{int} or L{NoneType <types.NoneType>}
+        @type i: L{int} or L{None}
         @param i: The 0-based index of a message.
 
         @rtype: L{int} or L{list} of L{int}
@@ -626,7 +627,8 @@ class MaildirMailbox(pop3.Mailbox):
         for (real, trash) in self.deleted.items():
             try:
                 os.rename(trash, real)
-            except OSError, (err, estr):
+            except OSError as e:
+                (err, estr) = e.args
                 import errno
                 # If the file has been deleted from disk, oh well!
                 if err != errno.ENOENT:
@@ -682,7 +684,7 @@ class StringListMailbox:
         Retrieve the size of a message, or, if none is specified, the size of
         each message in the mailbox.
 
-        @type i: L{int} or L{NoneType <types.NoneType>}
+        @type i: L{int} or L{None}
         @param i: The 0-based index of a message.
 
         @rtype: L{int} or L{list} of L{int}
@@ -811,10 +813,10 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         @type name: L{bytes}
         @param name: A username.
 
-        @rtype: L{bytes} or L{NoneType <types.NoneType>}
+        @rtype: L{bytes} or L{None}
         @return: The path to the user's mail directory for a valid user. For
             an invalid user, the path to the postmaster's mailbox if bounces
-            are redirected there. Otherwise, C{None}.
+            are redirected there. Otherwise, L{None}.
         """
         if name not in self.dbm:
             if not self.postmaster:
@@ -868,7 +870,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         @param avatarId: A string which identifies a user or an object which
             signals a request for anonymous access.
 
-        @type mind: L{NoneType <types.NoneType>}
+        @type mind: L{None}
         @param mind: Unused.
 
         @type interfaces: n-L{tuple} of C{zope.interface.Interface}

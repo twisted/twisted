@@ -103,8 +103,8 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         server = TestProtocol()
         client = TestProtocol()
         loopback.loopbackAsync(server, client)
-        self.failIfEqual(client.transport, None)
-        self.failIfEqual(server.transport, None)
+        self.assertIsNotNone(client.transport)
+        self.assertIsNotNone(server.transport)
 
 
     def _hostpeertest(self, get, testServer):
@@ -129,7 +129,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
 
         def connected(transport):
             host = getattr(transport, get)()
-            self.failUnless(IAddress.providedBy(host))
+            self.assertTrue(IAddress.providedBy(host))
 
         return d.addCallback(connected)
 

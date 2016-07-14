@@ -187,11 +187,8 @@ def execfile(filename, globals, locals=None):
     """
     if locals is None:
         locals = globals
-    fin = open(filename, "rbU")
-    try:
+    with open(filename, "rbU") as fin:
         source = fin.read()
-    finally:
-        fin.close()
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
 
@@ -375,6 +372,38 @@ def nativeString(s):
 
 
 
+def _matchingString(constantString, inputString):
+    """
+    Some functions, such as C{os.path.join}, operate on string arguments which
+    may be bytes or text, and wish to return a value of the same type.  In
+    those cases you may wish to have a string constant (in the case of
+    C{os.path.join}, that constant would be C{os.path.sep}) involved in the
+    parsing or processing, that must be of a matching type in order to use
+    string operations on it.  L{_matchingString} will take a constant string
+    (either L{bytes} or L{unicode}) and convert it to the same type as the
+    input string.  C{constantString} should contain only characters from ASCII;
+    to ensure this, it will be encoded or decoded regardless.
+
+    @param constantString: A string literal used in processing.
+    @type constantString: L{unicode} or L{bytes}
+
+    @param inputString: A byte string or text string provided by the user.
+    @type inputString: L{unicode} or L{bytes}
+
+    @return: C{constantString} converted into the same type as C{inputString}
+    @rtype: the type of C{inputString}
+    """
+    if isinstance(constantString, bytes):
+        otherType = constantString.decode("ascii")
+    else:
+        otherType = constantString.encode("ascii")
+    if type(constantString) == type(inputString):
+        return constantString
+    else:
+        return otherType
+
+
+
 if _PY3:
     def reraise(exception, traceback):
         raise exception.with_traceback(traceback)
@@ -390,7 +419,7 @@ Note that on Python 3, re-raised exceptions will be mutated, with their
 C{__traceback__} attribute being set.
 
 @param exception: The exception instance.
-@param traceback: The traceback to use, or C{None} indicating a new traceback.
+@param traceback: The traceback to use, or L{None} indicating a new traceback.
 """
 
 
@@ -580,6 +609,18 @@ Return a list of the items of C{d}.
 @rtype: L{list}
 """
 
+def _keys(d):
+    """
+    Return a list of the keys of C{d}.
+
+    @type d: L{dict}
+    @rtype: L{list}
+    """
+    if _PY3:
+        return list(d.keys())
+    else:
+        return d.keys()
+
 
 
 def bytesEnviron():
@@ -633,6 +674,69 @@ deprecatedModuleAttribute(
     "twisted.python.compat",
     "OrderedDict")
 
+if _PY3:
+    from base64 import encodebytes as _b64encodebytes
+    from base64 import decodebytes as _b64decodebytes
+else:
+    from base64 import encodestring as _b64encodebytes
+    from base64 import decodestring as _b64decodebytes
+
+
+
+def _bytesChr(i):
+    """
+    Like L{chr} but always works on ASCII, returning L{bytes}.
+
+    @param i: The ASCII code point to return.
+    @type i: L{int}
+
+    @rtype: L{bytes}
+    """
+    if _PY3:
+        return bytes([i])
+    else:
+        return chr(i)
+
+
+
+try:
+    from sys import intern
+except ImportError:
+    intern = intern
+
+
+
+def _coercedUnicode(s):
+    """
+    Coerce ASCII-only byte strings into unicode for Python 2.
+
+    In Python 2 C{unicode(b'bytes')} returns a unicode string C{'bytes'}. In
+    Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
+    instead. This function mimics the behavior for Python 2. It will decode the
+    byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
+    passing a byte string. Unicode strings are return as-is.
+
+    @param s: The string to coerce.
+    @type s: L{bytes} or L{unicode}
+
+    @raise UnicodeError: The input L{bytes} is not ASCII decodable.
+    @raise TypeError: The input is L{bytes} on Python 3.
+    """
+    if isinstance(s, bytes):
+        if _PY3:
+            raise TypeError("Expected str not %r (bytes)" % (s,))
+        else:
+            return s.decode('ascii')
+    else:
+        return s
+
+
+
+if _PY3:
+    unichr = chr
+else:
+    unichr = unichr
+
 
 
 __all__ = [
@@ -664,4 +768,11 @@ __all__ = [
     "urlquote",
     "urlunquote",
     "cookielib",
+    "_keys",
+    "_b64encodebytes",
+    "_b64decodebytes",
+    "_bytesChr",
+    "_coercedUnicode",
+    "intern",
+    "unichr",
 ]

@@ -90,15 +90,15 @@ class MyProtocolFactoryMixin(object):
         typical C{protocol} attribute of factories (but that name is used by
         this class for something else).
 
-    @type protocolConnectionMade: L{NoneType} or L{defer.Deferred}
+    @type protocolConnectionMade: L{None} or L{defer.Deferred}
     @ivar protocolConnectionMade: When an instance of L{AccumulatingProtocol}
-        is connected, if this is not C{None}, the L{Deferred} will be called
-        back with the protocol instance and the attribute set to C{None}.
+        is connected, if this is not L{None}, the L{Deferred} will be called
+        back with the protocol instance and the attribute set to L{None}.
 
-    @type protocolConnectionLost: L{NoneType} or L{defer.Deferred}
+    @type protocolConnectionLost: L{None} or L{defer.Deferred}
     @ivar protocolConnectionLost: When an instance of L{AccumulatingProtocol}
         is created, this will be set as its C{closedDeferred} attribute and
-        then this attribute will be set to C{None} so the L{defer.Deferred} is
+        then this attribute will be set to L{None} so the L{defer.Deferred} is
         not used by more than one protocol.
 
     @ivar protocol: The most recently created L{AccumulatingProtocol} instance
@@ -180,7 +180,7 @@ class ListeningTests(unittest.TestCase):
         f = MyServerFactory()
         p1 = reactor.listenTCP(0, f, interface="127.0.0.1")
         self.addCleanup(p1.stopListening)
-        self.failUnless(interfaces.IListeningPort.providedBy(p1))
+        self.assertTrue(interfaces.IListeningPort.providedBy(p1))
 
 
     def testStopListening(self):
@@ -214,9 +214,9 @@ class ListeningTests(unittest.TestCase):
         f = MyServerFactory()
         p = reactor.listenTCP(0, f)
         portNo = str(p.getHost().port)
-        self.failIf(repr(p).find(portNo) == -1)
+        self.assertFalse(repr(p).find(portNo) == -1)
         def stoppedListening(ign):
-            self.failIf(repr(p).find(portNo) != -1)
+            self.assertFalse(repr(p).find(portNo) != -1)
         d = defer.maybeDeferred(p.stopListening)
         return d.addCallback(stoppedListening)
 
@@ -899,13 +899,13 @@ class WriteDataTests(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", n, wrappedClientF)
 
         def check(ignored):
-            self.failUnless(f.done, "writer didn't finish, it probably died")
-            self.failUnless(f.problem == 0, "writer indicated an error")
-            self.failUnless(clientF.done,
+            self.assertTrue(f.done, "writer didn't finish, it probably died")
+            self.assertTrue(f.problem == 0, "writer indicated an error")
+            self.assertTrue(clientF.done,
                             "client didn't see connection dropped")
             expected = b"".join([b"Hello Cleveland!\n",
                                 b"Goodbye", b" cruel", b" world", b"\n"])
-            self.failUnless(clientF.data == expected,
+            self.assertTrue(clientF.data == expected,
                             "client didn't receive all the data it expected")
         d = defer.gatherResults([wrappedF.onDisconnect,
                                  wrappedClientF.onDisconnect])
@@ -922,15 +922,8 @@ class WriteDataTests(unittest.TestCase):
         # This is an unpleasant thing.  Generally tests shouldn't skip or
         # run based on the name of the reactor being used (most tests
         # shouldn't care _at all_ what reactor is being used, in fact).  The
-        # Gtk reactor cannot pass this test, though, because it fails to
-        # implement IReactorTCP entirely correctly.  Gtk is quite old at
-        # this point, so it's more likely that gtkreactor will be deprecated
-        # and removed rather than fixed to handle this case correctly.
-        # Since this is a pre-existing (and very long-standing) issue with
-        # the Gtk reactor, there's no reason for it to prevent this test
-        # being added to exercise the other reactors, for which the behavior
-        # was also untested but at least works correctly (now).  See #2833
-        # for information on the status of gtkreactor.
+        # IOCP reactor cannot pass this test, though -- please see the skip
+        # reason below for details.
         if reactor.__class__.__name__ == 'IOCPReactor':
             raise unittest.SkipTest(
                 "iocpreactor does not, in fact, stop reading immediately after "
@@ -938,11 +931,6 @@ class WriteDataTests(unittest.TestCase):
                 "notification. Under some circumstances, it might be possible to "
                 "not receive this notifications (specifically, pauseProducing, "
                 "deliver some data, proceed with this test).")
-        if reactor.__class__.__name__ == 'GtkReactor':
-            raise unittest.SkipTest(
-                "gtkreactor does not implement unclean disconnection "
-                "notification correctly.  This might more properly be "
-                "a todo, but due to technical limitations it cannot be.")
 
         # Called back after the protocol for the client side of the connection
         # has paused its transport, preventing it from reading, therefore
@@ -1083,7 +1071,7 @@ class ConnectionLostNotifyingProtocol(protocol.Protocol):
     @ivar onConnectionLost: The L{Deferred} which will be fired in
         C{connectionLost}.
 
-    @ivar lostConnectionReason: C{None} until the connection is lost, then a
+    @ivar lostConnectionReason: L{None} until the connection is lost, then a
         reference to the reason passed to C{connectionLost}.
     """
     def __init__(self, onConnectionLost):
@@ -1430,11 +1418,11 @@ class LargeBufferTests(unittest.TestCase):
 
         d = defer.gatherResults([wrappedF.deferred, wrappedClientF.deferred])
         def check(ignored):
-            self.failUnless(f.done, "writer didn't finish, it probably died")
-            self.failUnless(clientF.len == self.datalen,
+            self.assertTrue(f.done, "writer didn't finish, it probably died")
+            self.assertTrue(clientF.len == self.datalen,
                             "client didn't receive all the data it expected "
                             "(%d != %d)" % (clientF.len, self.datalen))
-            self.failUnless(clientF.done,
+            self.assertTrue(clientF.done,
                             "client didn't see connection dropped")
         return d.addCallback(check)
 
@@ -1528,9 +1516,9 @@ class HalfCloseTests(unittest.TestCase):
             t.loseWriteConnection()
             return loopUntil(lambda :t._writeDisconnected)
         def check(ignored):
-            self.assertEqual(client.closed, False)
-            self.assertEqual(client.writeHalfClosed, True)
-            self.assertEqual(client.readHalfClosed, False)
+            self.assertFalse(client.closed)
+            self.assertTrue(client.writeHalfClosed)
+            self.assertFalse(client.readHalfClosed)
             return loopUntil(lambda :f.protocol.readHalfClosed)
         def write(ignored):
             w = client.transport.write
@@ -1538,8 +1526,8 @@ class HalfCloseTests(unittest.TestCase):
             w(b"lalala fooled you")
             self.assertEqual(0, len(client.transport._tempDataBuffer))
             self.assertEqual(f.protocol.data, b"hello")
-            self.assertEqual(f.protocol.closed, False)
-            self.assertEqual(f.protocol.readHalfClosed, True)
+            self.assertFalse(f.protocol.closed)
+            self.assertTrue(f.protocol.readHalfClosed)
         return d.addCallback(loseWrite).addCallback(check).addCallback(write)
 
     def testWriteCloseNotification(self):
@@ -1591,7 +1579,7 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
                       self.assertEqual(self.f.protocol.data, b'hello'))
-        d.addCallback(lambda x: self.assertEqual(self.f.protocol.closed, True))
+        d.addCallback(lambda x: self.assertTrue(self.f.protocol.closed))
         return defer.gatherResults([d, d2])
 
     def testShutdownException(self):
@@ -1605,7 +1593,7 @@ class HalfCloseNoNotificationAndShutdownExceptionTests(unittest.TestCase):
         self.f.protocol.closedDeferred = d = defer.Deferred()
         self.client.closedDeferred = d2 = defer.Deferred()
         d.addCallback(lambda x:
-                      self.assertEqual(self.f.protocol.closed, True))
+                      self.assertTrue(self.f.protocol.closed))
         return defer.gatherResults([d, d2])
 
 
