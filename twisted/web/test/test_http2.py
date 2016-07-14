@@ -2200,6 +2200,13 @@ class HTTP2TimeoutTests(unittest.TestCase):
         Unfortunately, TimeoutMixin does not allow passing an explicit reactor
         to test timeouts. For that reason, we need to monkeypatch the method
         set up by the TimeoutMixin.
+
+        @param connection: The HTTP/2 connection object to patch.
+        @type connection: L{H2Connection}
+
+        @param reactor: The reactor whose callLater method we want.
+        @type reactor: An object implementing
+            L{twisted.internet.interfaces.IReactorTime}
         """
         connection.callLater = reactor.callLater
 
@@ -2209,6 +2216,13 @@ class HTTP2TimeoutTests(unittest.TestCase):
         Performs test setup by building a HTTP/2 connection object, a transport
         to back it, a reactor to run in, and sending in some initial data as
         needed.
+
+        @param initialData: The initial HTTP/2 data to be fed into the
+            connection after setup.
+        @type initialData: L{bytes}
+
+        @param requestFactory: The L{Request} factory to use with the
+            connection.
         """
         reactor = task.Clock()
         conn = H2Connection(reactor)
@@ -2224,6 +2238,24 @@ class HTTP2TimeoutTests(unittest.TestCase):
             conn.dataReceived(byte)
 
         return (reactor, conn, transport)
+
+
+    def assertTimedOut(self, data, frameCount, errorCode, lastStreamID):
+        """
+        Confirm that the data that was sent matches what we expect from a
+        timeout: namely, that it ends with a GOAWAY frame carrying an
+        appropriate error code and last stream ID.
+        """
+        buffer = FrameBuffer()
+        buffer.receiveData(data)
+        frames = list(buffer)
+
+        self.assertEqual(len(frames), frameCount)
+        self.assertTrue(
+            isinstance(frames[-1], hyperframe.frame.GoAwayFrame)
+        )
+        self.assertEqual(frames[-1].error_code, errorCode)
+        self.assertEqual(frames[-1].last_stream_id, lastStreamID)
 
 
     def test_timeoutAfterInactivity(self):
@@ -2254,16 +2286,12 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # We disconnected after sending a GoAway frame.
         self.assertTrue(transport.disconnecting)
 
-        buffer = FrameBuffer()
-        buffer.receiveData(transport.value())
-        frames = list(buffer)
-
-        self.assertEqual(len(frames), 2)
-        self.assertTrue(
-            isinstance(frames[-1], hyperframe.frame.GoAwayFrame)
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.NO_ERROR,
+            lastStreamID=0
         )
-        self.assertEqual(frames[-1].error_code, h2.errors.NO_ERROR)
-        self.assertEqual(frames[-1].last_stream_id, 0)
 
 
     def test_timeoutResetByData(self):
@@ -2294,16 +2322,12 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # We disconnected after sending a GoAway frame.
         self.assertTrue(transport.disconnecting)
 
-        buffer = FrameBuffer()
-        buffer.receiveData(transport.value())
-        frames = list(buffer)
-
-        self.assertEqual(len(frames), 2)
-        self.assertTrue(
-            isinstance(frames[-1], hyperframe.frame.GoAwayFrame)
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.NO_ERROR,
+            lastStreamID=0
         )
-        self.assertEqual(frames[-1].error_code, h2.errors.NO_ERROR)
-        self.assertEqual(frames[-1].last_stream_id, 0)
 
 
     def test_timeoutWithProtocolErrorIfStreamsOpen(self):
@@ -2326,16 +2350,12 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # We disconnected after sending a GoAway frame.
         self.assertTrue(transport.disconnecting)
 
-        buffer = FrameBuffer()
-        buffer.receiveData(transport.value())
-        frames = list(buffer)
-
-        self.assertEqual(len(frames), 2)
-        self.assertTrue(
-            isinstance(frames[-1], hyperframe.frame.GoAwayFrame)
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.PROTOCOL_ERROR,
+            lastStreamID=1
         )
-        self.assertEqual(frames[-1].error_code, h2.errors.PROTOCOL_ERROR)
-        self.assertEqual(frames[-1].last_stream_id, 1)
 
 
     def test_noTimeoutIfConnectionLost(self):
