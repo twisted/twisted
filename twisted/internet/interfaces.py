@@ -704,7 +704,7 @@ class IReactorSSL(Interface):
 
         @param factory: a L{twisted.internet.protocol.ServerFactory} instance
 
-        @param contextFactory: a L{ITLSContextFactory} instance
+        @param contextFactory: an implementor of L{ITLSContextFactory}
 
         @param backlog: size of the listen queue
 
@@ -2299,7 +2299,7 @@ class ITLSTransport(ITCPTransport):
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must
-            be an old-style L{ITLSContextFactory}.
+            be an implementor of L{ITLSContextFactory}.
         """
 
 
