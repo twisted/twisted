@@ -353,7 +353,7 @@ class ZshArgumentsGenerator(object):
         """
         self.file.write(b'#compdef %s\n\n'
                         b'_arguments -s -A "-*" \\\n'
-                        % (self.cmdName.encode('utf-8'),))
+                        % self.cmdName.encode('utf-8'))
 
 
     def writeOptions(self):
