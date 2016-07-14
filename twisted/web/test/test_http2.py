@@ -2283,15 +2283,13 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # Advance the clock.
         reactor.advance(2)
 
-        # We disconnected after sending a GoAway frame.
-        self.assertTrue(transport.disconnecting)
-
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
             errorCode=h2.errors.NO_ERROR,
             lastStreamID=0
         )
+        self.assertTrue(transport.disconnecting)
 
 
     def test_timeoutResetByData(self):
@@ -2319,15 +2317,13 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # Advance the clock.
         reactor.advance(2)
 
-        # We disconnected after sending a GoAway frame.
-        self.assertTrue(transport.disconnecting)
-
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
             errorCode=h2.errors.NO_ERROR,
             lastStreamID=0
         )
+        self.assertTrue(transport.disconnecting)
 
 
     def test_timeoutWithProtocolErrorIfStreamsOpen(self):
@@ -2347,15 +2343,13 @@ class HTTP2TimeoutTests(unittest.TestCase):
         # Advance the clock to time out the request.
         reactor.advance(101)
 
-        # We disconnected after sending a GoAway frame.
-        self.assertTrue(transport.disconnecting)
-
         self.assertTimedOut(
             transport.value(),
             frameCount=2,
             errorCode=h2.errors.PROTOCOL_ERROR,
             lastStreamID=1
         )
+        self.assertTrue(transport.disconnecting)
 
 
     def test_noTimeoutIfConnectionLost(self):
