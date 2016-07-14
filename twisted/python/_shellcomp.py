@@ -351,9 +351,9 @@ class ZshArgumentsGenerator(object):
         This is the start of the code that calls _arguments
         @return: L{None}
         """
-        self.file.write(b'#compdef %s\n\n'
-                        b'_arguments -s -A "-*" \\\n'
-                        % self.cmdName.encode('utf-8'))
+        self.file.write(b'#compdef ' + self.cmdName.encode('utf-8') +
+                        b'\n\n'
+                        b'_arguments -s -A "-*" \\\n')
 
 
     def writeOptions(self):
