@@ -49,16 +49,16 @@ put this code in it:
 
 .. code-block:: python
 
-    
+
     import time
-    
+
     from twisted.web.resource import Resource
-    
+
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
             return "<html><body>%s</body></html>" % (time.ctime(),)
-    
+
     resource = ClockPage()
 
 
@@ -67,7 +67,7 @@ put this code in it:
 You may recognize this as the resource from
 the :doc:`first dynamic rendering example <dynamic-content>` . What's different is what you don't see: we didn't
 import ``reactor`` or ``Site`` . There are no calls
-to ``listenTCP`` or ``run`` . Instead, and this is
+to ``endpoints.TCP4ServerEndpoint`` or ``run`` . Instead, and this is
 the core idea for rpy scripts, we just bound the
 name ``resource`` to the resource we want the script to
 serve. Every rpy script must bind this name, and this name is the only
@@ -85,14 +85,14 @@ are a few ways to do this. The simplest way is with ``twistd`` :
 
 .. code-block:: console
 
-    
+
     $ twistd -n web --path .
 
 
 
 
-Hit `http://localhost:8080/example.rpy <http://localhost:8080/example.rpy>`_ 
-to see it run. You can pass other arguments here too. ``twistd web`` 
+Hit `http://localhost:8080/example.rpy <http://localhost:8080/example.rpy>`_
+to see it run. You can pass other arguments here too. ``twistd web``
 has options for specifying which port number to bind, whether to set up an HTTPS
 server, and plenty more. Other options you can pass to ``twistd`` allow
 you to configure logging to work differently, to select a different reactor,
