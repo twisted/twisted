@@ -581,9 +581,8 @@ class MemoryReactor(object):
 
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptStreamConnection}
         """
-        self.adoptedStreamConnections.append(
-            (fileDescriptor, addressFamily, factory)
-        )
+        self.adoptedStreamConnections.append((
+                fileDescriptor, addressFamily, factory))
 
 
     def adoptDatagramPort(self, fileno, addressFamily, protocol,
