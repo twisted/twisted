@@ -10,7 +10,8 @@ from sys import stdout
 from twisted.logger import LogLevel, jsonFileLogObserver
 from twisted.test.proto_helpers import MemoryReactor
 from ...service import IService, MultiService
-from ...runner import ExitStatus, Runner, RunnerOptions
+from ...runner._exit import ExitStatus
+from ...runner._runner import Runner, RunnerOptions
 from ...runner.test.test_runner import DummyExit
 from ...twist import _options, _twist
 from .._options import TwistOptions

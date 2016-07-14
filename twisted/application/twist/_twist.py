@@ -10,7 +10,8 @@ import sys
 
 from twisted.python.usage import UsageError
 from ..service import Application, IService
-from ..runner import Runner, RunnerOptions, exit, ExitStatus
+from ..runner._exit import exit, ExitStatus
+from ..runner._runner import Runner, RunnerOptions
 from ._options import TwistOptions
 
 

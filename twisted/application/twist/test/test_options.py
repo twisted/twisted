@@ -13,7 +13,7 @@ from twisted.logger import LogLevel, textFileLogObserver, jsonFileLogObserver
 from twisted.test.proto_helpers import MemoryReactor
 from ...reactors import NoSuchReactor
 from ...service import ServiceMaker
-from ...runner import ExitStatus
+from ...runner._exit import ExitStatus
 from ...runner.test.test_runner import DummyExit
 from ...twist import _options
 from .._options import TwistOptions

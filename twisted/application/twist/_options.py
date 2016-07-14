@@ -18,7 +18,7 @@ from twisted.logger import (
 from twisted.plugin import getPlugins
 
 from ..reactors import installReactor, NoSuchReactor, getReactorTypes
-from ..runner import exit, ExitStatus
+from ..runner._exit import exit, ExitStatus
 from ..service import IServiceMaker
 
 openFile = open
