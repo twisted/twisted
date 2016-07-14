@@ -177,7 +177,7 @@ class ZshBuilder(object):
             self.file.write(b'local _zsh_subcmds_array\n_zsh_subcmds_array=(\n')
             for (cmd, short, parser, desc) in self.options.subCommands:
                 self.file.write(
-                    b'"%s:%s"\n' % (cmd.encode('utf-8'), desc.encode('utf-8')))
+                    b'\"' + cmd.encode('utf-8') + b':' + desc.encode('utf-8') +b'\"\n')
             self.file.write(b")\n\n")
             self.file.write(b'_describe "sub-command" _zsh_subcmds_array\n')
         else:
