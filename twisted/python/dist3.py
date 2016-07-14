@@ -200,6 +200,7 @@ modules = [
     "twisted.python._appdirs",
     "twisted.python._tzhelper",
     "twisted.python._oldstyle",
+    "twisted.python._shellcomp",
     "twisted.python._textattributes",
     "twisted.python._url",
     "twisted.python.compat",
