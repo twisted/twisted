@@ -21,7 +21,7 @@ First, we need to import some objects:
 
     from twisted.internet import reactor
 
-- And the :api:`twisted.internet.endpoints <endpoints>` module, which gives us tools for creating listening sockets::
+- And the :api:`twisted.internet.endpoints <endpoints>` module, which gives us tools for, amongst other things, creating listening sockets::
 
     from twisted.internet import endpoints
 
