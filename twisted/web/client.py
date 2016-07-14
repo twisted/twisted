@@ -38,7 +38,7 @@ from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.abstract import isIPv6Address
-from twisted.internet.interfaces import IProtocol, ITLSContextFactory
+from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
@@ -911,7 +911,7 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
 
 
 
-@implementer(ITLSContextFactory)
+@implementer(IOpenSSLContextFactory)
 class _ContextFactoryWithContext(object):
     """
     A L{_ContextFactoryWithContext} is like a
@@ -977,7 +977,7 @@ class _DeprecatedToCurrentPolicyForHTTPS(object):
         @type port: L{int}
 
         @return: A context factory.
-        @rtype: L{ITLSContextFactory}
+        @rtype: L{IOpenSSLContextFactory}
         """
         context = self._webContextFactory.getContext(hostname, port)
         return _ContextFactoryWithContext(context)

@@ -66,7 +66,7 @@ from twisted.internet import tcp, interfaces
 
 
 
-@implementer(interfaces.ITLSContextFactory)
+@implementer(interfaces.IOpenSSLContextFactory)
 class ContextFactory:
     """A factory for SSL context objects, for server SSL connections."""
 
@@ -136,7 +136,7 @@ class DefaultOpenSSLContextFactory(ContextFactory):
 
 
 
-@implementer(interfaces.ITLSContextFactory)
+@implementer(interfaces.IOpenSSLContextFactory)
 class ClientContextFactory:
     """A context factory for SSL clients."""
 

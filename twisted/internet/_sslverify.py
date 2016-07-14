@@ -210,7 +210,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import (
     IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    ITLSContextFactory
+    IOpenSSLContextFactory
 )
 
 from twisted.python import reflect, util
@@ -1344,7 +1344,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
 
 
 
-@implementer(ITLSContextFactory)
+@implementer(IOpenSSLContextFactory)
 class OpenSSLCertificateOptions(object):
     """
     A L{CertificateOptions <twisted.internet.ssl.CertificateOptions>} specifies

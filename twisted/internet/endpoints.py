@@ -818,7 +818,7 @@ class SSL4ServerEndpoint(object):
         @type port: int
 
         @param sslContextFactory: An instance of
-            L{interfaces.ITLSContextFactory}.
+            L{interfaces.IOpenSSLContextFactory}.
 
         @param backlog: Size of the listen queue
         @type backlog: int
@@ -864,7 +864,7 @@ class SSL4ClientEndpoint(object):
         @type port: int
 
         @param sslContextFactory: SSL Configuration information as an instance
-            of L{interfaces.ITLSContextFactory}.
+            of L{interfaces.IOpenSSLContextFactory}.
 
         @param timeout: Number of seconds to wait before assuming the
             connection has failed.
