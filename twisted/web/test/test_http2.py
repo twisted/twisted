@@ -2195,6 +2195,15 @@ class HTTP2TimeoutTests(unittest.TestCase):
     ]
 
 
+    def patch_TimeoutMixin_clock(self, connection, reactor):
+        """
+        Unfortunately, TimeoutMixin does not allow passing an explicit reactor
+        to test timeouts. For that reason, we need to monkeypatch the method
+        set up by the TimeoutMixin.
+        """
+        connection.callLater = reactor.callLater
+
+
     def test_timeoutAfterInactivity(self):
         """
         When a L{H2Connection} does not receive any data for more than the
@@ -2203,10 +2212,7 @@ class HTTP2TimeoutTests(unittest.TestCase):
         reactor = task.Clock()
         conn = H2Connection(reactor)
         conn.timeOut = 100
-
-        # This monkeypatch is needed because TimeoutMixin doesn't accept being
-        # passed a reactor.
-        conn.callLater = reactor.callLater
+        self.patch_TimeoutMixin_clock(conn, reactor)
 
         frameFactory = FrameFactory()
         transport = StringTransport()
@@ -2254,10 +2260,7 @@ class HTTP2TimeoutTests(unittest.TestCase):
         reactor = task.Clock()
         conn = H2Connection(reactor)
         conn.timeOut = 100
-
-        # This monkeypatch is needed because TimeoutMixin doesn't accept being
-        # passed a reactor.
-        conn.callLater = reactor.callLater
+        self.patch_TimeoutMixin_clock(conn, reactor)
 
         frameFactory = FrameFactory()
         transport = StringTransport()
@@ -2300,10 +2303,7 @@ class HTTP2TimeoutTests(unittest.TestCase):
         reactor = task.Clock()
         conn = H2Connection(reactor)
         conn.timeOut = 100
-
-        # This monkeypatch is needed because TimeoutMixin doesn't accept being
-        # passed a reactor.
-        conn.callLater = reactor.callLater
+        self.patch_TimeoutMixin_clock(conn, reactor)
 
         frameFactory = FrameFactory()
         transport = StringTransport()
@@ -2344,10 +2344,7 @@ class HTTP2TimeoutTests(unittest.TestCase):
         reactor = task.Clock()
         conn = H2Connection(reactor)
         conn.timeOut = 100
-
-        # This monkeypatch is needed because TimeoutMixin doesn't accept being
-        # passed a reactor.
-        conn.callLater = reactor.callLater
+        self.patch_TimeoutMixin_clock(conn, reactor)
 
         frameFactory = FrameFactory()
         transport = StringTransport()
