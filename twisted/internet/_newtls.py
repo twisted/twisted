@@ -108,7 +108,7 @@ def startTLS(transport, contextFactory, normal, bypass):
 
     @param contextFactory: An SSL context factory defining SSL parameters for
         the new SSL layer.
-    @type contextFactory: L{twisted.internet.ssl.ContextFactory}
+    @type contextFactory: L{twisted.internet.interfaces.IOpenSSLContextFactory}
 
     @param normal: A flag indicating whether SSL will go in the same direction
         as the underlying transport goes.  That is, if the SSL client will be
