@@ -1252,7 +1252,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         included in the response.
         """
         # Make the Date header value deterministic
-        self.patch(http, 'datetimeToString', lambda: 'Tuesday')
+        self.patch(http, 'datetimeToString', lambda *args, **kwargs: 'Tuesday')
 
         channel = DummyChannel()
 
