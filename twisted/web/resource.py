@@ -24,7 +24,7 @@ from twisted.python.components import proxyForInterface
 from twisted.internet.defer import Deferred
 
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
-from twisted.web.error import UnsupportedMethod, Error
+from twisted.web.error import UnsupportedMethod
 
 
 

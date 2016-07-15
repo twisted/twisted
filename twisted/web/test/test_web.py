@@ -1421,7 +1421,7 @@ class DeferredsInResourceTests(unittest.TestCase):
 
         clock = Clock()
         baseResource = resource.Resource()
-        baseResource.putChild('', DeferringResource(clock))
+        baseResource.putChild(b'', DeferringResource(clock))
         site = server.Site(baseResource, reactor=clock)
         site.startFactory()
         self.addCleanup(site.stopFactory)
@@ -1450,7 +1450,8 @@ class DeferredsInResourceTests(unittest.TestCase):
     def test_deferredNeverEnds(self):
         """
         If a L{resource.Resource} process function returns a L{defer.Deferred},
-        and it does not complete in L{resource.Resource.deferredTimeout}, the Deferred will be cancelled and a HTTP 504 returned.
+        and it does not complete in L{resource.Resource.deferredTimeout}, the
+        Deferred will be cancelled and a HTTP 504 returned.
         """
         class NeverEndingDeferringResource(resource.Resource):
             isLeaf = True
@@ -1464,7 +1465,7 @@ class DeferredsInResourceTests(unittest.TestCase):
 
         clock = Clock()
         baseResource = resource.Resource()
-        baseResource.putChild('', NeverEndingDeferringResource(clock))
+        baseResource.putChild(b'', NeverEndingDeferringResource(clock))
         site = server.Site(baseResource, reactor=clock)
         site.startFactory()
         self.addCleanup(site.stopFactory)
