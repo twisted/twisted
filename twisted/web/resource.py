@@ -21,8 +21,10 @@ from twisted.python.compat import nativeString, unicode
 from twisted.python.reflect import prefixedMethodNames
 from twisted.python.components import proxyForInterface
 
+from twisted.internet.defer import Deferred
+
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
-from twisted.web.error import UnsupportedMethod
+from twisted.web.error import UnsupportedMethod, Error
 
 
 
@@ -108,8 +110,13 @@ class Resource:
     This serves 2 main purposes; one is to provide a standard representation
     for what HTTP specification calls an 'entity', and the other is to provide
     an abstract directory structure for URL retrieval.
+
+    @ivar deferredTimeout: How many seconds that L{Resource.process} should
+        wait for L{Deferred}s returned from C{render_METHOD} before timing out.
+    @type deferredTimeout: L{int}, L{float}, or L{None} for no timeout.
     """
     entityType = IResource
+    deferredTimeout = 60
 
     server = None
 
@@ -224,19 +231,24 @@ class Resource:
         """
         Render a given resource. See L{IResource}'s render method.
 
-        I delegate to methods of self with the form 'render_METHOD'
-        where METHOD is the HTTP that was used to make the
-        request. Examples: render_GET, render_HEAD, render_POST, and
+        I delegate to methods of self with the form C{render_METHOD} where
+        METHOD is the HTTP method (or "verb") that was used to make the
+        request. Examples: C{render_GET}, C{render_HEAD}, C{render_POST}, and
         so on. Generally you should implement those methods instead of
         overriding this one.
 
-        render_METHOD methods are expected to return a byte string which will be
-        the rendered page, unless the return value is C{server.NOT_DONE_YET}, in
-        which case it is this class's responsibility to write the results using
-        C{request.write(data)} and then call C{request.finish()}.
+        C{render_METHOD} methods are expected to return any one of::
 
-        Old code that overrides render() directly is likewise expected
-        to return a byte string or NOT_DONE_YET.
+            - a byte string which will be the rendered page;
+            - L{NOT_DONE_YET <twisted.web.server.NOT_DONE_YET>}, in which case
+              it is this class's responsibility to write the results using
+              C{request.write(data)} and then call C{request.finish()};
+            - or a L{Deferred} which fires with a L{bytes} in within
+              L{Resource.deferredTimeout} wall-clock seconds (or unlimited if
+              the value is L{None}.)
+
+        Old code that overrides C{render()} directly is likewise expected to
+        return a L{bytes} or L{NOT_DONE_YET <twisted.web.server.NOT_DONE_YET>}.
 
         @see: L{IResource.render}
         """
@@ -247,7 +259,48 @@ class Resource:
             except AttributeError:
                 allowedMethods = _computeAllowedMethods(self)
             raise UnsupportedMethod(allowedMethods)
-        return m(request)
+
+        r = m(request)
+
+        if isinstance(r, Deferred):
+            # If it's a Deferred, we want to handle it a bit specially! We
+            # handle it here and not in Site as it's then possible to have
+            # per-resource timeouts, rather than site-level timeouts.
+            # Site-level timeouts are decent for user requests, but our code
+            # might knowingly take a very long time.
+
+            def timedOut():
+                """
+                Called when L{Request.deferredTimeout} has passed and the
+                L{Deferred} has not fired.
+                """
+                r.cancel()
+                request.setResponseCode(504)
+                request.write(b"<h1>Gateway Timeout</h1>")
+                request.finish()
+
+            if self.deferredTimeout:
+                # Only set the timeout if we have the timeout...
+                timeout = request.site._reactor.callLater(self.deferredTimeout,
+                                                          timedOut)
+            else:
+                timeout = None
+
+            def done(res, timeout):
+                """
+                Called when the L{Deferred} has fired.
+                """
+                if timeout:
+                    timeout.cancel()
+                request.write(res)
+                request.finish()
+
+            r.addCallback(done, timeout)
+
+            from twisted.web.server import NOT_DONE_YET
+            return NOT_DONE_YET
+        else:
+            return r
 
 
     def render_HEAD(self, request):
