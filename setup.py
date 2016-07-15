@@ -28,8 +28,8 @@ def main(args):
         setup3.main()
         return
 
-    if os.path.exists('twisted'):
-        sys.path.insert(0, '.')
+    if os.path.exists('src/twisted/'):
+        sys.path.insert(0, 'src')
 
     requirements = ["zope.interface >= 3.6.0"]
 
@@ -40,13 +40,14 @@ def main(args):
     setup_args = STATIC_PACKAGE_METADATA.copy()
 
     setup_args.update(dict(
-        packages=setuptools.find_packages(),
+        packages=setuptools.find_packages("src"),
         install_requires=requirements,
         conditionalExtensions=getExtensions(),
         scripts=getScripts(),
         include_package_data=True,
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,
+        package_dir={"": "src"},
     ))
 
     setup(**setup_args)
