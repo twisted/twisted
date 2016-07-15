@@ -5,6 +5,8 @@
 Tests for various parts of L{twisted.web}.
 """
 
+from __future__ import absolute_import, division, print_function
+
 import os
 import zlib
 
@@ -12,10 +14,10 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import reflect, failure
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, iterbytes
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.internet.address import IPv4Address
 from twisted.internet.task import Clock
 from twisted.web import server, resource
@@ -1390,3 +1392,58 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
         from twisted.internet import reactor
         factory = http.HTTPFactory()
         self.assertIs(factory._reactor, reactor)
+
+
+
+class DeferredsInResourceTests(unittest.TestCase):
+    """
+    L{server.Site} allows L{resource.Resource} render methods to return a L{Deferred}.
+    """
+
+    def test_deferredWithBytestring(self):
+        """
+        If a L{resource.Resource} process function returns a L{defer.Deferred},
+        the bytestring returned from the Deferred will be written to the
+        transport and the transport closed.
+        """
+        class DeferringResource(resource.Resource):
+            isLeaf = True
+
+            def __init__(self, clock):
+                self.clock = clock
+
+            def render_GET(self, request):
+                d = defer.Deferred()
+                self.clock.callLater(1, d.callback, b"whee!")
+                return d
+
+        clock = Clock()
+        baseResource = resource.Resource()
+        baseResource.putChild('', DeferringResource(clock))
+        site = server.Site(baseResource, reactor=clock)
+        site.startFactory()
+        self.addCleanup(site.stopFactory)
+
+        channel = site.buildProtocol(None)
+        transport = http.StringTransport()
+        transport.close = lambda *a, **kw: None
+        transport.disconnecting = lambda *a, **kw: 0
+        transport.getPeer = lambda *a, **kw: "peer"
+        transport.getHost = lambda *a, **kw: "host"
+        channel.makeConnection(transport)
+
+        data = (
+            b"GET / HTTP/1.1\r\n"
+            b"Host: foo.bar\r\n"
+            b"\r\n")
+
+        # Wtf we can't send it all at once?
+        for x in iterbytes(data):
+            channel.dataReceived(x)
+
+        self.assertEqual(transport.getvalue(), b"")
+
+        clock.advance(1)
+
+        self.assertIn(b"HTTP/1.1 200 OK", transport.getvalue())
+        self.assertIn(b"whee!", transport.getvalue())
