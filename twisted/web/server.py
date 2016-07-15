@@ -168,7 +168,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
         # set various default headers
         self.setHeader(b'server', version)
-        self.setHeader(b'date', http.datetimeToString())
+        self.setHeader(b'date', http.datetimeToString(self._reactor.seconds()))
 
         # Resource Identification
         self.prepath = []

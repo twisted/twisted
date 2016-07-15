@@ -597,12 +597,17 @@ class Request:
     _forceSSL = 0
     _disconnected = False
 
-    def __init__(self, channel, queued=_QUEUED_SENTINEL):
+    def __init__(self, channel, queued=_QUEUED_SENTINEL, reactor=None):
         """
         @param channel: the channel we're connected to.
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
         """
+        if not reactor:
+            from twisted.internet import reactor
+
+        self._reactor = reactor
+
         self.notifications = []
         self.channel = channel
         self.requestHeaders = Headers()
@@ -1668,7 +1673,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _receivedHeaderCount = 0
     _receivedHeaderSize = 0
 
-    def __init__(self):
+    def __init__(self, reactor=None):
+
+        if reactor is None:
+            from twisted.internet import reactor
+
+        self._reactor = reactor
+
         # the request queue
         self.requests = []
         self._handlingRequest = False
@@ -1942,6 +1953,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
         policies.TimeoutMixin.timeoutConnection(self)
+
+
+    def callLater(self, period, func):
+        """
+        Call something later. See:
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        """
+        return self._reactor.callLater(period, func)
 
 
     def connectionLost(self, reason):
@@ -2294,6 +2313,15 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._timeOut = value
         self._channel.timeOut = value
 
+    @property
+    def _reactor(self):
+        return self._channel._reactor
+
+
+    @_reactor.setter
+    def _reactor(self, value):
+        self._channel._reactor = value
+
 
     def dataReceived(self, data):
         """
@@ -2409,6 +2437,8 @@ class HTTPFactory(protocol.ServerFactory):
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
         p.timeOut = self.timeOut
+        p._reactor = self._reactor
+
         return p
 
 
