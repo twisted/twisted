@@ -217,7 +217,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
         with LogCapture() as lc:
             self.assertRaises(error.UnauthorizedLogin, self.db.getUser, 'user')
             self.assertIn(
-                'Unable to load credentials db: IOError', lc.messages[0])
+                'Unable to load credentials db: ', lc.messages[0])
 
 
 

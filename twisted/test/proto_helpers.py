@@ -9,7 +9,7 @@ Assorted functionality which is commonly useful when writing unit tests.
 from __future__ import division, absolute_import
 
 from socket import AF_INET, AF_INET6
-from io import BytesIO, StringIO
+from io import BytesIO
 
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
@@ -17,8 +17,11 @@ from zope.interface.verify import verifyClass
 from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.logger import (
-    FilteringLogObserver, ILogFilterPredicate, LogLevel, PredicateResult,
-    globalLogPublisher, textFileLogObserver, formatEvent
+    FilteringLogObserver,
+    formatEvent,
+    globalLogPublisher,
+    ILogFilterPredicate,
+    PredicateResult,
 )
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector, IReactorTCP, IReactorSSL,

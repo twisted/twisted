@@ -408,7 +408,7 @@ class FactoryTests(TestCase):
             self.assertIs(events[0]['factory'], f)
             self.assertEqual(events[0]['log_level'], LogLevel.info)
             self.assertIn(
-                'Starting factory <twisted.internet.protocol.Factory instance',
+                'Starting factory <twisted.internet.protocol.Factory ',
                 messages[0]
             )
 
@@ -432,7 +432,7 @@ class FactoryTests(TestCase):
             self.assertEqual(events[0]['log_level'], LogLevel.info)
             self.assertIn(
                 'Stopping factory '
-                '<twisted.internet.test.test_protocol.MyFactory instance',
+                '<twisted.internet.test.test_protocol.MyFactory ',
                 messages[0]
             )
 
