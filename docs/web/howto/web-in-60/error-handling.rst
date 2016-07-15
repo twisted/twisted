@@ -16,7 +16,7 @@ response when a client requests a non-existent URL.
 
 
 
-As in the previous examples, we'll start with :api:`twisted.web.server.Site <Site>` , :api:`twisted.web.resource.Resource <Resource>` , and :api:`twisted.internet.reactor <reactor>` imports:
+As in the previous examples, we'll start with :api:`twisted.web.server.Site <Site>` , :api:`twisted.web.resource.Resource <Resource>` , :api:`twisted.internet.reactor <reactor>`, and :api:`twisted.internet.endpoints <endpoints>` imports:
 
 
 
@@ -24,10 +24,10 @@ As in the previous examples, we'll start with :api:`twisted.web.server.Site <Sit
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
+    from twisted.internet import reactor, endpoints
 
 
 
@@ -42,7 +42,7 @@ and renders a simple html page telling the client there is no such resource.
 
 .. code-block:: python
 
-    
+
     from twisted.web.resource import NoResource
 
 
@@ -60,7 +60,7 @@ which don't conform to that pattern by returning the not found response:
 
 .. code-block:: python
 
-    
+
     class Calendar(Resource):
         def getChild(self, name, request):
             try:
@@ -84,22 +84,22 @@ complete code for this example:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
+    from twisted.internet import reactor, endpoints
     from twisted.web.resource import NoResource
-    
+
     from calendar import calendar
-    
+
     class YearPage(Resource):
         def __init__(self, year):
             Resource.__init__(self)
             self.year = year
-    
+
         def render_GET(self, request):
             return "<html><body><pre>%s</pre></body></html>" % (calendar(self.year),)
-    
+
     class Calendar(Resource):
         def getChild(self, name, request):
             try:
@@ -108,10 +108,11 @@ complete code for this example:
                 return NoResource()
             else:
                 return YearPage(year)
-    
+
     root = Calendar()
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
