@@ -1486,4 +1486,5 @@ class DeferredsInResourceTests(unittest.TestCase):
 
         clock.advance(1)
 
-        self.assertIn(b"HTTP/1.1 504 Gateway Timeout", transport.value())
+        self.assertIn(b"HTTP/1.1 504 Gateway Time-out", transport.value())
+        self.flushLoggedErrors(defer.CancelledError)
