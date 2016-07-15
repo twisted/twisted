@@ -26,6 +26,8 @@ from twisted.web import iweb, http, error
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from twisted.web.static import Data
 
+from twisted.test.proto_helpers import StringTransport
+
 
 class ResourceTests(unittest.TestCase):
     def testListEntities(self):
@@ -1403,8 +1405,8 @@ class DeferredsInResourceTests(unittest.TestCase):
     def test_deferredWithBytestring(self):
         """
         If a L{resource.Resource} process function returns a L{defer.Deferred},
-        the bytestring returned from the Deferred will be written to the
-        transport and the transport closed.
+        the bytestring fired from the Deferred will be written to the transport
+        and the transport closed.
         """
         class DeferringResource(resource.Resource):
             isLeaf = True
@@ -1425,11 +1427,7 @@ class DeferredsInResourceTests(unittest.TestCase):
         self.addCleanup(site.stopFactory)
 
         channel = site.buildProtocol(None)
-        transport = http.StringTransport()
-        transport.close = lambda *a, **kw: None
-        transport.disconnecting = lambda *a, **kw: 0
-        transport.getPeer = lambda *a, **kw: "peer"
-        transport.getHost = lambda *a, **kw: "host"
+        transport = StringTransport()
         channel.makeConnection(transport)
 
         data = (
@@ -1441,9 +1439,51 @@ class DeferredsInResourceTests(unittest.TestCase):
         for x in iterbytes(data):
             channel.dataReceived(x)
 
-        self.assertEqual(transport.getvalue(), b"")
+        self.assertEqual(transport.value(), b"")
 
         clock.advance(1)
 
-        self.assertIn(b"HTTP/1.1 200 OK", transport.getvalue())
-        self.assertIn(b"whee!", transport.getvalue())
+        self.assertIn(b"HTTP/1.1 200 OK", transport.value())
+        self.assertIn(b"whee!", transport.value())
+
+
+    def test_deferredNeverEnds(self):
+        """
+        If a L{resource.Resource} process function returns a L{defer.Deferred},
+        and it does not complete in L{resource.Resource.deferredTimeout}, the Deferred will be cancelled and a HTTP 504 returned.
+        """
+        class NeverEndingDeferringResource(resource.Resource):
+            isLeaf = True
+            deferredTimeout = 1
+
+            def __init__(self, clock):
+                self.clock = clock
+
+            def render_GET(self, request):
+                return defer.Deferred()
+
+        clock = Clock()
+        baseResource = resource.Resource()
+        baseResource.putChild('', NeverEndingDeferringResource(clock))
+        site = server.Site(baseResource, reactor=clock)
+        site.startFactory()
+        self.addCleanup(site.stopFactory)
+
+        channel = site.buildProtocol(None)
+        transport = StringTransport()
+        channel.makeConnection(transport)
+
+        data = (
+            b"GET / HTTP/1.1\r\n"
+            b"Host: foo.bar\r\n"
+            b"\r\n")
+
+        # Wtf we can't send it all at once?
+        for x in iterbytes(data):
+            channel.dataReceived(x)
+
+        self.assertEqual(transport.value(), b"")
+
+        clock.advance(1)
+
+        self.assertIn(b"HTTP/1.1 504 Gateway Timeout", transport.value())
