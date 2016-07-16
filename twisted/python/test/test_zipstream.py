@@ -10,7 +10,6 @@ import zipfile
 from hashlib import md5
 
 from twisted.python import zipstream, filepath
-from twisted.python.compat import xrange
 from twisted.trial import unittest
 
 
@@ -309,7 +308,7 @@ class ZipstreamTests(unittest.TestCase):
         """
         unzipIterChunky should unzip the given number of bytes per iteration.
         """
-        junk = ' '.join([str(random.random()) for n in xrange(1000)])
+        junk = ' '.join([str(random.random()) for n in range(1000)])
         junkmd5 = md5(junk).hexdigest()
 
         tempdir = filepath.FilePath(self.mktemp())
