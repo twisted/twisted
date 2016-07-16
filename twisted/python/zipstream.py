@@ -44,10 +44,17 @@ class ChunkingZipFile(zipfile.ZipFile):
         if fheader[zipfile._FH_EXTRA_FIELD_LENGTH]:
             self.fp.read(fheader[zipfile._FH_EXTRA_FIELD_LENGTH])
 
-        if fname != zinfo.orig_filename:
+
+        if zinfo.flag_bits & 0x800:
+            # UTF-8 filename
+            fname_str = fname.decode("utf-8")
+        else:
+            fname_str = fname.decode("cp437")
+
+        if fname_str != zinfo.orig_filename:
             raise zipfile.BadZipfile(
                 'File name in directory "%s" and header "%s" differ.' % (
-                    zinfo.orig_filename, fname))
+                    zinfo.orig_filename, fname_str))
 
         if zinfo.compress_type == zipfile.ZIP_STORED:
             return ZipFileEntry(self, zinfo.compress_size)
