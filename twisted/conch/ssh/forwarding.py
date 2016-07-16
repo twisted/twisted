@@ -14,7 +14,7 @@ from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
 from twisted.python import log
 
-import common, channel
+from twisted.conch.ssh import common, channel
 
 class SSHListenForwardingFactory(protocol.Factory):
     def __init__(self, connection, hostport, klass):
@@ -189,10 +189,10 @@ def packOpen_direct_tcpip(destination, source):
     """
     Pack the data suitable for sending in a CHANNEL_OPEN packet.
 
-    @type destination: C{tuple}
+    @type destination: L{tuple}
     @param destination: A tuple of the (host, port) of the destination host.
 
-    @type source: C{tuple}
+    @type source: L{tuple}
     @param source: A tuple of the (host, port) of the source host.
     """
     (connHost, connPort) = destination
@@ -221,7 +221,7 @@ def packGlobal_tcpip_forward(peer):
     Pack the data for tcpip forwarding.
 
     @param peer: A tuple of the (host, port) .
-    @type peer: C{tuple}
+    @type peer: L{tuple}
     """
     (host, port) = peer
     return common.NS(host) + struct.pack('>L', port)

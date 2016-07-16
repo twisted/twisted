@@ -506,7 +506,7 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
         @param backlog: Size of the listen queue
         @type backlog: int
 
-        @param interface: The hostname to bind to, defaults to '' (all)
+        @param interface: The hostname to bind to, defaults to C{::} (all)
         @type interface: str
         """
         _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
@@ -818,7 +818,7 @@ class SSL4ServerEndpoint(object):
         @type port: int
 
         @param sslContextFactory: An instance of
-            L{twisted.internet.ssl.ContextFactory}.
+            L{interfaces.IOpenSSLContextFactory}.
 
         @param backlog: Size of the listen queue
         @type backlog: int
@@ -864,7 +864,7 @@ class SSL4ClientEndpoint(object):
         @type port: int
 
         @param sslContextFactory: SSL Configuration information as an instance
-            of L{twisted.internet.ssl.ContextFactory}.
+            of L{interfaces.IOpenSSLContextFactory}.
 
         @param timeout: Number of seconds to wait before assuming the
             connection has failed.
@@ -1072,8 +1072,8 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
         respectively.  See the C{wantPID} argument to C{listenUNIX}
 
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
-        L{IReactorTCP.listenUNIX} (or, modulo argument 2, the factory,
-        arguments to L{UNIXServerEndpoint}.
+        L{twisted.internet.interfaces.IReactorUNIX.listenUNIX} (or,
+        modulo argument 2, the factory, arguments to L{UNIXServerEndpoint}.
     """
     return (
         (address, factory),
@@ -1296,8 +1296,8 @@ def _tokenize(description):
         L{clientFromString}.
     @type description: L{str} or L{bytes}
 
-    @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
-        starting with L{_OP} will contain a second element of either ':' (i.e.
+    @return: an iterable of 2-tuples of (C{_OP} or C{_STRING}, string).  Tuples
+        starting with C{_OP} will contain a second element of either ':' (i.e.
         'next parameter') or '=' (i.e. 'assign parameter value').  For example,
         the string 'hello:greeting=world' would result in a generator yielding
         these values::

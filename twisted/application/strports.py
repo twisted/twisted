@@ -25,7 +25,7 @@ def parse(description, factory, default='tcp'):
     """
     This function is deprecated as of Twisted 10.2.
 
-    @see: L{twisted.internet.endpoints.server}
+    @see: L{twisted.internet.endpoints.serverFromString}
     """
     return endpoints._parseServer(description, factory, default)
 
@@ -43,7 +43,7 @@ def service(description, factory, default=_DEFAULT, reactor=None):
     Return the service corresponding to a description.
 
     @param description: The description of the listening port, in the syntax
-        described by L{twisted.internet.endpoints.server}.
+        described by L{twisted.internet.endpoints.serverFromString}.
 
     @type description: C{str}
 

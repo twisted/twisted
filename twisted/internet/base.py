@@ -940,7 +940,8 @@ class ReactorBase(object):
 
         def callFromThread(self, f, *args, **kw):
             """
-            See L{twisted.internet.interfaces.IReactorThreads.callFromThread}.
+            See
+            L{twisted.internet.interfaces.IReactorFromThreads.callFromThread}.
             """
             assert callable(f), "%s is not callable" % (f,)
             # lists are thread-safe in CPython, but not in Jython

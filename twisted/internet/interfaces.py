@@ -112,7 +112,7 @@ class IResolver(IResolverSimple):
         """
         Perform an A record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -704,7 +704,7 @@ class IReactorSSL(Interface):
 
         @param factory: a L{twisted.internet.protocol.ServerFactory} instance
 
-        @param contextFactory: a L{twisted.internet.ssl.ContextFactory} instance
+        @param contextFactory: an implementor of L{IOpenSSLContextFactory}
 
         @param backlog: size of the listen queue
 
@@ -1007,7 +1007,7 @@ class IReactorSocket(Interface):
             done as soon as C{adoptDatagramPort} returns.
         @type fileDescriptor: C{int}
 
-        @param addressFamily: The address family (or I{domain}) of the socket.
+        @param addressFamily: The address family or I{domain} of the socket.
             For example, L{socket.AF_INET6}.
         @type addressFamily: C{int}
 
@@ -1020,7 +1020,7 @@ class IReactorSocket(Interface):
 
         @return: An object providing L{IListeningPort}.
 
-        @raise L{UnsupportedAddressFamily}: If the given address family is not
+        @raise UnsupportedAddressFamily: If the given address family is not
             supported by this reactor, or not supported with the given socket
             type.
 
@@ -1946,6 +1946,33 @@ class IHalfCloseableProtocol(Interface):
 
 
 
+class IHandshakeListener(Interface):
+    """
+    An interface implemented by a L{IProtocol} to indicate that it would like
+    to be notified when TLS handshakes complete when run over a TLS-based
+    transport.
+
+    This interface is only guaranteed to be called when run over a TLS-based
+    transport: non TLS-based transports will not respect this interface.
+    """
+
+    def handshakeCompleted():
+        """
+        Notification of the TLS handshake being completed.
+
+        This notification fires when OpenSSL has completed the TLS handshake.
+        At this point the TLS connection is established, and the protocol can
+        interrogate its transport (usually an L{ISSLTransport}) for details of
+        the TLS connection.
+
+        This notification *also* fires whenever the TLS session is
+        renegotiated. As a result, protocols that have certain minimum security
+        requirements should implement this interface to ensure that they are
+        able to re-evaluate the security of the TLS session if it changes.
+        """
+
+
+
 class IFileDescriptorReceiver(Interface):
     """
     Protocols may implement L{IFileDescriptorReceiver} to receive file
@@ -2212,7 +2239,7 @@ class IProtocolNegotiationFactory(Interface):
     A provider of L{IProtocolNegotiationFactory} can provide information about
     the various protocols that the factory can create implementations of. This
     can be used, for example, to provide protocol names for Next Protocol
-    Negotation and Application Layer Protocol Negotiation.
+    Negotiation and Application Layer Protocol Negotiation.
 
     @see: L{twisted.internet.ssl}
     """
@@ -2225,6 +2252,28 @@ class IProtocolNegotiationFactory(Interface):
 
         @return: a list of ALPN tokens in order of preference.
         @rtype: L{list} of L{bytes}
+        """
+
+
+
+class IOpenSSLContextFactory(Interface):
+    """
+    A provider of L{IOpenSSLContextFactory} is capable of generating
+    L{OpenSSL.SSL.Context} classes suitable for configuring TLS on a
+    connection. A provider will store enough state to be able to generate these
+    contexts as needed for individual connections.
+
+    @see: L{twisted.internet.ssl}
+    """
+
+    def getContext():
+        """
+        Returns a TLS context object, suitable for securing a TLS connection.
+        This context object will be appropriately customized for the connection
+        based on the state in this object.
+
+        @return: A TLS context object.
+        @rtype: L{OpenSSL.SSL.Context}
         """
 
 
@@ -2250,7 +2299,7 @@ class ITLSTransport(ITCPTransport):
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must
-            be an old-style L{twisted.internet.ssl.ContextFactory} or similar.
+            be an implementor of L{IOpenSSLContextFactory}.
         """
 
 

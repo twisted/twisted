@@ -187,11 +187,8 @@ def execfile(filename, globals, locals=None):
     """
     if locals is None:
         locals = globals
-    fin = open(filename, "rbU")
-    try:
+    with open(filename, "rbU") as fin:
         source = fin.read()
-    finally:
-        fin.close()
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
 
@@ -735,6 +732,13 @@ def _coercedUnicode(s):
 
 
 
+if _PY3:
+    unichr = chr
+else:
+    unichr = unichr
+
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -770,4 +774,5 @@ __all__ = [
     "_bytesChr",
     "_coercedUnicode",
     "intern",
+    "unichr",
 ]

@@ -155,7 +155,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         has been started, to the L{TLSMemoryBIOProtocol} for it to encrypt and
         send.
 
-        @see: L{ITCPTransport.write}
+        @see: L{twisted.internet.interfaces.ITransport.write}
         """
         if self.disconnected:
             return
@@ -171,7 +171,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         has been started, to the L{TLSMemoryBIOProtocol} for it to encrypt and
         send.
 
-        @see: L{ITCPTransport.writeSequence}
+        @see: L{twisted.internet.interfaces.ITransport.writeSequence}
         """
         if self.disconnected:
             return
@@ -186,7 +186,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         Close the underlying handle or, if TLS has been started, first shut it
         down.
 
-        @see: L{ITCPTransport.loseConnection}
+        @see: L{twisted.internet.interfaces.ITransport.loseConnection}
         """
         if self.TLS:
             if self.connected and not self.disconnecting:
@@ -577,7 +577,7 @@ class Port(_SocketCloser, _LogOwner):
         evt = _iocp.Event(self.cbAccept, self)
 
         # see AcceptEx documentation
-        evt.buff = buff = _iocp.AllocateReadBuffer(2 * (self.addrLen + 16))
+        evt.buff = buff = bytearray(2 * (self.addrLen + 16))
 
         evt.newskt = newskt = self.reactor.createSocket(self.addressFamily,
                                                         self.socketType)

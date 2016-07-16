@@ -371,7 +371,7 @@ class _ProxiedClassMethod(object):
 
     @ivar originalAttribute: name of the attribute of the proxy where the
         original object is stored.
-    @type orginalAttribute: L{str}
+    @type originalAttribute: L{str}
     """
     def __init__(self, methodName, originalAttribute):
         self.methodName = self.__name__ = methodName
@@ -396,8 +396,8 @@ class _ProxiedClassMethod(object):
 class _ProxyDescriptor(object):
     """
     A descriptor which will proxy attribute access, mutation, and
-    deletion to the L{original} attribute of the object it is being accessed
-    from.
+    deletion to the L{_ProxyDescriptor.originalAttribute} of the
+    object it is being accessed from.
 
     @ivar attributeName: the name of the attribute which this descriptor will
         retrieve from instances' C{original} attribute.
@@ -405,7 +405,7 @@ class _ProxyDescriptor(object):
 
     @ivar originalAttribute: name of the attribute of the proxy where the
         original object is stored.
-    @type orginalAttribute: C{str}
+    @type originalAttribute: C{str}
     """
     def __init__(self, attributeName, originalAttribute):
         self.attributeName = attributeName
@@ -414,7 +414,7 @@ class _ProxyDescriptor(object):
 
     def __get__(self, oself, type=None):
         """
-        Retrieve the C{self.attributeName} property from L{oself}.
+        Retrieve the C{self.attributeName} property from I{oself}.
         """
         if oself is None:
             return _ProxiedClassMethod(self.attributeName,
@@ -425,7 +425,7 @@ class _ProxyDescriptor(object):
 
     def __set__(self, oself, value):
         """
-        Set the C{self.attributeName} property of L{oself}.
+        Set the C{self.attributeName} property of I{oself}.
         """
         original = getattr(oself, self.originalAttribute)
         setattr(original, self.attributeName, value)
@@ -433,7 +433,7 @@ class _ProxyDescriptor(object):
 
     def __delete__(self, oself):
         """
-        Delete the C{self.attributeName} property of L{oself}.
+        Delete the C{self.attributeName} property of I{oself}.
         """
         original = getattr(oself, self.originalAttribute)
         delattr(original, self.attributeName)

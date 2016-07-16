@@ -838,7 +838,7 @@ class Key(object):
         Return the size of the object we wrap.
 
         @return: The size of the key.
-        @rtype: C{int}
+        @rtype: L{int}
         """
         if self._keyObject is None:
             return 0
@@ -849,7 +849,7 @@ class Key(object):
         """
         Return the values of the public key as a dictionary.
 
-        @rtype: C{dict}
+        @rtype: L{dict}
         """
         if isinstance(self._keyObject, rsa.RSAPublicKey):
             numbers = self._keyObject.public_numbers()
@@ -1217,7 +1217,7 @@ def objectType(obj):
     @type obj: C{Crypto.PublicKey.pubkey.pubkey}
 
     @return: Return the SSH key type corresponding to a PyCrypto object.
-    @rtype: C{str}
+    @rtype: L{str}
     """
     keyDataMapping = {
         ('n', 'e', 'd', 'p', 'q'): b'ssh-rsa',
@@ -1239,7 +1239,7 @@ def _getPersistentRSAKey(location, keySize=4096):
     key with the key size of C{keySize} is generated and saved.
 
     @param location: Where the key is stored.
-    @type location: L{twisted.python.filepath.FilePath)
+    @type location: L{twisted.python.filepath.FilePath}
 
     @param keySize: The size of the key, if it needs to be generated.
     @type keySize: L{int}
@@ -1267,7 +1267,7 @@ def _getPersistentRSAKey(location, keySize=4096):
 
     # By this point (save any hilarious race conditions) we should have a
     # working PEM file. Load it!
-    # (Future archaelogical readers: I chose not to short circuit above,
+    # (Future archaeological readers: I chose not to short circuit above,
     # because then there's two exit paths to this code!)
     with location.open("rb") as keyFile:
         privateKey = serialization.load_pem_private_key(

@@ -45,6 +45,7 @@ from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
+from twisted.python.compat import xrange
 
 NUL = chr(0)
 CR = chr(0o15)
@@ -2909,7 +2910,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
         (To be honest, fromUser is the only thing that's currently
         used here. targetUserOrChannel is potentially useful, while
-        the 'data' argument is soley for informational purposes.)
+        the 'data' argument is solely for informational purposes.)
         """
         self.client = client
         if queryData:
@@ -3603,7 +3604,7 @@ def assembleFormattedText(formatted):
 
     @rtype: C{str}
     @return: String containing mIRC control sequences that mimic those
-        specified by L{formatted}.
+        specified by I{formatted}.
 
     @since: 13.1
     """

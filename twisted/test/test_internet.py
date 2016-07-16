@@ -675,7 +675,8 @@ class TimeTests(unittest.TestCase):
 
     def test_callLaterUsesReactorSecondsInDelayedCall(self):
         """
-        L{reactor.callLater} should use the reactor's seconds factory
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        should use the reactor's seconds factory
         to produce the time at which the DelayedCall will be called.
         """
         oseconds = reactor.seconds
@@ -689,7 +690,8 @@ class TimeTests(unittest.TestCase):
 
     def test_callLaterUsesReactorSecondsAsDelayedCallSecondsFactory(self):
         """
-        L{reactor.callLater} should propagate its own seconds factory
+        L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
+        should propagate its own seconds factory
         to the DelayedCall to use as its own seconds factory.
         """
         oseconds = reactor.seconds
@@ -1005,13 +1007,12 @@ class ResolveTests(unittest.TestCase):
         # child which just does reactor.resolve after the reactor has
         # started, fail if it does not complete in a timely fashion.
         helperPath = os.path.abspath(self.mktemp())
-        helperFile = open(helperPath, 'w')
+        with open(helperPath, 'w') as helperFile:
 
-        # Eeueuuggg
-        reactorName = reactor.__module__
+            # Eeueuuggg
+            reactorName = reactor.__module__
 
-        helperFile.write(resolve_helper % {'reactor': reactorName})
-        helperFile.close()
+            helperFile.write(resolve_helper % {'reactor': reactorName})
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)

@@ -424,7 +424,7 @@ class InMemorySSHKeyDB(object):
 
         @param mapping: mapping of usernames to iterables of
             L{twisted.conch.ssh.keys.Key}s
-        @type mapping: C{dict}
+        @type mapping: L{dict}
 
         """
         self._mapping = mapping

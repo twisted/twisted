@@ -499,7 +499,8 @@ class WebClientTests(unittest.TestCase):
         return defer.gatherResults(downloads)
 
     def _cbDownloadPageTest(self, ignored, data, name):
-        bytes = open(name, "rb").read()
+        with open(name, "rb") as f:
+            bytes = f.read()
         self.assertEqual(bytes, data)
 
     def testDownloadPageError1(self):
@@ -686,33 +687,6 @@ class WebClientTests(unittest.TestCase):
             url, followRedirect=True, afterFoundGet=True, method=b"POST")
         d.addCallback(checkRedirectCount)
         return d
-
-
-    def testPartial(self):
-        name = self.mktemp()
-        f = open(name, "wb")
-        f.write(b"abcd")
-        f.close()
-
-        partialDownload = [(True, b"abcd456789"),
-                           (True, b"abcd456789"),
-                           (False, b"0123456789")]
-
-        d = defer.succeed(None)
-        for (partial, expectedData) in partialDownload:
-            d.addCallback(self._cbRunPartial, name, partial)
-            d.addCallback(self._cbPartialTest, expectedData, name)
-
-        return d
-
-    testPartial.skip = "Cannot test until webserver can serve partial data properly"
-
-    def _cbRunPartial(self, ignored, name, partial):
-        return client.downloadPage(self.getURL("file"), name, supportPartial=partial)
-
-    def _cbPartialTest(self, ignored, expectedData, filename):
-        bytes = file(filename, "rb").read()
-        self.assertEqual(bytes, expectedData)
 
 
     def test_downloadTimeout(self):

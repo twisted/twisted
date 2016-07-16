@@ -1176,7 +1176,7 @@ class ProducerTests(unittest.SynchronousTestCase):
         self.assertTrue(p.paused)
 
         # Unpausing delivers the waiting line, and causes the protocol to
-        # pause agin.
+        # pause again.
         p.resumeProducing()
         self.assertEqual(t.data, [b'hello, world', b'hello', b'world'])
         self.assertTrue(t.paused)
@@ -1190,7 +1190,7 @@ class ProducerTests(unittest.SynchronousTestCase):
         self.assertTrue(p.paused)
 
         # Unpausing delivers the waiting line, and causes the protocol to
-        # pause agin.
+        # pause again.
         p.resumeProducing()
         self.assertEqual(
             t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
@@ -1245,7 +1245,7 @@ class FileSenderTests(unittest.TestCase):
         sender.resumeProducing()
         # resumeProducing only finishes after trying to read at eof
         sender.resumeProducing()
-        self.assertEqual(consumer.producer, None)
+        self.assertIsNone(consumer.producer)
 
         self.assertEqual(b"t", self.successResultOf(d))
         self.assertEqual(b"Test content", consumer.value())

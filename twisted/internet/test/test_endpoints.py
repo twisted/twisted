@@ -2074,7 +2074,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
     def test_otherConnectionsCancelled(self):
         """
-        Once the endpoint returns a succesful connection, all the other
+        Once the endpoint returns a successful connection, all the other
         pending connections are cancelled.
 
         Here, the second connection attempt, i.e. IPv6, succeeds, and the
