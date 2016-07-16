@@ -20,17 +20,19 @@ class DBOptions(usage.Options):
         ["groups",     "g", "groups.list",   "File containing group list"],
         ["servers",    "s", "servers.list",  "File containing server list"]
     ]
-    
+
     def postOptions(self):
         # XXX - Hmmm.
-        self['groups'] = [g.strip() for g in open(self['groups']).readlines() if not g.startswith('#')]
-        self['servers'] = [s.strip() for s in open(self['servers']).readlines() if not s.startswith('#')]
+        with open(self['groups']) as groupsFile:
+            self['groups'] = [g.strip() for g in groupsFile if not g.startswith('#')]
+        with open(self['servers']) as serversFile:
+            self['servers'] = [s.strip() for s in serversFile if not s.startswith('#')]
 
         try:
             __import__(self['module'])
         except ImportError:
             log.msg("Warning: Cannot import %s" % (self['module'],))
-        
+
         f = open(self['schema'], 'w')
         f.write(
             database.NewsStorageAugmentation.schema + '\n' +
@@ -38,7 +40,7 @@ class DBOptions(usage.Options):
             database.makeOverviewSQL()
         )
         f.close()
-        
+
         info = {
             'host': self['dbhost'], 'user': self['dbuser'],
             'database': self['database'], 'dbapiName': self['module']
@@ -56,26 +58,27 @@ class PickleOptions(usage.Options):
         ["moderators", "m", "moderators.list",
          "File containing moderators list"],
     ]
-    
+
     subCommands = None
 
     def postOptions(self):
         # XXX - Hmmm.
         filename = self['file']
-        self['groups'] = [g.strip() for g in open(self['groups']).readlines()
-                          if not g.startswith('#')]
-        self['servers'] = [s.strip() for s in open(self['servers']).readlines()
-                           if not s.startswith('#')]
-        self['moderators'] = [s.split()
-                              for s in open(self['moderators']).readlines()
-                              if not s.startswith('#')]
+        with open(self['groups']) as groupsFile:
+            self['groups'] = [g.strip() for g in groupsFile if not g.startswith('#')]
+        with open(self['servers']) as serversFile:
+            self['servers'] = [s.strip() for s in serversFile if not s.startswith('#')]
+        with open(self['moderators']) as moderatorsFile:
+            self['moderators'] = [s.split()
+                                  for s in moderatorsFile
+                                  if not s.startswith('#')]
         self.db = database.PickleStorage(filename, self['groups'],
                                          self['moderators'])
 
 
 class Options(usage.Options):
     synopsis = "[options]"
-    
+
     groups = None
     servers = None
     subscriptions = None
@@ -122,7 +125,7 @@ class Options(usage.Options):
 def makeService(config):
     if not len(config.groups):
         raise usage.UsageError("No newsgroups specified")
-    
+
     db = database.NewsShelf(config['mailhost'], config['datadir'])
     for (g, m) in config.groups:
         if m:
