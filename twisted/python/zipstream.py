@@ -17,8 +17,8 @@ _fileHeaderSize = struct.calcsize(zipfile.structFileHeader)
 
 class ChunkingZipFile(zipfile.ZipFile):
     """
-    A C{ZipFile} object which, with L{readfile}, also gives you access to a
-    file-like object for each entry.
+    A L{zipfile.ZipFile} object which, with L{readfile}, also gives you access
+    to a file-like object for each entry.
     """
 
     def readfile(self, name):
@@ -84,11 +84,11 @@ class _FileEntry(object):
 
     @ivar closed: File-like 'closed' attribute; True before this file has been
     closed, False after.
-    @type closed: C{bool}
+    @type closed: L{bool}
 
     @ivar finished: An older, broken synonym for 'closed'.  Do not touch this,
     please.
-    @type finished: C{int}
+    @type finished: L{int}
     """
     def __init__(self, chunkingZipFile, length):
         """
@@ -272,7 +272,7 @@ def countFileChunks(zipinfo, chunksize):
 
     @return: the number of chunks present in the zip file.  (Even an empty file
     counts as one chunk.)
-    @rtype: C{int}
+    @rtype: L{int}
     """
     count, extra = divmod(zipinfo.file_size, chunksize)
     if extra > 0:
