@@ -308,7 +308,12 @@ class ZipstreamTests(unittest.TestCase):
         """
         unzipIterChunky should unzip the given number of bytes per iteration.
         """
-        junk = ' '.join([str(random.random()) for n in range(1000)])
+        junk = b''
+        for n in range(1000):
+            num = round(random.random(), 12)
+            numEncoded = str(num).encode("ascii")
+            junk += b' '+numEncoded
+
         junkmd5 = md5(junk).hexdigest()
 
         tempdir = filepath.FilePath(self.mktemp())
