@@ -53,19 +53,19 @@ class FileEntryMixin:
         C{readline()} should mirror L{file.readline} and return up to a single
         deliminter.
         """
-        fileEntry = self.getFileEntry('hoho\nho')
-        self.assertEqual(fileEntry.readline(), 'hoho\n')
-        self.assertEqual(fileEntry.readline(), 'ho')
-        self.assertEqual(fileEntry.readline(), '')
+        fileEntry = self.getFileEntry(b'hoho\nho')
+        self.assertEqual(fileEntry.readline(), b'hoho\n')
+        self.assertEqual(fileEntry.readline(), b'ho')
+        self.assertEqual(fileEntry.readline(), b'')
 
 
     def test_next(self):
         """
         Zip file entries should implement the iterator protocol as files do.
         """
-        fileEntry = self.getFileEntry('ho\nhoho')
-        self.assertEqual(fileEntry.next(), 'ho\n')
-        self.assertEqual(fileEntry.next(), 'hoho')
+        fileEntry = self.getFileEntry(b'ho\nhoho')
+        self.assertEqual(fileEntry.next(), b'ho\n')
+        self.assertEqual(fileEntry.next(), b'hoho')
         self.assertRaises(StopIteration, fileEntry.next)
 
 
@@ -73,8 +73,8 @@ class FileEntryMixin:
         """
         C{readlines()} should return a list of all the lines.
         """
-        fileEntry = self.getFileEntry('ho\nho\nho')
-        self.assertEqual(fileEntry.readlines(), ['ho\n', 'ho\n', 'ho'])
+        fileEntry = self.getFileEntry(b'ho\nho\nho')
+        self.assertEqual(fileEntry.readlines(), [b'ho\n', b'ho\n', b'ho'])
 
 
     def test_iteration(self):
@@ -90,7 +90,7 @@ class FileEntryMixin:
         """
         C{.read()} should read the entire file.
         """
-        contents = "Hello, world!"
+        contents = b"Hello, world!"
         entry = self.getFileEntry(contents)
         self.assertEqual(entry.read(), contents)
 
@@ -103,8 +103,8 @@ class FileEntryMixin:
         entry = self.getFileEntry(contents)
         one = entry.read(4)
         two = entry.read(200)
-        self.assertEqual(one, "0123")
-        self.assertEqual(two, "456789")
+        self.assertEqual(one, b"0123")
+        self.assertEqual(two, b"456789")
 
 
     def test_tell(self):
@@ -198,13 +198,13 @@ class ZipstreamTests(unittest.TestCase):
         zeroOffset = zf.getinfo("0").header_offset
         zf.close()
         # Zero out just the one header.
-        scribble = file(fn, "r+b")
+        scribble = open(fn, "r+b")
         scribble.seek(zeroOffset, 0)
-        scribble.write(chr(0) * 4)
+        scribble.write(b'0' * 4)
         scribble.close()
         czf = zipstream.ChunkingZipFile(fn)
         self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
-        self.assertEqual(czf.readfile("1").read(), "more contents")
+        self.assertEqual(czf.readfile("1").read(), b"more contents")
 
 
     def test_filenameMismatch(self):
@@ -212,20 +212,20 @@ class ZipstreamTests(unittest.TestCase):
         A zipfile entry with a different filename than is found in the central
         directory should raise BadZipfile.
         """
-        fn = self.makeZipFile(["test contents",
-                               "more contents"])
+        fn = self.makeZipFile([b"test contents",
+                               b"more contents"])
         zf = zipfile.ZipFile(fn, "r")
         info = zf.getinfo("0")
         info.filename = "not zero"
         zf.close()
-        scribble = file(fn, "r+b")
+        scribble = open(fn, "r+b")
         scribble.seek(info.header_offset, 0)
         scribble.write(info.FileHeader())
         scribble.close()
 
         czf = zipstream.ChunkingZipFile(fn)
         self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
-        self.assertEqual(czf.readfile("1").read(), "more contents")
+        self.assertEqual(czf.readfile("1").read(), b"more contents")
 
 
     def test_unsupportedCompression(self):
@@ -254,11 +254,11 @@ class ZipstreamTests(unittest.TestCase):
         fn = self.mktemp()
         zf = zipfile.ZipFile(fn, 'w')
         zi = zipfile.ZipInfo("0")
-        zi.extra = "hello, extra"
-        zf.writestr(zi, "the real data")
+        zi.extra = b"hello, extra"
+        zf.writestr(zi, b"the real data")
         zf.close()
         czf = zipstream.ChunkingZipFile(fn)
-        self.assertEqual(czf.readfile("0").read(), "the real data")
+        self.assertEqual(czf.readfile("0").read(), b"the real data")
 
 
     def test_unzipIterChunky(self):
@@ -268,6 +268,7 @@ class ZipstreamTests(unittest.TestCase):
         """
         numfiles = 10
         contents = ['This is test file %d!' % i for i in range(numfiles)]
+        contents = [i.encode("ascii") for i in contents]
         zpfilename = self.makeZipFile(contents)
         list(zipstream.unzipIterChunky(zpfilename, self.unzipdir.path))
         self.assertEqual(
@@ -287,13 +288,15 @@ class ZipstreamTests(unittest.TestCase):
         """
         numfiles = 10
         contents = ['This is test file %d!' % i for i in range(numfiles)]
+        contents = [i.encode("ascii") for i in contents]
         zpfilename = self.makeZipFile(contents, 'foo')
         list(zipstream.unzipIterChunky(zpfilename, self.unzipdir.path))
+        fileContents = {str(num).encode("ascii") for num in range(numfiles)}
         self.assertEqual(
-            set(self.unzipdir.child('foo').listdir()),
-            set(map(str, range(numfiles))))
+            set(self.unzipdir.child(b'foo').listdir()),
+                fileContents)
 
-        for child in self.unzipdir.child('foo').children():
+        for child in self.unzipdir.child(b'foo').children():
             num = int(child.basename())
             self.assertEqual(child.getContent(), contents[num])
 

@@ -114,12 +114,12 @@ class _FileEntry(object):
         """
         Read a line.
         """
-        bytes = ""
-        for byte in iter(lambda : self.read(1), ""):
-            bytes += byte
-            if byte == "\n":
+        line = b""
+        for byte in iter(lambda : self.read(1), b""):
+            line += byte
+            if byte == b"\n":
                 break
-        return bytes
+        return line
 
 
     def __next__(self):
@@ -176,7 +176,7 @@ class ZipFileEntry(_FileEntry):
         if n is None:
             n = self.length - self.readBytes
         if n == 0 or self.finished:
-            return ''
+            return b''
         data = self.chunkingZipFile.fp.read(
             min(n, self.length - self.readBytes))
         self.readBytes += len(data)
@@ -196,7 +196,7 @@ class DeflatedZipFileEntry(_FileEntry):
         self.returnedBytes = 0
         self.readBytes = 0
         self.decomp = zlib.decompressobj(-15)
-        self.buffer = ""
+        self.buffer = b""
 
 
     def tell(self):
@@ -205,18 +205,18 @@ class DeflatedZipFileEntry(_FileEntry):
 
     def read(self, n=None):
         if self.finished:
-            return ""
+            return b""
         if n is None:
             result = [self.buffer,]
             result.append(
                 self.decomp.decompress(
                     self.chunkingZipFile.fp.read(
                         self.length - self.readBytes)))
-            result.append(self.decomp.decompress("Z"))
+            result.append(self.decomp.decompress(b"Z"))
             result.append(self.decomp.flush())
-            self.buffer = ""
+            self.buffer = b""
             self.finished = 1
-            result = "".join(result)
+            result = b"".join(result)
             self.returnedBytes += len(result)
             return result
         else:
@@ -226,10 +226,10 @@ class DeflatedZipFileEntry(_FileEntry):
                 self.readBytes += len(data)
                 if not data:
                     result = (self.buffer
-                              + self.decomp.decompress("Z")
+                              + self.decomp.decompress(b"Z")
                               + self.decomp.flush())
                     self.finished = 1
-                    self.buffer = ""
+                    self.buffer = b""
                     self.returnedBytes += len(result)
                     return result
                 else:
