@@ -324,9 +324,9 @@ class ZipstreamTests(unittest.TestCase):
         for r in uziter:
             pass
         self.assertEqual(r, 0)
-        newmd5 = md5(
-            tempdir.child("zipstreamjunk").open().read()).hexdigest()
-        self.assertEqual(newmd5, junkmd5)
+        with tempdir.child("zipstreamjunk").open() as f:
+            newmd5 = md5(f.read()).hexdigest()
+            self.assertEqual(newmd5, junkmd5)
 
     def test_unzipIterChunkyStored(self):
         """

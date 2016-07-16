@@ -577,7 +577,7 @@ class Port(_SocketCloser, _LogOwner):
         evt = _iocp.Event(self.cbAccept, self)
 
         # see AcceptEx documentation
-        evt.buff = buff = _iocp.AllocateReadBuffer(2 * (self.addrLen + 16))
+        evt.buff = buff = bytearray(2 * (self.addrLen + 16))
 
         evt.newskt = newskt = self.reactor.createSocket(self.addressFamily,
                                                         self.socketType)

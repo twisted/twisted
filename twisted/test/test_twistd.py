@@ -50,6 +50,7 @@ try:
 except ImportError:
     _twistd_unix = None
 else:
+    from twisted.scripts._twistd_unix import checkPID
     from twisted.scripts._twistd_unix import UnixApplicationRunner
     from twisted.scripts._twistd_unix import UnixAppLogger
 
@@ -170,7 +171,7 @@ class CrippledApplicationRunner(twistd._SomeApplicationRunner):
 
 class ServerOptionsTests(unittest.TestCase):
     """
-    Non-platform-specific tests for the pltaform-specific ServerOptions class.
+    Non-platform-specific tests for the platform-specific ServerOptions class.
     """
     def test_subCommands(self):
         """
@@ -355,6 +356,63 @@ class ServerOptionsTests(unittest.TestCase):
                     "imported: module 'twisted.test.test_twistd' "
                     "has no attribute 'FOOBAR'"))
         self.assertNotIn('\n', e.args[0])
+
+
+
+class CheckPIDTests(unittest.TestCase):
+    """
+    Tests for L{checkPID}.
+    """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
+
+
+    def test_notExists(self):
+        """
+        Nonexistent PID file is not an error.
+        """
+        self.patch(os.path, "exists", lambda _: False)
+        checkPID("non-existent PID file")
+
+
+    def test_nonNumeric(self):
+        """
+        Non-numeric content in a PID file causes a system exit.
+        """
+        pidfile = self.mktemp()
+        with open(pidfile, "w") as f:
+            f.write("non-numeric")
+        e = self.assertRaises(SystemExit, checkPID, pidfile)
+        self.assertIn("non-numeric value", e.code)
+
+
+    def test_anotherRunning(self):
+        """
+        Another running twistd server causes a system exit.
+        """
+        pidfile = self.mktemp()
+        with open(pidfile, "w") as f:
+            f.write("42")
+        def kill(pid, sig):
+            pass
+        self.patch(os, "kill", kill)
+        e = self.assertRaises(SystemExit, checkPID, pidfile)
+        self.assertIn("Another twistd server", e.code)
+
+
+
+    def test_stale(self):
+        """
+        Stale PID file is removed without causing a system exit.
+        """
+        pidfile = self.mktemp()
+        with open(pidfile, "w") as f:
+            f.write(str(os.getpid() + 1))
+        def kill(pid, sig):
+            raise OSError(errno.ESRCH, "fake")
+        self.patch(os, "kill", kill)
+        checkPID(pidfile)
+        self.assertFalse(os.path.exists(pidfile))
 
 
 

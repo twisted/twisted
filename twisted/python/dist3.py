@@ -86,6 +86,14 @@ modules = [
     "twisted.internet.gireactor",
     "twisted.internet.gtk3reactor",
     "twisted.internet.interfaces",
+    "twisted.internet.iocpreactor.__init__",
+    "twisted.internet.iocpreactor.abstract",
+    "twisted.internet.iocpreactor.const",
+    "twisted.internet.iocpreactor.interfaces",
+    "twisted.internet.iocpreactor.reactor",
+    "twisted.internet.iocpreactor.setup",
+    "twisted.internet.iocpreactor.tcp",
+    "twisted.internet.iocpreactor.udp",
     "twisted.internet.kqreactor",
     "twisted.internet.main",
     "twisted.internet.pollreactor",
@@ -192,6 +200,7 @@ modules = [
     "twisted.python._appdirs",
     "twisted.python._tzhelper",
     "twisted.python._oldstyle",
+    "twisted.python._shellcomp",
     "twisted.python._textattributes",
     "twisted.python._url",
     "twisted.python.compat",
@@ -328,6 +337,7 @@ testModules = [
     "twisted.internet.test.test_gireactor",
     "twisted.internet.test.test_glibbase",
     "twisted.internet.test.test_inlinecb",
+    "twisted.internet.test.test_iocp",
     "twisted.internet.test.test_kqueuereactor",
     "twisted.internet.test.test_main",
     "twisted.internet.test.test_newtls",
@@ -388,6 +398,7 @@ testModules = [
     "twisted.python.test.test_dist3",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
+    "twisted.python.test.test_shellcomp",
     "twisted.python.test.test_syslog",
     "twisted.python.test.test_systemd",
     "twisted.python.test.test_textattributes",
@@ -586,5 +597,3 @@ almostModules = [
 ]
 
 modulesToInstall = modules + testModules + almostModules
-
-portedScripts = ["bin/trial", "bin/twistd"]
