@@ -315,7 +315,7 @@ class ZipstreamTests(unittest.TestCase):
         self._makebigfile(zfpath, compression, junk)
         uziter = zipstream.unzipIterChunky(zfpath, tempdir.path,
                                            chunksize=chunksize)
-        r = uziter.next()
+        r = next(uziter)
         # test that the number of chunks is in the right ballpark;
         # this could theoretically be any number but statistically it
         # should always be in this range

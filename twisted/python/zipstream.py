@@ -122,7 +122,7 @@ class _FileEntry(object):
         return bytes
 
 
-    def next(self):
+    def __next__(self):
         """
         Implement next as file does (like readline, except raises StopIteration
         at EOF)
@@ -131,6 +131,9 @@ class _FileEntry(object):
         if nextline:
             return nextline
         raise StopIteration()
+
+    # Iterators on Python 2 use next(), not __next__()
+    next = __next__
 
 
     def readlines(self):
