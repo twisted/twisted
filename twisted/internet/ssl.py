@@ -65,6 +65,8 @@ from zope.interface import implementer, implementer_only, implementedBy
 from twisted.internet import tcp, interfaces
 
 
+
+@implementer(interfaces.IOpenSSLContextFactory)
 class ContextFactory:
     """A factory for SSL context objects, for server SSL connections."""
 
@@ -73,6 +75,7 @@ class ContextFactory:
     def getContext(self):
         """Return a SSL.Context object. override in subclasses."""
         raise NotImplementedError
+
 
 
 class DefaultOpenSSLContextFactory(ContextFactory):
@@ -132,6 +135,8 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         return self._context
 
 
+
+@implementer(interfaces.IOpenSSLContextFactory)
 class ClientContextFactory:
     """A context factory for SSL clients."""
 

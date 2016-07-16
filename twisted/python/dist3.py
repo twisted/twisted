@@ -200,6 +200,7 @@ modules = [
     "twisted.python._appdirs",
     "twisted.python._tzhelper",
     "twisted.python._oldstyle",
+    "twisted.python._shellcomp",
     "twisted.python._textattributes",
     "twisted.python._url",
     "twisted.python.compat",
@@ -397,6 +398,7 @@ testModules = [
     "twisted.python.test.test_dist3",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
+    "twisted.python.test.test_shellcomp",
     "twisted.python.test.test_syslog",
     "twisted.python.test.test_systemd",
     "twisted.python.test.test_textattributes",
@@ -595,5 +597,3 @@ almostModules = [
 ]
 
 modulesToInstall = modules + testModules + almostModules
-
-portedScripts = ["bin/trial", "bin/twistd"]
