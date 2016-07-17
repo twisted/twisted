@@ -46,7 +46,7 @@ class DomainDeliveryBase:
         @type service: L{MailService}
         @param service: A mail service.
 
-        @type user: L{bytes} or L{NoneType <types.NoneType>}
+        @type user: L{bytes} or L{None}
         @param user: The authenticated SMTP user.
 
         @type host: L{bytes}
@@ -165,8 +165,8 @@ class DomainSMTP(SMTPDomainDelivery, smtp.SMTP):
         Initialize the SMTP server.
 
         @type args: 2-L{tuple} of (L{IMessageDelivery} provider or
-            L{NoneType <types.NoneType>}, L{IMessageDeliveryFactory}
-            provider or L{NoneType <types.NoneType>})
+            L{None}, L{IMessageDeliveryFactory}
+            provider or L{None})
         @param args: Positional arguments for L{SMTP.__init__}
 
         @type kw: L{dict}
@@ -194,8 +194,8 @@ class DomainESMTP(ESMTPDomainDelivery, smtp.ESMTP):
         Initialize the ESMTP server.
 
         @type args: 2-L{tuple} of (L{IMessageDelivery} provider or
-            L{NoneType <types.NoneType>}, L{IMessageDeliveryFactory}
-            provider or L{NoneType <types.NoneType>})
+            L{None}, L{IMessageDeliveryFactory}
+            provider or L{None})
         @param args: Positional arguments for L{ESMTP.__init__}
 
         @type kw: L{dict}
@@ -233,7 +233,7 @@ class SMTPFactory(smtp.SMTPFactory):
         @param service: An email service.
 
         @type portal: L{Portal <twisted.cred.portal.Portal>} or
-            L{NoneType <types.NoneType>}
+            L{None}
         @param portal: A portal to use for authentication.
         """
         smtp.SMTPFactory.__init__(self)
@@ -268,8 +268,8 @@ class ESMTPFactory(SMTPFactory):
     @ivar protocol: A callable which creates a protocol.  The default value is
         L{ESMTP}.
 
-    @type context: L{ContextFactory <twisted.internet.ssl.ContextFactory>} or
-        L{NoneType <types.NoneType>}
+    @type context: L{IOpenSSLContextFactory
+        <twisted.internet.interfaces.IOpenSSLContextFactory>} or L{None}
     @ivar context: A factory to generate contexts to be used in negotiating
         encrypted communication.
 

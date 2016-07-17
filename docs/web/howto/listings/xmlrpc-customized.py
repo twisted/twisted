@@ -1,4 +1,5 @@
 from twisted.web import xmlrpc, server
+from twisted.internet import endpoints
 
 class EchoHandler:
 
@@ -56,5 +57,6 @@ class Example(xmlrpc.XMLRPC):
 if __name__ == '__main__':
     from twisted.internet import reactor
     r = Example()
-    reactor.listenTCP(7080, server.Site(r))
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
+    endpoint.listen(server.Site(r))
     reactor.run()

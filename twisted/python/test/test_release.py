@@ -550,18 +550,19 @@ class UtilityTests(ExternalTempdirTestCase):
         value.
         """
         content = 'foo\nhey hey $VER\nbar\n'
-        outf = open('release.replace', 'w')
-        outf.write(content)
-        outf.close()
+        with open('release.replace', 'w') as outf:
+            outf.write(content)
 
         expected = content.replace('$VER', '2.0.0')
         replaceInFile('release.replace', {'$VER': '2.0.0'})
-        self.assertEqual(open('release.replace').read(), expected)
+        with open('release.replace') as f:
+            self.assertEqual(f.read(), expected)
 
 
         expected = expected.replace('2.0.0', '3.0.0')
         replaceInFile('release.replace', {'2.0.0': '3.0.0'})
-        self.assertEqual(open('release.replace').read(), expected)
+        with open('release.replace') as f:
+            self.assertEqual(f.read(), expected)
 
 
 
@@ -1397,7 +1398,7 @@ class SphinxBuilderTests(TestCase):
                 3. In the case where it's a path to a C{.html} file, the
                    content looks like an HTML file.
 
-        @return: C{None}
+        @return: L{None}
         """
         # check that file exists
         fpath = fileDir.child(fileName)
@@ -1605,7 +1606,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         working directory doesn't produce any error.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        self.assertEqual(None,
+        self.assertIsNone(
                          self.createCommand.ensureIsWorkingDirectory(reposDir))
 
 
@@ -1989,3 +1990,33 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+
+
+    def test_topfileAddedButWithOtherTopfiles(self):
+        """
+        Running it on a branch with a fragment in the topfiles dir added
+        returns green, even if there are other files in the topfiles dir.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = topfiles.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")

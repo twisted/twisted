@@ -37,6 +37,7 @@ intersphinxURLs = [
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "https://python-hyper.org/h2/en/stable/objects.inv",
     "https://python-hyper.org/priority/en/stable/objects.inv",
+    "https://docs.zope.org/zope.interface/objects.inv",
 ]
 
 
@@ -453,9 +454,8 @@ def replaceProjectVersion(filename, newversion):
     """
     # XXX - this should be moved to Project and renamed to writeVersionFile.
     # jml, 2007-11-15.
-    f = open(filename, 'w')
-    f.write(generateVersionFileData(newversion))
-    f.close()
+    with open(filename, 'w') as f:
+        f.write(generateVersionFileData(newversion))
 
 
 
@@ -464,14 +464,12 @@ def replaceInFile(filename, oldToNew):
     I replace the text `oldstr' with `newstr' in `filename' using science.
     """
     os.rename(filename, filename + '.bak')
-    f = open(filename + '.bak')
-    d = f.read()
-    f.close()
+    with open(filename + '.bak') as f:
+        d = f.read()
     for k, v in oldToNew.items():
         d = d.replace(k, v)
-    f = open(filename + '.new', 'w')
-    f.write(d)
-    f.close()
+    with open(filename + '.new', 'w') as f:
+        f.write(d)
     os.rename(filename + '.new', filename)
     os.unlink(filename + '.bak')
 
@@ -487,7 +485,7 @@ class NoDocumentsFound(Exception):
 class APIBuilder(object):
     """
     Generate API documentation from source files using
-    U{pydoctor<http://codespeak.net/~mwh/pydoctor/>}.  This requires
+    U{pydoctor<https://github.com/twisted/pydoctor>}.  This requires
     pydoctor to be installed and usable.
     """
     def build(self, projectName, projectURL, sourceURL, packagePath,
@@ -526,7 +524,7 @@ class APIBuilder(object):
         main(
             ["--project-name", projectName,
              "--project-url", projectURL,
-             "--system-class", "pydoctor.twistedmodel.TwistedSystem",
+             "--system-class", "twisted.python._pydoctor.TwistedSystem",
              "--project-base-dir", packagePath.parent().path,
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
@@ -592,8 +590,8 @@ class NewsBuilder(object):
             for news entries.
 
         @param ticketType: The type of news entries to search for.  One of
-            L{NewsBuilder._FEATURE}, L{NewsBuilder._BUGFIX},
-            L{NewsBuilder._REMOVAL}, or L{NewsBuilder._MISC}.
+            C{NewsBuilder._FEATURE}, C{NewsBuilder._BUGFIX},
+            C{NewsBuilder._REMOVAL}, or C{NewsBuilder._MISC}.
 
         @return: A C{list} of two-tuples.  The first element is the ticket
             number as an C{int}.  The second element of each tuple is the
@@ -718,22 +716,22 @@ class NewsBuilder(object):
         misc = self._findChanges(path, self._MISC)
 
         oldNews = output.getContent()
-        newNews = output.sibling('NEWS.new').open('w')
-        if oldNews.startswith(self._TICKET_HINT):
-            newNews.write(self._TICKET_HINT)
-            oldNews = oldNews[len(self._TICKET_HINT):]
+        with output.sibling('NEWS.new').open('w') as newNews:
+            if oldNews.startswith(self._TICKET_HINT):
+                newNews.write(self._TICKET_HINT)
+                oldNews = oldNews[len(self._TICKET_HINT):]
 
-        self._writeHeader(newNews, header)
-        if changes:
-            for (part, tickets) in changes:
-                self._writeSection(newNews, self._headings.get(part), tickets)
-        else:
-            newNews.write(self._NO_CHANGES)
+            self._writeHeader(newNews, header)
+            if changes:
+                for (part, tickets) in changes:
+                    self._writeSection(newNews, self._headings.get(part),
+                                       tickets)
+            else:
+                newNews.write(self._NO_CHANGES)
+                newNews.write('\n')
+            self._writeMisc(newNews, self._headings.get(self._MISC), misc)
             newNews.write('\n')
-        self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-        newNews.write('\n')
-        newNews.write(oldNews)
-        newNews.close()
+            newNews.write(oldNews)
         output.sibling('NEWS.new').moveTo(output)
 
 
@@ -1108,7 +1106,7 @@ class CheckTopfileScript(object):
 
         for change in files:
             if os.sep + "topfiles" + os.sep in change:
-                if change.rsplit(".", 1)[1] in TOPFILE_TYPES:
+                if "." in change and change.rsplit(".", 1)[1] in TOPFILE_TYPES:
                     topfiles.append(change)
 
         if branch.startswith("release-"):

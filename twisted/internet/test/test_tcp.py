@@ -213,7 +213,7 @@ class FakeProtocol(Protocol):
     """
     def dataReceived(self, data):
         """
-        Return something other than C{None} to trigger a deprecation warning for
+        Return something other than L{None} to trigger a deprecation warning for
         that behavior.
         """
         return ()
@@ -542,7 +542,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
     def test_buildProtocolReturnsNone(self):
         """
-        When the factory's C{buildProtocol} returns C{None} the connection is
+        When the factory's C{buildProtocol} returns L{None} the connection is
         gracefully closed.
         """
         connectionLost = Deferred()

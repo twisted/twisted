@@ -360,7 +360,7 @@ if cryptography is not None and pyasn1 is not None:
             diffie-hellman-group-exchange-sha1 key exchange.
 
             @return: The primes and generators.
-            @rtype: C{dict} mapping the key size to a C{list} of
+            @rtype: L{dict} mapping the key size to a C{list} of
                 C{(generator, prime)} tupple.
             """
             # In these tests, we hardwire the prime values to those defined by
@@ -448,7 +448,7 @@ if cryptography is not None and pyasn1 is not None:
         def ssh_USERAUTH_SUCCESS(self, packet):
             if not self.canSucceedPassword and self.canSucceedPublicKey:
                 raise unittest.FailTest(
-                    'got USERAUTH_SUCESS before password and publickey')
+                    'got USERAUTH_SUCCESS before password and publickey')
             userauth.SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
 
         def getPassword(self):

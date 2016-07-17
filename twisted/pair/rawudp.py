@@ -2,9 +2,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
-"""Implementation of raw packet interfaces for UDP"""
+"""
+Implementation of raw packet interfaces for UDP
+"""
 
 import struct
 
@@ -18,10 +18,13 @@ class UDPHeader:
         (self.source, self.dest, self.len, self.check) \
                  = struct.unpack("!HHHH", data[:8])
 
+
+
 @implementer(raw.IRawDatagramProtocol)
 class RawUDPProtocol(protocol.AbstractDatagramProtocol):
     def __init__(self):
         self.udpProtos = {}
+
 
     def addProto(self, num, proto):
         if not isinstance(proto, protocol.DatagramProtocol):
@@ -33,6 +36,7 @@ class RawUDPProtocol(protocol.AbstractDatagramProtocol):
         if num not in self.udpProtos:
             self.udpProtos[num] = []
         self.udpProtos[num].append(proto)
+
 
     def datagramReceived(self,
                          data,

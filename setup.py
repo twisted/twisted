@@ -34,7 +34,7 @@ def main(args):
     requirements = ["zope.interface >= 3.6.0"]
 
     from twisted.python.dist import (
-        STATIC_PACKAGE_METADATA, getExtensions, getScripts,
+        STATIC_PACKAGE_METADATA, getExtensions, getConsoleScripts,
         setup, _EXTRAS_REQUIRE)
 
     setup_args = STATIC_PACKAGE_METADATA.copy()
@@ -43,7 +43,9 @@ def main(args):
         packages=setuptools.find_packages(),
         install_requires=requirements,
         conditionalExtensions=getExtensions(),
-        scripts=getScripts(),
+        entry_points={
+            'console_scripts':  getConsoleScripts()
+        },
         include_package_data=True,
         zip_safe=False,
         extras_require=_EXTRAS_REQUIRE,

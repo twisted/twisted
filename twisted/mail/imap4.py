@@ -25,7 +25,6 @@ import tempfile
 import string
 import time
 import random
-import types
 
 import email.Utils
 
@@ -87,7 +86,7 @@ class MessageSet(object):
         if start is self._empty:
             return
 
-        if isinstance(start, types.ListType):
+        if isinstance(start, list):
             self.ranges = start[:]
             self.clean()
         else:
@@ -372,7 +371,8 @@ class Command:
             N = len(names)
             if (N >= 1 and names[0] in self._1_RESPONSES or
                 N >= 2 and names[1] in self._2_RESPONSES or
-                N >= 2 and names[0] == 'OK' and isinstance(names[1], types.ListType) and names[1][0] in self._OK_RESPONSES):
+                N >= 2 and names[0] == 'OK' and isinstance(names[1], list)
+               and names[1][0] in self._OK_RESPONSES):
                 send.append(names)
             else:
                 unuse.append(names)
@@ -444,15 +444,15 @@ class IMailboxListener(Interface):
     def newMessages(exists, recent):
         """Indicates that the number of messages in a mailbox has changed.
 
-        @type exists: C{int} or C{None}
+        @type exists: C{int} or L{None}
         @param exists: The total number of messages now in this mailbox.
         If the total number of messages has not changed, this should be
-        C{None}.
+        L{None}.
 
         @type recent: C{int}
         @param recent: The number of messages now flagged \\Recent.
         If the number of recent messages has not changed, this should be
-        C{None}.
+        L{None}.
         """
 
 # Some constants to help define what an atom is and is not - see the grammar
@@ -1478,7 +1478,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             sequence numbers or UIDs.
 
         @type searchResults: C{list}
-        @param searchResults: The search results so far or C{None} if no
+        @param searchResults: The search results so far or L{None} if no
             results yet.
         """
         if searchResults is None:
@@ -3363,7 +3363,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message-id fields are strings, while the from, sender, reply-to,
         to, cc, and bcc fields contain address data.  Address data consists
         of a sequence of name, source route, mailbox name, and hostname.
-        Fields which are not present for a particular address may be C{None}.
+        Fields which are not present for a particular address may be L{None}.
         """
         return self._fetch(str(messages), useUID=uid, envelope=1)
 
@@ -3842,7 +3842,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}
@@ -3868,7 +3868,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}
@@ -3894,7 +3894,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}
@@ -4202,7 +4202,7 @@ def splitQuoted(s):
 
     Tokens that would otherwise be separated but are surrounded by \"
     remain as a single token.  Any token that is not quoted and is
-    equal to \"NIL\" is tokenized as C{None}.
+    equal to \"NIL\" is tokenized as L{None}.
 
     @type s: C{str}
     @param s: The string to be split
@@ -4284,9 +4284,9 @@ def collapseStrings(results):
     """
     copy = []
     begun = None
-    listsList = [isinstance(s, types.ListType) for s in results]
+    listsList = [isinstance(s, list) for s in results]
 
-    pred = lambda e: isinstance(e, types.TupleType)
+    pred = lambda e: isinstance(e, tuple)
     tran = {
         0: lambda e: splitQuoted(''.join(e)),
         1: lambda e: [''.join([i[0] for i in e])]
@@ -4421,7 +4421,7 @@ def collapseNestedLists(items):
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, (DontQuoteMe, int, long)):
             pieces.extend([' ', str(i)])
-        elif isinstance(i, types.StringTypes):
+        elif isinstance(i, (str, unicode)):
             if _needsLiteral(i):
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
             else:
@@ -4520,7 +4520,7 @@ class IAccount(Interface):
         contain multiple hierarchical parts.
 
         @type mbox: An object implementing C{IMailbox}
-        @param mbox: The mailbox to associate with this name.  If C{None},
+        @param mbox: The mailbox to associate with this name.  If L{None},
         a suitable default is created and used.
 
         @rtype: C{Deferred} or C{bool}
@@ -4948,7 +4948,7 @@ class _MessageStructure(object):
         Parse a I{Content-Disposition} header into a two-sequence of the
         disposition and a flattened list of its parameters.
 
-        @return: C{None} if there is no disposition header value, a C{list} with
+        @return: L{None} if there is no disposition header value, a C{list} with
             two elements otherwise.
         """
         if disp:

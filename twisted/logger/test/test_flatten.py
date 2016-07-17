@@ -177,7 +177,7 @@ class FlatFormattingTests(unittest.TestCase):
         """
         The same format field used twice in one event is rendered twice.
 
-        @param event: An event to flatten.  If C{None}, create a new event.
+        @param event: An event to flatten.  If L{None}, create a new event.
         @return: C{event} or the event created.
         """
         if event is None:

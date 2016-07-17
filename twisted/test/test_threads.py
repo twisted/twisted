@@ -172,7 +172,7 @@ class ReactorThreadsTests(unittest.TestCase):
         def reactorFunc():
             return defer.fail(RuntimeError("bar"))
         def cb(res):
-            self.assert_(isinstance(res[1][0], RuntimeError))
+            self.assertIsInstance(res[1][0], RuntimeError)
             self.assertEqual(res[1][0].args[0], "bar")
 
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
@@ -187,7 +187,7 @@ class ReactorThreadsTests(unittest.TestCase):
             reactor.callLater(0.1, d.errback, RuntimeError("spam"))
             return d
         def cb(res):
-            self.assert_(isinstance(res[1][0], RuntimeError))
+            self.assertIsInstance(res[1][0], RuntimeError)
             self.assertEqual(res[1][0].args[0], "spam")
 
         return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
@@ -269,7 +269,7 @@ class DeferredResultTests(unittest.TestCase):
 
     def test_deferredFailureAfterSuccess(self):
         """
-        Check that a successfull L{threads.deferToThread} followed by a one
+        Check that a successful L{threads.deferToThread} followed by a one
         that raises an exception correctly result as a failure.
         """
         # set up a condition that causes cReactor to hang. These conditions
@@ -381,9 +381,8 @@ class StartupBehaviorTests(unittest.TestCase):
 
     def testCallBeforeStartupUnexecuted(self):
         progname = self.mktemp()
-        progfile = open(progname, 'w')
-        progfile.write(_callBeforeStartupProgram % {'reactor': reactor.__module__})
-        progfile.close()
+        with open(progname, 'w') as progfile:
+            progfile.write(_callBeforeStartupProgram % {'reactor': reactor.__module__})
 
         def programFinished(result):
             (out, err, reason) = result

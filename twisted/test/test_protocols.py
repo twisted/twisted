@@ -215,8 +215,8 @@ class PortforwardingTests(unittest.TestCase):
         client.makeConnection(clientTransport)
 
         # check that the producers are registered
-        self.assertIdentical(clientTransport.producer, serverTransport)
-        self.assertIdentical(serverTransport.producer, clientTransport)
+        self.assertIs(clientTransport.producer, serverTransport)
+        self.assertIs(serverTransport.producer, clientTransport)
         # check the streaming attribute in both transports
         self.assertTrue(clientTransport.streaming)
         self.assertTrue(serverTransport.streaming)

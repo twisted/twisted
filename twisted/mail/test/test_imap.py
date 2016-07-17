@@ -730,10 +730,11 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_files(self):
         inputStructure = [
-            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz'
+            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz',
+            u'biz'
         ]
 
-        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz"'
+        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz" "biz"'
 
         self.assertEqual(imap4.collapseNestedLists(inputStructure), output)
 
@@ -1643,7 +1644,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN', '\\DELETED'], 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
@@ -1651,7 +1653,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def login():
             return self.client.login('testuser', 'password-test')
         def append():
-            message = file(infile)
+            message = open(infile)
             return self.client.sendCommand(
                 imap4.Command(
                     'APPEND',
@@ -1673,7 +1675,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN'], 'Right now', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testCheck(self):
         SimpleServer.theAccount.addMailbox('root/subthing')
@@ -2204,7 +2207,7 @@ class ClientCapabilityTests(unittest.TestCase):
     def test_simpleAtoms(self):
         """
         A capability response consisting only of atoms without C{'='} in them
-        should result in a dict mapping those atoms to C{None}.
+        should result in a dict mapping those atoms to L{None}.
         """
         capabilitiesResult = self.protocol.getCapabilities(useCache=False)
         self.protocol.dataReceived('* CAPABILITY IMAP4rev1 LOGINDISABLED\r\n')
@@ -2243,7 +2246,7 @@ class ClientCapabilityTests(unittest.TestCase):
     def test_mixedAtoms(self):
         """
         A capability response consisting of both simple and category atoms of
-        the same type should result in a list containing C{None} as well as the
+        the same type should result in a list containing L{None} as well as the
         values for the category.
         """
         capabilitiesResult = self.protocol.getCapabilities(useCache=False)
@@ -3563,7 +3566,7 @@ class GetBodyStructureTests(unittest.TestCase):
     def test_singlePartWithMissing(self):
         """
         For fields with no information contained in the message headers,
-        L{imap4.getBodyStructure} fills in C{None} values in its result.
+        L{imap4.getBodyStructure} fills in L{None} values in its result.
         """
         major = 'image'
         minor = 'jpeg'

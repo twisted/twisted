@@ -37,7 +37,7 @@ class LimitedHistoryLogObserver(object):
 
     def __init__(self, size=_DEFAULT_BUFFER_MAXIMUM):
         """
-        @param size: The maximum number of events to buffer.  If C{None}, the
+        @param size: The maximum number of events to buffer.  If L{None}, the
             buffer is unbounded.
         @type size: L{int}
         """

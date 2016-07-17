@@ -63,7 +63,7 @@ class NameVirtualHostTests(TestCase):
     def test_renderWithoutHost(self):
         """
         L{NameVirtualHost.render} returns the result of rendering the
-        instance's C{default} if it is not C{None} and there is no I{Host}
+        instance's C{default} if it is not L{None} and there is no I{Host}
         header in the request.
         """
         virtualHostResource = NameVirtualHost()
@@ -76,7 +76,7 @@ class NameVirtualHostTests(TestCase):
     def test_renderWithoutHostNoDefault(self):
         """
         L{NameVirtualHost.render} returns a response with a status of I{NOT
-        FOUND} if the instance's C{default} is C{None} and there is no I{Host}
+        FOUND} if the instance's C{default} is L{None} and there is no I{Host}
         header in the request.
         """
         virtualHostResource = NameVirtualHost()
@@ -118,7 +118,7 @@ class NameVirtualHostTests(TestCase):
     def test_renderWithUnknownHost(self):
         """
         L{NameVirtualHost.render} returns the result of rendering the
-        instance's C{default} if it is not C{None} and there is no host
+        instance's C{default} if it is not L{None} and there is no host
         matching the value of the I{Host} header in the request.
         """
         virtualHostResource = NameVirtualHost()
@@ -135,7 +135,7 @@ class NameVirtualHostTests(TestCase):
     def test_renderWithUnknownHostNoDefault(self):
         """
         L{NameVirtualHost.render} returns a response with a status of I{NOT
-        FOUND} if the instance's C{default} is C{None} and there is no host
+        FOUND} if the instance's C{default} is L{None} and there is no host
         matching the value of the I{Host} header in the request.
         """
         virtualHostResource = NameVirtualHost()

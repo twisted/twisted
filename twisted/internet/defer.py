@@ -11,7 +11,7 @@ Maintainer: Glyph Lefkowitz
     result. B{Never ever ever use this as an actual result for a Deferred}.  You
     have been warned.
 
-@var _CONTINUE: A marker left in L{Deferred.callbacks} to indicate a Deferred
+@var _CONTINUE: A marker left in L{Deferred.callback}s to indicate a Deferred
     chain.  Always accompanied by a Deferred instance in the args tuple pointing
     at the Deferred which is chained to the Deferred which has this marker.
 """
@@ -47,8 +47,7 @@ class CancelledError(Exception):
 
 class TimeoutError(Exception):
     """
-    This exception is deprecated.  It is used only by the deprecated
-    L{Deferred.setTimeout} method.
+    This exception is deprecated.
     """
 
 
@@ -98,7 +97,7 @@ def fail(result=None):
 
     @param result: The same argument that L{Deferred.errback} takes.
 
-    @raise NoCurrentExceptionError: If C{result} is C{None} but there is no
+    @raise NoCurrentExceptionError: If C{result} is L{None} but there is no
         current exception state.
 
     @rtype: L{Deferred}
@@ -175,7 +174,7 @@ def setDebugging(on):
     Enable or disable L{Deferred} debugging.
 
     When debugging is on, the call stacks from creation and invocation are
-    recorded, and added to any L{AlreadyCalledErrors} we raise.
+    recorded, and added to any L{AlreadyCalledError}s we raise.
     """
     Deferred.debug=bool(on)
 
@@ -216,26 +215,27 @@ class Deferred:
 
     @ivar called: A flag which is C{False} until either C{callback} or
         C{errback} is called and afterwards always C{True}.
-    @type called: C{bool}
+    @type called: L{bool}
 
     @ivar paused: A counter of how many unmatched C{pause} calls have been made
         on this instance.
-    @type paused: C{int}
+    @type paused: L{int}
 
     @ivar _suppressAlreadyCalled: A flag used by the cancellation mechanism
         which is C{True} if the Deferred has no canceller and has been
         cancelled, C{False} otherwise.  If C{True}, it can be expected that
         C{callback} or C{errback} will eventually be called and the result
         should be silently discarded.
-    @type _suppressAlreadyCalled: C{bool}
+    @type _suppressAlreadyCalled: L{bool}
 
     @ivar _runningCallbacks: A flag which is C{True} while this instance is
         executing its callback chain, used to stop recursive execution of
         L{_runCallbacks}
-    @type _runningCallbacks: C{bool}
+    @type _runningCallbacks: L{bool}
 
-    @ivar _chainedTo: If this Deferred is waiting for the result of another
-        Deferred, this is a reference to the other Deferred.  Otherwise, C{None}.
+    @ivar _chainedTo: If this L{Deferred} is waiting for the result of another
+        L{Deferred}, this is a reference to the other Deferred.  Otherwise,
+        L{None}.
     """
 
     called = False
@@ -417,13 +417,13 @@ class Deferred:
         @param fail: The L{Failure} object which will be passed to the first
             errback added to this L{Deferred} (via L{addErrback}).
             Alternatively, a L{Exception} instance from which a L{Failure} will
-            be constructed (with no traceback) or C{None} to create a L{Failure}
+            be constructed (with no traceback) or L{None} to create a L{Failure}
             instance from the current exception state (with a traceback).
 
         @raise AlreadyCalledError: If L{callback} or L{errback} has already been
             called on this L{Deferred}.
 
-        @raise NoCurrentExceptionError: If C{fail} is C{None} but there is
+        @raise NoCurrentExceptionError: If C{fail} is L{None} but there is
             no current exception state.
         """
         if fail is None:
@@ -503,8 +503,7 @@ class Deferred:
 
     def _continuation(self):
         """
-        Build a tuple of callback and errback with L{_continue} to be used by
-        L{_addContinue} and L{_removeContinue} on another Deferred.
+        Build a tuple of callback and errback with L{_CONTINUE}.
         """
         return ((_CONTINUE, (self,), None),
                 (_CONTINUE, (self,), None))
@@ -518,21 +517,21 @@ class Deferred:
         with the current result and making the current result equal to the
         return value (or raised exception) of that call.
 
-        If C{self._runningCallbacks} is true, this loop won't run at all, since
+        If L{_runningCallbacks} is true, this loop won't run at all, since
         it is already running above us on the call stack.  If C{self.paused} is
         true, the loop also won't run, because that's what it means to be
         paused.
 
         The loop will terminate before processing all of the callbacks if a
-        C{Deferred} without a result is encountered.
+        L{Deferred} without a result is encountered.
 
-        If a C{Deferred} I{with} a result is encountered, that result is taken
+        If a L{Deferred} I{with} a result is encountered, that result is taken
         and the loop proceeds.
 
         @note: The implementation is complicated slightly by the fact that
-            chaining (associating two Deferreds with each other such that one
+            chaining (associating two L{Deferred}s with each other such that one
             will wait for the result of the other, as happens when a Deferred is
-            returned from a callback on another Deferred) is supported
+            returned from a callback on another L{Deferred}) is supported
             iteratively rather than recursively, to avoid running out of stack
             frames when processing long chains.
         """
@@ -778,7 +777,7 @@ class FirstError(Exception):
 
     @ivar index: The index of the L{Deferred} in the L{DeferredList} where
         it happened.
-    @type index: C{int}
+    @type index: L{int}
     """
     def __init__(self, failure, index):
         Exception.__init__(self, failure, index)
@@ -840,7 +839,7 @@ class DeferredList(Deferred):
 
     See the documentation for the C{__init__} arguments for more information.
 
-    @ivar _deferredList: The C{list} of L{Deferred}s to track.
+    @ivar _deferredList: The L{list} of L{Deferred}s to track.
     """
 
     fireOnOneCallback = False
@@ -852,7 +851,7 @@ class DeferredList(Deferred):
         Initialize a DeferredList.
 
         @param deferredList: The list of deferreds to track.
-        @type deferredList:  C{list} of L{Deferred}s
+        @type deferredList:  L{list} of L{Deferred}s
 
         @param fireOnOneCallback: (keyword param) a flag indicating that this
             L{DeferredList} will fire when the first L{Deferred} in
@@ -861,7 +860,7 @@ class DeferredList(Deferred):
             will fire with a two-tuple: the first element is the result of the
             Deferred which fired; the second element is the index in
             C{deferredList} of that Deferred.
-        @type fireOnOneCallback: C{bool}
+        @type fireOnOneCallback: L{bool}
 
         @param fireOnOneErrback: (keyword param) a flag indicating that this
             L{DeferredList} will fire when the first L{Deferred} in
@@ -869,17 +868,17 @@ class DeferredList(Deferred):
             of the other Deferreds.  When this flag is set, if a Deferred in the
             list errbacks, the DeferredList will errback with a L{FirstError}
             failure wrapping the failure of that Deferred.
-        @type fireOnOneErrback: C{bool}
+        @type fireOnOneErrback: L{bool}
 
         @param consumeErrors: (keyword param) a flag indicating that failures in
-            any of the included L{Deferreds} should not be propagated to
-            errbacks added to the individual L{Deferreds} after this
+            any of the included L{Deferred}s should not be propagated to
+            errbacks added to the individual L{Deferred}s after this
             L{DeferredList} is constructed.  After constructing the
             L{DeferredList}, any errors in the individual L{Deferred}s will be
-            converted to a callback result of C{None}.  This is useful to
+            converted to a callback result of L{None}.  This is useful to
             prevent spurious 'Unhandled error in Deferred' messages from being
             logged.  This does not prevent C{fireOnOneErrback} from working.
-        @type consumeErrors: C{bool}
+        @type consumeErrors: L{bool}
         """
         self._deferredList = list(deferredList)
         self.resultList = [None] * len(self._deferredList)
@@ -969,16 +968,16 @@ def gatherResults(deferredList, consumeErrors=False):
     This differs from L{DeferredList} in that you don't need to parse
     the result for success/failure.
 
-    @type deferredList:  C{list} of L{Deferred}s
+    @type deferredList:  L{list} of L{Deferred}s
 
     @param consumeErrors: (keyword param) a flag, defaulting to False,
-        indicating that failures in any of the given L{Deferreds} should not be
-        propagated to errbacks added to the individual L{Deferreds} after this
+        indicating that failures in any of the given L{Deferred}s should not be
+        propagated to errbacks added to the individual L{Deferred}s after this
         L{gatherResults} invocation.  Any such errors in the individual
-        L{Deferred}s will be converted to a callback result of C{None}.  This
+        L{Deferred}s will be converted to a callback result of L{None}.  This
         is useful to prevent spurious 'Unhandled error in Deferred' messages
         from being logged.  This parameter is available since 11.1.0.
-    @type consumeErrors: C{bool}
+    @type consumeErrors: L{bool}
     """
     d = DeferredList(deferredList, fireOnOneErrback=True,
                                    consumeErrors=consumeErrors)
@@ -1104,12 +1103,12 @@ def deferredGenerator(f):
     functions and converts it into a function that returns a L{Deferred}. The
     result of the L{Deferred} will be the last value that your generator yielded
     unless the last value is a L{waitForDeferred} instance, in which case the
-    result will be C{None}.  If the function raises an unhandled exception, the
+    result will be L{None}.  If the function raises an unhandled exception, the
     L{Deferred} will errback instead.  Remember that C{return result} won't work;
     use C{yield result; return} in place of that.
 
     Note that not yielding anything from your generator will make the L{Deferred}
-    result in C{None}. Yielding a L{Deferred} from your generator is also an error
+    result in L{None}. Yielding a L{Deferred} from your generator is also an error
     condition; always yield C{waitForDeferred(d)} instead.
 
     The L{Deferred} returned from your deferred generator may also errback if your
@@ -1289,7 +1288,7 @@ def inlineCallbacks(f):
     failure object if your generator raises an unhandled exception). Note that
     you can't use C{return result} to return a value; use C{returnValue(result)}
     instead. Falling off the end of the generator, or simply using C{return}
-    will cause the L{Deferred} to have a result of C{None}.
+    will cause the L{Deferred} to have a result of L{None}.
 
     Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
     If you believe the thing you'd like to return could be a L{Deferred}, do
@@ -1452,11 +1451,11 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
 
     @ivar limit: At most this many users may acquire this semaphore at
         once.
-    @type limit: C{int}
+    @type limit: L{int}
 
     @ivar tokens: The difference between C{limit} and the number of users
         which have currently acquired this semaphore.
-    @type tokens: C{int}
+    @type tokens: L{int}
     """
 
     def __init__(self, tokens):
@@ -1535,11 +1534,11 @@ class DeferredQueue(object):
 
     @ivar size: The maximum number of objects to allow into the queue
     at a time.  When an attempt to add a new object would exceed this
-    limit, L{QueueOverflow} is raised synchronously.  C{None} for no limit.
+    limit, L{QueueOverflow} is raised synchronously.  L{None} for no limit.
 
     @ivar backlog: The maximum number of L{Deferred} gets to allow at
     one time.  When an attempt is made to get an object which would
-    exceed this limit, L{QueueUnderflow} is raised synchronously.  C{None}
+    exceed this limit, L{QueueUnderflow} is raised synchronously.  L{None}
     for no limit.
     """
 
@@ -1649,7 +1648,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
         Wait until we acquire this lock.  This method is not safe for
         concurrent use.
 
-        @type timeout: C{float} or C{int}
+        @type timeout: L{float} or L{int}
         @param timeout: the number of seconds after which to time out if the
             lock has not been acquired.
 

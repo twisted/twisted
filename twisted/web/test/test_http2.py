@@ -26,6 +26,7 @@ try:
     # These third-party imports are guaranteed to be present if HTTP/2 support
     # is compiled in. We do not use them in the main code: only in the tests.
     import h2
+    import h2.errors
     import hyperframe
     from hpack.hpack import Encoder, Decoder
 except ImportError:
@@ -2009,6 +2010,46 @@ class H2FlowControlTests(unittest.TestCase):
         )
 
 
+    def test_windowUpdateAfterComplete(self):
+        """
+        When a WindowUpdate frame is received for a stream that has been
+        completed it is ignored.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DummyHTTPHandler
+
+        # Send the request.
+        frames = buildRequestFrames(
+            self.postRequestHeaders, self.postRequestData, f
+        )
+        requestBytes = f.preamble()
+        requestBytes += b''.join(f.serialize() for f in frames)
+        a.makeConnection(b)
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(requestBytes):
+            a.dataReceived(byte)
+
+        def update_window(*args):
+            # Send a WindowUpdate
+            windowUpdateFrame = f.buildWindowUpdateFrame(
+                streamID=1, increment=5
+            )
+            a.dataReceived(windowUpdateFrame.serialize())
+
+        def validate(*args):
+            # Give the sending loop a chance to catch up!
+            buffer = FrameBuffer()
+            buffer.receiveData(b.value())
+            frames = list(buffer)
+
+            # Check that the stream is ended neatly.
+            self.assertIn('END_STREAM', frames[-1].flags)
+
+        d = a._streamCleanupCallbacks[1].addCallback(update_window)
+        return d.addCallback(validate)
+
 
 class HTTP2TransportChecking(unittest.TestCase):
     if skipH2:
@@ -2172,3 +2213,208 @@ class HTTP2SchedulingTests(unittest.TestCase):
         self.assertEqual(call.func, a._sendPrioritisedData)
         self.assertEqual(call.args, ())
         self.assertEqual(call.kw, {})
+
+
+
+class HTTP2TimeoutTests(unittest.TestCase):
+    """
+    The L{H2Connection} object times out idle connections.
+    """
+    if skipH2:
+        skip = skipH2
+
+
+    getRequestHeaders = [
+        (b':method', b'GET'),
+        (b':authority', b'localhost'),
+        (b':path', b'/'),
+        (b':scheme', b'https'),
+        (b'user-agent', b'twisted-test-code'),
+        (b'custom-header', b'1'),
+        (b'custom-header', b'2'),
+    ]
+
+
+    def patch_TimeoutMixin_clock(self, connection, reactor):
+        """
+        Unfortunately, TimeoutMixin does not allow passing an explicit reactor
+        to test timeouts. For that reason, we need to monkeypatch the method
+        set up by the TimeoutMixin.
+
+        @param connection: The HTTP/2 connection object to patch.
+        @type connection: L{H2Connection}
+
+        @param reactor: The reactor whose callLater method we want.
+        @type reactor: An object implementing
+            L{twisted.internet.interfaces.IReactorTime}
+        """
+        connection.callLater = reactor.callLater
+
+
+    def initiateH2Connection(self, initialData, requestFactory):
+        """
+        Performs test setup by building a HTTP/2 connection object, a transport
+        to back it, a reactor to run in, and sending in some initial data as
+        needed.
+
+        @param initialData: The initial HTTP/2 data to be fed into the
+            connection after setup.
+        @type initialData: L{bytes}
+
+        @param requestFactory: The L{Request} factory to use with the
+            connection.
+        """
+        reactor = task.Clock()
+        conn = H2Connection(reactor)
+        conn.timeOut = 100
+        self.patch_TimeoutMixin_clock(conn, reactor)
+
+        transport = StringTransport()
+        conn.requestFactory = requestFactory
+        conn.makeConnection(transport)
+
+        # one byte at a time, to stress the implementation.
+        for byte in iterbytes(initialData):
+            conn.dataReceived(byte)
+
+        return (reactor, conn, transport)
+
+
+    def assertTimedOut(self, data, frameCount, errorCode, lastStreamID):
+        """
+        Confirm that the data that was sent matches what we expect from a
+        timeout: namely, that it ends with a GOAWAY frame carrying an
+        appropriate error code and last stream ID.
+        """
+        buffer = FrameBuffer()
+        buffer.receiveData(data)
+        frames = list(buffer)
+
+        self.assertEqual(len(frames), frameCount)
+        self.assertTrue(
+            isinstance(frames[-1], hyperframe.frame.GoAwayFrame)
+        )
+        self.assertEqual(frames[-1].error_code, errorCode)
+        self.assertEqual(frames[-1].last_stream_id, lastStreamID)
+
+
+    def test_timeoutAfterInactivity(self):
+        """
+        When a L{H2Connection} does not receive any data for more than the
+        time out interval, it closes the connection cleanly.
+        """
+        frameFactory = FrameFactory()
+        initialData = frameFactory.preamble()
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+
+        # Save the response preamble.
+        preamble = transport.value()
+
+        # Advance the clock.
+        reactor.advance(99)
+
+        # Everything is fine, no extra data got sent.
+        self.assertEqual(preamble, transport.value())
+        self.assertFalse(transport.disconnecting)
+
+        # Advance the clock.
+        reactor.advance(2)
+
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.NO_ERROR,
+            lastStreamID=0
+        )
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_timeoutResetByData(self):
+        """
+        When a L{H2Connection} receives data, the timeout is reset.
+        """
+        # Don't send any initial data, we'll send the preamble manually.
+        frameFactory = FrameFactory()
+        initialData = b''
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyHTTPHandler,
+        )
+
+        # Send one byte of the preamble every 99 'seconds'.
+        for byte in iterbytes(frameFactory.preamble()):
+            conn.dataReceived(byte)
+
+            # Advance the clock.
+            reactor.advance(99)
+
+            # Everything is fine.
+            self.assertFalse(transport.disconnecting)
+
+        # Advance the clock.
+        reactor.advance(2)
+
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.NO_ERROR,
+            lastStreamID=0
+        )
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_timeoutWithProtocolErrorIfStreamsOpen(self):
+        """
+        When a L{H2Connection} times out with active streams, the error code
+        returned is L{h2.errors.PROTOCOL_ERROR}.
+        """
+        frameFactory = FrameFactory()
+        frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
+        initialData = frameFactory.preamble()
+        initialData += b''.join(f.serialize() for f in frames)
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyProducerHandler,
+        )
+
+        # Advance the clock to time out the request.
+        reactor.advance(101)
+
+        self.assertTimedOut(
+            transport.value(),
+            frameCount=2,
+            errorCode=h2.errors.PROTOCOL_ERROR,
+            lastStreamID=1
+        )
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_noTimeoutIfConnectionLost(self):
+        """
+        When a L{H2Connection} loses its connection it cancels its timeout.
+        """
+        frameFactory = FrameFactory()
+        frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
+        initialData = frameFactory.preamble()
+        initialData += b''.join(f.serialize() for f in frames)
+
+        reactor, conn, transport = self.initiateH2Connection(
+            initialData, requestFactory=DummyProducerHandler,
+        )
+
+        sentData = transport.value()
+        oldCallCount = len(reactor.getDelayedCalls())
+
+        # Now lose the connection.
+        conn.connectionLost("reason")
+
+        # There should be one fewer call than there was.
+        currentCallCount = len(reactor.getDelayedCalls())
+        self.assertEqual(oldCallCount - 1, currentCallCount)
+
+        # Advancing the clock should do nothing.
+        reactor.advance(101)
+        self.assertEqual(transport.value(), sentData)

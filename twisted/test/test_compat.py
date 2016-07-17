@@ -13,9 +13,10 @@ import socket, sys, traceback, io, codecs
 from twisted.trial import unittest
 
 from twisted.python.compat import (
-    reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
-    unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType, bytesEnviron, iteritems, _coercedUnicode
+    reduce, execfile, _PY3, _PYPY, comparable, cmp, nativeString,
+    networkString, unicode as unicodeCompat, lazyByteSlice, reraise,
+    NativeStringIO, iterbytes, intToBytes, ioType, bytesEnviron, iteritems,
+    _coercedUnicode, unichr,
 )
 from twisted.python.filepath import FilePath
 
@@ -44,14 +45,16 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         A file opened via 'io.open' in text mode accepts and returns text.
         """
-        self.assertEqual(ioType(io.open(self.mktemp(), "w")), unicodeCompat)
+        with io.open(self.mktemp(), "w") as f:
+            self.assertEqual(ioType(f), unicodeCompat)
 
 
     def test_3openBinaryMode(self):
         """
         A file opened via 'io.open' in binary mode accepts and returns bytes.
         """
-        self.assertEqual(ioType(io.open(self.mktemp(), "wb")), bytes)
+        with io.open(self.mktemp(), "wb") as f:
+            self.assertEqual(ioType(f), bytes)
 
 
     def test_2openTextMode(self):
@@ -89,7 +92,8 @@ class IOTypeTests(unittest.SynchronousTestCase):
         """
         The normal 'open' builtin in Python 2 will always result in bytes I/O.
         """
-        self.assertEqual(ioType(open(self.mktemp(), "w")), bytes)
+        with open(self.mktemp(), "w") as f:
+            self.assertEqual(ioType(f), bytes)
 
     if _PY3:
         test_2openTextMode.skip = "The 'file' type is no longer available."
@@ -103,17 +107,16 @@ class IOTypeTests(unittest.SynchronousTestCase):
         The L{codecs} module, oddly, returns a file-like object which returns
         bytes when not passed an 'encoding' argument.
         """
-        self.assertEqual(ioType(codecs.open(self.mktemp(), 'wb')),
-                          bytes)
+        with codecs.open(self.mktemp(), 'wb') as f:
+            self.assertEqual(ioType(f), bytes)
 
 
     def test_codecsOpenText(self):
         """
         When passed an encoding, however, the L{codecs} module returns unicode.
         """
-        self.assertEqual(ioType(codecs.open(self.mktemp(), 'wb',
-                                             encoding='utf-8')),
-                          unicodeCompat)
+        with codecs.open(self.mktemp(), 'wb', encoding='utf-8') as f:
+            self.assertEqual(ioType(f), unicodeCompat)
 
 
     def test_defaultToText(self):
@@ -312,6 +315,22 @@ class PY3Tests(unittest.SynchronousTestCase):
         """
         if sys.version.startswith("3."):
             self.assertTrue(_PY3)
+
+
+
+class PYPYTest(unittest.SynchronousTestCase):
+    """
+    Identification of PyPy.
+    """
+
+    def test_PYPY(self):
+        """
+        On PyPy, L{_PYPY} is True.
+        """
+        if 'PyPy' in sys.version:
+            self.assertTrue(_PYPY)
+        else:
+            self.assertFalse(_PYPY)
 
 
 
@@ -561,7 +580,7 @@ class StringTests(unittest.SynchronousTestCase):
             expected = str
         else:
             expected = unicode
-        self.assertTrue(unicodeCompat is expected)
+        self.assertIs(unicodeCompat, expected)
 
 
     def test_nativeStringIO(self):
@@ -640,7 +659,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
     def test_reraiseWithNone(self):
         """
         Calling L{reraise} with an exception instance and a traceback of
-        C{None} re-raises it with a new traceback.
+        L{None} re-raises it with a new traceback.
         """
         try:
             1/0
@@ -651,7 +670,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
         except:
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
-            self.assertTrue(value is value2)
+            self.assertIs(value, value2)
             self.assertNotEqual(traceback.format_tb(tb)[-1],
                                 traceback.format_tb(tb2)[-1])
         else:
@@ -672,7 +691,7 @@ class ReraiseTests(unittest.SynchronousTestCase):
         except:
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
-            self.assertTrue(value is value2)
+            self.assertIs(value, value2)
             self.assertEqual(traceback.format_tb(tb)[-1],
                              traceback.format_tb(tb2)[-1])
         else:
@@ -829,3 +848,16 @@ class CoercedUnicodeTests(unittest.TestCase):
     if _PY3:
         test_bytesNonASCII.skip = (
             "Bytes behavior of _coercedUnicode only provided on Python 2.")
+
+
+
+class UnichrTests(unittest.TestCase):
+    """
+    Tests for L{unichr}.
+    """
+
+    def test_unichr(self):
+        """
+        unichar exists and returns a unicode string with the given code point.
+        """
+        self.assertEqual(unichr(0x2603), u"\N{SNOWMAN}")

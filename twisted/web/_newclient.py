@@ -188,7 +188,7 @@ def _callAppFunction(function):
     Call C{function}.  If it raises an exception, log it with a minimal
     description of the source.
 
-    @return: C{None}
+    @return: L{None}
     """
     try:
         function()
@@ -210,7 +210,7 @@ class HTTPParser(LineReceiver):
     @ivar state: State indicator for the response parsing state machine.  One
         of C{STATUS}, C{HEADER}, C{BODY}, C{DONE}.
 
-    @ivar _partialHeader: C{None} or a C{list} of the lines of a multiline
+    @ivar _partialHeader: L{None} or a C{list} of the lines of a multiline
         header while that header is being received.
     """
 
@@ -358,7 +358,7 @@ class HTTPClientParser(HTTPParser):
 
     @ivar _responseDeferred: A L{Deferred} which will be called back with the
         response when all headers in the response have been received.
-        Thereafter, C{None}.
+        Thereafter, L{None}.
 
     @ivar _everReceivedData: C{True} if any bytes have been received.
     """
@@ -563,7 +563,7 @@ class Request:
     @ivar bodyProducer: See L{__init__}.
     @ivar persistent: See L{__init__}.
 
-    @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
+    @ivar _parsedURI: Parsed I{URI} for the request, or L{None}.
     @type _parsedURI: L{twisted.web.client.URI} or L{None}
     """
 
@@ -582,7 +582,7 @@ class Request:
             is up to the HTTP Client to add required headers such as 'Host'.
         @type headers: L{twisted.web.http_headers.Headers}
 
-        @param bodyProducer: C{None} or an L{IBodyProducer} provider which
+        @param bodyProducer: L{None} or an L{IBodyProducer} provider which
             produces the content body to send to the remote HTTP server.
 
         @param persistent: Set to C{True} when you use HTTP persistent
@@ -620,7 +620,7 @@ class Request:
     @property
     def absoluteURI(self):
         """
-        The absolute URI of the request as C{bytes}, or C{None} if the
+        The absolute URI of the request as C{bytes}, or L{None} if the
         absolute URI cannot be determined.
         """
         return getattr(self._parsedURI, 'toBytes', lambda: None)()
@@ -633,7 +633,7 @@ class Request:
 
         # In the future, having the protocol version be a parameter to this
         # method would probably be good.  It would be nice if this method
-        # weren't limited to issueing HTTP/1.1 requests.
+        # weren't limited to issuing HTTP/1.1 requests.
         requestLines = []
         requestLines.append(b' '.join([self.method, self.uri,
             b'HTTP/1.1\r\n']))
@@ -790,7 +790,7 @@ class Request:
         transport.  If bodyProducer is not None, it will be associated with an
         L{IConsumer}.
 
-        @return: A L{Deferred} which fires with C{None} when the request has
+        @return: A L{Deferred} which fires with L{None} when the request has
             been completely written to the transport or with a L{Failure} if
             there is any problem generating the request bytes.
         """
@@ -938,11 +938,11 @@ class Response:
     @ivar _transport: See L{__init__}.
 
     @ivar _bodyProtocol: The L{IProtocol} provider to which the body is
-        delivered.  C{None} before one has been registered with
+        delivered.  L{None} before one has been registered with
         C{deliverBody}.
 
     @ivar _bodyBuffer: A C{list} of the strings passed to C{bodyDataReceived}
-        before C{deliverBody} is called.  C{None} afterwards.
+        before C{deliverBody} is called.  L{None} afterwards.
 
     @ivar _state: Indicates what state this L{Response} instance is in,
         particularly with respect to delivering bytes from the response body
@@ -1241,11 +1241,11 @@ class ChunkedEncoder:
 @implementer(IPushProducer)
 class TransportProxyProducer:
     """
-    An L{IPushProducer} implementation which wraps another such thing and
-    proxies calls to it until it is told to stop.
+    An L{twisted.internet.interfaces.IPushProducer} implementation which
+    wraps another such thing and proxies calls to it until it is told to stop.
 
-    @ivar _producer: The wrapped L{IPushProducer} provider or C{None} after
-        this proxy has been stopped.
+    @ivar _producer: The wrapped L{twisted.internet.interfaces.IPushProducer}
+    provider or L{None} after this proxy has been stopped.
     """
 
     # LineReceiver uses this undocumented attribute of transports to decide
@@ -1262,8 +1262,9 @@ class TransportProxyProducer:
 
     def _stopProxying(self):
         """
-        Stop forwarding calls of L{IPushProducer} methods to the underlying
-        L{IPushProvider} provider.
+        Stop forwarding calls of L{twisted.internet.interfaces.IPushProducer}
+        methods to the underlying L{twisted.internet.interfaces.IPushProducer}
+        provider.
         """
         self._producer = None
 
