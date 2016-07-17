@@ -68,12 +68,15 @@ modules = [
     "twisted.enterprise.adbapi",
     "twisted.internet.__init__",
     "twisted.internet._baseprocess",
+    "twisted.internet._dumbwin32proc",
     "twisted.internet._glibbase",
     "twisted.internet._newtls",
+    "twisted.internet._pollingfile",
     "twisted.internet._posixstdio",
     "twisted.internet._posixserialport",
     "twisted.internet._signals",
     "twisted.internet._win32serialport",
+    "twisted.internet._win32stdio",
     "twisted.internet.abstract",
     "twisted.internet.address",
     "twisted.internet.base",
@@ -597,5 +600,3 @@ almostModules = [
 ]
 
 modulesToInstall = modules + testModules + almostModules
-
-portedScripts = ["bin/trial", "bin/twistd"]
