@@ -1,6 +1,49 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 16.3.0 (2016-07-05)
+================================
+
+Features
+--------
+ - Defined a new interface, IProtocolNegotiationFactory, that can be
+   implemented by IOpenSSLClientConnectionCreator or
+   IOpenSSLServerConnectionCreator factories to allow them to offer
+   protocols for negotiation using ALPN or NPN during the TLS
+   handshake. (#8188)
+ - twisted.trial.unittest.SynchronousTestCase.assertRegex is now
+   available to provide Python 2.7 and Python 3 compatibility. (#8372)
+
+Improved Documentation
+----------------------
+ - Development documentation has been updated to refer to Git instead
+   of SVN. (#8335)
+
+Deprecations and Removals
+-------------------------
+ - twisted.python.reflect's deprecated functions have been removed.
+   This includes funcinfo (deprecated since Twisted 2.5), allYourBase
+   and accumulateBases (deprecated since Twisted 11.0), getcurrent and
+   isinst (deprecated since Twisted 14.0). (#8293)
+ - twisted.scripts.tap2deb and twisted.scripts.tap2rpm (along with the
+   associated executables), deprecated since Twisted 15.2, have now
+   been removed. (#8326)
+ - twisted.spread.ui has been removed. (#8329)
+ - twisted.manhole -- not to be confused with manhole in Conch -- has
+   been removed. This includes the semi-functional Glade reactor, the
+   manhole application, and the manhole-old twistd plugin. (#8330)
+ - twisted.protocols.sip.DigestAuthorizer, BasicAuthorizer, and
+   related functions have been removed. (#8445)
+
+Other
+-----
+ - #7229, #7826, #8290, #8323, #8331, #8336, #8341, #8344, #8345,
+   #8347, #8351, #8363, #8365, #8366, #8374, #8382, #8384, #8390,
+   #8395, #8396, #8398, #8399, #8400, #8401, #8403, #8404, #8405,
+   #8407, #8408, #8409, #8415, #8416, #8417, #8418, #8419, #8420,
+   #8427, #8433, #8436, #8461
+
+
 Twisted Core 16.2.0 (2016-05-18)
 ================================
 
@@ -1816,7 +1859,7 @@ Features
    zombie processes in this case. (#2078)
 
  - High-throughput applications based on Perspective Broker should now
-   run noticably faster thanks to the use of a more efficient decoding
+   run noticeably faster thanks to the use of a more efficient decoding
    function in Twisted Spread. (#2310)
 
  - Documentation for trac-post-commit-hook functionality in svn-dev

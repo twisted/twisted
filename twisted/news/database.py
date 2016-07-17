@@ -461,9 +461,8 @@ class PickleStorage(_ModerationMixin):
 
 
     def flush(self):
-        f = open(self.datafile, 'w')
-        pickle.dump(self.db, f)
-        f.close()
+        with open(self.datafile, 'w') as f:
+            pickle.dump(self.db, f)
 
 
     def load(self, filename, groups = None, moderators = ()):
@@ -471,7 +470,8 @@ class PickleStorage(_ModerationMixin):
             self.db = PickleStorage.sharedDBs[filename]
         else:
             try:
-                self.db = pickle.load(open(filename))
+                with open(filename) as f:
+                    self.db = pickle.load(f)
                 PickleStorage.sharedDBs[filename] = self.db
             except IOError:
                 self.db = PickleStorage.sharedDBs[filename] = {}

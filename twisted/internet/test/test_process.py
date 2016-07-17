@@ -348,7 +348,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         Older versions of Twisted installed a SIGCHLD handler on POSIX without
         using the feature exposed by the SA_RESTART flag to sigaction(2).  The
-        most noticable problem this caused was for blocking reads and writes to
+        most noticeable problem this caused was for blocking reads and writes to
         sometimes fail with EINTR.
         """
         reactor = self.buildReactor()

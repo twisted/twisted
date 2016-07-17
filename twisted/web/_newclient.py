@@ -633,7 +633,7 @@ class Request:
 
         # In the future, having the protocol version be a parameter to this
         # method would probably be good.  It would be nice if this method
-        # weren't limited to issueing HTTP/1.1 requests.
+        # weren't limited to issuing HTTP/1.1 requests.
         requestLines = []
         requestLines.append(b' '.join([self.method, self.uri,
             b'HTTP/1.1\r\n']))
@@ -1241,11 +1241,11 @@ class ChunkedEncoder:
 @implementer(IPushProducer)
 class TransportProxyProducer:
     """
-    An L{IPushProducer} implementation which wraps another such thing and
-    proxies calls to it until it is told to stop.
+    An L{twisted.internet.interfaces.IPushProducer} implementation which
+    wraps another such thing and proxies calls to it until it is told to stop.
 
-    @ivar _producer: The wrapped L{IPushProducer} provider or L{None} after
-        this proxy has been stopped.
+    @ivar _producer: The wrapped L{twisted.internet.interfaces.IPushProducer}
+    provider or L{None} after this proxy has been stopped.
     """
 
     # LineReceiver uses this undocumented attribute of transports to decide
@@ -1262,8 +1262,9 @@ class TransportProxyProducer:
 
     def _stopProxying(self):
         """
-        Stop forwarding calls of L{IPushProducer} methods to the underlying
-        L{IPushProvider} provider.
+        Stop forwarding calls of L{twisted.internet.interfaces.IPushProducer}
+        methods to the underlying L{twisted.internet.interfaces.IPushProducer}
+        provider.
         """
         self._producer = None
 

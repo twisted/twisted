@@ -15,6 +15,7 @@ from setuptools.dist import Distribution
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
+from twisted.python.compat import _PY3
 from twisted.python.dist import (get_setup_args, ConditionalExtension,
                                  build_scripts_twisted, _EXTRAS_REQUIRE)
 from twisted.python.filepath import FilePath
@@ -102,12 +103,13 @@ class OptionalDependenciesTests(TestCase):
         the tools required for Twisted development.
         """
         deps = _EXTRAS_REQUIRE['dev']
-        self.assertIn('twistedchecker >= 0.4.0', deps)
         self.assertIn('pyflakes >= 1.0.0', deps)
         self.assertIn('twisted-dev-tools >= 0.0.2', deps)
         self.assertIn('python-subunit', deps)
         self.assertIn('sphinx >= 1.3.1', deps)
-        self.assertIn('pydoctor >= 15.0.0', deps)
+        if not _PY3:
+            self.assertIn('twistedchecker >= 0.4.0', deps)
+            self.assertIn('pydoctor >= 15.0.0', deps)
 
 
     def test_extrasRequiresTlsDeps(self):
@@ -242,70 +244,12 @@ class GetVersionTests(TestCase):
         Test that getting the version of core reads from the
         [base]/_version.py file.
         """
-        f = open(os.path.join(self.dirname, "_version.py"), "w")
-        f.write("""
+        with open(os.path.join(self.dirname, "_version.py"), "w") as f:
+            f.write("""
 from twisted.python import versions
 version = versions.Version("twisted", 0, 1, 2)
 """)
-        f.close()
         self.assertEqual(dist.getVersion(base=self.dirname), "0.1.2")
-
-
-
-class GetScriptsTests(TestCase):
-    """
-    Tests for L{dist.getScripts} which returns the scripts which should be
-    included in the distribution of a project.
-    """
-
-    def test_excludedPreamble(self):
-        """
-        L{dist.getScripts} includes neither C{"_preamble.py"} nor
-        C{"_preamble.pyc"}.
-        """
-        basedir = FilePath(self.mktemp())
-        bin = basedir.child('bin')
-        bin.makedirs()
-        bin.child('_preamble.py').setContent('some preamble code\n')
-        bin.child('_preamble.pyc').setContent('some preamble byte code\n')
-        bin.child('program').setContent('good program code\n')
-        scripts = dist.getScripts(basedir=basedir.path)
-        self.assertEqual(scripts, [bin.child('program').path])
-
-
-    def test_scriptsInRelease(self):
-        """
-        getScripts should return the scripts associated with a project
-        in the context of a released subproject tarball.
-        """
-        basedir = self.mktemp()
-        os.mkdir(basedir)
-        os.mkdir(os.path.join(basedir, 'bin'))
-        f = open(os.path.join(basedir, 'bin', 'exy'), 'w')
-        f.write('yay')
-        f.close()
-        scripts = dist.getScripts(basedir=basedir)
-        self.assertEqual(len(scripts), 1)
-        self.assertEqual(os.path.basename(scripts[0]), 'exy')
-
-
-    def test_getScriptsTopLevel(self):
-        """
-        getScripts returns scripts that are (only) in the top level bin
-        directory.
-        """
-        basedir = FilePath(self.mktemp())
-        basedir.createDirectory()
-        bindir = basedir.child("bin")
-        bindir.createDirectory()
-        included = bindir.child("included")
-        included.setContent("yay included")
-        subdir = bindir.child("subdir")
-        subdir.createDirectory()
-        subdir.child("not-included").setContent("not included")
-
-        scripts = dist.getScripts(basedir=basedir.path)
-        self.assertEqual(scripts, [included.path])
 
 
 

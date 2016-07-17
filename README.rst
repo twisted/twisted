@@ -1,16 +1,20 @@
-Twisted 16.2.0
+Twisted 16.3.0
 ==============
 
 |pypi|
 |coverage|
 |travis|
+|appveyor|
 
 .. code::
 
-    <lukasa> Can we talk for a moment about how there's a twisted class called BaseBaseClient?
+    <tomprince> [...] that made me think of (infinity,1)-groupoids and motivic and crystalline cohomology. :)
+    <@glyph> tomprince: NO IDEA IF THOSE ARE REAL WORDS
+    <tomprince> They are.
+    <tomprince> It would have been no fun to come up with nonsense, when there is perfectly good existing abstract nonsense to choose from.
 
 
-For information on what's new in Twisted 16.2.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
+For information on what's new in Twisted 16.3.0, see the `NEWS <NEWS>`_ file that comes with the distribution.
 
 
 What is this?
@@ -107,3 +111,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
 .. _travis https://travis-ci.org/twisted/twisted
+
+.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
+.. _appveyor https://ci.appveyor.com/project/adiroiban/twisted

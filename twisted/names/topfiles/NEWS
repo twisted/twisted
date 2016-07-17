@@ -1,6 +1,18 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 16.3.0 (2016-07-05)
+=================================
+
+Bugfixes
+--------
+ - twisted.names.client.Resolver as well as all resolvers inheriting
+   from twisted.names.common.ResolverBase can now understand DNS
+   answers that come back in a different case than the query. Example:
+   querying for www.google.com and the answer comes back with an A
+   record for www.google.COM will now work. (#8343)
+
+
 Twisted Names 16.2.0 (2016-05-18)
 =================================
 
@@ -445,7 +457,7 @@ Fixes
 
 0.2.0
 =====
- - Fix occassional TCP connection leak in gethostbyname()
+ - Fix occasional TCP connection leak in gethostbyname()
  - Fix TCP connection leak in recursive lookups
  - Remove deprecated use of Deferred.setTimeout
  - Improved test coverage for zone transfers

@@ -39,7 +39,7 @@ class ITerminalProtocol(Interface):
     def unhandledControlSequence(seq):
         """Called when an unsupported control sequence is received.
 
-        @type seq: C{str}
+        @type seq: L{str}
         @param seq: The whole control sequence which could not be interpreted.
         """
 
@@ -265,7 +265,7 @@ class ITerminalTransport(iinternet.ITransport):
     def unhandledControlSequence(seq):
         """Called when an unsupported control sequence is received.
 
-        @type seq: C{str}
+        @type seq: L{str}
         @param seq: The whole control sequence which could not be interpreted.
         """
 

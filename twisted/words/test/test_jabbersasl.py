@@ -1,8 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import absolute_import, division
+
 from zope.interface import implementer
+
 from twisted.internet import defer
+from twisted.python.compat import unicode
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import sasl, sasl_mechanisms, xmlstream, jid
 from twisted.words.xish import domish
@@ -15,7 +19,7 @@ class DummySASLMechanism(object):
     Dummy SASL mechanism.
 
     This just returns the initialResponse passed on creation, stores any
-    challenges and replies with an empty response.
+    challenges and replies with the value of C{response}.
 
     @ivar challenge: Last received challenge.
     @type challenge: C{unicode}.
@@ -23,8 +27,10 @@ class DummySASLMechanism(object):
                            via C{getInitialResponse} or L{None}.
     @type initialResponse: C{unicode}
     """
+
     challenge = None
-    name = "DUMMY"
+    name = u"DUMMY"
+    response = b""
 
     def __init__(self, initialResponse):
         self.initialResponse = initialResponse
@@ -34,7 +40,8 @@ class DummySASLMechanism(object):
 
     def getResponse(self, challenge):
         self.challenge = challenge
-        return ""
+        return self.response
+
 
 class DummySASLInitiatingInitializer(sasl.SASLInitiatingInitializer):
     """
@@ -67,9 +74,9 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         self.xmlstream = xmlstream.XmlStream(self.authenticator)
         self.xmlstream.send = self.output.append
         self.xmlstream.connectionMade()
-        self.xmlstream.dataReceived("<stream:stream xmlns='jabber:client' "
-                        "xmlns:stream='http://etherx.jabber.org/streams' "
-                        "from='example.com' id='12345' version='1.0'>")
+        self.xmlstream.dataReceived(b"<stream:stream xmlns='jabber:client' "
+                        b"xmlns:stream='http://etherx.jabber.org/streams' "
+                        b"from='example.com' id='12345' version='1.0'>")
         self.init = DummySASLInitiatingInitializer(self.xmlstream)
 
 
@@ -93,13 +100,13 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         """
         Test starting authentication with an initial response.
         """
-        self.init.initialResponse = "dummy"
+        self.init.initialResponse = b"dummy"
         self.init.start()
         auth = self.output[0]
         self.assertEqual(NS_XMPP_SASL, auth.uri)
-        self.assertEqual('auth', auth.name)
-        self.assertEqual('DUMMY', auth['mechanism'])
-        self.assertEqual('ZHVtbXk=', str(auth))
+        self.assertEqual(u'auth', auth.name)
+        self.assertEqual(u'DUMMY', auth['mechanism'])
+        self.assertEqual(u'ZHVtbXk=', unicode(auth))
 
 
     def test_sendAuthNoInitialResponse(self):
@@ -109,17 +116,17 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         self.init.initialResponse = None
         self.init.start()
         auth = self.output[0]
-        self.assertEqual('', str(auth))
+        self.assertEqual(u'', str(auth))
 
 
     def test_sendAuthEmptyInitialResponse(self):
         """
         Test starting authentication where the initial response is empty.
         """
-        self.init.initialResponse = ""
+        self.init.initialResponse = b""
         self.init.start()
         auth = self.output[0]
-        self.assertEqual('=', str(auth))
+        self.assertEqual('=', unicode(auth))
 
 
     def test_onChallenge(self):
@@ -128,9 +135,24 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         """
         d = self.init.start()
         challenge = domish.Element((NS_XMPP_SASL, 'challenge'))
-        challenge.addContent('bXkgY2hhbGxlbmdl')
+        challenge.addContent(u'bXkgY2hhbGxlbmdl')
         self.init.onChallenge(challenge)
-        self.assertEqual('my challenge', self.init.mechanism.challenge)
+        self.assertEqual(b'my challenge', self.init.mechanism.challenge)
+        self.init.onSuccess(None)
+        return d
+
+
+    def test_onChallengeResponse(self):
+        """
+        A non-empty response gets encoded and included as character data.
+        """
+        d = self.init.start()
+        challenge = domish.Element((NS_XMPP_SASL, 'challenge'))
+        challenge.addContent(u'bXkgY2hhbGxlbmdl')
+        self.init.mechanism.response = b"response"
+        self.init.onChallenge(challenge)
+        response = self.output[1]
+        self.assertEqual(u'cmVzcG9uc2U=', unicode(response))
         self.init.onSuccess(None)
         return d
 
@@ -142,7 +164,7 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         d = self.init.start()
         challenge = domish.Element((NS_XMPP_SASL, 'challenge'))
         self.init.onChallenge(challenge)
-        self.assertEqual('', self.init.mechanism.challenge)
+        self.assertEqual(b'', self.init.mechanism.challenge)
         self.init.onSuccess(None)
         return d
 
@@ -153,7 +175,7 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         """
         d = self.init.start()
         challenge = domish.Element((NS_XMPP_SASL, 'challenge'))
-        challenge.addContent('bXkg=Y2hhbGxlbmdl')
+        challenge.addContent(u'bXkg=Y2hhbGxlbmdl')
         self.init.onChallenge(challenge)
         self.assertFailure(d, sasl.SASLIncorrectEncodingError)
         return d
@@ -165,7 +187,7 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         """
         d = self.init.start()
         challenge = domish.Element((NS_XMPP_SASL, 'challenge'))
-        challenge.addContent('bXkg*Y2hhbGxlbmdl')
+        challenge.addContent(u'bXkg*Y2hhbGxlbmdl')
         self.init.onChallenge(challenge)
         self.assertFailure(d, sasl.SASLIncorrectEncodingError)
         return d
@@ -177,7 +199,7 @@ class SASLInitiatingInitializerTests(unittest.TestCase):
         """
         d = self.init.start()
         challenge = domish.Element((NS_XMPP_SASL, 'challenge'))
-        challenge.addContent('a')
+        challenge.addContent(u'a')
         self.init.onChallenge(challenge)
         self.assertFailure(d, sasl.SASLIncorrectEncodingError)
         return d
@@ -220,7 +242,7 @@ class SASLInitiatingInitializerSetMechanismTests(unittest.TestCase):
         """
         self.authenticator.jid = jid.JID('example.com')
         self.authenticator.password = None
-        name = "ANONYMOUS"
+        name = u"ANONYMOUS"
 
         self.assertEqual(name, self._setMechanism(name))
 
@@ -231,7 +253,7 @@ class SASLInitiatingInitializerSetMechanismTests(unittest.TestCase):
         """
         self.authenticator.jid = jid.JID('test@example.com')
         self.authenticator.password = 'secret'
-        name = "PLAIN"
+        name = u"PLAIN"
 
         self.assertEqual(name, self._setMechanism(name))
 
@@ -242,7 +264,7 @@ class SASLInitiatingInitializerSetMechanismTests(unittest.TestCase):
         """
         self.authenticator.jid = jid.JID('test@example.com')
         self.authenticator.password = 'secret'
-        name = "DIGEST-MD5"
+        name = u"DIGEST-MD5"
 
         self.assertEqual(name, self._setMechanism(name))
 
@@ -253,10 +275,10 @@ class SASLInitiatingInitializerSetMechanismTests(unittest.TestCase):
         """
 
         self.authenticator.jid = jid.JID('test@example.com')
-        self.authenticator.password = 'secret'
+        self.authenticator.password = u'secret'
 
         self.assertRaises(sasl.SASLNoAcceptableMechanism,
-                          self._setMechanism, 'SOMETHING_UNACCEPTABLE')
+                          self._setMechanism, u'SOMETHING_UNACCEPTABLE')
 
 
     def test_notAcceptableWithoutUser(self):
@@ -264,7 +286,7 @@ class SASLInitiatingInitializerSetMechanismTests(unittest.TestCase):
         Test using an unacceptable SASL authentication mechanism with no JID.
         """
         self.authenticator.jid = jid.JID('example.com')
-        self.authenticator.password = 'secret'
+        self.authenticator.password = u'secret'
 
         self.assertRaises(sasl.SASLNoAcceptableMechanism,
-                          self._setMechanism, 'SOMETHING_UNACCEPTABLE')
+                          self._setMechanism, u'SOMETHING_UNACCEPTABLE')

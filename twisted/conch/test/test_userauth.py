@@ -129,7 +129,7 @@ class FakeTransport(transport.SSHTransportBase):
         a sent packet.
     @type packets: C{list}
     @param lostConnecion: True if loseConnection has been called on us.
-    @type lostConnection: C{bool}
+    @type lostConnection: L{bool}
     """
 
     class Service(object):

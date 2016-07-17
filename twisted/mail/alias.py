@@ -92,23 +92,29 @@ def loadAliasFile(domains, filename=None, fp=None):
     @return: A mapping from username to group of aliases.
     """
     result = {}
+    close = False
     if fp is None:
-        fp = file(filename)
+        fp = open(filename)
+        close = True
     else:
         filename = getattr(fp, 'name', '<unknown>')
     i = 0
     prev = ''
-    for line in fp:
-        i += 1
-        line = line.rstrip()
-        if line.lstrip().startswith('#'):
-            continue
-        elif line.startswith(' ') or line.startswith('\t'):
-            prev = prev + line
-        else:
-            if prev:
-                handle(result, prev, filename, i)
-            prev = line
+    try:
+        for line in fp:
+            i += 1
+            line = line.rstrip()
+            if line.lstrip().startswith('#'):
+                continue
+            elif line.startswith(' ') or line.startswith('\t'):
+                prev = prev + line
+            else:
+                if prev:
+                    handle(result, prev, filename, i)
+                prev = line
+    finally:
+        if close:
+            fp.close()
     if prev:
         handle(result, prev, filename, i)
     for (u, a) in result.items():
@@ -305,13 +311,13 @@ class FileWrapper:
         """
         self.fp.seek(0, 0)
         try:
-            f = file(self.finalname, 'a')
+            f = open(self.finalname, 'a')
         except:
             return defer.fail(failure.Failure())
 
-        f.write(self.fp.read())
-        self.fp.close()
-        f.close()
+        with f:
+            f.write(self.fp.read())
+            self.fp.close()
 
         return defer.succeed(self.finalname)
 
@@ -732,11 +738,12 @@ class AliasGroup(AliasBase):
             addr = items.pop().strip()
             if addr.startswith(':'):
                 try:
-                    f = file(addr[1:])
+                    f = open(addr[1:])
                 except:
                     log.err("Invalid filename in alias file %r" % (addr[1:],))
                 else:
-                    addr = ' '.join([l.strip() for l in f])
+                    with f:
+                        addr = ' '.join([l.strip() for l in f])
                     items.extend(addr.split(','))
             elif addr.startswith('|'):
                 self.aliases.append(self.processAliasFactory(addr[1:], *args))

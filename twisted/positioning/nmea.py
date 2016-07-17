@@ -954,7 +954,7 @@ class NMEAAdapter(object):
         in the current state and at least one such field was altered in the
         current sentence.
 
-        The callbacks will only be fired with data from L{self._state}.
+        The callbacks will only be fired with data from L{_state}.
         """
         iface = ipositioning.IPositioningReceiver
         for name, method in iface.namesAndDescriptions():

@@ -26,6 +26,7 @@ from zope.interface import implementer
 
 import priority
 import h2.connection
+import h2.errors
 import h2.events
 import h2.exceptions
 
@@ -34,6 +35,8 @@ from twisted.internet.interfaces import (
     IProtocol, ITransport, IConsumer, IPushProducer, ISSLTransport
 )
 from twisted.internet.protocol import Protocol
+from twisted.logger import Logger
+from twisted.protocols.policies import TimeoutMixin
 from twisted.protocols.tls import _PullToPush
 
 
@@ -59,7 +62,7 @@ if sys.version_info < (2, 7, 4):
 
 
 @implementer(IProtocol, IPushProducer)
-class H2Connection(Protocol):
+class H2Connection(Protocol, TimeoutMixin):
     """
     A class representing a single HTTP/2 connection.
 
@@ -104,6 +107,8 @@ class H2Connection(Protocol):
     factory = None
     site = None
 
+    _log = Logger()
+
     def __init__(self, reactor=None):
         self.conn = h2.connection.H2Connection(
             client_side=False, header_encoding=None
@@ -132,6 +137,7 @@ class H2Connection(Protocol):
         by the L{twisted.web.http._GenericHTTPChannelProtocol} during upgrade
         to HTTP/2.
         """
+        self.setTimeout(self.timeOut)
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())
 
@@ -143,6 +149,8 @@ class H2Connection(Protocol):
         @param data: The data received from the transport.
         @type data: L{bytes}
         """
+        self.resetTimeout()
+
         try:
             events = self.conn.receive_data(data)
         except h2.exceptions.ProtocolError:
@@ -175,6 +183,39 @@ class H2Connection(Protocol):
             self.transport.write(dataToSend)
 
 
+    def timeoutConnection(self):
+        """
+        Called when the connection has been inactive for C{self.timeOut}
+        seconds. Cleanly tears the connection down, attempting to notify the
+        peer if needed.
+
+        We override this method to add two extra bits of functionality:
+
+        - We want to log the timeout.
+        - We want to send a GOAWAY frame indicating that the connection is
+          being terminated, and whether it was clean or not. We have to do this
+          before the connection is torn down.
+        """
+        self._log.info(
+            "Timing out client {client}", client=self.transport.getPeer()
+        )
+
+        # Check whether there are open streams. If there are, we're going to
+        # want to use the error code PROTOCOL_ERROR. If there aren't, use
+        # NO_ERROR.
+        if (self.conn.open_outbound_streams > 0 or
+                self.conn.open_inbound_streams > 0):
+            error_code = h2.errors.PROTOCOL_ERROR
+        else:
+            error_code = h2.errors.NO_ERROR
+
+        self.conn.close_connection(error_code=error_code)
+        self.transport.write(self.conn.data_to_send())
+
+        # We're done, throw the connection away.
+        self.transport.loseConnection()
+
+
     def connectionLost(self, reason):
         """
         Called when the transport connection is lost.
@@ -183,6 +224,7 @@ class H2Connection(Protocol):
         lost, and cleans up all internal state.
         """
         self._stillProducing = False
+        self.setTimeout(None)
 
         for stream in self.streams.values():
             stream.connectionLost(reason)
@@ -577,8 +619,12 @@ class H2Connection(Protocol):
         streamID = event.stream_id
 
         if streamID:
-            # Update applies only to a specific stream. If we don't have the
-            # stream, that's ok: just ignore it.
+            if not self._streamIsActive(streamID):
+                # We may have already cleaned up our stream state, making this
+                # a late WINDOW_UPDATE frame. That's fine: the update is
+                # unnecessary but benign. We'll ignore it.
+                return
+
             self.priority.unblock(streamID)
             self.streams[streamID].windowUpdated()
         else:
@@ -684,6 +730,20 @@ class H2Connection(Protocol):
         stream = self.streams[streamID]
         stream.connectionLost("Stream reset")
         self._requestDone(streamID)
+
+
+    def _streamIsActive(self, streamID):
+        """
+        Checks whether Twisted has still got state for a given stream and so
+        can process events for that stream.
+
+        @param streamID: The ID of the stream that needs processing.
+        @type streamID: L{int}
+
+        @return: Whether the stream still has state allocated.
+        @rtype: L{bool}
+        """
+        return streamID in self.streams
 
 
 

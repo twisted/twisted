@@ -730,10 +730,11 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_files(self):
         inputStructure = [
-            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz'
+            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz',
+            u'biz'
         ]
 
-        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz"'
+        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz" "biz"'
 
         self.assertEqual(imap4.collapseNestedLists(inputStructure), output)
 
@@ -1643,7 +1644,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN', '\\DELETED'], 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
@@ -1651,7 +1653,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
         def login():
             return self.client.login('testuser', 'password-test')
         def append():
-            message = file(infile)
+            message = open(infile)
             return self.client.sendCommand(
                 imap4.Command(
                     'APPEND',
@@ -1673,7 +1675,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN'], 'Right now', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testCheck(self):
         SimpleServer.theAccount.addMailbox('root/subthing')
