@@ -32,7 +32,7 @@ environment:
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
     - PYTHON: C:\Python27-x64
-      TOXENV: py27-coverage-windows
+      TOXENV: py27-coverage-windows,codecov-publish
 
 # Some tests are failing on Appveyor and they will be fixed in a separate
 # ticket.
@@ -42,9 +42,11 @@ matrix:
 
 install:
   # Get some information about the build environment.
-  - ps: "ls \"C:/\""
-  - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
-  - ps: echo $env:PYTHON $env:TOXENV
+  # Uncomment them. Left here so that you don't have to search the net for
+  # how to run such command on Windows :)
+  # - ps: "ls \"C:/\""
+  # - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
+  # - ps: echo $env:PYTHON $env:TOXENV
   # Check that we have the expected version and architecture for Python
   - "%PYTHON%\\python --version"
   - "%PYTHON%\\python -c \"import struct; print(struct.calcsize('P') * 8)\""
