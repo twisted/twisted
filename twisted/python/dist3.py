@@ -524,7 +524,6 @@ testModules = [
 
 testDataFiles = [
     "twisted.conch.test.keydata",
-    "twisted.internet.test._awaittests",
     "twisted.internet.test.process_cli",
     "twisted.internet.test.process_helper",
     "twisted.positioning.test.receiver",
