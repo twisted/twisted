@@ -21,7 +21,7 @@ from __future__ import division, absolute_import, print_function
 import traceback
 import types
 import warnings
-from sys import exc_info, version_info
+from sys import exc_info
 from functools import wraps
 
 # Twisted imports
