@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 # System Imports
 import types
+import pickle
 try:
     import copy_reg
 except ImportError:
@@ -24,6 +25,23 @@ from twisted.python import log
 from twisted.python import reflect
 
 oldModules = {}
+
+
+try:
+    import cPickle
+except ImportError:
+    cPickle = None
+
+if cPickle is None or cPickle.PicklingError is pickle.PicklingError:
+    _UniversalPicklingError = pickle.PicklingError
+else:
+    class _UniversalPicklingError(pickle.PicklingError,
+                                  cPickle.PicklingError):
+        """
+        An PicklingException catchable by both L{cPickle.PicklingException}
+        and L{pickle.PicklingException} handlers.
+        """
+
 
 ## First, let's register support for some stuff that really ought to
 ## be registerable...
@@ -113,7 +131,8 @@ def _pickleFunction(f):
     @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == '<lambda>':
-        return None
+        raise _UniversalPicklingError(
+            "Cannot pickle lambda function: {}".format(f))
     return (_unpickleFunction,
             tuple([".".join([f.__module__, f.__qualname__])]))
 
