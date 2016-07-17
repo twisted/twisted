@@ -72,7 +72,7 @@ class AwaitTests(TestCase):
         async def run():
             d = Deferred()
             d.callback("foo")
-            res = await d
+            await d
             raise ValueError("Oh no!")
 
         d = ensureDeferred(run())
