@@ -309,8 +309,8 @@ class build_ext_twisted(build_ext.build_ext):
     def _compile_helper(self, content):
         conftest = open("conftest.c", "w")
         try:
-            conftest.write(content)
-            conftest.close()
+            with conftest:
+                conftest.write(content)
 
             try:
                 self.compiler.compile(["conftest.c"], output_dir='')
