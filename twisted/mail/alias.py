@@ -742,7 +742,8 @@ class AliasGroup(AliasBase):
                 except:
                     log.err("Invalid filename in alias file %r" % (addr[1:],))
                 else:
-                    addr = ' '.join([l.strip() for l in f])
+                    with f:
+                        addr = ' '.join([l.strip() for l in f])
                     items.extend(addr.split(','))
             elif addr.startswith('|'):
                 self.aliases.append(self.processAliasFactory(addr[1:], *args))
