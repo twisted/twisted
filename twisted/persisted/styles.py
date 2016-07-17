@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 # System Imports
 import types
+import pickle
 try:
     import copy_reg
 except ImportError:
@@ -26,12 +27,14 @@ from twisted.python import reflect
 oldModules = {}
 
 
-if _PY3 or _PYPY:
-    from pickle import PicklingError as _UniversalPicklingError
-else:
-    import pickle
+try:
     import cPickle
+except ImportError:
+    cPickle = None
 
+if cPickle is None or cPickle.PicklingError is pickle.PicklingError:
+    _UniversalPicklingError = pickle.PicklingError
+else:
     class _UniversalPicklingError(pickle.PicklingError,
                                   cPickle.PicklingError):
         """
