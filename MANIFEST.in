@@ -18,6 +18,7 @@ include NEWS README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
 exclude codecov.yml
+exclude appveyor.yml
 prune bin
 prune admin
 
