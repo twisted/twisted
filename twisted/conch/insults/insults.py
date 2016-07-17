@@ -348,7 +348,7 @@ class Vector:
         self.y = y
 
 def log(s):
-    file('log', 'a').write(str(s) + '\n')
+    open('log', 'a').write(str(s) + '\n')
 
 # XXX TODO - These attributes are really part of the
 # ITerminalTransport interface, I think.

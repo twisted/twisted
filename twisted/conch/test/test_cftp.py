@@ -1053,8 +1053,8 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         Assert that the files at C{name1} and C{name2} contain exactly the
         same data.
         """
-        f1 = file(name1).read()
-        f2 = file(name2).read()
+        f1 = open(name1).read()
+        f2 = open(name2).read()
         self.assertEqual(f1, f2, msg)
 
 
@@ -1125,10 +1125,10 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         file.
         """
         # XXX - not actually a unit test
-        f = file(os.path.join(self.testDir, 'shorterFile'), 'w')
+        f = open(os.path.join(self.testDir, 'shorterFile'), 'w')
         f.write("a")
         f.close()
-        f = file(os.path.join(self.testDir, 'longerFile'), 'w')
+        f = open(os.path.join(self.testDir, 'longerFile'), 'w')
         f.write("bb")
         f.close()
         def _checkPut(result):
@@ -1148,10 +1148,10 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         """
         # XXX - not actually a unit test
         os.mkdir(os.path.join(self.testDir, 'dir'))
-        f = file(os.path.join(self.testDir, 'dir', 'file'), 'w')
+        f = open(os.path.join(self.testDir, 'dir', 'file'), 'w')
         f.write("a")
         f.close()
-        f = file(os.path.join(self.testDir, 'file'), 'w')
+        f = open(os.path.join(self.testDir, 'file'), 'w')
         f.write("bb")
         f.close()
         def _checkPut(result):
