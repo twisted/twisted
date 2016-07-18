@@ -34,14 +34,14 @@ def int2b128(integer, stream):
 
 def b1282int(st):
     """
-    Convert an integer represented as a base 128 string into an C{int} or
-    C{long}.
+    Convert an integer represented as a base 128 string into an L{int} or
+    L{long}.
 
     @param st: The integer encoded in a string.
-    @type st: C{str}
+    @type st: L{str}
 
     @return: The integer value extracted from the string.
-    @rtype: C{int} or C{long}
+    @rtype: L{int} or L{long}
     """
     e = 1
     i = 0
@@ -74,7 +74,7 @@ def setPrefixLimit(limit):
     The prefix length limit determines how many bytes of prefix a banana
     decoder will allow before rejecting a potential object as too large.
 
-    @type limit: C{int}
+    @type limit: L{int}
     @param limit: The number of bytes of prefix for banana to allow when
     decoding.
     """
