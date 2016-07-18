@@ -17,9 +17,6 @@ from twisted.python.compat import _PY3
 from twisted.application import internet, service, strports
 
 if not _PY3:
-    # FIXME: https://twistedmatrix.com/trac/ticket/8009
-    from twisted.web import twcgi
-
     # FIXME: https://twistedmatrix.com/trac/ticket/7993
     from twisted.web import wsgi
 
@@ -101,7 +98,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
     def opt_path(self, path):
         """
         <path> is either a specific file or a directory to be set as the root
-        of the web server. Use this if you have a directory full of HTML, cgi,
+        of the web server. Use this if you have a directory full of HTML,
         epy, or rpy files or any other files that you want to be served up raw.
         """
         self['root'] = static.File(os.path.abspath(path))
@@ -109,8 +106,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             '.epy': script.PythonScript,
             '.rpy': script.ResourceScript,
         }
-        if not _PY3:
-            self['root'].processors['.cgi'] = twcgi.CGIScript
 
 
     def opt_processor(self, proc):

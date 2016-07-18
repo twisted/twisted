@@ -26,9 +26,6 @@ from twisted.web.tap import Options, makeService
 from twisted.web.script import PythonScript
 
 if not _PY3:
-    # FIXME: https://twistedmatrix.com/trac/ticket/8009
-    from twisted.web.twcgi import CGIScript
-
     # FIXME: https://twistedmatrix.com/trac/ticket/7993
     from twisted.web.wsgi import WSGIResource
 
@@ -94,20 +91,6 @@ class ServiceTests(TestCase):
     if not IReactorUNIX.providedBy(reactor):
         test_pathServer.skip = (
             "The reactor does not support UNIX domain sockets")
-
-
-    def test_cgiProcessor(self):
-        """
-        The I{--path} option creates a root resource which serves a
-        L{CGIScript} instance for any child with the C{".cgi"} extension.
-        """
-        path, root = self._pathOption()
-        path.child("foo.cgi").setContent(b"")
-        self.assertIsInstance(root.getChild("foo.cgi", None), CGIScript)
-
-    if _PY3:
-        test_cgiProcessor.skip = (
-            "Will be ported in https://twistedmatrix.com/trac/ticket/8009")
 
 
     def test_epyProcessor(self):
