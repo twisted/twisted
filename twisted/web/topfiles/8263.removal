@@ -1,0 +1,1 @@
+twisted.web.twcgi has been removed, as it was vulnerable to a class of exploits common to CGI, where user data can be seen as trusted environment variables in the CGI script.
