@@ -36,7 +36,8 @@ def get_accept_addrs(long s, object buff):
     cdef int locallen, remotelen
     cdef Py_ssize_t size
     cdef void *mem_buffer
-    cdef sockaddr *localaddr, *remoteaddr
+    cdef sockaddr *localaddr
+    cdef sockaddr *remoteaddr
 
     PyObject_AsReadBuffer(buff, &mem_buffer, &size)
 

@@ -99,23 +99,24 @@ def isInKnownHosts(host, pubKey, options):
         known_hosts = open(os.path.expanduser(kh_file))
     except IOError:
         return 0
-    for line in known_hosts.xreadlines():
-        split = line.split()
-        if len(split) < 3:
-            continue
-        hosts, hostKeyType, encodedKey = split[:3]
-        if host not in hosts.split(','): # incorrect host
-            continue
-        if hostKeyType != keyType: # incorrect type of key
-            continue
-        try:
-            decodedKey = base64.decodestring(encodedKey)
-        except:
-            continue
-        if decodedKey == pubKey:
-            return 1
-        else:
-            retVal = 2
+    with known_hosts:
+        for line in known_hosts.xreadlines():
+            split = line.split()
+            if len(split) < 3:
+                continue
+            hosts, hostKeyType, encodedKey = split[:3]
+            if host not in hosts.split(','): # incorrect host
+                continue
+            if hostKeyType != keyType: # incorrect type of key
+                continue
+            try:
+                decodedKey = base64.decodestring(encodedKey)
+            except:
+                continue
+            if decodedKey == pubKey:
+                return 1
+            else:
+                retVal = 2
     return retVal
 
 

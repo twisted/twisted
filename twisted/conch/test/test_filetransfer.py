@@ -91,13 +91,13 @@ class SFTPTestBase(unittest.TestCase):
         self.testDir = os.path.join(self.testDir, 'extra')
         os.makedirs(os.path.join(self.testDir, 'testDirectory'))
 
-        f = file(os.path.join(self.testDir, 'testfile1'),'w')
+        f = open(os.path.join(self.testDir, 'testfile1'),'w')
         f.write('a'*10+'b'*10)
-        f.write(file('/dev/urandom').read(1024*64)) # random data
+        f.write(open('/dev/urandom').read(1024*64)) # random data
         os.chmod(os.path.join(self.testDir, 'testfile1'), 0o644)
-        file(os.path.join(self.testDir, 'testRemoveFile'), 'w').write('a')
-        file(os.path.join(self.testDir, 'testRenameFile'), 'w').write('a')
-        file(os.path.join(self.testDir, '.testHiddenFile'), 'w').write('a')
+        open(os.path.join(self.testDir, 'testRemoveFile'), 'w').write('a')
+        open(os.path.join(self.testDir, 'testRenameFile'), 'w').write('a')
+        open(os.path.join(self.testDir, '.testHiddenFile'), 'w').write('a')
 
 
 class OurServerOurClientTests(SFTPTestBase):

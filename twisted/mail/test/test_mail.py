@@ -221,7 +221,8 @@ class FileMessageTests(unittest.TestCase):
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.eomReceived()
-        self.assertEqual(open(self.final).read(), contents)
+        with open(self.final) as f:
+            self.assertEqual(f.read(), contents)
 
     def testInterrupted(self):
         contents = "first line\nsecond line\n"
@@ -562,9 +563,8 @@ class MaildirTests(unittest.TestCase):
         # Toss a few files into the mailbox
         i = 1
         for f in msgs:
-            fObj = open(j(self.d, f), 'w')
-            fObj.write('x' * i)
-            fObj.close()
+            with open(j(self.d, f), 'w') as fObj:
+                fObj.write('x' * i)
             i = i + 1
 
         mb = mail.maildir.MaildirMailbox(self.d)
@@ -957,9 +957,8 @@ class RelayerTests(unittest.TestCase):
         self.messageFiles = []
         for i in range(10):
             name = os.path.join(self.tmpdir, 'body-%d' % (i,))
-            f = open(name + '-H', 'w')
-            pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
-            f.close()
+            with open(name + '-H', 'w') as f:
+                pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
 
             f = open(name + '-D', 'w')
             f.write(name)
@@ -1789,7 +1788,8 @@ class AliasTests(unittest.TestCase):
         return m.eomReceived().addCallback(self._cbTestFileAlias, tmpfile)
 
     def _cbTestFileAlias(self, ignored, tmpfile):
-        lines = open(tmpfile).readlines()
+        with open(tmpfile) as f:
+            lines = f.readlines()
         self.assertEqual([L[:-1] for L in lines], self.lines)
 
 
@@ -2011,7 +2011,8 @@ done""")
             m.lineReceived(l)
 
         def _cbProcessAlias(ignored):
-            lines = open('process.alias.out').readlines()
+            with open('process.alias.out') as f:
+                lines = f.readlines()
             self.assertEqual([L[:-1] for L in lines], self.lines)
 
         return m.eomReceived().addCallback(_cbProcessAlias)
@@ -2400,13 +2401,11 @@ class _AttemptManagerTests(unittest.TestCase):
         self.quietAttemptMgr.manager.managed['quietRelayer'] = [
                 quietBaseName]
 
-        envelope = open(self.noisyMessage+'-H', 'w')
-        pickle.dump(['from-noisy@domain', 'to-noisy@domain'], envelope)
-        envelope.close()
+        with open(self.noisyMessage+'-H', 'w') as envelope:
+            pickle.dump(['from-noisy@domain', 'to-noisy@domain'], envelope)
 
-        envelope = open(self.quietMessage+'-H', 'w')
-        pickle.dump(['from-quiet@domain', 'to-quiet@domain'], envelope)
-        envelope.close()
+        with open(self.quietMessage+'-H', 'w') as envelope:
+            pickle.dump(['from-quiet@domain', 'to-quiet@domain'], envelope)
 
 
     def tearDown(self):

@@ -118,7 +118,7 @@ class STDLibLogObserverTests(unittest.TestCase):
             if level is not None:
                 event["log_level"] = level
 
-            # Remeber the Python log level we expect to see for this
+            # Remember the Python log level we expect to see for this
             # event (as an int)
             event["py_levelno"] = int(pyLevel)
 
@@ -270,7 +270,7 @@ def handlerAndBytesIO():
     with the 'logging' module.
 
     @return: handler and io object
-    @rtype: tuple of L{StreamHandler} and L{BytesIO}
+    @rtype: tuple of L{StreamHandler} and L{io.BytesIO}
     """
     output = BytesIO()
     stream = output

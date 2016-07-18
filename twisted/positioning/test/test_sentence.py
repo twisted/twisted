@@ -129,17 +129,6 @@ class SentenceTestsMixin(object):
 
 
 
-class DummyTests(TestCase, SentenceTestsMixin):
-    """
-    Tests for protocol classes that implement the appropriate interface
-    (L{ipositioning.IPositioningSentenceProducer}) manually.
-    """
-    def setUp(self):
-        self.protocol = DummyProtocol()
-        self.sentenceClass = DummySentence
-
-
-
 class MixinTests(TestCase, SentenceTestsMixin):
     """
     Tests for protocols deriving from L{base.PositioningSentenceProducerMixin}

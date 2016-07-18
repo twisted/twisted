@@ -38,7 +38,7 @@ from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.abstract import isIPv6Address
-from twisted.internet.interfaces import IProtocol
+from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
@@ -911,6 +911,7 @@ deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
 
 
 
+@implementer(IOpenSSLContextFactory)
 class _ContextFactoryWithContext(object):
     """
     A L{_ContextFactoryWithContext} is like a
@@ -935,9 +936,8 @@ class _ContextFactoryWithContext(object):
         Return the context created by
         L{_DeprecatedToCurrentPolicyForHTTPS._webContextFactory}.
 
-        @return: An old-style context factory.
-        @rtype: object with C{getContext} method, like
-            L{twisted.internet.ssl.ContextFactory}.
+        @return: A context.
+        @rtype context: L{OpenSSL.SSL.Context}
         """
         return self._context
 
@@ -976,9 +976,8 @@ class _DeprecatedToCurrentPolicyForHTTPS(object):
         @param port: The port part of the URI.
         @type port: L{int}
 
-        @return: An old-style context factory.
-        @rtype: object with C{getContext} method, like
-            L{twisted.internet.ssl.ContextFactory}.
+        @return: A context factory.
+        @rtype: L{IOpenSSLContextFactory}
         """
         context = self._webContextFactory.getContext(hostname, port)
         return _ContextFactoryWithContext(context)
