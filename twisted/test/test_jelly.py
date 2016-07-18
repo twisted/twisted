@@ -8,6 +8,7 @@ Test cases for L{jelly} object serialization.
 import datetime
 import decimal
 
+from twisted.python.compat import unicode
 from twisted.spread import jelly, pb
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
