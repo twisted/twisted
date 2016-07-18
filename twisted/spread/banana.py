@@ -122,9 +122,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         Called after protocol negotiation.
         """
 
+
     def _selectDialect(self, dialect):
         self.currentDialect = dialect
         self.connectionReady()
+
 
     def callExpressionReceived(self, obj):
         if self.currentDialect:
@@ -294,11 +296,13 @@ class Banana(protocol.Protocol, styles.Ephemeral):
     for k, v in outgoingVocabulary.items():
         incomingVocabulary[v] = k
 
+
     def __init__(self, isClient=1):
         self.listStack = []
         self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
         self.outgoingSymbolCount = 0
         self.isClient = isClient
+
 
     def sendEncoded(self, obj):
         """
@@ -311,10 +315,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 
         @return: L{None}
         """
-        io = BytesIO()
-        self._encode(obj, io.write)
-        value = io.getvalue()
+        encodeStream = BytesIO()
+        self._encode(obj, encodeStream.write)
+        value = encodeStream.getvalue()
         self.transport.write(value)
+
 
     def _encode(self, obj, write):
         if isinstance(obj, (list, tuple)):
@@ -370,10 +375,10 @@ _i._selectDialect("none")
 
 def encode(lst):
     """Encode a list s-expression."""
-    io = BytesIO()
-    _i.transport = io
+    encodeStream = BytesIO()
+    _i.transport = encodeStream
     _i.sendEncoded(lst)
-    return io.getvalue()
+    return encodeStream.getvalue()
 
 
 def decode(st):
