@@ -242,6 +242,7 @@ modules = [
     "twisted.python.zippath",
     "twisted.scripts.__init__",
     "twisted.scripts._twistd_unix",
+    "twisted.scripts._twistw",
     "twisted.scripts.trial",
     "twisted.scripts.twistd",
     "twisted.test.__init__",
