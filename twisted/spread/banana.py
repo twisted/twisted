@@ -12,7 +12,8 @@ for more details.
 @author: Glyph Lefkowitz
 """
 
-import copy, cStringIO, struct
+import copy, struct
+from io import BytesIO
 
 from twisted.internet import protocol
 from twisted.persisted import styles
@@ -310,7 +311,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 
         @return: L{None}
         """
-        io = cStringIO.StringIO()
+        io = BytesIO()
         self._encode(obj, io.write)
         value = io.getvalue()
         self.transport.write(value)
@@ -369,7 +370,7 @@ _i._selectDialect("none")
 
 def encode(lst):
     """Encode a list s-expression."""
-    io = cStringIO.StringIO()
+    io = BytesIO()
     _i.transport = io
     _i.sendEncoded(lst)
     return io.getvalue()
