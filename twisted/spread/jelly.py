@@ -616,7 +616,7 @@ class _Unjellier:
 
 
     def unjelly(self, obj):
-        if type(obj) is not types.ListType:
+        if type(obj) is not list:
             return obj
         jelType = obj[0]
         if not self.taster.isTypeAllowed(jelType):
