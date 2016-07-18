@@ -16,7 +16,6 @@ from twisted.logger import Logger
 from twisted.internet.base import DelayedCall
 from twisted.internet.posixbase import (PosixReactorBase, _NO_FILEDESC,
                                         _ContinuousPolling)
-from twisted.python.compat import _PY3
 from twisted.python.log import callWithLogger
 from twisted.internet.interfaces import IReactorFDSet
 
@@ -24,7 +23,7 @@ try:
     from asyncio import new_event_loop
 except ImportError:
     try:
-        from trollius import new_event_loop, BrokenPipeError
+        from trollius import new_event_loop
     except ImportError:
         raise ImportError("Requires asyncio or trollius.")
 
