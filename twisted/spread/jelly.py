@@ -67,23 +67,9 @@ import types
 import warnings
 import decimal
 from functools import reduce
-from types import StringType
-from types import IntType
-from types import TupleType
-from types import ListType
-from types import LongType
-from types import FloatType
-from types import FunctionType
-from types import MethodType
-from types import ModuleType
-from types import DictionaryType
-from types import InstanceType
-from types import NoneType
-from types import ClassType
 import copy
 
 import datetime
-from types import BooleanType
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
@@ -100,10 +86,11 @@ from twisted.persisted.crefutil import _Container
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
+from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 
-DictTypes = (DictionaryType,)
+DictTypes = (dict,)
 
 None_atom = "None"                  # N
 # code
@@ -158,9 +145,9 @@ def _newInstance(cls, state=_NO_STATE):
             inst.__dict__.update(state) # Copy 'instance' behaviour
     else:
         if state is not _NO_STATE:
-            inst = InstanceType(cls, state)
+            inst = types.InstanceType(cls, state)
         else:
-            inst = InstanceType(cls)
+            inst = types.InstanceType(cls)
     return inst
 
 
@@ -172,7 +159,7 @@ def _maybeClass(classnamep):
         isObject = 0
     else:
         isObject = isinstance(classnamep, type)
-    if isinstance(classnamep, ClassType) or isObject:
+    if isinstance(classnamep, types.ClassType) or isObject:
         return qual(classnamep)
     return classnamep
 
@@ -445,8 +432,11 @@ class _Jellier:
             self.preserved[id(object)] = sexp
         return sexp
 
-    constantTypes = {types.StringType : 1, types.IntType : 1,
-                     types.FloatType : 1, types.LongType : 1}
+    constantTypes = {str : 1, int : 1,
+                     float : 1 }
+
+    if not _PY3:
+        constantTypes[long] = 1
 
 
     def _checkMutable(self,obj):
@@ -467,29 +457,30 @@ class _Jellier:
         objType = type(obj)
         if self.taster.isTypeAllowed(qual(objType)):
             # "Immutable" Types
-            if ((objType is StringType) or
-                (objType is IntType) or
-                (objType is LongType) or
-                (objType is FloatType)):
+            if ((objType is str) or
+                (objType is int) or
+                (objType is float)):
                 return obj
-            elif objType is MethodType:
+            elif not _PY3 and (objType is long):
+                return obj
+            elif objType is types.MethodType:
                 return ["method",
                         obj.im_func.__name__,
                         self.jelly(obj.im_self),
                         self.jelly(obj.im_class)]
 
-            elif objType is unicode:
+            elif not _PY3 and objType is unicode:
                 return ['unicode', obj.encode('UTF-8')]
-            elif objType is NoneType:
+            elif objType is type(None):
                 return ['None']
-            elif objType is FunctionType:
+            elif objType is types.FunctionType:
                 name = obj.__name__
                 return ['function', str(pickle.whichmodule(obj, obj.__name__))
                         + '.' +
                         name]
-            elif objType is ModuleType:
+            elif objType is types.ModuleType:
                 return ['module', obj.__name__]
-            elif objType is BooleanType:
+            elif objType is bool:
                 return ['boolean', obj and 'true' or 'false']
             elif objType is datetime.datetime:
                 if obj.tzinfo:
@@ -509,7 +500,7 @@ class _Jellier:
             elif objType is datetime.timedelta:
                 return ['timedelta', '%s %s %s' % (obj.days, obj.seconds,
                                                    obj.microseconds)]
-            elif objType is ClassType or issubclass(objType, type):
+            elif objType is types.ClassType or issubclass(objType, type):
                 return ['class', qual(obj)]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
@@ -519,9 +510,9 @@ class _Jellier:
                     return preRef
                 # "Mutable" Types
                 sxp = self.prepare(obj)
-                if objType is ListType:
+                if objType is list:
                     sxp.extend(self._jellyIterable(list_atom, obj))
-                elif objType is TupleType:
+                elif objType is tuple:
                     sxp.extend(self._jellyIterable(tuple_atom, obj))
                 elif objType in DictTypes:
                     sxp.append(dictionary_atom)
@@ -552,7 +543,7 @@ class _Jellier:
                             qual(obj.__class__), sxp)
                 return self.preserve(obj, sxp)
         else:
-            if objType is InstanceType:
+            if objType is types.InstanceType:
                 raise InsecureJelly("Class not allowed for instance: %s %s" %
                                     (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
@@ -632,7 +623,7 @@ class _Unjellier:
             raise InsecureJelly(jelType)
         regClass = unjellyableRegistry.get(jelType)
         if regClass is not None:
-            if isinstance(regClass, ClassType):
+            if isinstance(regClass, types.ClassType):
                 inst = _Dummy() # XXX chomp, chomp
                 inst.__class__ = regClass
                 method = inst.unjellyFor
@@ -700,7 +691,7 @@ class _Unjellier:
 
 
     def _unjelly_boolean(self, exp):
-        if BooleanType:
+        if bool:
             assert exp[0] in ('true', 'false')
             return exp[0] == 'true'
         else:
@@ -916,7 +907,7 @@ class _Unjellier:
             elif isinstance(im_self, NotKnown):
                 im = _InstanceMethod(im_name, im_self, im_class)
             else:
-                im = MethodType(im_class.__dict__[im_name], im_self, im_class)
+                im = types.MethodType(im_class.__dict__[im_name], im_self, im_class)
         else:
             raise TypeError('instance method changed')
         return im
