@@ -24,12 +24,9 @@ try:
     from asyncio import new_event_loop
 except ImportError:
     try:
-        from trollius import new_event_loop
+        from trollius import new_event_loop, BrokenPipeError
     except ImportError:
         raise ImportError("Requires asyncio or trollius.")
-
-if not _PY3:
-    BrokenPipeError = OSError
 
 
 

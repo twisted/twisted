@@ -25,7 +25,6 @@ from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 from twisted.python.runtime import platform
 from twisted.python.reflect import namedAny
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-from twisted.python.compat import _PY3
 
 from twisted.python import log
 from twisted.python.failure import Failure
@@ -143,15 +142,11 @@ class ReactorBuilder:
                 "twisted.internet.iocpreactor.reactor.IOCPReactor"])
     else:
         _reactors.extend([
+                "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
                 "twisted.internet.glib2reactor.Glib2Reactor",
                 "twisted.internet.gtk2reactor.Gtk2Reactor",
                 "twisted.internet.gireactor.GIReactor",
                 "twisted.internet.gtk3reactor.Gtk3Reactor"])
-
-        if _PY3:
-            _reactors.extend([
-                "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
-            ])
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
