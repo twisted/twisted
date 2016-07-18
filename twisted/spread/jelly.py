@@ -73,7 +73,12 @@ import datetime
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
-    import sets as _sets
+    try:
+        import sets as _sets
+    except ImportError:
+        # sets module is deprecated in Python 2.6, and gone in
+        # Python 3
+        _sets = None
 
 from zope.interface import implementer
 
@@ -518,9 +523,10 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or objType is _sets.Set:
+                elif objType is set or (_sets and objType is _sets.Set):
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset or objType is _sets.ImmutableSet:
+                elif objType is frozenset or \
+                     (_sets and objType is _sets.ImmutableSet):
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
