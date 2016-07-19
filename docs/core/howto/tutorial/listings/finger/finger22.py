@@ -299,20 +299,6 @@ class FingerService(service.Service):
         self.call.cancel()
 
 
-class ServerContextFactory:
-
-    def getContext(self):
-        """
-        Create an SSL context.
-
-        This is a sample implementation that loads a certificate from a file
-        called 'server.pem'.
-        """
-        ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.use_certificate_file('server.pem')
-        ctx.use_privatekey_file('server.pem')
-        return ctx
-
 
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
