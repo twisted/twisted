@@ -99,7 +99,7 @@ class CGITests(unittest.TestCase):
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
+        cgiFile = open(cgiFilename, 'wt')
         cgiFile.write(source)
         cgiFile.close()
         return cgiFilename
@@ -200,7 +200,7 @@ class CGITests(unittest.TestCase):
 
     def testReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
+        cgiFile = open(cgiFilename, 'wt')
         cgiFile.write(READINPUT_CGI)
         cgiFile.close()
 
@@ -214,7 +214,7 @@ class CGITests(unittest.TestCase):
 
     def testReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
+        cgiFile = open(cgiFilename, 'wt')
         cgiFile.write(READINPUT_CGI)
         cgiFile.close()
 
@@ -231,7 +231,7 @@ class CGITests(unittest.TestCase):
 
     def testReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        cgiFile = file(cgiFilename, 'wt')
+        cgiFile = open(cgiFilename, 'wt')
         cgiFile.write(READALLINPUT_CGI)
         cgiFile.close()
 

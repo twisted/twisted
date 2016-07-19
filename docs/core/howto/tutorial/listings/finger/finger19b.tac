@@ -1,6 +1,6 @@
 # Do everything properly, and componentize
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer, utils
+from twisted.application import internet, service, strports
+from twisted.internet import protocol, reactor, defer, utils, endpoints
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
@@ -271,11 +271,12 @@ class LocalFingerService(service.Service):
 application = service.Application('finger', uid=1, gid=1)
 f = LocalFingerService()
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79, IFingerFactory(f)
+strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000, server.Site(resource.IResource(f))
+strports.service("tcp:8000", server.Site(resource.IResource(f))
                    ).setServiceParent(serviceCollection)
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'
-internet.TCPClient('irc.freenode.org', 6667, i
-                   ).setServiceParent(serviceCollection)
+internet.ClientService(
+    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"),
+    i).setServiceParent(serviceCollection)
