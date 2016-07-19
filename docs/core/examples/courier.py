@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 """
-Example of a interfacing to Courier's mail filter interface.
+Example of an interface to Courier's mail filter interface.
 """
 
 LOGFILE = '/tmp/filter.log'
