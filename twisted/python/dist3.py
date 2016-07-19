@@ -122,6 +122,7 @@ modules = [
     "twisted.internet.udp",
     "twisted.internet.unix",
     "twisted.internet.utils",
+    "twisted.internet.win32eventreactor",
     "twisted.logger.__init__",
     "twisted.logger._buffer",
     "twisted.logger._file",
