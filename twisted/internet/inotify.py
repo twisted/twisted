@@ -25,6 +25,14 @@ at some point)::
     notifier = inotify.INotify()
     notifier.startReading()
     notifier.watch(filepath.FilePath("/some/directory"), callbacks=[notify])
+    notifier.watch(filepath.FilePath(b"/some/directory2"), callbacks=[notify])
+
+Note that in the above example, a L{FilePath} which is a L{bytes} path name
+or L{str} path name may be used.  However, no matter what type of
+L{FilePath} is passed to this module, internally the L{FilePath} is
+converted to L{bytes} according to L{sys.getfilesystemencoding}.
+For any L{FilePath} returned by this module, the caller is responsible for
+converting from a L{bytes} path name to a L{str} path name.
 
 @since: 10.1
 """
