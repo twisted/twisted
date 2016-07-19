@@ -422,7 +422,7 @@ class _ThreadedWin32EventsMixin(object):
 def install():
     threadable.init(1)
     r = Win32Reactor()
-    import main
+    from . import main
     main.installReactor(r)
 
 
