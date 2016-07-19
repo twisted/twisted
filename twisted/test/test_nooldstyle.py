@@ -33,7 +33,7 @@ class SomeOldStyleClass:
 
     def func(self):
         """
-        A function on a old style class.
+        A function on an old style class.
 
         @return: "hi", for testing.
         """

@@ -1233,7 +1233,7 @@ class DefaultAPITests(TestCase):
     def test_verifyQuestion(self):
         """
         L{default.verifyHostKey} should return a L{Default} which fires with
-        C{0} when passed a unknown host that the user refuses to acknowledge.
+        C{0} when passed an unknown host that the user refuses to acknowledge.
         """
         self.fakeTransport.factory.options['host'] = 'fake.example.com'
         self.fakeFile.inlines.append("no")
