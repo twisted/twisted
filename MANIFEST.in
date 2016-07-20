@@ -21,7 +21,6 @@ exclude codecov.yml
 exclude appveyor.yml
 prune bin
 prune admin
-prune .travis
 
 # Include test-running utilities for downstream packagers
 include tox.ini .coveragerc
