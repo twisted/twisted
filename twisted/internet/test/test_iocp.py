@@ -55,8 +55,7 @@ class SupportTests(unittest.TestCase):
         try:
             client.connect((localhost, port.getsockname()[1]))
         except error as e:
-            (errnum, message) = e.args
-            self.assertIn(errnum, (errno.EINPROGRESS, errno.EWOULDBLOCK))
+            self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         server = socket(family, SOCK_STREAM)
         self.addCleanup(server.close)
