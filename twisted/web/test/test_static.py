@@ -1063,7 +1063,7 @@ class RangeTests(TestCase):
         logItem = self.catcher.pop()
         self.assertEqual(logItem["message"][0], expected)
         self.assertEqual(
-            self.catcher, [], "An additional log occured: %r" % (logItem,))
+            self.catcher, [], "An additional log occurred: %r" % (logItem,))
 
 
     def test_invalidRanges(self):

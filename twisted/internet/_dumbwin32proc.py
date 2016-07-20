@@ -75,10 +75,10 @@ def _findShebang(filename):
 
     @return: a str representing another filename.
     """
-    f = file(filename, 'rU')
-    if f.read(2) == '#!':
-        exe = f.readline(1024).strip('\n')
-        return exe
+    with open(filename, 'rU') as f:
+        if f.read(2) == '#!':
+            exe = f.readline(1024).strip('\n')
+            return exe
 
 def _invalidWin32App(pywinerr):
     """

@@ -29,7 +29,7 @@ class Logging(object):
         key = reflect.qual(original.__class__)
         count = _counters.get(key, 0)
         _counters[key] = count + 1
-        self._logFile = file(key + '-' + str(count), 'w')
+        self._logFile = open(key + '-' + str(count), 'w')
 
     def __str__(self):
         return str(super(Logging, self).__getattribute__('original'))

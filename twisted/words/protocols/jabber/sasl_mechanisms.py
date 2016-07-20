@@ -135,7 +135,7 @@ class DigestMD5(object):
         directives = self._parse(challenge)
 
         # Compat for implementations that do not send this along with
-        # a succesful authentication.
+        # a successful authentication.
         if b'rspauth' in directives:
             return b''
 

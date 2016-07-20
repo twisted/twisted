@@ -555,7 +555,7 @@ class Broker(banana.Banana):
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
         """
-        if isinstance(sexp, types.ListType):
+        if isinstance(sexp, list):
             command = sexp[0]
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)
@@ -1414,7 +1414,7 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
 
 
 __all__ = [
-    # Everything from flavors is exposed publically here.
+    # Everything from flavors is exposed publicly here.
     'IPBRoot', 'Serializable', 'Referenceable', 'NoSuchMethod', 'Root',
     'ViewPoint', 'Viewable', 'Copyable', 'Jellyable', 'Cacheable',
     'RemoteCopy', 'RemoteCache', 'RemoteCacheObserver', 'copyTags',

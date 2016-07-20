@@ -1,6 +1,6 @@
 # Do everything properly, and componentize
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer
+from twisted.application import internet, service, strports
+from twisted.internet import protocol, reactor, defer, endpoints
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
@@ -188,7 +188,7 @@ class UserStatusTree(resource.Resource):
             %s
             </ul></body></html>""" % userOutput)
         request.finish()
-        
+
     def render_GET(self, request):
         d = self.service.getUsers()
         d.addCallback(self._cb_render_GET, request)
@@ -215,7 +215,7 @@ class UserStatus(resource.Resource):
         <p>%s</p>
         </body></html>""" % (self.user, self.user, status))
         request.finish()
-    
+
     def render_GET(self, request):
         d = self.service.getUser(self.user)
         d.addCallback(self._cb_render_GET, request)
@@ -276,11 +276,12 @@ class FingerService(service.Service):
 
     def _read(self):
         self.users.clear()
-        for line in open(self.filename):
-            user, status = line.split(':', 1)
-            user = user.strip()
-            status = status.strip()
-            self.users[user] = status
+        with open(self.filename) as f:
+            for line in f:
+                user, status = line.split(':', 1)
+                user = user.strip()
+                status = status.strip()
+                self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
@@ -302,13 +303,14 @@ application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
 f.setServiceParent(serviceCollection)
-internet.TCPServer(79, IFingerFactory(f)
+strports.service("tcp:79", IFingerFactory(f)
                    ).setServiceParent(serviceCollection)
-internet.TCPServer(8000, server.Site(resource.IResource(f))
+strports.service("tcp:8000", server.Site(resource.IResource(f))
                    ).setServiceParent(serviceCollection)
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'
-internet.TCPClient('irc.freenode.org', 6667, i
-                   ).setServiceParent(serviceCollection)
-internet.TCPServer(8889, pb.PBServerFactory(IPerspectiveFinger(f))
+internet.ClientService(
+    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"),
+    i).setServiceParent(serviceCollection)
+strports.service("tcp:8889", pb.PBServerFactory(IPerspectiveFinger(f))
                    ).setServiceParent(serviceCollection)
