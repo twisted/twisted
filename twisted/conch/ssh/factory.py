@@ -58,7 +58,7 @@ class SSHFactory(protocol.Factory):
                     'because we cannot find moduli file')
             t.supportedKeyExchanges = [
                 kexAlgorithm for kexAlgorithm in t.supportedKeyExchanges
-                if _kex.isFixedGroup(kexAlgorithm)]
+                if _kex.isFixedGroup(kexAlgorithm) or (hasattr(_kex, "isEllipticCurve") and _kex.isEllipticCurve(kexAlgorithm))]
         return t
 
 
