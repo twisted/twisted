@@ -8,6 +8,7 @@ Abstract file handle class
 from twisted.internet import main, error, interfaces
 from twisted.internet.abstract import _ConsumerMixin, _LogOwner
 from twisted.python import failure
+from twisted.python.compat import unicode
 
 from zope.interface import implementer
 import errno
