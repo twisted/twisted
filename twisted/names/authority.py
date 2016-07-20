@@ -199,7 +199,7 @@ class FileAuthority(common.ResolverBase):
         else:
             if dns._isSubdomainOf(name, self.soa[0]):
                 # We may be the authority and we didn't find it.
-                # XXX: The QNAME may also be a in a delegated child zone. See
+                # XXX: The QNAME may also be in a delegated child zone. See
                 # #6581 and #6580
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
             else:

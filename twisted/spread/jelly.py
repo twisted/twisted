@@ -1126,7 +1126,7 @@ def unjelly(sexp, taster=DummySecurityOptions(), persistentLoad=None,
     """
     Unserialize from s-expression.
 
-    Takes an list that was the result from a call to jelly() and unserializes
+    Takes a list that was the result from a call to jelly() and unserializes
     an arbitrary object from it.  The optional 'taster' argument, an instance
     of SecurityOptions, will cause an InsecureJelly exception to be raised if a
     disallowed type, module, or class attempted to unserialize.

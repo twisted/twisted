@@ -108,7 +108,7 @@ _FLAG_TO_HUMAN = [
 
 def humanReadableMask(mask):
     """
-    Auxiliary function that converts an hexadecimal mask into a series
+    Auxiliary function that converts a hexadecimal mask into a series
     of human readable flags.
     """
     s = []
@@ -364,7 +364,7 @@ class INotify(FileDescriptor, object):
             # interface for filesystem changes:
             # http://msdn.microsoft.com/en-us/library/aa365465(VS.85).aspx
             # ReadDirectoryChangesW can do bWatchSubtree so it doesn't
-            # make sense to implement this at an higher abstraction
+            # make sense to implement this at a higher abstraction
             # level when other platforms support it already
             for child in path.walk():
                 if child.isdir():

@@ -335,7 +335,7 @@ class ManholeLoopbackMixin:
     def test_deferred(self):
         """
         When a deferred is returned to the manhole REPL, it is displayed with
-        an sequence number, and when the deferred fires, the result is printed.
+        a sequence number, and when the deferred fires, the result is printed.
         """
         self._testwrite(
             "from twisted.internet import defer, reactor\n"
