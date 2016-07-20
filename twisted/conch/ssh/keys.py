@@ -609,8 +609,6 @@ class Key(object):
             return 'public_lsh'
         elif data.startswith(b'('):
             return 'private_lsh'
-        elif data.startswith(b'\x00\x00\x00\x0bssh-'):
-            return 'blob'
         elif data.startswith(b'\x00\x00\x00\x07ssh-'):
             ignored, rest = common.getNS(data)
             count = 0
