@@ -266,6 +266,10 @@ cdef object fillinetaddr(sockaddr_in *dest, object addr):
     cdef Py_ssize_t rc
     host, port = addr
 
+    if PY_MAJOR_VERSION < 3: 
+        if (isinstance(host, str)):
+            host = unicode(host, "utf-8")
+
     memset(hostStr, 0, sizeof(hostStr))
     rc = PyUnicode_AsWideChar(host, hostStr, hostStrWcharLen)
     if rc == -1:
@@ -287,6 +291,10 @@ cdef object fillinet6addr(sockaddr_in6 *dest, object addr):
     cdef int addrlen = sizeof(sockaddr_in6)
     host, port, flow, scope = addr
     host = host.split("%")[0] # remove scope ID, if any
+
+    if PY_MAJOR_VERSION < 3:
+        if (isinstance(host, str)):
+            host = unicode(host, "utf-8")
 
     memset(hostStr, 0, sizeof(hostStr))
     rc = PyUnicode_AsWideChar(host, hostStr, hostStrWcharLen)
