@@ -23,7 +23,7 @@ except ImportError:
 if ssl and not ssl.supported:
     ssl = None
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, passthru
 if not _PY3:
     from twisted.python import util
 
@@ -720,8 +720,7 @@ class TimeTests(unittest.TestCase):
         """
         A L{DelayedCall} that is reset will be scheduled at the new time.
         """
-        noop = lambda _: None
-        call = reactor.callLater(2, noop, noop)
+        call = reactor.callLater(2, passthru, passthru)
         self.addCleanup(call.cancel)
         origTime = call.time
         call.reset(1)
