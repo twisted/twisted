@@ -33,7 +33,8 @@ class FileEntryMixin:
         """
         zip files should not be ttys, so isatty() should be false
         """
-        self.assertFalse(self.getFileEntry('').isatty())
+        with self.getFileEntry('') as fileEntry:
+            self.assertFalse(fileEntry.isatty())
 
 
     def test_closed(self):
@@ -41,48 +42,47 @@ class FileEntryMixin:
         The C{closed} attribute should reflect whether C{close()} has been
         called.
         """
-        fileEntry = self.getFileEntry('')
-        self.assertFalse(fileEntry.closed)
-        fileEntry.close()
+        with self.getFileEntry('') as fileEntry:
+            self.assertFalse(fileEntry.closed)
         self.assertTrue(fileEntry.closed)
 
 
     def test_readline(self):
         """
         C{readline()} should mirror L{file.readline} and return up to a single
-        deliminter.
+        delimiter.
         """
-        fileEntry = self.getFileEntry(b'hoho\nho')
-        self.assertEqual(fileEntry.readline(), b'hoho\n')
-        self.assertEqual(fileEntry.readline(), b'ho')
-        self.assertEqual(fileEntry.readline(), b'')
+        with self.getFileEntry(b'hoho\nho') as fileEntry:
+            self.assertEqual(fileEntry.readline(), b'hoho\n')
+            self.assertEqual(fileEntry.readline(), b'ho')
+            self.assertEqual(fileEntry.readline(), b'')
 
 
     def test_next(self):
         """
         Zip file entries should implement the iterator protocol as files do.
         """
-        fileEntry = self.getFileEntry(b'ho\nhoho')
-        self.assertEqual(fileEntry.next(), b'ho\n')
-        self.assertEqual(fileEntry.next(), b'hoho')
-        self.assertRaises(StopIteration, fileEntry.next)
+        with self.getFileEntry(b'ho\nhoho') as fileEntry:
+            self.assertEqual(fileEntry.next(), b'ho\n')
+            self.assertEqual(fileEntry.next(), b'hoho')
+            self.assertRaises(StopIteration, fileEntry.next)
 
 
     def test_readlines(self):
         """
         C{readlines()} should return a list of all the lines.
         """
-        fileEntry = self.getFileEntry(b'ho\nho\nho')
-        self.assertEqual(fileEntry.readlines(), [b'ho\n', b'ho\n', b'ho'])
+        with self.getFileEntry(b'ho\nho\nho') as fileEntry:
+            self.assertEqual(fileEntry.readlines(), [b'ho\n', b'ho\n', b'ho'])
 
 
     def test_iteration(self):
         """
         C{__iter__()} and C{xreadlines()} should return C{self}.
         """
-        fileEntry = self.getFileEntry('')
-        self.assertIs(iter(fileEntry), fileEntry)
-        self.assertIs(fileEntry.xreadlines(), fileEntry)
+        with self.getFileEntry('') as fileEntry:
+            self.assertIs(iter(fileEntry), fileEntry)
+            self.assertIs(fileEntry.xreadlines(), fileEntry)
 
 
     def test_readWhole(self):
@@ -90,8 +90,8 @@ class FileEntryMixin:
         C{.read()} should read the entire file.
         """
         contents = b"Hello, world!"
-        entry = self.getFileEntry(contents)
-        self.assertEqual(entry.read(), contents)
+        with self.getFileEntry(contents) as entry:
+            self.assertEqual(entry.read(), contents)
 
 
     def test_readPartial(self):
@@ -99,9 +99,9 @@ class FileEntryMixin:
         C{.read(num)} should read num bytes from the file.
         """
         contents = "0123456789"
-        entry = self.getFileEntry(contents)
-        one = entry.read(4)
-        two = entry.read(200)
+        with self.getFileEntry(contents) as entry:
+            one = entry.read(4)
+            two = entry.read(200)
         self.assertEqual(one, b"0123")
         self.assertEqual(two, b"456789")
 
@@ -112,11 +112,11 @@ class FileEntryMixin:
         far.
         """
         contents = "x" * 100
-        entry = self.getFileEntry(contents)
-        entry.read(2)
-        self.assertEqual(entry.tell(), 2)
-        entry.read(4)
-        self.assertEqual(entry.tell(), 6)
+        with self.getFileEntry(contents) as entry:
+            entry.read(2)
+            self.assertEqual(entry.tell(), 2)
+            entry.read(4)
+            self.assertEqual(entry.tell(), 6)
 
 
 
