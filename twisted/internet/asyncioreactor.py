@@ -22,10 +22,7 @@ from twisted.internet.interfaces import IReactorFDSet
 try:
     from asyncio import new_event_loop
 except ImportError:
-    try:
-        from trollius import new_event_loop
-    except ImportError:
-        raise ImportError("Requires asyncio or trollius.")
+    raise ImportError("Requires asyncio.")
 
 
 
@@ -64,7 +61,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._readers = {}
         self._delayedCalls = set()
         self._continuousPolling = _ContinuousPolling(self)
-        super(AsyncioSelectorReactor, self).__init__()
+        super().__init__()
 
 
     def _readOrWrite(self, selectable, read):
@@ -207,12 +204,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
 
     def stop(self):
-        super(AsyncioSelectorReactor, self).stop()
+        super().stop()
         self.callLater(0, self.fireSystemEvent, "shutdown")
 
 
     def crash(self):
-        super(AsyncioSelectorReactor, self).crash()
+        super().crash()
         self._asyncioEventloop.stop()
 
 
