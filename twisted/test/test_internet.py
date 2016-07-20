@@ -718,9 +718,10 @@ class TimeTests(unittest.TestCase):
 
     def test_callLaterReset(self):
         """
-        A DelayedCall that is reset will be scheduled at the new time.
+        A L{DelayedCall} that is reset will be scheduled at the new time.
         """
-        call = reactor.callLater(2, lambda _: None, lambda _: None)
+        noop = lambda _: None
+        call = reactor.callLater(2, noop, noop)
         self.addCleanup(call.cancel)
         origTime = call.time
         call.reset(1)
