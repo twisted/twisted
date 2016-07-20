@@ -24,8 +24,8 @@ class SSHFactory(protocol.Factory):
     protocol = transport.SSHServerTransport
 
     services = {
-        'ssh-userauth':userauth.SSHUserAuthServer,
-        'ssh-connection':connection.SSHConnection
+        b'ssh-userauth':userauth.SSHUserAuthServer,
+        b'ssh-connection':connection.SSHConnection
     }
     def startFactory(self):
         """
@@ -102,8 +102,7 @@ class SSHFactory(protocol.Factory):
         @type bits: L{int}
         @rtype:     L{tuple}
         """
-        primesKeys = self.primes.keys()
-        primesKeys.sort(lambda x, y: cmp(abs(x - bits), abs(y - bits)))
+        primesKeys = sorted(self.primes.keys(), key=lambda i: abs(i - bits))
         realBits = primesKeys[0]
         return random.choice(self.primes[realBits])
 
@@ -113,8 +112,8 @@ class SSHFactory(protocol.Factory):
         Return a class to use as a service for the given transport.
 
         @type transport:    L{transport.SSHServerTransport}
-        @type service:      L{str}
+        @type service:      L{bytes}
         @rtype:             subclass of L{service.SSHService}
         """
-        if service == 'ssh-userauth' or hasattr(transport, 'avatar'):
+        if service == b'ssh-userauth' or hasattr(transport, 'avatar'):
             return self.services[service]
