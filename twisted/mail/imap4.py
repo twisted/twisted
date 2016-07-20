@@ -3969,7 +3969,7 @@ def parseIdList(s, lastMessageId=None):
     Parse a message set search key into a C{MessageSet}.
 
     @type s: C{str}
-    @param s: A string description of a id list, for example "1:3, 4:*"
+    @param s: A string description of an id list, for example "1:3, 4:*"
 
     @type lastMessageId: C{int}
     @param lastMessageId: The last message sequence id or UID, depending on
@@ -5382,7 +5382,7 @@ class IMessageFile(Interface):
     the more complex MIME-based interface.
     """
     def open():
-        """Return an file-like object opened for reading.
+        """Return a file-like object opened for reading.
 
         Reading from the returned file will return all the bytes
         of which this message consists.

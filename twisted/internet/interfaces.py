@@ -1744,7 +1744,7 @@ class IProducer(Interface):
     """
     A producer produces data for a consumer.
 
-    Typically producing is done by calling the write method of an class
+    Typically producing is done by calling the write method of a class
     implementing L{IConsumer}.
     """
 

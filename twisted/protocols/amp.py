@@ -708,7 +708,7 @@ class AmpBox(dict):
 
     def _sendTo(self, proto):
         """
-        Serialize and send this box to a Amp instance.  By the time it is being
+        Serialize and send this box to an Amp instance.  By the time it is being
         sent, several keys are required.  I must have exactly ONE of::
 
             _ask
@@ -751,7 +751,7 @@ class QuitBox(AmpBox):
 
 class _SwitchBox(AmpBox):
     """
-    Implementation detail of ProtocolSwitchCommand: I am a AmpBox which sets
+    Implementation detail of ProtocolSwitchCommand: I am an AmpBox which sets
     up state for the protocol to switch.
     """
 
