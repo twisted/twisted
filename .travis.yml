@@ -26,10 +26,10 @@ matrix:
       env: TOXENV=py34-coverage-posix,codecov-publish
     - python: 3.5
       env: TOXENV=py35-coverage-posix,codecov-publish
-  # For now all non-trial tests are in a single job to reduce the time spent
-  # on starting separate jobs.
+    # For now all non-trial tests are in a single job to reduce the time spent
+    # on starting separate jobs.
     - python: 2.7
-      env: TOXENV=narrativedocs,pyflakes,topfile
+      env: TOXENV=narrativedocs,pyflakes,topfile,manifest-checker
 
 addons:
   apt:
