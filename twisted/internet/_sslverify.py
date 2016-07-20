@@ -1739,7 +1739,7 @@ class _OpenSSLECCurve(FancyEqMixin, object):
 
     def addECKeyToContext(self, context):
         """
-        Add an temporary EC key to C{context}.
+        Add a temporary EC key to C{context}.
 
         @param context: The context to add a key to.
         @type context: L{OpenSSL.SSL.Context}
@@ -1898,7 +1898,7 @@ class OpenSSLDiffieHellmanParameters(object):
             exchange.
         @type filePath: L{FilePath <twisted.python.filepath.FilePath>}
 
-        @return: A instance that loads its parameters from C{filePath}.
+        @return: An instance that loads its parameters from C{filePath}.
         @rtype: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """

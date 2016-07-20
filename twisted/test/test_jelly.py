@@ -8,12 +8,13 @@ Test cases for L{jelly} object serialization.
 import datetime
 import decimal
 
+from twisted.python.compat import unicode
 from twisted.spread import jelly, pb
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
 
-class TestNode(object, jelly.Jellyable):
+class TestNode(jelly.Jellyable, object):
     """
     An object to test jellyfying of new style class instances.
     """
@@ -342,6 +343,9 @@ class JellyTests(unittest.TestCase):
         else:
             self.assertIsInstance(output[0], set)
 
+    if not jelly._sets:
+        test_oldSets.skip = "sets.Set is gone in Python 3 and higher"
+
 
     def test_oldImmutableSets(self):
         """
@@ -359,6 +363,10 @@ class JellyTests(unittest.TestCase):
             self.assertIsInstance(output[0], jelly._sets.ImmutableSet)
         else:
             self.assertIsInstance(output[0], frozenset)
+
+    if not jelly._sets:
+        test_oldImmutableSets.skip = (
+            "sets.ImmutableSets is gone in Python 3 and higher")
 
 
     def test_simple(self):

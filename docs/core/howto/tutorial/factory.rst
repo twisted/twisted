@@ -36,8 +36,21 @@ Support HTTPS
 
 All we need to do to code an HTTPS site is just write a context factory (in
 this case, which loads the certificate from a certain file) and then use the
-twisted.application.internet.SSLServer method. Note that one factory (in this
-case, a site) can listen on multiple ports with multiple protocols.
+``twisted.internet.endpoints.serverFromString`` method to build a SSL endpoint.
+Note that one factory (in this case, a site) can listen on multiple ports with
+multiple protocols.
+
+Of course, this endpoint doesn't work without a TLS certificate and a private
+key. You'll need to create a self-signed cert and key. This will obviously not
+be trusted by your web browser, so you'll see a warning when you connect. In
+this case, don't worry: you're not at risk.
+
+To create a certificate and key that can be used by this tutorial, run the
+following:
+
+.. code-block:: bash
+
+    openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365
 
 
 

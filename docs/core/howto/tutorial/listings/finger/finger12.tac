@@ -1,5 +1,5 @@
 # But let's try and fix setting away messages, shall we?
-from twisted.application import internet, service
+from twisted.application import service, strports
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
@@ -24,7 +24,7 @@ class FingerFactory(protocol.ServerFactory):
 
     def getUser(self, user):
         return defer.succeed(self.users.get(user, "No such user"))
-    
+
 class FingerSetterProtocol(basic.LineReceiver):
     def connectionMade(self):
         self.lines = []
@@ -36,7 +36,7 @@ class FingerSetterProtocol(basic.LineReceiver):
         user = self.lines[0]
         status = self.lines[1]
         self.factory.setUser(user, status)
-        
+
 class FingerSetterFactory(protocol.ServerFactory):
     protocol = FingerSetterProtocol
 
@@ -51,5 +51,5 @@ fsf = FingerSetterFactory(ff)
 
 application = service.Application('finger', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79,ff).setServiceParent(serviceCollection)
-internet.TCPServer(1079,fsf).setServiceParent(serviceCollection)
+strports.service("tcp:79", ff).setServiceParent(serviceCollection)
+strports.service("tcp:1079", fsf).setServiceParent(serviceCollection)

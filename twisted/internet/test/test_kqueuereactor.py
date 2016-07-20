@@ -60,7 +60,7 @@ class KQueueTests(TestCase):
         class FakeKQueue(object):
             """
             A fake KQueue that raises L{errno.EINTR} when C{control} is called,
-            a a real KQueue would if it was interrupted.
+            like a real KQueue would if it was interrupted.
             """
             def control(self, *args, **kwargs):
                 raise OSError(errno.EINTR, "Interrupted")

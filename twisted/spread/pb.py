@@ -555,7 +555,7 @@ class Broker(banana.Banana):
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
         """
-        if isinstance(sexp, types.ListType):
+        if isinstance(sexp, list):
             command = sexp[0]
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)

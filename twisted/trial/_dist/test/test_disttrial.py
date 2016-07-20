@@ -138,7 +138,7 @@ class DistTrialRunnerTests(TestCase):
     def test_launchWorkerProcesses(self):
         """
         Given a C{spawnProcess} function, C{launchWorkerProcess} launches a
-        python process with a existing path as its argument.
+        python process with an existing path as its argument.
         """
         protocols = [ProcessProtocol() for i in range(4)]
         arguments = []
