@@ -43,8 +43,8 @@ matrix:
 
   allow_failures:
     # For now, OSX run on Travis-CI has a few failures.
-    - language: generic
-      python: 2.7
+    - os: osx
+
 
 addons:
   apt:
