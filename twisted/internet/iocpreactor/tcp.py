@@ -15,6 +15,7 @@ from twisted.internet.abstract import _LogOwner, isIPv6Address
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
 from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
 from twisted.python import log, failure, reflect
+from twisted.python.compat import _PY3
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
@@ -59,7 +60,13 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
 
     def dataReceived(self, rbuffer):
         # XXX: some day, we'll have protocols that can handle raw buffers
-        self.protocol.dataReceived(str(rbuffer))
+        if not isinstance(rbuffer, bytes):
+            if _PY3:
+                rbuffer = bytes(rbuffer, "utf-8")
+            else:
+                rbuffer = bytes(rbuffer)
+
+        self.protocol.dataReceived(rbuffer)
 
 
     def readFromHandle(self, bufflist, evt):

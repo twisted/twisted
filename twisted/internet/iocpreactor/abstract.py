@@ -144,7 +144,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
 
     # write stuff
-    dataBuffer = ''
+    dataBuffer = b''
     offset = 0
     writing = False
     _writeScheduled = None
@@ -210,7 +210,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
             self.offset += bytes
             # If there is nothing left to send,
             if self.offset == len(self.dataBuffer) and not self._tempDataLen:
-                self.dataBuffer = ""
+                self.dataBuffer = b""
                 self.offset = 0
                 # stop writing
                 self.stopWriting()
