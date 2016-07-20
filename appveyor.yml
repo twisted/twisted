@@ -11,7 +11,7 @@ build: off
 # AppVeyor.
 test: off
 
-# Don't build branch if there is a open PR, to prevent double builds.
+# Don't build branch if there is an open PR, to prevent double builds.
 # For now, Appveyour will only build PR commits and not commits to master or
 # commits on random branches without an associated PR.
 skip_branch_with_pr: true

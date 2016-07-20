@@ -73,7 +73,12 @@ import datetime
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
-    import sets as _sets
+    try:
+        import sets as _sets
+    except ImportError:
+        # sets module is deprecated in Python 2.6, and gone in
+        # Python 3
+        _sets = None
 
 from zope.interface import implementer
 
@@ -518,9 +523,10 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or objType is _sets.Set:
+                elif objType is set or (_sets and objType is _sets.Set):
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset or objType is _sets.ImmutableSet:
+                elif objType is frozenset or \
+                     (_sets and objType is _sets.ImmutableSet):
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
@@ -616,7 +622,7 @@ class _Unjellier:
 
 
     def unjelly(self, obj):
-        if type(obj) is not types.ListType:
+        if type(obj) is not list:
             return obj
         jelType = obj[0]
         if not self.taster.isTypeAllowed(jelType):
@@ -750,7 +756,7 @@ class _Unjellier:
 
 
     def _unjelly_tuple(self, lst):
-        l = range(len(lst))
+        l = list(range(len(lst)))
         finished = 1
         for elem in l:
             if isinstance(self.unjellyInto(l, elem, lst[elem]), NotKnown):
@@ -762,7 +768,7 @@ class _Unjellier:
 
 
     def _unjelly_list(self, lst):
-        l = range(len(lst))
+        l = list(range(len(lst)))
         for elem in l:
             self.unjellyInto(l, elem, lst[elem])
         return l
@@ -777,7 +783,7 @@ class _Unjellier:
 
         @param containerType: the type of C{set} to use.
         """
-        l = range(len(lst))
+        l = list(range(len(lst)))
         finished = True
         for elem in l:
             data = self.unjellyInto(l, elem, lst[elem])
@@ -1120,7 +1126,7 @@ def unjelly(sexp, taster=DummySecurityOptions(), persistentLoad=None,
     """
     Unserialize from s-expression.
 
-    Takes an list that was the result from a call to jelly() and unserializes
+    Takes a list that was the result from a call to jelly() and unserializes
     an arbitrary object from it.  The optional 'taster' argument, an instance
     of SecurityOptions, will cause an InsecureJelly exception to be raised if a
     disallowed type, module, or class attempted to unserialize.

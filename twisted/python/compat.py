@@ -719,7 +719,7 @@ def _coercedUnicode(s):
     Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
     instead. This function mimics the behavior for Python 2. It will decode the
     byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
-    passing a byte string. Unicode strings are return as-is.
+    passing a byte string. Unicode strings are returned as-is.
 
     @param s: The string to coerce.
     @type s: L{bytes} or L{unicode}

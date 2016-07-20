@@ -1510,7 +1510,7 @@ class NewCredTests(unittest.TestCase):
 
     def test_anonymousLogin(self):
         """
-        Verify that a PB server using a portal configured with an checker which
+        Verify that a PB server using a portal configured with a checker which
         allows IAnonymous credentials can be logged into using IAnonymous
         credentials.
         """
@@ -1763,7 +1763,7 @@ class SpreadUtilTests(unittest.TestCase):
 
     def test_asyncFail(self):
         """
-        Test a asynchronous failure on a remote method call.
+        Test an asynchronous failure on a remote method call.
         """
         o = LocalRemoteTest()
         d = o.callRemote("fail")

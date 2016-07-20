@@ -139,7 +139,7 @@ class CommandMixin:
 
     def test_errorDelete(self):
         """
-        Test a error during a delete: if key doesn't exist on the server, it
+        Test an error during a delete: if key doesn't exist on the server, it
         returns a B{NOT FOUND} answer which calls back the resulting
         L{Deferred} with C{False}.
         """

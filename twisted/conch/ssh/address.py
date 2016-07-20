@@ -29,7 +29,7 @@ class SSHTransportAddress(util.FancyEqMixin, object):
     mislead into creating a transport which is not similar to the one it is
     indicating.
 
-    @ivar address: A instance of an object which implements I{IAddress} to
+    @ivar address: An instance of an object which implements I{IAddress} to
         which this transport address is connected.
     """
 
