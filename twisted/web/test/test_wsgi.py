@@ -1311,7 +1311,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def checkMessage(error):
             self.assertRegex(
                 str(error), "headers must be a list, not "
-                "<list_?iterator .+> [(]list_?iterator[)]")
+                r"<(list_?|sequence)iterator .+> [(]\1iterator[)]")
 
         return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
@@ -1361,7 +1361,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         def checkMessage(error):
             self.assertRegex(
                 str(error), "header must be a [(]str, str[)] tuple, not "
-                "<tuple_?iterator .+> [(]tuple_?iterator[)]")
+                r"<(tuple_?|sequence)iterator .+> [(]\1iterator[)]")
 
         return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
