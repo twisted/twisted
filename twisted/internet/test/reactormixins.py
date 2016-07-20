@@ -28,6 +28,7 @@ from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 from twisted.python import log
 from twisted.python.failure import Failure
+from twisted.python.compat import _PY3
 
 
 # Access private APIs.
