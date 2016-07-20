@@ -6,6 +6,8 @@
 SSH key exchange handling.
 """
 
+from __future__ import absolute_import, division
+
 from hashlib import sha1, sha256
 
 from zope.interface import Attribute, implementer, Interface
@@ -126,10 +128,10 @@ class _DHGroup14SHA1(object):
 
 
 _kexAlgorithms = {
-    "diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
-    "diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
-    "diffie-hellman-group1-sha1": _DHGroup1SHA1(),
-    "diffie-hellman-group14-sha1": _DHGroup14SHA1(),
+    b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
+    b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
+    b"diffie-hellman-group1-sha1": _DHGroup1SHA1(),
+    b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
     }
 
 
