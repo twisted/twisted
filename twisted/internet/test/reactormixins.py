@@ -142,11 +142,14 @@ class ReactorBuilder:
                 "twisted.internet.iocpreactor.reactor.IOCPReactor"])
     else:
         _reactors.extend([
-                "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
                 "twisted.internet.glib2reactor.Glib2Reactor",
                 "twisted.internet.gtk2reactor.Gtk2Reactor",
                 "twisted.internet.gireactor.GIReactor",
                 "twisted.internet.gtk3reactor.Gtk3Reactor"])
+
+        if _PY3:
+            _reactors.append(
+                "twisted.internet.asyncioreactor.AsyncioSelectorReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")

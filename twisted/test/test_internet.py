@@ -716,6 +716,17 @@ class TimeTests(unittest.TestCase):
         return d
 
 
+    def test_callLaterReset(self):
+        """
+        A DelayedCall that is reset will be scheduled at the new time.
+        """
+        call = reactor.callLater(2, lambda _: None, lambda _: None)
+        self.addCleanup(call.cancel)
+        origTime = call.time
+        call.reset(1)
+        self.assertNotEqual(call.time, origTime)
+
+
     def test_cancelDelayedCall(self):
         """
         Test that when a DelayedCall is cancelled it does not run.
