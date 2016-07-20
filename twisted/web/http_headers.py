@@ -84,7 +84,7 @@ class Headers(object):
 
     def _encodeName(self, name):
         """
-        Encode the name of a header (eg 'Content-Type') to a ISO-8859-1 encoded
+        Encode the name of a header (eg 'Content-Type') to an ISO-8859-1 encoded
         bytestring if required.
 
         @param name: A HTTP header name

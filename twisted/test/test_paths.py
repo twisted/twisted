@@ -1246,7 +1246,7 @@ class FilePathTests(AbstractFilePathTests):
         with appender.open('r+') as f:
             self.assertEqual(f.read(), b'abcdef')
             # ANSI C *requires* an fseek or an fgetpos between an fread and an
-            # fwrite or an fwrite and a fread.  We can't reliable get Python to
+            # fwrite or an fwrite and an fread.  We can't reliably get Python to
             # invoke fgetpos, so we seek to a 0 byte offset from the current
             # position instead.  Also, Python sucks for making this seek
             # relative to 1 instead of a symbolic constant representing the

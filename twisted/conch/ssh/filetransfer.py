@@ -505,7 +505,7 @@ class FileTransferClient(FileTransferBase):
 
         @param filename: a string representing the file to open.
 
-        @param flags: a integer of the flags to open the file with, ORed together.
+        @param flags: an integer of the flags to open the file with, ORed together.
         The flags and their values are listed at the bottom of this file.
 
         @param attrs: a list of attributes to open the file with.  It is a
