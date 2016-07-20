@@ -57,7 +57,7 @@ cache:
     - $HOME/.cache/pip
 
 install:
-  - ./.travis/install.sh tox tox-travis
+  - ./.travis/install.sh tox
 
 # FIXME: https://twistedmatrix.com/trac/ticket/8373
 # By default, Travis only clones one branch.
