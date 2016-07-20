@@ -78,8 +78,9 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         Send C{buff} to current file handle using C{_iocp.send}. The buffer
         sent is limited to a size of C{self.SEND_LIMIT}.
         """
+        writeView = memoryview(buff)
         return _iocp.send(self.getFileHandle(),
-            buffer(buff, 0, self.SEND_LIMIT), evt)
+            writeView[0:self.SEND_LIMIT].tobytes(), evt)
 
 
     def _closeWriteConnection(self):

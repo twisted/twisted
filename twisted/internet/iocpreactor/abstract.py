@@ -72,8 +72,8 @@ class FileHandle(_ConsumerMixin, _LogOwner):
                 return False
         remainder = size % self.readBufferSize
         if remainder:
-            self.dataReceived(buffer(self._readBuffers[full_buffers],
-                                     0, remainder))
+            remainderView = memoryview(self._readBuffers[full_buffers])
+            self.dataReceived(remainderView[0:remainder].tobytes())
         if self.dynamicReadBuffers:
             total_buffer_size = self.readBufferSize * len(self._readBuffers)
             # we have one buffer too many
@@ -237,8 +237,9 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
             # If there is currently less than SEND_LIMIT bytes left to send
             # in the string, extend it with the array data.
-            self.dataBuffer = (buffer(self.dataBuffer, self.offset) +
-                               "".join(self._tempDataBuffer))
+            writeView = memoryview(self.dataBuffer)
+            self.dataBuffer = (writeView[self.offset:].tobytes() +
+                               b"".join(self._tempDataBuffer))
             self.offset = 0
             self._tempDataBuffer = []
             self._tempDataLen = 0
@@ -247,7 +248,8 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
         # Send as much data as you can.
         if self.offset:
-            evt.buff = buff = buffer(self.dataBuffer, self.offset)
+            sendView = memoryview(self.dataBuffer)
+            evt.buff = buff = sendView[self.offset:]
         else:
             evt.buff = buff = self.dataBuffer
         rc, bytes = self.writeToHandle(buff, evt)
