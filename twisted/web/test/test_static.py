@@ -1063,7 +1063,7 @@ class RangeTests(TestCase):
         logItem = self.catcher.pop()
         self.assertEqual(logItem["message"][0], expected)
         self.assertEqual(
-            self.catcher, [], "An additional log occured: %r" % (logItem,))
+            self.catcher, [], "An additional log occurred: %r" % (logItem,))
 
 
     def test_invalidRanges(self):
@@ -1491,7 +1491,7 @@ class DirectoryListerTests(TestCase):
 
     def test_renderFiltered(self):
         """
-        L{static.DirectoryLister} takes a optional C{dirs} argument that
+        L{static.DirectoryLister} takes an optional C{dirs} argument that
         filter out the list of directories and files printed.
         """
         path = FilePath(self.mktemp())

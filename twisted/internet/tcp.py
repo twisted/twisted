@@ -482,7 +482,7 @@ class _BaseBaseClient(object):
 
 class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
     """
-    A base class for client TCP (and similiar) sockets.
+    A base class for client TCP (and similar) sockets.
 
     @ivar realAddress: The address object that will be used for socket.connect;
         this address is an address tuple (the number of elements dependent upon

@@ -1871,7 +1871,7 @@ class DummyProcess(object):
 
 class MockProcessAlias(mail.alias.ProcessAlias):
     """
-    A alias processor that doesn't actually launch processes.
+    An alias processor that doesn't actually launch processes.
     """
 
     def spawnProcess(self, proto, program, path):

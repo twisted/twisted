@@ -818,7 +818,7 @@ class SSL4ServerEndpoint(object):
         @type port: int
 
         @param sslContextFactory: An instance of
-            L{twisted.internet.ssl.ContextFactory}.
+            L{interfaces.IOpenSSLContextFactory}.
 
         @param backlog: Size of the listen queue
         @type backlog: int
@@ -864,7 +864,7 @@ class SSL4ClientEndpoint(object):
         @type port: int
 
         @param sslContextFactory: SSL Configuration information as an instance
-            of L{twisted.internet.ssl.ContextFactory}.
+            of L{interfaces.IOpenSSLContextFactory}.
 
         @param timeout: Number of seconds to wait before assuming the
             connection has failed.
@@ -2034,7 +2034,7 @@ class _TLSClientEndpointParser(object):
         Redirects to another function L{_parseClientTLS}; tricks zope.interface
         into believing the interface is correctly implemented, since the
         signature is (C{reactor}, C{*args}, C{**kwargs}).  See
-        L{_parseClientTLS} for an the specific signature description for this
+        L{_parseClientTLS} for the specific signature description for this
         endpoint parser.
 
         @param reactor: The reactor passed to L{clientFromString}.

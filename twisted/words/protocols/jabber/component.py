@@ -455,7 +455,7 @@ class XMPPComponentServerFactory(xmlstream.XmlStreamServerFactory):
 
     def onAuthenticated(self, xs):
         """
-        Called when a component has succesfully authenticated.
+        Called when a component has successfully authenticated.
 
         Add the component to the routing table and establish a handler
         for a closed connection.

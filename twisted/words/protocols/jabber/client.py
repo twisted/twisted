@@ -344,7 +344,7 @@ class XMPPAuthenticator(xmlstream.ConnectAuthenticator):
     authentication failure, a user may be given the opportunity to input the
     correct password.  By setting the L{password} instance variable and restarting
     initialization, the stream authentication step is then retried, and subsequent
-    steps are performed if succesful.
+    steps are performed if successful.
 
     @ivar jid: Jabber ID to authenticate with. This may contain a resource
                part, as a suggestion to the server for resource binding. A

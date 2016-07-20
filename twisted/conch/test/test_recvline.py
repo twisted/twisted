@@ -43,7 +43,7 @@ class ArrowsTests(unittest.TestCase):
 
     def test_horizontalArrows(self):
         """
-        When L{HistoricRecvLine} receives an LEFT_ARROW or
+        When L{HistoricRecvLine} receives a LEFT_ARROW or
         RIGHT_ARROW keystroke it moves the cursor left or right
         in the current line buffer, respectively.
         """
@@ -160,7 +160,7 @@ class ArrowsTests(unittest.TestCase):
 
     def test_end(self):
         """
-        When L{HistoricRecvLine} receives a END keystroke it moves the cursor
+        When L{HistoricRecvLine} receives an END keystroke it moves the cursor
         to the end of the current line buffer.
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)

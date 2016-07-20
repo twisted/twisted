@@ -13,6 +13,7 @@ from __future__ import print_function
 
 import sys
 
+from twisted.internet import endpoints
 from twisted.internet import protocol
 from twisted.internet import ssl
 from twisted.internet import defer
@@ -67,8 +68,6 @@ class SimpleIMAP4ClientFactory(protocol.ClientFactory):
 
 
     def __init__(self, username, onConn):
-        self.ctx = ssl.ClientContextFactory()
-
         self.username = username
         self.onConn = onConn
 
@@ -84,7 +83,7 @@ class SimpleIMAP4ClientFactory(protocol.ClientFactory):
         assert not self.usedUp
         self.usedUp = True
 
-        p = self.protocol(self.ctx)
+        p = self.protocol()
         p.factory = self
         p.greetDeferred = self.onConn
 
@@ -241,13 +240,22 @@ def main():
 
     factory = SimpleIMAP4ClientFactory(username, onConn)
 
-    from twisted.internet import reactor
-    if port == '993':
-        reactor.connectSSL(hostname, int(port), factory, ssl.ClientContextFactory())
+    if not port:
+        port = 143
     else:
-        if not port:
-            port = 143
-        reactor.connectTCP(hostname, int(port), factory)
+        port = int(port)
+
+    from twisted.internet import reactor
+
+    endpoint = endpoints.HostnameEndpoint(reactor, hostname, port)
+
+    if port == 993:
+        contextFactory = ssl.optionsForClientTLS(
+            hostname=hostname.decode('utf-8')
+        )
+        endpoint = endpoints.wrapClientTLS(contextFactory, endpoint)
+
+    endpoint.connect(factory)
     reactor.run()
 
 

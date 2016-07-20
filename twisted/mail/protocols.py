@@ -266,8 +266,8 @@ class ESMTPFactory(SMTPFactory):
     @ivar protocol: A callable which creates a protocol.  The default value is
         L{ESMTP}.
 
-    @type context: L{ContextFactory <twisted.internet.ssl.ContextFactory>} or
-        L{None}
+    @type context: L{IOpenSSLContextFactory
+        <twisted.internet.interfaces.IOpenSSLContextFactory>} or L{None}
     @ivar context: A factory to generate contexts to be used in negotiating
         encrypted communication.
 

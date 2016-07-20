@@ -335,7 +335,7 @@ class ManholeLoopbackMixin:
     def test_deferred(self):
         """
         When a deferred is returned to the manhole REPL, it is displayed with
-        an sequence number, and when the deferred fires, the result is printed.
+        a sequence number, and when the deferred fires, the result is printed.
         """
         self._testwrite(
             "from twisted.internet import defer, reactor\n"
@@ -389,3 +389,25 @@ class ManholeLoopbackStdioTests(_StdioMixin, unittest.TestCase,
         skip = "Terminal requirements missing"
     else:
         serverProtocol = stdio.ConsoleManhole
+
+
+
+class ManholeMainTests(unittest.TestCase):
+    """
+    Test the I{main} method from the I{manhole} module.
+    """
+    if stdio is None:
+        skip = "Terminal requirements missing"
+
+
+    def test_mainClassNotFound(self):
+        """
+        Will raise an exception when called with an argument which is a
+        dotted patch which can not be imported..
+        """
+        exception = self.assertRaises(
+            ValueError,
+            stdio.main, argv=['no-such-class'],
+            )
+
+        self.assertEqual('Empty module name', exception.args[0])

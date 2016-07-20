@@ -5,8 +5,10 @@
 Test cases for twisted.python._shellcomp
 """
 
+from __future__ import division, absolute_import
+
 import sys
-from cStringIO import StringIO
+from io import BytesIO
 
 from twisted.trial import unittest
 from twisted.python import _shellcomp, usage, reflect
@@ -69,7 +71,7 @@ def test_genZshFunction(self, cmdName, optionsFQPN):
     @param optionsFQPN: The Fully Qualified Python Name of the C{Options}
         class to be tested.
     """
-    outputFile = StringIO()
+    outputFile = BytesIO()
     self.patch(usage.Options, '_shellCompFile', outputFile)
 
     # some scripts won't import or instantiate because of missing
@@ -231,7 +233,7 @@ class ZshTests(unittest.TestCase):
         Generate a completion function, and test the textual output
         against a known correct output
         """
-        outputFile = StringIO()
+        outputFile = BytesIO()
         self.patch(usage.Options, '_shellCompFile', outputFile)
         self.patch(sys, 'argv', ["silly", "", "--_shell-completion", "zsh:2"])
         opts = SimpleProgOptions()
@@ -244,7 +246,7 @@ class ZshTests(unittest.TestCase):
         Generate a completion function with subcommands,
         and test the textual output against a known correct output
         """
-        outputFile = StringIO()
+        outputFile = BytesIO()
         self.patch(usage.Options, '_shellCompFile', outputFile)
         self.patch(sys, 'argv', ["silly2", "", "--_shell-completion", "zsh:2"])
         opts = SimpleProgWithSubcommands()
@@ -257,7 +259,7 @@ class ZshTests(unittest.TestCase):
         Completion still happens even if a command-line is given
         that would normally throw UsageError.
         """
-        outputFile = StringIO()
+        outputFile = BytesIO()
         self.patch(usage.Options, '_shellCompFile', outputFile)
         opts = FighterAceOptions()
 
@@ -278,7 +280,7 @@ class ZshTests(unittest.TestCase):
         The existence of --unknown-option prior to the subcommand
         will break subcommand detection... but we complete anyway
         """
-        outputFile = StringIO()
+        outputFile = BytesIO()
         self.patch(usage.Options, '_shellCompFile', outputFile)
         opts = FighterAceOptions()
 
@@ -301,7 +303,7 @@ class ZshTests(unittest.TestCase):
         Break subcommand detection in a different way by providing
         an invalid subcommand name.
         """
-        outputFile = StringIO()
+        outputFile = BytesIO()
         self.patch(usage.Options, '_shellCompFile', outputFile)
         opts = FighterAceOptions()
 
@@ -318,7 +320,7 @@ class ZshTests(unittest.TestCase):
         Ensure the optimization which skips building the subcommand list
         under certain conditions isn't broken.
         """
-        outputFile = StringIO()
+        outputFile = BytesIO()
         self.patch(usage.Options, '_shellCompFile', outputFile)
         opts = FighterAceOptions()
 
@@ -354,7 +356,7 @@ class ZshTests(unittest.TestCase):
                               usage.Completer()]
                 )
 
-        outputFile = StringIO()
+        outputFile = BytesIO()
         opts = BrokenActions()
         self.patch(opts, '_shellCompFile', outputFile)
         self.assertRaises(ValueError, opts.parseOptions,
@@ -569,7 +571,7 @@ class SimpleProgWithSubcommands(SimpleProgOptions):
 
 
 
-testOutput1 = """#compdef silly
+testOutput1 = b"""#compdef silly
 
 _arguments -s -A "-*" \\
 ':output file (*):_files -g "*"' \\
@@ -588,7 +590,7 @@ _arguments -s -A "-*" \\
 """
 
 # with sub-commands
-testOutput2 = """#compdef silly2
+testOutput2 = b"""#compdef silly2
 
 _arguments -s -A "-*" \\
 '*::subcmd:->subcmd' \\

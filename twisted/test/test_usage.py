@@ -697,7 +697,7 @@ class OptionsInternalTests(unittest.TestCase):
         class Opts(usage.Options):
             def opt_very_very_long(self):
                 """
-                This is a option method with a very long name, that is going to
+                This is an option method with a very long name, that is going to
                 be aliased.
                 """
 

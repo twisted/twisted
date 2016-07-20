@@ -633,7 +633,7 @@ class Request:
 
         # In the future, having the protocol version be a parameter to this
         # method would probably be good.  It would be nice if this method
-        # weren't limited to issueing HTTP/1.1 requests.
+        # weren't limited to issuing HTTP/1.1 requests.
         requestLines = []
         requestLines.append(b' '.join([self.method, self.uri,
             b'HTTP/1.1\r\n']))
