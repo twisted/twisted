@@ -802,7 +802,7 @@ class _NewConnectionHelper(object):
         @type immediate: L{bool}.
         """
         if immediate:
-            # We're assuming the underlying connection is a ITCPTransport,
+            # We're assuming the underlying connection is an ITCPTransport,
             # which is what the current implementation is restricted to:
             connection.transport.transport.abortConnection()
         else:

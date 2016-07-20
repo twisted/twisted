@@ -506,7 +506,7 @@ class ProxyRequestTests(TestCase):
     def test_processWithPort(self):
         """
         Check that L{ProxyRequest.process} correctly parse port in the incoming
-        URL, and create a outgoing connection with this port.
+        URL, and create an outgoing connection with this port.
         """
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
