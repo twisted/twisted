@@ -1,6 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from cpython.version cimport PY_MAJOR_VERSION
 
 # HANDLE and SOCKET are pointer-sized (they are 64 bit wide in 64-bit builds)
 ctypedef size_t HANDLE
@@ -27,6 +28,9 @@ cdef extern from 'ws2tcpip.h':
 cdef extern from 'windows.h':
     ctypedef struct OVERLAPPED:
         pass
+
+    ctypedef Py_UNICODE WCHAR
+    ctypedef const WCHAR* LPCWSTR
     HANDLE CreateIoCompletionPort(HANDLE fileHandle, HANDLE existing, ULONG_PTR key, DWORD numThreads)
     BOOL GetQueuedCompletionStatus(HANDLE port, DWORD *bytes, ULONG_PTR *key, OVERLAPPED **ov, DWORD timeout)
     BOOL PostQueuedCompletionStatus(HANDLE port, DWORD bytes, ULONG_PTR key, OVERLAPPED *ov)
@@ -38,6 +42,7 @@ cdef extern from 'windows.h':
 
 cdef extern from 'python.h':
     ctypedef struct PyObject
+    ctypedef struct PyUnicodeObject
     void *PyMem_Malloc(size_t n) except NULL
     void PyMem_Free(void *p)
     ctypedef struct PyThreadState
@@ -49,15 +54,13 @@ cdef extern from 'python.h':
     void Py_XDECREF(object o)
     int PyObject_AsWriteBuffer(object obj, void **buffer, Py_ssize_t *buffer_len) except -1
     int PyObject_AsReadBuffer(object obj, void **buffer, Py_ssize_t *buffer_len) except -1
-    object PyBytes_FromString(const char *v)
-    object PyBytes_FromStringAndSize(const char *v, Py_ssize_t len)
-    object PyBuffer_New(Py_ssize_t size)
-    char *PyBytes_AsString(object obj) except NULL
     object PySequence_Fast(object o, char *m)
 #    object PySequence_Fast_GET_ITEM(object o, Py_ssize_t i)
     PyObject** PySequence_Fast_ITEMS(object o)
     PyObject* PySequence_ITEM(PyObject *o, Py_ssize_t i)
     Py_ssize_t PySequence_Fast_GET_SIZE(object o)
+    Py_ssize_t PyUnicode_AsWideChar(object o, LPCWSTR u, Py_ssize_t size) 
+    object PyUnicode_FromWideChar(LPCWSTR u, Py_ssize_t size) 
 
 cdef extern from '':
     struct sockaddr:
@@ -89,8 +92,6 @@ cdef extern from '':
         int iMaxSockAddr
         int iAddressFamily
     int WSAGetLastError()
-    char *inet_ntoa(in_addr ina)
-    unsigned long inet_addr(char *cp)
     unsigned short ntohs(unsigned short netshort)
     unsigned short htons(unsigned short hostshort)
     ctypedef struct WSABUF:
@@ -101,16 +102,19 @@ cdef extern from '':
     int WSARecv(SOCKET s, WSABUF *buffs, DWORD buffcount, DWORD *bytes, DWORD *flags, OVERLAPPED *ov, void *crud)
     int WSARecvFrom(SOCKET s, WSABUF *buffs, DWORD buffcount, DWORD *bytes, DWORD *flags, sockaddr *fromaddr, int *fromlen, OVERLAPPED *ov, void *crud)
     int WSASend(SOCKET s, WSABUF *buffs, DWORD buffcount, DWORD *bytes, DWORD flags, OVERLAPPED *ov, void *crud)
-    int WSAAddressToStringA(sockaddr *lpsaAddress, DWORD dwAddressLength,
+    int WSAAddressToStringW(sockaddr *lpsaAddress, DWORD dwAddressLength,
                             WSAPROTOCOL_INFO *lpProtocolInfo,
-                            char *lpszAddressString,
+                            LPCWSTR lpszAddressString,
                             DWORD *lpdwAddressStringLength)
-    int WSAStringToAddressA(char *AddressString, int AddressFamily,
+    int WSAStringToAddressW(LPCWSTR AddressString, int AddressFamily,
                             WSAPROTOCOL_INFO *lpProtocolInfo,
                             sockaddr *lpAddress, int *lpAddressLength)
 
 cdef extern from 'string.h':
     void *memset(void *s, int c, size_t n)
+
+cdef extern from 'wchar.h':
+    size_t wcslen(const WCHAR *)
 
 cdef extern from 'winsock_pointers.h':
     int initWinsockPointers()
@@ -214,41 +218,62 @@ def makesockaddr(object buff):
 cdef object _makesockaddr(sockaddr *addr, Py_ssize_t len):
     cdef sockaddr_in *sin
     cdef sockaddr_in6 *sin6
-    cdef char buff[256]
+    cdef WCHAR buff[256]
+    cdef DWORD buffWcharLen = <DWORD>(sizeof(buff) / sizeof(WCHAR)) - 1
     cdef int rc
-    cdef DWORD buff_size = sizeof(buff)
     if not len:
         return None
+
+    memset(buff, 0, sizeof(buff))
+
     if addr.sa_family == AF_INET:
         sin = <sockaddr_in *>addr
-        return PyBytes_FromString(inet_ntoa(sin.sin_addr)), ntohs(sin.sin_port)
+        rc = WSAAddressToStringW(addr, sizeof(sockaddr_in), NULL, buff,
+                                 &buffWcharLen)
+        if rc == SOCKET_ERROR:
+            raise_error(0, 'WSAAddressToStringW')
+        sa_port = ntohs(sin.sin_port)
+        host = PyUnicode_FromWideChar(buff, wcslen(buff))
+        host, port = host.rsplit(u':', 1)
+        port = int(port)
+        assert port == sa_port
+
+        return host, port
     elif addr.sa_family == AF_INET6:
         sin6 = <sockaddr_in6 *>addr
-        rc = WSAAddressToStringA(addr, sizeof(sockaddr_in6), NULL, buff, &buff_size)
+        rc = WSAAddressToStringW(addr, sizeof(sockaddr_in6), NULL, buff,
+                                 &buffWcharLen)
         if rc == SOCKET_ERROR:
-            raise_error(0, 'WSAAddressToString')
-        host, sa_port = PyBytes_FromString(buff), ntohs(sin6.sin6_port)
-        host, port = host.rsplit(':', 1)
+            raise_error(0, 'WSAAddressToStringW')
+        sa_port = ntohs(sin6.sin6_port)
+        host = PyUnicode_FromWideChar(buff, wcslen(buff))
+        host, port = host.rsplit(u':', 1)
         port = int(port)
         assert host[0] == '['
         assert host[-1] == ']'
         assert port == sa_port
+
         return host[1:-1], port
     else:
-        return PyBytes_FromStringAndSize(addr.sa_data, sizeof(addr.sa_data))
+        raise_error(0, "unsupported address family %d" % (addr.sa_family))
 
 
 cdef object fillinetaddr(sockaddr_in *dest, object addr):
     cdef unsigned short port
-    cdef unsigned long res
-    cdef char *hoststr
+    cdef WCHAR hostStr[256]
+    cdef Py_ssize_t hostStrWcharLen = (sizeof(hostStr) / sizeof(WCHAR)) - 1
+    cdef int addrlen = sizeof(sockaddr_in)
+    cdef Py_ssize_t rc
     host, port = addr
 
-    hoststr = PyBytes_AsString(host)
-    res = inet_addr(hoststr)
-    if res == INADDR_ANY:
-        raise ValueError, 'invalid IP address'
-    dest.sin_addr.s_addr = res
+    memset(hostStr, 0, sizeof(hostStr))
+    rc = PyUnicode_AsWideChar(host, hostStr, hostStrWcharLen)
+    if rc == -1:
+        raise ValueError, 'invalid IP address %r' % (host,)
+    cdef int parseresult = WSAStringToAddressW(hostStr, AF_INET, NULL,
+                                               <sockaddr *>dest, &addrlen)
+    if parseresult == SOCKET_ERROR:
+        raise ValueError, 'invalid IP address %r' % (host,)
 
     dest.sin_port = htons(port)
 
@@ -256,13 +281,18 @@ cdef object fillinetaddr(sockaddr_in *dest, object addr):
 cdef object fillinet6addr(sockaddr_in6 *dest, object addr):
     cdef unsigned short port
     cdef unsigned long res
-    cdef char *hoststr
+    cdef WCHAR hostStr[256]
+    cdef Py_ssize_t hostStrWcharLen = (sizeof(hostStr) / sizeof(WCHAR)) - 1
+    cdef Py_ssize_t rc
     cdef int addrlen = sizeof(sockaddr_in6)
     host, port, flow, scope = addr
     host = host.split("%")[0] # remove scope ID, if any
 
-    hoststr = PyBytes_AsString(host)
-    cdef int parseresult = WSAStringToAddressA(hoststr, AF_INET6, NULL,
+    memset(hostStr, 0, sizeof(hostStr))
+    rc = PyUnicode_AsWideChar(host, hostStr, hostStrWcharLen)
+    if rc == -1:
+        raise ValueError, 'invalid IPv6 address %r' % (host,)
+    cdef int parseresult = WSAStringToAddressW(hostStr, AF_INET6, NULL,
                                                <sockaddr *>dest, &addrlen)
     if parseresult == SOCKET_ERROR:
         raise ValueError, 'invalid IPv6 address %r' % (host,)
