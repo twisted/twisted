@@ -462,7 +462,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.makeConnection(self.transport)
         self.finishKeyExchange(proto)
         self.transport.clear()
-        message = ord(b'A')
+        message = ord('A')
         payload = b'BCDEFG'
         proto.sendPacket(message, payload)
         value = self.transport.value()
