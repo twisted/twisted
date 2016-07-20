@@ -626,7 +626,6 @@ class SSHTransportBase(protocol.Protocol):
         packet = (struct.pack('!LB',
                               totalSize + lenPad - 4, lenPad) +
                   payload + randbytes.secureRandom(lenPad))
-        #TODO: Encrypt then hash
         encPacket = (
             self.currentEncryptions.encrypt(packet) +
             self.currentEncryptions.makeMAC(
