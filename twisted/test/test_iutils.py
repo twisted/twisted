@@ -225,8 +225,7 @@ class ProcessUtilsTests(unittest.TestCase):
         self.addCleanup(
             os.chmod, dir, stat.S_IMODE(os.stat('.').st_mode))
         os.chmod(dir, 0)
-
-        d = utilFunc(self.exe, ['-u', scriptFile])
+        d = utilFunc(self.exe, ['-S', '-u', scriptFile])
         d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
 
