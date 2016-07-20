@@ -201,9 +201,10 @@ class ZipstreamTests(unittest.TestCase):
         scribble.seek(zeroOffset, 0)
         scribble.write(b'0' * 4)
         scribble.close()
-        czf = zipstream.ChunkingZipFile(fn)
-        self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
-        self.assertEqual(czf.readfile("1").read(), b"more contents")
+        with zipstream.ChunkingZipFile(fn) as czf:
+            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+            with czf.readfile("1") as zfe:
+                self.assertEqual(zfe.read(), b"more contents")
 
 
     def test_filenameMismatch(self):
@@ -222,9 +223,10 @@ class ZipstreamTests(unittest.TestCase):
         scribble.write(info.FileHeader())
         scribble.close()
 
-        czf = zipstream.ChunkingZipFile(fn)
-        self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
-        self.assertEqual(czf.readfile("1").read(), b"more contents")
+        with zipstream.ChunkingZipFile(fn) as czf:
+            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+            with czf.readfile("1") as zfe:
+                self.assertEqual(zfe.read(), b"more contents")
 
 
     def test_unsupportedCompression(self):
@@ -256,8 +258,8 @@ class ZipstreamTests(unittest.TestCase):
         zi.extra = b"hello, extra"
         zf.writestr(zi, b"the real data")
         zf.close()
-        czf = zipstream.ChunkingZipFile(fn)
-        self.assertEqual(czf.readfile("0").read(), b"the real data")
+        with zipstream.ChunkingZipFile(fn) as czf, czf.readfile("0") as zfe:
+            self.assertEqual(zfe.read(), b"the real data")
 
 
     def test_unzipIterChunky(self):
