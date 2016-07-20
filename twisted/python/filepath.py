@@ -288,7 +288,10 @@ class AbstractFilePath(object):
 
     def getContent(self):
         """
-        Retrieve the file-like object for this file path.
+        Retrieve the contents of the file at this path.
+
+        @return: the contents of the file
+        @rtype: L{bytes}
         """
         with self.open() as fp:
             return fp.read()
