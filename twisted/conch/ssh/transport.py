@@ -789,11 +789,7 @@ class SSHTransportBase(protocol.Protocol):
     def kexAlg(self, value):
         """
         Set the key exchange algorithm name.
-
-        @raises ConchError: if the key exchange algorithm is not found.
         """
-        # Check for supportedness.
-        _kex.getKex(value)
         self._kexAlg = value
 
     # Client-initiated rekeying looks like this:
