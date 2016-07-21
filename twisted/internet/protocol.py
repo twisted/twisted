@@ -16,7 +16,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
-from twisted.logger import _loggerFor
+from twisted.logger._logger import _loggerFor
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)

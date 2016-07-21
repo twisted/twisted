@@ -17,6 +17,7 @@ from operator import attrgetter
 from twisted import copyright, plugin, logger
 from twisted.application import service, reactors
 from twisted.internet import defer
+from twisted.logger._logger import _loggerFor
 from twisted.persisted import sob
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python.reflect import qual, namedAny
@@ -217,11 +218,11 @@ class AppLogger(object):
         Print twistd start log message.
         """
         from twisted.internet import reactor
-        logger._loggerFor(self).info(
+        _loggerFor(self).info(
             "twistd {version} ({exe} {pyVersion}) starting up.",
             version=copyright.version, exe=sys.executable,
             pyVersion=runtime.shortPythonVersion())
-        logger._loggerFor(self).info('reactor class: {reactor}.',
+        _loggerFor(self).info('reactor class: {reactor}.',
                                      reactor=qual(reactor.__class__))
 
 
@@ -241,7 +242,7 @@ class AppLogger(object):
         """
         Remove all log observers previously set up by L{AppLogger.start}.
         """
-        logger._loggerFor(self).info("Server Shut Down.")
+        _loggerFor(self).info("Server Shut Down.")
         if self._observer is not None:
             logger.globalLogPublisher.removeObserver(self._observer)
             self._observer = None
