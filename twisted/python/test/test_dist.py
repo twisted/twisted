@@ -109,7 +109,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('sphinx >= 1.3.1', deps)
         if not _PY3:
             self.assertIn('twistedchecker >= 0.4.0', deps)
-            self.assertIn('pydoctor >= 16.1.0', deps)
+            self.assertIn('pydoctor >= 16.2.0', deps)
 
 
     def test_extrasRequiresTlsDeps(self):
