@@ -71,12 +71,9 @@ class AbstractFilePathTests(BytesTestCase):
         with self.subfile(b"sub1", b"file2") as f:
             f.write(self.f2content)
         self.subdir(b'sub3')
-        f = self.subfile(b"sub3", b"file3.ext1")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext2")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext3")
-        f.close()
+        self.subfile(b"sub3", b"file3.ext1").close()
+        self.subfile(b"sub3", b"file3.ext2").close()
+        self.subfile(b"sub3", b"file3.ext3").close()
         self.path = filepath.FilePath(cmn)
         self.root = filepath.FilePath(b"/")
 
@@ -1222,8 +1219,7 @@ class FilePathTests(AbstractFilePathTests):
             self.assertEqual(f.read(), b'abc\ndef')
 
         # Re-opening that file in write mode should erase whatever was there.
-        f = writer.open('w')
-        f.close()
+        writer.open('w').close()
         with writer.open() as f:
             self.assertEqual(f.read(), b'')
 

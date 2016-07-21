@@ -528,8 +528,7 @@ class WebClientTests(unittest.TestCase):
     def testDownloadPageError3(self):
         # make sure failures in open() are caught too. This is tricky.
         # Might only work on posix.
-        tmpfile = open("unwritable", "wb")
-        tmpfile.close()
+        open("unwritable", "wb").close()
         os.chmod("unwritable", 0) # make it unwritable (to us)
         d = self.assertFailure(
             client.downloadPage(self.getURL("file"), "unwritable"),

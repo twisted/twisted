@@ -885,8 +885,7 @@ class PagingTests(unittest.TestCase):
         Test L{util.FilePager}, sending an empty file.
         """
         filenameEmpty = self.mktemp()
-        fd = file(filenameEmpty, 'w')
-        fd.close()
+        open(filenameEmpty, 'w').close()
         c, s, pump = connectedServerAndClient()
         pagerizer = FilePagerizer(filenameEmpty, None)
         s.setNameForLocal("bar", pagerizer)
