@@ -170,8 +170,8 @@ class ZipstreamTests(unittest.TestCase):
         A ChunkingZipFile opened in write-mode should not allow .readfile(),
         and raise a RuntimeError instead.
         """
-        czf = zipstream.ChunkingZipFile(self.mktemp(), "w")
-        self.assertRaises(RuntimeError, czf.readfile, "something")
+        with zipstream.ChunkingZipFile(self.mktemp(), "w") as czf:
+            self.assertRaises(RuntimeError, czf.readfile, "something")
 
 
     def test_closedArchive(self):
@@ -237,8 +237,8 @@ class ZipstreamTests(unittest.TestCase):
             # not to pass bad compression types :)
             zi.compress_type = 1234
 
-        czf = zipstream.ChunkingZipFile(fn)
-        self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+        with zipstream.ChunkingZipFile(fn) as czf:
+            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
 
 
     def test_extraData(self):

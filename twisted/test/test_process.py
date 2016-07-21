@@ -2179,8 +2179,8 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
         def processEnded(ign):
             f = p.outF
             f.seek(0, 0)
-            gf = gzip.GzipFile(fileobj=f)
-            self.assertEqual(gf.read(), s)
+            with gzip.GzipFile(fileobj=f) as gf:
+                self.assertEqual(gf.read(), s)
         return d.addCallback(processEnded)
 
 
