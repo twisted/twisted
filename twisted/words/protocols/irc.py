@@ -34,7 +34,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-import errno, os, random, re, stat, struct, sys, time, types, traceback
+import errno, os, random, re, stat, struct, sys, time, traceback
 import operator
 import string, socket
 import textwrap
@@ -2782,7 +2782,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
     connected = 0
 
     def __init__(self, file):
-        if type(file) is types.StringType:
+        if type(file) is str:
             self.file = open(file, 'r')
 
     def connectionMade(self):
@@ -3750,7 +3750,7 @@ def ctcpStringify(messages):
     coded_messages = []
     for (tag, data) in messages:
         if data:
-            if not isinstance(data, types.StringType):
+            if not isinstance(data, str):
                 try:
                     # data as list-of-strings
                     data = " ".join(map(str, data))
