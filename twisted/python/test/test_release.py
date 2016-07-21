@@ -29,10 +29,12 @@ from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 
+from subprocess import CalledProcessError
+
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
-    changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
+    changeAllProjectVersions, VERSION_OFFSET, filePathDelta,
     APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
     ChangeVersionsScript, NewsBuilder, SphinxBuilder,
@@ -1543,7 +1545,7 @@ class SphinxBuilderTests(TestCase):
         directory.
         """
         # note no fake sphinx project is created
-        self.assertRaises(CommandFailed,
+        self.assertRaises(CalledProcessError,
                           self.builder.build,
                           self.sphinxDir)
 
