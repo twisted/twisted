@@ -14,13 +14,11 @@ from twisted.python.compat import _shouldEnableNewStyle, _PY3
 from twisted.python.util import _replaceIf
 
 
-def passthru(arg, **kwargs):
+def passthru(arg):
     """
     Return C{arg}. Do nothing.
 
     @param arg: The arg to return.
-
-    @param kwargs: Ignored keyword arguments.
 
     @return: C{arg}
     """
@@ -28,13 +26,11 @@ def passthru(arg, **kwargs):
 
 
 
-def _ensureOldClass(cls, **kwargs):
+def _ensureOldClass(cls):
     """
     Ensure that C{cls} is an old-style class.
 
     @param cls: The class to check.
-
-    @param kwargs: Ignored keyword arguments.
 
     @return: The class, if it is an old-style class.
     @raises: L{ValueError} if it is a new-style class.
@@ -64,11 +60,7 @@ def _oldStyle(cls):
     @param cls: An old-style class to convert to new-style.
     @type cls: L{types.ClassType}
 
-    @param bases: The bases that the converted class will use.
-    @type bases: L{tuple}
-
-    @return: A new-style version of C{cls}, with the bases C{bases} if
-        upgraded.
+    @return: A new-style version of C{cls}.
     """
     _ensureOldClass(cls)
     _bases = cls.__bases__ + (object,)
