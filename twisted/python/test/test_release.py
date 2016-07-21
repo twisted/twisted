@@ -778,7 +778,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         self.assertIn(
             'Baz was deprecated in Twisted 14.2.3; please use stuff instead.',
-            quuxPath.sibling('quux.baz.html').getContent())
+            quuxPath.sibling('quux.Baz.html').getContent())
 
 
         self.assertEqual(stdout.getvalue(), '')
