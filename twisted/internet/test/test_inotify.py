@@ -102,9 +102,8 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_MODIFY} event to the callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.write(b'foo')
-            fObj.close()
+            with path.open("w") as fObj:
+                fObj.write(b'foo')
 
         return self._notificationTest(inotify.IN_MODIFY, operation)
 
