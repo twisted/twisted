@@ -127,8 +127,7 @@ class INotifyTests(unittest.TestCase):
         callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.close()
+            path.open("w").close()
 
         return self._notificationTest(inotify.IN_CLOSE_WRITE, operation)
 
@@ -141,8 +140,7 @@ class INotifyTests(unittest.TestCase):
         """
         def operation(path):
             path.touch()
-            fObj = path.open("r")
-            fObj.close()
+            path.open("r").close()
 
         return self._notificationTest(inotify.IN_CLOSE_NOWRITE, operation)
 
@@ -153,8 +151,7 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_OPEN} event to the callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.close()
+            path.open("w").close()
 
         return self._notificationTest(inotify.IN_OPEN, operation)
 
@@ -165,8 +162,7 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_MOVED_FROM} event to the callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.close()
+            path.open("w").close()
             path.moveTo(filepath.FilePath(self.mktemp()))
 
         return self._notificationTest(inotify.IN_MOVED_FROM, operation)
@@ -191,8 +187,7 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_CREATE} event to the callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.close()
+            path.open("w").close()
 
         return self._notificationTest(inotify.IN_CREATE, operation)
 

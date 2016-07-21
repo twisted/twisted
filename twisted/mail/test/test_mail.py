@@ -2368,11 +2368,9 @@ class _AttemptManagerTests(unittest.TestCase):
         self.noisyMessage = os.path.join(self.tmpdir, noisyBaseName)
         self.quietMessage = os.path.join(self.tmpdir, quietBaseName)
 
-        message = open(self.noisyMessage+'-D', "w")
-        message.close()
+        open(self.noisyMessage+'-D', "w").close()
 
-        message = open(self.quietMessage+'-D', "w")
-        message.close()
+        open(self.quietMessage+'-D', "w").close()
 
         self.noisyAttemptMgr.manager.managed['noisyRelayer'] = [
                 noisyBaseName]

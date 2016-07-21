@@ -2466,8 +2466,7 @@ class UtilTests(unittest.TestCase):
                            (j(self.bazfoo, "executable"), 0o700),
                            (j(self.bazfoo, "executable.bin"), 0o700),
                            (j(self.bazbar, "executable"), 0)]:
-            f = open(name, "wb")
-            f.close()
+            open(name, "wb").close()
             os.chmod(name, mode)
 
         self.oldPath = os.environ.get('PATH', None)
