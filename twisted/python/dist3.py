@@ -53,6 +53,8 @@ modules = [
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.sexpy",
     "twisted.conch.ssh.address",
+    "twisted.conch.ssh._kex",
+    "twisted.conch.ssh.transport",
     "twisted.conch.telnet",
     "twisted.conch.test.__init__",
     "twisted.copyright",
@@ -328,6 +330,7 @@ testModules = [
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_address",
     "twisted.conch.test.test_telnet",
+    "twisted.conch.test.test_transport",
     "twisted.cred.test.test_cramauth",
     "twisted.cred.test.test_cred",
     "twisted.cred.test.test_digestauth",
@@ -607,6 +610,13 @@ almostModules = [
     # GzipEncoder and allowed methods functionality not ported, no doubt
     # missing lots of test coverage:
     "twisted.web.server",
+    # The tests for twisted.web.conch.ssh.transport depends on the
+    # following.
+    "twisted.conch.ssh.factory",
+    "twisted.conch.ssh.userauth",
+    "twisted.conch.ssh.connection",
+    "twisted.conch.ssh.service",
+    "twisted.conch.interfaces",
 ]
 
 modulesToInstall = modules + testModules + almostModules
