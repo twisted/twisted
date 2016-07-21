@@ -312,11 +312,11 @@ class Port(base.BasePort):
 
     def writeSequence(self, seq, addr):
         """
-        Write a datagram constructed from a L{list} of L{bytes}.
+        Write a datagram constructed from an iterable of L{bytes}.
 
         @param seq: The data that will make up the complete datagram to be
             written.
-        @type seq: L{list} of L{bytes}
+        @type seq: an iterable of L{bytes}
 
         @type addr: L{tuple} containing L{str} as first element and L{int} as
             second element, or L{None}
