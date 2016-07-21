@@ -80,7 +80,7 @@ def runWithProtocol(klass):
 
 
 def main(argv=None):
-    log.startLogging(file('child.log', 'w'))
+    log.startLogging(open('child.log', 'w'))
 
     if argv is None:
         argv = sys.argv[1:]

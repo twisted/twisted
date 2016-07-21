@@ -799,7 +799,7 @@ class SessionInterfaceTests(unittest.TestCase):
 
     def test_eofReceived(self):
         """
-        When an EOF is received and a ISession adapter is present, it should
+        When an EOF is received and an ISession adapter is present, it should
         be notified of the EOF message.
         """
         self.session.session = session.ISession(self.session.avatar)
@@ -818,7 +818,7 @@ class SessionInterfaceTests(unittest.TestCase):
 
     def test_closed(self):
         """
-        When a close is received and a ISession adapter is present, it should
+        When a close is received and an ISession adapter is present, it should
         be notified of the close message.
         """
         self.session.session = session.ISession(self.session.avatar)

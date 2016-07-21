@@ -1,6 +1,6 @@
 # finger proxy
-from twisted.application import internet, service
-from twisted.internet import defer, protocol, reactor
+from twisted.application import internet, service, strports
+from twisted.internet import defer, protocol, reactor, endpoints
 from twisted.protocols import basic
 from twisted.python import components
 from zope.interface import Interface, implementer
@@ -27,7 +27,7 @@ class IFingerFactory(Interface):
         """Return a protocol returning a string"""
 
 class FingerProtocol(basic.LineReceiver):
-            
+
     def lineReceived(self, user):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
@@ -42,10 +42,10 @@ class FingerProtocol(basic.LineReceiver):
 class FingerFactoryFromService(protocol.ClientFactory):
 
     protocol = FingerProtocol
-    
+
     def __init__(self, service):
         self.service = service
-        
+
     def getUser(self, user):
         return self.service.getUser(user)
 
@@ -55,10 +55,10 @@ components.registerAdapter(FingerFactoryFromService,
                            IFingerFactory)
 
 class FingerClient(protocol.Protocol):
-                                
+
     def connectionMade(self):
         self.transport.write(self.factory.user+"\r\n")
-        self.buf = []                        
+        self.buf = []
 
     def dataReceived(self, data):
         self.buf.append(data)
@@ -80,10 +80,11 @@ class FingerClientFactory(protocol.ClientFactory):
     def gotData(self, data):
         self.d.callback(data)
 
-        
+
 def finger(user, host, port=79):
     f = FingerClientFactory(user)
-    reactor.connectTCP(host, port, f)                   
+    endpoint = endpoints.TCP4ClientEndpoint(reactor, host, port)
+    endpoint.connect(f)
     return f.d
 
 
@@ -102,8 +103,8 @@ class ProxyFingerService(service.Service):
 
     def getUsers(self):
         return defer.succeed([])
-                             
-application = service.Application('finger', uid=1, gid=1) 
+
+application = service.Application('finger', uid=1, gid=1)
 f = ProxyFingerService()
-internet.TCPServer(7779, IFingerFactory(f)).setServiceParent(
+strports.service("tcp:7779", IFingerFactory(f)).setServiceParent(
     service.IServiceCollection(application))

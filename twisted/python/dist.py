@@ -215,23 +215,23 @@ def getExtensions():
 
 
 
-def getScripts(basedir=''):
+def getConsoleScripts():
     """
     Returns a list of scripts for Twisted.
     """
-    scriptdir = os.path.join(basedir, 'bin')
-    if not os.path.isdir(scriptdir):
-        # Probably a project-specific tarball, in which case only this
-        # project's bins are included in 'bin'
-        scriptdir = os.path.join(basedir, 'bin')
-        if not os.path.isdir(scriptdir):
-            return []
-    thingies = os.listdir(scriptdir)
-    for specialExclusion in ['_preamble.py', '_preamble.pyc']:
-        if specialExclusion in thingies:
-            thingies.remove(specialExclusion)
-    return list(filter(os.path.isfile,
-                       [os.path.join(scriptdir, x) for x in thingies]))
+    scripts = [ "cftp = twisted.conch.scripts.cftp:run",
+                "ckeygen = twisted.conch.scripts.ckeygen:run",
+                "conch = twisted.conch.scripts.conch:run",
+                "mailmail = twisted.mail.scripts.mailmail:run",
+                "pyhtmlizer = twisted.scripts.htmlizer:run",
+                "tkconch = twisted.conch.scripts.tkconch:run"
+              ]
+    portedToPython3Scripts = [ "trial = twisted.scripts.trial:run",
+                               "twistd = twisted.scripts.twistd:run" ]
+    if _PY3:
+        return portedToPython3Scripts
+    else:
+        return scripts + portedToPython3Scripts
 
 
 ## Helpers and distutil tweaks
@@ -309,8 +309,8 @@ class build_ext_twisted(build_ext.build_ext):
     def _compile_helper(self, content):
         conftest = open("conftest.c", "w")
         try:
-            conftest.write(content)
-            conftest.close()
+            with conftest:
+                conftest.write(content)
 
             try:
                 self.compiler.compile(["conftest.c"], output_dir='')
