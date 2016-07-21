@@ -610,6 +610,13 @@ almostModules = [
     # GzipEncoder and allowed methods functionality not ported, no doubt
     # missing lots of test coverage:
     "twisted.web.server",
+    # The tests for twisted.web.conch.ssh.transport depends on the
+    # following.
+    "twisted.conch.ssh.factory",
+    "twisted.conch.ssh.userauth",
+    "twisted.conch.ssh.connection",
+    "twisted.conch.ssh.service",
+    "twisted.conch.interfaces",
 ]
 
 modulesToInstall = modules + testModules + almostModules
