@@ -1,4 +1,6 @@
 from twisted.web import soap, xmlrpc, resource, server
+from twisted.internet import endpoints
+
 import os
 
 def getQuote():
@@ -7,7 +9,7 @@ def getQuote():
 class XMLRPCQuoter(xmlrpc.XMLRPC):
     def xmlrpc_quote(self):
         return getQuote()
-    
+
 class SOAPQuoter(soap.SOAPPublisher):
     def soap_quote(self):
         return getQuote()
@@ -17,7 +19,8 @@ def main():
     root = resource.Resource()
     root.putChild('RPC2', XMLRPCQuoter())
     root.putChild('SOAP', SOAPQuoter())
-    reactor.listenTCP(7080, server.Site(root))
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
+    endpoint.listen(server.Site(root))
     reactor.run()
 
 if __name__ == '__main__':

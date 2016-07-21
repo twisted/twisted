@@ -53,6 +53,8 @@ modules = [
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.sexpy",
     "twisted.conch.ssh.address",
+    "twisted.conch.ssh._kex",
+    "twisted.conch.ssh.transport",
     "twisted.conch.telnet",
     "twisted.conch.test.__init__",
     "twisted.copyright",
@@ -68,12 +70,15 @@ modules = [
     "twisted.enterprise.adbapi",
     "twisted.internet.__init__",
     "twisted.internet._baseprocess",
+    "twisted.internet._dumbwin32proc",
     "twisted.internet._glibbase",
     "twisted.internet._newtls",
+    "twisted.internet._pollingfile",
     "twisted.internet._posixstdio",
     "twisted.internet._posixserialport",
     "twisted.internet._signals",
     "twisted.internet._win32serialport",
+    "twisted.internet._win32stdio",
     "twisted.internet.abstract",
     "twisted.internet.address",
     "twisted.internet.base",
@@ -85,7 +90,16 @@ modules = [
     "twisted.internet.fdesc",
     "twisted.internet.gireactor",
     "twisted.internet.gtk3reactor",
+    "twisted.internet.inotify",
     "twisted.internet.interfaces",
+    "twisted.internet.iocpreactor.__init__",
+    "twisted.internet.iocpreactor.abstract",
+    "twisted.internet.iocpreactor.const",
+    "twisted.internet.iocpreactor.interfaces",
+    "twisted.internet.iocpreactor.reactor",
+    "twisted.internet.iocpreactor.setup",
+    "twisted.internet.iocpreactor.tcp",
+    "twisted.internet.iocpreactor.udp",
     "twisted.internet.kqreactor",
     "twisted.internet.main",
     "twisted.internet.pollreactor",
@@ -101,6 +115,7 @@ modules = [
     "twisted.internet.tcp",
     "twisted.internet.test.__init__",
     "twisted.internet.test._posixifaces",
+    "twisted.internet.test._win32ifaces",
     "twisted.internet.test.connectionmixins",
     "twisted.internet.test.fakeendpoint",
     "twisted.internet.test.modulehelpers",
@@ -109,6 +124,7 @@ modules = [
     "twisted.internet.udp",
     "twisted.internet.unix",
     "twisted.internet.utils",
+    "twisted.internet.win32eventreactor",
     "twisted.logger.__init__",
     "twisted.logger._buffer",
     "twisted.logger._file",
@@ -190,8 +206,10 @@ modules = [
     "twisted.protocols.tls",
     "twisted.python.__init__",
     "twisted.python._appdirs",
+    "twisted.python._inotify",
     "twisted.python._tzhelper",
     "twisted.python._oldstyle",
+    "twisted.python._shellcomp",
     "twisted.python._textattributes",
     "twisted.python._url",
     "twisted.python.compat",
@@ -227,8 +245,10 @@ modules = [
     "twisted.python.util",
     "twisted.python.versions",
     "twisted.python.zippath",
+    "twisted.python.zipstream",
     "twisted.scripts.__init__",
     "twisted.scripts._twistd_unix",
+    "twisted.scripts._twistw",
     "twisted.scripts.trial",
     "twisted.scripts.twistd",
     "twisted.test.__init__",
@@ -310,6 +330,7 @@ testModules = [
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_address",
     "twisted.conch.test.test_telnet",
+    "twisted.conch.test.test_transport",
     "twisted.cred.test.test_cramauth",
     "twisted.cred.test.test_cred",
     "twisted.cred.test.test_digestauth",
@@ -328,6 +349,8 @@ testModules = [
     "twisted.internet.test.test_gireactor",
     "twisted.internet.test.test_glibbase",
     "twisted.internet.test.test_inlinecb",
+    "twisted.internet.test.test_iocp",
+    "twisted.internet.test.test_inotify",
     "twisted.internet.test.test_kqueuereactor",
     "twisted.internet.test.test_main",
     "twisted.internet.test.test_newtls",
@@ -386,8 +409,10 @@ testModules = [
     "twisted.python.test.test_deprecate",
     "twisted.python.test.test_dist",
     "twisted.python.test.test_dist3",
+    "twisted.python.test.test_inotify",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
+    "twisted.python.test.test_shellcomp",
     "twisted.python.test.test_syslog",
     "twisted.python.test.test_systemd",
     "twisted.python.test.test_textattributes",
@@ -397,6 +422,7 @@ testModules = [
     "twisted.python.test.test_util",
     "twisted.python.test.test_versions",
     "twisted.python.test.test_zippath",
+    "twisted.python.test.test_zipstream",
     "twisted.test.test_abstract",
     "twisted.test.test_adbapi",
     "twisted.test.test_amp",
@@ -514,6 +540,7 @@ testDataFiles = [
     "twisted.positioning.test.receiver",
     "twisted.python.test.pullpipe",
     "twisted.python.test.pullpipe",
+    "twisted.test.mock_win32process",
     "twisted.test.plugin_basic",
     "twisted.test.plugin_extra1",
     "twisted.test.plugin_extra2",
@@ -529,6 +556,9 @@ testDataFiles = [
     "twisted.test.process_tester",
     "twisted.test.process_tty",
     "twisted.test.process_twisted",
+    "twisted.test.reflect_helper_IE",
+    "twisted.test.reflect_helper_VE",
+    "twisted.test.reflect_helper_ZDE",
     "twisted.test.stdio_test_consumer",
     "twisted.test.stdio_test_halfclose",
     "twisted.test.stdio_test_hostpeer",
@@ -553,23 +583,27 @@ testDataFiles = [
 
 
 almostModules = [
-    # Required for Trial
-    "twisted.python.logfile",
+    # The tests for twisted.web.conch.ssh.transport depends on the
+    # following.
+    "twisted.conch.ssh.factory",
+    "twisted.conch.ssh.userauth",
+    "twisted.conch.ssh.connection",
+    "twisted.conch.ssh.service",
+    "twisted.conch.interfaces",
     # Missing test coverage, see #6156:
     "twisted.internet._sslverify",
     # twisted.names.client semi-depends on twisted.names.root, but only on
     # Windows really:
     "twisted.names.root",
-    # Echo is ported for twisted.application tests:
-    "twisted.protocols.wire",
     # Missing test coverage:
     "twisted.protocols.loopback",
+    # Echo is ported for twisted.application tests:
+    "twisted.protocols.wire",
+    # Required for Trial
+    "twisted.python.logfile",
     # twisted.python.filepath depends on twisted.python.win32, but on Linux it
     # only really needs to import:
     "twisted.python.win32",
-    "twisted.test.reflect_helper_IE",
-    "twisted.test.reflect_helper_VE",
-    "twisted.test.reflect_helper_ZDE",
     # Agent code and downloadPage aren't ported, test coverage isn't complete:
     "twisted.web.client",
     # Required by twisted.web.server, no actual code here:
@@ -586,5 +620,3 @@ almostModules = [
 ]
 
 modulesToInstall = modules + testModules + almostModules
-
-portedScripts = ["bin/trial", "bin/twistd"]

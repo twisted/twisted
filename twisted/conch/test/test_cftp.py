@@ -675,7 +675,7 @@ class StdioClientTests(TestCase):
 
     def test_cmd_PUTMultipleNoRemotePath(self):
         """
-        When a gobbing expression is used local files are transfered with
+        When a gobbing expression is used local files are transferred with
         remote file names based on local names.
         """
         first = self.makeFile()
@@ -714,7 +714,7 @@ class StdioClientTests(TestCase):
 
     def test_cmd_PUTMultipleWithRemotePath(self):
         """
-        When a gobbing expression is used local files are transfered with
+        When a gobbing expression is used local files are transferred with
         remote file names based on local names.
         when a remote folder is requested remote paths are composed from
         remote path and local filename.
@@ -1053,9 +1053,8 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         Assert that the files at C{name1} and C{name2} contain exactly the
         same data.
         """
-        f1 = file(name1).read()
-        f2 = file(name2).read()
-        self.assertEqual(f1, f2, msg)
+        with open(name1) as f1, open(name2) as f2:
+            self.assertEqual(f1.read(), f2.read(), msg)
 
 
     def testGet(self):
@@ -1125,12 +1124,10 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         file.
         """
         # XXX - not actually a unit test
-        f = file(os.path.join(self.testDir, 'shorterFile'), 'w')
-        f.write("a")
-        f.close()
-        f = file(os.path.join(self.testDir, 'longerFile'), 'w')
-        f.write("bb")
-        f.close()
+        with open(os.path.join(self.testDir, 'shorterFile'), 'w') as f:
+            f.write("a")
+        with open(os.path.join(self.testDir, 'longerFile'), 'w') as f:
+            f.write("bb")
         def _checkPut(result):
             self.assertFilesEqual(self.testDir + '/shorterFile',
                                   self.testDir + '/longerFile')
@@ -1148,12 +1145,10 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         """
         # XXX - not actually a unit test
         os.mkdir(os.path.join(self.testDir, 'dir'))
-        f = file(os.path.join(self.testDir, 'dir', 'file'), 'w')
-        f.write("a")
-        f.close()
-        f = file(os.path.join(self.testDir, 'file'), 'w')
-        f.write("bb")
-        f.close()
+        with open(os.path.join(self.testDir, 'dir', 'file'), 'w') as f:
+            f.write("a")
+        with open(os.path.join(self.testDir, 'file'), 'w') as f:
+            f.write("bb")
         def _checkPut(result):
             self.assertFilesEqual(self.testDir + '/dir/file',
                                   self.testDir + '/file')

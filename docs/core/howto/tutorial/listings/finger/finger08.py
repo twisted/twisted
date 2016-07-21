@@ -1,7 +1,7 @@
 # Read username, output from non-empty factory, drop connections
 # Use deferreds, to minimize synchronicity assumptions
 
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import protocol, reactor, defer, endpoints
 from twisted.protocols import basic
 
 class FingerProtocol(basic.LineReceiver):
@@ -26,5 +26,6 @@ class FingerFactory(protocol.ServerFactory):
     def getUser(self, user):
         return defer.succeed(self.users.get(user, "No such user"))
 
-reactor.listenTCP(1079, FingerFactory(moshez='Happy and well'))
+fingerEndpoint = endpoints.serverFromString(reactor, "tcp:1079")
+fingerEndpoint.listen(FingerFactory(moshez='Happy and well'))
 reactor.run()

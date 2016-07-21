@@ -2074,7 +2074,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
     def test_otherConnectionsCancelled(self):
         """
-        Once the endpoint returns a succesful connection, all the other
+        Once the endpoint returns a successful connection, all the other
         pending connections are cancelled.
 
         Here, the second connection attempt, i.e. IPv6, succeeds, and the
@@ -2571,7 +2571,7 @@ class ServerStringTests(unittest.TestCase):
         certificate in PEM format.
         """
         fp = FilePath(self.mktemp())
-        fp.create()
+        fp.create().close()
         # The endpoint string is the same as in the valid case except for
         # a different chain file.  We use an empty temp file which obviously
         # will never contain any certificates.

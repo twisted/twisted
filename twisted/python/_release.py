@@ -59,8 +59,8 @@ def runCommand(args, cwd=None):
     @raise CommandFailed: when the program exited with a non-0 exit code.
     """
     process = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=cwd)
-    stdout = process.stdout.read()
-    exitCode = process.wait()
+    stdout = process.communicate()[0]
+    exitCode = process.poll()
     if exitCode < 0:
         raise CommandFailed(None, -exitCode, stdout)
     elif exitCode > 0:

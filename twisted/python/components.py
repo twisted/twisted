@@ -371,7 +371,7 @@ class _ProxiedClassMethod(object):
 
     @ivar originalAttribute: name of the attribute of the proxy where the
         original object is stored.
-    @type orginalAttribute: L{str}
+    @type originalAttribute: L{str}
     """
     def __init__(self, methodName, originalAttribute):
         self.methodName = self.__name__ = methodName
@@ -405,7 +405,7 @@ class _ProxyDescriptor(object):
 
     @ivar originalAttribute: name of the attribute of the proxy where the
         original object is stored.
-    @type orginalAttribute: C{str}
+    @type originalAttribute: C{str}
     """
     def __init__(self, attributeName, originalAttribute):
         self.attributeName = attributeName

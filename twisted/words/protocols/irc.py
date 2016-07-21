@@ -2910,7 +2910,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
         (To be honest, fromUser is the only thing that's currently
         used here. targetUserOrChannel is potentially useful, while
-        the 'data' argument is soley for informational purposes.)
+        the 'data' argument is solely for informational purposes.)
         """
         self.client = client
         if queryData:
@@ -3850,8 +3850,8 @@ RPL_LUSERUNKNOWN = '253'
 RPL_LUSERCHANNELS = '254'
 RPL_LUSERME = '255'
 RPL_ADMINME = '256'
-RPL_ADMINLOC = '257'
-RPL_ADMINLOC = '258'
+RPL_ADMINLOC1 = '257'
+RPL_ADMINLOC2 = '258'
 RPL_ADMINEMAIL = '259'
 RPL_TRYAGAIN = '263'
 ERR_NOSUCHNICK = '401'
@@ -3868,6 +3868,9 @@ ERR_NOTEXTTOSEND = '412'
 ERR_NOTOPLEVEL = '413'
 ERR_WILDTOPLEVEL = '414'
 ERR_BADMASK = '415'
+# Defined in errata.
+# https://www.rfc-editor.org/errata_search.php?rfc=2812&eid=2822
+ERR_TOOMANYMATCHES = '416'
 ERR_UNKNOWNCOMMAND = '421'
 ERR_NOMOTD = '422'
 ERR_NOADMININFO = '423'
@@ -3992,8 +3995,8 @@ symbolic_to_numeric = {
     "RPL_LUSERCHANNELS": '254',
     "RPL_LUSERME": '255',
     "RPL_ADMINME": '256',
-    "RPL_ADMINLOC": '257',
-    "RPL_ADMINLOC": '258',
+    "RPL_ADMINLOC1": '257',
+    "RPL_ADMINLOC2": '258',
     "RPL_ADMINEMAIL": '259',
     "RPL_TRYAGAIN": '263',
     "ERR_NOSUCHNICK": '401',
@@ -4010,6 +4013,7 @@ symbolic_to_numeric = {
     "ERR_NOTOPLEVEL": '413',
     "ERR_WILDTOPLEVEL": '414',
     "ERR_BADMASK": '415',
+    "ERR_TOOMANYMATCHES": '416',
     "ERR_UNKNOWNCOMMAND": '421',
     "ERR_NOMOTD": '422',
     "ERR_NOADMININFO": '423',

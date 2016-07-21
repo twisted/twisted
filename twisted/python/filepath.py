@@ -288,7 +288,10 @@ class AbstractFilePath(object):
 
     def getContent(self):
         """
-        Retrieve the file-like object for this file path.
+        Retrieve the contents of the file at this path.
+
+        @return: the contents of the file
+        @rtype: L{bytes}
         """
         with self.open() as fp:
             return fp.read()
@@ -1569,7 +1572,7 @@ class FilePath(AbstractFilePath):
         fdint = os.open(self.path, _CREATE_FLAGS)
 
         # XXX TODO: 'name' attribute of returned files is not mutable or
-        # settable via fdopen, so this file is slighly less functional than the
+        # settable via fdopen, so this file is slightly less functional than the
         # one returned from 'open' by default.  send a patch to Python...
 
         return os.fdopen(fdint, 'w+b')

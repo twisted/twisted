@@ -12,7 +12,8 @@ for more details.
 @author: Glyph Lefkowitz
 """
 
-import copy, cStringIO, struct
+import copy, struct
+from io import BytesIO
 
 from twisted.internet import protocol
 from twisted.persisted import styles
@@ -34,14 +35,14 @@ def int2b128(integer, stream):
 
 def b1282int(st):
     """
-    Convert an integer represented as a base 128 string into an C{int} or
-    C{long}.
+    Convert an integer represented as a base 128 string into an L{int} or
+    L{long}.
 
     @param st: The integer encoded in a string.
-    @type st: C{str}
+    @type st: L{str}
 
     @return: The integer value extracted from the string.
-    @rtype: C{int} or C{long}
+    @rtype: L{int} or L{long}
     """
     e = 1
     i = 0
@@ -74,7 +75,7 @@ def setPrefixLimit(limit):
     The prefix length limit determines how many bytes of prefix a banana
     decoder will allow before rejecting a potential object as too large.
 
-    @type limit: C{int}
+    @type limit: L{int}
     @param limit: The number of bytes of prefix for banana to allow when
     decoding.
     """
@@ -121,9 +122,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         Called after protocol negotiation.
         """
 
+
     def _selectDialect(self, dialect):
         self.currentDialect = dialect
         self.connectionReady()
+
 
     def callExpressionReceived(self, obj):
         if self.currentDialect:
@@ -293,11 +296,13 @@ class Banana(protocol.Protocol, styles.Ephemeral):
     for k, v in outgoingVocabulary.items():
         incomingVocabulary[v] = k
 
+
     def __init__(self, isClient=1):
         self.listStack = []
         self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
         self.outgoingSymbolCount = 0
         self.isClient = isClient
+
 
     def sendEncoded(self, obj):
         """
@@ -310,10 +315,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
 
         @return: L{None}
         """
-        io = cStringIO.StringIO()
-        self._encode(obj, io.write)
-        value = io.getvalue()
+        encodeStream = BytesIO()
+        self._encode(obj, encodeStream.write)
+        value = encodeStream.getvalue()
         self.transport.write(value)
+
 
     def _encode(self, obj, write):
         if isinstance(obj, (list, tuple)):
@@ -369,10 +375,10 @@ _i._selectDialect("none")
 
 def encode(lst):
     """Encode a list s-expression."""
-    io = cStringIO.StringIO()
-    _i.transport = io
+    encodeStream = BytesIO()
+    _i.transport = encodeStream
     _i.sendEncoded(lst)
-    return io.getvalue()
+    return encodeStream.getvalue()
 
 
 def decode(st):

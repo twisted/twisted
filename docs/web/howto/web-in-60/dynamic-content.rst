@@ -16,7 +16,7 @@ contents of a page.
 
 
 
-Taking care of some of the necessary imports first, we'll import :api:`twisted.web.server.Site <Site>` and the :api:`twisted.internet.reactor <reactor>` :
+Taking care of some of the necessary imports first, we'll import :api:`twisted.web.server.Site <Site>`, the :api:`twisted.internet.reactor <reactor>`, and :api:`twisted.internet.endpoints <endpoints>` :
 
 
 
@@ -24,8 +24,8 @@ Taking care of some of the necessary imports first, we'll import :api:`twisted.w
 
 .. code-block:: python
 
-    
-    from twisted.internet import reactor
+
+    from twisted.internet import reactor, endpoints
     from twisted.web.server import Site
 
 
@@ -33,7 +33,7 @@ Taking care of some of the necessary imports first, we'll import :api:`twisted.w
 
 The Site is a factory which associates a listening port with the HTTP
 protocol implementation. The reactor is the main loop that drives any Twisted
-application; we'll use it to actually create the listening port in a moment.
+application. Endpoints are used to create listening ports.
 
 
 
@@ -49,7 +49,7 @@ instance of ``Resource`` (or a subclass) represents a page
 
 .. code-block:: python
 
-    
+
     from twisted.web.resource import Resource
 
 
@@ -64,7 +64,7 @@ time module:
 
 .. code-block:: python
 
-    
+
     import time
 
 
@@ -81,7 +81,7 @@ time:
 
 .. code-block:: python
 
-    
+
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
@@ -112,7 +112,7 @@ With the resource defined, we can create a ``Site`` from it:
 
 .. code-block:: python
 
-    
+
     resource = ClockPage()
     factory = Site(resource)
 
@@ -130,8 +130,9 @@ tell the reactor to :doc:`create a TCP server <../../../core/howto/servers>` and
 
 .. code-block:: python
 
-    
-    reactor.listenTCP(8880, factory)
+
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
@@ -145,20 +146,21 @@ Here's the code with no interruptions:
 
 .. code-block:: python
 
-    
-    from twisted.internet import reactor
+
+    from twisted.internet import reactor, endpoints
     from twisted.web.server import Site
     from twisted.web.resource import Resource
     import time
-    
+
     class ClockPage(Resource):
         isLeaf = True
         def render_GET(self, request):
             return "<html><body>%s</body></html>" % (time.ctime(),)
-    
+
     resource = ClockPage()
     factory = Site(resource)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
