@@ -747,7 +747,7 @@ MSG_USERAUTH_INFO_RESPONSE    = 61
 MSG_USERAUTH_PK_OK            = 60
 
 messages = {}
-for k, v in locals().items():
+for k, v in list(locals().items()):
     if k[:4] == 'MSG_':
         messages[v] = k
 
