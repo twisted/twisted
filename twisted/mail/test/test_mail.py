@@ -1046,8 +1046,8 @@ class DirectoryQueueTests(unittest.TestCase):
         self.queue.noisy = False
         for m in range(25):
             hdrF, msgF = self.queue.createNewMessage()
-            pickle.dump(['header', m], hdrF)
-            hdrF.close()
+            with hdrF:
+                pickle.dump(['header', m], hdrF)
             msgF.lineReceived('body: %d' % (m,))
             msgF.eomReceived()
         self.queue.readDirectory()

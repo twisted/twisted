@@ -182,12 +182,18 @@ class Screen(CursesStdIO):
         curses.echo()
         curses.endwin()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+
 if __name__ == '__main__':
     stdscr = curses.initscr() # initialize curses
-    screen = Screen(stdscr)   # create Screen object
-    stdscr.refresh()
-    ircFactory = IRCFactory(screen)
-    reactor.addReader(screen) # add screen object as a reader to the reactor
-    reactor.connectTCP("irc.freenode.net",6667,ircFactory) # connect to IRC
-    reactor.run() # have fun!
-    screen.close()
+    with Screen(stdscr) as screen:  # create Screen object
+        stdscr.refresh()
+        ircFactory = IRCFactory(screen)
+        reactor.addReader(screen) # add screen object as a reader to the reactor
+        reactor.connectTCP("irc.freenode.net",6667,ircFactory) # connect to IRC
+        reactor.run() # have fun!

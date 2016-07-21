@@ -841,9 +841,8 @@ class PagingTests(unittest.TestCase):
         Create a file used to test L{util.FilePager}.
         """
         self.filename = self.mktemp()
-        fd = file(self.filename, 'w')
-        fd.write(bigString)
-        fd.close()
+        with open(self.filename, 'w') as fd:
+            fd.write(bigString)
 
 
     def test_pagingWithCallback(self):
