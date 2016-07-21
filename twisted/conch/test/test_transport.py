@@ -45,7 +45,7 @@ from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.randbytes import insecureRandom
-from twisted.python.compat import iterbytes, networkString, _bytesChr as chr
+from twisted.python.compat import iterbytes, _bytesChr as chr
 from twisted.conch.ssh import address, service, common, _kex
 from twisted.test import proto_helpers
 
