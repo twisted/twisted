@@ -846,7 +846,7 @@ class _Unjellier:
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(rest[0])
         objType = type(klaus)
-        if objType not in (_OldStyleClass, types.TypeType):
+        if objType not in (_OldStyleClass, type):
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
                     rest[0], klaus))
