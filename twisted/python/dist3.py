@@ -53,6 +53,7 @@ modules = [
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.sexpy",
     "twisted.conch.ssh.address",
+    "twisted.conch.ssh._kex",
     "twisted.conch.ssh.transport",
     "twisted.conch.telnet",
     "twisted.conch.test.__init__",
