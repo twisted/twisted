@@ -52,9 +52,9 @@ def _ensureOldClass(cls, **kwargs):
 
 
 
-@_replaceIf(_PY3, lambda **k: passthru)
-@_replaceIf(not _shouldEnableNewStyle(), lambda **k: _ensureOldClass)
-def _oldStyle(bases=(object,)):
+@_replaceIf(_PY3, passthru)
+@_replaceIf(not _shouldEnableNewStyle(), _ensureOldClass)
+def _oldStyle(cls):
     """
     A decorator which conditionally converts old-style classes to new-style
     classes. If it is Python 3, or if the C{TWISTED_NEWSTYLE} environment
@@ -70,9 +70,6 @@ def _oldStyle(bases=(object,)):
     @return: A new-style version of C{cls}, with the bases C{bases} if
         upgraded.
     """
-    def _old(cls):
-
-        _ensureOldClass(cls)
-        return type(cls.__name__, bases, cls.__dict__)
-
-    return _old
+    _ensureOldClass(cls)
+    _bases = cls.__bases__ + (object,)
+    return type(cls.__name__, _bases, cls.__dict__)
