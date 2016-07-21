@@ -643,10 +643,10 @@ General usage rules:
 * Emitted logs are not part of the API/contract so you don't have to document it as part of the API.
 * For security features you might documented the emitted logs and then they will became part of the contract.
 
-Example of usage::
-
+Example of usage:
 
 .. code-block:: python
+
     from twisted.logger import Logger
 
     class SomeStuff(object):
@@ -673,7 +673,7 @@ General testing rules:
 * Emitted logs which are documented should have detailed tests which check all the conditions described in the documentation.
 
 
-Example of testing the code::
+Example of testing the code:
 
 .. code-block:: python
 
@@ -698,29 +698,34 @@ Example of testing the code::
 
 Working around `self._log` conflicts.
 For older code you might now be able to use `self._log` as it can be already used for other purpose.
-In this case you can just use a diffrent name for the new logging object.
+In this case you can just use a different name for the new logging object or
+use the :api:`twisted.logger._logger._loggerFor <_loggerFor>` helper.
 
 .. code-block:: python
 
+    from twisted.logger._logger import _loggerFor
+
     class SomeStuff(object):
         """
-        Class using the new logging system using the C{_logFor} helper as
+        Class using the new logging system using the C{_loggerFor} helper as
         C{_log} ivar was already used.
         """
 
         def __init__(self):
             self._log = SomeOtherStuff()
-            # Use a diffrent name for the new logging code.
+            # Use a different name for the new logging code.
             self._logger = Logger()
+            self._logger.info(
+                "Initializing factory {factory!r}", factory=self)
 
 
         def doSomething(self):
             """
-            Use the C{_logger} name to emit the logs using the new logger.
+            Use the C{_loggerFor} helper to emit the logs without conflicting
+            with C{_log}.
             """
-            self._logger.info(
+            _loggerFor(self).info(
                 "Starting factory {factory!r}", factory=self)
-
             self.otherStuff()
 
 
