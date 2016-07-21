@@ -174,11 +174,12 @@ class ZshBuilder(object):
             gen = ZshArgumentsGenerator(self.options, self.cmdName, self.file)
             gen.extraActions.insert(0, SubcommandAction())
             gen.write()
-            self.file.write('local _zsh_subcmds_array\n_zsh_subcmds_array=(\n')
+            self.file.write(b'local _zsh_subcmds_array\n_zsh_subcmds_array=(\n')
             for (cmd, short, parser, desc) in self.options.subCommands:
-                self.file.write('"%s:%s"\n' % (cmd, desc))
-            self.file.write(")\n\n")
-            self.file.write('_describe "sub-command" _zsh_subcmds_array\n')
+                self.file.write(
+                    b'\"' + cmd.encode('utf-8') + b':' + desc.encode('utf-8') +b'\"\n')
+            self.file.write(b")\n\n")
+            self.file.write(b'_describe "sub-command" _zsh_subcmds_array\n')
         else:
             gen = ZshArgumentsGenerator(self.options, self.cmdName, self.file)
             gen.write()
@@ -350,8 +351,9 @@ class ZshArgumentsGenerator(object):
         This is the start of the code that calls _arguments
         @return: L{None}
         """
-        self.file.write('#compdef %s\n\n'
-                        '_arguments -s -A "-*" \\\n' % (self.cmdName,))
+        self.file.write(b'#compdef ' + self.cmdName.encode('utf-8') +
+                        b'\n\n'
+                        b'_arguments -s -A "-*" \\\n')
 
 
     def writeOptions(self):
@@ -359,7 +361,7 @@ class ZshArgumentsGenerator(object):
         Write out zsh code for each option in this command
         @return: L{None}
         """
-        optNames = self.allOptionsNameToDefinition.keys()
+        optNames = list(self.allOptionsNameToDefinition.keys())
         optNames.sort()
         for longname in optNames:
             self.writeOpt(longname)
@@ -382,8 +384,9 @@ class ZshArgumentsGenerator(object):
             if action._repeat and i != len(self.extraActions) - 1:
                 raise ValueError("Completer with repeat=True must be "
                                  "last item in Options.extraActions")
-            self.file.write(escape(action._shellCode('', usage._ZSH)))
-            self.file.write(' \\\n')
+            self.file.write(
+                escape(action._shellCode('', usage._ZSH)).encode('utf-8'))
+            self.file.write(b' \\\n')
 
 
     def writeFooter(self):
@@ -391,7 +394,7 @@ class ZshArgumentsGenerator(object):
         Write the last bit of code that finishes the call to _arguments
         @return: L{None}
         """
-        self.file.write('&& return 0\n')
+        self.file.write(b'&& return 0\n')
 
 
     def verifyZshNames(self):
@@ -526,12 +529,12 @@ class ZshArgumentsGenerator(object):
             #we have to write an extra line for the short option if we have one
             shortExclusionsField = self.excludeStr(longname, buildShort=True)
             self.file.write(escape('%s%s%s%s%s' % (shortExclusionsField,
-                multiField, shortField, descriptionField, actionField)))
-            self.file.write(' \\\n')
+                multiField, shortField, descriptionField, actionField)).encode('utf-8'))
+            self.file.write(b' \\\n')
 
         self.file.write(escape('%s%s%s%s%s' % (longExclusionsField,
-            multiField, longField, descriptionField, actionField)))
-        self.file.write(' \\\n')
+            multiField, longField, descriptionField, actionField)).encode('utf-8'))
+        self.file.write(b' \\\n')
 
 
     def getAction(self, longname):
@@ -619,7 +622,7 @@ class ZshArgumentsGenerator(object):
             if methodObj in methodToShort:
                 short = methodToShort[methodObj]
 
-            reqArgs = methodObj.im_func.func_code.co_argcount
+            reqArgs = methodObj.__func__.__code__.co_argcount
             if reqArgs == 2:
                 self.optParams.append([longname, short, None, descr])
                 self.paramNameToDefinition[longname] = [short, None, descr]

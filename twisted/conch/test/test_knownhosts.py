@@ -1145,10 +1145,11 @@ class DefaultAPITests(TestCase):
         self.fakeFile = FakeFile()
         self.patch(default, "_open", self.patchedOpen)
         self.hostsOption = self.mktemp()
+        self.hashedEntries = {}
         knownHostsFile = KnownHostsFile(FilePath(self.hostsOption))
-        knownHostsFile.addHostKey("exists.example.com",
-            Key.fromString(sampleKey))
-        knownHostsFile.addHostKey("4.3.2.1", Key.fromString(sampleKey))
+        for host in ("exists.example.com", "4.3.2.1"):
+            entry = knownHostsFile.addHostKey(host, Key.fromString(sampleKey))
+            self.hashedEntries[host] = entry
         knownHostsFile.save()
         self.fakeTransport = FakeObject()
         self.fakeTransport.factory = FakeObject()
@@ -1232,7 +1233,7 @@ class DefaultAPITests(TestCase):
     def test_verifyQuestion(self):
         """
         L{default.verifyHostKey} should return a L{Default} which fires with
-        C{0} when passed a unknown host that the user refuses to acknowledge.
+        C{0} when passed an unknown host that the user refuses to acknowledge.
         """
         self.fakeTransport.factory.options['host'] = 'fake.example.com'
         self.fakeFile.inlines.append("no")
@@ -1257,3 +1258,38 @@ class DefaultAPITests(TestCase):
             self.fakeTransport, "4.3.2.1", otherSampleKey,
             "Again, not required.")
         return self.assertFailure(d, HostKeyChanged)
+
+
+    def test_inKnownHosts(self):
+        """
+        L{default.isInKnownHosts} should return C{1} when a host with a key
+        is in the known hosts file.
+        """
+        host = self.hashedEntries["4.3.2.1"].toString().split()[0]
+        r = default.isInKnownHosts(
+            host, Key.fromString(sampleKey).blob(),
+            {"known-hosts": FilePath(self.hostsOption).path})
+        self.assertEqual(1, r)
+
+
+    def test_notInKnownHosts(self):
+        """
+        L{default.isInKnownHosts} should return C{0} when a host with a key
+        is not in the known hosts file.
+        """
+        r = default.isInKnownHosts(
+            "not.there", b"irrelevant",
+            {"known-hosts": FilePath(self.hostsOption).path})
+        self.assertEqual(0, r)
+
+
+    def test_inKnownHostsKeyChanged(self):
+        """
+        L{default.isInKnownHosts} should return C{2} when a host with a key
+        other than the given one is in the known hosts file.
+        """
+        host = self.hashedEntries["4.3.2.1"].toString().split()[0]
+        r = default.isInKnownHosts(
+            host, Key.fromString(otherSampleKey).blob(),
+            {"known-hosts": FilePath(self.hostsOption).path})
+        self.assertEqual(2, r)

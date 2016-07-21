@@ -10,7 +10,6 @@ import zipfile
 from hashlib import md5
 
 from twisted.python import zipstream, filepath
-from twisted.python.compat import xrange
 from twisted.trial import unittest
 
 
@@ -34,7 +33,8 @@ class FileEntryMixin:
         """
         zip files should not be ttys, so isatty() should be false
         """
-        self.assertFalse(self.getFileEntry('').isatty())
+        with self.getFileEntry('') as fileEntry:
+            self.assertFalse(fileEntry.isatty())
 
 
     def test_closed(self):
@@ -42,57 +42,56 @@ class FileEntryMixin:
         The C{closed} attribute should reflect whether C{close()} has been
         called.
         """
-        fileEntry = self.getFileEntry('')
-        self.assertFalse(fileEntry.closed)
-        fileEntry.close()
+        with self.getFileEntry('') as fileEntry:
+            self.assertFalse(fileEntry.closed)
         self.assertTrue(fileEntry.closed)
 
 
     def test_readline(self):
         """
         C{readline()} should mirror L{file.readline} and return up to a single
-        deliminter.
+        delimiter.
         """
-        fileEntry = self.getFileEntry('hoho\nho')
-        self.assertEqual(fileEntry.readline(), 'hoho\n')
-        self.assertEqual(fileEntry.readline(), 'ho')
-        self.assertEqual(fileEntry.readline(), '')
+        with self.getFileEntry(b'hoho\nho') as fileEntry:
+            self.assertEqual(fileEntry.readline(), b'hoho\n')
+            self.assertEqual(fileEntry.readline(), b'ho')
+            self.assertEqual(fileEntry.readline(), b'')
 
 
     def test_next(self):
         """
         Zip file entries should implement the iterator protocol as files do.
         """
-        fileEntry = self.getFileEntry('ho\nhoho')
-        self.assertEqual(fileEntry.next(), 'ho\n')
-        self.assertEqual(fileEntry.next(), 'hoho')
-        self.assertRaises(StopIteration, fileEntry.next)
+        with self.getFileEntry(b'ho\nhoho') as fileEntry:
+            self.assertEqual(fileEntry.next(), b'ho\n')
+            self.assertEqual(fileEntry.next(), b'hoho')
+            self.assertRaises(StopIteration, fileEntry.next)
 
 
     def test_readlines(self):
         """
         C{readlines()} should return a list of all the lines.
         """
-        fileEntry = self.getFileEntry('ho\nho\nho')
-        self.assertEqual(fileEntry.readlines(), ['ho\n', 'ho\n', 'ho'])
+        with self.getFileEntry(b'ho\nho\nho') as fileEntry:
+            self.assertEqual(fileEntry.readlines(), [b'ho\n', b'ho\n', b'ho'])
 
 
     def test_iteration(self):
         """
         C{__iter__()} and C{xreadlines()} should return C{self}.
         """
-        fileEntry = self.getFileEntry('')
-        self.assertIs(iter(fileEntry), fileEntry)
-        self.assertIs(fileEntry.xreadlines(), fileEntry)
+        with self.getFileEntry('') as fileEntry:
+            self.assertIs(iter(fileEntry), fileEntry)
+            self.assertIs(fileEntry.xreadlines(), fileEntry)
 
 
     def test_readWhole(self):
         """
         C{.read()} should read the entire file.
         """
-        contents = "Hello, world!"
-        entry = self.getFileEntry(contents)
-        self.assertEqual(entry.read(), contents)
+        contents = b"Hello, world!"
+        with self.getFileEntry(contents) as entry:
+            self.assertEqual(entry.read(), contents)
 
 
     def test_readPartial(self):
@@ -100,11 +99,11 @@ class FileEntryMixin:
         C{.read(num)} should read num bytes from the file.
         """
         contents = "0123456789"
-        entry = self.getFileEntry(contents)
-        one = entry.read(4)
-        two = entry.read(200)
-        self.assertEqual(one, "0123")
-        self.assertEqual(two, "456789")
+        with self.getFileEntry(contents) as entry:
+            one = entry.read(4)
+            two = entry.read(200)
+        self.assertEqual(one, b"0123")
+        self.assertEqual(two, b"456789")
 
 
     def test_tell(self):
@@ -113,11 +112,11 @@ class FileEntryMixin:
         far.
         """
         contents = "x" * 100
-        entry = self.getFileEntry(contents)
-        entry.read(2)
-        self.assertEqual(entry.tell(), 2)
-        entry.read(4)
-        self.assertEqual(entry.tell(), 6)
+        with self.getFileEntry(contents) as entry:
+            entry.read(2)
+            self.assertEqual(entry.tell(), 2)
+            entry.read(4)
+            self.assertEqual(entry.tell(), 6)
 
 
 
@@ -198,13 +197,14 @@ class ZipstreamTests(unittest.TestCase):
         zeroOffset = zf.getinfo("0").header_offset
         zf.close()
         # Zero out just the one header.
-        scribble = file(fn, "r+b")
+        scribble = open(fn, "r+b")
         scribble.seek(zeroOffset, 0)
-        scribble.write(chr(0) * 4)
+        scribble.write(b'0' * 4)
         scribble.close()
-        czf = zipstream.ChunkingZipFile(fn)
-        self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
-        self.assertEqual(czf.readfile("1").read(), "more contents")
+        with zipstream.ChunkingZipFile(fn) as czf:
+            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+            with czf.readfile("1") as zfe:
+                self.assertEqual(zfe.read(), b"more contents")
 
 
     def test_filenameMismatch(self):
@@ -212,20 +212,21 @@ class ZipstreamTests(unittest.TestCase):
         A zipfile entry with a different filename than is found in the central
         directory should raise BadZipfile.
         """
-        fn = self.makeZipFile(["test contents",
-                               "more contents"])
+        fn = self.makeZipFile([b"test contents",
+                               b"more contents"])
         zf = zipfile.ZipFile(fn, "r")
         info = zf.getinfo("0")
         info.filename = "not zero"
         zf.close()
-        scribble = file(fn, "r+b")
+        scribble = open(fn, "r+b")
         scribble.seek(info.header_offset, 0)
         scribble.write(info.FileHeader())
         scribble.close()
 
-        czf = zipstream.ChunkingZipFile(fn)
-        self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
-        self.assertEqual(czf.readfile("1").read(), "more contents")
+        with zipstream.ChunkingZipFile(fn) as czf:
+            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+            with czf.readfile("1") as zfe:
+                self.assertEqual(zfe.read(), b"more contents")
 
 
     def test_unsupportedCompression(self):
@@ -254,11 +255,11 @@ class ZipstreamTests(unittest.TestCase):
         fn = self.mktemp()
         zf = zipfile.ZipFile(fn, 'w')
         zi = zipfile.ZipInfo("0")
-        zi.extra = "hello, extra"
-        zf.writestr(zi, "the real data")
+        zi.extra = b"hello, extra"
+        zf.writestr(zi, b"the real data")
         zf.close()
-        czf = zipstream.ChunkingZipFile(fn)
-        self.assertEqual(czf.readfile("0").read(), "the real data")
+        with zipstream.ChunkingZipFile(fn) as czf, czf.readfile("0") as zfe:
+            self.assertEqual(zfe.read(), b"the real data")
 
 
     def test_unzipIterChunky(self):
@@ -268,6 +269,7 @@ class ZipstreamTests(unittest.TestCase):
         """
         numfiles = 10
         contents = ['This is test file %d!' % i for i in range(numfiles)]
+        contents = [i.encode("ascii") for i in contents]
         zpfilename = self.makeZipFile(contents)
         list(zipstream.unzipIterChunky(zpfilename, self.unzipdir.path))
         self.assertEqual(
@@ -287,13 +289,15 @@ class ZipstreamTests(unittest.TestCase):
         """
         numfiles = 10
         contents = ['This is test file %d!' % i for i in range(numfiles)]
+        contents = [i.encode("ascii") for i in contents]
         zpfilename = self.makeZipFile(contents, 'foo')
         list(zipstream.unzipIterChunky(zpfilename, self.unzipdir.path))
+        fileContents = {str(num).encode("ascii") for num in range(numfiles)}
         self.assertEqual(
-            set(self.unzipdir.child('foo').listdir()),
-            set(map(str, range(numfiles))))
+            set(self.unzipdir.child(b'foo').listdir()),
+                fileContents)
 
-        for child in self.unzipdir.child('foo').children():
+        for child in self.unzipdir.child(b'foo').children():
             num = int(child.basename())
             self.assertEqual(child.getContent(), contents[num])
 
@@ -306,7 +310,12 @@ class ZipstreamTests(unittest.TestCase):
         """
         unzipIterChunky should unzip the given number of bytes per iteration.
         """
-        junk = ' '.join([str(random.random()) for n in xrange(1000)])
+        junk = b''
+        for n in range(1000):
+            num = round(random.random(), 12)
+            numEncoded = str(num).encode("ascii")
+            junk += b' '+numEncoded
+
         junkmd5 = md5(junk).hexdigest()
 
         tempdir = filepath.FilePath(self.mktemp())
@@ -315,7 +324,7 @@ class ZipstreamTests(unittest.TestCase):
         self._makebigfile(zfpath, compression, junk)
         uziter = zipstream.unzipIterChunky(zfpath, tempdir.path,
                                            chunksize=chunksize)
-        r = uziter.next()
+        r = next(uziter)
         # test that the number of chunks is in the right ballpark;
         # this could theoretically be any number but statistically it
         # should always be in this range

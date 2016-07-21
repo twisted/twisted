@@ -704,7 +704,7 @@ class IReactorSSL(Interface):
 
         @param factory: a L{twisted.internet.protocol.ServerFactory} instance
 
-        @param contextFactory: a L{twisted.internet.ssl.ContextFactory} instance
+        @param contextFactory: an implementor of L{IOpenSSLContextFactory}
 
         @param backlog: size of the listen queue
 
@@ -1744,7 +1744,7 @@ class IProducer(Interface):
     """
     A producer produces data for a consumer.
 
-    Typically producing is done by calling the write method of an class
+    Typically producing is done by calling the write method of a class
     implementing L{IConsumer}.
     """
 
@@ -2256,6 +2256,28 @@ class IProtocolNegotiationFactory(Interface):
 
 
 
+class IOpenSSLContextFactory(Interface):
+    """
+    A provider of L{IOpenSSLContextFactory} is capable of generating
+    L{OpenSSL.SSL.Context} classes suitable for configuring TLS on a
+    connection. A provider will store enough state to be able to generate these
+    contexts as needed for individual connections.
+
+    @see: L{twisted.internet.ssl}
+    """
+
+    def getContext():
+        """
+        Returns a TLS context object, suitable for securing a TLS connection.
+        This context object will be appropriately customized for the connection
+        based on the state in this object.
+
+        @return: A TLS context object.
+        @rtype: L{OpenSSL.SSL.Context}
+        """
+
+
+
 class ITLSTransport(ITCPTransport):
     """
     A TCP transport that supports switching to TLS midstream.
@@ -2277,7 +2299,7 @@ class ITLSTransport(ITCPTransport):
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must
-            be an old-style L{twisted.internet.ssl.ContextFactory} or similar.
+            be an implementor of L{IOpenSSLContextFactory}.
         """
 
 

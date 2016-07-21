@@ -250,19 +250,19 @@ class SRVConnectorTests(unittest.TestCase):
         self.randIntResults = [11, 0]
 
         self.connector.pickServer()
-        self.assertEquals(self.randIntArgs[0], (0, 30))
+        self.assertEqual(self.randIntArgs[0], (0, 30))
 
         self.connector.pickServer()
-        self.assertEquals(self.randIntArgs[1], (0, 10))
+        self.assertEqual(self.randIntArgs[1], (0, 10))
 
         # 2nd round
         self.randIntResults = [10, 0]
 
         self.connector.pickServer()
-        self.assertEquals(self.randIntArgs[2], (0, 30))
+        self.assertEqual(self.randIntArgs[2], (0, 30))
 
         self.connector.pickServer()
-        self.assertEquals(self.randIntArgs[3], (0, 20))
+        self.assertEqual(self.randIntArgs[3], (0, 20))
 
 
     def test_pickServerSamePriorities(self):
