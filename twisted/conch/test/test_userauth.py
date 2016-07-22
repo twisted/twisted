@@ -21,6 +21,7 @@ from twisted.internet import defer, task
 from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+from twisted.python.compat import _bytesChr as chr
 
 if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.ssh.common import NS
@@ -136,7 +137,7 @@ class FakeTransport(transport.SSHTransportBase):
         """
         A mock service, representing the other service offered by the server.
         """
-        name = 'nancy'
+        name = b'nancy'
 
 
         def serviceStarted(self):
@@ -153,7 +154,7 @@ class FakeTransport(transport.SSHTransportBase):
             """
             Return our fake service.
             """
-            if service == 'none':
+            if service == b'none':
                 return FakeTransport.Service
 
 
@@ -599,7 +600,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
         Test that client is initialized properly.
         """
         self.assertEqual(self.authClient.user, b'foo')
-        self.assertEqual(self.authClient.instance.name, 'nancy')
+        self.assertEqual(self.authClient.instance.name, b'nancy')
         self.assertEqual(self.authClient.transport.packets,
                 [(userauth.MSG_USERAUTH_REQUEST, NS(b'foo') + NS(b'nancy')
                     + NS(b'none'))])
@@ -801,7 +802,7 @@ class LoopbackTests(unittest.TestCase):
 
     class Factory:
         class Service:
-            name = 'TestService'
+            name = b'TestService'
 
 
             def serviceStarted(self):
@@ -855,7 +856,7 @@ class LoopbackTests(unittest.TestCase):
         client.serviceStarted()
 
         def check(ignored):
-            self.assertEqual(server.transport.service.name, 'TestService')
+            self.assertEqual(server.transport.service.name, b'TestService')
         return d.addCallback(check)
 
 

@@ -56,6 +56,7 @@ modules = [
     "twisted.conch.ssh._kex",
     "twisted.conch.ssh.transport",
     "twisted.conch.ssh.channel",
+    "twisted.conch.ssh.userauth",
     "twisted.conch.telnet",
     "twisted.conch.test.__init__",
     "twisted.copyright",
@@ -333,6 +334,7 @@ testModules = [
     "twisted.conch.test.test_telnet",
     "twisted.conch.test.test_transport",
     "twisted.conch.test.test_channel",
+    "twisted.conch.test.test_userauth",
     "twisted.cred.test.test_cramauth",
     "twisted.cred.test.test_cred",
     "twisted.cred.test.test_digestauth",
@@ -588,7 +590,6 @@ almostModules = [
     # The tests for twisted.web.conch.ssh.transport depends on the
     # following.
     "twisted.conch.ssh.factory",
-    "twisted.conch.ssh.userauth",
     "twisted.conch.ssh.connection",
     "twisted.conch.ssh.service",
     "twisted.conch.interfaces",
