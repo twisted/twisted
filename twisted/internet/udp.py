@@ -323,7 +323,7 @@ class Port(base.BasePort):
         @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
             I{integer port number}); can be L{None} in connected mode.
         """
-        self.write("".join(seq), addr)
+        self.write(b"".join(seq), addr)
 
 
     def connect(self, host, port):
