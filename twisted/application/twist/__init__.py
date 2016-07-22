@@ -5,9 +5,3 @@
 """
 C{twist} command line tool.
 """
-
-__all__ = [
-    "Twist",
-]
-
-from _twist import Twist

@@ -235,7 +235,7 @@ def getConsoleScripts():
     ]
     portedToPython3Scripts = [
         "trial = twisted.scripts.trial:run",
-        "twist = twisted.application.twist:Twist.main",
+        "twist = twisted.application.twist._twist:Twist.main",
         "twistd = twisted.scripts.twistd:run",
     ]
     if _PY3:
