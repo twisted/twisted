@@ -13,7 +13,6 @@ import struct
 import string
 import socket
 import random
-import types
 import re
 from hashlib import md5
 
@@ -808,9 +807,9 @@ class BOSConnection(SNACBased):
         """
         data = ''.join([chr(random.randrange(0, 127)) for i in range(8)]) # cookie
         data = data + '\x00\x01' + chr(len(user)) + user
-        if not type(message) in (types.TupleType, types.ListType):
+        if not type(message) in (tuple, list):
             message = [[message,]]
-            if type(message[0][0]) == types.UnicodeType:
+            if type(message[0][0]) == unicode:
                 message[0].append('unicode')
         messageData = ''
         for part in message:

@@ -1,0 +1,1 @@
+In twisted.internet.udp.Port, write() takes a parameter of type bytes.  This is clarified in the docstring.
