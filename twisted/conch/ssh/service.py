@@ -8,6 +8,7 @@ are ssh-userauth and ssh-connection.
 Maintainer: Paul Swartz
 """
 
+from __future__ import division, absolute_import
 
 from twisted.python import log
 
@@ -45,4 +46,3 @@ class SSHService(log.Logger):
         log.msg("couldn't handle %r" % messageNum)
         log.msg(repr(packet))
         self.transport.sendUnimplemented()
-
