@@ -106,7 +106,7 @@ class ChannelTests(unittest.TestCase):
         self.conn = MockConnection()
         self.channel = channel.SSHChannel(conn=self.conn,
                 remoteMaxPacket=10)
-        self.channel.name = 'channel'
+        self.channel.name = b'channel'
 
 
     def test_interface(self):

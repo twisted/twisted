@@ -29,7 +29,7 @@ class SSHChannel(log.Logger):
     packet going each way.
 
     @ivar name: the name of the channel.
-    @type name: L{str}
+    @type name: L{bytes}
     @ivar localWindowSize: the maximum size of the local window in bytes.
     @type localWindowSize: L{int}
     @ivar localWindowLeft: how many bytes are left in the local window.
@@ -77,13 +77,19 @@ class SSHChannel(log.Logger):
 
 
     def __str__(self):
-        return '<SSHChannel %s (lw %i rw %i)>' % (self.name,
+        name = self.name
+        if name:
+            name = nativeString(name)
+        return '<SSHChannel %s (lw %i rw %i)>' % (name,
                 self.localWindowLeft, self.remoteWindowLeft)
 
 
     def logPrefix(self):
         id = (self.id is not None and str(self.id)) or "unknown"
-        return "SSHChannel %s (%s) on %s" % (self.name, id,
+        name = self.name
+        if name:
+            name = nativeString(name)
+        return "SSHChannel %s (%s) on %s" % (name, id,
                 self.conn.logPrefix())
 
 
