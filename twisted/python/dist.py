@@ -219,15 +219,19 @@ def getConsoleScripts():
     """
     Returns a list of scripts for Twisted.
     """
-    scripts = [ "cftp = twisted.conch.scripts.cftp:run",
-                "ckeygen = twisted.conch.scripts.ckeygen:run",
-                "conch = twisted.conch.scripts.conch:run",
-                "mailmail = twisted.mail.scripts.mailmail:run",
-                "pyhtmlizer = twisted.scripts.htmlizer:run",
-                "tkconch = twisted.conch.scripts.tkconch:run"
-              ]
-    portedToPython3Scripts = [ "trial = twisted.scripts.trial:run",
-                               "twistd = twisted.scripts.twistd:run" ]
+    scripts = [
+        "cftp = twisted.conch.scripts.cftp:run",
+        "ckeygen = twisted.conch.scripts.ckeygen:run",
+        "conch = twisted.conch.scripts.conch:run",
+        "mailmail = twisted.mail.scripts.mailmail:run",
+        "pyhtmlizer = twisted.scripts.htmlizer:run",
+        "tkconch = twisted.conch.scripts.tkconch:run"
+    ]
+    portedToPython3Scripts = [
+        "trial = twisted.scripts.trial:run",
+        "twist = twisted.application.twist:Twist.main",
+        "twistd = twisted.scripts.twistd:run",
+    ]
     if _PY3:
         return portedToPython3Scripts
     else:
