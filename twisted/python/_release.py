@@ -41,26 +41,15 @@ intersphinxURLs = [
 ]
 
 
-def runCommand(args, cwd=None):
+def runCommand(args, **kwargs):
+    """Execute a vector of arguments.
+
+    This is a wrapper around L{subprocess.check_output}, so it takes
+    the same arguments as L{subprocess.Popen} with one difference: all
+    arguments after the vector must be keyword arguments.
     """
-    Execute a vector of arguments.
-
-    @type args: L{list} of L{bytes} or L{str}
-    @param args: A list of arguments, the first of which will be used
-        as the executable to run.
-
-    @type cwd: L{bytes} or L{str}
-
-    @param: The current working directory that the command should run
-        with.
-
-    @rtype: L{bytes}
-    @return: All of the standard output.
-
-    @raise L{subprocess.CalledProcessError}: when the program exited
-        with a non-0 exit code.
-    """
-    return check_output(args, stderr=STDOUT, cwd=cwd)
+    kwargs['stderr'] = STDOUT
+    return check_output(args, **kwargs)
 
 
 
