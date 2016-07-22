@@ -2,6 +2,7 @@
 *.o
 *.py[co]
 *.so
+*.DS_Store
 _trial_temp*/
 build/
 dropin.cache
