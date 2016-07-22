@@ -45,11 +45,11 @@ def runCommand(args, cwd=None):
     """
     Execute a vector of arguments.
 
-    @type args: L{list} of L{bytes}
+    @type args: L{list} of L{bytes} or L{str}
     @param args: A list of arguments, the first of which will be used
         as the executable to run.
 
-    @type cwd: L{bytes}
+    @type cwd: L{bytes} or L{str}
 
     @param: The current working directory that the command should run
         with.
