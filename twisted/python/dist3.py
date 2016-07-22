@@ -53,6 +53,8 @@ modules = [
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.sexpy",
     "twisted.conch.ssh.address",
+    "twisted.conch.ssh._kex",
+    "twisted.conch.ssh.transport",
     "twisted.conch.telnet",
     "twisted.conch.test.__init__",
     "twisted.copyright",
@@ -328,6 +330,7 @@ testModules = [
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_address",
     "twisted.conch.test.test_telnet",
+    "twisted.conch.test.test_transport",
     "twisted.cred.test.test_cramauth",
     "twisted.cred.test.test_cred",
     "twisted.cred.test.test_digestauth",
@@ -553,6 +556,9 @@ testDataFiles = [
     "twisted.test.process_tester",
     "twisted.test.process_tty",
     "twisted.test.process_twisted",
+    "twisted.test.reflect_helper_IE",
+    "twisted.test.reflect_helper_VE",
+    "twisted.test.reflect_helper_ZDE",
     "twisted.test.stdio_test_consumer",
     "twisted.test.stdio_test_halfclose",
     "twisted.test.stdio_test_hostpeer",
@@ -577,23 +583,27 @@ testDataFiles = [
 
 
 almostModules = [
-    # Required for Trial
-    "twisted.python.logfile",
+    # The tests for twisted.web.conch.ssh.transport depends on the
+    # following.
+    "twisted.conch.ssh.factory",
+    "twisted.conch.ssh.userauth",
+    "twisted.conch.ssh.connection",
+    "twisted.conch.ssh.service",
+    "twisted.conch.interfaces",
     # Missing test coverage, see #6156:
     "twisted.internet._sslverify",
     # twisted.names.client semi-depends on twisted.names.root, but only on
     # Windows really:
     "twisted.names.root",
-    # Echo is ported for twisted.application tests:
-    "twisted.protocols.wire",
     # Missing test coverage:
     "twisted.protocols.loopback",
+    # Echo is ported for twisted.application tests:
+    "twisted.protocols.wire",
+    # Required for Trial
+    "twisted.python.logfile",
     # twisted.python.filepath depends on twisted.python.win32, but on Linux it
     # only really needs to import:
     "twisted.python.win32",
-    "twisted.test.reflect_helper_IE",
-    "twisted.test.reflect_helper_VE",
-    "twisted.test.reflect_helper_ZDE",
     # Agent code and downloadPage aren't ported, test coverage isn't complete:
     "twisted.web.client",
     # Required by twisted.web.server, no actual code here:
