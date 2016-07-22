@@ -70,7 +70,7 @@ class ExitTests(twisted.trial.unittest.TestCase):
         message = b"Hello, world."
         exit(0, message)
 
-        self.assertEqual(out.getvalue(), b"{}\n".format(message))
+        self.assertEqual(out.getvalue(), message + b"\n")
 
 
     def test_exitMessageNonZero(self):
@@ -84,7 +84,7 @@ class ExitTests(twisted.trial.unittest.TestCase):
         message = b"Hello, world."
         exit(64, message)
 
-        self.assertEqual(out.getvalue(), b"{}\n".format(message))
+        self.assertEqual(out.getvalue(), message + b"\n")
 
 
 

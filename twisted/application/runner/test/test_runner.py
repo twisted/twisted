@@ -41,7 +41,7 @@ class CommandTests(twisted.trial.unittest.TestCase):
         # Patch getpid so we get a known result
 
         self.pid = 1337
-        self.pidFileContent = b"{}\n".format(self.pid)
+        self.pidFileContent = u"{}\n".format(self.pid).encode("utf-8")
         self.patch(_runner, "getpid", lambda: self.pid)
 
         # Patch globalLogBeginner so that we aren't trying to install multiple

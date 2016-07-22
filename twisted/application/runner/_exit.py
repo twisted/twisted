@@ -33,7 +33,7 @@ def exit(status, message=None):
         else:
             out = stderr
         out.write(message)
-        out.write("\n")
+        out.write(b"\n")
 
     sysexit(code)
 
