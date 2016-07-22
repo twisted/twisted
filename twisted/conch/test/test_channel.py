@@ -22,7 +22,7 @@ except ImportError:
     skipTest = 'Conch SSH not supported.'
     SSHService = object
 from twisted.trial import unittest
-from twisted.python.compat import intToBytes
+from twisted.python.compat import intToBytes, _PY3
 
 
 class MockConnection(SSHService):
@@ -106,7 +106,7 @@ class ChannelTests(unittest.TestCase):
         self.conn = MockConnection()
         self.channel = channel.SSHChannel(conn=self.conn,
                 remoteMaxPacket=10)
-        self.channel.name = 'channel'
+        self.channel.name = b'channel'
 
 
     def test_interface(self):
@@ -151,8 +151,23 @@ class ChannelTests(unittest.TestCase):
         Test that str(SSHChannel) works gives the channel name and local and
         remote windows at a glance..
         """
-        self.assertEqual(str(self.channel), '<SSHChannel channel (lw 131072 '
-                'rw 0)>')
+        if _PY3:
+            self.assertEqual(
+                str(self.channel), "<SSHChannel b'channel' (lw 131072 rw 0)>")
+
+        else:
+            self.assertEqual(
+                str(self.channel), '<SSHChannel channel (lw 131072 rw 0)>')
+
+    def test_bytes(self):
+        """
+        Test that bytes(SSHChannel) works, gives the channel name and
+        local and remote windows at a glance..
+
+        """
+        self.assertEqual(
+            self.channel.__bytes__(),
+            b'<SSHChannel channel (lw 131072 rw 0)>')
 
     def test_logPrefix(self):
         """
