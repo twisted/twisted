@@ -218,7 +218,7 @@ class MockService(service.SSHService):
     @ivar started: True if this service has been started.
     @ivar stopped: True if this service has been stopped.
     """
-    name = "MockService"
+    name = b"MockService"
     started = False
     stopped = False
     protocolMessages = {0xff: "MSG_TEST", 71: "MSG_fiction"}
@@ -1478,7 +1478,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.ssh_SERVICE_REQUEST(common.NS(b'ssh-userauth'))
         self.assertEqual(self.packets, [(transport.MSG_SERVICE_ACCEPT,
                                          common.NS(b'ssh-userauth'))])
-        self.assertEqual(self.proto.service.name, 'MockService')
+        self.assertEqual(self.proto.service.name, b'MockService')
 
 
     def test_disconnectNEWKEYSData(self):
