@@ -251,8 +251,7 @@ class MockProtocol(protocol.Protocol):
         the data.
         """
         self.data += data
-        if self.transport is not None:
-            self.transport.write(data + b'~')
+        self.transport.write(data + b'~')
 
 
     def connectionLost(self, reason):
