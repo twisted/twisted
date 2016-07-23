@@ -26,6 +26,7 @@ from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 from twisted.python.compat import execfile
 from twisted.python.usage import Options, UsageError
+from twisted.python.monkey import MonkeyPatcher
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
@@ -495,7 +496,24 @@ class APIBuilder(object):
             intersphinxes.append("--intersphinx")
             intersphinxes.append(intersphinx)
 
+        # Super awful monkeypatch that will selectively use our templates.
+        from pydoctor.templatewriter import util
+        originalTemplatefile = util.templatefile
+
+        def templatefile(filename):
+
+            if filename in ["summary.html", "index.html", "common.html"]:
+                twistedPythonDir = FilePath(__file__).parent()
+                templatesDir = twistedPythonDir.child("_pydoctortemplates")
+                return templatesDir.child(filename).path
+            else:
+                return originalTemplatefile(filename)
+
+        monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
+        monkeyPatch.patch()
+
         from pydoctor.driver import main
+
         main(
             ["--project-name", projectName,
              "--project-url", projectURL,
@@ -507,6 +525,7 @@ class APIBuilder(object):
              "--html-write-function-pages", "--quiet", "--make-html",
             ] + intersphinxes)
 
+        monkeyPatch.restore()
 
 
 class NewsBuilder(object):
@@ -1006,7 +1025,7 @@ class BuildAPIDocsScript(object):
         """
         version = Project(projectRoot.child("twisted")).getVersion()
         versionString = version.base()
-        sourceURL = ("http://twistedmatrix.com/trac/browser/tags/releases/"
+        sourceURL = ("https://github.com/twisted/twisted/tree/"
                      "twisted-%s" % (versionString,))
         apiBuilder = APIBuilder()
         apiBuilder.build(

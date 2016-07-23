@@ -47,15 +47,21 @@ modules = [
     "twisted.conch.__init__",
     "twisted.conch.checkers",
     "twisted.conch.error",
+    "twisted.conch.insults.__init__",
+    "twisted.conch.insults.text",
+    "twisted.conch.insults.window",
     "twisted.conch.ssh.__init__",
     "twisted.conch.ssh._cryptography_backports",
+    "twisted.conch.ssh.channel",
     "twisted.conch.ssh.common",
+    "twisted.conch.ssh.forwarding",
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.sexpy",
     "twisted.conch.ssh.address",
     "twisted.conch.ssh._kex",
     "twisted.conch.ssh.transport",
     "twisted.conch.ssh.channel",
+    "twisted.conch.ssh.userauth",
     "twisted.conch.telnet",
     "twisted.conch.test.__init__",
     "twisted.copyright",
@@ -238,6 +244,7 @@ modules = [
     "twisted.python.test.__init__",
     "twisted.python.test.deprecatedattributes",
     "twisted.python.test.modules_helpers",
+    "twisted.python.text",
     "twisted.python.threadable",
     "twisted.python.threadpool",
     "twisted.python.url",
@@ -330,9 +337,13 @@ testModules = [
     "twisted.conch.test.test_checkers",
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_address",
-    "twisted.conch.test.test_telnet",
-    "twisted.conch.test.test_transport",
     "twisted.conch.test.test_channel",
+    "twisted.conch.test.test_forwarding",
+    "twisted.conch.test.test_telnet",
+    "twisted.conch.test.test_text",
+    "twisted.conch.test.test_transport",
+    "twisted.conch.test.test_userauth",
+    "twisted.conch.test.test_window",
     "twisted.cred.test.test_cramauth",
     "twisted.cred.test.test_cred",
     "twisted.cred.test.test_digestauth",
@@ -587,11 +598,17 @@ testDataFiles = [
 almostModules = [
     # The tests for twisted.web.conch.ssh.transport depends on the
     # following.
+    "twisted.conch.interfaces",
     "twisted.conch.ssh.factory",
-    "twisted.conch.ssh.userauth",
     "twisted.conch.ssh.connection",
     "twisted.conch.ssh.service",
-    "twisted.conch.interfaces",
+    # twisted.conch.test.test_text and twisted.conch.test.test_window
+    # need these conch modules.  They need more work to get full
+    # Python 3 test coverage
+    "twisted.conch.insults.helper",
+    "twisted.conch.insults.insults",
+    # Required for Trial
+    "twisted.python.logfile",
     # Missing test coverage, see #6156:
     "twisted.internet._sslverify",
     # twisted.names.client semi-depends on twisted.names.root, but only on
