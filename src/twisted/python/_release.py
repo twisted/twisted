@@ -1013,7 +1013,7 @@ class BuildAPIDocsScript(object):
         @param output: A L{FilePath} pointing to the desired output directory.
         """
         version = Project(
-            projectRoot.child("src").child("twisted")).getVersion()
+            projectRoot.child("twisted")).getVersion()
         versionString = version.base()
         sourceURL = ("https://github.com/twisted/twisted/tree/"
                      "twisted-%s" % (versionString,))
@@ -1022,7 +1022,7 @@ class BuildAPIDocsScript(object):
             "Twisted",
             "http://twistedmatrix.com/",
             sourceURL,
-            projectRoot.child("src").child("twisted"),
+            projectRoot.child("twisted"),
             output)
 
 

@@ -27,7 +27,7 @@ prune .travis
 include tox.ini .coveragerc
 
 # Include our docs templates
-recursive-include twisted/python/_pydoctortemplates *.html
+recursive-include src/twisted/python/_pydoctortemplates *.html
 
 # Python 3 setup file
 include setup3.py
