@@ -93,7 +93,8 @@ class MailProcessor(basic.LineReceiver):
         """
         try:
             emailParser = email.parser.Parser()
-            emailParser.parse(open(self.messageFilename))
+            with open(self.messageFilename) as f:
+                emailParser.parse(f)
             self.sendLine('200 Ok')
         except:
             trace_dump()
