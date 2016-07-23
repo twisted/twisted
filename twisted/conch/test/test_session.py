@@ -33,11 +33,10 @@ class SubsystemOnlyAvatar(object):
     def lookupSubsystem(self, name, data):
         """
         If the other side requests the 'subsystem' subsystem, allow it by
-        returning a MockProtocol to implement it.  Otherwise, return
-        None which is interpreted by SSHSession as a failure.
+        returning a MockProtocol to implement it. Otherwise raise an assertion.
         """
-        if name == b'subsystem':
-            return MockProtocol()
+        assert name == b'subsystem'
+        return MockProtocol()
 
 
 
