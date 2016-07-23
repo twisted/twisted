@@ -704,7 +704,7 @@ class IReactorSSL(Interface):
 
         @param factory: a L{twisted.internet.protocol.ServerFactory} instance
 
-        @param contextFactory: a L{twisted.internet.ssl.ContextFactory} instance
+        @param contextFactory: an implementor of L{IOpenSSLContextFactory}
 
         @param backlog: size of the listen queue
 
@@ -1744,7 +1744,7 @@ class IProducer(Interface):
     """
     A producer produces data for a consumer.
 
-    Typically producing is done by calling the write method of an class
+    Typically producing is done by calling the write method of a class
     implementing L{IConsumer}.
     """
 
@@ -1946,6 +1946,33 @@ class IHalfCloseableProtocol(Interface):
 
 
 
+class IHandshakeListener(Interface):
+    """
+    An interface implemented by a L{IProtocol} to indicate that it would like
+    to be notified when TLS handshakes complete when run over a TLS-based
+    transport.
+
+    This interface is only guaranteed to be called when run over a TLS-based
+    transport: non TLS-based transports will not respect this interface.
+    """
+
+    def handshakeCompleted():
+        """
+        Notification of the TLS handshake being completed.
+
+        This notification fires when OpenSSL has completed the TLS handshake.
+        At this point the TLS connection is established, and the protocol can
+        interrogate its transport (usually an L{ISSLTransport}) for details of
+        the TLS connection.
+
+        This notification *also* fires whenever the TLS session is
+        renegotiated. As a result, protocols that have certain minimum security
+        requirements should implement this interface to ensure that they are
+        able to re-evaluate the security of the TLS session if it changes.
+        """
+
+
+
 class IFileDescriptorReceiver(Interface):
     """
     Protocols may implement L{IFileDescriptorReceiver} to receive file
@@ -2016,15 +2043,21 @@ class ITransport(Interface):
         If possible, make sure that it is all written.  No data will
         ever be lost, although (obviously) the connection may be closed
         before it all gets through.
+
+        @type data: L{bytes}
+        @param data: The data to write.
         """
 
     def writeSequence(data):
         """
-        Write a list of strings to the physical connection.
+        Write an iterable of byte strings to the physical connection.
 
         If possible, make sure that all of the data is written to
         the socket at once, without first copying it all into a
-        single string.
+        single byte string.
+
+        @type data: an iterable of L{bytes}
+        @param data: The data to write.
         """
 
     def loseConnection():
@@ -2212,7 +2245,7 @@ class IProtocolNegotiationFactory(Interface):
     A provider of L{IProtocolNegotiationFactory} can provide information about
     the various protocols that the factory can create implementations of. This
     can be used, for example, to provide protocol names for Next Protocol
-    Negotation and Application Layer Protocol Negotiation.
+    Negotiation and Application Layer Protocol Negotiation.
 
     @see: L{twisted.internet.ssl}
     """
@@ -2225,6 +2258,28 @@ class IProtocolNegotiationFactory(Interface):
 
         @return: a list of ALPN tokens in order of preference.
         @rtype: L{list} of L{bytes}
+        """
+
+
+
+class IOpenSSLContextFactory(Interface):
+    """
+    A provider of L{IOpenSSLContextFactory} is capable of generating
+    L{OpenSSL.SSL.Context} classes suitable for configuring TLS on a
+    connection. A provider will store enough state to be able to generate these
+    contexts as needed for individual connections.
+
+    @see: L{twisted.internet.ssl}
+    """
+
+    def getContext():
+        """
+        Returns a TLS context object, suitable for securing a TLS connection.
+        This context object will be appropriately customized for the connection
+        based on the state in this object.
+
+        @return: A TLS context object.
+        @rtype: L{OpenSSL.SSL.Context}
         """
 
 
@@ -2250,7 +2305,7 @@ class ITLSTransport(ITCPTransport):
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must
-            be an old-style L{twisted.internet.ssl.ContextFactory} or similar.
+            be an implementor of L{IOpenSSLContextFactory}.
         """
 
 

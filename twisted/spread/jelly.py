@@ -67,27 +67,27 @@ import types
 import warnings
 import decimal
 from functools import reduce
-from types import StringType
-from types import IntType
-from types import TupleType
-from types import ListType
-from types import LongType
-from types import FloatType
-from types import FunctionType
-from types import MethodType
-from types import ModuleType
-from types import DictionaryType
-from types import InstanceType
-from types import NoneType
-from types import ClassType
 import copy
-
 import datetime
-from types import BooleanType
+
+try:
+    from types import (ClassType as _OldStyleClass,
+                       InstanceType as _OldStyleInstance)
+except ImportError:
+    # On Python 3 and higher, ClassType and InstanceType
+    # are gone.  Use an empty tuple to pass to isinstance()
+    # tests without throwing an exception.
+    _OldStyleClass = ()
+    _OldStyleInstance = ()
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
-    import sets as _sets
+    try:
+        import sets as _sets
+    except ImportError:
+        # sets module is deprecated in Python 2.6, and gone in
+        # Python 3
+        _sets = None
 
 from zope.interface import implementer
 
@@ -100,10 +100,11 @@ from twisted.persisted.crefutil import _Container
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
+from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 
-DictTypes = (DictionaryType,)
+DictTypes = (dict,)
 
 None_atom = "None"                  # N
 # code
@@ -150,7 +151,7 @@ def _newInstance(cls, state=_NO_STATE):
 
     @return: A new instance of C{cls}.
     """
-    if not isinstance(cls, types.ClassType):
+    if not isinstance(cls, _OldStyleClass):
         # new-style
         inst = cls.__new__(cls)
 
@@ -158,9 +159,9 @@ def _newInstance(cls, state=_NO_STATE):
             inst.__dict__.update(state) # Copy 'instance' behaviour
     else:
         if state is not _NO_STATE:
-            inst = InstanceType(cls, state)
+            inst = _OldStyleInstance(cls, state)
         else:
-            inst = InstanceType(cls)
+            inst = _OldStyleInstance(cls)
     return inst
 
 
@@ -172,7 +173,7 @@ def _maybeClass(classnamep):
         isObject = 0
     else:
         isObject = isinstance(classnamep, type)
-    if isinstance(classnamep, ClassType) or isObject:
+    if isinstance(classnamep, _OldStyleClass) or isObject:
         return qual(classnamep)
     return classnamep
 
@@ -230,7 +231,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
     Set all classes in a module derived from C{baseClass} as copiers for
     a corresponding remote class.
 
-    When you have a heirarchy of Copyable (or Cacheable) classes on one
+    When you have a hierarchy of Copyable (or Cacheable) classes on one
     side, and a mirror structure of Copied (or RemoteCache) classes on the
     other, use this to setUnjellyableForClass all your Copieds for the
     Copyables.
@@ -257,7 +258,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
 
     for i in dir(module):
         i_ = getattr(module, i)
-        if type(i_) == types.ClassType:
+        if type(i_) == _OldStyleClass:
             if issubclass(i_, baseClass):
                 setUnjellyableForClass('%s%s' % (prefix, i), i_)
 
@@ -445,8 +446,11 @@ class _Jellier:
             self.preserved[id(object)] = sexp
         return sexp
 
-    constantTypes = {types.StringType : 1, types.IntType : 1,
-                     types.FloatType : 1, types.LongType : 1}
+    constantTypes = {str : 1, int : 1,
+                     float : 1 }
+
+    if not _PY3:
+        constantTypes[long] = 1
 
 
     def _checkMutable(self,obj):
@@ -467,29 +471,30 @@ class _Jellier:
         objType = type(obj)
         if self.taster.isTypeAllowed(qual(objType)):
             # "Immutable" Types
-            if ((objType is StringType) or
-                (objType is IntType) or
-                (objType is LongType) or
-                (objType is FloatType)):
+            if ((objType is str) or
+                (objType is int) or
+                (objType is float)):
                 return obj
-            elif objType is MethodType:
+            elif not _PY3 and (objType is long):
+                return obj
+            elif objType is types.MethodType:
                 return ["method",
                         obj.im_func.__name__,
                         self.jelly(obj.im_self),
                         self.jelly(obj.im_class)]
 
-            elif objType is unicode:
+            elif not _PY3 and objType is unicode:
                 return ['unicode', obj.encode('UTF-8')]
-            elif objType is NoneType:
+            elif objType is type(None):
                 return ['None']
-            elif objType is FunctionType:
+            elif objType is types.FunctionType:
                 name = obj.__name__
                 return ['function', str(pickle.whichmodule(obj, obj.__name__))
                         + '.' +
                         name]
-            elif objType is ModuleType:
+            elif objType is types.ModuleType:
                 return ['module', obj.__name__]
-            elif objType is BooleanType:
+            elif objType is bool:
                 return ['boolean', obj and 'true' or 'false']
             elif objType is datetime.datetime:
                 if obj.tzinfo:
@@ -509,7 +514,7 @@ class _Jellier:
             elif objType is datetime.timedelta:
                 return ['timedelta', '%s %s %s' % (obj.days, obj.seconds,
                                                    obj.microseconds)]
-            elif objType is ClassType or issubclass(objType, type):
+            elif objType is _OldStyleClass or issubclass(objType, type):
                 return ['class', qual(obj)]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
@@ -519,17 +524,18 @@ class _Jellier:
                     return preRef
                 # "Mutable" Types
                 sxp = self.prepare(obj)
-                if objType is ListType:
+                if objType is list:
                     sxp.extend(self._jellyIterable(list_atom, obj))
-                elif objType is TupleType:
+                elif objType is tuple:
                     sxp.extend(self._jellyIterable(tuple_atom, obj))
                 elif objType in DictTypes:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or objType is _sets.Set:
+                elif objType is set or (_sets and objType is _sets.Set):
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType is frozenset or objType is _sets.ImmutableSet:
+                elif objType is frozenset or \
+                     (_sets and objType is _sets.ImmutableSet):
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
@@ -552,7 +558,7 @@ class _Jellier:
                             qual(obj.__class__), sxp)
                 return self.preserve(obj, sxp)
         else:
-            if objType is InstanceType:
+            if objType is _OldStyleInstance:
                 raise InsecureJelly("Class not allowed for instance: %s %s" %
                                     (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
@@ -625,14 +631,14 @@ class _Unjellier:
 
 
     def unjelly(self, obj):
-        if type(obj) is not types.ListType:
+        if type(obj) is not list:
             return obj
         jelType = obj[0]
         if not self.taster.isTypeAllowed(jelType):
             raise InsecureJelly(jelType)
         regClass = unjellyableRegistry.get(jelType)
         if regClass is not None:
-            if isinstance(regClass, ClassType):
+            if isinstance(regClass, _OldStyleClass):
                 inst = _Dummy() # XXX chomp, chomp
                 inst.__class__ = regClass
                 method = inst.unjellyFor
@@ -700,7 +706,7 @@ class _Unjellier:
 
 
     def _unjelly_boolean(self, exp):
-        if BooleanType:
+        if bool:
             assert exp[0] in ('true', 'false')
             return exp[0] == 'true'
         else:
@@ -759,7 +765,7 @@ class _Unjellier:
 
 
     def _unjelly_tuple(self, lst):
-        l = range(len(lst))
+        l = list(range(len(lst)))
         finished = 1
         for elem in l:
             if isinstance(self.unjellyInto(l, elem, lst[elem]), NotKnown):
@@ -771,7 +777,7 @@ class _Unjellier:
 
 
     def _unjelly_list(self, lst):
-        l = range(len(lst))
+        l = list(range(len(lst)))
         for elem in l:
             self.unjellyInto(l, elem, lst[elem])
         return l
@@ -786,7 +792,7 @@ class _Unjellier:
 
         @param containerType: the type of C{set} to use.
         """
-        l = range(len(lst))
+        l = list(range(len(lst)))
         finished = True
         for elem in l:
             data = self.unjellyInto(l, elem, lst[elem])
@@ -840,7 +846,7 @@ class _Unjellier:
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(rest[0])
         objType = type(klaus)
-        if objType not in (types.ClassType, types.TypeType):
+        if objType not in (_OldStyleClass, type):
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
                     rest[0], klaus))
@@ -883,7 +889,7 @@ class _Unjellier:
             category=DeprecationWarning, filename="", lineno=0)
 
         clz = self.unjelly(rest[0])
-        if type(clz) is not types.ClassType:
+        if type(clz) is not _OldStyleClass:
             raise InsecureJelly("Instance found with non-class class.")
         if hasattr(clz, "__setstate__"):
             inst = _newInstance(clz, {})
@@ -908,7 +914,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if type(im_class) is not types.ClassType:
+        if type(im_class) is not _OldStyleClass:
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:
@@ -916,7 +922,7 @@ class _Unjellier:
             elif isinstance(im_self, NotKnown):
                 im = _InstanceMethod(im_name, im_self, im_class)
             else:
-                im = MethodType(im_class.__dict__[im_name], im_self, im_class)
+                im = types.MethodType(im_class.__dict__[im_name], im_self, im_class)
         else:
             raise TypeError('instance method changed')
         return im
@@ -1129,7 +1135,7 @@ def unjelly(sexp, taster=DummySecurityOptions(), persistentLoad=None,
     """
     Unserialize from s-expression.
 
-    Takes an list that was the result from a call to jelly() and unserializes
+    Takes a list that was the result from a call to jelly() and unserializes
     an arbitrary object from it.  The optional 'taster' argument, an instance
     of SecurityOptions, will cause an InsecureJelly exception to be raised if a
     disallowed type, module, or class attempted to unserialize.

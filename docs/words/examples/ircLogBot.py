@@ -77,7 +77,7 @@ class LogBot(irc.IRCClient):
     # callbacks for events
 
     def signedOn(self):
-        """Called when bot has succesfully signed on to server."""
+        """Called when bot has successfully signed on to server."""
         self.join(self.factory.channel)
 
     def joined(self, channel):

@@ -11,7 +11,7 @@ sends mail to a smart host.  The smart host finds the mail exchange server for
 the recipient and sends on the message.
 """
 
-import rfc822
+import email.utils
 import os
 import time
 
@@ -449,7 +449,8 @@ class Queue:
         @return: A list containing the origination and destination addresses
             for the message.
         """
-        return pickle.load(self.getEnvelopeFile(message))
+        with self.getEnvelopeFile(message) as f:
+            return pickle.load(f)
 
 
     def getEnvelopeFile(self, message):
@@ -579,14 +580,13 @@ class _AttemptManager(object):
         # Be careful: if it's a bounced bounce, silently
         # discard it
         message = os.path.basename(message)
-        fp = self.manager.queue.getEnvelopeFile(message)
-        from_, to = pickle.load(fp)
-        fp.close()
+        with self.manager.queue.getEnvelopeFile(message) as fp:
+            from_, to = pickle.load(fp)
         from_, to, bounceMessage = bounce.generateBounce(
             open(self.manager.queue.getPath(message) + '-D'), from_, to)
         fp, outgoingMessage = self.manager.queue.createNewMessage()
-        pickle.dump([from_, to], fp)
-        fp.close()
+        with fp:
+            pickle.dump([from_, to], fp)
         for line in bounceMessage.splitlines():
             outgoingMessage.lineReceived(line)
         outgoingMessage.eomReceived()
@@ -768,7 +768,7 @@ class SmartHostSMTPRelayingManager:
         exchanges = {}
         for msg in nextMessages:
             from_, to = self.queue.getEnvelope(msg)
-            name, addr = rfc822.parseaddr(to)
+            name, addr = email.utils.parseaddr(to)
             parts = addr.split('@', 1)
             if len(parts) != 2:
                 log.err("Illegal message destination: " + to)

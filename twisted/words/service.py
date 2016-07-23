@@ -1087,7 +1087,7 @@ class WordsRealm(object):
     def addUser(self, user):
         """Add the given user to this service.
 
-        This is an internal method intented to be overridden by
+        This is an internal method intended to be overridden by
         L{WordsRealm} subclasses, not called by external code.
 
         @type user: L{IUser}

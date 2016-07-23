@@ -2179,8 +2179,8 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
         def processEnded(ign):
             f = p.outF
             f.seek(0, 0)
-            gf = gzip.GzipFile(fileobj=f)
-            self.assertEqual(gf.read(), s)
+            with gzip.GzipFile(fileobj=f) as gf:
+                self.assertEqual(gf.read(), s)
         return d.addCallback(processEnded)
 
 
@@ -2391,13 +2391,13 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
 
 
 
-class Dumbwin32procPidTests(unittest.TestCase):
+class DumbWin32ProcTests(unittest.TestCase):
     """
-    Simple test for the pid attribute of Process on win32.
+    L{twisted.internet._dumbwin32proc} tests.
     """
-
     def test_pid(self):
         """
+        Simple test for the pid attribute of Process on win32.
         Launch process with mock win32process. The only mock aspect of this
         module is that the pid of the process created will always be 42.
         """
@@ -2424,6 +2424,17 @@ class Dumbwin32procPidTests(unittest.TestCase):
             self.assertIsNone(p.pid)
         return d.addCallback(pidCompleteCb)
 
+
+    def test_findShebang(self):
+        """
+        Look for the string after the shebang C{#!}
+        in a file.
+        """
+        from twisted.internet._dumbwin32proc import _findShebang
+        cgiScript = FilePath(b"example.cgi")
+        cgiScript.setContent(b"#!/usr/bin/python")
+        program = _findShebang(cgiScript.path)
+        self.assertEqual(program, "/usr/bin/python")
 
 
 class UtilTests(unittest.TestCase):
@@ -2455,8 +2466,7 @@ class UtilTests(unittest.TestCase):
                            (j(self.bazfoo, "executable"), 0o700),
                            (j(self.bazfoo, "executable.bin"), 0o700),
                            (j(self.bazbar, "executable"), 0)]:
-            f = open(name, "wb")
-            f.close()
+            open(name, "wb").close()
             os.chmod(name, mode)
 
         self.oldPath = os.environ.get('PATH', None)
@@ -2633,7 +2643,7 @@ if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(re
 if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
     Win32ProcessTests.skip = skipMessage
     TwoProcessesNonPosixTests.skip = skipMessage
-    Dumbwin32procPidTests.skip = skipMessage
+    DumbWin32ProcTests.skip = skipMessage
     Win32UnicodeEnvironmentTests.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):

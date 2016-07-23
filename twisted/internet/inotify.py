@@ -25,6 +25,14 @@ at some point)::
     notifier = inotify.INotify()
     notifier.startReading()
     notifier.watch(filepath.FilePath("/some/directory"), callbacks=[notify])
+    notifier.watch(filepath.FilePath(b"/some/directory2"), callbacks=[notify])
+
+Note that in the above example, a L{FilePath} which is a L{bytes} path name
+or L{str} path name may be used.  However, no matter what type of
+L{FilePath} is passed to this module, internally the L{FilePath} is
+converted to L{bytes} according to L{sys.getfilesystemencoding}.
+For any L{FilePath} returned by this module, the caller is responsible for
+converting from a L{bytes} path name to a L{str} path name.
 
 @since: 10.1
 """
@@ -100,7 +108,7 @@ _FLAG_TO_HUMAN = [
 
 def humanReadableMask(mask):
     """
-    Auxiliary function that converts an hexadecimal mask into a series
+    Auxiliary function that converts a hexadecimal mask into a series
     of human readable flags.
     """
     s = []
@@ -120,12 +128,12 @@ class _Watch(object):
     @ivar mask: The events monitored by this watchpoint
     @ivar autoAdd: Flag that determines whether this watch point
         should automatically add created subdirectories
-    @ivar callbacks: C{list} of callback functions that will be called
+    @ivar callbacks: L{list} of callback functions that will be called
         when an event occurs on this watch.
     """
     def __init__(self, path, mask=IN_WATCH_MASK, autoAdd=False,
                  callbacks=None):
-        self.path = path
+        self.path = path.asBytesMode()
         self.mask = mask
         self.autoAdd = autoAdd
         if callbacks is None:
@@ -137,6 +145,7 @@ class _Watch(object):
         """
         Callback function used by L{INotify} to dispatch an event.
         """
+        filepath = filepath.asBytesMode()
         for callback in self.callbacks:
             callback(self, filepath, events)
 
@@ -147,12 +156,12 @@ class INotify(FileDescriptor, object):
     The INotify file descriptor, it basically does everything related
     to INotify, from reading to notifying watch points.
 
-    @ivar _buffer: a C{str} containing the data read from the inotify fd.
+    @ivar _buffer: a L{bytes} containing the data read from the inotify fd.
 
-    @ivar _watchpoints: a C{dict} that maps from inotify watch ids to
+    @ivar _watchpoints: a L{dict} that maps from inotify watch ids to
         watchpoints objects
 
-    @ivar _watchpaths: a C{dict} that maps from watched paths to the
+    @ivar _watchpaths: a L{dict} that maps from watched paths to the
         inotify watch ids
     """
     _inotify = _inotify
@@ -174,7 +183,7 @@ class INotify(FileDescriptor, object):
         self.connected = 1
         self._writeDisconnected = True
 
-        self._buffer = ''
+        self._buffer = b''
         self._watchpoints = {}
         self._watchpaths = {}
 
@@ -189,7 +198,8 @@ class INotify(FileDescriptor, object):
         adding a watchpath for inverse lookup of the file descriptor from the
         path.
         """
-        wd = self._inotify.add(self._fd, path.path, mask)
+        path = path.asBytesMode()
+        wd = self._inotify.add(self._fd, path, mask)
 
         iwp = _Watch(path, mask, autoAdd, callbacks)
 
@@ -249,7 +259,7 @@ class INotify(FileDescriptor, object):
             wd, mask, cookie, size = struct.unpack("=LLLL", self._buffer[0:16])
 
             if size:
-                name = self._buffer[16:16 + size].rstrip('\0')
+                name = self._buffer[16:16 + size].rstrip(b'\0')
             else:
                 name = None
 
@@ -260,7 +270,7 @@ class INotify(FileDescriptor, object):
             except KeyError:
                 continue
 
-            path = iwp.path
+            path = iwp.path.asBytesMode()
             if name:
                 path = path.child(name)
             iwp._notify(path, mask)
@@ -334,27 +344,27 @@ class INotify(FileDescriptor, object):
         @type path: L{FilePath}
 
         @param mask: The events that should be watched
-        @type mask: C{int}
+        @type mask: L{int}
 
         @param autoAdd: if True automatically add newly created
                         subdirectories
-        @type autoAdd: C{boolean}
+        @type autoAdd: L{bool}
 
         @param callbacks: A list of callbacks that should be called
                           when an event happens in the given path.
                           The callback should accept 3 arguments:
                           (ignored, filepath, mask)
-        @type callbacks: C{list} of callables
+        @type callbacks: L{list} of callables
 
         @param recursive: Also add all the subdirectories in this path
-        @type recursive: C{boolean}
+        @type recursive: L{bool}
         """
         if recursive:
             # This behavior is needed to be compatible with the windows
             # interface for filesystem changes:
             # http://msdn.microsoft.com/en-us/library/aa365465(VS.85).aspx
             # ReadDirectoryChangesW can do bWatchSubtree so it doesn't
-            # make sense to implement this at an higher abstraction
+            # make sense to implement this at a higher abstraction
             # level when other platforms support it already
             for child in path.walk():
                 if child.isdir():
@@ -377,6 +387,7 @@ class INotify(FileDescriptor, object):
         @param path: The path that should be ignored
         @type path: L{FilePath}
         """
+        path = path.asBytesMode()
         wd = self._isWatched(path)
         if wd is None:
             raise KeyError("%r is not watched" % (path,))
@@ -392,6 +403,7 @@ class INotify(FileDescriptor, object):
         @param path: The path that should be checked
         @type path: L{FilePath}
         """
+        path = path.asBytesMode()
         return self._watchpaths.get(path, None)
 
 

@@ -15,7 +15,6 @@ To do::
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
 
-import rfc822
 import base64
 import binascii
 import hmac
@@ -25,9 +24,8 @@ import tempfile
 import string
 import time
 import random
-import types
 
-import email.Utils
+import email.utils
 
 try:
     import cStringIO as StringIO
@@ -87,7 +85,7 @@ class MessageSet(object):
         if start is self._empty:
             return
 
-        if isinstance(start, types.ListType):
+        if isinstance(start, list):
             self.ranges = start[:]
             self.clean()
         else:
@@ -372,7 +370,8 @@ class Command:
             N = len(names)
             if (N >= 1 and names[0] in self._1_RESPONSES or
                 N >= 2 and names[1] in self._2_RESPONSES or
-                N >= 2 and names[0] == 'OK' and isinstance(names[1], types.ListType) and names[1][0] in self._OK_RESPONSES):
+                N >= 2 and names[0] == 'OK' and isinstance(names[1], list)
+               and names[1][0] in self._OK_RESPONSES):
                 send.append(names)
             else:
                 unuse.append(names)
@@ -1632,7 +1631,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_BEFORE(self, query, id, msg):
         date = parseTime(query.pop(0))
-        return rfc822.parsedate(msg.getInternalDate()) < date
+        return email.utils.parsedate(msg.getInternalDate()) < date
 
     def search_BODY(self, query, id, msg):
         body = query.pop(0).lower()
@@ -1698,7 +1697,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_ON(self, query, id, msg):
         date = parseTime(query.pop(0))
-        return rfc822.parsedate(msg.getInternalDate()) == date
+        return email.utils.parsedate(msg.getInternalDate()) == date
 
     def search_OR(self, query, id, msg, lastIDs):
         """
@@ -1748,7 +1747,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         """
         date = msg.getHeaders(False, 'date').get('date', '')
-        date = rfc822.parsedate(date)
+        date = email.utils.parsedate(date)
         return date < parseTime(query.pop(0))
 
     def search_SENTON(self, query, id, msg):
@@ -1763,7 +1762,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         """
         date = msg.getHeaders(False, 'date').get('date', '')
-        date = rfc822.parsedate(date)
+        date = email.utils.parsedate(date)
         return date[:3] == parseTime(query.pop(0))[:3]
 
     def search_SENTSINCE(self, query, id, msg):
@@ -1778,12 +1777,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         """
         date = msg.getHeaders(False, 'date').get('date', '')
-        date = rfc822.parsedate(date)
+        date = email.utils.parsedate(date)
         return date > parseTime(query.pop(0))
 
     def search_SINCE(self, query, id, msg):
         date = parseTime(query.pop(0))
-        return rfc822.parsedate(msg.getInternalDate()) > date
+        return email.utils.parsedate(msg.getInternalDate()) > date
 
     def search_SMALLER(self, query, id, msg):
         return int(query.pop(0)) > msg.getSize()
@@ -1921,7 +1920,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if _w is None:
             _w = self.transport.write
         idate = msg.getInternalDate()
-        ttup = rfc822.parsedate_tz(idate)
+        ttup = email.utils.parsedate_tz(idate)
         if ttup is None:
             log.msg("%d:%r: unpareseable internaldate: %r" % (id, msg, idate))
             raise IMAP4Exception("Internal failure generating INTERNALDATE")
@@ -3842,7 +3841,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}
@@ -3868,7 +3867,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}
@@ -3894,7 +3893,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @param flags: The flags to set
 
         @type silent: C{bool}
-        @param silent: If true, cause the server to supress its verbose
+        @param silent: If true, cause the server to suppress its verbose
         response.
 
         @type uid: C{bool}
@@ -3969,7 +3968,7 @@ def parseIdList(s, lastMessageId=None):
     Parse a message set search key into a C{MessageSet}.
 
     @type s: C{str}
-    @param s: A string description of a id list, for example "1:3, 4:*"
+    @param s: A string description of an id list, for example "1:3, 4:*"
 
     @type lastMessageId: C{int}
     @param lastMessageId: The last message sequence id or UID, depending on
@@ -4284,9 +4283,9 @@ def collapseStrings(results):
     """
     copy = []
     begun = None
-    listsList = [isinstance(s, types.ListType) for s in results]
+    listsList = [isinstance(s, list) for s in results]
 
-    pred = lambda e: isinstance(e, types.TupleType)
+    pred = lambda e: isinstance(e, tuple)
     tran = {
         0: lambda e: splitQuoted(''.join(e)),
         1: lambda e: [''.join([i[0] for i in e])]
@@ -4421,7 +4420,7 @@ def collapseNestedLists(items):
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, (DontQuoteMe, int, long)):
             pieces.extend([' ', str(i)])
-        elif isinstance(i, types.StringTypes):
+        elif isinstance(i, (str, unicode)):
             if _needsLiteral(i):
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
             else:
@@ -4838,7 +4837,7 @@ def statusRequestHelper(mbox, names):
 def parseAddr(addr):
     if addr is None:
         return [(None, None, None),]
-    addr = email.Utils.getaddresses([addr])
+    addr = email.utils.getaddresses([addr])
     return [[fn or None, None] + address.split('@') for fn, address in addr]
 
 def getEnvelope(msg):
@@ -5382,7 +5381,7 @@ class IMessageFile(Interface):
     the more complex MIME-based interface.
     """
     def open():
-        """Return an file-like object opened for reading.
+        """Return a file-like object opened for reading.
 
         Reading from the returned file will return all the bytes
         of which this message consists.

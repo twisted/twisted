@@ -209,7 +209,8 @@ from zope.interface import Interface, implementer
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory
 )
 
 from twisted.python import reflect, util
@@ -1283,7 +1284,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
     @type clientCertificate: L{PrivateCertificate}
 
     @param acceptableProtocols: The protocols this peer is willing to speak
-        after the TLS negotation has completed, advertised over both ALPN and
+        after the TLS negotiation has completed, advertised over both ALPN and
         NPN. If this argument is specified, and no overlap can be found with
         the other peer, the connection will fail to be established. If the
         remote peer does not offer NPN or ALPN, the connection will be
@@ -1334,6 +1335,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
 
 
 
+@implementer(IOpenSSLContextFactory)
 class OpenSSLCertificateOptions(object):
     """
     A L{CertificateOptions <twisted.internet.ssl.CertificateOptions>} specifies
@@ -1475,7 +1477,7 @@ class OpenSSLCertificateOptions(object):
         @type trustRoot: L{IOpenSSLTrustRoot}
 
         @param acceptableProtocols: The protocols this peer is willing to speak
-            after the TLS negotation has completed, advertised over both ALPN
+            after the TLS negotiation has completed, advertised over both ALPN
             and NPN. If this argument is specified, and no overlap can be found
             with the other peer, the connection will fail to be established.
             If the remote peer does not offer NPN or ALPN, the connection will
@@ -1728,7 +1730,7 @@ class _OpenSSLECCurve(FancyEqMixin, object):
 
     def addECKeyToContext(self, context):
         """
-        Add an temporary EC key to C{context}.
+        Add a temporary EC key to C{context}.
 
         @param context: The context to add a key to.
         @type context: L{OpenSSL.SSL.Context}
@@ -1887,7 +1889,7 @@ class OpenSSLDiffieHellmanParameters(object):
             exchange.
         @type filePath: L{FilePath <twisted.python.filepath.FilePath>}
 
-        @return: A instance that loads its parameters from C{filePath}.
+        @return: An instance that loads its parameters from C{filePath}.
         @rtype: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """
@@ -1903,7 +1905,7 @@ def _setAcceptableProtocols(context, acceptableProtocols):
     @type context: L{OpenSSL.SSL.Context}
 
     @param acceptableProtocols: The protocols this peer is willing to speak
-        after the TLS negotation has completed, advertised over both ALPN and
+        after the TLS negotiation has completed, advertised over both ALPN and
         NPN. If this argument is specified, and no overlap can be found with
         the other peer, the connection will fail to be established. If the
         remote peer does not offer NPN or ALPN, the connection will be

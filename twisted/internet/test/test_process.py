@@ -348,7 +348,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         Older versions of Twisted installed a SIGCHLD handler on POSIX without
         using the feature exposed by the SA_RESTART flag to sigaction(2).  The
-        most noticable problem this caused was for blocking reads and writes to
+        most noticeable problem this caused was for blocking reads and writes to
         sometimes fail with EINTR.
         """
         reactor = self.buildReactor()
@@ -369,7 +369,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                result.append(f2.stdout.read())
+                with f2.stdout:
+                    result.append(f2.stdout.read())
             finally:
                 reactor.stop()
 

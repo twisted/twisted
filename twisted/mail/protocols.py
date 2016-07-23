@@ -13,9 +13,7 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion
 from twisted.python import log
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
-
+    
 from twisted.cred.credentials import CramMD5Credentials, UsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 
@@ -268,8 +266,8 @@ class ESMTPFactory(SMTPFactory):
     @ivar protocol: A callable which creates a protocol.  The default value is
         L{ESMTP}.
 
-    @type context: L{ContextFactory <twisted.internet.ssl.ContextFactory>} or
-        L{None}
+    @type context: L{IOpenSSLContextFactory
+        <twisted.internet.interfaces.IOpenSSLContextFactory>} or L{None}
     @ivar context: A factory to generate contexts to be used in negotiating
         encrypted communication.
 
@@ -456,48 +454,3 @@ class POP3Factory(protocol.ServerFactory):
         p = protocol.ServerFactory.buildProtocol(self, addr)
         p.service = self.service
         return p
-
-
-
-# It is useful to know, perhaps, that the required file for this to work can
-# be created thusly:
-#
-# openssl req -x509 -newkey rsa:2048 -keyout file.key -out file.crt \
-# -days 365 -nodes
-#
-# And then cat file.key and file.crt together.  The number of days and bits
-# can be changed, of course.
-#
-class SSLContextFactory:
-    """
-    An SSL context factory.
-
-    @ivar filename: See L{__init__}
-    """
-    deprecatedModuleAttribute(
-        Version("Twisted", 12, 2, 0),
-        "Use twisted.internet.ssl.DefaultOpenSSLContextFactory instead.",
-        "twisted.mail.protocols", "SSLContextFactory")
-
-    def __init__(self, filename):
-        """
-        @type filename: L{bytes}
-        @param filename: The name of a file containing a certificate and
-            private key.
-        """
-        self.filename = filename
-
-
-    def getContext(self):
-        """
-        Create an SSL context.
-
-        @rtype: C{OpenSSL.SSL.Context}
-        @return: An SSL context configured with the certificate and private key
-            from the file.
-        """
-        from OpenSSL import SSL
-        ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.use_certificate_file(self.filename)
-        ctx.use_privatekey_file(self.filename)
-        return ctx

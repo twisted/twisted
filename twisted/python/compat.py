@@ -25,6 +25,7 @@ from __future__ import absolute_import, division
 
 import inspect
 import os
+import platform
 import socket
 import string
 import struct
@@ -39,6 +40,10 @@ if sys.version_info < (3, 0):
 else:
     _PY3 = True
 
+if platform.python_implementation() == 'PyPy':
+    _PYPY = True
+else:
+    _PYPY = False
 
 
 def currentframe(n=0):
@@ -187,11 +192,8 @@ def execfile(filename, globals, locals=None):
     """
     if locals is None:
         locals = globals
-    fin = open(filename, "rbU")
-    try:
+    with open(filename, "rbU") as fin:
         source = fin.read()
-    finally:
-        fin.close()
     code = compile(source, filename, "exec")
     exec(code, globals, locals)
 
@@ -717,7 +719,7 @@ def _coercedUnicode(s):
     Python 3, the equivalent C{str(b'bytes')} will return C{"b'bytes'"}
     instead. This function mimics the behavior for Python 2. It will decode the
     byte string as ASCII. In Python 3 it simply raises a L{TypeError} when
-    passing a byte string. Unicode strings are return as-is.
+    passing a byte string. Unicode strings are returned as-is.
 
     @param s: The string to coerce.
     @type s: L{bytes} or L{unicode}

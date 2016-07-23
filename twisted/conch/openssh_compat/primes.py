@@ -10,7 +10,8 @@ Maintainer: Paul Swartz
 """
 
 def parseModuliFile(filename):
-    lines = open(filename).readlines()
+    with open(filename) as f:
+        lines = f.readlines()
     primes = {}
     for l in lines:
         l = l.strip()

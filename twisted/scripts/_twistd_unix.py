@@ -83,14 +83,15 @@ def checkPID(pidfile):
         return
     if os.path.exists(pidfile):
         try:
-            pid = int(open(pidfile).read())
+            with open(pidfile) as f:
+                pid = int(f.read())
         except ValueError:
             sys.exit('Pidfile %s contains non-numeric value' % pidfile)
         try:
             os.kill(pid, 0)
         except OSError as why:
-            if why[0] == errno.ESRCH:
-                # The pid doesn't exists.
+            if why.errno == errno.ESRCH:
+                # The pid doesn't exist.
                 log.msg('Removing stale pidfile %s' % pidfile, isError=True)
                 os.remove(pidfile)
             else:

@@ -1,0 +1,58 @@
+#
+# Some help for Python on AppVeyor:
+# * https://packaging.python.org/appveyor/
+# * https://ci.appveyor.com/tools/validate-yaml
+
+version: '{branch}-{build}'
+
+# No need for Python.
+build: off
+# We don't report the test in XUnit tests or any other format supported by
+# AppVeyor.
+test: off
+
+# Don't build branch if there is an open PR, to prevent double builds.
+# For now, Appveyour will only build PR commits and not commits to master or
+# commits on random branches without an associated PR.
+skip_branch_with_pr: true
+
+# Not sure if the cache works.
+# Note the use of single quotes around the entire line, when environment
+# variables are used.
+cache:
+  - '%LOCALAPPDATA%\pip\Cache'
+
+
+environment:
+  global:
+    TRIAL_REPORTER: text
+
+  # Only use pre-installed Python versions, which Appveyor may upgrade to
+  # a later point release.
+  # See: http://www.appveyor.com/docs/installed-software#python
+  matrix:
+    - PYTHON: C:\Python27-x64
+      TOXENV: py27-coverage-windows,codecov-publish
+
+# Some tests are failing on Appveyor and they will be fixed in a separate
+# ticket.
+matrix:
+  allow_failures:
+    - PYTHON: C:\Python27-x64
+
+install:
+  # Get some information about the build environment.
+  # Uncomment them. Left here so that you don't have to search the net for
+  # how to run such command on Windows :)
+  # - ps: "ls \"C:/\""
+  # - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
+  # - ps: echo $env:PYTHON $env:TOXENV
+  # Check that we have the expected version and architecture for Python
+  - "%PYTHON%\\python --version"
+  - "%PYTHON%\\python -c \"import struct; print(struct.calcsize('P') * 8)\""
+
+  # The build system itself is handled by tox.
+  - "%PYTHON%\\Scripts\\pip install tox"
+
+test_script:
+  - "%PYTHON%\\python -m tox -e %TOXENV%"

@@ -288,13 +288,13 @@ class AbstractFilePath(object):
 
     def getContent(self):
         """
-        Retrieve the file-like object for this file path.
+        Retrieve the contents of the file at this path.
+
+        @return: the contents of the file
+        @rtype: L{bytes}
         """
-        fp = self.open()
-        try:
+        with self.open() as fp:
             return fp.read()
-        finally:
-            fp.close()
 
 
     def parents(self):
@@ -1526,11 +1526,8 @@ class FilePath(AbstractFilePath):
         @type ext: L{bytes}
         """
         sib = self.temporarySibling(ext)
-        f = sib.open('w')
-        try:
+        with sib.open('w') as f:
             f.write(content)
-        finally:
-            f.close()
         if platform.isWindows() and exists(self.path):
             os.unlink(self.path)
         os.rename(sib.path, self.path)
@@ -1575,7 +1572,7 @@ class FilePath(AbstractFilePath):
         fdint = os.open(self.path, _CREATE_FLAGS)
 
         # XXX TODO: 'name' attribute of returned files is not mutable or
-        # settable via fdopen, so this file is slighly less functional than the
+        # settable via fdopen, so this file is slightly less functional than the
         # one returned from 'open' by default.  send a patch to Python...
 
         return os.fdopen(fdint, 'w+b')
@@ -1659,24 +1656,17 @@ class FilePath(AbstractFilePath):
                 destChild = destination.child(child.basename())
                 child.copyTo(destChild, followLinks)
         elif self.isfile():
-            writefile = destination.open('w')
-            try:
-                readfile = self.open()
-                try:
-                    while 1:
-                        # XXX TODO: optionally use os.open, os.read and
-                        # O_DIRECT and use os.fstatvfs to determine chunk sizes
-                        # and make *****sure**** copy is page-atomic; the
-                        # following is good enough for 99.9% of everybody and
-                        # won't take a week to audit though.
-                        chunk = readfile.read(self._chunkSize)
-                        writefile.write(chunk)
-                        if len(chunk) < self._chunkSize:
-                            break
-                finally:
-                    readfile.close()
-            finally:
-                writefile.close()
+            with destination.open('w') as writefile, self.open() as readfile:
+                while 1:
+                    # XXX TODO: optionally use os.open, os.read and
+                    # O_DIRECT and use os.fstatvfs to determine chunk sizes
+                    # and make *****sure**** copy is page-atomic; the
+                    # following is good enough for 99.9% of everybody and
+                    # won't take a week to audit though.
+                    chunk = readfile.read(self._chunkSize)
+                    writefile.write(chunk)
+                    if len(chunk) < self._chunkSize:
+                        break
         elif not self.exists():
             raise OSError(errno.ENOENT, "No such file or directory")
         else:

@@ -730,10 +730,11 @@ class IMAP4HelperTests(unittest.TestCase):
 
     def test_files(self):
         inputStructure = [
-            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz'
+            'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz',
+            u'biz'
         ]
 
-        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz"'
+        output = '"foo" "bar" "baz" {16}\r\nthis is a file\r\n "buz" "biz"'
 
         self.assertEqual(imap4.collapseNestedLists(inputStructure), output)
 
@@ -1643,7 +1644,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN', '\\DELETED'], 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
@@ -1673,7 +1675,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
             (['\\SEEN'], 'Right now', 0),
             mb.messages[0][1:]
         )
-        self.assertEqual(open(infile).read(), mb.messages[0][0].getvalue())
+        with open(infile) as f:
+            self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
     def testCheck(self):
         SimpleServer.theAccount.addMailbox('root/subthing')
@@ -1766,7 +1769,7 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         self.laterQuery = ["16-Dec-2009"]
         self.seq = 0
         self.msg = FakeyMessage({"date" : "Mon, 13 Dec 2009 21:25:10 GMT"}, [],
-                                '', '', 1234, None)
+                                '13 Dec 2009 00:00:00 GMT', '', 1234, None)
 
 
     def test_searchSentBefore(self):
@@ -1866,6 +1869,45 @@ class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
         self.assertTrue(self.server.search_NOT(
                 ["SENTON"] + self.laterQuery, self.seq, self.msg,
                 (None, None)))
+
+
+    def test_searchBefore(self):
+        """
+        L{imap4.IMAP4Server.search_BEFORE} returns True if the
+        internal message date is before the query date.
+        """
+        self.assertFalse(
+            self.server.search_BEFORE(self.earlierQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_BEFORE(self.sameDateQuery, self.seq, self.msg))
+        self.assertTrue(
+            self.server.search_BEFORE(self.laterQuery, self.seq, self.msg))
+
+
+    def test_searchOn(self):
+        """
+        L{imap4.IMAP4Server.search_ON} returns True if the
+        internal message date is the same as the query date.
+        """
+        self.assertFalse(
+            self.server.search_ON(self.earlierQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_ON(self.sameDateQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_ON(self.laterQuery, self.seq, self.msg))
+
+
+    def test_searchSince(self):
+        """
+        L{imap4.IMAP4Server.search_SINCE} returns True if the
+        internal message date is greater than the query date.
+        """
+        self.assertTrue(
+            self.server.search_SINCE(self.earlierQuery, self.seq, self.msg))
+        self.assertTrue(
+            self.server.search_SINCE(self.sameDateQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_SINCE(self.laterQuery, self.seq, self.msg))
 
 
 

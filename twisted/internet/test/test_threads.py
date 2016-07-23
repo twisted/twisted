@@ -74,7 +74,7 @@ class ThreadTestsBuilder(ReactorBuilder):
         When invoked from the reactor thread, previous implementations of
         L{IReactorThreads.callFromThread} would skip the pipe/socket based wake
         up step, assuming the reactor would wake up on its own.  However, this
-        resulted in the reactor not noticing a insert into the thread queue at
+        resulted in the reactor not noticing an insert into the thread queue at
         the right time (in this case, after the thread queue has been processed
         for that reactor iteration).
         """

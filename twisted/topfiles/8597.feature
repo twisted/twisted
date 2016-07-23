@@ -1,0 +1,1 @@
+twisted.internet.interfaces.IOpenSSLContextFactory has been added, which defines the interface provided both by the old-style twisted.internet.ssl.ContextFactory class and the newer twisted.interface.ssl.CertificateOptions class. This is a precursor to formally deprecating the former class in favour of the latter.

@@ -20,12 +20,13 @@ import textwrap
 from zope.interface import Interface, implementer
 
 from datetime import date
-from subprocess import PIPE, STDOUT, Popen
+from subprocess import check_output, STDOUT, CalledProcessError
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 from twisted.python.compat import execfile
 from twisted.python.usage import Options, UsageError
+from twisted.python.monkey import MonkeyPatcher
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
@@ -41,51 +42,15 @@ intersphinxURLs = [
 ]
 
 
-def runCommand(args, cwd=None):
+def runCommand(args, **kwargs):
+    """Execute a vector of arguments.
+
+    This is a wrapper around L{subprocess.check_output}, so it takes
+    the same arguments as L{subprocess.Popen} with one difference: all
+    arguments after the vector must be keyword arguments.
     """
-    Execute a vector of arguments.
-
-    @type args: L{list} of L{bytes}
-    @param args: A list of arguments, the first of which will be used as the
-        executable to run.
-
-    @type cwd: L{bytes}
-    @param: The current working directory that the command should run with.
-
-    @rtype: L{bytes}
-    @return: All of the standard output.
-
-    @raise CommandFailed: when the program exited with a non-0 exit code.
-    """
-    process = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=cwd)
-    stdout = process.stdout.read()
-    exitCode = process.wait()
-    if exitCode < 0:
-        raise CommandFailed(None, -exitCode, stdout)
-    elif exitCode > 0:
-        raise CommandFailed(exitCode, None, stdout)
-    return stdout
-
-
-
-class CommandFailed(Exception):
-    """
-    Raised when a child process exits unsuccessfully.
-
-    @type exitStatus: C{int}
-    @ivar exitStatus: The exit status for the child process.
-
-    @type exitSignal: C{int}
-    @ivar exitSignal: The exit signal for the child process.
-
-    @type output: C{str}
-    @ivar output: The bytes read from stdout and stderr of the child process.
-    """
-    def __init__(self, exitStatus, exitSignal, output):
-        Exception.__init__(self, exitStatus, exitSignal, output)
-        self.exitStatus = exitStatus
-        self.exitSignal = exitSignal
-        self.output = output
+    kwargs['stderr'] = STDOUT
+    return check_output(args, **kwargs)
 
 
 
@@ -151,7 +116,7 @@ class GitCommand(object):
         """
         try:
             runCommand(["git", "rev-parse"], cwd=path.path)
-        except (CommandFailed, OSError):
+        except (CalledProcessError, OSError):
             raise NotWorkingDirectory(
                 "%s does not appear to be a Git repository."
                 % (path.path,))
@@ -454,9 +419,8 @@ def replaceProjectVersion(filename, newversion):
     """
     # XXX - this should be moved to Project and renamed to writeVersionFile.
     # jml, 2007-11-15.
-    f = open(filename, 'w')
-    f.write(generateVersionFileData(newversion))
-    f.close()
+    with open(filename, 'w') as f:
+        f.write(generateVersionFileData(newversion))
 
 
 
@@ -465,14 +429,12 @@ def replaceInFile(filename, oldToNew):
     I replace the text `oldstr' with `newstr' in `filename' using science.
     """
     os.rename(filename, filename + '.bak')
-    f = open(filename + '.bak')
-    d = f.read()
-    f.close()
+    with open(filename + '.bak') as f:
+        d = f.read()
     for k, v in oldToNew.items():
         d = d.replace(k, v)
-    f = open(filename + '.new', 'w')
-    f.write(d)
-    f.close()
+    with open(filename + '.new', 'w') as f:
+        f.write(d)
     os.rename(filename + '.new', filename)
     os.unlink(filename + '.bak')
 
@@ -523,7 +485,24 @@ class APIBuilder(object):
             intersphinxes.append("--intersphinx")
             intersphinxes.append(intersphinx)
 
+        # Super awful monkeypatch that will selectively use our templates.
+        from pydoctor.templatewriter import util
+        originalTemplatefile = util.templatefile
+
+        def templatefile(filename):
+
+            if filename in ["summary.html", "index.html", "common.html"]:
+                twistedPythonDir = FilePath(__file__).parent()
+                templatesDir = twistedPythonDir.child("_pydoctortemplates")
+                return templatesDir.child(filename).path
+            else:
+                return originalTemplatefile(filename)
+
+        monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
+        monkeyPatch.patch()
+
         from pydoctor.driver import main
+
         main(
             ["--project-name", projectName,
              "--project-url", projectURL,
@@ -535,6 +514,7 @@ class APIBuilder(object):
              "--html-write-function-pages", "--quiet", "--make-html",
             ] + intersphinxes)
 
+        monkeyPatch.restore()
 
 
 class NewsBuilder(object):
@@ -719,22 +699,22 @@ class NewsBuilder(object):
         misc = self._findChanges(path, self._MISC)
 
         oldNews = output.getContent()
-        newNews = output.sibling('NEWS.new').open('w')
-        if oldNews.startswith(self._TICKET_HINT):
-            newNews.write(self._TICKET_HINT)
-            oldNews = oldNews[len(self._TICKET_HINT):]
+        with output.sibling('NEWS.new').open('w') as newNews:
+            if oldNews.startswith(self._TICKET_HINT):
+                newNews.write(self._TICKET_HINT)
+                oldNews = oldNews[len(self._TICKET_HINT):]
 
-        self._writeHeader(newNews, header)
-        if changes:
-            for (part, tickets) in changes:
-                self._writeSection(newNews, self._headings.get(part), tickets)
-        else:
-            newNews.write(self._NO_CHANGES)
+            self._writeHeader(newNews, header)
+            if changes:
+                for (part, tickets) in changes:
+                    self._writeSection(newNews, self._headings.get(part),
+                                       tickets)
+            else:
+                newNews.write(self._NO_CHANGES)
+                newNews.write('\n')
+            self._writeMisc(newNews, self._headings.get(self._MISC), misc)
             newNews.write('\n')
-        self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-        newNews.write('\n')
-        newNews.write(oldNews)
-        newNews.close()
+            newNews.write(oldNews)
         output.sibling('NEWS.new').moveTo(output)
 
 
@@ -1034,7 +1014,7 @@ class BuildAPIDocsScript(object):
         """
         version = Project(projectRoot.child("twisted")).getVersion()
         versionString = version.base()
-        sourceURL = ("http://twistedmatrix.com/trac/browser/tags/releases/"
+        sourceURL = ("https://github.com/twisted/twisted/tree/"
                      "twisted-%s" % (versionString,))
         apiBuilder = APIBuilder()
         apiBuilder.build(
@@ -1109,7 +1089,7 @@ class CheckTopfileScript(object):
 
         for change in files:
             if os.sep + "topfiles" + os.sep in change:
-                if change.rsplit(".", 1)[1] in TOPFILE_TYPES:
+                if "." in change and change.rsplit(".", 1)[1] in TOPFILE_TYPES:
                     topfiles.append(change)
 
         if branch.startswith("release-"):

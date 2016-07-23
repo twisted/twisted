@@ -499,7 +499,8 @@ class WebClientTests(unittest.TestCase):
         return defer.gatherResults(downloads)
 
     def _cbDownloadPageTest(self, ignored, data, name):
-        bytes = open(name, "rb").read()
+        with open(name, "rb") as f:
+            bytes = f.read()
         self.assertEqual(bytes, data)
 
     def testDownloadPageError1(self):
@@ -527,8 +528,7 @@ class WebClientTests(unittest.TestCase):
     def testDownloadPageError3(self):
         # make sure failures in open() are caught too. This is tricky.
         # Might only work on posix.
-        tmpfile = open("unwritable", "wb")
-        tmpfile.close()
+        open("unwritable", "wb").close()
         os.chmod("unwritable", 0) # make it unwritable (to us)
         d = self.assertFailure(
             client.downloadPage(self.getURL("file"), "unwritable"),

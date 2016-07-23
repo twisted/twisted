@@ -56,10 +56,9 @@ class Port(abstract.FileHandle):
 
         skt = socket.socket(self.addressFamily, self.socketType)
         addrLen = _iocp.maxAddrLen(skt.fileno())
-        self.addressBuffer = _iocp.AllocateReadBuffer(addrLen)
+        self.addressBuffer = bytearray(addrLen)
         # WSARecvFrom takes an int
-        self.addressLengthBuffer = _iocp.AllocateReadBuffer(
-                struct.calcsize('i'))
+        self.addressLengthBuffer = bytearray(struct.calcsize('i'))
 
 
     def _setAddressFamily(self):

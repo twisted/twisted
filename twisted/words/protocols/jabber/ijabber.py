@@ -171,7 +171,7 @@ class IService(Interface):
         """
         Parent component has established a connection.
 
-        At this point, authentication was succesful, and XML stanzas
+        At this point, authentication was successful, and XML stanzas
         can be exchanged over the XML stream C{xs}. This method can be used
         to setup observers for incoming stanzas.
 

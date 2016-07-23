@@ -10,7 +10,8 @@ import errno
 import shutil
 import pickle
 import StringIO
-import rfc822
+import email.message
+import email.parser
 import tempfile
 import signal
 import time
@@ -221,7 +222,8 @@ class FileMessageTests(unittest.TestCase):
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.eomReceived()
-        self.assertEqual(open(self.final).read(), contents)
+        with open(self.final) as f:
+            self.assertEqual(f.read(), contents)
 
     def testInterrupted(self):
         contents = "first line\nsecond line\n"
@@ -562,9 +564,8 @@ class MaildirTests(unittest.TestCase):
         # Toss a few files into the mailbox
         i = 1
         for f in msgs:
-            fObj = open(j(self.d, f), 'w')
-            fObj.write('x' * i)
-            fObj.close()
+            with open(j(self.d, f), 'w') as fObj:
+                fObj.write('x' * i)
             i = i + 1
 
         mb = mail.maildir.MaildirMailbox(self.d)
@@ -798,7 +799,8 @@ class ServiceDomainTests(unittest.TestCase):
              ['user@host.name']
          )
          fp = StringIO.StringIO(hdr)
-         m = rfc822.Message(fp)
+         emailParser = email.parser.Parser()
+         m = emailParser.parse(fp)
          self.assertEqual(len(m.items()), 1)
          self.assertIn('Received', m)
 
@@ -957,9 +959,8 @@ class RelayerTests(unittest.TestCase):
         self.messageFiles = []
         for i in range(10):
             name = os.path.join(self.tmpdir, 'body-%d' % (i,))
-            f = open(name + '-H', 'w')
-            pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
-            f.close()
+            with open(name + '-H', 'w') as f:
+                pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
 
             f = open(name + '-D', 'w')
             f.write(name)
@@ -1047,8 +1048,8 @@ class DirectoryQueueTests(unittest.TestCase):
         self.queue.noisy = False
         for m in range(25):
             hdrF, msgF = self.queue.createNewMessage()
-            pickle.dump(['header', m], hdrF)
-            hdrF.close()
+            with hdrF:
+                pickle.dump(['header', m], hdrF)
             msgF.lineReceived('body: %d' % (m,))
             msgF.eomReceived()
         self.queue.readDirectory()
@@ -1789,7 +1790,8 @@ class AliasTests(unittest.TestCase):
         return m.eomReceived().addCallback(self._cbTestFileAlias, tmpfile)
 
     def _cbTestFileAlias(self, ignored, tmpfile):
-        lines = open(tmpfile).readlines()
+        with open(tmpfile) as f:
+            lines = f.readlines()
         self.assertEqual([L[:-1] for L in lines], self.lines)
 
 
@@ -1871,7 +1873,7 @@ class DummyProcess(object):
 
 class MockProcessAlias(mail.alias.ProcessAlias):
     """
-    A alias processor that doesn't actually launch processes.
+    An alias processor that doesn't actually launch processes.
     """
 
     def spawnProcess(self, proto, program, path):
@@ -2011,7 +2013,8 @@ done""")
             m.lineReceived(l)
 
         def _cbProcessAlias(ignored):
-            lines = open('process.alias.out').readlines()
+            with open('process.alias.out') as f:
+                lines = f.readlines()
             self.assertEqual([L[:-1] for L in lines], self.lines)
 
         return m.eomReceived().addCallback(_cbProcessAlias)
@@ -2201,28 +2204,6 @@ class TestDomain:
 
 
 
-class SSLContextFactoryTests(unittest.TestCase):
-    """
-    Tests for twisted.mail.protocols.SSLContextFactory.
-    """
-    def test_deprecation(self):
-        """
-        Accessing L{twisted.mail.protocols.SSLContextFactory} emits a
-        deprecation warning recommending the use of the more general SSL context
-        factory from L{twisted.internet.ssl}.
-        """
-        mail.protocols.SSLContextFactory
-        warningsShown = self.flushWarnings([self.test_deprecation])
-        self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningsShown[0]['message'],
-            'twisted.mail.protocols.SSLContextFactory was deprecated in '
-            'Twisted 12.2.0: Use twisted.internet.ssl.'
-            'DefaultOpenSSLContextFactory instead.')
-
-
-
 class DummyQueue(object):
     """
     A fake relay queue to use for testing.
@@ -2389,24 +2370,20 @@ class _AttemptManagerTests(unittest.TestCase):
         self.noisyMessage = os.path.join(self.tmpdir, noisyBaseName)
         self.quietMessage = os.path.join(self.tmpdir, quietBaseName)
 
-        message = open(self.noisyMessage+'-D', "w")
-        message.close()
+        open(self.noisyMessage+'-D', "w").close()
 
-        message = open(self.quietMessage+'-D', "w")
-        message.close()
+        open(self.quietMessage+'-D', "w").close()
 
         self.noisyAttemptMgr.manager.managed['noisyRelayer'] = [
                 noisyBaseName]
         self.quietAttemptMgr.manager.managed['quietRelayer'] = [
                 quietBaseName]
 
-        envelope = open(self.noisyMessage+'-H', 'w')
-        pickle.dump(['from-noisy@domain', 'to-noisy@domain'], envelope)
-        envelope.close()
+        with open(self.noisyMessage+'-H', 'w') as envelope:
+            pickle.dump(['from-noisy@domain', 'to-noisy@domain'], envelope)
 
-        envelope = open(self.quietMessage+'-H', 'w')
-        pickle.dump(['from-quiet@domain', 'to-quiet@domain'], envelope)
-        envelope.close()
+        with open(self.quietMessage+'-H', 'w') as envelope:
+            pickle.dump(['from-quiet@domain', 'to-quiet@domain'], envelope)
 
 
     def tearDown(self):
