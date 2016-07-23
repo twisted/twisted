@@ -69,6 +69,7 @@ modules = [
     "twisted.conch.ssh._kex",
     "twisted.conch.ssh.transport",
     "twisted.conch.ssh.channel",
+    "twisted.conch.ssh.connection",
     "twisted.conch.ssh.userauth",
     "twisted.conch.telnet",
     "twisted.conch.test.__init__",
@@ -354,6 +355,7 @@ testModules = [
     "twisted.conch.test.test_telnet",
     "twisted.conch.test.test_text",
     "twisted.conch.test.test_transport",
+    "twisted.conch.test.test_connection",
     "twisted.conch.test.test_userauth",
     "twisted.conch.test.test_window",
     "twisted.cred.test.test_cramauth",
@@ -612,7 +614,6 @@ almostModules = [
     # following.
     "twisted.conch.interfaces",
     "twisted.conch.ssh.factory",
-    "twisted.conch.ssh.connection",
     "twisted.conch.ssh.service",
     # twisted.conch.test.test_text and twisted.conch.test.test_window
     # need these conch modules.  They need more work to get full
