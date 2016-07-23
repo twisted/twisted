@@ -20,7 +20,7 @@ import textwrap
 from zope.interface import Interface, implementer
 
 from datetime import date
-from subprocess import PIPE, STDOUT, Popen
+from subprocess import check_output, STDOUT, CalledProcessError
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
@@ -42,51 +42,15 @@ intersphinxURLs = [
 ]
 
 
-def runCommand(args, cwd=None):
+def runCommand(args, **kwargs):
+    """Execute a vector of arguments.
+
+    This is a wrapper around L{subprocess.check_output}, so it takes
+    the same arguments as L{subprocess.Popen} with one difference: all
+    arguments after the vector must be keyword arguments.
     """
-    Execute a vector of arguments.
-
-    @type args: L{list} of L{bytes}
-    @param args: A list of arguments, the first of which will be used as the
-        executable to run.
-
-    @type cwd: L{bytes}
-    @param: The current working directory that the command should run with.
-
-    @rtype: L{bytes}
-    @return: All of the standard output.
-
-    @raise CommandFailed: when the program exited with a non-0 exit code.
-    """
-    process = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=cwd)
-    stdout = process.communicate()[0]
-    exitCode = process.poll()
-    if exitCode < 0:
-        raise CommandFailed(None, -exitCode, stdout)
-    elif exitCode > 0:
-        raise CommandFailed(exitCode, None, stdout)
-    return stdout
-
-
-
-class CommandFailed(Exception):
-    """
-    Raised when a child process exits unsuccessfully.
-
-    @type exitStatus: C{int}
-    @ivar exitStatus: The exit status for the child process.
-
-    @type exitSignal: C{int}
-    @ivar exitSignal: The exit signal for the child process.
-
-    @type output: C{str}
-    @ivar output: The bytes read from stdout and stderr of the child process.
-    """
-    def __init__(self, exitStatus, exitSignal, output):
-        Exception.__init__(self, exitStatus, exitSignal, output)
-        self.exitStatus = exitStatus
-        self.exitSignal = exitSignal
-        self.output = output
+    kwargs['stderr'] = STDOUT
+    return check_output(args, **kwargs)
 
 
 
@@ -152,7 +116,7 @@ class GitCommand(object):
         """
         try:
             runCommand(["git", "rev-parse"], cwd=path.path)
-        except (CommandFailed, OSError):
+        except (CalledProcessError, OSError):
             raise NotWorkingDirectory(
                 "%s does not appear to be a Git repository."
                 % (path.path,))
