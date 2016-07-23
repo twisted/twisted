@@ -61,7 +61,13 @@ class TwistedSphinxInventory(SphinxInventory):
             # We get the base URL from IInterface which is assume that is
             # always and already well defined in the Sphinx index.
             baseURL, _ = self._links.get(
-                'zope.interface.interfaces.IInterface')
+                'zope.interface.interfaces.IInterface',
+                (None, None))
+
+            if baseURL is None:
+                # Most probably the zope.interface inventory was
+                # not loaded.
+                return None
 
             if name  == 'zope.interface.adapter.AdapterRegistry':
                 # FIXME:
