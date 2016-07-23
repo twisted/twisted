@@ -8,7 +8,6 @@ from __future__ import division, absolute_import
 import itertools
 import warnings
 
-from binascii import a2b_base64
 from hashlib import md5
 
 import OpenSSL
