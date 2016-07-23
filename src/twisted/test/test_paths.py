@@ -66,19 +66,14 @@ class AbstractFilePathTests(BytesTestCase):
         self.all = [cmn]
         os.mkdir(cmn)
         self.subdir(b"sub1")
-        f = self.subfile(b"file1")
-        f.write(self.f1content)
-        f.close()
-        f = self.subfile(b"sub1", b"file2")
-        f.write(self.f2content)
-        f.close()
+        with self.subfile(b"file1") as f:
+            f.write(self.f1content)
+        with self.subfile(b"sub1", b"file2") as f:
+            f.write(self.f2content)
         self.subdir(b'sub3')
-        f = self.subfile(b"sub3", b"file3.ext1")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext2")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext3")
-        f.close()
+        self.subfile(b"sub3", b"file3.ext1").close()
+        self.subfile(b"sub3", b"file3.ext2").close()
+        self.subfile(b"sub3", b"file3.ext3").close()
         self.path = filepath.FilePath(cmn)
         self.root = filepath.FilePath(b"/")
 
@@ -1199,10 +1194,9 @@ class FilePathTests(AbstractFilePathTests):
         Windows platforms.)
         """
         path = filepath.FilePath(self.mktemp())
-        f = path.create()
-        self.assertIn("b", f.mode)
-        f.write(b"\n")
-        f.close()
+        with path.create() as f:
+            self.assertIn("b", f.mode)
+            f.write(b"\n")
         with open(path.path, "rb") as fp:
             read = fp.read()
             self.assertEqual(read, b"\n")
@@ -1225,8 +1219,7 @@ class FilePathTests(AbstractFilePathTests):
             self.assertEqual(f.read(), b'abc\ndef')
 
         # Re-opening that file in write mode should erase whatever was there.
-        f = writer.open('w')
-        f.close()
+        writer.open('w').close()
         with writer.open() as f:
             self.assertEqual(f.read(), b'')
 
@@ -1246,7 +1239,7 @@ class FilePathTests(AbstractFilePathTests):
         with appender.open('r+') as f:
             self.assertEqual(f.read(), b'abcdef')
             # ANSI C *requires* an fseek or an fgetpos between an fread and an
-            # fwrite or an fwrite and a fread.  We can't reliable get Python to
+            # fwrite or an fwrite and an fread.  We can't reliably get Python to
             # invoke fgetpos, so we seek to a 0 byte offset from the current
             # position instead.  Also, Python sucks for making this seek
             # relative to 1 instead of a symbolic constant representing the

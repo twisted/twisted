@@ -25,6 +25,7 @@ from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
+from twisted.python.compat import networkString, iterbytes, _bytesChr as chr
 
 from twisted.conch.ssh import address, keys, _kex
 from twisted.conch.ssh.common import (
@@ -642,8 +643,9 @@ class SSHTransportBase(protocol.Protocol):
             del self.first
         packetLen, paddingLen = struct.unpack('!LB', first[:5])
         if packetLen > 1048576: # 1024 ** 2
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
-                                b'bad packet length %s' % (packetLen,))
+            self.sendDisconnect(
+                DISCONNECT_PROTOCOL_ERROR,
+                networkString('bad packet length %s' % (packetLen,)))
             return
         if len(self.buf) < packetLen + 4 + ms:
             # Not enough data for a packet
@@ -652,8 +654,9 @@ class SSHTransportBase(protocol.Protocol):
         if (packetLen + 4) % bs != 0:
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                b'bad packet mod (%i%%%i == %i)' % (packetLen + 4, bs,
-                                                   (packetLen + 4) % bs))
+                networkString(
+                    'bad packet mod (%i%%%i == %i)' % (
+                        packetLen + 4, bs,(packetLen + 4) % bs)))
             return
         encData, self.buf = self.buf[:4 + packetLen], self.buf[4 + packetLen:]
         packet = first + self.currentEncryptions.decrypt(encData[bs:])
@@ -720,7 +723,7 @@ class SSHTransportBase(protocol.Protocol):
                     self.buf = b'\n'.join(lines[i + 1:])
         packet = self.getPacket()
         while packet:
-            messageNum = ord(packet[0])
+            messageNum = ord(packet[0:1])
             self.dispatchMessage(messageNum, packet[1:])
             packet = self.getPacket()
 
@@ -789,11 +792,7 @@ class SSHTransportBase(protocol.Protocol):
     def kexAlg(self, value):
         """
         Set the key exchange algorithm name.
-
-        @raises ConchError: if the key exchange algorithm is not found.
         """
-        # Check for supportedness.
-        _kex.getKex(value)
         self._kexAlg = value
 
     # Client-initiated rekeying looks like this:
@@ -1224,7 +1223,7 @@ class SSHServerTransport(SSHTransportBase):
             return
         else:
             kexAlgs, keyAlgs, rest = retval
-        if ord(rest[0]): # Flag first_kex_packet_follows?
+        if ord(rest[0:1]): # Flag first_kex_packet_follows?
             if (kexAlgs[0] != self.supportedKeyExchanges[0] or
                 keyAlgs[0] != self.supportedPublicKeys[0]):
                 self.ignoreNextPacket = True # Guess was wrong
@@ -1527,7 +1526,7 @@ class SSHClientTransport(SSHTransportBase):
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
         fingerprint = b':'.join([binascii.hexlify(ch) for ch in
-                                 md5(pubKey).digest()])
+                                 iterbytes(md5(pubKey).digest())])
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueKEXDH_REPLY, pubKey, f, signature)
         d.addErrback(
@@ -1611,8 +1610,8 @@ class SSHClientTransport(SSHTransportBase):
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
-        fingerprint = ':'.join(map(lambda c: '%02x' % (ord(c),),
-            md5(pubKey).digest()))
+        fingerprint = b':'.join(
+            [binascii.hexlify(c) for c in iterbytes(md5(pubKey).digest())])
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
         d.addErrback(
@@ -1846,7 +1845,7 @@ DISCONNECT_ILLEGAL_USER_NAME = 15
 
 
 messages = {}
-for name, value in globals().items():
+for name, value in list(globals().items()):
     # Avoid legacy messages which overlap with never ones
     if name.startswith('MSG_') and not name.startswith('MSG_KEXDH_'):
         messages[value] = name

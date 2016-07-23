@@ -10,7 +10,8 @@ import errno
 import shutil
 import pickle
 import StringIO
-import rfc822
+import email.message
+import email.parser
 import tempfile
 import signal
 import time
@@ -798,7 +799,8 @@ class ServiceDomainTests(unittest.TestCase):
              ['user@host.name']
          )
          fp = StringIO.StringIO(hdr)
-         m = rfc822.Message(fp)
+         emailParser = email.parser.Parser()
+         m = emailParser.parse(fp)
          self.assertEqual(len(m.items()), 1)
          self.assertIn('Received', m)
 
@@ -1046,8 +1048,8 @@ class DirectoryQueueTests(unittest.TestCase):
         self.queue.noisy = False
         for m in range(25):
             hdrF, msgF = self.queue.createNewMessage()
-            pickle.dump(['header', m], hdrF)
-            hdrF.close()
+            with hdrF:
+                pickle.dump(['header', m], hdrF)
             msgF.lineReceived('body: %d' % (m,))
             msgF.eomReceived()
         self.queue.readDirectory()
@@ -1871,7 +1873,7 @@ class DummyProcess(object):
 
 class MockProcessAlias(mail.alias.ProcessAlias):
     """
-    A alias processor that doesn't actually launch processes.
+    An alias processor that doesn't actually launch processes.
     """
 
     def spawnProcess(self, proto, program, path):
@@ -2202,28 +2204,6 @@ class TestDomain:
 
 
 
-class SSLContextFactoryTests(unittest.TestCase):
-    """
-    Tests for twisted.mail.protocols.SSLContextFactory.
-    """
-    def test_deprecation(self):
-        """
-        Accessing L{twisted.mail.protocols.SSLContextFactory} emits a
-        deprecation warning recommending the use of the more general SSL context
-        factory from L{twisted.internet.ssl}.
-        """
-        mail.protocols.SSLContextFactory
-        warningsShown = self.flushWarnings([self.test_deprecation])
-        self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningsShown[0]['message'],
-            'twisted.mail.protocols.SSLContextFactory was deprecated in '
-            'Twisted 12.2.0: Use twisted.internet.ssl.'
-            'DefaultOpenSSLContextFactory instead.')
-
-
-
 class DummyQueue(object):
     """
     A fake relay queue to use for testing.
@@ -2390,11 +2370,9 @@ class _AttemptManagerTests(unittest.TestCase):
         self.noisyMessage = os.path.join(self.tmpdir, noisyBaseName)
         self.quietMessage = os.path.join(self.tmpdir, quietBaseName)
 
-        message = open(self.noisyMessage+'-D', "w")
-        message.close()
+        open(self.noisyMessage+'-D', "w").close()
 
-        message = open(self.quietMessage+'-D', "w")
-        message.close()
+        open(self.quietMessage+'-D', "w").close()
 
         self.noisyAttemptMgr.manager.managed['noisyRelayer'] = [
                 noisyBaseName]

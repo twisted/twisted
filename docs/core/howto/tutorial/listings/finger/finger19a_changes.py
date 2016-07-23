@@ -23,5 +23,5 @@ class MemoryFingerService(service.Service):
 
 f = MemoryFingerService(moshez='Happy and well')
 serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(1079, IFingerSetterFactory(f), interface='127.0.0.1'
+strports.service("tcp:1079:interface=127.0.0.1", IFingerSetterFactory(f)
                    ).setServiceParent(serviceCollection)

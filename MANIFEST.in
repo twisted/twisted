@@ -17,14 +17,17 @@ recursive-include docs README
 include NEWS README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
-exclude bin/_preamble.py
-exclude admin
-exclude bin/admin
-recursive-exclude admin *
-recursive-exclude bin/admin *
+exclude codecov.yml
+exclude appveyor.yml
+prune bin
+prune admin
+prune .travis
 
 # Include test-running utilities for downstream packagers
 include tox.ini .coveragerc
+
+# Include our docs templates
+recursive-include twisted/python/_pydoctortemplates *.html
 
 # Python 3 setup file
 include setup3.py

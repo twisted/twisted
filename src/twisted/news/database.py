@@ -470,7 +470,8 @@ class PickleStorage(_ModerationMixin):
             self.db = PickleStorage.sharedDBs[filename]
         else:
             try:
-                self.db = pickle.load(open(filename))
+                with open(filename) as f:
+                    self.db = pickle.load(f)
                 PickleStorage.sharedDBs[filename] = self.db
             except IOError:
                 self.db = PickleStorage.sharedDBs[filename] = {}

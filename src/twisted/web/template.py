@@ -450,11 +450,8 @@ class XMLFile(object):
         if not isinstance(self._path, FilePath):
             return _flatsaxParse(self._path)
         else:
-            f = self._path.open('r')
-            try:
+            with self._path.open('r') as f:
                 return _flatsaxParse(f)
-            finally:
-                f.close()
 
 
     def __repr__(self):

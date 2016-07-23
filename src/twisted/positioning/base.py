@@ -313,7 +313,7 @@ class Heading(Angle):
     """
     def __init__(self, angle=None, variation=None):
         """
-        Initializes a angle with an optional variation.
+        Initializes an angle with an optional variation.
         """
         Angle.__init__(self, angle, Angles.HEADING)
         self.variation = variation
@@ -786,7 +786,7 @@ class BeaconInformation(object):
     @ivar seenBeacons: A set of visible beacons. Note that visible beacons are not
         necessarily used in acquiring a positioning fix.
     @type seenBeacons: C{set} of L{IPositioningBeacon}
-    @ivar usedBeacons: An set of the beacons that were used in obtaining a
+    @ivar usedBeacons: A set of the beacons that were used in obtaining a
         positioning fix. This only contains beacons that are actually used, not
         beacons for which it is unknown if they are used or not.
     @type usedBeacons: C{set} of L{IPositioningBeacon}

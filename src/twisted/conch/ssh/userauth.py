@@ -20,6 +20,7 @@ from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
 from twisted.python import failure, log
+from twisted.python.compat import nativeString, _bytesChr as chr
 
 
 
@@ -30,7 +31,7 @@ class SSHUserAuthServer(service.SSHService):
     this server.
 
     @ivar name: the name of this service: 'ssh-userauth'
-    @type name: L{str}
+    @type name: L{bytes}
     @ivar authenticatedWith: a list of authentication methods that have
         already been used.
     @type authenticatedWith: L{list}
@@ -59,14 +60,14 @@ class SSHUserAuthServer(service.SSHService):
     @type method: L{bytes}
     @ivar nextService: the service the user wants started after authentication
         has been completed.
-    @type nextService: L{str}
+    @type nextService: L{bytes}
     @ivar portal: the L{twisted.cred.portal.Portal} we are using for
         authentication
     @type portal: L{twisted.cred.portal.Portal}
     @ivar clock: an object with a callLater method.  Stubbed out for testing.
     """
 
-    name = 'ssh-userauth'
+    name = b'ssh-userauth'
     loginTimeout = 10 * 60 * 60
     # 10 minutes before we disconnect them
     attemptsBeforeDisconnect = 20
@@ -146,7 +147,7 @@ class SSHUserAuthServer(service.SSHService):
         if kind not in self.supportedAuthentications:
             return defer.fail(
                     error.ConchError('unsupported authentication, failing'))
-        kind = kind.replace(b'-', b'_')
+        kind = nativeString(kind.replace(b'-', b'_'))
         f = getattr(self, 'auth_%s' % (kind,), None)
         if f:
             ret = f(data)
@@ -260,7 +261,7 @@ class SSHUserAuthServer(service.SSHService):
 
         Create a SSHPublicKey credential and verify it using our portal.
         """
-        hasSig = ord(packet[0])
+        hasSig = ord(packet[0:1])
         algName, blob, rest = getNS(packet[1:], 2)
         pubKey = keys.Key.fromString(blob)
         signature = hasSig and getNS(rest)[0] or None
@@ -340,7 +341,7 @@ class SSHUserAuthClient(service.SSHService):
     @type lastPublicKey: L{Key}
     """
 
-    name = 'ssh-userauth'
+    name = b'ssh-userauth'
     preferredOrder = [b'publickey', b'password', b'keyboard-interactive']
 
 
@@ -377,7 +378,7 @@ class SSHUserAuthClient(service.SSHService):
         @param kind: the authentication method
         @type kind: L{bytes}
         """
-        kind = kind.replace(b'-', b'_')
+        kind = nativeString(kind.replace(b'-', b'_'))
         log.msg('trying to auth with %s' % (kind,))
         f = getattr(self,'auth_%s' % (kind,), None)
         if f:
@@ -474,7 +475,7 @@ class SSHUserAuthClient(service.SSHService):
         in order to handle this request.
         """
         func = getattr(self, 'ssh_USERAUTH_PK_OK_%s' %
-                       self.lastAuth.replace(b'-', b'_'), None)
+                       nativeString(self.lastAuth.replace(b'-', b'_')), None)
         if func is not None:
             return func(packet)
         else:
@@ -747,7 +748,7 @@ MSG_USERAUTH_INFO_RESPONSE    = 61
 MSG_USERAUTH_PK_OK            = 60
 
 messages = {}
-for k, v in locals().items():
+for k, v in list(locals().items()):
     if k[:4] == 'MSG_':
         messages[v] = k
 

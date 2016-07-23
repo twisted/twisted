@@ -4,6 +4,7 @@ Twisted 16.3.0
 |pypi|
 |coverage|
 |travis|
+|appveyor|
 
 .. code::
 
@@ -110,3 +111,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |travis| image:: https://travis-ci.org/twisted/twisted.svg?branch=trunk
 .. _travis https://travis-ci.org/twisted/twisted
+
+.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/x4oyqtl9cqc2i2l8
+.. _appveyor https://ci.appveyor.com/project/adiroiban/twisted

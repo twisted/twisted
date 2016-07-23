@@ -29,9 +29,9 @@ from zope.interface import implementer, Interface
 from twisted.python import log, reflect
 
 # sibling imports
-from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
-from jelly import Jellyable, Unjellyable, _newDummyLike
-from jelly import setInstanceState, getInstanceState
+from .jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
+from .jelly import Jellyable, Unjellyable, _newDummyLike
+from .jelly import setInstanceState, getInstanceState
 
 # compatibility
 setCopierForClass = setUnjellyableForClass

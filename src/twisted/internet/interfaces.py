@@ -1744,7 +1744,7 @@ class IProducer(Interface):
     """
     A producer produces data for a consumer.
 
-    Typically producing is done by calling the write method of an class
+    Typically producing is done by calling the write method of a class
     implementing L{IConsumer}.
     """
 
@@ -2043,15 +2043,21 @@ class ITransport(Interface):
         If possible, make sure that it is all written.  No data will
         ever be lost, although (obviously) the connection may be closed
         before it all gets through.
+
+        @type data: L{bytes}
+        @param data: The data to write.
         """
 
     def writeSequence(data):
         """
-        Write a list of strings to the physical connection.
+        Write an iterable of byte strings to the physical connection.
 
         If possible, make sure that all of the data is written to
         the socket at once, without first copying it all into a
-        single string.
+        single byte string.
+
+        @type data: an iterable of L{bytes}
+        @param data: The data to write.
         """
 
     def loseConnection():

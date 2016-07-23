@@ -15,7 +15,6 @@ To do::
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
 
-import rfc822
 import base64
 import binascii
 import hmac
@@ -26,7 +25,7 @@ import string
 import time
 import random
 
-import email.Utils
+import email.utils
 
 try:
     import cStringIO as StringIO
@@ -1632,7 +1631,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_BEFORE(self, query, id, msg):
         date = parseTime(query.pop(0))
-        return rfc822.parsedate(msg.getInternalDate()) < date
+        return email.utils.parsedate(msg.getInternalDate()) < date
 
     def search_BODY(self, query, id, msg):
         body = query.pop(0).lower()
@@ -1698,7 +1697,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_ON(self, query, id, msg):
         date = parseTime(query.pop(0))
-        return rfc822.parsedate(msg.getInternalDate()) == date
+        return email.utils.parsedate(msg.getInternalDate()) == date
 
     def search_OR(self, query, id, msg, lastIDs):
         """
@@ -1748,7 +1747,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         """
         date = msg.getHeaders(False, 'date').get('date', '')
-        date = rfc822.parsedate(date)
+        date = email.utils.parsedate(date)
         return date < parseTime(query.pop(0))
 
     def search_SENTON(self, query, id, msg):
@@ -1763,7 +1762,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         """
         date = msg.getHeaders(False, 'date').get('date', '')
-        date = rfc822.parsedate(date)
+        date = email.utils.parsedate(date)
         return date[:3] == parseTime(query.pop(0))[:3]
 
     def search_SENTSINCE(self, query, id, msg):
@@ -1778,12 +1777,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @type msg: Provider of L{imap4.IMessage}
         """
         date = msg.getHeaders(False, 'date').get('date', '')
-        date = rfc822.parsedate(date)
+        date = email.utils.parsedate(date)
         return date > parseTime(query.pop(0))
 
     def search_SINCE(self, query, id, msg):
         date = parseTime(query.pop(0))
-        return rfc822.parsedate(msg.getInternalDate()) > date
+        return email.utils.parsedate(msg.getInternalDate()) > date
 
     def search_SMALLER(self, query, id, msg):
         return int(query.pop(0)) > msg.getSize()
@@ -1921,7 +1920,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if _w is None:
             _w = self.transport.write
         idate = msg.getInternalDate()
-        ttup = rfc822.parsedate_tz(idate)
+        ttup = email.utils.parsedate_tz(idate)
         if ttup is None:
             log.msg("%d:%r: unpareseable internaldate: %r" % (id, msg, idate))
             raise IMAP4Exception("Internal failure generating INTERNALDATE")
@@ -3969,7 +3968,7 @@ def parseIdList(s, lastMessageId=None):
     Parse a message set search key into a C{MessageSet}.
 
     @type s: C{str}
-    @param s: A string description of a id list, for example "1:3, 4:*"
+    @param s: A string description of an id list, for example "1:3, 4:*"
 
     @type lastMessageId: C{int}
     @param lastMessageId: The last message sequence id or UID, depending on
@@ -4838,7 +4837,7 @@ def statusRequestHelper(mbox, names):
 def parseAddr(addr):
     if addr is None:
         return [(None, None, None),]
-    addr = email.Utils.getaddresses([addr])
+    addr = email.utils.getaddresses([addr])
     return [[fn or None, None] + address.split('@') for fn, address in addr]
 
 def getEnvelope(msg):
@@ -5382,7 +5381,7 @@ class IMessageFile(Interface):
     the more complex MIME-based interface.
     """
     def open():
-        """Return an file-like object opened for reading.
+        """Return a file-like object opened for reading.
 
         Reading from the returned file will return all the bytes
         of which this message consists.

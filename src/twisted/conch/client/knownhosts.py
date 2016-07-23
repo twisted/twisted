@@ -10,6 +10,7 @@ An implementation of the OpenSSH known_hosts database.
 
 import hmac
 from binascii import Error as DecodeError, b2a_base64
+from contextlib import closing
 from hashlib import sha1
 
 from zope.interface import implementer
@@ -394,7 +395,7 @@ class KnownHostsFile(object):
         except IOError:
             return
 
-        try:
+        with fp:
             for line in fp:
                 try:
                     if line.startswith(HashedEntry.MAGIC):
@@ -404,8 +405,6 @@ class KnownHostsFile(object):
                 except (DecodeError, InvalidEntry, BadKeyError):
                     entry = UnparsedEntry(line)
                 yield entry
-        finally:
-            fp.close()
 
 
     def hasHostKey(self, hostname, key):
@@ -590,18 +589,16 @@ class ConsoleUI(object):
         """
         d = defer.succeed(None)
         def body(ignored):
-            f = self.opener()
-            f.write(text)
-            while True:
-                answer = f.readline().strip().lower()
-                if answer == 'yes':
-                    f.close()
-                    return True
-                elif answer == 'no':
-                    f.close()
-                    return False
-                else:
-                    f.write("Please type 'yes' or 'no': ")
+            with closing(self.opener()) as f:
+                f.write(text)
+                while True:
+                    answer = f.readline().strip().lower()
+                    if answer == 'yes':
+                        return True
+                    elif answer == 'no':
+                        return False
+                    else:
+                        f.write("Please type 'yes' or 'no': ")
         return d.addCallback(body)
 
 
@@ -614,8 +611,7 @@ class ConsoleUI(object):
         @type text: L{bytes}
         """
         try:
-            f = self.opener()
-            f.write(text)
-            f.close()
+            with closing(self.opener()) as f:
+                f.write(text)
         except:
             log.err()

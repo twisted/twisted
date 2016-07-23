@@ -157,12 +157,12 @@ class Resolver(common.ResolverBase):
             else:
                 raise
         else:
-            mtime = os.fstat(resolvConf.fileno()).st_mtime
-            if mtime != self._lastResolvTime:
-                log.msg('%s changed, reparsing' % (self.resolv,))
-                self._lastResolvTime = mtime
-                self.parseConfig(resolvConf)
-            resolvConf.close()
+            with resolvConf:
+                mtime = os.fstat(resolvConf.fileno()).st_mtime
+                if mtime != self._lastResolvTime:
+                    log.msg('%s changed, reparsing' % (self.resolv,))
+                    self._lastResolvTime = mtime
+                    self.parseConfig(resolvConf)
 
         # Check again in a little while
         self._parseCall = self._reactor.callLater(

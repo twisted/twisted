@@ -41,18 +41,35 @@ modules = [
     "twisted.application.app",
     "twisted.application.internet",
     "twisted.application.reactors",
+    "twisted.application.runner.__init__",
+    "twisted.application.runner._exit",
+    "twisted.application.runner._runner",
+    "twisted.application.runner.test.__init__",
     "twisted.application.service",
     "twisted.application.strports",
     "twisted.application.test.__init__",
+    "twisted.application.twist.__init__",
+    "twisted.application.twist._options",
+    "twisted.application.twist._twist",
+    "twisted.application.twist.test.__init__",
     "twisted.conch.__init__",
     "twisted.conch.checkers",
     "twisted.conch.error",
+    "twisted.conch.insults.__init__",
+    "twisted.conch.insults.text",
+    "twisted.conch.insults.window",
     "twisted.conch.ssh.__init__",
     "twisted.conch.ssh._cryptography_backports",
+    "twisted.conch.ssh.channel",
     "twisted.conch.ssh.common",
+    "twisted.conch.ssh.forwarding",
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.sexpy",
     "twisted.conch.ssh.address",
+    "twisted.conch.ssh._kex",
+    "twisted.conch.ssh.transport",
+    "twisted.conch.ssh.channel",
+    "twisted.conch.ssh.userauth",
     "twisted.conch.telnet",
     "twisted.conch.test.__init__",
     "twisted.copyright",
@@ -68,12 +85,15 @@ modules = [
     "twisted.enterprise.adbapi",
     "twisted.internet.__init__",
     "twisted.internet._baseprocess",
+    "twisted.internet._dumbwin32proc",
     "twisted.internet._glibbase",
     "twisted.internet._newtls",
+    "twisted.internet._pollingfile",
     "twisted.internet._posixstdio",
     "twisted.internet._posixserialport",
     "twisted.internet._signals",
     "twisted.internet._win32serialport",
+    "twisted.internet._win32stdio",
     "twisted.internet.abstract",
     "twisted.internet.address",
     "twisted.internet.base",
@@ -85,6 +105,7 @@ modules = [
     "twisted.internet.fdesc",
     "twisted.internet.gireactor",
     "twisted.internet.gtk3reactor",
+    "twisted.internet.inotify",
     "twisted.internet.interfaces",
     "twisted.internet.iocpreactor.__init__",
     "twisted.internet.iocpreactor.abstract",
@@ -109,6 +130,7 @@ modules = [
     "twisted.internet.tcp",
     "twisted.internet.test.__init__",
     "twisted.internet.test._posixifaces",
+    "twisted.internet.test._win32ifaces",
     "twisted.internet.test.connectionmixins",
     "twisted.internet.test.fakeendpoint",
     "twisted.internet.test.modulehelpers",
@@ -117,6 +139,7 @@ modules = [
     "twisted.internet.udp",
     "twisted.internet.unix",
     "twisted.internet.utils",
+    "twisted.internet.win32eventreactor",
     "twisted.logger.__init__",
     "twisted.logger._buffer",
     "twisted.logger._file",
@@ -198,6 +221,7 @@ modules = [
     "twisted.protocols.tls",
     "twisted.python.__init__",
     "twisted.python._appdirs",
+    "twisted.python._inotify",
     "twisted.python._tzhelper",
     "twisted.python._oldstyle",
     "twisted.python._shellcomp",
@@ -228,6 +252,7 @@ modules = [
     "twisted.python.test.__init__",
     "twisted.python.test.deprecatedattributes",
     "twisted.python.test.modules_helpers",
+    "twisted.python.text",
     "twisted.python.threadable",
     "twisted.python.threadpool",
     "twisted.python.url",
@@ -236,8 +261,10 @@ modules = [
     "twisted.python.util",
     "twisted.python.versions",
     "twisted.python.zippath",
+    "twisted.python.zipstream",
     "twisted.scripts.__init__",
     "twisted.scripts._twistd_unix",
+    "twisted.scripts._twistw",
     "twisted.scripts.trial",
     "twisted.scripts.twistd",
     "twisted.test.__init__",
@@ -315,10 +342,20 @@ modules = [
 testModules = [
     "twisted.application.test.test_internet",
     "twisted.application.test.test_service",
+    "twisted.application.runner.test.test_exit",
+    "twisted.application.runner.test.test_runner",
+    "twisted.application.twist.test.test_options",
+    "twisted.application.twist.test.test_twist",
     "twisted.conch.test.test_checkers",
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_address",
+    "twisted.conch.test.test_channel",
+    "twisted.conch.test.test_forwarding",
     "twisted.conch.test.test_telnet",
+    "twisted.conch.test.test_text",
+    "twisted.conch.test.test_transport",
+    "twisted.conch.test.test_userauth",
+    "twisted.conch.test.test_window",
     "twisted.cred.test.test_cramauth",
     "twisted.cred.test.test_cred",
     "twisted.cred.test.test_digestauth",
@@ -338,6 +375,7 @@ testModules = [
     "twisted.internet.test.test_glibbase",
     "twisted.internet.test.test_inlinecb",
     "twisted.internet.test.test_iocp",
+    "twisted.internet.test.test_inotify",
     "twisted.internet.test.test_kqueuereactor",
     "twisted.internet.test.test_main",
     "twisted.internet.test.test_newtls",
@@ -396,6 +434,7 @@ testModules = [
     "twisted.python.test.test_deprecate",
     "twisted.python.test.test_dist",
     "twisted.python.test.test_dist3",
+    "twisted.python.test.test_inotify",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
     "twisted.python.test.test_shellcomp",
@@ -408,6 +447,7 @@ testModules = [
     "twisted.python.test.test_util",
     "twisted.python.test.test_versions",
     "twisted.python.test.test_zippath",
+    "twisted.python.test.test_zipstream",
     "twisted.test.test_abstract",
     "twisted.test.test_adbapi",
     "twisted.test.test_amp",
@@ -525,6 +565,7 @@ testDataFiles = [
     "twisted.positioning.test.receiver",
     "twisted.python.test.pullpipe",
     "twisted.python.test.pullpipe",
+    "twisted.test.mock_win32process",
     "twisted.test.plugin_basic",
     "twisted.test.plugin_extra1",
     "twisted.test.plugin_extra2",
@@ -540,6 +581,9 @@ testDataFiles = [
     "twisted.test.process_tester",
     "twisted.test.process_tty",
     "twisted.test.process_twisted",
+    "twisted.test.reflect_helper_IE",
+    "twisted.test.reflect_helper_VE",
+    "twisted.test.reflect_helper_ZDE",
     "twisted.test.stdio_test_consumer",
     "twisted.test.stdio_test_halfclose",
     "twisted.test.stdio_test_hostpeer",
@@ -564,6 +608,17 @@ testDataFiles = [
 
 
 almostModules = [
+    # The tests for twisted.web.conch.ssh.transport depends on the
+    # following.
+    "twisted.conch.interfaces",
+    "twisted.conch.ssh.factory",
+    "twisted.conch.ssh.connection",
+    "twisted.conch.ssh.service",
+    # twisted.conch.test.test_text and twisted.conch.test.test_window
+    # need these conch modules.  They need more work to get full
+    # Python 3 test coverage
+    "twisted.conch.insults.helper",
+    "twisted.conch.insults.insults",
     # Required for Trial
     "twisted.python.logfile",
     # Missing test coverage, see #6156:
@@ -571,16 +626,15 @@ almostModules = [
     # twisted.names.client semi-depends on twisted.names.root, but only on
     # Windows really:
     "twisted.names.root",
-    # Echo is ported for twisted.application tests:
-    "twisted.protocols.wire",
     # Missing test coverage:
     "twisted.protocols.loopback",
+    # Echo is ported for twisted.application tests:
+    "twisted.protocols.wire",
+    # Required for Trial
+    "twisted.python.logfile",
     # twisted.python.filepath depends on twisted.python.win32, but on Linux it
     # only really needs to import:
     "twisted.python.win32",
-    "twisted.test.reflect_helper_IE",
-    "twisted.test.reflect_helper_VE",
-    "twisted.test.reflect_helper_ZDE",
     # Agent code and downloadPage aren't ported, test coverage isn't complete:
     "twisted.web.client",
     # Required by twisted.web.server, no actual code here:
@@ -597,5 +651,3 @@ almostModules = [
 ]
 
 modulesToInstall = modules + testModules + almostModules
-
-portedScripts = ["bin/trial", "bin/twistd"]
