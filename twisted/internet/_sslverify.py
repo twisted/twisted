@@ -8,7 +8,6 @@ from __future__ import division, absolute_import
 import itertools
 import warnings
 
-from binascii import a2b_base64
 from hashlib import md5
 
 import OpenSSL
@@ -817,20 +816,11 @@ class PublicKey:
         involving certificate requests for computing the hash that was not
         stable in the face of changes to the underlying OpenSSL library.
 
-        The technique currently being used - using Netscape SPKI APIs in
-        OpenSSL - is still somewhat dubious, but due to limitations in both
-        pyOpenSSL and OpenSSL APIs, it is not currently possible to compute a
-        reliable hash of the public key in isolation (i.e. not paired with a
-        specific certificate).
-
         @return: Return a 32-character hexadecimal string uniquely identifying
             this public key, I{for this version of Twisted}.
         @rtype: native L{str}
         """
-        nsspki = crypto.NetscapeSPKI()
-        nsspki.set_pubkey(self.original)
-        encoded = nsspki.b64_encode()
-        raw = a2b_base64(encoded)
+        raw = crypto.dump_publickey(crypto.FILETYPE_ASN1, self.original)
         h = md5()
         h.update(raw)
         return h.hexdigest()
