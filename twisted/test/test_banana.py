@@ -127,7 +127,10 @@ class BananaTests(BananaTestBase):
         with an instance of L{type}.
         """
         # type is an instance of type
-        self._unsupportedTypeTest(type, "__builtin__.type")
+        if _PY3:
+            self._unsupportedTypeTest(type, "builtins.type")
+        else:
+            self._unsupportedTypeTest(type, "__builtin__.type")
 
 
     def test_unsupportedUserType(self):
