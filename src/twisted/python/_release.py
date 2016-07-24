@@ -1016,7 +1016,7 @@ class BuildAPIDocsScript(object):
             projectRoot.child("twisted")).getVersion()
         versionString = version.base()
         sourceURL = ("https://github.com/twisted/twisted/tree/"
-                     "twisted-%s" % (versionString,))
+                     "twisted-%s" % (versionString,) + "/src")
         apiBuilder = APIBuilder()
         apiBuilder.build(
             "Twisted",
