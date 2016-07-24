@@ -189,7 +189,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     raise BananaError("Security precaution: more than %d bytes of prefix" % (self.prefixLimit,))
                 return
             num = buffer[:pos]
-            typebyte = buffer[pos]
+            typebyte = buffer[pos:pos+1]
             rest = buffer[pos+1:]
             if len(num) > self.prefixLimit:
                 raise BananaError("Security precaution: longer than %d bytes worth of prefix" % (self.prefixLimit,))
