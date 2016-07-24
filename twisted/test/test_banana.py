@@ -8,7 +8,7 @@ from io import BytesIO
 # Twisted Imports
 from twisted.internet import protocol, main
 from twisted.python import failure
-from twisted.python.compat import _bytesChr as chr
+from twisted.python.compat import iterbytes, _bytesChr as chr
 from twisted.spread import banana
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
@@ -302,7 +302,7 @@ class BananaTests(BananaTestBase):
         @param data: The bytes to deliver.
         @type data: L{bytes}
         """
-        for byte in data:
+        for byte in iterbytes(data):
             self.enc.dataReceived(byte)
 
 

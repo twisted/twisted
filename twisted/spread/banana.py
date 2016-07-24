@@ -18,7 +18,7 @@ from io import BytesIO
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
-from twisted.python.compat import long, _bytesChr as chr
+from twisted.python.compat import iterbytes, long, _bytesChr as chr
 from twisted.python.reflect import fullyQualifiedName
 
 class BananaError(Exception):
@@ -180,7 +180,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             assert self.buffer != buffer, "This ain't right: %s %s" % (repr(self.buffer), repr(buffer))
             self.buffer = buffer
             pos = 0
-            for ch in buffer:
+            for ch in iterbytes(buffer):
                 if ch >= HIGH_BIT_SET:
                     break
                 pos = pos + 1
