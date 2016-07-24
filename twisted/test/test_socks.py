@@ -10,6 +10,7 @@ import struct, socket
 
 from twisted.internet import defer, address
 from twisted.internet.error import DNSLookupError
+from twisted.python.compat import iterbytes
 from twisted.protocols import socks
 from twisted.test import proto_helpers
 from twisted.trial import unittest
@@ -147,7 +148,7 @@ class ConnectTests(unittest.TestCase):
         # Deliver the bytes one by one to exercise the protocol's buffering
         # logic. FakeResolverReactor's resolve method is invoked to "resolve"
         # the hostname.
-        for byte in clientRequest:
+        for byte in iterbytes(clientRequest):
             self.sock.dataReceived(byte)
 
         sent = self.sock.transport.value()
@@ -190,7 +191,7 @@ class ConnectTests(unittest.TestCase):
         # Deliver the bytes one by one to exercise the protocol's buffering
         # logic. FakeResolverReactor's resolve method is invoked to "resolve"
         # the hostname.
-        for byte in clientRequest:
+        for byte in iterbytes(clientRequest):
             self.sock.dataReceived(byte)
 
         # Verify that the server responds with a 91 error.
@@ -331,7 +332,7 @@ class BindTests(unittest.TestCase):
         # Deliver the bytes one by one to exercise the protocol's buffering
         # logic. FakeResolverReactor's resolve method is invoked to "resolve"
         # the hostname.
-        for byte in clientRequest:
+        for byte in iterbytes(clientRequest):
             self.sock.dataReceived(byte)
 
         sent = self.sock.transport.value()
@@ -387,7 +388,7 @@ class BindTests(unittest.TestCase):
         # Deliver the bytes one by one to exercise the protocol's buffering
         # logic. FakeResolverReactor's resolve method is invoked to "resolve"
         # the hostname.
-        for byte in clientRequest:
+        for byte in iterbytes(clientRequest):
             self.sock.dataReceived(byte)
 
         # Verify that the server responds with a 91 error.
