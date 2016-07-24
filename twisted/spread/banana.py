@@ -39,15 +39,15 @@ def b1282int(st):
     Convert an integer represented as a base 128 string into an L{int} or
     L{long}.
 
-    @param st: The integer encoded in a string.
-    @type st: L{str}
+    @param st: The integer encoded in a byte string.
+    @type st: L{bytes}
 
-    @return: The integer value extracted from the string.
+    @return: The integer value extracted from the byte string.
     @rtype: L{int} or L{long}
     """
     e = 1
     i = 0
-    for char in st:
+    for char in iterbytes(st):
         n = ord(char)
         i += (n * e)
         e <<= 7
