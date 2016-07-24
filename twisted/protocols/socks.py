@@ -18,7 +18,7 @@ from twisted.python import log
 
 
 class SOCKSv4Outgoing(protocol.Protocol):
-    def __init__(self,socks):
+    def __init__(self, socks):
         self.socks=socks
 
 
@@ -32,7 +32,7 @@ class SOCKSv4Outgoing(protocol.Protocol):
         self.socks.transport.loseConnection()
 
 
-    def dataReceived(self,data):
+    def dataReceived(self, data):
         self.socks.write(data)
 
 
@@ -56,7 +56,7 @@ class SOCKSv4Incoming(protocol.Protocol):
         self.socks.write(data)
 
 
-    def write(self,data):
+    def write(self, data):
         self.socks.log(self,data)
         self.transport.write(data)
 
@@ -66,14 +66,14 @@ class SOCKSv4(protocol.Protocol):
     """
     An implementation of the SOCKSv4 protocol.
 
-    @type logging: C{str} or L{None}
+    @type logging: L{str} or L{None}
     @ivar logging: If not L{None}, the name of the logfile to which connection
         information will be written.
 
     @type reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
     @ivar reactor: The reactor used to create connections.
 
-    @type buf: C{str}
+    @type buf: L{str}
     @ivar buf: Part of a SOCKSv4 connection request.
 
     @type otherConn: C{SOCKSv4Incoming}, C{SOCKSv4Outgoing} or L{None}
@@ -133,21 +133,21 @@ class SOCKSv4(protocol.Protocol):
         is after the server address has been extracted from the header. For a
         SOCKSv4a packet this is after the host name has been resolved.
 
-        @type server: C{str}
+        @type server: L{str}
         @param server: The IP address of the destination, represented as a
             dotted quad.
 
-        @type user: C{str}
+        @type user: L{str}
         @param user: The username associated with the connection.
 
-        @type version: C{int}
+        @type version: L{int}
         @param version: The SOCKS protocol version number.
 
-        @type code: C{int}
+        @type code: L{int}
         @param code: The comand code. 1 means establish a TCP/IP stream
             connection, and 2 means establish a TCP/IP port binding.
 
-        @type port: C{int}
+        @type port: L{int}
         @param port: The port number associated with the connection.
         """
         assert version == 4, "Bad version code: %s" % version
