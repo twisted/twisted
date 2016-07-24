@@ -15,7 +15,8 @@ from twisted.test.proto_helpers import StringTransport
 
 class MathTests(unittest.TestCase):
     def test_int2b128(self):
-        funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10]
+        funkylist = (list(range(0,100)) + list(range(1000,1100)) +
+                    list(range(1000000,1000100)) + [1024 **10])
         for i in funkylist:
             x = BytesIO()
             banana.int2b128(i, x.write)
