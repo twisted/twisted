@@ -1,9 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import StringIO
 import sys
 from functools import partial
+from io import BytesIO
 
 # Twisted Imports
 from twisted.trial import unittest
@@ -17,7 +17,7 @@ class MathTests(unittest.TestCase):
     def test_int2b128(self):
         funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10]
         for i in funkylist:
-            x = StringIO.StringIO()
+            x = BytesIO()
             banana.int2b128(i, x.write)
             v = x.getvalue()
             y = banana.b1282int(v)
@@ -72,7 +72,7 @@ class BananaTestBase(unittest.TestCase):
     encClass = banana.Banana
 
     def setUp(self):
-        self.io = StringIO.StringIO()
+        self.io = BytesIO()
         self.enc = self.encClass()
         self.enc.makeConnection(protocol.FileWrapper(self.io))
         selectDialect(self.enc, b"none")
