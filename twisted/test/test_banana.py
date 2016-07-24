@@ -104,9 +104,9 @@ class BananaTests(BananaTestBase):
     """
 
     def test_string(self):
-        self.enc.sendEncoded("hello")
+        self.enc.sendEncoded(b"hello")
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == 'hello'
+        assert self.result == b'hello'
 
 
     def test_unsupportedUnicode(self):
@@ -307,19 +307,19 @@ class BananaTests(BananaTestBase):
 
 
     def test_oversizedList(self):
-        data = '\x02\x01\x01\x01\x01\x80'
+        data = b'\x02\x01\x01\x01\x01\x80'
         # list(size=0x0101010102, about 4.3e9)
         self.assertRaises(banana.BananaError, self.feed, data)
 
 
     def test_oversizedString(self):
-        data = '\x02\x01\x01\x01\x01\x82'
+        data = b'\x02\x01\x01\x01\x01\x82'
         # string(size=0x0101010102, about 4.3e9)
         self.assertRaises(banana.BananaError, self.feed, data)
 
 
     def test_crashString(self):
-        crashString = '\x00\x00\x00\x00\x04\x80'
+        crashString = b'\x00\x00\x00\x00\x04\x80'
         # string(size=0x0400000000, about 17.2e9)
 
         #  cBanana would fold that into a 32-bit 'int', then try to allocate
