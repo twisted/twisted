@@ -391,6 +391,6 @@ def decode(st):
     try:
         _i.dataReceived(st)
     finally:
-        _i.buffer = ''
+        _i.buffer = b''
         del _i.expressionReceived
     return l[0]
