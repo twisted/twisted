@@ -170,7 +170,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         else:
             self.callExpressionReceived(item)
 
-    buffer = ''
+    buffer = b''
 
     def dataReceived(self, chunk):
         buffer = self.buffer + chunk
@@ -245,7 +245,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
                 item = listStack.pop()[1]
                 gotItem(item)
-        self.buffer = ''
+        self.buffer = b''
 
 
     def expressionReceived(self, lst):
