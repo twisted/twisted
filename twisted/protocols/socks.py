@@ -87,7 +87,7 @@ class SOCKSv4(protocol.Protocol):
 
 
     def connectionMade(self):
-        self.buf = ""
+        self.buf = b""
         self.otherConn = None
 
 
@@ -103,19 +103,19 @@ class SOCKSv4(protocol.Protocol):
             return
         self.buf = self.buf + data
         completeBuffer = self.buf
-        if "\000" in self.buf[8:]:
+        if b"\000" in self.buf[8:]:
             head, self.buf = self.buf[:8], self.buf[8:]
             version, code, port = struct.unpack("!BBH", head[:4])
-            user, self.buf = self.buf.split("\000", 1)
-            if head[4:7] == "\000\000\000" and head[7] != "\000":
+            user, self.buf = self.buf.split(b"\000", 1)
+            if head[4:7] == b"\000\000\000" and head[7] != b"\000":
                 # An IP address of the form 0.0.0.X, where X is non-zero,
                 # signifies that this is a SOCKSv4a packet.
                 # If the complete packet hasn't been received, restore the
                 # buffer and wait for it.
-                if "\000" not in self.buf:
+                if b"\000" not in self.buf:
                     self.buf = completeBuffer
                     return
-                server, self.buf = self.buf.split("\000", 1)
+                server, self.buf = self.buf.split(b"\000", 1)
                 d = self.reactor.resolve(server)
                 d.addCallback(self._dataReceived2, user,
                               version, code, port)
@@ -163,7 +163,7 @@ class SOCKSv4(protocol.Protocol):
                           self = self: self.makeReply(90, 0, x[1], x[0]))
         else:
             raise RuntimeError("Bad Connect Code: %s" % (code,))
-        assert self.buf == "", "hmm, still stuff in buffer... %s" % repr(
+        assert self.buf == b"", "hmm, still stuff in buffer... %s" % repr(
             self.buf)
 
 
