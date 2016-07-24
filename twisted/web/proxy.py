@@ -275,7 +275,7 @@ class ReverseProxyResource(Resource):
         C{path} at the end.
         """
         return ReverseProxyResource(
-            self.host, self.port, self.path + b'/' + urlquote(path, safe=b"").encode('utf-8'),
+            self.host, self.port, self.path.encode('utf-8') + b'/' + urlquote(path, safe=b"").encode('utf-8'),
             self.reactor)
 
 
