@@ -8,7 +8,7 @@ from io import BytesIO
 # Twisted Imports
 from twisted.internet import protocol, main
 from twisted.python import failure
-from twisted.python.compat import iterbytes, _bytesChr as chr
+from twisted.python.compat import iterbytes, _PY3, _bytesChr as chr
 from twisted.spread import banana
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
@@ -114,7 +114,10 @@ class BananaTests(BananaTestBase):
         Banana does not support unicode.  ``Banana.sendEncoded`` raises
         ``BananaError`` if called with an instance of ``unicode``.
         """
-        self._unsupportedTypeTest(u"hello", "__builtin__.unicode")
+        if _PY3:
+            self._unsupportedTypeTest(u"hello", "builtins.str")
+        else:
+            self._unsupportedTypeTest(u"hello", "__builtin__.unicode")
 
 
     def test_unsupportedBuiltinType(self):

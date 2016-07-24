@@ -350,7 +350,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         elif isinstance(obj, float):
             write(FLOAT)
             write(struct.pack("!d", obj))
-        elif isinstance(obj, str):
+        elif isinstance(obj, bytes):
             # TODO: an API for extending banana...
             if self.currentDialect == "pb" and obj in self.outgoingSymbols:
                 symbolID = self.outgoingSymbols[obj]
@@ -359,7 +359,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             else:
                 if len(obj) > SIZE_LIMIT:
                     raise BananaError(
-                        "string is too long to send (%d)" % (len(obj),))
+                        "byte string is too long to send (%d)" % (len(obj),))
                 int2b128(len(obj), write)
                 write(STRING)
                 write(obj)
