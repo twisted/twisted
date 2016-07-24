@@ -22,8 +22,10 @@ class StringTCPTransport(proto_helpers.StringTransport):
     def getPeer(self):
         return self.peer
 
+
     def getHost(self):
         return address.IPv4Address('TCP', '2.3.4.5', 42)
+
 
     def loseConnection(self):
         self.stringTCPTransport_closing = True
@@ -70,6 +72,7 @@ class SOCKSv4Driver(socks.SOCKSv4):
         proto.connectionMade()
         self.driver_outgoing = proto
         return defer.succeed(proto)
+
 
     def listenClass(self, port, klass, *args):
         # fake it
@@ -268,6 +271,7 @@ class BindTests(unittest.TestCase):
 ##             self.assert_(incoming.transport.stringTCPTransport_closing,
 ##                     "Incoming SOCKS connections need to be closed.")
 
+
     def test_simple(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 2, 34)
@@ -410,6 +414,7 @@ class BindTests(unittest.TestCase):
         self.assertTrue(self.sock.transport.stringTCPTransport_closing)
         self.assertIsNone(self.sock.driver_listen)
 
+
     def test_eofRemote(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 2, 34)
@@ -442,6 +447,7 @@ class BindTests(unittest.TestCase):
         incoming.transport.loseConnection()
         incoming.connectionLost('fake reason')
 
+
     def test_eofLocal(self):
         self.sock.dataReceived(
             struct.pack('!BBH', 4, 2, 34)
@@ -472,6 +478,7 @@ class BindTests(unittest.TestCase):
 
         # now close it from the client side
         self.sock.connectionLost('fake reason')
+
 
     def test_badSource(self):
         self.sock.dataReceived(
