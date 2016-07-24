@@ -38,7 +38,7 @@ class FakeResolverReactor:
     """
     def __init__(self, names):
         """
-        @type names: C{dict} containing C{str} keys and C{str} values.
+        @type names: L{dict} containing L{str} keys and L{str} values.
         @param names: A hostname to IP address mapping. The IP addresses are
             stringified dotted quads.
         """
