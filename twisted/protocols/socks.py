@@ -95,7 +95,7 @@ class SOCKSv4(protocol.Protocol):
         """
         Called whenever data is received.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @param data: Part or all of a SOCKSv4 packet.
         """
         if self.otherConn:
