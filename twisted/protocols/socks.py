@@ -18,20 +18,23 @@ from twisted.python import log
 
 
 class SOCKSv4Outgoing(protocol.Protocol):
-
     def __init__(self,socks):
         self.socks=socks
+
 
     def connectionMade(self):
         peer = self.transport.getPeer()
         self.socks.makeReply(90, 0, port=peer.port, ip=peer.host)
         self.socks.otherConn=self
 
+
     def connectionLost(self, reason):
         self.socks.transport.loseConnection()
 
+
     def dataReceived(self,data):
         self.socks.write(data)
+
 
     def write(self,data):
         self.socks.log(self,data)
@@ -40,20 +43,23 @@ class SOCKSv4Outgoing(protocol.Protocol):
 
 
 class SOCKSv4Incoming(protocol.Protocol):
-
     def __init__(self,socks):
         self.socks=socks
         self.socks.otherConn=self
 
+
     def connectionLost(self, reason):
         self.socks.transport.loseConnection()
+
 
     def dataReceived(self,data):
         self.socks.write(data)
 
+
     def write(self,data):
         self.socks.log(self,data)
         self.transport.write(data)
+
 
 
 class SOCKSv4(protocol.Protocol):
@@ -79,9 +85,11 @@ class SOCKSv4(protocol.Protocol):
         self.logging = logging
         self.reactor = reactor
 
+
     def connectionMade(self):
         self.buf = ""
         self.otherConn = None
+
 
     def dataReceived(self, data):
         """
@@ -117,6 +125,7 @@ class SOCKSv4(protocol.Protocol):
                 server = socket.inet_ntoa(head[4:8])
 
             self._dataReceived2(server, user, version, code, port)
+
 
     def _dataReceived2(self, server, user, version, code, port):
         """
@@ -157,28 +166,35 @@ class SOCKSv4(protocol.Protocol):
         assert self.buf == "", "hmm, still stuff in buffer... %s" % repr(
             self.buf)
 
+
     def connectionLost(self, reason):
         if self.otherConn:
             self.otherConn.transport.loseConnection()
+
 
     def authorize(self,code,server,port,user):
         log.msg("code %s connection to %s:%s (user %s) authorized" % (code,server,port,user))
         return 1
 
+
     def connectClass(self, host, port, klass, *args):
         return protocol.ClientCreator(reactor, klass, *args).connectTCP(host,port)
+
 
     def listenClass(self, port, klass, *args):
         serv = reactor.listenTCP(port, klass(*args))
         return defer.succeed(serv.getHost()[1:])
 
+
     def makeReply(self,reply,version=0,port=0,ip="0.0.0.0"):
         self.transport.write(struct.pack("!BBH",version,reply,port)+socket.inet_aton(ip))
         if reply!=90: self.transport.loseConnection()
 
+
     def write(self,data):
         self.log(self,data)
         self.transport.write(data)
+
 
     def log(self,proto,data):
         if not self.logging: return
@@ -208,9 +224,9 @@ class SOCKSv4Factory(protocol.Factory):
 
     Constructor accepts one argument, a log file name.
     """
-
     def __init__(self, log):
         self.logging = log
+
 
     def buildProtocol(self, addr):
         return SOCKSv4(self.logging, reactor)
@@ -221,7 +237,6 @@ class SOCKSv4IncomingFactory(protocol.Factory):
     """
     A utility class for building protocols for incoming connections.
     """
-
     def __init__(self, socks, ip):
         self.socks = socks
         self.ip = ip
