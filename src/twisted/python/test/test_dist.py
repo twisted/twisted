@@ -119,7 +119,7 @@ class OptionalDependenciesTests(TestCase):
         work for both clients and servers.
         """
         deps = _EXTRAS_REQUIRE['tls']
-        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
 
@@ -176,7 +176,7 @@ class OptionalDependenciesTests(TestCase):
         all supported operating systems.
         """
         deps = _EXTRAS_REQUIRE['all_non_platform']
-        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
@@ -196,7 +196,7 @@ class OptionalDependenciesTests(TestCase):
         Mac OS X platform.
         """
         deps = _EXTRAS_REQUIRE['osx_platform']
-        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)
@@ -216,7 +216,7 @@ class OptionalDependenciesTests(TestCase):
         Microsoft Windows platform.
         """
         deps = _EXTRAS_REQUIRE['windows_platform']
-        self.assertIn('pyopenssl >= 0.13', deps)
+        self.assertIn('pyopenssl >= 16.0.0', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('idna >= 0.6', deps)
         self.assertIn('gmpy', deps)

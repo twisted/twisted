@@ -28,8 +28,6 @@ else:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
-    if getattr(SSL.Context, "set_tlsext_servername_callback", None) is None:
-        skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)

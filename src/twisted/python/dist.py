@@ -78,7 +78,7 @@ if not _PY3:
 
 _EXTRA_OPTIONS = dict(
     dev=_dev,
-    tls=['pyopenssl >= 0.13',
+    tls=['pyopenssl >= 16.0.0',
          'service_identity',
          'idna >= 0.6'],
     conch=['gmpy',
