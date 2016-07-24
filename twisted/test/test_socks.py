@@ -54,7 +54,8 @@ class FakeResolverReactor:
             return defer.succeed(self.names[hostname])
         except KeyError:
             return defer.fail(
-                DNSLookupError("FakeResolverReactor couldn't find " + hostname))
+                DNSLookupError("FakeResolverReactor couldn't find " +
+                                hostname.decode("utf-8")))
 
 
 
