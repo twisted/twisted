@@ -190,6 +190,10 @@ class BananaTests(BananaTestBase):
                     else:
                         self.assertIsInstance(self.result, int)
 
+    if _PY3:
+        test_largeLong.skip = (
+            "Python 3 has unified int/long into an int type of unlimited size")
+
 
     def _getSmallest(self):
         # How many bytes of prefix our implementation allows
