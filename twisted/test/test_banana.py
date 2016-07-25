@@ -300,7 +300,7 @@ class BananaTests(BananaTestBase):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5,
                [b"six", b"seven", [b"eight", 9]], [10],
                # TODO: currently the C implementation's a bit buggy...
-               sys.maxint * 3, sys.maxint * 2, sys.maxint * -2]
+               sys.maxsize * 3, sys.maxsize * 2, sys.maxsize * -2]
         self.enc.sendEncoded(foo)
         self.feed(self.io.getvalue())
         assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
