@@ -120,6 +120,9 @@ class JellyTests(unittest.TestCase):
     @cvar decimalData: serialized version of decimal data, to be used in tests.
     @type decimalData: L{list}
     """
+    decimalData = ['list', ['decimal', 995, -2], ['decimal', 0, 0],
+                           ['decimal', 123456, 0], ['decimal', -78901, -3]]
+
 
     def _testSecurity(self, inputList, atom):
         """
@@ -259,19 +262,15 @@ class JellyTests(unittest.TestCase):
         self.assertIsNot(inputList, output)
 
 
-    decimalData = ['list', ['decimal', 995, -2], ['decimal', 0, 0],
-                           ['decimal', 123456, 0], ['decimal', -78901, -3]]
-
-
     def test_decimalUnjelly(self):
         """
         Unjellying the s-expressions produced by jelly for L{decimal.Decimal}
         instances should result in L{decimal.Decimal} instances with the values
         represented by the s-expressions.
 
-        This test also verifies that C{self.decimalData} contains valid jellied
+        This test also verifies that L{decimalData} contains valid jellied
         data.  This is important since L{test_decimalMissing} re-uses
-        C{self.decimalData} and is expected to be unable to produce
+        L{decimalData} and is expected to be unable to produce
         L{decimal.Decimal} instances even though the s-expression correctly
         represents a list of them.
         """
