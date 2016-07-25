@@ -1367,7 +1367,7 @@ class SSHServerTransport(SSHTransportBase):
             self.ignoreNextPacket = 0
             return
 
-        # KEXDH_INIT and KEX_DH_GEX_REQUEST_OLD have the same value, so use
+        # KEXDH_INIT, KEX_ECDH_INIT, and KEX_DH_GEX_REQUEST_OLD have the same value, so use
         # another cue to decide what kind of message the peer sent us.
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_INIT(packet)
