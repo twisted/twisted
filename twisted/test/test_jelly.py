@@ -182,6 +182,7 @@ class JellyTests(unittest.TestCase):
         m = jelly.unjelly(c)
         self.assertIsInstance(m, D)
         self.assertIs(m.n2, m.n3)
+        self.assertEqual(m.x, 1)
 
 
     def test_newStyleWithSlots(self):
