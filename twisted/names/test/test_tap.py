@@ -102,8 +102,10 @@ class OptionsTests(SynchronousTestCase):
                     recurser._parseCall.cancel()
 
         # On Windows, we need to use a threaded resolver, which leaves trash
-        # lying about that we can't easily clean up. This isn't a good bit of
-        # code. Sorry, abstraction gods.
+        # lying about that we can't easily clean up without reaching into the
+        # reactor and cancelling them. We only cancel the cleanup functions, as
+        # there should be no others (and it leaving a callLater lying about
+        # should rightly cause the test to fail.
         if platform.getType() != 'posix':
 
             # We want the delayed calls on the reactor, which should be all of
