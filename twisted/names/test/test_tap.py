@@ -105,7 +105,7 @@ class OptionsTests(SynchronousTestCase):
         # lying about that we can't easily clean up without reaching into the
         # reactor and cancelling them. We only cancel the cleanup functions, as
         # there should be no others (and it leaving a callLater lying about
-        # should rightly cause the test to fail.
+        # should rightly cause the test to fail).
         if platform.getType() != 'posix':
 
             # We want the delayed calls on the reactor, which should be all of
