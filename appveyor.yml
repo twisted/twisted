@@ -35,7 +35,6 @@ environment:
     - PYTHON: C:\Python27-x64
       TOXENV: py27-coverage-windows,codecov-publish
       TWISTED_REACTOR: select
-  matrix:
     - PYTHON: C:\Python27-x64
       TOXENV: py27-coverage-windows,codecov-publish
       TWISTED_REACTOR: iocp
