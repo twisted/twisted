@@ -169,6 +169,10 @@ class JellyTests(unittest.TestCase):
 
 
     def test_newStyle(self):
+        """
+        Test that a new style class can be jellied and unjellied with its
+        objects and attribute values preserved.
+        """
         n = D()
         n.x = 1
         n2 = D()
