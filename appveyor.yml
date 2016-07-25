@@ -32,7 +32,7 @@ environment:
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
     - PYTHON: C:\Python27-x64
-      TOXENV: py27-coverage-windows,py27-nomodulescov-windows,codecov-publish
+      TOXENV: py27-coverage-windows,codecov-publish
 
 
 install:
