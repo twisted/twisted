@@ -36,7 +36,7 @@ environment:
       TOXENV: py27-coverage-windows,codecov-publish
       TWISTED_REACTOR: select
     - PYTHON: C:\Python27-x64
-      TOXENV: py27-coverage-windows,codecov-publish
+      TOXENV: py27-coverage-buildext-windows,codecov-publish
       TWISTED_REACTOR: iocp
 
 install:
