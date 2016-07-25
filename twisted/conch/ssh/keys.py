@@ -1265,10 +1265,10 @@ class Key(object):
             signatureType, signature = b'ssh-dss', common.NS(signature)
         else:
             signatureType, signature = common.getNS(signature)
-        #Do we really need this check?
-        #nist check must be first
-        if signatureType.find(b'nist') >= 0 and signatureType != self.sshType():
+        
+        if signatureType != self.sshType():
             return False
+        
         name = self.type()
         if name == 'RSA':
             k = self._keyObject
