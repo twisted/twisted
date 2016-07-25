@@ -352,7 +352,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             write(struct.pack("!d", obj))
         elif isinstance(obj, bytes):
             # TODO: an API for extending banana...
-            if self.currentDialect == "pb" and obj in self.outgoingSymbols:
+            if self.currentDialect == b"pb" and obj in self.outgoingSymbols:
                 symbolID = self.outgoingSymbols[obj]
                 int2b128(symbolID, write)
                 write(VOCAB)
