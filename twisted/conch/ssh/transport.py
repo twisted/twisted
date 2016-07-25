@@ -476,12 +476,6 @@ class SSHTransportBase(protocol.Protocol):
 
     supportedKeyExchanges = _kex.getSupportedKeyExchanges() 
     supportedPublicKeys = [b'ssh-rsa', b'ssh-dss']
-
-    #Add the supported EC keys, and change the name from ecdh* to ecdsa*
-    for eckey in supportedKeyExchanges:
-        if 'ecdh' in eckey:
-            supportedPublicKeys += [eckey.replace("ecdh", "ecdsa")]
-
     supportedCompressions = [b'none', b'zlib']
     supportedLanguages = ()
     supportedVersions = (b'1.99', b'2.0')
@@ -1282,7 +1276,6 @@ class SSHServerTransport(SSHTransportBase):
             shortKex = re.search("(nist[kpbt]\d{3})$", self.kexAlg).group(1)
         except:
             raise UnsupportedAlgorithm(self.kexAlg)
-            return
 
         #Get the curve instance
         self.curve = self.curveTable[shortKex]
@@ -1574,7 +1567,6 @@ class SSHClientTransport(SSHTransportBase):
                 shortKex = re.search("(nist[kpbt]\d{3})$", self.kexAlg).group(1)
             except:
                 raise UnsupportedAlgorithm(self.kexAlg)
-                return
 
             #Get the curve
             self.curve = self.curveTable[shortKex]
@@ -1657,7 +1649,6 @@ class SSHClientTransport(SSHTransportBase):
 
         if not keys.Key.fromString(self.theirECHost).verify(signature, exchangeHash):
             raise InvalidSignature("Signature Verification Failed!")
-            return
 
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1701,8 +1692,6 @@ class SSHClientTransport(SSHTransportBase):
         """
         This handles different messages which share an integer value.
        
-        If it is ECDH, call C{_ssh_KEX_ECDH_REPLY} and pass along the packet.
-
         If the key exchange does not have a fixed prime/generator group,
         we generate a Diffie-Hellman public key and send it in a
         MSG_KEX_DH_GEX_INIT message.
@@ -1987,10 +1976,6 @@ MSG_KEX_DH_GEX_REQUEST = 34
 MSG_KEX_DH_GEX_GROUP = 31
 MSG_KEX_DH_GEX_INIT = 32
 MSG_KEX_DH_GEX_REPLY = 33
-
-#Unused but here for reference and possibly future use.
-#MSG_KEX_ECDH_INIT = 30
-#MSG_KEX_ECDH_REPLY = 31
 
 DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT = 1
 DISCONNECT_PROTOCOL_ERROR = 2
