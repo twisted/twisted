@@ -1562,7 +1562,7 @@ class SSHClientTransport(SSHTransportBase):
             #Find the base curve info
             try:
                 shortKex = re.search("(nist[kpbt]\d{3})$", self.kexAlg).group(1)
-            except:
+            except AttributeError:
                 raise UnsupportedAlgorithm(self.kexAlg)
 
             #Get the curve
