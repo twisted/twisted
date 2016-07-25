@@ -286,7 +286,7 @@ class LoopbackRelay:
             self.logFile.write("loopback writing %s\n" % repr(data))
 
     def writeSequence(self, iovec):
-        self.write(b"".join(iovec))
+        self.write("".join(iovec))
 
     def clearBuffer(self):
         if self.shouldLose == -1:
