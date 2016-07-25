@@ -4,6 +4,9 @@
 
 """
 Handling of RSA and DSA keys.
+
+@ivar curveTable: a look up table for translating NIST standard curve names to Cryptograpy instances.
+@ivar oidTable: a table to translate OID values to Cryptography instances.
 """
 
 from __future__ import absolute_import, division
@@ -11,7 +14,6 @@ from __future__ import absolute_import, division
 import base64
 import itertools
 import warnings
-import re
 
 from hashlib import md5
 
@@ -19,7 +21,6 @@ from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
-from cryptography.hazmat.primitives.serialization import load_der_private_key, load_pem_private_key, load_ssh_public_key
 
 try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
@@ -74,16 +75,6 @@ oidTable = {
     '1.3.132.0.37' : ec.SECT409R1(),
     '1.3.132.0.38' : ec.SECT571K1()
     }
-
-#Return the curve table dictionary for nist name lookup.
-def getCurveTable():
-    return curveTable
-
-
-#Return the curve table dictionary for OID lookup.
-def getOidTable():
-    return oidTable
-
 
 class BadKeyError(Exception):
     """
@@ -1053,7 +1044,6 @@ class Key(object):
         # No support for EC keys yet.
         if self.type() == 'EC':
             raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
-            return
 
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
@@ -1081,7 +1071,6 @@ class Key(object):
         # No support for EC keys yet.
         if self.type() == 'EC':
             raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
-            return
 
         data = self.data()
         if self.isPublic():
@@ -1144,7 +1133,6 @@ class Key(object):
         # No support for EC keys yet.
         if self.type() == 'EC':
             raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
-            return
 
         if self.isPublic():
             if type == 'RSA':
@@ -1209,7 +1197,6 @@ class Key(object):
             # But commented out because it hasn't been tested yet.
             elif self.type() == 'EC':
                 raise UnsupportedAlgorithm("toString() does not support Elliptic Curves yet.")
-                return
                 #values = (data['curve'], data['curve'][-8:], data['p'], data['x'])
             return common.NS(self.sshType()) + b''.join(map(common.MP, values))
 
@@ -1269,8 +1256,8 @@ class Key(object):
         if signatureType != self.sshType():
             return False
         
-        name = self.type()
-        if name == 'RSA':
+        keyType = self.type()
+        if keyType == 'RSA':
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
@@ -1279,7 +1266,7 @@ class Key(object):
                 padding.PKCS1v15(),
                 hashes.SHA1(),
             )
-        elif name == 'DSA':
+        elif keyType == 'DSA':
             concatenatedSignature = common.getNS(signature)[0]
             r = int_from_bytes(concatenatedSignature[:20], 'big')
             s = int_from_bytes(concatenatedSignature[20:], 'big')
@@ -1298,8 +1285,6 @@ class Key(object):
             return True
         except InvalidSignature:
             return False
-        else:
-            return True
 
 
 
