@@ -26,6 +26,7 @@ cache:
 environment:
   global:
     TRIAL_REPORTER: text
+    TWISTED_REACTOR: default
 
   # Only use pre-installed Python versions, which Appveyor may upgrade to
   # a later point release.
@@ -33,7 +34,11 @@ environment:
   matrix:
     - PYTHON: C:\Python27-x64
       TOXENV: py27-coverage-windows,codecov-publish
-
+      TWISTED_REACTOR: select
+  matrix:
+    - PYTHON: C:\Python27-x64
+      TOXENV: py27-coverage-windows,codecov-publish
+      TWISTED_REACTOR: iocp
 
 install:
   # Get some information about the build environment.
