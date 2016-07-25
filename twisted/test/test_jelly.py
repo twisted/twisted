@@ -118,7 +118,7 @@ class JellyTests(unittest.TestCase):
     Testcases for L{jelly} module serialization.
 
     @cvar decimalData: serialized version of decimal data, to be used in tests.
-    @type decimalData: C{list}
+    @type decimalData: L{list}
     """
 
     def _testSecurity(self, inputList, atom):
@@ -126,10 +126,10 @@ class JellyTests(unittest.TestCase):
         Helper test method to test security options for a type.
 
         @param inputList: a sample input for the type.
-        @type inputList: C{list}
+        @type inputList: L{list}
 
         @param atom: atom identifier for the type.
-        @type atom: C{str}
+        @type atom: L{str}
         """
         c = jelly.jelly(inputList)
         taster = jelly.SecurityOptions()
@@ -307,7 +307,7 @@ class JellyTests(unittest.TestCase):
 
     def test_frozenset(self):
         """
-        Jellying C{frozenset} instances and then unjellying the result
+        Jellying L{frozenset} instances and then unjellying the result
         should produce objects which represent the values of the original
         inputs.
         """
@@ -329,7 +329,7 @@ class JellyTests(unittest.TestCase):
 
     def test_frozensetSecurity(self):
         """
-        By default, C{frozenset} objects should be allowed by
+        By default, L{frozenset} objects should be allowed by
         L{jelly.SecurityOptions}. If not allowed, L{jelly.unjelly} should raise
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
@@ -360,7 +360,7 @@ class JellyTests(unittest.TestCase):
     def test_oldImmutableSets(self):
         """
         Test jellying C{sets.ImmutableSet}: it should serialize to the same
-        thing as C{frozenset} jelly, and be unjellied as C{frozenset} if
+        thing as L{frozenset} jelly, and be unjellied as L{frozenset} if
         available.
         """
         inputList = [jelly._sets.ImmutableSet([1, 2, 3])]
@@ -687,7 +687,7 @@ class CircularReferenceTests(unittest.TestCase):
 
     def test_frozenset(self):
         """
-        Check that a C{frozenset} can contain a circular reference and be
+        Check that a L{frozenset} can contain a circular reference and be
         serialized and unserialized without losing the reference.
         """
         a = SimpleJellyTest(None, None)
