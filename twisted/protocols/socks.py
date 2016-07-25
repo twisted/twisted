@@ -107,7 +107,7 @@ class SOCKSv4(protocol.Protocol):
             head, self.buf = self.buf[:8], self.buf[8:]
             version, code, port = struct.unpack("!BBH", head[:4])
             user, self.buf = self.buf.split(b"\000", 1)
-            if head[4:7] == b"\000\000\000" and head[7] != b"\000":
+            if head[4:7] == b"\000\000\000" and head[7:8] != b"\000":
                 # An IP address of the form 0.0.0.X, where X is non-zero,
                 # signifies that this is a SOCKSv4a packet.
                 # If the complete packet hasn't been received, restore the
