@@ -32,12 +32,18 @@ environment:
   # a later point release.
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
-    # - PYTHON: C:\Python27-x64
-    #   TOXENV: py27-coverage-windows,codecov-publish
-    #   TWISTED_REACTOR: select
+    - PYTHON: C:\Python27-x64
+      TOXENV: py27-coverage-windows,codecov-publish
+      TWISTED_REACTOR: select
     - PYTHON: C:\Python27-x64
       TOXENV: py27-coverage-buildext-windows,codecov-publish
       TWISTED_REACTOR: iocp
+
+  allow_failures:
+    # FIXME: https://twistedmatrix.com/trac/ticket/8679
+    # For now iocp reactor tests are failing.
+    - TWISTED_REACTOR: iocp
+
 
 install:
   # Get some information about the build environment.
