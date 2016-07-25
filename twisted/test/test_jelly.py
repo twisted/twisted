@@ -38,7 +38,7 @@ class A:
 
     def amethod(self):
         """
-        Method tp be used in serialization tests.
+        Method to be used in serialization tests.
         """
 
 
@@ -126,7 +126,7 @@ class JellyTests(unittest.TestCase):
         Helper test method to test security options for a type.
 
         @param inputList: a sample input for the type.
-        @param inputList: C{list}
+        @type inputList: C{list}
 
         @param atom: atom identifier for the type.
         @type atom: C{str}
@@ -224,6 +224,11 @@ class JellyTests(unittest.TestCase):
 
 
     def test_dateTime(self):
+        """
+        Jellying L{datetime.timedelta} instances and then unjellying the result
+        should produce objects which represent the values of the original
+        inputs.
+        """
         dtn = datetime.datetime.now()
         dtd = datetime.datetime.now() - dtn
         input = [dtn, dtd]
@@ -678,7 +683,7 @@ class CircularReferenceTests(unittest.TestCase):
     def test_frozenset(self):
         """
         Check that a C{frozenset} can contain a circular reference and be
-        serializeserialized without losing the reference.
+        serialized and unserialized without losing the reference.
         """
         a = SimpleJellyTest(None, None)
         s = frozenset([a])
