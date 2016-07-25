@@ -45,7 +45,8 @@ install:
   # how to run such command on Windows :)
   # - ps: "ls \"C:/\""
   # - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
-  # - ps: echo $env:PYTHON $env:TOXENV
+  # See the environment variables used for this build.
+  - ps: echo $env:PYTHON $env:TOXENV $env:TWISTED_REACTOR
   # Check that we have the expected version and architecture for Python
   - "%PYTHON%\\python --version"
   - "%PYTHON%\\python -c \"import struct; print(struct.calcsize('P') * 8)\""
