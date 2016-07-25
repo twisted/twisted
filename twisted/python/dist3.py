@@ -65,6 +65,7 @@ modules = [
     "twisted.conch.ssh.channel",
     "twisted.conch.ssh.connection",
     "twisted.conch.ssh.common",
+    "twisted.conch.ssh.filetransfer",
     "twisted.conch.ssh.forwarding",
     "twisted.conch.ssh.keys",
     "twisted.conch.ssh.session",
@@ -353,6 +354,7 @@ testModules = [
     "twisted.conch.test.test_channel",
     "twisted.conch.test.test_checkers",
     "twisted.conch.test.test_connection",
+    "twisted.conch.test.test_filetransfer",
     "twisted.conch.test.test_forwarding",
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_session",
@@ -620,6 +622,10 @@ almostModules = [
     "twisted.conch.interfaces",
     "twisted.conch.ssh.factory",
     "twisted.conch.ssh.service",
+    # twisted.conch.test.test_filetransfer need the following to work.
+    "twisted.conch.avatar",
+    "twisted.conch.ls",
+    "twisted.conch.unix",
     # twisted.conch.test.test_text and twisted.conch.test.test_window
     # need these conch modules.  They need more work to get full
     # Python 3 test coverage
