@@ -39,6 +39,8 @@ environment:
       TOXENV: py27-coverage-buildext-windows,codecov-publish
       TWISTED_REACTOR: iocp
 
+
+matrix:
   allow_failures:
     # FIXME: https://twistedmatrix.com/trac/ticket/8679
     # For now iocp reactor tests are failing.
