@@ -236,11 +236,11 @@ class JellyTests(unittest.TestCase):
         """
         dtn = datetime.datetime.now()
         dtd = datetime.datetime.now() - dtn
-        input = [dtn, dtd]
-        c = jelly.jelly(input)
+        inputList = [dtn, dtd]
+        c = jelly.jelly(inputList)
         output = jelly.unjelly(c)
-        self.assertEqual(input, output)
-        self.assertIsNot(input, output)
+        self.assertEqual(inputList, output)
+        self.assertIsNot(inputList, output)
 
 
     def test_decimal(self):
