@@ -1259,15 +1259,6 @@ class SSHServerTransport(SSHTransportBase):
         pubHostKey = self.factory.publicKeys[self.keyAlg]
         privHostKey = self.factory.privateKeys[self.keyAlg]
 
-        #Create the first part of the exchange hash
-        h = _kex.getHashProcessor(self.kexAlg)()
-        h.update(NS(self.otherVersionString))
-        h.update(NS(self.ourVersionString))
-        h.update(NS(self.otherKexInitPayload))
-        h.update(NS(self.ourKexInitPayload))
-        h.update(NS(pubHostKey.blob()))
-        h.update(NS(pktPub))
-
         #Get the base curve info
         try:
             shortKex = re.search("(nist[kpbt]\d{3})$", self.kexAlg).group(1)
@@ -1291,6 +1282,13 @@ class SSHServerTransport(SSHTransportBase):
         sharedSecret = MP(int(self.ecPriv.exchange(ec.ECDH(), self.theirECPub).encode('hex'), 16))
 
         # Finish update and digest
+        h = _kex.getHashProcessor(self.kexAlg)()
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(pubHostKey.blob()))
+        h.update(NS(pktPub))
         h.update(NS(encPub))
         h.update(sharedSecret)
         exchangeHash = h.digest()
