@@ -1403,6 +1403,32 @@ class HTTP2ServerTests(unittest.TestCase):
         return a._streamCleanupCallbacks[1].addCallback(validate)
 
 
+    def test_resetAfterBody(self):
+        """
+        A client that immediately resets after sending the body causes Twisted
+        to send no response.
+        """
+        f = FrameFactory()
+        b = StringTransport()
+        a = H2Connection()
+        a.requestFactory = DummyHTTPHandler
+
+        requestBytes = f.preamble()
+        requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
+        requestBytes += hyperframe.frame.RstStreamFrame(
+            stream_id=1
+        ).serialize()
+        a.makeConnection(b)
+        a.dataReceived(requestBytes)
+
+        buffer = FrameBuffer()
+        buffer.receiveData(b.value())
+        frames = list(buffer)
+
+        self.assertEqual(len(frames), 1)
+        self.assertNotIn(1, a._streamCleanupCallbacks)
+
+
 
 class H2FlowControlTests(unittest.TestCase):
     """
