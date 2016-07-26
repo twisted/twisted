@@ -16,7 +16,7 @@ from zope.interface import implementer
 
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log, _textattributes
-from twisted.python.compat import iterbytes, xrange
+from twisted.python.compat import iterbytes
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.versions import Version
 from twisted.conch.insults import insults
@@ -177,7 +177,7 @@ class TerminalBuffer(protocol.Protocol):
 
     def _emptyLine(self, width):
         return [(self.void, self._currentFormattingState())
-                for i in xrange(width)]
+                for i in range(width)]
 
 
     def _scrollDown(self):
@@ -377,7 +377,7 @@ class TerminalBuffer(protocol.Protocol):
 
 
     def eraseDisplay(self):
-        self.lines = [self._emptyLine(self.width) for i in xrange(self.height)]
+        self.lines = [self._emptyLine(self.width) for i in range(self.height)]
 
 
     def eraseToDisplayEnd(self):
