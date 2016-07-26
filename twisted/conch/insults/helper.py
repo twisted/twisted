@@ -130,14 +130,14 @@ class TerminalBuffer(protocol.Protocol):
         self.reset()
 
 
-    def write(self, bytes):
+    def write(self, data):
         """
         Add the given printable bytes to the terminal.
 
         Line feeds in C{bytes} will be replaced with carriage return / line
         feed pairs.
         """
-        for b in bytes.replace('\n', '\r\n'):
+        for b in data.replace('\n', '\r\n'):
             self.insertAtCursor(b)
 
 
@@ -467,8 +467,8 @@ class ExpectableBuffer(TerminalBuffer):
         self._expecting = []
 
 
-    def write(self, bytes):
-        TerminalBuffer.write(self, bytes)
+    def write(self, data):
+        TerminalBuffer.write(self, data)
         self._checkExpected()
 
 
