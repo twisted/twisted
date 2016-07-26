@@ -14,6 +14,7 @@ from twisted.conch.insults import insults
 from twisted.conch import recvline
 
 from twisted.python import reflect, components, filepath
+from twisted.python.compat import iterbytes
 from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.cred import portal
@@ -36,11 +37,11 @@ class ArrowsTests(unittest.TestCase):
         When L{HistoricRecvLine} receives a printable character,
         it adds it to the current line buffer.
         """
-        self.p.keystrokeReceived('x', None)
-        self.p.keystrokeReceived('y', None)
-        self.p.keystrokeReceived('z', None)
+        self.p.keystrokeReceived(b'x', None)
+        self.p.keystrokeReceived(b'y', None)
+        self.p.keystrokeReceived(b'z', None)
 
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
 
     def test_horizontalArrows(self):
@@ -50,37 +51,37 @@ class ArrowsTests(unittest.TestCase):
         in the current line buffer, respectively.
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
-        for ch in 'xyz':
+        for ch in iterbytes(b'xyz'):
             kR(ch)
 
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('xy', 'z'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xy', b'z'))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('x', 'yz'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'x', b'yz'))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('', 'xyz'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'', b'xyz'))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('', 'xyz'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'', b'xyz'))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('x', 'yz'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'x', b'yz'))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('xy', 'z'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xy', b'z'))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
 
     def test_newline(self):
@@ -90,21 +91,21 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in 'xyz\nabc\n123\n':
+        for ch in iterbytes(b'xyz\nabc\n123\n'):
             kR(ch)
 
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          (('xyz', 'abc', '123'), ()))
+                          ((b'xyz', b'abc', b'123'), ()))
 
-        kR('c')
-        kR('b')
-        kR('a')
+        kR(b'c')
+        kR(b'b')
+        kR(b'a')
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          (('xyz', 'abc', '123'), ()))
+                          ((b'xyz', b'abc', b'123'), ()))
 
-        kR('\n')
+        kR(b'\n')
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          (('xyz', 'abc', '123', 'cba'), ()))
+                          ((b'xyz', b'abc', b'123', b'cba'), ()))
 
 
     def test_verticalArrows(self):
@@ -116,37 +117,37 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in 'xyz\nabc\n123\n':
+        for ch in iterbytes(b'xyz\nabc\n123\n'):
             kR(ch)
 
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          (('xyz', 'abc', '123'), ()))
-        self.assertEqual(self.p.currentLineBuffer(), ('', ''))
+                          ((b'xyz', b'abc', b'123'), ()))
+        self.assertEqual(self.p.currentLineBuffer(), (b'', b''))
 
         kR(self.pt.UP_ARROW)
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          (('xyz', 'abc'), ('123',)))
-        self.assertEqual(self.p.currentLineBuffer(), ('123', ''))
+                          ((b'xyz', b'abc'), (b'123',)))
+        self.assertEqual(self.p.currentLineBuffer(), (b'123', b''))
 
         kR(self.pt.UP_ARROW)
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          (('xyz',), ('abc', '123')))
-        self.assertEqual(self.p.currentLineBuffer(), ('abc', ''))
+                          ((b'xyz',), (b'abc', b'123')))
+        self.assertEqual(self.p.currentLineBuffer(), (b'abc', b''))
 
         kR(self.pt.UP_ARROW)
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((), ('xyz', 'abc', '123')))
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+                          ((), (b'xyz', b'abc', b'123')))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
         kR(self.pt.UP_ARROW)
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((), ('xyz', 'abc', '123')))
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+                          ((), (b'xyz', b'abc', b'123')))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
         for i in range(4):
             kR(self.pt.DOWN_ARROW)
         self.assertEqual(self.p.currentHistoryBuffer(),
-                          (('xyz', 'abc', '123'), ()))
+                          ((b'xyz', b'abc', b'123'), ()))
 
 
     def test_home(self):
@@ -156,12 +157,12 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in 'hello, world':
+        for ch in iterbytes(b'hello, world'):
             kR(ch)
-        self.assertEqual(self.p.currentLineBuffer(), ('hello, world', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'hello, world', b''))
 
         kR(self.pt.HOME)
-        self.assertEqual(self.p.currentLineBuffer(), ('', 'hello, world'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'', b'hello, world'))
 
 
     def test_end(self):
@@ -171,13 +172,13 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in 'hello, world':
+        for ch in iterbytes(b'hello, world'):
             kR(ch)
-        self.assertEqual(self.p.currentLineBuffer(), ('hello, world', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'hello, world', b''))
 
         kR(self.pt.HOME)
         kR(self.pt.END)
-        self.assertEqual(self.p.currentLineBuffer(), ('hello, world', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'hello, world', b''))
 
 
     def test_backspace(self):
@@ -187,19 +188,19 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in 'xyz':
+        for ch in iterbytes(b'xyz'):
             kR(ch)
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
         kR(self.pt.BACKSPACE)
-        self.assertEqual(self.p.currentLineBuffer(), ('xy', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xy', b''))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.BACKSPACE)
-        self.assertEqual(self.p.currentLineBuffer(), ('', 'y'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'', b'y'))
 
         kR(self.pt.BACKSPACE)
-        self.assertEqual(self.p.currentLineBuffer(), ('', 'y'))
+        self.assertEqual(self.p.currentLineBuffer(), (b'', b'y'))
 
 
     def test_delete(self):
@@ -209,27 +210,27 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in 'xyz':
+        for ch in iterbytes(b'xyz'):
             kR(ch)
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), ('xyz', ''))
-
-        kR(self.pt.LEFT_ARROW)
-        kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), ('xy', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), ('x', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'xy', b''))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), ('', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'x', b''))
+
+        kR(self.pt.LEFT_ARROW)
+        kR(self.pt.DELETE)
+        self.assertEqual(self.p.currentLineBuffer(), (b'', b''))
 
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), ('', ''))
+        self.assertEqual(self.p.currentLineBuffer(), (b'', b''))
 
 
     def test_insert(self):
@@ -239,16 +240,16 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in 'xyz':
+        for ch in iterbytes(b'xyz'):
             kR(ch)
 
         kR(self.pt.LEFT_ARROW)
-        kR('A')
-        self.assertEqual(self.p.currentLineBuffer(), ('xyA', 'z'))
+        kR(b'A')
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyA', b'z'))
 
         kR(self.pt.LEFT_ARROW)
-        kR('B')
-        self.assertEqual(self.p.currentLineBuffer(), ('xyB', 'Az'))
+        kR(b'B')
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyB', b'Az'))
 
 
     def test_typeover(self):
@@ -260,18 +261,18 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in 'xyz':
+        for ch in iterbytes(b'xyz'):
             kR(ch)
 
         kR(self.pt.INSERT)
 
         kR(self.pt.LEFT_ARROW)
-        kR('A')
-        self.assertEqual(self.p.currentLineBuffer(), ('xyA', ''))
+        kR(b'A')
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyA', b''))
 
         kR(self.pt.LEFT_ARROW)
-        kR('B')
-        self.assertEqual(self.p.currentLineBuffer(), ('xyB', ''))
+        kR(b'B')
+        self.assertEqual(self.p.currentLineBuffer(), (b'xyB', b''))
 
 
     def test_unprintableCharacters(self):
@@ -285,7 +286,7 @@ class ArrowsTests(unittest.TestCase):
         for ch in (pt.F1, pt.F2, pt.F3, pt.F4, pt.F5, pt.F6, pt.F7, pt.F8,
                    pt.F9, pt.F10, pt.F11, pt.F12, pt.PGUP, pt.PGDN):
             kR(ch)
-            self.assertEqual(self.p.currentLineBuffer(), ('', ''))
+            self.assertEqual(self.p.currentLineBuffer(), (b'', b''))
 
 
 
