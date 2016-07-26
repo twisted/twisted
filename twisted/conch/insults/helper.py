@@ -159,11 +159,11 @@ class TerminalBuffer(protocol.Protocol):
         Otherwise, if b is printable, put it at the cursor position (inserting
         or overwriting as dictated by the current mode) and move the cursor.
         """
-        if b == '\r':
+        if b == b'\r':
             self.x = 0
-        elif b == '\n':
+        elif b == b'\n':
             self._scrollDown()
-        elif b in string.printable:
+        elif b in string.printable.encode("ascii"):
             if self.x >= self.width:
                 self.nextLine()
             ch = (b, self._currentFormattingState())
