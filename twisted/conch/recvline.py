@@ -15,6 +15,7 @@ from zope.interface import implementer
 from twisted.conch.insults import insults, helper
 
 from twisted.python import log, reflect
+from twisted.python.compat import iterbytes
 
 _counters = {}
 class Logging(object):
@@ -325,9 +326,9 @@ class HistoricRecvLine(RecvLine):
 
     def _deliverBuffer(self, buf):
         if buf:
-            for ch in buf[:-1]:
+            for ch in iterbytes(buf[:-1]):
                 self.characterReceived(ch, True)
-            self.characterReceived(buf[-1], False)
+            self.characterReceived(buf[-1:], False)
 
 
     def handle_UP(self):
