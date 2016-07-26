@@ -2310,7 +2310,7 @@ class IRCClient(basic.LineReceiver):
         # when faced with an ERRMSG query (not a reply).
         nick = user.split('!')[0]
         self.ctcpMakeReply(nick, [('ERRMSG',
-                                   "%s :No error has occoured." % data)])
+                                   "%s :No error has occurred." % data)])
 
     def ctcpQuery_TIME(self, user, channel, data):
         if data is not None:

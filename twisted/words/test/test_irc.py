@@ -1981,7 +1981,7 @@ class ClientMsgTests(unittest.TestCase):
 
     def test_sufficientWidth(self):
         """
-        Messages exactly equal in length to the C{length} paramtere to
+        Messages exactly equal in length to the C{length} parameter to
         L{IRCClient.msg} are sent in a single command.
         """
         msg = 'barbazbo'

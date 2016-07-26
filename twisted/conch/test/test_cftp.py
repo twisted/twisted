@@ -240,7 +240,7 @@ class InMemorySSHChannel(StringTransport, object):
 
 class FilesystemAccessExpectations(object):
     """
-    A test helper used to support expected filesytem access.
+    A test helper used to support expected filesystem access.
     """
 
     def __init__(self):

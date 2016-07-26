@@ -244,10 +244,10 @@ def _isGlobbingExpression(segments=None):
     # then it contains no globbing expression.
     globCandidate = segments[-1]
     # A set of default regex rules is added to all strings.
-    emtpyTranslations = fnmatch.translate('')
+    emptyTranslations = fnmatch.translate('')
     globTranslations = fnmatch.translate(globCandidate)
 
-    if globCandidate + emtpyTranslations == globTranslations:
+    if globCandidate + emptyTranslations == globTranslations:
         return False
     else:
         return True
