@@ -14,7 +14,7 @@ from __future__ import division, absolute_import
 from zope.interface import implementer
 
 from twisted.python import log
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, networkString
 from twisted.internet import interfaces
 
 
@@ -77,12 +77,19 @@ class SSHChannel(log.Logger):
 
 
     def __str__(self):
+        return '<SSHChannel %s (lw %i rw %i)>' % (self.name,
+                self.localWindowLeft, self.remoteWindowLeft)
+
+    def __bytes__(self):
+        """
+        Return a byte string representation of the channel
+        """
         name = self.name
         if name:
             name = nativeString(name)
-        return '<SSHChannel %s (lw %i rw %i)>' % (name,
-                self.localWindowLeft, self.remoteWindowLeft)
-
+        return networkString(
+            '<SSHChannel %s (lw %i rw %i)>' % (
+                name, self.localWindowLeft, self.remoteWindowLeft))
 
     def logPrefix(self):
         id = (self.id is not None and str(self.id)) or "unknown"
