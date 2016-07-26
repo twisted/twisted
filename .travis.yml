@@ -30,6 +30,11 @@ matrix:
     # on starting separate jobs.
     - python: 2.7
       env: TOXENV=narrativedocs,apidocs,pyflakes,topfile,manifest-checker
+    # Check that the release process is not broken.
+    - python: 2.7
+      env: TOXENV=py27-release
+    - python: 3.5
+      env: TOXENV=py27-release
     #
     # OSX 10.10
     #

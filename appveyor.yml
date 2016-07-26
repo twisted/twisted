@@ -31,8 +31,12 @@ environment:
   # a later point release.
   # See: http://www.appveyor.com/docs/installed-software#python
   matrix:
+    # - PYTHON: C:\Python27-x64
+    #   TOXENV: py27-coverage-windows,codecov-publish
+    #   CI_DEPLOY: False
     - PYTHON: C:\Python27-x64
-      TOXENV: py27-coverage-windows,codecov-publish
+      TOXENV: py27-release
+      CI_DEPLOY: True
 
 
 install:
@@ -55,3 +59,17 @@ install:
 
 test_script:
   - "%PYTHON%\\python -m tox -e %TOXENV%"
+
+deploy:
+  provider: FTP
+  name: production
+  on:
+    CI_DEPLOY: True
+
+  protocol: sftp
+  host: ci-release.twistedmatrix.com
+  username: appveyor-ci
+  password:
+    secure: AABBBCCCCddd123==
+  folder: ci-wheels
+  artifact: /.*\.wheel/
