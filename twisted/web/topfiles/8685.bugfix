@@ -1,1 +1,1 @@
-twisted.web._http2.H2Connection now swallows header writes on reset streams, rather than erroring out.
+twisted.web.http.Request now swallows header writes on reset HTTP/2 streams, rather than erroring out.

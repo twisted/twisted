@@ -1409,7 +1409,7 @@ class HTTP2ServerTests(unittest.TestCase):
         to send no response.
         """
         f = FrameFactory()
-        b = StringTransport()
+        transport = StringTransport()
         a = H2Connection()
         a.requestFactory = DummyHTTPHandler
 
@@ -1418,11 +1418,11 @@ class HTTP2ServerTests(unittest.TestCase):
         requestBytes += hyperframe.frame.RstStreamFrame(
             stream_id=1
         ).serialize()
-        a.makeConnection(b)
+        a.makeConnection(transport)
         a.dataReceived(requestBytes)
 
         buffer = FrameBuffer()
-        buffer.receiveData(b.value())
+        buffer.receiveData(transport.value())
         frames = list(buffer)
 
         self.assertEqual(len(frames), 1)
