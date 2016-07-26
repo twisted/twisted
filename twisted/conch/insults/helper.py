@@ -440,7 +440,7 @@ class TerminalBuffer(protocol.Protocol):
         print('Could not handle', repr(buf))
 
 
-    def __str__(self):
+    def __bytes__(self):
         lines = []
         for L in self.lines:
             buf = []
@@ -451,8 +451,8 @@ class TerminalBuffer(protocol.Protocol):
                     length = len(buf)
                 else:
                     buf.append(self.fill)
-            lines.append(''.join(buf[:length]))
-        return '\n'.join(lines)
+            lines.append(b''.join(buf[:length]))
+        return b'\n'.join(lines)
 
 
 
@@ -485,7 +485,7 @@ class ExpectableBuffer(TerminalBuffer):
 
 
     def _checkExpected(self):
-        s = str(self)[self._mark:]
+        s = self.__bytes__()[self._mark:]
         while self._expecting:
             expr, timer, deferred = self._expecting[0]
             if timer and not timer.active():
