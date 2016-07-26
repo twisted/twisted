@@ -59,14 +59,16 @@ class TransportSequence(object):
     the server process.
     """
 
-    for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
-                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
-                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
-                  'F10', 'F11', 'F12'):
-        exec('%s = object()' % (keyID,))
+    for keyID in (b'UP_ARROW', b'DOWN_ARROW', b'RIGHT_ARROW', b'LEFT_ARROW',
+                  b'HOME', b'INSERT', b'DELETE', b'END', b'PGUP', b'PGDN',
+                  b'F1', b'F2', b'F3', b'F4', b'F5', b'F6', b'F7', b'F8', b'F9',
+                  b'F10', b'F11', b'F12'):
+        execBytes = keyID + b" = object()"
+        execStr = execBytes.decode("ascii")
+        exec(execStr)
 
-    TAB = '\t'
-    BACKSPACE = '\x7f'
+    TAB = b'\t'
+    BACKSPACE = b'\x7f'
 
     def __init__(self, *transports):
         assert transports, "Cannot construct a TransportSequence with no transports"
@@ -145,8 +147,8 @@ class RecvLine(insults.TerminalProtocol):
 
             # Both of these should not be necessary, but figuring out
             # which is necessary is a huge hassle.
-            '\r': self.handle_RETURN,
-            '\n': self.handle_RETURN,
+            b'\r': self.handle_RETURN,
+            b'\n': self.handle_RETURN,
 
             t.BACKSPACE: self.handle_BACKSPACE,
             t.DELETE: self.handle_DELETE,
