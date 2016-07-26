@@ -1039,7 +1039,7 @@ class CTCPTests(unittest.TestCase):
                        'EOL': irc.CR + irc.LF})
 
         errReply = ("NOTICE nick :%(X)cERRMSG t :"
-                    "No error has occoured.%(X)c%(EOL)s"
+                    "No error has occurred.%(X)c%(EOL)s"
                     % {'X': irc.X_DELIM,
                        'EOL': irc.CR + irc.LF})
 
