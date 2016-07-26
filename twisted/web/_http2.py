@@ -510,7 +510,8 @@ class H2Connection(Protocol, TimeoutMixin):
             self.conn.send_headers(streamID, headers)
         except h2.exceptions.StreamClosedError:
             # Stream was closed by the client at some point. We need to not
-            # explode here: just swallow the error.
+            # explode here: just swallow the error. That's what write() does
+            # when a connection is lost, so that's what we do too.
             return
         else:
             self.transport.write(self.conn.data_to_send())
