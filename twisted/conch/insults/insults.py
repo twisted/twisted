@@ -10,6 +10,7 @@ VT102 and VT220 terminal manipulation.
 
 from zope.interface import implementer, Interface
 
+from twisted.python.compat import intToBytes
 from twisted.internet import protocol, defer, interfaces as iinternet
 
 
@@ -752,20 +753,24 @@ class ServerProtocol(protocol.Protocol):
 
     def setModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write(b'\x1b[%sh' % (b';'.join(map(str, modes)),))
+        self.write(b'\x1b[%sh' %
+                   (b';'.join([intToBytes(mode) for mode in modes])))
 
 
     def setPrivateModes(self, modes):
-        self.write(b'\x1b[?%sh' % (b';'.join(map(str, modes)),))
+        self.write(b'\x1b[?%sh' %
+                   (b';'.join([intToBytes(mode) for mode in modes])))
 
 
     def resetModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write(b'\x1b[%sl' % (b';'.join(map(str, modes)),))
+        self.write(b'\x1b[%sl' %
+                   (b';'.join([intToBytes(mode) for mode in modes])))
 
 
     def resetPrivateModes(self, modes):
-        self.write(b'\x1b[?%sl' % (b';'.join(map(str, modes)),))
+        self.write(b'\x1b[?%sl' %
+                   (b';'.join([intToBytes(mode) for mode in modes])))
 
 
     def applicationKeypadMode(self):
