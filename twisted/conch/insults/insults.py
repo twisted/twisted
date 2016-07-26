@@ -689,87 +689,87 @@ class ServerProtocol(protocol.Protocol):
     def cursorUp(self, n=1):
         assert n >= 1
         self.cursorPos.y = max(self.cursorPos.y - n, 0)
-        self.write('\x1b[%dA' % (n,))
+        self.write(b'\x1b[%dA' % (n,))
 
 
     def cursorDown(self, n=1):
         assert n >= 1
         self.cursorPos.y = min(self.cursorPos.y + n, self.termSize.y - 1)
-        self.write('\x1b[%dB' % (n,))
+        self.write(b'\x1b[%dB' % (n,))
 
 
     def cursorForward(self, n=1):
         assert n >= 1
         self.cursorPos.x = min(self.cursorPos.x + n, self.termSize.x - 1)
-        self.write('\x1b[%dC' % (n,))
+        self.write(b'\x1b[%dC' % (n,))
 
 
     def cursorBackward(self, n=1):
         assert n >= 1
         self.cursorPos.x = max(self.cursorPos.x - n, 0)
-        self.write('\x1b[%dD' % (n,))
+        self.write(b'\x1b[%dD' % (n,))
 
 
     def cursorPosition(self, column, line):
-        self.write('\x1b[%d;%dH' % (line + 1, column + 1))
+        self.write(b'\x1b[%d;%dH' % (line + 1, column + 1))
 
 
     def cursorHome(self):
         self.cursorPos.x = self.cursorPos.y = 0
-        self.write('\x1b[H')
+        self.write(b'\x1b[H')
 
 
     def index(self):
         self.cursorPos.y = min(self.cursorPos.y + 1, self.termSize.y - 1)
-        self.write('\x1bD')
+        self.write(b'\x1bD')
 
 
     def reverseIndex(self):
         self.cursorPos.y = max(self.cursorPos.y - 1, 0)
-        self.write('\x1bM')
+        self.write(b'\x1bM')
 
 
     def nextLine(self):
         self.cursorPos.x = 0
         self.cursorPos.y = min(self.cursorPos.y + 1, self.termSize.y - 1)
-        self.write('\n')
+        self.write(b'\n')
 
 
     def saveCursor(self):
         self._savedCursorPos = Vector(self.cursorPos.x, self.cursorPos.y)
-        self.write('\x1b7')
+        self.write(b'\x1b7')
 
 
     def restoreCursor(self):
         self.cursorPos = self._savedCursorPos
         del self._savedCursorPos
-        self.write('\x1b8')
+        self.write(b'\x1b8')
 
 
     def setModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write('\x1b[%sh' % (';'.join(map(str, modes)),))
+        self.write(b'\x1b[%sh' % (b';'.join(map(str, modes)),))
 
 
     def setPrivateModes(self, modes):
-        self.write('\x1b[?%sh' % (';'.join(map(str, modes)),))
+        self.write(b'\x1b[?%sh' % (b';'.join(map(str, modes)),))
 
 
     def resetModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write('\x1b[%sl' % (';'.join(map(str, modes)),))
+        self.write(b'\x1b[%sl' % (b';'.join(map(str, modes)),))
 
 
     def resetPrivateModes(self, modes):
-        self.write('\x1b[?%sl' % (';'.join(map(str, modes)),))
+        self.write(b'\x1b[?%sl' % (b';'.join(map(str, modes)),))
 
 
     def applicationKeypadMode(self):
-        self.write('\x1b=')
+        self.write(b'\x1b=')
 
 
     def numericKeypadMode(self):
-        self.write('\x1b>')
+        self.write(b'\x1b>')
 
 
     def selectCharacterSet(self, charSet, which):
@@ -792,93 +792,93 @@ class ServerProtocol(protocol.Protocol):
             charSet = '2'
         else:
             raise ValueError("Invalid `charSet' argument to selectCharacterSet")
-        self.write('\x1b' + which + charSet)
+        self.write(b'\x1b' + which + charSet)
 
 
     def shiftIn(self):
-        self.write('\x15')
+        self.write(b'\x15')
 
 
     def shiftOut(self):
-        self.write('\x14')
+        self.write(b'\x14')
 
 
     def singleShift2(self):
-        self.write('\x1bN')
+        self.write(b'\x1bN')
 
 
     def singleShift3(self):
-        self.write('\x1bO')
+        self.write(b'\x1bO')
 
 
     def selectGraphicRendition(self, *attributes):
         attrs = []
         for a in attributes:
             attrs.append(a)
-        self.write('\x1b[%sm' % (';'.join(attrs),))
+        self.write(b'\x1b[%sm' % (b';'.join(attrs),))
 
 
     def horizontalTabulationSet(self):
-        self.write('\x1bH')
+        self.write(b'\x1bH')
 
 
     def tabulationClear(self):
-        self.write('\x1b[q')
+        self.write(b'\x1b[q')
 
 
     def tabulationClearAll(self):
-        self.write('\x1b[3q')
+        self.write(b'\x1b[3q')
 
 
     def doubleHeightLine(self, top=True):
         if top:
-            self.write('\x1b#3')
+            self.write(b'\x1b#3')
         else:
-            self.write('\x1b#4')
+            self.write(b'\x1b#4')
 
 
     def singleWidthLine(self):
-        self.write('\x1b#5')
+        self.write(b'\x1b#5')
 
 
     def doubleWidthLine(self):
-        self.write('\x1b#6')
+        self.write(b'\x1b#6')
 
 
     def eraseToLineEnd(self):
-        self.write('\x1b[K')
+        self.write(b'\x1b[K')
 
 
     def eraseToLineBeginning(self):
-        self.write('\x1b[1K')
+        self.write(b'\x1b[1K')
 
 
     def eraseLine(self):
-        self.write('\x1b[2K')
+        self.write(b'\x1b[2K')
 
 
     def eraseToDisplayEnd(self):
-        self.write('\x1b[J')
+        self.write(b'\x1b[J')
 
 
     def eraseToDisplayBeginning(self):
-        self.write('\x1b[1J')
+        self.write(b'\x1b[1J')
 
 
     def eraseDisplay(self):
-        self.write('\x1b[2J')
+        self.write(b'\x1b[2J')
 
 
     def deleteCharacter(self, n=1):
-        self.write('\x1b[%dP' % (n,))
+        self.write(b'\x1b[%dP' % (n,))
 
 
     def insertLine(self, n=1):
-        self.write('\x1b[%dL' % (n,))
+        self.write(b'\x1b[%dL' % (n,))
 
 
     def deleteLine(self, n=1):
-        self.write('\x1b[%dM' % (n,))
+        self.write(b'\x1b[%dM' % (n,))
 
 
     def setScrollRegion(self, first=None, last=None):
@@ -890,7 +890,7 @@ class ServerProtocol(protocol.Protocol):
             last = '%d' % (last,)
         else:
             last = ''
-        self.write('\x1b[%s;%sr' % (first, last))
+        self.write(b'\x1b[%s;%sr' % (first, last))
 
 
     def resetScrollRegion(self):
@@ -900,7 +900,7 @@ class ServerProtocol(protocol.Protocol):
     def reportCursorPosition(self):
         d = defer.Deferred()
         self._cursorReports.append(d)
-        self.write('\x1b[6n')
+        self.write(b'\x1b[6n')
         return d
 
 
@@ -910,18 +910,18 @@ class ServerProtocol(protocol.Protocol):
             del self._savedCursorPos
         except AttributeError:
             pass
-        self.write('\x1bc')
+        self.write(b'\x1bc')
 
 
     # ITransport
     def write(self, data):
         if data:
             self.lastWrite = data
-            self.transport.write('\r\n'.join(data.split('\n')))
+            self.transport.write(b'\r\n'.join(data.split(b'\n')))
 
 
     def writeSequence(self, data):
-        self.write(''.join(data))
+        self.write(b''.join(data))
 
 
     def loseConnection(self):
@@ -1021,22 +1021,22 @@ class ClientProtocol(protocol.Protocol):
             if self.state == 'data':
                 if b == '\x1b':
                     if toWrite:
-                        self.terminal.write(''.join(toWrite))
+                        self.terminal.write(b''.join(toWrite))
                         del toWrite[:]
                     self.state = 'escaped'
                 elif b == '\x14':
                     if toWrite:
-                        self.terminal.write(''.join(toWrite))
+                        self.terminal.write(b''.join(toWrite))
                         del toWrite[:]
                     self.terminal.shiftOut()
                 elif b == '\x15':
                     if toWrite:
-                        self.terminal.write(''.join(toWrite))
+                        self.terminal.write(b''.join(toWrite))
                         del toWrite[:]
                     self.terminal.shiftIn()
                 elif b == '\x08':
                     if toWrite:
-                        self.terminal.write(''.join(toWrite))
+                        self.terminal.write(b''.join(toWrite))
                         del toWrite[:]
                     self.terminal.cursorBackward()
                 else:
@@ -1074,7 +1074,7 @@ class ClientProtocol(protocol.Protocol):
             else:
                 raise ValueError("Illegal state")
         if toWrite:
-            self.terminal.write(''.join(toWrite))
+            self.terminal.write(b''.join(toWrite))
 
 
     def _handleControlSequence(self, buf, terminal):
@@ -1211,7 +1211,7 @@ class ClientProtocol(protocol.Protocol):
         def n(self, proto, handler, buf):
             if buf == '6':
                 x, y = handler.reportCursorPosition()
-                proto.transport.write('\x1b[%d;%dR' % (x + 1, y + 1))
+                proto.transport.write(b'\x1b[%d;%dR' % (x + 1, y + 1))
             else:
                 handler.unhandledControlSequence('\x1b[' + buf + 'n')
 
