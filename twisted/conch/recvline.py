@@ -124,9 +124,9 @@ class RecvLine(insults.TerminalProtocol):
 
     TABSTOP = 4
 
-    ps = ('>>> ', '... ')
+    ps = (b'>>> ', b'... ')
     pn = 0
-    _printableChars = set(string.printable)
+    _printableChars = string.printable.encode("ascii")
 
     def connectionMade(self):
         # A list containing the characters making up the current line
