@@ -914,14 +914,14 @@ class ServerProtocol(protocol.Protocol):
 
 
     # ITransport
-    def write(self, bytes):
-        if bytes:
-            self.lastWrite = bytes
-            self.transport.write('\r\n'.join(bytes.split('\n')))
+    def write(self, data):
+        if data:
+            self.lastWrite = data
+            self.transport.write('\r\n'.join(data.split('\n')))
 
 
-    def writeSequence(self, bytes):
-        self.write(''.join(bytes))
+    def writeSequence(self, data):
+        self.write(''.join(data))
 
 
     def loseConnection(self):
@@ -1011,13 +1011,13 @@ class ClientProtocol(protocol.Protocol):
                 del self.terminal
 
 
-    def dataReceived(self, bytes):
+    def dataReceived(self, data):
         """
         Parse the given data from a terminal server, dispatching to event
         handlers defined by C{self.terminal}.
         """
         toWrite = []
-        for b in bytes:
+        for b in data:
             if self.state == 'data':
                 if b == '\x1b':
                     if toWrite:
