@@ -68,9 +68,11 @@ modules = [
     "twisted.conch.ssh.channel",
     "twisted.conch.ssh.connection",
     "twisted.conch.ssh.common",
+    "twisted.conch.ssh.factory",
     "twisted.conch.ssh.filetransfer",
     "twisted.conch.ssh.forwarding",
     "twisted.conch.ssh.keys",
+    "twisted.conch.ssh.service",
     "twisted.conch.ssh.session",
     "twisted.conch.ssh.sexpy",
     "twisted.conch.ssh.transport",
@@ -624,11 +626,9 @@ testDataFiles = [
 
 
 almostModules = [
-    # The tests for twisted.web.conch.ssh.transport depends on the
-    # following.
+    # The tests for twisted.web.conch.ssh depends on the conch
+    # interfaces.
     "twisted.conch.interfaces",
-    "twisted.conch.ssh.factory",
-    "twisted.conch.ssh.service",
     # twisted.conch.test.test_text and twisted.conch.test.test_window
     # need these conch modules.  They need more work to get full
     # Python 3 test coverage
