@@ -13,7 +13,8 @@ and reasonable handling of Deferreds.
 @author: Jp Calderone
 """
 
-import code, sys, StringIO, tokenize
+import code, sys, tokenize
+from io import BytesIO
 
 from twisted.conch import recvline
 
@@ -280,7 +281,7 @@ def lastColorizedLine(source):
     """
     w = VT102Writer()
     p = TokenPrinter(w.write).printtoken
-    s = StringIO.StringIO(source)
+    s = BytesIO(source)
 
     tokenize.tokenize(s.readline, p)
 
