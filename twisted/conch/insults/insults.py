@@ -465,8 +465,12 @@ class _const(object):
         return '[' + self.name + ']'
 
 
+    def __bytes__(self):
+        return ('[' + self.name + ']').encode("ascii")
+
+
 FUNCTION_KEYS = [
-    _const(_name) for _name in _KEY_NAMES]
+    _const(_name).__bytes__() for _name in _KEY_NAMES]
 
 
 
