@@ -30,7 +30,7 @@ from twisted.internet.error import ProcessTerminated
 from twisted.python import failure, log
 from twisted.trial import unittest
 
-from twisted.conch.test.test_recvline import LoopbackRelay
+from twisted.conch.test.loopback import LoopbackRelay
 
 
 
