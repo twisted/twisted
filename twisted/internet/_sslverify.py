@@ -327,7 +327,7 @@ class DistinguishedName(dict):
 
     A L{DistinguishedName} should be constructed using keyword arguments whose
     keys can be any of the field names above (as a native string), and the
-    values are either Unicode text which is encodable to ASCII, or C{bytes}
+    values are either Unicode text which is encodable to ASCII, or L{bytes}
     limited to the ASCII subset. Any fields passed to the constructor will be
     set as attributes, accessible using both their extended name and their
     shortened acronym. The attribute values will be the ASCII-encoded
@@ -394,7 +394,7 @@ class DistinguishedName(dict):
         """
         Return a multi-line, human-readable representation of this DN.
 
-        @rtype: C{str}
+        @rtype: L{str}
         """
         l = []
         lablen = 0
@@ -513,7 +513,7 @@ class Certificate(CertBase):
         """
         Dump this certificate to a PEM-format data string.
 
-        @rtype: C{str}
+        @rtype: L{str}
         """
         return self.dump(crypto.FILETYPE_PEM)
 
@@ -574,7 +574,7 @@ class Certificate(CertBase):
         """
         Retrieve the serial number of this certificate.
 
-        @rtype: C{int}
+        @rtype: L{int}
         """
         return self.original.get_serial_number()
 
@@ -585,7 +585,7 @@ class Certificate(CertBase):
         algorithm.
 
         @param method: One of C{'md5'} or C{'sha'}.
-        @rtype: C{str}
+        @rtype: L{str}
         """
         return self.original.digest(method)
 
@@ -1289,7 +1289,7 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         remote peer does not offer NPN or ALPN, the connection will be
         established, but no protocol wil be negotiated. Protocols earlier in
         the list are preferred over those later in the list.
-    @type acceptableProtocols: C{list} of C{bytes}
+    @type acceptableProtocols: L{list} of L{bytes}
 
     @param extraCertificateOptions: keyword-only argument; this is a dictionary
         of additional keyword arguments to be presented to
@@ -1413,7 +1413,7 @@ class OpenSSLCertificateOptions(object):
             ignored otherwise.  Since verify is L{False} by default, this is
             L{None} by default.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}
+        @type caCerts: L{list} of L{OpenSSL.crypto.X509}
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
             If unspecified, use the underlying default (9).
@@ -1482,7 +1482,7 @@ class OpenSSLCertificateOptions(object):
             If the remote peer does not offer NPN or ALPN, the connection will
             be established, but no protocol wil be negotiated. Protocols
             earlier in the list are preferred over those later in the list.
-        @type acceptableProtocols: C{list} of C{bytes}
+        @type acceptableProtocols: L{list} of L{bytes}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1910,7 +1910,7 @@ def _setAcceptableProtocols(context, acceptableProtocols):
         remote peer does not offer NPN or ALPN, the connection will be
         established, but no protocol wil be negotiated. Protocols earlier in
         the list are preferred over those later in the list.
-    @type acceptableProtocols: C{list} of C{bytes}
+    @type acceptableProtocols: L{list} of L{bytes}
     """
     def protoSelectCallback(conn, protocols):
         """
@@ -1922,7 +1922,7 @@ def _setAcceptableProtocols(context, acceptableProtocols):
         @type conn: L{OpenSSL.SSL.Connection}
 
         @param conn: Protocols advertised by the other side.
-        @type conn: C{list} of C{bytes}
+        @type conn: L{list} of L{bytes}
         """
         overlap = set(protocols) & set(acceptableProtocols)
 
