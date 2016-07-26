@@ -27,7 +27,7 @@ It includes modules for many different purposes, including the following:
 - ``twisted.conch``: SSHv2 and Telnet clients and servers and terminal emulators
 - ``twisted.words``: Clients and servers for IRC, XMPP, and other IM protocols
 - ``twisted.mail``: IMAPv4, POP3, SMTP clients and servers
-- ``twisted.positioning``: Tools for communicating with NMEA-compatible GPS recievers
+- ``twisted.positioning``: Tools for communicating with NMEA-compatible GPS receivers
 - ``twisted.names``: DNS client and tools for making your own DNS servers
 - ``twisted.trial``: A unit testing framework that integrates well with Twisted-based code.
 
