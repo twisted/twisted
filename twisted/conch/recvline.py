@@ -175,7 +175,7 @@ class RecvLine(insults.TerminalProtocol):
 
 
     def currentLineBuffer(self):
-        s = ''.join(self.lineBuffer)
+        s = b''.join(self.lineBuffer)
         return s[:self.lineBufferIndex], s[self.lineBufferIndex:]
 
 
@@ -194,7 +194,7 @@ class RecvLine(insults.TerminalProtocol):
         Write a line containing the current input prompt and the current line
         buffer at the current cursor position.
         """
-        self.terminal.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+        self.terminal.write(self.ps[self.pn] + b''.join(self.lineBuffer))
 
 
     def terminalSize(self, width, height):
@@ -277,7 +277,7 @@ class RecvLine(insults.TerminalProtocol):
 
 
     def handle_RETURN(self):
-        line = ''.join(self.lineBuffer)
+        line = b''.join(self.lineBuffer)
         self.lineBuffer = []
         self.lineBufferIndex = 0
         self.terminal.nextLine()
@@ -361,6 +361,6 @@ class HistoricRecvLine(RecvLine):
 
     def handle_RETURN(self):
         if self.lineBuffer:
-            self.historyLines.append(''.join(self.lineBuffer))
+            self.historyLines.append(b''.join(self.lineBuffer))
         self.historyPosition = len(self.historyLines)
         return RecvLine.handle_RETURN(self)
