@@ -21,7 +21,7 @@ class BufferTests(unittest.TestCase):
     def testInitialState(self):
         self.assertEqual(self.term.width, WIDTH)
         self.assertEqual(self.term.height, HEIGHT)
-        self.assertEqual(str(self.term),
+        self.assertEqual(self.term.__bytes__(),
                           b'\n' * (HEIGHT - 1))
         self.assertEqual(self.term.reportCursorPosition(), (0, 0))
 
@@ -141,7 +141,7 @@ class BufferTests(unittest.TestCase):
         s = b"Hello, world."
         self.term.write(s)
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             s + b'\n' +
             b'\n' * (HEIGHT - 2))
 
@@ -153,7 +153,7 @@ class BufferTests(unittest.TestCase):
         self.term.resetModes([modes.IRM])
         self.term.write(b"H")
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             (b"H" + s[1:]) + b'\n' +
             b'\n' * (HEIGHT - 2))
 
@@ -165,7 +165,7 @@ class BufferTests(unittest.TestCase):
         self.term.setModes([modes.IRM])
         self.term.write(b"H")
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             (b"H" + s) + b'\n' +
             b'\n' * (HEIGHT - 2))
 
@@ -176,7 +176,7 @@ class BufferTests(unittest.TestCase):
         self.term.cursorForward(5)
         self.term.write(s)
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             b'\n' * 5 +
             (self.term.fill * 5) + s + b'\n' +
             b'\n' * (HEIGHT - 7))
@@ -187,7 +187,7 @@ class BufferTests(unittest.TestCase):
         self.term.cursorForward(WIDTH - 5)
         self.term.write(s)
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             s[:5].rjust(WIDTH) + b'\n' +
             s[5:] + b'\n' +
             b'\n' * (HEIGHT - 3))
@@ -361,7 +361,7 @@ class BufferTests(unittest.TestCase):
         self.term.eraseLine()
 
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             s1 + b'\n' +
             b'\n' +
             s3 + b'\n' +
@@ -374,7 +374,7 @@ class BufferTests(unittest.TestCase):
         self.term.cursorBackward(5)
         self.term.eraseToLineEnd()
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             s[:-5] + b'\n' +
             b'\n' * (HEIGHT - 2))
 
@@ -385,7 +385,7 @@ class BufferTests(unittest.TestCase):
         self.term.cursorBackward(5)
         self.term.eraseToLineBeginning()
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             s[-4:].rjust(len(s)) + b'\n' +
             b'\n' * (HEIGHT - 2))
 
@@ -396,7 +396,7 @@ class BufferTests(unittest.TestCase):
         self.term.eraseDisplay()
 
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             b'\n' * (HEIGHT - 1))
 
 
@@ -408,7 +408,7 @@ class BufferTests(unittest.TestCase):
         self.term.eraseToDisplayEnd()
 
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             s1 + b'\n' +
             s2[:5] + b'\n' +
             b'\n' * (HEIGHT - 3))
@@ -422,7 +422,7 @@ class BufferTests(unittest.TestCase):
         self.term.eraseToDisplayBeginning()
 
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             b'\n' +
             s2[6:].rjust(len(s2)) + b'\n' +
             b'\n' * (HEIGHT - 3))
@@ -436,7 +436,7 @@ class BufferTests(unittest.TestCase):
         self.term.insertLine()
 
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             s1 + b'\n' +
             b'\n' +
             s2 + b'\n' +
@@ -452,7 +452,7 @@ class BufferTests(unittest.TestCase):
         self.term.deleteLine()
 
         self.assertEqual(
-            str(self.term),
+            self.term.__bytes__(),
             s1 + b'\n' +
             s3 + b'\n' +
             b'\n' * (HEIGHT - 3))
