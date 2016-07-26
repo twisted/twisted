@@ -6,6 +6,8 @@
 SSH key exchange handling.
 """
 
+from __future__ import absolute_import, division
+
 from hashlib import sha1, sha256, sha384, sha512
 
 from zope.interface import Attribute, implementer, Interface
@@ -160,21 +162,21 @@ class _DHGroup14SHA1(object):
 
 #Which ECDH hash function to use is dependent on the size.
 _kexAlgorithms = {
-    "diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
-    "diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
-    "diffie-hellman-group1-sha1": _DHGroup1SHA1(),
-    "diffie-hellman-group14-sha1": _DHGroup14SHA1(),
-    'ecdh-sha2-nistp256': _ECDH256(),
-    'ecdh-sha2-nistp384': _ECDH384(),
-    'ecdh-sha2-nistp521': _ECDH512(),
-    'ecdh-sha2-nistk163': _ECDH256(),
-    'ecdh-sha2-nistp224': _ECDH256(),
-    'ecdh-sha2-nistk233': _ECDH256(),
-    'ecdh-sha2-nistb233': _ECDH256(),
-    'ecdh-sha2-nistk283': _ECDH384(),
-    'ecdh-sha2-nistk409': _ECDH384(),
-    'ecdh-sha2-nistb409': _ECDH384(),
-    'ecdh-sha2-nistt571': _ECDH512()
+    b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
+    b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
+    b"diffie-hellman-group1-sha1": _DHGroup1SHA1(),
+    b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
+    b"ecdh-sha2-nistp256": _ECDH256(),
+    b"ecdh-sha2-nistp384": _ECDH384(),
+    b"ecdh-sha2-nistp521": _ECDH512(),
+    b"ecdh-sha2-nistk163": _ECDH256(),
+    b"ecdh-sha2-nistp224": _ECDH256(),
+    b"ecdh-sha2-nistk233": _ECDH256(),
+    b"ecdh-sha2-nistb233": _ECDH256(),
+    b"ecdh-sha2-nistk283": _ECDH384(),
+    b"ecdh-sha2-nistk409": _ECDH384(),
+    b"ecdh-sha2-nistb409": _ECDH384(),
+    b"ecdh-sha2-nistt571": _ECDH512()
     } 
 
 

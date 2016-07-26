@@ -697,7 +697,7 @@ class Key(object):
                 '<%s %s (%s bits)' % (
                     nativeString(self.type()),
                     self.isPublic() and 'Public Key' or 'Private Key',
-                    self.size())]
+                    self._keyObject.key_size)]
             for k, v in sorted(self.data().items()):
                 if _PY3 and isinstance(k, bytes):
                     k = k.decode('ascii')
@@ -1026,7 +1026,7 @@ class Key(object):
     def toString(self, type, extra=None):
         """
         Create a string representation of this key.  If the key is a private
-        key and you want the represenation of its public key, use
+        key and you want the representation of its public key, use
         C{key.public().toString()}.  type maps to a _toString_* method.
 
         @param type: The type of string to emit.  Currently supported values
