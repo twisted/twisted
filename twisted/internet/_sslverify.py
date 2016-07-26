@@ -1645,11 +1645,11 @@ class OpenSSLCertificateOptions(object):
             name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
             sessionName = md5(networkString(name)).hexdigest()
 
-            ctx.set_session_id(sessionName)
+            ctx.set_session_id(sessionName.encode('utf-8'))
 
         if self.dhParameters:
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
-        ctx.set_cipher_list(nativeString(self._cipherString))
+        ctx.set_cipher_list(self._cipherString.encode('utf-8'))
 
         if self._ecCurve is not None:
             try:
@@ -1788,7 +1788,7 @@ def _expandCipherString(cipherString, method, options):
     ctx = SSL.Context(method)
     ctx.set_options(options)
     try:
-        ctx.set_cipher_list(nativeString(cipherString))
+        ctx.set_cipher_list(cipherString.encode('utf-8'))
     except SSL.Error as e:
         if e.args[0][0][2] == 'no cipher match':
             return []
