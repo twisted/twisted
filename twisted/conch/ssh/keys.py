@@ -4,6 +4,9 @@
 
 """
 Handling of RSA and DSA keys.
+
+@ivar curveTable: a look up table for translating NIST standard curve names to Cryptograpy instances.
+@ivar oidTable: a table to translate OID values to Cryptography instances.
 """
 
 from __future__ import absolute_import, division
@@ -14,10 +17,11 @@ import warnings
 
 from hashlib import md5
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding
+from cryptography.hazmat.primitives.asymmetric import dsa, rsa, padding, ec
+
 try:
     from cryptography.hazmat.primitives.asymmetric.utils import (
         encode_dss_signature, decode_dss_signature)
@@ -39,7 +43,38 @@ from twisted.python.compat import iterbytes, long, izip, nativeString, _PY3
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
 from twisted.python.versions import Version
 
+# Curve lookup table
+curveTable = {
+        b'nistp256' : ec.SECP256R1(),
+        b'nistp384' : ec.SECP384R1(),
+        b'nistp521' : ec.SECP521R1(),
+        b'nistk163' : ec.SECT163K1(),
+        b'nistp192' : ec.SECP192R1(), 
+        b'nistp224' : ec.SECP224R1(),
+        b'nistk233' : ec.SECT233K1(),
+        b'nistb233' : ec.SECT233R1(),
+        b'nistk283' : ec.SECT283K1(),
+        b'nistk409' : ec.SECT409K1(),
+        b'nistb409' : ec.SECT409R1(),
+        b'nistt571' : ec.SECT571K1()
+        }
 
+# The ASN.1 encoded key files use OID instead of common names.
+# Same order as curveTable
+oidTable = {
+    b'1.2.840.10045.3.1.7' : ec.SECP256R1(),
+    b'1.3.132.0.34' : ec.SECP384R1(),
+    b'1.3.132.0.35' : ec.SECP521R1(),
+    b'1.3.132.0.1'  : ec.SECT163K1(),
+    b'1.2.840.10045.3.1.1' : ec.SECP192R1(),
+    b'1.3.132.0.33' : ec.SECP224R1(),
+    b'1.3.132.0.26' : ec.SECT233K1(),
+    b'1.3.132.0.27' : ec.SECT233R1(),
+    b'1.3.132.0.16' : ec.SECT283K1(),
+    b'1.3.132.0.36' : ec.SECT409K1(),
+    b'1.3.132.0.37' : ec.SECT409R1(),
+    b'1.3.132.0.38' : ec.SECT571K1()
+    }
 
 class BadKeyError(Exception):
     """
@@ -144,6 +179,19 @@ class Key(object):
             integer q
             integer g
             integer y
+
+        EC keys::
+            version  1
+            fieldID 
+                    fieldType: ansi-X9-62 fieldType
+                    parameters 
+            curve
+                    octet string a
+                    octet string b
+                    bit string (optional) seed
+            octet string base
+            integer order
+            integer (optional) cofactor
 
         @type blob: L{bytes}
         @param blob: The key data.
@@ -639,27 +687,33 @@ class Key(object):
         """
         Return a pretty representation of this object.
         """
-        lines = [
-            '<%s %s (%s bits)' % (
-                nativeString(self.type()),
-                self.isPublic() and 'Public Key' or 'Private Key',
-                self._keyObject.key_size)]
-        for k, v in sorted(self.data().items()):
-            if _PY3 and isinstance(k, bytes):
-                k = k.decode('ascii')
-            lines.append('attr %s:' % (k,))
-            by = common.MP(v)[4:]
-            while by:
-                m = by[:15]
-                by = by[15:]
-                o = ''
-                for c in iterbytes(m):
-                    o = o + '%02x:' % (ord(c),)
-                if len(m) < 15:
-                    o = o[:-1]
-                lines.append('\t' + o)
-        lines[-1] = lines[-1] + '>'
-        return '\n'.join(lines)
+        if self.type() == 'EC':
+            if self.isPublic():
+                return self._keyObject.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+            else:
+                return self._keyObject.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL, serialization.NoEncryption())
+        else:
+            lines = [
+                '<%s %s (%s bits)' % (
+                    nativeString(self.type()),
+                    self.isPublic() and 'Public Key' or 'Private Key',
+                    self._keyObject.key_size)]
+            for k, v in sorted(self.data().items()):
+                if _PY3 and isinstance(k, bytes):
+                    k = k.decode('ascii')
+                lines.append('attr %s:' % (k,))
+                by = common.MP(v)[4:]
+                while by:
+                    m = by[:15]
+                    by = by[15:]
+                    o = ''
+                    for c in iterbytes(m):
+                        o = o + '%02x:' % (ord(c),)
+                    if len(m) < 15:
+                        o = o[:-1]
+                    lines.append('\t' + o)
+            lines[-1] = lines[-1] + '>'
+            return '\n'.join(lines)
 
 
     @property
@@ -765,7 +819,7 @@ class Key(object):
         @return: C{True} if this is a public key.
         """
         return isinstance(
-            self._keyObject, (rsa.RSAPublicKey, dsa.DSAPublicKey))
+            self._keyObject, (rsa.RSAPublicKey, dsa.DSAPublicKey, ec.EllipticCurvePublicKey))
 
 
     def public(self):
@@ -821,6 +875,12 @@ class Key(object):
                 'unknown type of object: %r' % (self._keyObject,))
 
 
+    def getECKeyName(self):
+        if hasattr(self, 'ecKeyName'):
+            return self.ecKeyName
+        else:
+            return None
+
     def sshType(self):
         """
         Get the type of the object we wrap as defined in the SSH protocol,
@@ -830,7 +890,7 @@ class Key(object):
         @return: The key type format.
         @rtype: L{bytes}
         """
-        return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss'}[self.type()]
+        return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss', 'EC': self.getECKeyName()}[self.type()]
 
 
     def size(self):
@@ -842,7 +902,8 @@ class Key(object):
         """
         if self._keyObject is None:
             return 0
-        return self._keyObject.key_size
+        else:
+            return self._keyObject.key_size
 
 
     def data(self):
@@ -965,7 +1026,7 @@ class Key(object):
     def toString(self, type, extra=None):
         """
         Create a string representation of this key.  If the key is a private
-        key and you want the represenation of its public key, use
+        key and you want the representation of its public key, use
         C{key.public().toString()}.  type maps to a _toString_* method.
 
         @param type: The type of string to emit.  Currently supported values
@@ -980,6 +1041,10 @@ class Key(object):
 
         @rtype: L{bytes}
         """
+        # No support for EC keys yet.
+        if self.type() == 'EC':
+            raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
+
         method = getattr(self, '_toString_%s' % (type.upper(),), None)
         if method is None:
             raise BadKeyError('unknown key type: %s' % (type,))
@@ -1002,6 +1067,11 @@ class Key(object):
 
         @rtype: L{bytes}
         """
+        
+        # No support for EC keys yet.
+        if self.type() == 'EC':
+            raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
+
         data = self.data()
         if self.isPublic():
             b64Data = base64.encodestring(self.blob()).replace(b'\n', b'')
@@ -1016,7 +1086,7 @@ class Key(object):
                 objData = (0, data['n'], data['e'], data['d'], q, p,
                            data['d'] % (q - 1), data['d'] % (p - 1),
                            data['u'])
-            else:
+            elif self.type() == 'DSA':
                 objData = (0, data['p'], data['q'], data['g'], data['y'],
                            data['x'])
             asn1Sequence = univ.Sequence()
@@ -1059,6 +1129,11 @@ class Key(object):
         """
         data = self.data()
         type = self.type()
+
+        # No support for EC keys yet.
+        if self.type() == 'EC':
+            raise UnsupportedAlgorithm("toString() does not support  Elliptic Curves yet.")
+
         if self.isPublic():
             if type == 'RSA':
                 keyData = sexpy.pack([[b'public-key',
@@ -1118,6 +1193,11 @@ class Key(object):
             elif self.type() == 'DSA':
                 values = (data['p'], data['q'], data['g'], data['y'],
                           data['x'])
+            # I assume this is what's needed
+            # But commented out because it hasn't been tested yet.
+            elif self.type() == 'EC':
+                raise UnsupportedAlgorithm("toString() does not support Elliptic Curves yet.")
+                #values = (data['curve'], data['curve'][-8:], data['p'], data['x'])
             return common.NS(self.sshType()) + b''.join(map(common.MP, values))
 
 
@@ -1133,13 +1213,13 @@ class Key(object):
         @rtype: L{bytes}
         @return: A signature for the given data.
         """
-        if self.type() == 'RSA':
+        type = self.type()
+        if type == 'RSA':
             signer = self._keyObject.signer(
                 padding.PKCS1v15(), hashes.SHA1())
             signer.update(data)
             ret = common.NS(signer.finalize())
-
-        elif self.type() == 'DSA':
+        elif type == 'DSA':
             signer = self._keyObject.signer(hashes.SHA1())
             signer.update(data)
             signature = signer.finalize()
@@ -1149,7 +1229,6 @@ class Key(object):
             # are just numbers, and could be any length from 0 to 160 bits.
             # Make sure they are padded out to 160 bits (20 bytes each)
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
-
         else:
             raise BadKeyError("unknown key type %s" % (self.type(),))
         return common.NS(self.sshType()) + ret
@@ -1173,9 +1252,12 @@ class Key(object):
             signatureType, signature = b'ssh-dss', common.NS(signature)
         else:
             signatureType, signature = common.getNS(signature)
+        
         if signatureType != self.sshType():
             return False
-        if self.type() == 'RSA':
+        
+        keyType = self.type()
+        if keyType == 'RSA':
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
@@ -1184,7 +1266,7 @@ class Key(object):
                 padding.PKCS1v15(),
                 hashes.SHA1(),
             )
-        elif self.type() == 'DSA':
+        elif keyType == 'DSA':
             concatenatedSignature = common.getNS(signature)[0]
             r = int_from_bytes(concatenatedSignature[:20], 'big')
             s = int_from_bytes(concatenatedSignature[20:], 'big')
