@@ -10,8 +10,8 @@ VT102 and VT220 terminal manipulation.
 
 from zope.interface import implementer, Interface
 
-from twisted.python.compat import intToBytes
 from twisted.internet import protocol, defer, interfaces as iinternet
+from twisted.python.compat import intToBytes, iterbytes
 
 
 
@@ -529,7 +529,7 @@ class ServerProtocol(protocol.Protocol):
 
 
     def dataReceived(self, data):
-        for ch in data:
+        for ch in iterbytes(data):
             if self.state == 'data':
                 if ch == '\x1b':
                     self.state = 'escaped'
@@ -1026,7 +1026,7 @@ class ClientProtocol(protocol.Protocol):
         handlers defined by C{self.terminal}.
         """
         toWrite = []
-        for b in data:
+        for b in iterbytes(data):
             if self.state == 'data':
                 if b == '\x1b':
                     if toWrite:
