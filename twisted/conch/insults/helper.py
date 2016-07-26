@@ -137,7 +137,7 @@ class TerminalBuffer(protocol.Protocol):
         Line feeds in C{bytes} will be replaced with carriage return / line
         feed pairs.
         """
-        for b in data.replace('\n', '\r\n'):
+        for b in data.replace(b'\n', b'\r\n'):
             self.insertAtCursor(b)
 
 
