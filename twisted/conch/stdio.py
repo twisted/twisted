@@ -29,21 +29,44 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         self.onConnection.callback(None)
         self.onConnection = None
 
-    def write(self, bytes):
-        self.transport.write(bytes)
 
-    def outReceived(self, bytes):
-        self.proto.dataReceived(bytes)
+    def write(self, data):
+        """
+        Write to the terminal.
 
-    def errReceived(self, bytes):
+        @param data: Data to write.
+        @type L{bytes}
+        """
+        self.transport.write(data)
+
+
+    def outReceived(self, data):
+        """
+        Receive data from the terminal.
+
+        @param data: Data received.
+        @type L{bytes}
+        """
+        self.proto.dataReceived(data)
+
+
+    def errReceived(self, data):
+        """
+        Report an error.
+
+        @param data: Data to include in L{Failure}.
+        @type L{bytes}
+        """
         self.transport.loseConnection()
         if self.proto is not None:
-            self.proto.connectionLost(failure.Failure(UnexpectedOutputError(bytes)))
+            self.proto.connectionLost(failure.Failure(UnexpectedOutputError(data)))
             self.proto = None
+
 
     def childConnectionLost(self, childFD):
         if self.proto is not None:
             self.proto.childConnectionLost(childFD)
+
 
     def processEnded(self, reason):
         if self.proto is not None:
