@@ -747,7 +747,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(opts._cipherString.encode('utf-8'), ctx._cipherList)
+        self.assertEqual(opts._cipherString.encode('ascii'), ctx._cipherList)
 
 
     def test_givesMeaningfulErrorMessageIfNoCipherMatches(self):
