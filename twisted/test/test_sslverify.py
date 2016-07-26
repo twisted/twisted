@@ -747,7 +747,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(opts._cipherString, ctx._cipherList)
+        self.assertEqual(opts._cipherString.encode('ascii'), ctx._cipherList)
 
 
     def test_givesMeaningfulErrorMessageIfNoCipherMatches(self):
@@ -781,7 +781,7 @@ class OpenSSLOptionsTests(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(u'sentinel', ctx._cipherList)
+        self.assertEqual(b'sentinel', ctx._cipherList)
 
 
     def test_basicSecurityOptionsAreSet(self):
