@@ -296,18 +296,18 @@ from twisted.conch.test.loopback import LoopbackRelay
 
 class EchoServer(recvline.HistoricRecvLine):
     def lineReceived(self, line):
-        self.terminal.write(line + '\n' + self.ps[self.pn])
+        self.terminal.write(line + b'\n' + self.ps[self.pn])
 
 # An insults API for this would be nice.
-left = "\x1b[D"
-right = "\x1b[C"
-up = "\x1b[A"
-down = "\x1b[B"
-insert = "\x1b[2~"
-home = "\x1b[1~"
-delete = "\x1b[3~"
-end = "\x1b[4~"
-backspace = "\x7f"
+left = b"\x1b[D"
+right = b"\x1b[C"
+up = b"\x1b[A"
+down = b"\x1b[B"
+insert = b"\x1b[2~"
+home = b"\x1b[1~"
+delete = b"\x1b[3~"
+end = b"\x1b[4~"
+backspace = b"\x7f"
 
 from twisted.cred import checkers
 
@@ -444,21 +444,21 @@ class _BaseMixin:
     HEIGHT = 24
 
     def _assertBuffer(self, lines):
-        receivedLines = str(self.recvlineClient).splitlines()
-        expectedLines = lines + ([''] * (self.HEIGHT - len(lines) - 1))
+        receivedLines = self.recvlineClient.__bytes__().splitlines()
+        expectedLines = lines + ([b''] * (self.HEIGHT - len(lines) - 1))
         self.assertEqual(len(receivedLines), len(expectedLines))
         for i in range(len(receivedLines)):
             self.assertEqual(
                 receivedLines[i], expectedLines[i],
-                str(receivedLines[max(0, i-1):i+1]) +
-                " != " +
-                str(expectedLines[max(0, i-1):i+1]))
+                b"".join(receivedLines[max(0, i-1):i+1]) +
+                b" != " +
+                b"".join(expectedLines[max(0, i-1):i+1]))
 
 
-    def _trivialTest(self, input, output):
-        done = self.recvlineClient.expect("done")
+    def _trivialTest(self, inputLine, output):
+        done = self.recvlineClient.expect(b"done")
 
-        self._testwrite(input)
+        self._testwrite(inputLine)
 
         def finished(ign):
             self._assertBuffer(output)
@@ -474,7 +474,7 @@ class _SSHMixin(_BaseMixin):
                 "cryptography requirements missing, can't run historic "
                 "recvline tests over ssh")
 
-        u, p = 'testuser', 'testpass'
+        u, p = 'testuser', b'testpass'
         rlm = TerminalRealm()
         rlm.userFactory = TestUser
         rlm.chainedProtocolFactory = lambda: insultsServer
@@ -486,8 +486,8 @@ class _SSHMixin(_BaseMixin):
 
         sshKey = keys._getPersistentRSAKey(filepath.FilePath(self.mktemp()),
                                            keySize=512)
-        sshFactory.publicKeys["ssh-rsa"] = sshKey
-        sshFactory.privateKeys["ssh-rsa"] = sshKey
+        sshFactory.publicKeys[b"ssh-rsa"] = sshKey
+        sshFactory.privateKeys[b"ssh-rsa"] = sshKey
 
         sshFactory.serverProtocol = self.serverProtocol
         sshFactory.startFactory()
@@ -611,7 +611,7 @@ class _StdioMixin(_BaseMixin):
         # happen first, but it doesn't hurt to be safe.
         return defer.gatherResults(filter(None, [
             processClient.onConnection,
-            testTerminal.expect(">>> ")]))
+            testTerminal.expect(b">>> ")]))
 
 
     def tearDown(self):
@@ -637,74 +637,74 @@ class RecvlineLoopbackMixin:
 
     def testSimple(self):
         return self._trivialTest(
-            "first line\ndone",
-            [">>> first line",
-             "first line",
-             ">>> done"])
+            b"first line\ndone",
+            [b">>> first line",
+             b"first line",
+             b">>> done"])
 
 
     def testLeftArrow(self):
         return self._trivialTest(
-            insert + 'first line' + left * 4 + "xxxx\ndone",
-            [">>> first xxxx",
-             "first xxxx",
-             ">>> done"])
+            insert + b'first line' + left * 4 + b"xxxx\ndone",
+            [b">>> first xxxx",
+             b"first xxxx",
+             b">>> done"])
 
 
     def testRightArrow(self):
         return self._trivialTest(
-            insert + 'right line' + left * 4 + right * 2 + "xx\ndone",
-            [">>> right lixx",
-             "right lixx",
-            ">>> done"])
+            insert + b'right line' + left * 4 + right * 2 + b"xx\ndone",
+            [b">>> right lixx",
+             b"right lixx",
+            b">>> done"])
 
 
     def testBackspace(self):
         return self._trivialTest(
-            "second line" + backspace * 4 + "xxxx\ndone",
-            [">>> second xxxx",
-             "second xxxx",
-             ">>> done"])
+            b"second line" + backspace * 4 + b"xxxx\ndone",
+            [b">>> second xxxx",
+             b"second xxxx",
+             b">>> done"])
 
 
     def testDelete(self):
         return self._trivialTest(
-            "delete xxxx" + left * 4 + delete * 4 + "line\ndone",
-            [">>> delete line",
-             "delete line",
-             ">>> done"])
+            b"delete xxxx" + left * 4 + delete * 4 + b"line\ndone",
+            [b">>> delete line",
+             b"delete line",
+             b">>> done"])
 
 
     def testInsert(self):
         return self._trivialTest(
-            "third ine" + left * 3 + "l\ndone",
-            [">>> third line",
-             "third line",
-             ">>> done"])
+            b"third ine" + left * 3 + b"l\ndone",
+            [b">>> third line",
+             b"third line",
+             b">>> done"])
 
 
     def testTypeover(self):
         return self._trivialTest(
-            "fourth xine" + left * 4 + insert + "l\ndone",
-            [">>> fourth line",
-             "fourth line",
-             ">>> done"])
+            b"fourth xine" + left * 4 + insert + b"l\ndone",
+            [b">>> fourth line",
+             b"fourth line",
+             b">>> done"])
 
 
     def testHome(self):
         return self._trivialTest(
-            insert + "blah line" + home + "home\ndone",
-            [">>> home line",
-             "home line",
-             ">>> done"])
+            insert + b"blah line" + home + b"home\ndone",
+            [b">>> home line",
+             b"home line",
+             b">>> done"])
 
 
     def testEnd(self):
         return self._trivialTest(
-            "end " + left * 4 + end + "line\ndone",
-            [">>> end line",
-             "end line",
-             ">>> done"])
+            b"end " + left * 4 + end + b"line\ndone",
+            [b">>> end line",
+             b"end line",
+             b">>> done"])
 
 
 
@@ -729,24 +729,24 @@ class HistoricRecvlineLoopbackMixin:
 
     def testUpArrow(self):
         return self._trivialTest(
-            "first line\n" + up + "\ndone",
-            [">>> first line",
-             "first line",
-             ">>> first line",
-             "first line",
-             ">>> done"])
+            b"first line\n" + up + b"\ndone",
+            [b">>> first line",
+             b"first line",
+             b">>> first line",
+             b"first line",
+             b">>> done"])
 
 
     def testDownArrow(self):
         return self._trivialTest(
-            "first line\nsecond line\n" + up * 2 + down + "\ndone",
-            [">>> first line",
-             "first line",
-             ">>> second line",
-             "second line",
-             ">>> second line",
-             "second line",
-             ">>> done"])
+            b"first line\nsecond line\n" + up * 2 + down + b"\ndone",
+            [b">>> first line",
+             b"first line",
+             b">>> second line",
+             b"second line",
+             b">>> second line",
+             b"second line",
+             b">>> done"])
 
 
 
