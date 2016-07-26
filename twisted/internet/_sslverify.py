@@ -452,7 +452,7 @@ class CertBase:
         @type interface: L{zope.interface.interfaces.IInterface}
 
         @return: an L{IOpenSSLTrustRoot} provider or L{NotImplemented}
-        @rtype: C{interface} or L{NotImplemented}
+        @rtype: L{IOpenSSLTrustRoot} or L{NotImplemented}
         """
         if interface is IOpenSSLTrustRoot:
             return OpenSSLCertificateAuthorities([self.original])
@@ -532,11 +532,12 @@ class Certificate(CertBase):
         """
         Get the certificate for the remote end of the given transport.
 
-        @type: L{ISystemHandle}
+        @param transport: an L{ISystemHandle} provider
+
         @rtype: C{Class}
 
         @raise: L{CertificateError}, if the given transport does not have a peer
-        certificate.
+            certificate.
         """
         return _handleattrhelper(Class, transport, 'peer')
     peerFromTransport = classmethod(peerFromTransport)
@@ -551,7 +552,7 @@ class Certificate(CertBase):
         @rtype: C{Class}
 
         @raise: L{CertificateError}, if the given transport does not have a host
-        certificate.
+            certificate.
         """
         return _handleattrhelper(Class, transport, 'host')
     hostFromTransport = classmethod(hostFromTransport)
@@ -585,7 +586,9 @@ class Certificate(CertBase):
         algorithm.
 
         @param method: One of C{'md5'} or C{'sha'}.
-        @rtype: L{str}
+
+        @return: The digest of the object, formatted as b":"-delimited hex pairs
+        @rtype: L{bytes}
         """
         return self.original.digest(method)
 
