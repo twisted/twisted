@@ -363,6 +363,7 @@ testModules = [
     "twisted.conch.test.test_forwarding",
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_session",
+    "twisted.conch.test.test_ssh",
     "twisted.conch.test.test_telnet",
     "twisted.conch.test.test_text",
     "twisted.conch.test.test_transport",
@@ -574,6 +575,7 @@ testModules = [
 
 testDataFiles = [
     "twisted.conch.test.keydata",
+    "twisted.conch.test.loopback",
     "twisted.internet.test.process_cli",
     "twisted.internet.test.process_helper",
     "twisted.positioning.test.receiver",
