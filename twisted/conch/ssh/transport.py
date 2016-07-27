@@ -1621,8 +1621,24 @@ class SSHClientTransport(SSHTransportBase):
 
         @return: None.
         """
+        pubKey, packet = getNS(packet)
+        f, packet = getMP(packet)
+        signature, packet = getNS(packet)
+        fingerprint = b':'.join([binascii.hexlify(ch) for ch in
+                                 iterbytes(sha256(pubKey).digest())])
+        print "Key fingerprint: %s" % fingerprint
+        d = self.verifyHostKey(pubKey, fingerprint)
+        d.addCallback(self._continue_KEX_ECDH_REPLY, pubKey, f, signature)
+        d.addErrback(
+            lambda unused: self.sendDisconnect(
+                DISCONNECT_HOST_KEY_NOT_VERIFIABLE, b'bad host key'))
+        return d
+
+    def _continue_KEX_ECDH_REPLY(self, pubkey, f, signature):
         #Get the host public key, the raw ECDH public key bytes and the signature
-        self.theirECHost, pktPub, signature, packet = getNS(packet, 3)
+        #self.theirECHost, pktPub, signature, packet = getNS(packet, 3)
+        self.theirECHost = pubkey
+        pktPub = f
 
         #Take the provided public key and transform it into a format for the cryptography module
         self.theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
