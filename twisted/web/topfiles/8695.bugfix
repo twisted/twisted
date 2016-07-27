@@ -1,0 +1,1 @@
+twisted.web's HTTP/2 server now tolerates receiving WINDOW_UPDATE frames for streams for which it has no outstanding data to send.
