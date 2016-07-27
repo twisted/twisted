@@ -68,9 +68,11 @@ modules = [
     "twisted.conch.ssh.channel",
     "twisted.conch.ssh.connection",
     "twisted.conch.ssh.common",
+    "twisted.conch.ssh.factory",
     "twisted.conch.ssh.filetransfer",
     "twisted.conch.ssh.forwarding",
     "twisted.conch.ssh.keys",
+    "twisted.conch.ssh.service",
     "twisted.conch.ssh.session",
     "twisted.conch.ssh.sexpy",
     "twisted.conch.ssh.transport",
@@ -364,6 +366,7 @@ testModules = [
     "twisted.conch.test.test_forwarding",
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_session",
+    "twisted.conch.test.test_ssh",
     "twisted.conch.test.test_telnet",
     "twisted.conch.test.test_text",
     "twisted.conch.test.test_transport",
@@ -576,6 +579,7 @@ testModules = [
 
 testDataFiles = [
     "twisted.conch.test.keydata",
+    "twisted.conch.test.loopback",
     "twisted.internet.test.process_cli",
     "twisted.internet.test.process_helper",
     "twisted.positioning.test.receiver",
@@ -624,11 +628,9 @@ testDataFiles = [
 
 
 almostModules = [
-    # The tests for twisted.web.conch.ssh.transport depends on the
-    # following.
+    # The tests for twisted.web.conch.ssh depends on the conch
+    # interfaces.
     "twisted.conch.interfaces",
-    "twisted.conch.ssh.factory",
-    "twisted.conch.ssh.service",
     # twisted.conch.test.test_text and twisted.conch.test.test_window
     # need these conch modules.  They need more work to get full
     # Python 3 test coverage
