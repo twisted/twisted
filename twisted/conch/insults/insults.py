@@ -1120,7 +1120,7 @@ class ClientProtocol(protocol.Protocol):
         def h(self, proto, handler, buf):
             # XXX - Handle '?' to introduce ANSI-Compatible private modes.
             try:
-                modes = map(int, buf.split(b';'))
+                modes = [int(mode) for mode in buf.split(b';')]
             except ValueError:
                 handler.unhandledControlSequence(b'\x1b[' + buf + b'h')
             else:
@@ -1130,7 +1130,7 @@ class ClientProtocol(protocol.Protocol):
         def l(self, proto, handler, buf):
             # XXX - Handle '?' to introduce ANSI-Compatible private modes.
             try:
-                modes = map(int, buf.split(';'))
+                modes = [int(mode) for mode in buf.split(b';')]
             except ValueError:
                 handler.unhandledControlSequence(b'\x1b[' + buf + 'l')
             else:
