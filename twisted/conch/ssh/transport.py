@@ -1619,7 +1619,6 @@ class SSHClientTransport(SSHTransportBase):
         # Get the host public key, the raw ECDH public key bytes and the signature
         hostKey, f, signature, packet = getNS(packet, 3)
 
-        #No point computing the hash, as it just gets ignored later on.
         fingerprint = b':'.join([binascii.hexlify(ch) for ch in
                                  iterbytes(md5(hostKey).digest())])
         d = self.verifyHostKey(hostKey, fingerprint)
