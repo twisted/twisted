@@ -96,16 +96,16 @@ def isInKnownHosts(host, pubKey, options):
         os.mkdir(os.path.expanduser('~/.ssh'))
     kh_file = options['known-hosts'] or _KNOWN_HOSTS
     try:
-        known_hosts = open(os.path.expanduser(kh_file))
+        known_hosts = open(os.path.expanduser(kh_file), 'rb')
     except IOError:
         return 0
     with known_hosts:
-        for line in known_hosts.xreadlines():
+        for line in known_hosts.readlines():
             split = line.split()
             if len(split) < 3:
                 continue
             hosts, hostKeyType, encodedKey = split[:3]
-            if host not in hosts.split(','): # incorrect host
+            if host not in hosts.split(b','): # incorrect host
                 continue
             if hostKeyType != keyType: # incorrect type of key
                 continue
