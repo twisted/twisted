@@ -48,11 +48,6 @@ class SomeNewStyleClass(object):
 
 
 
-class SomeClassThatUsesOldStyle(SomeOldStyleClass):
-    pass
-
-
-
 class OldStyleDecoratorTests(unittest.TestCase):
     """
     Tests for L{_oldstyle._oldStyle}.
@@ -63,6 +58,9 @@ class OldStyleDecoratorTests(unittest.TestCase):
         L{_oldstyle._oldStyle} wraps an old-style class and returns a new-style
         class that has the same functions, attributes, etc.
         """
+        class SomeClassThatUsesOldStyle(SomeOldStyleClass):
+            pass
+
         self.assertEqual(type(SomeClassThatUsesOldStyle), types.ClassType)
         updatedClass = _oldstyle._oldStyle(SomeClassThatUsesOldStyle)
         self.assertEqual(type(updatedClass), type)
@@ -147,7 +145,7 @@ class NewStyleOnly(object):
                     oldStyleClasses.append(fullyQualifiedName(val))
 
         if oldStyleClasses:
-            self.todo = "Not all classes are made new-style yet."
+            self.todo = "Not all classes are made new-style yet. See #8243."
             raise unittest.FailTest(
                 "Old-style classes in {module}: {val}".format(
                     module=self.module,
