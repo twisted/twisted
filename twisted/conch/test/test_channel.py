@@ -166,7 +166,8 @@ class ChannelTests(unittest.TestCase):
 
         """
         self.assertEqual(
-            bytes(self.channel), b'<SSHChannel channel (lw 131072 rw 0)>')
+            self.channel.__bytes__(),
+            b'<SSHChannel channel (lw 131072 rw 0)>')
 
     def test_logPrefix(self):
         """
