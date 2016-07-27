@@ -2024,7 +2024,7 @@ class GetMACTests(unittest.TestCase):
         Generate a new shared secret to be used with the tests.
 
         @return: A new secret.
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         return insecureRandom(64)
 
@@ -2037,7 +2037,7 @@ class GetMACTests(unittest.TestCase):
         attribute set to the value of the key supplied.
 
         @param hmacName: Identifier of HMAC algorithm.
-        @type hmacName: C{bytes}
+        @type hmacName: L{bytes}
 
         @param hashProcessor: Callable for the hash algorithm.
         @type hashProcessor: C{callable}
@@ -2357,10 +2357,10 @@ class RandomNumberTests(unittest.TestCase):
         L{_getRandomNumber} returns an integer constructed directly from the
         bytes returned by the random byte generator passed to it.
         """
-        def random(bytes):
+        def random(data):
             # The number of bytes requested will be the value of each byte
             # we return.
-            return chr(bytes) * bytes
+            return chr(data) * data
         self.assertEqual(
             transport._getRandomNumber(random, 32),
             4 << 24 | 4 << 16 | 4 << 8 | 4)
@@ -2383,8 +2383,8 @@ class RandomNumberTests(unittest.TestCase):
         discarded and another attempt is made to produce a larger value.
         """
         results = [chr(0), chr(1), chr(127)]
-        def random(bytes):
-            return results.pop(0) * bytes
+        def random(data):
+            return results.pop(0) * data
         self.assertEqual(
             transport._generateX(random, 8),
             127)
@@ -2398,8 +2398,8 @@ class RandomNumberTests(unittest.TestCase):
         value.
         """
         results = [chr(255), chr(64)]
-        def random(bytes):
-            return results.pop(0) * bytes
+        def random(data):
+            return results.pop(0) * data
         self.assertEqual(
             transport._generateX(random, 8),
             64)

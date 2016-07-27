@@ -17,33 +17,37 @@ class BufferingMixin:
     """Mixin which adds write buffering.
     """
     _delayedWriteCall = None
-    bytes = None
+    data = None
 
     DELAY = 0.0
 
     def schedule(self):
         return reactor.callLater(self.DELAY, self.flush)
 
+
     def reschedule(self, token):
         token.reset(self.DELAY)
 
-    def write(self, bytes):
-        """Buffer some bytes to be written soon.
+
+    def write(self, data):
+        """
+        Buffer some bytes to be written soon.
 
         Every call to this function delays the real write by C{self.DELAY}
         seconds.  When the delay expires, all collected bytes are written
         to the underlying transport using L{ITransport.writeSequence}.
         """
         if self._delayedWriteCall is None:
-            self.bytes = []
+            self.data = []
             self._delayedWriteCall = self.schedule()
         else:
             self.reschedule(self._delayedWriteCall)
-        self.bytes.append(bytes)
+        self.data.append(data)
+
 
     def flush(self):
         """Flush the buffer immediately.
         """
         self._delayedWriteCall = None
-        self.transport.writeSequence(self.bytes)
-        self.bytes = None
+        self.transport.writeSequence(self.data)
+        self.data = None
