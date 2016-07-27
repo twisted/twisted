@@ -14,7 +14,7 @@ interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 from __future__ import print_function
 
 from twisted.python import log
-from twisted.python.compat import networkString, nativeString
+from twisted.python.compat import nativeString, raw_input, _PY3
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -26,6 +26,9 @@ from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
 from twisted.conch.client import agent
 
 import os, sys, base64, getpass
+
+if _PY3:
+    import io
 
 # The default location of the known hosts file (probably should be parsed out
 # of an ssh config file someday).
@@ -159,7 +162,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     def _getPassword(self, prompt):
         try:
             oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','rb+', buffering=0)
+            sys.stdin, sys.stdout = self._open_tty()
             p=getpass.getpass(prompt)
             return p
         except (KeyboardInterrupt, IOError):
@@ -269,3 +272,17 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         finally:
             sys.stdout,sys.stdin=oldout,oldin
         return defer.succeed(responses)
+
+
+    @classmethod
+    def _open_tty(self):
+        """
+        Open /dev/tty as two streams one in read, one in write mode,
+        and return them.
+        """
+        stdin = open("/dev/tty", "rb")
+        stdout = open("/dev/tty", "wb")
+        if _PY3:
+            stdin = io.TextIOWrapper(stdin)
+            stdout = io.TextIOWrapper(stdout)
+        return stdin, stdout
