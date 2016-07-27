@@ -641,9 +641,6 @@ class _Unjellier:
             return obj
         jelType = obj[0]
 
-        if not isinstance(jelType, str):
-            jelType = jelType.decode('utf8')
-
         if not self.taster.isTypeAllowed(jelType):
             raise InsecureJelly(jelType)
         regClass = unjellyableRegistry.get(jelType)
@@ -669,6 +666,9 @@ class _Unjellier:
             if hasattr(inst, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
             return inst
+
+        if not isinstance(jelType, str):
+            jelType = jelType.decode('utf8')
 
         thunk = getattr(self, '_unjelly_%s' % jelType, None)
         if thunk is not None:
