@@ -1106,7 +1106,7 @@ class ClientProtocol(protocol.Protocol):
                     except ValueError:
                         handler.unhandledControlSequence(b'\x1b[' + buf + ch)
                     else:
-                        getattr(handler, n.decode("ascii"))(m)
+                        getattr(handler, n)(m)
             return simple
 
         for (ch, fName) in (('A', 'Up'),
