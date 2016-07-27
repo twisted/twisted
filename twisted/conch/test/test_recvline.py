@@ -291,7 +291,7 @@ class ArrowsTests(unittest.TestCase):
 
 from twisted.conch import telnet
 from twisted.conch.insults import helper
-from twisted.protocols import loopback
+from twisted.conch.test.loopback import LoopbackRelay
 
 class EchoServer(recvline.HistoricRecvLine):
     def lineReceived(self, line):
@@ -420,29 +420,6 @@ else:
         pass
 
     components.registerAdapter(TestSession, TestUser, session.ISession)
-
-
-
-class LoopbackRelay(loopback.LoopbackRelay):
-    clearCall = None
-
-    def logPrefix(self):
-        return "LoopbackRelay(%r)" % (self.target.__class__.__name__,)
-
-
-    def write(self, bytes):
-        loopback.LoopbackRelay.write(self, bytes)
-        if self.clearCall is not None:
-            self.clearCall.cancel()
-
-        from twisted.internet import reactor
-        self.clearCall = reactor.callLater(0, self._clearBuffer)
-
-
-    def _clearBuffer(self):
-        self.clearCall = None
-        loopback.LoopbackRelay.clearBuffer(self)
-
 
 
 class NotifyingExpectableBuffer(helper.ExpectableBuffer):
