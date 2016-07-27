@@ -474,7 +474,7 @@ class _SSHMixin(_BaseMixin):
                 "cryptography requirements missing, can't run historic "
                 "recvline tests over ssh")
 
-        u, p = 'testuser', b'testpass'
+        u, p = b'testuser', b'testpass'
         rlm = TerminalRealm()
         rlm.userFactory = TestUser
         rlm.chainedProtocolFactory = lambda: insultsServer
