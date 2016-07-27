@@ -659,11 +659,6 @@ almostModules = [
     # twisted.conch.test_knownhosts tests parts of the default module
     "twisted.conch.client.default",
     "twisted.conch.client.agent",
-    # twisted.conch.test.test_text and twisted.conch.test.test_window
-    # need these conch modules.  They need more work to get full
-    # Python 3 test coverage
-    "twisted.conch.insults.helper",
-    "twisted.conch.insults.insults",
     # Required for Trial
     "twisted.python.logfile",
     # Missing test coverage, see #6156:
