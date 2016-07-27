@@ -625,7 +625,8 @@ class H2Connection(Protocol, TimeoutMixin):
                 # unnecessary but benign. We'll ignore it.
                 return
 
-            self.priority.unblock(streamID)
+            if self._outboundStreamQueues.get(streamID):
+                self.priority.unblock(streamID)
             self.streams[streamID].windowUpdated()
         else:
             # Update strictly applies to all streams.
