@@ -7,6 +7,8 @@ Tests for L{twisted.conch.client.default}.
 
 from __future__ import absolute_import, division
 
+import sys
+
 from twisted.python.reflect import requireModule
 
 if requireModule('cryptography') and requireModule('pyasn1'):
@@ -236,5 +238,11 @@ class SSHUserAuthClientTests(TestCase):
             raise KeyboardInterrupt("User pressed CTRL-C")
 
         self.patch(default.getpass, 'getpass', getpass)
+        stdout, stdin = sys.stdout, sys.stdin
         d = client.getPassword(b'?')
+        @d.addErrback
+        def check_sys(fail):
+            self.assertEqual(
+                [stdout, stdin], [sys.stdout, sys.stdin])
+            return fail
         self.assertFailure(d, ConchError)

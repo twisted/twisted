@@ -161,11 +161,12 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             oldout, oldin = sys.stdout, sys.stdin
             sys.stdin = sys.stdout = open('/dev/tty','rb+', buffering=0)
             p=getpass.getpass(prompt)
-            sys.stdout,sys.stdin=oldout,oldin
             return p
         except (KeyboardInterrupt, IOError):
             print()
             raise ConchError('PEBKAC')
+        finally:
+            sys.stdout, sys.stdin=oldout,oldin
 
     def getPassword(self, prompt = None):
         if prompt:
