@@ -368,8 +368,8 @@ else:
             self.openChannel(self.__channel)
 
 
-        def write(self, bytes):
-            return self.__channel.write(bytes)
+        def write(self, data):
+            return self.__channel.write(data)
 
 
     class TestAuth(userauth.SSHUserAuthClient):
@@ -404,8 +404,8 @@ else:
                 TestAuth(self.username, self.password, self.__connection))
 
 
-        def write(self, bytes):
-            return self.__connection.write(bytes)
+        def write(self, data):
+            return self.__connection.write(data)
 
 
     class TestSessionTransport(TerminalSessionTransport):
@@ -514,8 +514,8 @@ class _SSHMixin(_BaseMixin):
         return recvlineClient.onConnection
 
 
-    def _testwrite(self, bytes):
-        self.sshClient.write(bytes)
+    def _testwrite(self, data):
+        self.sshClient.write(data)
 
 
 
@@ -559,8 +559,8 @@ class _TelnetMixin(_BaseMixin):
         return recvlineClient.onConnection
 
 
-    def _testwrite(self, bytes):
-        self.telnetClient.write(bytes)
+    def _testwrite(self, data):
+        self.telnetClient.write(data)
 
 try:
     from twisted.conch import stdio
@@ -627,8 +627,8 @@ class _StdioMixin(_BaseMixin):
         return self.testTerminal.onDisconnection.addErrback(trap)
 
 
-    def _testwrite(self, bytes):
-        self.clientTransport.write(bytes)
+    def _testwrite(self, data):
+        self.clientTransport.write(data)
 
 
 
