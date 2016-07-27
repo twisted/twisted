@@ -24,13 +24,11 @@ from twisted.web.server import Site
 from twisted.web.static import Data, File
 from twisted.web.tap import Options, makeService
 from twisted.web.script import PythonScript
+from twisted.web.wsgi import WSGIResource
 
 if not _PY3:
     # FIXME: https://twistedmatrix.com/trac/ticket/8009
     from twisted.web.twcgi import CGIScript
-
-    # FIXME: https://twistedmatrix.com/trac/ticket/7993
-    from twisted.web.wsgi import WSGIResource
 
     # FIXME: https://twistedmatrix.com/trac/ticket/8010
     # FIXME: https://twistedmatrix.com/trac/ticket/7598
@@ -229,10 +227,6 @@ class ServiceTests(TestCase):
         self.assertFalse(root._threadpool.joined)
         reactor.fireSystemEvent('shutdown')
         self.assertTrue(root._threadpool.joined)
-
-    if _PY3:
-        test_wsgi.skip = (
-            "Will be ported in https://twistedmatrix.com/trac/ticket/7993")
 
 
     def test_invalidApplication(self):

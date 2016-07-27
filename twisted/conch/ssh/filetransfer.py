@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import division, absolute_import
+
 import errno
 import struct
 
@@ -12,7 +14,8 @@ from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
-
+from twisted.python.compat import (
+    xrange, itervalues, networkString, nativeString)
 
 
 
@@ -23,7 +26,7 @@ class FileTransferBase(protocol.Protocol):
     packetTypes = {}
 
     def __init__(self):
-        self.buf = ''
+        self.buf = b''
         self.otherVersion = None # this gets set
 
     def sendPacket(self, kind, data):
@@ -84,12 +87,12 @@ class FileTransferBase(protocol.Protocol):
             for i in xrange(extended_count):
                 extended_type, data = getNS(data)
                 extended_data, data = getNS(data)
-                attrs['ext_%s' % extended_type] = extended_data
+                attrs['ext_%s' % nativeString(extended_type)] = extended_data
         return attrs, data
 
     def _packAttributes(self, attrs):
         flags = 0
-        data = ''
+        data = b''
         if 'size' in attrs:
             data += struct.pack('!Q', attrs['size'])
             flags |= FILEXFER_ATTR_SIZE
@@ -105,12 +108,12 @@ class FileTransferBase(protocol.Protocol):
         extended = []
         for k in attrs:
             if k.startswith('ext_'):
-                ext_type = NS(k[4:])
+                ext_type = NS(networkString(k[4:]))
                 ext_data = NS(attrs[k])
                 extended.append(ext_type+ext_data)
         if extended:
             data += struct.pack('!L', len(extended))
-            data += ''.join(extended)
+            data += b''.join(extended)
             flags |= FILEXFER_ATTR_EXTENDED
         return struct.pack('!L', flags) + data
 
@@ -132,7 +135,7 @@ class FileTransferServer(FileTransferBase):
             ext_data, data = getNS(data)
             ext[ext_name] = ext_data
         our_ext = self.client.gotVersion(version, ext)
-        our_ext_data = ""
+        our_ext_data = b""
         for (k,v) in our_ext.items():
             our_ext_data += NS(k) + NS(v)
         self.sendPacket(FXP_VERSION, struct.pack('!L', self.version) + \
@@ -145,13 +148,13 @@ class FileTransferServer(FileTransferBase):
         flags ,= struct.unpack('!L', data[:4])
         data = data[4:]
         attrs, data = self._parseAttributes(data)
-        assert data == '', 'still have data in OPEN: %s' % repr(data)
+        assert data == b'', 'still have data in OPEN: %s' % repr(data)
         d = defer.maybeDeferred(self.client.openFile, filename, flags, attrs)
         d.addCallback(self._cbOpenFile, requestId)
-        d.addErrback(self._ebStatus, requestId, "open failed")
+        d.addErrback(self._ebStatus, requestId, b"open failed")
 
     def _cbOpenFile(self, fileObj, requestId):
-        fileId = str(hash(fileObj))
+        fileId = networkString(str(hash(fileObj)))
         if fileId in self.openFiles:
             raise KeyError('id already open')
         self.openFiles[fileId] = fileObj
@@ -161,17 +164,17 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
-        assert data == '', 'still have data in CLOSE: %s' % repr(data)
+        assert data == b'', 'still have data in CLOSE: %s' % repr(data)
         if handle in self.openFiles:
             fileObj = self.openFiles[handle]
             d = defer.maybeDeferred(fileObj.close)
             d.addCallback(self._cbClose, handle, requestId)
-            d.addErrback(self._ebStatus, requestId, "close failed")
+            d.addErrback(self._ebStatus, requestId, b"close failed")
         elif handle in self.openDirs:
             dirObj = self.openDirs[handle][0]
             d = defer.maybeDeferred(dirObj.close)
             d.addCallback(self._cbClose, handle, requestId, 1)
-            d.addErrback(self._ebStatus, requestId, "close failed")
+            d.addErrback(self._ebStatus, requestId, b"close failed")
         else:
             self._ebClose(failure.Failure(KeyError()), requestId)
 
@@ -180,24 +183,24 @@ class FileTransferServer(FileTransferBase):
             del self.openDirs[handle]
         else:
             del self.openFiles[handle]
-        self._sendStatus(requestId, FX_OK, 'file closed')
+        self._sendStatus(requestId, FX_OK, b'file closed')
 
     def packet_READ(self, data):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
         (offset, length), data = struct.unpack('!QL', data[:12]), data[12:]
-        assert data == '', 'still have data in READ: %s' % repr(data)
+        assert data == b'', 'still have data in READ: %s' % repr(data)
         if handle not in self.openFiles:
             self._ebRead(failure.Failure(KeyError()), requestId)
         else:
             fileObj = self.openFiles[handle]
             d = defer.maybeDeferred(fileObj.readChunk, offset, length)
             d.addCallback(self._cbRead, requestId)
-            d.addErrback(self._ebStatus, requestId, "read failed")
+            d.addErrback(self._ebStatus, requestId, b"read failed")
 
     def _cbRead(self, result, requestId):
-        if result == '': # python's read will return this for EOF
+        if result == b'': # python's read will return this for EOF
             raise EOFError()
         self.sendPacket(FXP_DATA, requestId + NS(result))
 
@@ -208,64 +211,64 @@ class FileTransferServer(FileTransferBase):
         offset, = struct.unpack('!Q', data[:8])
         data = data[8:]
         writeData, data = getNS(data)
-        assert data == '', 'still have data in WRITE: %s' % repr(data)
+        assert data == b'', 'still have data in WRITE: %s' % repr(data)
         if handle not in self.openFiles:
             self._ebWrite(failure.Failure(KeyError()), requestId)
         else:
             fileObj = self.openFiles[handle]
             d = defer.maybeDeferred(fileObj.writeChunk, offset, writeData)
-            d.addCallback(self._cbStatus, requestId, "write succeeded")
-            d.addErrback(self._ebStatus, requestId, "write failed")
+            d.addCallback(self._cbStatus, requestId, b"write succeeded")
+            d.addErrback(self._ebStatus, requestId, b"write failed")
 
     def packet_REMOVE(self, data):
         requestId = data[:4]
         data = data[4:]
         filename, data = getNS(data)
-        assert data == '', 'still have data in REMOVE: %s' % repr(data)
+        assert data == b'', 'still have data in REMOVE: %s' % repr(data)
         d = defer.maybeDeferred(self.client.removeFile, filename)
-        d.addCallback(self._cbStatus, requestId, "remove succeeded")
-        d.addErrback(self._ebStatus, requestId, "remove failed")
+        d.addCallback(self._cbStatus, requestId, b"remove succeeded")
+        d.addErrback(self._ebStatus, requestId, b"remove failed")
 
     def packet_RENAME(self, data):
         requestId = data[:4]
         data = data[4:]
         oldPath, data = getNS(data)
         newPath, data = getNS(data)
-        assert data == '', 'still have data in RENAME: %s' % repr(data)
+        assert data == b'', 'still have data in RENAME: %s' % repr(data)
         d = defer.maybeDeferred(self.client.renameFile, oldPath, newPath)
-        d.addCallback(self._cbStatus, requestId, "rename succeeded")
-        d.addErrback(self._ebStatus, requestId, "rename failed")
+        d.addCallback(self._cbStatus, requestId, b"rename succeeded")
+        d.addErrback(self._ebStatus, requestId, b"rename failed")
 
     def packet_MKDIR(self, data):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
         attrs, data = self._parseAttributes(data)
-        assert data == '', 'still have data in MKDIR: %s' % repr(data)
+        assert data == b'', 'still have data in MKDIR: %s' % repr(data)
         d = defer.maybeDeferred(self.client.makeDirectory, path, attrs)
-        d.addCallback(self._cbStatus, requestId, "mkdir succeeded")
-        d.addErrback(self._ebStatus, requestId, "mkdir failed")
+        d.addCallback(self._cbStatus, requestId, b"mkdir succeeded")
+        d.addErrback(self._ebStatus, requestId, b"mkdir failed")
 
     def packet_RMDIR(self, data):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == '', 'still have data in RMDIR: %s' % repr(data)
+        assert data == b'', 'still have data in RMDIR: %s' % repr(data)
         d = defer.maybeDeferred(self.client.removeDirectory, path)
-        d.addCallback(self._cbStatus, requestId, "rmdir succeeded")
-        d.addErrback(self._ebStatus, requestId, "rmdir failed")
+        d.addCallback(self._cbStatus, requestId, b"rmdir succeeded")
+        d.addErrback(self._ebStatus, requestId, b"rmdir failed")
 
     def packet_OPENDIR(self, data):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == '', 'still have data in OPENDIR: %s' % repr(data)
+        assert data == b'', 'still have data in OPENDIR: %s' % repr(data)
         d = defer.maybeDeferred(self.client.openDirectory, path)
         d.addCallback(self._cbOpenDirectory, requestId)
-        d.addErrback(self._ebStatus, requestId, "opendir failed")
+        d.addErrback(self._ebStatus, requestId, b"opendir failed")
 
     def _cbOpenDirectory(self, dirObj, requestId):
-        handle = str(hash(dirObj))
+        handle = networkString(str(hash(dirObj)))
         if handle in self.openDirs:
             raise KeyError("already opened this directory")
         self.openDirs[handle] = [dirObj, iter(dirObj)]
@@ -275,14 +278,14 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
-        assert data == '', 'still have data in READDIR: %s' % repr(data)
+        assert data == b'', 'still have data in READDIR: %s' % repr(data)
         if handle not in self.openDirs:
             self._ebStatus(failure.Failure(KeyError()), requestId)
         else:
             dirObj, dirIter = self.openDirs[handle]
             d = defer.maybeDeferred(self._scanDirectory, dirIter, [])
             d.addCallback(self._cbSendDirectory, requestId)
-            d.addErrback(self._ebStatus, requestId, "scan directory failed")
+            d.addErrback(self._ebStatus, requestId, b"scan directory failed")
 
     def _scanDirectory(self, dirIter, f):
         while len(f) < 250:
@@ -304,7 +307,7 @@ class FileTransferServer(FileTransferBase):
         return self._scanDirectory(dirIter, f)
 
     def _cbSendDirectory(self, result, requestId):
-        data = ''
+        data = b''
         for (filename, longname, attrs) in result:
             data += NS(filename)
             data += NS(longname)
@@ -316,10 +319,10 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == '', 'still have data in STAT/LSTAT: %s' % repr(data)
+        assert data == b'', 'still have data in STAT/LSTAT: %s' % repr(data)
         d = defer.maybeDeferred(self.client.getAttrs, path, followLinks)
         d.addCallback(self._cbStat, requestId)
-        d.addErrback(self._ebStatus, requestId, 'stat/lstat failed')
+        d.addErrback(self._ebStatus, requestId, b'stat/lstat failed')
 
     def packet_LSTAT(self, data):
         self.packet_STAT(data, 0)
@@ -328,7 +331,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
-        assert data == '', 'still have data in FSTAT: %s' % repr(data)
+        assert data == b'', 'still have data in FSTAT: %s' % repr(data)
         if handle not in self.openFiles:
             self._ebStatus(failure.Failure(KeyError('%s not in self.openFiles'
                                         % handle)), requestId)
@@ -336,7 +339,7 @@ class FileTransferServer(FileTransferBase):
             fileObj = self.openFiles[handle]
             d = defer.maybeDeferred(fileObj.getAttrs)
             d.addCallback(self._cbStat, requestId)
-            d.addErrback(self._ebStatus, requestId, 'fstat failed')
+            d.addErrback(self._ebStatus, requestId, b'fstat failed')
 
     def _cbStat(self, result, requestId):
         data = requestId + self._packAttributes(result)
@@ -347,37 +350,37 @@ class FileTransferServer(FileTransferBase):
         data = data[4:]
         path, data = getNS(data)
         attrs, data = self._parseAttributes(data)
-        if data != '':
+        if data != b'':
             log.msg('WARN: still have data in SETSTAT: %s' % repr(data))
         d = defer.maybeDeferred(self.client.setAttrs, path, attrs)
-        d.addCallback(self._cbStatus, requestId, 'setstat succeeded')
-        d.addErrback(self._ebStatus, requestId, 'setstat failed')
+        d.addCallback(self._cbStatus, requestId, b'setstat succeeded')
+        d.addErrback(self._ebStatus, requestId, b'setstat failed')
 
     def packet_FSETSTAT(self, data):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
         attrs, data = self._parseAttributes(data)
-        assert data == '', 'still have data in FSETSTAT: %s' % repr(data)
+        assert data == b'', 'still have data in FSETSTAT: %s' % repr(data)
         if handle not in self.openFiles:
             self._ebStatus(failure.Failure(KeyError()), requestId)
         else:
             fileObj = self.openFiles[handle]
             d = defer.maybeDeferred(fileObj.setAttrs, attrs)
-            d.addCallback(self._cbStatus, requestId, 'fsetstat succeeded')
-            d.addErrback(self._ebStatus, requestId, 'fsetstat failed')
+            d.addCallback(self._cbStatus, requestId, b'fsetstat succeeded')
+            d.addErrback(self._ebStatus, requestId, b'fsetstat failed')
 
     def packet_READLINK(self, data):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == '', 'still have data in READLINK: %s' % repr(data)
+        assert data == b'', 'still have data in READLINK: %s' % repr(data)
         d = defer.maybeDeferred(self.client.readLink, path)
         d.addCallback(self._cbReadLink, requestId)
-        d.addErrback(self._ebStatus, requestId, 'readlink failed')
+        d.addErrback(self._ebStatus, requestId, b'readlink failed')
 
     def _cbReadLink(self, result, requestId):
-        self._cbSendDirectory([(result, '', {})], requestId)
+        self._cbSendDirectory([(result, b'', {})], requestId)
 
     def packet_SYMLINK(self, data):
         requestId = data[:4]
@@ -385,17 +388,17 @@ class FileTransferServer(FileTransferBase):
         linkPath, data = getNS(data)
         targetPath, data = getNS(data)
         d = defer.maybeDeferred(self.client.makeLink, linkPath, targetPath)
-        d.addCallback(self._cbStatus, requestId, 'symlink succeeded')
-        d.addErrback(self._ebStatus, requestId, 'symlink failed')
+        d.addCallback(self._cbStatus, requestId, b'symlink succeeded')
+        d.addErrback(self._ebStatus, requestId, b'symlink failed')
 
     def packet_REALPATH(self, data):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == '', 'still have data in REALPATH: %s' % repr(data)
+        assert data == b'', 'still have data in REALPATH: %s' % repr(data)
         d = defer.maybeDeferred(self.client.realPath, path)
         d.addCallback(self._cbReadLink, requestId) # same return format
-        d.addErrback(self._ebStatus, requestId, 'realpath failed')
+        d.addErrback(self._ebStatus, requestId, b'realpath failed')
 
     def packet_EXTENDED(self, data):
         requestId = data[:4]
@@ -403,44 +406,45 @@ class FileTransferServer(FileTransferBase):
         extName, extData = getNS(data)
         d = defer.maybeDeferred(self.client.extendedRequest, extName, extData)
         d.addCallback(self._cbExtended, requestId)
-        d.addErrback(self._ebStatus, requestId, 'extended %s failed' % extName)
+        d.addErrback(self._ebStatus, requestId, networkString(
+            'extended %s failed' % extName))
 
     def _cbExtended(self, data, requestId):
         self.sendPacket(FXP_EXTENDED_REPLY, requestId + data)
 
-    def _cbStatus(self, result, requestId, msg = "request succeeded"):
+    def _cbStatus(self, result, requestId, msg = b"request succeeded"):
         self._sendStatus(requestId, FX_OK, msg)
 
-    def _ebStatus(self, reason, requestId, msg = "request failed"):
+    def _ebStatus(self, reason, requestId, msg = b"request failed"):
         code = FX_FAILURE
         message = msg
-        if reason.type in (IOError, OSError):
+        if isinstance(reason.value, (IOError, OSError)):
             if reason.value.errno == errno.ENOENT: # no such file
                 code = FX_NO_SUCH_FILE
-                message = reason.value.strerror
+                message = networkString(reason.value.strerror)
             elif reason.value.errno == errno.EACCES: # permission denied
                 code = FX_PERMISSION_DENIED
-                message = reason.value.strerror
+                message = networkString(reason.value.strerror)
             elif reason.value.errno == errno.EEXIST:
                 code = FX_FILE_ALREADY_EXISTS
             else:
                 log.err(reason)
-        elif reason.type == EOFError: # EOF
+        elif isinstance(reason.value, EOFError): # EOF
             code = FX_EOF
             if reason.value.args:
-                message = reason.value.args[0]
-        elif reason.type == NotImplementedError:
+                message = networkString(reason.value.args[0])
+        elif isinstance(reason.value, NotImplementedError):
             code = FX_OP_UNSUPPORTED
             if reason.value.args:
-                message = reason.value.args[0]
-        elif reason.type == SFTPError:
+                message = networkString(reason.value.args[0])
+        elif isinstance(reason.value, SFTPError):
             code = reason.value.code
-            message = reason.value.message
+            message = networkString(reason.value.message)
         else:
             log.err(reason)
         self._sendStatus(requestId, code, message)
 
-    def _sendStatus(self, requestId, code, message, lang = ''):
+    def _sendStatus(self, requestId, code, message, lang = b''):
         """
         Helper method to send a FXP_STATUS message.
         """
@@ -478,7 +482,7 @@ class FileTransferClient(FileTransferBase):
 
     def connectionMade(self):
         data = struct.pack('!L', max(self.versions))
-        for k,v in self.extData.itervalues():
+        for k,v in itervalues(self.extData):
             data += NS(k) + NS(v)
         self.sendPacket(FXP_INIT, data)
 
@@ -503,9 +507,10 @@ class FileTransferClient(FileTransferBase):
         This method returns a L{Deferred} that is called back with an object
         that provides the L{ISFTPFile} interface.
 
+        @type filename: L{bytes}
         @param filename: a string representing the file to open.
 
-        @param flags: a integer of the flags to open the file with, ORed together.
+        @param flags: an integer of the flags to open the file with, ORed together.
         The flags and their values are listed at the bottom of this file.
 
         @param attrs: a list of attributes to open the file with.  It is a
@@ -535,6 +540,7 @@ class FileTransferClient(FileTransferBase):
 
         This method returns a Deferred that is called back when it succeeds.
 
+        @type filename: L{bytes}
         @param filename: the name of the file as a string.
         """
         return self._sendRequest(FXP_REMOVE, NS(filename))
@@ -545,7 +551,9 @@ class FileTransferClient(FileTransferBase):
 
         This method returns a Deferred that is called back when it succeeds.
 
+        @type oldpath: L{bytes}
         @param oldpath: the current location of the file.
+        @type newpath: L{bytes}
         @param newpath: the new file name.
         """
         return self._sendRequest(FXP_RENAME, NS(oldpath)+NS(newpath))
@@ -557,6 +565,7 @@ class FileTransferClient(FileTransferBase):
         This method returns a Deferred that is called back when it is
         created.
 
+        @type path: L{bytes}
         @param path: the name of the directory to create as a string.
 
         @param attrs: a dictionary of attributes to create the directory
@@ -573,6 +582,7 @@ class FileTransferClient(FileTransferBase):
 
         This method returns a Deferred that is called back when it is removed.
 
+        @type path: L{bytes}
         @param path: the directory to remove.
         """
         return self._sendRequest(FXP_RMDIR, NS(path))
@@ -604,6 +614,7 @@ class FileTransferClient(FileTransferBase):
 
         attrs is a dictionary in the format of the attrs argument to openFile.
 
+        @type path: L{bytes}
         @param path: the directory to open.
         """
         d = self._sendRequest(FXP_OPENDIR, NS(path))
@@ -617,6 +628,7 @@ class FileTransferClient(FileTransferBase):
         This method returns a dictionary in the same format as the attrs
         argument to openFile or a Deferred that is called back with same.
 
+        @type path: L{bytes}
         @param path: the path to return attributes for as a string.
         @param followLinks: a boolean.  if it is True, follow symbolic links
         and return attributes for the real path at the base.  if it is False,
@@ -633,6 +645,7 @@ class FileTransferClient(FileTransferBase):
         This method returns when the attributes are set or a Deferred that is
         called back when they are.
 
+        @type path: L{bytes}
         @param path: the path to set attributes for as a string.
         @param attrs: a dictionary in the same format as the attrs argument to
         openFile.
@@ -647,6 +660,7 @@ class FileTransferClient(FileTransferBase):
         This method returns the target of the link, or a Deferred that
         returns the same.
 
+        @type path: L{bytes}
         @param path: the path of the symlink to read.
         """
         d = self._sendRequest(FXP_READLINK, NS(path))
@@ -659,7 +673,9 @@ class FileTransferClient(FileTransferBase):
         This method returns when the link is made, or a Deferred that
         returns the same.
 
+        @type linkPath: L{bytes}
         @param linkPath: the pathname of the symlink as a string
+        @type targetPath: L{bytes}
         @param targetPath: the path of the target of the link as a string.
         """
         return self._sendRequest(FXP_SYMLINK, NS(linkPath)+NS(targetPath))
@@ -671,6 +687,7 @@ class FileTransferClient(FileTransferBase):
         This method returns the absolute path as a string, or a Deferred
         that returns the same.
 
+        @type path: L{bytes}
         @param path: the path to convert as a string.
         """
         d = self._sendRequest(FXP_REALPATH, NS(path))
@@ -687,7 +704,9 @@ class FileTransferClient(FileTransferBase):
         The method returns a Deferred that is called back with
         the result of the extended request.
 
+        @type request: L{bytes}
         @param request: the name of the extended request to make.
+        @type data: L{bytes}
         @param data: any other data that goes along with the request.
         """
         return self._sendRequest(FXP_EXTENDED, NS(request) + data)
@@ -712,10 +731,10 @@ class FileTransferClient(FileTransferBase):
             if len(data) >= 4:
                 lang, data = getNS(data)
             else:
-                lang = ''
+                lang = b''
         else:
-            msg = ''
-            lang = ''
+            msg = b''
+            lang = b''
         if code == FX_OK:
             d.callback((msg, lang))
         elif code == FX_EOF:
@@ -723,7 +742,7 @@ class FileTransferClient(FileTransferBase):
         elif code == FX_OP_UNSUPPORTED:
             d.errback(NotImplementedError(msg))
         else:
-            d.errback(SFTPError(code, msg, lang))
+            d.errback(SFTPError(code, nativeString(msg), lang))
 
     def packet_HANDLE(self, data):
         d, data = self._parseRequest(data)
@@ -926,7 +945,7 @@ FX_FILE_IS_A_DIRECTORY         = FX_FAILURE
 
 # initialize FileTransferBase.packetTypes:
 g = globals()
-for name in g.keys():
+for name in list(g.keys()):
     if name.startswith('FXP_'):
         value = g[name]
         FileTransferBase.packetTypes[value] = name[4:]

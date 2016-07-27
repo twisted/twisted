@@ -9,9 +9,12 @@ are session. direct-tcp, and forwarded-tcp.
 Maintainer: Paul Swartz
 """
 
+from __future__ import division, absolute_import
+
 from zope.interface import implementer
 
 from twisted.python import log
+from twisted.python.compat import nativeString
 from twisted.internet import interfaces
 
 
@@ -26,28 +29,28 @@ class SSHChannel(log.Logger):
     packet going each way.
 
     @ivar name: the name of the channel.
-    @type name: C{str}
+    @type name: L{str}
     @ivar localWindowSize: the maximum size of the local window in bytes.
-    @type localWindowSize: C{int}
+    @type localWindowSize: L{int}
     @ivar localWindowLeft: how many bytes are left in the local window.
-    @type localWindowLeft: C{int}
+    @type localWindowLeft: L{int}
     @ivar localMaxPacket: the maximum size of packet we will accept in bytes.
-    @type localMaxPacket: C{int}
+    @type localMaxPacket: L{int}
     @ivar remoteWindowLeft: how many bytes are left in the remote window.
-    @type remoteWindowLeft: C{int}
+    @type remoteWindowLeft: L{int}
     @ivar remoteMaxPacket: the maximum size of a packet the remote side will
         accept in bytes.
-    @type remoteMaxPacket: C{int}
+    @type remoteMaxPacket: L{int}
     @ivar conn: the connection this channel is multiplexed through.
     @type conn: L{SSHConnection}
     @ivar data: any data to send to the other size when the channel is
         requested.
-    @type data: C{str}
+    @type data: L{bytes}
     @ivar avatar: an avatar for the logged-in user (if a server channel)
     @ivar localClosed: True if we aren't accepting more data.
-    @type localClosed: C{bool}
+    @type localClosed: L{bool}
     @ivar remoteClosed: True if the other size isn't accepting more data.
-    @type remoteClosed: C{bool}
+    @type remoteClosed: L{bool}
     """
 
     name = None # only needed for client channels
@@ -64,8 +67,8 @@ class SSHChannel(log.Logger):
         self.conn = conn
         self.data = data
         self.avatar = avatar
-        self.specificData = ''
-        self.buf = ''
+        self.specificData = b''
+        self.buf = b''
         self.extBuf = []
         self.closing = 0
         self.localClosed = 0
@@ -89,7 +92,7 @@ class SSHChannel(log.Logger):
         Called when the channel is opened.  specificData is any data that the
         other side sent us when opening the channel.
 
-        @type specificData: C{str}
+        @type specificData: L{bytes}
         """
         log.msg('channel open')
 
@@ -104,20 +107,20 @@ class SSHChannel(log.Logger):
         log.msg('other side refused open\nreason: %s'% reason)
 
 
-    def addWindowBytes(self, bytes):
+    def addWindowBytes(self, data):
         """
         Called when bytes are added to the remote window.  By default it clears
         the data buffers.
 
-        @type bytes:    C{int}
+        @type data:    L{bytes}
         """
-        self.remoteWindowLeft = self.remoteWindowLeft+bytes
+        self.remoteWindowLeft = self.remoteWindowLeft+data
         if not self.areWriting and not self.closing:
             self.areWriting = True
             self.startWriting()
         if self.buf:
             b = self.buf
-            self.buf = ''
+            self.buf = b''
             self.write(b)
         if self.extBuf:
             b = self.extBuf
@@ -133,11 +136,11 @@ class SSHChannel(log.Logger):
         If this function returns true, the request succeeded, otherwise it
         failed.
 
-        @type requestType:  C{str}
-        @type data:         C{str}
-        @rtype:             C{bool}
+        @type requestType:  L{bytes}
+        @type data:         L{bytes}
+        @rtype:             L{bool}
         """
-        foo = requestType.replace('-', '_')
+        foo = nativeString(requestType.replace(b'-', b'_'))
         f = getattr(self, 'request_%s'%foo, None)
         if f:
             return f(data)
@@ -149,7 +152,7 @@ class SSHChannel(log.Logger):
         """
         Called when we receive data.
 
-        @type data: C{str}
+        @type data: L{bytes}
         """
         log.msg('got data %s'%repr(data))
 
@@ -158,8 +161,8 @@ class SSHChannel(log.Logger):
         """
         Called when we receive extended data (usually standard error).
 
-        @type dataType: C{int}
-        @type data:     C{str}
+        @type dataType: L{int}
+        @type data:     L{str}
         """
         log.msg('got extended data %s %s'%(dataType, repr(data)))
 
@@ -193,7 +196,7 @@ class SSHChannel(log.Logger):
         available, buffer until it is.  Otherwise, split the data into
         packets of length remoteMaxPacket and send them.
 
-        @type data: C{str}
+        @type data: L{bytes}
         """
         if self.buf:
             self.buf += data
@@ -221,8 +224,8 @@ class SSHChannel(log.Logger):
         window available, buffer until there is.  Otherwise, split the data
         into packets of length remoteMaxPacket and send them.
 
-        @type dataType: C{int}
-        @type data:     C{str}
+        @type dataType: L{int}
+        @type data:     L{bytes}
         """
         if self.extBuf:
             if self.extBuf[-1][0] == dataType:
@@ -252,9 +255,9 @@ class SSHChannel(log.Logger):
         Part of the Transport interface.  Write a list of strings to the
         channel.
 
-        @type data: C{list} of C{str}
+        @type data: C{list} of L{str}
         """
-        self.write(''.join(data))
+        self.write(b''.join(data))
 
 
     def loseConnection(self):

@@ -12,7 +12,7 @@ import struct
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 
 class IEthernetProtocol(Interface):
@@ -29,10 +29,10 @@ class EthernetHeader:
         (self.dest, self.source, self.proto) \
                     = struct.unpack("!6s6sH", data[:6+6+2])
 
-class EthernetProtocol(protocol.AbstractDatagramProtocol):
 
-    implements(IEthernetProtocol)
-    
+
+@implementer(IEthernetProtocol)
+class EthernetProtocol(protocol.AbstractDatagramProtocol):
     def __init__(self):
         self.etherProtos = {}
 

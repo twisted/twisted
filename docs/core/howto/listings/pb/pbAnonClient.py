@@ -8,6 +8,8 @@ Client which will talk to the server run by pbAnonServer.py, logging in
 either anonymously or with username/password credentials.
 """
 
+from __future__ import print_function
+
 from sys import stdout
 
 from twisted.python.log import err, startLogging
@@ -30,8 +32,8 @@ def connected(perspective):
     Login callback which invokes the remote "foo" method on the perspective
     which the server returned.
     """
-    print "got perspective1 ref:", perspective
-    print "asking it to foo(13)"
+    print("got perspective1 ref:", perspective)
+    print("asking it to foo(13)")
     return perspective.callRemote("foo", 13)
 
 

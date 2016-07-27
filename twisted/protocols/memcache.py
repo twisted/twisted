@@ -292,7 +292,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
     def cmd_ERROR(self):
         """
-        An non-existent command has been sent.
+        A non-existent command has been sent.
         """
         log.err("Non-existent command sent.")
         cmd = self._current.popleft()
@@ -607,7 +607,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         @return: A deferred that will fire with the tuple (flags, value) if
             C{withIdentifier} is C{False}, or (flags, cas identifier, value)
             if C{True}.  If the server indicates there is no value
-            associated with C{key}, the returned value will be C{None} and
+            associated with C{key}, the returned value will be L{None} and
             the returned flags will be C{0}.
         @rtype: L{Deferred}
         """
@@ -632,7 +632,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             of C{keys} as keys and the tuples (flags, value) as values if
             C{withIdentifier} is C{False}, or (flags, cas identifier, value) if
             C{True}.  If the server indicates there is no value associated with
-            C{key}, the returned values will be C{None} and the returned flags
+            C{key}, the returned values will be L{None} and the returned flags
             will be C{0}.
         @rtype: L{Deferred}
 
@@ -675,7 +675,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             with the I{stats} command.  The interpretation of this value by
             the server is left undefined by the memcache protocol
             specification.
-        @type arg: L{NoneType} or L{str}
+        @type arg: L{None} or L{str}
 
         @return: a deferred that will fire with a C{dict} of the available
             statistics.

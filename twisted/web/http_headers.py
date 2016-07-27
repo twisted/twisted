@@ -84,7 +84,7 @@ class Headers(object):
 
     def _encodeName(self, name):
         """
-        Encode the name of a header (eg 'Content-Type') to a ISO-8859-1 encoded
+        Encode the name of a header (eg 'Content-Type') to an ISO-8859-1 encoded
         bytestring if required.
 
         @param name: A HTTP header name
@@ -180,7 +180,7 @@ class Headers(object):
         @type name: L{bytes} or L{unicode}
         @param name: The name of the HTTP header to remove.
 
-        @return: C{None}
+        @return: L{None}
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
@@ -196,7 +196,7 @@ class Headers(object):
         @param values: A list of strings each one being a header value of
             the given name.
 
-        @return: C{None}
+        @return: L{None}
         """
         if not isinstance(values, list):
             raise TypeError("Header entry %r should be list but found "

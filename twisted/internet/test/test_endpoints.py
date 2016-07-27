@@ -158,7 +158,7 @@ class TestFactory(ClientFactory):
 
 class NoneFactory(ClientFactory):
     """
-    A one off factory whose C{buildProtocol} returns C{None}.
+    A one off factory whose C{buildProtocol} returns L{None}.
     """
     def buildProtocol(self, addr):
         return None
@@ -219,7 +219,7 @@ class WrappingFactoryTests(unittest.TestCase):
 
     def test_buildNoneProtocol(self):
         """
-        If the wrapped factory's C{buildProtocol} returns C{None} the
+        If the wrapped factory's C{buildProtocol} returns L{None} the
         C{onConnection} errback fires with L{error.NoProtocol}.
         """
         wrappingFactory = endpoints._WrappingFactory(NoneFactory())
@@ -229,14 +229,14 @@ class WrappingFactoryTests(unittest.TestCase):
 
     def test_buildProtocolReturnsNone(self):
         """
-        If the wrapped factory's C{buildProtocol} returns C{None} then
-        L{endpoints._WrappingFactory.buildProtocol} returns C{None}.
+        If the wrapped factory's C{buildProtocol} returns L{None} then
+        L{endpoints._WrappingFactory.buildProtocol} returns L{None}.
         """
         wrappingFactory = endpoints._WrappingFactory(NoneFactory())
         # Discard the failure this Deferred will get
         wrappingFactory._onConnection.addErrback(lambda reason: None)
 
-        self.assertIs(None, wrappingFactory.buildProtocol(None))
+        self.assertIsNone(wrappingFactory.buildProtocol(None))
 
 
     def test_logPrefixPassthrough(self):
@@ -400,7 +400,7 @@ class WrappingFactoryTests(unittest.TestCase):
         hcp = TestHalfCloseableProtocol()
         p = endpoints._WrappingProtocol(None, hcp)
         p.readConnectionLost()
-        self.assertEqual(hcp.readLost, True)
+        self.assertTrue(hcp.readLost)
 
 
     def test_wrappedProtocolWriteConnectionLost(self):
@@ -411,7 +411,7 @@ class WrappingFactoryTests(unittest.TestCase):
         hcp = TestHalfCloseableProtocol()
         p = endpoints._WrappingProtocol(None, hcp)
         p.writeConnectionLost()
-        self.assertEqual(hcp.writeLost, True)
+        self.assertTrue(hcp.writeLost)
 
 
 
@@ -698,7 +698,7 @@ class StandardIOEndpointsTests(unittest.TestCase):
         """
         self.reactor = object()
         endpoint = endpoints.StandardIOEndpoint(self.reactor)
-        self.assertIdentical(endpoint._stdio, stdio.StandardIO)
+        self.assertIs(endpoint._stdio, stdio.StandardIO)
 
         endpoint._stdio = FakeStdio
         self.specificProtocol = Protocol()
@@ -714,7 +714,7 @@ class StandardIOEndpointsTests(unittest.TestCase):
         of a L{stdio.StandardIO} like object that was passed the result of
         L{SpecificFactory.buildProtocol} which was passed a L{PipeAddress}.
         """
-        self.assertIdentical(self.fakeStdio.protocolInstance,
+        self.assertIs(self.fakeStdio.protocolInstance,
                              self.specificProtocol)
         self.assertIsInstance(self.fakeStdio.protocolInstance.passedAddress,
                               PipeAddress)
@@ -725,7 +725,7 @@ class StandardIOEndpointsTests(unittest.TestCase):
         L{StandardIOEndpoint} passes its C{reactor} argument to the constructor
         of its L{stdio.StandardIO} like object.
         """
-        self.assertIdentical(self.fakeStdio.reactor, self.reactor)
+        self.assertIs(self.fakeStdio.reactor, self.reactor)
 
 
 
@@ -843,11 +843,11 @@ class ProcessEndpointsTests(unittest.TestCase):
         self.assertEqual(self.ep._executable, b'/bin/executable')
         self.assertEqual(self.ep._args, ())
         self.assertEqual(self.ep._env, {})
-        self.assertEqual(self.ep._path, None)
-        self.assertEqual(self.ep._uid, None)
-        self.assertEqual(self.ep._gid, None)
+        self.assertIsNone(self.ep._path)
+        self.assertIsNone(self.ep._uid)
+        self.assertIsNone(self.ep._gid)
         self.assertEqual(self.ep._usePTY, 0)
-        self.assertEqual(self.ep._childFDs, None)
+        self.assertIsNone(self.ep._childFDs)
         self.assertEqual(self.ep._errFlag, StandardErrorBehavior.LOG)
 
 
@@ -869,7 +869,7 @@ class ProcessEndpointsTests(unittest.TestCase):
         self.assertEqual(ep._path, b'/runProcessHere/')
         self.assertEqual(ep._uid, 1)
         self.assertEqual(ep._gid, 2)
-        self.assertEqual(ep._usePTY, True)
+        self.assertTrue(ep._usePTY)
         self.assertEqual(ep._childFDs, {3: 'w', 4: 'r', 5: 'r'})
         self.assertEqual(ep._errFlag, StandardErrorBehavior.DROP)
 
@@ -1003,7 +1003,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         The L{_ProcessEndpointTransport} instance stores the process passed to
         it.
         """
-        self.assertIdentical(self.endpointTransport._process, self.process)
+        self.assertIs(self.endpointTransport._process, self.process)
 
 
     def test_registerProducer(self):
@@ -1016,7 +1016,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
             pass
         aProducer = AProducer()
         self.endpointTransport.registerProducer(aProducer, False)
-        self.assertIdentical(self.process.producer, aProducer)
+        self.assertIs(self.process.producer, aProducer)
 
 
     def test_pauseProducing(self):
@@ -1053,7 +1053,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         """
         self.test_registerProducer()
         self.endpointTransport.unregisterProducer()
-        self.assertIdentical(self.process.producer, None)
+        self.assertIsNone(self.process.producer)
 
 
     def test_extraneousAttributes(self):
@@ -1092,7 +1092,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         instance returns a call to the process transport's loseConnection.
         """
         self.endpointTransport.loseConnection()
-        self.assertEqual(self.process.connected, False)
+        self.assertFalse(self.process.connected)
 
 
     def test_getHost(self):
@@ -1190,7 +1190,7 @@ class WrappedIProtocolTests(unittest.TestCase):
         self.addCleanup(log.removeObserver, self._stdLog)
 
         wpp.childDataReceived(2, b'stderr2')
-        self.assertEqual(self.eventLog, None)
+        self.assertIsNone(self.eventLog)
 
 
     def test_stdout(self):
@@ -2074,7 +2074,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
 
     def test_otherConnectionsCancelled(self):
         """
-        Once the endpoint returns a succesful connection, all the other
+        Once the endpoint returns a successful connection, all the other
         pending connections are cancelled.
 
         Here, the second connection attempt, i.e. IPv6, succeeds, and the
@@ -2571,7 +2571,7 @@ class ServerStringTests(unittest.TestCase):
         certificate in PEM format.
         """
         fp = FilePath(self.mktemp())
-        fp.create()
+        fp.create().close()
         # The endpoint string is the same as in the valid case except for
         # a different chain file.  We use an empty temp file which obviously
         # will never contain any certificates.
@@ -2630,7 +2630,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(endpoint._address, "/var/foo/bar")
         self.assertEqual(endpoint._backlog, 7)
         self.assertEqual(endpoint._mode, 0o123)
-        self.assertEqual(endpoint._wantPID, True)
+        self.assertTrue(endpoint._wantPID)
 
 
     def test_implicitDefaultNotAllowed(self):
@@ -2786,7 +2786,7 @@ class ClientStringTests(unittest.TestCase):
             reactor,
             "tcp:host=example.com:port=1234")
         self.assertEqual(client._timeout, 30)
-        self.assertEqual(client._bindAddress, None)
+        self.assertIsNone(client._bindAddress)
 
 
     def test_unix(self):
@@ -2803,7 +2803,7 @@ class ClientStringTests(unittest.TestCase):
         self.assertIs(client._reactor, reactor)
         self.assertEqual(client._path, "/var/foo/bar")
         self.assertEqual(client._timeout, 9)
-        self.assertEqual(client._checkPID, True)
+        self.assertTrue(client._checkPID)
 
 
     def test_unixDefaults(self):
@@ -2814,7 +2814,7 @@ class ClientStringTests(unittest.TestCase):
         client = endpoints.clientFromString(
             object(), "unix:path=/var/foo/bar")
         self.assertEqual(client._timeout, 30)
-        self.assertEqual(client._checkPID, False)
+        self.assertFalse(client._checkPID)
 
 
     def test_unixPathPositionalArg(self):
@@ -2831,7 +2831,7 @@ class ClientStringTests(unittest.TestCase):
         self.assertIs(client._reactor, reactor)
         self.assertEqual(client._path, "/var/foo/bar")
         self.assertEqual(client._timeout, 9)
-        self.assertEqual(client._checkPID, True)
+        self.assertTrue(client._checkPID)
 
 
     def test_typeFromPlugin(self):
@@ -2975,8 +2975,8 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._port, 4321)
         certOptions = client._sslContextFactory
         self.assertEqual(certOptions.method, SSLv23_METHOD)
-        self.assertEqual(certOptions.certificate, None)
-        self.assertEqual(certOptions.privateKey, None)
+        self.assertIsNone(certOptions.certificate)
+        self.assertIsNone(certOptions.privateKey)
 
 
     def test_unreadableCertificate(self):
@@ -3012,7 +3012,7 @@ class SSLClientStringTests(unittest.TestCase):
             reactor, "ssl:host=simple.example.org:port=4321")
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
-        self.assertEqual(certOptions.verify, False)
+        self.assertFalse(certOptions.verify)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
 
@@ -3501,7 +3501,7 @@ class WrapperClientEndpointTests(unittest.TestCase):
         connecting = self.wrapper.connect(self.factory)
         pump = self.completer.succeedOnce()
         proto = self.successResultOf(connecting)
-        self.assertIdentical(
+        self.assertIs(
             proto.transport.transport, pump.clientIO)
 
 

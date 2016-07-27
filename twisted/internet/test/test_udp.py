@@ -200,6 +200,34 @@ class UDPPortTestsMixin(object):
         self.runReactor(reactor)
 
 
+    def test_writeSequence(self):
+        """
+        Write a sequence of L{bytes} to a L{DatagramProtocol}.
+        """
+        class SimpleDatagramProtocol(DatagramProtocol):
+            def __init__(self):
+                self.defer = Deferred()
+
+            def datagramReceived(self, data, addr):
+                self.defer.callback(data)
+
+        reactor = self.buildReactor()
+        protocol = SimpleDatagramProtocol()
+        defer = protocol.defer
+        port = self.getListeningPort(reactor, protocol)
+        address = port.getHost()
+        dataToWrite = (b"some", b"bytes", b"to", b"write")
+
+        def gotData(data):
+            self.assertEqual(b"".join(dataToWrite), data)
+
+        defer.addCallback(gotData)
+        defer.addErrback(err)
+        defer.addCallback(lambda ignored: reactor.stop())
+        port.writeSequence(dataToWrite, ('127.0.0.1', address.port))
+        self.runReactor(reactor)
+
+
     def test_str(self):
         """
         C{str()} on the listening port object includes the port number.
@@ -249,8 +277,8 @@ class UDPPortTestsMixin(object):
             """
             Stop the reactor after a datagram is received.
 
-            @param ignored: C{None}, which is ignored
-            @returns: C{None}
+            @param ignored: L{None}, which is ignored
+            @returns: L{None}
             """
             reactor.stop()
 
@@ -297,8 +325,8 @@ class UDPPortTestsMixin(object):
             """
             Stop the reactor after a datagram is received.
 
-            @param ignored: C{None}, which is ignored
-            @returns: C{None}
+            @param ignored: L{None}, which is ignored
+            @returns: L{None}
             """
 
             reactor.stop()

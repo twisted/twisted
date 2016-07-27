@@ -3,16 +3,18 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import stringprep
 from encodings import idna
+from itertools import chain
+import stringprep
 
 # We require Unicode version 3.2.
 from unicodedata import ucd_3_2_0 as unicodedata
 
-from twisted.python.versions import Version
+from twisted.python.compat import unichr
 from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 
 crippled = False
@@ -48,18 +50,16 @@ class IMappingTable(Interface):
 
 
 
+@implementer(ILookupTable)
 class LookupTableFromFunction:
-
-    implements(ILookupTable)
 
     def __init__(self, in_table_function):
         self.lookup = in_table_function
 
 
 
+@implementer(ILookupTable)
 class LookupTable:
-
-    implements(ILookupTable)
 
     def __init__(self, table):
         self._table = table
@@ -69,18 +69,16 @@ class LookupTable:
 
 
 
+@implementer(IMappingTable)
 class MappingTableFromFunction:
-
-    implements(IMappingTable)
 
     def __init__(self, map_table_function):
         self.map = map_table_function
 
 
 
+@implementer(IMappingTable)
 class EmptyMappingTable:
-
-    implements(IMappingTable)
 
     def __init__(self, in_table_function):
         self._in_table_function = in_table_function
@@ -181,11 +179,11 @@ class NamePrep:
     """
 
     # Prohibited characters.
-    prohibiteds = [unichr(n) for n in range(0x00, 0x2c + 1) +
-                                       range(0x2e, 0x2f + 1) +
-                                       range(0x3a, 0x40 + 1) +
-                                       range(0x5b, 0x60 + 1) +
-                                       range(0x7b, 0x7f + 1) ]
+    prohibiteds = [unichr(n) for n in chain(range(0x00, 0x2c + 1),
+                                            range(0x2e, 0x2f + 1),
+                                            range(0x3a, 0x40 + 1),
+                                            range(0x5b, 0x60 + 1),
+                                            range(0x7b, 0x7f + 1))]
 
     def prepare(self, string):
         result = []
@@ -193,15 +191,15 @@ class NamePrep:
         labels = idna.dots.split(string)
 
         if labels and len(labels[-1]) == 0:
-            trailing_dot = '.'
+            trailing_dot = u'.'
             del labels[-1]
         else:
-            trailing_dot = ''
+            trailing_dot = u''
 
         for label in labels:
             result.append(self.nameprep(label))
 
-        return ".".join(result) + trailing_dot
+        return u".".join(result) + trailing_dot
 
     def check_prohibiteds(self, string):
         for c in string:
@@ -211,9 +209,9 @@ class NamePrep:
     def nameprep(self, label):
         label = idna.nameprep(label)
         self.check_prohibiteds(label)
-        if label[0] == '-':
+        if label[0] == u'-':
             raise UnicodeError("Invalid leading hyphen-minus")
-        if label[-1] == '-':
+        if label[-1] == u'-':
             raise UnicodeError("Invalid trailing hyphen-minus")
         return label
 

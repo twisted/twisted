@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from twisted.internet import reactor
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
@@ -11,7 +13,7 @@ d = agent.request(
     None)
 
 def cbResponse(ignored):
-    print 'Response received'
+    print('Response received')
 d.addCallback(cbResponse)
 
 def cbShutdown(ignored):

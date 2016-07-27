@@ -304,7 +304,7 @@ How to deprecate APIs
 Classes
 ^^^^^^^
 
-Classes are deprecated by raising an warning when they are access from withing their module, using the :api:`twisted.python.deprecate.deprecatedModuleAttribute <deprecatedModuleAttribute>` helper.
+Classes are deprecated by raising a warning when they are access from within their module, using the :api:`twisted.python.deprecate.deprecatedModuleAttribute <deprecatedModuleAttribute>` helper.
 
 .. code-block:: python
 

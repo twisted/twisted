@@ -86,7 +86,7 @@ def stopOnError(case, reactor, publisher=None):
     @param case: A L{SynchronousTestCase} to use to clean up the necessary log
         observer when the test is over.
     @param reactor: The reactor to stop.
-    @param publisher: A L{LogPublisher} to watch for errors.  If C{None}, the
+    @param publisher: A L{LogPublisher} to watch for errors.  If L{None}, the
         global log publisher will be watched.
     """
     if publisher is None:
@@ -112,7 +112,7 @@ class ReactorBuilder:
         which the tests defined by this class will be skipped to strings
         giving the skip message.
     @cvar requiredInterfaces: A C{list} of interfaces which the reactor must
-        provide or these tests will be skipped.  The default, C{None}, means
+        provide or these tests will be skipped.  The default, L{None}, means
         that no interfaces are required.
     @ivar reactorFactory: A no-argument callable which returns the reactor to
         use for testing.
@@ -295,7 +295,7 @@ class ReactorBuilder:
         @param timeout: The maximum amount of time, specified in seconds, to
             allow the reactor to run.  If the reactor is still running after
             this much time has elapsed, it will be stopped and an exception
-            raised.  If C{None}, the default test method timeout imposed by
+            raised.  If L{None}, the default test method timeout imposed by
             Trial will be used.  This depends on the L{IReactorTime}
             implementation of C{reactor} for correct operation.
 

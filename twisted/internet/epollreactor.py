@@ -41,7 +41,7 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
 
     @ivar _reactor: The L{EPollReactor} that is using this instance.
 
-    @ivar _loop: A C{LoopingCall} that drives the polling, or C{None}.
+    @ivar _loop: A C{LoopingCall} that drives the polling, or L{None}.
 
     @ivar _readers: A C{set} of C{FileDescriptor} objects that should be read
         from.
@@ -210,7 +210,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         C{FileDescriptor} instances in C{_selectables}.
 
     @ivar _continuousPolling: A L{_ContinuousPolling} instance, used to handle
-        file descriptors (e.g. filesytem files) that are not supported by
+        file descriptors (e.g. filesystem files) that are not supported by
         C{epoll(7)}.
     """
 

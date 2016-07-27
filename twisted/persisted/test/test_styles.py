@@ -8,7 +8,7 @@ Tests for L{twisted.persisted.styles}.
 import pickle
 
 from twisted.trial import unittest
-from twisted.persisted.styles import unpickleMethod
+from twisted.persisted.styles import unpickleMethod, _UniversalPicklingError
 
 
 class Foo:
@@ -40,6 +40,42 @@ lambdaExample = lambda x: x
 
 
 
+class UniversalPicklingErrorTests(unittest.TestCase):
+    """
+    Tests the L{_UniversalPicklingError} exception.
+    """
+
+    def raise_UniversalPicklingError(self):
+        """
+        Raise L{UniversalPicklingError}.
+        """
+        raise _UniversalPicklingError
+
+
+    def test_handledByPickleModule(self):
+        """
+        Handling L{pickle.PicklingError} handles
+        L{_UniversalPicklingError}.
+        """
+        self.assertRaises(pickle.PicklingError,
+                          self.raise_UniversalPicklingError)
+
+
+    def test_handledBycPickleModule(self):
+        """
+        Handling L{cPickle.PicklingError} handles
+        L{_UniversalPicklingError}.
+        """
+        try:
+            import cPickle
+        except ImportError:
+            raise unittest.SkipTest("cPickle not available.")
+        else:
+            self.assertRaises(cPickle.PicklingError,
+                              self.raise_UniversalPicklingError)
+
+
+
 class UnpickleMethodTests(unittest.TestCase):
     """
     Tests for the unpickleMethod function.
@@ -53,7 +89,7 @@ class UnpickleMethodTests(unittest.TestCase):
         foo = Foo()
         m = unpickleMethod('method', foo, Foo)
         self.assertEqual(m, foo.method)
-        self.assertNotIdentical(m, foo.method)
+        self.assertIsNot(m, foo.method)
 
 
     def test_instanceBuildingNameNotPresent(self):
@@ -65,7 +101,7 @@ class UnpickleMethodTests(unittest.TestCase):
         foo = Foo()
         m = unpickleMethod('method', foo, Bar)
         self.assertEqual(m, foo.method)
-        self.assertNotIdentical(m, foo.method)
+        self.assertIsNot(m, foo.method)
 
 
     def test_primeDirective(self):

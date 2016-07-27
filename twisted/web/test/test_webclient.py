@@ -499,7 +499,8 @@ class WebClientTests(unittest.TestCase):
         return defer.gatherResults(downloads)
 
     def _cbDownloadPageTest(self, ignored, data, name):
-        bytes = open(name, "rb").read()
+        with open(name, "rb") as f:
+            bytes = f.read()
         self.assertEqual(bytes, data)
 
     def testDownloadPageError1(self):
@@ -527,8 +528,7 @@ class WebClientTests(unittest.TestCase):
     def testDownloadPageError3(self):
         # make sure failures in open() are caught too. This is tricky.
         # Might only work on posix.
-        tmpfile = open("unwritable", "wb")
-        tmpfile.close()
+        open("unwritable", "wb").close()
         os.chmod("unwritable", 0) # make it unwritable (to us)
         d = self.assertFailure(
             client.downloadPage(self.getURL("file"), "unwritable"),
@@ -566,7 +566,7 @@ class WebClientTests(unittest.TestCase):
 
     def _cbFactoryInfo(self, ignoredResult, factory):
         self.assertEqual(factory.status, b'200')
-        self.assert_(factory.version.startswith(b'HTTP/'))
+        self.assertTrue(factory.version.startswith(b'HTTP/'))
         self.assertEqual(factory.message, b'OK')
         self.assertEqual(factory.response_headers[b'content-length'][0], b'10')
 
@@ -686,33 +686,6 @@ class WebClientTests(unittest.TestCase):
             url, followRedirect=True, afterFoundGet=True, method=b"POST")
         d.addCallback(checkRedirectCount)
         return d
-
-
-    def testPartial(self):
-        name = self.mktemp()
-        f = open(name, "wb")
-        f.write(b"abcd")
-        f.close()
-
-        partialDownload = [(True, b"abcd456789"),
-                           (True, b"abcd456789"),
-                           (False, b"0123456789")]
-
-        d = defer.succeed(None)
-        for (partial, expectedData) in partialDownload:
-            d.addCallback(self._cbRunPartial, name, partial)
-            d.addCallback(self._cbPartialTest, expectedData, name)
-
-        return d
-
-    testPartial.skip = "Cannot test until webserver can serve partial data properly"
-
-    def _cbRunPartial(self, ignored, name, partial):
-        return client.downloadPage(self.getURL("file"), name, supportPartial=partial)
-
-    def _cbPartialTest(self, ignored, expectedData, filename):
-        bytes = file(filename, "rb").read()
-        self.assertEqual(bytes, expectedData)
 
 
     def test_downloadTimeout(self):

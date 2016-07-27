@@ -115,11 +115,11 @@ def err(_stuff=None, _why=None, **kw):
     to pass.  It is intended that they be supplied with arguments passed
     positionally, not by keyword.
 
-    @param _stuff: The failure to log.  If C{_stuff} is C{None} a new
+    @param _stuff: The failure to log.  If C{_stuff} is L{None} a new
         L{Failure} will be created from the current exception state.  If
         C{_stuff} is an C{Exception} instance it will be wrapped in a
         L{Failure}.
-    @type _stuff: C{NoneType}, C{Exception}, or L{Failure}.
+    @type _stuff: L{None}, C{Exception}, or L{Failure}.
 
     @param _why: The source of this failure.  This will be logged along with
         C{_stuff} and should describe the context in which the failure
@@ -477,8 +477,8 @@ class FileLogObserver(_GlobalStartStopMixIn):
     """
     Log observer that writes to a file-like object.
 
-    @type timeFormat: C{str} or C{NoneType}
-    @ivar timeFormat: If not C{None}, the format string passed to strftime().
+    @type timeFormat: C{str} or L{None}
+    @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 
     timeFormat = None
@@ -509,7 +509,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
         Format the given UTC value as a string representing that time in the
         local timezone.
 
-        By default it's formatted as a ISO8601-like string (ISO8601 date and
+        By default it's formatted as an ISO8601-like string (ISO8601 date and
         ISO8601 time separated by a space). It can be customized using the
         C{timeFormat} attribute, which will be used as input for the underlying
         L{datetime.datetime.strftime} call.

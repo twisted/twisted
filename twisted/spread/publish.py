@@ -107,8 +107,8 @@ class RemotePublished(flavors.RemoteCache):
             listener(self)
         self._activationListeners = []
         self.activated()
-        with open(self.getFileName(), "wb") as f:
-            f.write(banana.encode(jelly.jelly(self)))
+        with open(self.getFileName(), "wb") as dataFile:
+            dataFile.write(banana.encode(jelly.jelly(self)))
 
 
     def activated(self):

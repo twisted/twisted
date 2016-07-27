@@ -4,6 +4,7 @@
 """
 Tests for the inotify wrapper in L{twisted.internet.inotify}.
 """
+import sys
 
 from twisted.internet import defer, reactor
 from twisted.python import filepath, runtime
@@ -70,8 +71,9 @@ class INotifyTests(unittest.TestCase):
         if expectedPath is None:
             expectedPath = self.dirname.child("foo.bar")
         notified = defer.Deferred()
-        def cbNotified((watch, filename, events)):
-            self.assertEqual(filename, expectedPath)
+        def cbNotified(result):
+            (watch, filename, events) = result
+            self.assertEqual(filename.asBytesMode(), expectedPath.asBytesMode())
             self.assertTrue(events & mask)
         notified.addCallback(cbNotified)
 
@@ -88,7 +90,7 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_ACCESS} event to the callback.
         """
         def operation(path):
-            path.setContent("foo")
+            path.setContent(b"foo")
             path.getContent()
 
         return self._notificationTest(inotify.IN_ACCESS, operation)
@@ -100,9 +102,8 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_MODIFY} event to the callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.write('foo')
-            fObj.close()
+            with path.open("w") as fObj:
+                fObj.write(b'foo')
 
         return self._notificationTest(inotify.IN_MODIFY, operation)
 
@@ -126,8 +127,7 @@ class INotifyTests(unittest.TestCase):
         callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.close()
+            path.open("w").close()
 
         return self._notificationTest(inotify.IN_CLOSE_WRITE, operation)
 
@@ -140,8 +140,7 @@ class INotifyTests(unittest.TestCase):
         """
         def operation(path):
             path.touch()
-            fObj = path.open("r")
-            fObj.close()
+            path.open("r").close()
 
         return self._notificationTest(inotify.IN_CLOSE_NOWRITE, operation)
 
@@ -152,8 +151,7 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_OPEN} event to the callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.close()
+            path.open("w").close()
 
         return self._notificationTest(inotify.IN_OPEN, operation)
 
@@ -164,8 +162,7 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_MOVED_FROM} event to the callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.close()
+            path.open("w").close()
             path.moveTo(filepath.FilePath(self.mktemp()))
 
         return self._notificationTest(inotify.IN_MOVED_FROM, operation)
@@ -190,8 +187,7 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_CREATE} event to the callback.
         """
         def operation(path):
-            fObj = path.open("w")
-            fObj.close()
+            path.open("w").close()
 
         return self._notificationTest(inotify.IN_CREATE, operation)
 
@@ -276,7 +272,7 @@ class INotifyTests(unittest.TestCase):
             def _eb():
                 # second call, we have just removed the subdir
                 try:
-                    self.assertTrue(not self.inotify._isWatched(subdir))
+                    self.assertFalse(self.inotify._isWatched(subdir))
                     d.callback(None)
                 except Exception:
                     d.errback()
@@ -362,7 +358,7 @@ class INotifyTests(unittest.TestCase):
             # directories, so we need to defer this check.
             def _():
                 try:
-                    self.assertFalse(self.inotify._isWatched(subdir.path))
+                    self.assertFalse(self.inotify._isWatched(subdir))
                     d.callback(None)
                 except Exception:
                     d.errback()
@@ -387,8 +383,9 @@ class INotifyTests(unittest.TestCase):
         expectedPath.touch()
 
         notified = defer.Deferred()
-        def cbNotified((ignored, filename, events)):
-            self.assertEqual(filename, expectedPath)
+        def cbNotified(result):
+            (ignored, filename, events) = result
+            self.assertEqual(filename.asBytesMode(), expectedPath.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
         def callIt(*args):
@@ -423,8 +420,9 @@ class INotifyTests(unittest.TestCase):
         expectedPath2.touch()
 
         notified = defer.Deferred()
-        def cbNotified((ignored, filename, events)):
-            self.assertEqual(filename, expectedPath2)
+        def cbNotified(result):
+            (ignored, filename, events) = result
+            self.assertEqual(filename.asBytesMode(), expectedPath2.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
         def callIt(*args):
@@ -476,8 +474,9 @@ class INotifyTests(unittest.TestCase):
                     self.assertTrue(self.inotify._isWatched(subdir2))
                     self.assertTrue(self.inotify._isWatched(subdir3))
                     created = someFiles + [subdir, subdir2, subdir3]
+                    created = {f.asBytesMode() for f in created}
                     self.assertEqual(len(calls), len(created))
-                    self.assertEqual(calls, set(created))
+                    self.assertEqual(calls, created)
                 except Exception:
                     d.errback()
                 else:
@@ -499,5 +498,6 @@ class INotifyTests(unittest.TestCase):
         # Add some files in pretty much all the directories so that we
         # see that we process all of them.
         for i, filename in enumerate(someFiles):
-            filename.setContent(filename.path)
+            filename.setContent(
+                filename.path.encode(sys.getfilesystemencoding()))
         return d

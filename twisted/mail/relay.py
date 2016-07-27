@@ -76,12 +76,10 @@ class DomainQueuer:
         """
         queue = self.service.queue
         envelopeFile, smtpMessage = queue.createNewMessage()
-        try:
+        with envelopeFile:
             log.msg('Queueing mail %r -> %r' % (str(user.orig),
                 str(user.dest)))
             pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
-        finally:
-            envelopeFile.close()
         return smtpMessage
 
 
@@ -96,11 +94,8 @@ class RelayerMixin:
         self.messages = []
         self.names = []
         for message in messagePaths:
-            fp = open(message + '-H')
-            try:
+            with open(message + '-H') as fp:
                 messageContents = pickle.load(fp)
-            finally:
-                fp.close()
             fp = open(message + '-D')
             messageContents.append(fp)
             self.messages.append(messageContents)
@@ -169,10 +164,10 @@ class ESMTPRelayer(RelayerMixin, smtp.ESMTPClient):
         @type messagePaths: L{list} of L{bytes}
         @param messagePaths: The base filename for each message to be relayed.
 
-        @type args: 3-L{tuple} of (0) L{bytes}, (1) L{NoneType
-            <types.NoneType>} or L{ClientContextFactory
-            <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes} or
-            4-L{tuple} of (0) L{bytes}, (1) L{NoneType <types.NoneType>}
+        @type args: 3-L{tuple} of (0) L{bytes}, (1) L{None} or
+            L{ClientContextFactory
+            <twisted.internet.ssl.ClientContextFactory>},
+            (2) L{bytes} or 4-L{tuple} of (0) L{bytes}, (1) L{None}
             or L{ClientContextFactory
             <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes},
             (3) L{int}

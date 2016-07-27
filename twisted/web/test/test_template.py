@@ -89,7 +89,7 @@ class ElementTests(TestCase):
     def test_missingTemplateLoader(self):
         """
         L{Element.render} raises L{MissingTemplateLoader} if the C{loader}
-        attribute is C{None}.
+        attribute is L{None}.
         """
         element = Element()
         err = self.assertRaises(MissingTemplateLoader, element.render, None)
@@ -354,7 +354,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_missingTemplateLoader(self):
         """
-        Rendering a Element without a loader attribute raises the appropriate
+        Rendering an Element without a loader attribute raises the appropriate
         exception.
         """
         return self.assertFlatteningRaises(Element(), MissingTemplateLoader)
@@ -545,7 +545,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_elementContainingDynamicElement(self):
         """
-        Directives in the document factory of a Element returned from a render
+        Directives in the document factory of an Element returned from a render
         method of another Element are satisfied from the correct object: the
         "inner" Element.
         """
@@ -800,7 +800,7 @@ class RenderElementTests(TestCase):
     def test_noneDoctype(self):
         """
         L{renderElement} will not write out a doctype if the doctype keyword
-        argument is C{None}.
+        argument is L{None}.
         """
         element = TestElement()
 

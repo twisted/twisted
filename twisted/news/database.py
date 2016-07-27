@@ -12,7 +12,7 @@ import StringIO
 from hashlib import md5
 from email.Message import Message
 from email.Generator import Generator
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.news.nntp import NNTPError
 from twisted.mail import smtp
@@ -279,6 +279,7 @@ class _ModerationMixin:
 
 
 
+@implementer(INewsStorage)
 class PickleStorage(_ModerationMixin):
     """
     A trivial NewsStorage implementation using pickles
@@ -286,9 +287,6 @@ class PickleStorage(_ModerationMixin):
     Contains numerous flaws and is generally unsuitable for any
     real applications.  Consider yourself warned!
     """
-
-    implements(INewsStorage)
-
     sharedDBs = {}
 
     def __init__(self, filename, groups=None, moderators=(),
@@ -463,9 +461,8 @@ class PickleStorage(_ModerationMixin):
 
 
     def flush(self):
-        f = open(self.datafile, 'w')
-        pickle.dump(self.db, f)
-        f.close()
+        with open(self.datafile, 'w') as f:
+            pickle.dump(self.db, f)
 
 
     def load(self, filename, groups = None, moderators = ()):
@@ -473,7 +470,8 @@ class PickleStorage(_ModerationMixin):
             self.db = PickleStorage.sharedDBs[filename]
         else:
             try:
-                self.db = pickle.load(open(filename))
+                with open(filename) as f:
+                    self.db = pickle.load(f)
                 PickleStorage.sharedDBs[filename] = self.db
             except IOError:
                 self.db = PickleStorage.sharedDBs[filename] = {}
@@ -498,13 +496,11 @@ class Group:
         self.articles = {}
 
 
+@implementer(INewsStorage)
 class NewsShelf(_ModerationMixin):
     """
     A NewStorage implementation using Twisted's dirdbm persistence module.
     """
-
-    implements(INewsStorage)
-
     def __init__(self, mailhost, path, sender=None):
         """
         @param mailhost: A C{str} giving the mail exchange host which will
@@ -732,13 +728,11 @@ class NewsShelf(_ModerationMixin):
             return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
 
 
+@implementer(INewsStorage)
 class NewsStorageAugmentation:
     """
     A NewsStorage implementation using Twisted's asynchronous DB-API
     """
-
-    implements(INewsStorage)
-
     schema = """
 
     CREATE TABLE groups (
@@ -1031,7 +1025,8 @@ class NewsStorageAugmentation:
         return self.dbpool.runQuery(sql).addCallback(
             lambda result: result[0]
         ).addCallback(
-            lambda (index, id, body): (index, id, StringIO.StringIO(body))
+            # result is a tuple of (index, id, body)
+            lambda result: (result[0], result[1], StringIO.StringIO(result[2]))
         )
 
 ####

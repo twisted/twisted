@@ -9,16 +9,16 @@ Component architecture for Twisted, based on Zope3 components.
 Using the Zope3 API directly is strongly recommended. Everything
 you need is in the top-level of the zope.interface package, e.g.::
 
-   from zope.interface import Interface, implements
+   from zope.interface import Interface, implementer
 
    class IFoo(Interface):
        pass
 
+   @implementer(IFoo)
    class Foo:
-       implements(IFoo)
 
-   print IFoo.implementedBy(Foo) # True
-   print IFoo.providedBy(Foo()) # True
+   print(IFoo.implementedBy(Foo)) # True
+   print(IFoo.providedBy(Foo())) # True
 
 L{twisted.python.components.registerAdapter} from this module may be used to
 add to Twisted's global adapter registry.
@@ -28,7 +28,7 @@ which allow access to only the parts of another class defined by a specified
 interface.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 # zope3 imports
 from zope.interface import interface, declarations
@@ -371,7 +371,7 @@ class _ProxiedClassMethod(object):
 
     @ivar originalAttribute: name of the attribute of the proxy where the
         original object is stored.
-    @type orginalAttribute: L{str}
+    @type originalAttribute: L{str}
     """
     def __init__(self, methodName, originalAttribute):
         self.methodName = self.__name__ = methodName
@@ -396,8 +396,8 @@ class _ProxiedClassMethod(object):
 class _ProxyDescriptor(object):
     """
     A descriptor which will proxy attribute access, mutation, and
-    deletion to the L{original} attribute of the object it is being accessed
-    from.
+    deletion to the L{_ProxyDescriptor.originalAttribute} of the
+    object it is being accessed from.
 
     @ivar attributeName: the name of the attribute which this descriptor will
         retrieve from instances' C{original} attribute.
@@ -405,7 +405,7 @@ class _ProxyDescriptor(object):
 
     @ivar originalAttribute: name of the attribute of the proxy where the
         original object is stored.
-    @type orginalAttribute: C{str}
+    @type originalAttribute: C{str}
     """
     def __init__(self, attributeName, originalAttribute):
         self.attributeName = attributeName
@@ -414,7 +414,7 @@ class _ProxyDescriptor(object):
 
     def __get__(self, oself, type=None):
         """
-        Retrieve the C{self.attributeName} property from L{oself}.
+        Retrieve the C{self.attributeName} property from I{oself}.
         """
         if oself is None:
             return _ProxiedClassMethod(self.attributeName,
@@ -425,7 +425,7 @@ class _ProxyDescriptor(object):
 
     def __set__(self, oself, value):
         """
-        Set the C{self.attributeName} property of L{oself}.
+        Set the C{self.attributeName} property of I{oself}.
         """
         original = getattr(oself, self.originalAttribute)
         setattr(original, self.attributeName, value)
@@ -433,7 +433,7 @@ class _ProxyDescriptor(object):
 
     def __delete__(self, oself):
         """
-        Delete the C{self.attributeName} property of L{oself}.
+        Delete the C{self.attributeName} property of I{oself}.
         """
         original = getattr(oself, self.originalAttribute)
         delattr(original, self.attributeName)

@@ -650,7 +650,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
         """
         L{ServerSupportedFeatures._parsePrefixParam} parses the ISUPPORT PREFIX
         parameter into a mapping from modes to prefix symbols, returns
-        C{None} if there is no parseable prefix parameter or raises
+        L{None} if there is no parseable prefix parameter or raises
         C{ValueError} if the prefix parameter is malformed.
         """
         _parsePrefixParam = irc.ServerSupportedFeatures._parsePrefixParam
@@ -1039,7 +1039,7 @@ class CTCPTests(unittest.TestCase):
                        'EOL': irc.CR + irc.LF})
 
         errReply = ("NOTICE nick :%(X)cERRMSG t :"
-                    "No error has occoured.%(X)c%(EOL)s"
+                    "No error has occurred.%(X)c%(EOL)s"
                     % {'X': irc.X_DELIM,
                        'EOL': irc.CR + irc.LF})
 
@@ -1052,7 +1052,7 @@ class CTCPTests(unittest.TestCase):
     def test_noNumbersVERSION(self):
         """
         If attributes for version information on L{IRCClient} are set to
-        C{None}, the parts of the CTCP VERSION response they correspond to
+        L{None}, the parts of the CTCP VERSION response they correspond to
         are omitted.
         """
         self.client.versionName = "FrobozzIRC"
@@ -1615,7 +1615,7 @@ class ClientImplementationTests(unittest.TestCase):
 
     def test_heartbeatDisabled(self):
         """
-        If L{irc.IRCClient.heartbeatInterval} is set to C{None} then no
+        If L{irc.IRCClient.heartbeatInterval} is set to L{None} then no
         heartbeat is created.
         """
         self.assertIdentical(self.client._heartbeat, None)
@@ -1671,7 +1671,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
 
     def test_sendMessageNoCommand(self):
         """
-        Passing C{None} as the command to L{IRC.sendMessage} raises a
+        Passing L{None} as the command to L{IRC.sendMessage} raises a
         C{ValueError}.
         """
         error = self.assertRaises(ValueError, self.p.sendMessage, None,
@@ -1681,7 +1681,7 @@ class BasicServerFunctionalityTests(unittest.TestCase):
 
     def test_sendCommandNoCommand(self):
         """
-        Passing C{None} as the command to L{IRC.sendCommand} raises a
+        Passing L{None} as the command to L{IRC.sendCommand} raises a
         C{ValueError}.
         """
         error = self.assertRaises(ValueError, self.p.sendCommand, None,
@@ -1981,7 +1981,7 @@ class ClientMsgTests(unittest.TestCase):
 
     def test_sufficientWidth(self):
         """
-        Messages exactly equal in length to the C{length} paramtere to
+        Messages exactly equal in length to the C{length} parameter to
         L{IRCClient.msg} are sent in a single command.
         """
         msg = 'barbazbo'
@@ -2262,7 +2262,7 @@ class ClientTests(TestCase):
 
     def test_registerWithPassword(self):
         """
-        If the C{password} attribute of L{IRCClient} is not C{None}, the
+        If the C{password} attribute of L{IRCClient} is not L{None}, the
         C{register} method also sends a PASS command with it as the
         argument.
         """

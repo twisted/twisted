@@ -8,13 +8,15 @@ clients and servers to forward arbitrary TCP data across the connection.
 Maintainer: Paul Swartz
 """
 
+from __future__ import division, absolute_import
+
 import struct
 
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
 from twisted.python import log
 
-import common, channel
+from twisted.conch.ssh import common, channel
 
 class SSHListenForwardingFactory(protocol.Factory):
     def __init__(self, connection, hostport, klass):
@@ -38,7 +40,7 @@ class SSHListenForwardingChannel(channel.SSHChannel):
         if len(self.client.buf)>1:
             b = self.client.buf[1:]
             self.write(b)
-        self.client.buf = ''
+        self.client.buf = b''
 
     def openFailed(self, reason):
         self.closed()
@@ -57,11 +59,11 @@ class SSHListenForwardingChannel(channel.SSHChannel):
 
 class SSHListenClientForwardingChannel(SSHListenForwardingChannel):
 
-    name = 'direct-tcpip'
+    name = b'direct-tcpip'
 
 class SSHListenServerForwardingChannel(SSHListenForwardingChannel):
 
-    name = 'forwarded-tcpip'
+    name = b'forwarded-tcpip'
 
 
 
@@ -72,14 +74,14 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
 
     @ivar hostport: C{(host, port)} requested by client as forwarding
         destination.
-    @type hostport: C{tupple} or a C{sequence}
+    @type hostport: L{tuple} or a C{sequence}
 
     @ivar client: Protocol connected to the forwarding destination.
     @type client: L{protocol.Protocol}
 
     @ivar clientBuf: Data received while forwarding channel is not yet
         connected.
-    @type clientBuf: C{bytes}
+    @type clientBuf: L{bytes}
 
     @var  _reactor: Reactor used for TCP connections.
     @type _reactor: A reactor.
@@ -94,7 +96,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         channel.SSHChannel.__init__(self, *args, **kw)
         self.hostport = hostport
         self.client = None
-        self.clientBuf = ''
+        self.clientBuf = b''
 
 
     def channelOpen(self, specificData):
@@ -123,7 +125,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
             self.clientBuf = None
         if self.client.buf[1:]:
             self.write(self.client.buf[1:])
-        self.client.buf = ''
+        self.client.buf = b''
 
 
     def _close(self, reason):
@@ -171,7 +173,7 @@ class SSHForwardingClient(protocol.Protocol):
 
     def __init__(self, channel):
         self.channel = channel
-        self.buf = '\000'
+        self.buf = b'\000'
 
     def dataReceived(self, data):
         if self.buf:
@@ -185,9 +187,18 @@ class SSHForwardingClient(protocol.Protocol):
             self.channel = None
 
 
-def packOpen_direct_tcpip((connHost, connPort), (origHost, origPort)):
-    """Pack the data suitable for sending in a CHANNEL_OPEN packet.
+def packOpen_direct_tcpip(destination, source):
     """
+    Pack the data suitable for sending in a CHANNEL_OPEN packet.
+
+    @type destination: L{tuple}
+    @param destination: A tuple of the (host, port) of the destination host.
+
+    @type source: L{tuple}
+    @param source: A tuple of the (host, port) of the source host.
+    """
+    (connHost, connPort) = destination
+    (origHost, origPort) = source
     conn = common.NS(connHost) + struct.pack('>L', connPort)
     orig = common.NS(origHost) + struct.pack('>L', origPort)
     return conn + orig
@@ -204,9 +215,20 @@ def unpackOpen_direct_tcpip(data):
     return (connHost, connPort), (origHost, origPort)
 
 unpackOpen_forwarded_tcpip = unpackOpen_direct_tcpip
-    
-def packGlobal_tcpip_forward((host, port)):
+
+
+
+def packGlobal_tcpip_forward(peer):
+    """
+    Pack the data for tcpip forwarding.
+
+    @param peer: A tuple of the (host, port) .
+    @type peer: L{tuple}
+    """
+    (host, port) = peer
     return common.NS(host) + struct.pack('>L', port)
+
+
 
 def unpackGlobal_tcpip_forward(data):
     host, rest = common.getNS(data)

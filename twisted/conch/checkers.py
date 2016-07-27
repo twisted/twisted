@@ -74,7 +74,7 @@ def _pwdGetByName(username):
 def _shadowGetByName(username):
     """
     Look up a user in the /etc/shadow database using the spwd module. If it is
-    not available, return C{None}.
+    not available, return L{None}.
 
     @param username: the username of the user to return the shadow database
         information for.
@@ -224,15 +224,16 @@ class SSHPublicKeyDatabase:
                     lines = runAsEffectiveUser(ouid, ogid, filepath.open)
                 else:
                     raise
-            for l in lines:
-                l2 = l.split()
-                if len(l2) < 2:
-                    continue
-                try:
-                    if _b64decodebytes(l2[1]) == credentials.blob:
-                        return True
-                except binascii.Error:
-                    continue
+            with lines:
+                for l in lines:
+                    l2 = l.split()
+                    if len(l2) < 2:
+                        continue
+                    try:
+                        if _b64decodebytes(l2[1]) == credentials.blob:
+                            return True
+                    except binascii.Error:
+                        continue
         return False
 
     def _ebRequestAvatarId(self, f):
@@ -424,7 +425,7 @@ class InMemorySSHKeyDB(object):
 
         @param mapping: mapping of usernames to iterables of
             L{twisted.conch.ssh.keys.Key}s
-        @type mapping: C{dict}
+        @type mapping: L{dict}
 
         """
         self._mapping = mapping

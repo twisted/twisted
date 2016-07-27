@@ -53,9 +53,9 @@ def sendmsg(socket, data, ancillary=[], flags=0):
 
 def recvmsg(socket, maxSize=8192, cmsgSize=4096, flags=0):
     """
-    Recieve a message on a socket.
+    Receive a message on a socket.
 
-    @param socket: The socket to recieve the message on.
+    @param socket: The socket to receive the message on.
     @type socket: L{socket.socket}
 
     @param maxSize: The maximum number of bytes to receive from the socket using
@@ -71,9 +71,9 @@ def recvmsg(socket, maxSize=8192, cmsgSize=4096, flags=0):
         constants in the sendmsg(2) manual page. By default no flags are set.
     @type flags: L{int}
 
-    @return: A named 3-tuple of the bytes recieved using the datagram/stream
-        mechanism, a L{list} of L{tuple}s giving ancillary recieved data, and
-        flags as an L{int} describing the data recieved.
+    @return: A named 3-tuple of the bytes received using the datagram/stream
+        mechanism, a L{list} of L{tuple}s giving ancillary received data, and
+        flags as an L{int} describing the data received.
     """
     if _PY3:
         # In Twisted's sendmsg.c, the csmg_space is defined as:

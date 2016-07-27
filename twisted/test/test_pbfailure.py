@@ -260,8 +260,8 @@ class PBFailureTests(PBConnTestCase):
         """
         def failureJelly(fail):
             fail.trap(JellyError)
-            self.assertFalse(isinstance(fail.type, str))
-            self.assertTrue(isinstance(fail.value, fail.type))
+            self.assertNotIsInstance(fail.type, str)
+            self.assertIsInstance(fail.value, fail.type)
             return 43
         return self._testImpl('jelly', 43, failureJelly)
 
@@ -273,15 +273,15 @@ class PBFailureTests(PBConnTestCase):
         """
         def failureDeferredJelly(fail):
             fail.trap(JellyError)
-            self.assertFalse(isinstance(fail.type, str))
-            self.assertTrue(isinstance(fail.value, fail.type))
+            self.assertNotIsInstance(fail.type, str)
+            self.assertIsInstance(fail.value, fail.type)
             return 430
         return self._testImpl('deferredJelly', 430, failureDeferredJelly)
 
 
     def test_unjellyableFailure(self):
         """
-        An non-jellyable L{pb.Error} subclass raised by a remote method is
+        A non-jellyable L{pb.Error} subclass raised by a remote method is
         turned into a Failure with a type set to the FQPN of the exception
         type.
         """
@@ -312,8 +312,8 @@ class PBFailureTests(PBConnTestCase):
         """
         def failureSecurity(fail):
             fail.trap(SecurityError)
-            self.assertFalse(isinstance(fail.type, str))
-            self.assertTrue(isinstance(fail.value, fail.type))
+            self.assertNotIsInstance(fail.type, str)
+            self.assertIsInstance(fail.value, fail.type)
             return 4300
         return self._testImpl('security', 4300, failureSecurity)
 
@@ -326,8 +326,8 @@ class PBFailureTests(PBConnTestCase):
         """
         def failureDeferredSecurity(fail):
             fail.trap(SecurityError)
-            self.assertFalse(isinstance(fail.type, str))
-            self.assertTrue(isinstance(fail.value, fail.type))
+            self.assertNotIsInstance(fail.type, str)
+            self.assertIsInstance(fail.value, fail.type)
             return 43000
         return self._testImpl('deferredSecurity', 43000, failureDeferredSecurity)
 
@@ -419,13 +419,13 @@ class FailureJellyingTests(unittest.TestCase):
         same way as the original L{CopyableFailure}'s check method.
         """
         original = pb.CopyableFailure(ZeroDivisionError())
-        self.assertIdentical(
+        self.assertIs(
             original.check(ZeroDivisionError), ZeroDivisionError)
-        self.assertIdentical(original.check(ArithmeticError), ArithmeticError)
+        self.assertIs(original.check(ArithmeticError), ArithmeticError)
         copied = jelly.unjelly(jelly.jelly(original, invoker=DummyInvoker()))
-        self.assertIdentical(
+        self.assertIs(
             copied.check(ZeroDivisionError), ZeroDivisionError)
-        self.assertIdentical(copied.check(ArithmeticError), ArithmeticError)
+        self.assertIs(copied.check(ArithmeticError), ArithmeticError)
 
 
     def test_twiceUnjelliedFailureCheck(self):
@@ -437,17 +437,17 @@ class FailureJellyingTests(unittest.TestCase):
         check method.
         """
         original = pb.CopyableFailure(ZeroDivisionError())
-        self.assertIdentical(
+        self.assertIs(
             original.check(ZeroDivisionError), ZeroDivisionError)
-        self.assertIdentical(original.check(ArithmeticError), ArithmeticError)
+        self.assertIs(original.check(ArithmeticError), ArithmeticError)
         copiedOnce = jelly.unjelly(
             jelly.jelly(original, invoker=DummyInvoker()))
         derivative = pb.CopyableFailure(copiedOnce)
         copiedTwice = jelly.unjelly(
             jelly.jelly(derivative, invoker=DummyInvoker()))
-        self.assertIdentical(
+        self.assertIs(
             copiedTwice.check(ZeroDivisionError), ZeroDivisionError)
-        self.assertIdentical(
+        self.assertIs(
             copiedTwice.check(ArithmeticError), ArithmeticError)
 
 

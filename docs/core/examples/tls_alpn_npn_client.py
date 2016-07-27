@@ -19,6 +19,8 @@ tls_alpn_npn_server.py from the directory that contains this example.
 It assumes that you have a self-signed server certificate, named
 `server-cert.pem` and located in the working directory.
 """
+from __future__ import print_function
+
 from twisted.internet import ssl, protocol, endpoints, task, defer
 from twisted.python.filepath import FilePath
 
@@ -59,7 +61,7 @@ def main(reactor):
     options = ssl.optionsForClientTLS(
         hostname=TARGET_HOST,
         trustRoot=serverCertificate,
-        # `acceptableProtocols` is the targetted option for this example.
+        # `acceptableProtocols` is the targeted option for this example.
         acceptableProtocols=ACCEPTABLE_PROTOCOLS,
     )
 
@@ -92,7 +94,7 @@ def main(reactor):
             # If we haven't received any data, an error occurred. Otherwise,
             # we lost the connection on purpose.
             if self.complete is not None:
-                print("Connection lost due to error %s" % (reason,))
+                print(("Connection lost due to error %s" % (reason,)))
                 self.complete.callback(None)
             else:
                 print("Connection closed cleanly")

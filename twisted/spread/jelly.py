@@ -67,9 +67,7 @@ import types
 import warnings
 import decimal
 from functools import reduce
-
 import copy
-
 import datetime
 
 from zope.interface import implementer
@@ -83,6 +81,7 @@ from twisted.persisted.crefutil import _Container
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
+from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 
@@ -144,7 +143,7 @@ def _newInstance(cls, state=_NO_STATE):
 
     @return: A new instance of C{cls}.
     """
-    if _PY3 or not isinstance(cls, types.ClassType):
+    if _PY3 or not isinstance(cls, ClassType):
         # new-style
         inst = cls.__new__(cls)
 
@@ -152,9 +151,9 @@ def _newInstance(cls, state=_NO_STATE):
             inst.__dict__.update(state) # Copy 'instance' behaviour
     else:
         if state is not _NO_STATE:
-            inst = InstanceType(cls, state)
+            inst = _OldStyleInstance(cls, state)
         else:
-            inst = InstanceType(cls)
+            inst = _OldStyleInstance(cls)
     return inst
 
 
@@ -173,7 +172,6 @@ def _maybeClass(classnamep):
     else:
         if isObject:
             return qual(classnamep)
-
     return classnamep
 
 
@@ -230,7 +228,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
     Set all classes in a module derived from C{baseClass} as copiers for
     a corresponding remote class.
 
-    When you have a heirarchy of Copyable (or Cacheable) classes on one
+    When you have a hierarchy of Copyable (or Cacheable) classes on one
     side, and a mirror structure of Copied (or RemoteCache) classes on the
     other, use this to setUnjellyableForClass all your Copieds for the
     Copyables.
@@ -536,10 +534,10 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or not _PY3 and objType is _sets.Set:
+                elif objType is set or (not _PY3 and objType is _sets.Set):
                     sxp.extend(self._jellyIterable(set_atom, obj))
                 elif (objType is frozenset or
-                      not _PY3 and objType is _sets.ImmutableSet):
+                      (not _PY3 and objType is _sets.ImmutableSet)):
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__)
@@ -562,7 +560,7 @@ class _Jellier:
                             qual(obj.__class__), sxp)
                 return self.preserve(obj, sxp)
         else:
-            if objType is InstanceType:
+            if objType is _OldStyleInstance:
                 raise InsecureJelly("Class not allowed for instance: %s %s" %
                                     (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
@@ -715,8 +713,11 @@ class _Unjellier:
 
 
     def _unjelly_boolean(self, exp):
-        assert exp[0] in ('true', 'false')
-        return exp[0] == 'true'
+        if bool:
+            assert exp[0] in ('true', 'false')
+            return exp[0] == 'true'
+        else:
+            return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
 
     def _unjelly_datetime(self, exp):
         return datetime.datetime(*map(int, exp[0].split()))
@@ -919,7 +920,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if type(im_class) is not types.ClassType:
+        if type(im_class) is not _OldStyleClass:
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:
@@ -927,7 +928,7 @@ class _Unjellier:
             elif isinstance(im_self, NotKnown):
                 im = _InstanceMethod(im_name, im_self, im_class)
             else:
-                im = MethodType(im_class.__dict__[im_name], im_self, im_class)
+                im = types.MethodType(im_class.__dict__[im_name], im_self, im_class)
         else:
             raise TypeError('instance method changed')
         return im
@@ -1140,7 +1141,7 @@ def unjelly(sexp, taster=DummySecurityOptions(), persistentLoad=None,
     """
     Unserialize from s-expression.
 
-    Takes an list that was the result from a call to jelly() and unserializes
+    Takes a list that was the result from a call to jelly() and unserializes
     an arbitrary object from it.  The optional 'taster' argument, an instance
     of SecurityOptions, will cause an InsecureJelly exception to be raised if a
     disallowed type, module, or class attempted to unserialize.

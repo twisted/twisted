@@ -8,6 +8,8 @@ All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
 
+from __future__ import print_function
+
 import glob
 import operator
 import os
@@ -27,10 +29,12 @@ from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 
+from subprocess import CalledProcessError
+
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
-    changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
+    changeAllProjectVersions, VERSION_OFFSET, filePathDelta,
     APIBuilder, BuildAPIDocsScript, CheckTopfileScript,
     runCommand, NotWorkingDirectory,
     ChangeVersionsScript, NewsBuilder, SphinxBuilder,
@@ -550,18 +554,19 @@ class UtilityTests(ExternalTempdirTestCase):
         value.
         """
         content = 'foo\nhey hey $VER\nbar\n'
-        outf = open('release.replace', 'w')
-        outf.write(content)
-        outf.close()
+        with open('release.replace', 'w') as outf:
+            outf.write(content)
 
         expected = content.replace('$VER', '2.0.0')
         replaceInFile('release.replace', {'$VER': '2.0.0'})
-        self.assertEqual(open('release.replace').read(), expected)
+        with open('release.replace') as f:
+            self.assertEqual(f.read(), expected)
 
 
         expected = expected.replace('2.0.0', '3.0.0')
         replaceInFile('release.replace', {'2.0.0': '3.0.0'})
-        self.assertEqual(open('release.replace').read(), expected)
+        with open('release.replace') as f:
+            self.assertEqual(f.read(), expected)
 
 
 
@@ -706,9 +711,77 @@ class APIBuilderTests(ExternalTempdirTestCase):
         #Here we check that it figured out the correct version based on the
         #source code.
         self.assertIn(
-            '<a href="http://twistedmatrix.com/trac/browser/tags/releases/'
+            '<a href="https://github.com/twisted/twisted/tree/'
             'twisted-1.0.0/twisted">View Source</a>',
             twistedPath.getContent())
+
+        self.assertEqual(stdout.getvalue(), '')
+
+
+    def test_buildWithDeprecated(self):
+        """
+        The templates and System for Twisted includes adding deprecations.
+        """
+        stdout = StringIO()
+        self.patch(sys, 'stdout', stdout)
+
+        projectName = "Foobar"
+        packageName = "quux"
+        projectURL = "scheme:project"
+        sourceURL = "scheme:source"
+        docstring = "text in docstring"
+        privateDocstring = "should also appear in output"
+
+        inputPath = FilePath(self.mktemp()).child(packageName)
+        inputPath.makedirs()
+        inputPath.child("__init__.py").setContent(
+            "from twisted.python.deprecate import deprecated\n"
+            "from twisted.python.versions import Version\n"
+            "@deprecated(Version('Twisted', 15, 0, 0), "
+            "'Baz')\n"
+            "def foo():\n"
+            "    '%s'\n"
+            "from twisted.python import deprecate, versions\n"
+            "@deprecate.deprecated(versions.Version('Twisted', 16, 0, 0))\n"
+            "def _bar():\n"
+            "    '%s'\n"
+            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
+            "class Baz(object):\n"
+            "    pass"
+            "" % (docstring, privateDocstring))
+
+        outputPath = FilePath(self.mktemp())
+
+        builder = APIBuilder()
+        builder.build(projectName, projectURL, sourceURL, inputPath,
+                      outputPath)
+
+        quuxPath = outputPath.child("quux.html")
+        self.assertTrue(
+            quuxPath.exists(),
+            "Package documentation file %r did not exist." % (quuxPath.path,))
+        self.assertIn(
+            docstring, quuxPath.getContent(),
+            "Docstring not in package documentation file.")
+        self.assertIn(
+            'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
+            quuxPath.getContent())
+        self.assertIn(
+            '_bar was deprecated in Twisted 16.0.0.',
+            quuxPath.getContent())
+        self.assertIn(privateDocstring, quuxPath.getContent())
+
+        # There should also be a page for the foo function in quux.
+        self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
+
+        self.assertIn(
+            'foo was deprecated in Twisted 15.0.0; please use Baz instead.',
+            quuxPath.sibling('quux.foo.html').getContent())
+
+        self.assertIn(
+            'Baz was deprecated in Twisted 14.2.3; please use stuff instead.',
+            quuxPath.sibling('quux.Baz.html').getContent())
+
 
         self.assertEqual(stdout.getvalue(), '')
 
@@ -1397,7 +1470,7 @@ class SphinxBuilderTests(TestCase):
                 3. In the case where it's a path to a C{.html} file, the
                    content looks like an HTML file.
 
-        @return: C{None}
+        @return: L{None}
         """
         # check that file exists
         fpath = fileDir.child(fileName)
@@ -1472,7 +1545,7 @@ class SphinxBuilderTests(TestCase):
         directory.
         """
         # note no fake sphinx project is created
-        self.assertRaises(CommandFailed,
+        self.assertRaises(CalledProcessError,
                           self.builder.build,
                           self.sphinxDir)
 
@@ -1605,7 +1678,7 @@ class CommandsTestMixin(StructureAssertingMixin):
         working directory doesn't produce any error.
         """
         reposDir = self.makeRepository(self.tmpDir)
-        self.assertEqual(None,
+        self.assertIsNone(
                          self.createCommand.ensureIsWorkingDirectory(reposDir))
 
 
@@ -1989,3 +2062,33 @@ class CheckTopfileScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1], "No topfile found. Have you committed it?")
+
+
+    def test_topfileAddedButWithOtherTopfiles(self):
+        """
+        Running it on a branch with a fragment in the topfiles dir added
+        returns green, even if there are other files in the topfiles dir.
+        """
+        runCommand(["git", "checkout", "-b", "quotefile"],
+                   cwd=self.repo.path)
+
+        topfiles = self.repo.child("twisted").child("topfiles")
+        topfiles.makedirs()
+        fragment = topfiles.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = topfiles.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path],
+                   cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "topfile"],
+                   cwd=self.repo.path)
+
+        logs = []
+
+        with self.assertRaises(SystemExit) as e:
+            CheckTopfileScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(logs[-1], "Found twisted/topfiles/1234.misc")

@@ -169,6 +169,28 @@ has several features:
       plain-text protocol, and easily distinguish between non-AMP clients (like
       web browsers) which issue non-NUL as the first byte, and AMP clients,
       which always issue NUL as the first byte.
+
+@var MAX_VALUE_LENGTH: The maximum length of a message.
+@type MAX_VALUE_LENGTH: L{int}
+
+@var ASK: Marker for an Ask packet.
+@type ASK: L{bytes}
+
+@var ANSWER: Marker for an Answer packet.
+@type ANSWER: L{bytes}
+
+@var COMMAND: Marker for a Command packet.
+@type COMMAND: L{bytes}
+
+@var ERROR: Marker for an AMP box of error type.
+@type ERROR: L{bytes}
+
+@var ERROR_CODE: Marker for an AMP box containing the code of an error.
+@type ERROR_CODE: L{bytes}
+
+@var ERROR_DESCRIPTION: Marker for an AMP box containing the description of the
+    error.
+@type ERROR_DESCRIPTION: L{bytes}
 """
 
 from __future__ import absolute_import, division
@@ -321,7 +343,7 @@ class IArgumentType(Interface):
             interpreted.  Most likely this is an instance of L{AMP}, but
             this is not guaranteed.
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -349,7 +371,7 @@ class IArgumentType(Interface):
             it is fully populated.  Most likely this is an instance of
             L{AMP}, but this is not guaranteed.
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -388,8 +410,8 @@ class IBoxReceiver(Interface):
 
     def startReceivingBoxes(boxSender):
         """
-        The L{ampBoxReceived} method will start being called; boxes may be
-        responded to by responding to the given L{IBoxSender}.
+        The L{IBoxReceiver.ampBoxReceived} method will start being called;
+        boxes may be responded to by responding to the given L{IBoxSender}.
 
         @param boxSender: an L{IBoxSender} provider.
         """
@@ -686,7 +708,7 @@ class AmpBox(dict):
 
     def _sendTo(self, proto):
         """
-        Serialize and send this box to a Amp instance.  By the time it is being
+        Serialize and send this box to an Amp instance.  By the time it is being
         sent, several keys are required.  I must have exactly ONE of::
 
             _ask
@@ -729,7 +751,7 @@ class QuitBox(AmpBox):
 
 class _SwitchBox(AmpBox):
     """
-    Implementation detail of ProtocolSwitchCommand: I am a AmpBox which sets
+    Implementation detail of ProtocolSwitchCommand: I am an AmpBox which sets
     up state for the protocol to switch.
     """
 
@@ -779,11 +801,11 @@ class BoxDispatcher:
     @ivar _outstandingRequests: a dictionary mapping request IDs to
     L{Deferred}s which were returned for those requests.
 
-    @ivar locator: an object with a L{locateResponder} method that locates a
-    responder function that takes a Box and returns a result (either a Box or a
-    Deferred which fires one).
+    @ivar locator: an object with a L{CommandLocator.locateResponder} method
+        that locates a responder function that takes a Box and returns a result
+        (either a Box or a Deferred which fires one).
 
-    @ivar boxSender: an object which can send boxes, via the L{_sendBox}
+    @ivar boxSender: an object which can send boxes, via the L{_sendBoxCommand}
     method, such as an L{AMP} instance.
     @type boxSender: L{IBoxSender}
     """
@@ -811,7 +833,7 @@ class BoxDispatcher:
     def stopReceivingBoxes(self, reason):
         """
         No further boxes will be received here.  Terminate all currently
-        oustanding command deferreds with the given reason.
+        outstanding command deferreds with the given reason.
         """
         self.failAllOutgoing(reason)
 
@@ -1171,7 +1193,7 @@ class CommandLocator:
 
     def lookupFunction(self, name):
         """
-        Deprecated synonym for L{locateResponder}
+        Deprecated synonym for L{CommandLocator.locateResponder}
         """
         if self.__class__.lookupFunction != CommandLocator.lookupFunction:
             return CommandLocator.locateResponder(self, name)
@@ -1221,7 +1243,7 @@ if _PY3:
 @implementer(IResponderLocator)
 class SimpleStringLocator(object):
     """
-    Implement the L{locateResponder} method to do simple, string-based
+    Implement the L{AMP.locateResponder} method to do simple, string-based
     dispatch.
     """
 
@@ -1231,9 +1253,10 @@ class SimpleStringLocator(object):
         """
         Locate a callable to invoke when executing the named command.
 
-        @return: a function with the name C{"amp_" + name} on L{self}, or None
-        if no such function exists.  This function will then be called with the
-        L{AmpBox} itself as an argument.
+        @return: a function with the name C{"amp_" + name} on the same
+            instance, or None if no such function exists.
+            This function will then be called with the L{AmpBox} itself as an
+            argument.
 
         @param name: the normalized name (from the wire) of the command.
         @type name: C{bytes}
@@ -1313,7 +1336,7 @@ class Argument:
 
         @param d: a dictionary.
 
-        @param name: a key in L{d}.
+        @param name: a key in I{d}.
 
         @param proto: an instance of an AMP.
 
@@ -1540,7 +1563,7 @@ class ListOf(Argument):
     responsible for producing the serialized form of each element.
 
     @ivar elementType: The L{Argument} instance used to encode and decode list
-        elements (note, not an arbitrary L{IArgument} implementation:
+        elements (note, not an arbitrary L{IArgumentType} implementation:
         arguments must be implemented using only the C{fromString} and
         C{toString} methods, not the C{fromBox} and C{toBox} methods).
 
@@ -1703,15 +1726,17 @@ class Command:
     value.
 
     @cvar errors: A mapping of subclasses of L{Exception} to wire-protocol tags
-    for errors represented as L{str}s.  Responders which raise keys from this
-    dictionary will have the error translated to the corresponding tag on the
-    wire.  Invokers which receive Deferreds from invoking this command with
-    L{AMP.callRemote} will potentially receive Failures with keys from this
-    mapping as their value.  This mapping is inherited; if you declare a
-    command which handles C{FooError} as 'FOO_ERROR', then subclass it and
-    specify C{BarError} as 'BAR_ERROR', responders to the subclass may raise
-    either C{FooError} or C{BarError}, and invokers must be able to deal with
-    either of those exceptions.
+        for errors represented as L{str}s.  Responders which raise keys from
+        this dictionary will have the error translated to the corresponding tag
+        on the wire.
+        Invokers which receive Deferreds from invoking this command with
+        L{BoxDispatcher.callRemote} will potentially receive Failures with keys
+        from this mapping as their value.
+        This mapping is inherited; if you declare a command which handles
+        C{FooError} as 'FOO_ERROR', then subclass it and specify C{BarError} as
+        'BAR_ERROR', responders to the subclass may raise either C{FooError} or
+        C{BarError}, and invokers must be able to deal with either of those
+        exceptions.
 
     @cvar fatalErrors: like 'errors', but errors in this list will always
     terminate the connection, despite being of a recognizable error type.
@@ -2281,8 +2306,9 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         connection is being closed because a key length prefix which was longer
         than allowed by the protocol was received.
 
-    @ivar boxReceiver: an L{IBoxReceiver} provider, whose L{ampBoxReceived}
-    method will be invoked for each L{AmpBox} that is received.
+    @ivar boxReceiver: an L{IBoxReceiver} provider, whose
+        L{IBoxReceiver.ampBoxReceived} method will be invoked for each
+        L{AmpBox} that is received.
     """
 
     _justStartedTLS = False
@@ -2312,7 +2338,8 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         @param newProto: the new protocol instance to switch to.
 
         @param clientFactory: the ClientFactory to send the
-        L{clientConnectionLost} notification to.
+            L{twisted.internet.protocol.ClientFactory.clientConnectionLost}
+            notification to.
         """
         # All the data that Int16Receiver has not yet dealt with belongs to our
         # new protocol: luckily it's keeping that in a handy (although
@@ -2358,7 +2385,7 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
     def makeConnection(self, transport):
         """
         Notify L{boxReceiver} that it is about to receive boxes from this
-        protocol by invoking L{startReceivingBoxes}.
+        protocol by invoking L{IBoxReceiver.startReceivingBoxes}.
         """
         self.transport = transport
         self.boxReceiver.startReceivingBoxes(self)
@@ -2479,7 +2506,7 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         """
         Used by StartTLSCommand to put us into the state where we don't
         actually send things that get sent, instead we buffer them.  see
-        L{_sendBox}.
+        L{_sendBoxCommand}.
         """
         self._startingTLSBuffer = []
         if self.hostCertificate is not None:

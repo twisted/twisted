@@ -86,13 +86,13 @@ class FakeTransport:
             connection, C{False} if it is the connecting side.
         @type isServer: L{bool}
 
-        @param hostAddress: The value to return from C{getHost}.  C{None}
+        @param hostAddress: The value to return from C{getHost}.  L{None}
             results in a new L{FakeAddress} being created to use as the value.
-        @type hostAddress: L{IAddress} provider or L{NoneType}
+        @type hostAddress: L{IAddress} provider or L{None}
 
-        @param peerAddress: The value to return from C{getPeer}.  C{None}
+        @param peerAddress: The value to return from C{getPeer}.  L{None}
             results in a new L{FakeAddress} being created to use as the value.
-        @type peerAddress: L{IAddress} provider or L{NoneType}
+        @type peerAddress: L{IAddress} provider or L{None}
         """
         self.protocol = protocol
         self.isServer = isServer
@@ -356,8 +356,8 @@ class IOPump:
 
 
 
-def connect(serverProtocol, serverTransport,
-            clientProtocol, clientTransport, debug=False):
+def connect(serverProtocol, serverTransport, clientProtocol, clientTransport,
+            debug=False, greet=True):
     """
     Create a new L{IOPump} connecting two protocols.
 
@@ -379,6 +379,11 @@ def connect(serverProtocol, serverTransport,
         L{IOPump} is doing.
     @type debug: L{bool}
 
+    @param greet: Should the L{IOPump} be L{flushed <IOPump.flush>} once before
+        returning to put the protocols into their post-handshake or
+        post-server-greeting state?
+    @type greet: L{bool}
+
     @return: An L{IOPump} which connects C{serverProtocol} and
         C{clientProtocol} and delivers bytes between them when it is pumped.
     @rtype: L{IOPump}
@@ -388,8 +393,9 @@ def connect(serverProtocol, serverTransport,
     pump = IOPump(
         clientProtocol, serverProtocol, clientTransport, serverTransport, debug
     )
-    # Kick off server greeting, etc
-    pump.flush()
+    if greet:
+        # Kick off server greeting, etc
+        pump.flush()
     return pump
 
 
@@ -397,7 +403,7 @@ def connect(serverProtocol, serverTransport,
 def connectedServerAndClient(ServerClass, ClientClass,
                              clientTransportFactory=makeFakeClient,
                              serverTransportFactory=makeFakeServer,
-                             debug=False):
+                             debug=False, greet=True):
     """
     Connect a given server and client class to each other.
 
@@ -422,6 +428,11 @@ def connectedServerAndClient(ServerClass, ClientClass,
         connection to stdout for inspection?
     @type debug: L{bool}
 
+    @param greet: Should the L{IOPump} be L{flushed <IOPump.flush>} once before
+        returning to put the protocols into their post-handshake or
+        post-server-greeting state?
+    @type greet: L{bool}
+
     @return: the client protocol, the server protocol, and an L{IOPump} which,
         when its C{pump} and C{flush} methods are called, will move data
         between the created client and server protocol instances.
@@ -431,7 +442,7 @@ def connectedServerAndClient(ServerClass, ClientClass,
     s = ServerClass()
     cio = clientTransportFactory(c)
     sio = serverTransportFactory(s)
-    return c, s, connect(s, sio, c, cio, debug)
+    return c, s, connect(s, sio, c, cio, debug, greet)
 
 
 
@@ -449,7 +460,7 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
     @return: If they do match, return factories for the client and server that
         should connect; otherwise return L{None}, indicating they shouldn't be
         connected.
-    @rtype: L{types.NoneType} or 2-L{tuple} of (L{ClientFactory},
+    @rtype: L{None} or 2-L{tuple} of (L{ClientFactory},
         L{IProtocolFactory})
     """
     (clientHost, clientPort, clientFactory, clientTimeout,

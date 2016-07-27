@@ -1,6 +1,12 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 16.3.0 (2016-07-05)
+=================================
+
+No significant changes have been made for this release.
+
+
 Twisted Conch 16.2.0 (2016-05-18)
 =================================
 
@@ -424,7 +430,7 @@ Bugfixes
    intermittent error, crashing at startup with a ZeroDivisionError
    while trying to report progress. (#4463)
  - twisted.conch.ssh.connection.SSHConnection now replies to requests
-   to open an unknown channel with a OPEN_UNKNOWN_CHANNEL_TYPE message
+   to open an unknown channel with an OPEN_UNKNOWN_CHANNEL_TYPE message
    instead of closing the connection. (#4490)
 
 Deprecations and Removals

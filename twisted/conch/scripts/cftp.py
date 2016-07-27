@@ -291,7 +291,7 @@ class StdioClient(basic.LineReceiver):
         else:
             local = os.path.split(remote)[1]
         log.msg((remote, local))
-        lf = file(local, 'w', 0)
+        lf = open(local, 'w', 0)
         path = os.path.join(self.currentDirectory, remote)
         d = self.client.openFile(path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
@@ -313,7 +313,7 @@ class StdioClient(basic.LineReceiver):
         if not files:
             return
         f = files.pop(0)[0]
-        lf = file(os.path.join(local, os.path.split(f)[1]), 'w', 0)
+        lf = open(os.path.join(local, os.path.split(f)[1]), 'w', 0)
         path = os.path.join(self.currentDirectory, f)
         d = self.client.openFile(path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
@@ -406,9 +406,9 @@ class StdioClient(basic.LineReceiver):
         Do an upload request for a single local file or a globing expression.
 
         @param rest: Requested command line for the PUT command.
-        @type rest: C{str}
+        @type rest: L{str}
 
-        @return: A deferred which fires with C{None} when transfer is done.
+        @return: A deferred which fires with L{None} when transfer is done.
         @rtype: L{defer.Deferred}
         """
         local, rest = self._getFilename(rest)
@@ -438,11 +438,11 @@ class StdioClient(basic.LineReceiver):
         Perform an upload for a single file.
 
         @param local: Path to local file.
-        @type local: C{str}.
+        @type local: L{str}.
 
         @param remote: Remote path for the request relative to current working
             directory.
-        @type remote: C{str}
+        @type remote: L{str}
 
         @return: A deferred which fires when transfer is done.
         """
@@ -454,11 +454,11 @@ class StdioClient(basic.LineReceiver):
         Perform an upload for a list of local files.
 
         @param files: List of local files.
-        @type files: C{list} of C{str}.
+        @type files: C{list} of L{str}.
 
         @param remote: Remote path for the request relative to current working
             directory.
-        @type remote: C{str}
+        @type remote: L{str}
 
         @return: A deferred which fires when transfer is done.
         """
@@ -471,18 +471,18 @@ class StdioClient(basic.LineReceiver):
         Perform an upload for the next file in the list of local files.
 
         @param previousResult: Result form previous file form the list.
-        @type previousResult: C{str}
+        @type previousResult: L{str}
 
         @param files: List of local files.
-        @type files: C{list} of C{str}
+        @type files: C{list} of L{str}
 
         @param remotePath: Remote path for the request relative to current
             working directory.
-        @type remotePath: C{str}
+        @type remotePath: L{str}
 
         @param single: A flag which signals if this is a transfer for a single
             file in which case we use the exact remote path
-        @type single: C{bool}
+        @type single: L{bool}
 
         @return: A deferred which fires when transfer is done.
         """
@@ -526,7 +526,7 @@ class StdioClient(basic.LineReceiver):
         @type localStream: File like object.
 
         @param remotePath: Remote path for the request relative to current working directory.
-        @type remotePath: C{str}
+        @type remotePath: L{str}
 
         @return: A deferred which fires when transfer is done.
         """
@@ -801,7 +801,7 @@ version                         Print the SFTP version.
         @type f: L{FileWrapper}
 
         @param startTime: The time at which the operation being tracked began.
-        @type startTime: C{float}
+        @type startTime: L{float}
         """
         diff = self.reactor.seconds() - startTime
         total = f.total
@@ -837,7 +837,7 @@ version                         Print the SFTP version.
         together with the remaining line.
 
         @param line: Arguments received from command line input.
-        @type line: C{str}
+        @type line: L{str}
 
         @return: Tupple with filename and rest. Return empty values when no path was not found.
         @rtype: C{tupple}
@@ -897,7 +897,7 @@ class SSHSession(channel.SSHChannel):
         if self.conn.options['batchfile']:
             fn = self.conn.options['batchfile']
             if fn != '-':
-                f = file(fn)
+                f = open(fn)
         self.stdio = stdio.StandardIO(StdioClient(self.client, f))
 
     def extReceived(self, t, data):

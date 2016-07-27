@@ -112,7 +112,7 @@ class IResolver(IResolverSimple):
         """
         Perform an A record lookup.
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param name: DNS name to resolve.
 
         @type timeout: Sequence of C{int}
@@ -689,7 +689,7 @@ class IReactorSSL(Interface):
                         connection has failed.
 
         @param bindAddress: a (host, port) tuple of local address to bind to,
-                            or C{None}.
+                            or L{None}.
 
         @return: An object which provides L{IConnector}.
         """
@@ -704,7 +704,7 @@ class IReactorSSL(Interface):
 
         @param factory: a L{twisted.internet.protocol.ServerFactory} instance
 
-        @param contextFactory: a L{twisted.internet.ssl.ContextFactory} instance
+        @param contextFactory: an implementor of L{IOpenSSLContextFactory}
 
         @param backlog: size of the listen queue
 
@@ -1007,7 +1007,7 @@ class IReactorSocket(Interface):
             done as soon as C{adoptDatagramPort} returns.
         @type fileDescriptor: C{int}
 
-        @param addressFamily: The address family (or I{domain}) of the socket.
+        @param addressFamily: The address family or I{domain} of the socket.
             For example, L{socket.AF_INET6}.
         @type addressFamily: C{int}
 
@@ -1020,7 +1020,7 @@ class IReactorSocket(Interface):
 
         @return: An object providing L{IListeningPort}.
 
-        @raise L{UnsupportedAddressFamily}: If the given address family is not
+        @raise UnsupportedAddressFamily: If the given address family is not
             supported by this reactor, or not supported with the given socket
             type.
 
@@ -1048,13 +1048,13 @@ class IReactorProcess(Interface):
                      sequence of strings. The first string should be the
                      executable's name.
 
-        @type env: a C{dict} mapping C{str} to C{str}, or C{None}.
+        @type env: a C{dict} mapping C{str} to C{str}, or L{None}.
         @param env: the environment variables to pass to the child process. The
                     resulting behavior varies between platforms. If
                       - C{env} is not set:
                         - On POSIX: pass an empty environment.
                         - On Windows: pass C{os.environ}.
-                      - C{env} is C{None}:
+                      - C{env} is L{None}:
                         - On POSIX: pass C{os.environ}.
                         - On Windows: pass C{os.environ}.
                       - C{env} is a C{dict}:
@@ -1446,7 +1446,7 @@ class IReactorDaemonize(Interface):
         Hook to be called immediately before daemonization. No reactor methods
         may be called until L{afterDaemonize} is called.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
 
@@ -1455,7 +1455,7 @@ class IReactorDaemonize(Interface):
         Hook to be called immediately after daemonization. This may only be
         called after L{beforeDaemonize} had been called previously.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
 
@@ -1476,7 +1476,7 @@ class IReactorFDSet(Interface):
                        read events until it is removed from the reactor with
                        L{removeReader}.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
     def addWriter(writer):
@@ -1487,21 +1487,21 @@ class IReactorFDSet(Interface):
                        write events until it is removed from the reactor with
                        L{removeWriter}.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
     def removeReader(reader):
         """
         Removes an object previously added with L{addReader}.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
     def removeWriter(writer):
         """
         Removes an object previously added with L{addWriter}.
 
-        @return: C{None}.
+        @return: L{None}.
         """
 
     def removeAll():
@@ -1628,7 +1628,7 @@ class IReadDescriptor(IFileDescriptor):
 
         @return: If an error is encountered which causes the descriptor to
             no longer be valid, a L{Failure} should be returned.  Otherwise,
-            C{None}.
+            L{None}.
         """
 
 
@@ -1645,7 +1645,7 @@ class IWriteDescriptor(IFileDescriptor):
 
         @return: If an error is encountered which causes the descriptor to
             no longer be valid, a L{Failure} should be returned.  Otherwise,
-            C{None}.
+            L{None}.
         """
 
 
@@ -1718,7 +1718,7 @@ class IConsumer(Interface):
 
         @raise RuntimeError: If a producer is already registered.
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -1744,7 +1744,7 @@ class IProducer(Interface):
     """
     A producer produces data for a consumer.
 
-    Typically producing is done by calling the write method of an class
+    Typically producing is done by calling the write method of a class
     implementing L{IConsumer}.
     """
 
@@ -1946,6 +1946,33 @@ class IHalfCloseableProtocol(Interface):
 
 
 
+class IHandshakeListener(Interface):
+    """
+    An interface implemented by a L{IProtocol} to indicate that it would like
+    to be notified when TLS handshakes complete when run over a TLS-based
+    transport.
+
+    This interface is only guaranteed to be called when run over a TLS-based
+    transport: non TLS-based transports will not respect this interface.
+    """
+
+    def handshakeCompleted():
+        """
+        Notification of the TLS handshake being completed.
+
+        This notification fires when OpenSSL has completed the TLS handshake.
+        At this point the TLS connection is established, and the protocol can
+        interrogate its transport (usually an L{ISSLTransport}) for details of
+        the TLS connection.
+
+        This notification *also* fires whenever the TLS session is
+        renegotiated. As a result, protocols that have certain minimum security
+        requirements should implement this interface to ensure that they are
+        able to re-evaluate the security of the TLS session if it changes.
+        """
+
+
+
 class IFileDescriptorReceiver(Interface):
     """
     Protocols may implement L{IFileDescriptorReceiver} to receive file
@@ -1960,7 +1987,7 @@ class IFileDescriptorReceiver(Interface):
         @param descriptor: The descriptor which was received.
         @type descriptor: C{int}
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -2016,15 +2043,21 @@ class ITransport(Interface):
         If possible, make sure that it is all written.  No data will
         ever be lost, although (obviously) the connection may be closed
         before it all gets through.
+
+        @type data: L{bytes}
+        @param data: The data to write.
         """
 
     def writeSequence(data):
         """
-        Write a list of strings to the physical connection.
+        Write an iterable of byte strings to the physical connection.
 
         If possible, make sure that all of the data is written to
         the socket at once, without first copying it all into a
-        single string.
+        single byte string.
+
+        @type data: an iterable of L{bytes}
+        @param data: The data to write.
         """
 
     def loseConnection():
@@ -2146,7 +2179,7 @@ class IUNIXTransport(ITransport):
             socket, a pipe, or anything else POSIX tries to treat in the same
             way as a file.
 
-        @return: C{None}
+        @return: L{None}
         """
 
 
@@ -2207,6 +2240,50 @@ class IOpenSSLClientConnectionCreator(Interface):
 
 
 
+class IProtocolNegotiationFactory(Interface):
+    """
+    A provider of L{IProtocolNegotiationFactory} can provide information about
+    the various protocols that the factory can create implementations of. This
+    can be used, for example, to provide protocol names for Next Protocol
+    Negotiation and Application Layer Protocol Negotiation.
+
+    @see: L{twisted.internet.ssl}
+    """
+
+    def acceptableProtocols():
+        """
+        Returns a list of protocols that can be spoken by the connection
+        factory in the form of ALPN tokens, as laid out in the IANA registry
+        for ALPN tokens.
+
+        @return: a list of ALPN tokens in order of preference.
+        @rtype: L{list} of L{bytes}
+        """
+
+
+
+class IOpenSSLContextFactory(Interface):
+    """
+    A provider of L{IOpenSSLContextFactory} is capable of generating
+    L{OpenSSL.SSL.Context} classes suitable for configuring TLS on a
+    connection. A provider will store enough state to be able to generate these
+    contexts as needed for individual connections.
+
+    @see: L{twisted.internet.ssl}
+    """
+
+    def getContext():
+        """
+        Returns a TLS context object, suitable for securing a TLS connection.
+        This context object will be appropriately customized for the connection
+        based on the state in this object.
+
+        @return: A TLS context object.
+        @rtype: L{OpenSSL.SSL.Context}
+        """
+
+
+
 class ITLSTransport(ITCPTransport):
     """
     A TCP transport that supports switching to TLS midstream.
@@ -2228,7 +2305,7 @@ class ITLSTransport(ITCPTransport):
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must
-            be an old-style L{twisted.internet.ssl.ContextFactory} or similar.
+            be an implementor of L{IOpenSSLContextFactory}.
         """
 
 
@@ -2255,9 +2332,9 @@ class INegotiated(ISSLTransport):
         The protocol selected to be spoken using ALPN/NPN. The result from ALPN
         is preferred to the result from NPN if both were used. If the remote
         peer does not support ALPN or NPN, or neither NPN or ALPN are available
-        on this machine, will be C{None}. Otherwise, will be the name of the
+        on this machine, will be L{None}. Otherwise, will be the name of the
         selected protocol as C{bytes}. Note that until the handshake has
-        completed this property may incorrectly return C{None}: wait until data
+        completed this property may incorrectly return L{None}: wait until data
         has been received before trusting it (see
         https://twistedmatrix.com/trac/ticket/6024).
         """
@@ -2337,7 +2414,7 @@ class IProcessTransport(ITransport):
         @type data: C{str}
         @param data: The bytes to write.
 
-        @return: C{None}
+        @return: L{None}
 
         @raise KeyError: If C{childFD} is not a file descriptor that was mapped
             in the child when L{IReactorProcess.spawnProcess} was used to create

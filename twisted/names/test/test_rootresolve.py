@@ -209,20 +209,20 @@ class RootResolverTests(TestCase):
         badClass.CLASS = HS
         servers = {
             ('1.1.2.3', 53): {
-                ('foo.example.com', A): {
-                    'answers': [('foo.example.com', badClass)],
-                    'authority': [('foo.example.com', Record_NS('ns1.example.com'))],
-                    'additional': [('ns1.example.com', Record_A('10.0.0.2'))],
+                (b'foo.example.com', A): {
+                    'answers': [(b'foo.example.com', badClass)],
+                    'authority': [(b'foo.example.com', Record_NS(b'ns1.example.com'))],
+                    'additional': [(b'ns1.example.com', Record_A('10.0.0.2'))],
                 },
             },
             ('10.0.0.2', 53): {
-                ('foo.example.com', A): {
-                    'answers': [('foo.example.com', Record_A('10.0.0.3'))],
+                (b'foo.example.com', A): {
+                    'answers': [(b'foo.example.com', Record_A('10.0.0.3'))],
                 },
             },
         }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('foo.example.com')
+        d = resolver.lookupAddress(b'foo.example.com')
         d.addCallback(getOnePayload)
         d.addCallback(self.assertEqual, Record_A('10.0.0.3'))
         return d
@@ -281,12 +281,12 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
+                (b'example.com', A): {
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('example.com')
+        d = resolver.lookupAddress(b'example.com')
         return self.assertFailure(d, ResolverError)
 
 
@@ -298,16 +298,16 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
-                    'authority': [('example.com', Record_NS('ns1.example.com'))],
+                (b'example.com', A): {
+                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))],
                     },
-                ('ns1.example.com', A): {
+                (b'ns1.example.com', A): {
                     'rCode': ENAME,
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('example.com')
+        d = resolver.lookupAddress(b'example.com')
         return self.assertFailure(d, DNSNameError)
 
 
@@ -319,15 +319,15 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
-                    'authority': [('example.com', Record_NS('ns1.example.com'))],
+                (b'example.com', A): {
+                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))],
                     },
-                ('ns1.example.com', A): {
+                (b'ns1.example.com', A): {
                     },
                 },
             }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('example.com')
+        d = resolver.lookupAddress(b'example.com')
         return self.assertFailure(d, ResolverError)
 
 
@@ -387,21 +387,21 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
-                    'answers': [('example.com', Record_CNAME('example.net'))],
+                (b'example.com', A): {
+                    'answers': [(b'example.com', Record_CNAME(b'example.net'))],
                 },
-                ('example.net', A): {
-                    'answers': [('example.net', Record_A('10.0.0.5'))],
+                (b'example.net', A): {
+                    'answers': [(b'example.net', Record_A('10.0.0.5'))],
                 },
             },
         }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('example.com')
+        d = resolver.lookupAddress(b'example.com')
         d.addCallback(lambda results: results[0]) # Get the answer section
         d.addCallback(
             self.assertEqual,
-            [RRHeader('example.com', CNAME, payload=Record_CNAME('example.net')),
-             RRHeader('example.net', A, payload=Record_A('10.0.0.5'))])
+            [RRHeader(b'example.com', CNAME, payload=Record_CNAME(b'example.net')),
+             RRHeader(b'example.net', A, payload=Record_A('10.0.0.5'))])
         return d
 
 
@@ -413,14 +413,14 @@ class RootResolverTests(TestCase):
         """
         servers = {
             ('1.1.2.3', 53): {
-                ('example.com', A): {
-                    'answers': [('example.com', Record_CNAME('example.net')),
-                                ('example.net', Record_CNAME('example.com'))],
+                (b'example.com', A): {
+                    'answers': [(b'example.com', Record_CNAME(b'example.net')),
+                                (b'example.net', Record_CNAME(b'example.com'))],
                 },
             },
         }
         resolver = self._getResolver(servers)
-        d = resolver.lookupAddress('example.com')
+        d = resolver.lookupAddress(b'example.com')
         return self.assertFailure(d, ResolverError)
 
 
@@ -433,28 +433,28 @@ class RootResolverTests(TestCase):
             ('1.1.2.3', 53): {
                 # First query - force it to start over with a name lookup of
                 # ns1.example.com
-                ('example.com', A): {
-                    'authority': [('example.com', Record_NS('ns1.example.com'))],
+                (b'example.com', A): {
+                    'authority': [(b'example.com', Record_NS(b'ns1.example.com'))],
                 },
                 # Second query - let it resume the original lookup with the
                 # address of the nameserver handling the delegation.
-                ('ns1.example.com', A): {
-                    'answers': [('ns1.example.com', Record_A('10.0.0.2'))],
+                (b'ns1.example.com', A): {
+                    'answers': [(b'ns1.example.com', Record_A('10.0.0.2'))],
                 },
             },
             ('10.0.0.2', 53): {
                 # Third query - let it jump straight to asking the
                 # delegation server by including its address here (different
                 # case from the first query).
-                ('example.com', A): {
-                    'authority': [('example.com', Record_NS('ns2.example.com'))],
-                    'additional': [('ns2.example.com', Record_A('10.0.0.3'))],
+                (b'example.com', A): {
+                    'authority': [(b'example.com', Record_NS(b'ns2.example.com'))],
+                    'additional': [(b'ns2.example.com', Record_A('10.0.0.3'))],
                 },
             },
             ('10.0.0.3', 53): {
                 # Fourth query - give it the answer, we're done.
-                ('example.com', A): {
-                    'answers': [('example.com', Record_A('10.0.0.4'))],
+                (b'example.com', A): {
+                    'answers': [(b'example.com', Record_A('10.0.0.4'))],
                 },
             },
         }
@@ -464,10 +464,10 @@ class RootResolverTests(TestCase):
         # succeed.
         failer = self._getResolver(servers, 3)
         failD = self.assertFailure(
-            failer.lookupAddress('example.com'), ResolverError)
+            failer.lookupAddress(b'example.com'), ResolverError)
 
         succeeder = self._getResolver(servers, 4)
-        succeedD = succeeder.lookupAddress('example.com')
+        succeedD = succeeder.lookupAddress(b'example.com')
         succeedD.addCallback(getOnePayload)
         succeedD.addCallback(self.assertEqual, Record_A('10.0.0.4'))
 
@@ -517,7 +517,7 @@ class RootResolverResolverFactoryTests(TestCase):
         argument and assigns it to C{self._resolverFactory}.
         """
         r = Resolver(hints=[None], resolverFactory=raisingResolverFactory)
-        self.assertIdentical(r._resolverFactory, raisingResolverFactory)
+        self.assertIs(r._resolverFactory, raisingResolverFactory)
 
 
     def test_resolverFactoryArgumentAbsent(self):
@@ -527,7 +527,7 @@ class RootResolverResolverFactoryTests(TestCase):
         supplied.
         """
         r = Resolver(hints=[None])
-        self.assertIdentical(r._resolverFactory, client.Resolver)
+        self.assertIs(r._resolverFactory, client.Resolver)
 
 
     def test_resolverFactoryOnlyExpectedArguments(self):
@@ -712,7 +712,7 @@ class BootstrapTests(SynchronousTestCase):
         for d in stubResolver.pendingResults:
             d.callback('192.0.2.101')
 
-        self.assertIdentical(
+        self.assertIs(
             deferredResolver._resolverFactory, raisingResolverFactory)
 
 

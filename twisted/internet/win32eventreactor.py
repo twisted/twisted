@@ -15,7 +15,7 @@ listeners or connectors are added)::
 
 LIMITATIONS:
  1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
- 2. Process running has some problems (see L{Process} docstring).
+ 2. Process running has some problems (see L{twisted.internet.process} docstring).
 
 
 TODO:
@@ -205,11 +205,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
 
     def getReaders(self):
-        return self._reads.keys()
+        return list(self._reads.keys())
 
 
     def getWriters(self):
-        return self._writes.keys()
+        return list(self._writes.keys())
 
 
     def doWaitForMultipleEvents(self, timeout):
@@ -225,11 +225,11 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         # If any descriptors are trying to close, try to get them out of the way
         # first.
-        for reader in self._closedAndReading.keys():
+        for reader in list(self._closedAndReading.keys()):
             ranUserCode = True
             self._runAction('doRead', reader)
 
-        for fd in self._writes.keys():
+        for fd in list(self._writes.keys()):
             ranUserCode = True
             log.callWithLogger(fd, self._runWrite, fd)
 
@@ -245,7 +245,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             time.sleep(timeout)
             return
 
-        handles = self._events.keys() or [self.dummyEvent]
+        handles = list(self._events.keys()) or [self.dummyEvent]
         timeout = int(timeout * 1000)
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT)
         if val == WAIT_TIMEOUT:
@@ -365,10 +365,10 @@ class _ThreadedWin32EventsMixin(object):
     a L{Win32Reactor} in a separate thread and dispatching work to it.
 
     @ivar _reactor: The L{Win32Reactor} running in the other thread.  This is
-        C{None} until it is actually needed.
+        L{None} until it is actually needed.
 
     @ivar _reactorThread: The L{threading.Thread} which is running the
-        L{Win32Reactor}.  This is C{None} until it is actually needed.
+        L{Win32Reactor}.  This is L{None} until it is actually needed.
     """
 
     _reactor = None
@@ -422,7 +422,7 @@ class _ThreadedWin32EventsMixin(object):
 def install():
     threadable.init(1)
     r = Win32Reactor()
-    import main
+    from . import main
     main.installReactor(r)
 
 

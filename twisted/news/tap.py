@@ -2,6 +2,8 @@
 # See LICENSE for details.
 
 
+from __future__ import print_function
+
 from twisted.news import news, database
 from twisted.application import strports
 from twisted.python import usage, log
@@ -21,21 +23,22 @@ class DBOptions(usage.Options):
     
     def postOptions(self):
         # XXX - Hmmm.
-        self['groups'] = [g.strip() for g in open(self['groups']).readlines() if not g.startswith('#')]
-        self['servers'] = [s.strip() for s in open(self['servers']).readlines() if not s.startswith('#')]
+        with open(self['groups']) as f:
+            self['groups'] = [g.strip() for g in f.readlines() if not g.startswith('#')]
+        with open(self['servers']) as f:
+            self['servers'] = [s.strip() for s in f.readlines() if not s.startswith('#')]
 
         try:
             __import__(self['module'])
         except ImportError:
             log.msg("Warning: Cannot import %s" % (self['module'],))
         
-        f = open(self['schema'], 'w')
-        f.write(
-            database.NewsStorageAugmentation.schema + '\n' +
-            database.makeGroupSQL(self['groups']) + '\n' +
-            database.makeOverviewSQL()
-        )
-        f.close()
+        with open(self['schema'], 'w') as f:
+            f.write(
+                database.NewsStorageAugmentation.schema + '\n' +
+                database.makeGroupSQL(self['groups']) + '\n' +
+                database.makeOverviewSQL()
+            )
         
         info = {
             'host': self['dbhost'], 'user': self['dbuser'],
@@ -60,13 +63,15 @@ class PickleOptions(usage.Options):
     def postOptions(self):
         # XXX - Hmmm.
         filename = self['file']
-        self['groups'] = [g.strip() for g in open(self['groups']).readlines()
-                          if not g.startswith('#')]
-        self['servers'] = [s.strip() for s in open(self['servers']).readlines()
-                           if not s.startswith('#')]
-        self['moderators'] = [s.split()
-                              for s in open(self['moderators']).readlines()
-                              if not s.startswith('#')]
+        with open(self['groups']) as f:
+            self['groups'] = [g.strip() for g in f.readlines()
+                              if not g.startswith('#')]
+        with open(self['servers']) as f:
+            self['servers'] = [s.strip() for s in f.readlines()
+                               if not s.startswith('#')]
+        with open(self['moderators']) as f:
+            self['moderators'] = [s.split() for s in f.readlines()
+                                  if not s.startswith('#')]
         self.db = database.PickleStorage(filename, self['groups'],
                                          self['moderators'])
 
@@ -129,7 +134,7 @@ def makeService(config):
         else:
             db.addGroup(g, 'y')
     for s in config.subscriptions:
-        print s
+        print(s)
         db.addSubscription(s)
     s = config['port']
     if config['interface']:

@@ -173,7 +173,7 @@ class DigestAuthTests(TestCase):
         """
         L{calcResponse} accepts the C{'md5'} algorithm and returns an MD5 hash
         of its parameters, excluding the nonce count, client nonce, and QoP
-        value if the nonce count and client nonce are C{None}
+        value if the nonce count and client nonce are L{None}
         """
         hashA1 = b'abc123'
         hashA2 = b'789xyz'
@@ -191,7 +191,7 @@ class DigestAuthTests(TestCase):
         """
         L{calcResponse} accepts the C{'md5-sess'} algorithm and returns an MD5
         hash of its parameters, excluding the nonce count, client nonce, and
-        QoP value if the nonce count and client nonce are C{None}
+        QoP value if the nonce count and client nonce are L{None}
         """
         self.test_MD5HashResponse(b'md5-sess')
 
@@ -200,7 +200,7 @@ class DigestAuthTests(TestCase):
         """
         L{calcResponse} accepts the C{'sha'} algorithm and returns a SHA hash
         of its parameters, excluding the nonce count, client nonce, and QoP
-        value if the nonce count and client nonce are C{None}
+        value if the nonce count and client nonce are L{None}
         """
         self.test_MD5HashResponse(b'sha', sha1)
 
@@ -361,7 +361,7 @@ class DigestAuthTests(TestCase):
     def test_responseWithoutClientIP(self):
         """
         L{DigestCredentialFactory.decode} accepts a digest challenge response
-        even if the client address it is passed is C{None}.
+        even if the client address it is passed is L{None}.
         """
         challenge = self.credentialFactory.getChallenge(None)
 

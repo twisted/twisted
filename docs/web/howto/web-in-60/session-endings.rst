@@ -19,7 +19,7 @@ control over that lifetime and react when it expires.
 
 
 
-The lifetime of a session is controlled by the ``sessionTimeout`` 
+The lifetime of a session is controlled by the ``sessionTimeout``
 attribute of the ``Session`` class. This attribute gives the number of
 seconds a session may go without being accessed before it expires. The default
 is 15 minutes. In this example we'll change that to a different value.
@@ -35,9 +35,9 @@ One way to override the value is with a subclass:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Session
-    
+
     class ShortSession(Session):
         sessionTimeout = 60
 
@@ -56,9 +56,9 @@ of ``Site`` :
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
-    
+
     factory = Site(rootResource)
     factory.sessionFactory = ShortSession
 
@@ -84,21 +84,21 @@ trivial example which prints a message whenever a session expires:
 
 .. code-block:: python
 
-    
+
     from twisted.web.resource import Resource
-    
+
     class ExpirationLogger(Resource):
         sessions = set()
-    
+
         def render_GET(self, request):
             session = request.getSession()
             if session.uid not in self.sessions:
                 self.sessions.add(session.uid)
                 session.notifyOnExpire(lambda: self._expired(session.uid))
             return ""
-    
+
         def _expired(self, uid):
-            print "Session", uid, "has expired."
+            print("Session", uid, "has expired.")
             self.sessions.remove(uid)
 
 
@@ -120,41 +120,42 @@ session expires, and uses sessions which last for 5 seconds:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site, Session
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
-    
+    from twisted.internet import reactor, endpoints
+
     class ShortSession(Session):
         sessionTimeout = 5
-    
+
     class ExpirationLogger(Resource):
         sessions = set()
-    
+
         def render_GET(self, request):
             session = request.getSession()
             if session.uid not in self.sessions:
                 self.sessions.add(session.uid)
                 session.notifyOnExpire(lambda: self._expired(session.uid))
             return ""
-    
+
         def _expired(self, uid):
-            print "Session", uid, "has expired."
+            print("Session", uid, "has expired.")
             self.sessions.remove(uid)
-    
+
     rootResource = Resource()
     rootResource.putChild("logme", ExpirationLogger())
     factory = Site(rootResource)
     factory.sessionFactory = ShortSession
-    
-    reactor.listenTCP(8080, factory)
+
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
+    endpoint.listen(factory)
     reactor.run()
 
 
 
 
 Since ``Site`` customization is required, this example can't be
-rpy-based, so it brings back the manual ``reactor.listenTCP`` 
+rpy-based, so it brings back the manual ``endpoints.TCP4ServerEndpoint``
 and ``reactor.run`` calls. Run it and visit ``/logme`` to see
 it in action. Keep visiting it to keep your session active. Stop visiting it for
 five seconds to see your session expiration message.

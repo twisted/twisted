@@ -26,7 +26,7 @@ class TestProtocol:
     remoteEnableable = ()
 
     def __init__(self):
-        self.bytes = b''
+        self.data = b''
         self.subcmd = []
         self.calls = []
 
@@ -34,6 +34,7 @@ class TestProtocol:
         self.enabledRemote = []
         self.disabledLocal = []
         self.disabledRemote = []
+
 
     def makeConnection(self, transport):
         d = transport.negotiationMap = {}
@@ -43,14 +44,18 @@ class TestProtocol:
         for cmd in ('NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'):
             d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
 
-    def dataReceived(self, bytes):
-        self.bytes += bytes
+
+    def dataReceived(self, data):
+        self.data += data
+
 
     def connectionLost(self, reason):
         pass
 
+
     def neg_TEST_COMMAND(self, payload):
         self.subcmd = payload
+
 
     def enableLocal(self, option):
         if option in self.localEnableable:
@@ -58,14 +63,17 @@ class TestProtocol:
             return True
         return False
 
+
     def disableLocal(self, option):
         self.disabledLocal.append(option)
+
 
     def enableRemote(self, option):
         if option in self.remoteEnableable:
             self.enabledRemote.append(option)
             return True
         return False
+
 
     def disableRemote(self, option):
         self.disabledRemote.append(option)
@@ -91,6 +99,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.t = proto_helpers.StringTransport()
         self.p.makeConnection(self.t)
 
+
     def testRegularBytes(self):
         # Just send a bunch of bytes.  None of these do anything
         # with telnet.  They should pass right through to the
@@ -106,7 +115,8 @@ class TelnetTransportTests(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEqual(h.bytes, b''.join(L))
+        self.assertEqual(h.data, b''.join(L))
+
 
     def testNewlineHandling(self):
         # Send various kinds of newlines and make sure they get translated
@@ -121,10 +131,11 @@ class TelnetTransportTests(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEqual(h.bytes, L[0][:-2] + b'\n' +
+        self.assertEqual(h.data, L[0][:-2] + b'\n' +
                           L[1][:-2] + b'\r' +
                           L[2][:-2] + b'\n' +
                           L[3][:-2] + b'\r')
+
 
     def testIACEscape(self):
         # Send a bunch of bytes and a couple quoted \xFFs.  Unquoted,
@@ -139,7 +150,8 @@ class TelnetTransportTests(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEqual(h.bytes, b''.join(L).replace(b'\xff\xff', b'\xff'))
+        self.assertEqual(h.data, b''.join(L).replace(b'\xff\xff', b'\xff'))
+
 
     def _simpleCommandTest(self, cmdName):
         # Send a single simple telnet command and make sure
@@ -155,34 +167,44 @@ class TelnetTransportTests(unittest.TestCase):
             self.p.dataReceived(b)
 
         self.assertEqual(h.calls, [cmdName])
-        self.assertEqual(h.bytes, b''.join(L).replace(cmd, b''))
+        self.assertEqual(h.data, b''.join(L).replace(cmd, b''))
+
 
     def testInterrupt(self):
         self._simpleCommandTest("IP")
 
+
     def testNoOperation(self):
         self._simpleCommandTest("NOP")
+
 
     def testDataMark(self):
         self._simpleCommandTest("DM")
 
+
     def testBreak(self):
         self._simpleCommandTest("BRK")
+
 
     def testAbortOutput(self):
         self._simpleCommandTest("AO")
 
+
     def testAreYouThere(self):
         self._simpleCommandTest("AYT")
+
 
     def testEraseCharacter(self):
         self._simpleCommandTest("EC")
 
+
     def testEraseLine(self):
         self._simpleCommandTest("EL")
 
+
     def testGoAhead(self):
         self._simpleCommandTest("GA")
+
 
     def testSubnegotiation(self):
         # Send a subnegotiation command and make sure it gets
@@ -196,8 +218,9 @@ class TelnetTransportTests(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEqual(h.bytes, b''.join(L).replace(cmd, b''))
+        self.assertEqual(h.data, b''.join(L).replace(cmd, b''))
         self.assertEqual(h.subcmd, list(iterbytes(b"hello world")))
+
 
     def testSubnegotiationWithEmbeddedSE(self):
         # Send a subnegotiation command with an embedded SE.  Make sure
@@ -214,8 +237,9 @@ class TelnetTransportTests(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEqual(h.bytes, b''.join(L).replace(cmd, b''))
+        self.assertEqual(h.data, b''.join(L).replace(cmd, b''))
         self.assertEqual(h.subcmd, [telnet.SE])
+
 
     def testBoundarySubnegotiation(self):
         # Send a subnegotiation command.  Split it at every possible byte boundary
@@ -233,11 +257,12 @@ class TelnetTransportTests(unittest.TestCase):
             L = [b"first part" + a,
                  b + b"last part"]
 
-            for bytes in L:
-                self.p.dataReceived(bytes)
+            for data in L:
+                self.p.dataReceived(data)
 
-            self.assertEqual(h.bytes, b''.join(L).replace(cmd, b''))
+            self.assertEqual(h.data, b''.join(L).replace(cmd, b''))
             self.assertEqual(h.subcmd, [telnet.SE] + list(iterbytes(b'hello')))
+
 
     def _enabledHelper(self, o, eL=[], eR=[], dL=[], dR=[]):
         self.assertEqual(o.enabledLocal, eL)
@@ -245,52 +270,57 @@ class TelnetTransportTests(unittest.TestCase):
         self.assertEqual(o.disabledLocal, dL)
         self.assertEqual(o.disabledRemote, dR)
 
+
     def testRefuseWill(self):
         # Try to enable an option.  The server should refuse to enable it.
         cmd = telnet.IAC + telnet.WILL + b'\x12'
 
-        bytes = b"surrounding bytes" + cmd + b"to spice things up"
-        self.p.dataReceived(bytes)
+        data = b"surrounding bytes" + cmd + b"to spice things up"
+        self.p.dataReceived(data)
 
-        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, b''))
+        self.assertEqual(self.p.protocol.data, data.replace(cmd, b''))
         self.assertEqual(self.t.value(), telnet.IAC + telnet.DONT + b'\x12')
         self._enabledHelper(self.p.protocol)
+
 
     def testRefuseDo(self):
         # Try to enable an option.  The server should refuse to enable it.
         cmd = telnet.IAC + telnet.DO + b'\x12'
 
-        bytes = b"surrounding bytes" + cmd + b"to spice things up"
-        self.p.dataReceived(bytes)
+        data = b"surrounding bytes" + cmd + b"to spice things up"
+        self.p.dataReceived(data)
 
-        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, b''))
+        self.assertEqual(self.p.protocol.data, data.replace(cmd, b''))
         self.assertEqual(self.t.value(), telnet.IAC + telnet.WONT + b'\x12')
         self._enabledHelper(self.p.protocol)
+
 
     def testAcceptDo(self):
         # Try to enable an option.  The option is in our allowEnable
         # list, so we will allow it to be enabled.
         cmd = telnet.IAC + telnet.DO + b'\x19'
-        bytes = b'padding' + cmd + b'trailer'
+        data = b'padding' + cmd + b'trailer'
 
         h = self.p.protocol
         h.localEnableable = (b'\x19',)
-        self.p.dataReceived(bytes)
+        self.p.dataReceived(data)
 
         self.assertEqual(self.t.value(), telnet.IAC + telnet.WILL + b'\x19')
         self._enabledHelper(h, eL=[b'\x19'])
 
+
     def testAcceptWill(self):
         # Same as testAcceptDo, but reversed.
         cmd = telnet.IAC + telnet.WILL + b'\x91'
-        bytes = b'header' + cmd + b'padding'
+        data = b'header' + cmd + b'padding'
 
         h = self.p.protocol
         h.remoteEnableable = (b'\x91',)
-        self.p.dataReceived(bytes)
+        self.p.dataReceived(data)
 
         self.assertEqual(self.t.value(), telnet.IAC + telnet.DO + b'\x91')
         self._enabledHelper(h, eR=[b'\x91'])
+
 
     def testAcceptWont(self):
         # Try to disable an option.  The server must allow any option to
@@ -304,13 +334,14 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x29')
         s.him.state = 'yes'
 
-        bytes = b"fiddle dee" + cmd
-        self.p.dataReceived(bytes)
+        data = b"fiddle dee" + cmd
+        self.p.dataReceived(data)
 
-        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, b''))
+        self.assertEqual(self.p.protocol.data, data.replace(cmd, b''))
         self.assertEqual(self.t.value(), telnet.IAC + telnet.DONT + b'\x29')
         self.assertEqual(s.him.state, 'no')
         self._enabledHelper(self.p.protocol, dR=[b'\x29'])
+
 
     def testAcceptDont(self):
         # Try to disable an option.  The server must allow any option to
@@ -324,25 +355,27 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x29')
         s.us.state = 'yes'
 
-        bytes = b"fiddle dum " + cmd
-        self.p.dataReceived(bytes)
+        data = b"fiddle dum " + cmd
+        self.p.dataReceived(data)
 
-        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, b''))
+        self.assertEqual(self.p.protocol.data, data.replace(cmd, b''))
         self.assertEqual(self.t.value(), telnet.IAC + telnet.WONT + b'\x29')
         self.assertEqual(s.us.state, 'no')
         self._enabledHelper(self.p.protocol, dL=[b'\x29'])
+
 
     def testIgnoreWont(self):
         # Try to disable an option.  The option is already disabled.  The
         # server should send nothing in response to this.
         cmd = telnet.IAC + telnet.WONT + b'\x47'
 
-        bytes = b"dum de dum" + cmd + b"tra la la"
-        self.p.dataReceived(bytes)
+        data = b"dum de dum" + cmd + b"tra la la"
+        self.p.dataReceived(data)
 
-        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, b''))
+        self.assertEqual(self.p.protocol.data, data.replace(cmd, b''))
         self.assertEqual(self.t.value(), b'')
         self._enabledHelper(self.p.protocol)
+
 
     def testIgnoreDont(self):
         # Try to disable an option.  The option is already disabled.  The
@@ -350,12 +383,13 @@ class TelnetTransportTests(unittest.TestCase):
         # lead to a negotiation loop.
         cmd = telnet.IAC + telnet.DONT + b'\x47'
 
-        bytes = b"dum de dum" + cmd + b"tra la la"
-        self.p.dataReceived(bytes)
+        data = b"dum de dum" + cmd + b"tra la la"
+        self.p.dataReceived(data)
 
-        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, b''))
+        self.assertEqual(self.p.protocol.data, data.replace(cmd, b''))
         self.assertEqual(self.t.value(), b'')
         self._enabledHelper(self.p.protocol)
+
 
     def testIgnoreWill(self):
         # Try to enable an option.  The option is already enabled.  The
@@ -369,12 +403,13 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x56')
         s.him.state = 'yes'
 
-        bytes = b"tra la la" + cmd + b"dum de dum"
-        self.p.dataReceived(bytes)
+        data = b"tra la la" + cmd + b"dum de dum"
+        self.p.dataReceived(data)
 
-        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, b''))
+        self.assertEqual(self.p.protocol.data, data.replace(cmd, b''))
         self.assertEqual(self.t.value(), b'')
         self._enabledHelper(self.p.protocol)
+
 
     def testIgnoreDo(self):
         # Try to enable an option.  The option is already enabled.  The
@@ -388,12 +423,13 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x56')
         s.us.state = 'yes'
 
-        bytes = b"tra la la" + cmd + b"dum de dum"
-        self.p.dataReceived(bytes)
+        data = b"tra la la" + cmd + b"dum de dum"
+        self.p.dataReceived(data)
 
-        self.assertEqual(self.p.protocol.bytes, bytes.replace(cmd, b''))
+        self.assertEqual(self.p.protocol.data, data.replace(cmd, b''))
         self.assertEqual(self.t.value(), b'')
         self._enabledHelper(self.p.protocol)
+
 
     def testAcceptedEnableRequest(self):
         # Try to enable an option through the user-level API.  This
@@ -432,15 +468,15 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x42')
         self.assertEqual(s.him.state, 'no')
         self.assertEqual(s.us.state, 'no')
-        self.assertEqual(s.him.negotiating, True)
-        self.assertEqual(s.us.negotiating, False)
+        self.assertTrue(s.him.negotiating)
+        self.assertFalse(s.us.negotiating)
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + b'\x42')
 
         d = self.assertFailure(d, telnet.OptionRefused)
         d.addCallback(lambda ignored: self._enabledHelper(self.p.protocol))
         d.addCallback(
-            lambda ignored: self.assertEqual(s.him.negotiating, False))
+            lambda ignored: self.assertFalse(s.him.negotiating))
         return d
 
 
@@ -462,15 +498,15 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b'\x42')
         self.assertEqual(s.him.state, 'no')
         self.assertEqual(s.us.state, 'no')
-        self.assertEqual(s.him.negotiating, False)
-        self.assertEqual(s.us.negotiating, True)
+        self.assertFalse(s.him.negotiating)
+        self.assertTrue(s.us.negotiating)
 
         self.p.dataReceived(telnet.IAC + telnet.DONT + b'\x42')
 
         d = self.assertFailure(d, telnet.OptionRefused)
         d.addCallback(lambda ignored: self._enabledHelper(self.p.protocol))
         d.addCallback(
-            lambda ignored: self.assertEqual(s.us.negotiating, False))
+            lambda ignored: self.assertFalse(s.us.negotiating))
         return d
 
 
@@ -493,6 +529,7 @@ class TelnetTransportTests(unittest.TestCase):
                                                     dR=[b'\x42']))
         return d
 
+
     def testNegotiationBlocksFurtherNegotiation(self):
         # Try to disable an option, then immediately try to enable it, then
         # immediately try to disable it.  Ensure that the 2nd and 3rd calls
@@ -505,9 +542,11 @@ class TelnetTransportTests(unittest.TestCase):
             d = self.p.do(b'\x24')
             return self.assertFailure(d, telnet.AlreadyNegotiating)
 
+
         def _dont(x):
             d = self.p.dont(b'\x24')
             return self.assertFailure(d, telnet.AlreadyNegotiating)
+
 
         def _final(x):
             self.p.dataReceived(telnet.IAC + telnet.WONT + b'\x24')
@@ -528,10 +567,12 @@ class TelnetTransportTests(unittest.TestCase):
         d.addCallback(_final)
         return d
 
+
     def testSuperfluousDisableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
         d = self.p.dont(b'\xab')
         return self.assertFailure(d, telnet.AlreadyDisabled)
+
 
     def testSuperfluousEnableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
@@ -539,6 +580,7 @@ class TelnetTransportTests(unittest.TestCase):
         s.him.state = 'yes'
         d = self.p.do(b'\xab')
         return self.assertFailure(d, telnet.AlreadyEnabled)
+
 
     def testLostConnectionFailsDeferreds(self):
         d1 = self.p.do(b'\x12')
@@ -565,25 +607,25 @@ class TestTelnet(telnet.Telnet):
         self.events = []
 
 
-    def applicationDataReceived(self, bytes):
+    def applicationDataReceived(self, data):
         """
         Record the given data in C{self.events}.
         """
-        self.events.append(('bytes', bytes))
+        self.events.append(('bytes', data))
 
 
-    def unhandledCommand(self, command, bytes):
+    def unhandledCommand(self, command, data):
         """
         Record the given command in C{self.events}.
         """
-        self.events.append(('command', command, bytes))
+        self.events.append(('command', command, data))
 
 
-    def unhandledSubnegotiation(self, command, bytes):
+    def unhandledSubnegotiation(self, command, data):
         """
         Record the given subnegotiation command in C{self.events}.
         """
-        self.events.append(('negotiate', command, bytes))
+        self.events.append(('negotiate', command, data))
 
 
 
@@ -668,13 +710,13 @@ class TelnetTests(unittest.TestCase):
             b'\xff\xfa\x01\xff\xff\xff\xf0')
 
 
-    def _deliver(self, bytes, *expected):
+    def _deliver(self, data, *expected):
         """
         Pass the given bytes to the protocol's C{dataReceived} method and
         assert that the given events occur.
         """
         received = self.protocol.events = []
-        self.protocol.dataReceived(bytes)
+        self.protocol.dataReceived(data)
         self.assertEqual(received, list(expected))
 
 

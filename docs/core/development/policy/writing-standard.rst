@@ -7,8 +7,10 @@ Twisted Writing Standard
 ========================
 
 The Twisted writing standard describes the documentation writing
-styles we prefer in our documentation. This standard applies particularly
-to howtos and other descriptive documentation.
+styles we prefer in our narrative documentation.
+
+This standard applies particularly to howtos and other descriptive documentation.
+For writing API documentation, please refer to :doc:`Docstrings section in our coding standard <coding-standard>`.
 
 This document is meant to help Twisted documentation authors produce
 documentation that does not have the following problems:
@@ -309,7 +311,7 @@ that they will see the document do. For example:
       backend;
     - creating an anonymous access read-only SFTP server using a proxy
       backend connecting to an HTTP server; and
-    - creating a anonymous access read and write SFTP server using a
+    - creating an anonymous access read and write SFTP server using a
       filesystem backend.
     
     

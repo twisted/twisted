@@ -12,9 +12,16 @@ from twisted.protocols import ident
 from twisted.python import failure
 from twisted.internet import error
 from twisted.internet import defer
+from twisted.python.compat import NativeStringIO
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
+
+
+try:
+    import builtins
+except ImportError:
+    import __builtin__ as builtins
 
 
 
@@ -25,7 +32,7 @@ class ClassParserTests(unittest.TestCase):
 
     def setUp(self):
         """
-        Create a ident client used in tests.
+        Create an ident client used in tests.
         """
         self.client = ident.IdentClient()
 
@@ -87,13 +94,16 @@ class TestIdentServer(ident.IdentServer):
         return self.resultValue
 
 
+
 class TestErrorIdentServer(ident.IdentServer):
     def lookup(self, serverAddress, clientAddress):
         raise self.exceptionType()
 
 
+
 class NewException(RuntimeError):
     pass
+
 
 
 class ServerParserTests(unittest.TestCase):
@@ -133,6 +143,7 @@ class ServerParserTests(unittest.TestCase):
                 L, ['%d, 5 : ERROR : INVALID-PORT' % (port,),
                     '5, %d : ERROR : INVALID-PORT' % (port,)])
 
+
     def testSuccess(self):
         p = TestIdentServer()
         p.makeConnection(StringTransport())
@@ -152,25 +163,32 @@ else:
     _addr2 = '01020304'
 
 
+
 class ProcMixinTests(unittest.TestCase):
     line = ('4: %s:0019 %s:02FA 0A 00000000:00000000 '
             '00:00000000 00000000     0        0 10927 1 f72a5b80 '
             '3000 0 0 2 -1') % (_addr1, _addr2)
+    sampleFile = ('  sl  local_address rem_address   st tx_queue rx_queue tr '
+                  'tm->when retrnsmt   uid  timeout inode\n   ' + line)
+
 
     def testDottedQuadFromHexString(self):
         p = ident.ProcServerMixin()
         self.assertEqual(p.dottedQuadFromHexString(_addr1), '127.0.0.1')
+
 
     def testUnpackAddress(self):
         p = ident.ProcServerMixin()
         self.assertEqual(p.unpackAddress(_addr1 + ':0277'),
                           ('127.0.0.1', 631))
 
+
     def testLineParser(self):
         p = ident.ProcServerMixin()
         self.assertEqual(
             p.parseLine(self.line),
             (('127.0.0.1', 25), ('1.2.3.4', 762), 0))
+
 
     def testExistingAddress(self):
         username = []
@@ -182,6 +200,7 @@ class ProcMixinTests(unittest.TestCase):
             (p.SYSTEM_NAME, 'root'))
         self.assertEqual(username, [0])
 
+
     def testNonExistingAddress(self):
         p = ident.ProcServerMixin()
         p.entries = lambda: iter([self.line])
@@ -192,3 +211,23 @@ class ProcMixinTests(unittest.TestCase):
         self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 25),
                                                   ('1.2.3.4', 763))
 
+
+    def testLookupProcNetTcp(self):
+        """
+        L{ident.ProcServerMixin.lookup} uses the Linux TCP process table.
+        """
+        open_calls = []
+
+        def mocked_open(*args, **kwargs):
+            """
+            Mock for the open call to prevent actually opening /proc/net/tcp.
+            """
+            open_calls.append((args, kwargs))
+            return NativeStringIO(self.sampleFile)
+
+        self.patch(builtins, 'open', mocked_open)
+
+        p = ident.ProcServerMixin()
+        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 26),
+                                                  ('1.2.3.4', 762))
+        self.assertEqual([(('/proc/net/tcp',), {})], open_calls)

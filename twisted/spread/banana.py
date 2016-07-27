@@ -23,6 +23,7 @@ from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python.compat import _bytesChr as chr, long, iterbytes, unicode
 from twisted.python import log
+from twisted.python.compat import iterbytes, long, _bytesChr as chr
 from twisted.python.reflect import fullyQualifiedName
 
 class BananaError(Exception):
@@ -40,14 +41,14 @@ def int2b128(integer, stream):
 
 def b1282int(st):
     """
-    Convert an integer represented as a base 128 string into an C{int} or
-    C{long}.
+    Convert an integer represented as a base 128 string into an L{int} or
+    L{long}.
 
-    @param st: The integer encoded in a string.
-    @type st: C{str}
+    @param st: The integer encoded in a byte string.
+    @type st: L{bytes}
 
-    @return: The integer value extracted from the string.
-    @rtype: C{int} or C{long}
+    @return: The integer value extracted from the byte string.
+    @rtype: L{int} or L{long}
     """
     e = 1
     i = 0
@@ -82,7 +83,7 @@ def setPrefixLimit(limit):
     The prefix length limit determines how many bytes of prefix a banana
     decoder will allow before rejecting a potential object as too large.
 
-    @type limit: C{int}
+    @type limit: L{int}
     @param limit: The number of bytes of prefix for banana to allow when
     decoding.
     """
@@ -129,9 +130,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         Called after protocol negotiation.
         """
 
+
     def _selectDialect(self, dialect):
         self.currentDialect = dialect
         self.connectionReady()
+
 
     def callExpressionReceived(self, obj):
         if self.currentDialect:
@@ -311,11 +314,13 @@ class Banana(protocol.Protocol, styles.Ephemeral):
     for k, v in outgoingVocabulary.items():
         incomingVocabulary[v] = k
 
+
     def __init__(self, isClient=1):
         self.listStack = []
         self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
         self.outgoingSymbolCount = 0
         self.isClient = isClient
+
 
     def sendEncoded(self, obj):
         """
@@ -326,12 +331,13 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         @raise BananaError: If the given object is not an instance of one of
             the types supported by Banana.
 
-        @return: C{None}
+        @return: L{None}
         """
-        io = BytesIO()
-        self._encode(obj, io.write)
-        value = io.getvalue()
+        encodeStream = BytesIO()
+        self._encode(obj, encodeStream.write)
+        value = encodeStream.getvalue()
         self.transport.write(value)
+
 
     def _encode(self, obj, write):
         if isinstance(obj, (list, tuple)):
@@ -362,7 +368,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             write(FLOAT)
             write(struct.pack("!d", obj))
         elif isinstance(obj, bytes):
-
             # TODO: an API for extending banana...
             if self.currentDialect == b"pb" and obj in self.outgoingSymbols:
                 symbolID = self.outgoingSymbols[obj]
@@ -371,7 +376,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             else:
                 if len(obj) > SIZE_LIMIT:
                     raise BananaError(
-                        "string is too long to send (%d)" % (len(obj),))
+                        "byte string is too long to send (%d)" % (len(obj),))
                 int2b128(len(obj), write)
                 write(BYTES)
                 write(obj)
@@ -400,10 +405,10 @@ _i._selectDialect(b"none")
 
 def encode(lst):
     """Encode a list s-expression."""
-    io = BytesIO()
-    _i.transport = io
+    encodeStream = BytesIO()
+    _i.transport = encodeStream
     _i.sendEncoded(lst)
-    return io.getvalue()
+    return encodeStream.getvalue()
 
 
 def decode(st):

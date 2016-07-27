@@ -710,7 +710,7 @@ class Broker(banana.Banana):
         Get a local object for a locally unique ID.
 
         @return: An object previously stored with L{registerReference} or
-            C{None} if there is no object which corresponds to the given
+            L{None} if there is no object which corresponds to the given
             identifier.
         """
         if isinstance(luid, unicode):
@@ -772,7 +772,7 @@ class Broker(banana.Banana):
         return RemoteReference(None, self, name, 0)
 
     def cachedRemotelyAs(self, instance, incref=0):
-        """Returns an ID that says what this instance is cached as remotely, or C{None} if it's not.
+        """Returns an ID that says what this instance is cached as remotely, or L{None} if it's not.
         """
         puid = instance.processUniqueID()
         luid = self.remotelyCachedLUIDs.get(puid)
@@ -1357,12 +1357,12 @@ class _JellyableAvatarMixin:
     Helper class for code which deals with avatars which PB must be capable of
     sending to a peer.
     """
-    def _cbLogin(self, x):
+    def _cbLogin(self, result):
         """
         Ensure that the avatar to be returned to the client is jellyable and
         set up disconnection notification to call the realm's logout object.
         """
-        interface, avatar, logout = x
+        (interface, avatar, logout) = result
         if not IJellyable.providedBy(avatar):
             avatar = AsReferenceable(avatar, "perspective")
 
@@ -1454,7 +1454,7 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
 
 
 __all__ = [
-    # Everything from flavors is exposed publically here.
+    # Everything from flavors is exposed publicly here.
     'IPBRoot', 'Serializable', 'Referenceable', 'NoSuchMethod', 'Root',
     'ViewPoint', 'Viewable', 'Copyable', 'Jellyable', 'Cacheable',
     'RemoteCopy', 'RemoteCache', 'RemoteCacheObserver', 'copyTags',

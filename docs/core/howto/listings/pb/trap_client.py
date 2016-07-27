@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 from twisted.spread import pb, jelly
 from twisted.python import log
 from twisted.internet import reactor
@@ -20,37 +22,37 @@ def worksLike(obj):
     try:
         response = obj.callMethod(name, arg)
     except pb.DeadReferenceError:
-        print " stale reference: the client disconnected or crashed"
+        print(" stale reference: the client disconnected or crashed")
     except jelly.InsecureJelly:
-        print " InsecureJelly: you tried to send something unsafe to them"
+        print(" InsecureJelly: you tried to send something unsafe to them")
     except (MyException, MyOtherException):
-        print " remote raised a MyException" # or MyOtherException
+        print(" remote raised a MyException") # or MyOtherException
     except:
-        print " something else happened"
+        print(" something else happened")
     else:
-        print " method successful, response:", response
+        print(" method successful, response:", response)
 
 class One:
     def worked(self, response):
-        print " method successful, response:", response
+        print(" method successful, response:", response)
     def check_InsecureJelly(self, failure):
         failure.trap(jelly.InsecureJelly)
-        print " InsecureJelly: you tried to send something unsafe to them"
+        print(" InsecureJelly: you tried to send something unsafe to them")
         return None
     def check_MyException(self, failure):
         which = failure.trap(MyException, MyOtherException)
         if which == MyException:
-            print " remote raised a MyException"
+            print(" remote raised a MyException")
         else:
-            print " remote raised a MyOtherException"
+            print(" remote raised a MyOtherException")
         return None
     def catch_everythingElse(self, failure):
-        print " something else happened"
+        print(" something else happened")
         log.err(failure)
         return None
 
     def doCall(self, explanation, arg):
-        print explanation
+        print(explanation)
         try:
             deferred = self.remote.callRemote("fooMethod", arg)
             deferred.addCallback(self.worked)
@@ -58,7 +60,7 @@ class One:
             deferred.addErrback(self.check_MyException)
             deferred.addErrback(self.catch_everythingElse)
         except pb.DeadReferenceError:
-            print " stale reference: the client disconnected or crashed"
+            print(" stale reference: the client disconnected or crashed")
 
     def callOne(self):
         self.doCall("callOne: call with safe object", "safe string")
@@ -67,7 +69,7 @@ class One:
     def callThree(self):
         self.doCall("callThree: call that raises remote exception", "panic!")
     def callShutdown(self):
-        print "telling them to shut down"
+        print("telling them to shut down")
         self.remote.callRemote("shutdown")
     def callFour(self):
         self.doCall("callFour: call on stale reference", "dummy")

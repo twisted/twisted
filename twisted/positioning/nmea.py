@@ -344,7 +344,7 @@ class NMEASentence(_sentence._BaseSentence):
 
     This object contains all the raw NMEA protocol data in a single
     sentence.  Not all of these necessarily have to be present in the
-    sentence. Missing attributes are C{None} when accessed.
+    sentence. Missing attributes are L{None} when accessed.
 
     @ivar type: The sentence type (C{"GPGGA"}, C{"GPGSV"}...).
     @ivar numberOfGSVSentences: The total number of GSV sentences in a
@@ -383,7 +383,7 @@ class NMEASentence(_sentence._BaseSentence):
         position on a plane tangential to the geoid. (HDOP)
     @ivar verticalDilutionOfPrecision: As C{horizontalDilutionOfPrecision},
         but for a position on a plane perpendicular to the geoid. (VDOP)
-    @ivar positionDilutionOfPrecision: Euclidian norm of HDOP and VDOP.
+    @ivar positionDilutionOfPrecision: Euclidean norm of HDOP and VDOP.
     @ivar satellitePRN: The unique identifcation number of a particular
         satellite. Optionally suffixed with C{_N} if multiple satellites are
         referenced in a sentence, where C{N in range(4)}.
@@ -537,7 +537,7 @@ class NMEAAdapter(object):
         @param sentenceDataKey: The key name of the hemisphere sign being
             fixed in the sentence data. If unspecified, C{coordinateType} is
             used.
-        @type sentenceDataKey: C{str} (unless C{None})
+        @type sentenceDataKey: C{str} (unless L{None})
         """
         sentenceDataKey = sentenceDataKey or coordinateType
         sign = self._getHemisphereSign(coordinateType)
@@ -651,7 +651,7 @@ class NMEAAdapter(object):
         None of the keys are allowed to be the empty string.
 
         @param unit: The unit that is being converted I{from}. If unspecified
-            or C{None}, asks the current sentence for the C{unitKey}. If that
+            or L{None}, asks the current sentence for the C{unitKey}. If that
             also fails, raises C{AttributeError}.
         @type unit: C{str}
         @param unitKey: The name of the key/attribute under which the unit can
@@ -954,7 +954,7 @@ class NMEAAdapter(object):
         in the current state and at least one such field was altered in the
         current sentence.
 
-        The callbacks will only be fired with data from L{self._state}.
+        The callbacks will only be fired with data from L{_state}.
         """
         iface = ipositioning.IPositioningReceiver
         for name, method in iface.namesAndDescriptions():
