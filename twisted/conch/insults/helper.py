@@ -16,7 +16,7 @@ from zope.interface import implementer
 
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log, _textattributes
-from twisted.python.compat import xrange
+from twisted.python.compat import iterbytes
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.versions import Version
 from twisted.conch.insults import insults
@@ -107,19 +107,21 @@ class TerminalBuffer(protocol.Protocol):
     """
     An in-memory terminal emulator.
     """
-    for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
-                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
-                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
-                  'F10', 'F11', 'F12'):
-        exec('%s = object()' % (keyID,))
+    for keyID in (b'UP_ARROW', b'DOWN_ARROW', b'RIGHT_ARROW', b'LEFT_ARROW',
+                  b'HOME', b'INSERT', b'DELETE', b'END', b'PGUP', b'PGDN',
+                  b'F1', b'F2', b'F3', b'F4', b'F5', b'F6', b'F7', b'F8', b'F9',
+                  b'F10', b'F11', b'F12'):
+        execBytes = keyID + b" = object()"
+        execStr = execBytes.decode("ascii")
+        exec(execStr)
 
-    TAB = '\t'
-    BACKSPACE = '\x7f'
+    TAB = b'\t'
+    BACKSPACE = b'\x7f'
 
     width = 80
     height = 24
 
-    fill = ' '
+    fill = b' '
     void = object()
 
     def getCharacter(self, x, y):
@@ -130,14 +132,14 @@ class TerminalBuffer(protocol.Protocol):
         self.reset()
 
 
-    def write(self, bytes):
+    def write(self, data):
         """
         Add the given printable bytes to the terminal.
 
-        Line feeds in C{bytes} will be replaced with carriage return / line
+        Line feeds in L{bytes} will be replaced with carriage return / line
         feed pairs.
         """
-        for b in bytes.replace('\n', '\r\n'):
+        for b in iterbytes(data.replace(b'\n', b'\r\n')):
             self.insertAtCursor(b)
 
 
@@ -159,11 +161,11 @@ class TerminalBuffer(protocol.Protocol):
         Otherwise, if b is printable, put it at the cursor position (inserting
         or overwriting as dictated by the current mode) and move the cursor.
         """
-        if b == '\r':
+        if b == b'\r':
             self.x = 0
-        elif b == '\n':
+        elif b == b'\n':
             self._scrollDown()
-        elif b in string.printable:
+        elif b in string.printable.encode("ascii"):
             if self.x >= self.width:
                 self.nextLine()
             ch = (b, self._currentFormattingState())
@@ -177,7 +179,7 @@ class TerminalBuffer(protocol.Protocol):
 
     def _emptyLine(self, width):
         return [(self.void, self._currentFormattingState())
-                for i in xrange(width)]
+                for i in range(width)]
 
 
     def _scrollDown(self):
@@ -377,7 +379,7 @@ class TerminalBuffer(protocol.Protocol):
 
 
     def eraseDisplay(self):
-        self.lines = [self._emptyLine(self.width) for i in xrange(self.height)]
+        self.lines = [self._emptyLine(self.width) for i in range(self.height)]
 
 
     def eraseToDisplayEnd(self):
@@ -438,7 +440,7 @@ class TerminalBuffer(protocol.Protocol):
         print('Could not handle', repr(buf))
 
 
-    def __str__(self):
+    def __bytes__(self):
         lines = []
         for L in self.lines:
             buf = []
@@ -449,8 +451,8 @@ class TerminalBuffer(protocol.Protocol):
                     length = len(buf)
                 else:
                     buf.append(self.fill)
-            lines.append(''.join(buf[:length]))
-        return '\n'.join(lines)
+            lines.append(b''.join(buf[:length]))
+        return b'\n'.join(lines)
 
 
 
@@ -467,8 +469,8 @@ class ExpectableBuffer(TerminalBuffer):
         self._expecting = []
 
 
-    def write(self, bytes):
-        TerminalBuffer.write(self, bytes)
+    def write(self, data):
+        TerminalBuffer.write(self, data)
         self._checkExpected()
 
 
@@ -483,7 +485,7 @@ class ExpectableBuffer(TerminalBuffer):
 
 
     def _checkExpected(self):
-        s = str(self)[self._mark:]
+        s = self.__bytes__()[self._mark:]
         while self._expecting:
             expr, timer, deferred = self._expecting[0]
             if timer and not timer.active():

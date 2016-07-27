@@ -15,6 +15,7 @@ from zope.interface import implementer
 from twisted.conch.insults import insults, helper
 
 from twisted.python import log, reflect
+from twisted.python.compat import iterbytes
 
 _counters = {}
 class Logging(object):
@@ -59,14 +60,16 @@ class TransportSequence(object):
     the server process.
     """
 
-    for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
-                  'HOME', 'INSERT', 'DELETE', 'END', 'PGUP', 'PGDN',
-                  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9',
-                  'F10', 'F11', 'F12'):
-        exec('%s = object()' % (keyID,))
+    for keyID in (b'UP_ARROW', b'DOWN_ARROW', b'RIGHT_ARROW', b'LEFT_ARROW',
+                  b'HOME', b'INSERT', b'DELETE', b'END', b'PGUP', b'PGDN',
+                  b'F1', b'F2', b'F3', b'F4', b'F5', b'F6', b'F7', b'F8', b'F9',
+                  b'F10', b'F11', b'F12'):
+        execBytes = keyID + b" = object()"
+        execStr = execBytes.decode("ascii")
+        exec(execStr)
 
-    TAB = '\t'
-    BACKSPACE = '\x7f'
+    TAB = b'\t'
+    BACKSPACE = b'\x7f'
 
     def __init__(self, *transports):
         assert transports, "Cannot construct a TransportSequence with no transports"
@@ -124,9 +127,9 @@ class RecvLine(insults.TerminalProtocol):
 
     TABSTOP = 4
 
-    ps = ('>>> ', '... ')
+    ps = (b'>>> ', b'... ')
     pn = 0
-    _printableChars = set(string.printable)
+    _printableChars = string.printable.encode("ascii")
 
     def connectionMade(self):
         # A list containing the characters making up the current line
@@ -145,8 +148,8 @@ class RecvLine(insults.TerminalProtocol):
 
             # Both of these should not be necessary, but figuring out
             # which is necessary is a huge hassle.
-            '\r': self.handle_RETURN,
-            '\n': self.handle_RETURN,
+            b'\r': self.handle_RETURN,
+            b'\n': self.handle_RETURN,
 
             t.BACKSPACE: self.handle_BACKSPACE,
             t.DELETE: self.handle_DELETE,
@@ -175,7 +178,7 @@ class RecvLine(insults.TerminalProtocol):
 
 
     def currentLineBuffer(self):
-        s = ''.join(self.lineBuffer)
+        s = b''.join(self.lineBuffer)
         return s[:self.lineBufferIndex], s[self.lineBufferIndex:]
 
 
@@ -194,7 +197,7 @@ class RecvLine(insults.TerminalProtocol):
         Write a line containing the current input prompt and the current line
         buffer at the current cursor position.
         """
-        self.terminal.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+        self.terminal.write(self.ps[self.pn] + b''.join(self.lineBuffer))
 
 
     def terminalSize(self, width, height):
@@ -277,7 +280,7 @@ class RecvLine(insults.TerminalProtocol):
 
 
     def handle_RETURN(self):
-        line = ''.join(self.lineBuffer)
+        line = b''.join(self.lineBuffer)
         self.lineBuffer = []
         self.lineBufferIndex = 0
         self.terminal.nextLine()
@@ -323,9 +326,9 @@ class HistoricRecvLine(RecvLine):
 
     def _deliverBuffer(self, buf):
         if buf:
-            for ch in buf[:-1]:
+            for ch in iterbytes(buf[:-1]):
                 self.characterReceived(ch, True)
-            self.characterReceived(buf[-1], False)
+            self.characterReceived(buf[-1:], False)
 
 
     def handle_UP(self):
@@ -361,6 +364,6 @@ class HistoricRecvLine(RecvLine):
 
     def handle_RETURN(self):
         if self.lineBuffer:
-            self.historyLines.append(''.join(self.lineBuffer))
+            self.historyLines.append(b''.join(self.lineBuffer))
         self.historyPosition = len(self.historyLines)
         return RecvLine.handle_RETURN(self)
