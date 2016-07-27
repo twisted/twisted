@@ -144,12 +144,12 @@ class ServerFunctionKeysTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
 
     byteList = []
-    for bytes in ('OP', 'OQ', 'OR', 'OS', # F1 - F4
+    for byteCodes in ('OP', 'OQ', 'OR', 'OS', # F1 - F4
                   '15~', '17~', '18~', '19~', # F5 - F8
                   '20~', '21~', '23~', '24~'): # F9 - F12
-        byteList.append('\x1b[' + bytes)
+        byteList.append('\x1b[' + byteCodes)
     TEST_BYTES = ''.join(byteList)
-    del byteList, bytes
+    del byteList, byteCodes
 
     def verifyResults(self, transport, proto, parser):
         ByteGroupingsMixin.verifyResults(self, transport, proto, parser)

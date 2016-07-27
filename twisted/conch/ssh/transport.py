@@ -739,7 +739,7 @@ class SSHTransportBase(protocol.Protocol):
         @type messageNum: L{int}
         @param messageNum: The message number.
 
-        @type payload: C{bytes}
+        @type payload: L{bytes}
         @param payload: The message payload.
         """
         if messageNum < 50 and messageNum in messages:

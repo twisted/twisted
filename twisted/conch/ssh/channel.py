@@ -107,14 +107,14 @@ class SSHChannel(log.Logger):
         log.msg('other side refused open\nreason: %s'% reason)
 
 
-    def addWindowBytes(self, bytes):
+    def addWindowBytes(self, data):
         """
         Called when bytes are added to the remote window.  By default it clears
         the data buffers.
 
-        @type bytes:    L{int}
+        @type data:    L{bytes}
         """
-        self.remoteWindowLeft = self.remoteWindowLeft+bytes
+        self.remoteWindowLeft = self.remoteWindowLeft+data
         if not self.areWriting and not self.closing:
             self.areWriting = True
             self.startWriting()
