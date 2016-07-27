@@ -16,12 +16,14 @@ import binascii
 import hmac
 import struct
 import zlib
+import re
 
-from hashlib import md5, sha1, sha256, sha512
+from hashlib import md5, sha1, sha256, sha384, sha512
 
-from cryptography.exceptions import UnsupportedAlgorithm
+from cryptography.exceptions import UnsupportedAlgorithm, InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
@@ -141,6 +143,7 @@ class SSHCiphers:
     }
     macMap = {
         b'hmac-sha2-512': sha512,
+        b'hmac-sha2-384': sha384,
         b'hmac-sha2-256': sha256,
         b'hmac-sha1': sha1,
         b'hmac-md5': md5,
@@ -463,6 +466,7 @@ class SSHTransportBase(protocol.Protocol):
     supportedCiphers = _getSupportedCiphers()
     supportedMACs = [
         b'hmac-sha2-512',
+        b'hmac-sha2-384',
         b'hmac-sha2-256',
         b'hmac-sha1',
         b'hmac-md5',
@@ -1229,6 +1233,71 @@ class SSHServerTransport(SSHTransportBase):
                 self.ignoreNextPacket = True # Guess was wrong
 
 
+    def _ssh_KEX_ECDH_INIT(self, packet):
+        """
+        Called from ssh_KEX_DH_GEX_REQUEST_OLD.
+ 
+        Payload::
+
+            string client Elliptic Curve Diffie-Hellman public key
+
+        First we load the host's public/private keys.
+        Then we generate the ECDH public/private keypair for the given curve.
+        With that we generate the shared secret key.
+        Then we compute the hash to sign and send back to the client
+        Along with the server's public key and the ECDH public key.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
+
+        @return: None.
+        """
+        #Get the raw client public key.
+        pktPub, packet = getNS(packet)
+
+        #Get the host's public and private keys
+        pubHostKey = self.factory.publicKeys[self.keyAlg]
+        privHostKey = self.factory.privateKeys[self.keyAlg]
+
+        #Get the base curve info
+        try:
+            shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
+        except AttributeError:
+            raise UnsupportedAlgorithm(self.kexAlg)
+
+        #Get the curve instance
+        self.curve = keys.curveTable[shortKex]
+        
+        #Generate the private key
+        self.ecPriv = ec.generate_private_key(self.curve, default_backend())
+
+        #Get the public key
+        self.ecPub = self.ecPriv.public_key()
+        encPub = self.ecPub.public_numbers().encode_point()
+
+        #Take the provided public key and transform it into a format for the cryptography module
+        self.theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
+    
+        #We need to convert to hex, so we can convert to an int so we can make it a multiple precision int.
+        sharedSecret = MP(int(binascii.hexlify(self.ecPriv.exchange(ec.ECDH(), self.theirECPub)), 16))
+
+        # Finish update and digest
+        h = _kex.getHashProcessor(self.kexAlg)()
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(pubHostKey.blob()))
+        h.update(NS(pktPub))
+        h.update(NS(encPub))
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+
+        # DH_GEX_GROUP has the same number we need
+        self.sendPacket(MSG_KEX_DH_GEX_GROUP, NS(pubHostKey.blob()) + NS(encPub) + NS(privHostKey.sign(exchangeHash)))
+        self._keySetup(sharedSecret, exchangeHash)
+
+
     def _ssh_KEXDH_INIT(self, packet):
         """
         Called to handle the beginning of a non-group key exchange.
@@ -1274,8 +1343,9 @@ class SSHServerTransport(SSHTransportBase):
         """
         This represents different key exchange methods that share the same
         integer value.  If the message is determined to be a KEXDH_INIT,
-        C{_ssh_KEXDH_INIT} is called to handle it.  Otherwise, for
-        KEX_DH_GEX_REQUEST_OLD payload::
+        C{_ssh_KEXDH_INIT} is called to handle it. If it is a KEX_ECDH_INIT,
+        C{_ssh_KEX_ECDH_INIT} is called.
+        Otherwise, for KEX_DH_GEX_REQUEST_OLD payload::
 
                 integer ideal (ideal size for the Diffie-Hellman prime)
 
@@ -1292,10 +1362,12 @@ class SSHServerTransport(SSHTransportBase):
             self.ignoreNextPacket = 0
             return
 
-        # KEXDH_INIT and KEX_DH_GEX_REQUEST_OLD have the same value, so use
+        # KEXDH_INIT, KEX_ECDH_INIT, and KEX_DH_GEX_REQUEST_OLD have the same value, so use
         # another cue to decide what kind of message the peer sent us.
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_INIT(packet)
+        elif _kex.isEllipticCurve(self.kexAlg):
+            return self._ssh_KEX_ECDH_INIT(packet)
         else:
             self.dhGexRequest = packet
             ideal = struct.unpack('>L', packet)[0]
@@ -1469,17 +1541,40 @@ class SSHClientTransport(SSHTransportBase):
         """
         Called when we receive a MSG_KEXINIT message.  For a description
         of the packet, see SSHTransportBase.ssh_KEXINIT().  Additionally,
-        this method sends the first key exchange packet.  If the agreed-upon
-        exchange has a fixed prime/generator group, generate a public key
-        and send it in a MSG_KEXDH_INIT message. Otherwise, ask for a 2048
-        bit group with a MSG_KEX_DH_GEX_REQUEST message.
+        this method sends the first key exchange packet.  
+
+        If the agreed-upon exchange is ECDH, generate a key pair for the 
+        corresponding curve and send the public key.
+
+        If the agreed-upon exchange has a fixed prime/generator group,
+        generate a public key and send it in a MSG_KEXDH_INIT message.
+        Otherwise, ask for a 2048 bit group with a MSG_KEX_DH_GEX_REQUEST
+        message.
         """
         if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
             # Connection was disconnected while doing base processing.
             # Maybe no common protocols were agreed.
             return
+        # Are we using ECDH?
+        if _kex.isEllipticCurve(self.kexAlg):
+            #Find the base curve info
+            try:
+                shortKex = re.search(b"(nist[kpbt]\d{3})$", self.kexAlg).group(1)
+            except AttributeError:
+                raise UnsupportedAlgorithm(self.kexAlg)
 
-        if _kex.isFixedGroup(self.kexAlg):
+            #Get the curve
+            self.curve = keys.curveTable[shortKex]
+
+            #Generate the keys
+            self.ecPriv = ec.generate_private_key(self.curve, default_backend())
+            self.ecPub = self.ecPriv.public_key()
+
+            #DH_GEX_REQUEST_OLD is the same number we need.
+            self.sendPacket(
+                    MSG_KEX_DH_GEX_REQUEST_OLD,
+                    NS(self.ecPub.public_numbers().encode_point()))
+        elif _kex.isFixedGroup(self.kexAlg):
             # We agreed on a fixed group key exchange algorithm.
             self.x = _generateX(randbytes.secureRandom, 512)
             self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
@@ -1498,6 +1593,52 @@ class SSHClientTransport(SSHTransportBase):
                     self._dhMaximalGroupSize,
                     ))
 
+    def _ssh_KEX_ECDH_REPLY(self, packet):
+        """
+        Called to handle a reply to a ECDH exchange message(KEX_ECDH_INIT).
+
+        Like the handler for I{KEXDH_INIT}, this message type has an
+        overlapping value.  This method is called from C{ssh_KEX_DH_GEX_GROUP}
+        if that method detects a non-group key exchange is in progress.
+
+        Payload::
+
+            string serverHostKey
+            string server Elliptic Curve Diffie-Hellman public key
+            string signature
+
+        We verify the host key and continue if it passes verificiation.
+        Otherwise raise an exception and return.
+
+        @type packet: L{bytes}
+        @param packet: The message data.
+
+        @return: None.
+        """
+        #Get the host public key, the raw ECDH public key bytes and the signature
+        self.theirECHost, pktPub, signature, packet = getNS(packet, 3)
+
+        #Take the provided public key and transform it into a format for the cryptography module
+        self.theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
+
+        #We need to convert to hex, so we can convert to an int so we can make a multiple precision int.
+        sharedSecret = MP(int(binascii.hexlify(self.ecPriv.exchange(ec.ECDH(), self.theirECPub)), 16))
+
+        h = _kex.getHashProcessor(self.kexAlg)()
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.theirECHost))
+        h.update(NS(self.ecPub.public_numbers().encode_point()))
+        h.update(NS(pktPub))
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+
+        if not keys.Key.fromString(self.theirECHost).verify(signature, exchangeHash):
+            raise InvalidSignature("Signature Verification Failed!")
+
+        self._keySetup(sharedSecret, exchangeHash)
 
     def _ssh_KEXDH_REPLY(self, packet):
         """
@@ -1552,6 +1693,8 @@ class SSHClientTransport(SSHTransportBase):
         """
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_REPLY(packet)
+        elif _kex.isEllipticCurve(self.kexAlg):
+            self._ssh_KEX_ECDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
