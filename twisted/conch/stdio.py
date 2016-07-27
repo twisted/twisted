@@ -35,7 +35,7 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         Write to the terminal.
 
         @param data: Data to write.
-        @type L{bytes}
+        @type data: L{bytes}
         """
         self.transport.write(data)
 
@@ -45,7 +45,7 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         Receive data from the terminal.
 
         @param data: Data received.
-        @type L{bytes}
+        @type data: L{bytes}
         """
         self.proto.dataReceived(data)
 
@@ -55,7 +55,7 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         Report an error.
 
         @param data: Data to include in L{Failure}.
-        @type L{bytes}
+        @type data: L{bytes}
         """
         self.transport.loseConnection()
         if self.proto is not None:
