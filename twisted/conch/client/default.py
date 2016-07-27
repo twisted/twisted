@@ -14,7 +14,7 @@ interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 from __future__ import print_function
 
 from twisted.python import log
-from twisted.python.compat import networkString
+from twisted.python.compat import networkString, nativeString
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -159,7 +159,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     def _getPassword(self, prompt):
         try:
             oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
+            sys.stdin = sys.stdout = open('/dev/tty','rb+', buffering=0)
             p=getpass.getpass(prompt)
             sys.stdout,sys.stdin=oldout,oldin
             return p
@@ -168,10 +168,16 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             raise ConchError('PEBKAC')
 
     def getPassword(self, prompt = None):
-        if not prompt:
-            prompt = "%s@%s's password: " % (self.user, self.transport.transport.getPeer().host)
+        if prompt:
+            prompt = nativeString(prompt)
+        else:
+            prompt = "%s@%s's password: " % (nativeString(self.user), self.transport.transport.getPeer().host)
         try:
-            p = self._getPassword(prompt)
+            # We don't know the encoding the other side is using,
+            # signaling that is not part of the SSH protocol. But
+            # using our defaultencoding is better than just going for
+            # ASCII.
+            p = self._getPassword(prompt).encode(sys.getdefaultencoding())
             return defer.succeed(p)
         except ConchError:
             return defer.fail()

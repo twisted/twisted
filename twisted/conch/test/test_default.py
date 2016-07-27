@@ -13,12 +13,14 @@ if requireModule('cryptography') and requireModule('pyasn1'):
     from twisted.conch.client.agent import SSHAgentClient
     from twisted.conch.client.default import SSHUserAuthClient
     from twisted.conch.client.options import ConchOptions
+    from twisted.conch.client import default
     from twisted.conch.ssh.keys import Key
 else:
     skip = "cryptography and PyASN1 required for twisted.conch.client.default."
 
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
+from twisted.conch.error import ConchError
 from twisted.conch.test import keydata
 from twisted.test.proto_helpers import StringTransport
 from twisted.python.compat import networkString, nativeString
@@ -171,3 +173,68 @@ class SSHUserAuthClientTests(TestCase):
 
         self.patch(client, '_getPassword', _getPassword)
         return client.getPrivateKey().addCallback(_cbGetPrivateKey)
+
+
+    def test_getPassword(self):
+        """
+        Verify that the getPassword function in L{SSHUserAuthClient}
+        works, when prompt is sent, and fetching the password from the
+        user succeeds.
+
+        """
+        class FakeTransport:
+            def __init__(self, host):
+                self.transport = self
+                self.host = host
+            def getPeer(self):
+                return self
+
+        options = ConchOptions()
+        client = SSHUserAuthClient(b"user",  options, None)
+        client.transport = FakeTransport("127.0.0.1")
+
+        def getpass(prompt):
+            self.assertEqual(prompt, "user@127.0.0.1's password: ")
+            return 'bad password'
+
+        self.patch(default.getpass, 'getpass', getpass)
+        d = client.getPassword()
+        d.addCallback(self.assertEqual, b'bad password')
+        return d
+
+
+    def test_getPasswordPrompt(self):
+        """
+        Verify that the getPassword function in L{SSHUserAuthClient}
+        works, when prompt is sent, and fetching the password from the
+        user succeeds.
+        """
+        options = ConchOptions()
+        client = SSHUserAuthClient(b"user",  options, None)
+        prompt = b"Give up your password"
+
+        def getpass(p):
+            self.assertEqual(p, nativeString(prompt))
+            return 'bad password'
+
+        self.patch(default.getpass, 'getpass', getpass)
+        d = client.getPassword(prompt)
+        d.addCallback(self.assertEqual, b'bad password')
+        return d
+
+
+    def test_getPasswordConchError(self):
+        """
+        Verify that the getPassword function in L{SSHUserAuthClient}
+        fails it's deferred if the underlying _getPassword function
+        raises a ConchError
+        """
+        options = ConchOptions()
+        client = SSHUserAuthClient(b"user",  options, None)
+
+        def getpass(prompt):
+            raise KeyboardInterrupt("User pressed CTRL-C")
+
+        self.patch(default.getpass, 'getpass', getpass)
+        d = client.getPassword(b'?')
+        self.assertFailure(d, ConchError)
