@@ -36,14 +36,14 @@ class OpenSSHFactoryTests(TestCase):
         self.keysDir.makedirs()
         self.factory.dataRoot = self.keysDir.path
 
-        self.keysDir.child("ssh_host_foo").setContent("foo")
-        self.keysDir.child("bar_key").setContent("foo")
+        self.keysDir.child("ssh_host_foo").setContent(b"foo")
+        self.keysDir.child("bar_key").setContent(b"foo")
         self.keysDir.child("ssh_host_one_key").setContent(
             keydata.privateRSA_openssh)
         self.keysDir.child("ssh_host_two_key").setContent(
             keydata.privateDSA_openssh)
         self.keysDir.child("ssh_host_three_key").setContent(
-            "not a key content")
+            b"not a key content")
 
         self.keysDir.child("ssh_host_one_key.pub").setContent(
             keydata.publicRSA_openssh)
@@ -61,7 +61,7 @@ class OpenSSHFactoryTests(TestCase):
         keys = self.factory.getPublicKeys()
         self.assertEqual(len(keys), 1)
         keyTypes = keys.keys()
-        self.assertEqual(keyTypes, ['ssh-rsa'])
+        self.assertEqual(list(keyTypes), [b'ssh-rsa'])
 
 
     def test_getPrivateKeys(self):
@@ -72,7 +72,7 @@ class OpenSSHFactoryTests(TestCase):
         keys = self.factory.getPrivateKeys()
         self.assertEqual(len(keys), 2)
         keyTypes = keys.keys()
-        self.assertEqual(set(keyTypes), set(['ssh-rsa', 'ssh-dss']))
+        self.assertEqual(set(keyTypes), set([b'ssh-rsa', b'ssh-dss']))
         self.assertEqual(self.mockos.seteuidCalls, [])
         self.assertEqual(self.mockos.setegidCalls, [])
 
@@ -95,6 +95,6 @@ class OpenSSHFactoryTests(TestCase):
         keys = self.factory.getPrivateKeys()
         self.assertEqual(len(keys), 2)
         keyTypes = keys.keys()
-        self.assertEqual(set(keyTypes), set(['ssh-rsa', 'ssh-dss']))
+        self.assertEqual(set(keyTypes), set([b'ssh-rsa', b'ssh-dss']))
         self.assertEqual(self.mockos.seteuidCalls, [0, os.geteuid()])
         self.assertEqual(self.mockos.setegidCalls, [0, os.getegid()])
