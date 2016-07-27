@@ -22,7 +22,7 @@ except ImportError:
     skipTest = 'Conch SSH not supported.'
     SSHService = object
 from twisted.trial import unittest
-from twisted.python.compat import intToBytes, _PY3
+from twisted.python.compat import intToBytes
 
 
 class MockConnection(SSHService):
@@ -43,11 +43,13 @@ class MockConnection(SSHService):
         self.extData = {}
         self.closes = {}
 
+
     def logPrefix(self):
         """
         Return our logging prefix.
         """
         return "MockConnection"
+
 
     def sendData(self, channel, data):
         """
@@ -55,11 +57,13 @@ class MockConnection(SSHService):
         """
         self.data.setdefault(channel, []).append(data)
 
+
     def sendExtendedData(self, channel, type, data):
         """
         Record the sent extended data.
         """
         self.extData.setdefault(channel, []).append((type, data))
+
 
     def sendClose(self, channel):
         """
@@ -146,18 +150,18 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(c2.data, 6)
         self.assertEqual(c2.avatar, 7)
 
+
     def test_str(self):
         """
         Test that str(SSHChannel) works gives the channel name and local and
         remote windows at a glance..
         """
-        if _PY3:
-            self.assertEqual(
-                str(self.channel), "<SSHChannel b'channel' (lw 131072 rw 0)>")
-
-        else:
-            self.assertEqual(
+        self.assertEqual(
                 str(self.channel), '<SSHChannel channel (lw 131072 rw 0)>')
+        self.assertEqual(
+                str(channel.SSHChannel(localWindow=1)),
+                '<SSHChannel None (lw 1 rw 0)>')
+
 
     def test_bytes(self):
         """
@@ -168,6 +172,10 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(
             self.channel.__bytes__(),
             b'<SSHChannel channel (lw 131072 rw 0)>')
+        self.assertEqual(
+            channel.SSHChannel(localWindow=1).__bytes__(),
+            b'<SSHChannel None (lw 1 rw 0)>')
+
 
     def test_logPrefix(self):
         """
@@ -176,6 +184,7 @@ class ChannelTests(unittest.TestCase):
         """
         self.assertEqual(self.channel.logPrefix(), 'SSHChannel channel '
                 '(unknown) on MockConnection')
+
 
     def test_addWindowBytes(self):
         """
@@ -206,6 +215,7 @@ class ChannelTests(unittest.TestCase):
         self.channel.addWindowBytes(20)
         self.assertFalse(cb[0])
 
+
     def test_requestReceived(self):
         """
         Test that requestReceived handles requests by dispatching them to
@@ -216,6 +226,7 @@ class ChannelTests(unittest.TestCase):
         self.assertFalse(self.channel.requestReceived(b'test-method', b'a'))
         self.assertFalse(self.channel.requestReceived(b'bad-method', b''))
 
+
     def test_closeReceieved(self):
         """
         Test that the default closeReceieved closes the connection.
@@ -223,6 +234,7 @@ class ChannelTests(unittest.TestCase):
         self.assertFalse(self.channel.closing)
         self.channel.closeReceived()
         self.assertTrue(self.channel.closing)
+
 
     def test_write(self):
         """
@@ -257,6 +269,7 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(data, [b'da', b'ta', b'1234567890', b'1', b'12345'])
         self.assertEqual(self.channel.buf, b'6')
         self.assertEqual(self.channel.remoteWindowLeft, 0)
+
 
     def test_writeExtended(self):
         """
@@ -295,6 +308,7 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(self.channel.extBuf, [[4, b'6']])
         self.assertEqual(self.channel.remoteWindowLeft, 0)
 
+
     def test_writeSequence(self):
         """
         Test that writeSequence is equivalent to write(''.join(sequece)).
@@ -302,6 +316,7 @@ class ChannelTests(unittest.TestCase):
         self.channel.addWindowBytes(20)
         self.channel.writeSequence(map(intToBytes, range(10)))
         self.assertEqual(self.conn.data[self.channel], [b'0123456789'])
+
 
     def test_loseConnection(self):
         """
