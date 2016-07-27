@@ -21,7 +21,7 @@ else:
     # Otherwise, the pyOpenSSL dependency must be satisfied, so all these
     # imports will work.
     from OpenSSL.crypto import X509Type
-    from OpenSSL.SSL import (TLSv1_METHOD, Error, Context, ConnectionType,
+    from OpenSSL.SSL import (TLSv1_METHOD, TLSv1_1_METHOD, TLSv1_2_METHOD, Error, Context, ConnectionType,
                              WantReadError)
     from twisted.internet.ssl import PrivateCertificate, optionsForClientTLS
     from twisted.test.ssl_helpers import (ClientTLSContext, ServerTLSContext,
@@ -62,8 +62,9 @@ class HandshakeCallbackContextFactory:
     # https://bugs.launchpad.net/pyopenssl/+bug/372832
     SSL_CB_HANDSHAKE_DONE = 0x20
 
-    def __init__(self):
+    def __init__(self, method=TLSv1_METHOD):
         self._finished = Deferred()
+        self._method = method
 
 
     def factoryAndDeferred(cls):
@@ -93,7 +94,7 @@ class HandshakeCallbackContextFactory:
         Create and return an SSL context configured to use L{self._info} as the
         info callback.
         """
-        context = Context(TLSv1_METHOD)
+        context = Context(self._method)
         context.set_info_callback(self._info)
         return context
 
@@ -704,14 +705,14 @@ class TLSMemoryBIOTests(TestCase):
         return connectionDeferred
 
 
-    def test_hugeWrite(self):
+    def hugeWrite(self, method=TLSv1_METHOD):
         """
         If a very long string is passed to L{TLSMemoryBIOProtocol.write}, any
         trailing part of it which cannot be send immediately is buffered and
         sent later.
         """
         bytes = b"some bytes"
-        factor = 8192
+        factor = 2 ** 20
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
                 self.transport.write(bytes * factor)
@@ -719,7 +720,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = SimpleSendingProtocol
 
-        clientContextFactory = HandshakeCallbackContextFactory()
+        clientContextFactory = HandshakeCallbackContextFactory(method=method)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -728,7 +729,7 @@ class TLSMemoryBIOTests(TestCase):
         serverFactory = ServerFactory()
         serverFactory.protocol = lambda: serverProtocol
 
-        serverContextFactory = ServerTLSContext()
+        serverContextFactory = ServerTLSContext(method=method)
         wrapperFactory = TLSMemoryBIOFactory(
             serverContextFactory, False, serverFactory)
         sslServerProtocol = wrapperFactory.buildProtocol(None)
@@ -742,6 +743,14 @@ class TLSMemoryBIOTests(TestCase):
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
+    def test_hugeWrite_TLSv1(self):
+        return self.hugeWrite()
+
+    def test_hugeWrite_TLSv1_1(self):
+        return self.hugeWrite(method=TLSv1_1_METHOD)
+
+    def test_hugeWrite_TLSv1_2(self):
+        return self.hugeWrite(method=TLSv1_2_METHOD)
 
     def test_disorderlyShutdown(self):
         """
