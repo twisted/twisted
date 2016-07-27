@@ -566,7 +566,9 @@ class ServerProtocol(protocol.Protocol):
 
     def _handleControlSequence(self, buf):
         buf = b'\x1b[' + buf
-        f = getattr(self.controlSequenceParser, CST.get(buf[-1], buf[-1]).decode("ascii"), None)
+        f = getattr(self.controlSequenceParser,
+                    CST.get(buf[-1:], buf[-1:]).decode("ascii"),
+                    None)
         if f is None:
             self.unhandledControlSequence(buf)
         else:
