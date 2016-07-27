@@ -1613,10 +1613,25 @@ class SSHClientTransport(SSHTransportBase):
         @type packet: L{bytes}
         @param packet: The message data.
 
-        @return: None.
+        @return: A deferred firing when key exchange is complete.
         """
-        #Get the host public key, the raw ECDH public key bytes and the signature
-        self.theirECHost, pktPub, signature, packet = getNS(packet, 3)
+
+        # Get the host public key, the raw ECDH public key bytes and the signature
+        hostKey, f, signature, packet = getNS(packet, 3)
+
+        #No point computing the hash, as it just gets ignored later on.
+        fingerprint = b':'.join([binascii.hexlify(ch) for ch in
+                                 iterbytes(md5(hostKey).digest())])
+        d = self.verifyHostKey(hostKey, fingerprint)
+        d.addCallback(self._continue_KEX_ECDH_REPLY, hostKey, f, signature)
+        d.addErrback(
+            lambda unused: self.sendDisconnect(
+                DISCONNECT_HOST_KEY_NOT_VERIFIABLE, b'bad host key'))
+        return d
+
+    def _continue_KEX_ECDH_REPLY(self, ignored, hostKey, pktPub, signature):
+        #Save off the host public key.
+        self.theirECHost = hostKey
 
         #Take the provided public key and transform it into a format for the cryptography module
         self.theirECPub = ec.EllipticCurvePublicNumbers.from_encoded_point(self.curve, pktPub).public_key(default_backend())
@@ -1636,7 +1651,9 @@ class SSHClientTransport(SSHTransportBase):
         exchangeHash = h.digest()
 
         if not keys.Key.fromString(self.theirECHost).verify(signature, exchangeHash):
-            raise InvalidSignature("Signature Verification Failed!")
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
+                                b'bad signature')
+            return
 
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1694,7 +1711,7 @@ class SSHClientTransport(SSHTransportBase):
         if _kex.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_REPLY(packet)
         elif _kex.isEllipticCurve(self.kexAlg):
-            self._ssh_KEX_ECDH_REPLY(packet)
+            return self._ssh_KEX_ECDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)

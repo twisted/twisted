@@ -508,7 +508,21 @@ class KnownHostsFile(object):
         @rtype: L{HashedEntry}
         """
         salt = secureRandom(20)
-        keyType = "ssh-" + key.type().lower()
+
+        #Get the base key type.
+        baseType = key.type()
+
+        # ECDSA keys need to be named after the curve
+        if baseType == "RSA":
+            keyType = "ssh-rsa"
+        elif baseType == "DSA":
+            keyType = "ssh-dsa"
+        elif baseType == "EC":
+            baseType = "ECDSA"
+            keyType = key.getECKeyName()
+        else:
+            raise BadKeyError("Type: " + baseType + " is is undefined.")
+
         entry = HashedEntry(salt, _hmacedString(salt, hostname),
                             keyType, key, None)
         self._added.append(entry)
