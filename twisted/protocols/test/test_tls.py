@@ -108,7 +108,7 @@ class AccumulatingProtocol(Protocol):
     @ivar howMany: The number of bytes of data to wait for before closing the
         connection.
 
-    @ivar receiving: A C{list} of C{str} of the bytes received so far.
+    @ivar received: A L{list} of L{bytes} of the bytes received so far.
     """
     def __init__(self, howMany):
         self.howMany = howMany
@@ -118,8 +118,8 @@ class AccumulatingProtocol(Protocol):
         self.received = []
 
 
-    def dataReceived(self, bytes):
-        self.received.append(bytes)
+    def dataReceived(self, data):
+        self.received.append(data)
         if sum(map(len, self.received)) >= self.howMany:
             self.transport.loseConnection()
 
@@ -337,7 +337,7 @@ class TLSMemoryBIOTests(TestCase):
             pass
 
         class MyTransport(object):
-            def write(self, bytes):
+            def write(self, data):
                 pass
 
         clientFactory = ClientFactory()
@@ -531,7 +531,7 @@ class TLSMemoryBIOTests(TestCase):
         complete are received by the protocol on the other side of the
         connection once the handshake succeeds.
         """
-        bytes = b"some bytes"
+        data = b"some bytes"
 
         clientProtocol = Protocol()
         clientFactory = ClientFactory()
@@ -543,7 +543,7 @@ class TLSMemoryBIOTests(TestCase):
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
-        serverProtocol = AccumulatingProtocol(len(bytes))
+        serverProtocol = AccumulatingProtocol(len(data))
         serverFactory = ServerFactory()
         serverFactory.protocol = lambda: serverProtocol
 
@@ -556,7 +556,7 @@ class TLSMemoryBIOTests(TestCase):
 
         # Wait for the handshake to finish before writing anything.
         def cbHandshook(ignored):
-            clientProtocol.transport.write(bytes)
+            clientProtocol.transport.write(data)
 
             # The server will drop the connection once it gets the bytes.
             return connectionDeferred
@@ -565,13 +565,13 @@ class TLSMemoryBIOTests(TestCase):
         # Once the connection is lost, make sure the server received the
         # expected bytes.
         def cbDisconnected(ignored):
-            self.assertEqual(b"".join(serverProtocol.received), bytes)
+            self.assertEqual(b"".join(serverProtocol.received), data)
         handshakeDeferred.addCallback(cbDisconnected)
 
         return handshakeDeferred
 
 
-    def writeBeforeHandshakeTest(self, sendingProtocol, bytes):
+    def writeBeforeHandshakeTest(self, sendingProtocol, data):
         """
         Run test where client sends data before handshake, given the sending
         protocol and expected bytes.
@@ -585,7 +585,7 @@ class TLSMemoryBIOTests(TestCase):
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
-        serverProtocol = AccumulatingProtocol(len(bytes))
+        serverProtocol = AccumulatingProtocol(len(data))
         serverFactory = ServerFactory()
         serverFactory.protocol = lambda: serverProtocol
 
@@ -599,7 +599,7 @@ class TLSMemoryBIOTests(TestCase):
         # Wait for the connection to end, then make sure the server received
         # the bytes sent by the client.
         def cbConnectionDone(ignored):
-            self.assertEqual(b"".join(serverProtocol.received), bytes)
+            self.assertEqual(b"".join(serverProtocol.received), data)
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
@@ -610,13 +610,13 @@ class TLSMemoryBIOTests(TestCase):
         complete are received by the protocol on the other side of the
         connection once the handshake succeeds.
         """
-        bytes = b"some bytes"
+        data = b"some bytes"
 
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
-                self.transport.write(bytes)
+                self.transport.write(data)
 
-        return self.writeBeforeHandshakeTest(SimpleSendingProtocol, bytes)
+        return self.writeBeforeHandshakeTest(SimpleSendingProtocol, data)
 
 
     def test_writeSequence(self):
@@ -624,12 +624,12 @@ class TLSMemoryBIOTests(TestCase):
         Bytes written to L{TLSMemoryBIOProtocol} with C{writeSequence} are
         received by the protocol on the other side of the connection.
         """
-        bytes = b"some bytes"
+        data = b"some bytes"
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
-                self.transport.writeSequence(list(iterbytes(bytes)))
+                self.transport.writeSequence(list(iterbytes(data)))
 
-        return self.writeBeforeHandshakeTest(SimpleSendingProtocol, bytes)
+        return self.writeBeforeHandshakeTest(SimpleSendingProtocol, data)
 
 
     def test_writeAfterLoseConnection(self):
@@ -638,14 +638,14 @@ class TLSMemoryBIOTests(TestCase):
         called are not transmitted (unless there is a registered producer,
         which will be tested elsewhere).
         """
-        bytes = b"some bytes"
+        data = b"some bytes"
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
-                self.transport.write(bytes)
+                self.transport.write(data)
                 self.transport.loseConnection()
                 self.transport.write(b"hello")
                 self.transport.writeSequence([b"world"])
-        return self.writeBeforeHandshakeTest(SimpleSendingProtocol, bytes)
+        return self.writeBeforeHandshakeTest(SimpleSendingProtocol, data)
 
 
     def test_writeUnicodeRaisesTypeError(self):
@@ -672,10 +672,10 @@ class TLSMemoryBIOTests(TestCase):
         the underlying transport, all of the application bytes from each
         message are delivered to the application-level protocol.
         """
-        bytes = [b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h', b'i']
+        data = [b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h', b'i']
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
-                for b in bytes:
+                for b in data:
                     self.transport.write(b)
 
         clientFactory = ClientFactory()
@@ -686,7 +686,7 @@ class TLSMemoryBIOTests(TestCase):
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
-        serverProtocol = AccumulatingProtocol(sum(map(len, bytes)))
+        serverProtocol = AccumulatingProtocol(sum(map(len, data)))
         serverFactory = ServerFactory()
         serverFactory.protocol = lambda: serverProtocol
 
@@ -700,7 +700,7 @@ class TLSMemoryBIOTests(TestCase):
         # Wait for the connection to end, then make sure the server received
         # the bytes sent by the client.
         def cbConnectionDone(ignored):
-            self.assertEqual(b"".join(serverProtocol.received), b''.join(bytes))
+            self.assertEqual(b"".join(serverProtocol.received), b''.join(data))
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
@@ -711,11 +711,11 @@ class TLSMemoryBIOTests(TestCase):
         trailing part of it which cannot be send immediately is buffered and
         sent later.
         """
-        bytes = b"some bytes"
+        data = b"some bytes"
         factor = 2 ** 20
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
-                self.transport.write(bytes * factor)
+                self.transport.write(data * factor)
 
         clientFactory = ClientFactory()
         clientFactory.protocol = SimpleSendingProtocol
@@ -725,7 +725,7 @@ class TLSMemoryBIOTests(TestCase):
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
-        serverProtocol = AccumulatingProtocol(len(bytes) * factor)
+        serverProtocol = AccumulatingProtocol(len(data) * factor)
         serverFactory = ServerFactory()
         serverFactory.protocol = lambda: serverProtocol
 
@@ -739,7 +739,7 @@ class TLSMemoryBIOTests(TestCase):
         # Wait for the connection to end, then make sure the server received
         # the bytes sent by the client.
         def cbConnectionDone(ignored):
-            self.assertEqual(b"".join(serverProtocol.received), bytes * factor)
+            self.assertEqual(b"".join(serverProtocol.received), data * factor)
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
@@ -795,8 +795,8 @@ class TLSMemoryBIOTests(TestCase):
                                                          onConnectionLost)
                 self.data = []
 
-            def dataReceived(self, bytes):
-                self.data.append(bytes)
+            def dataReceived(self, data):
+                self.data.append(data)
 
         clientConnectionLost = Deferred()
         clientFactory = ClientFactory()
@@ -1271,17 +1271,17 @@ class TLSProducerTests(TestCase):
             def __init__(self):
                 self.l = []
 
-            def send(self, bytes):
+            def send(self, data):
                 # on first write, don't send all bytes:
                 if not self.l:
-                    bytes = bytes[:-1]
+                    data = data[:-1]
                 # pause on second write:
                 if len(self.l) == 1:
                     self.l.append("paused")
                     raise WantReadError()
                 # otherwise just take in data:
-                self.l.append(bytes)
-                return len(bytes)
+                self.l.append(data)
+                return len(data)
 
             def set_connect_state(self):
                 pass
@@ -1806,16 +1806,16 @@ class IProtocolNegotiationFactoryTests(TestCase):
         @rtype: A L{tuple} of (L{Protocol}, L{Protocol}, L{Deferred},
             L{Deferred})
         """
-        bytes = b'some bytes'
+        data = b'some bytes'
 
         class NotifyingSender(Protocol):
             def __init__(self, notifier):
                 self.notifier = notifier
 
             def connectionMade(self):
-                self.transport.writeSequence(list(iterbytes(bytes)))
+                self.transport.writeSequence(list(iterbytes(data)))
 
-            def dataReceived(self, bytes):
+            def dataReceived(self, data):
                 if self.notifier is not None:
                     self.notifier.callback(self)
                     self.notifier = None
