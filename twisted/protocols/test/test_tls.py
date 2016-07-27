@@ -749,7 +749,7 @@ class TLSMemoryBIOTests(TestCase):
     def test_hugeWrite_TLSv1_1(self):
         return self.hugeWrite(method=TLSv1_1_METHOD)
 
-    def test_hugeWrite_TLSv1_(self):
+    def test_hugeWrite_TLSv1_2(self):
         return self.hugeWrite(method=TLSv1_2_METHOD)
 
     def test_disorderlyShutdown(self):
