@@ -965,7 +965,7 @@ class Key(object):
     def toString(self, type, extra=None):
         """
         Create a string representation of this key.  If the key is a private
-        key and you want the represenation of its public key, use
+        key and you want the representation of its public key, use
         C{key.public().toString()}.  type maps to a _toString_* method.
 
         @param type: The type of string to emit.  Currently supported values

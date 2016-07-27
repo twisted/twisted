@@ -210,7 +210,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         C{FileDescriptor} instances in C{_selectables}.
 
     @ivar _continuousPolling: A L{_ContinuousPolling} instance, used to handle
-        file descriptors (e.g. filesytem files) that are not supported by
+        file descriptors (e.g. filesystem files) that are not supported by
         C{epoll(7)}.
     """
 

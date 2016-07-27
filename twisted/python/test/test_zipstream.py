@@ -22,9 +22,8 @@ class FileEntryMixin:
         Return an appropriate zip file entry
         """
         filename = self.mktemp()
-        z = zipfile.ZipFile(filename, 'w', self.compression)
-        z.writestr('content', contents)
-        z.close()
+        with zipfile.ZipFile(filename, 'w', self.compression) as z:
+            z.writestr('content', contents)
         z = zipstream.ChunkingZipFile(filename, 'r')
         return z.readfile('content')
 
@@ -157,13 +156,12 @@ class ZipstreamTests(unittest.TestCase):
         should be a list of strings, each string being the content of one file.
         """
         zpfilename = self.testdir.child('zipfile.zip').path
-        zpfile = zipfile.ZipFile(zpfilename, 'w')
-        for i, content in enumerate(contents):
-            filename = str(i)
-            if directory:
-                filename = directory + "/" + filename
-            zpfile.writestr(filename, content)
-        zpfile.close()
+        with zipfile.ZipFile(zpfilename, 'w') as zpfile:
+            for i, content in enumerate(contents):
+                filename = str(i)
+                if directory:
+                    filename = directory + "/" + filename
+                zpfile.writestr(filename, content)
         return zpfilename
 
 
@@ -172,8 +170,8 @@ class ZipstreamTests(unittest.TestCase):
         A ChunkingZipFile opened in write-mode should not allow .readfile(),
         and raise a RuntimeError instead.
         """
-        czf = zipstream.ChunkingZipFile(self.mktemp(), "w")
-        self.assertRaises(RuntimeError, czf.readfile, "something")
+        with zipstream.ChunkingZipFile(self.mktemp(), "w") as czf:
+            self.assertRaises(RuntimeError, czf.readfile, "something")
 
 
     def test_closedArchive(self):
@@ -193,14 +191,12 @@ class ZipstreamTests(unittest.TestCase):
         """
         fn = self.makeZipFile(["test contents",
                                "more contents"])
-        zf = zipfile.ZipFile(fn, "r")
-        zeroOffset = zf.getinfo("0").header_offset
-        zf.close()
+        with zipfile.ZipFile(fn, "r") as zf:
+            zeroOffset = zf.getinfo("0").header_offset
         # Zero out just the one header.
-        scribble = open(fn, "r+b")
-        scribble.seek(zeroOffset, 0)
-        scribble.write(b'0' * 4)
-        scribble.close()
+        with open(fn, "r+b") as scribble:
+            scribble.seek(zeroOffset, 0)
+            scribble.write(b'0' * 4)
         with zipstream.ChunkingZipFile(fn) as czf:
             self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
             with czf.readfile("1") as zfe:
@@ -214,14 +210,12 @@ class ZipstreamTests(unittest.TestCase):
         """
         fn = self.makeZipFile([b"test contents",
                                b"more contents"])
-        zf = zipfile.ZipFile(fn, "r")
-        info = zf.getinfo("0")
-        info.filename = "not zero"
-        zf.close()
-        scribble = open(fn, "r+b")
-        scribble.seek(info.header_offset, 0)
-        scribble.write(info.FileHeader())
-        scribble.close()
+        with zipfile.ZipFile(fn, "r") as zf:
+            info = zf.getinfo("0")
+            info.filename = "not zero"
+        with open(fn, "r+b") as scribble:
+            scribble.seek(info.header_offset, 0)
+            scribble.write(info.FileHeader())
 
         with zipstream.ChunkingZipFile(fn) as czf:
             self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
@@ -235,17 +229,16 @@ class ZipstreamTests(unittest.TestCase):
         raise BadZipfile.
         """
         fn = self.mktemp()
-        zf = zipfile.ZipFile(fn, "w")
-        zi = zipfile.ZipInfo("0")
-        zf.writestr(zi, "some data")
-        # Mangle its compression type in the central directory; can't do this
-        # before the writestr call or zipfile will (correctly) tell us not to
-        # pass bad compression types :)
-        zi.compress_type = 1234
-        zf.close()
+        with zipfile.ZipFile(fn, "w") as zf:
+            zi = zipfile.ZipInfo("0")
+            zf.writestr(zi, "some data")
+            # Mangle its compression type in the central directory; can't do
+            # this before the writestr call or zipfile will (correctly) tell us
+            # not to pass bad compression types :)
+            zi.compress_type = 1234
 
-        czf = zipstream.ChunkingZipFile(fn)
-        self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+        with zipstream.ChunkingZipFile(fn) as czf:
+            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
 
 
     def test_extraData(self):
@@ -253,11 +246,10 @@ class ZipstreamTests(unittest.TestCase):
         readfile() should skip over 'extra' data present in the zip metadata.
         """
         fn = self.mktemp()
-        zf = zipfile.ZipFile(fn, 'w')
-        zi = zipfile.ZipInfo("0")
-        zi.extra = b"hello, extra"
-        zf.writestr(zi, b"the real data")
-        zf.close()
+        with zipfile.ZipFile(fn, 'w') as zf:
+            zi = zipfile.ZipInfo("0")
+            zi.extra = b"hello, extra"
+            zf.writestr(zi, b"the real data")
         with zipstream.ChunkingZipFile(fn) as czf, czf.readfile("0") as zfe:
             self.assertEqual(zfe.read(), b"the real data")
 
@@ -357,9 +349,8 @@ class ZipstreamTests(unittest.TestCase):
         """
         Create a zip file with the given file name and compression scheme.
         """
-        zf = zipfile.ZipFile(filename, 'w', compression)
-        for i in range(10):
-            fn = 'zipstream%d' % i
-            zf.writestr(fn, "")
-        zf.writestr('zipstreamjunk', junk)
-        zf.close()
+        with zipfile.ZipFile(filename, 'w', compression) as zf:
+            for i in range(10):
+                fn = 'zipstream%d' % i
+                zf.writestr(fn, "")
+            zf.writestr('zipstreamjunk', junk)

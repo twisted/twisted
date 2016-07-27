@@ -10,7 +10,8 @@ import errno
 import shutil
 import pickle
 import StringIO
-import rfc822
+import email.message
+import email.parser
 import tempfile
 import signal
 import time
@@ -798,7 +799,8 @@ class ServiceDomainTests(unittest.TestCase):
              ['user@host.name']
          )
          fp = StringIO.StringIO(hdr)
-         m = rfc822.Message(fp)
+         emailParser = email.parser.Parser()
+         m = emailParser.parse(fp)
          self.assertEqual(len(m.items()), 1)
          self.assertIn('Received', m)
 
@@ -1046,8 +1048,8 @@ class DirectoryQueueTests(unittest.TestCase):
         self.queue.noisy = False
         for m in range(25):
             hdrF, msgF = self.queue.createNewMessage()
-            pickle.dump(['header', m], hdrF)
-            hdrF.close()
+            with hdrF:
+                pickle.dump(['header', m], hdrF)
             msgF.lineReceived('body: %d' % (m,))
             msgF.eomReceived()
         self.queue.readDirectory()
@@ -2368,11 +2370,9 @@ class _AttemptManagerTests(unittest.TestCase):
         self.noisyMessage = os.path.join(self.tmpdir, noisyBaseName)
         self.quietMessage = os.path.join(self.tmpdir, quietBaseName)
 
-        message = open(self.noisyMessage+'-D', "w")
-        message.close()
+        open(self.noisyMessage+'-D', "w").close()
 
-        message = open(self.quietMessage+'-D', "w")
-        message.close()
+        open(self.quietMessage+'-D', "w").close()
 
         self.noisyAttemptMgr.manager.managed['noisyRelayer'] = [
                 noisyBaseName]

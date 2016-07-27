@@ -240,7 +240,7 @@ class InMemorySSHChannel(StringTransport, object):
 
 class FilesystemAccessExpectations(object):
     """
-    A test helper used to support expected filesytem access.
+    A test helper used to support expected filesystem access.
     """
 
     def __init__(self):
@@ -549,7 +549,7 @@ class StdioClientTests(TestCase):
         @type path: L{str}
 
         @param content: Content to be written in the new file.
-        @type content: C{bytes}
+        @type content: L{bytes}
 
         @return: Path to the newly create file.
         """

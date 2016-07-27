@@ -7,7 +7,7 @@ HTML rendering of Python source.
 """
 
 import tokenize, cgi, keyword
-import reflect
+from . import reflect
 
 class TokenPrinter:
 

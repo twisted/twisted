@@ -456,7 +456,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Called when TLS connection has gone away; tell underlying transport to
         disconnect.
 
-        @param reason: a L{Failure} whose value is an L{Error} if we want to
+        @param reason: a L{Failure} whose value is an L{Exception} if we want to
             report that failure through to the wrapped protocol's
             C{connectionLost}, or L{None} if the C{reason} that
             C{connectionLost} should receive should be coming from the
@@ -614,7 +614,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             return
 
         # A TLS payload is 16kB max
-        bufferSize = 2 ** 16
+        bufferSize = 2 ** 14
 
         # How far into the input we've gotten so far
         alreadySent = 0
