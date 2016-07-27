@@ -136,7 +136,7 @@ class TerminalBuffer(protocol.Protocol):
         """
         Add the given printable bytes to the terminal.
 
-        Line feeds in C{bytes} will be replaced with carriage return / line
+        Line feeds in L{bytes} will be replaced with carriage return / line
         feed pairs.
         """
         for b in iterbytes(data.replace(b'\n', b'\r\n')):

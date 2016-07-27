@@ -2024,7 +2024,7 @@ class GetMACTests(unittest.TestCase):
         Generate a new shared secret to be used with the tests.
 
         @return: A new secret.
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         return insecureRandom(64)
 
@@ -2037,7 +2037,7 @@ class GetMACTests(unittest.TestCase):
         attribute set to the value of the key supplied.
 
         @param hmacName: Identifier of HMAC algorithm.
-        @type hmacName: C{bytes}
+        @type hmacName: L{bytes}
 
         @param hashProcessor: Callable for the hash algorithm.
         @type hashProcessor: C{callable}
