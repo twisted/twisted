@@ -580,8 +580,9 @@ class ServerProtocol(protocol.Protocol):
 
 
     def _handleLowFunctionControlSequence(self, ch):
-        map = {b'P': self.F1, b'Q': self.F2, b'R': self.F3, b'S': self.F4}
-        keyID = map.get(ch)
+        functionKeys = {b'P': self.F1, b'Q': self.F2,
+                        b'R': self.F3, b'S': self.F4}
+        keyID = functionKeys.get(ch)
         if keyID is not None:
             self.terminalProtocol.keystrokeReceived(keyID, None)
         else:
