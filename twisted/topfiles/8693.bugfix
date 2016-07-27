@@ -1,0 +1,1 @@
+The TLS payload buffer size was reduced in twisted.protocols.tls.TLSMemoryBIOProtocol.  This fixes writing of very long strings using the TLSv1_1 method from the OpenSSL library.
