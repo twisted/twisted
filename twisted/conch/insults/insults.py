@@ -360,7 +360,7 @@ class ITerminalTransport(iinternet.ITransport):
 
 
 CSI = b'\x1b'
-CST = {b'~': 'tilde'}
+CST = {b'~': b'tilde'}
 
 class modes:
     """
@@ -641,7 +641,7 @@ class ServerProtocol(protocol.Protocol):
                 handler.unhandledControlSequence(buf + b'R')
             elif buf.startswith(b'\x1b['):
                 report = buf[2:]
-                parts = report.split(';')
+                parts = report.split(b';')
                 if len(parts) != 2:
                     handler.unhandledControlSequence(buf + b'R')
                 else:
@@ -1138,7 +1138,7 @@ class ClientProtocol(protocol.Protocol):
 
 
         def r(self, proto, handler, buf):
-            parts = buf.split(';')
+            parts = buf.split(b';')
             if len(parts) == 1:
                 handler.setScrollRegion(None, None)
             elif len(parts) == 2:
@@ -1232,7 +1232,7 @@ class ClientProtocol(protocol.Protocol):
                 handler.selectGraphicRendition(NORMAL)
             else:
                 attrs = []
-                for a in buf.split(';'):
+                for a in buf.split(b';'):
                     try:
                         a = int(a)
                     except ValueError:
