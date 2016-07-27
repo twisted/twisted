@@ -14,15 +14,15 @@ from twisted.python.compat import intToBytes, iterbytes
 try:
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
     from twisted.protocols.tls import _PullToPush, _ProducerMembrane
+    from OpenSSL.crypto import X509Type
+    from OpenSSL.SSL import (TLSv1_METHOD, TLSv1_1_METHOD, TLSv1_2_METHOD,
+                             Error, Context, ConnectionType,
+                             WantReadError)
 except ImportError:
     # Skip the whole test module if it can't be imported.
     skip = "pyOpenSSL 0.10 or newer required for twisted.protocol.tls"
+    TLSv1_METHOD = TLSv1_1_METHOD = TLSv1_2_METHOD = None
 else:
-    # Otherwise, the pyOpenSSL dependency must be satisfied, so all these
-    # imports will work.
-    from OpenSSL.crypto import X509Type
-    from OpenSSL.SSL import (TLSv1_METHOD, TLSv1_1_METHOD, TLSv1_2_METHOD, Error, Context, ConnectionType,
-                             WantReadError)
     from twisted.internet.ssl import PrivateCertificate, optionsForClientTLS
     from twisted.test.ssl_helpers import (ClientTLSContext, ServerTLSContext,
                                           certPath)
