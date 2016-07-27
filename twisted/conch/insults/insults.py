@@ -697,29 +697,33 @@ class ServerProtocol(protocol.Protocol):
     def cursorUp(self, n=1):
         assert n >= 1
         self.cursorPos.y = max(self.cursorPos.y - n, 0)
-        self.write(b'\x1b[%dA' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) +  b'A')
 
 
     def cursorDown(self, n=1):
         assert n >= 1
         self.cursorPos.y = min(self.cursorPos.y + n, self.termSize.y - 1)
-        self.write(b'\x1b[%dB' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'B')
 
 
     def cursorForward(self, n=1):
         assert n >= 1
         self.cursorPos.x = min(self.cursorPos.x + n, self.termSize.x - 1)
-        self.write(b'\x1b[%dC' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'C')
 
 
     def cursorBackward(self, n=1):
         assert n >= 1
         self.cursorPos.x = max(self.cursorPos.x - n, 0)
-        self.write(b'\x1b[%dD' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'D')
 
 
     def cursorPosition(self, column, line):
-        self.write(b'\x1b[%d;%dH' % (line + 1, column + 1))
+        self.write(b'\x1b[' +
+                   intToBytes(line + 1)  +
+                   b'; '+
+                   intToBytes(column + 1) +
+                   b'H')
 
 
     def cursorHome(self):
@@ -756,24 +760,24 @@ class ServerProtocol(protocol.Protocol):
 
     def setModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write(b'\x1b[%sh' %
-                   (b';'.join([intToBytes(mode) for mode in modes])))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[' + modesBytes + b'h')
 
 
     def setPrivateModes(self, modes):
-        self.write(b'\x1b[?%sh' %
-                   (b';'.join([intToBytes(mode) for mode in modes])))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[?' + modesBytes + b'h')
 
 
     def resetModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write(b'\x1b[%sl' %
-                   (b';'.join([intToBytes(mode) for mode in modes])))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[' + modesBytes + b'l')
 
 
     def resetPrivateModes(self, modes):
-        self.write(b'\x1b[?%sl' %
-                   (b';'.join([intToBytes(mode) for mode in modes])))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[?' + modesBytes + b'l')
 
 
     def applicationKeypadMode(self):
@@ -882,15 +886,15 @@ class ServerProtocol(protocol.Protocol):
 
 
     def deleteCharacter(self, n=1):
-        self.write(b'\x1b[%dP' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'P')
 
 
     def insertLine(self, n=1):
-        self.write(b'\x1b[%dL' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'L')
 
 
     def deleteLine(self, n=1):
-        self.write(b'\x1b[%dM' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'M')
 
 
     def setScrollRegion(self, first=None, last=None):
@@ -902,7 +906,7 @@ class ServerProtocol(protocol.Protocol):
             last = '%d' % (last,)
         else:
             last = ''
-        self.write(b'\x1b[%s;%sr' % (first, last))
+        self.write(b'\x1b[' + first + b';' + last + b'r')
 
 
     def resetScrollRegion(self):
