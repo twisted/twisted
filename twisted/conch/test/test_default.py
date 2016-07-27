@@ -25,7 +25,7 @@ from twisted.python.filepath import FilePath
 from twisted.conch.error import ConchError
 from twisted.conch.test import keydata
 from twisted.test.proto_helpers import StringTransport
-from twisted.python.compat import networkString, nativeString
+from twisted.python.compat import nativeString
 
 
 
@@ -246,3 +246,30 @@ class SSHUserAuthClientTests(TestCase):
                 [stdout, stdin], [sys.stdout, sys.stdin])
             return fail
         self.assertFailure(d, ConchError)
+
+
+    def test_getGenericAnswers(self):
+        """
+        Verify that the getGenericAnswers function in L{SSHUserAuthClient}
+        works.
+        """
+        options = ConchOptions()
+        client = SSHUserAuthClient(b"user",  options, None)
+
+        def getpass(prompt):
+            self.assertEqual(prompt, "pass prompt")
+            return "getpass"
+
+        self.patch(default.getpass, 'getpass', getpass)
+
+        def raw_input(prompt):
+            self.assertEqual(prompt, "raw_input prompt")
+            return "raw_input"
+
+        self.patch(default, 'raw_input', raw_input)
+        d =client.getGenericAnswers(
+            b"Name", b"Instruction", [
+                (b"pass prompt", False), (b"raw_input prompt", True)])
+        d.addCallback(
+            self.assertListEqual, ["getpass", "raw_input"])
+        return d

@@ -259,12 +259,13 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         responses = []
         try:
             oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
+            sys.stdin, sys.stdout = self._open_tty()
             if name:
-                print(name)
+                print(name.decode("UTF8"))
             if instruction:
-                print(instruction)
+                print(instruction.decode("UTF8"))
             for prompt, echo in prompts:
+                prompt = prompt.decode("UTF8")
                 if echo:
                     responses.append(raw_input(prompt))
                 else:
