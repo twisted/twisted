@@ -14,6 +14,7 @@ interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 from __future__ import print_function
 
 from twisted.python import log
+from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 
 from twisted.conch.error import ConchError
@@ -230,10 +231,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return defer.succeed(keys.Key.fromFile(file))
         except keys.EncryptedKeyError:
             for i in range(3):
-                prompt = "Enter passphrase for key '%s': " % \
-                    self.usedFiles[-1]
+                prompt = "Enter passphrase for key '%s': " % self.usedFiles[-1]
                 try:
-                    p = self._getPassword(prompt)
+                    p = self._getPassword(prompt).encode(
+                        sys.getfilesystemencoding())
                     return defer.succeed(keys.Key.fromFile(file, passphrase=p))
                 except (keys.BadKeyError, ConchError):
                     pass

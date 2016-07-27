@@ -4,6 +4,9 @@
 """
 Tests for L{twisted.conch.client.default}.
 """
+
+from __future__ import absolute_import, division
+
 from twisted.python.reflect import requireModule
 
 if requireModule('cryptography') and requireModule('pyasn1'):
@@ -18,6 +21,7 @@ from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.conch.test import keydata
 from twisted.test.proto_helpers import StringTransport
+from twisted.python.compat import networkString, nativeString
 
 
 
@@ -43,18 +47,18 @@ class SSHUserAuthClientTests(TestCase):
         When connected to an agent, L{SSHUserAuthClient} can use it to
         request signatures of particular data with a particular L{Key}.
         """
-        client = SSHUserAuthClient("user", ConchOptions(), None)
+        client = SSHUserAuthClient(b"user", ConchOptions(), None)
         agent = SSHAgentClient()
         transport = StringTransport()
         agent.makeConnection(transport)
         client.keyAgent = agent
-        cleartext = "Sign here"
+        cleartext = b"Sign here"
         client.signData(self.rsaPublic, cleartext)
         self.assertEqual(
             transport.value(),
-            "\x00\x00\x00\x8b\r\x00\x00\x00u" + self.rsaPublic.blob() +
-            "\x00\x00\x00\t" + cleartext +
-            "\x00\x00\x00\x00")
+            b"\x00\x00\x00\x8b\r\x00\x00\x00u" + self.rsaPublic.blob() +
+            b"\x00\x00\x00\t" + cleartext +
+            b"\x00\x00\x00\x00")
 
 
     def test_agentGetPublicKey(self):
@@ -80,7 +84,7 @@ class SSHUserAuthClientTests(TestCase):
         """
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient("user",  options, None)
+        client = SSHUserAuthClient(b"user",  options, None)
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
         self.assertEqual(key, self.rsaPublic)
@@ -94,7 +98,7 @@ class SSHUserAuthClientTests(TestCase):
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
         agent = SSHAgentClient()
-        client = SSHUserAuthClient("user",  options, None)
+        client = SSHUserAuthClient(b"user",  options, None)
         client.keyAgent = agent
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
@@ -112,8 +116,8 @@ class SSHUserAuthClientTests(TestCase):
         dsaFile = self.tmpdir.child('id_dsa')
         dsaFile.setContent(keydata.privateDSA_openssh)
         options.identitys = [self.rsaFile.path, dsaFile.path]
-        self.tmpdir.child('id_rsa.pub').setContent('not a key!')
-        client = SSHUserAuthClient("user",  options, None)
+        self.tmpdir.child('id_rsa.pub').setContent(b'not a key!')
+        client = SSHUserAuthClient(b"user",  options, None)
         key = client.getPublicKey()
         self.assertTrue(key.isPublic())
         self.assertEqual(key, Key.fromString(keydata.publicDSA_openssh))
@@ -129,7 +133,7 @@ class SSHUserAuthClientTests(TestCase):
         rsaPrivate = Key.fromString(keydata.privateRSA_openssh)
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient("user",  options, None)
+        client = SSHUserAuthClient(b"user",  options, None)
         # Populate the list of used files
         client.getPublicKey()
 
@@ -147,19 +151,19 @@ class SSHUserAuthClientTests(TestCase):
         encrypted.
         """
         rsaPrivate = Key.fromString(keydata.privateRSA_openssh)
-        passphrase = 'this is the passphrase'
+        passphrase = b'this is the passphrase'
         self.rsaFile.setContent(rsaPrivate.toString('openssh', passphrase))
         options = ConchOptions()
         options.identitys = [self.rsaFile.path]
-        client = SSHUserAuthClient("user",  options, None)
+        client = SSHUserAuthClient(b"user",  options, None)
         # Populate the list of used files
         client.getPublicKey()
 
         def _getPassword(prompt):
-            self.assertEqual(prompt,
-                              "Enter passphrase for key '%s': " % (
-                              self.rsaFile.path,))
-            return passphrase
+            self.assertEqual(
+                prompt,
+                "Enter passphrase for key '%s': " % (self.rsaFile.path,))
+            return nativeString(passphrase)
 
         def _cbGetPrivateKey(key):
             self.assertFalse(key.isPublic())
