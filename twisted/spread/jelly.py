@@ -151,9 +151,9 @@ def _newInstance(cls, state=_NO_STATE):
             inst.__dict__.update(state) # Copy 'instance' behaviour
     else:
         if state is not _NO_STATE:
-            inst = _OldStyleInstance(cls, state)
+            inst = InstanceType(cls, state)
         else:
-            inst = _OldStyleInstance(cls)
+            inst = InstanceType(cls)
     return inst
 
 
@@ -172,6 +172,10 @@ def _maybeClass(classnamep):
     else:
         if isObject:
             return qual(classnamep)
+
+    if not isinstance(classnamep, bytes):
+        classnamep = classnamep.encode('utf-8')
+
     return classnamep
 
 
@@ -276,7 +280,7 @@ def getInstanceState(inst, jellier):
     else:
         state = inst.__dict__
     sxp = jellier.prepare(inst)
-    sxp.extend([qual(inst.__class__), jellier.jelly(state)])
+    sxp.extend([qual(inst.__class__).encode('utf-8'), jellier.jelly(state)])
     return jellier.preserve(inst, sxp)
 
 
@@ -329,7 +333,7 @@ class Jellyable:
         """
         sxp = jellier.prepare(self)
         sxp.extend([
-            qual(self.__class__),
+            qual(self.__class__).encode('utf-8'),
             jellier.jelly(self.getStateFor(jellier))])
         return jellier.preserve(self, sxp)
 
@@ -469,7 +473,7 @@ class _Jellier:
                 return preRef
             return obj.jellyFor(self)
         objType = type(obj)
-        if self.taster.isTypeAllowed(qual(objType)):
+        if self.taster.isTypeAllowed(qual(objType).encode('utf-8')):
             # "Immutable" Types
             if ((objType is bytes) or
                 (objType is int) or
@@ -517,7 +521,7 @@ class _Jellier:
                 return [b'timedelta', '%s %s %s' % (obj.days, obj.seconds,
                                                    obj.microseconds)]
             elif issubclass(objType, type) or (not _PY3 and objType is ClassType):
-                return [b'class', qual(obj)]
+                return [b'class', qual(obj).encode('utf-8')]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
             else:
@@ -540,7 +544,7 @@ class _Jellier:
                       (not _PY3 and objType is _sets.ImmutableSet)):
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
-                    className = qual(obj.__class__)
+                    className = qual(obj.__class__).encode('utf-8')
                     persistent = None
                     if self.persistentStore:
                         persistent = self.persistentStore(obj, self)
@@ -560,7 +564,7 @@ class _Jellier:
                             qual(obj.__class__), sxp)
                 return self.preserve(obj, sxp)
         else:
-            if objType is _OldStyleInstance:
+            if objType is InstanceType:
                 raise InsecureJelly("Class not allowed for instance: %s %s" %
                                     (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
@@ -714,8 +718,8 @@ class _Unjellier:
 
     def _unjelly_boolean(self, exp):
         if bool:
-            assert exp[0] in ('true', 'false')
-            return exp[0] == 'true'
+            assert exp[0] in (b'true', b'false')
+            return exp[0] == b'true'
         else:
             return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
 
@@ -862,10 +866,10 @@ class _Unjellier:
 
 
     def _unjelly_function(self, rest):
-        modSplit = rest[0].split('.')
-        modName = '.'.join(modSplit[:-1])
+        modSplit = rest[0].split(b'.')
+        modName = b'.'.join(modSplit[:-1])
         if not self.taster.isModuleAllowed(modName):
-            raise InsecureJelly("Module not allowed: %s"% modName)
+            raise InsecureJelly("Module not allowed: %s" % modName)
         # XXX do I need an isFunctionAllowed?
         function = namedObject(rest[0])
         return function
@@ -920,7 +924,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if type(im_class) is not _OldStyleClass:
+        if type(im_class) is not ClassType:
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:
@@ -1027,22 +1031,22 @@ class SecurityOptions:
         """
         # I don't believe any of these types can ever pose a security hazard,
         # except perhaps "reference"...
-        self.allowedTypes = {"None": 1,
-                             "bool": 1,
-                             "boolean": 1,
-                             "string": 1,
-                             "str": 1,
-                             "int": 1,
-                             "float": 1,
-                             "datetime": 1,
-                             "time": 1,
-                             "date": 1,
-                             "timedelta": 1,
-                             "NoneType": 1}
-        self.allowedTypes['unicode'] = 1
-        self.allowedTypes['decimal'] = 1
-        self.allowedTypes['set'] = 1
-        self.allowedTypes['frozenset'] = 1
+        self.allowedTypes = {b"None": 1,
+                             b"bool": 1,
+                             b"boolean": 1,
+                             b"string": 1,
+                             b"str": 1,
+                             b"int": 1,
+                             b"float": 1,
+                             b"datetime": 1,
+                             b"time": 1,
+                             b"date": 1,
+                             b"timedelta": 1,
+                             b"NoneType": 1}
+        self.allowedTypes[b'unicode'] = 1
+        self.allowedTypes[b'decimal'] = 1
+        self.allowedTypes[b'set'] = 1
+        self.allowedTypes[b'frozenset'] = 1
         self.allowedModules = {}
         self.allowedClasses = {}
 
@@ -1061,8 +1065,12 @@ class SecurityOptions:
         name.
         """
         for typ in types:
-            if not isinstance(typ, str):
+            if isinstance(typ, unicode):
+                typ = typ.encode('utf-8')
+
+            if not isinstance(typ, bytes):
                 typ = qual(typ)
+
             self.allowedTypes[typ] = 1
 
 
@@ -1090,6 +1098,10 @@ class SecurityOptions:
         for module in modules:
             if type(module) == types.ModuleType:
                 module = module.__name__
+
+            if not isinstance(module, bytes):
+                module = module.encode('utf-8')
+
             self.allowedModules[module] = 1
 
 
@@ -1098,6 +1110,9 @@ class SecurityOptions:
         SecurityOptions.isModuleAllowed(moduleName) -> boolean
         returns 1 if a module by that name is allowed, 0 otherwise
         """
+        if not isinstance(moduleName, bytes):
+            moduleName = moduleName.encode('utf-8')
+
         return moduleName in self.allowedModules
 
 
@@ -1115,7 +1130,10 @@ class SecurityOptions:
         SecurityOptions.isTypeAllowed(typeName) -> boolean
         Returns 1 if the given type is allowed, 0 otherwise.
         """
-        return (typeName in self.allowedTypes or '.' in typeName)
+        if not isinstance(typeName, bytes):
+            typeName = typeName.encode('utf-8')
+
+        return (typeName in self.allowedTypes or b'.' in typeName)
 
 
 globalSecurity = SecurityOptions()

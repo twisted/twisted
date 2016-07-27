@@ -66,7 +66,6 @@ BYTES    = chr(0x82)
 STRING   = BYTES # (backwards compat)
 NEG      = chr(0x83)
 FLOAT    = chr(0x84)
-UNICODE  = chr(0x88) # UTF-8
 # "optional" -- these might be refused by a low-level implementation.
 LONGINT  = chr(0x85)
 LONGNEG  = chr(0x86)
@@ -214,15 +213,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 if len(rest) >= num:
                     buffer = rest[num:]
                     gotItem(rest[:num])
-                else:
-                    return
-            elif typebyte == UNICODE:
-                num = b1282int(num)
-                if num > SIZE_LIMIT:
-                    raise BananaError("Security precaution: String too long.")
-                if len(rest) >= num:
-                    buffer = rest[num:]
-                    gotItem(rest[:num].decode('utf8'))
                 else:
                     return
             elif typebyte == INT:
@@ -380,18 +370,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 int2b128(len(obj), write)
                 write(BYTES)
                 write(obj)
-        elif isinstance(obj, unicode):
-            obj = obj.encode('utf8')
-
-            if self.currentDialect == b"pb" and obj in self.outgoingSymbols:
-                raise ValueError("This should be bytes.")
-
-            if len(obj) > SIZE_LIMIT:
-                raise BananaError(
-                    "string is too long to send (%d)" % (len(obj),))
-            int2b128(len(obj), write)
-            write(UNICODE)
-            write(obj)
         else:
             raise BananaError("Banana cannot send {0} objects: {1!r}".format(
                 fullyQualifiedName(type(obj)), obj))

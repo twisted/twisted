@@ -361,7 +361,7 @@ class JellyTests(unittest.TestCase):
         else:
             self.assertIsInstance(output[0], set)
 
-    if not jelly._sets:
+    if not hasattr(jelly, "_sets"):
         test_oldSets.skip = "sets.Set is gone in Python 3 and higher"
 
 
@@ -382,7 +382,7 @@ class JellyTests(unittest.TestCase):
         else:
             self.assertIsInstance(output[0], frozenset)
 
-    if not jelly._sets:
+    if not hasattr(jelly, "_sets"):
         test_oldImmutableSets.skip = (
             "sets.ImmutableSets is gone in Python 3 and higher")
 
@@ -650,7 +650,7 @@ class JellyDeprecationTests(unittest.TestCase):
         """
         jelly.unjelly(
             ["instance",
-             ["class", "twisted.test.test_jelly.A"],
+             ["class", "twisted.spread.test.test_jelly.A"],
              ["dictionary"]])
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 1)

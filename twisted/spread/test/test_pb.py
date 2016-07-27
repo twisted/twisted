@@ -662,8 +662,8 @@ class BrokerTests(unittest.TestCase):
     def test_refcount(self):
         c, s, pump = connectedServerAndClient()
         foo = NestedRemote()
-        s.setNameForLocal(b"foo", foo)
-        bar = c.remoteForName(b"foo")
+        s.setNameForLocal("foo", foo)
+        bar = c.remoteForName("foo")
         bar.callRemote('getSimple'
             ).addCallbacks(self.refcountResult, self.thunkErrorBad)
 
@@ -691,10 +691,10 @@ class BrokerTests(unittest.TestCase):
         obj = NestedCache()
         obj2 = NestedComplicatedCache()
         vcc = obj2.c
-        s.setNameForLocal(b"obj", obj)
-        s.setNameForLocal(b"xxx", obj2)
-        o2 = c.remoteForName(b"obj")
-        o3 = c.remoteForName(b"xxx")
+        s.setNameForLocal("obj", obj)
+        s.setNameForLocal("xxx", obj2)
+        o2 = c.remoteForName("obj")
+        o3 = c.remoteForName("xxx")
         coll = []
         o2.callRemote("getCache"
             ).addCallback(coll.append).addErrback(coll.append)
@@ -767,8 +767,8 @@ class BrokerTests(unittest.TestCase):
         c, s, pump = connectedServerAndClient()
         foo = GetPublisher()
         # foo.pub.timestamp = 1.0
-        s.setNameForLocal(b"foo", foo)
-        bar = c.remoteForName(b"foo")
+        s.setNameForLocal("foo", foo)
+        bar = c.remoteForName("foo")
         accum = []
         bar.callRemote('getPub').addCallbacks(accum.append, self.thunkErrorBad)
         pump.flush()
@@ -779,8 +779,8 @@ class BrokerTests(unittest.TestCase):
         # timestamp's dirty, we don't have a cache file
         self.assertEqual(obj._wasCleanWhenLoaded, 0)
         c, s, pump = connectedServerAndClient()
-        s.setNameForLocal(b"foo", foo)
-        bar = c.remoteForName(b"foo")
+        s.setNameForLocal("foo", foo)
+        bar = c.remoteForName("foo")
         bar.callRemote('getPub').addCallbacks(accum.append, self.thunkErrorBad)
         pump.flush()
         obj = accum.pop()
@@ -795,8 +795,8 @@ class BrokerTests(unittest.TestCase):
         c, s, pump = connectedServerAndClient()
         ID = 99
         obj = NestedCopy()
-        s.setNameForLocal(b"foo", obj)
-        x = c.remoteForName(b"foo")
+        s.setNameForLocal("foo", obj)
+        x = c.remoteForName("foo")
         x.callRemote('getFactory', ID
             ).addCallbacks(self.gotCopy, self.thunkResultBad)
         pump.pump()
@@ -861,8 +861,8 @@ class PagingTests(unittest.TestCase):
         are sent.
         """
         c, s, pump = connectedServerAndClient()
-        s.setNameForLocal(b"foo", Pagerizer(finishedCallback, 'hello', value=10))
-        x = c.remoteForName(b"foo")
+        s.setNameForLocal("foo", Pagerizer(finishedCallback, 'hello', value=10))
+        x = c.remoteForName("foo")
         l = []
         util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
@@ -880,8 +880,8 @@ class PagingTests(unittest.TestCase):
         Test L{util.StringPager} without a callback.
         """
         c, s, pump = connectedServerAndClient()
-        s.setNameForLocal(b"foo", Pagerizer(None))
-        x = c.remoteForName(b"foo")
+        s.setNameForLocal("foo", Pagerizer(None))
+        x = c.remoteForName("foo")
         l = []
         util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
@@ -898,8 +898,8 @@ class PagingTests(unittest.TestCase):
         open(filenameEmpty, 'w').close()
         c, s, pump = connectedServerAndClient()
         pagerizer = FilePagerizer(filenameEmpty, None)
-        s.setNameForLocal(b"bar", pagerizer)
-        x = c.remoteForName(b"bar")
+        s.setNameForLocal("bar", pagerizer)
+        x = c.remoteForName("bar")
         l = []
         util.getAllPages(x, "getPages").addCallback(l.append)
         ttl = 10
@@ -920,8 +920,8 @@ class PagingTests(unittest.TestCase):
         c, s, pump = connectedServerAndClient()
         pagerizer = FilePagerizer(self.filename, finishedCallback,
                                   'frodo', value = 9)
-        s.setNameForLocal(b"bar", pagerizer)
-        x = c.remoteForName(b"bar")
+        s.setNameForLocal("bar", pagerizer)
+        x = c.remoteForName("bar")
         l = []
         util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:

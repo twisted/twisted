@@ -285,7 +285,7 @@ class Copyable(Serializable):
         you may override this to change it.
         """
 
-        return reflect.qual(self.__class__)
+        return reflect.qual(self.__class__).encode('utf-8')
 
     def getTypeToCopyFor(self, perspective):
         """Determine what type tag to send for me.

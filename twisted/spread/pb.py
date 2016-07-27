@@ -437,10 +437,10 @@ class CopyableFailure(failure.Failure, Copyable):
         state['frames'] = []
         state['stack'] = []
         state['value'] = str(self.value) # Exception instance
-        if isinstance(self.type, str):
+        if isinstance(self.type, bytes):
             state['type'] = self.type
         else:
-            state['type'] = reflect.qual(self.type) # Exception class
+            state['type'] = reflect.qual(self.type).encode('utf-8') # Exception class
         if self.unsafeTracebacks:
             state['traceback'] = self.getTraceback()
         else:
