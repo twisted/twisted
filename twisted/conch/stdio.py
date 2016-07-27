@@ -98,7 +98,7 @@ def runWithProtocol(klass):
         reactor.run()
     finally:
         termios.tcsetattr(fd, termios.TCSANOW, oldSettings)
-        os.write(fd, "\r\x1bc\r")
+        os.write(fd, b"\r\x1bc\r")
 
 
 
