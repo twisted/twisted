@@ -1225,7 +1225,11 @@ class ClientProtocol(protocol.Protocol):
         def n(self, proto, handler, buf):
             if buf == b'6':
                 x, y = handler.reportCursorPosition()
-                proto.transport.write(b'\x1b[%d;%dR' % (x + 1, y + 1))
+                proto.transport.write(b'\x1b['
+                                      + intToBytes(x+1)
+                                      + b';'
+                                      + intToBytes(y+1)
+                                      + b'R')
             else:
                 handler.unhandledControlSequence(b'\x1b[' + buf + b'n')
 
