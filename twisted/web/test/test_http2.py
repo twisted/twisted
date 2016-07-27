@@ -28,6 +28,7 @@ try:
     import h2
     import h2.errors
     import hyperframe
+    import priority
     from hpack.hpack import Encoder, Decoder
 except ImportError:
     skipH2 = "HTTP/2 support not enabled"
@@ -1969,6 +1970,30 @@ class H2FlowControlTests(unittest.TestCase):
             self.assertEqual(self.postResponseData, actualResponseData)
 
         return a._streamCleanupCallbacks[1].addCallback(validate)
+
+
+    def test_unnecessaryWindowUpdateForStream(self):
+        """
+        When a WindowUpdate frame is received for a stream but no data is
+        currently waiting, nothing exciting happens.
+        """
+        f = FrameFactory()
+        transport = StringTransport()
+        conn = H2Connection()
+        conn.requestFactory = DummyHTTPHandler
+
+        # Send the request.
+        frames = buildRequestFrames(
+            self.postRequestHeaders, self.postRequestData, f
+        )
+        frames.insert(1, f.buildWindowUpdateFrame(streamID=1, increment=5))
+        firstBytes = f.preamble()
+        firstBytes += b''.join(f.serialize() for f in frames[:2])
+
+        conn.makeConnection(transport)
+        conn.dataReceived(firstBytes)
+
+        self.assertRaises(priority.DeadlockError, next, conn.priority)
 
 
     def test_windowUpdateAfterTerminate(self):
