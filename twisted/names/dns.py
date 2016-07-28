@@ -2073,16 +2073,25 @@ def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
 
     out = ['<', obj.__class__.__name__]
 
-    # Get the argument names and values from the constructor.
-    argspec = inspect.getargspec(obj.__class__.__init__)
-    # Reverse the args and defaults to avoid mapping positional arguments
-    # which don't have a default.
-    defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
-    for name in fieldNames:
-        defaultValue = defaults.get(name)
-        fieldValue = getattr(obj, name, defaultValue)
-        if (name in alwaysShow) or (fieldValue != defaultValue):
-            out.append(' %s=%r' % (name, fieldValue))
+    if _PY3:
+        # Get the argument names and values from the constructor.
+        signature = inspect.signature(obj.__class__.__init__)
+        for name in fieldNames:
+            defaultValue = signature.parameters[name].default
+            fieldValue = getattr(obj, name, defaultValue)
+            if (name in alwaysShow) or (fieldValue != defaultValue):
+                out.append(' %s=%r' %(name, fieldValue))
+    else:
+        # Get the argument names and values from the constructor.
+        argspec = inspect.getargspec(obj.__class__.__init__)
+        # Reverse the args and defaults to avoid mapping positional arguments
+        # which don't have a default.
+        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+        for name in fieldNames:
+            defaultValue = defaults.get(name)
+            fieldValue = getattr(obj, name, defaultValue)
+            if (name in alwaysShow) or (fieldValue != defaultValue):
+                out.append(' %s=%r' % (name, fieldValue))
 
     if setFlags:
         out.append(' flags=%s' % (','.join(setFlags),))
