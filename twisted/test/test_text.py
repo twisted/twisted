@@ -181,66 +181,66 @@ class SplitTests(unittest.TestCase):
 
 class StrFileTests(unittest.TestCase):
     def setUp(self):
-        self.stream = StringIO(u"this is a test string")
+        self.io = StringIO(u"this is a test string")
 
     def tearDown(self):
         pass
 
     def test_1_f(self):
-        self.assertFalse(text.strFile("x", self.stream))
+        self.assertFalse(text.strFile("x", self.io))
 
     def test_1_1(self):
-        self.assertTrue(text.strFile("t", self.stream))
+        self.assertTrue(text.strFile("t", self.io))
 
     def test_1_2(self):
-        self.assertTrue(text.strFile("h", self.stream))
+        self.assertTrue(text.strFile("h", self.io))
 
     def test_1_3(self):
-        self.assertTrue(text.strFile("i", self.stream))
+        self.assertTrue(text.strFile("i", self.io))
 
     def test_1_4(self):
-        self.assertTrue(text.strFile("s", self.stream))
+        self.assertTrue(text.strFile("s", self.io))
 
     def test_1_5(self):
-        self.assertTrue(text.strFile("n", self.stream))
+        self.assertTrue(text.strFile("n", self.io))
 
     def test_1_6(self):
-        self.assertTrue(text.strFile("g", self.stream))
+        self.assertTrue(text.strFile("g", self.io))
 
     def test_3_1(self):
-        self.assertTrue(text.strFile("thi", self.stream))
+        self.assertTrue(text.strFile("thi", self.io))
 
     def test_3_2(self):
-        self.assertTrue(text.strFile("his", self.stream))
+        self.assertTrue(text.strFile("his", self.io))
 
     def test_3_3(self):
-        self.assertTrue(text.strFile("is ", self.stream))
+        self.assertTrue(text.strFile("is ", self.io))
 
     def test_3_4(self):
-        self.assertTrue(text.strFile("ing", self.stream))
+        self.assertTrue(text.strFile("ing", self.io))
 
     def test_3_f(self):
-        self.assertFalse(text.strFile("bla", self.stream))
+        self.assertFalse(text.strFile("bla", self.io))
 
     def test_large_1(self):
-        self.assertTrue(text.strFile("this is a test", self.stream))
+        self.assertTrue(text.strFile("this is a test", self.io))
 
     def test_large_2(self):
-        self.assertTrue(text.strFile("is a test string", self.stream))
+        self.assertTrue(text.strFile("is a test string", self.io))
 
     def test_large_f(self):
-        self.assertFalse(text.strFile("ds jhfsa k fdas", self.stream))
+        self.assertFalse(text.strFile("ds jhfsa k fdas", self.io))
 
 
     def test_overlarge_f(self):
         self.assertFalse(text.strFile(
                          "djhsakj dhsa fkhsa s,mdbnfsauiw bndasdf hreew",
-                         self.stream))
+                         self.io))
 
 
     def test_self(self):
-        self.assertTrue(text.strFile("this is a test string", self.stream))
+        self.assertTrue(text.strFile("this is a test string", self.io))
 
     def test_insensitive(self):
-        self.assertTrue(text.strFile("ThIs is A test STRING", self.stream, False))
+        self.assertTrue(text.strFile("ThIs is A test STRING", self.io, False))
 
