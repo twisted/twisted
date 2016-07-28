@@ -483,12 +483,19 @@ class KnownHostsFile(object):
                         return response
                     else:
                         raise UserRejectedKey()
+
+                # Get the base type of the key.
+                baseType = key.type()
+
+                if baseType == "EC":
+                    baseType = "ECDSA"
+
                 proceed = ui.prompt(
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
-                    "RSA key fingerprint is %s.\n"
+                    "%s key fingerprint is %s.\n"
                     "Are you sure you want to continue connecting (yes/no)? " %
-                    (nativeString(hostname), nativeString(ip),
+                    (nativeString(hostname), nativeString(ip), baseType,
                      key.fingerprint()))
                 return proceed.addCallback(promptResponse)
         return hhk.addCallback(gotHasKey)

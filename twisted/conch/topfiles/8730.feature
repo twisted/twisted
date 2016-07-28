@@ -1,1 +1,1 @@
-Twisted Conch now supports ECDH key exchanges.
+Twisted Conch now supports ECDH key exchanges with ECDSA signatures.
