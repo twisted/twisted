@@ -56,6 +56,7 @@ modules = [
     "twisted.conch.avatar",
     "twisted.conch.checkers",
     "twisted.conch.client.__init__",
+    "twisted.conch.client.default",
     "twisted.conch.client.knownhosts",
     "twisted.conch.error",
     "twisted.conch.interfaces",
@@ -383,6 +384,7 @@ testModules = [
     "twisted.conch.test.test_channel",
     "twisted.conch.test.test_checkers",
     "twisted.conch.test.test_connection",
+    "twisted.conch.test.test_default",
     "twisted.conch.test.test_filetransfer",
     "twisted.conch.test.test_forwarding",
     "twisted.conch.test.test_keys",
@@ -657,8 +659,9 @@ testDataFiles = [
 
 almostModules = [
     # twisted.conch.test_knownhosts tests parts of the default module
-    "twisted.conch.client.default",
     "twisted.conch.client.agent",
+    # twisted.conch.client.default has tests that depend on
+    "twisted.conch.client.options",
     # twisted.conch.test.test_text and twisted.conch.test.test_window
     # need these conch modules.  They need more work to get full
     # Python 3 test coverage
