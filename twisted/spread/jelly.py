@@ -62,7 +62,6 @@ The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 """
 
 # System Imports
-import pickle
 import types
 import warnings
 import decimal
@@ -80,6 +79,9 @@ except ImportError:
     _OldStyleClass = ()
     _OldStyleInstance = ()
 
+_SetTypes = [set]
+_ImmutableSetTypes = [frozenset]
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
     try:
@@ -87,13 +89,16 @@ with warnings.catch_warnings():
     except ImportError:
         # sets module is deprecated in Python 2.6, and gone in
         # Python 3
-        _sets = None
+        pass
+    else:
+        _SetTypes.append(_sets.Set)
+        _ImmutableSetTypes.append(_sets.ImmutableSet)
 
 from zope.interface import implementer
 
 # Twisted Imports
 from twisted.python.compat import unicode, long, nativeString
-from twisted.python.reflect import namedObject, qual
+from twisted.python.reflect import namedObject, qual, namedAny
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
 from twisted.persisted.crefutil import _Container
@@ -491,20 +496,21 @@ class _Jellier:
                 (objType is float)):
                 return obj
             elif objType is types.MethodType:
+                aSelf = obj.__self__ if _PY3 else obj.im_self
+                aFunc = obj.__func__ if _PY3 else obj.im_func
+                aClass = aSelf.__class__ if _PY3 else obj.im_class
                 return [b"method",
-                        obj.im_func.__name__,
-                        self.jelly(obj.im_self),
-                        self.jelly(obj.im_class)]
+                        aFunc.__name__,
+                        self.jelly(aSelf),
+                        self.jelly(aClass)]
 
             elif objType is unicode:
                 return [b'unicode', obj.encode('UTF-8')]
             elif objType is type(None):
                 return [b'None']
             elif objType is types.FunctionType:
-                name = obj.__name__
-                return [b'function', str(pickle.whichmodule(obj, obj.__name__))
-                        + '.' +
-                        name]
+                return [b'function', obj.__module__ + '.' +
+                        (obj.__qualname__ if _PY3 else obj.__name__)]
             elif objType is types.ModuleType:
                 return [b'module', obj.__name__]
             elif objType is bool:
@@ -546,10 +552,9 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is set or (not _PY3 and objType is _sets.Set):
+                elif objType in _SetTypes:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif (objType is frozenset or
-                      (not _PY3 and objType is _sets.ImmutableSet)):
+                elif objType in _ImmutableSetTypes:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__).encode('utf-8')
@@ -885,7 +890,7 @@ class _Unjellier:
         if not self.taster.isModuleAllowed(modName):
             raise InsecureJelly("Module not allowed: %s" % modName)
         # XXX do I need an isFunctionAllowed?
-        function = namedObject(fname)
+        function = namedAny(fname)
         return function
 
 
@@ -929,7 +934,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if type(im_class) is not _OldStyleClass:
+        if not isinstance(im_class, (type, _OldStyleClass)):
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:
@@ -937,7 +942,8 @@ class _Unjellier:
             elif isinstance(im_self, NotKnown):
                 im = _InstanceMethod(im_name, im_self, im_class)
             else:
-                im = types.MethodType(im_class.__dict__[im_name], im_self, im_class)
+                im = types.MethodType(im_class.__dict__[im_name], im_self,
+                                      *([im_class] * (not _PY3)))
         else:
             raise TypeError('instance method changed')
         return im

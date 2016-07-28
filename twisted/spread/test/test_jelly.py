@@ -146,15 +146,6 @@ class JellyTests(unittest.TestCase):
         self.assertRaises(jelly.InsecureJelly, jelly.unjelly, c, taster)
 
 
-    def test_methodSelfIdentity(self):
-        a = A()
-        b = B()
-        a.bmethod = b.bmethod
-        b.a = a
-        im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
-        self.assertEqual(im_.im_class, im_.im_self.__class__)
-
-
     def test_methodsNotSelfIdentity(self):
         """
         If a class change after an instance has been created, L{jelly.unjelly}
