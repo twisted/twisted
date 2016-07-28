@@ -544,7 +544,7 @@ class _Jellier:
                     sxp.extend(self._jellyIterable(list_atom, obj))
                 elif objType is tuple:
                     sxp.extend(self._jellyIterable(tuple_atom, obj))
-                elif objType is dict:
+                elif objType in DictTypes:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
