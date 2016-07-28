@@ -14,8 +14,7 @@ for more details.
 
 from __future__ import absolute_import, division
 
-import copy
-import struct
+import copy, struct
 
 from io import BytesIO
 
@@ -61,8 +60,7 @@ def b1282int(st):
 # delimiter characters.
 LIST     = chr(0x80)
 INT      = chr(0x81)
-BYTES    = chr(0x82)
-STRING   = BYTES # (backwards compat)
+STRING   = chr(0x82)
 NEG      = chr(0x83)
 FLOAT    = chr(0x84)
 # "optional" -- these might be refused by a low-level implementation.
@@ -204,11 +202,10 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     raise BananaError("Security precaution: List too long.")
                 listStack.append((num, []))
                 buffer = rest
-            elif typebyte == BYTES:
+            elif typebyte == STRING:
                 num = b1282int(num)
                 if num > SIZE_LIMIT:
-                    raise BananaError(
-                        "Security precaution: Bytestring too long.")
+                    raise BananaError("Security precaution: String too long.")
                 if len(rest) >= num:
                     buffer = rest[num:]
                     gotItem(rest[:num])
@@ -297,7 +294,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         b'decref'         : 29,
         b'decache'        : 30,
         b'uncache'        : 31,
-    }
+        }
 
     incomingVocabulary = {}
     for k, v in outgoingVocabulary.items():
@@ -367,7 +364,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     raise BananaError(
                         "byte string is too long to send (%d)" % (len(obj),))
                 int2b128(len(obj), write)
-                write(BYTES)
+                write(STRING)
                 write(obj)
         else:
             raise BananaError("Banana cannot send {0} objects: {1!r}".format(
