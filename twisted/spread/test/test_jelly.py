@@ -123,8 +123,8 @@ class JellyTests(unittest.TestCase):
     @cvar decimalData: serialized version of decimal data, to be used in tests.
     @type decimalData: L{list}
     """
-    decimalData = ['list', ['decimal', 995, -2], ['decimal', 0, 0],
-                           ['decimal', 123456, 0], ['decimal', -78901, -3]]
+    decimalData = [b'list', [b'decimal', 995, -2], [b'decimal', 0, 0],
+                   [b'decimal', 123456, 0], [b'decimal', -78901, -3]]
 
 
     def _testSecurity(self, inputList, atom):
@@ -298,7 +298,7 @@ class JellyTests(unittest.TestCase):
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
         inputList = [decimal.Decimal('9.95')]
-        self._testSecurity(inputList, "decimal")
+        self._testSecurity(inputList, b"decimal")
 
 
     def test_set(self):
@@ -332,7 +332,7 @@ class JellyTests(unittest.TestCase):
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
         inputList = [set([1, 2, 3])]
-        self._testSecurity(inputList, "set")
+        self._testSecurity(inputList, b"set")
 
 
     def test_frozensetSecurity(self):
@@ -342,7 +342,7 @@ class JellyTests(unittest.TestCase):
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
         inputList = [frozenset([1, 2, 3])]
-        self._testSecurity(inputList, "frozenset")
+        self._testSecurity(inputList, b"frozenset")
 
 
     def test_oldSets(self):
