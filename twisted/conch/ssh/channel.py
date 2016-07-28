@@ -14,7 +14,7 @@ from __future__ import division, absolute_import
 from zope.interface import implementer
 
 from twisted.python import log
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, intToBytes
 from twisted.internet import interfaces
 
 
@@ -29,7 +29,7 @@ class SSHChannel(log.Logger):
     packet going each way.
 
     @ivar name: the name of the channel.
-    @type name: L{str}
+    @type name: L{bytes}
     @ivar localWindowSize: the maximum size of the local window in bytes.
     @type localWindowSize: L{int}
     @ivar localWindowLeft: how many bytes are left in the local window.
@@ -77,13 +77,29 @@ class SSHChannel(log.Logger):
 
 
     def __str__(self):
-        return '<SSHChannel %s (lw %i rw %i)>' % (self.name,
-                self.localWindowLeft, self.remoteWindowLeft)
+        return nativeString(self.__bytes__())
+
+
+    def __bytes__(self):
+        """
+        Return a byte string representation of the channel
+        """
+        name = self.name
+        if not name:
+            name = b'None'
+
+        return (b'<SSHChannel ' + name +
+                b' (lw ' + intToBytes(self.localWindowLeft) +
+                b' rw ' + intToBytes(self.remoteWindowLeft) +
+                b')>')
 
 
     def logPrefix(self):
         id = (self.id is not None and str(self.id)) or "unknown"
-        return "SSHChannel %s (%s) on %s" % (self.name, id,
+        name = self.name
+        if name:
+            name = nativeString(name)
+        return "SSHChannel %s (%s) on %s" % (name, id,
                 self.conn.logPrefix())
 
 
