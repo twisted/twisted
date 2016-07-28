@@ -164,12 +164,6 @@ class JellyTests(unittest.TestCase):
             C.cmethod = savecmethod
 
 
-    if _PY3:
-        test_methodSelfIdentity.skip = "Jellying methods only available on Py2"
-        test_methodsNotSelfIdentity.skip = ("Jellying methods only available "
-                                            "on Py2")
-
-
     def test_newStyle(self):
         """
         Test that a new style class can be jellied and unjellied with its
@@ -375,11 +369,6 @@ class JellyTests(unittest.TestCase):
     if not hasattr(jelly, "_sets"):
         test_oldImmutableSets.skip = (
             "sets.ImmutableSets is gone in Python 3 and higher")
-
-
-    if _PY3:
-        test_oldSets.skip = "Only on Py2"
-        test_oldImmutableSets.skip = "Only on Py2"
 
 
     def test_simple(self):
