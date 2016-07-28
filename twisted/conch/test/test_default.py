@@ -26,7 +26,14 @@ from twisted.conch.error import ConchError
 from twisted.conch.test import keydata
 from twisted.test.proto_helpers import StringTransport
 from twisted.python.compat import nativeString
+from twisted.python.runtime import platform
 
+if platform.isWindows():
+    windowsSkip = (
+        "genericAnswers and getPassword does not work on Windows."
+        " Should be fixed as part of fixing bug 6409 and 6410")
+else:
+    windowsSkip = None
 
 
 class SSHUserAuthClientTests(TestCase):
@@ -203,6 +210,7 @@ class SSHUserAuthClientTests(TestCase):
         d = client.getPassword()
         d.addCallback(self.assertEqual, b'bad password')
         return d
+    test_getPassword.skip = windowsSkip
 
 
     def test_getPasswordPrompt(self):
@@ -223,6 +231,7 @@ class SSHUserAuthClientTests(TestCase):
         d = client.getPassword(prompt)
         d.addCallback(self.assertEqual, b'bad password')
         return d
+    test_getPasswordPrompt.skip = windowsSkip
 
 
     def test_getPasswordConchError(self):
@@ -246,6 +255,7 @@ class SSHUserAuthClientTests(TestCase):
                 [stdout, stdin], [sys.stdout, sys.stdin])
             return fail
         self.assertFailure(d, ConchError)
+    test_getPasswordConchError.skip = windowsSkip
 
 
     def test_getGenericAnswers(self):
@@ -273,3 +283,4 @@ class SSHUserAuthClientTests(TestCase):
         d.addCallback(
             self.assertListEqual, ["getpass", "raw_input"])
         return d
+    test_getGenericAnswers.skip = windowsSkip
