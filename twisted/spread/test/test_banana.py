@@ -266,12 +266,6 @@ class BananaTests(BananaTestBase):
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
 
 
-    def test_negativeLong(self):
-        self.enc.sendEncoded(long(-1015))
-        self.enc.dataReceived(self.io.getvalue())
-        self.assertEqual(self.result, long(-1015))
-
-
     def test_integer(self):
         self.enc.sendEncoded(1015)
         self.enc.dataReceived(self.io.getvalue())
