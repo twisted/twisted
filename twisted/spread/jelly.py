@@ -468,8 +468,7 @@ class _Jellier:
             self.preserved[id(object)] = sexp
         return sexp
 
-    constantTypes = {bytes: 1, unicode: 1, int: 1,
-                     float: 1, long: 1}
+    constantTypes = {bytes: 1, unicode: 1, int: 1, float: 1, long: 1}
 
 
     def _checkMutable(self,obj):
