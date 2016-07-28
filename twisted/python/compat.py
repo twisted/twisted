@@ -45,6 +45,25 @@ if platform.python_implementation() == 'PyPy':
 else:
     _PYPY = False
 
+def _shouldEnableNewStyle():
+    """
+    Returns whether or not we should enable the new-style conversion of
+    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
+    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
+    values and everything else as a truthy value.
+
+    @rtype: L{bool}
+    """
+    value = os.environ.get('TWISTED_NEWSTYLE', '')
+
+    if value in ['', 'no', 'false', 'False', '0']:
+        return False
+    else:
+        return True
+
+
+_EXPECT_NEWSTYLE = _PY3 or _shouldEnableNewStyle()
+
 
 def currentframe(n=0):
     """
