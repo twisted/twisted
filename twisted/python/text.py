@@ -6,7 +6,6 @@
 """
 Miscellany of text-munging functions.
 """
-from twisted.python.compat import unicode
 
 
 def stringyString(object, indentation=''):
