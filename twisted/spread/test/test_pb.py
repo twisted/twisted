@@ -13,13 +13,9 @@ only specific tests for old API.
 
 from __future__ import absolute_import, division
 
-import sys
-import os
-import time
-import gc
-import weakref
-
 from io import BytesIO
+import sys, os, time, gc, weakref
+
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
