@@ -111,7 +111,7 @@ def flattenEvent(event):
         if conversion == "r":
             conversionFunction = repr
         else:  # Above: if conversion is not "r", it's "s"
-            conversionFunction = str
+            conversionFunction = unicode
 
         if callit:
             fieldValue = fieldValue()
