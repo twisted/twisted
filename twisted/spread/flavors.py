@@ -607,10 +607,9 @@ class RemoteCacheObserver:
             self.broker, self.cached, self.perspective, id(self))
 
     def __hash__(self):
+        """Generate a hash unique to all L{RemoteCacheObserver}s for this broker/perspective/cached triplet
         """
-        Generate a hash unique to all L{RemoteCacheObserver}s for this
-        broker/perspective/cached triplet.
-        """
+
         return (  (hash(self.broker) % 2**10)
                 + (hash(self.perspective) % 2**10)
                 + (hash(self.cached) % 2**10))
