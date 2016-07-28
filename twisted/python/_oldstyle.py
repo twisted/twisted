@@ -8,33 +8,47 @@ Utilities to assist in the "flag day" new-style object transition.
 
 from __future__ import absolute_import, division
 
+import os
 import types
 
-from twisted.python.compat import _shouldEnableNewStyle, _PY3
+from twisted.python.compat import _PY3
 from twisted.python.util import _replaceIf
 
 
-def passthru(arg, **kwargs):
+def passthru(arg):
     """
     Return C{arg}. Do nothing.
 
     @param arg: The arg to return.
-
-    @param kwargs: Ignored keyword arguments.
-
     @return: C{arg}
     """
     return arg
 
 
 
-def _ensureOldClass(cls, **kwargs):
+def _shouldEnableNewStyle():
+    """
+    Returns whether or not we should enable the new-style conversion of
+    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
+    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
+    values and everything else as a truthy value.
+
+    @rtype: L{bool}
+    """
+    value = os.environ.get('TWISTED_NEWSTYLE', '')
+
+    if value in ['', 'no', 'false', 'False', '0']:
+        return False
+    else:
+        return True
+
+
+
+def _ensureOldClass(cls):
     """
     Ensure that C{cls} is an old-style class.
 
     @param cls: The class to check.
-
-    @param kwargs: Ignored keyword arguments.
 
     @return: The class, if it is an old-style class.
     @raises: L{ValueError} if it is a new-style class.
@@ -52,9 +66,9 @@ def _ensureOldClass(cls, **kwargs):
 
 
 
-@_replaceIf(_PY3, lambda **k: passthru)
-@_replaceIf(not _shouldEnableNewStyle(), lambda **k: _ensureOldClass)
-def _oldStyle(bases=(object,)):
+@_replaceIf(_PY3, passthru)
+@_replaceIf(not _shouldEnableNewStyle(), _ensureOldClass)
+def _oldStyle(cls):
     """
     A decorator which conditionally converts old-style classes to new-style
     classes. If it is Python 3, or if the C{TWISTED_NEWSTYLE} environment
@@ -64,15 +78,7 @@ def _oldStyle(bases=(object,)):
     @param cls: An old-style class to convert to new-style.
     @type cls: L{types.ClassType}
 
-    @param bases: The bases that the converted class will use.
-    @type bases: L{tuple}
-
-    @return: A new-style version of C{cls}, with the bases C{bases} if
-        upgraded.
+    @return: A new-style version of C{cls}.
     """
-    def _old(cls):
-
-        _ensureOldClass(cls)
-        return type(cls.__name__, bases, cls.__dict__)
-
-    return _old
+    _ensureOldClass(cls)
+    return type(cls.__name__, (object,), cls.__dict__)

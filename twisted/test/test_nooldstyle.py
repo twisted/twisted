@@ -12,7 +12,7 @@ import inspect
 
 from twisted.python.reflect import namedAny, fullyQualifiedName
 from twisted.python.modules import getModule
-from twisted.python.compat import _PY3, _shouldEnableNewStyle
+from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.python import _oldstyle
 
@@ -20,7 +20,7 @@ _skip = None
 
 if _PY3:
     _skip = "Not relevant on Python 3."
-elif not _shouldEnableNewStyle():
+elif not _oldstyle._shouldEnableNewStyle():
     _skip = "Not running with TWISTED_NEWSTYLE=1"
 
 
@@ -59,7 +59,7 @@ class OldStyleDecoratorTests(unittest.TestCase):
         class that has the same functions, attributes, etc.
         """
         self.assertEqual(type(SomeOldStyleClass), types.ClassType)
-        updatedClass = _oldstyle._oldStyle()(SomeOldStyleClass)
+        updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
         self.assertEqual(type(updatedClass), type)
         self.assertEqual(updatedClass().func(), "hi")
         self.assertEqual(updatedClass().bar, "baz")
@@ -70,7 +70,7 @@ class OldStyleDecoratorTests(unittest.TestCase):
         The class returned by L{_oldstyle._oldStyle} has the same C{__name__},
         C{__module__}, and docstring (C{__doc__}) attributes as the original.
         """
-        updatedClass = _oldstyle._oldStyle()(SomeOldStyleClass)
+        updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
 
         self.assertEqual(updatedClass.__name__, SomeOldStyleClass.__name__)
         self.assertEqual(updatedClass.__doc__, SomeOldStyleClass.__doc__)
@@ -83,7 +83,7 @@ class OldStyleDecoratorTests(unittest.TestCase):
         raise an exception.
         """
         with self.assertRaises(ValueError) as e:
-            _oldstyle._oldStyle()(SomeNewStyleClass)
+            _oldstyle._oldStyle(SomeNewStyleClass)
 
         self.assertEqual(
             e.exception.args[0],
@@ -92,65 +92,12 @@ class OldStyleDecoratorTests(unittest.TestCase):
              ". This should only be used to decorate old-style classes."))
 
 
-    def test_withBasesWhenUpgraded(self):
-        """
-        When it is upgraded, the bases keyword dictate the new bases of the
-        upgraded object.
-        """
-        @_oldstyle._oldStyle(bases=(Exception,))
-        class Failure:
-            pass
-
-        f = Failure()
-        self.assertIsInstance(f, Exception)
-        self.assertEqual(Failure.__mro__, (Failure,) + Exception.__mro__)
-
-
-    def test_withoutBasesWhenUpgraded(self):
-        """
-        The bases in the decorator are not taken into account when it is not
-        upgraded.
-        """
-        @_oldstyle._oldStyle(bases=(Exception,))
-        class Failure:
-            pass
-
-        f = Failure()
-        self.assertNotIsInstance(f, Exception)
-        self.assertNotIn("__mro__", f.__dict__.keys())
-
-
-    def test_withBasesEitherWay(self):
-        """
-        The bases in the decorator are chosen when it is upgraded,
-        """
-        class Foo(object):
-            pass
-
-        class Bar:
-            pass
-
-        @_oldstyle._oldStyle(bases=(Foo,))
-        class FooDescend(Bar):
-            pass
-
-        f = FooDescend()
-
-        if _shouldEnableNewStyle():
-            self.assertIsInstance(f, Foo)
-            self.assertEqual(FooDescend.__mro__, (FooDescend,) + Foo.__mro__)
-            self.assertEqual(FooDescend.__bases__, (Foo,))
-        else:
-            self.assertIsInstance(f, Bar)
-            self.assertEqual(FooDescend.__bases__, (Bar,))
-
-
     def test_noOpByDefault(self):
         """
         On Python 3 or on Py2 when C{TWISTED_NEWSTYLE} is not set,
         L{_oldStyle._oldStyle} is a no-op.
         """
-        updatedClass = _oldstyle._oldStyle()(SomeOldStyleClass)
+        updatedClass = _oldstyle._oldStyle(SomeOldStyleClass)
         self.assertEqual(type(updatedClass), type(SomeOldStyleClass))
         self.assertIs(updatedClass, SomeOldStyleClass)
 
@@ -160,13 +107,9 @@ class OldStyleDecoratorTests(unittest.TestCase):
     if _skip:
         test_makesNewStyle.skip = _skip
         test_carriesAttributes.skip = _skip
-        test_withBasesWhenUpgraded.skip = _skip
     else:
         test_noOpByDefault.skip = ("Only relevant when not running under "
                                    "TWISTED_NEWSTYLE=1")
-        test_withoutBasesWhenUpgraded.skip = ("Only relevant when not "
-                                              "running under "
-                                              "TWISTED_NEWSTYLE=1")
 
 
 
