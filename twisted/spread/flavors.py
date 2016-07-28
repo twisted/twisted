@@ -28,7 +28,7 @@ import sys
 from zope.interface import implementer, Interface
 
 from twisted.python import log, reflect
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, unicode
 from twisted.spread.jelly import (
     setUnjellyableForClass, setUnjellyableForClassTree,
     setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
@@ -601,6 +601,8 @@ class RemoteCacheObserver:
         """(internal) action method.
         """
         cacheID = self.broker.cachedRemotelyAs(self.cached)
+        if isinstance(_name, unicode):
+            _name = _name.encode("utf-8")
         if cacheID is None:
             from pb import ProtocolError
             raise ProtocolError("You can't call a cached method when the "
