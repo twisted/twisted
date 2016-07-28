@@ -1004,22 +1004,12 @@ class SecurityOptions:
         """
         # I don't believe any of these types can ever pose a security hazard,
         # except perhaps "reference"...
-        self.allowedTypes = {b"None": 1,
-                             b"bool": 1,
-                             b"boolean": 1,
-                             b"string": 1,
-                             b"str": 1,
-                             b"int": 1,
-                             b"float": 1,
-                             b"datetime": 1,
-                             b"time": 1,
-                             b"date": 1,
-                             b"timedelta": 1,
-                             b"NoneType": 1}
-        self.allowedTypes[b'unicode'] = 1
-        self.allowedTypes[b'decimal'] = 1
-        self.allowedTypes[b'set'] = 1
-        self.allowedTypes[b'frozenset'] = 1
+        self.allowedTypes = {
+            b"None": 1, b"bool": 1, b"boolean": 1, b"string": 1, b"str": 1,
+            b"int": 1, b"float": 1, b"datetime": 1, b"time": 1, b"date": 1,
+            b"timedelta": 1, b"NoneType": 1, b'unicode': 1, b'decimal': 1,
+            b'set': 1, b'frozenset': 1,
+        }
         self.allowedModules = {}
         self.allowedClasses = {}
 
