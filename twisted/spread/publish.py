@@ -16,7 +16,6 @@ import time
 
 from twisted.internet import defer
 from twisted.spread import banana, jelly, flavors
-from twisted.python.compat import _PY3
 
 
 class Publishable(flavors.Cacheable):

@@ -10,7 +10,6 @@ from __future__ import absolute_import, division
 import datetime
 import decimal
 
-from twisted.python.compat import unicode
 from twisted.spread import jelly, pb
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport

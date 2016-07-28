@@ -10,13 +10,9 @@ from io import BytesIO
 from twisted.trial import unittest
 from twisted.spread import banana
 from twisted.python import failure
-from twisted.python.compat import long, iterbytes, _bytesChr as chr, _PY3, _range
+from twisted.python.compat import long, iterbytes, _bytesChr as chr, _PY3
 from twisted.internet import protocol, main
-from twisted.python import failure
-from twisted.python.compat import iterbytes, _PY3, _bytesChr as chr
-from twisted.spread import banana
 from twisted.test.proto_helpers import StringTransport
-from twisted.trial import unittest
 
 if _PY3:
     _maxint = 9223372036854775807

@@ -30,7 +30,6 @@ To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 from __future__ import absolute_import, division
 
 import random
-import types
 from hashlib import md5
 
 from zope.interface import implementer, Interface
@@ -44,7 +43,6 @@ from twisted.cred.credentials import IAnonymous, ICredentials
 from twisted.cred.credentials import IUsernameHashedPassword, Anonymous
 from twisted.persisted import styles
 from twisted.python.components import registerAdapter
-from twisted.python.compat import _EXPECT_NEWSTYLE
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 from twisted.spread.jelly import jelly, unjelly, globalSecurity, _newInstance
