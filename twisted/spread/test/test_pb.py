@@ -13,9 +13,9 @@ only specific tests for old API.
 
 from __future__ import absolute_import, division
 
-from io import BytesIO
 import sys, os, time, gc, weakref
 
+from io import BytesIO as StringIO
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
@@ -55,7 +55,7 @@ class DummyRealm(object):
                 return iface, DummyPerspective(avatarId), lambda: None
 
 
-class IOPump(object):
+class IOPump:
     """
     Utility to pump data between clients and servers for protocol testing.
 
@@ -111,9 +111,9 @@ class IOPump(object):
         for byte in iterbytes(sData):
             self.client.dataReceived(byte)
         if cData or sData:
-            return True
+            return 1
         else:
-            return False
+            return 0
 
 
 
@@ -131,8 +131,8 @@ def connectedServerAndClient(realm=None):
     factory = pb.PBServerFactory(portal.Portal(realm, [checker]))
     serverBroker = factory.buildProtocol(('127.0.0.1',))
 
-    clientTransport = BytesIO()
-    serverTransport = BytesIO()
+    clientTransport = StringIO()
+    serverTransport = StringIO()
     clientBroker.makeConnection(protocol.FileWrapper(clientTransport))
     serverBroker.makeConnection(protocol.FileWrapper(serverTransport))
     pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
@@ -1341,7 +1341,7 @@ class NewCredTests(unittest.TestCase):
         it doesn't raise any exceptions or log any errors.
         """
         serverProto = self.factory.buildProtocol(('127.0.0.1', 12345))
-        serverProto.makeConnection(protocol.FileWrapper(BytesIO()))
+        serverProto.makeConnection(protocol.FileWrapper(StringIO()))
         serverProto.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
 
