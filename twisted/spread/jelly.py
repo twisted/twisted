@@ -89,7 +89,7 @@ with warnings.catch_warnings():
     except ImportError:
         # sets module is deprecated in Python 2.6, and gone in
         # Python 3
-        pass
+        _sets = None
     else:
         _SetTypes.append(_sets.Set)
         _ImmutableSetTypes.append(_sets.ImmutableSet)
