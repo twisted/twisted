@@ -330,7 +330,7 @@ class Observer(pb.Referenceable):
     def remote_notify(self, other, obj):
         self.obj = obj
         self.notified = self.notified + 1
-        other.callRemote('unobserve', self)
+        other.callRemote('unobserve',self)
 
 
 class NewStyleCopy(pb.Copyable, pb.RemoteCopy, object):
@@ -559,8 +559,8 @@ class BrokerTests(unittest.TestCase):
             def remote_throw(self, a, b):
                 a.callRemote('catch', b)
 
-        s.setNameForLocal(b"y", Y())
-        y = c.remoteForName(b"y")
+        s.setNameForLocal("y", Y())
+        y = c.remoteForName("y")
         x = X()
         z = X()
         y.callRemote('throw', x, z)
@@ -577,10 +577,10 @@ class BrokerTests(unittest.TestCase):
         for x, y in (c, s), (s, c):
             # test reflexivity
             foo = SimpleRemote()
-            x.setNameForLocal(b"foo", foo)
-            bar = y.remoteForName(b"foo")
+            x.setNameForLocal("foo", foo)
+            bar = y.remoteForName("foo")
             self.expectedThunkResult = 8
-            bar.callRemote('thunk', self.expectedThunkResult - 1
+            bar.callRemote('thunk',self.expectedThunkResult - 1
                 ).addCallbacks(self.thunkResultGood, self.thunkErrorBad)
             # Send question.
             pump.pump()
@@ -598,8 +598,8 @@ class BrokerTests(unittest.TestCase):
         e = []
         c, s, pump = connectedServerAndClient()
         foo = NestedRemote()
-        s.setNameForLocal(b"foo", foo)
-        x = c.remoteForName(b"foo")
+        s.setNameForLocal("foo", foo)
+        x = c.remoteForName("foo")
         for igno in xrange(pb.MAX_BROKER_REFS + 10):
             if s.transport.closed or c.transport.closed:
                 break
@@ -613,8 +613,8 @@ class BrokerTests(unittest.TestCase):
     def test_copy(self):
         c, s, pump = connectedServerAndClient()
         foo = NestedCopy()
-        s.setNameForLocal(b"foo", foo)
-        x = c.remoteForName(b"foo")
+        s.setNameForLocal("foo", foo)
+        x = c.remoteForName("foo")
         x.callRemote('getCopy'
             ).addCallbacks(self.thunkResultGood, self.thunkErrorBad)
         pump.pump()
@@ -630,8 +630,8 @@ class BrokerTests(unittest.TestCase):
         # sure that you can *UN*observe when you have an observer architecture.
         a = Observable()
         b = Observer()
-        s.setNameForLocal(b"a", a)
-        ra = c.remoteForName(b"a")
+        s.setNameForLocal("a", a)
+        ra = c.remoteForName("a")
         ra.callRemote('observe',b)
         pump.pump()
         a.notify(1)
@@ -646,8 +646,8 @@ class BrokerTests(unittest.TestCase):
     def test_defer(self):
         c, s, pump = connectedServerAndClient()
         d = DeferredRemote()
-        s.setNameForLocal(b"d", d)
-        e = c.remoteForName(b"d")
+        s.setNameForLocal("d", d)
+        e = c.remoteForName("d")
         pump.pump(); pump.pump()
         results = []
         e.callRemote('doItLater').addCallback(results.append)
@@ -704,7 +704,6 @@ class BrokerTests(unittest.TestCase):
         o3.callRemote("getCache").addCallback(complex.append)
         o3.callRemote("getCache").addCallback(complex.append)
         pump.flush()
-
         # `worst things first'
         self.assertEqual(complex[0].x, 1)
         self.assertEqual(complex[0].y, 2)
@@ -715,20 +714,19 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(complex[0].foo, 4)
         self.assertEqual(len(coll), 2)
         cp = coll[0][0]
-        if not _PY3:
-            self.assertIdentical(cp.checkMethod().im_self, cp,
-                                 "potential refcounting issue")
+        self.assertIdentical(cp.checkMethod().__self__ if _PY3 else
+                             cp.checkMethod().im_self, cp,
+                             "potential refcounting issue")
         self.assertIdentical(cp.checkSelf(), cp,
                              "other potential refcounting issue")
         col2 = []
-        o2.callRemote('putCache', cp).addCallback(col2.append)
+        o2.callRemote('putCache',cp).addCallback(col2.append)
         pump.flush()
         # The objects were the same (testing lcache identity)
         self.assertTrue(col2[0])
-
         # test equality of references to methods
         self.assertEqual(o2.remoteMethod("getCache"),
-                         o2.remoteMethod("getCache"))
+                          o2.remoteMethod("getCache"))
 
         # now, refcounting (similar to testRefCount)
         luid = cp.luid
@@ -941,8 +939,8 @@ class PagingTests(unittest.TestCase):
         """
         c, s, pump = connectedServerAndClient()
         pagerizer = FilePagerizer(self.filename, None)
-        s.setNameForLocal(b"bar", pagerizer)
-        x = c.remoteForName(b"bar")
+        s.setNameForLocal("bar", pagerizer)
+        x = c.remoteForName("bar")
         l = []
         util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
@@ -998,8 +996,8 @@ class DisconnectionTests(unittest.TestCase):
     def test_badSerialization(self):
         c, s, pump = connectedServerAndClient()
         pump.pump()
-        s.setNameForLocal(b"o", BadCopySet())
-        g = c.remoteForName(b"o")
+        s.setNameForLocal("o", BadCopySet())
+        g = c.remoteForName("o")
         l = []
         g.callRemote("setBadCopy", BadCopyable()).addErrback(l.append)
         pump.flush()
@@ -1008,10 +1006,10 @@ class DisconnectionTests(unittest.TestCase):
     def test_disconnection(self):
         c, s, pump = connectedServerAndClient()
         pump.pump()
-        s.setNameForLocal(b"o", SimpleRemote())
+        s.setNameForLocal("o", SimpleRemote())
 
         # get a client reference to server object
-        r = c.remoteForName(b"o")
+        r = c.remoteForName("o")
         pump.pump()
         pump.pump()
         pump.pump()
@@ -1194,7 +1192,7 @@ class NewCredLeakTests(unittest.TestCase):
 
         # log in from the client
         connectionBroken = []
-        root = clientBroker.remoteForName(b"root")
+        root = clientBroker.remoteForName("root")
         d = root.callRemote("login", b'guest')
         def cbResponse(x):
             challenge, challenger = x
