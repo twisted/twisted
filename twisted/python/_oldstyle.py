@@ -8,10 +8,9 @@ Utilities to assist in the "flag day" new-style object transition.
 
 from __future__ import absolute_import, division
 
-import os
 import types
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _shouldEnableNewStyle, _PY3
 from twisted.python.util import _replaceIf
 
 
@@ -20,27 +19,10 @@ def passthru(arg):
     Return C{arg}. Do nothing.
 
     @param arg: The arg to return.
+
     @return: C{arg}
     """
     return arg
-
-
-
-def _shouldEnableNewStyle():
-    """
-    Returns whether or not we should enable the new-style conversion of
-    old-style classes. It inspects the environment for C{TWISTED_NEWSTYLE},
-    accepting an empty string, C{no}, C{false}, C{False}, and C{0} as falsey
-    values and everything else as a truthy value.
-
-    @rtype: L{bool}
-    """
-    value = os.environ.get('TWISTED_NEWSTYLE', '')
-
-    if value in ['', 'no', 'false', 'False', '0']:
-        return False
-    else:
-        return True
 
 
 
@@ -81,4 +63,5 @@ def _oldStyle(cls):
     @return: A new-style version of C{cls}.
     """
     _ensureOldClass(cls)
-    return type(cls.__name__, (object,), cls.__dict__)
+    _bases = cls.__bases__ + (object,)
+    return type(cls.__name__, _bases, cls.__dict__)
