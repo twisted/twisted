@@ -495,7 +495,7 @@ testModules = [
     "twisted.test.test_adbapi",
     "twisted.test.test_amp",
     "twisted.test.test_application",
-    "twisted.test.test_banana",
+    "twisted.spread.test.test_banana",
     "twisted.test.test_compat",
     "twisted.test.test_context",
     "twisted.test.test_cooperator",
