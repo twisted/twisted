@@ -571,7 +571,8 @@ class RemoteCacheMethod:
         if cacheID is None:
             from pb import ProtocolError
             raise ProtocolError("You can't call a cached method when the object hasn't been given to the peer yet.")
-        return self.broker._sendMessage(b'cache', self.perspective, cacheID, self.name, args, kw)
+        return self.broker._sendMessage(b'cache', self.perspective, cacheID,
+                                        self.name, args, kw)
 
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's L{RemoteCache}.
