@@ -132,30 +132,43 @@ unpersistable_atom = b"unpersistable"# u
 unjellyableRegistry = {}
 unjellyableFactoryRegistry = {}
 
-_NO_STATE = object()
 
-def _newInstance(cls, state=_NO_STATE):
+
+def _createBlank(cls):
+    """
+    Given an object, if that object is a type (or a legacy old-style class),
+    return a new, blank instance of that type which has not had C{__init__}
+    called on it.  If the object is not a type, return C{None}.
+
+    @param cls: The type (or class) to create an instance of.
+    @type cls: L{ClassType}, L{type}, or something else that cannot be
+        instantiated.
+
+    @return: a new blank instance or L{None} if C{cls} is not a class or type.
+    """
+    if isinstance(cls, type):
+        return cls.__new__(cls)
+    if not _PY3 and isinstance(cls, ClassType):
+        return InstanceType(cls)
+
+
+
+def _newInstance(cls, state):
     """
     Make a new instance of a class without calling its __init__ method.
     Supports both new- and old-style classes.
 
-    @param state: A C{dict} used to update C{inst.__dict__} or C{_NO_STATE}
-        to skip this part of initialization.
+    @param state: A C{dict} used to update C{inst.__dict__} either directly or
+        via C{__setstate__}, if available.
 
     @return: A new instance of C{cls}.
     """
-    if _PY3 or not isinstance(cls, ClassType):
-        # new-style
-        inst = cls.__new__(cls)
-
-        if state is not _NO_STATE:
-            inst.__dict__ = state # Copy 'InstanceType' behaviour
-    else:
-        if state is not _NO_STATE:
-            inst = InstanceType(cls, state)
-        else:
-            inst = InstanceType(cls)
-    return inst
+    instance = _createBlank(cls)
+    def defaultSetter(state):
+        instance.__dict__ = state
+    setter = getattr(instance, "__setstate__", defaultSetter)
+    setter(state)
+    return instance
 
 
 
@@ -628,62 +641,66 @@ class _Unjellier:
         return o
 
 
+    def _maybePostUnjelly(self, unjellied):
+        """
+        If the given object has support for the C{postUnjelly} hook, set it up
+        to be called at the end of deserialization.
+
+        @param unjellied: an object that has already been unjellied.
+
+        @return: C{unjellied}
+        """
+        if hasattr(unjellied, 'postUnjelly'):
+            self.postCallbacks.append(unjellied.postUnjelly)
+        return unjellied
+
+
     def unjelly(self, obj):
         if type(obj) is not list:
             return obj
-        jelType = obj[0]
-
-        if not self.taster.isTypeAllowed(jelType):
-            raise InsecureJelly(jelType)
-        regClass = unjellyableRegistry.get(jelType)
+        jelTypeBytes = obj[0]
+        if not self.taster.isTypeAllowed(jelTypeBytes):
+            raise InsecureJelly(jelTypeBytes)
+        regClass = unjellyableRegistry.get(jelTypeBytes)
         if regClass is not None:
-            if not _PY3 and isinstance(regClass, ClassType):
-                inst = _Dummy() # XXX chomp, chomp
-                inst.__class__ = regClass
-                method = inst.unjellyFor
-            elif isinstance(regClass, type):
-                # regClass.__new__ does not call regClass.__init__
-                inst = regClass.__new__(regClass)
-                method = inst.unjellyFor
-            else:
-                method = regClass # this is how it ought to be done
-            val = method(self, obj)
-            if hasattr(val, 'postUnjelly'):
-                self.postCallbacks.append(inst.postUnjelly)
-            return val
-        regFactory = unjellyableFactoryRegistry.get(jelType)
+            method = getattr(_createBlank(regClass), "unjellyFor", regClass)
+            return self._maybePostUnjelly(method(self, obj))
+        regFactory = unjellyableFactoryRegistry.get(jelTypeBytes)
         if regFactory is not None:
-            state = self.unjelly(obj[1])
-            inst = regFactory(state)
-            if hasattr(inst, 'postUnjelly'):
-                self.postCallbacks.append(inst.postUnjelly)
-            return inst
+            return self._maybePostUnjelly(regFactory(self.unjelly(obj[1])))
 
-        if not isinstance(jelType, str):
-            jelType = jelType.decode('utf8')
-
-        thunk = getattr(self, '_unjelly_%s' % jelType, None)
+        jelTypeText = nativeString(jelTypeBytes)
+        thunk = getattr(self, '_unjelly_%s' % jelTypeText, None)
         if thunk is not None:
-            ret = thunk(obj[1:])
+            return thunk(obj[1:])
         else:
-            nameSplit = jelType.split('.')
+            nameSplit = jelTypeText.split('.')
             modName = '.'.join(nameSplit[:-1])
             if not self.taster.isModuleAllowed(modName):
                 raise InsecureJelly(
-                    "Module %s not allowed (in type %s)." % (modName, jelType))
-            clz = namedObject(jelType)
+                    "Module %s not allowed (in type %s)." % (modName, jelTypeText))
+            clz = namedObject(jelTypeText)
             if not self.taster.isClassAllowed(clz):
-                raise InsecureJelly("Class %s not allowed." % jelType)
-            if hasattr(clz, "__setstate__"):
-                ret = _newInstance(clz)
-                state = self.unjelly(obj[1])
-                ret.__setstate__(state)
-            else:
-                state = self.unjelly(obj[1])
-                ret = _newInstance(clz, state)
-            if hasattr(clz, 'postUnjelly'):
-                self.postCallbacks.append(ret.postUnjelly)
-        return ret
+                raise InsecureJelly("Class %s not allowed." % jelTypeText)
+            return self._genericUnjelly(clz, obj[1])
+
+
+    def _genericUnjelly(self, cls, state):
+        """
+        Unjelly a type for which no specific unjellier is registered, but which
+        is nonetheless allowed.
+
+        @param cls: the class of the instance we are unjellying.
+        @type cls: L{ClassType} or L{type}
+
+        @param state: The jellied representation of the object's state; its
+            C{__dict__} unless it has a C{__setstate__} that takes something
+            else.
+        @type state: L{list}
+
+        @return: the new, unjellied instance.
+        """
+        return self._maybePostUnjelly(_newInstance(cls, self.unjelly(state)))
 
 
     def _unjelly_None(self, exp):
@@ -894,17 +911,8 @@ class _Unjellier:
 
         clz = self.unjelly(rest[0])
         if not _PY3 and type(clz) is not types.ClassType:
-            raise InsecureJelly("Instance found with non-class class.")
-        if hasattr(clz, "__setstate__"):
-            inst = _newInstance(clz, {})
-            state = self.unjelly(rest[1])
-            inst.__setstate__(state)
-        else:
-            state = self.unjelly(rest[1])
-            inst = _newInstance(clz, state)
-        if hasattr(clz, 'postUnjelly'):
-            self.postCallbacks.append(inst.postUnjelly)
-        return inst
+            raise InsecureJelly("Legacy 'instance' found with new-style class")
+        return self._genericUnjelly(clz, rest[1])
 
 
     def _unjelly_unpersistable(self, rest):
@@ -931,40 +939,6 @@ class _Unjellier:
             raise TypeError('instance method changed')
         return im
 
-
-
-class _Dummy:
-    """
-    (Internal) Dummy class, used for unserializing instances.
-    """
-
-
-
-class _DummyNewStyle(object):
-    """
-    (Internal) Dummy class, used for unserializing instances of new-style
-    classes.
-    """
-
-
-def _newDummyLike(instance):
-    """
-    Create a new instance like C{instance}.
-
-    The new instance has the same class and instance dictionary as the given
-    instance.
-
-    @return: The new instance.
-    """
-    if isinstance(instance.__class__, type):
-        # New-style class
-        dummy = _DummyNewStyle()
-    else:
-        # Classic class
-        dummy = _Dummy()
-    dummy.__class__ = instance.__class__
-    dummy.__dict__ = instance.__dict__
-    return dummy
 
 
 #### Published Interface.

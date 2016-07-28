@@ -32,7 +32,8 @@ from twisted.python.compat import _PY3, unicode
 from twisted.spread.jelly import (
     setUnjellyableForClass, setUnjellyableForClassTree,
     setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
-    _newDummyLike, setInstanceState, getInstanceState)
+    setInstanceState, getInstanceState, _createBlank
+)
 
 # compatibility
 setCopierForClass = setUnjellyableForClass
@@ -452,21 +453,21 @@ class RemoteCache(RemoteCopy, Serializable):
             return setInstanceState(self, unjellier, jellyList)
         self.broker = unjellier.invoker
         self.luid = jellyList[1]
-        cProxy = _newDummyLike(self)
+        borgCopy = self._borgify()
         # XXX questionable whether this was a good design idea...
-        init = getattr(cProxy, "__init__", None)
+        init = getattr(borgCopy, "__init__", None)
         if init:
             init()
         unjellier.invoker.cacheLocally(jellyList[1], self)
-        cProxy.setCopyableState(unjellier.unjelly(jellyList[2]))
+        borgCopy.setCopyableState(unjellier.unjelly(jellyList[2]))
         # Might have changed due to setCopyableState method; we'll assume that
         # it's bad form to do so afterwards.
-        self.__dict__ = cProxy.__dict__
+        self.__dict__ = borgCopy.__dict__
         # chomp, chomp -- some existing code uses "self.__dict__ =", some uses
         # "__dict__.update".  This is here in order to handle both cases.
         self.broker = unjellier.invoker
         self.luid = jellyList[1]
-        return cProxy
+        return borgCopy
 
 ##     def __really_del__(self):
 ##         """Final finalization call, made after all remote references have been lost.
@@ -498,11 +499,37 @@ class RemoteCache(RemoteCopy, Serializable):
         except:
             log.deferr()
 
+
+    def _borgify(self):
+        """
+        Create a new object that shares its state (i.e. its C{__dict__}) and
+        type with this object, but does not share its identity.
+
+        This is an instance of U{the Borg design pattern
+        <https://code.activestate.com/recipes/66531/>} originally described by
+        Alex Martelli, but unlike the example given there, this is not a
+        replacement for a Singleton.  Instead, it is for lifecycle tracking
+        (and distributed garbage collection).  The purpose of these separate
+        objects is to have a separate object tracking each application-level
+        reference to the root L{RemoteCache} object being tracked by the
+        broker, and to have their C{__del__} methods be invoked.
+
+        This may be achievable via a weak value dictionary to track the root
+        L{RemoteCache} instances instead, but this implementation strategy
+        predates the availability of weak references in Python.
+
+        @return: The new instance.
+        @rtype: C{self.__class__}
+        """
+        blank = _createBlank(self.__class__)
+        blank.__dict__ = self.__dict__
+        return blank
+
+
+
 def unjellyCached(unjellier, unjellyList):
     luid = unjellyList[1]
-    cNotProxy = unjellier.invoker.cachedLocallyAs(luid)
-    cProxy = _newDummyLike(cNotProxy)
-    return cProxy
+    return unjellier.invoker.cachedLocallyAs(luid)._borgify()
 
 setUnjellyableForClass("cached", unjellyCached)
 
