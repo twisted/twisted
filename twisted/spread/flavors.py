@@ -395,8 +395,8 @@ class RemoteCopy(Unjellyable):
         on my peer's perspective).
         """
         if _PY3:
-            # Make the state keys str again
-            state = {x.decode('utf8') if isinstance(x, bytes) else x:y for x,y in state.items()}
+            state = {x.decode('utf8') if isinstance(x, bytes)
+                     else x:y for x,y in state.items()}
         self.__dict__ = state
 
     def unjellyFor(self, unjellier, jellyList):
