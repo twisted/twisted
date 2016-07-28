@@ -10,20 +10,26 @@ from twisted.conch.insults.insults import ServerProtocol, ClientProtocol
 from twisted.conch.insults.insults import CS_UK, CS_US, CS_DRAWING, CS_ALTERNATE, CS_ALTERNATE_SPECIAL
 from twisted.conch.insults.insults import G0, G1
 from twisted.conch.insults.insults import modes
+from twisted.python.compat import intToBytes, iterbytes
 
 def _getattr(mock, name):
     return super(Mock, mock).__getattribute__(name)
 
+
 def occurrences(mock):
     return _getattr(mock, 'occurrences')
 
+
 def methods(mock):
     return _getattr(mock, 'methods')
+
 
 def _append(mock, obj):
     occurrences(mock).append(obj)
 
 default = object()
+
+
 
 class Mock(object):
     callReturnValue = default
@@ -40,6 +46,7 @@ class Mock(object):
         if callReturnValue is not default:
             self.callReturnValue = callReturnValue
 
+
     def __call__(self, *a, **kw):
         returnValue = _getattr(self, 'callReturnValue')
         if returnValue is default:
@@ -47,6 +54,7 @@ class Mock(object):
         # _getattr(self, 'occurrences').append(('__call__', returnValue, a, kw))
         _append(self, ('__call__', returnValue, a, kw))
         return returnValue
+
 
     def __getattribute__(self, name):
         methods = _getattr(self, 'methods')
@@ -57,6 +65,8 @@ class Mock(object):
         # _getattr(self, 'occurrences').append((name, attrValue))
         _append(self, (name, attrValue))
         return attrValue
+
+
 
 class MockMixin:
     def assertCall(self, occurrence, methodName, expectedPositionalArgs=(),
@@ -104,7 +114,7 @@ class ServerArrowKeysTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
 
     # All the arrow keys once
-    TEST_BYTES = '\x1b[A\x1b[B\x1b[C\x1b[D'
+    TEST_BYTES = b'\x1b[A\x1b[B\x1b[C\x1b[D'
 
     def verifyResults(self, transport, proto, parser):
         ByteGroupingsMixin.verifyResults(self, transport, proto, parser)
@@ -122,21 +132,23 @@ class PrintableCharactersTests(ByteGroupingsMixin, unittest.TestCase):
     # Some letters and digits, first on their own, then capitalized,
     # then modified with alt
 
-    TEST_BYTES = 'abc123ABC!@#\x1ba\x1bb\x1bc\x1b1\x1b2\x1b3'
+    TEST_BYTES = b'abc123ABC!@#\x1ba\x1bb\x1bc\x1b1\x1b2\x1b3'
 
     def verifyResults(self, transport, proto, parser):
         ByteGroupingsMixin.verifyResults(self, transport, proto, parser)
 
-        for char in 'abc123ABC!@#':
+        for char in iterbytes(b'abc123ABC!@#'):
             result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (char, None))
             self.assertEqual(occurrences(result), [])
 
-        for char in 'abc123':
+        for char in iterbytes(b'abc123'):
             result = self.assertCall(occurrences(proto).pop(0), "keystrokeReceived", (char, parser.ALT))
             self.assertEqual(occurrences(result), [])
 
         occs = occurrences(proto)
         self.assertFalse(occs, "%r should have been []" % (occs,))
+
+
 
 class ServerFunctionKeysTests(ByteGroupingsMixin, unittest.TestCase):
     """Test for parsing and dispatching function keys (F1 - F12)
@@ -144,11 +156,11 @@ class ServerFunctionKeysTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
 
     byteList = []
-    for byteCodes in ('OP', 'OQ', 'OR', 'OS', # F1 - F4
-                  '15~', '17~', '18~', '19~', # F5 - F8
-                  '20~', '21~', '23~', '24~'): # F9 - F12
-        byteList.append('\x1b[' + byteCodes)
-    TEST_BYTES = ''.join(byteList)
+    for byteCodes in (b'OP', b'OQ', b'OR', b'OS', # F1 - F4
+                  b'15~', b'17~', b'18~', b'19~', # F5 - F8
+                  b'20~', b'21~', b'23~', b'24~'): # F9 - F12
+        byteList.append(b'\x1b[' + byteCodes)
+    TEST_BYTES = b''.join(byteList)
     del byteList, byteCodes
 
     def verifyResults(self, transport, proto, parser):
@@ -159,13 +171,15 @@ class ServerFunctionKeysTests(ByteGroupingsMixin, unittest.TestCase):
             self.assertEqual(occurrences(result), [])
         self.assertFalse(occurrences(proto))
 
+
+
 class ClientCursorMovementTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ClientProtocol
 
-    d2 = "\x1b[2B"
-    r4 = "\x1b[4C"
-    u1 = "\x1b[A"
-    l2 = "\x1b[2D"
+    d2 = b"\x1b[2B"
+    r4 = b"\x1b[4C"
+    u1 = b"\x1b[A"
+    l2 = b"\x1b[2D"
     # Move the cursor down two, right four, up one, left two, up one, left two
     TEST_BYTES = d2 + r4 + u1 + l2 + u1 + l2
     del d2, r4, u1, l2
@@ -191,7 +205,11 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
 
     def testSimpleCardinals(self):
         self.parser.dataReceived(
-            ''.join([''.join(['\x1b[' + str(n) + ch for n in ('', 2, 20, 200)]) for ch in 'BACD']))
+            b''.join(
+                    [b''.join([b'\x1b[' + n + ch
+                             for n in (b'', intToBytes(2), intToBytes(20), intToBytes(200))]
+                           ) for ch in iterbytes(b'BACD')
+                    ]))
         occs = occurrences(self.proto)
 
         for meth in ("Down", "Up", "Forward", "Backward"):
@@ -201,7 +219,7 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occs)
 
     def testScrollRegion(self):
-        self.parser.dataReceived('\x1b[5;22r\x1b[r')
+        self.parser.dataReceived(b'\x1b[5;22r\x1b[r')
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "setScrollRegion", (5, 22))
@@ -212,7 +230,7 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occs)
 
     def testHeightAndWidth(self):
-        self.parser.dataReceived("\x1b#3\x1b#4\x1b#5\x1b#6")
+        self.parser.dataReceived(b"\x1b#3\x1b#4\x1b#5\x1b#6")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "doubleHeightLine", (True,))
@@ -230,7 +248,10 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
 
     def testCharacterSet(self):
         self.parser.dataReceived(
-            ''.join([''.join(['\x1b' + g + n for n in 'AB012']) for g in '()']))
+            b''.join(
+                [b''.join([b'\x1b' + g + n for n in iterbytes(b'AB012')])
+                    for g in iterbytes(b'()')
+                ]))
         occs = occurrences(self.proto)
 
         for which in (G0, G1):
@@ -239,8 +260,9 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
                 self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testShifting(self):
-        self.parser.dataReceived("\x15\x14")
+        self.parser.dataReceived(b"\x15\x14")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "shiftIn")
@@ -250,8 +272,9 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testSingleShifts(self):
-        self.parser.dataReceived("\x1bN\x1bO")
+        self.parser.dataReceived(b"\x1bN\x1bO")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "singleShift2")
@@ -261,8 +284,9 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testKeypadMode(self):
-        self.parser.dataReceived("\x1b=\x1b>")
+        self.parser.dataReceived(b"\x1b=\x1b>")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "applicationKeypadMode")
@@ -272,8 +296,9 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testCursor(self):
-        self.parser.dataReceived("\x1b7\x1b8")
+        self.parser.dataReceived(b"\x1b7\x1b8")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "saveCursor")
@@ -283,16 +308,18 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testReset(self):
-        self.parser.dataReceived("\x1bc")
+        self.parser.dataReceived(b"\x1bc")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "reset")
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testIndex(self):
-        self.parser.dataReceived("\x1bD\x1bM\x1bE")
+        self.parser.dataReceived(b"\x1bD\x1bM\x1bE")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "index")
@@ -305,11 +332,12 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testModes(self):
         self.parser.dataReceived(
-            "\x1b[" + ';'.join(map(str, [modes.KAM, modes.IRM, modes.LNM])) + "h")
+            b"\x1b[" + b';'.join(map(intToBytes, [modes.KAM, modes.IRM, modes.LNM])) + b"h")
         self.parser.dataReceived(
-            "\x1b[" + ';'.join(map(str, [modes.KAM, modes.IRM, modes.LNM])) + "l")
+            b"\x1b[" + b';'.join(map(intToBytes, [modes.KAM, modes.IRM, modes.LNM])) + b"l")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "setModes", ([modes.KAM, modes.IRM, modes.LNM],))
@@ -319,9 +347,10 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testErasure(self):
         self.parser.dataReceived(
-            "\x1b[K\x1b[1K\x1b[2K\x1b[J\x1b[1J\x1b[2J\x1b[3P")
+            b"\x1b[K\x1b[1K\x1b[2K\x1b[J\x1b[1J\x1b[2J\x1b[3P")
         occs = occurrences(self.proto)
 
         for meth in ("eraseToLineEnd", "eraseToLineBeginning", "eraseLine",
@@ -334,8 +363,9 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testLineDeletion(self):
-        self.parser.dataReceived("\x1b[M\x1b[3M")
+        self.parser.dataReceived(b"\x1b[M\x1b[3M")
         occs = occurrences(self.proto)
 
         for arg in (1, 3):
@@ -343,8 +373,9 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
             self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testLineInsertion(self):
-        self.parser.dataReceived("\x1b[L\x1b[3L")
+        self.parser.dataReceived(b"\x1b[L\x1b[3L")
         occs = occurrences(self.proto)
 
         for arg in (1, 3):
@@ -352,10 +383,11 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
             self.assertFalse(occurrences(result))
         self.assertFalse(occs)
 
+
     def testCursorPosition(self):
         methods(self.proto)['reportCursorPosition'] = (6, 7)
-        self.parser.dataReceived("\x1b[6n")
-        self.assertEqual(self.transport.value(), "\x1b[7;8R")
+        self.parser.dataReceived(b"\x1b[6n")
+        self.assertEqual(self.transport.value(), b"\x1b[7;8R")
         occs = occurrences(self.proto)
 
         result = self.assertCall(occs.pop(0), "reportCursorPosition")
@@ -371,10 +403,10 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         connected.
         """
         occs = occurrences(self.proto)
-        self.parser.dataReceived('a')
-        self.assertCall(occs.pop(0), "write", ("a",))
-        self.parser.dataReceived('bc')
-        self.assertCall(occs.pop(0), "write", ("bc",))
+        self.parser.dataReceived(b'a')
+        self.assertCall(occs.pop(0), "write", (b"a",))
+        self.parser.dataReceived(b'bc')
+        self.assertCall(occs.pop(0), "write", (b"bc",))
 
 
     def _applicationDataTest(self, data, calls):
@@ -391,8 +423,8 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         call to C{write} before the terminal's C{shiftIn} method is called.
         """
         self._applicationDataTest(
-            'ab\x15', [
-                ("write", ("ab",)),
+            b'ab\x15', [
+                ("write", (b"ab",)),
                 ("shiftIn",)])
 
 
@@ -402,8 +434,8 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         call to C{write} before the terminal's C{shiftOut} method is called.
         """
         self._applicationDataTest(
-            'ab\x14', [
-                ("write", ("ab",)),
+            b'ab\x14', [
+                ("write", (b"ab",)),
                 ("shiftOut",)])
 
 
@@ -414,8 +446,8 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         called.
         """
         self._applicationDataTest(
-            'ab\x08', [
-                ("write", ("ab",)),
+            b'ab\x08', [
+                ("write", (b"ab",)),
                 ("cursorBackward",)])
 
 
@@ -427,14 +459,14 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         """
         # Test a short escape
         self._applicationDataTest(
-            'ab\x1bD', [
-                ("write", ("ab",)),
+            b'ab\x1bD', [
+                ("write", (b"ab",)),
                 ("index",)])
 
         # And a long escape
         self._applicationDataTest(
-            'ab\x1b[4h', [
-                ("write", ("ab",)),
+            b'ab\x1b[4h', [
+                ("write", (b"ab",)),
                 ("setModes", ([4],))])
 
         # There's some other cases too, but they're all handled by the same
@@ -458,7 +490,7 @@ class ServerProtocolOutputTests(unittest.TestCase):
         transport = StringTransport()
         protocol.makeConnection(transport)
         protocol.nextLine()
-        self.assertEqual(transport.value(), "\r\n")
+        self.assertEqual(transport.value(), b"\r\n")
 
 
 
