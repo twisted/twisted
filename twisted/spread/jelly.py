@@ -74,7 +74,7 @@ from zope.interface import implementer
 
 # Twisted Imports
 from twisted.python.compat import (
-    unicode, long, _PY3, _range, _EXPECT_NEWSTYLE, nativeString
+    unicode, long, _PY3, _EXPECT_NEWSTYLE, nativeString
 )
 from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
@@ -784,7 +784,7 @@ class _Unjellier:
 
 
     def _unjelly_tuple(self, lst):
-        l = _range(len(lst))
+        l = list(range(len(lst)))
         finished = 1
         for elem in l:
             if isinstance(self.unjellyInto(l, elem, lst[elem]), NotKnown):
@@ -796,7 +796,7 @@ class _Unjellier:
 
 
     def _unjelly_list(self, lst):
-        l = _range(len(lst))
+        l = list(range(len(lst)))
         for elem in l:
             self.unjellyInto(l, elem, lst[elem])
         return l
@@ -811,7 +811,7 @@ class _Unjellier:
 
         @param containerType: the type of C{set} to use.
         """
-        l = _range(len(lst))
+        l = list(range(len(lst)))
         finished = True
         for elem in l:
             data = self.unjellyInto(l, elem, lst[elem])
