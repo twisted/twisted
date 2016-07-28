@@ -70,10 +70,29 @@ from functools import reduce
 import copy
 import datetime
 
+try:
+    from types import (ClassType as _OldStyleClass,
+                       InstanceType as _OldStyleInstance)
+except ImportError:
+    # On Python 3 and higher, ClassType and InstanceType
+    # are gone.  Use an empty tuple to pass to isinstance()
+    # tests without throwing an exception.
+    _OldStyleClass = ()
+    _OldStyleInstance = ()
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=DeprecationWarning)
+    try:
+        import sets as _sets
+    except ImportError:
+        # sets module is deprecated in Python 2.6, and gone in
+        # Python 3
+        _sets = None
+
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, long, _PY3, nativeString
+from twisted.python.compat import unicode, long, nativeString
 from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -81,20 +100,10 @@ from twisted.persisted.crefutil import _Container
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
+from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 
-if not _PY3:
-    from types import ClassType, InstanceType
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=DeprecationWarning)
-        import sets as _sets
-else:
-    ClassType = type
-
-from types import MethodType, ModuleType, FunctionType
-
-NoneType = type(None)
 DictTypes = (dict,)
 
 None_atom = b"None"                  # N
@@ -139,15 +148,15 @@ def _createBlank(cls):
     called on it.  If the object is not a type, return C{None}.
 
     @param cls: The type (or class) to create an instance of.
-    @type cls: L{ClassType}, L{type}, or something else that cannot be
+    @type cls: L{_OldStyleClass}, L{type}, or something else that cannot be
         instantiated.
 
     @return: a new blank instance or L{None} if C{cls} is not a class or type.
     """
     if isinstance(cls, type):
         return cls.__new__(cls)
-    if not _PY3 and isinstance(cls, ClassType):
-        return InstanceType(cls)
+    if not _PY3 and isinstance(cls, _OldStyleClass):
+        return _OldStyleInstance(cls)
 
 
 
@@ -173,7 +182,7 @@ def _newInstance(cls, state):
 def _maybeClass(classnamep):
     isObject = isinstance(classnamep, type)
 
-    if isObject or ((not _PY3) and isinstance(classnamep, ClassType)):
+    if isObject or ((not _PY3) and isinstance(classnamep, _OldStyleClass)):
         classnamep = qual(classnamep)
 
     if not isinstance(classnamep, bytes):
@@ -481,7 +490,7 @@ class _Jellier:
                 (objType is long) or
                 (objType is float)):
                 return obj
-            elif objType is MethodType:
+            elif objType is types.MethodType:
                 if _PY3:
                     raise ValueError("Can't jelly methods on Python 3")
 
@@ -492,14 +501,14 @@ class _Jellier:
 
             elif objType is unicode:
                 return [b'unicode', obj.encode('UTF-8')]
-            elif objType is NoneType:
+            elif objType is type(None):
                 return [b'None']
-            elif objType is FunctionType:
+            elif objType is types.FunctionType:
                 name = obj.__name__
                 return [b'function', str(pickle.whichmodule(obj, obj.__name__))
                         + '.' +
                         name]
-            elif objType is ModuleType:
+            elif objType is types.ModuleType:
                 return [b'module', obj.__name__]
             elif objType is bool:
                 return [b'boolean', obj and b'true' or b'false']
@@ -507,7 +516,7 @@ class _Jellier:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return [b'datetime', '%s %s %s %s %s %s %s' % (
+                return [b'datetime', b'%s %s %s %s %s %s %s' % (
                     obj.year, obj.month, obj.day, obj.hour,
                     obj.minute, obj.second, obj.microsecond)]
             elif objType is datetime.time:
@@ -521,7 +530,7 @@ class _Jellier:
             elif objType is datetime.timedelta:
                 return [b'timedelta', '%s %s %s' % (obj.days, obj.seconds,
                                                    obj.microseconds)]
-            elif issubclass(objType, type) or (not _PY3 and objType is ClassType):
+            elif issubclass(objType, (type, _OldStyleClass)):
                 return [b'class', qual(obj).encode('utf-8')]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
@@ -565,7 +574,7 @@ class _Jellier:
                             qual(obj.__class__), sxp)
                 return self.preserve(obj, sxp)
         else:
-            if objType is InstanceType:
+            if objType is _OldStyleInstance:
                 raise InsecureJelly("Class not allowed for instance: %s %s" %
                                     (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
@@ -687,7 +696,7 @@ class _Unjellier:
         is nonetheless allowed.
 
         @param cls: the class of the instance we are unjellying.
-        @type cls: L{ClassType} or L{type}
+        @type cls: L{_OldStyleClass} or L{type}
 
         @param state: The jellied representation of the object's state; its
             C{__dict__} unless it has a C{__setstate__} that takes something
@@ -862,7 +871,7 @@ class _Unjellier:
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(cname)
         objType = type(klaus)
-        if objType not in (ClassType, type):
+        if objType not in (_OldStyleClass, type):
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
                     cname, klaus))
@@ -906,7 +915,7 @@ class _Unjellier:
             category=DeprecationWarning, filename="", lineno=0)
 
         clz = self.unjelly(rest[0])
-        if not _PY3 and type(clz) is not types.ClassType:
+        if not _PY3 and type(clz) is not _OldStyleClass:
             raise InsecureJelly("Legacy 'instance' found with new-style class")
         return self._genericUnjelly(clz, rest[1])
 
@@ -922,7 +931,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if type(im_class) is not ClassType:
+        if type(im_class) is not _OldStyleClass:
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:
