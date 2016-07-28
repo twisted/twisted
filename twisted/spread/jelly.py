@@ -1040,10 +1040,8 @@ class SecurityOptions:
         for typ in types:
             if isinstance(typ, unicode):
                 typ = typ.encode('utf-8')
-
             if not isinstance(typ, bytes):
                 typ = qual(typ)
-
             self.allowedTypes[typ] = 1
 
 
