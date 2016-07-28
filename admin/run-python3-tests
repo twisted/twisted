@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.3
+#!/usr/bin/env python3
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.

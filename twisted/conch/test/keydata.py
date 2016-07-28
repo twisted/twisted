@@ -53,6 +53,16 @@ DSAData = {
               "684264272082256183140297951")
 }
 
+privateECDSA_openssh = b"""-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIEyU1YOT2JxxofwbJXIjGftdNcJK55aQdNrhIt2xYQz0oAoGCCqGSM49
+AwEHoUQDQgAEqKZfUNnv5CPRKl948xujWlvrIaQBvmXt24LWXznnIPu0R9B+qTtt
+zu/jpZ7WEszLPo5tQFiCQ3/fifjYXi+l4A==
+-----END EC PRIVATE KEY-----"""
+
+publicECDSA_openssh = (b"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAA"
+b"AAIbmlzdHAyNTYAAABBBKimX1DZ7+Qj0SpfePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v"
+b"46We1hLMyz6ObUBYgkN/34n42F4vpeA= comment")
+
 publicRSA_openssh = (b"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBE"
 b"vLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYL"
 b"h5KmRpslkYHRivcJSkbh/C+BR3utDS555mV comment")

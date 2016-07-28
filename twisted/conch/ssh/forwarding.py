@@ -74,14 +74,14 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
 
     @ivar hostport: C{(host, port)} requested by client as forwarding
         destination.
-    @type hostport: C{tupple} or a C{sequence}
+    @type hostport: L{tuple} or a C{sequence}
 
     @ivar client: Protocol connected to the forwarding destination.
     @type client: L{protocol.Protocol}
 
     @ivar clientBuf: Data received while forwarding channel is not yet
         connected.
-    @type clientBuf: C{bytes}
+    @type clientBuf: L{bytes}
 
     @var  _reactor: Reactor used for TCP connections.
     @type _reactor: A reactor.
