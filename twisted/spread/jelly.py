@@ -491,9 +491,6 @@ class _Jellier:
                 (objType is float)):
                 return obj
             elif objType is types.MethodType:
-                if _PY3:
-                    raise ValueError("Can't jelly methods on Python 3")
-
                 return [b"method",
                         obj.im_func.__name__,
                         self.jelly(obj.im_self),

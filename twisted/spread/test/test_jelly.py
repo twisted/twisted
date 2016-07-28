@@ -461,7 +461,7 @@ class JellyTests(unittest.TestCase):
 
     def test_lotsaTypes(self):
         """
-        Test for all types currently supported in jelly, in Python 2
+        Test for all types currently supported in jelly
         """
         a = A()
         jelly.unjelly(jelly.jelly(a))
@@ -470,24 +470,6 @@ class JellyTests(unittest.TestCase):
                  (1, 2, 3), None, A, unittest, {'a': 1}, A.amethod]
         for i in items:
             self.assertEqual(i, jelly.unjelly(jelly.jelly(i)))
-
-
-    def test_lotsaTypesPy3(self):
-        """
-        Test for all types currently supported in jelly, in Python 3
-        """
-        a = A()
-        jelly.unjelly(jelly.jelly(a))
-        items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3,
-                 (1, 2, 3), None, A, unittest, {'a': 1}]
-        for i in items:
-            self.assertEqual(i, jelly.unjelly(jelly.jelly(i)))
-
-
-    if _PY3:
-        test_lotsaTypes.skip = "Only relevant on Py2"
-    else:
-        test_lotsaTypesPy3.skip = "Only relevant on Py3"
 
 
     def test_setState(self):
