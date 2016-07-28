@@ -516,9 +516,10 @@ class _Jellier:
                 if obj.tzinfo:
                     raise NotImplementedError(
                         "Currently can't jelly datetime objects with tzinfo")
-                return [b'datetime', b'%s %s %s %s %s %s %s' % (
+                return [b'datetime', ' '.join([unicode(x) for x in (
                     obj.year, obj.month, obj.day, obj.hour,
                     obj.minute, obj.second, obj.microsecond)]
+                ).encode('utf-8')]
             elif objType is datetime.time:
                 if obj.tzinfo:
                     raise NotImplementedError(
