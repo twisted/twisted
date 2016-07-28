@@ -29,7 +29,7 @@ from zope.interface import implementer, Interface
 
 from twisted.python import log, reflect
 from twisted.python.compat import _PY3, unicode, comparable, cmp
-from twisted.spread.jelly import (
+from .jelly import (
     setUnjellyableForClass, setUnjellyableForClassTree,
     setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
     setInstanceState, getInstanceState, _createBlank
