@@ -36,7 +36,8 @@ from zope.interface import implementer, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
-from twisted.python.compat import unicode, _bytesChr as chr, xrange
+from twisted.python.compat import (unicode, _bytesChr as chr, xrange,
+                                   comparable, cmp)
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials
@@ -130,6 +131,7 @@ class RemoteError(Exception):
 
 
 
+@comparable
 class RemoteMethod:
     """
     This is a translucent reference to a remote message.
@@ -140,12 +142,6 @@ class RemoteMethod:
         """
         self.obj = obj
         self.name = name
-
-    def __eq__(self, other):
-        if type(self) != type(other):
-            raise NotImplemented
-
-        return (self.obj, self.name) == (other.obj, other.name)
 
 
     def __cmp__(self, other):
@@ -266,6 +262,7 @@ class AsReferenceable(Referenceable):
 
 
 @implementer(IUnjellyable)
+@comparable
 class RemoteReference(Serializable, styles.Ephemeral):
     """
     A translucent reference to a remote object.
@@ -369,14 +366,6 @@ class RemoteReference(Serializable, styles.Ephemeral):
         """Hash me.
         """
         return self.luid
-
-
-    def __eq__(self, other):
-        if not type(self) == type(other):
-            raise NotImplemented
-
-        return self.luid == other.luid
-
 
     def __del__(self):
         """Do distributed reference counting on finalization.

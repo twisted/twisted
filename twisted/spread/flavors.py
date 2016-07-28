@@ -28,7 +28,7 @@ import sys
 from zope.interface import implementer, Interface
 
 from twisted.python import log, reflect
-from twisted.python.compat import _PY3, unicode
+from twisted.python.compat import _PY3, unicode, comparable, cmp
 from twisted.spread.jelly import (
     setUnjellyableForClass, setUnjellyableForClassTree,
     setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
@@ -546,6 +546,7 @@ def unjellyLocal(unjellier, unjellyList):
 
 setUnjellyableForClass("local", unjellyLocal)
 
+@comparable
 class RemoteCacheMethod:
     """A method on a reference to a L{RemoteCache}.
     """
@@ -574,6 +575,9 @@ class RemoteCacheMethod:
         return self.broker._sendMessage(b'cache', self.perspective, cacheID,
                                         self.name, args, kw)
 
+
+
+@comparable
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's L{RemoteCache}.
 
@@ -601,14 +605,6 @@ class RemoteCacheObserver:
     def __repr__(self):
         return "<RemoteCacheObserver(%s, %s, %s) at %s>" % (
             self.broker, self.cached, self.perspective, id(self))
-
-    def __eq__(self, other):
-        if not type(self) == type(other):
-            raise NotImplemented
-
-        o = (other.broker, other.perspective, other.cached)
-        s = (self.broker, self.perspective, self.cached)
-        return s == o
 
     def __hash__(self):
         """
