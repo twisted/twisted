@@ -12,6 +12,7 @@ Handling of RSA and DSA keys.
 from __future__ import absolute_import, division
 
 import base64
+import binascii
 import itertools
 import warnings
 
@@ -854,7 +855,9 @@ class Key(object):
 
         @rtype: L{str}
         """
-        return ':'.join([x.encode('hex') for x in md5(self.blob()).digest()])
+        return nativeString(
+            b':'.join([binascii.hexlify(x)
+                       for x in iterbytes(md5(self.blob()).digest())]))
 
 
     def type(self):

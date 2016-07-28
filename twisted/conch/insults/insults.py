@@ -360,7 +360,7 @@ class ITerminalTransport(iinternet.ITransport):
 
 
 CSI = b'\x1b'
-CST = {b'~': 'tilde'}
+CST = {b'~': b'tilde'}
 
 class modes:
     """
@@ -566,7 +566,9 @@ class ServerProtocol(protocol.Protocol):
 
     def _handleControlSequence(self, buf):
         buf = b'\x1b[' + buf
-        f = getattr(self.controlSequenceParser, CST.get(buf[-1], buf[-1]).decode("ascii"), None)
+        f = getattr(self.controlSequenceParser,
+                    CST.get(buf[-1:], buf[-1:]).decode("ascii"),
+                    None)
         if f is None:
             self.unhandledControlSequence(buf)
         else:
@@ -578,8 +580,9 @@ class ServerProtocol(protocol.Protocol):
 
 
     def _handleLowFunctionControlSequence(self, ch):
-        map = {'P': self.F1, 'Q': self.F2, 'R': self.F3, 'S': self.F4}
-        keyID = map.get(ch)
+        functionKeys = {b'P': self.F1, b'Q': self.F2,
+                        b'R': self.F3, b'S': self.F4}
+        keyID = functionKeys.get(ch)
         if keyID is not None:
             self.terminalProtocol.keystrokeReceived(keyID, None)
         else:
@@ -641,7 +644,7 @@ class ServerProtocol(protocol.Protocol):
                 handler.unhandledControlSequence(buf + b'R')
             elif buf.startswith(b'\x1b['):
                 report = buf[2:]
-                parts = report.split(';')
+                parts = report.split(b';')
                 if len(parts) != 2:
                     handler.unhandledControlSequence(buf + b'R')
                 else:
@@ -694,29 +697,33 @@ class ServerProtocol(protocol.Protocol):
     def cursorUp(self, n=1):
         assert n >= 1
         self.cursorPos.y = max(self.cursorPos.y - n, 0)
-        self.write(b'\x1b[%dA' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) +  b'A')
 
 
     def cursorDown(self, n=1):
         assert n >= 1
         self.cursorPos.y = min(self.cursorPos.y + n, self.termSize.y - 1)
-        self.write(b'\x1b[%dB' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'B')
 
 
     def cursorForward(self, n=1):
         assert n >= 1
         self.cursorPos.x = min(self.cursorPos.x + n, self.termSize.x - 1)
-        self.write(b'\x1b[%dC' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'C')
 
 
     def cursorBackward(self, n=1):
         assert n >= 1
         self.cursorPos.x = max(self.cursorPos.x - n, 0)
-        self.write(b'\x1b[%dD' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'D')
 
 
     def cursorPosition(self, column, line):
-        self.write(b'\x1b[%d;%dH' % (line + 1, column + 1))
+        self.write(b'\x1b[' +
+                   intToBytes(line + 1)  +
+                   b'; '+
+                   intToBytes(column + 1) +
+                   b'H')
 
 
     def cursorHome(self):
@@ -753,24 +760,24 @@ class ServerProtocol(protocol.Protocol):
 
     def setModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write(b'\x1b[%sh' %
-                   (b';'.join([intToBytes(mode) for mode in modes])))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[' + modesBytes + b'h')
 
 
     def setPrivateModes(self, modes):
-        self.write(b'\x1b[?%sh' %
-                   (b';'.join([intToBytes(mode) for mode in modes])))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[?' + modesBytes + b'h')
 
 
     def resetModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write(b'\x1b[%sl' %
-                   (b';'.join([intToBytes(mode) for mode in modes])))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[' + modesBytes + b'l')
 
 
     def resetPrivateModes(self, modes):
-        self.write(b'\x1b[?%sl' %
-                   (b';'.join([intToBytes(mode) for mode in modes])))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[?' + modesBytes + b'l')
 
 
     def applicationKeypadMode(self):
@@ -879,15 +886,15 @@ class ServerProtocol(protocol.Protocol):
 
 
     def deleteCharacter(self, n=1):
-        self.write(b'\x1b[%dP' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'P')
 
 
     def insertLine(self, n=1):
-        self.write(b'\x1b[%dL' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'L')
 
 
     def deleteLine(self, n=1):
-        self.write(b'\x1b[%dM' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'M')
 
 
     def setScrollRegion(self, first=None, last=None):
@@ -899,7 +906,7 @@ class ServerProtocol(protocol.Protocol):
             last = '%d' % (last,)
         else:
             last = ''
-        self.write(b'\x1b[%s;%sr' % (first, last))
+        self.write(b'\x1b[' + first + b';' + last + b'r')
 
 
     def resetScrollRegion(self):
@@ -1106,7 +1113,7 @@ class ClientProtocol(protocol.Protocol):
                     except ValueError:
                         handler.unhandledControlSequence(b'\x1b[' + buf + ch)
                     else:
-                        getattr(handler, n.decode("ascii"))(m)
+                        getattr(handler, n)(m)
             return simple
 
         for (ch, fName) in (('A', 'Up'),
@@ -1120,7 +1127,7 @@ class ClientProtocol(protocol.Protocol):
         def h(self, proto, handler, buf):
             # XXX - Handle '?' to introduce ANSI-Compatible private modes.
             try:
-                modes = map(int, buf.split(b';'))
+                modes = [int(mode) for mode in buf.split(b';')]
             except ValueError:
                 handler.unhandledControlSequence(b'\x1b[' + buf + b'h')
             else:
@@ -1130,7 +1137,7 @@ class ClientProtocol(protocol.Protocol):
         def l(self, proto, handler, buf):
             # XXX - Handle '?' to introduce ANSI-Compatible private modes.
             try:
-                modes = map(int, buf.split(';'))
+                modes = [int(mode) for mode in buf.split(b';')]
             except ValueError:
                 handler.unhandledControlSequence(b'\x1b[' + buf + 'l')
             else:
@@ -1138,7 +1145,7 @@ class ClientProtocol(protocol.Protocol):
 
 
         def r(self, proto, handler, buf):
-            parts = buf.split(';')
+            parts = buf.split(b';')
             if len(parts) == 1:
                 handler.setScrollRegion(None, None)
             elif len(parts) == 2:
@@ -1222,7 +1229,11 @@ class ClientProtocol(protocol.Protocol):
         def n(self, proto, handler, buf):
             if buf == b'6':
                 x, y = handler.reportCursorPosition()
-                proto.transport.write(b'\x1b[%d;%dR' % (x + 1, y + 1))
+                proto.transport.write(b'\x1b['
+                                      + intToBytes(x+1)
+                                      + b';'
+                                      + intToBytes(y+1)
+                                      + b'R')
             else:
                 handler.unhandledControlSequence(b'\x1b[' + buf + b'n')
 
@@ -1232,7 +1243,7 @@ class ClientProtocol(protocol.Protocol):
                 handler.selectGraphicRendition(NORMAL)
             else:
                 attrs = []
-                for a in buf.split(';'):
+                for a in buf.split(b';'):
                     try:
                         a = int(a)
                     except ValueError:
