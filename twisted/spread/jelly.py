@@ -499,11 +499,8 @@ class _Jellier:
                 aSelf = obj.__self__ if _PY3 else obj.im_self
                 aFunc = obj.__func__ if _PY3 else obj.im_func
                 aClass = aSelf.__class__ if _PY3 else obj.im_class
-                return [b"method",
-                        aFunc.__name__,
-                        self.jelly(aSelf),
+                return [b"method", aFunc.__name__, self.jelly(aSelf),
                         self.jelly(aClass)]
-
             elif objType is unicode:
                 return [b'unicode', obj.encode('UTF-8')]
             elif objType is type(None):
