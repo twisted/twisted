@@ -73,9 +73,7 @@ import datetime
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import (
-    unicode, long, _PY3, _EXPECT_NEWSTYLE, nativeString
-)
+from twisted.python.compat import unicode, long, _PY3, nativeString
 from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -262,17 +260,15 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
     if prefix:
         prefix = "%s." % prefix
 
-    if _EXPECT_NEWSTYLE:
-        compared = type
-    else:
-        compared = types.ClassType
-
-
-    for i in dir(module):
-        i_ = getattr(module, i)
-        if type(i_) == compared:
-            if issubclass(i_, baseClass):
-                setUnjellyableForClass('%s%s' % (prefix, i), i_)
+    for name in dir(module):
+        loaded = getattr(module, name)
+        try:
+            yes = issubclass(loaded, baseClass)
+        except TypeError:
+            "It's not a class."
+        else:
+            if yes:
+                setUnjellyableForClass('%s%s' % (prefix, name), loaded)
 
 
 
