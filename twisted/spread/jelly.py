@@ -73,7 +73,9 @@ import datetime
 from zope.interface import implementer
 
 # Twisted Imports
-from twisted.python.compat import unicode, long, _PY3, _range, _EXPECT_NEWSTYLE
+from twisted.python.compat import (
+    unicode, long, _PY3, _range, _EXPECT_NEWSTYLE, nativeString
+)
 from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -159,19 +161,10 @@ def _newInstance(cls, state=_NO_STATE):
 
 
 def _maybeClass(classnamep):
-    try:
-        object
-    except NameError:
-        isObject = False
-    else:
-        isObject = isinstance(classnamep, type)
+    isObject = isinstance(classnamep, type)
 
-    if not _PY3:
-        if isinstance(classnamep, ClassType) or isObject:
-            return qual(classnamep)
-    else:
-        if isObject:
-            return qual(classnamep)
+    if isObject or ((not _PY3) and isinstance(classnamep, ClassType)):
+        classnamep = qual(classnamep)
 
     if not isinstance(classnamep, bytes):
         classnamep = classnamep.encode('utf-8')
@@ -501,7 +494,7 @@ class _Jellier:
             elif objType is ModuleType:
                 return [b'module', obj.__name__]
             elif objType is bool:
-                return [b'boolean', obj and 'true' or 'false']
+                return [b'boolean', obj and b'true' or b'false']
             elif objType is datetime.datetime:
                 if obj.tzinfo:
                     raise NotImplementedError(
@@ -838,7 +831,7 @@ class _Unjellier:
 
 
     def _unjelly_module(self, rest):
-        moduleName = rest[0]
+        moduleName = nativeString(rest[0])
         if type(moduleName) != str:
             raise InsecureJelly(
                 "Attempted to unjelly a module with a non-string name.")
@@ -850,28 +843,30 @@ class _Unjellier:
 
 
     def _unjelly_class(self, rest):
-        clist = rest[0].split('.')
-        modName = '.'.join(clist[:-1])
+        cname = nativeString(rest[0])
+        clist = cname.split(nativeString('.'))
+        modName = nativeString('.').join(clist[:-1])
         if not self.taster.isModuleAllowed(modName):
             raise InsecureJelly("module %s not allowed" % modName)
-        klaus = namedObject(rest[0])
+        klaus = namedObject(cname)
         objType = type(klaus)
         if objType not in (ClassType, type):
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
-                    rest[0], klaus))
+                    cname, klaus))
         if not self.taster.isClassAllowed(klaus):
             raise InsecureJelly("class not allowed: %s" % qual(klaus))
         return klaus
 
 
     def _unjelly_function(self, rest):
-        modSplit = rest[0].split(b'.')
-        modName = b'.'.join(modSplit[:-1])
+        fname = nativeString(rest[0])
+        modSplit = fname.split(nativeString('.'))
+        modName = nativeString('.').join(modSplit[:-1])
         if not self.taster.isModuleAllowed(modName):
             raise InsecureJelly("Module not allowed: %s" % modName)
         # XXX do I need an isFunctionAllowed?
-        function = namedObject(rest[0])
+        function = namedObject(fname)
         return function
 
 
