@@ -536,6 +536,7 @@ testModules = [
     "twisted.test.test_task",
     "twisted.test.test_tcp",
     "twisted.test.test_tcp_internals",
+    "twisted.test.test_text",
     "twisted.test.test_threadable",
     "twisted.test.test_threadpool",
     "twisted.test.test_threads",
