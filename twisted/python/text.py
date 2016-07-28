@@ -6,6 +6,7 @@
 """
 Miscellany of text-munging functions.
 """
+from twisted.python.compat import unicode, ioType
 
 
 def stringyString(object, indentation=''):
@@ -187,7 +188,10 @@ def strFile(p, f, caseSensitive=True):
 
     @rtype: C{bool}
     """
-    buf = ""
+    t = ioType(f)
+    if t not in (unicode, bytes):
+        t = bytes
+    buf = t()
     buf_len = max(len(p), 2**2**2**2)
     if not caseSensitive:
         p = p.lower()
