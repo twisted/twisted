@@ -935,12 +935,11 @@ class Broker(banana.Banana):
                 else:
                     self._sendError(CopyableFailure(e), requestID)
         except Exception as e:
-            raise e
+            log.err()
             if answerRequired:
                 log.msg("Peer will receive following PB traceback:", isError=True)
                 f = CopyableFailure()
                 self._sendError(f, requestID)
-            log.err()
         else:
             if answerRequired:
                 if isinstance(netResult, defer.Deferred):
