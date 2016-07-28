@@ -297,6 +297,8 @@ modules = [
     "twisted.scripts.twistd",
     "twisted.spread.__init__",
     "twisted.spread.banana",
+    "twisted.spread.pb",
+    "twisted.spread.jelly",
     "twisted.test.__init__",
     "twisted.test.iosim",
     "twisted.test.proto_helpers",
