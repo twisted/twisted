@@ -149,7 +149,7 @@ def _newInstance(cls, state=_NO_STATE):
         inst = cls.__new__(cls)
 
         if state is not _NO_STATE:
-            inst.__dict__.update(state) # Copy 'instance' behaviour
+            inst.__dict__ = state # Copy 'InstanceType' behaviour
     else:
         if state is not _NO_STATE:
             inst = InstanceType(cls, state)
