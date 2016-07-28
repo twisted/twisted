@@ -88,8 +88,6 @@ class Serializable(Jellyable):
 
         return id(self)
 
-
-
 class Referenceable(Serializable):
     perspective = None
     """I am an object sent remotely as a direct reference.
