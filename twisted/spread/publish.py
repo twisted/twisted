@@ -33,7 +33,7 @@ class Publishable(flavors.Cacheable):
     def view_getStateToPublish(self, perspective):
         '(internal)'
         return self.getStateToPublishFor(perspective)
-
+    
     def getStateToPublishFor(self, perspective):
         """Implement me to special-case your state for a perspective.
         """
@@ -68,9 +68,8 @@ class RemotePublished(flavors.RemoteCache):
     def getFileName(self, ext='pub'):
         return ("%s-%s-%s.%s" %
                 (self.service, self.perspective, str(self.publishedID), ext))
-
+    
     def setCopyableState(self, state):
-
         self.__dict__.update(state)
         self._activationListeners = []
         try:
@@ -114,7 +113,7 @@ class RemotePublished(flavors.RemoteCache):
         """Implement this method if you want to be notified when your
         publishable subclass is activated.
         """
-
+        
     def callWhenActivated(self, callback):
         """Externally register for notification when this publishable has received all relevant data.
         """
