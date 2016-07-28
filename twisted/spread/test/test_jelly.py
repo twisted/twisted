@@ -13,7 +13,6 @@ import decimal
 from twisted.spread import jelly, pb
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
-from twisted.python.compat import _PY3
 
 
 class TestNode(jelly.Jellyable, object):
