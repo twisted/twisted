@@ -60,6 +60,7 @@ modules = [
     "twisted.conch.error",
     "twisted.conch.interfaces",
     "twisted.conch.insults.__init__",
+    "twisted.conch.insults.client",
     "twisted.conch.insults.colors",
     "twisted.conch.insults.helper",
     "twisted.conch.insults.insults",
@@ -385,6 +386,7 @@ testModules = [
     "twisted.conch.test.test_connection",
     "twisted.conch.test.test_filetransfer",
     "twisted.conch.test.test_forwarding",
+    "twisted.conch.test.test_insults",
     "twisted.conch.test.test_keys",
     "twisted.conch.test.test_knownhosts",
     "twisted.conch.test.test_manhole_tap",
@@ -659,11 +661,6 @@ almostModules = [
     # twisted.conch.test_knownhosts tests parts of the default module
     "twisted.conch.client.default",
     "twisted.conch.client.agent",
-    # twisted.conch.test.test_text and twisted.conch.test.test_window
-    # need these conch modules.  They need more work to get full
-    # Python 3 test coverage
-    "twisted.conch.insults.helper",
-    "twisted.conch.insults.insults",
     # Required for Trial
     "twisted.python.logfile",
     # Missing test coverage, see #6156:
