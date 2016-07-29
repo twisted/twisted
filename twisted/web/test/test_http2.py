@@ -266,6 +266,27 @@ def buildRequestBytes(headers, data, frameFactory=None, streamID=1):
 
 
 
+def framesFromBytes(data):
+    """
+    Given a sequence of bytes, decodes them into frames.
+
+    Note that this method should almost always be called only once, before
+    making some assertions. This is because decoding HTTP/2 frames is extremely
+    stateful, and this function doesn't preserve any of that state between
+    calls.
+
+    @param data: The serialized HTTP/2 frames.
+    @type data: L{bytes}
+
+    @returns: A list of HTTP/2 frames.
+    @rtype: L{list} of L{hyperframe.frame.Frame} subclasses.
+    """
+    buffer = FrameBuffer()
+    buffer.receiveData(data)
+    return list(buffer)
+
+
+
 class ChunkedHTTPHandler(http.Request):
     """
     A HTTP request object that writes chunks of data back to the network based
@@ -452,9 +473,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             a.dataReceived(byte)
 
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             self.assertEqual(len(frames), 4)
             self.assertTrue(all(f.stream_id == 1 for f in frames[1:]))
@@ -494,9 +513,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             a.dataReceived(byte)
 
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # One Settings frame, 8 WindowUpdate frames, one Headers frame,
             # and two Data frames
@@ -554,9 +571,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             a.dataReceived(byte)
 
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # One Settings frame, 8 WindowUpdate frames, one Headers frame,
             # and two Data frames
@@ -612,9 +627,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             a.dataReceived(byte)
 
         def validate(results):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # We expect 1 Settings frame for the connection, and then 11 frames
             # *per stream* (8 WindowUpdate frames, 1 Headers frame,
@@ -698,9 +711,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             a.dataReceived(byte)
 
         def validate(results):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # We expect 1 Settings frame for the connection, and then 6 frames
             # per stream (1 Headers frame, 5 data frames), for a total of 19.
@@ -748,9 +759,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             if b.disconnecting:
                 break
 
-        buffer = FrameBuffer()
-        buffer.receiveData(b.value())
-        frames = list(buffer)
+        frames = framesFromBytes(b.value())
 
         # The send loop never gets to terminate the stream, but *some* data
         # does get sent. We get a Settings frame, a Headers frame, and then the
@@ -790,9 +799,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # We should have only received the Settings frame. It's important that
         # the WindowUpdate frames don't land before data is delivered to the
         # Request.
-        buffer = FrameBuffer()
-        buffer.receiveData(b.value())
-        frames = list(buffer)
+        frames = framesFromBytes(b.value())
         self.assertEqual(len(frames), 1)
 
         # At this point, we can kick off the producing. This will force the
@@ -805,16 +812,12 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # *That* will have also caused the H2Connection object to emit almost
         # all the data it needs. That'll be a Headers frame, as well as two
         # WindowUpdate frames.
-        buffer = FrameBuffer()
-        buffer.receiveData(b.value())
-        frames = list(buffer)
+        frames = framesFromBytes(b.value())
         self.assertEqual(len(frames), 4)
 
         def validate(streamID):
             # Confirm that the response is ok.
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # The only new frames here are the two Data frames.
             self.assertEqual(len(frames), 6)
@@ -862,9 +865,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # The stream will now have been aborted.
         def validate(streamID):
             # Confirm that the response is ok.
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # We expect a Settings frame, two WindowUpdate frames, and a
             # RstStream frame.
@@ -926,9 +927,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # emitted. The two writes are lost because the delayed call never had
         # another chance to execute before the RstStream frame got processed.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             self.assertEqual(len(frames), 2)
             self.assertEqual(frames[1].stream_id, 1)
@@ -989,9 +988,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # emitted. The writes are lost because the callLater never had
         # a chance to execute before the GoAway frame got processed.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             self.assertEqual(len(frames), 2)
             self.assertEqual(frames[1].stream_id, 1)
@@ -1027,9 +1024,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # frames. We're only really interested in validating the first Headers
         # frame which contains the 100.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             self.assertEqual(len(frames), 5)
             self.assertTrue(all(f.stream_id == 1 for f in frames[1:]))
@@ -1082,9 +1077,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
 
         # We expect 2 frames Settings and the 400 Headers.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             self.assertEqual(len(frames), 2)
 
@@ -1133,9 +1126,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # Check that the data was all written out correctly and that the stream
         # state is cleaned up.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Settings, Headers, 7 Data frames.
             self.assertEqual(len(frames), 9)
@@ -1210,9 +1201,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Check that the sending loop sends all the appropriate data.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertTrue('END_STREAM' in frames[-1].flags)
@@ -1282,9 +1271,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         reactor.callLater(0.01, request.finish)
 
         def validateComplete(*args):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertEqual(len(frames), 3)
@@ -1322,9 +1309,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         completionDeferred = a._streamCleanupCallbacks[1]
 
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertTrue('END_STREAM' in frames[-1].flags)
@@ -1393,9 +1378,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # Check that the data was all written out correctly and that the stream
         # state is cleaned up.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # 2 Settings, Headers, 7 Data frames.
             self.assertEqual(len(frames), 9)
@@ -1438,9 +1421,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a.makeConnection(transport)
         a.dataReceived(requestBytes)
 
-        buffer = FrameBuffer()
-        buffer.receiveData(transport.value())
-        frames = list(buffer)
+        frames = framesFromBytes(transport.value())
 
         self.assertEqual(len(frames), 1)
         self.assertNotIn(1, a._streamCleanupCallbacks)
@@ -1513,9 +1494,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Give the sending loop a chance to catch up!
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertTrue('END_STREAM' in frames[-1].flags)
@@ -1611,9 +1590,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Check that the sending loop sends all the appropriate data.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertTrue('END_STREAM' in frames[-1].flags)
@@ -1688,9 +1665,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Check that the sending loop sends all the appropriate data.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertTrue('END_STREAM' in frames[-1].flags)
@@ -1753,9 +1728,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Check that the sending loop sends all the appropriate data.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertTrue('END_STREAM' in frames[-1].flags)
@@ -1809,9 +1782,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Check that the sending loop sends all the appropriate data.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             self.assertEqual(len(frames), 3)
 
@@ -1876,9 +1847,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Check that the sending loop sends all the appropriate data.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             self.assertEqual(len(frames), 3)
 
@@ -1949,9 +1918,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Check that the sending loop sends all the appropriate data.
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertTrue('END_STREAM' in frames[-1].flags)
@@ -1993,9 +1960,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Give the sending loop a chance to catch up!
         def validate(streamID):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertTrue('END_STREAM' in frames[-1].flags)
@@ -2067,9 +2032,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.dataReceived(windowUpdateFrame.serialize())
 
         # Give the sending loop a chance to catch up!
-        buffer = FrameBuffer()
-        buffer.receiveData(b.value())
-        frames = list(buffer)
+        frames = framesFromBytes(b.value())
 
         # Check that the stream is terminated.
         self.assertTrue(
@@ -2107,9 +2070,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
 
         def validate(*args):
             # Give the sending loop a chance to catch up!
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is ended neatly.
             self.assertIn('END_STREAM', frames[-1].flags)
@@ -2179,9 +2140,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
         cleanupCallback = a._streamCleanupCallbacks[1]
 
         def validateNotSent(*args):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             self.assertEqual(len(frames), 2)
             self.assertFalse(
@@ -2197,9 +2156,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
             return cleanupCallback
 
         def validateComplete(*args):
-            buffer = FrameBuffer()
-            buffer.receiveData(b.value())
-            frames = list(buffer)
+            frames = framesFromBytes(b.value())
 
             # Check that the stream is correctly terminated.
             self.assertEqual(len(frames), 4)
@@ -2236,9 +2193,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
         # until the reactor gets to spin. Before it does we'll stop production.
         a.stopProducing()
 
-        buffer = FrameBuffer()
-        buffer.receiveData(b.value())
-        frames = list(buffer)
+        frames = framesFromBytes(b.value())
 
         self.assertEqual(len(frames), 2)
         self.assertFalse(
@@ -2342,9 +2297,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         timeout: namely, that it ends with a GOAWAY frame carrying an
         appropriate error code and last stream ID.
         """
-        buffer = FrameBuffer()
-        buffer.receiveData(data)
-        frames = list(buffer)
+        frames = framesFromBytes(data)
 
         self.assertEqual(len(frames), frameCount)
         self.assertTrue(
