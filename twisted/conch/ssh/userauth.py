@@ -232,7 +232,7 @@ class SSHUserAuthServer(service.SSHService):
         """
         if reason.check(error.IgnoreAuthentication):
             return
-        if self.method != 'none':
+        if self.method != b'none':
             log.msg('%s failed auth %s' % (self.user, self.method))
             if reason.check(UnauthorizedLogin):
                 log.msg('unauthorized login: %s' % reason.getErrorMessage())

@@ -156,8 +156,8 @@ def makeService(options):
 
         sshKey = keys._getPersistentRSAKey(keyLocation,
                                            int(options['sshKeySize']))
-        sshFactory.publicKeys["ssh-rsa"] = sshKey
-        sshFactory.privateKeys["ssh-rsa"] = sshKey
+        sshFactory.publicKeys[b"ssh-rsa"] = sshKey
+        sshFactory.privateKeys[b"ssh-rsa"] = sshKey
 
         sshService = strports.service(options['sshPort'], sshFactory)
         sshService.setServiceParent(svc)

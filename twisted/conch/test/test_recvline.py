@@ -320,7 +320,7 @@ except ImportError:
 else:
     ssh = True
     class SessionChannel(channel.SSHChannel):
-        name = 'session'
+        name = b'session'
 
         def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
             channel.SSHChannel.__init__(self, *a, **kw)
@@ -334,9 +334,9 @@ else:
 
 
         def channelOpen(self, data):
-            term = session.packRequest_pty_req("vt102", (self.height, self.width, 0, 0), '')
-            self.conn.sendRequest(self, 'pty-req', term)
-            self.conn.sendRequest(self, 'shell', '')
+            term = session.packRequest_pty_req(b"vt102", (self.height, self.width, 0, 0), b'')
+            self.conn.sendRequest(self, b'pty-req', term)
+            self.conn.sendRequest(self, b'shell', b'')
 
             self._protocolInstance = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
             self._protocolInstance.factory = self
