@@ -479,9 +479,10 @@ class _SSHMixin(_BaseMixin):
         rlm.userFactory = TestUser
         rlm.chainedProtocolFactory = lambda: insultsServer
 
-        ptl = portal.Portal(
-            rlm,
-            [checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
+        checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        checker.addUser(u, p)
+        ptl = portal.Portal(rlm)
+        ptl.registerChecker(checker)
         sshFactory = ConchFactory(ptl)
 
         sshKey = keys._getPersistentRSAKey(filepath.FilePath(self.mktemp()),
