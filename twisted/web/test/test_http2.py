@@ -1975,24 +1975,30 @@ class H2FlowControlTests(unittest.TestCase):
     def test_unnecessaryWindowUpdateForStream(self):
         """
         When a WindowUpdate frame is received for a stream but no data is
-        currently waiting, nothing exciting happens.
+        currently waiting, that stream is not marked as unblocked and the
+        priority tree continues to assert that no stream can progress.
         """
         f = FrameFactory()
         transport = StringTransport()
         conn = H2Connection()
         conn.requestFactory = DummyHTTPHandler
 
-        # Send the request.
+        # Send the request. We don't actually care about sending the data part:
+        # just the initial HEADERS frame and then a WINDOW_UPDATE. The reason
+        # we do this is that Twisted won't start generating data until after
+        # the request is complete, so we can ensure that there's no data ready
+        # to be sent when the WINDOW_UPDATE comes on.
         frames = buildRequestFrames(
             self.postRequestHeaders, self.postRequestData, f
         )
         frames.insert(1, f.buildWindowUpdateFrame(streamID=1, increment=5))
-        firstBytes = f.preamble()
-        firstBytes += b''.join(f.serialize() for f in frames[:2])
+        data = f.preamble()
+        data += b''.join(f.serialize() for f in frames[:2])
 
         conn.makeConnection(transport)
-        conn.dataReceived(firstBytes)
+        conn.dataReceived(data)
 
+        # All the streams should still be blocked.
         self.assertRaises(priority.DeadlockError, next, conn.priority)
 
 
