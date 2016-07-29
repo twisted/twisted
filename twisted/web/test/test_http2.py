@@ -370,6 +370,10 @@ class HTTP2TestHelpers(unittest.TestCase):
     A superclass that contains no tests but provides test helpers for HTTP/2
     tests.
     """
+    if skipH2:
+        skip = skipH2
+
+
     def assertAllStreamsBlocked(self, connection):
         """
         Confirm that all streams are blocked: that is, the priority tree
@@ -379,11 +383,7 @@ class HTTP2TestHelpers(unittest.TestCase):
 
 
 
-class HTTP2ServerTests(unittest.TestCase):
-    if skipH2:
-        skip = skipH2
-
-
+class HTTP2ServerTests(HTTP2TestHelpers):
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
@@ -1423,10 +1423,6 @@ class H2FlowControlTests(HTTP2TestHelpers):
     """
     Tests that ensure that we handle HTTP/2 flow control limits appropriately.
     """
-    if skipH2:
-        skip = skipH2
-
-
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
@@ -2094,11 +2090,7 @@ class H2FlowControlTests(HTTP2TestHelpers):
         return d.addCallback(validate)
 
 
-class HTTP2TransportChecking(unittest.TestCase):
-    if skipH2:
-        skip = skipH2
-
-
+class HTTP2TransportChecking(HTTP2TestHelpers):
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
@@ -2228,15 +2220,12 @@ class HTTP2TransportChecking(unittest.TestCase):
 
 
 
-class HTTP2SchedulingTests(unittest.TestCase):
+class HTTP2SchedulingTests(HTTP2TestHelpers):
     """
     The H2Connection object schedules certain events (mostly its data sending
     loop) using callbacks from the reactor. These tests validate that the calls
     are scheduled correctly.
     """
-    if skipH2:
-        skip = skipH2
-
     def test_initiallySchedulesOneDataCall(self):
         """
         When a H2Connection is established it schedules one call to be run as
@@ -2259,14 +2248,10 @@ class HTTP2SchedulingTests(unittest.TestCase):
 
 
 
-class HTTP2TimeoutTests(unittest.TestCase):
+class HTTP2TimeoutTests(HTTP2TestHelpers):
     """
     The L{H2Connection} object times out idle connections.
     """
-    if skipH2:
-        skip = skipH2
-
-
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
