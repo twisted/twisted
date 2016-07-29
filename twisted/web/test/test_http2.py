@@ -365,6 +365,20 @@ class DummyPullProducerHandler(http.Request):
 
 
 
+class HTTP2TestHelpers(unittest.TestCase):
+    """
+    A superclass that contains no tests but provides test helpers for HTTP/2
+    tests.
+    """
+    def assertAllStreamsBlocked(self, connection):
+        """
+        Confirm that all streams are blocked: that is, the priority tree
+        believes that none of the streams have data ready to send.
+        """
+        self.assertRaises(priority.DeadlockError, next, connection.priority)
+
+
+
 class HTTP2ServerTests(unittest.TestCase):
     if skipH2:
         skip = skipH2
@@ -1405,7 +1419,7 @@ class HTTP2ServerTests(unittest.TestCase):
 
 
 
-class H2FlowControlTests(unittest.TestCase):
+class H2FlowControlTests(HTTP2TestHelpers):
     """
     Tests that ensure that we handle HTTP/2 flow control limits appropriately.
     """
@@ -1983,23 +1997,21 @@ class H2FlowControlTests(unittest.TestCase):
         conn = H2Connection()
         conn.requestFactory = DummyHTTPHandler
 
-        # Send the request. We don't actually care about sending the data part:
-        # just the initial HEADERS frame and then a WINDOW_UPDATE. The reason
-        # we do this is that Twisted won't start generating data until after
-        # the request is complete, so we can ensure that there's no data ready
-        # to be sent when the WINDOW_UPDATE comes on.
-        frames = buildRequestFrames(
-            self.postRequestHeaders, self.postRequestData, f
+        # Send a request that implies a body is coming. Twisted doesn't send a
+        # response until the entire request is received, so it won't queue any
+        # data yet. Then, fire off a WINDOW_UPDATE frame.
+        frames = []
+        frames.append(
+            f.buildHeadersFrame(headers=self.postRequestHeaders, streamID=1)
         )
-        frames.insert(1, f.buildWindowUpdateFrame(streamID=1, increment=5))
+        frames.append(f.buildWindowUpdateFrame(streamID=1, increment=5))
         data = f.preamble()
-        data += b''.join(f.serialize() for f in frames[:2])
+        data += b''.join(f.serialize() for f in frames)
 
         conn.makeConnection(transport)
         conn.dataReceived(data)
 
-        # All the streams should still be blocked.
-        self.assertRaises(priority.DeadlockError, next, conn.priority)
+        self.assertAllStreamsBlocked(conn)
 
 
     def test_windowUpdateAfterTerminate(self):
