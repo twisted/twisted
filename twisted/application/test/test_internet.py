@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.application.test.test_internet -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -299,6 +300,9 @@ class TimerServiceTests(TestCase):
     """
 
     def setUp(self):
+        """
+        Set up a timer service to test.
+        """
         self.timer = TimerService(2, self.call)
         self.clock = self.timer.clock = task.Clock()
         self.deferred = Deferred()
