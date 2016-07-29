@@ -202,6 +202,21 @@ class EndpointServiceTests(TestCase):
         self.assertEqual(len(logged), 1)
 
 
+    def test_asynchronousFailReportsError(self):
+        """
+        L{StreamServerEndpointService.startService} and
+        L{StreamServerEndpointService.privilegedStartService} should both log
+        an exception when the L{Deferred} returned from their wrapped
+        L{IStreamServerEndpoint.listen} fails asynchronously, even if
+        C{_raiseSynchronously} is set.
+        """
+        self.svc._raiseSynchronously = True
+        self.svc.startService()
+        self.fakeServer.result.errback(ZeroDivisionError())
+        logged = self.flushLoggedErrors(ZeroDivisionError)
+        self.assertEqual(len(logged), 1)
+
+
     def test_synchronousFailReportsError(self):
         """
         Without the C{_raiseSynchronously} compatibility flag, failing
