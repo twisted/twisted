@@ -14,11 +14,20 @@ from twisted.conch.insults import insults
 from twisted.conch import recvline
 
 from twisted.python import reflect, components, filepath
-from twisted.python.compat import iterbytes
+from twisted.python.compat import iterbytes, bytesEnviron
+from twisted.python.runtime import platform
 from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
+
+if platform.isWindows():
+    properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+else:
+    properEnv = bytesEnviron()
+    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+        sys.getfilesystemencoding())
 
 
 class ArrowsTests(unittest.TestCase):
@@ -320,7 +329,7 @@ except ImportError:
 else:
     ssh = True
     class SessionChannel(channel.SSHChannel):
-        name = 'session'
+        name = b'session'
 
         def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
             channel.SSHChannel.__init__(self, *a, **kw)
@@ -334,9 +343,9 @@ else:
 
 
         def channelOpen(self, data):
-            term = session.packRequest_pty_req("vt102", (self.height, self.width, 0, 0), '')
-            self.conn.sendRequest(self, 'pty-req', term)
-            self.conn.sendRequest(self, 'shell', '')
+            term = session.packRequest_pty_req(b"vt102", (self.height, self.width, 0, 0), b'')
+            self.conn.sendRequest(self, b'pty-req', term)
+            self.conn.sendRequest(self, b'shell', b'')
 
             self._protocolInstance = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
             self._protocolInstance.factory = self
@@ -479,9 +488,10 @@ class _SSHMixin(_BaseMixin):
         rlm.userFactory = TestUser
         rlm.chainedProtocolFactory = lambda: insultsServer
 
-        ptl = portal.Portal(
-            rlm,
-            [checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
+        checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        checker.addUser(u, p)
+        ptl = portal.Portal(rlm)
+        ptl.registerChecker(checker)
         sshFactory = ConchFactory(ptl)
 
         sshKey = keys._getPersistentRSAKey(filepath.FilePath(self.mktemp()),
@@ -595,12 +605,12 @@ class _StdioMixin(_BaseMixin):
         if module.endswith('.pyc') or module.endswith('.pyo'):
             module = module[:-1]
         args = [exe, module, reflect.qual(self.serverProtocol)]
-        env = os.environ.copy()
-        env["PYTHONPATH"] = os.pathsep.join(sys.path)
+        if not platform.isWindows():
+            args = [arg.encode(sys.getfilesystemencoding()) for arg in args]
 
         from twisted.internet import reactor
         clientTransport = reactor.spawnProcess(processClient, exe, args,
-                                               env=env, usePTY=True)
+                                               env=properEnv, usePTY=True)
 
         self.recvlineClient = self.testTerminal = testTerminal
         self.processClient = processClient
