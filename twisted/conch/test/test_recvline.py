@@ -14,11 +14,20 @@ from twisted.conch.insults import insults
 from twisted.conch import recvline
 
 from twisted.python import reflect, components, filepath
-from twisted.python.compat import iterbytes
+from twisted.python.compat import iterbytes, bytesEnviron
+from twisted.python.runtime import platform
 from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
+
+if platform.isWindows():
+    properEnv = dict(os.environ)
+    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
+else:
+    properEnv = bytesEnviron()
+    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
+        sys.getfilesystemencoding())
 
 
 class ArrowsTests(unittest.TestCase):
@@ -596,12 +605,10 @@ class _StdioMixin(_BaseMixin):
         if module.endswith('.pyc') or module.endswith('.pyo'):
             module = module[:-1]
         args = [exe, module, reflect.qual(self.serverProtocol)]
-        env = os.environ.copy()
-        env["PYTHONPATH"] = os.pathsep.join(sys.path)
 
         from twisted.internet import reactor
         clientTransport = reactor.spawnProcess(processClient, exe, args,
-                                               env=env, usePTY=True)
+                                               env=properEnv, usePTY=True)
 
         self.recvlineClient = self.testTerminal = testTerminal
         self.processClient = processClient
