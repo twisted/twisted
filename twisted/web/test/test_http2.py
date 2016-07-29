@@ -50,7 +50,7 @@ class FrameFactory(object):
         self.encoder = Encoder()
 
 
-    def preamble(self):
+    def clientConnectionPreface(self):
         return b'PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'
 
 
@@ -465,7 +465,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DummyHTTPHandler
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -503,7 +503,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DummyHTTPHandler
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             self.postRequestHeaders, self.postRequestData, f
         )
@@ -561,7 +561,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             if x != b'content-length'
         ]
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             postRequestHeaders, self.postRequestData, f
         )
@@ -615,7 +615,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             ) for streamID in streamIDs
         ]
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
 
         # Interleave the frames. That is, send one frame from each stream at a
         # time. This wacky line lets us do that.
@@ -702,7 +702,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         frames[2].insert(0, priorityFrame)
 
         frames = itertools.chain.from_iterable(frames)
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += b''.join(frame.serialize() for frame in frames)
 
         a.makeConnection(b)
@@ -740,7 +740,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
 
         # We're going to open a stream and then send a PUSH_PROMISE frame,
         # which is forbidden.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
         requestBytes += f.buildPushPromiseFrame(
             streamID=1,
@@ -782,7 +782,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = ConsumerDummyHandler
 
         # We're going to send in a POST request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             self.postRequestHeaders, self.postRequestData, f
         )
@@ -843,7 +843,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
             self.postRequestHeaders, self.postRequestData, f
         )
         frames[-1].flags = set()  # Remove END_STREAM flag.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += b''.join(f.serialize() for f in frames)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -892,7 +892,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DummyProducerHandler
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -953,7 +953,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DummyProducerHandler
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -1013,7 +1013,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         # Add Expect: 100-continue for this request.
         headers = self.getRequestHeaders + [(b'expect', b'100-continue')]
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(headers, [], f)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -1056,7 +1056,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DummyProducerHandler
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -1104,7 +1104,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DummyProducerHandler
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -1158,7 +1158,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DummyProducerHandler
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -1183,7 +1183,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyPullProducerHandler
 
         # Send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
         )
@@ -1232,7 +1232,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DelayedHTTPHandler
 
         # Send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
         )
@@ -1256,7 +1256,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DelayedHTTPHandler
 
         # Send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
         )
@@ -1290,7 +1290,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DelayedHTTPHandler
 
         # Send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
         )
@@ -1342,7 +1342,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DelayedHTTPHandler
 
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
             {h2.settings.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
@@ -1411,7 +1411,7 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         a = H2Connection()
         a.requestFactory = DummyHTTPHandler
 
-        requestBytes = frameFactory.preamble()
+        requestBytes = frameFactory.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             headers=self.getRequestHeaders, data=[], frameFactory=frameFactory
         )
@@ -1472,7 +1472,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyHTTPHandler
 
         # Shrink the window to 5 bytes, then send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
             {h2.settings.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
@@ -1520,7 +1520,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyProducerHandler
 
         # Shrink the window to 5 bytes, then send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
             {h2.settings.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
@@ -1618,7 +1618,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyProducerHandler
 
         # Shrink the window to 5 bytes, then send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
             {h2.settings.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
@@ -1692,7 +1692,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyProducerHandler
 
         # Shrink the window to 5 bytes, then send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
             {h2.settings.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
@@ -1759,7 +1759,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyProducerHandler
 
         # Send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
         )
@@ -1818,7 +1818,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyProducerHandler
 
         # Send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += buildRequestBytes(
             self.getRequestHeaders, [], f
         )
@@ -1878,7 +1878,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         a.requestFactory = DummyProducerHandler
 
         # Shrink the window to 5 bytes, then send the request.
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += f.buildSettingsFrame(
             {h2.settings.INITIAL_WINDOW_SIZE: 5}
         ).serialize()
@@ -1951,7 +1951,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
             self.postRequestHeaders, self.postRequestData, f
         )
         frames.insert(1, f.buildWindowUpdateFrame(streamID=0, increment=5))
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += b''.join(f.serialize() for f in frames)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -1994,7 +1994,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
             f.buildHeadersFrame(headers=self.postRequestHeaders, streamID=1)
         )
         frames.append(f.buildWindowUpdateFrame(streamID=1, increment=5))
-        data = f.preamble()
+        data = f.clientConnectionPreface()
         data += b''.join(f.serialize() for f in frames)
 
         conn.makeConnection(transport)
@@ -2017,7 +2017,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         frames = buildRequestFrames(
             self.postRequestHeaders, self.postRequestData, f
         )
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += b''.join(f.serialize() for f in frames)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -2054,7 +2054,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         frames = buildRequestFrames(
             self.postRequestHeaders, self.postRequestData, f
         )
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += b''.join(f.serialize() for f in frames)
         a.makeConnection(b)
         # one byte at a time, to stress the implementation.
@@ -2115,7 +2115,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
 
         # Send the request.
         frames = buildRequestFrames(self.getRequestHeaders, [], f)
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += b''.join(f.serialize() for f in frames)
         a.makeConnection(b)
         b.registerProducer(a, True)
@@ -2180,7 +2180,7 @@ class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
 
         # Send the request.
         frames = buildRequestFrames(self.getRequestHeaders, [], f)
-        requestBytes = f.preamble()
+        requestBytes = f.clientConnectionPreface()
         requestBytes += b''.join(f.serialize() for f in frames)
         a.makeConnection(b)
         b.registerProducer(a, True)
@@ -2313,7 +2313,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         time out interval, it closes the connection cleanly.
         """
         frameFactory = FrameFactory()
-        initialData = frameFactory.preamble()
+        initialData = frameFactory.clientConnectionPreface()
 
         reactor, conn, transport = self.initiateH2Connection(
             initialData, requestFactory=DummyHTTPHandler,
@@ -2354,7 +2354,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         )
 
         # Send one byte of the preamble every 99 'seconds'.
-        for byte in iterbytes(frameFactory.preamble()):
+        for byte in iterbytes(frameFactory.clientConnectionPreface()):
             conn.dataReceived(byte)
 
             # Advance the clock.
@@ -2382,7 +2382,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         """
         frameFactory = FrameFactory()
         frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
-        initialData = frameFactory.preamble()
+        initialData = frameFactory.clientConnectionPreface()
         initialData += b''.join(f.serialize() for f in frames)
 
         reactor, conn, transport = self.initiateH2Connection(
@@ -2407,7 +2407,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         """
         frameFactory = FrameFactory()
         frames = buildRequestFrames(self.getRequestHeaders, [], frameFactory)
-        initialData = frameFactory.preamble()
+        initialData = frameFactory.clientConnectionPreface()
         initialData += b''.join(f.serialize() for f in frames)
 
         reactor, conn, transport = self.initiateH2Connection(
