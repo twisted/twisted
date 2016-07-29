@@ -1423,15 +1423,17 @@ class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
         A client that immediately resets after sending the body causes Twisted
         to send no response.
         """
-        f = FrameFactory()
+        frameFactory = FrameFactory()
         transport = StringTransport()
         a = H2Connection()
         a.requestFactory = DummyHTTPHandler
 
-        requestBytes = f.preamble()
-        requestBytes += buildRequestBytes(self.getRequestHeaders, [], f)
-        requestBytes += hyperframe.frame.RstStreamFrame(
-            stream_id=1
+        requestBytes = frameFactory.preamble()
+        requestBytes += buildRequestBytes(
+            headers=self.getRequestHeaders, data=[], frameFactory=frameFactory
+        )
+        requestBytes += frameFactory.buildRstStreamFrame(
+            streamID=1
         ).serialize()
         a.makeConnection(transport)
         a.dataReceived(requestBytes)
