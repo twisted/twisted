@@ -768,7 +768,7 @@ class Key(object):
         """
         Return a pretty representation of this object.
         """
-        if self.type() == '25519':
+        if self.type() == 'ED25519':
             return binascii.hexlify(self._keyObject.serialize())
         elif self.type() == 'EC':
             if self.isPublic():
@@ -960,7 +960,7 @@ class Key(object):
             return 'EC'
         elif isinstance(
                 self._keyObject, (curve25519.Public, curve25519.Private)):
-            return '25519'
+            return 'ED25519'
         else:
             raise RuntimeError(
                 'unknown type of object: %r' % (self._keyObject,))
@@ -981,7 +981,7 @@ class Key(object):
         @return: The key type format.
         @rtype: L{bytes}
         """
-        return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss', '25519': b'ssh-ed25519', 'EC': self.getECKeyName()}[self.type()]
+        return {'RSA': b'ssh-rsa', 'DSA': b'ssh-dss', 'ED25519': b'ssh-ed25519', 'EC': self.getECKeyName()}[self.type()]
 
 
     def size(self):
@@ -995,7 +995,7 @@ class Key(object):
             return 0
         elif self.type() == 'EC':
             return self._keyObject.curve.key_size
-        elif self.type() == '25519':
+        elif self.type() == 'ED25519':
             return 32
         else:
             return self._keyObject.key_size
@@ -1096,7 +1096,7 @@ class Key(object):
             b = (common.NS(data["curve"]) + common.NS(data["curve"][-8:]) + 
                     common.NS(data["n"]))
             return b
-        elif type == '25519':
+        elif type == 'ED25519':
             return (common.NS(b'ssh-ed25519') + common.NS(data))
         else:
             raise BadKeyError("unknown key type %s" % (type,))
@@ -1140,7 +1140,7 @@ class Key(object):
         elif type == 'EC':
             return (common.NS(data['curve']) + common.NS(data["curve"][-8:]) +
                     common.NS(data['p']) + common.MP(data['X']))
-        elif type == '25519':
+        elif type == 'ED25519':
             return (common.NS(b'ssh-ed25519') + common.NS(data))
         else:
             raise BadKeyError("unknown key type %s" % (type,))
@@ -1366,7 +1366,7 @@ class Key(object):
             signature = signer.finalize()
             (r, s) = decode_dss_signature(signature)
             ret = common.NS(common.NS(int_to_bytes(r)) + common.NS(int_to_bytes(s)))
-        elif type == '25519':
+        elif type == 'ED25519':
             sk = nacl.signing.SigningKey(self._keyObject.serialize())
             ret = common.NS(sk.sign(data)[:nacl.bindings.crypto_sign_BYTES])
         else:
@@ -1436,7 +1436,7 @@ class Key(object):
                 h = hashes.SHA512()
                 
             verifier = k.verifier(signature, ec.ECDSA(h))
-        elif keyType == '25519':
+        elif keyType == 'ED25519':
             vk = nacl.signing.VerifyKey(self._keyObject.serialize())
             try:
                 vk.verify(data, common.getNS(signature)[0])
