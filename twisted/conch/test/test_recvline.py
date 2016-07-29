@@ -605,6 +605,8 @@ class _StdioMixin(_BaseMixin):
         if module.endswith('.pyc') or module.endswith('.pyo'):
             module = module[:-1]
         args = [exe, module, reflect.qual(self.serverProtocol)]
+        if not platform.isWindows():
+            args = [arg.encode(sys.getfilesystemencoding()) for arg in args]
 
         from twisted.internet import reactor
         clientTransport = reactor.spawnProcess(processClient, exe, args,
