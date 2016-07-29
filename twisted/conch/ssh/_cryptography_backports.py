@@ -55,7 +55,7 @@ def intToBytes(integer, length=None):
     @type length: L{int} or L{None}
     @param length: The length to pad the result to, or L{None} for no padding.
 
-    @rtype: C{bytes}
+    @rtype: L{bytes}
     @return: The packed integer.
     """
     hexString = '%x' % (integer,)

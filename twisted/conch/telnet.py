@@ -167,17 +167,19 @@ class ITelnetProtocol(iinternet.IProtocol):
             was unhandled does not provide an argument.
         """
 
-    def unhandledSubnegotiation(command, bytes):
+
+    def unhandledSubnegotiation(command, data):
         """
         A subnegotiation command was received but not understood.
 
         @param command: the command being subnegotiated. That is, the first
             byte after the SB command.
         @type command: L{str}, a single character.
-        @param bytes: all other bytes of the subneogation. That is, all but the
+        @param data: all other bytes of the subneogation. That is, all but the
             first bytes between SB and SE, with IAC un-escaping applied.
-        @type bytes: C{list} of L{str}, each a single character
+        @type data: L{bytes}, each a single character
         """
+
 
     def enableLocal(option):
         """
@@ -189,8 +191,9 @@ class ITelnetProtocol(iinternet.IProtocol):
         will be notified.
 
         @param option: the option to be enabled.
-        @type option: L{str}, a single character.
+        @type option: L{bytes}, a single character.
         """
+
 
     def enableRemote(option):
         """
@@ -200,8 +203,9 @@ class ITelnetProtocol(iinternet.IProtocol):
         False otherwise.
 
         @param option: the option to be enabled.
-        @type option: L{str}, a single character.
+        @type option: L{bytes}, a single character.
         """
+
 
     def disableLocal(option):
         """
@@ -211,15 +215,16 @@ class ITelnetProtocol(iinternet.IProtocol):
         disabled.
 
         @param option: the option to be disabled.
-        @type option: L{str}, a single character.
+        @type option: L{bytes}, a single character.
         """
+
 
     def disableRemote(option):
         """
         Indicate that the peer has disabled this option.
 
         @param option: the option to be disabled.
-        @type option: L{str}, a single character.
+        @type option: L{bytes}, a single character.
         """
 
 
@@ -291,12 +296,12 @@ class ITelnetTransport(iinternet.ITransport):
         """
 
 
-    def requestNegotiation(about, bytes):
+    def requestNegotiation(about, data):
         """
         Send a subnegotiation request.
 
         @param about: A byte indicating the feature being negotiated.
-        @param bytes: Any number of bytes containing specific information
+        @param data: Any number of L{bytes} containing specific information
         about the negotiation being requested.  No values in this string
         need to be escaped, as this function will escape any value which
         requires it.
@@ -341,7 +346,7 @@ class TelnetProtocol(protocol.Protocol):
         pass
 
 
-    def unhandledSubnegotiation(self, command, bytes):
+    def unhandledSubnegotiation(self, command, data):
         pass
 
 
@@ -407,8 +412,8 @@ class Telnet(protocol.Protocol):
             DONT: self.telnet_DONT}
 
 
-    def _write(self, bytes):
-        self.transport.write(bytes)
+    def _write(self, data):
+        self.transport.write(data)
 
 
     class _OptionState:
@@ -536,15 +541,17 @@ class Telnet(protocol.Protocol):
             return d
 
 
-    def requestNegotiation(self, about, bytes):
+    def requestNegotiation(self, about, data):
         """
-        Send a negotiation message for the option C{about} with C{bytes} as the
+        Send a negotiation message for the option C{about} with C{data} as the
         payload.
 
+        @param data: the payload
+        @type data: L{bytes}
         @see: L{ITelnetTransport.requestNegotiation}
         """
-        bytes = bytes.replace(IAC, IAC * 2)
-        self._write(IAC + SB + about + bytes + IAC + SE)
+        data = data.replace(IAC, IAC * 2)
+        self._write(IAC + SB + about + data + IAC + SE)
 
 
     def dataReceived(self, data):
@@ -641,7 +648,7 @@ class Telnet(protocol.Protocol):
                 d.errback(reason)
 
 
-    def applicationDataReceived(self, bytes):
+    def applicationDataReceived(self, data):
         """
         Called with application-level data.
         """
@@ -660,19 +667,19 @@ class Telnet(protocol.Protocol):
             cmdFunc(argument)
 
 
-    def unhandledSubnegotiation(self, command, bytes):
+    def unhandledSubnegotiation(self, command, data):
         """
         Called for subnegotiations for which no handler is installed.
         """
 
 
-    def negotiate(self, bytes):
-        command, bytes = bytes[0], bytes[1:]
+    def negotiate(self, data):
+        command, data = data[0], data[1:]
         cmdFunc = self.negotiationMap.get(command)
         if cmdFunc is None:
-            self.unhandledSubnegotiation(command, bytes)
+            self.unhandledSubnegotiation(command, data)
         else:
-            cmdFunc(bytes)
+            cmdFunc(data)
 
 
     def telnet_WILL(self, option):
@@ -879,8 +886,8 @@ class Telnet(protocol.Protocol):
 
 
 class ProtocolTransportMixin:
-    def write(self, bytes):
-        self.transport.write(bytes.replace(b'\n', b'\r\n'))
+    def write(self, data):
+        self.transport.write(data.replace(b'\n', b'\r\n'))
 
 
     def writeSequence(self, seq):
@@ -969,16 +976,16 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
         return self.protocol.disableRemote(option)
 
 
-    def unhandledSubnegotiation(self, command, bytes):
-        self.protocol.unhandledSubnegotiation(command, bytes)
+    def unhandledSubnegotiation(self, command, data):
+        self.protocol.unhandledSubnegotiation(command, data)
 
 
     def unhandledCommand(self, command, argument):
         self.protocol.unhandledCommand(command, argument)
 
 
-    def applicationDataReceived(self, bytes):
-        self.protocol.dataReceived(bytes)
+    def applicationDataReceived(self, data):
+        self.protocol.dataReceived(data)
 
 
     def write(self, data):
@@ -1049,28 +1056,28 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             return False
 
 
-    def telnet_NAWS(self, bytes):
+    def telnet_NAWS(self, data):
         # NAWS is client -> server *only*.  self.protocol will
         # therefore be an ITerminalTransport, the `.protocol'
         # attribute of which will be an ITerminalProtocol.  Maybe.
         # You know what, XXX TODO clean this up.
-        if len(bytes) == 4:
-            width, height = struct.unpack('!HH', b''.join(bytes))
+        if len(data) == 4:
+            width, height = struct.unpack('!HH', b''.join(data))
             self.protocol.terminalProtocol.terminalSize(width, height)
         else:
             log.msg("Wrong number of NAWS bytes")
 
     linemodeSubcommands = {
         LINEMODE_SLC: 'SLC'}
-    def telnet_LINEMODE(self, bytes):
-        linemodeSubcommand = bytes[0]
+    def telnet_LINEMODE(self, data):
+        linemodeSubcommand = data[0]
         if 0:
             # XXX TODO: This should be enabled to parse linemode subnegotiation.
-            getattr(self, 'linemode_' + self.linemodeSubcommands[linemodeSubcommand])(bytes[1:])
+            getattr(self, 'linemode_' + self.linemodeSubcommands[linemodeSubcommand])(data[1:])
 
 
-    def linemode_SLC(self, bytes):
-        chunks = zip(*[iter(bytes)]*3)
+    def linemode_SLC(self, data):
+        chunks = zip(*[iter(data)]*3)
         for slcFunction, slcValue, slcWhat in chunks:
             # Later, we should parse stuff.
             'SLC', ord(slcFunction), ord(slcValue), ord(slcWhat)

@@ -143,7 +143,7 @@ class SSHUserAuthServer(service.SSHService):
             if it failed.
         @rtype: C{defer.Deferred}
         """
-        log.msg('%s trying auth %s' % (user, kind))
+        log.msg('%r trying auth %r' % (user, kind))
         if kind not in self.supportedAuthentications:
             return defer.fail(
                     error.ConchError('unsupported authentication, failing'))
@@ -202,7 +202,7 @@ class SSHUserAuthServer(service.SSHService):
         if not service:
             raise error.ConchError('could not get next service: %s'
                                   % self.nextService)
-        log.msg('%s authenticated with %s' % (self.user, self.method))
+        log.msg('%r authenticated with %r' % (self.user, self.method))
         self.transport.sendPacket(MSG_USERAUTH_SUCCESS, b'')
         self.transport.setService(service())
 
@@ -232,8 +232,8 @@ class SSHUserAuthServer(service.SSHService):
         """
         if reason.check(error.IgnoreAuthentication):
             return
-        if self.method != 'none':
-            log.msg('%s failed auth %s' % (self.user, self.method))
+        if self.method != b'none':
+            log.msg('%r failed auth %r' % (self.user, self.method))
             if reason.check(UnauthorizedLogin):
                 log.msg('unauthorized login: %s' % reason.getErrorMessage())
             elif reason.check(error.ConchError):

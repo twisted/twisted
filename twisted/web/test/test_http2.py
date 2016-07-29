@@ -28,6 +28,7 @@ try:
     import h2
     import h2.errors
     import hyperframe
+    import priority
     from hpack.hpack import Encoder, Decoder
 except ImportError:
     skipH2 = "HTTP/2 support not enabled"
@@ -364,11 +365,25 @@ class DummyPullProducerHandler(http.Request):
 
 
 
-class HTTP2ServerTests(unittest.TestCase):
+class HTTP2TestHelpers(object):
+    """
+    A superclass that contains no tests but provides test helpers for HTTP/2
+    tests.
+    """
     if skipH2:
         skip = skipH2
 
 
+    def assertAllStreamsBlocked(self, connection):
+        """
+        Confirm that all streams are blocked: that is, the priority tree
+        believes that none of the streams have data ready to send.
+        """
+        self.assertRaises(priority.DeadlockError, next, connection.priority)
+
+
+
+class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
@@ -1404,14 +1419,10 @@ class HTTP2ServerTests(unittest.TestCase):
 
 
 
-class H2FlowControlTests(unittest.TestCase):
+class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
     """
     Tests that ensure that we handle HTTP/2 flow control limits appropriately.
     """
-    if skipH2:
-        skip = skipH2
-
-
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
@@ -1971,6 +1982,34 @@ class H2FlowControlTests(unittest.TestCase):
         return a._streamCleanupCallbacks[1].addCallback(validate)
 
 
+    def test_unnecessaryWindowUpdateForStream(self):
+        """
+        When a WindowUpdate frame is received for a stream but no data is
+        currently waiting, that stream is not marked as unblocked and the
+        priority tree continues to assert that no stream can progress.
+        """
+        f = FrameFactory()
+        transport = StringTransport()
+        conn = H2Connection()
+        conn.requestFactory = DummyHTTPHandler
+
+        # Send a request that implies a body is coming. Twisted doesn't send a
+        # response until the entire request is received, so it won't queue any
+        # data yet. Then, fire off a WINDOW_UPDATE frame.
+        frames = []
+        frames.append(
+            f.buildHeadersFrame(headers=self.postRequestHeaders, streamID=1)
+        )
+        frames.append(f.buildWindowUpdateFrame(streamID=1, increment=5))
+        data = f.preamble()
+        data += b''.join(f.serialize() for f in frames)
+
+        conn.makeConnection(transport)
+        conn.dataReceived(data)
+
+        self.assertAllStreamsBlocked(conn)
+
+
     def test_windowUpdateAfterTerminate(self):
         """
         When a WindowUpdate frame is received for a stream that has been
@@ -2051,11 +2090,7 @@ class H2FlowControlTests(unittest.TestCase):
         return d.addCallback(validate)
 
 
-class HTTP2TransportChecking(unittest.TestCase):
-    if skipH2:
-        skip = skipH2
-
-
+class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
@@ -2185,15 +2220,12 @@ class HTTP2TransportChecking(unittest.TestCase):
 
 
 
-class HTTP2SchedulingTests(unittest.TestCase):
+class HTTP2SchedulingTests(unittest.TestCase, HTTP2TestHelpers):
     """
     The H2Connection object schedules certain events (mostly its data sending
     loop) using callbacks from the reactor. These tests validate that the calls
     are scheduled correctly.
     """
-    if skipH2:
-        skip = skipH2
-
     def test_initiallySchedulesOneDataCall(self):
         """
         When a H2Connection is established it schedules one call to be run as
@@ -2216,14 +2248,10 @@ class HTTP2SchedulingTests(unittest.TestCase):
 
 
 
-class HTTP2TimeoutTests(unittest.TestCase):
+class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
     """
     The L{H2Connection} object times out idle connections.
     """
-    if skipH2:
-        skip = skipH2
-
-
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),

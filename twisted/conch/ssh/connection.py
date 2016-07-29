@@ -432,7 +432,7 @@ class SSHConnection(service.SSHService):
         """
         if channel.localClosed:
             return
-        log.msg('sending request %s' % requestType)
+        log.msg('sending request %r' % (requestType))
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L',
                                     self.channelsToRemoteChannel[channel])
                                   + common.NS(requestType)+chr(wantReply)
@@ -538,7 +538,7 @@ class SSHConnection(service.SSHService):
         @type data:         L{bytes}
         @rtype:             subclass of L{SSHChannel}/L{tuple}
         """
-        log.msg('got channel %s request' % channelType)
+        log.msg('got channel %r request' % (channelType))
         if hasattr(self.transport, "avatar"): # this is a server!
             chan = self.transport.avatar.lookupChannel(channelType,
                                                        windowSize,

@@ -14,8 +14,8 @@ class LoopbackRelay(loopback.LoopbackRelay):
         return "LoopbackRelay(%r)" % (self.target.__class__.__name__,)
 
 
-    def write(self, bytes):
-        loopback.LoopbackRelay.write(self, bytes)
+    def write(self, data):
+        loopback.LoopbackRelay.write(self, data)
         if self.clearCall is not None:
             self.clearCall.cancel()
 
