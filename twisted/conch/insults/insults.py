@@ -11,6 +11,7 @@ VT102 and VT220 terminal manipulation.
 from zope.interface import implementer, Interface
 
 from twisted.internet import protocol, defer, interfaces as iinternet
+from twisted.python.compat import intToBytes, iterbytes
 
 
 
@@ -358,8 +359,8 @@ class ITerminalTransport(iinternet.ITransport):
         """
 
 
-CSI = '\x1b'
-CST = {'~': 'tilde'}
+CSI = b'\x1b'
+CST = {b'~': b'tilde'}
 
 class modes:
     """
@@ -411,19 +412,19 @@ class privateModes:
 
 
 # Character sets
-CS_US = 'CS_US'
-CS_UK = 'CS_UK'
-CS_DRAWING = 'CS_DRAWING'
-CS_ALTERNATE = 'CS_ALTERNATE'
-CS_ALTERNATE_SPECIAL = 'CS_ALTERNATE_SPECIAL'
+CS_US = b'CS_US'
+CS_UK = b'CS_UK'
+CS_DRAWING = b'CS_DRAWING'
+CS_ALTERNATE = b'CS_ALTERNATE'
+CS_ALTERNATE_SPECIAL = b'CS_ALTERNATE_SPECIAL'
 
 # Groupings (or something?? These are like variables that can be bound to character sets)
-G0 = 'G0'
-G1 = 'G1'
+G0 = b'G0'
+G1 = b'G1'
 
 # G2 and G3 cannot be changed, but they can be shifted to.
-G2 = 'G2'
-G3 = 'G3'
+G2 = b'G2'
+G3 = b'G3'
 
 # Character attributes
 
@@ -465,8 +466,12 @@ class _const(object):
         return '[' + self.name + ']'
 
 
+    def __bytes__(self):
+        return ('[' + self.name + ']').encode("ascii")
+
+
 FUNCTION_KEYS = [
-    _const(_name) for _name in _KEY_NAMES]
+    _const(_name).__bytes__() for _name in _KEY_NAMES]
 
 
 
@@ -475,13 +480,13 @@ class ServerProtocol(protocol.Protocol):
     protocolFactory = None
     terminalProtocol = None
 
-    TAB = '\t'
-    BACKSPACE = '\x7f'
+    TAB = b'\t'
+    BACKSPACE = b'\x7f'
     ##
 
-    lastWrite = ''
+    lastWrite = b''
 
-    state = 'data'
+    state = b'data'
 
     termSize = Vector(80, 24)
     cursorPos = Vector(0, 0)
@@ -524,33 +529,33 @@ class ServerProtocol(protocol.Protocol):
 
 
     def dataReceived(self, data):
-        for ch in data:
-            if self.state == 'data':
-                if ch == '\x1b':
-                    self.state = 'escaped'
+        for ch in iterbytes(data):
+            if self.state == b'data':
+                if ch == b'\x1b':
+                    self.state = b'escaped'
                 else:
                     self.terminalProtocol.keystrokeReceived(ch, None)
-            elif self.state == 'escaped':
-                if ch == '[':
-                    self.state = 'bracket-escaped'
+            elif self.state == b'escaped':
+                if ch == b'[':
+                    self.state = b'bracket-escaped'
                     self.escBuf = []
-                elif ch == 'O':
-                    self.state = 'low-function-escaped'
+                elif ch == b'O':
+                    self.state = b'low-function-escaped'
                 else:
-                    self.state = 'data'
+                    self.state = b'data'
                     self._handleShortControlSequence(ch)
-            elif self.state == 'bracket-escaped':
-                if ch == 'O':
-                    self.state = 'low-function-escaped'
-                elif ch.isalpha() or ch == '~':
-                    self._handleControlSequence(''.join(self.escBuf) + ch)
+            elif self.state == b'bracket-escaped':
+                if ch == b'O':
+                    self.state = b'low-function-escaped'
+                elif ch.isalpha() or ch == b'~':
+                    self._handleControlSequence(b''.join(self.escBuf) + ch)
                     del self.escBuf
-                    self.state = 'data'
+                    self.state = b'data'
                 else:
                     self.escBuf.append(ch)
-            elif self.state == 'low-function-escaped':
+            elif self.state == b'low-function-escaped':
                 self._handleLowFunctionControlSequence(ch)
-                self.state = 'data'
+                self.state = b'data'
             else:
                 raise ValueError("Illegal state")
 
@@ -560,8 +565,10 @@ class ServerProtocol(protocol.Protocol):
 
 
     def _handleControlSequence(self, buf):
-        buf = '\x1b[' + buf
-        f = getattr(self.controlSequenceParser, CST.get(buf[-1], buf[-1]), None)
+        buf = b'\x1b[' + buf
+        f = getattr(self.controlSequenceParser,
+                    CST.get(buf[-1:], buf[-1:]).decode("ascii"),
+                    None)
         if f is None:
             self.unhandledControlSequence(buf)
         else:
@@ -573,90 +580,91 @@ class ServerProtocol(protocol.Protocol):
 
 
     def _handleLowFunctionControlSequence(self, ch):
-        map = {'P': self.F1, 'Q': self.F2, 'R': self.F3, 'S': self.F4}
-        keyID = map.get(ch)
+        functionKeys = {b'P': self.F1, b'Q': self.F2,
+                        b'R': self.F3, b'S': self.F4}
+        keyID = functionKeys.get(ch)
         if keyID is not None:
             self.terminalProtocol.keystrokeReceived(keyID, None)
         else:
-            self.terminalProtocol.unhandledControlSequence('\x1b[O' + ch)
+            self.terminalProtocol.unhandledControlSequence(b'\x1b[O' + ch)
 
 
     class ControlSequenceParser:
         def A(self, proto, handler, buf):
-            if buf == '\x1b[':
+            if buf == b'\x1b[':
                 handler.keystrokeReceived(proto.UP_ARROW, None)
             else:
-                handler.unhandledControlSequence(buf + 'A')
+                handler.unhandledControlSequence(buf + b'A')
 
 
         def B(self, proto, handler, buf):
-            if buf == '\x1b[':
+            if buf == b'\x1b[':
                 handler.keystrokeReceived(proto.DOWN_ARROW, None)
             else:
-                handler.unhandledControlSequence(buf + 'B')
+                handler.unhandledControlSequence(buf + b'B')
 
 
         def C(self, proto, handler, buf):
-            if buf == '\x1b[':
+            if buf == b'\x1b[':
                 handler.keystrokeReceived(proto.RIGHT_ARROW, None)
             else:
-                handler.unhandledControlSequence(buf + 'C')
+                handler.unhandledControlSequence(buf + b'C')
 
 
         def D(self, proto, handler, buf):
-            if buf == '\x1b[':
+            if buf == b'\x1b[':
                 handler.keystrokeReceived(proto.LEFT_ARROW, None)
             else:
-                handler.unhandledControlSequence(buf + 'D')
+                handler.unhandledControlSequence(buf + b'D')
 
 
         def E(self, proto, handler, buf):
-            if buf == '\x1b[':
+            if buf == b'\x1b[':
                 handler.keystrokeReceived(proto.NUMPAD_MIDDLE, None)
             else:
-                handler.unhandledControlSequence(buf + 'E')
+                handler.unhandledControlSequence(buf + b'E')
 
 
         def F(self, proto, handler, buf):
-            if buf == '\x1b[':
+            if buf == b'\x1b[':
                 handler.keystrokeReceived(proto.END, None)
             else:
-                handler.unhandledControlSequence(buf + 'F')
+                handler.unhandledControlSequence(buf + b'F')
 
 
         def H(self, proto, handler, buf):
-            if buf == '\x1b[':
+            if buf == b'\x1b[':
                 handler.keystrokeReceived(proto.HOME, None)
             else:
-                handler.unhandledControlSequence(buf + 'H')
+                handler.unhandledControlSequence(buf + b'H')
 
 
         def R(self, proto, handler, buf):
             if not proto._cursorReports:
-                handler.unhandledControlSequence(buf + 'R')
-            elif buf.startswith('\x1b['):
+                handler.unhandledControlSequence(buf + b'R')
+            elif buf.startswith(b'\x1b['):
                 report = buf[2:]
-                parts = report.split(';')
+                parts = report.split(b';')
                 if len(parts) != 2:
-                    handler.unhandledControlSequence(buf + 'R')
+                    handler.unhandledControlSequence(buf + b'R')
                 else:
                     Pl, Pc = parts
                     try:
                         Pl, Pc = int(Pl), int(Pc)
                     except ValueError:
-                        handler.unhandledControlSequence(buf + 'R')
+                        handler.unhandledControlSequence(buf + b'R')
                     else:
                         d = proto._cursorReports.pop(0)
                         d.callback((Pc - 1, Pl - 1))
             else:
-                handler.unhandledControlSequence(buf + 'R')
+                handler.unhandledControlSequence(buf + b'R')
 
 
         def Z(self, proto, handler, buf):
-            if buf == '\x1b[':
+            if buf == b'\x1b[':
                 handler.keystrokeReceived(proto.TAB, proto.SHIFT)
             else:
-                handler.unhandledControlSequence(buf + 'Z')
+                handler.unhandledControlSequence(buf + b'Z')
 
 
         def tilde(self, proto, handler, buf):
@@ -667,20 +675,20 @@ class ServerProtocol(protocol.Protocol):
                    19: proto.F8,  20: proto.F9, 21: proto.F10,
                    23: proto.F11, 24: proto.F12}
 
-            if buf.startswith('\x1b['):
+            if buf.startswith(b'\x1b['):
                 ch = buf[2:]
                 try:
                     v = int(ch)
                 except ValueError:
-                    handler.unhandledControlSequence(buf + '~')
+                    handler.unhandledControlSequence(buf + b'~')
                 else:
                     symbolic = map.get(v)
                     if symbolic is not None:
                         handler.keystrokeReceived(map[v], None)
                     else:
-                        handler.unhandledControlSequence(buf + '~')
+                        handler.unhandledControlSequence(buf + b'~')
             else:
-                handler.unhandledControlSequence(buf + '~')
+                handler.unhandledControlSequence(buf + b'~')
 
     controlSequenceParser = ControlSequenceParser()
 
@@ -689,196 +697,204 @@ class ServerProtocol(protocol.Protocol):
     def cursorUp(self, n=1):
         assert n >= 1
         self.cursorPos.y = max(self.cursorPos.y - n, 0)
-        self.write('\x1b[%dA' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) +  b'A')
 
 
     def cursorDown(self, n=1):
         assert n >= 1
         self.cursorPos.y = min(self.cursorPos.y + n, self.termSize.y - 1)
-        self.write('\x1b[%dB' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'B')
 
 
     def cursorForward(self, n=1):
         assert n >= 1
         self.cursorPos.x = min(self.cursorPos.x + n, self.termSize.x - 1)
-        self.write('\x1b[%dC' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'C')
 
 
     def cursorBackward(self, n=1):
         assert n >= 1
         self.cursorPos.x = max(self.cursorPos.x - n, 0)
-        self.write('\x1b[%dD' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'D')
 
 
     def cursorPosition(self, column, line):
-        self.write('\x1b[%d;%dH' % (line + 1, column + 1))
+        self.write(b'\x1b[' +
+                   intToBytes(line + 1)  +
+                   b'; '+
+                   intToBytes(column + 1) +
+                   b'H')
 
 
     def cursorHome(self):
         self.cursorPos.x = self.cursorPos.y = 0
-        self.write('\x1b[H')
+        self.write(b'\x1b[H')
 
 
     def index(self):
         self.cursorPos.y = min(self.cursorPos.y + 1, self.termSize.y - 1)
-        self.write('\x1bD')
+        self.write(b'\x1bD')
 
 
     def reverseIndex(self):
         self.cursorPos.y = max(self.cursorPos.y - 1, 0)
-        self.write('\x1bM')
+        self.write(b'\x1bM')
 
 
     def nextLine(self):
         self.cursorPos.x = 0
         self.cursorPos.y = min(self.cursorPos.y + 1, self.termSize.y - 1)
-        self.write('\n')
+        self.write(b'\n')
 
 
     def saveCursor(self):
         self._savedCursorPos = Vector(self.cursorPos.x, self.cursorPos.y)
-        self.write('\x1b7')
+        self.write(b'\x1b7')
 
 
     def restoreCursor(self):
         self.cursorPos = self._savedCursorPos
         del self._savedCursorPos
-        self.write('\x1b8')
+        self.write(b'\x1b8')
 
 
     def setModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write('\x1b[%sh' % (';'.join(map(str, modes)),))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[' + modesBytes + b'h')
 
 
     def setPrivateModes(self, modes):
-        self.write('\x1b[?%sh' % (';'.join(map(str, modes)),))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[?' + modesBytes + b'h')
 
 
     def resetModes(self, modes):
         # XXX Support ANSI-Compatible private modes
-        self.write('\x1b[%sl' % (';'.join(map(str, modes)),))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[' + modesBytes + b'l')
 
 
     def resetPrivateModes(self, modes):
-        self.write('\x1b[?%sl' % (';'.join(map(str, modes)),))
+        modesBytes = b';'.join([intToBytes(mode) for mode in modes])
+        self.write(b'\x1b[?' + modesBytes + b'l')
 
 
     def applicationKeypadMode(self):
-        self.write('\x1b=')
+        self.write(b'\x1b=')
 
 
     def numericKeypadMode(self):
-        self.write('\x1b>')
+        self.write(b'\x1b>')
 
 
     def selectCharacterSet(self, charSet, which):
         # XXX Rewrite these as dict lookups
         if which == G0:
-            which = '('
+            which = b'('
         elif which == G1:
-            which = ')'
+            which = b')'
         else:
             raise ValueError("`which' argument to selectCharacterSet must be G0 or G1")
         if charSet == CS_UK:
-            charSet = 'A'
+            charSet = b'A'
         elif charSet == CS_US:
-            charSet = 'B'
+            charSet = b'B'
         elif charSet == CS_DRAWING:
-            charSet = '0'
+            charSet = b'0'
         elif charSet == CS_ALTERNATE:
-            charSet = '1'
+            charSet = b'1'
         elif charSet == CS_ALTERNATE_SPECIAL:
-            charSet = '2'
+            charSet = b'2'
         else:
             raise ValueError("Invalid `charSet' argument to selectCharacterSet")
-        self.write('\x1b' + which + charSet)
+        self.write(b'\x1b' + which + charSet)
 
 
     def shiftIn(self):
-        self.write('\x15')
+        self.write(b'\x15')
 
 
     def shiftOut(self):
-        self.write('\x14')
+        self.write(b'\x14')
 
 
     def singleShift2(self):
-        self.write('\x1bN')
+        self.write(b'\x1bN')
 
 
     def singleShift3(self):
-        self.write('\x1bO')
+        self.write(b'\x1bO')
 
 
     def selectGraphicRendition(self, *attributes):
         attrs = []
         for a in attributes:
             attrs.append(a)
-        self.write('\x1b[%sm' % (';'.join(attrs),))
+        self.write(b'\x1b[%sm' % (b';'.join(attrs),))
 
 
     def horizontalTabulationSet(self):
-        self.write('\x1bH')
+        self.write(b'\x1bH')
 
 
     def tabulationClear(self):
-        self.write('\x1b[q')
+        self.write(b'\x1b[q')
 
 
     def tabulationClearAll(self):
-        self.write('\x1b[3q')
+        self.write(b'\x1b[3q')
 
 
     def doubleHeightLine(self, top=True):
         if top:
-            self.write('\x1b#3')
+            self.write(b'\x1b#3')
         else:
-            self.write('\x1b#4')
+            self.write(b'\x1b#4')
 
 
     def singleWidthLine(self):
-        self.write('\x1b#5')
+        self.write(b'\x1b#5')
 
 
     def doubleWidthLine(self):
-        self.write('\x1b#6')
+        self.write(b'\x1b#6')
 
 
     def eraseToLineEnd(self):
-        self.write('\x1b[K')
+        self.write(b'\x1b[K')
 
 
     def eraseToLineBeginning(self):
-        self.write('\x1b[1K')
+        self.write(b'\x1b[1K')
 
 
     def eraseLine(self):
-        self.write('\x1b[2K')
+        self.write(b'\x1b[2K')
 
 
     def eraseToDisplayEnd(self):
-        self.write('\x1b[J')
+        self.write(b'\x1b[J')
 
 
     def eraseToDisplayBeginning(self):
-        self.write('\x1b[1J')
+        self.write(b'\x1b[1J')
 
 
     def eraseDisplay(self):
-        self.write('\x1b[2J')
+        self.write(b'\x1b[2J')
 
 
     def deleteCharacter(self, n=1):
-        self.write('\x1b[%dP' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'P')
 
 
     def insertLine(self, n=1):
-        self.write('\x1b[%dL' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'L')
 
 
     def deleteLine(self, n=1):
-        self.write('\x1b[%dM' % (n,))
+        self.write(b'\x1b[' + intToBytes(n) + b'M')
 
 
     def setScrollRegion(self, first=None, last=None):
@@ -890,7 +906,7 @@ class ServerProtocol(protocol.Protocol):
             last = '%d' % (last,)
         else:
             last = ''
-        self.write('\x1b[%s;%sr' % (first, last))
+        self.write(b'\x1b[' + first + b';' + last + b'r')
 
 
     def resetScrollRegion(self):
@@ -900,7 +916,7 @@ class ServerProtocol(protocol.Protocol):
     def reportCursorPosition(self):
         d = defer.Deferred()
         self._cursorReports.append(d)
-        self.write('\x1b[6n')
+        self.write(b'\x1b[6n')
         return d
 
 
@@ -910,18 +926,18 @@ class ServerProtocol(protocol.Protocol):
             del self._savedCursorPos
         except AttributeError:
             pass
-        self.write('\x1bc')
+        self.write(b'\x1bc')
 
 
     # ITransport
-    def write(self, bytes):
-        if bytes:
-            self.lastWrite = bytes
-            self.transport.write('\r\n'.join(bytes.split('\n')))
+    def write(self, data):
+        if data:
+            self.lastWrite = data
+            self.transport.write(b'\r\n'.join(data.split(b'\n')))
 
 
-    def writeSequence(self, bytes):
-        self.write(''.join(bytes))
+    def writeSequence(self, data):
+        self.write(b''.join(data))
 
 
     def loseConnection(self):
@@ -946,35 +962,35 @@ class ClientProtocol(protocol.Protocol):
     terminalFactory = None
     terminal = None
 
-    state = 'data'
+    state = b'data'
 
     _escBuf = None
 
     _shorts = {
-        'D': 'index',
-        'M': 'reverseIndex',
-        'E': 'nextLine',
-        '7': 'saveCursor',
-        '8': 'restoreCursor',
-        '=': 'applicationKeypadMode',
-        '>': 'numericKeypadMode',
-        'N': 'singleShift2',
-        'O': 'singleShift3',
-        'H': 'horizontalTabulationSet',
-        'c': 'reset'}
+        b'D': b'index',
+        b'M': b'reverseIndex',
+        b'E': b'nextLine',
+        b'7': b'saveCursor',
+        b'8': b'restoreCursor',
+        b'=': b'applicationKeypadMode',
+        b'>': b'numericKeypadMode',
+        b'N': b'singleShift2',
+        b'O': b'singleShift3',
+        b'H': b'horizontalTabulationSet',
+        b'c': b'reset'}
 
     _longs = {
-        '[': 'bracket-escape',
-        '(': 'select-g0',
-        ')': 'select-g1',
-        '#': 'select-height-width'}
+        b'[': b'bracket-escape',
+        b'(': b'select-g0',
+        b')': b'select-g1',
+        b'#': b'select-height-width'}
 
     _charsets = {
-        'A': CS_UK,
-        'B': CS_US,
-        '0': CS_DRAWING,
-        '1': CS_ALTERNATE,
-        '2': CS_ALTERNATE_SPECIAL}
+        b'A': CS_UK,
+        b'B': CS_US,
+        b'0': CS_DRAWING,
+        b'1': CS_ALTERNATE,
+        b'2': CS_ALTERNATE_SPECIAL}
 
     # Factory who instantiated me
     factory = None
@@ -1011,76 +1027,76 @@ class ClientProtocol(protocol.Protocol):
                 del self.terminal
 
 
-    def dataReceived(self, bytes):
+    def dataReceived(self, data):
         """
         Parse the given data from a terminal server, dispatching to event
         handlers defined by C{self.terminal}.
         """
         toWrite = []
-        for b in bytes:
-            if self.state == 'data':
-                if b == '\x1b':
+        for b in iterbytes(data):
+            if self.state == b'data':
+                if b == b'\x1b':
                     if toWrite:
-                        self.terminal.write(''.join(toWrite))
+                        self.terminal.write(b''.join(toWrite))
                         del toWrite[:]
-                    self.state = 'escaped'
-                elif b == '\x14':
+                    self.state = b'escaped'
+                elif b == b'\x14':
                     if toWrite:
-                        self.terminal.write(''.join(toWrite))
+                        self.terminal.write(b''.join(toWrite))
                         del toWrite[:]
                     self.terminal.shiftOut()
-                elif b == '\x15':
+                elif b == b'\x15':
                     if toWrite:
-                        self.terminal.write(''.join(toWrite))
+                        self.terminal.write(b''.join(toWrite))
                         del toWrite[:]
                     self.terminal.shiftIn()
-                elif b == '\x08':
+                elif b == b'\x08':
                     if toWrite:
-                        self.terminal.write(''.join(toWrite))
+                        self.terminal.write(b''.join(toWrite))
                         del toWrite[:]
                     self.terminal.cursorBackward()
                 else:
                     toWrite.append(b)
-            elif self.state == 'escaped':
+            elif self.state == b'escaped':
                 fName = self._shorts.get(b)
                 if fName is not None:
-                    self.state = 'data'
-                    getattr(self.terminal, fName)()
+                    self.state = b'data'
+                    getattr(self.terminal, fName.decode("ascii"))()
                 else:
                     state = self._longs.get(b)
                     if state is not None:
                         self.state = state
                     else:
-                        self.terminal.unhandledControlSequence('\x1b' + b)
-                        self.state = 'data'
-            elif self.state == 'bracket-escape':
+                        self.terminal.unhandledControlSequence(b'\x1b' + b)
+                        self.state = b'data'
+            elif self.state == b'bracket-escape':
                 if self._escBuf is None:
                     self._escBuf = []
-                if b.isalpha() or b == '~':
-                    self._handleControlSequence(''.join(self._escBuf), b)
+                if b.isalpha() or b == b'~':
+                    self._handleControlSequence(b''.join(self._escBuf), b)
                     del self._escBuf
-                    self.state = 'data'
+                    self.state = b'data'
                 else:
                     self._escBuf.append(b)
-            elif self.state == 'select-g0':
+            elif self.state == b'select-g0':
                 self.terminal.selectCharacterSet(self._charsets.get(b, b), G0)
-                self.state = 'data'
-            elif self.state == 'select-g1':
+                self.state = b'data'
+            elif self.state == b'select-g1':
                 self.terminal.selectCharacterSet(self._charsets.get(b, b), G1)
-                self.state = 'data'
-            elif self.state == 'select-height-width':
+                self.state = b'data'
+            elif self.state == b'select-height-width':
                 self._handleHeightWidth(b)
-                self.state = 'data'
+                self.state = b'data'
             else:
                 raise ValueError("Illegal state")
         if toWrite:
-            self.terminal.write(''.join(toWrite))
+            self.terminal.write(b''.join(toWrite))
 
 
     def _handleControlSequence(self, buf, terminal):
-        f = getattr(self.controlSequenceParser, CST.get(terminal, terminal), None)
+        f = getattr(self.controlSequenceParser, CST.get(terminal, terminal).decode("ascii"), None)
         if f is None:
-            self.terminal.unhandledControlSequence('\x1b[' + buf + terminal)
+            self.terminal.unhandledControlSequence(b'\x1b[' + buf + terminal)
         else:
             f(self, self.terminal, buf)
 
@@ -1095,10 +1111,11 @@ class ClientProtocol(protocol.Protocol):
                     try:
                         m = int(buf)
                     except ValueError:
-                        handler.unhandledControlSequence('\x1b[' + buf + ch)
+                        handler.unhandledControlSequence(b'\x1b[' + buf + ch)
                     else:
                         getattr(handler, n)(m)
             return simple
+
         for (ch, fName) in (('A', 'Up'),
                             ('B', 'Down'),
                             ('C', 'Forward'),
@@ -1106,12 +1123,13 @@ class ClientProtocol(protocol.Protocol):
             exec(ch + " = _makeSimple(ch, fName)")
         del _makeSimple
 
+
         def h(self, proto, handler, buf):
             # XXX - Handle '?' to introduce ANSI-Compatible private modes.
             try:
-                modes = map(int, buf.split(';'))
+                modes = [int(mode) for mode in buf.split(b';')]
             except ValueError:
-                handler.unhandledControlSequence('\x1b[' + buf + 'h')
+                handler.unhandledControlSequence(b'\x1b[' + buf + b'h')
             else:
                 handler.setModes(modes)
 
@@ -1119,15 +1137,15 @@ class ClientProtocol(protocol.Protocol):
         def l(self, proto, handler, buf):
             # XXX - Handle '?' to introduce ANSI-Compatible private modes.
             try:
-                modes = map(int, buf.split(';'))
+                modes = [int(mode) for mode in buf.split(b';')]
             except ValueError:
-                handler.unhandledControlSequence('\x1b[' + buf + 'l')
+                handler.unhandledControlSequence(b'\x1b[' + buf + 'l')
             else:
                 handler.resetModes(modes)
 
 
         def r(self, proto, handler, buf):
-            parts = buf.split(';')
+            parts = buf.split(b';')
             if len(parts) == 1:
                 handler.setScrollRegion(None, None)
             elif len(parts) == 2:
@@ -1141,21 +1159,21 @@ class ClientProtocol(protocol.Protocol):
                     else:
                         pb = None
                 except ValueError:
-                    handler.unhandledControlSequence('\x1b[' + buf + 'r')
+                    handler.unhandledControlSequence(b'\x1b[' + buf + b'r')
                 else:
                     handler.setScrollRegion(pt, pb)
             else:
-                handler.unhandledControlSequence('\x1b[' + buf + 'r')
+                handler.unhandledControlSequence(b'\x1b[' + buf + b'r')
 
         def K(self, proto, handler, buf):
             if not buf:
                 handler.eraseToLineEnd()
-            elif buf == '1':
+            elif buf == b'1':
                 handler.eraseToLineBeginning()
-            elif buf == '2':
+            elif buf == b'2':
                 handler.eraseLine()
             else:
-                handler.unhandledControlSequence('\x1b[' + buf + 'K')
+                handler.unhandledControlSequence(b'\x1b[' + buf + b'K')
 
 
         def H(self, proto, handler, buf):
@@ -1165,12 +1183,12 @@ class ClientProtocol(protocol.Protocol):
         def J(self, proto, handler, buf):
             if not buf:
                 handler.eraseToDisplayEnd()
-            elif buf == '1':
+            elif buf == b'1':
                 handler.eraseToDisplayBeginning()
-            elif buf == '2':
+            elif buf == b'2':
                 handler.eraseDisplay()
             else:
-                handler.unhandledControlSequence('\x1b[' + buf + 'J')
+                handler.unhandledControlSequence(b'\x1b[' + buf + b'J')
 
 
         def P(self, proto, handler, buf):
@@ -1180,7 +1198,7 @@ class ClientProtocol(protocol.Protocol):
                 try:
                     n = int(buf)
                 except ValueError:
-                    handler.unhandledControlSequence('\x1b[' + buf + 'P')
+                    handler.unhandledControlSequence(b'\x1b[' + buf + b'P')
                 else:
                     handler.deleteCharacter(n)
 
@@ -1191,7 +1209,7 @@ class ClientProtocol(protocol.Protocol):
                 try:
                     n = int(buf)
                 except ValueError:
-                    handler.unhandledControlSequence('\x1b[' + buf + 'L')
+                    handler.unhandledControlSequence(b'\x1b[' + buf + b'L')
                 else:
                     handler.insertLine(n)
 
@@ -1203,17 +1221,21 @@ class ClientProtocol(protocol.Protocol):
                 try:
                     n = int(buf)
                 except ValueError:
-                    handler.unhandledControlSequence('\x1b[' + buf + 'M')
+                    handler.unhandledControlSequence(b'\x1b[' + buf + b'M')
                 else:
                     handler.deleteLine(n)
 
 
         def n(self, proto, handler, buf):
-            if buf == '6':
+            if buf == b'6':
                 x, y = handler.reportCursorPosition()
-                proto.transport.write('\x1b[%d;%dR' % (x + 1, y + 1))
+                proto.transport.write(b'\x1b['
+                                      + intToBytes(x+1)
+                                      + b';'
+                                      + intToBytes(y+1)
+                                      + b'R')
             else:
-                handler.unhandledControlSequence('\x1b[' + buf + 'n')
+                handler.unhandledControlSequence(b'\x1b[' + buf + b'n')
 
 
         def m(self, proto, handler, buf):
@@ -1221,7 +1243,7 @@ class ClientProtocol(protocol.Protocol):
                 handler.selectGraphicRendition(NORMAL)
             else:
                 attrs = []
-                for a in buf.split(';'):
+                for a in buf.split(b';'):
                     try:
                         a = int(a)
                     except ValueError:
@@ -1233,16 +1255,16 @@ class ClientProtocol(protocol.Protocol):
 
 
     def _handleHeightWidth(self, b):
-        if b == '3':
+        if b == b'3':
             self.terminal.doubleHeightLine(True)
-        elif b == '4':
+        elif b == b'4':
             self.terminal.doubleHeightLine(False)
-        elif b == '5':
+        elif b == b'5':
             self.terminal.singleWidthLine()
-        elif b == '6':
+        elif b == b'6':
             self.terminal.doubleWidthLine()
         else:
-            self.terminal.unhandledControlSequence('\x1b#' + b)
+            self.terminal.unhandledControlSequence(b'\x1b#' + b)
 
 
 __all__ = [

@@ -38,7 +38,7 @@ class A:
 
     def amethod(self):
         """
-        Method tp be used in serialization tests.
+        Method to be used in serialization tests.
         """
 
 
@@ -118,18 +118,21 @@ class JellyTests(unittest.TestCase):
     Testcases for L{jelly} module serialization.
 
     @cvar decimalData: serialized version of decimal data, to be used in tests.
-    @type decimalData: C{list}
+    @type decimalData: L{list}
     """
+    decimalData = ['list', ['decimal', 995, -2], ['decimal', 0, 0],
+                           ['decimal', 123456, 0], ['decimal', -78901, -3]]
+
 
     def _testSecurity(self, inputList, atom):
         """
         Helper test method to test security options for a type.
 
         @param inputList: a sample input for the type.
-        @param inputList: C{list}
+        @type inputList: L{list}
 
         @param atom: atom identifier for the type.
-        @type atom: C{str}
+        @type atom: L{str}
         """
         c = jelly.jelly(inputList)
         taster = jelly.SecurityOptions()
@@ -169,6 +172,10 @@ class JellyTests(unittest.TestCase):
 
 
     def test_newStyle(self):
+        """
+        Test that a new style class can be jellied and unjellied with its
+        objects and attribute values preserved.
+        """
         n = D()
         n.x = 1
         n2 = D()
@@ -178,6 +185,7 @@ class JellyTests(unittest.TestCase):
         m = jelly.unjelly(c)
         self.assertIsInstance(m, D)
         self.assertIs(m.n2, m.n3)
+        self.assertEqual(m.x, 1)
 
 
     def test_newStyleWithSlots(self):
@@ -224,13 +232,18 @@ class JellyTests(unittest.TestCase):
 
 
     def test_dateTime(self):
+        """
+        Jellying L{datetime.timedelta} instances and then unjellying the result
+        should produce objects which represent the values of the original
+        inputs.
+        """
         dtn = datetime.datetime.now()
         dtd = datetime.datetime.now() - dtn
-        input = [dtn, dtd]
-        c = jelly.jelly(input)
+        inputList = [dtn, dtd]
+        c = jelly.jelly(inputList)
         output = jelly.unjelly(c)
-        self.assertEqual(input, output)
-        self.assertIsNot(input, output)
+        self.assertEqual(inputList, output)
+        self.assertIsNot(inputList, output)
 
 
     def test_decimal(self):
@@ -249,19 +262,15 @@ class JellyTests(unittest.TestCase):
         self.assertIsNot(inputList, output)
 
 
-    decimalData = ['list', ['decimal', 995, -2], ['decimal', 0, 0],
-                           ['decimal', 123456, 0], ['decimal', -78901, -3]]
-
-
     def test_decimalUnjelly(self):
         """
         Unjellying the s-expressions produced by jelly for L{decimal.Decimal}
         instances should result in L{decimal.Decimal} instances with the values
         represented by the s-expressions.
 
-        This test also verifies that C{self.decimalData} contains valid jellied
+        This test also verifies that L{decimalData} contains valid jellied
         data.  This is important since L{test_decimalMissing} re-uses
-        C{self.decimalData} and is expected to be unable to produce
+        L{decimalData} and is expected to be unable to produce
         L{decimal.Decimal} instances even though the s-expression correctly
         represents a list of them.
         """
@@ -297,7 +306,7 @@ class JellyTests(unittest.TestCase):
 
     def test_frozenset(self):
         """
-        Jellying C{frozenset} instances and then unjellying the result
+        Jellying L{frozenset} instances and then unjellying the result
         should produce objects which represent the values of the original
         inputs.
         """
@@ -319,7 +328,7 @@ class JellyTests(unittest.TestCase):
 
     def test_frozensetSecurity(self):
         """
-        By default, C{frozenset} objects should be allowed by
+        By default, L{frozenset} objects should be allowed by
         L{jelly.SecurityOptions}. If not allowed, L{jelly.unjelly} should raise
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
@@ -350,7 +359,7 @@ class JellyTests(unittest.TestCase):
     def test_oldImmutableSets(self):
         """
         Test jellying C{sets.ImmutableSet}: it should serialize to the same
-        thing as C{frozenset} jelly, and be unjellied as C{frozenset} if
+        thing as L{frozenset} jelly, and be unjellied as L{frozenset} if
         available.
         """
         inputList = [jelly._sets.ImmutableSet([1, 2, 3])]
@@ -677,8 +686,8 @@ class CircularReferenceTests(unittest.TestCase):
 
     def test_frozenset(self):
         """
-        Check that a C{frozenset} can contain a circular reference and be
-        serializeserialized without losing the reference.
+        Check that a L{frozenset} can contain a circular reference and be
+        serialized and unserialized without losing the reference.
         """
         a = SimpleJellyTest(None, None)
         s = frozenset([a])

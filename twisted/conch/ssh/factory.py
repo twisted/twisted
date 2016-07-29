@@ -8,6 +8,8 @@ data sources as OpenSSH.
 Maintainer: Paul Swartz
 """
 
+from __future__ import division, absolute_import
+
 from twisted.internet import protocol
 from twisted.python import log
 
