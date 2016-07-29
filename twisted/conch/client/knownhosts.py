@@ -519,18 +519,7 @@ class KnownHostsFile(object):
         @rtype: L{HashedEntry}
         """
         salt = secureRandom(20)
-
-        #Get the base type of the key.
-        baseType = key.type()
-
-        #ECDSA keys need to be stored with the curve name.
-        if baseType == "RSA":
-            keyType = "ssh-rsa"
-        elif baseType == "DSA":
-            keyType = "ssh-dsa"
-        elif baseType == "EC":
-            keyType = key.getECKeyName()
-
+        keyType = key.sshType()
         entry = HashedEntry(salt, _hmacedString(salt, hostname),
                             keyType, key, None)
         self._added.append(entry)
