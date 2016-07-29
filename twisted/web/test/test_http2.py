@@ -365,7 +365,7 @@ class DummyPullProducerHandler(http.Request):
 
 
 
-class HTTP2TestHelpers(unittest.TestCase):
+class HTTP2TestHelpers(object):
     """
     A superclass that contains no tests but provides test helpers for HTTP/2
     tests.
@@ -383,7 +383,7 @@ class HTTP2TestHelpers(unittest.TestCase):
 
 
 
-class HTTP2ServerTests(HTTP2TestHelpers):
+class HTTP2ServerTests(unittest.TestCase, HTTP2TestHelpers):
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
@@ -1419,7 +1419,7 @@ class HTTP2ServerTests(HTTP2TestHelpers):
 
 
 
-class H2FlowControlTests(HTTP2TestHelpers):
+class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
     """
     Tests that ensure that we handle HTTP/2 flow control limits appropriately.
     """
@@ -2090,7 +2090,7 @@ class H2FlowControlTests(HTTP2TestHelpers):
         return d.addCallback(validate)
 
 
-class HTTP2TransportChecking(HTTP2TestHelpers):
+class HTTP2TransportChecking(unittest.TestCase, HTTP2TestHelpers):
     getRequestHeaders = [
         (b':method', b'GET'),
         (b':authority', b'localhost'),
@@ -2220,7 +2220,7 @@ class HTTP2TransportChecking(HTTP2TestHelpers):
 
 
 
-class HTTP2SchedulingTests(HTTP2TestHelpers):
+class HTTP2SchedulingTests(unittest.TestCase, HTTP2TestHelpers):
     """
     The H2Connection object schedules certain events (mostly its data sending
     loop) using callbacks from the reactor. These tests validate that the calls
@@ -2248,7 +2248,7 @@ class HTTP2SchedulingTests(HTTP2TestHelpers):
 
 
 
-class HTTP2TimeoutTests(HTTP2TestHelpers):
+class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
     """
     The L{H2Connection} object times out idle connections.
     """
