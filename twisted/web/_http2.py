@@ -185,16 +185,17 @@ class H2Connection(Protocol, TimeoutMixin):
 
     def timeoutConnection(self):
         """
-        Called when the connection has been inactive for C{self.timeOut}
+        Called when the connection has been inactive for
+        L{self.timeOut<twisted.protocols.policies.TimeoutMixin.timeOut>}
         seconds. Cleanly tears the connection down, attempting to notify the
         peer if needed.
 
         We override this method to add two extra bits of functionality:
 
-        - We want to log the timeout.
-        - We want to send a GOAWAY frame indicating that the connection is
-          being terminated, and whether it was clean or not. We have to do this
-          before the connection is torn down.
+         - We want to log the timeout.
+         - We want to send a GOAWAY frame indicating that the connection is
+           being terminated, and whether it was clean or not. We have to do this
+           before the connection is torn down.
         """
         self._log.info(
             "Timing out client {client}", client=self.transport.getPeer()

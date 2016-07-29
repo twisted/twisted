@@ -614,7 +614,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             return
 
         # A TLS payload is 16kB max
-        bufferSize = 2 ** 16
+        bufferSize = 2 ** 14
 
         # How far into the input we've gotten so far
         alreadySent = 0

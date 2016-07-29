@@ -614,7 +614,7 @@ class FileTransferClient(FileTransferBase):
 
         attrs is a dictionary in the format of the attrs argument to openFile.
 
-        @type path L{bytes}
+        @type path: L{bytes}
         @param path: the directory to open.
         """
         d = self._sendRequest(FXP_OPENDIR, NS(path))
