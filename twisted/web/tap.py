@@ -10,7 +10,7 @@ from __future__ import absolute_import, division
 
 import os
 
-from twisted.web import server, static, script, demo
+from twisted.web import server, static, script, demo, wsgi
 from twisted.internet import interfaces, reactor
 from twisted.python import usage, reflect, threadpool
 from twisted.python.compat import _PY3
@@ -19,9 +19,6 @@ from twisted.application import internet, service, strports
 if not _PY3:
     # FIXME: https://twistedmatrix.com/trac/ticket/8009
     from twisted.web import twcgi
-
-    # FIXME: https://twistedmatrix.com/trac/ticket/7993
-    from twisted.web import wsgi
 
     # FIXME: https://twistedmatrix.com/trac/ticket/8010
     # FIXME: https://twistedmatrix.com/trac/ticket/7598

@@ -25,7 +25,7 @@ Overview
 ~~~~~~~~
 
 Twisted development should always be `test-driven <http://en.wikipedia.org/wiki/Test-driven_development>`_ .
-The complete test suite in the head of the SVN trunk is required to be passing on `supported platforms <http://buildbot.twistedmatrix.com/supported>`_ at all times.
+The complete test suite in the head of the Git trunk is required to be passing on `supported platforms <http://buildbot.twistedmatrix.com/supported>`_ at all times.
 Regressions in the test suite are addressed by reverting whatever revisions introduced them.
 
 
@@ -281,7 +281,16 @@ For example:
 
 
 Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_.
-Please note that pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
+
+When you are referring to a type, you should use `L{}`, whether it's in the stdlib , in Twisted or somewhere else.
+
+`NoneType` is an exception and we are referring it just as `L{None}`.
+
+Pydoctor, the software we use to generate the documentation, links to the Python standard library if you use ``L{}`` with standard Python types (e.g. ``L{str}``).
+
+For the API doc `C{something}` means "I made up a new word, and I want it to be monospaced, like it's an identifier in code and not an English noun"
+
+`L{something}` means "I am referring to the previously-defined concept/package/module/class/function/method/attribute identified as `something`"
 
 Additionally, to accommodate emacs users, single quotes of the type of the docstring's triple-quote should be escaped.
 This will prevent font-lock from accidentally fontifying large portions of the file as a string.
@@ -364,7 +373,7 @@ This makes the script more portable but note that it is not a foolproof method.
 Always make sure that ``/usr/bin/env`` exists or use a softlink/symbolic link to point it to the correct path.
 Python's distutils will rewrite the shebang line upon installation so this policy only covers the source files in version control.
 
-#. For core scripts, add this Twisted running-from-SVN header:
+#. For core scripts, add this Twisted running-from-Git header:
 
    .. code-block:: python
 
@@ -400,7 +409,7 @@ Python's distutils will rewrite the shebang line upon installation so this polic
 #. Write a manpage and add it to the ``man`` folder of a subproject's ``doc`` folder.
    On Debian systems you can find a skeleton example of a manpage in ``/usr/share/doc/man-db/examples/manpage.example``.
 
-This will ensure your program will work correctly for users of SVN, Windows releases and Debian packages.
+This will ensure your program will work correctly for users of Git, Windows releases and Debian packages.
 
 
 Examples
@@ -622,7 +631,7 @@ C Code
 C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7, 3.3/3.4, and 3.5 on Windows, as well as recent GCCs and Clangs for Linux, OS X, and FreeBSD).
 
 C code should be kept in external bindings packages which Twisted depends on.
-If creating new C extension modules, using `cffi <https://cffi.readthedocs.org/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
+If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.
 Consider optimizing for `PyPy <http://pypy.org/performance.html>`_ instead of creating bespoke C code.
 
 
@@ -637,7 +646,7 @@ Therefore, it should be short (aim for < 80 characters) and descriptive -- and m
 The rest of the e-mail should be separated with *hard line breaks* into short lines (< 70 characters).
 This is free-format, so you can do whatever you like here.
 
-Commit messages should be about *what*, not *how*: we can get how from SVN diff.
+Commit messages should be about *what*, not *how*: we can get how from Git diff.
 Explain reasons for commits, and what they affect.
 
 Each commit should be a single logical change, which is internally consistent.
@@ -647,24 +656,24 @@ If you can't summarize your changes in one short line, this is probably a sign t
 Source Control
 --------------
 
-Twisted currently uses Subversion for source control.
+Twisted currently uses Git for source control.
 All development must occur using branches; when a task is considered complete another Twisted developer may review it and if no problems are found, it may be merged into trunk.
 The Twisted wiki has `a start <http://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_.
-Branches can be managed using `Combinator <http://divmod.org/trac/wiki/DivmodCombinator>`_ for interfacing with the SVN repo, or using `twisted-dev-tools <https://github.com/twisted/twisted-dev-tools>`_ if interacting with the Git mirror.
 
-Certain features of Subversion should be avoided.
+If you wish to ignore certain files, create a ``.gitignore`` file, or edit it if it exists.
+For example:
 
-- Do not set the ``svn:ignore`` property on any file or directory.
-  What you wish to ignore, others may wish to examine.
-  What others may wish you ignore, *you* may wish you examine.
-  ``svn:ignore`` will affect everyone who uses the repository, and so it is not the right mechanism to express personal preferences.
+ .. code-block:: console
 
-  If you wish to ignore certain files use the ``global-ignores`` feature of ``~/.subversion/config``, for example:
-
-  .. code-block:: console
-
-      [miscellany]
-      global-ignores = dropin.cache *.pyc *.pyo *.o *.lo *.la #*# .*.rej *.rej .*~
+     dropin.cache
+     *.pyc
+     *.pyo
+     *.o
+     *.lo
+     *.la #*#
+     .*.rej
+     *.rej
+     .*~
 
 
 Fallback

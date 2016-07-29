@@ -524,11 +524,11 @@ class _FDDetector(object):
     _listOpenFDs method of this class so that the detection only needs to occur
     once.
 
-    @ivars listdir: The implementation of listdir to use. This gets overwritten
+    @ivar listdir: The implementation of listdir to use. This gets overwritten
         by the test cases.
-    @ivars getpid: The implementation of getpid to use, returns the PID of the
+    @ivar getpid: The implementation of getpid to use, returns the PID of the
         running process.
-    @ivars openfile: The implementation of open() to use, by default the Python
+    @ivar openfile: The implementation of open() to use, by default the Python
         builtin.
     """
     # So that we can unit test this
@@ -571,11 +571,8 @@ class _FDDetector(object):
                 before = impl()
             except:
                 continue
-            try:
-                fp = self.openfile("/dev/null", "r")
+            with self.openfile("/dev/null", "r"):
                 after = impl()
-            finally:
-                fp.close()
             if before != after:
                 return impl
         # If no implementation can detect the newly opened file above, then just

@@ -38,7 +38,7 @@ class InMemoryCheckerFactory(object):
 
     You really don't want to use this for anything else.  It is, at best, a
     toy.  If you need a simple credentials checker for a real application,
-    see L{cred_passwd.PasswdCheckerFactory}.
+    see L{cred_file.FileCheckerFactory}.
     """
     authType = 'memory'
     authHelp = inMemoryCheckerFactoryHelp

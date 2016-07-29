@@ -83,14 +83,15 @@ def checkPID(pidfile):
         return
     if os.path.exists(pidfile):
         try:
-            pid = int(open(pidfile).read())
+            with open(pidfile) as f:
+                pid = int(f.read())
         except ValueError:
             sys.exit('Pidfile %s contains non-numeric value' % pidfile)
         try:
             os.kill(pid, 0)
         except OSError as why:
-            if why[0] == errno.ESRCH:
-                # The pid doesn't exists.
+            if why.errno == errno.ESRCH:
+                # The pid doesn't exist.
                 log.msg('Removing stale pidfile %s' % pidfile, isError=True)
                 os.remove(pidfile)
             else:
@@ -248,7 +249,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         """
         Set the filesystem root, the working directory, and daemonize.
 
-        @type chroot: C{str} or L{NoneType}
+        @type chroot: C{str} or L{None}
         @param chroot: If not None, a path to use as the filesystem root (using
             L{os.chroot}).
 
@@ -259,11 +260,11 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @param nodaemon: A flag which, if set, indicates that daemonization
             should not be done.
 
-        @type umask: C{int} or L{NoneType}
+        @type umask: C{int} or L{None}
         @param umask: The value to which to change the process umask.
 
-        @type pidfile: C{str} or L{NoneType}
-        @param pidfile: If not C{None}, the path to a file into which to put
+        @type pidfile: C{str} or L{None}
+        @param pidfile: If not L{None}, the path to a file into which to put
             the PID of this process.
         """
         daemon = not nodaemon
@@ -357,11 +358,11 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @param euid: A flag which, if set, indicates that only the I{effective}
             UID and GID should be set.
 
-        @type uid: C{int} or C{NoneType}
-        @param uid: If not C{None}, the UID to which to switch.
+        @type uid: C{int} or L{None}
+        @param uid: If not L{None}, the UID to which to switch.
 
-        @type gid: C{int} or C{NoneType}
-        @param gid: If not C{None}, the GID to which to switch.
+        @type gid: C{int} or L{None}
+        @param gid: If not L{None}, the GID to which to switch.
         """
         if uid is not None or gid is not None:
             extra = euid and 'e' or ''

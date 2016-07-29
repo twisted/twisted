@@ -6,6 +6,8 @@
 Implementation module for the `tkconch` command.
 """
 
+from __future__ import print_function
+
 import Tkinter, tkFileDialog, tkMessageBox
 from twisted.conch import error
 from twisted.conch.ui import tkvt100
@@ -300,8 +302,8 @@ def run():
     options = GeneralOptions()
     try:
         options.parseOptions(args)
-    except usage.UsageError, u:
-        print 'ERROR: %s' % u
+    except usage.UsageError as u:
+        print('ERROR: %s' % u)
         options.opt_help()
         sys.exit(1)
     for k,v in options.items():
@@ -396,10 +398,9 @@ class SSHClientTransport(transport.SSHClientTransport):
             raise error.ConchError('bad host key')
         try:
             frame.write("Warning: Permanently added '%s' (%s) to the list of known hosts.\r\n" % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType]))
-            known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
-            encodedKey = base64.encodestring(pubKey).replace('\n', '')
-            known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
-            known_hosts.close()
+            with open(os.path.expanduser('~/.ssh/known_hosts'), 'a') as known_hosts:
+                encodedKey = base64.encodestring(pubKey).replace('\n', '')
+                known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
         except:
             log.deferr()
             raise error.ConchError
@@ -441,7 +442,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return None
         try:
             return defer.succeed(keys.Key.fromFile(file).keyObject)
-        except keys.BadKeyError, e:
+        except keys.BadKeyError as e:
             if e.args[0] == 'encrypted key with no password':
                 prompt = "Enter passphrase for key '%s': " % \
                        self.usedFiles[-1]
@@ -543,7 +544,7 @@ class SSHSession(channel.SSHChannel):
 
     def dataReceived(self, data):
         if options['ansilog']:
-            print repr(data)
+            print(repr(data))
         frame.write(data)
 
     def extReceived(self, t, data):

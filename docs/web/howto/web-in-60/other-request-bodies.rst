@@ -11,7 +11,7 @@ Other Request Bodies
 
 
 The previous example demonstrated how to accept the payload of
-a ``POST`` carrying HTML form data.  What about ``POST`` 
+a ``POST`` carrying HTML form data.  What about ``POST``
 requests with data in some other format?  Or even ``PUT`` requests?
 Here is an example which demonstrates how to get *any* request body,
 regardless of its format - using the request's
@@ -21,7 +21,7 @@ regardless of its format - using the request's
 
 
 The only significant difference between this example and the previous is that
-instead of accessing ``request.args`` 
+instead of accessing ``request.args``
 in ``render_POST`` , it
 uses ``request.content`` to get the request's body
 directly:
@@ -32,7 +32,7 @@ directly:
 
 .. code-block:: python
 
-    
+
     ...
         def render_POST(self, request):
             return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.content.read()),)
@@ -58,24 +58,25 @@ only ``render_POST`` changed:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
-    
+    from twisted.internet import reactor, endpoints
+
     import cgi
-    
+
     class FormPage(Resource):
         def render_GET(self, request):
             return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
-    
+
         def render_POST(self, request):
             return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.content.read()),)
-    
+
     root = Resource()
     root.putChild("form", FormPage())
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 

@@ -1063,7 +1063,7 @@ class RangeTests(TestCase):
         logItem = self.catcher.pop()
         self.assertEqual(logItem["message"][0], expected)
         self.assertEqual(
-            self.catcher, [], "An additional log occured: %r" % (logItem,))
+            self.catcher, [], "An additional log occurred: %r" % (logItem,))
 
 
     def test_invalidRanges(self):
@@ -1098,7 +1098,7 @@ class RangeTests(TestCase):
     def test_rangeMissingStop(self):
         """
         A single bytes range without an explicit stop position is parsed into a
-        two-tuple giving the start position and C{None}.
+        two-tuple giving the start position and L{None}.
         """
         self.assertEqual(
             self.resource._parseRangeHeader(b'bytes=0-'), [(0, None)])
@@ -1107,7 +1107,7 @@ class RangeTests(TestCase):
     def test_rangeMissingStart(self):
         """
         A single bytes range without an explicit start position is parsed into
-        a two-tuple of C{None} and the end position.
+        a two-tuple of L{None} and the end position.
         """
         self.assertEqual(
             self.resource._parseRangeHeader(b'bytes=-3'), [(None, 3)])
@@ -1491,7 +1491,7 @@ class DirectoryListerTests(TestCase):
 
     def test_renderFiltered(self):
         """
-        L{static.DirectoryLister} takes a optional C{dirs} argument that
+        L{static.DirectoryLister} takes an optional C{dirs} argument that
         filter out the list of directories and files printed.
         """
         path = FilePath(self.mktemp())
@@ -1685,7 +1685,7 @@ class LoadMimeTypesTests(TestCase):
 
     def test_defaultArgumentIsNone(self):
         """
-        By default, C{None} is passed to C{mimetypes.init}.
+        By default, L{None} is passed to C{mimetypes.init}.
         """
         static.loadMimeTypes(init=self._fakeInit)
         self.assertIdentical(self.paths, None)

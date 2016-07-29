@@ -35,7 +35,7 @@ class LoggingFile(object):
         @param level: the log level to emit events with.
 
         @param encoding: The encoding to expect when receiving bytes via
-            C{write()}.  If C{None}, use C{sys.getdefaultencoding()}.
+            C{write()}.  If L{None}, use C{sys.getdefaultencoding()}.
         @type encoding: L{str}
 
         @param log: The logger to send events to.
@@ -91,8 +91,8 @@ class LoggingFile(object):
         """
         Read-only property.  Types of newlines encountered.
 
-        @return: C{None}
-        @rtype: L{NoneType}
+        @return: L{None}
+        @rtype: L{None}
         """
         return None
 

@@ -20,6 +20,7 @@ from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
 from twisted.python import failure, log
+from twisted.python.compat import nativeString, _bytesChr as chr
 
 
 
@@ -30,43 +31,43 @@ class SSHUserAuthServer(service.SSHService):
     this server.
 
     @ivar name: the name of this service: 'ssh-userauth'
-    @type name: C{str}
+    @type name: L{bytes}
     @ivar authenticatedWith: a list of authentication methods that have
         already been used.
-    @type authenticatedWith: C{list}
+    @type authenticatedWith: L{list}
     @ivar loginTimeout: the number of seconds we wait before disconnecting
         the user for taking too long to authenticate
-    @type loginTimeout: C{int}
+    @type loginTimeout: L{int}
     @ivar attemptsBeforeDisconnect: the number of failed login attempts we
         allow before disconnecting.
-    @type attemptsBeforeDisconnect: C{int}
+    @type attemptsBeforeDisconnect: L{int}
     @ivar loginAttempts: the number of login attempts that have been made
-    @type loginAttempts: C{int}
+    @type loginAttempts: L{int}
     @ivar passwordDelay: the number of seconds to delay when the user gives
         an incorrect password
-    @type passwordDelay: C{int}
-    @ivar interfaceToMethod: a C{dict} mapping credential interfaces to
+    @type passwordDelay: L{int}
+    @ivar interfaceToMethod: a L{dict} mapping credential interfaces to
         authentication methods.  The server checks to see which of the
         cred interfaces have checkers and tells the client that those methods
         are valid for authentication.
-    @type interfaceToMethod: C{dict}
+    @type interfaceToMethod: L{dict}
     @ivar supportedAuthentications: A list of the supported authentication
         methods.
-    @type supportedAuthentications: C{list} of C{bytes}
+    @type supportedAuthentications: L{list} of L{bytes}
     @ivar user: the last username the client tried to authenticate with
-    @type user: C{bytes}
+    @type user: L{bytes}
     @ivar method: the current authentication method
-    @type method: C{bytes}
+    @type method: L{bytes}
     @ivar nextService: the service the user wants started after authentication
         has been completed.
-    @type nextService: C{str}
+    @type nextService: L{bytes}
     @ivar portal: the L{twisted.cred.portal.Portal} we are using for
         authentication
     @type portal: L{twisted.cred.portal.Portal}
     @ivar clock: an object with a callLater method.  Stubbed out for testing.
     """
 
-    name = 'ssh-userauth'
+    name = b'ssh-userauth'
     loginTimeout = 10 * 60 * 60
     # 10 minutes before we disconnect them
     attemptsBeforeDisconnect = 20
@@ -133,20 +134,20 @@ class SSHUserAuthServer(service.SSHService):
         auth_* method.
 
         @param kind: the authentication method to try.
-        @type kind: C{bytes}
+        @type kind: L{bytes}
         @param user: the username the client is authenticating with.
-        @type user: C{bytes}
+        @type user: L{bytes}
         @param data: authentication specific data sent by the client.
-        @type data: C{bytes}
+        @type data: L{bytes}
         @return: A Deferred called back if the method succeeded, or erred back
             if it failed.
         @rtype: C{defer.Deferred}
         """
-        log.msg('%s trying auth %s' % (user, kind))
+        log.msg('%r trying auth %r' % (user, kind))
         if kind not in self.supportedAuthentications:
             return defer.fail(
                     error.ConchError('unsupported authentication, failing'))
-        kind = kind.replace(b'-', b'_')
+        kind = nativeString(kind.replace(b'-', b'_'))
         f = getattr(self, 'auth_%s' % (kind,), None)
         if f:
             ret = f(data)
@@ -168,7 +169,7 @@ class SSHUserAuthServer(service.SSHService):
             string method
             <authentication specific data>
 
-        @type packet: C{bytes}
+        @type packet: L{bytes}
         """
         user, nextService, method, rest = getNS(packet, 3)
         if user != self.user or nextService != self.nextService:
@@ -187,12 +188,13 @@ class SSHUserAuthServer(service.SSHService):
         return d
 
 
-    def _cbFinishedAuth(self, (interface, avatar, logout)):
+    def _cbFinishedAuth(self, result):
         """
         The callback when user has successfully been authenticated.  For a
         description of the arguments, see L{twisted.cred.portal.Portal.login}.
         We start the service requested by the user.
         """
+        (interface, avatar, logout) = result
         self.transport.avatar = avatar
         self.transport.logoutFunction = logout
         service = self.transport.factory.getService(self.transport,
@@ -200,7 +202,7 @@ class SSHUserAuthServer(service.SSHService):
         if not service:
             raise error.ConchError('could not get next service: %s'
                                   % self.nextService)
-        log.msg('%s authenticated with %s' % (self.user, self.method))
+        log.msg('%r authenticated with %r' % (self.user, self.method))
         self.transport.sendPacket(MSG_USERAUTH_SUCCESS, b'')
         self.transport.setService(service())
 
@@ -230,8 +232,8 @@ class SSHUserAuthServer(service.SSHService):
         """
         if reason.check(error.IgnoreAuthentication):
             return
-        if self.method != 'none':
-            log.msg('%s failed auth %s' % (self.user, self.method))
+        if self.method != b'none':
+            log.msg('%r failed auth %r' % (self.user, self.method))
             if reason.check(UnauthorizedLogin):
                 log.msg('unauthorized login: %s' % reason.getErrorMessage())
             elif reason.check(error.ConchError):
@@ -259,7 +261,7 @@ class SSHUserAuthServer(service.SSHService):
 
         Create a SSHPublicKey credential and verify it using our portal.
         """
-        hasSig = ord(packet[0])
+        hasSig = ord(packet[0:1])
         algName, blob, rest = getNS(packet[1:], 2)
         pubKey = keys.Key.fromString(blob)
         signature = hasSig and getNS(rest)[0] or None
@@ -321,25 +323,25 @@ class SSHUserAuthClient(service.SSHService):
     making callbacks for more information when necessary.
 
     @ivar name: the name of this service: 'ssh-userauth'
-    @type name: C{str}
+    @type name: L{str}
     @ivar preferredOrder: a list of authentication methods that should be used
         first, in order of preference, if supported by the server
-    @type preferredOrder: C{list}
+    @type preferredOrder: L{list}
     @ivar user: the name of the user to authenticate as
-    @type user: C{bytes}
+    @type user: L{bytes}
     @ivar instance: the service to start after authentication has finished
     @type instance: L{service.SSHService}
     @ivar authenticatedWith: a list of strings of authentication methods we've tried
-    @type authenticatedWith: C{list} of C{bytes}
+    @type authenticatedWith: L{list} of L{bytes}
     @ivar triedPublicKeys: a list of public key objects that we've tried to
         authenticate with
-    @type triedPublicKeys: C{list} of L{Key}
+    @type triedPublicKeys: L{list} of L{Key}
     @ivar lastPublicKey: the last public key object we've tried to authenticate
         with
     @type lastPublicKey: L{Key}
     """
 
-    name = 'ssh-userauth'
+    name = b'ssh-userauth'
     preferredOrder = [b'publickey', b'password', b'keyboard-interactive']
 
 
@@ -360,9 +362,9 @@ class SSHUserAuthClient(service.SSHService):
         Send a MSG_USERAUTH_REQUEST.
 
         @param kind: the authentication method to try.
-        @type kind: C{bytes}
+        @type kind: L{bytes}
         @param extraData: method-specific data to go in the packet
-        @type extraData: C{bytes}
+        @type extraData: L{bytes}
         """
         self.lastAuth = kind
         self.transport.sendPacket(MSG_USERAUTH_REQUEST, NS(self.user) +
@@ -374,9 +376,9 @@ class SSHUserAuthClient(service.SSHService):
         Dispatch to an authentication method.
 
         @param kind: the authentication method
-        @type kind: C{bytes}
+        @type kind: L{bytes}
         """
-        kind = kind.replace(b'-', b'_')
+        kind = nativeString(kind.replace(b'-', b'_'))
         log.msg('trying to auth with %s' % (kind,))
         f = getattr(self,'auth_%s' % (kind,), None)
         if f:
@@ -413,13 +415,13 @@ class SSHUserAuthClient(service.SSHService):
         removing methods that have already succeeded. We then call
         C{self.tryAuth} with the most preferred method.
 
-        @param packet: the L{MSG_USERAUTH_FAILURE} payload.
-        @type packet: C{bytes}
+        @param packet: the C{MSG_USERAUTH_FAILURE} payload.
+        @type packet: L{bytes}
 
-        @return: a L{defer.Deferred} that will be callbacked with C{None} as
-            soon as all authentication methods have been tried, or C{None} if no
+        @return: a L{defer.Deferred} that will be callbacked with L{None} as
+            soon as all authentication methods have been tried, or L{None} if no
             more authentication methods are available.
-        @rtype: C{defer.Deferred} or C{None}
+        @rtype: C{defer.Deferred} or L{None}
         """
         canContinue, partial = getNS(packet)
         partial = ord(partial)
@@ -432,10 +434,10 @@ class SSHUserAuthClient(service.SSHService):
             comparison key which is then used for sorting.
 
             @param meth: the authentication method.
-            @type meth: C{bytes}
+            @type meth: L{bytes}
 
             @return: the comparison key for C{meth}.
-            @rtype: C{int}
+            @rtype: L{int}
             """
             if meth in self.preferredOrder:
                 return self.preferredOrder.index(meth)
@@ -473,7 +475,7 @@ class SSHUserAuthClient(service.SSHService):
         in order to handle this request.
         """
         func = getattr(self, 'ssh_USERAUTH_PK_OK_%s' %
-                       self.lastAuth.replace(b'-', b'_'), None)
+                       nativeString(self.lastAuth.replace(b'-', b'_')), None)
         if func is not None:
             return func(packet)
         else:
@@ -538,7 +540,7 @@ class SSHUserAuthClient(service.SSHService):
         authentication request with the signature.
 
         @param signedData: the data signed by the user's private key.
-        @type signedData: C{bytes}
+        @type signedData: L{bytes}
         """
         publicKey = self.lastPublicKey
         self.askForAuth(b'publickey', b'\x01' + NS(publicKey.sshType()) +
@@ -551,7 +553,7 @@ class SSHUserAuthClient(service.SSHService):
         password for now.
 
         @param op: the old password as entered by the user
-        @type op: C{bytes}
+        @type op: L{bytes}
         """
         self._oldPass = op
 
@@ -562,7 +564,7 @@ class SSHUserAuthClient(service.SSHService):
         and send the authentication message with both.
 
         @param np: the new password as entered by the user
-        @type np: C{bytes}
+        @type np: L{bytes}
         """
         op = self._oldPass
         self._oldPass = None
@@ -575,8 +577,8 @@ class SSHUserAuthClient(service.SSHService):
         questions.  Send the info back to the server in a
         MSG_USERAUTH_INFO_RESPONSE.
 
-        @param responses: a list of C{bytes} responses
-        @type responses: C{list}
+        @param responses: a list of L{bytes} responses
+        @type responses: L{list}
         """
         data = struct.pack('!L', len(responses))
         for r in responses:
@@ -590,7 +592,7 @@ class SSHUserAuthClient(service.SSHService):
         if the user has one, send the request to the server and return True.
         Otherwise, return False.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         """
         d = defer.maybeDeferred(self.getPublicKey)
         d.addBoth(self._cbGetPublicKey)
@@ -617,7 +619,7 @@ class SSHUserAuthClient(service.SSHService):
         If the user will return a password, return True.  Otherwise, return
         False.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         """
         d = self.getPassword()
         if d:
@@ -632,7 +634,7 @@ class SSHUserAuthClient(service.SSHService):
         Try to authenticate with keyboard-interactive authentication.  Send
         the request to the server and return True.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         """
         log.msg('authing with keyboard-interactive')
         self.askForAuth(b'keyboard-interactive', NS(b'') + NS(b''))
@@ -645,7 +647,7 @@ class SSHUserAuthClient(service.SSHService):
         server.
 
         @param password: the password the user entered
-        @type password: C{bytes}
+        @type password: L{bytes}
         """
         self.askForAuth(b'password', b'\x00' + NS(password))
 
@@ -664,7 +666,7 @@ class SSHUserAuthClient(service.SSHService):
         @type publicKey: L{keys.Key}
 
         @param signData: the data to be signed by the private key.
-        @type signData: C{bytes}
+        @type signData: L{bytes}
         @return: a Deferred that's called back with the signature
         @rtype: L{defer.Deferred}
         """
@@ -682,9 +684,9 @@ class SSHUserAuthClient(service.SSHService):
         @param privateKey: the private key object
         @type publicKey: L{keys.Key}
         @param signData: the data to be signed by the private key.
-        @type signData: C{bytes}
+        @type signData: L{bytes}
         @return: the signature
-        @rtype: C{bytes}
+        @rtype: L{bytes}
         """
         return privateKey.sign(signData)
 
@@ -692,12 +694,12 @@ class SSHUserAuthClient(service.SSHService):
     def getPublicKey(self):
         """
         Return a public key for the user.  If no more public keys are
-        available, return C{None}.
+        available, return L{None}.
 
-        This implementation always returns C{None}.  Override it in a
+        This implementation always returns L{None}.  Override it in a
         subclass to actually find and return a public key object.
 
-        @rtype: L{Key} or L{NoneType}
+        @rtype: L{Key} or L{None}
         """
         return None
 
@@ -719,7 +721,7 @@ class SSHUserAuthClient(service.SSHService):
         prompt is a string to display for the password, or None for a generic
         'user@hostname's password: '.
 
-        @type prompt: C{bytes}/C{None}
+        @type prompt: L{bytes}/L{None}
         @rtype: L{defer.Deferred}
         """
         return defer.fail(NotImplementedError())
@@ -746,7 +748,7 @@ MSG_USERAUTH_INFO_RESPONSE    = 61
 MSG_USERAUTH_PK_OK            = 60
 
 messages = {}
-for k, v in locals().items():
+for k, v in list(locals().items()):
     if k[:4] == 'MSG_':
         messages[v] = k
 

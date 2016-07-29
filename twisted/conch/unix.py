@@ -115,7 +115,7 @@ class UnixConchUser(ConchUser):
 
     def logout(self):
         # Remove all listeners.
-        for listener in self.listeners.itervalues():
+        for listener in self.listeners.values():
             self._runAsUser(listener.stopListening)
         log.msg(
             'avatar %s logging out (%i)'
@@ -464,7 +464,7 @@ class UnixSFTPFile:
             mode = attrs["permissions"]
             del attrs["permissions"]
         else:
-            mode = 0777
+            mode = 0o777
         fd = server.avatar._runAsUser(os.open, filename, openFlags, mode)
         if attrs:
             server.avatar._runAsUser(server._setAttrs, filename, attrs)
@@ -509,7 +509,7 @@ class UnixSFTPDirectory:
         return self
 
 
-    def next(self):
+    def __next__(self):
         try:
             f = self.files.pop(0)
         except IndexError:
@@ -521,6 +521,7 @@ class UnixSFTPDirectory:
             attrs = self.server._getAttrs(s)
             return (f, longname, attrs)
 
+    next = __next__
 
     def close(self):
         self.files = []

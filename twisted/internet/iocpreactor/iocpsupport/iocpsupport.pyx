@@ -37,12 +37,10 @@ cdef extern from 'windows.h':
     void DebugBreak()
 
 cdef extern from 'python.h':
-    struct PyObject:
-        pass
+    ctypedef struct PyObject
     void *PyMem_Malloc(size_t n) except NULL
     void PyMem_Free(void *p)
-    struct PyThreadState:
-        pass
+    ctypedef struct PyThreadState
     PyThreadState *PyEval_SaveThread()
     void PyEval_RestoreThread(PyThreadState *tstate)
     void Py_INCREF(object o)
@@ -51,10 +49,10 @@ cdef extern from 'python.h':
     void Py_XDECREF(object o)
     int PyObject_AsWriteBuffer(object obj, void **buffer, Py_ssize_t *buffer_len) except -1
     int PyObject_AsReadBuffer(object obj, void **buffer, Py_ssize_t *buffer_len) except -1
-    object PyString_FromString(char *v)
-    object PyString_FromStringAndSize(char *v, Py_ssize_t len)
+    object PyBytes_FromString(const char *v)
+    object PyBytes_FromStringAndSize(const char *v, Py_ssize_t len)
     object PyBuffer_New(Py_ssize_t size)
-    char *PyString_AsString(object obj) except NULL
+    char *PyBytes_AsString(object obj) except NULL
     object PySequence_Fast(object o, char *m)
 #    object PySequence_Fast_GET_ITEM(object o, Py_ssize_t i)
     PyObject** PySequence_Fast_ITEMS(object o)
@@ -223,13 +221,13 @@ cdef object _makesockaddr(sockaddr *addr, Py_ssize_t len):
         return None
     if addr.sa_family == AF_INET:
         sin = <sockaddr_in *>addr
-        return PyString_FromString(inet_ntoa(sin.sin_addr)), ntohs(sin.sin_port)
+        return PyBytes_FromString(inet_ntoa(sin.sin_addr)), ntohs(sin.sin_port)
     elif addr.sa_family == AF_INET6:
         sin6 = <sockaddr_in6 *>addr
         rc = WSAAddressToStringA(addr, sizeof(sockaddr_in6), NULL, buff, &buff_size)
         if rc == SOCKET_ERROR:
             raise_error(0, 'WSAAddressToString')
-        host, sa_port = PyString_FromString(buff), ntohs(sin6.sin6_port)
+        host, sa_port = PyBytes_FromString(buff), ntohs(sin6.sin6_port)
         host, port = host.rsplit(':', 1)
         port = int(port)
         assert host[0] == '['
@@ -237,7 +235,7 @@ cdef object _makesockaddr(sockaddr *addr, Py_ssize_t len):
         assert port == sa_port
         return host[1:-1], port
     else:
-        return PyString_FromStringAndSize(addr.sa_data, sizeof(addr.sa_data))
+        return PyBytes_FromStringAndSize(addr.sa_data, sizeof(addr.sa_data))
 
 
 cdef object fillinetaddr(sockaddr_in *dest, object addr):
@@ -246,7 +244,7 @@ cdef object fillinetaddr(sockaddr_in *dest, object addr):
     cdef char *hoststr
     host, port = addr
 
-    hoststr = PyString_AsString(host)
+    hoststr = PyBytes_AsString(host)
     res = inet_addr(hoststr)
     if res == INADDR_ANY:
         raise ValueError, 'invalid IP address'
@@ -263,7 +261,7 @@ cdef object fillinet6addr(sockaddr_in6 *dest, object addr):
     host, port, flow, scope = addr
     host = host.split("%")[0] # remove scope ID, if any
 
-    hoststr = PyString_AsString(host)
+    hoststr = PyBytes_AsString(host)
     cdef int parseresult = WSAStringToAddressA(hoststr, AF_INET6, NULL,
                                                <sockaddr *>dest, &addrlen)
     if parseresult == SOCKET_ERROR:
@@ -275,9 +273,6 @@ cdef object fillinet6addr(sockaddr_in6 *dest, object addr):
     dest.sin6_flowinfo = flow
     dest.sin6_scope_id = scope
 
-
-def AllocateReadBuffer(int size):
-    return PyBuffer_New(size)
 
 def maxAddrLen(long s):
     cdef WSAPROTOCOL_INFO wsa_pi

@@ -262,7 +262,7 @@ class DictClient(basic.LineReceiver):
         pass
 
     def defineDone(self, result):
-        """override to catch succesful DEFINE"""
+        """override to catch successful DEFINE"""
         pass
     
     def matchFailed(self, reason):
@@ -270,7 +270,7 @@ class DictClient(basic.LineReceiver):
         pass
 
     def matchDone(self, result):
-        """override to catch succesful MATCH"""
+        """override to catch successful MATCH"""
         pass
 
 

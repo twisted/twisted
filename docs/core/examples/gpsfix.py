@@ -8,6 +8,8 @@ GPSTest is a simple example using the SerialPort transport and the NMEA 0183
 and Rockwell Zodiac GPS protocols to display fix data as it is received from
 the device.
 """
+from __future__ import print_function
+
 from twisted.python import log, usage
 import sys
 
@@ -49,10 +51,10 @@ if __name__ == '__main__':
     o = GPSOptions()
     try:
         o.parseOptions()
-    except usage.UsageError, errortext:
-        print '%s: %s' % (sys.argv[0], errortext)
-        print '%s: Try --help for usage details.' % (sys.argv[0])
-        raise SystemExit, 1
+    except usage.UsageError as errortext:
+        print('%s: %s' % (sys.argv[0], errortext))
+        print('%s: Try --help for usage details.' % (sys.argv[0]))
+        raise SystemExit(1)
 
     logFile = o.opts['outfile']
     if logFile is None:

@@ -70,7 +70,7 @@ class V1ParserTests(unittest.TestCase):
         info = _v1parser.V1Parser.parse(
             b'PROXY TCP4 127.0.0.1 127.0.0.1 8080 8888',
         )
-        self.assertTrue(isinstance(info.source, address.IPv4Address))
+        self.assertIsInstance(info.source, address.IPv4Address)
         self.assertEqual(info.source.host, b'127.0.0.1')
         self.assertEqual(info.source.port, 8080)
         self.assertEqual(info.destination.host, b'127.0.0.1')
@@ -84,7 +84,7 @@ class V1ParserTests(unittest.TestCase):
         info = _v1parser.V1Parser.parse(
             b'PROXY TCP6 ::1 ::1 8080 8888',
         )
-        self.assertTrue(isinstance(info.source, address.IPv6Address))
+        self.assertIsInstance(info.source, address.IPv6Address)
         self.assertEqual(info.source.host, b'::1')
         self.assertEqual(info.source.port, 8080)
         self.assertEqual(info.destination.host, b'::1')
@@ -98,8 +98,8 @@ class V1ParserTests(unittest.TestCase):
         info = _v1parser.V1Parser.parse(
             b'PROXY UNKNOWN anything could go here',
         )
-        self.assertIs(info.source, None)
-        self.assertIs(info.destination, None)
+        self.assertIsNone(info.source)
+        self.assertIsNone(info.destination)
 
 
     def test_feedParsing(self):
@@ -115,7 +115,7 @@ class V1ParserTests(unittest.TestCase):
         self.assertFalse(remaining)
         info, remaining = parser.feed(b'\r\n')
         self.assertFalse(remaining)
-        self.assertTrue(isinstance(info.source, address.IPv4Address))
+        self.assertIsInstance(info.source, address.IPv4Address)
         self.assertEqual(info.source.host, b'127.0.0.1')
         self.assertEqual(info.source.port, 8080)
         self.assertEqual(info.destination.host, b'127.0.0.1')

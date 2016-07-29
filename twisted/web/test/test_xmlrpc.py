@@ -175,7 +175,7 @@ class Test(XMLRPC):
         except xmlrpc.NoSuchFunction:
             if procedurePath.startswith("SESSION"):
                 raise xmlrpc.Fault(self.SESSION_EXPIRED,
-                                   "Session non-existant/expired.")
+                                   "Session non-existent/expired.")
             else:
                 raise
 
@@ -624,7 +624,7 @@ class SerializationConfigMixin:
 
 class XMLRPCAllowNoneTests(SerializationConfigMixin, unittest.TestCase):
     """
-    Tests for passing C{None} when the C{allowNone} flag is set.
+    Tests for passing L{None} when the C{allowNone} flag is set.
     """
     flagName = "allowNone"
     value = None

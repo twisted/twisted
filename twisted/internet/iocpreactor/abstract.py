@@ -81,8 +81,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
             # we filled all buffers, so allocate one more
             elif (size == total_buffer_size and
                   len(self._readBuffers) < self.maxReadBuffers):
-                self._readBuffers.append(_iocp.AllocateReadBuffer(
-                                            self.readBufferSize))
+                self._readBuffers.append(bytearray(self.readBufferSize))
         self._readNextBuffer = 0
         self._readSize = 0
         return self.reading
@@ -310,7 +309,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         self.reactor = reactor
         self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
-        self._readBuffers = [_iocp.AllocateReadBuffer(self.readBufferSize)]
+        self._readBuffers = [bytearray(self.readBufferSize)]
 
 
     def connectionLost(self, reason):

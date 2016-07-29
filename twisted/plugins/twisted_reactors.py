@@ -38,9 +38,6 @@ if not _PY3:
     glib2 = Reactor(
         'glib2', 'twisted.internet.glib2reactor',
         'GLib2 event-loop integration reactor.')
-    glade = Reactor(
-        'debug-gui', 'twisted.manhole.gladereactor',
-        'Semi-functional debugging/introspection reactor.')
     win32er = Reactor(
         'win32', 'twisted.internet.win32eventreactor',
         'Win32 WaitForMultipleObjects-based reactor.')

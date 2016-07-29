@@ -17,7 +17,7 @@ from .._global import globalLogPublisher
 
 class TestLogger(Logger):
     """
-    L{Logger} with an overriden C{emit} method that keeps track of received
+    L{Logger} with an overridden C{emit} method that keeps track of received
     events.
     """
 
@@ -90,7 +90,7 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(LogComposedObject.log.namespace, expectedNamespace)
         self.assertIs(LogComposedObject.log.source, LogComposedObject)
         self.assertIs(obj.log.source, obj)
-        self.assertIs(Logger().source, None)
+        self.assertIsNone(Logger().source)
 
 
     def test_descriptorObserver(self):
@@ -147,7 +147,7 @@ class LoggerTests(unittest.TestCase):
             self.assertEqual(log.event["log_format"], format)
             self.assertEqual(log.event["log_level"], level)
             self.assertEqual(log.event["log_namespace"], __name__)
-            self.assertEqual(log.event["log_source"], None)
+            self.assertIsNone(log.event["log_source"])
             self.assertEqual(log.event["junk"], message)
 
             self.assertEqual(formatEvent(log.event), message)
@@ -182,10 +182,10 @@ class LoggerTests(unittest.TestCase):
 
     def test_sourceUnbound(self):
         """
-        C{log_source} event key is C{None}.
+        C{log_source} event key is L{None}.
         """
         def observer(event):
-            self.assertEqual(event["log_source"], None)
+            self.assertIsNone(event["log_source"])
 
         log = TestLogger(observer=observer)
         log.info()
@@ -225,7 +225,7 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(log.event["log_format"], u"*")
         self.assertEqual(log.event["log_level"], LogLevel.warn)
         self.assertEqual(log.event["log_namespace"], log.namespace)
-        self.assertEqual(log.event["log_source"], None)
+        self.assertIsNone(log.event["log_source"])
 
 
     def test_logInvalidLogLevel(self):

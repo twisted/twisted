@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 #
-import direct
+from twisted.conch.client import direct
 
 connectTypes = {"direct" : direct.connect}
 

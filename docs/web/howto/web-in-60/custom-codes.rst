@@ -26,10 +26,10 @@ First, the now-standard import preamble:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
+    from twisted.internet import reactor, endpoints
 
 
 
@@ -45,7 +45,7 @@ the request object, though, which none of the previous examples have done.
 
 The :api:`twisted.web.server.Request <Request>` object has
 shown up in a couple of places, but so far we've ignored it. It is a parameter
-to the :api:`twisted.web.resource.Resource.getChild <getChild>` 
+to the :api:`twisted.web.resource.Resource.getChild <getChild>`
 API as well as to render methods such as ``render_GET`` . As you might
 have suspected, it represents the request for which a response is to be
 generated. Additionally, it also represents the response being generated. In
@@ -58,7 +58,7 @@ it - set the response's status code.
 
 .. code-block:: python
 
-    
+
     class PaymentRequired(Resource):
         def render_GET(self, request):
             request.setResponseCode(402)
@@ -85,11 +85,12 @@ the above defined resource at ``/buy`` :
 
 .. code-block:: python
 
-    
+
     root = Resource()
     root.putChild("buy", PaymentRequired())
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 
@@ -103,20 +104,21 @@ Here's the complete example:
 
 .. code-block:: python
 
-    
+
     from twisted.web.server import Site
     from twisted.web.resource import Resource
-    from twisted.internet import reactor
-    
+    from twisted.internet import reactor, endpoints
+
     class PaymentRequired(Resource):
         def render_GET(self, request):
             request.setResponseCode(402)
             return "<html><body>Please swipe your credit card.</body></html>"
-    
+
     root = Resource()
     root.putChild("buy", PaymentRequired())
     factory = Site(root)
-    reactor.listenTCP(8880, factory)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8880)
+    endpoint.listen(factory)
     reactor.run()
 
 

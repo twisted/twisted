@@ -57,23 +57,29 @@ class SimpleConfFile:
         If file is None and self.defaultFilename is set, it will open
         defaultFilename and use it.
         """
+        close = False
         if file is None and self.defaultFilename:
             file = open(self.defaultFilename,'r')
-            
-        for line in file.readlines():
-            # Strip out comments
-            comment = line.find(self.commentChar)
-            if comment != -1:
-                line = line[:comment]
+            close = True
 
-            # Strip whitespace
-            line = line.strip()
+        try:
+            for line in file.readlines():
+                # Strip out comments
+                comment = line.find(self.commentChar)
+                if comment != -1:
+                    line = line[:comment]
 
-            # Skip empty lines (and lines which only contain comments)
-            if not line:
-                continue
+                # Strip whitespace
+                line = line.strip()
 
-            self.parseLine(line)
+                # Skip empty lines (and lines which only contain comments)
+                if not line:
+                    continue
+
+                self.parseLine(line)
+        finally:
+            if close:
+                file.close()
 
     def parseLine(self, line):
         """Override this.
@@ -84,7 +90,7 @@ class SimpleConfFile:
         try:
             self.parseFields(*line.split())
         except ValueError:
-            raise InvalidInetdConfError, 'Invalid line: ' + repr(line)
+            raise InvalidInetdConfError('Invalid line: ' + repr(line))
     
     def parseFields(self, *fields):
         """Override this."""
@@ -146,8 +152,8 @@ class InetdConf(SimpleConfFile):
                 port = int(serviceName)
                 serviceName = 'unknown'
             except:
-                raise UnknownService, "Unknown service: %s (%s)" \
-                      % (serviceName, protocol)
+                raise UnknownService("Unknown service: %s (%s)" % (
+                    serviceName, protocol))
 
         self.services.append(InetdService(serviceName, port, socketType,
                                           protocol, wait, user, group, program,
@@ -170,8 +176,8 @@ class ServicesConf(SimpleConfFile):
             port, protocol = portAndProtocol.split('/')
             port = long(port)
         except:
-            raise InvalidServicesConfError, 'Invalid port/protocol:' + \
-                                            repr(portAndProtocol)
+            raise InvalidServicesConfError(
+                'Invalid port/protocol: %s' % (repr(portAndProtocol),))
 
         self.services[(name, protocol)] = port
         for alias in aliases:
@@ -199,7 +205,8 @@ class RPCServicesConf(SimpleConfFile):
         try:
             port = long(port)
         except:
-            raise InvalidRPCServicesConfError, 'Invalid port:' + repr(port)
+            raise InvalidRPCServicesConfError(
+                'Invalid port: %s' % (repr(port),))
 
         self.services[name] = port
         for alias in aliases:

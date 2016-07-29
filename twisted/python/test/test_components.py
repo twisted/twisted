@@ -147,8 +147,8 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         co1 = c.getComponent(ITest)
         co3 = c.getComponent(ITest3)
         co4 = c.getComponent(ITest4)
-        self.assertIdentical(None, co4)
-        self.assertIdentical(co1, co3)
+        self.assertIsNone(co4)
+        self.assertIs(co1, co3)
 
 
     def test_getComponentDefaults(self):
@@ -158,13 +158,13 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         """
         componentized = components.Componentized()
         default = object()
-        self.assertIdentical(
+        self.assertIs(
             componentized.getComponent(ITest, default),
             default)
-        self.assertIdentical(
+        self.assertIs(
             componentized.getComponent(ITest, default=default),
             default)
-        self.assertIdentical(
+        self.assertIs(
             componentized.getComponent(ITest),
             None)
 
@@ -201,7 +201,7 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         componentized = components.Componentized()
         obj = object()
         componentized.setComponent(ITest, obj)
-        self.assertIdentical(componentized.getComponent(ITest), obj)
+        self.assertIs(componentized.getComponent(ITest), obj)
 
 
     def test_unsetComponent(self):
@@ -213,7 +213,7 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
         obj = object()
         componentized.setComponent(ITest, obj)
         componentized.unsetComponent(ITest)
-        self.assertIdentical(componentized.getComponent(ITest), None)
+        self.assertIsNone(componentized.getComponent(ITest))
 
 
     def test_reprableComponentized(self):
@@ -235,7 +235,7 @@ class AdapterTests(unittest.SynchronousTestCase):
         o = object()
         a = Adept(o)
         self.assertRaises(components.CannotAdapt, ITest, a)
-        self.assertEqual(ITest(a, None), None)
+        self.assertIsNone(ITest(a, None))
 
 
 
@@ -340,7 +340,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         """
         adapter = lambda o: None
         components.registerAdapter(adapter, original, ITest)
-        self.assertIdentical(
+        self.assertIs(
             components.getAdapterFactory(original, ITest, None),
             adapter)
 
@@ -376,7 +376,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
             components.registerAdapter,
             secondAdapter, original, ITest)
         # Make sure that the original adapter is still around as well
-        self.assertIdentical(
+        self.assertIs(
             components.getAdapterFactory(original, ITest, None),
             firstAdapter)
 
@@ -413,7 +413,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         components.ALLOW_DUPLICATES = True
         try:
             components.registerAdapter(secondAdapter, original, TheInterface)
-            self.assertIdentical(
+            self.assertIs(
                 components.getAdapterFactory(original, TheInterface, None),
                 secondAdapter)
         finally:
@@ -425,7 +425,7 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
             components.registerAdapter,
             firstAdapter, original, TheInterface)
 
-        self.assertIdentical(
+        self.assertIs(
             components.getAdapterFactory(original, TheInterface, None),
             secondAdapter)
 
@@ -459,9 +459,9 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         """
         adapter = lambda o: None
         components.registerAdapter(adapter, original, ITest, ITest2)
-        self.assertIdentical(
+        self.assertIs(
             components.getAdapterFactory(original, ITest, None), adapter)
-        self.assertIdentical(
+        self.assertIs(
             components.getAdapterFactory(original, ITest2, None), adapter)
 
 
@@ -496,10 +496,10 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
             pass
         components.registerAdapter(firstAdapter, original, ITest)
         components.registerAdapter(secondAdapter, TheSubclass, ITest)
-        self.assertIdentical(
+        self.assertIs(
             components.getAdapterFactory(original, ITest, None),
             firstAdapter)
-        self.assertIdentical(
+        self.assertIs(
             components.getAdapterFactory(TheSubclass, ITest, None),
             secondAdapter)
 
@@ -641,7 +641,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         """
         original = object()
         proxy = proxyForInterface(IProxiedInterface)(original)
-        self.assertIdentical(proxy.original, original)
+        self.assertIs(proxy.original, original)
 
 
     def test_proxyMethod(self):
@@ -683,7 +683,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         yayable = Yayable()
         yayable.ifaceAttribute = object()
         proxy = proxyForInterface(IProxiedInterface)(yayable)
-        self.assertIdentical(proxy.ifaceAttribute, yayable.ifaceAttribute)
+        self.assertIs(proxy.ifaceAttribute, yayable.ifaceAttribute)
         self.assertRaises(AttributeError, lambda: proxy.yays)
 
 
@@ -696,7 +696,7 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         proxy = proxyForInterface(IProxiedInterface)(yayable)
         thingy = object()
         proxy.ifaceAttribute = thingy
-        self.assertIdentical(yayable.ifaceAttribute, thingy)
+        self.assertIs(yayable.ifaceAttribute, thingy)
 
 
     def test_proxyDeleteAttribute(self):
@@ -845,14 +845,14 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         yayable.ifaceAttribute = object()
         proxy = proxyForInterface(
             IProxiedInterface, originalAttribute='foo')(yayable)
-        self.assertIdentical(proxy.foo, yayable)
+        self.assertIs(proxy.foo, yayable)
 
         # Check the behavior
         self.assertEqual(proxy.yay(), 1)
-        self.assertIdentical(proxy.ifaceAttribute, yayable.ifaceAttribute)
+        self.assertIs(proxy.ifaceAttribute, yayable.ifaceAttribute)
         thingy = object()
         proxy.ifaceAttribute = thingy
-        self.assertIdentical(yayable.ifaceAttribute, thingy)
+        self.assertIs(yayable.ifaceAttribute, thingy)
         del proxy.ifaceAttribute
         self.assertFalse(hasattr(yayable, 'ifaceAttribute'))
 

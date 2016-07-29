@@ -178,7 +178,7 @@ the normal test-failure paths are followed. This timeout puts an upper bound
 on the time that a test can consume, and prevents the entire test suite from
 stalling because of a single test. This is especially important for the
 Twisted test suite, because it is run automatically by the buildbot whenever
-changes are committed to the Subversion repository.
+changes are committed to the Git repository.
 
 
 

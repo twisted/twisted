@@ -65,7 +65,7 @@ class ResultsTestMixin(object):
 
     def assertCount(self, numTests):
         """
-        Asserts that the test count is plausable
+        Asserts that the test count is plausible
         """
         self.assertEqual(self.suite.countTestCases(), numTests)
         self.suite(self.reporter)
@@ -90,7 +90,7 @@ class SuccessMixin(object):
     def assertSuccessful(self, test, result):
         """
         Utility function -- assert there is one success and the state is
-        plausable
+        plausible
         """
         self.assertEqual(result.successes, 1)
         self.assertEqual(result.failures, [])

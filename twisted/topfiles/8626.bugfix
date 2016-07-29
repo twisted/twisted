@@ -1,0 +1,1 @@
+twisted.internet.win32eventreactor works on Python 3 in Windows

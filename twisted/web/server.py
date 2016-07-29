@@ -32,7 +32,7 @@ if _PY3:
         """
 else:
     from twisted.spread.pb import Copyable, ViewPoint
-from twisted.internet import address
+from twisted.internet import address, interfaces
 from twisted.web import iweb, http, util
 from twisted.web.http import unquote
 from twisted.python import log, reflect, failure, components
@@ -91,7 +91,7 @@ class Request(Copyable, http.Request, components.Componentized):
     An HTTP request.
 
     @ivar defaultContentType: A C{bytes} giving the default I{Content-Type}
-        value to send in responses if no other value is set.  C{None} disables
+        value to send in responses if no other value is set.  L{None} disables
         the default.
     """
 
@@ -576,7 +576,7 @@ class Session(components.Componentized):
         """
         Start expiration tracking.
 
-        @return: C{None}
+        @return: L{None}
         """
         self._expireCall = self._reactor.callLater(
             self.sessionTimeout, self.expire)
@@ -615,12 +615,14 @@ class Session(components.Componentized):
 version = networkString("TwistedWeb/%s" % (copyright.version,))
 
 
+
+@implementer(interfaces.IProtocolNegotiationFactory)
 class Site(http.HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
 
     @ivar counter: increment value used for generating unique sessions ID.
-    @ivar requestFactory: A factory which is called with (channel, queued)
+    @ivar requestFactory: A factory which is called with (channel)
         and creates L{Request} instances. Default to L{Request}.
     @ivar displayTracebacks: if set, Twisted internal errors are displayed on
         rendered pages. Default to C{True}.
@@ -728,7 +730,7 @@ class Site(http.HTTPFactory):
         """
         Get a resource for a request.
 
-        This iterates through the resource heirarchy, calling
+        This iterates through the resource hierarchy, calling
         getChildWithDefault on each resource it finds for a path element,
         stopping when it hits an element where isLeaf is true.
         """
@@ -737,3 +739,15 @@ class Site(http.HTTPFactory):
         # servers and disconnected sites.
         request.sitepath = copy.copy(request.prepath)
         return resource.getChildForRequest(self.resource, request)
+
+    # IProtocolNegotiationFactory
+    def acceptableProtocols(self):
+        """
+        Protocols this server can speak.
+        """
+        baseProtocols = [b'http/1.1']
+
+        if http.H2_ENABLED:
+            baseProtocols.insert(0, b'h2')
+
+        return baseProtocols

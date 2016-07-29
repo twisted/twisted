@@ -9,6 +9,7 @@ Handling of RSA and DSA keys.
 from __future__ import absolute_import, division
 
 import base64
+import binascii
 import itertools
 import warnings
 
@@ -75,12 +76,12 @@ class Key(object):
 
         @param filename: The path to load key data from.
 
-        @type type: L{str} or C{None}
+        @type type: L{str} or L{None}
         @param type: A string describing the format the key data is in, or
-        C{None} to attempt detection of the type.
+        L{None} to attempt detection of the type.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if there is no encryption.
 
         @rtype: L{Key}
@@ -102,12 +103,12 @@ class Key(object):
         @type data: L{bytes}
         @param data: The key data.
 
-        @type type: L{str} or C{None}
+        @type type: L{str} or L{None}
         @param type: A string describing the format the key data is in, or
-        C{None} to attempt detection of the type.
+        L{None} to attempt detection of the type.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if there is no encryption.
 
         @rtype: L{Key}
@@ -256,8 +257,8 @@ class Key(object):
         @type data: L{bytes}
         @param data: The key data.
 
-        @type passphrase: L{bytes} or C{None}
-        @param passphrase: The passphrase the key is encrypted with, or C{None}
+        @type passphrase: L{bytes} or L{None}
+        @param passphrase: The passphrase the key is encrypted with, or L{None}
         if it is not encrypted.
 
         @return: A new key.
@@ -524,16 +525,16 @@ class Key(object):
         @type e: L{int}
         @param e: The 'e' RSA variable.
 
-        @type d: L{int} or C{None}
+        @type d: L{int} or L{None}
         @param d: The 'd' RSA variable (optional for a public key).
 
-        @type p: L{int} or C{None}
+        @type p: L{int} or L{None}
         @param p: The 'p' RSA variable (optional for a public key).
 
-        @type q: L{int} or C{None}
+        @type q: L{int} or L{None}
         @param q: The 'q' RSA variable (optional for a public key).
 
-        @type u: L{int} or C{None}
+        @type u: L{int} or L{None}
         @param u: The 'u' RSA variable. Ignored, as its value is determined by
         p and q.
 
@@ -576,7 +577,7 @@ class Key(object):
         @type g: L{int}
         @param g: The 'g' DSA variable.
 
-        @type x: L{int} or C{None}
+        @type x: L{int} or L{None}
         @param x: The 'x' DSA variable (optional for a public key)
 
         @rtype: L{Key}
@@ -800,7 +801,9 @@ class Key(object):
 
         @rtype: L{str}
         """
-        return ':'.join([x.encode('hex') for x in md5(self.blob()).digest()])
+        return nativeString(
+            b':'.join([binascii.hexlify(x)
+                       for x in iterbytes(md5(self.blob()).digest())]))
 
 
     def type(self):
@@ -838,7 +841,7 @@ class Key(object):
         Return the size of the object we wrap.
 
         @return: The size of the key.
-        @rtype: C{int}
+        @rtype: L{int}
         """
         if self._keyObject is None:
             return 0
@@ -849,7 +852,7 @@ class Key(object):
         """
         Return the values of the public key as a dictionary.
 
-        @rtype: C{dict}
+        @rtype: L{dict}
         """
         if isinstance(self._keyObject, rsa.RSAPublicKey):
             numbers = self._keyObject.public_numbers()
@@ -965,7 +968,7 @@ class Key(object):
     def toString(self, type, extra=None):
         """
         Create a string representation of this key.  If the key is a private
-        key and you want the represenation of its public key, use
+        key and you want the representation of its public key, use
         C{key.public().toString()}.  type maps to a _toString_* method.
 
         @param type: The type of string to emit.  Currently supported values
@@ -976,7 +979,7 @@ class Key(object):
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
             encrypt with.
-        @type extra: L{bytes} or L{NoneType}
+        @type extra: L{bytes} or L{None}
 
         @rtype: L{bytes}
         """
@@ -1217,7 +1220,7 @@ def objectType(obj):
     @type obj: C{Crypto.PublicKey.pubkey.pubkey}
 
     @return: Return the SSH key type corresponding to a PyCrypto object.
-    @rtype: C{str}
+    @rtype: L{str}
     """
     keyDataMapping = {
         ('n', 'e', 'd', 'p', 'q'): b'ssh-rsa',
@@ -1239,7 +1242,7 @@ def _getPersistentRSAKey(location, keySize=4096):
     key with the key size of C{keySize} is generated and saved.
 
     @param location: Where the key is stored.
-    @type location: L{twisted.python.filepath.FilePath)
+    @type location: L{twisted.python.filepath.FilePath}
 
     @param keySize: The size of the key, if it needs to be generated.
     @type keySize: L{int}
@@ -1267,7 +1270,7 @@ def _getPersistentRSAKey(location, keySize=4096):
 
     # By this point (save any hilarious race conditions) we should have a
     # working PEM file. Load it!
-    # (Future archaelogical readers: I chose not to short circuit above,
+    # (Future archaeological readers: I chose not to short circuit above,
     # because then there's two exit paths to this code!)
     with location.open("rb") as keyFile:
         privateKey = serialization.load_pem_private_key(

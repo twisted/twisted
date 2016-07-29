@@ -19,7 +19,7 @@ try:
 except ImportError:
     pwd = grp = None
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 # Twisted Imports
 from twisted import copyright
@@ -244,10 +244,10 @@ def _isGlobbingExpression(segments=None):
     # then it contains no globbing expression.
     globCandidate = segments[-1]
     # A set of default regex rules is added to all strings.
-    emtpyTranslations = fnmatch.translate('')
+    emptyTranslations = fnmatch.translate('')
     globTranslations = fnmatch.translate(globCandidate)
 
-    if globCandidate + emtpyTranslations == globTranslations:
+    if globCandidate + emptyTranslations == globTranslations:
         return False
     else:
         return True
@@ -394,9 +394,8 @@ _months = [
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
+@implementer(interfaces.IConsumer)
 class DTP(object, protocol.Protocol):
-    implements(interfaces.IConsumer)
-
     isConnected = False
 
     _cons = None
@@ -544,6 +543,15 @@ class DTPFactory(protocol.ClientFactory):
         this is L{_IN_PROGRESS}.  If the connection fails or times out, it is
         L{_FAILED}.  If the connection succeeds before the timeout, it is
         L{_FINISHED}.
+
+    @cvar _IN_PROGRESS: Token to signal that connection is active.
+    @type _IN_PROGRESS: L{object}.
+
+    @cvar _FAILED: Token to signal that connection has failed.
+    @type _FAILED: L{object}.
+
+    @cvar _FINISHED: Token to signal that connection was successfully closed.
+    @type _FINISHED: L{object}.
     """
 
     _IN_PROGRESS = object()
@@ -643,6 +651,7 @@ class ASCIIConsumerWrapper(object):
 
 
 
+@implementer(interfaces.IConsumer)
 class FileConsumer(object):
     """
     A consumer for FTP input that writes data to a file.
@@ -650,9 +659,6 @@ class FileConsumer(object):
     @ivar fObj: a file object opened for writing, used to write data received.
     @type fObj: C{file}
     """
-
-    implements(interfaces.IConsumer)
-
     def __init__(self, fObj):
         self.fObj = fObj
 
@@ -696,6 +702,18 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar passivePortRange: iterator used as source of passive port numbers.
     @type passivePortRange: C{iterator}
+
+    @cvar UNAUTH: Command channel is not yet authenticated.
+    @type UNAUTH: L{int}
+
+    @cvar INAUTH: Command channel is in the process of being authenticated.
+    @type INAUTH: L{int}
+
+    @cvar AUTHED: Command channel was successfully authenticated.
+    @type AUTHED: L{int}
+
+    @cvar RENAMING: Command channel is between the renaming command sequence.
+    @type RENAMING: L{int}
     """
 
     disconnected = False
@@ -874,7 +892,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             reply = USR_LOGGED_IN_PROCEED
         del self._user
 
-        def _cbLogin((interface, avatar, logout)):
+        def _cbLogin(result):
+            (interface, avatar, logout) = result
             assert interface is IFTPShell, "The realm is busted, jerk."
             self.shell = avatar
             self.logout = logout
@@ -1045,9 +1064,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             @param results: The names of the files in the directory.
 
             @param glob: A shell-style glob through which to filter results (see
-                U{http://docs.python.org/2/library/fnmatch.html}), or C{None}
+                U{http://docs.python.org/2/library/fnmatch.html}), or L{None}
                 for no filtering.
-            @type glob: L{str} or L{NoneType}
+            @type glob: L{str} or L{None}
 
             @return: A C{tuple} containing the status code for a successful
                 transfer.
@@ -1315,7 +1334,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
-        def cbStat((size,)):
+        def cbStat(result):
+            (size,) = result
             return (FILE_STATUS, str(size))
 
         return self.shell.stat(newsegs, ('size',)).addCallback(cbStat)
@@ -1339,7 +1359,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
-        def cbStat((modified,)):
+        def cbStat(result):
+            (modified,) = result
             return (FILE_STATUS, time.strftime('%Y%m%d%H%M%S', time.gmtime(modified)))
 
         return self.shell.stat(newsegs, ('modified',)).addCallback(cbStat)
@@ -1790,6 +1811,7 @@ def _testPermissions(uid, gid, spath, mode='r'):
 
 
 
+@implementer(IFTPShell)
 class FTPAnonymousShell(object):
     """
     An anonymous implementation of IFTPShell
@@ -1798,8 +1820,6 @@ class FTPAnonymousShell(object):
     @ivar filesystemRoot: The path which is considered the root of
     this shell.
     """
-    implements(IFTPShell)
-
     def __init__(self, filesystemRoot):
         self.filesystemRoot = filesystemRoot
 
@@ -1847,7 +1867,7 @@ class FTPAnonymousShell(object):
             return defer.fail(IsADirectoryError(path))
         try:
             f = p.open('r')
-        except (IOError, OSError), e:
+        except (IOError, OSError) as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -1872,7 +1892,7 @@ class FTPAnonymousShell(object):
         # For now, just see if we can os.listdir() it
         try:
             p.listdir()
-        except (IOError, OSError), e:
+        except (IOError, OSError) as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -1885,7 +1905,7 @@ class FTPAnonymousShell(object):
         if p.isdir():
             try:
                 statResult = self._statNode(p, keys)
-            except (IOError, OSError), e:
+            except (IOError, OSError) as e:
                 return errnoToFailure(e.errno, path)
             except:
                 return defer.fail()
@@ -1923,7 +1943,7 @@ class FTPAnonymousShell(object):
             if keys:
                 try:
                     ent.extend(self._statNode(filePath, keys))
-                except (IOError, OSError), e:
+                except (IOError, OSError) as e:
                     return errnoToFailure(e.errno, fileName)
                 except:
                     return defer.fail()
@@ -2054,9 +2074,8 @@ class FTPAnonymousShell(object):
 
 
 
+@implementer(IReadFile)
 class _FileReader(object):
-    implements(IReadFile)
-
     def __init__(self, fObj):
         self.fObj = fObj
         self._send = False
@@ -2084,7 +2103,7 @@ class FTPShell(FTPAnonymousShell):
         p = self._path(path)
         try:
             p.makedirs()
-        except (IOError, OSError), e:
+        except (IOError, OSError) as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -2101,7 +2120,7 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsNotADirectoryError(path))
         try:
             os.rmdir(p.path)
-        except (IOError, OSError), e:
+        except (IOError, OSError) as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -2118,7 +2137,7 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsADirectoryError(path))
         try:
             p.remove()
-        except (IOError, OSError), e:
+        except (IOError, OSError) as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -2131,7 +2150,7 @@ class FTPShell(FTPAnonymousShell):
         tp = self._path(toPath)
         try:
             os.rename(fp.path, tp.path)
-        except (IOError, OSError), e:
+        except (IOError, OSError) as e:
             return errnoToFailure(e.errno, fromPath)
         except:
             return defer.fail()
@@ -2157,7 +2176,7 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsADirectoryError(path))
         try:
             fObj = p.open('w')
-        except (IOError, OSError), e:
+        except (IOError, OSError) as e:
             return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
@@ -2165,9 +2184,8 @@ class FTPShell(FTPAnonymousShell):
 
 
 
+@implementer(IWriteFile)
 class _FileWriter(object):
-    implements(IWriteFile)
-
     def __init__(self, fObj):
         self.fObj = fObj
         self._receive = False
@@ -2183,13 +2201,12 @@ class _FileWriter(object):
 
 
 
+@implementer(portal.IRealm)
 class BaseFTPRealm:
     """
     Base class for simple FTP realms which provides an easy hook for specifying
     the home directory for each user.
     """
-    implements(portal.IRealm)
-
     def __init__(self, anonymousRoot):
         self.anonymousRoot = filepath.FilePath(anonymousRoot)
 
@@ -2338,9 +2355,8 @@ class IFinishableConsumer(interfaces.IConsumer):
 
 
 
+@implementer(IFinishableConsumer)
 class SenderProtocol(protocol.Protocol):
-    implements(IFinishableConsumer)
-
     def __init__(self):
         # Fired upon connection
         self.connectedDeferred = defer.Deferred()
@@ -2541,7 +2557,7 @@ class FTPClientBasic(basic.LineReceiver):
         """
         Login: send the username, send the password.
 
-        If the password is C{None}, the PASS command won't be sent.  Also, if
+        If the password is L{None}, the PASS command won't be sent.  Also, if
         the response to the USER command has a response code of 230 (User logged
         in), then PASS won't be sent either.
         """
@@ -3209,7 +3225,7 @@ def parsePWDResponse(response):
 
     For this example, I will return C{'/home/andrew'}.
 
-    If I can't find the path, I return C{None}.
+    If I can't find the path, I return L{None}.
     """
     match = re.search('"(.*)"', response)
     if match:

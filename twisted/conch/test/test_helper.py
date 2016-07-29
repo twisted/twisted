@@ -21,8 +21,8 @@ class BufferTests(unittest.TestCase):
     def testInitialState(self):
         self.assertEqual(self.term.width, WIDTH)
         self.assertEqual(self.term.height, HEIGHT)
-        self.assertEqual(str(self.term),
-                          '\n' * (HEIGHT - 1))
+        self.assertEqual(self.term.__bytes__(),
+                          b'\n' * (HEIGHT - 1))
         self.assertEqual(self.term.reportCursorPosition(), (0, 0))
 
 
@@ -44,7 +44,7 @@ class BufferTests(unittest.TestCase):
         self.term.cursorForward(5)
         self.term.cursorDown(3)
         self.assertEqual(self.term.reportCursorPosition(), (5, 3))
-        self.term.insertAtCursor("\r")
+        self.term.insertAtCursor(b"\r")
         self.assertEqual(self.term.reportCursorPosition(), (0, 3))
 
 
@@ -54,7 +54,7 @@ class BufferTests(unittest.TestCase):
         """
         self.term.cursorForward(5)
         self.assertEqual(self.term.reportCursorPosition(), (5, 0))
-        self.term.insertAtCursor("\n")
+        self.term.insertAtCursor(b"\n")
         self.assertEqual(self.term.reportCursorPosition(), (5, 1))
 
 
@@ -65,7 +65,7 @@ class BufferTests(unittest.TestCase):
         self.term.cursorForward(5)
         self.term.cursorDown(3)
         self.assertEqual(self.term.reportCursorPosition(), (5, 3))
-        self.term.write("\n")
+        self.term.write(b"\n")
         self.assertEqual(self.term.reportCursorPosition(), (0, 4))
 
 
@@ -131,60 +131,67 @@ class BufferTests(unittest.TestCase):
         self.term.cursorBackward(1)
         self.assertEqual(self.term.reportCursorPosition(), (0, 0))
 
+
     def testCursorPositioning(self):
         self.term.cursorPosition(3, 9)
         self.assertEqual(self.term.reportCursorPosition(), (3, 9))
 
+
     def testSimpleWriting(self):
-        s = "Hello, world."
+        s = b"Hello, world."
         self.term.write(s)
         self.assertEqual(
-            str(self.term),
-            s + '\n' +
-            '\n' * (HEIGHT - 2))
+            self.term.__bytes__(),
+            s + b'\n' +
+            b'\n' * (HEIGHT - 2))
+
 
     def testOvertype(self):
-        s = "hello, world."
+        s = b"hello, world."
         self.term.write(s)
         self.term.cursorBackward(len(s))
         self.term.resetModes([modes.IRM])
-        self.term.write("H")
+        self.term.write(b"H")
         self.assertEqual(
-            str(self.term),
-            ("H" + s[1:]) + '\n' +
-            '\n' * (HEIGHT - 2))
+            self.term.__bytes__(),
+            (b"H" + s[1:]) + b'\n' +
+            b'\n' * (HEIGHT - 2))
+
 
     def testInsert(self):
-        s = "ello, world."
+        s = b"ello, world."
         self.term.write(s)
         self.term.cursorBackward(len(s))
         self.term.setModes([modes.IRM])
-        self.term.write("H")
+        self.term.write(b"H")
         self.assertEqual(
-            str(self.term),
-            ("H" + s) + '\n' +
-            '\n' * (HEIGHT - 2))
+            self.term.__bytes__(),
+            (b"H" + s) + b'\n' +
+            b'\n' * (HEIGHT - 2))
+
 
     def testWritingInTheMiddle(self):
-        s = "Hello, world."
+        s = b"Hello, world."
         self.term.cursorDown(5)
         self.term.cursorForward(5)
         self.term.write(s)
         self.assertEqual(
-            str(self.term),
-            '\n' * 5 +
-            (self.term.fill * 5) + s + '\n' +
-            '\n' * (HEIGHT - 7))
+            self.term.__bytes__(),
+            b'\n' * 5 +
+            (self.term.fill * 5) + s + b'\n' +
+            b'\n' * (HEIGHT - 7))
+
 
     def testWritingWrappedAtEndOfLine(self):
-        s = "Hello, world."
+        s = b"Hello, world."
         self.term.cursorForward(WIDTH - 5)
         self.term.write(s)
         self.assertEqual(
-            str(self.term),
-            s[:5].rjust(WIDTH) + '\n' +
-            s[5:] + '\n' +
-            '\n' * (HEIGHT - 3))
+            self.term.__bytes__(),
+            s[:5].rjust(WIDTH) + b'\n' +
+            s[5:] + b'\n' +
+            b'\n' * (HEIGHT - 3))
+
 
     def testIndex(self):
         self.term.index()
@@ -194,6 +201,7 @@ class BufferTests(unittest.TestCase):
         self.term.index()
         self.assertEqual(self.term.reportCursorPosition(), (0, HEIGHT - 1))
 
+
     def testReverseIndex(self):
         self.term.reverseIndex()
         self.assertEqual(self.term.reportCursorPosition(), (0, 0))
@@ -201,6 +209,7 @@ class BufferTests(unittest.TestCase):
         self.assertEqual(self.term.reportCursorPosition(), (0, 2))
         self.term.reverseIndex()
         self.assertEqual(self.term.reportCursorPosition(), (0, 1))
+
 
     def test_nextLine(self):
         """
@@ -214,6 +223,7 @@ class BufferTests(unittest.TestCase):
         self.term.nextLine()
         self.assertEqual(self.term.reportCursorPosition(), (0, 2))
 
+
     def testSaveCursor(self):
         self.term.cursorDown(5)
         self.term.cursorForward(7)
@@ -225,215 +235,229 @@ class BufferTests(unittest.TestCase):
         self.term.restoreCursor()
         self.assertEqual(self.term.reportCursorPosition(), (7, 5))
 
+
     def testSingleShifts(self):
         self.term.singleShift2()
-        self.term.write('Hi')
+        self.term.write(b'Hi')
 
         ch = self.term.getCharacter(0, 0)
-        self.assertEqual(ch[0], 'H')
+        self.assertEqual(ch[0], b'H')
         self.assertEqual(ch[1].charset, G2)
 
         ch = self.term.getCharacter(1, 0)
-        self.assertEqual(ch[0], 'i')
+        self.assertEqual(ch[0], b'i')
         self.assertEqual(ch[1].charset, G0)
 
         self.term.singleShift3()
-        self.term.write('!!')
+        self.term.write(b'!!')
 
         ch = self.term.getCharacter(2, 0)
-        self.assertEqual(ch[0], '!')
+        self.assertEqual(ch[0], b'!')
         self.assertEqual(ch[1].charset, G3)
 
         ch = self.term.getCharacter(3, 0)
-        self.assertEqual(ch[0], '!')
+        self.assertEqual(ch[0], b'!')
         self.assertEqual(ch[1].charset, G0)
 
+
     def testShifting(self):
-        s1 = "Hello"
-        s2 = "World"
-        s3 = "Bye!"
-        self.term.write("Hello\n")
+        s1 = b"Hello"
+        s2 = b"World"
+        s3 = b"Bye!"
+        self.term.write(b"Hello\n")
         self.term.shiftOut()
-        self.term.write("World\n")
+        self.term.write(b"World\n")
         self.term.shiftIn()
-        self.term.write("Bye!\n")
+        self.term.write(b"Bye!\n")
 
         g = G0
         h = 0
         for s in (s1, s2, s3):
             for i in range(len(s)):
                 ch = self.term.getCharacter(i, h)
-                self.assertEqual(ch[0], s[i])
+                self.assertEqual(ch[0], s[i:i+1])
                 self.assertEqual(ch[1].charset, g)
             g = g == G0 and G1 or G0
             h += 1
 
+
     def testGraphicRendition(self):
         self.term.selectGraphicRendition(BOLD, UNDERLINE, BLINK, REVERSE_VIDEO)
-        self.term.write('W')
+        self.term.write(b'W')
         self.term.selectGraphicRendition(NORMAL)
-        self.term.write('X')
+        self.term.write(b'X')
         self.term.selectGraphicRendition(BLINK)
-        self.term.write('Y')
+        self.term.write(b'Y')
         self.term.selectGraphicRendition(BOLD)
-        self.term.write('Z')
+        self.term.write(b'Z')
 
         ch = self.term.getCharacter(0, 0)
-        self.assertEqual(ch[0], 'W')
+        self.assertEqual(ch[0], b'W')
         self.assertTrue(ch[1].bold)
         self.assertTrue(ch[1].underline)
         self.assertTrue(ch[1].blink)
         self.assertTrue(ch[1].reverseVideo)
 
         ch = self.term.getCharacter(1, 0)
-        self.assertEqual(ch[0], 'X')
+        self.assertEqual(ch[0], b'X')
         self.assertFalse(ch[1].bold)
         self.assertFalse(ch[1].underline)
         self.assertFalse(ch[1].blink)
         self.assertFalse(ch[1].reverseVideo)
 
         ch = self.term.getCharacter(2, 0)
-        self.assertEqual(ch[0], 'Y')
+        self.assertEqual(ch[0], b'Y')
         self.assertTrue(ch[1].blink)
         self.assertFalse(ch[1].bold)
         self.assertFalse(ch[1].underline)
         self.assertFalse(ch[1].reverseVideo)
 
         ch = self.term.getCharacter(3, 0)
-        self.assertEqual(ch[0], 'Z')
+        self.assertEqual(ch[0], b'Z')
         self.assertTrue(ch[1].blink)
         self.assertTrue(ch[1].bold)
         self.assertFalse(ch[1].underline)
         self.assertFalse(ch[1].reverseVideo)
 
+
     def testColorAttributes(self):
-        s1 = "Merry xmas"
-        s2 = "Just kidding"
+        s1 = b"Merry xmas"
+        s2 = b"Just kidding"
         self.term.selectGraphicRendition(helper.FOREGROUND + helper.RED,
                                          helper.BACKGROUND + helper.GREEN)
-        self.term.write(s1 + "\n")
+        self.term.write(s1 + b"\n")
         self.term.selectGraphicRendition(NORMAL)
-        self.term.write(s2 + "\n")
+        self.term.write(s2 + b"\n")
 
         for i in range(len(s1)):
             ch = self.term.getCharacter(i, 0)
-            self.assertEqual(ch[0], s1[i])
+            self.assertEqual(ch[0], s1[i:i+1])
             self.assertEqual(ch[1].charset, G0)
-            self.assertEqual(ch[1].bold, False)
-            self.assertEqual(ch[1].underline, False)
-            self.assertEqual(ch[1].blink, False)
-            self.assertEqual(ch[1].reverseVideo, False)
+            self.assertFalse(ch[1].bold)
+            self.assertFalse(ch[1].underline)
+            self.assertFalse(ch[1].blink)
+            self.assertFalse(ch[1].reverseVideo)
             self.assertEqual(ch[1].foreground, helper.RED)
             self.assertEqual(ch[1].background, helper.GREEN)
 
         for i in range(len(s2)):
             ch = self.term.getCharacter(i, 1)
-            self.assertEqual(ch[0], s2[i])
+            self.assertEqual(ch[0], s2[i:i+1])
             self.assertEqual(ch[1].charset, G0)
-            self.assertEqual(ch[1].bold, False)
-            self.assertEqual(ch[1].underline, False)
-            self.assertEqual(ch[1].blink, False)
-            self.assertEqual(ch[1].reverseVideo, False)
+            self.assertFalse(ch[1].bold)
+            self.assertFalse(ch[1].underline)
+            self.assertFalse(ch[1].blink)
+            self.assertFalse(ch[1].reverseVideo)
             self.assertEqual(ch[1].foreground, helper.WHITE)
             self.assertEqual(ch[1].background, helper.BLACK)
 
+
     def testEraseLine(self):
-        s1 = 'line 1'
-        s2 = 'line 2'
-        s3 = 'line 3'
-        self.term.write('\n'.join((s1, s2, s3)) + '\n')
+        s1 = b'line 1'
+        s2 = b'line 2'
+        s3 = b'line 3'
+        self.term.write(b'\n'.join((s1, s2, s3)) + b'\n')
         self.term.cursorPosition(1, 1)
         self.term.eraseLine()
 
         self.assertEqual(
-            str(self.term),
-            s1 + '\n' +
-            '\n' +
-            s3 + '\n' +
-            '\n' * (HEIGHT - 4))
+            self.term.__bytes__(),
+            s1 + b'\n' +
+            b'\n' +
+            s3 + b'\n' +
+            b'\n' * (HEIGHT - 4))
+
 
     def testEraseToLineEnd(self):
-        s = 'Hello, world.'
+        s = b'Hello, world.'
         self.term.write(s)
         self.term.cursorBackward(5)
         self.term.eraseToLineEnd()
         self.assertEqual(
-            str(self.term),
-            s[:-5] + '\n' +
-            '\n' * (HEIGHT - 2))
+            self.term.__bytes__(),
+            s[:-5] + b'\n' +
+            b'\n' * (HEIGHT - 2))
+
 
     def testEraseToLineBeginning(self):
-        s = 'Hello, world.'
+        s = b'Hello, world.'
         self.term.write(s)
         self.term.cursorBackward(5)
         self.term.eraseToLineBeginning()
         self.assertEqual(
-            str(self.term),
-            s[-4:].rjust(len(s)) + '\n' +
-            '\n' * (HEIGHT - 2))
+            self.term.__bytes__(),
+            s[-4:].rjust(len(s)) + b'\n' +
+            b'\n' * (HEIGHT - 2))
+
 
     def testEraseDisplay(self):
-        self.term.write('Hello world\n')
-        self.term.write('Goodbye world\n')
+        self.term.write(b'Hello world\n')
+        self.term.write(b'Goodbye world\n')
         self.term.eraseDisplay()
 
         self.assertEqual(
-            str(self.term),
-            '\n' * (HEIGHT - 1))
+            self.term.__bytes__(),
+            b'\n' * (HEIGHT - 1))
+
 
     def testEraseToDisplayEnd(self):
-        s1 = "Hello world"
-        s2 = "Goodbye world"
-        self.term.write('\n'.join((s1, s2, '')))
+        s1 = b"Hello world"
+        s2 = b"Goodbye world"
+        self.term.write(b'\n'.join((s1, s2, b'')))
         self.term.cursorPosition(5, 1)
         self.term.eraseToDisplayEnd()
 
         self.assertEqual(
-            str(self.term),
-            s1 + '\n' +
-            s2[:5] + '\n' +
-            '\n' * (HEIGHT - 3))
+            self.term.__bytes__(),
+            s1 + b'\n' +
+            s2[:5] + b'\n' +
+            b'\n' * (HEIGHT - 3))
+
 
     def testEraseToDisplayBeginning(self):
-        s1 = "Hello world"
-        s2 = "Goodbye world"
-        self.term.write('\n'.join((s1, s2)))
+        s1 = b"Hello world"
+        s2 = b"Goodbye world"
+        self.term.write(b'\n'.join((s1, s2)))
         self.term.cursorPosition(5, 1)
         self.term.eraseToDisplayBeginning()
 
         self.assertEqual(
-            str(self.term),
-            '\n' +
-            s2[6:].rjust(len(s2)) + '\n' +
-            '\n' * (HEIGHT - 3))
+            self.term.__bytes__(),
+            b'\n' +
+            s2[6:].rjust(len(s2)) + b'\n' +
+            b'\n' * (HEIGHT - 3))
+
 
     def testLineInsertion(self):
-        s1 = "Hello world"
-        s2 = "Goodbye world"
-        self.term.write('\n'.join((s1, s2)))
+        s1 = b"Hello world"
+        s2 = b"Goodbye world"
+        self.term.write(b'\n'.join((s1, s2)))
         self.term.cursorPosition(7, 1)
         self.term.insertLine()
 
         self.assertEqual(
-            str(self.term),
-            s1 + '\n' +
-            '\n' +
-            s2 + '\n' +
-            '\n' * (HEIGHT - 4))
+            self.term.__bytes__(),
+            s1 + b'\n' +
+            b'\n' +
+            s2 + b'\n' +
+            b'\n' * (HEIGHT - 4))
+
 
     def testLineDeletion(self):
-        s1 = "Hello world"
-        s2 = "Middle words"
-        s3 = "Goodbye world"
-        self.term.write('\n'.join((s1, s2, s3)))
+        s1 = b"Hello world"
+        s2 = b"Middle words"
+        s3 = b"Goodbye world"
+        self.term.write(b'\n'.join((s1, s2, s3)))
         self.term.cursorPosition(9, 1)
         self.term.deleteLine()
 
         self.assertEqual(
-            str(self.term),
-            s1 + '\n' +
-            s3 + '\n' +
-            '\n' * (HEIGHT - 3))
+            self.term.__bytes__(),
+            s1 + b'\n' +
+            s3 + b'\n' +
+            b'\n' * (HEIGHT - 3))
+
+
 
 class FakeDelayedCall:
     called = False
@@ -445,24 +469,32 @@ class FakeDelayedCall:
         self.a = a
         self.kw = kw
 
+
     def active(self):
         return not (self.cancelled or self.called)
+
 
     def cancel(self):
         self.cancelled = True
 #        self.fs.calls.remove(self)
 
+
     def call(self):
         self.called = True
         self.f(*self.a, **self.kw)
+
+
 
 class FakeScheduler:
     def __init__(self):
         self.calls = []
 
+
     def callLater(self, timeout, f, *a, **kw):
         self.calls.append(FakeDelayedCall(self, timeout, f, a, kw))
         return self.calls[-1]
+
+
 
 class ExpectTests(unittest.TestCase):
     def setUp(self):
@@ -470,95 +502,102 @@ class ExpectTests(unittest.TestCase):
         self.term.connectionMade()
         self.fs = FakeScheduler()
 
+
     def testSimpleString(self):
         result = []
-        d = self.term.expect("hello world", timeout=1, scheduler=self.fs)
+        d = self.term.expect(b"hello world", timeout=1, scheduler=self.fs)
         d.addCallback(result.append)
 
-        self.term.write("greeting puny earthlings\n")
+        self.term.write(b"greeting puny earthlings\n")
         self.assertFalse(result)
-        self.term.write("hello world\n")
+        self.term.write(b"hello world\n")
         self.assertTrue(result)
-        self.assertEqual(result[0].group(), "hello world")
+        self.assertEqual(result[0].group(), b"hello world")
         self.assertEqual(len(self.fs.calls), 1)
         self.assertFalse(self.fs.calls[0].active())
 
+
     def testBrokenUpString(self):
         result = []
-        d = self.term.expect("hello world")
+        d = self.term.expect(b"hello world")
         d.addCallback(result.append)
 
         self.assertFalse(result)
-        self.term.write("hello ")
+        self.term.write(b"hello ")
         self.assertFalse(result)
-        self.term.write("worl")
+        self.term.write(b"worl")
         self.assertFalse(result)
-        self.term.write("d")
+        self.term.write(b"d")
         self.assertTrue(result)
-        self.assertEqual(result[0].group(), "hello world")
+        self.assertEqual(result[0].group(), b"hello world")
 
 
     def testMultiple(self):
         result = []
-        d1 = self.term.expect("hello ")
+        d1 = self.term.expect(b"hello ")
         d1.addCallback(result.append)
-        d2 = self.term.expect("world")
+        d2 = self.term.expect(b"world")
         d2.addCallback(result.append)
 
         self.assertFalse(result)
-        self.term.write("hello")
+        self.term.write(b"hello")
         self.assertFalse(result)
-        self.term.write(" ")
+        self.term.write(b" ")
         self.assertEqual(len(result), 1)
-        self.term.write("world")
+        self.term.write(b"world")
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0].group(), "hello ")
-        self.assertEqual(result[1].group(), "world")
+        self.assertEqual(result[0].group(), b"hello ")
+        self.assertEqual(result[1].group(), b"world")
+
 
     def testSynchronous(self):
-        self.term.write("hello world")
+        self.term.write(b"hello world")
 
         result = []
-        d = self.term.expect("hello world")
+        d = self.term.expect(b"hello world")
         d.addCallback(result.append)
         self.assertTrue(result)
-        self.assertEqual(result[0].group(), "hello world")
+        self.assertEqual(result[0].group(), b"hello world")
+
 
     def testMultipleSynchronous(self):
-        self.term.write("goodbye world")
+        self.term.write(b"goodbye world")
 
         result = []
-        d1 = self.term.expect("bye")
+        d1 = self.term.expect(b"bye")
         d1.addCallback(result.append)
-        d2 = self.term.expect("world")
+        d2 = self.term.expect(b"world")
         d2.addCallback(result.append)
 
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0].group(), "bye")
-        self.assertEqual(result[1].group(), "world")
+        self.assertEqual(result[0].group(), b"bye")
+        self.assertEqual(result[1].group(), b"world")
+
 
     def _cbTestTimeoutFailure(self, res):
         self.assertTrue(hasattr(res, 'type'))
         self.assertEqual(res.type, helper.ExpectationTimeout)
 
+
     def testTimeoutFailure(self):
-        d = self.term.expect("hello world", timeout=1, scheduler=self.fs)
+        d = self.term.expect(b"hello world", timeout=1, scheduler=self.fs)
         d.addBoth(self._cbTestTimeoutFailure)
         self.fs.calls[0].call()
 
+
     def testOverlappingTimeout(self):
-        self.term.write("not zoomtastic")
+        self.term.write(b"not zoomtastic")
 
         result = []
-        d1 = self.term.expect("hello world", timeout=1, scheduler=self.fs)
+        d1 = self.term.expect(b"hello world", timeout=1, scheduler=self.fs)
         d1.addBoth(self._cbTestTimeoutFailure)
-        d2 = self.term.expect("zoom")
+        d2 = self.term.expect(b"zoom")
         d2.addCallback(result.append)
 
         self.fs.calls[0].call()
 
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].group(), "zoom")
+        self.assertEqual(result[0].group(), b"zoom")
 
 
 

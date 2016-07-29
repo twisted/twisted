@@ -1,16 +1,14 @@
 # finger.py module
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer
+from twisted.application import internet, service, strports
+from twisted.internet import protocol, reactor, defer, endpoints
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components, log
 from twisted.web import resource, server, xmlrpc
 from twisted.spread import pb
-
-from OpenSSL import SSL
 
 class IFingerService(Interface):
 
@@ -61,8 +59,8 @@ class IFingerFactory(Interface):
         """
 
 
+@implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ServerFactory):
-    implements(IFingerFactory)
 
     protocol = FingerProtocol
 
@@ -103,9 +101,8 @@ class IFingerSetterFactory(Interface):
         """
 
 
+@implementer(IFingerSetterFactory)
 class FingerSetterFactoryFromService(protocol.ServerFactory):
-
-    implements(IFingerSetterFactory)
 
     protocol = FingerSetterProtocol
 
@@ -153,9 +150,8 @@ class IIRCClientFactory(Interface):
         """
 
 
+@implementer(IIRCClientFactory)
 class IRCClientFactoryFromService(protocol.ClientFactory):
-
-    implements(IIRCClientFactory)
 
     protocol = IRCReplyBot
     nickname = None
@@ -263,9 +259,8 @@ class IPerspectiveFinger(Interface):
         """
 
 
+@implementer(IPerspectiveFinger)
 class PerspectiveFingerFromService(pb.Root):
-
-    implements(IPerspectiveFinger)
 
     def __init__(self, service):
         self.service = service
@@ -281,20 +276,20 @@ components.registerAdapter(PerspectiveFingerFromService,
                            IPerspectiveFinger)
 
 
+@implementer(IFingerService)
 class FingerService(service.Service):
-
-    implements(IFingerService)
 
     def __init__(self, filename):
         self.filename = filename
 
     def _read(self):
         self.users = {}
-        for line in file(self.filename):
-            user, status = line.split(':', 1)
-            user = user.strip()
-            status = status.strip()
-            self.users[user] = status
+        with open(self.filename) as f:
+            for line in f:
+                user, status = line.split(':', 1)
+                user = user.strip()
+                status = status.strip()
+                self.users[user] = status
         self.call = reactor.callLater(30, self._read)
 
     def getUser(self, user):
@@ -312,21 +307,6 @@ class FingerService(service.Service):
         self.call.cancel()
 
 
-class ServerContextFactory:
-
-    def getContext(self):
-        """
-        Create an SSL context.
-
-        This is a sample implementation that loads a certificate from a file
-        called 'server.pem'.
-        """
-        ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.use_certificate_file('server.pem')
-        ctx.use_privatekey_file('server.pem')
-        return ctx
-
-
 
 # Easy configuration
 
@@ -334,7 +314,7 @@ def makeService(config):
     # finger on port 79
     s = service.MultiService()
     f = FingerService(config['file'])
-    h = internet.TCPServer(1079, IFingerFactory(f))
+    h = strports.service("tcp:1079", IFingerFactory(f))
     h.setServiceParent(s)
 
 
@@ -342,12 +322,14 @@ def makeService(config):
     r = resource.IResource(f)
     r.templateDirectory = config['templates']
     site = server.Site(r)
-    j = internet.TCPServer(8000, site)
+    j = strports.service("tcp:8000", site)
     j.setServiceParent(s)
 
     # ssl on port 443
 #    if config.get('ssl'):
-#        k = internet.SSLServer(443, site, ServerContextFactory())
+#        k = strports.service(
+#            "ssl:port=443:certKey=cert.pem:privateKey=key.pem", site
+#        )
 #        k.setServiceParent(s)
 
     # irc fingerbot
@@ -355,14 +337,17 @@ def makeService(config):
         i = IIRCClientFactory(f)
         i.nickname = config['ircnick']
         ircserver = config['ircserver']
-        b = internet.TCPClient(ircserver, 6667, i)
+        b = internet.ClientService(
+            endpoints.HostnameEndpoint(reactor, ircserver, 6667), i
+        )
         b.setServiceParent(s)
 
     # Pespective Broker on port 8889
     if 'pbport' in config:
-        m = internet.TCPServer(
-            int(config['pbport']),
-            pb.PBServerFactory(IPerspectiveFinger(f)))
+        m = internet.StreamServerEndpointService(
+            endpoints.TCP4ServerEndpoint(reactor, int(config['pbport'])),
+            pb.PBServerFactory(IPerspectiveFinger(f))
+        )
         m.setServiceParent(s)
 
     return s

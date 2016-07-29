@@ -118,10 +118,10 @@ class HelperTests(TestCase):
 
     def test_pwdGetByNameWithoutPwd(self):
         """
-        If the C{pwd} module isn't present, L{_pwdGetByName} returns C{None}.
+        If the C{pwd} module isn't present, L{_pwdGetByName} returns L{None}.
         """
         self.patch(checkers, 'pwd', None)
-        self.assertIs(checkers._pwdGetByName('alice'), None)
+        self.assertIsNone(checkers._pwdGetByName('alice'))
 
 
     def test_shadowGetByName(self):
@@ -145,11 +145,11 @@ class HelperTests(TestCase):
 
     def test_shadowGetByNameWithoutSpwd(self):
         """
-        L{_shadowGetByName} returns C{None} if C{spwd} is not present.
+        L{_shadowGetByName} returns L{None} if C{spwd} is not present.
         """
         self.patch(checkers, 'spwd', None)
 
-        self.assertIs(checkers._shadowGetByName('bob'), None)
+        self.assertIsNone(checkers._shadowGetByName('bob'))
         self.assertEqual(self.mockos.seteuidCalls, [])
         self.assertEqual(self.mockos.setegidCalls, [])
 
@@ -358,7 +358,7 @@ class SSHProtocolCheckerTests(TestCase):
 
     def test_registerCheckerWithInterface(self):
         """
-        If a apecific interface is passed into
+        If a specific interface is passed into
         L{SSHProtocolChecker.registerChecker}, that interface should be
         registered instead of what the checker specifies in
         credentialIntefaces.
@@ -419,7 +419,7 @@ class SSHProtocolCheckerTests(TestCase):
         """
         The default L{SSHProcotolChecker.areDone} should simply return True.
         """
-        self.assertEqual(checkers.SSHProtocolChecker().areDone(None), True)
+        self.assertTrue(checkers.SSHProtocolChecker().areDone(None))
 
 
 

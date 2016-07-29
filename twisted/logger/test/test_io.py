@@ -99,10 +99,10 @@ class LoggingFileTests(unittest.TestCase):
 
     def test_newlines(self):
         """
-        The C{newlines} attribute is C{None}.
+        The C{newlines} attribute is L{None}.
         """
         f = LoggingFile(self.logger)
-        self.assertEqual(f.newlines, None)
+        self.assertIsNone(f.newlines)
 
 
     def test_name(self):
@@ -123,7 +123,7 @@ class LoggingFileTests(unittest.TestCase):
         f = LoggingFile(self.logger)
         f.close()
 
-        self.assertEqual(f.closed, True)
+        self.assertTrue(f.closed)
         self.assertRaises(ValueError, f.write, "Hello")
 
 
@@ -148,7 +148,7 @@ class LoggingFileTests(unittest.TestCase):
         L{LoggingFile.isatty} returns C{False}.
         """
         f = LoggingFile(self.logger)
-        self.assertEqual(f.isatty(), False)
+        self.assertFalse(f.isatty())
 
 
     def test_writeBuffering(self):

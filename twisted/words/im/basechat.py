@@ -46,12 +46,12 @@ class ContactsList:
         @param person: The person whose status has changed.
         @type person: L{IPerson<interfaces.IPerson>} provider
         """
-        if not self.contacts.has_key(person.name):
+        if person.name not in self.contacts:
             self.contacts[person.name] = person
-        if not self.onlineContacts.has_key(person.name) and \
+        if person.name not in self.onlineContacts and \
                 (person.status == ONLINE or person.status == AWAY):
             self.onlineContacts[person.name] = person
-        if self.onlineContacts.has_key(person.name) and \
+        if person.name in self.onlineContacts and \
                 person.status == OFFLINE:
             del self.onlineContacts[person.name]
 
@@ -97,7 +97,7 @@ class ContactsList:
             del self.contacts[oldname]
             person.name = newnick
             self.contacts[newnick] = person
-            if self.onlineContacts.has_key(oldname):
+            if oldname in self.onlineContacts:
                 del self.onlineContacts[oldname]
                 self.onlineContacts[newnick] = person
 

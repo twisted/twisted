@@ -36,9 +36,8 @@ class ProcessUtilsTests(unittest.TestCase):
         path to it.
         """
         script = self.mktemp()
-        scriptFile = file(script, 'wt')
-        scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
-        scriptFile.close()
+        with open(script, 'wt') as scriptFile:
+            scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 
 
@@ -53,7 +52,7 @@ class ProcessUtilsTests(unittest.TestCase):
                 "    sys.stdout.write(s)",
                 "    sys.stdout.flush()"])
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
-        return d.addCallback(self.assertEqual, "hello world\n")
+        return d.addCallback(self.assertEqual, b"hello world\n")
 
 
     def test_outputWithErrorIgnored(self):
@@ -91,7 +90,7 @@ class ProcessUtilsTests(unittest.TestCase):
             'sys.stderr.flush()'])
 
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile], errortoo=True)
-        return d.addCallback(self.assertEqual, "foofoo")
+        return d.addCallback(self.assertEqual, b"foofoo")
 
 
     def test_value(self):
@@ -121,8 +120,8 @@ class ProcessUtilsTests(unittest.TestCase):
 
         def gotOutputAndValue(out_err_code):
             out, err, code = out_err_code
-            self.assertEqual(out, "hello world!\n")
-            self.assertEqual(err, "goodbye world!" + os.linesep)
+            self.assertEqual(out, b"hello world!\n")
+            self.assertEqual(err, b"goodbye world!" + os.linesep.encode("ascii"))
             self.assertEqual(code, 1)
         d = utils.getProcessOutputAndValue(self.exe, ["-u", scriptFile])
         return d.addCallback(gotOutputAndValue)
@@ -148,14 +147,16 @@ class ProcessUtilsTests(unittest.TestCase):
 
         def gotOutputAndValue(out_err_sig):
             out, err, sig = out_err_sig
-            self.assertEqual(out, "stdout bytes\n")
-            self.assertEqual(err, "stderr bytes\n")
+            self.assertEqual(out, b"stdout bytes\n")
+            self.assertEqual(err, b"stderr bytes\n")
             self.assertEqual(sig, signal.SIGKILL)
 
         d = utils.getProcessOutputAndValue(self.exe, ['-u', scriptFile])
         d = self.assertFailure(d, tuple)
         return d.addCallback(gotOutputAndValue)
 
+    if _PY3:
+        test_outputSignal.skip = "Test hangs on Python 3 (#8583)"
     if platform.isWindows():
         test_outputSignal.skip = "Windows doesn't have real signals."
 
@@ -167,7 +168,7 @@ class ProcessUtilsTests(unittest.TestCase):
                 "import os, sys",
                 "sys.stdout.write(os.getcwd())"])
         d = utilFunc(self.exe, ['-u', scriptFile], path=dir)
-        d.addCallback(check, dir)
+        d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
 
 
@@ -225,8 +226,11 @@ class ProcessUtilsTests(unittest.TestCase):
             os.chmod, dir, stat.S_IMODE(os.stat('.').st_mode))
         os.chmod(dir, 0)
 
-        d = utilFunc(self.exe, ['-u', scriptFile])
-        d.addCallback(check, dir)
+        # Pass in -S so that if run using the coverage .pth trick, it won't be
+        # loaded and cause Coverage to try and get the current working
+        # directory (see the comments above why this can be a problem) on OSX.
+        d = utilFunc(self.exe, ['-S', '-u', scriptFile])
+        d.addCallback(check, dir.encode(sys.getfilesystemencoding()))
         return d
 
 
@@ -345,6 +349,3 @@ class DeferredSuppressedWarningsTests(SuppressedWarningsTests):
         warnings.warn("ignore foo 2")
         self.assertEqual(
             ["ignore foo 2"], [w['message'] for w in self.flushWarnings()])
-
-if _PY3:
-    del ProcessUtilsTests

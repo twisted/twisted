@@ -1,0 +1,1 @@
+Twisted's HTTP/2 support no longer throws priority exceptions when WINDOW_UDPATE frames are received after a response has been completed.

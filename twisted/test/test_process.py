@@ -17,7 +17,7 @@ Test running processes.
     platforms and native L{str} keys/values on Windows.
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 import gzip
 import os
@@ -327,8 +327,8 @@ class SignalProtocol(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         """
-        Callback C{self.deferred} with C{None} if C{reason} is a
-        L{error.ProcessTerminated} failure with C{exitCode} set to C{None},
+        Callback C{self.deferred} with L{None} if C{reason} is a
+        L{error.ProcessTerminated} failure with C{exitCode} set to L{None},
         C{signal} set to C{self.signal}, and C{status} holding the status code
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
@@ -537,7 +537,7 @@ class ProcessTests(unittest.TestCase):
         self.assertTrue(procTrans.pid)
 
         def afterProcessEnd(ignored):
-            self.assertEqual(procTrans.pid, None)
+            self.assertIsNone(procTrans.pid)
 
         p.transport.closeStdin()
         return finished.addCallback(afterProcessEnd)
@@ -560,7 +560,7 @@ class ProcessTests(unittest.TestCase):
             f.trap(error.ProcessTerminated)
             self.assertEqual(f.value.exitCode, 23)
             # would .signal be available on non-posix?
-            # self.assertEqual(f.value.signal, None)
+            # self.assertIsNone(f.value.signal)
             self.assertRaises(
                 error.ProcessExitedAlready, p.transport.signalProcess, 'INT')
             try:
@@ -604,7 +604,7 @@ class ProcessTests(unittest.TestCase):
     def test_echo(self):
         """
         A spawning a subprocess which echoes its stdin to its stdout via
-        C{reactor.spawnProcess} will result in that echoed output being
+        L{IReactorProcess.spawnProcess} will result in that echoed output being
         delivered to outReceived.
         """
         finished = defer.Deferred()
@@ -1056,7 +1056,7 @@ class PosixProcessBase(object):
         def check(ignored):
             p.reason.trap(error.ProcessDone)
             self.assertEqual(p.reason.value.exitCode, 0)
-            self.assertEqual(p.reason.value.signal, None)
+            self.assertIsNone(p.reason.value.signal)
         d.addCallback(check)
         return d
 
@@ -1076,7 +1076,7 @@ class PosixProcessBase(object):
         def check(ignored):
             p.reason.trap(error.ProcessTerminated)
             self.assertEqual(p.reason.value.exitCode, 1)
-            self.assertEqual(p.reason.value.signal, None)
+            self.assertIsNone(p.reason.value.signal)
         d.addCallback(check)
         return d
 
@@ -1094,7 +1094,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGHUP signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGHUP}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1105,7 +1105,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGINT signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGINT}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1116,7 +1116,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGKILL signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGKILL}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1127,7 +1127,7 @@ class PosixProcessBase(object):
         """
         Sending the SIGTERM signal to a running process interrupts it, and
         C{processEnded} is called with a L{error.ProcessTerminated} instance
-        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        with the C{exitCode} set to L{None} and the C{signal} attribute set to
         C{signal.SIGTERM}. C{os.WTERMSIG} can also be used on the C{status}
         attribute to extract the signal value.
         """
@@ -1265,9 +1265,9 @@ class MockOS(object):
     @ivar WNOHANG: dumb value faking C{os.WNOHANG}.
     @type WNOHANG: C{int}
 
-    @ivar raiseFork: if not C{None}, subsequent calls to fork will raise this
+    @ivar raiseFork: if not L{None}, subsequent calls to fork will raise this
         object.
-    @type raiseFork: C{NoneType} or C{Exception}
+    @type raiseFork: L{None} or C{Exception}
 
     @ivar raiseExec: if set, subsequent calls to execvpe will raise an error.
     @type raiseExec: C{bool}
@@ -1291,10 +1291,10 @@ class MockOS(object):
 
     @ivar raiseWaitPid: if set, subsequent calls to waitpid will raise
         the error specified.
-    @type raiseWaitPid: C{None} or a class
+    @type raiseWaitPid: L{None} or a class
 
     @ivar waitChild: if set, subsequent calls to waitpid will return it.
-    @type waitChild: C{None} or a tuple
+    @type waitChild: L{None} or a tuple
 
     @ivar euid: the uid returned by the fake C{os.geteuid}
     @type euid: C{int}
@@ -1313,7 +1313,7 @@ class MockOS(object):
 
     @ivar raiseKill: if set, subsequent call to kill will raise the error
         specified.
-    @type raiseKill: C{None} or an exception instance.
+    @type raiseKill: L{None} or an exception instance.
 
     @ivar readData: data returned by C{os.read}.
     @type readData: C{str}
@@ -1751,7 +1751,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
         else:
@@ -1923,7 +1923,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
             # Check that fd have been closed
@@ -1949,7 +1949,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b'ouch'], env=None,
                                  usePTY=False, uid=8080)
         except SystemError:
-            self.assert_(self.mockos.exited)
+            self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions,
                 [('fork', False), ('setuid', 0), ('setgid', 0),
@@ -2179,8 +2179,8 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
         def processEnded(ign):
             f = p.outF
             f.seek(0, 0)
-            gf = gzip.GzipFile(fileobj=f)
-            self.assertEqual(gf.read(), s)
+            with gzip.GzipFile(fileobj=f) as gf:
+                self.assertEqual(gf.read(), s)
         return d.addCallback(processEnded)
 
 
@@ -2232,7 +2232,7 @@ class Win32SignalProtocol(SignalProtocol):
 
     def processEnded(self, reason):
         """
-        Callback C{self.deferred} with C{None} if C{reason} is a
+        Callback C{self.deferred} with L{None} if C{reason} is a
         L{error.ProcessTerminated} failure with C{exitCode} set to 1.
         Otherwise, errback with a C{ValueError} describing the problem.
         """
@@ -2340,7 +2340,7 @@ class Win32ProcessTests(unittest.TestCase):
         proc = reactor.spawnProcess(p, pyExe, pyArgs)
 
         def cbConnected(transport):
-            self.assertIdentical(transport, proc)
+            self.assertIs(transport, proc)
             # perform a basic validity test on the handles
             win32api.GetHandleInformation(proc.hProcess)
             win32api.GetHandleInformation(proc.hThread)
@@ -2351,9 +2351,9 @@ class Win32ProcessTests(unittest.TestCase):
 
         def checkTerminated(ignored):
             # The attributes on the process object must be reset...
-            self.assertIdentical(proc.pid, None)
-            self.assertIdentical(proc.hProcess, None)
-            self.assertIdentical(proc.hThread, None)
+            self.assertIsNone(proc.pid)
+            self.assertIsNone(proc.hProcess)
+            self.assertIsNone(proc.hThread)
             # ...and the handles must be closed.
             self.assertRaises(win32api.error,
                               win32api.GetHandleInformation, self.hProcess)
@@ -2391,13 +2391,13 @@ class Win32UnicodeEnvironmentTests(unittest.TestCase):
 
 
 
-class Dumbwin32procPidTests(unittest.TestCase):
+class DumbWin32ProcTests(unittest.TestCase):
     """
-    Simple test for the pid attribute of Process on win32.
+    L{twisted.internet._dumbwin32proc} tests.
     """
-
     def test_pid(self):
         """
+        Simple test for the pid attribute of Process on win32.
         Launch process with mock win32process. The only mock aspect of this
         module is that the pid of the process created will always be 42.
         """
@@ -2421,9 +2421,20 @@ class Dumbwin32procPidTests(unittest.TestCase):
         self.assertEqual("<Process pid=42>", repr(p))
 
         def pidCompleteCb(result):
-            self.assertEqual(None, p.pid)
+            self.assertIsNone(p.pid)
         return d.addCallback(pidCompleteCb)
 
+
+    def test_findShebang(self):
+        """
+        Look for the string after the shebang C{#!}
+        in a file.
+        """
+        from twisted.internet._dumbwin32proc import _findShebang
+        cgiScript = FilePath(b"example.cgi")
+        cgiScript.setContent(b"#!/usr/bin/python")
+        program = _findShebang(cgiScript.path)
+        self.assertEqual(program, "/usr/bin/python")
 
 
 class UtilTests(unittest.TestCase):
@@ -2455,8 +2466,7 @@ class UtilTests(unittest.TestCase):
                            (j(self.bazfoo, "executable"), 0o700),
                            (j(self.bazfoo, "executable.bin"), 0o700),
                            (j(self.bazbar, "executable"), 0)]:
-            f = open(name, "wb")
-            f.close()
+            open(name, "wb").close()
             os.chmod(name, mode)
 
         self.oldPath = os.environ.get('PATH', None)
@@ -2633,7 +2643,7 @@ if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(re
 if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
     Win32ProcessTests.skip = skipMessage
     TwoProcessesNonPosixTests.skip = skipMessage
-    Dumbwin32procPidTests.skip = skipMessage
+    DumbWin32ProcTests.skip = skipMessage
     Win32UnicodeEnvironmentTests.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):

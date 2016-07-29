@@ -196,7 +196,7 @@ class _WrappingFactory(ClientFactory):
             L{_WrappingFactory}'s L{Deferred <defer.Deferred>} is returned to
             C{connect()}'s caller.
 
-        @return: C{None}
+        @return: L{None}
         """
         deferred.errback(
             error.ConnectingCancelledError(
@@ -222,9 +222,9 @@ class _WrappingFactory(ClientFactory):
         """
         Proxy C{buildProtocol} to our C{self._wrappedFactory} or errback the
         C{self._onConnection} L{Deferred} if the wrapped factory raises an
-        exception or returns C{None}.
+        exception or returns L{None}.
 
-        @return: An instance of L{_WrappingProtocol} or C{None}
+        @return: An instance of L{_WrappingProtocol} or L{None}
         """
         try:
             proto = self._wrappedFactory.buildProtocol(addr)
@@ -506,7 +506,7 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
         @param backlog: Size of the listen queue
         @type backlog: int
 
-        @param interface: The hostname to bind to, defaults to '' (all)
+        @param interface: The hostname to bind to, defaults to C{::} (all)
         @type interface: str
         """
         _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
@@ -818,7 +818,7 @@ class SSL4ServerEndpoint(object):
         @type port: int
 
         @param sslContextFactory: An instance of
-            L{twisted.internet.ssl.ContextFactory}.
+            L{interfaces.IOpenSSLContextFactory}.
 
         @param backlog: Size of the listen queue
         @type backlog: int
@@ -864,7 +864,7 @@ class SSL4ClientEndpoint(object):
         @type port: int
 
         @param sslContextFactory: SSL Configuration information as an instance
-            of L{twisted.internet.ssl.ContextFactory}.
+            of L{interfaces.IOpenSSLContextFactory}.
 
         @param timeout: Number of seconds to wait before assuming the
             connection has failed.
@@ -1028,11 +1028,11 @@ def _parseTCP(factory, port, interface="", backlog=50):
     Internal parser function for L{_parseServer} to convert the string
     arguments for a TCP(IPv4) stream endpoint into the structured arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
 
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param port: the integer port number to bind
     @type port: C{str}
@@ -1056,11 +1056,11 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
     arguments for a UNIX (AF_UNIX/SOCK_STREAM) stream endpoint into the
     structured arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
 
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param address: the pathname of the unix socket
     @type address: C{str}
@@ -1072,8 +1072,8 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
         respectively.  See the C{wantPID} argument to C{listenUNIX}
 
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
-        L{IReactorTCP.listenUNIX} (or, modulo argument 2, the factory,
-        arguments to L{UNIXServerEndpoint}.
+        L{twisted.internet.interfaces.IReactorUNIX.listenUNIX} (or,
+        modulo argument 2, the factory, arguments to L{UNIXServerEndpoint}.
     """
     return (
         (address, factory),
@@ -1090,10 +1090,10 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
     arguments.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
+    @param factory: the protocol factory being parsed, or L{None}.  (This was a
         leftover argument from when this code was in C{strports}, and is now
         mostly None and unused.)
-    @type factory: L{IProtocolFactory} or C{NoneType}
+    @type factory: L{IProtocolFactory} or L{None}
 
     @param port: the integer port number to bind
     @type port: C{str}
@@ -1296,8 +1296,8 @@ def _tokenize(description):
         L{clientFromString}.
     @type description: L{str} or L{bytes}
 
-    @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
-        starting with L{_OP} will contain a second element of either ':' (i.e.
+    @return: an iterable of 2-tuples of (C{_OP} or C{_STRING}, string).  Tuples
+        starting with C{_OP} will contain a second element of either ':' (i.e.
         'next parameter') or '=' (i.e. 'assign parameter value').  For example,
         the string 'hello:greeting=world' would result in a generator yielding
         these values::
@@ -1394,7 +1394,7 @@ def _parseServer(description, factory, default=None):
     @param default: Deprecated argument, specifying the default parser mode to
         use for unqualified description strings (those which do not have a ':'
         and prefix).
-    @type default: C{str} or C{NoneType}
+    @type default: C{str} or L{None}
 
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
@@ -1646,7 +1646,7 @@ def _parseTrustRootPath(pathName):
 def _privateCertFromPaths(certificatePath, keyPath):
     """
     Parse a certificate path and key path, either or both of which might be
-    C{None}, into a certificate object.
+    L{None}, into a certificate object.
 
     @param certificatePath: the certificate path
     @type certificatePath: L{bytes} or L{unicode} or L{None}
@@ -2034,7 +2034,7 @@ class _TLSClientEndpointParser(object):
         Redirects to another function L{_parseClientTLS}; tricks zope.interface
         into believing the interface is correctly implemented, since the
         signature is (C{reactor}, C{*args}, C{**kwargs}).  See
-        L{_parseClientTLS} for an the specific signature description for this
+        L{_parseClientTLS} for the specific signature description for this
         endpoint parser.
 
         @param reactor: The reactor passed to L{clientFromString}.

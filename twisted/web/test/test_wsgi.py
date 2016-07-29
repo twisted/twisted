@@ -923,7 +923,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def test_readNone(self):
         """
-        Calling L{_InputStream.read} with C{None} as an argument returns all
+        Calling L{_InputStream.read} with L{None} as an argument returns all
         bytes in the input stream.
         """
         bytes = b"the entire stream"
@@ -1003,7 +1003,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def test_readlineNone(self):
         """
-        Calling L{_InputStream.readline} with C{None} as an argument returns
+        Calling L{_InputStream.readline} with L{None} as an argument returns
         one line from the input stream.
         """
         bytes = b"this is one line\nthis is another line"
@@ -1086,7 +1086,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def test_readlinesNone(self):
         """
-        Calling L{_InputStream.readlines} with C{None} as an argument returns
+        Calling L{_InputStream.readlines} with L{None} as an argument returns
         all lines from the input.
         """
         bytes = b"one fish\ntwo fish\n"
@@ -1309,9 +1309,9 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         request.requestReceived()
 
         def checkMessage(error):
-            self.assertRegexpMatches(
+            self.assertRegex(
                 str(error), "headers must be a list, not "
-                "<list_?iterator .+> [(]list_?iterator[)]")
+                r"<(list_?|sequence)iterator .+> [(]\1iterator[)]")
 
         return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
@@ -1324,7 +1324,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
           The response_headers argument ... must be a Python list; i.e.
           type(response_headers) is ListType
 
-        However, for bug-compatiblity, any sequence is accepted. In both
+        However, for bug-compatibility, any sequence is accepted. In both
         Python 2 and Python 3, only a warning is issued when a sequence other
         than a list is encountered.
         """
@@ -1359,9 +1359,9 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         request.requestReceived()
 
         def checkMessage(error):
-            self.assertRegexpMatches(
+            self.assertRegex(
                 str(error), "header must be a [(]str, str[)] tuple, not "
-                "<tuple_?iterator .+> [(]tuple_?iterator[)]")
+                r"<(tuple_?|sequence)iterator .+> [(]\1iterator[)]")
 
         return self.assertFailure(result, TypeError).addCallback(checkMessage)
 
@@ -1374,7 +1374,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
           The response_headers argument is a list of (header_name,
           header_value) tuples
 
-        However, for bug-compatiblity, any 2 element sequence is also
+        However, for bug-compatibility, any 2 element sequence is also
         accepted. In both Python 2 and Python 3, only a warning is issued when
         a sequence other than a tuple is encountered.
         """

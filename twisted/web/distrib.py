@@ -10,7 +10,7 @@ by each subprocess and not by the main web server (i.e. GET, POST etc.).
 """
 
 # System Imports
-import types, os, copy, cStringIO
+import os, copy, cStringIO
 try:
     import pwd
 except ImportError:
@@ -112,8 +112,7 @@ class Issue:
 
     def finished(self, result):
         if result != server.NOT_DONE_YET:
-            assert isinstance(result, types.StringType),\
-                   "return value not a string"
+            assert isinstance(result, str), "return value not a string"
             self.request.write(result)
             self.request.finish()
 

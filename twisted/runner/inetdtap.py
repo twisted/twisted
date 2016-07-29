@@ -62,7 +62,8 @@ class RPCServer(internet.TCPServer):
 def makeService(config):
     s = appservice.MultiService()
     conf = inetdconf.InetdConf()
-    conf.parseFile(open(config['file']))
+    with open(config['file']) as f:
+        conf.parseFile(f)
 
     for service in conf.services:
         protocol = service.protocol
@@ -106,7 +107,7 @@ def makeService(config):
                 continue
 
             # Internal services can use a standard ServerFactory
-            if not inetd.internalProtocols.has_key(service.name):
+            if service.name not in inetd.internalProtocols:
                 log.msg('Unknown internal service: ' + service.name)
                 continue
             factory = ServerFactory()

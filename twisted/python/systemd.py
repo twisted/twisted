@@ -46,12 +46,12 @@ class ListenFDs(object):
     def fromEnvironment(cls, environ=None, start=None):
         """
         @param environ: A dictionary-like object to inspect to discover
-            inherited descriptors.  By default, C{None}, indicating that the
+            inherited descriptors.  By default, L{None}, indicating that the
             real process environment should be inspected.  The default is
             suitable for typical usage.
 
         @param start: An integer giving the lowest value of an inherited
-            descriptor systemd will give us.  By default, C{None}, indicating
+            descriptor systemd will give us.  By default, L{None}, indicating
             the known correct (that is, in agreement with systemd) value will be
             used.  The default is suitable for typical usage.
 

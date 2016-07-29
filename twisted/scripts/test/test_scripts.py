@@ -37,12 +37,11 @@ def outputFromPythonScript(script, *args):
         from C{stderr}.
     @rtype: L{bytes}
     """
-    nullInput = file(devnull, "rb")
-    nullError = file(devnull, "wb")
-    stdout = Popen([executable, script.path] + list(args),
-                   stdout=PIPE, stderr=nullError, stdin=nullInput).stdout.read()
-    nullInput.close()
-    nullError.close()
+    with open(devnull, "rb") as nullInput, open(devnull, "wb") as nullError:
+        process = Popen(
+            [executable, script.path] + list(args),
+            stdout=PIPE, stderr=nullError, stdin=nullInput)
+        stdout = process.communicate()[0]
     return stdout
 
 
@@ -111,10 +110,6 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         self.assertIn(repr(testDir.path), output)
 
 
-    def test_manhole(self):
-        self.scriptTest("manhole")
-
-
     def test_trial(self):
         self.scriptTest("trial")
 
@@ -150,5 +145,4 @@ class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
     generateFor = [('twistd', 'twisted.scripts.twistd.ServerOptions'),
                    ('trial', 'twisted.scripts.trial.Options'),
                    ('pyhtmlizer', 'twisted.scripts.htmlizer.Options'),
-                   ('manhole', 'twisted.scripts.manhole.MyOptions')
                    ]

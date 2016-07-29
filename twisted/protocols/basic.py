@@ -250,7 +250,7 @@ class NetstringReceiver(protocol.Protocol):
         equal to C{self.MAX_LENGTH}.
 
         @raise NetstringParseError: if C{self._remainingData} is no
-            number or is too big (checked by L{extractLength}).
+            number or is too big (checked by L{_extractLength}).
         """
         partialLengthMatch = self._LENGTH_PREFIX.match(self._remainingData)
         if not partialLengthMatch:
@@ -511,8 +511,8 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
 
     In line mode, each line that's received becomes a callback to
     L{lineReceived}.  In raw data mode, each chunk of raw data becomes a
-    callback to L{rawDataReceived}.  The L{setLineMode} and L{setRawMode}
-    methods switch between the two modes.
+    callback to L{LineReceiver.rawDataReceived}.
+    The L{setLineMode} and L{setRawMode} methods switch between the two modes.
 
     This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
 

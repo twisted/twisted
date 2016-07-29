@@ -30,11 +30,11 @@ class DNSServerFactory(protocol.ServerFactory):
     Server factory and tracker for L{DNSProtocol} connections.  This class also
     provides records for responses to DNS queries.
 
-    @ivar cache: A L{Cache<twisted.names.cache.Cache>} instance whose
+    @ivar cache: A L{Cache<twisted.names.cache.CacheResolver>} instance whose
         C{cacheResult} method is called when a response is received from one of
         C{clients}. Defaults to L{None} if no caches are specified. See
         C{caches} of L{__init__} for more details.
-    @type cache: L{Cache<twisted.names.cache.Cache} or L{None}
+    @type cache: L{Cache<twisted.names.cache.CacheResolver>} or L{None}
 
     @ivar canRecurse: A flag indicating whether this server is capable of
         performing recursive DNS resolution.
@@ -76,7 +76,7 @@ class DNSServerFactory(protocol.ServerFactory):
             answers. The first cache instance is assigned to
             C{DNSServerFactory.cache} and its C{cacheResult} method will be
             called when a response is received from one of C{clients}.
-        @type caches: L{list} of L{Cache<twisted.names.cache.Cache} instances
+        @type caches: L{list} of L{Cache<twisted.names.cache.CacheResolver>} instances
 
         @param clients: Resolvers which are capable of performing recursive DNS
             lookups.
@@ -85,7 +85,7 @@ class DNSServerFactory(protocol.ServerFactory):
         @param verbose: An integer controlling the verbosity of logging of
             queries and responses. Default is C{0} which means no logging. Set
             to C{2} to enable logging of full query and response messages.
-        @param verbose: L{int}
+        @type verbose: L{int}
         """
         resolvers = []
         if authorities is not None:

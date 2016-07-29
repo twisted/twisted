@@ -2,15 +2,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
-"""Implementation of raw packet interfaces for UDP"""
+"""
+Implementation of raw packet interfaces for UDP
+"""
 
 import struct
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from zope.interface import implements
+from zope.interface import implementer
 
 class UDPHeader:
     def __init__(self, data):
@@ -18,21 +18,25 @@ class UDPHeader:
         (self.source, self.dest, self.len, self.check) \
                  = struct.unpack("!HHHH", data[:8])
 
+
+
+@implementer(raw.IRawDatagramProtocol)
 class RawUDPProtocol(protocol.AbstractDatagramProtocol):
-    implements(raw.IRawDatagramProtocol)
     def __init__(self):
         self.udpProtos = {}
 
+
     def addProto(self, num, proto):
         if not isinstance(proto, protocol.DatagramProtocol):
-            raise TypeError, 'Added protocol must be an instance of DatagramProtocol'
+            raise TypeError('Added protocol must be an instance of DatagramProtocol')
         if num < 0:
-            raise TypeError, 'Added protocol must be positive or zero'
+            raise TypeError('Added protocol must be positive or zero')
         if num >= 2**16:
-            raise TypeError, 'Added protocol must fit in 16 bits'
+            raise TypeError('Added protocol must fit in 16 bits')
         if num not in self.udpProtos:
             self.udpProtos[num] = []
         self.udpProtos[num].append(proto)
+
 
     def datagramReceived(self,
                          data,

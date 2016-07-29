@@ -29,9 +29,9 @@ from zope.interface import implementer, Interface
 from twisted.python import log, reflect
 
 # sibling imports
-from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
-from jelly import Jellyable, Unjellyable, _newDummyLike
-from jelly import setInstanceState, getInstanceState
+from .jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
+from .jelly import Jellyable, Unjellyable, _newDummyLike
+from .jelly import setInstanceState, getInstanceState
 
 # compatibility
 setCopierForClass = setUnjellyableForClass
@@ -129,17 +129,18 @@ class Referenceable(Serializable):
 
 @implementer(IPBRoot)
 class Root(Referenceable):
-    """I provide a root object to L{pb.Broker}s for a L{pb.BrokerFactory}.
+    """I provide a root object to L{pb.Broker}s for a L{pb.PBClientFactory} or
+    L{pb.PBServerFactory}.
 
-    When a L{pb.BrokerFactory} produces a L{pb.Broker}, it supplies that
+    When a factory produces a L{pb.Broker}, it supplies that
     L{pb.Broker} with an object named \"root\".  That object is obtained
     by calling my rootObject method.
     """
 
     def rootObject(self, broker):
-        """A L{pb.BrokerFactory} is requesting to publish me as a root object.
+        """A factory is requesting to publish me as a root object.
 
-        When a L{pb.BrokerFactory} is sending me as the root object, this
+        When a factory is sending me as the root object, this
         method will be invoked to allow per-broker versions of an
         object.  By default I return myself.
         """
@@ -149,7 +150,7 @@ class Root(Referenceable):
 class ViewPoint(Referenceable):
     """
     I act as an indirect reference to an object accessed through a
-    L{pb.Perspective}.
+    L{pb.IPerspective}.
 
     Simply put, I combine an object with a perspective so that when a
     peer calls methods on the object I refer to, the method will be
@@ -159,10 +160,10 @@ class ViewPoint(Referenceable):
     While L{Viewable} objects will be converted to ViewPoints by default
     when they are returned from or sent as arguments to a remote
     method, any object may be manually proxied as well. (XXX: Now that
-    this class is no longer named C{Proxy}, this is the only occourance
+    this class is no longer named C{Proxy}, this is the only occurrence
     of the term 'proxied' in this docstring, and may be unclear.)
 
-    This can be useful when dealing with L{pb.Perspective}s, L{Copyable}s,
+    This can be useful when dealing with L{pb.IPerspective}s, L{Copyable}s,
     and L{Cacheable}s.  It is legal to implement a method as such on
     a perspective::
 
@@ -318,7 +319,7 @@ class Cacheable(Copyable):
         Get state to cache on the client and client-cache reference
         to observe locally.
 
-        This is similiar to getStateToCopyFor, but it additionally
+        This is similar to getStateToCopyFor, but it additionally
         passes in a reference to the client-side RemoteCache instance
         that will be created when it is unserialized.  This allows
         Cacheable instances to keep their RemoteCaches up to date when
@@ -467,7 +468,7 @@ class RemoteCache(RemoteCopy, Serializable):
     def __hash__(self):
         """Hash me.
         """
-        return int(id(self.__dict__) % sys.maxint)
+        return int(id(self.__dict__) % sys.maxsize)
 
     broker = None
     luid = None
