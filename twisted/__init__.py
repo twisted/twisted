@@ -38,6 +38,9 @@ def _checkRequirements():
         # It isn't installed.
         raise ImportError(required + ": no module named zope.interface.")
     except:
+        if version < (3, 0):
+            import traceback
+            traceback.print_exc()
         # It is installed but not compatible with this version of Python.
         raise ImportError(required + ".")
     try:
