@@ -12,7 +12,7 @@ build: off
 test: off
 
 # Don't build branch if there is an open PR, to prevent double builds.
-# For now, Appveyour will only build PR commits and not commits to master or
+# For now, Appveyor will only build PR commits and not commits to master or
 # commits on random branches without an associated PR.
 skip_branch_with_pr: true
 
@@ -34,11 +34,6 @@ environment:
     - PYTHON: C:\Python27-x64
       TOXENV: py27-coverage-windows,codecov-publish
 
-# Some tests are failing on Appveyor and they will be fixed in a separate
-# ticket.
-matrix:
-  allow_failures:
-    - PYTHON: C:\Python27-x64
 
 install:
   # Get some information about the build environment.
@@ -53,6 +48,10 @@ install:
 
   # The build system itself is handled by tox.
   - "%PYTHON%\\Scripts\\pip install tox"
+
+  # Install OpenSSH through chocolatey
+  - "choco install win32-openssh -confirm"
+  - cmd: "SET PATH=%PATH%;C:\\Program Files\\OpenSSH-Win64"
 
 test_script:
   - "%PYTHON%\\python -m tox -e %TOXENV%"

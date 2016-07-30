@@ -24,9 +24,10 @@ FILTERS='/var/lib/courier/filters'
 ALLFILTERS='/var/lib/courier/allfilters'
 FILTERNAME='twistedfilter'
 
+import email.parser
+import email.message
 import os, os.path
 from syslog import syslog, openlog, LOG_MAIL
-from rfc822 import Message
 
 def trace_dump():
     t,v,tb = sys.exc_info()
@@ -65,7 +66,6 @@ class MailProcessor(basic.LineReceiver):
     messageFilename = None
     delimiter = '\n'
 
-
     def connectionMade(self):
         log.msg('Connection from %r' % self.transport)
         self.state = 'connected'
@@ -92,7 +92,9 @@ class MailProcessor(basic.LineReceiver):
         A trivial example is included.
         """
         try:
-            m = Message(open(self.messageFilename))
+            emailParser = email.parser.Parser()
+            with open(self.messageFilename) as f:
+                emailParser.parse(f)
             self.sendLine('200 Ok')
         except:
             trace_dump()
@@ -110,7 +112,7 @@ def main():
     reactor.callLater(0, os.close, 3)
 
     # When stdin is closed, it's time to exit.
-    s = stdio.StandardIO(DieWhenLost())
+    stdio.StandardIO(DieWhenLost())
 
     # Go!
     reactor.run()

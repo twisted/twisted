@@ -6,6 +6,8 @@
 SSH key exchange handling.
 """
 
+from __future__ import absolute_import, division
+
 from hashlib import sha1, sha256
 
 from zope.interface import Attribute, implementer, Interface
@@ -126,10 +128,10 @@ class _DHGroup14SHA1(object):
 
 
 _kexAlgorithms = {
-    "diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
-    "diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
-    "diffie-hellman-group1-sha1": _DHGroup1SHA1(),
-    "diffie-hellman-group14-sha1": _DHGroup14SHA1(),
+    b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
+    b"diffie-hellman-group-exchange-sha1": _DHGroupExchangeSHA1(),
+    b"diffie-hellman-group1-sha1": _DHGroup1SHA1(),
+    b"diffie-hellman-group14-sha1": _DHGroup14SHA1(),
     }
 
 
@@ -139,7 +141,7 @@ def getKex(kexAlgorithm):
     Get a description of a named key exchange algorithm.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{str}
+    @type kexAlgorithm: L{bytes}
 
     @return: A description of the key exchange algorithm named by
         C{kexAlgorithm}.
@@ -159,7 +161,7 @@ def isFixedGroup(kexAlgorithm):
     Returns C{True} if C{kexAlgorithm} has a fixed prime / generator group.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{str}
+    @type kexAlgorithm: L{bytes}
 
     @return: C{True} if C{kexAlgorithm} has a fixed prime / generator group,
         otherwise C{False}.
@@ -174,7 +176,7 @@ def getHashProcessor(kexAlgorithm):
     Get the hash algorithm callable to use in key exchange.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{str}
+    @type kexAlgorithm: L{bytes}
 
     @return: A callable hash algorithm constructor (e.g. C{hashlib.sha256}).
     @rtype: C{callable}
@@ -189,7 +191,7 @@ def getDHGeneratorAndPrime(kexAlgorithm):
     Get the generator and the prime to use in key exchange.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{str}
+    @type kexAlgorithm: L{bytes}
 
     @return: A L{tuple} containing L{long} generator and L{long} prime.
     @rtype: L{tuple}
@@ -205,7 +207,7 @@ def getSupportedKeyExchanges():
     preference.
 
     @return: A C{list} of supported key exchange algorithm names.
-    @rtype: C{list} of L{str}
+    @rtype: C{list} of L{bytes}
     """
     return sorted(
         _kexAlgorithms,

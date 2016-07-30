@@ -107,8 +107,8 @@ else:
                 raise OSError(e.errno, None)
             raise
         else:
-            result = fObj.read()
-            fObj.close()
+            with fObj:
+                result = fObj.read()
             return result
 
 

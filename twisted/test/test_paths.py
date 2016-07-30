@@ -66,19 +66,14 @@ class AbstractFilePathTests(BytesTestCase):
         self.all = [cmn]
         os.mkdir(cmn)
         self.subdir(b"sub1")
-        f = self.subfile(b"file1")
-        f.write(self.f1content)
-        f.close()
-        f = self.subfile(b"sub1", b"file2")
-        f.write(self.f2content)
-        f.close()
+        with self.subfile(b"file1") as f:
+            f.write(self.f1content)
+        with self.subfile(b"sub1", b"file2") as f:
+            f.write(self.f2content)
         self.subdir(b'sub3')
-        f = self.subfile(b"sub3", b"file3.ext1")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext2")
-        f.close()
-        f = self.subfile(b"sub3", b"file3.ext3")
-        f.close()
+        self.subfile(b"sub3", b"file3.ext1").close()
+        self.subfile(b"sub3", b"file3.ext2").close()
+        self.subfile(b"sub3", b"file3.ext3").close()
         self.path = filepath.FilePath(cmn)
         self.root = filepath.FilePath(b"/")
 
@@ -1199,10 +1194,9 @@ class FilePathTests(AbstractFilePathTests):
         Windows platforms.)
         """
         path = filepath.FilePath(self.mktemp())
-        f = path.create()
-        self.assertIn("b", f.mode)
-        f.write(b"\n")
-        f.close()
+        with path.create() as f:
+            self.assertIn("b", f.mode)
+            f.write(b"\n")
         with open(path.path, "rb") as fp:
             read = fp.read()
             self.assertEqual(read, b"\n")
@@ -1225,8 +1219,7 @@ class FilePathTests(AbstractFilePathTests):
             self.assertEqual(f.read(), b'abc\ndef')
 
         # Re-opening that file in write mode should erase whatever was there.
-        f = writer.open('w')
-        f.close()
+        writer.open('w').close()
         with writer.open() as f:
             self.assertEqual(f.read(), b'')
 

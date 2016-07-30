@@ -68,8 +68,17 @@ import warnings
 import decimal
 from functools import reduce
 import copy
-
 import datetime
+
+try:
+    from types import (ClassType as _OldStyleClass,
+                       InstanceType as _OldStyleInstance)
+except ImportError:
+    # On Python 3 and higher, ClassType and InstanceType
+    # are gone.  Use an empty tuple to pass to isinstance()
+    # tests without throwing an exception.
+    _OldStyleClass = ()
+    _OldStyleInstance = ()
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
@@ -142,7 +151,7 @@ def _newInstance(cls, state=_NO_STATE):
 
     @return: A new instance of C{cls}.
     """
-    if not isinstance(cls, types.ClassType):
+    if not isinstance(cls, _OldStyleClass):
         # new-style
         inst = cls.__new__(cls)
 
@@ -150,9 +159,9 @@ def _newInstance(cls, state=_NO_STATE):
             inst.__dict__.update(state) # Copy 'instance' behaviour
     else:
         if state is not _NO_STATE:
-            inst = types.InstanceType(cls, state)
+            inst = _OldStyleInstance(cls, state)
         else:
-            inst = types.InstanceType(cls)
+            inst = _OldStyleInstance(cls)
     return inst
 
 
@@ -164,7 +173,7 @@ def _maybeClass(classnamep):
         isObject = 0
     else:
         isObject = isinstance(classnamep, type)
-    if isinstance(classnamep, types.ClassType) or isObject:
+    if isinstance(classnamep, _OldStyleClass) or isObject:
         return qual(classnamep)
     return classnamep
 
@@ -249,7 +258,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
 
     for i in dir(module):
         i_ = getattr(module, i)
-        if type(i_) == types.ClassType:
+        if type(i_) == _OldStyleClass:
             if issubclass(i_, baseClass):
                 setUnjellyableForClass('%s%s' % (prefix, i), i_)
 
@@ -505,7 +514,7 @@ class _Jellier:
             elif objType is datetime.timedelta:
                 return ['timedelta', '%s %s %s' % (obj.days, obj.seconds,
                                                    obj.microseconds)]
-            elif objType is types.ClassType or issubclass(objType, type):
+            elif objType is _OldStyleClass or issubclass(objType, type):
                 return ['class', qual(obj)]
             elif objType is decimal.Decimal:
                 return self.jelly_decimal(obj)
@@ -549,7 +558,7 @@ class _Jellier:
                             qual(obj.__class__), sxp)
                 return self.preserve(obj, sxp)
         else:
-            if objType is types.InstanceType:
+            if objType is _OldStyleInstance:
                 raise InsecureJelly("Class not allowed for instance: %s %s" %
                                     (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
@@ -629,7 +638,7 @@ class _Unjellier:
             raise InsecureJelly(jelType)
         regClass = unjellyableRegistry.get(jelType)
         if regClass is not None:
-            if isinstance(regClass, types.ClassType):
+            if isinstance(regClass, _OldStyleClass):
                 inst = _Dummy() # XXX chomp, chomp
                 inst.__class__ = regClass
                 method = inst.unjellyFor
@@ -837,7 +846,7 @@ class _Unjellier:
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(rest[0])
         objType = type(klaus)
-        if objType not in (types.ClassType, types.TypeType):
+        if objType not in (_OldStyleClass, type):
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
                     rest[0], klaus))
@@ -880,7 +889,7 @@ class _Unjellier:
             category=DeprecationWarning, filename="", lineno=0)
 
         clz = self.unjelly(rest[0])
-        if type(clz) is not types.ClassType:
+        if type(clz) is not _OldStyleClass:
             raise InsecureJelly("Instance found with non-class class.")
         if hasattr(clz, "__setstate__"):
             inst = _newInstance(clz, {})
@@ -905,7 +914,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if type(im_class) is not types.ClassType:
+        if type(im_class) is not _OldStyleClass:
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:

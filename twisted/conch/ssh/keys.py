@@ -9,6 +9,7 @@ Handling of RSA and DSA keys.
 from __future__ import absolute_import, division
 
 import base64
+import binascii
 import itertools
 import warnings
 
@@ -800,7 +801,9 @@ class Key(object):
 
         @rtype: L{str}
         """
-        return ':'.join([x.encode('hex') for x in md5(self.blob()).digest()])
+        return nativeString(
+            b':'.join([binascii.hexlify(x)
+                       for x in iterbytes(md5(self.blob()).digest())]))
 
 
     def type(self):
@@ -965,7 +968,7 @@ class Key(object):
     def toString(self, type, extra=None):
         """
         Create a string representation of this key.  If the key is a private
-        key and you want the represenation of its public key, use
+        key and you want the representation of its public key, use
         C{key.public().toString()}.  type maps to a _toString_* method.
 
         @param type: The type of string to emit.  Currently supported values

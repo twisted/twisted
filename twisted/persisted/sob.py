@@ -184,12 +184,12 @@ def load(filename, style, passphrase=None):
     ee = _EverythingEphemeral(sys.modules['__main__'])
     sys.modules['__main__'] = ee
     ee.initRun = 1
-    try:
-        value = _load(fp)
-    finally:
-        # restore __main__ if an exception is raised.
-        sys.modules['__main__'] = ee.mainMod
-        fp.close()
+    with fp:
+        try:
+            value = _load(fp)
+        finally:
+            # restore __main__ if an exception is raised.
+            sys.modules['__main__'] = ee.mainMod
 
     styles.doUpgrade()
     ee.initRun = 0

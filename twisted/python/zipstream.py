@@ -164,6 +164,14 @@ class _FileEntry(object):
         return self
 
 
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+
 
 class ZipFileEntry(_FileEntry):
     """

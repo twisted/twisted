@@ -29,7 +29,22 @@ matrix:
     # For now all non-trial tests are in a single job to reduce the time spent
     # on starting separate jobs.
     - python: 2.7
-      env: TOXENV=narrativedocs,pyflakes,topfile,manifest-checker
+      env: TOXENV=narrativedocs,apidocs,pyflakes,topfile,manifest-checker
+    #
+    # OSX 10.10
+    #
+    - language: generic
+      os: osx
+      # 7.1 is OS X 10.10.x
+      # see: https://docs.travis-ci.com/user/languages/objective-c/#Supported-OS-X-iOS-SDK-versions
+      osx_image: xcode7.1
+      python: 2.7
+      env: TOXENV=py27-coverage-posix,codecov-publish
+
+  allow_failures:
+    # For now, OSX run on Travis-CI has a few failures.
+    - os: osx
+
 
 addons:
   apt:
@@ -42,7 +57,7 @@ cache:
     - $HOME/.cache/pip
 
 install:
-  - pip install tox
+  - ./.travis/install.sh tox
 
 # FIXME: https://twistedmatrix.com/trac/ticket/8373
 # By default, Travis only clones one branch.
@@ -52,5 +67,6 @@ before_script:
   - git remote set-branches --add origin trunk
   - git fetch origin trunk
 
+# Run tox from the created virtualenv.
 script:
-  - tox
+  - ./.travis/run.sh
